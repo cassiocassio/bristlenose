@@ -1,6 +1,8 @@
 import Cocoa
 import WebKit
-// usage: wk <url> <runs>   — loads the URL in a fresh non-persistent WKWebView per run, reports resource timing
+// usage: wk <url> [runs] — a new non-persistent WKWebView per run (earlier views are kept alive, so only the first
+// run pays WebKit's content-process launch: read the "all ready" list, not only the median). The window is
+// transparent and may be throttled as occluded, unlike the app's visible one.
 final class H: NSObject, WKScriptMessageHandler {
     var readyAt: Double?
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
@@ -8,7 +10,8 @@ final class H: NSObject, WKScriptMessageHandler {
     }
 }
 let args = CommandLine.arguments
-let url = URL(string: args[1])!, runs = Int(args[2]) ?? 5
+guard args.count >= 2, let url = URL(string: args[1]) else { print("usage: wk <report-url> [runs]"); exit(2) }
+let runs = args.count > 2 ? (Int(args[2]) ?? 5) : 5
 let app = NSApplication.shared; app.setActivationPolicy(.accessory)
 var results: [[String: Double]] = []
 var keep: [AnyObject] = []
@@ -33,7 +36,8 @@ func runOnce(_ done: @escaping () -> Void) {
             web.evaluateJavaScript(js) { v, _ in
                 var row: [String: Double] = ["ready": (h.readyAt ?? 0) - t0, "didStart": (nav.started ?? 0) - t0, "didFinish": (nav.finished ?? 0) - t0]
                 if let s = v as? String, let d = try? JSONSerialization.jsonObject(with: Data(s.utf8)) as? [String: Double] { row.merge(d) { $1 } }
-                results.append(row); done()
+                if h.readyAt != nil { results.append(row) } else { print("run timed out (no ready after 12 s): not counted") }
+                done()
             }
         }
     }

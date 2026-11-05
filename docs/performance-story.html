@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance field notebook</title>
+<meta name="description" content="What we measured, changed, declined and learned making Bristlenose open faster, 4 to 5 November 2026. Raw material for a long-form piece on performance work.">
+<style>
+  :root {
+    --bg: #fbfaf8; --fg: #1d1c1a; --muted: #6a665f; --line: #e3dfd8; --card: #ffffff;
+    --accent: #1f5f8b; --good: #2d7a4d; --warn: #b4690e; --bad: #a8361f; --before: #b9b2a6; --after: #1f5f8b;
+    --s1: #1f5f8b; --s2: #5b9bc4; --s3: #b4690e; --s4: #8a8f3a; --s5: #7a5aa6;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161614; --fg: #ece9e3; --muted: #9a958c; --line: #33302b; --card: #1e1d1a;
+      --accent: #6fb0dc; --good: #6cc08a; --warn: #e0a050; --bad: #e07a62; --before: #6b665d; --after: #6fb0dc;
+      --s1: #6fb0dc; --s2: #3f7ba3; --s3: #e0a050; --s4: #b3b85a; --s5: #a58bd0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 -apple-system, "Inter", system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 96px; }
+  h1 { font-size: 2.1rem; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 1.45rem; margin: 56px 0 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.1rem; margin: 28px 0 4px; }
+  p, li { max-width: 72ch; }
+  .lede { color: var(--muted); font-size: 1.1rem; max-width: 70ch; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  nav { margin: 24px 0 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .92rem; }
+  nav a { color: var(--accent); text-decoration: none; } nav a:hover { text-decoration: underline; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin: 20px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 1.7rem; line-height: 1.1; color: var(--accent); }
+  .stat span { color: var(--muted); font-size: .88rem; }
+  figure { margin: 20px 0 28px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 14px 10px; }
+  figcaption { color: var(--muted); font-size: .88rem; margin-top: 8px; max-width: 80ch; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--fg); font: 12px -apple-system, system-ui, sans-serif; }
+  svg .muted { fill: var(--muted); }
+  svg .axis { stroke: var(--line); stroke-width: 1; }
+  .tag { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); vertical-align: 1px; white-space: nowrap; }
+  .tag.m { color: var(--good); border-color: var(--good); } .tag.e { color: var(--warn); border-color: var(--warn); } .tag.u { color: var(--bad); border-color: var(--bad); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 12px 0 24px; background: var(--card); border: 1px solid var(--line); }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { background: color-mix(in srgb, var(--line) 40%, var(--card)); font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .wrap { overflow-x: auto; }
+  code { font-family: var(--mono); font-size: .86em; }
+  .callout { border-left: 4px solid var(--accent); background: var(--card); padding: 10px 16px; margin: 18px 0; border-radius: 0 8px 8px 0; max-width: 78ch; }
+  .callout.warn { border-color: var(--warn); } .callout.bad { border-color: var(--bad); }
+  .two { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); margin: 4px 0 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  ol.steps li { margin: 6px 0; }
+  footer { margin-top: 64px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Performance field notebook</h1>
+<p class="lede">What we measured, changed, declined and learned making Bristlenose open faster. Two days of work (4 to 5 November 2026), written so it can be distilled later into a long-form piece on how to do performance work without fooling yourself.</p>
+<p class="meta">Source of truth for every number: <code>docs/design-perf-ledger.md</code> and <code>docs/design-standby-sidecar.md</code>. All app timings are from a <strong>Debug</strong> build of the macOS app, sandboxed, on one Apple Silicon Mac. Nothing here is a Release-build number, and that matters (see "The biggest caveat").</p>
+
+<nav>
+  <a href="#summary">Summary</a><a href="#method">Method</a><a href="#story">What we did</a><a href="#numbers">The numbers</a><a href="#declined">Declined and not kept</a>
+  <a href="#learned">What we learned</a><a href="#caveat">Biggest caveat</a><a href="#backlog">Backlog</a><a href="#sequence">Sequencing</a><a href="#substack">Notes for the essay</a>
+</nav>
+
+<h2 id="summary">Summary</h2>
+<div class="grid">
+  <div class="stat"><b>−0.6 s</b><span>off every study opened from the Welcome screen: standby sidecar, measured in the app (1,824 → 1,238 ms click to report)</span></div>
+  <div class="stat"><b>−30%</b><span>sidecar start from one lazy import (<code>inflect</code>): 3.19 → 2.24 s cold, in the app</span></div>
+  <div class="stat"><b>−30%</b><span>spawn to first health check from loading the MCP endpoint on first use: 1,454 → 1,005 ms</span></div>
+  <div class="stat"><b>75%</b><span>off the first click on Sessions: 361 → 86 ms (preload the chunk when idle)</span></div>
+</div>
+<p>The shape of the result: the big wins were not tuning. They were finding work that did not depend on the thing the researcher had just asked for (importing a plural library, building an agent endpoint nobody had called, starting a Python process that could have been started earlier) and moving it out of the click. What is left is smaller, harder, and mostly in two places we have deliberately not touched yet: the server's bind step and the web view's own startup.</p>
+<p>Two things also went wrong in instructive ways. A fix to return the window to its lens after an analysis passed its unit tests and did nothing in the real app (a run replaces the page and records the wrong lens). And a "regression" in the standby turned out to be a changed macOS setting under the test harness. Both are in <a href="#learned">What we learned</a>.</p>
+
+<h2 id="method">Method</h2>
+<p>The loop, every time: <strong>instrument, change one thing, re-measure, stop at a number you wrote down before you started.</strong> The rest is discipline about not fooling ourselves.</p>
+<div class="two">
+<div>
+<h3>Rules we held to</h3>
+<ol class="steps">
+  <li><strong>Label every number</strong>: <span class="tag m">measured</span> a repeatable run; <span class="tag e">estimate</span> reasoned from a measured part, with the reasoning shown; <span class="tag u">unmeasured</span> no number, and none guessed.</li>
+  <li><strong>Interleave A/B.</strong> Alternate the arms (off, on, on, off…) so drift in machine load hits both. Report the spread, not just the median.</li>
+  <li><strong>Same binary, one switch.</strong> The standby was toggled by an environment variable on one app build, never by comparing two builds.</li>
+  <li><strong>Measure in the real thing.</strong> A dev-server number is a hypothesis. The sandboxed app's own signposts decide.</li>
+  <li><strong>Write the stop number first.</strong> "Good enough" is a figure, so a pass can end by succeeding or by declining.</li>
+  <li><strong>Declined is a result.</strong> A change that does not pay is recorded with its number, so nobody re-proposes it.</li>
+</ol>
+</div>
+<div>
+<h3>Instruments we built</h3>
+<ul>
+  <li><strong>Signposts</strong> in the Mac app (<code>os_signpost</code>): launch, project select, serve ready, and one named step per stage between the click and the report being ready.</li>
+  <li><strong>Server stamps</strong>: <code>BRISTLENOSE_STARTUP_TRACE</code> and <code>Server-Timing</code> on routes.</li>
+  <li><strong>Harness scripts</strong>: a launcher that drives the real app through Accessibility, an interleaved A/B runner, a bare <code>WKWebView</code> loader, a Chromium timeline script.</li>
+  <li><strong>A spend guard</strong>: the harness aborts if the study's LLM call log grows, because some trial launches start a paid job.</li>
+  <li><strong>Isolated Swift verification</strong>: build in a throwaway worktree with only your own files, so a concurrent session's half-saved edit cannot flip your result.</li>
+  <li><strong>Mutation proof</strong>: revert the fix and see that exactly the new test fails. A test you have not seen fail is a guess.</li>
+</ul>
+</div>
+</div>
+
+<h2 id="story">What we did, in order</h2>
+<div class="wrap"><table>
+<thead><tr><th>When</th><th>What</th><th>Outcome</th></tr></thead>
+<tbody>
+<tr><td>4 Nov</td><td>Window resize, sidebar hold, selector fix</td><td>10 → 59 window updates per second; web content main thread 4,145 → 1,705 ms (−58%).</td></tr>
+<tr><td>4 Nov</td><td>Ledger opened; lazy <code>inflect</code>, libyaml codebook, Keychain cache, export skip, gzip level</td><td>Cold sidecar start −30% from the plural library alone; codebook import 130 → 40 ms; gzip changed nothing at real size, and was kept only because it is free.</td></tr>
+<tr><td>4 Nov</td><td>Sessions grid chunk preloaded when idle; WebKit has no idle callback, so a 250 ms timer fallback</td><td>First click on Sessions 361 → 86 ms in Chromium; 366 → 101 ms in WebKit.</td></tr>
+<tr><td>4 Nov</td><td>MCP endpoint built on first request; Screens availability check off the event loop</td><td>Spawn to first health 1,454 → 1,005 ms; with Screens on, 1,450 → 1,170 ms. A code review caught that the health route still imported the SDK.</td></tr>
+<tr><td>5 Nov</td><td><strong>Standby sidecar</strong>: plan, independent review, build, second review, fix</td><td>Spare Python process booted ahead and claimed over stdin. Review found a blocker no unit test saw: nothing owned the adopted process, so it was freed after the claim.</td></tr>
+<tr><td>5 Nov</td><td>Measured the standby in the sandboxed app, interleaved</td><td>serve-ready 1,140 → 516 ms cold; click to report 1,824 → 1,238 ms. Sandbox lease inheritance works.</td></tr>
+<tr><td>5 Nov</td><td>Restored-launch trial</td><td>Found a correctness bug (restored windows came back empty on macOS 27) and declined the "earlier spare" idea: the window asks for its sidecar 0.13 s after launch.</td></tr>
+<tr><td>5 Nov</td><td>Web view pre-warm</td><td>Measured, declined.</td></tr>
+<tr><td>5 Nov</td><td>Busy-aware reap; lens restore across relaunch and across a finished analysis</td><td>A study with paid work in flight is no longer reaped for lack of a window. The lens fix first passed tests and failed live, then was corrected and verified on two lenses.</td></tr>
+<tr><td>5 Nov</td><td>Attributed the time after the port answers; bundle and mount pass</td><td>Five new signposts, two page-load harnesses; no cheap win in the bundle (see below).</td></tr>
+</tbody></table></div>
+
+<h2 id="numbers">The numbers</h2>
+
+<h3>Before and after, per change</h3>
+<figure>
+  <div class="legend"><span><i style="background:var(--before)"></i>before</span><span><i style="background:var(--after)"></i>after</span></div>
+  <div id="c-gains"></div>
+  <figcaption>Per occurrence, in milliseconds, as measured for each change (the ledger row has the exact method). Different moments, so read each pair on its own: the scale only shows that the early changes are large and the late ones are not. Midpoints are used where the ledger gives a range.</figcaption>
+</figure>
+
+<h3>Where the time goes between click and report</h3>
+<figure>
+  <div class="legend">
+    <span><i style="background:var(--s1)"></i>sidecar boot and bind</span><span><i style="background:var(--s2)"></i>port poll</span>
+    <span><i style="background:var(--s3)"></i>web view start</span><span><i style="background:var(--s4)"></i>page load</span><span><i style="background:var(--s5)"></i>React mount to ready</span><span><i style="background:var(--before)"></i>other / native</span>
+  </div>
+  <div id="c-waterfall"></div>
+  <figcaption>Cold open of a real-size study in the sandboxed Debug app. Top bar: standby off, medians of 6 launches. Bottom bar: standby claimed, from the A/B (516 ms to serve-ready, then the web side, with about 110 ms not attributed). The standby removes the boot but not the bind or the web side.</figcaption>
+</figure>
+
+<h3>The law behind the standby</h3>
+<figure>
+  <div id="c-law"></div>
+  <figcaption>Waiting after the click = max(boot − head start, 0) + bind. Boot is 0.64 s, bind 0.75 s. A spare with a head start of 0.64 s or more saves the whole boot; claiming it early gives the study exactly the head start the spare had and nothing more, because boot and bind are in series. This is why "claim while it is still booting" was dropped.</figcaption>
+</figure>
+
+<h3>The web side: our app against bare WebKit</h3>
+<figure>
+  <div class="legend"><span><i style="background:var(--s3)"></i>load call to navigation start</span><span><i style="background:var(--s4)"></i>navigation start to did-finish</span><span><i style="background:var(--s5)"></i>did-finish to ready</span></div>
+  <div id="c-web"></div>
+  <figcaption>The same report, a real-size study. Bare WKWebView outside the app: warm process 57 / 67 / 46 ms; first load of a process (which pays about 110 ms of content-process launch) 166 / 134 / 57 ms. In the app: 168 / 272 / 148 ms, 14 launches, plus 23 ms of our own view setup before the load call. Against the equally cold bare load the app is about 230 ms slower, and the gap sits in the load phase (272 vs 134 ms) and the mount phase (148 vs 57 ms), not in process start (168 vs 166 ms). The cause is a hypothesis we have not tested (sandboxed network path, Debug build, main-thread contention): no Release run, no sandbox-off run.</figcaption>
+</figure>
+
+<h3>A restored launch</h3>
+<div class="two">
+<figure><div id="c-restore"></div><figcaption>Launch to report ready on a restored window, 5 launches per arm, interleaved. The standby does not cost a restored launch (+5 ms; an earlier +73 ms did not reproduce). It also does not help it: the window asks for its sidecar 0.13 s after launch, before any spare could be ready.</figcaption></figure>
+<div>
+<p><strong>Why the standby cannot help a relaunch.</strong> macOS restores windows by default, so most relaunches skip the Welcome screen. The standby earns its 0.6 s on the first study opened from Welcome and on every later open in the session (a replacement spare is started after each claim).</p>
+<p>The thing that looked like a regression was this: the harness had been written while the system switch for restoring windows was off, so every launch landed on Welcome and then clicked. With the switch back at its factory default, every launch restored the study at once and no spare existed in time. The build was fine. The test had changed under us.</p>
+</div></div>
+
+<h2 id="declined">Declined, tried and not kept</h2>
+<div class="wrap"><table>
+<thead><tr><th>Idea</th><th>Result</th><th>Why we stopped</th></tr></thead>
+<tbody>
+<tr><td>Pre-bind the last-opened study</td><td>Not built</td><td>The server's app construction is welded to the study (database, watchers, media, paid background jobs). A quiet bind is a core refactor, and risks starting paid work on a study nobody chose.</td></tr>
+<tr><td>Claim the spare while it is still booting</td><td>Dropped before building</td><td>Measured law: finishes at the same moment as waiting for ready.</td></tr>
+<tr><td>Spawn the spare earlier, before the window asks</td><td>Declined</td><td>Window asks at 0.13 s; the best case saves 0.1 to 0.2 s for a hook before window creation.</td></tr>
+<tr><td>Pre-warm a web content process</td><td>Declined, in the app</td><td>Did not pay when measured. Worth one re-test with the bare numbers (see backlog).</td></tr>
+<tr><td>Delay the Screens job by 1.5 s</td><td>Dropped</td><td>1,223 vs 1,191 ms: nothing.</td></tr>
+<tr><td>Bulk-validate transcript words</td><td>Byte-identical output, a 300 → 266 ms first read</td><td>Not kept: the interleaved numbers did not hold the gain.</td></tr>
+<tr><td>Startup importer skip-when-unchanged</td><td>About 70 ms at real size</td><td>Declined at real size.</td></tr>
+<tr><td>Further import work on Python start</td><td>About 0 gain left</td><td>740 ms of diffuse imports; no single item over 35 ms except the MCP one, already done.</td></tr>
+<tr><td>Playback follow paint cost</td><td>No difference in WebKit</td><td>The layout-pass fix landed; the rest was headless software rendering.</td></tr>
+<tr><td>Scene strips off to speed the first load</td><td>ready 357 / 354 / 367 ms with them on, 386 / 399 / 397 ms off (bare view right after bind, 3 launches per arm)</td><td>Turning them off did not help (off was slower; n = 3, nothing more claimed). The first-load penalty is not their contention.</td></tr>
+</tbody></table></div>
+
+<h2 id="learned">What we learned</h2>
+<h3>About the product</h3>
+<ul>
+  <li><strong>Find work that does not depend on the click.</strong> 47% of a cold start was Python importing things unrelated to which study was opened. The three largest wins were all of this kind.</li>
+  <li><strong>The platform default decides who benefits.</strong> Window restoration is on by default, so the thing we optimised (open from Welcome) is the minority path on a relaunch and the common path within a session.</li>
+  <li><strong>A restored window is a different product moment</strong>, and it hid a real bug: on macOS 27 the restored scene value arrives after the view appears, so every relaunch used to come back empty.</li>
+  <li><strong>Bind is the floor we have not touched.</strong> About 440 ms of the 1.2 s after a click is the server building the study's app. Lowering it means a per-study warm worker, which is an architecture decision, not a patch.</li>
+</ul>
+<h3>About doing the work</h3>
+<ul>
+  <li><strong>The first measurement is usually of the wrong scenario.</strong> Three times in two days a harness measured something other than what we thought: a changed system setting, a <code>pgrep</code> pattern that matched nothing, and a clock that started a second early. Check what the run actually did before reading its numbers.</li>
+  <li><strong>Unit tests do not see the product.</strong> The lens-after-analysis fix held the lens the window was on at reload time. In the real app that lens was always Project, because a run replaces the report with its own page. Only running an analysis, with a harness reading the window, showed it. The corrected version captures the lens when the run starts, and was checked live on two lenses.</li>
+  <li><strong>Reviews find a different class of bug.</strong> An independent review found the standby process was freed immediately after being claimed (nothing owned it). Every unit test had passed.</li>
+  <li><strong>An honest "not measured" beats a confident guess.</strong> Several rows in the ledger say so, and two of our own earlier claims were corrected after a review: a lazy-loading change that still loaded the SDK on its first health call, and a standby "cost" that did not reproduce.</li>
+  <li><strong>Verification costs something.</strong> Trial launches spent real LLM calls (five early, then about seventy on a scratch study for the lens check). The spend guard exists because of the first five.</li>
+  <li><strong>Shared working trees bite.</strong> One commit swept in another session's uncommitted edit. Stage by explicit path, read <code>git diff</code> for hunks you did not write, and never rewrite another session's work to tidy up.</li>
+</ul>
+
+<h2 id="caveat">The biggest caveat</h2>
+<div class="callout warn">
+<p><strong>Every app number here is from a Debug build.</strong> SwiftUI in Debug is substantially slower than Release, the web view is created and driven by SwiftUI, and the in-app web side runs about 230 ms slower than bare WebKit for reasons we have not separated. A Release build may close a large part of that gap, or none. This is the cheapest and highest-value next measurement (about an hour), and it decides whether several backlog items are real. We did not do it, so we do not claim anything about it.</p>
+</div>
+
+<h2 id="backlog">Backlog: opportunities, costs, pros and cons</h2>
+<p>Gains are per occurrence, with the label that says how much to trust them. Cost is engineering effort: S under a day, M a few days, L weeks. "Frequency" is how often a researcher meets the moment.</p>
+<div class="wrap"><table>
+<thead><tr><th>#</th><th>Opportunity</th><th>Moment, frequency</th><th>Gain</th><th>Cost</th><th>Pros</th><th>Cons and risks</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Re-run the app harness on a Release build</strong></td><td>Decides items 3 and 4</td><td><span class="tag u">unmeasured</span> could close up to the 230 ms in-app premium</td><td>S (an hour)</td><td>Cheapest, most informative; removes our biggest caveat.</td><td>Needs a signed Release build and the same harness; may show nothing.</td></tr>
+<tr><td>2</td><td><strong>Idle CPU and energy measurement</strong> (<code>powermetrics</code>)</td><td>App open all day, continuous</td><td><span class="tag u">unmeasured</span> polls: agent pulse 1.5 s, screens 3 s, run 1 s, plus the web content process</td><td>S (needs sudo)</td><td>For an app that stays open, battery is felt more than a 100 ms open.</td><td>Needs an idle machine and an elevated run; may find nothing to fix.</td></tr>
+<tr><td>3</td><td><strong>Web view start-up</strong>: re-test pre-warm with the bare numbers (about 110 ms is content-process launch)</td><td>First study open of a session, daily</td><td><span class="tag e">estimate</span> ≤ 110 ms, first open only</td><td>S (a day)</td><td>Small and contained; harness exists.</td><td>Earlier in-app test said it does not pay. Hidden pre-emptive work must be invisible and failure our problem, never the user's.</td></tr>
+<tr><td>4</td><td><strong>Close the in-app web premium</strong> (sandbox, contention, SwiftUI): find which</td><td>Every study open</td><td><span class="tag e">estimate</span> up to about 230 ms</td><td>M (after #1)</td><td>The largest remaining piece we can influence without a server change.</td><td>Cause unknown; may be the sandbox, which we will not change.</td></tr>
+<tr><td>5</td><td><strong><code>QuoteCard</code> memoisation and selector subscriptions</strong></td><td>Search, tag, star, keyboard moves; many a day</td><td><span class="tag e">estimate</span> search echo 170 → under 16 ms at 1,500 quotes. At real size the Quotes revisit render is only 15 ms of 117 (fetch is 92)</td><td>S to M</td><td>Protects large studies; low blast radius.</td><td>At typical size the gain is small. Ownership overlapped another session's display-preferences work.</td></tr>
+<tr><td>6</td><td><strong>Lens revisit from last-known data</strong> (stale while revalidate), with per-lens scroll position</td><td>Switching lenses, many a day</td><td><span class="tag e">estimate</span> Quotes revisit about 117 ms → near 0 to 20 ms perceived</td><td>M</td><td>The most felt interaction gain; pairs with remembering scroll position.</td><td>Staleness and invalidation bugs are the classic failure; owner's call, parked.</td></tr>
+<tr><td>7</td><td><strong>Per-study warm worker / split bind from the study</strong></td><td>Every study open, daily</td><td><span class="tag m">measured</span> bind is about 440 ms; and would let a restored launch benefit from a spare</td><td>L (weeks)</td><td>The biggest remaining lever; also fixes the restored-launch case.</td><td>Core server refactor; paid-job risk; changes lifecycle and the sandbox lease story. Do as a designed project, not a patch.</td></tr>
+<tr><td>8</td><td><strong>Performance regression gate</strong> (a ratchet on a few numbers)</td><td>Protects every gain</td><td>Prevents loss, not a gain</td><td>M</td><td>Gains rot silently without it; the ratchet pattern already exists for other gates.</td><td>Timing is noisy on shared CI; use ratios and wide margins, or run on a pinned machine.</td></tr>
+<tr><td>9</td><td>Startup importer skip-when-unchanged</td><td>Study start, daily</td><td><span class="tag m">measured</span> about 70 ms at real size</td><td>M</td><td>Cheap per study.</td><td>Declined at real size; revisit only if studies grow.</td></tr>
+</tbody></table></div>
+
+<h3>Value against cost</h3>
+<figure>
+  <div id="c-matrix"></div>
+  <figcaption>Position is a judgement, not a measurement: horizontal is engineering cost in days (a log-ish scale), vertical is the gain a researcher would feel, from our estimates. Bubbles are the backlog numbers. The two top-left items are measurements that decide the rest.</figcaption>
+</figure>
+
+<h2 id="sequence">Sequencing</h2>
+<figure>
+  <div id="c-seq"></div>
+  <figcaption>Dependencies are the point: measure before building, and keep the large architecture item out of the critical path of anything shippable.</figcaption>
+</figure>
+<ol class="steps">
+  <li><strong>Now (measure only):</strong> Release-build re-run (#1), then idle energy (#2). Neither changes the product; both can kill or confirm other items.</li>
+  <li><strong>Next (small, contained):</strong> web view start-up re-test (#3) and, if #1 says the gap is real, finding its cause (#4). Memoisation and selectors (#5) when the display-preferences work has landed.</li>
+  <li><strong>After launch:</strong> lens revisit from last-known data together with per-lens scroll position (#6), since they share the same state model; then the regression gate (#8) once the numbers have stopped moving.</li>
+  <li><strong>As a designed project:</strong> the warm worker (#7). It deserves its own design note first, and its decision rule is the standby's law: it must beat bind (440 ms) by more than it costs in memory and lifecycle complexity.</li>
+</ol>
+
+<h2 id="substack">Notes for the essay</h2>
+<p>Angles that came out of the work and could carry a piece on their own:</p>
+<ul>
+  <li><strong>"Find the work that does not depend on the click."</strong> The three biggest wins, with the 47% figure for how much of a cold start was independent of the study.</li>
+  <li><strong>"The test changed under us."</strong> How a macOS default turned a working optimisation into an apparent regression, and what a harness should assert before it measures.</li>
+  <li><strong>"It passed its tests and did nothing."</strong> The lens fix: why a live run found what unit tests could not, and why a review found what the live run could not (the freed standby).</li>
+  <li><strong>"The stop number."</strong> Writing the good-enough figure first, and treating declined changes as results with a recorded number.</li>
+  <li><strong>"Label your numbers."</strong> Measured, estimate, unmeasured, and the discipline of saying which.</li>
+  <li><strong>"Everything here is a Debug number."</strong> The honest caveat as the opening of the next chapter.</li>
+</ul>
+
+<h3>Appendix: the raw figures used above</h3>
+<div class="wrap"><table>
+<thead><tr><th>Figure</th><th class="n">Value</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>Standby off, serve-ready cold / warm</td><td class="n">1,140 / 1,106 ms</td><td>app A/B, 6 reps</td></tr>
+<tr><td>Standby on, serve-ready cold / warm</td><td class="n">516 / 508 ms</td><td>app A/B, 6 reps</td></tr>
+<tr><td>Click to report ready, off, cold / warm</td><td class="n">1,824 / 1,752 ms</td><td>app A/B</td></tr>
+<tr><td>Click to report ready, on, cold / warm</td><td class="n">1,238 / 1,144 ms</td><td>app A/B</td></tr>
+<tr><td>Restored launch, launch to report, off / on</td><td class="n">1,915 / 1,920 ms</td><td>5 launches per arm, interleaved</td></tr>
+<tr><td>Standby spare boot in the app</td><td class="n">595 to 629 ms</td><td>12 of 12 claimed in the A/B</td></tr>
+<tr><td>In-app web side: setup / load to start / start to finish / finish to ready</td><td class="n">23 / 168 / 272 / 148 ms</td><td>14 launches, medians</td></tr>
+<tr><td>Port line to port open</td><td class="n">66 ms</td><td>6 launches</td></tr>
+<tr><td>Frontend bundle, entry</td><td class="n">52 to 55 JS files, 331 KB transferred (829 KB raw)</td><td>Chromium resource timing</td></tr>
+<tr><td>Bare WKWebView, warm: start / finish / ready</td><td class="n">57 / 124 / 170 ms</td><td>real-size study copy, 7 runs</td></tr>
+<tr><td>Bare WKWebView, first of process, right after bind</td><td class="n">166 / 300 / 357 ms</td><td>3 runs, scene strips on</td></tr>
+</tbody></table></div>
+
+<footer>Written 5 November 2026 from the working record. If a number here disagrees with <code>docs/design-perf-ledger.md</code>, the ledger wins.</footer>
+</main>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function el(name, attrs, text, parent) {
+    var n = document.createElementNS(NS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function svg(id, w, h) {
+    var host = document.getElementById(id); host.innerHTML = '';
+    var s = el('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img' }); host.appendChild(s); return s;
+  }
+  var fmt = function (n) { return Math.round(n).toLocaleString('en-GB'); };
+
+  // 1. before / after pairs
+  function gains() {
+    var rows = [
+      ['Standby: click to report, cold', 1824, 1238],
+      ['Standby: serve ready, cold', 1140, 516],
+      ['Lazy inflect: sidecar start, cold', 3190, 2240],
+      ['MCP built on first call: spawn to health', 1454, 1005],
+      ['Screens check off the loop: spawn to health', 1450, 1170],
+      ['Export HTML, 1,500 quotes', 3300, 1200],
+      ['Keychain cache: CLI serve start', 1510, 1230],
+      ['First click on Sessions (Chromium)', 361, 86],
+      ['Codebook YAML import', 131, 40]
+    ];
+    var W = 920, rowH = 38, H = rows.length * rowH + 30, left = 300, max = 3400;
+    var s = svg('c-gains', W, H), x = function (v) { return left + (W - left - 70) * v / max; };
+    [0, 1000, 2000, 3000].forEach(function (t) {
+      el('line', { x1: x(t), x2: x(t), y1: 0, y2: H - 22, 'class': 'axis' }, null, s);
+      el('text', { x: x(t), y: H - 6, 'text-anchor': 'middle', 'class': 'muted' }, fmt(t) + ' ms', s);
+    });
+    rows.forEach(function (r, i) {
+      var y = i * rowH + 6;
+      el('text', { x: left - 10, y: y + 22, 'text-anchor': 'end' }, r[0], s);
+      el('rect', { x: left, y: y, width: x(r[1]) - left, height: 11, fill: css('--before'), rx: 2 }, null, s);
+      el('rect', { x: left, y: y + 14, width: x(r[2]) - left, height: 11, fill: css('--after'), rx: 2 }, null, s);
+      el('text', { x: x(r[1]) + 6, y: y + 10 }, fmt(r[1]), s);
+      var pct = Math.round(100 * (r[1] - r[2]) / r[1]);
+      el('text', { x: x(r[2]) + 6, y: y + 24 }, fmt(r[2]) + '  (−' + pct + '%)', s);
+    });
+  }
+
+  // 2. waterfall, two bars
+  function waterfall() {
+    var W = 920, H = 150, left = 110, max = 2000;
+    var s = svg('c-waterfall', W, H), x = function (v) { return left + (W - left - 30) * v / max; };
+    var bars = [
+      ['Standby off', [[43, 'before', 'var(--before)'], [1177, 'boot + bind', 'var(--s1)'], [66, '', 'var(--s2)'], [23, '', 'var(--s3)'], [168, 'start', 'var(--s3)'], [272, 'page load', 'var(--s4)'], [148, 'mount', 'var(--s5)']]],
+      ['Standby on', [[516, 'bind only', 'var(--s1)'], [23, '', 'var(--s3)'], [168, 'start', 'var(--s3)'], [272, 'page load', 'var(--s4)'], [148, 'mount', 'var(--s5)'], [111, 'other', 'var(--before)']]]
+    ];
+    [0, 500, 1000, 1500, 2000].forEach(function (t) {
+      el('line', { x1: x(t), x2: x(t), y1: 6, y2: H - 28, 'class': 'axis' }, null, s);
+      el('text', { x: x(t), y: H - 12, 'text-anchor': 'middle', 'class': 'muted' }, fmt(t) + ' ms', s);
+    });
+    bars.forEach(function (b, i) {
+      var y = 16 + i * 52, cur = 0;
+      el('text', { x: left - 10, y: y + 22, 'text-anchor': 'end' }, b[0], s);
+      b[1].forEach(function (seg) {
+        el('rect', { x: x(cur), y: y, width: Math.max(1, x(cur + seg[0]) - x(cur)), height: 32, fill: seg[2].replace('var(', '').replace(')', '') ? css(seg[2].slice(4, -1)) : '#888', stroke: css('--card'), 'stroke-width': 1 }, null, s);
+        if (seg[0] > 120 && seg[1]) el('text', { x: x(cur) + 6, y: y + 20, fill: '#fff', style: 'fill:#fff;font-weight:600' }, (seg[0] > 200 ? seg[1] + ' ' : '') + seg[0], s);
+        cur += seg[0];
+      });
+      el('text', { x: x(cur) + 8, y: y + 21 }, fmt(cur) + ' ms', s);
+    });
+  }
+
+  // 3. law line chart
+  function law() {
+    var W = 920, H = 260, L = 64, R = 24, T = 16, B = 44;
+    var s = svg('c-law', W, H);
+    var xs = function (d) { return L + (W - L - R) * d / 2; }, ys = function (v) { return H - B - (H - B - T) * v / 1.6; };
+    [0, 0.4, 0.8, 1.2, 1.6].forEach(function (t) {
+      el('line', { x1: L, x2: W - R, y1: ys(t), y2: ys(t), 'class': 'axis' }, null, s);
+      el('text', { x: L - 8, y: ys(t) + 4, 'text-anchor': 'end', 'class': 'muted' }, t.toFixed(1) + ' s', s);
+    });
+    [0, 0.5, 1, 1.5, 2].forEach(function (t) { el('text', { x: xs(t), y: H - 24, 'text-anchor': 'middle', 'class': 'muted' }, t.toFixed(1) + ' s', s); });
+    el('text', { x: (L + W - R) / 2, y: H - 4, 'text-anchor': 'middle', 'class': 'muted' }, 'head start the spare had before the click', s);
+    var pts = []; for (var d = 0; d <= 2.001; d += 0.02) pts.push([xs(d), ys(Math.max(0.64 - d, 0) + 0.75)]);
+    el('polyline', { points: pts.map(function (p) { return p.join(','); }).join(' '), fill: 'none', stroke: css('--accent'), 'stroke-width': 3 }, null, s);
+    el('circle', { cx: xs(0.64), cy: ys(0.75), r: 5, fill: css('--accent') }, null, s);
+    el('text', { x: xs(0.64) + 10, y: ys(0.75) - 10 }, 'boot fully hidden at 0.64 s; the 0.75 s bind remains', s);
+    el('text', { x: xs(0) + 8, y: ys(1.39) - 8 }, 'no spare: 1.39 s', s);
+  }
+
+  // 4. web side stacked
+  function web() {
+    var W = 920, H = 200, left = 200, max = 650;
+    var s = svg('c-web', W, H), x = function (v) { return left + (W - left - 40) * v / max; };
+    var rows = [['Bare WebKit, warm process', [57, 67, 46]], ['Bare WebKit, first of process', [166, 134, 57]], ['In the app (Debug, sandboxed)', [168, 272, 148]]];
+    var cols = ['--s3', '--s4', '--s5'];
+    [0, 200, 400, 600].forEach(function (t) {
+      el('line', { x1: x(t), x2: x(t), y1: 4, y2: H - 28, 'class': 'axis' }, null, s);
+      el('text', { x: x(t), y: H - 10, 'text-anchor': 'middle', 'class': 'muted' }, t + ' ms', s);
+    });
+    rows.forEach(function (r, i) {
+      var y = 14 + i * 52, cur = 0;
+      el('text', { x: left - 10, y: y + 22, 'text-anchor': 'end' }, r[0], s);
+      r[1].forEach(function (v, j) {
+        el('rect', { x: x(cur), y: y, width: x(cur + v) - x(cur), height: 32, fill: css(cols[j]), stroke: css('--card') }, null, s);
+        if (v > 50) el('text', { x: x(cur) + 6, y: y + 20, style: 'fill:#fff;font-weight:600' }, String(v), s);
+        cur += v;
+      });
+      el('text', { x: x(cur) + 8, y: y + 21 }, cur + ' ms', s);
+    });
+  }
+
+  // 5. restore bars
+  function restore() {
+    var W = 460, H = 200, L = 70, B = 36, T = 16;
+    var s = svg('c-restore', W, H), max = 2200, ys = function (v) { return H - B - (H - B - T) * v / max; };
+    [0, 1000, 2000].forEach(function (t) {
+      el('line', { x1: L, x2: W - 10, y1: ys(t), y2: ys(t), 'class': 'axis' }, null, s);
+      el('text', { x: L - 8, y: ys(t) + 4, 'text-anchor': 'end', 'class': 'muted' }, fmt(t), s);
+    });
+    [['Standby off', 1915, 120], ['Standby on', 1920, 250]].forEach(function (b, i) {
+      var x0 = L + 50 + i * 150;
+      el('rect', { x: x0, y: ys(b[1]), width: 90, height: ys(0) - ys(b[1]), fill: i ? css('--after') : css('--before'), rx: 3 }, null, s);
+      el('text', { x: x0 + 45, y: ys(b[1]) - 6, 'text-anchor': 'middle' }, fmt(b[1]) + ' ms', s);
+      el('text', { x: x0 + 45, y: H - 14, 'text-anchor': 'middle', 'class': 'muted' }, b[0], s);
+    });
+  }
+
+  // 6. value / cost matrix
+  function matrix() {
+    var W = 920, H = 360, L = 64, R = 20, T = 16, B = 50;
+    var s = svg('c-matrix', W, H);
+    var items = [
+      [1, 'Release re-run', 0.15, 6.2, 'u'], [2, 'Idle energy', 0.2, 4.4, 'u'], [3, 'Web view start', 1, 3.2, 'e'], [4, 'In-app web gap', 3, 6.6, 'e'],
+      [5, 'Memo + selectors', 2, 3.0, 'e'], [6, 'Lens revisit cache', 4, 7.6, 'e'], [7, 'Warm worker', 20, 9.0, 'm'], [8, 'Regression gate', 4, 2.6, 'n'], [9, 'Importer skip', 4, 1.4, 'm']
+    ];
+    var xs = function (c) { return L + (W - L - R) * Math.log10(c * 10) / Math.log10(250); }, ys = function (v) { return H - B - (H - B - T) * v / 10; };
+    [0.2, 1, 5, 20].forEach(function (c) {
+      el('line', { x1: xs(c), x2: xs(c), y1: T, y2: H - B, 'class': 'axis' }, null, s);
+      el('text', { x: xs(c), y: H - 30, 'text-anchor': 'middle', 'class': 'muted' }, c < 1 ? 'hours' : c + ' days', s);
+    });
+    el('text', { x: (L + W - R) / 2, y: H - 8, 'text-anchor': 'middle', 'class': 'muted' }, 'engineering cost (log scale)  →', s);
+    el('text', { x: 14, y: (T + H - B) / 2, transform: 'rotate(-90 14 ' + ((T + H - B) / 2) + ')', 'text-anchor': 'middle', 'class': 'muted' }, 'gain a researcher would feel (judged)', s);
+    var col = { m: '--good', e: '--warn', u: '--bad', n: '--muted' };
+    items.forEach(function (it) {
+      var cx = xs(it[2]), cy = ys(it[3]);
+      el('circle', { cx: cx, cy: cy, r: 14, fill: css(col[it[4]]), opacity: .85 }, null, s);
+      el('text', { x: cx, y: cy + 4, 'text-anchor': 'middle', style: 'fill:#fff;font-weight:700' }, String(it[0]), s);
+      el('text', { x: cx + 19, y: cy + 4 }, it[1], s);
+    });
+    el('text', { x: W - R, y: T + 10, 'text-anchor': 'end', 'class': 'muted' }, 'colour: green measured, amber estimate, red unmeasured, grey protects', s);
+  }
+
+  // 7. sequencing lanes
+  function seq() {
+    var W = 920, H = 250, L = 150;
+    var s = svg('c-seq', W, H);
+    var lanes = [['Now', 0, 200], ['Next', 200, 520], ['After launch', 520, 760], ['Designed project', 0, 0]];
+    var phases = [['Measure only', 0, 190, 1], ['Small and contained', 200, 510, 1], ['After launch', 520, 760, 1]];
+    var cols = [0, 215, 470, 680];
+    var heads = ['Now: measure only', 'Next: small', 'After launch', 'Own project'];
+    var xs = [L - 10, L + 160, L + 370, L + 580], wcol = 190;
+    heads.forEach(function (h, i) { el('text', { x: xs[i], y: 18, style: 'font-weight:700' }, h, s); el('line', { x1: xs[i], x2: xs[i] + wcol - 6, y1: 26, y2: 26, 'class': 'axis' }, null, s); });
+    var cards = [
+      [0, 40, '#1 Release re-run'], [0, 100, '#2 Idle energy'],
+      [1, 40, '#3 Web view start'], [1, 100, '#4 In-app web gap'], [1, 160, '#5 Memo + selectors'],
+      [2, 40, '#6 Lens revisit + scroll'], [2, 100, '#8 Regression gate'],
+      [3, 40, '#7 Warm worker (design first)']
+    ];
+    cards.forEach(function (c) {
+      el('rect', { x: xs[c[0]], y: c[1], width: wcol - 14, height: 44, rx: 8, fill: css('--card'), stroke: css('--line') }, null, s);
+      el('text', { x: xs[c[0]] + 10, y: c[1] + 27 }, c[2], s);
+    });
+    [[0, 1], [1, 2], [2, 3]].forEach(function (a) {
+      el('path', { d: 'M' + (xs[a[0]] + wcol - 14) + ' 22 L' + (xs[a[1]] - 2) + ' 22', stroke: css('--accent'), 'stroke-width': 2, fill: 'none' }, null, s);
+    });
+    el('text', { x: xs[0], y: H - 12, 'class': 'muted' }, '#1 gates #3 and #4. #6 and per-lens scroll share one state model. #7 is not on the critical path of anything shippable.', s);
+  }
+
+  function draw() { gains(); waterfall(); law(); web(); restore(); matrix(); seq(); }
+  draw();
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+})();
+</script>
+</body>
+</html>

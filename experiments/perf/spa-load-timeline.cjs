@@ -1,4 +1,6 @@
-const { chromium } = require('/Users/cassio/Code/bristlenose/e2e/node_modules/playwright');
+// usage: node spa-load-timeline.cjs <report-url> [runs]   (run from anywhere; finds Playwright in ../../e2e)
+const { chromium } = require(require('path').join(__dirname, '..', '..', 'e2e', 'node_modules', 'playwright'));
+if (!process.argv[2]) { console.error('usage: node spa-load-timeline.cjs <report-url> [runs]'); process.exit(2); }
 (async () => {
   const runs = +process.argv[3] || 5, url = process.argv[2];
   const out = [];
@@ -28,15 +30,15 @@ const { chromium } = require('/Users/cassio/Code/bristlenose/e2e/node_modules/pl
         fcp, ready: window.__bn.ready,
         nJs: js.length, jsBytes: sum(js, 'decodedBodySize'), jsTransfer: sum(js, 'transferSize'),
         nCss: css.length, nApi: api.length,
-        lastJsEnd: Math.max(...js.map(r => r.responseEnd)),
-        firstApiStart: Math.min(...api.map(r => r.startTime)), lastApiEnd: Math.max(...api.map(r => r.responseEnd)),
+        lastJsEnd: js.length ? Math.max(...js.map(r => r.responseEnd)) : null,
+        firstApiStart: api.length ? Math.min(...api.map(r => r.startTime)) : null, lastApiEnd: api.length ? Math.max(...api.map(r => r.responseEnd)) : null,
         apis: api.map(r => [r.name.replace(/^.*\/api\//, '/api/'), Math.round(r.startTime), Math.round(r.responseEnd)]),
       };
     });
     out.push(m); await ctx.close();
   }
   await browser.close();
-  const med = k => { const v = out.map(o => o[k]).sort((a, b) => a - b); return Math.round(v[v.length >> 1]); };
+  const med = k => { const v = out.map(o => o[k]).filter(x => x != null).sort((a, b) => a - b); return Math.round(v[v.length >> 1]); };
   const keys = ['domInteractive','dcl','load','fcp','ready','lastJsEnd','firstApiStart','lastApiEnd','nJs','jsBytes','jsTransfer','nCss','nApi'];
   const sum = {}; keys.forEach(k => sum[k] = med(k));
   console.log(JSON.stringify(sum));

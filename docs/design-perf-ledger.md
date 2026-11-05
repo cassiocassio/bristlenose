@@ -76,6 +76,25 @@ Delaying the Vision import does not remove it (1.5 s: 1,223 vs 1,191 ms; 4 s: 1,
 | Everyday CLI commands | `--help` 270 ms, `--version` 240, `status` 270, `use` 260 (all after the `inflect` fix); `codebooks` 1.1 s (the first plural loads `inflect`, 0.82 s, so it is a real need) and `pipeline` 1.3 s (any-llm readiness for a configured any-llm model, 0.72 s): rare commands, not daily; `doctor` 1.7 s does real checks |
 | Preload lens chunks on idle (all lenses) | chunks cost 8–40 ms; only Sessions suffered, from the Suspense throttle, and that is fixed on its own |
 
+## Opening a study: the numbers and where the time goes
+
+The moment: click a study in the sidebar, the report is ready. Measured in the Mac app (Debug build, the resize session's signposts, `design-client-performance.md` § Sidecar start); the page part measured here.
+
+| Part | Median | Basis |
+|---|---|---|
+| Before the work | 4.1 s | measured |
+| After the lazy `inflect` change | **3.1 s** (3,106 cold, 3,192 warm) | measured in the app, 5 runs, identical app binary |
+| Of that 2,948 ms: click to spawn | 112 ms | measured |
+| **Sidecar boot to its port line** | **2,076 ms (70%)** | measured |
+| Port answers, then `/api/health` | 264 ms | measured |
+| Web view built and loading | 340 ms | measured |
+| Page mounts and posts `ready` | 210 ms | measured; matches the 243 ms WebKit and 160 ms Chromium below |
+
+- **The page is not the lever.** Navigation to `ready` with a cold cache (the app's web view has none: a fresh store per study): **WebKit 243 ms (220–272), Chromium 160 ms (144–197)**, 51 script files and about 290 KB on the wire before `ready`, four API calls (`health`, `condition`, two export statuses; `experiments/perf/page-ready.mjs`). Posting `ready` earlier would save at most the one health round trip (about 10–20 ms).
+- **Since then, in dev only:** the lazy MCP mount (about −0.4 s) and the Screens check off the event loop (about −0.3 s) took spawn → first health from 1,817 to 1,191 ms. **Not confirmed in the app** (a noisy non-interleaved batch showed no drop); the owner approved an interleaved app A/B for when the Mac is idle. If the dev gains carry over, an estimate, not a measurement: 3.0 s → about 2.3 s.
+- **Not measured:** reopening a study whose sidecar is still alive (the app keeps one for 90 s after its window closes, so it may skip the spawn), switching between two open studies, a large study (the importer adds about 0.7 ms a quote), a Release build.
+- **The big lever is not tuning.** About 1.4–1.5 s of a process starting from nothing remains however the imports are trimmed (Python and imports about 0.74 s, `create_app` about 0.25 s, lifespan about 0.19 s). Getting near instant means a pre-started sidecar with its imports done, waiting for a study path: the Workspace item, whose "warm slot" in the code is dead. Estimated gain 1.3 s or more, unmeasured.
+
 ## The rule each entry follows
 
 1. A **moment** a researcher meets (not a function): "click a lens", "open a study", "double-click the app".

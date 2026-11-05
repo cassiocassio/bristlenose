@@ -864,10 +864,11 @@ final class BridgeHandler: ObservableObject {
     /// by this window's route change.
     var perfScope: String { String(UInt(bitPattern: ObjectIdentifier(self).hashValue)) }
 
-    /// A reload lands on the report root. Ask for the lens the window is on, to be replayed when the
-    /// new document says `ready` (the same queue a click during boot uses).
-    func holdLensAcrossReload() {
-        if activeTab != .project { pendingLensIntent = activeTab }
+    /// A reload lands on the report root, and a run has already taken the window off its lens (the
+    /// report is replaced by the run's own page, so the live lens is gone). Ask for the lens the study
+    /// was left on, to be replayed when the new document says `ready` (the queue a boot click uses).
+    func holdLensAcrossReload(remembered lens: Tab?) {
+        if let lens, lens != .project { pendingLensIntent = lens }
     }
 
     func activateLens(_ tab: Tab) {

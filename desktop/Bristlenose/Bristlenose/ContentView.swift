@@ -465,6 +465,9 @@ struct ContentView: View {
     @State private var reportReloadTask: Task<Void, Never>?
     /// Studies whose run ended through `.idle` and are waiting for the manifest re-read.
     @State private var runsEndedIdle: Set<UUID> = []
+    /// The lens a study was on when its run started: the run replaces the report with its own page,
+    /// which records Project as the lens, so the lens to return to is taken before that happens.
+    @State private var lensAtRunStart: [UUID: Tab] = [:]
 
     /// Is this the front window?
     private var isKeyWindow: Bool { controlActiveState == .key }
@@ -3704,6 +3707,10 @@ struct ContentView: View {
         old rawOld: [UUID: PipelineState], new: [UUID: PipelineState]
     ) {
         let old = CompletionRescan.oldStateForRunEnd(old: rawOld, new: new, pending: &runsEndedIdle)
+        if let id = selectedProjectID, case .running = new[id], lensAtRunStart[id] == nil,
+           let tab = bridgeHandler.activeTab, tab != .project {
+            lensAtRunStart[id] = tab
+        }
         guard CompletionRescan.shouldReloadReport(selected: selectedProjectID, old: old, new: new),
               let id = selectedProjectID else { return }
         Self.reloadLog.info("completion id=\(id.uuidString, privacy: .public)")
@@ -3750,11 +3757,14 @@ struct ContentView: View {
                     Self.reloadLog.info("reload defer (editing) attempt=\(attempt)")
                     continue
                 }
-                bridgeHandler.holdLensAcrossReload()
+                bridgeHandler.holdLensAcrossReload(
+                    remembered: lensAtRunStart[id]
+                        ?? selectedProject?.lastLens.flatMap(Tab.init(rawValue:)))
                 let didReload = bridgeHandler.reloadWebView()
                 Self.reloadLog.info("reload attempt=\(attempt) didReload=\(didReload)")
-                if didReload { return }
+                if didReload { lensAtRunStart[id] = nil; return }
             }
+            lensAtRunStart[id] = nil
             Self.reloadLog.info("reload gave up")
         }
     }

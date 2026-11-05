@@ -620,10 +620,15 @@ def _apply(factory, analyze: AsyncMock, tokens: tuple[int, int] = (0, 0)) -> _LL
 
 
 def _stopped_first_apply(factory, stop_on: str, tokens: tuple[int, int] = (0, 0),
-                         tagged: int = 1) -> None:
+                         tagged: int = 1, *, left_stopped: bool = False) -> None:
     """A first apply whose Stop lands while the batch carrying ``stop_on`` codes:
     that batch answers (tagging its first ``tagged`` quotes), the next is never
-    sent."""
+    sent.
+
+    A Stop on the LAST batch finds every quote answered and the apply finishes (N94);
+    ``left_stopped`` puts such a job back to the state an older release left it in
+    (cancelled, never applied, everything proposed), for the tests of what Apply does
+    with one."""
     db = factory()
     db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="pending"))
     db.commit()
@@ -637,6 +642,11 @@ def _stopped_first_apply(factory, stop_on: str, tokens: tuple[int, int] = (0, 0)
 
     with _LLM(AsyncMock(side_effect=analyze), tokens):
         asyncio.run(run_autocode_job(factory, 1, "garrett", _settings()))
+    if left_stopped:
+        db = factory()
+        db.query(AutoCodeJob).update({"status": "cancelled", "completed_at": None})
+        db.commit()
+        db.close()
     job = _job(factory)
     assert (job.status, job.completed_at) == ("cancelled", None)
 
@@ -730,7 +740,7 @@ class TestApplyKeepsANeverAppliedJobsWork:
         the same."""
         _session(factory, "s1")
         _session(factory, "s2")
-        _stopped_first_apply(factory, stop_on="s2-0", tagged=2)
+        _stopped_first_apply(factory, stop_on="s2-0", tagged=2, left_stopped=True)
         db = factory()
         db.query(AutoCodeSentQuote).delete()
         db.commit()
@@ -809,6 +819,7 @@ class TestApplyWaitsForAStoppedRunner:
         from bristlenose.server.routes import autocode as route
 
         _session(factory, "s1")
+        _session(factory, "s2")  # a second batch the Stop cuts off
         _stopped_first_apply(factory, stop_on="s1-0")
         app = _app(factory)
         still_running = MagicMock()
@@ -840,7 +851,7 @@ class TestApplyWaitsForAStoppedRunner:
 
     def test_a_stop_while_nothing_is_left_to_send_stands(self, factory) -> None:
         _session(factory, "s1")
-        _stopped_first_apply(factory, stop_on="s1-0", tagged=2)
+        _stopped_first_apply(factory, stop_on="s1-0", tagged=2, left_stopped=True)
         real = ac.sent_quote_ids
 
         def stop_meanwhile(*args: object) -> set[int]:
@@ -1150,3 +1161,40 @@ class TestAQuoteThatCountsAgainIsCodedWithoutAskingTheResearcher:
             )
         assert "ok quote s1-0" in _sent(llm), "the catch-up reached the quote"
         assert [t for t in _tags(factory) if t[0] == "s1-0"] == [("s1-0", "human")]
+
+
+class TestAStopThatArrivesAfterEveryQuoteWasSent:
+    """N94 (owner, 5 Nov 2026): a Stop landing while the last batches were still out left a
+    codebook that was fully coded as stopped, so it was never kept up to date. Every quote had
+    answered, so the Stop had nothing to stop: the apply finishes as if it had not come."""
+
+    def _run(self, factory, *, fail: str | None = None) -> None:
+        for sid in ("s1", "s2", "s3"):
+            _session(factory, sid)
+        db = factory()
+        db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="pending"))
+        db.commit()
+        db.close()
+
+        async def analyze(**kw: object) -> AutoCodeBatchResult:
+            prompt = str(kw["user_prompt"])
+            if "s3-0" in prompt:  # the last batch: the Stop lands while it codes
+                _set_status(factory, "cancelled")
+            if fail is not None and fail in prompt:
+                raise RuntimeError("the model refused this batch")
+            return _result(2)
+
+        with _LLM(AsyncMock(side_effect=analyze), (0, 0)):
+            asyncio.run(run_autocode_job(factory, 1, "garrett", _settings()))
+
+    def test_it_finishes_applied(self, factory) -> None:
+        self._run(factory)
+        job = _job(factory)
+        assert job.status == "completed"
+        assert job.completed_at is not None, "applied, so new sessions are kept up to date"
+        assert (job.total_quotes, job.processed_quotes, job.proposed_count) == (6, 6, 6)
+
+    def test_a_stop_after_a_failed_batch_is_still_a_stop(self, factory) -> None:
+        self._run(factory, fail="s1-0")
+        job = _job(factory)
+        assert (job.status, job.completed_at) == ("cancelled", None)

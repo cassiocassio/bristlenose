@@ -531,7 +531,15 @@ async def run_autocode_job(
 
         # Re-read job status — it may have been cancelled during processing.
         db.expire(job)
-        if job.status == "cancelled":
+        # A Stop that landed while the last batches were out found nothing left to stop:
+        # every quote was sent and answered, so the apply finishes as if it had not come
+        # (N94). Left cancelled it was never applied, and the codebook it had fully coded
+        # stopped following new sessions with nothing to say so. A batch that failed or was
+        # never sent leaves quotes owed, and that Stop stands.
+        every_quote_answered = all(
+            r is not None and not isinstance(r, BaseException) for r in batch_results
+        )
+        if job.status == "cancelled" and not every_quote_answered:
             # Keep "cancelled" status but save any partial results.
             job.processed_quotes = processed_count
             job.proposed_count = kept_proposals + proposed_count

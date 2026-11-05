@@ -362,3 +362,75 @@ User-defined tags auto-create `TagDefinition` rows.  New tags are assigned to an
 ### Hidden + Starred share QuoteState
 
 Both `is_hidden` and `is_starred` live on the same `QuoteState` row (one per quote).  The PUT endpoints update only their respective field — they don't clobber each other.
+
+## Names architecture — slots and identities (route C Phase 1) — full text
+
+Moved verbatim from `bristlenose/server/CLAUDE.md` on 5 Nov 2026.
+
+A transcript's speaker token (`m1`) is a **slot**: one speaker in one session.
+Moderator and observer tokens restart in every session, so a slot is not a
+person. `session_speakers.person_id` is the per-session map: it points at one
+`Person` per **identity** — a participant, or a moderator or observer across
+however many sessions they ran — or is `NULL` when nothing has identified the
+slot. `session_speakers.state` is `NULL` · `proposed` · `confirmed` · `cleared`
+(the researcher said *not this person*; sticky across re-imports);
+`evidence` says why (`platform-name`, `heard`, `label`, `inherited`,
+`participant`, `pick`). **Codes are worked out on read**
+(`speaker_slots._derive_codes`): a participant is its slot's code; a moderator or
+observer is numbered per **(person, role)** as the pair first appears, so one
+person is `m2` where they moderate and `o1` where they observe. The role is the
+slot's `speaker_role`, which a recode changes (§J7) — not the tag's letter.
+`persons.code` is kept by `renumber` as a record, not read by routes. Migration
+013; `docs/design-people.md` §H H9, §J8.
+
+**Every route emits the identity's code, never the slot's**: session 2's
+moderator reads `m2` in `/sessions`, `/transcripts/{sid}` (speakers *and*
+segments), `/dashboard`, `/people`, the moderator-question route and the MCP
+overview, and an unidentified slot reads `m?` / `o?` — lettered `mA?` / `mB?` when
+the session has more than one unknown of that role. `/sessions` also carries
+`slot_code`, which is how a client addresses a slot, because a pick can renumber
+identities. Read slots through `speaker_slots.project_slots` / `slot_map` /
+`session_slots` — an outer join. **Never inner-join `session_speakers` to
+`persons`**: it drops the unidentified slot (five sites did, before 013). Maps
+keyed by `(session_id, slot_code)` (export, clips) stay keyed by slot, as quotes
+are.
+
+Moderators and observers are named from the pipeline's evidence (`session-speakers.json`); `PUT …/sessions/{sid}/speakers/{code}` takes the **slot** code only, never the identity code. [full entry](gotchas.md#names-and-people)
+
+**Evidence is filtered on read.** Count quotes through `speaker_slots.evidence_out` / `evidence_quotes` / `analysis_quotes` (hidden quotes count nowhere), never a bare `Quote` query. [full entry](gotchas.md#names-and-people)
+
+**Transcript layout edits** (`transcript_layout_edits`, migrations 015–016): paragraph split, join and move are recorded and replayed on every import. [full entry](gotchas.md#names-and-people)
+
+**Participants are still named from `people.yaml`**, as below — the file is
+not yet retired as a store (that is Phase 5's, with the docs that promise an
+editable file).
+
+### Import path (YAML → DB)
+
+`_import_speakers()` in `importer.py` reads `people.yaml` via `_load_people_for_import()` and, for **participants**, fills `Person.full_name`, `short_name`, `role_title`, `persona`, `notes` from matching entries — empty fields only, on every import, so browser edits (via `PUT /people`) always win over YAML (`_import_participant`).
+
+### Write-through path (DB → YAML)
+
+`PUT /people` in `routes/data.py` writes to DB first (for UI responsiveness), then calls `_write_through_people_yaml()` which atomically updates `people.yaml` (tempfile + rename). This means pipeline re-runs see browser edits. Write-through is best-effort — if it fails, a warning is logged but the API still succeeds.
+
+### Lifecycle
+
+```
+Pipeline run → people.yaml (names from LLM/labels/manual edit)
+                    ↓
+bristlenose serve → importer reads YAML → Person rows in DB
+                    ↓
+Browser edit → PUT /people → DB (immediate) + YAML (atomic write-through)
+                    ↓
+Pipeline re-run → reads YAML → sees browser edits → preserves them
+```
+
+### International names (`_extract_given_name` in people.py)
+
+`suggest_short_names()` uses `_extract_given_name()` which handles:
+- **CJK ideographic** (田中由紀) — uses full name as short name (no splitting)
+- **Honorific prefixes** (Dr., Prof.) — strips via `_strip_honorific()` before taking first token
+- **Family-first names** (Tanaka Yuki, Park Ji-hyun) — checks first token against `_FAMILY_FIRST_SURNAMES` (337 entries), takes second token if matched
+- Everything else — first token heuristic (works for Western, Spanish double surname, Russian patronymic, Arabic, mononym)
+
+Known false positive: westernized order "Wei Zhang" (where "Wei" is also in `_FAMILY_FIRST_SURNAMES`) flips incorrectly. Acceptable — researcher corrects via inline edit.

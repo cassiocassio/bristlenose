@@ -3648,10 +3648,6 @@ struct ContentView: View {
     /// failed or stopped run rewrites the status page's cause, so it needs the
     /// same reload a completed one does; without it the pane went back to the
     /// PREVIOUS run's failure once a re-run failed.
-    private func isSettledAfterRun(_ s: PipelineState?) -> Bool {
-        CompletionRescan.isSettledAfterRun(s)
-    }
-
     /// A project actively mid-analysis. Used to distinguish a real run
     /// completion (analysing → ready) from the launch-time disk read of an
     /// already-finished project (nil → ready), which must not trigger a reload.
@@ -3730,7 +3726,7 @@ struct ContentView: View {
             for attempt in 0..<6 {
                 try? await Task.sleep(for: .seconds(1.5))
                 guard selectedProjectID == id,
-                      isSettledAfterRun(pipelineRunner.state[id]) else {
+                      CompletionRescan.isSettledAfterRun(pipelineRunner.state[id]) else {
                     Self.reloadLog.info("reload abandon attempt=\(attempt)")
                     return
                 }
@@ -4111,8 +4107,11 @@ struct ContentView: View {
                                     onAnalyse: { pipelineRunner.start(project: project) },
                                     onRetryStartup: {
                                         serveFleet.manager(for: project.id).recheckStudyStartup(projectPath: project.path) {
-                                            [weak pipelineRunner] in
+                                            [weak pipelineRunner, bridgeHandler] in
                                             pipelineRunner?.clearStartupRefusal(project: project)
+                                            // The refused serve's document is still on screen; the
+                                            // report-reload gate no longer treats this scan as a run.
+                                            _ = bridgeHandler.reloadWebView()
                                         }
                                     }
                                 )

@@ -51,11 +51,8 @@ enum CompletionRescan {
 
     /// Should the selected study's report be reloaded now because its **run** just finished?
     ///
-    /// Only a real `.running` to resting transition counts. The passive manifest read the app does
-    /// at launch (`.scanning` to a resting state) is not a run, and treating it as one reloaded the
-    /// report on every restored launch, a second page load that landed after the restored lens was
-    /// activated, put the report back on Project, and recorded Project as the lens the researcher
-    /// had left on (found 5 Nov 2026). It also cleared the remembered Sessions route.
+    /// Only a real `.running` to resting transition counts. The launch-time manifest read
+    /// (`.scanning` to resting) is not a run: reloading on it put a restored window back on Project.
     static func shouldReloadReport(selected: UUID?, old: [UUID: PipelineState],
                                    new: [UUID: PipelineState]) -> Bool {
         guard let id = selected, projectsFinishingRun(old: old, new: new).contains(id) else { return false }

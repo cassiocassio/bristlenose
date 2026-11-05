@@ -5,6 +5,7 @@ import { isExportMode } from "./utils/exportData";
 import { redirectHashToPathname } from "./utils/hashRedirect";
 import { applySavedZoom } from "./utils/zoom";
 import { applySavedDisplayPrefs } from "./contexts/DisplayPrefsStore";
+import { applySavedFocusMode } from "./contexts/FocusModeStore";
 
 // Initialise i18next — must be imported before any component that uses useTranslation.
 import { desktopEnReady } from "./i18n";
@@ -26,6 +27,8 @@ if (
 applySavedZoom();
 // The saved Display choices (layout, density, breaks), before first paint.
 applySavedDisplayPrefs();
+// Focus Mode persists (owner, 4 Nov 2026): put the saved choice back too.
+applySavedFocusMode();
 
 // ── SPA mode (serve) / Export mode ──────────────────────────────────────
 // When #bn-app-root exists, mount the full React Router app.

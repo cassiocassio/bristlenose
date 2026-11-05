@@ -58,10 +58,12 @@ export function densityWord(d: number): keyof typeof DENSITY_STOPS {
   return "normal";
 }
 
-/** The default of Break long paragraphs is the owner's call, not yet made:
- *  it ships off (today's screen). Changing it is this line and `DisplayPrefs.standard`
- *  in desktop/.../DisplayPrefs.swift, which the Mac popover shows before the report posts. */
-export const DEFAULT_BREAKS: Breaks = "off";
+/** Break long paragraphs is ON by default (owner, 4 Nov 2026): a researcher who has
+ *  never opened the Display menu gets long quotes in paragraphs; one who prefers the
+ *  unbroken quote turns it off and that choice is saved. Changing the default is this
+ *  line and `DisplayPrefs.standard` in desktop/.../DisplayPrefs.swift, which the Mac
+ *  popover shows before the report posts. */
+export const DEFAULT_BREAKS: Breaks = "on";
 
 export const DEFAULT_PREFS: Readonly<DisplayPrefs> = Object.freeze({
   layout: "columns",

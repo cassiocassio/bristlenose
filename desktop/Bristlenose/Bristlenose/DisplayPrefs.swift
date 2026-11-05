@@ -16,8 +16,10 @@ struct DisplayPrefs: Equatable {
     /// today's screen, in the middle.
     static let densityNormal = 0.5
 
-    /// A report that has not yet said otherwise: today's screen.
-    static let standard = DisplayPrefs(layout: "columns", density: densityNormal, breaks: "off")
+    /// A report that has not yet said otherwise: columns, Normal density, and long
+    /// quotes broken into paragraphs (on by default, owner 4 Nov 2026; the SPA's
+    /// `DEFAULT_BREAKS` is the other half of this).
+    static let standard = DisplayPrefs(layout: "columns", density: densityNormal, breaks: "on")
 
     var layout: String
     var density: Double

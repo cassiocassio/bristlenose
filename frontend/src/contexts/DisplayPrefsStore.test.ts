@@ -26,9 +26,9 @@ afterEach(() => {
 });
 
 describe("DisplayPrefsStore", () => {
-  it("boots on today's screen: columns, normal, breaks off", () => {
-    expect(getDisplayPrefs()).toEqual({ layout: "columns", density: 0.5, breaks: "off" });
-    expect(DEFAULT_PREFS.breaks).toBe("off");
+  it("boots with columns, Normal density and long quotes broken (on by default)", () => {
+    expect(getDisplayPrefs()).toEqual({ layout: "columns", density: 0.5, breaks: "on" });
+    expect(DEFAULT_PREFS.breaks).toBe("on");
   });
 
   it("sets the three attributes on <html> when a pref changes", () => {

@@ -723,6 +723,22 @@ request never reaches.
 - **CI fires on push-to-main and pull_request-to-main only, not on feature branch pushes** — `.github/workflows/ci.yml` `on:` block has no `push.branches: [<feature>]`. Pushing to a non-main branch updates origin but triggers nothing. To get CI signal before merging, open the PR. (Counter-intuitive coming from projects that run CI on every branch push.) `release.yml` fires only on `push.tags: ["v*"]`
 - **Smoke fixture must include a `pipeline-events.jsonl` with a `RunCompletedEvent`** — `tests/fixtures/smoke-test/input/bristlenose-output/.bristlenose/pipeline-events.jsonl` carries a hand-crafted terminus event so `app.state.last_run[1]` populates on server startup, so `status_page.detect_status` returns `None`, so `/report/*` falls through to the SPA mount. Without it the server-rendered status page intercepts ("Nothing to see here, yet.") and every SPA-based test against the fixture fails on `#bn-app-root` being absent. Run_id and timestamps are stable strings — don't regenerate them on whim, or perf-history will see git-noise as a perf change. Regression-pinned by `tests/test_server_status_page.py::TestSmokeFixtureMountsSPA` + `e2e/tests/spa-mounts.spec.ts`. **Any new test fixture that boots `bristlenose serve` against it inherits this contract** — give it a terminus event or the SPA never mounts. **This committed `.bristlenose/` dir LOOKS like runtime detritus but is a deliberate contract — don't delete it or assume the gitignore should swallow it.** Everywhere else `.bristlenose/` is a per-run state dir (db, log, llm-calls.jsonl) carrying re-identification keys and is gitignored; this one fixture is the sole tracked exception, re-included via a surgical negation in `.gitignore` (the dir + `pipeline-events.jsonl` + `intermediate/*.json` are tracked; logs/db stay ignored even inside it). If a future cleanup proposes synthesizing it at test-time, that's a legitimate option — but until then, keeping it committed is the intended resting state (7 Jun 2026)
 
+### A mutation harness can empty the file it is proving: `open(p, "w").write(open(p).read()…)` truncates first
+
+Two ways a hand-rolled mutate-run-restore script destroyed source on 3 Nov 2026, both
+caught by the next `npm run build`, neither by the test run. (1) The restore line
+`open(p, "w").write(open(p).read().replace(new, old))` opens for writing, which
+**truncates the file before the read**, so the "restore" wrote an empty file
+(`useMenuKeyboard.ts`, rebuilt from `git show HEAD:`). (2) A mutation whose
+replacement is the **empty string** (deleting a line) restores with
+`t.replace('', old, 1)`, and `str.replace` of `''` matches at offset 0, so the deleted
+line came back **prepended to the file** (`nativePrefs.ts`, a syntax error on line 1).
+Read into a variable first, restore by writing a *known original* you captured before
+mutating, and finish with `assert open(p).read() == original`. The
+exit-code-over-output-parsing rule applies too: `"failed" in output` said SURVIVED for
+mutants that were killed, because the summary text was never what it was matched to;
+use the runner's return code.
+
 ## Python, CLI and code conventions
 
 - **Rich's `console.print()` eats `[name]` as markup tags.** Square-bracket sequences are parsed as Rich style markup; unknown style names (e.g. `[serve]`, `[apple]`) are silently consumed, so `pip install bristlenose[serve]` renders as `pip install bristlenose`. Two fixes by site type: (1) plain-text output (doctor fix messages, log lines) → `console.print(text, markup=False)`; (2) sites with intentional Rich markup interpolating user-supplied text → `from rich.markup import escape; console.print(f"[bold]{escape(value)}[/bold]")`. Audit any new `console.print` that interpolates package-spec / file-glob / version-range text

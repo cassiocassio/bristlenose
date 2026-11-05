@@ -7,7 +7,7 @@ import Testing
 /// The SPA owns Layout, Density and Break long paragraphs and posts them
 /// (`display-prefs`); native mirrors the last good post. These pin that the
 /// mirror follows the SPA, ignores a message carrying a value the SPA could not
-/// have sent, and returns to "today's screen" for a new web view, which the SPA
+/// have sent, and returns to the defaults (columns, Normal, breaks on) for a new web view, which the SPA
 /// then re-syncs on mount.
 @MainActor
 struct DisplayPrefsMirrorTests {
@@ -16,10 +16,10 @@ struct DisplayPrefsMirrorTests {
         ["type": "display-prefs", "layout": layout, "density": density, "breaks": breaks]
     }
 
-    @Test func aNewReportStartsOnTodaysScreen() {
+    @Test func aNewReportStartsWithColumnsNormalDensityAndBreaksOn() {
         let bridge = BridgeHandler()
-        #expect(bridge.displayPrefs == DisplayPrefs(layout: "columns", density: 0.5, breaks: "off"))
-        #expect(!bridge.displayPrefs.breaksOn)
+        #expect(bridge.displayPrefs == DisplayPrefs(layout: "columns", density: 0.5, breaks: "on"))
+        #expect(bridge.displayPrefs.breaksOn)
     }
 
     @Test func thePopoverFollowsWhatTheReportPosts() {

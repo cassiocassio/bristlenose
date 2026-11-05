@@ -17,7 +17,8 @@
     "bn-discussion-nav-width",
     "bn-display-layout",
     "bn-display-density",
-    "bn-display-breaks"
+    "bn-display-breaks",
+    "bn-focus-mode"
   ],
   "key_prefixes": [
     "bristlenose-quote-grouping-"

@@ -10,18 +10,23 @@
  * three places, and routing every one of them through a component's render
  * cycle is how the class ends up out of step with the state.
  *
- * **Ephemeral by design — no persistence.** The spec is "remember the last
- * choice while you're working, but a freshly-opened project boots in normal
- * view; Focus is a lean-in action, not a default state"
- * (docs/design-focus-mode.md § State & persistence). Module state gives
- * exactly that: it survives route changes within the report and resets on
- * reload. Adding localStorage here would break the boot rule, not improve on
- * it.
+ * **Persisted (owner, 4 Nov 2026).** Focus Mode used to be ephemeral: "a freshly-opened
+ * project boots in normal view; Focus is a lean-in action, not a default state"
+ * (docs/design-focus-mode.md § State & persistence). The owner reversed that: a
+ * researcher who works in Focus Mode finds it still on at the next launch. Each change
+ * goes through `storePref` (`utils/nativePrefs.ts`), which the Mac app mirrors across a
+ * quit like zoom and the Display preferences (`bn-focus-mode`, in
+ * `MIRRORED_PREF_KEYS`); `applySavedFocusMode()` puts the saved choice back before
+ * first paint (`main.tsx`), with the classes already set so nothing fades in on load.
  *
  * @module FocusModeStore
  */
 
 import { useSyncExternalStore } from "react";
+import { storePref } from "../utils/nativePrefs";
+
+/** localStorage / native-mirror key; listed in `MIRRORED_PREF_KEYS`. */
+export const FOCUS_MODE_KEY = "bn-focus-mode";
 
 // ── DOM hooks ─────────────────────────────────────────────────────────────
 
@@ -61,7 +66,7 @@ function getSnapshot(): boolean {
   return active;
 }
 
-/** Server snapshot for SSR/prerender parity — Focus always boots off. */
+/** Server snapshot for SSR/prerender parity — there is no storage to read, so off. */
 function getServerSnapshot(): boolean {
   return false;
 }
@@ -93,6 +98,23 @@ export function isFocusMode(): boolean {
 export function setFocusMode(next: boolean): void {
   if (active === next) return;
   active = next;
+  storePref(FOCUS_MODE_KEY, next ? "on" : "off");
+  syncDom();
+  emit();
+}
+
+/**
+ * Put the saved choice back, before first paint (`main.tsx`). Restoring is not
+ * choosing, so it writes nothing. Never throws on unavailable storage.
+ */
+export function applySavedFocusMode(): void {
+  let saved = false;
+  try {
+    saved = localStorage.getItem(FOCUS_MODE_KEY) === "on";
+  } catch {
+    // storage unavailable: boots off
+  }
+  active = saved;
   syncDom();
   emit();
 }

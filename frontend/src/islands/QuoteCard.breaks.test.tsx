@@ -92,7 +92,13 @@ beforeEach(() => {
 afterEach(_resetDisplayPrefs);
 
 describe("QuoteCard — Break long paragraphs", () => {
-  it("draws the quote as it is today while the setting is off", () => {
+  it("breaks a long quote with no choice made: on is the default", () => {
+    renderCard();
+    expect(blockEls()).toHaveLength(2);
+  });
+
+  it("draws the quote as one piece when the reader has turned it off", () => {
+    setDisplayPref("breaks", "off");
     renderCard();
     expect(blockEls()).toHaveLength(0);
     expect(textEl()).toHaveTextContent(TEXT);

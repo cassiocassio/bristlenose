@@ -246,12 +246,11 @@ One consequence for the palette matrix: the desktop pins `BRISTLENOSE_COLOR_THEM
 
 ## State & persistence
 
-**Nothing is persisted, anywhere.** `FocusModeStore` is module state ([`FocusModeStore.ts:40`](../frontend/src/contexts/FocusModeStore.ts)) — it survives route changes within the report and resets on reload. Identical in serve, embedded and export; there is no storage layer and no seed.
+**Persisted (owner, 4 Nov 2026), reversing the earlier "boots off" rule.** `FocusModeStore` ([`FocusModeStore.ts`](../frontend/src/contexts/FocusModeStore.ts)) saves each change through `storePref` under `bn-focus-mode` (`on` | `off`), and `applySavedFocusMode()` puts it back before first paint (`main.tsx`), beside the Display preferences. The key is in the mirrored report-pref list (`MIRRORED_PREF_KEYS`, `BridgeHandler.reportPrefKeys`, `tests/fixtures/report-prefs-contract.json`), so the Mac app keeps it across a quit too. The earlier rule was *remember the last choice while you're working, but a freshly-opened project boots in normal view*; the owner decided a researcher who works in Focus Mode should find it still on.
 
-That satisfies the rule this section was written to express: *remember the last choice while you're working, but a freshly-opened project boots in normal view* — Focus is a lean-in action, not a default state. Module state gives exactly that, and adding `localStorage` would break the boot half rather than improve on it.
-
-- **Serve / export:** the store, and nothing else.
-- **Embedded:** the same store; the native menu checkmark mirrors it via the `focus-mode` bridge message. Native holds no state of its own — `BridgeHandler.reset()` clears `focusModeActive` on project switch.
+- **Serve / export:** the store, saved in the browser's own storage (an exported file saves per browser, like zoom).
+- **Embedded:** the same store; the native menu checkmark mirrors it via the `focus-mode` bridge message, and the saved value is seeded into each new web view like the other mirrored prefs. Native holds no state of its own: `BridgeHandler.reset()` clears `focusModeActive` on project switch and the SPA re-posts on mount.
+- **A lens with no recede transform** (Sessions, Codebooks) keeps the class on `<html>` but nothing recedes there, as it already did when Focus was toggled and the reader then navigated away.
 
 > **Corrected 3 Aug 2026.** This section previously described three mutually incompatible schemes in the space of three lines: a `localStorage`-seeded export, a `report.default_view` Settings key overriding the boot rule, and (further down, under § Decisions) no persistence at all. Only the last was ever built. The first two were pre-build design that survived the truing passes because each edit fixed the section it was looking at. **`report.default_view` does not exist** — no CLI key, no Settings entry, no reader. If the handoff/kiosk case turns out to be real, it's new work, not wiring-up.
 

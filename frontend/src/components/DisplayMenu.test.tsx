@@ -32,7 +32,7 @@ describe("DisplayMenu", () => {
     expect(screen.getByTestId("bn-display-layout-columns")).toHaveAttribute("aria-checked", "true");
     expect(screen.getByTestId("bn-display-layout-single")).toHaveAttribute("aria-checked", "false");
     expect(screen.getByTestId("bn-display-density-normal")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("bn-display-breaks")).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByTestId("bn-display-breaks")).toHaveAttribute("aria-checked", "true"); // on by default
   });
 
   it("uses radio rows for Layout and Density and checkbox rows for the two switches", () => {
@@ -56,16 +56,17 @@ describe("DisplayMenu", () => {
     fireEvent.click(screen.getByTestId("bn-display-breaks"));
     fireEvent.click(screen.getByTestId("bn-display-focus-mode"));
     expect(screen.getByTestId("bn-display-menu")).toBeInTheDocument();
-    expect(getDisplayPrefs()).toMatchObject({ density: 1, breaks: "on" });
+    expect(getDisplayPrefs()).toMatchObject({ density: 1, breaks: "off" }); // one click turns the default off
     expect(isFocusMode()).toBe(true);
     expect(screen.getByTestId("bn-display-focus-mode")).toHaveAttribute("aria-checked", "true");
   });
 
-  it("toggles the breaks switch off again", () => {
+  it("toggles the breaks switch off, and on again", () => {
     openMenu();
     fireEvent.click(screen.getByTestId("bn-display-breaks"));
-    fireEvent.click(screen.getByTestId("bn-display-breaks"));
     expect(getDisplayPrefs().breaks).toBe("off");
+    fireEvent.click(screen.getByTestId("bn-display-breaks"));
+    expect(getDisplayPrefs().breaks).toBe("on");
   });
 
   it("closes on Escape and on a click outside", () => {
@@ -123,7 +124,9 @@ describe("DisplayMenu", () => {
     }
   });
 
-  it("gives every Layout and Density row an icon, and the two switches none", () => {
+  it("gives every Layout and Density row an icon, and the two tick rows none of their own", () => {
+    // Break is on by default, and its tick is an icon; turn it off so only a row icon would show.
+    act(() => setDisplayPref("breaks", "off"));
     openMenu();
     for (const id of ["bn-display-layout-columns", "bn-display-density-compact", "bn-display-density-spacious"]) {
       // Two svgs: the tick (only when chosen) and the row's own icon, which is always there.

@@ -758,3 +758,30 @@ detail", not the menu bar's "Timeline Detail".
 pull-down opens on mouse-down; and picks toggle against the state at the click
 rather than setting it. Both are in TODO.md (18 Oct) for the owner.
 Mockup: `docs/mockups/transcript-timeline-native-menu.html`.
+
+## The Display control: one reading width, Focus Mode persists, Break on (4 Nov 2026)
+
+Owner decisions from building the quotes Display control
+(`docs/design-display-preferences.md`; commits `cfe9697c3` and after).
+
+- **One reading width, not one per lens.** Quotes' Single column and the Signals
+  card stack take Discussion's `--bn-max-width` (52rem); a 44rem token of its own
+  was dropped. Columns, Sessions and Codebook stay fluid. Full width was weighed
+  (the reader who picks Single column wants long lines) and not chosen. Reason: the
+  product already had one reading cap and a second one is how the lenses drift.
+- **Single column never switches `display`.** It sets only the track, so a
+  masonry container stays masonry with one lane; switching grid-lanes to grid over
+  laid-out `content-visibility: auto` cards left their contents unpainted in the
+  Mac app.
+- **Break long paragraphs defaults ON**, and the choice is saved. A follow-up the
+  owner asked for (100days) moves it to Settings and applies it on every surface.
+- **Focus Mode persists** (`bn-focus-mode`, mirrored), reversing the earlier
+  "boots off" rule in `design-focus-mode.md`.
+- **The Uncategorised floor follows Display fully; a search highlight does not
+  span a block break** (owner: unlikely to matter).
+- **Break and Focus Mode are plain tick rows** with a tick on the left; icons are
+  for Layout and Density only, and Density's are a small A and a big A (people read
+  it as text size), with the three words written under the Mac slider.
+- **The toolbar's "Display" and Settings' "Display" differ in nine locales, and
+  that is correct:** Apple's word for how content looks is *View*, never *Display*
+  (the monitor). Whether English should also say View/View Options is open.

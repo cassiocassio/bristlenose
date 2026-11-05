@@ -285,6 +285,7 @@ struct WebView: NSViewRepresentable {
 
         // Load the initial URL if provided.
         if let url {
+            PerfSignpost.step("webview-load-called")
             webView.load(URLRequest(url: url))
             context.coordinator.lastLoadedURL = url
         }

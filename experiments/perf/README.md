@@ -70,3 +70,10 @@ BN_URL=... node interaction-profile.mjs --cases=search       [--browser=webkit] 
 - `playback.mjs`: what following a recording costs the transcript page (synthetic player time-updates).
 - `playback-webkit.mjs`: the same ticks in WebKit, tick-to-painted-frame time, interleaved A/B on the progress variable.
 - `transcript-reread.mjs`: what a speaker write's re-read costs the transcript page.
+
+## Page load in the engine the app uses (5 Nov 2026)
+
+- `wk-webview-load.swift`: `swiftc -O wk-webview-load.swift -o wk && ./wk <url> <runs>`. Loads the report in a fresh non-persistent `WKWebView` per run (embedded flag set, the `navigation` handler stubbed) and prints medians of did-start, did-finish and the SPA's `ready`, plus the request count. The first run of a process pays WebKit's content-process launch (about 110 ms); the later runs do not, so read the "all ready" list, not only the median.
+- `spa-load-timeline.cjs`: the same page in headless Chromium (`node spa-load-timeline.cjs <url> <runs>`), with the resource and API request timeline.
+- Findings and the in-app comparison: `docs/design-perf-ledger.md` ("Click → report ready, attributed") and `docs/performance-story.html`.
+

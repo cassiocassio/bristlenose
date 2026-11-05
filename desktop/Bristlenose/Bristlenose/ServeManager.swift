@@ -1790,10 +1790,12 @@ final class ServeManager: ObservableObject {
         let readyGeneration = self.generation
         Task { [weak self] in
             await self?.waitForPort(parsedPort, timeout: 10)
+            PerfSignpost.step("serve-port-open")
             await MainActor.run {
                 guard let self, self.generation == readyGeneration,
                       case .starting = self.state else { return }
                 self.state = .running(port: parsedPort)
+                PerfSignpost.step("serve-state-running")
                 PerfSignpost.end(.serveReady, scope: self.perfScope)
                 Task { await self.fetchServerVersion(port: parsedPort) }
             }

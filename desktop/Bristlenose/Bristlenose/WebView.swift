@@ -156,6 +156,7 @@ struct WebView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> WKWebView {
+        PerfSignpost.step("webview-made")
         let config = WKWebViewConfiguration()
 
         // Ephemeral storage — no cross-project cookie/sessionStorage leakage.

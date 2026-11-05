@@ -1265,6 +1265,7 @@ final class BridgeHandler: ObservableObject {
 
         switch type {
         case "ready":
+            PerfSignpost.step("bridge-ready")
             isReady = true
             documentState = .spa
             PerfSignpost.end(.launchToReady)                       // the first report of the launch, any window

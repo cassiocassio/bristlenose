@@ -117,6 +117,24 @@ struct BridgeHandlerLensIntentTests {
         #expect(bridge.pendingLensIntent == .quotes)
     }
 
+    @Test func aReloadHoldsTheLensTheWindowWasOnAndReadyReplaysIt() {
+        let bridge = BridgeHandler()
+        bridge.currentPath = "/report/quotes/"
+        bridge.holdLensAcrossReload()
+        #expect(bridge.pendingLensIntent == .quotes)
+        bridge.currentPath = "/report/"            // the reloaded document lands on the root
+        bridge.handleMessage(["type": "ready"])
+        #expect(bridge.pendingLensIntent == nil)
+        #expect(bridge.lensIntentReplayed)
+    }
+
+    @Test func aReloadHoldsNothingFromTheProjectLens() {
+        let bridge = BridgeHandler()
+        bridge.currentPath = "/report/"
+        bridge.holdLensAcrossReload()
+        #expect(bridge.pendingLensIntent == nil)
+    }
+
     @Test func readyConsumesTheIntentOnce() {
         let bridge = litLoadingBridge()
         bridge.activateLens(.quotes)

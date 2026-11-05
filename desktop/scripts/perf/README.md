@@ -56,3 +56,9 @@ otherwise idle Mac: build the Debug app once, copy it per run, swap only
 `Contents/Resources/bristlenose-sidecar` between arms built from `58f0477e3` (before the lazy
 mount), `34c1ce020` and HEAD, alternate the arms 8 times each with Screens on (the Mac default),
 and read `serve-ready.sh <template.app> <label> 8 0`. Drop runs with a UI stall and count them.
+
+"Idle" means measured, not assumed: `uptime` 1-minute load under ~2 **and** `sysctl vm.swapusage`
+with swap mostly free. On 5 Nov 2026 the A/B was not started because load read 11 to 162 and swap
+was 25.5 of 26.6 GB used (no single process to blame: a 13-day Virtualization.framework service,
+Claude's renderer, a long-running `python3`, `fileproviderd`). Swap that full means any run can
+page, so a quiet load average alone is not enough. Free the memory first (quit the VM or restart).

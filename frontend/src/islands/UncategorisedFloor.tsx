@@ -10,15 +10,19 @@
  * case), so a healthy report pays nothing for it.
  */
 
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../components/Badge";
 import { PersonBadge } from "../components/PersonBadge";
 import { getTagBg } from "../utils/colours";
 import { useQuotesStore } from "../contexts/QuotesContext";
+import { useDisplayBreaks } from "../contexts/DisplayPrefsStore";
+import { breakIntoBlocks } from "../utils/breakParagraphs";
 
 export function UncategorisedFloor() {
   const { t } = useTranslation();
   const { uncategorised } = useQuotesStore();
+  const breaksOn = useDisplayBreaks() === "on";
 
   if (uncategorised.length === 0) return null;
 
@@ -38,9 +42,7 @@ export function UncategorisedFloor() {
           >
             <div className="quote-body">
               <span className="quote-text-wrapper">
-                <span className="smart-quote">{"“"}</span>
-                {q.edited_text || q.text}
-                <span className="smart-quote">{"”"}</span>
+                <QuoteWords text={q.edited_text || q.text} breaksOn={breaksOn} />
               </span>{" "}
               <span className="speaker">
                 <PersonBadge
@@ -72,5 +74,33 @@ export function UncategorisedFloor() {
         ))}
       </div>
     </section>
+  );
+}
+
+/** The quote's words with their quote marks. With Break long paragraphs on, a long quote is
+ *  blocks (the marks inside the first and last, as QuoteCard draws them; display-prefs.css
+ *  styles `.quote-text .bn-block`); otherwise the text as it was. */
+function QuoteWords({ text, breaksOn }: { text: string; breaksOn: boolean }) {
+  const blocks = useMemo(() => (breaksOn ? breakIntoBlocks(text) : [text]), [breaksOn, text]);
+  if (blocks.length < 2) {
+    return (
+      <>
+        <span className="smart-quote">{"\u201c"}</span>
+        {text}
+        <span className="smart-quote">{"\u201d"}</span>
+      </>
+    );
+  }
+  const last = blocks.length - 1;
+  return (
+    <span className="quote-text">
+      {blocks.map((block, i) => (
+        <span key={i} className="bn-block">
+          {i === 0 && <span className="smart-quote">{"\u201c"}</span>}
+          {block}
+          {i === last && <span className="smart-quote">{"\u201d"}</span>}
+        </span>
+      ))}
+    </span>
   );
 }

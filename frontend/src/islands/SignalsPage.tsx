@@ -42,6 +42,8 @@ import { featureFlags } from "../utils/featureFlags";
 import { chipWords, signalAccent } from "../utils/signalChip";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
+import { useDisplayBreaks } from "../contexts/DisplayPrefsStore";
+import { breakIntoBlocks } from "../utils/breakParagraphs";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import { selectQuotes } from "../utils/quoteSelection";
 import { renderLead, splitLead } from "../utils/leadSentence";
@@ -889,6 +891,10 @@ function QuoteBlock({
 }) {
   const { t } = useTranslation();
   const transcriptHref = transcriptHrefFor(quote);
+  // Break long paragraphs (the Display setting): the words as blocks, computed from the
+  // text each time. Blocks are drawn only when it splits; display-prefs.css styles them.
+  const breaksOn = useDisplayBreaks() === "on";
+  const blocks = useMemo(() => (breaksOn ? breakIntoBlocks(quote.text) : [quote.text]), [breaksOn, quote.text]);
 
   const seqPos = sequenceMeta?.position ?? "solo";
   const isContinuation = seqPos === "middle" || seqPos === "last";
@@ -920,7 +926,11 @@ function QuoteBlock({
           <span className="intensity-dots" title={t("signals.intensityTooltip", { value: quote.intensity })}>
             <IntensityDots value={quote.intensity} size="s" colour="var(--dot-colour, var(--bn-colour-muted))" />
           </span>
-          <span className="quote-text">{quote.text}</span>
+          <span className="quote-text">
+            {blocks.length > 1
+              ? blocks.map((block, i) => <span key={i} className="bn-block">{block}</span>)
+              : quote.text}
+          </span>
           {!isContinuation && (
             <>{" "}
               <span className="speaker">

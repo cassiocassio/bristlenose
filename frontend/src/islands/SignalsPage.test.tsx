@@ -7,6 +7,7 @@ import type { CodebookSignalsListResponse, SentimentSignalsData } from "../utils
 import { resetSignalStore, useSignalStore } from "../contexts/SignalStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { navigateTo } from "../shims/navigation";
+import { _resetDisplayPrefs, setDisplayPref } from "../contexts/DisplayPrefsStore";
 
 // The location link goes to the Quotes lens's own address (utils/quotesLink.ts), through the
 // navigation shim: a link to a group shows Sections & themes for the visit (QuotesArrival).
@@ -815,6 +816,33 @@ describe("SignalsPage", () => {
     // The chart's dots are the larger size.
     fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
     expect(screen.getAllByTestId("bn-metric-dots")[0].getAttribute("data-size")).toBe("m");
+  });
+
+  it("breaks a long evidence quote into blocks only when Break long paragraphs is on", async () => {
+    const long =
+      "Well, I can see the different sections... across the top quite easily — that makes it easier to select stuff. I'm... interested both in the... bed linen, ... that's... right there because that's something I've been looking at at the minute. I mean, it looks like an IKEA website. Then I scroll down and, so, I see the kitchen storage... which is what I came for, because I need jars and tins for the shelf. Fine, that works for me.";
+    const data = structuredClone(mockCbData);
+    data.codebooks[0].signals[0].quotes[0].text = long;
+    mockFetchCodebookSignals(data);
+    act(() => setDisplayPref("breaks", "off"));
+    const { unmount } = render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    expect(document.querySelectorAll(".signal-card-quotes .bn-block")).toHaveLength(0);
+    unmount();
+
+    act(() => setDisplayPref("breaks", "on"));
+    mockFetchCodebookSignals(data);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    const blocks = Array.from(document.querySelectorAll(".signal-card-quotes .quote-text .bn-block"));
+    expect(blocks.length).toBeGreaterThan(1);
+    const words = (t: string) => t.split(/\s+/).filter(Boolean).join(" ");
+    expect(words(blocks.map((b) => b.textContent ?? "").join(" "))).toBe(words(long));
+    _resetDisplayPrefs();
   });
 
   /** Two cards for one place: the first and a second one under it. */

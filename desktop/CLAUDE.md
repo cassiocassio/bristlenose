@@ -536,18 +536,19 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   antenna icon, no shortcut. `Bristlenose ▸ Connect an Agent…` opens the
   pane. "No agent installed" is never a gate — unknowable, and access is
   a permission, not a connection.
-- **"Close windows when quitting an application" is ON by default, so most users
-  never get window restoration at all.** System Settings ▸ Desktop & Dock. While
-  it is on — the macOS default — the system discards window state at quit for
+- **"Close windows when quitting an application" decides whether a relaunch restores
+  windows, and the factory default is to RESTORE.** System Settings ▸ Desktop &
+  Dock. While the switch is on, the system discards window state at quit for
   *every* app, and no amount of correct `WindowGroup(for:)` / scene-value code
   restores anything. Confirmed 20 Aug 2026 as the cause of an "always opens on
-  Welcome" report, after two other explanations had been chased; restoration
-  worked immediately once it was turned off. **Design consequence, not just a QA
-  note:** the restore-on-quit half of the launch behaviour is a *minority* path.
-  Welcome-on-launch is what nearly everyone gets, every time — which strengthens
-  the case for it being good rather than merely tolerable, and means the scene
-  value earns its keep through ⌥⌘N and the context menus rather than through
-  restoration.
+  Welcome" report on a Mac where the switch had been turned on; restoration worked
+  immediately once it was turned off. _Corrected 5 Nov 2026:_ this entry used to
+  say the switch is on by default and that restoration is therefore a minority
+  path. Fresh macOS 15.7 and 27.0 guests carry no such key, which is the restore
+  default; a Mac that has the switch on got it from its owner (or an old
+  migration). Restoration is the common case, so the restore path (the window
+  returns on its study and its lens, `WindowSeed.projectToOpen`, `LensMemory`)
+  has to be right, and was not until 5 Nov (`dbf18b01f`, `4298ef0a1`).
 
   **Do NOT add a Bristlenose preference for this** (decided 20 Aug 2026, after a
   review floated a Settings ▸ General row for the "it forgot where I was" case).

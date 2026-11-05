@@ -68,4 +68,5 @@ BN_URL=... node interaction-profile.mjs --cases=search       [--browser=webkit] 
 - `page-ready.mjs`: navigation to the embedded `ready` message with a cold cache, as the app's per-study web view has.
 - `idle.mjs`: requests per minute and page and server CPU for an open, untouched report.
 - `playback.mjs`: what following a recording costs the transcript page (synthetic player time-updates).
+- `playback-webkit.mjs`: the same ticks in WebKit, tick-to-painted-frame time, interleaved A/B on the progress variable.
 - `transcript-reread.mjs`: what a speaker write's re-read costs the transcript page.

@@ -278,9 +278,11 @@ final class BridgeHandler: ObservableObject {
 
     /// Whether the report is in Focus Mode. Mirrored from the SPA (`focus-mode`
     /// message) — the web side owns the state; this drives only the View-menu
-    /// checkmark. Resets to false on `reset()` because a project switch remounts
-    /// the web view, and Focus is deliberately ephemeral (a freshly-opened
-    /// project boots in normal view). See docs/design-focus-mode.md.
+    /// checkmark. Resets to false on `reset()` only until the new web view posts
+    /// again on mount: Focus Mode persists (owner, 4 Nov 2026; `bn-focus-mode` in
+    /// the report-pref mirror), and the SPA restores the saved choice and re-posts
+    /// it, so this is a mirror, never a second source of truth.
+    /// See docs/design-focus-mode.md.
     @Published var focusModeActive: Bool = false
 
     /// The report's Display preferences (layout, density, break long paragraphs),
@@ -338,6 +340,7 @@ final class BridgeHandler: ObservableObject {
         "bn-screens-nav-open", "bn-screens-nav-width",
         "bn-discussion-guide-open", "bn-discussion-nav-width",
         "bn-display-layout", "bn-display-density", "bn-display-breaks",
+        "bn-focus-mode",
     ]
     /// Keys taken by prefix. Serve always names the project "1", so the quote
     /// grouping is in practice one key.
@@ -860,6 +863,12 @@ final class BridgeHandler: ObservableObject {
     /// This window's key for the perf moments (`PerfSignpost`): a lens switch here is only ended
     /// by this window's route change.
     var perfScope: String { String(UInt(bitPattern: ObjectIdentifier(self).hashValue)) }
+
+    /// A reload lands on the report root. Ask for the lens the window is on, to be replayed when the
+    /// new document says `ready` (the same queue a click during boot uses).
+    func holdLensAcrossReload() {
+        if activeTab != .project { pendingLensIntent = activeTab }
+    }
 
     func activateLens(_ tab: Tab) {
         // A lens the document withholds during a run has nothing to show; every

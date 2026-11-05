@@ -188,4 +188,19 @@ import Testing
         #expect(!CompletionRescan.shouldReloadReport(selected: a, old: [a: .running], new: [a: .idle]))
         #expect(!CompletionRescan.shouldReloadReport(selected: a, old: [a: .running], new: [a: .running]))
     }
+
+    @Test func reload_aRunEndingThroughIdleStillReloadsAtTheSecondHop() {
+        var pending: Set<UUID> = []
+        let hop1 = CompletionRescan.oldStateForRunEnd(old: [a: .running], new: [a: .idle], pending: &pending)
+        #expect(!CompletionRescan.shouldReloadReport(selected: a, old: hop1, new: [a: .idle]))
+        let hop2 = CompletionRescan.oldStateForRunEnd(old: [a: .idle], new: [a: .ready(Date())], pending: &pending)
+        #expect(CompletionRescan.shouldReloadReport(selected: a, old: hop2, new: [a: .ready(Date())]))
+        #expect(pending.isEmpty)
+    }
+
+    @Test func reload_anIdleThatWasNotARunEndingDoesNotReload() {
+        var pending: Set<UUID> = []
+        let old = CompletionRescan.oldStateForRunEnd(old: [a: .idle], new: [a: .ready(Date())], pending: &pending)
+        #expect(!CompletionRescan.shouldReloadReport(selected: a, old: old, new: [a: .ready(Date())]))
+    }
 }

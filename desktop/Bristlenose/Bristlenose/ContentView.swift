@@ -463,6 +463,8 @@ struct ContentView: View {
     /// In-flight retry task that reloads the detail WebView after a run finishes
     /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
+    /// Studies whose run ended through `.idle` and are waiting for the manifest re-read.
+    @State private var runsEndedIdle: Set<UUID> = []
 
     /// Is this the front window?
     private var isKeyWindow: Bool { controlActiveState == .key }
@@ -3699,8 +3701,9 @@ struct ContentView: View {
     )
 
     private func scheduleReportReloadOnCompletion(
-        old: [UUID: PipelineState], new: [UUID: PipelineState]
+        old rawOld: [UUID: PipelineState], new: [UUID: PipelineState]
     ) {
+        let old = CompletionRescan.oldStateForRunEnd(old: rawOld, new: new, pending: &runsEndedIdle)
         guard CompletionRescan.shouldReloadReport(selected: selectedProjectID, old: old, new: new),
               let id = selectedProjectID else { return }
         Self.reloadLog.info("completion id=\(id.uuidString, privacy: .public)")
@@ -3747,6 +3750,7 @@ struct ContentView: View {
                     Self.reloadLog.info("reload defer (editing) attempt=\(attempt)")
                     continue
                 }
+                bridgeHandler.holdLensAcrossReload()
                 let didReload = bridgeHandler.reloadWebView()
                 Self.reloadLog.info("reload attempt=\(attempt) didReload=\(didReload)")
                 if didReload { return }

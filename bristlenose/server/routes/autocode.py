@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from bristlenose.config import load_settings
 from bristlenose.server.autocode import run_autocode_job, snap_cutoff
 from bristlenose.server.autocode_catch_up import note_quotes_counting
+from bristlenose.server.busy import working
 from bristlenose.server.codebook import get_template
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
@@ -385,7 +386,10 @@ async def start_autocode_job(
 
             begin_signals_preparing(app.state)
             try:
-                await _apply_and_snapshot()
+                # Paid work end to end: the gaps between the job's chunks and the
+                # snapshot build that follows count as busy too.
+                with working("autocode"):
+                    await _apply_and_snapshot()
             finally:
                 end_signals_preparing(app.state)
 

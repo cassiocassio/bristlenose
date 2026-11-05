@@ -289,7 +289,11 @@ final class ServeFleet: ObservableObject {
                     busySince[id] = now
                     log.notice("holding a window-less study's server: it has work in flight")
                 }
-            case .keep, .reapAfterGrace:
+            case .keep:
+                // A window is showing it: the hold is over, so a later close starts the
+                // ceiling afresh (a continuous window-less hold is what it bounds).
+                busySince[id] = nil
+            case .reapAfterGrace:
                 if busyFor[id] == nil { busySince[id] = nil }
             }
         }

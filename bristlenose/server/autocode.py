@@ -939,6 +939,7 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     return changed
 
 
+@tracked("autocode")
 async def reapply_to_new_quotes(
     db_factory: Callable[[], SASession],
     project_id: int,

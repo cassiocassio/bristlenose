@@ -107,10 +107,11 @@ def test_a_waiting_or_firing_catch_up_counts_as_autocode() -> None:
 def test_the_paid_entry_points_are_the_ones_marked() -> None:
     # Pin the callers, not only the helper: removing a decorator would silently make a paid pass
     # reapable again with every helper test still green.
-    from bristlenose.server.autocode import run_autocode_job
+    from bristlenose.server.autocode import reapply_to_new_quotes, run_autocode_job
     from bristlenose.server.elaboration import generate_elaborations
 
     assert getattr(run_autocode_job, "_busy_kind", None) == "autocode"
+    assert getattr(reapply_to_new_quotes, "_busy_kind", None) == "autocode"
     assert getattr(generate_elaborations, "_busy_kind", None) == "signals"
 
 

@@ -119,6 +119,22 @@ struct ServeReapingBusyTests {
         #expect(fleet.managers[Self.a] != nil)
     }
 
+    @Test func aWindowInTheMiddleRestartsTheCeiling() async throws {
+        // The ceiling bounds one continuous window-less hold. A study looked at again, then closed,
+        // is a fresh hold: it must not be reaped for time spent before the window came back.
+        let fleet = ServeFleet()
+        let manager = fleet.manager(for: Self.a)
+        manager.instance.state = .running(port: 5000)
+        manager.instance.noteBackgroundBusy(true)
+        let ceiling = Duration.milliseconds(150)
+
+        fleet.sweep(shownProjects: [], grace: .zero, busyCeiling: ceiling)         // held, clock starts
+        try await Task.sleep(for: .milliseconds(250))                              // the ceiling is now spent
+        fleet.sweep(shownProjects: [Self.a], grace: .zero, busyCeiling: ceiling)   // looked at again
+        fleet.sweep(shownProjects: [], grace: .zero, busyCeiling: ceiling)         // closed again
+        #expect(fleet.managers[Self.a] != nil, "the ceiling counted time from before the window came back")
+    }
+
     @Test func aNewServeStartsNotBusy() {
         let manager = ServeManager(resolvedMode: .success(.external(port: 1)))
         manager.instance.noteBackgroundBusy(true)

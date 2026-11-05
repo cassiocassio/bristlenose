@@ -1473,20 +1473,27 @@ def _make_run_completed_handler(
         begin_signals_preparing(app.state)
 
         async def _reapply_after_run() -> None:
-            try:
-                await reapply
-                from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
+            from bristlenose.server.busy import working
 
-                snapshot_db = session_factory()
-                try:
-                    await materialise_completed_signal_snapshot(
-                        snapshot_db,
-                        project_id,
-                        source="new_interviews",
-                        project_dir=getattr(app.state, "project_dir", None),
+            try:
+                # Paid work end to end, so the gap between the re-apply and the
+                # snapshot build is not a moment the study can be reaped.
+                with working("autocode"):
+                    await reapply
+                    from bristlenose.server.routes.signals import (
+                        materialise_completed_signal_snapshot,
                     )
-                finally:
-                    snapshot_db.close()
+
+                    snapshot_db = session_factory()
+                    try:
+                        await materialise_completed_signal_snapshot(
+                            snapshot_db,
+                            project_id,
+                            source="new_interviews",
+                            project_dir=getattr(app.state, "project_dir", None),
+                        )
+                    finally:
+                        snapshot_db.close()
             except Exception:
                 logger.exception("Auto re-apply or signal snapshot after run_completed failed")
             finally:

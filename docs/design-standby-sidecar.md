@@ -1,6 +1,6 @@
 # Standby sidecar: pay the generic part of a study open before the click
 
-Status: phase 1 built 5 Nov 2026 (`fcf1ae9f8` Python, `e373db000` and `83395564f` Swift), after a plan review and a code review. **Not yet run in the sandboxed app**: it needs a rebuilt sidecar (an older bundle has no `--standby`, so the pool gives up after three quiet deaths and every open cold-spawns as before) and the app A/B. Numbers come from `docs/design-perf-ledger.md` and are labelled there. Today opening a study from a cold launch is 3.1 s (measured), of which the sidecar's boot is about 2.1 s, and about 0.85 s of that happens before `create_app` and does not depend on which study is chosen (estimate, from the app's own stage stamps; the in-app interleaved A/B that would confirm it was still running when this was written).
+Status: phase 1 built 5 Nov 2026 (`fcf1ae9f8` Python, `e373db000` and `83395564f` Swift), after a plan review and a code review. **Measured in the sandboxed app on 5 Nov 2026** (below). An older bundle without `--standby` still just makes the pool give up after three quiet deaths, and every open cold-spawns as before. Numbers come from `docs/design-perf-ledger.md` and are labelled there. Today opening a study from a cold launch is 3.1 s (measured), of which the sidecar's boot is about 2.1 s, and about 0.85 s of that happens before `create_app` and does not depend on which study is chosen (estimate, from the app's own stage stamps; the in-app interleaved A/B that would confirm it was still running when this was written).
 
 ## What is built, what is not
 
@@ -53,7 +53,7 @@ Swift: a pure policy function (`StandbyPolicy`) decides start, claim, recycle an
 - **Python half, measured** (`experiments/perf/standby-ab.py`, dev, same bundle, real-size study copy, interleaved, 8 reps each): claim to `Report:` **0.74 s against 1.36 s cold** (Screens off) and **0.75 against 1.39 s** (Screens on), a saving of 0.62–0.65 s, spread under 50 ms. The standby's own boot, hidden behind the time spent choosing, is about 0.64 s. This is the Python half only: the sandboxed app, its code-signature cost and the Swift handover are not in it.
 - **What the two reviews caught.** The plan review (Fable) found the SIGTERM trap (`install_exit_logger` before uvicorn swallows SIGTERM, so a waiting standby could not be stopped), that the throwaway `create_app()` has side effects, the lease-at-spawn condition, the two-readers-on-one-pipe problem and the missing memory-pressure source. The code review (Fable) found a **blocker the tests could not see**: the manager kept the adopted process and read task but nothing kept the `StandbySidecar` object, whose reader and exit handler hold it weakly, so after the first claim no line and no exit reached the manager and every claim would have ended as the 90 s start timeout. Every test had held the object in a local variable. The regression tests drop every local reference first (`theAdoptedStandbyStaysAliveAndItsLinesReachTheManager`), and removing the owner turns two of them red.
 - **Tests:** 15 Python subprocess tests (`tests/test_standby.py`, four mutations killed); 43 Swift tests in `StandbySidecarTests.swift` (policy matrix, the process protocol against `/bin/sh` stand-ins, the pool, the manager's claim, `start()` itself), eight mutations killed; 190 Swift tests across the serve, fleet and project suites green, run in an isolated worktree because other sessions had uncommitted Swift in the tree.
-- **Not covered, only the real app can show:** that a standby spawned before the click can read a leased study under the sandbox; that a study added after launch is refused the claim and cold-spawns; the actual saving in the app.
+- **Shown by the app A/B:** a standby spawned before the click does read a leased study under the sandbox. **Still unshown:** that a study added after launch is refused the claim and cold-spawns, and the restored-window case.
 - **Kill switch:** `defaults write app.bristlenose BristlenoseStandbySidecar -bool NO`, or `BRISTLENOSE_STANDBY=0`.
 
 ## Restored launches: starting earlier, and claiming a spare that is still booting (proposal, 5 Nov 2026)
@@ -121,3 +121,20 @@ A disposable fresh macOS 15.7.7 guest (Cirrus vanilla image, deleted afterwards)
 2. **Measure t_w** in the real app (launch to the restored window's `serve-spawned`), and launch-to-ready with and without a launch-time spare; this needs a rebuilt sidecar, a quiet Mac and the sandboxed A/B. Everything below depends on it.
 3. If t_w shows a head start worth having: a wait-for-ready claim (B′), then an earlier start behind a hook that runs before window creation (A). Not before.
 4. Correct the default claim in `desktop/CLAUDE.md`.
+
+### The app A/B (5 Nov 2026, sandboxed Debug app, real sidecar built at HEAD)
+
+`desktop/scripts/perf/standby-app-ab.sh` (via `serve-ready.sh`): standby off (`BRISTLENOSE_STANDBY=0`) against on, 6 repetitions each, alternating which goes first, one cold launch (a fresh copy of the app) and one warm launch (a relaunch) per arm per repetition, the app's own signposts, real-size study.
+
+| | standby off | standby on | saved |
+|---|---|---|---|
+| serve-ready, cold | 1,140 ms (1,079–1,188) | 516 ms (469–538) | 624 ms |
+| serve-ready, warm | 1,106 ms (1,076–1,141) | 508 ms (462–530) | 599 ms |
+| click → report ready, cold | 1,824 ms | 1,238 ms | 586 ms |
+| click → report ready, warm | 1,752 ms | 1,144 ms | 608 ms |
+
+12 of 12 `on` launches claimed a spare, 0 of 12 `off` launches did, and the spare booted in 595–629 ms in the app. The saving matches the dev measurement (0.62 s) to within noise, so the sandbox, the code-signature check and the Swift handover add nothing measurable to the Python half. The machine was not idle by the README's bar (load 3–5, then 8–11 for the last four launches, a stray 12-hour `python3` using a core, swap sticky-full with 74% memory free), but the arms were interleaved, the spread inside each was under 70 ms, and the last four launches under heavier load looked like the first eight.
+
+**What it does not show:** a restored window, where the spare has had under a second; launch contention (launch-to-ready with and without a launch-time spare); a study added after launch.
+
+**A trap the run found.** `BN_APP_ENV=BRISTLENOSE_LLM_PROVIDER=local` does **not** reach the sidecar: the app builds the sidecar's environment from the researcher's own settings. A study with no Signals snapshot builds one at every serve start with the real provider, and a harness that kills the app after the port answers never lets it finish, so every launch spends again. Three trial launches spent three `signal-elaboration` calls on Talismanic before this was noticed; one deliberate run left up until the snapshot saved spent two more (five calls in all; the study now has its snapshot and the A/B itself spent none). `standby-app-ab.sh` stops itself if the study's `llm-calls.jsonl` grows. That a killed build respends is the same fact as the architecture note in the 100-days list: derived work that lives in the report server is tied to its window.

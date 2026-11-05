@@ -62,3 +62,12 @@ with swap mostly free. On 5 Nov 2026 the A/B was not started because load read 1
 was 25.5 of 26.6 GB used (no single process to blame: a 13-day Virtualization.framework service,
 Claude's renderer, a long-running `python3`, `fileproviderd`). Swap that full means any run can
 page, so a quiet load average alone is not enough. Free the memory first (quit the VM or restart).
+
+
+## The standby A/B (5 Nov 2026)
+
+`standby-app-ab.sh` alternates standby off and on (`APP=… STUDY_DIR=… BN_STUDY=… REPS=6`). Result and method: `docs/design-standby-sidecar.md`. Three things it taught about running these in the app:
+
+- **`BN_APP_ENV` does not reach the sidecar.** The app builds the sidecar's environment from the researcher's settings, so `BRISTLENOSE_LLM_PROVIDER=local` does nothing there. A study with no Signals snapshot builds one at every serve start with the real provider, and killing the app after the port answers means it never saves, so every launch spends. Check `llm-calls.jsonl` before and after the first launch, and let one run finish the build before measuring.
+- **Idle is judged by CPU and memory pressure, not by two stale numbers.** `vm.swapusage` stays full long after the pressure has gone (74% memory free with swap 13 of 14 GB used); `memory_pressure` and a `top` sample say what is happening now. The load average lags by minutes after any build.
+- **`serve-ready.sh <app> <label> <cold> <warm>` now honours a count of 0.** BSD `seq 1 0` counts down and printed `1 0`, so `8 0` ran two warm launches.

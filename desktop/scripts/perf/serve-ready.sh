@@ -71,8 +71,8 @@ print(kind, "project-select", total, "ms:", seg)
 PY
 }
 
-for i in $(seq 1 "$COLD"); do rm -rf "$RUN"; ditto "$TEMPLATE" "$RUN"; one cold "$i"; done
-for i in $(seq 1 "$WARM"); do one warm "$i"; done
+for ((i = 1; i <= COLD; i++)); do rm -rf "$RUN"; ditto "$TEMPLATE" "$RUN"; one cold "$i"; done
+for ((i = 1; i <= WARM; i++)); do one warm "$i"; done
 rm -rf "$RUN"
 python3 - "$OUT/$LABEL.runs" "$LABEL" <<'PY'
 import statistics as st, sys

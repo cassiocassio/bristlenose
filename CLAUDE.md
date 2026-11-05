@@ -198,7 +198,7 @@ Area gotchas live with the code: React/TypeScript/frontend gotchas (routing, vid
 
 ### Branch workflow (solo — trunk by default)
 
-**Solo project; the default is trunk.** Work directly on `main` in the main repo, commit at every green checkpoint, and do not spin a branch or worktree per feature (a branch is a free pointer; a worktree costs an env build). Checkpoint with `git branch -f checkpoint`; undo with `git revert <sha>`; the panic button is `git reflog`. A worktree is the rare exception, only when two envs must be live at once, and then only via `/new-branch` (never hand-rolled). Session-start check: `pwd`, `git branch --show-current`, the venv minor must match `.tool-versions`. Full text, rollback recipes and the handoff-is-not-a-spec rule: [`.claude/branch-workflow.md`](.claude/branch-workflow.md).
+**Solo project; the default is trunk.** Work directly on `main` in the main repo, commit at every green checkpoint, and do not spin a branch or worktree per feature (a branch is a free pointer; a worktree costs an env build). Checkpoint with `git branch -f checkpoint`; undo with `git revert <sha>`; the panic button is `git reflog`. A worktree is the rare exception, only when two envs must be live at once, and then only via `/new-branch` (never hand-rolled). Session-start check: `pwd`, `git branch --show-current`, the venv minor must match `.tool-versions`. A handoff or plan's default next step is work on `main`, not a `/new-branch` invocation. If `HANDOFF.md` exists, read it first, but handoffs are not specs: `git log -3 -p` the files it names and raise any contradicting recent commit before planning. If the venv minor differs from `.tool-versions`, rebuild with `python3.12 -m venv` + `pip install -e '.[dev,serve]'`; don't use `uv` or `mise`. Full text and rollback recipes: [`.claude/branch-workflow.md`](.claude/branch-workflow.md).
 
 ### General
 
@@ -215,7 +215,7 @@ Area gotchas live with the code: React/TypeScript/frontend gotchas (routing, vid
 
 ### Release timing (evening releases)
 
-**The act that lands a release is the tag push.** It waits for after 9pm London on a **working day**; weekends and UK bank holidays: any time (check the gov.uk feed, never derive the holiday). Push `main` any time; the tag goes **last**, after the Mac uploads and a strict CI verdict on `main`; push `main` and the tag as two separate pushes, never `--tags`. **A running `release.sh run` freezes `main` locally**; work that must not go live before PyPI waits on an `after-pypi/<version>` branch. After the tag, **verify on PyPI** with the version-specific endpoint (`/pypi/bristlenose/<X.Y.Z>/json`, 200 = published); the index JSON is CDN-cached and can read stale. Full rules, the holiday command, the poll loop and the reasoning: [`docs/release-timing.md`](docs/release-timing.md).
+**The act that lands a release is the tag push.** It waits for after 9pm London on a **working day**; weekends and UK bank holidays: any time (check the gov.uk feed, never derive the holiday). Push `main` any time; the tag goes **last**, after the Mac uploads and a strict CI verdict on `main`; push `main` and the tag as two separate pushes, never `--tags`. **A running `release.sh run` freezes `main` locally**; work that must not go live before PyPI waits on an `after-pypi/<version>` branch (also `after-<channel>/<version>`; `release.sh verify` lists holds; a fix the release itself needs goes in with `BN_RELEASE_FREEZE_OK=1 git commit …`). After the tag, **verify on PyPI** with the version-specific endpoint (`/pypi/bristlenose/<X.Y.Z>/json`, 200 = published); the index JSON is CDN-cached and can read stale. The 9pm wait is a guideline, not a gate; push earlier when something is urgent. Full rules, the holiday command, the poll loop and the reasoning: [`docs/release-timing.md`](docs/release-timing.md).
 
 ## Gate policy — no gate goes soft by default
 
@@ -262,7 +262,7 @@ X" or "enforced by X", `grep -rn X desktop/scripts .github/workflows scripts` fo
 
 ## Branch switching
 
-Before switching: commit, run the tests and `ruff check .`. After: clear `__pycache__`, `pip install -e .`, report `git status` and `git log --oneline -3` (stale editable-install bytecode caused the PreferencesFile incident). The checklist in full: [`.claude/branch-workflow.md`](.claude/branch-workflow.md).
+Before switching: commit, run the tests and `ruff check .`. After: clear `__pycache__`, `pip install -e .`, report `git status` and `git log --oneline -3` (stale editable-install bytecode caused the PreferencesFile incident). Warn on failing tests or lint before switching; never switch with uncommitted work. The checklist in full: [`.claude/branch-workflow.md`](.claude/branch-workflow.md).
 
 ## Session-end housekeeping
 
@@ -273,7 +273,7 @@ Before switching: commit, run the tests and `ruff check .`. After: clear `__pyca
 - On pickup, read this guidance, TODO, the relevant decision record and recent git history; inspect the working tree before editing. One agent owns a ruling's edits at a time in the shared checkout. Re-read files before changing them; preserve unrelated edits and stage only owned paths.
 - Respect `.claude/current-task.json`, workflow logs, review receipts and end-session sentinels as workflow state: do not overwrite another session's active task or mark a workflow completed unless its required steps actually ran. Claude auto-memory is supplementary; an agreed decision must also live in the shared project records.
 
-**Standing line from the 30 Oct 2026 consolidation:** no push, tag, release or public changelog update is authorised on the strength of that close-out. The full account (what was merged, preserved and retired, and which branches and stashes remain) is in [`docs/session-consolidation-2026-10-30.md`](docs/session-consolidation-2026-10-30.md); read it before resuming any branch or stash named there.
+**Standing line from the 30 Oct 2026 consolidation:** no push, tag, release or public changelog update is authorised. `codex/study-access-poc` stays unmerged and is not continued by default, and the Claude worktree `reliability/ruling-4-sent-register` is not retired until its owner confirms it is idle. The full account (what was merged, preserved and retired, and which branches and stashes remain) is in [`docs/session-consolidation-2026-10-30.md`](docs/session-consolidation-2026-10-30.md); read it before resuming any branch or stash named there.
 
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 

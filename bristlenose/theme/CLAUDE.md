@@ -147,7 +147,7 @@ Two side-by-side horizontal bar charts: AI sentiment (Python-rendered) and User 
 
 `templates/report.css` keeps the legacy `.bn-session-table tr/td` rules, still used by the sealed static render and the Project-tab session list.
 
-**Three specificity traps live here** (`.bn-cell-*` rules losing to the `templates/` layer, which concatenates after organisms): when adding any `.bn-cell-*` rule, grep `templates/report.css` for the twin `.bn-session-*` class first, and never fix it by editing `report.css`. The measured cases and the eleven-day inert ladder rung: [full entries](gotchas.md#css-cascade-specificity-and-caching).
+**Three specificity traps live here** (`.bn-cell-*` rules losing to the `templates/` layer, which concatenates after organisms): when adding any `.bn-cell-*` rule, grep `templates/report.css` for the twin `.bn-session-*` class first, and never fix it by editing `report.css`. The fix is a 0-2-0 rule such as `.bn-sessions-row .bn-cell-*`, and not applying `.bn-session-meta` to the start cell. The measured cases and the eleven-day inert ladder rung: [full entries](gotchas.md#css-cascade-specificity-and-caching).
 
 Class inventory for the grid (`.bn-session-*`, `.bn-video-thumb`, `.bn-sparkline`, `.bn-interviews-link`, clickable rows): [full entry](gotchas.md#layout-and-rendering-mechanics); per-component CSS docs are in `CSS-REFERENCE.md`.
 

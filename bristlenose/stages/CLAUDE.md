@@ -130,11 +130,11 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 
 ## Session start time (Stage 1, `utils/session_start.py`)
 
-`session_date` is the session's resolved START (11 Oct 2026), with a fixed precedence of sources; full precedence and the measurements in [gotchas.md](gotchas.md#ingest-and-session-grouping).
+`session_date` is the session's resolved START (11 Oct 2026), by a fixed precedence (cloud-import stamp > zone-stating filename > local-clock filename > container time > birthtime; filenames outrank the container on purpose). Two traps: numbering does not follow the start for a pre-registry project (`pipeline._may_order_by_start`), so reordering carries stars between interviews; and a run never downgrades a start (`SessionRegistry.settle_starts` keeps the best-ranked), so an evicted recording cannot fall back to its file date. A new `_END_WRITERS` row must be measured first. Full precedence and measurements: [gotchas.md](gotchas.md#ingest-and-session-grouping).
 
 ## One transcript per session (Stages 3–4, chosen in `_gather_all_segments`)
 
-A session with several transcript files (Teams `.vtt` + `.docx`, cloud + hand-dropped) gets exactly one, chosen in `_gather_all_segments`; the rule and its history are in [gotchas.md](gotchas.md#ingest-and-session-grouping).
+A session with several transcript files (Teams `.vtt` + `.docx`, cloud + hand-dropped) gets exactly one, chosen by `transcript_choice.choose_transcript`: named over unnamed, then coverage (spans within 10% equal), then format (cloud VTT > VTT/SRT > DOCX). Losers are stated (log WARNING + CLI line), never silently dropped; before 1 Oct 2026 every turn appeared twice. A file that fails to parse is still a recorded `StageFailure`. History: [gotchas.md](gotchas.md#ingest-and-session-grouping).
 
 ## Google Meet transcripts — the .docx export is not a transcript (Stage 4)
 
@@ -269,7 +269,7 @@ Reference for `_derive_journeys`, `_oxford_list_html`, `_build_session_rows`, `_
 
 When adding or modifying analysis stages, three invariants must hold or the cache poisons on failure (the 2026-05-09 first-run repro). All landed via `a4-stage-cache-honesty`:
 
-1. **Abandon-check fires BEFORE `mark_stage_complete`** at every analysis-stage site in `pipeline.py` (raise `PipelineAbandonedError` before any manifest write).
-2. **Stages with fallback paths emit `StageFailure` at the LLM call site, BEFORE the fallback runs.**
-3. **`Cause.message` is built from structured fields only**, never `str(exc)` / `repr(exc)`.
+1. **Abandon-check fires BEFORE `mark_stage_complete`** at every analysis-stage site in `pipeline.py` (raise `PipelineAbandonedError` before any manifest write); otherwise an empty intermediate is cached COMPLETE and the next run renders an empty report.
+2. **Stages with fallback paths emit `StageFailure` at the LLM call site, BEFORE the fallback runs**; otherwise `succeeded > 0 and failed == 0` and the abandon predicate never fires.
+3. **`Cause.message` is built from structured fields only** via `run_lifecycle._build_cause`, never `str(exc)` / `repr(exc)`; provider error bodies can echo participant text and `pipeline-events.jsonl` is a re-identification surface.
 Code patterns, `mark_stage_complete`'s belt-and-braces check, stage signatures and the `_succeeded_sids` rule: [full entries](gotchas.md#stage-cache-honesty).

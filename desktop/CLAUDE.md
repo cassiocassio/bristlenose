@@ -192,7 +192,7 @@ Menus dim, toolbars morph. Universal items are Search and Export; per-tab items 
 
 ### Zombie process cleanup
 
-The host cannot enumerate orphans (sandbox): the sidecar polls `os.getppid()` every 2 s and SIGTERMs itself on reparenting, which needs `_BRISTLENOSE_HOSTED_BY_DESKTOP=1`. Read process metadata via libproc, never via subprocess (`ps`/`lsof` are sandbox-blocked at startup), and keep the Swift/Python `start_time` token byte-identical. Build every spawned subprocess's environment with `BristlenoseShared.childEnvironment(for:)`; never hand-roll it. Desktop ports come from `bind(0)`. Cancelling a run uses one escalation ladder (`PipelineRunner.cancelLadder`: SIGINT, SIGTERM at +5 s, SIGKILL at +30 s); don't shorten the SIGKILL step below the Python backstop. Leaving the app stops a hosted run and Analyse resumes from cache; the queue is kept across Quit and a crash. `applyScanResult` won't overwrite `.running`; `PipelineProgress.isStopping` is the immediate-ack contract.
+The host cannot enumerate orphans (sandbox): the sidecar polls `os.getppid()` every 2 s and SIGTERMs itself on reparenting, which needs `_BRISTLENOSE_HOSTED_BY_DESKTOP=1`. Read process metadata via libproc, never via subprocess (`ps`/`lsof` are sandbox-blocked at startup), and keep the Swift/Python `start_time` token byte-identical. Build every spawned subprocess's environment with `BristlenoseShared.childEnvironment(for:)`; never hand-roll it. Desktop ports come from `bind(0)`. Cancelling a run uses one escalation ladder (`PipelineRunner.cancelLadder`: SIGINT, SIGTERM at +5 s, SIGKILL at +30 s); don't shorten the SIGKILL step below the Python backstop. Leaving the app stops a hosted run and Analyse resumes from cache (don't make a hosted run outlive the app: its stdout pipe breaks and it records `run_failed`); the queue is kept across Quit and a crash. `applyScanResult` won't overwrite `.running`; `PipelineProgress.isStopping` is the immediate-ack contract.
 
 [full text](reference.md#zombie-process-cleanup)
 
@@ -306,7 +306,7 @@ open desktop/Bristlenose/Bristlenose.xcodeproj
 
 The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files added to `desktop/Bristlenose/Bristlenose/` are auto-discovered. No need to manually add them to the project.
 
-The first `xcodebuild` in a fresh worktree fails with `cannot find 'GeneratedBuildInfo' in scope`; re-run it. Auto-sync covers only files under `desktop/Bristlenose/Bristlenose/`: shared dirs (e.g. `bristlenose/locales/`) must be added to the Copy Sidecar Resources phase. For Swift i18n sweeps start with `grep -rn ": LocalizedError"`, and grep helper-function `return "…"`, `Button("…")` and `.help("…")`, not just `Text("…")`. [full text](reference.md#dev-build-today)
+The first `xcodebuild` in a fresh worktree fails with `cannot find 'GeneratedBuildInfo' in scope`; re-run it. Auto-sync covers only files under `desktop/Bristlenose/Bristlenose/`: shared dirs (e.g. `bristlenose/locales/`) must be added to the Copy Sidecar Resources phase, or `Bundle.main` lookups return nil and chrome strings render as raw i18n keys. For Swift i18n sweeps start with `grep -rn ": LocalizedError"`, and grep helper-function `return "…"`, `Button("…")` and `.help("…")`, not just `Text("…")`. [full text](reference.md#dev-build-today)
 
 ### Alpha build (Track C C1 and beyond)
 

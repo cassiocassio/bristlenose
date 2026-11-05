@@ -279,6 +279,13 @@ def create_app(
     # /api/* (participant names, curation writes). Absent (the CLI), /mcp
     # falls back to the server token and behaviour is unchanged.
     app.state.mcp_token = os.environ.get("_BRISTLENOSE_MCP_TOKEN") or None
+    # On the desktop the scoped token is not optional: the host publishes it
+    # into a file another vendor's process reads, so a serve that never got
+    # one (nil on the cold path, empty in a standby claim) must close /mcp
+    # rather than fall back to the server token, which opens /api/* too.
+    app.state.mcp_requires_scoped_token = (
+        os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1"
+    )
     # Identifies THIS serve process, fresh every start. A proxy that reads a
     # handshake file off disk compares it against /api/health before sending
     # the bearer anywhere: the port is kernel-assigned and ephemeral, so a

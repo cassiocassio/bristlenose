@@ -952,6 +952,51 @@ class TestScopedMcpToken:
             assert resp.status_code == 200
 
 
+class TestDesktopRefusesMcpWithoutScopedToken:
+    """On the desktop host a missing scoped token must close /mcp, not widen it.
+
+    The CLI falls back to the single printed token on purpose. The desktop
+    publishes its MCP token into a file another vendor's process reads, so a
+    serve that was started without one (a nil token on the cold path, an empty
+    standby claim) would otherwise let the all-powerful server token open
+    /mcp. Nothing legitimate on desktop presents that token to /mcp.
+    """
+
+    @staticmethod
+    def _desktop_app(monkeypatch):
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        monkeypatch.delenv("_BRISTLENOSE_MCP_TOKEN", raising=False)
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "rotating-server-token"
+        return app
+
+    def test_server_token_does_not_open_mcp(self, monkeypatch) -> None:
+        app = self._desktop_app(monkeypatch)
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            resp = _rpc(client, "rotating-server-token", "tools/call",
+                        {"name": "get_project_overview", "arguments": {}})
+            assert resp.status_code == 401
+
+    def test_server_token_still_opens_api(self, monkeypatch) -> None:
+        app = self._desktop_app(monkeypatch)
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            resp = client.get(
+                "/api/projects/1/people",
+                headers={"Authorization": "Bearer rotating-server-token"},
+            )
+            assert resp.status_code == 200
+
+    def test_empty_token_env_counts_as_missing(self, monkeypatch) -> None:
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        monkeypatch.setenv("_BRISTLENOSE_MCP_TOKEN", "")
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "rotating-server-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            resp = _rpc(client, "rotating-server-token", "tools/call",
+                        {"name": "get_project_overview", "arguments": {}})
+            assert resp.status_code == 401
+
+
 class TestHealthAdvertisesMount:
     """The desktop host reads mcp.mounted from /api/health (auth-exempt) to
     decide whether its Connect Agent sheet can offer an address at all."""
@@ -1166,18 +1211,21 @@ class TestHealthAdvertisesMount:
         # A desktop-hosted serve has an owner that derives scope from the
         # window roster, so it starts closed and the host opens it.
         monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        # The desktop always injects a scoped MCP token; without one /mcp is
+        # closed outright (TestDesktopRefusesMcpWithoutScopedToken).
+        monkeypatch.setenv("_BRISTLENOSE_MCP_TOKEN", "test-scoped-mcp-token")
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         app.state.auth_token = "test-mcp-token"
         with TestClient(app, base_url="http://127.0.0.1:8150") as client:
             assert app.state.agent_readable is False
-            refused = _rpc(client, "test-mcp-token", "tools/call",
+            refused = _rpc(client, "test-scoped-mcp-token", "tools/call",
                            {"name": "get_project_overview", "arguments": {}})
             assert "out of scope" in refused.text, refused.text
 
             # …and the host can open it, which is the whole contract.
             hdr = {"Authorization": "Bearer test-mcp-token"}
             client.put("/api/agent-scope", json={"readable": True}, headers=hdr)
-            ok = _rpc(client, "test-mcp-token", "tools/call",
+            ok = _rpc(client, "test-scoped-mcp-token", "tools/call",
                       {"name": "get_project_overview", "arguments": {}})
             assert "out of scope" not in ok.text
 

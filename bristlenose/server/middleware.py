@@ -164,9 +164,17 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
         # must open the read-only /mcp tools and nothing else — never
         # /api/* writes or the persons endpoints.
         if is_mcp:
-            expected = getattr(request.app.state, "mcp_token", None) or getattr(
-                request.app.state, "auth_token", None
-            )
+            mcp_token = getattr(request.app.state, "mcp_token", None)
+            if not mcp_token and getattr(request.app.state, "mcp_requires_scoped_token", False):
+                # Desktop host, no scoped token: fail closed. Falling back to
+                # the server token would let it open /mcp, and the CLI's
+                # "one token for everything" promise does not hold here.
+                return Response(
+                    content=_UNAUTHORIZED_BODY,
+                    status_code=401,
+                    media_type="application/json",
+                )
+            expected = mcp_token or getattr(request.app.state, "auth_token", None)
         else:
             expected = getattr(request.app.state, "auth_token", None)
         if expected is None:

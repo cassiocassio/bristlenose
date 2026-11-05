@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from bristlenose.llm.failure_classifier import classify_exception
+from bristlenose.server.busy import tracked
 from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, TemplateTag
 
 if TYPE_CHECKING:
@@ -181,6 +182,7 @@ def build_tag_name_map(
 # ---------------------------------------------------------------------------
 
 
+@tracked("autocode")
 async def run_autocode_job(
     db_factory: Callable[[], SASession],
     project_id: int,

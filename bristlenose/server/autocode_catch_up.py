@@ -266,6 +266,11 @@ def _note_waiting_for_key(app: Any) -> None:
                        exc_info=True)
 
 
+def is_active() -> bool:
+    """A catch-up pass is waiting out its debounce or running (``server/busy.py``)."""
+    return bool(_WAITS) or bool(_FIRING)
+
+
 def resume_after_key(app: Any, project_id: int = 1) -> bool:
     """At serve start: if a write found quotes owed and no key, and there is a key now,
     arm one pass (the Mac restarts the serve when a key is saved). On the event loop.

@@ -23,6 +23,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from bristlenose.server.busy import tracked
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -531,6 +533,7 @@ def _validated_evidence_assertions(
 # ---------------------------------------------------------------------------
 
 
+@tracked("signals")
 async def generate_elaborations(
     signals: list[TagSignal],
     codebook_id: str,

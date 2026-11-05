@@ -143,6 +143,19 @@ def health(request: Request) -> dict[str, object]:
     return payload
 
 
+@router.get("/background-work")
+def background_work() -> dict[str, object]:
+    """Whether this serve has paid or unrecoverable work in flight (``server/busy.py``).
+
+    Behind the bearer, unlike ``/api/health``: the Mac holds the reap of a window-less study while
+    this says busy. Coarse kinds only (``autocode``, ``signals``), no timestamps.
+    """
+    from bristlenose.server.busy import active_kinds
+
+    kinds = active_kinds()
+    return {"busy": bool(kinds), "kinds": kinds}
+
+
 @router.get("/agent-activity")
 def agent_activity(request: Request) -> dict[str, int | str | dict[str, str | None] | None]:
     """Monotonic count of MCP tool calls this serve has answered.

@@ -17,6 +17,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 from bristlenose import startup_trace
 
@@ -24,7 +25,7 @@ CLAIM_VERSION = 1
 READY_LINE = "[bristlenose] standby-ready"
 
 
-def _refuse_claim() -> None:
+def _refuse_claim() -> NoReturn:
     # A fixed line: the claim holds a token, so it is never echoed.
     print("[bristlenose] standby: the claim could not be read", file=sys.stderr, flush=True)
     raise SystemExit(2)

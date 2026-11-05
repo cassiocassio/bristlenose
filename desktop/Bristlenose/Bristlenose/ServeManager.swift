@@ -519,8 +519,16 @@ final class ServeManager: ObservableObject {
 
     private var process: Process? {
         get { instance.process }
-        set { instance.process = newValue }
+        set {
+            instance.process = newValue
+            // The adopted standby is held exactly as long as its process is the serve's. Its reader
+            // and termination handler hold it weakly, so without this owner the first claim frees it
+            // and every line and exit of the adopted process goes nowhere.
+            if newValue == nil || newValue !== adoptedStandby?.process { adoptedStandby = nil }
+        }
     }
+    /// The standby this serve took over, kept alive while it is the serve's process.
+    private var adoptedStandby: StandbySidecar?
     private var readTask: Task<Void, Never>? {
         get { instance.readTask }
         set { instance.readTask = newValue }
@@ -786,6 +794,7 @@ final class ServeManager: ObservableObject {
         // below, exactly as before. See docs/design-standby-sidecar.md.
         if let adopted = claimStandby(projectPath: projectPath, mcpToken: mcpToken ?? "") {
             self.process = adopted.process
+            adoptedStandby = adopted
             readTask = adopted.readTask
             adopted.replayHeld()
             PerfSignpost.step("serve-claimed-standby")

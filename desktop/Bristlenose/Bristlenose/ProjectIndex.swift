@@ -1461,11 +1461,6 @@ final class ProjectIndex: ObservableObject {
 
     // MARK: - Watcher lifecycle
 
-    /// Bring `leases` and `watchers` into sync with current `availability`
-    /// across all projects. Acquires lease + starts watcher on each `.ready`
-    /// project that doesn't have one; releases lease + removes watcher on
-    /// each non-`.ready` project that does. Idempotent. Safe to call from
-    /// `refreshAvailability()`, project switch, or any state change.
     /// Paths of the projects whose security-scoped lease is open now. The standby sidecar is
     /// spawned while these are held, so it inherits their sandbox extensions and can read them
     /// (docs/design-standby-sidecar.md).
@@ -1473,6 +1468,11 @@ final class ProjectIndex: ObservableObject {
         projects.filter { leases[$0.id] != nil }.map(\.path)
     }
 
+    /// Bring `leases` and `watchers` into sync with current `availability`
+    /// across all projects. Acquires lease + starts watcher on each `.ready`
+    /// project that doesn't have one; releases lease + removes watcher on
+    /// each non-`.ready` project that does. Idempotent. Safe to call from
+    /// `refreshAvailability()`, project switch, or any state change.
     func syncWatchers() {
         let liveIDs = Set(projects.map(\.id))
         for stale in leases.keys where !liveIDs.contains(stale) {

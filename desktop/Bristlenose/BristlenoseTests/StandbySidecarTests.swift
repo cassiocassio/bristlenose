@@ -52,6 +52,9 @@ private func makeSidecar(_ args: [String], leased: [String] = ["/studies/a"],
         #expect(spawn(deaths: StandbyPolicy.maxConsecutiveDeaths - 1))
         #expect(!spawn(deaths: StandbyPolicy.maxConsecutiveDeaths))
     }
+    @Test func leaseRetriesAreBounded() {
+        #expect(StandbyPolicy.maxLeaseRetries * Int(StandbyPolicy.leaseRetryInterval.components.seconds) <= 120)
+    }
     @Test func waitsAfterADeath() {
         #expect(!spawn(since: .seconds(1)))
         #expect(spawn(since: StandbyPolicy.respawnAfterDeath))
@@ -249,6 +252,21 @@ private func makeSidecar(_ args: [String], leased: [String] = ["/studies/a"],
         p.shutdown()
     }
 
+    @Test func aStudyLeasedAfterTheStandbySpawnedReplacesIt() async {
+        var leased = ["/studies/a"]
+        let p = StandbyPool()
+        p.configure(mode: { .bundled(path: sh) }, leasedPaths: { leased },
+                    environmentFor: { _ in ["K": "1"] }, stampReader: { _ in nil }, arguments: Self.ready)
+        p.startIfWanted()
+        guard let s = p.current else { Issue.record("no standby"); return }
+        #expect(await waitUntil { s.phase == .ready })
+        leased = ["/studies/a", "/studies/b"]            // b's lease came after the spawn
+        let fp = ServeEnvStaleness.fingerprint(["K": "1"])
+        #expect(p.claimable(projectPath: "/studies/b", fingerprint: fp, stamp: nil) == nil)
+        #expect(p.current == nil)                          // replaced by one that will cover b
+        p.shutdown()
+    }
+
     @Test func aChangedEnvironmentRecyclesTheWaitingOne() async {
         var env = ["K": "1"]
         let p = StandbyPool()
@@ -370,6 +388,63 @@ private func makeSidecar(_ args: [String], leased: [String] = ["/studies/a"],
         })
         m.stop()
         pool.shutdown()
+    }
+
+    /// The review's blocker: nothing owned the adopted StandbySidecar, whose reader and exit
+    /// handler hold it weakly, so after `start()` returned no line and no exit reached the manager.
+    @Test func theAdoptedStandbyStaysAliveAndItsLinesReachTheManager() async throws {
+        let mode = SidecarMode.bundled(path: sh)
+        let pool = StandbyPool()
+        pool.configure(mode: { mode }, leasedPaths: { ["/studies/a"] },
+                       arguments: cooperative(writingClaimTo: scratchFile(), extraBeforeReady: ""))
+        pool.startIfWanted()
+        weak var weakStandby: StandbySidecar?
+        do {
+            guard let standby = pool.current else { Issue.record("no standby"); return }
+            weakStandby = standby
+            #expect(await waitUntil { standby.phase == .ready })
+        }
+        let m = ServeManager(resolvedMode: .success(mode))
+        m.standbyPool = pool
+        m.mcpTokenResolver = { _, _ in "t" }
+        m.start(projectPath: "/studies/a")
+        // Every test-local reference is gone; the pool let go at the claim. Only the manager holds it.
+        #expect(weakStandby != nil)
+        #expect(await waitUntil { m.outputLines.contains { $0.hasPrefix("Report:") } })
+        m.stop()
+        #expect(await waitUntil { weakStandby == nil })    // and it is released with its process
+        pool.shutdown()
+    }
+
+    @Test func anAdoptedStandbyThatDiesReachesTheManagersFailure() async throws {
+        let mode = SidecarMode.bundled(path: sh)
+        let pool = StandbyPool()
+        pool.configure(mode: { mode }, leasedPaths: { ["/studies/a"] },
+                       arguments: ["-c", "echo '[bristlenose] standby-ready'; read line; exit 7"])
+        pool.startIfWanted()
+        do {
+            guard let standby = pool.current else { Issue.record("no standby"); return }
+            #expect(await waitUntil { standby.phase == .ready })
+        }
+        let m = ServeManager(resolvedMode: .success(mode))
+        m.standbyPool = pool
+        m.mcpTokenResolver = { _, _ in "t" }
+        m.start(projectPath: "/studies/a")
+        #expect(await waitUntil(3) { if case .failed = m.state { return true } else { return false } })
+        pool.shutdown()
+    }
+
+    /// A claim is only possible while `start()`'s environment fingerprints like the pool's. Today
+    /// that holds because the one thing `start()` adds is underscore-prefixed (ignored); a future
+    /// plain variable added there would silently disable the standby for good.
+    @Test func startsEnvironmentFingerprintsLikeThePoolsOwn() async throws {
+        let mode = SidecarMode.bundled(path: sh)
+        let m = ServeManager(resolvedMode: .success(mode))
+        m.mcpTokenResolver = { _, _ in "t" }
+        m.start(projectPath: "/studies/a")
+        #expect(m.instance.spawnedEnvFingerprint
+                == ServeEnvStaleness.fingerprint(BristlenoseShared.childEnvironment(for: mode)))
+        m.stop()
     }
 
     @Test func startWithAStandbyForAnotherEnvironmentSpawnsItsOwn() async throws {

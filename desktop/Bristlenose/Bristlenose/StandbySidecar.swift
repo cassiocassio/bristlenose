@@ -28,6 +28,9 @@ enum StandbyPolicy {
     /// claim succeeds. A sidecar that cannot boot a standby (an old bundle without the flag) must
     /// not spin.
     static let maxConsecutiveDeaths = 3
+    /// While no study's lease is held yet, look again this often, this many times.
+    static let leaseRetryInterval: Duration = .seconds(5)
+    static let maxLeaseRetries = 12
     /// A standby that has not said it is ready by now is stopped.
     static let readyCeiling: Duration = .seconds(90)
 
@@ -242,6 +245,10 @@ final class StandbySidecar {
     }
 }
 
+private func sameStudy(_ a: String, _ b: String) -> Bool {
+    URL(fileURLWithPath: a).standardizedFileURL.path == URL(fileURLWithPath: b).standardizedFileURL.path
+}
+
 /// The app's one standby, and when to have it.
 @MainActor
 final class StandbyPool {
@@ -250,6 +257,7 @@ final class StandbyPool {
     private var lastDeathAt: ContinuousClock.Instant?
     private var pendingStart: Task<Void, Never>?
     private var readyWatchdog: Task<Void, Never>?
+    private var leaseRetries = 0
     private var quitObserver: NSObjectProtocol?
 
     private var mode: () -> SidecarMode? = { nil }
@@ -303,6 +311,14 @@ final class StandbyPool {
             hasLeasedStudy: !leasedPaths().isEmpty,
             hasStandby: current != nil,
             consecutiveDeaths: consecutiveDeaths, sinceLastDeath: sinceDeath)
+        // Leases are taken as the sidebar loads: if none are held yet, look again shortly (a minute
+        // at most) rather than never having a standby for this launch.
+        if inputs.enabled, inputs.isBundled, !inputs.hasLeasedStudy, !inputs.hasStandby,
+           leaseRetries < StandbyPolicy.maxLeaseRetries {
+            leaseRetries += 1
+            scheduleStart(after: StandbyPolicy.leaseRetryInterval)
+            return
+        }
         guard StandbyPolicy.shouldSpawn(inputs), let activeMode,
               let executable = activeMode.executableURL else { return }
         let env = environmentFor(activeMode)
@@ -367,7 +383,13 @@ final class StandbyPool {
             fingerprintMatches: sidecar.spawnedEnvFingerprint == fingerprint,
             stampMatches: sidecar.spawnedSidecarStamp == stamp,
             studyLeasedAtSpawn: sidecar.isLeased(projectPath))
-        if StandbyPolicy.isStale(inputs) { recycle() ; return nil }
+        if StandbyPolicy.isStale(inputs) { recycle(); return nil }
+        // A study whose lease was taken after this standby spawned can never use it, and neither
+        // can any later one that was leased at the same time: replace it with one that covers it.
+        if !inputs.studyLeasedAtSpawn, leasedPaths().contains(where: { sameStudy($0, projectPath) }) {
+            recycle()
+            return nil
+        }
         return StandbyPolicy.canClaim(inputs) ? sidecar : nil
     }
 

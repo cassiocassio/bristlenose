@@ -138,3 +138,20 @@ A disposable fresh macOS 15.7.7 guest (Cirrus vanilla image, deleted afterwards)
 **What it does not show:** a restored window, where the spare has had under a second; launch contention (launch-to-ready with and without a launch-time spare); a study added after launch.
 
 **A trap the run found.** `BN_APP_ENV=BRISTLENOSE_LLM_PROVIDER=local` does **not** reach the sidecar: the app builds the sidecar's environment from the researcher's own settings. A study with no Signals snapshot builds one at every serve start with the real provider, and a harness that kills the app after the port answers never lets it finish, so every launch spends again. Three trial launches spent three `signal-elaboration` calls on Talismanic before this was noticed; one deliberate run left up until the snapshot saved spent two more (five calls in all; the study now has its snapshot and the A/B itself spent none). `standby-app-ab.sh` stops itself if the study's `llm-calls.jsonl` grows. That a killed build respends is the same fact as the architecture note in the 100-days list: derived work that lives in the report server is tied to its window.
+
+### t_w measured, as a proxy (5 Nov 2026, sandboxed Debug app)
+
+A real restored window could not be tested without changing the Desktop & Dock switch (a system setting; a launch argument and the app's own preferences, which live in a protected container, both failed to turn restoration on: a graceful quit and relaunch came back with no window and no serve). So t_w is bounded from the other side: `desktop/scripts/perf/early-click.sh` polls for the sidebar from the moment of launch and selects the study the instant it exists. A restored window asks for its sidecar about as soon as its window exists, so this is the earliest it can.
+
+6 launches per arm, interleaved, standby off and on, warm copy, load 3 (three launches at the end saw 18 to 24 with no visible effect):
+
+| | standby off | standby on |
+|---|---|---|
+| launch → `start()` (t_w, proxy) | 508 ms (480 to 583) | 511 ms (366 to 556) |
+| serve-ready on an early start | 1,135 ms (1,082 to 1,155) | 1,146 ms (1,138 to 1,160) |
+| launch-to-ready | 2,273 ms | 2,205 ms |
+
+- **t_w is about 0.5 s.** The spare as built is spawned 1.6 to 1.8 s after launch and ready 2.3 to 2.5 s after, so a window that asks at 0.5 s never finds it: **a restored launch gets no benefit from the shipped standby**, as predicted. Every one of the 12 launches took the cold path.
+- **An early spare does not slow an early start**, because the cold start binds at about 1.6 s and the spare is spawned just after. No measurable change in serve-ready or launch-to-ready. The contention worry applies only to a spare moved earlier than that, which is not measured.
+- **What A + B′ could win, from measured parts (an estimate):** a spare spawned at launch is ready at about 0.6 s (boot 0.6 s in the app); a window asking at 0.5 s waits about 0.1 to 0.2 s for it, then the claim path takes 0.51 s to port-answering: about 0.5 + 0.15 + 0.51 = 1.15 s after launch against 0.5 + 1.14 = 1.64 s cold, so **roughly 0.3 to 0.5 s**, and only if the spare can be spawned within ~0.2 s of launch (an app-delegate hook; `onAppear` is too late, since it runs at t_w). Against 0.6 s on the Welcome path that works today.
+- **Not measured:** an actual restored window (it may also lose key status to Welcome and sit in `pendingStart`), launch-to-ready with a spare spawned at launch, and how many users restore at all.

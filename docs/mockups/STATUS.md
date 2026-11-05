@@ -358,6 +358,7 @@ state is still evidenced, the day is not.
 | `signals-heatmap-sticky-pane.html` | 26 Sep 2026 | *unreviewed* |
 | `signals-follow-hide.html` | 30 Oct 2026 | PROPOSED 30 Oct 2026 — how a Signals card follows a researcher's hide: shown set refills from the remaining ranked quotes (shipped cap of 4), the "Show all N" count and the contribution cells derive from what remains, and a parked hidden-quotes control reuses the Quotes lens counter. Real theme CSS and shipped strings; behaviour not built, no owner approval yet. |
 | `signals-lens-readiness.html` | 30 Oct 2026 | PROPOSED 30 Oct 2026 — Signals lens grey and unclickable until its first report exists, with "Preparing Signals…" under the project name in the sidebar and no bare page; plan `docs/design-signals-lens-readiness.md`. Real token CSS; the sidebar is native chrome drawn with stand-in glyphs; one new string, owner-written draft. Not built, under review, no owner approval yet. |
+| `intensity-graded-circles.html` | 5 Nov 2026 | PROPOSED 2 Nov 2026 · **IMPLEMENTED 5 Nov 2026** — the intensity mark as three growing circles on one centre line; row **G** (radii 3.8 / 4.6 / 5.4, equal pitch) is what ships in `IntensityDots.tsx`; the other rows (steep cone, area-honest, perceptual, no ceiling, single bubble) were measured and not taken, reasons in `design-intensity-mark-research.md` §8 |
 
 ## type
 

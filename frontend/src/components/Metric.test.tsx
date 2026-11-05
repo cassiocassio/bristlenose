@@ -105,7 +105,7 @@ describe("Metric", () => {
       <Metric label="L" displayValue="V" viz={{ type: "dots", value: 2 }} />,
     );
     const circles = container.querySelectorAll("circle");
-    // value=2 → dot 1 filled (1 circle), dot 2 filled (1 circle), dot 3 empty (1 circle)
+    // value=2 → circle 1 filled, circle 2 filled, circle 3 a ghost: one circle each
     expect(circles.length).toBe(3);
   });
 
@@ -113,9 +113,9 @@ describe("Metric", () => {
     const { container } = render(
       <Metric label="L" displayValue="V" viz={{ type: "dots", value: 1.5 }} />,
     );
-    // value=1.5 → dot 1 filled (1), dot 2 half (3 circles + clipPaths), dot 3 empty (1)
+    // value=1.5 → circle 1 filled, circle 2 half (a ghost plus a clipped fill), circle 3 a ghost
     const clipPaths = container.querySelectorAll("clipPath");
-    expect(clipPaths.length).toBe(2); // left and right clips for the half dot
+    expect(clipPaths.length).toBe(1); // the left half of the half circle
   });
 
   it("renders all empty dots for value 0", () => {
@@ -123,10 +123,10 @@ describe("Metric", () => {
       <Metric label="L" displayValue="V" viz={{ type: "dots", value: 0 }} />,
     );
     const circles = container.querySelectorAll("circle");
-    // All 3 empty — each is one circle with stroke only
+    // All 3 empty — each is one faint ghost circle, none at full strength
     expect(circles.length).toBe(3);
     circles.forEach((c) => {
-      expect(c.getAttribute("fill")).toBe("none");
+      expect(c.getAttribute("opacity")).toBe("0.22");
     });
   });
 
@@ -137,8 +137,7 @@ describe("Metric", () => {
     const circles = container.querySelectorAll("circle");
     expect(circles.length).toBe(3);
     circles.forEach((c) => {
-      expect(c.getAttribute("fill")).not.toBe("none");
-      expect(c.getAttribute("opacity")).toBe("0.7");
+      expect(c.getAttribute("opacity")).toBe("0.8");
     });
   });
 

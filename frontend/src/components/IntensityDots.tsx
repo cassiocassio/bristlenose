@@ -1,16 +1,34 @@
 import { useId } from "react";
 
 /**
- * The three intensity circles, one implementation for the chart and the quote paragraphs.
+ * The intensity mark: three circles that grow, one implementation for the chart and the quote
+ * paragraphs.
  *
- * `m` is the chart's size. `s` is the paragraphs': the circle radius 5% smaller (owner, 30 Oct
- * 2026), the spacing unchanged, so the row of three is a touch lighter beside running text.
- * Half values (1.5, 2.5) draw a half-filled circle; the chart's mean intensity needs them and a
+ * Three equal circles read as a page indicator. Here the radii grow 3.8, 4.6, 5.4 on a common
+ * centre line at an equal pitch, so the tangents run straight to a point (a cone) and the mark
+ * reads as one rising quantity, not as three objects with one flagged. The ramp is gentle on
+ * purpose: ink adds up as the circles fill, and this ramp keeps the perceived steps near even
+ * (measured 1 : 1.8 : 2.7 against 1 : 1.6 : 2.2 for equal circles) while a steep cone left level 1
+ * a speck. A circle not yet reached stays as a faint ghost so the ceiling is always visible.
+ * Chosen by the owner, 5 Nov 2026 (`docs/design-intensity-mark-research.md`, mockup
+ * `docs/mockups/intensity-graded-circles.html`, row G).
+ *
+ * `m` is the chart's size, drawn from the left edge of the box. `s` is the paragraphs': the radii
+ * 5% smaller (owner, 30 Oct 2026), drawn from the right edge because the paragraph's mark floats
+ * to the top right corner. The box is 46 x 12 for both and the centre line is shared.
+ * Half values (1.5, 2.5) fill half of the next circle; the chart's mean intensity needs them and a
  * single quote's whole number does not.
  */
 export type IntensityDotsSize = "m" | "s";
 
-const RADIUS: Record<IntensityDotsSize, number> = { m: 5, s: 4.75 };
+const SCALE: Record<IntensityDotsSize, number> = { m: 1, s: 0.95 };
+const RADII = [3.8, 4.6, 5.4];
+const PITCH = 11.5;
+const BOX_W = 46;
+const BOX_H = 12;
+const EDGE = 1; // clear space between the ink and the box edge it is drawn from
+const GHOST_OPACITY = 0.22;
+const FILL_OPACITY = 0.8;
 
 export function IntensityDots({
   value,
@@ -25,49 +43,44 @@ export function IntensityDots({
 }) {
   const clipBase = useId();
   const rounded = Math.round(value * 2) / 2;
-  const r = RADIUS[size];
-  const cx0 = 7;
-  const gap = 16;
-  const w = cx0 + gap * 2 + 5 + 2; // the width does not change with the size
-  const h = 5 * 2 + 2;
-  const y = 6; // the centre line does not change either, so the two sizes share a baseline
+  const k = SCALE[size];
+  const radii = RADII.map((r) => r * k);
+  const y = BOX_H / 2; // the centre line is the same for both sizes
+  // The first centre: left-aligned for the chart, right-aligned for the paragraph.
+  const cx0 =
+    size === "m" ? EDGE + radii[0] : BOX_W - EDGE - radii[2] - PITCH * 2;
 
   const dots: React.ReactNode[] = [];
   for (let i = 0; i < 3; i++) {
     const threshold = i + 1;
-    const x = cx0 + i * gap;
+    const x = cx0 + i * PITCH;
+    const r = radii[i];
     if (rounded >= threshold) {
-      dots.push(<circle key={i} cx={x} cy={y} r={r} fill={colour} opacity={0.7} />);
+      dots.push(<circle key={i} cx={x} cy={y} r={r} fill={colour} opacity={FILL_OPACITY} />);
     } else if (rounded >= threshold - 0.5) {
       const clipId = `${clipBase}-${i}`;
       dots.push(
         <g key={i}>
           <defs>
-            <clipPath id={`${clipId}-l`}>
+            <clipPath id={clipId}>
               <rect x={x - r} y={y - r} width={r} height={r * 2} />
             </clipPath>
-            <clipPath id={`${clipId}-r`}>
-              <rect x={x} y={y - r} width={r} height={r * 2} />
-            </clipPath>
           </defs>
-          <circle cx={x} cy={y} r={r} fill={colour} opacity={0.7} clipPath={`url(#${clipId}-l)`} />
-          <circle cx={x} cy={y} r={r} fill="none" stroke={colour} strokeWidth={1.2} opacity={0.35} clipPath={`url(#${clipId}-r)`} />
-          <circle cx={x} cy={y} r={r} fill="none" stroke={colour} strokeWidth={1.2} opacity={0.35} />
+          <circle cx={x} cy={y} r={r} fill={colour} opacity={GHOST_OPACITY} />
+          <circle cx={x} cy={y} r={r} fill={colour} opacity={FILL_OPACITY} clipPath={`url(#${clipId})`} />
         </g>,
       );
     } else {
-      dots.push(
-        <circle key={i} cx={x} cy={y} r={r} fill="none" stroke={colour} strokeWidth={1.2} opacity={0.35} />,
-      );
+      dots.push(<circle key={i} cx={x} cy={y} r={r} fill={colour} opacity={GHOST_OPACITY} />);
     }
   }
 
   return (
     <svg
       className="intensity-dots-svg"
-      width={w}
-      height={h}
-      viewBox={`0 0 ${w} ${h}`}
+      width={BOX_W}
+      height={BOX_H}
+      viewBox={`0 0 ${BOX_W} ${BOX_H}`}
       data-size={size}
       data-testid={testId}
     >

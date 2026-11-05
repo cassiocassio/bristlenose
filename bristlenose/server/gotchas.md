@@ -1,0 +1,364 @@
+# Server gotchas — the full entries
+
+Moved verbatim from `bristlenose/server/CLAUDE.md` on 5 Nov 2026 to cut what every session in `bristlenose/server/` loads on every turn (the file was 94 KB). That file keeps an index of every entry's rule and tell, grouped as below. **Read the theme's section before working in that area.** Add a new gotcha here under its theme, and add its one-line headline to the index in `bristlenose/server/CLAUDE.md` § Gotchas. Comments and docs elsewhere that cite "`server/CLAUDE.md`" for a gotcha mean this file. Some entries (quote ids, curation maps, names, the layout-tree route notes) also leave a one- or two-line summary where they used to sit; the full text is here.
+
+## Database, migrations and test harness
+
+- **`import_project` PASSIVE-checkpoints the WAL after its final commit (`_checkpoint_wal`) — don't remove it.** The serve runs `journal_mode=WAL` (`db.py`) on a long-lived connection that doesn't auto-checkpoint small imports, so committed rows stay in the `-wal` file. Out-of-process readers that open the DB with `?immutable=1` — the sandboxed macOS desktop sidebar's session-count read in `SourceFilesReader.swift` — deliberately ignore the WAL and read only the main DB file, so without the post-import checkpoint they see stale/zero counts until the serve connection closes (checkpoint-on-close). This was the desktop sidebar "session count blank after a run" bug: the report rendered fine (serve's own WAL-aware read) while the sidebar count read `nil`. `import_project` calls `_checkpoint_wal(db)` after the final `db.commit()` to flush WAL→main. Best-effort: a failed checkpoint is logged (`logger.warning`), never raised — the import is already durable. **Curation writes are covered too since 20 Oct 2026:** every serve connection sets `PRAGMA wal_autocheckpoint=1` (`db.py`), so a star or tag reaches the Mac app's immutable curation count at once. Until then they sat in `-wal` while the serve ran, the count read zero, and Re-analyse skipped its confirmation (`tests/test_serve_wal_visibility.py`; lifecycle register row 35). **Autocheckpoint is not a guarantee, though (decision #115, measured 21 Oct 2026):** a checkpoint cannot copy frames past an open reader's snapshot, and it comes back for them only at the *next* commit, not when the reader finishes. A star committed while any other statement is in flight (a concurrent request, the elaboration stream, the importer, a second serve on the folder) stays in `-wal` until something else is written, and the researcher's last edit before Re-analyse has no next write. The serve itself holds no snapshot between requests (pysqlite begins no transaction for a SELECT, and ORM results are buffered), so the window is one statement wide, but its consequence is unbounded. The Mac therefore reads the WAL index in `-shm` and counts only when `mxFrame == nBackfill` in an index a live connection holds and that matches the `-wal`'s era, checked before and after the count (`CurationCountsReader.walVouch`; `desktop/CLAUDE.md` has the rules). A served `-wal` is never empty after the first write, because SQLite reuses the file rather than truncating it, so file size is not the signal; nor is mtime, since a partial checkpoint writes the main file after the star went into the WAL. Keep both: the importer's explicit checkpoint costs nothing. Regression-guarded by `tests/test_serve_importer.py::TestImportProject::test_checkpoints_wal_so_immutable_readers_see_sessions` (file-backed WAL DB; fails `no such table: sessions` without the checkpoint — the in-memory `db` fixture can't catch this, it has no WAL). The desktop half (re-scan on completion) is in `ContentView.scheduleCountRescan`; both halves are needed — see `desktop/CLAUDE.md` immutable-read gotcha.
+
+- **Alembic: on a fresh DB every revision's `upgrade()` RUNS, after `create_all()`** — `init_db()` builds the latest schema from models.py, then `run_migrations` stamps the baseline and upgrades to head (004's docstring says so; measured again 4 Oct 2026). So each revision must be a no-op on a schema that already has its result — guard with `_has_column` / `_has_table` (`006_autocode_apply_params.py`). **The trap that follows:** a revision that *removes* a column an earlier revision *adds* must remove it whenever present, not only on the path where it did its own work. 012 adds `session_speakers.name_confirmed` to a fresh DB that `create_all()` built without it; 013's first draft returned early when its own `state` column already existed, and every fresh DB kept a stray NOT NULL `name_confirmed` — caught only because its test rebuilt the 012 shape and hit "duplicate column". A data transform likewise must cope with "nothing to transform"
+
+- **The migration head is derived, not pinned** — `tests/test_migrations.py::_migration_head()` reads the version scripts and asserts exactly one head, so a new revision needs no test edit there; a test that rolls a fresh DB back to an older revision (`test_serve_name_confirmed.py`, `test_serve_moderator_identities.py`) does, because it drops the newer columns by name
+
+- **TagDefinition foreign key** — `codebook_group_id` is non-nullable.  New tags go to the "Ungrouped" group.  Don't use `codebook_group_id=0` — it violates the FK constraint
+
+- **`Session` name collision** — SQLAlchemy's `Session` (the DB session) clashes with the `Session` model.  Import the model as `SessionModel`: `from bristlenose.server.models import Session as SessionModel`
+
+- **`db.close()` in finally** — every route must close its session.  Leaking sessions exhausts the SQLite connection pool
+
+- **`caplog` sees what is logged after `create_app(project_dir=…)` since 20 Oct 2026; before that it saw nothing.** `create_app` calls `setup_logging`, which removes every root handler, pytest's capture handler with them. In a test that asks for `caplog`, `tests/conftest.py::no_run_log_handlers_left_behind` takes pytest's handlers off before the call and puts them back after (`tests/test_caplog_survives_setup_logging.py`). Tests written before then attach a `logging.Handler` to the module's own logger instead (`tests/test_lifecycle_scenarios.py::_Warnings`); both work
+
+- **`db_url="sqlite://"` is ONE connection for every thread — a test that polls while a re-import runs will flake.** `db.py` gives the in-memory database a `StaticPool` (it has to: a second connection would be a second, empty database). The watcher's re-import runs in `asyncio.to_thread`, so a test that drives a real `import_project` through the live watcher *and* polls an endpoint meanwhile has two threads sharing one transaction — a request's session close rolls back the import mid-flight. Symptom: `StaleDataError: UPDATE statement on table 'projects' expected to update 1 row(s); 0 were matched`, or `FOREIGN KEY constraint failed`, logged as "Re-import after run_completed failed", and an `assert _wait(...)` timing out. It failed all five ubuntu cells and never macOS (28 Sep 2026, `test_serve_started_before_first_run_follows_the_output`; ~1 in 25 locally). **Use a file database** (`db_url=f"sqlite:///{tmp_path / 'serve.db'}"`) — one connection per thread, as production — for any test that exercises the threaded re-import with real data. Tests that call the handler directly, or stub `import_project`, are not exposed. This is a test-harness trap, not a product bug: serve always opens a file database. **And a test that polls across the serve's reattach must read a 500 as 'not yet'.** When the output folder is replaced, `ensure_schema` disposes the pool and `init_db` recreates the replaced file's schema; a request landing between the two gets `no such table: projects`, and `TestClient` re-raises server exceptions by default, so the transient becomes the test's verdict. It went red on five CI cells while passing locally (12 Oct 2026). Use `AuthTestClient(app, raise_server_exceptions=False)` and treat a non-200 as an empty answer (`tests/test_serve_project_root.py::_sessions`). The same window once raised `database is locked`, a real bug: the connect hook set `journal_mode=WAL`, which takes a write lock, before `busy_timeout` — the timeout comes first now (`db.py`)
+
+
+## Project identity and the importer
+
+- **The SPA always reads project 1, but the importer can create a second row — and when it does, the report goes blank with every signal green.** `BRISTLENOSE_API_BASE` is hardcoded to `/api/projects/1` (`app.py:739`, `frontend/src/utils/api.ts:35`), while `import_project` matches rows by `(input_dir, output_dir)` and *creates* one when nothing matches (`import_project`'s find-or-create block). `_make_run_completed_handler` then discarded the `Project` the import returns and published `app.state.last_run[1]` whatever row was written, so `/last-run` advanced and the SPA re-fetched an empty row 1. Measured 12 Oct 2026 on a real project and reproduced on the smoke fixture in 30 s with no LLM: start `serve` while `bristlenose-output/` is absent (a `--clean` re-analyse had moved it aside), let the run finish. Row 1 "Untitled" (`output_dir == input_dir`, DB at `<project>/.bristlenose/`), row 2 "Talismanic" holding every session. **Fixed 12 Oct 2026** (`git log -S'one output-dir resolver'`): the database and log are created eagerly under `project_output_dir(p)`, a never-run project's row carries its *future* output folder so the first run's import matches it, `project_input_dir` keys `serve <p>` and `serve <p>/bristlenose-output` to one row, and the handler publishes under the row the import returned and logs an ERROR when that is not 1. Pinned by `tests/test_serve_project_root.py`, which calls `create_app(project_dir=…)` **without `db_url`** — every one of the 161 earlier `create_app` calls in the suite passed one, which is why this class was green throughout; a test about *where the database lives* must not pass `db_url`. The eager creation is a pair inside `create_app`: the fixed `setup_logging` call creates the output folder before `db_url_for_project` runs, so a serve-level test cannot tell a reverted `db.py` from a fixed one. `test_the_database_path_names_the_future_output_folder` calls `db_url_for_project` on its own, so `db.py` is pinned whatever the call order; and `test_a_forked_import_is_logged_and_published_under_its_own_row` seeds an unrelated row 1 to make the fork no other test can, which is the only thing that exercises the handler's ERROR and its `last_run[project_id]` (both mutation-proved, 12 Oct 2026). **And the serve reattaches whenever the database file or the events log changes identity** (`_reattach_if_moved` in `_install_event_watcher`): the `run_completed` heal (`ensure_schema`) alone missed a failed `--clean` run's `restore`, which puts the previous report back with no new completion to import, so the pool stayed pinned to the set-aside copy and curation went into it. **Record what the heal attached to, never a fresh read after it** (17 Oct 2026, register rows 49–50): a restore landing inside a slow heal was recorded as attached while the pool held the tree it had set aside; and a restored tree carries the *original* inodes, so a stale record compares equal to it. The reattach now records the folder it healed and goes round again if that folder moved, and the watcher's baseline is read in `create_app` before the startup import, not when its task first runs. **The log file moves with it, and on every events-log change, not only at a reattach** (`logging.reopen_log_file`, 14 Oct 2026): an open handler follows its file, so the serve went on logging into the set-aside copy, which a successful run deletes — the whole serve log for that run was lost, a refused speaker pick included. It opens the new handler before closing the old and never creates the folder (mid-restore, a new output folder would block the old one moving back). The watcher also says once, at WARNING, when the project folder itself is renamed under it, and keeps listening. Every write to the session registry (`_reserve_code`, `sync_role_pins`, the importer's pick carry) is refused or deferred while `run_in_progress` — refused by name, `refusal.analysis_running()` (409, reason `run_in_progress`), which the SPA's save toast reads. **A `kind` that matches the slot's stored role is not a recode**: every SPA pick sends one, and refusing on its presence made "That's Me" on a moderator fail mid-run (14 Oct 2026; `test_naming_yourself_the_moderator_is_allowed`), and `output_backup.stash` refuses a live run's output (`tests/test_serve_lifecycle_robustness.py`). Full audit and plan: `TODO.md` 12 Oct 2026
+
+- **A study's own database holds one study, found by its marker — never by path (15 Oct 2026).** When the database is the file inside the study's output folder (`_is_the_studys_own_database`, the production shape), `_find_or_create_project` reads `<output>/.bristlenose/study.json` (`bristlenose/study_marker.py`, minted by the first run or serve, carried across `--clean`), takes the row whose `study_id` matches or else the lowest id (row 1, the row the SPA reads), heals its stored paths, and writes the marker's id into `projects.study_id` (migration 019; the marker wins on disagreement). A second row left by an older release (a move, a copy, a serve started while the output was set aside) is deleted with everything hanging off it at the next import — unless curation hangs off it (`_CURATION_TABLES`), in which case it stays and is said at ERROR. **This is what closed the move and copy forks** (register rows 29–30); `tests/test_study_identity.py` pins each rule. **Outside a study folder** — an in-memory test database, a file elsewhere, a future instance database — rows are still matched by resolved path with `os.path.samefile` (inode identity: case-insensitive volumes, symlinks, relative vs absolute spelling), and two studies stay two rows. That path match is now the only place a fork can occur, which is why `test_a_forked_import_is_logged_and_published_under_its_own_row` uses a database outside the study folder. _History: until 15 Oct 2026 every database matched by path, so a moved or copied study forked a second row with its curation left on the first, and the desktop sidebar showed double (29 Sep 2026); the importer heals source-file rows whose file moved (`_import_source_files`), since every run rewrites the transcript header with the recording's current place._
+
+- **The match branch also heals `name`/`slug` — but ONLY from the `"Untitled"` sentinel.** `project_name` is sourced from `metadata.json` (default `"Untitled"`). A row created at serve-startup import *before any run wrote `metadata.json`* (the create-vs-first-run race) freezes at `"Untitled"`, and the match branch never used to refresh it — so the report/dashboard title showed "Untitled" while the desktop sidebar (a *separate* store, `projects.json`) showed the real name. The match branch now heals `name`/`slug` when `project.name == "Untitled" and project_name != "Untitled"`. The sentinel scoping is load-bearing: **do not make this an unconditional refresh** — nothing else writes `projects.name`, so an unconditional metadata→name overwrite would silently clobber any future SPA-side rename. Regression: `tests/test_serve_importer.py::TestImportNameHealing`.
+
+- **Transcript headers carry the path relative to the input folder, subfolder included** — `s06_merge_transcript.py:147-158` writes `# Source: interviews/filename.mov` (`relative_to(input_dir)`, falling back to the bare name only when the file sits outside the input folder; since 12 Mar 2026 — this line said "basename only" until 12 Oct 2026, and `bristlenose/stages/CLAUDE.md` said the same). The importer resolves it against `project_dir`; `_import_source_files()` still scans one level of subdirectories as a fallback for older transcripts and for the cooked `[REDACTED]` header. What is stored is an **absolute** path (`SourceFile.path`, written once per session and never re-verified — `importer.py:520-556`), so a moved or copied project keeps pointing at the old location. If video playback returns 404 in serve mode: (1) check `Session.source_file` in the DB — if it's missing the subdirectory, delete `bristlenose.db` and restart to force re-import; (2) check the server is running from the correct directory (worktree). The video-map API (`GET /api/projects/{id}/video-map`) converts DB paths to `/media/` URIs via `_file_to_media_uri()` in `sessions.py`. `PlayerContext.tsx` fetches this in SPA mode (no IIFE globals exist because the SPA HTML is generated directly, not from baked HTML)
+
+- **`session_segments.json` is PRE-merge; the transcript `.txt` and the DB are POST-merge — never join them by position.** Stage 6 merges same-speaker runs after the intermediate is written, so an 18-minute interview is 263 raw segments there and 37 rows here, and every raw segment carries `segment_index = -1`. `_enrich_words_from_intermediate` fell back to list position from Feb to 27 Sep 2026: paragraph 36 (17:32) got the words spoken at 2:30, and because the transcript page renders word spans *in place of* text, every diarised transcript showed its first minutes smeared across the whole timeline. It now buckets by time and keeps words only if they read as the row's text. The `.txt` timecode is the **floor** of the merged segment's first raw start, and `# Duration:` is the last segment's end — the importer uses it for the final row. (`a9d6fb47`, `6dd8a1e4`)
+
+
+## Auth, media, downloads and locale
+
+- **The auth cookie is for the SPA's own navigations, nothing else.** `_is_own_navigation` (`middleware.py`) honours `bristlenose_auth` only for GET/HEAD, and not when `Sec-Fetch-Site` is `same-site` or `cross-site`: `SameSite` ignores the port, so a page on any other `127.0.0.1` port is same-site and was getting the cookie sent with its POSTs (measured in Chromium and WebKit, 28 Sep 2026). **A new flow that leans on the cookie — a form POST, anything but a same-origin GET — gets a 401**; send the header from `api.ts`. **Don't tighten it to *require* `same-origin`:** WebKit sends no `Sec-Fetch-Site` at all on the export's `<a download>` navigation, so the Mac app's exports would 401. And FastAPI's `strict_content_type` (default on) refusing a typeless JSON body is not the CSRF defence — it runs after auth, and bodiless POSTs have no body to refuse.
+
+- **`/media/` must NOT require bearer token auth** — HTML `<video>` and `<audio>` elements fetch their `src` URL without custom headers. If `/media/` is in `_AUTH_REQUIRED_PREFIXES`, media loads get 401'd and the player shows "Cannot play this format" (`MediaError code: 4`). This is NOT a codec issue — it's an auth issue. **Diagnostic**: check Network tab for 401 on the `/media/...` URL BEFORE investigating codecs. `/media/` is protected by path-traversal guard, extension allowlist, localhost binding, and CORS instead. This has been misdiagnosed as a format problem three times — don't add `/media/` back to the auth prefixes
+
+- **A download's `Content-Disposition` goes through `export_core.attachment_disposition()`, never an f-string.** Starlette encodes header values as Latin-1, so `filename="駅の調査-quotes.csv"` raises and the download is a 500 for every Japanese, Chinese, Korean, Russian, Ukrainian, Polish (ł), Czech (ř) or Turkish (ş) project name; a Latin-1 name like `Ærø` encodes but reaches the browser as Latin-1 bytes. The helper sends the real name in `filename*` (RFC 6266). Name the file with `safe_filename()`, not `slugify()` — a slug keeps only a-z and digits (17 Oct 2026; the quotes CSV/XLSX 500'd and the HTML export dropped non-Latin names). Pinned by `tests/test_serve_export_filename.py`, which stubs the export build so CI runs it
+
+- **Server-rendered pages localise via `BRISTLENOSE_LANG`, NOT the bridge.** The React SPA gets its locale client-side from the desktop bridge's `setLocale` — but `status_page.py` (and any future server-rendered error/status HTML) is plain Python rendered before the SPA mounts, so the bridge can't reach it. The *serve process itself* must know the locale: it reads `bristlenose.i18n.t()` against the module-global locale set at startup by the `--lang` CLI option, which now also honours the `BRISTLENOSE_LANG` env var (desktop injects it from `overlayPreferences`). So: route server-rendered strings through `t()` **and** confirm the locale reaches the process via `--lang`/`BRISTLENOSE_LANG` — wiring `t()` alone renders English on desktop because the serve subprocess defaults to `en`. (`e7ca69e5`, 29 Jun 2026)
+
+
+## Quotes, headings, Signals and the data API
+
+- **PUT replaces entire state** — PUT `/hidden` with `{}` unhides everything.  PUT `/tags` with `{}` deletes all tags.  This is intentional (mirrors localStorage `setItem`)
+
+- **Quote timecode range match** — DOM ID uses `int(start_timecode)` which truncates.  A quote at 123.45s becomes `q-p1-123`.  The resolver queries `start_timecode >= 123 AND start_timecode < 124` to handle this, **and `ordinal == <the id's ordinal, 0 when it carries none>`**: two quotes one speaker starts in the same second are `q-p1-123` and `q-p1-123-1` (see "Quote DOM ID ↔ DB mapping"). Seeding a second row in a test means setting `ordinal=1`; a hand-made row at `start + 0.001` with ordinal 0 shares the first's id, which is the pre-R86 state, not a pair
+
+- **Journey deep-links anchor by timecode, NOT by an index hand-off.** The Sessions-lens journey (`SessionResponse.journey`, built by `derive_journeys_with_anchors` in `journey.py`) carries each screen's `start_seconds` = the participant's *earliest quote start-timecode* on that screen; the frontend deep-links `#t-<int(seconds)>` into the transcript. Do NOT try to pass a positional index from the lens journey to the transcript's in-page waypoints — they're built from *different sources* (screen-clusters here vs. section annotations on the transcript page) with different dedup/revisit semantics, so index `i` does not map across them. Anchoring by timecode routes around that. Because `int()` truncation means `#t-N` may not hit a segment id exactly, `TranscriptPage.tsx` resolves `#t-N` to the containing/nearest segment (`resolveSegmentForSeconds`) — the same tolerance the quote-timecode-range match above uses. `derive_journeys` remains a thin label-only wrapper over `derive_journeys_with_anchors`, so transcript/dev routes are unaffected
+
+- **A section or theme name is read through `heading_names.HeadingNames`, never `screen_label` / `theme_label` directly.** A researcher's rename (`HeadingEdit`, keyed on the durable id) shows in every lens, export and agent surface; the pipeline's name is kept only for reset-to-original and the "edited" indicator, which is why the quotes route returns both (owner's rule, 16 Oct 2026). Until then the rename reached the Quotes lens and the session timeline only, and the transcript margin, journeys, Dashboard, Signals, the chat lens, MCP and the CSV/XLS/Miro exports all printed the pipeline's name. Signals key cards and the elaboration cache by the shown name, so renaming a section re-elaborates its cards once, with the new name in the prompt. Anchors are the id (`section_anchor`), never a slug. `tests/test_serve_heading_renames.py` renames through `PUT /edits` and reads each surface
+
+- **Codebook tab stale counts on initial load** — the CodebookPanel re-fetches via MutationObserver when its parent `.bn-tab-panel` gains `.active`.  This covers the race where vanilla JS `PUT /tags` hasn't finished when the panel first mounts.  Will be unnecessary once tag writes move from localStorage PUT to React CRUD
+
+**Why the ordinal (R86, 21 Oct 2026).** Stage 9 cuts two quotes from one paragraph with one start, and the importer matched on `(project, session, participant, start_timecode)` alone, so the second overwrote the first (one trial run: 85 extracted, 83 rows) and the two shared one DOM id. `Quote.ordinal` numbers the speaker's quotes that start in the same whole second; the stable key is `uq_quote_stable_key`, unique, with the ordinal. **The ordinal is a property of the row, never re-ranked** (review, 21 Oct 2026 — the first cut ranked every import by the batch's `(end, verbatim_excerpt)`, which are model output, so a re-run that re-cut a pair swapped their words under the row ids and every star, hide, tag and edit landed on the other utterance; and the pre-R86 row of every upgraded project held the *second* half's words, so its star crossed at the first re-analysis). The importer's one pre-pass (`_assign_ordinals`, over every section's and theme's quotes together, or a whole `extracted_quotes.json`) matches each incoming quote to the row it *is* among the rows at that exact start (`_match_quotes_to_rows`: one each side always match — Freeze's reworded-quote promise; otherwise the same words first, then the closest words at or above `_CLOSE_ENOUGH`, refused below it) and gives it that row's ordinal; a quote that matches nothing takes the lowest ordinal no row in that second holds, so no existing id ever moves. Only where nothing exists yet — a first import, or migration 021's backfill — are quotes ranked by `rank_quote_ordinals` (start, end, verbatim), which the migration carries as an inline copy held to the importer's by `tests/test_migration_021_quote_ordinal.py` (ranking *and* key construction) — change both. A re-run that rewords a quote under researcher state is said per quote at INFO and totalled once at WARNING ("N curated quotes reworded…", `_reword_tally`; the words stay out of the log); a quote without an `ordinal` key is refused (`KeyError`), since a default of 0 would re-create R86 silently. The content match uses `difflib` with `autojunk=False` — on, any quote past 200 characters scored a genuine rewording at 0.19 (review, 21 Oct 2026). The ranking key's content is the verbatim excerpt, or the text when there is none, and migration 021 ranks identical rows apart by id so the unique index always builds. The first of every group keeps 0, so every id, URL anchor and `ScreenArrangement.cards` key an existing project holds reads as before. The ordinal is internal; nothing in the UI shows it. The pipeline's `ExtractedQuote` carries none, so the sealed static render (`s12_render/`) builds ordinal-0 ids only. Open judgement: `_CLOSE_ENOUGH = 0.6` divides "reworded" from "new" in a second holding a pair; the call is logged either way.
+
+**The curation maps take a PATCH, and the SPA sends only that (20 Oct 2026).** `edits`, `tags`, `hidden`, `starred` and `deleted-badges` each have a `PATCH` beside the `PUT` that changes only the keys it names: `{dom_id: bool}` for stars and hides, `{key: text | null}` for edits (`null` clears), `{dom_id: {add: [...], remove: [...]}}` by name for tags and deleted badges; tags also take `add_ids` / `remove_ids` by tag row (N146: two tags in a project can share a name; a typed name resolves to the researcher's own tag first, never a sentiment tag; a removal by id takes only that tag; an unknown `add_ids` entry refuses the request with a 404). The server never deletes a row the body doesn't name, and answers `{"status": "ok", "unresolved": [...]}`: the quote ids it could not place (a re-run removed them), for which nothing was written, so the client takes that change back and says so. The whole-map `PUT` erased whatever the client didn't hold: AutoCode tags re-applied after a run (R1), the curation of quotes a speaker recode keeps off `/quotes` (`speaker_slots.evidence_quotes`, R2), and a deleted tag a stale client still carried came back under Uncategorised as a human tag (R3). The `PUT`s stay, unchanged, as the whole-map contract that tests seed through; nothing in the SPA calls them. **The eye toggle's `hidden-tag-groups` has the same pair since 20 Oct 2026:** `PATCH {group_name: bool}` (insert-or-ignore, so two clients hiding one group at once are not refused) answering `{"status": "ok", "unresolved": []}` (groups are names, so nothing is ever unresolved; the shape is kept for the client's one write path). The SPA's whole-set `PUT` erased every group hidden on the server whenever an eye was clicked before the first read landed or after a failed one. A tag add of a name nobody has made is still the new-tag path (Uncategorised, `source="human"`, pinned unless it is a sentiment tag); an add of a name already on the quote keeps its `source`, and a delta's `source` (an undo putting a removed tag back, decision #14) is written as given — one of the four values — and pins only when it is `human`. Pinned by `tests/test_serve_curation_deltas.py`.
+
+**Signals snapshot: the reader filters, it never recalculates (30 Oct 2026, `docs/design-signals-follow-hide.md`).** `GET /signals/snapshot` runs `filter_snapshot_to_counted` over the decoded payload with the references of `speaker_slots.analysis_quotes`: a hidden quote leaves its card, its assertions, the count and its heatmap cell; a card with no quote left is dropped; strength, ranking and the written headline stay as built. **The join key is frozen:** `quote_reference_for_row` builds the record with segment index -1 and ordinal 0 whatever the row holds, because that is how every stored `quote_id` was made (`signal_quote_record`, the one place the signal path builds it). `grounding.py` builds its own with the row's real values; do not unify them, or every stored snapshot empties and every elaboration cache key changes. The export calls the same handler, so it is filtered too. The filter only removes: a quote hidden before the snapshot was built is not in it and does not return on unhide until a rebuild. A researcher's `QuoteEdit` text is not seen by Signals at all.
+
+**Signals is withheld while its first report is built (30 Oct 2026, `docs/design-signals-lens-readiness.md`).** "Has a report" means a stored snapshot **with at least one card** (`snapshot_has_cards`): an empty analysis stores an empty row at serve start, so a row is not a report. `signals_preparing(app.state)` is the startup repair's flag OR a build in flight (`begin_signals_preparing` / `end_signals_preparing`, a counter on `app.state`). It is noted in the `run_completed` handler **where the overlay ends, before the codebook re-apply that precedes the build** (the lens would otherwise light at once and go dim), and ended in that task's `finally`; it is never noted when there is no cloud model, since nothing will be built. `/condition` passes `signals_preparing=` to `lens_readiness` only when no report with cards exists, so a rebuild over an existing report never greys the lens; `/signals/snapshot` reports `pending` the same way (over an empty row too), and the page keeps asking while it is true. There is no `data_version` bump for it: `ConditionStore` re-posts `lens-availability` whenever `lenses` changes, and a bump would make every other lens re-read. Pinned by `tests/test_signals_lens_readiness.py`.
+
+
+## Names and people
+
+- **Moderators and observers are identities, named from evidence (route C Phase 1).** See § Names architecture. `PUT /people` still drops `m*`/`o*` entries — the Sessions table sends the whole code-keyed map on every participant rename — and the per-session route names them. Before this the 3 Oct 2026 weekend fix named each session's slot from `session-speakers.json` (`_name_source`, `_repair_collided_names`, both gone)
+
+- **Importer reads people.yaml for participants** — `_import_speakers()` requires `output_dir` to find it; empty fields only, so browser edits survive server restarts
+
+- **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary. Both this and the importer's YAML read go when `people.yaml` is retired as a store (decided 1 Oct 2026, `docs/design-people.md` §C2). `get_people` is keyed by identity code since Phase 1, so no code is shared across sessions any more (storyboard frame F4 closed)
+
+Moderators and observers come from the pipeline's evidence,
+`.bristlenose/intermediate/session-speakers.json` (version 2: each name's
+`evidence` class, plus every speaker's per-session `stats`). One identity per
+distinct name within the study, whether a platform labelled it or the model
+heard it. A re-run never touches a confirmed slot. With no evidence file (output
+from before 3 Oct 2026) existing slots keep what they hold and new ones arrive
+unidentified — `people.yaml` never names a moderator. `PUT
+…/sessions/{sid}/speakers/{code}` takes the **slot** code only — never the
+identity code, because both are `mN` and a pick renumbers identities, so a
+stale grid's display code could name a different slot. Its fields: `person`
+points the slot at an identity (with `create`, a client-made uuid for someone
+new); `clear` makes it nobody (`m?`); `kind` recodes the speaker's role (§J7
+R1/R2); `swap_with` exchanges a participant and a moderator (its picker row is
+parked). Names are never guessed from text — a name edit renames that person
+everywhere (§J8.12).
+
+**Evidence is filtered on read.** `speaker_slots.evidence_out` / `evidence_quotes`
+drop quotes credited to a slot recoded out of participant, and quotes overlapping a
+paragraph moved to another speaker, until the session is re-analysed (R3: the next
+ordinary run, which honours the role pins `routes/data.py` `sync_role_pins` writes as the
+recode lands; `routes/reanalyse.py` keeps only the "owed" GET). Count quotes through them, not a bare `Quote` query.
+**`speaker_slots.analysis_quotes` is the same minus hidden quotes** (owner, 22 Oct
+2026: a hidden quote is discounted evidence and counts nowhere). Signals (all three
+lenses), the per-session sentiment bars (`/sessions` draws them as the Sessions
+lens sparkline; `/dashboard` carries a copy), the Dashboard's featured quotes, its
+quotes tile and tag pair (#121; the Quotes lens's own count already left hidden quotes
+out), the Codebook lens's tag counts, the codebook builder's candidate scan (#128),
+the clip export and every scoped export — CSV, XLSX, Miro and FigJam resolve a
+selection in `export_core._resolve_quote_ids` (#122) — read it; the transcript, the journey
+and the session timeline keep hidden quotes, because Sessions is the record and
+hiding only greys a quote's ink there (owner, 22 Oct 2026);
+`evidence_quotes` stays as it is, because the Quotes lens must return a hidden quote
+to unhide it and Dashboard coverage measures extraction. Pinned by
+`tests/test_serve_hidden_counts_nowhere.py`.
+
+**Transcript layout edits** (`transcript_layout_edits`, migrations 015–016): a
+paragraph split, join, or move to another speaker (`/split`, `/join`, `/reassign`,
+undo by `DELETE /layout-edits/{id}`) is recorded with the words it named and
+replayed by `transcript_layout.replay` on every import, after `_import_speakers`;
+an edit whose paragraph no longer matches is refused and logged, never guessed.
+`design-transcript-editing.md` §"Split and join, stage 1", `design-people.md` §K6.
+The importer also strips a leading speaker label ("(Speaker B)", or a platform's
+real name) from paragraph text (`_without_speaker_label`) — a privacy fix as much
+as a display one: the name used to reach exports and the agent endpoint.
+
+
+## Frozen vanilla JS, static render and island markers
+
+- **Offline graceful degradation** — static HTML files (opened from disk, not served) have no `BRISTLENOSE_API_BASE` global.  `isServeMode()` returns false, all API calls skip silently, localStorage works as before
+
+- **No `await` on API calls** — the JS modules fire `apiPut()` without awaiting.  This means rapid clicks send multiple overlapping PUTs.  The server handles this safely because each PUT replaces the full state (last writer wins)
+
+- **Always use `apiGet()`/`apiPost()` from `frontend/src/utils/api.ts`** — never raw `fetch()` for `/api/*` endpoints.  The auth middleware requires a bearer token on every request.  The `api.ts` helpers add the `Authorization` header automatically from `window.__BRISTLENOSE_AUTH_TOKEN__`.  Raw `fetch()` gets 401'd silently (this broke the TOC sidebar in v0.14.1)
+
+- **Ruff ignores JS files** — `ruff check .` skips `.js` files.  Don't pass JS files to ruff directly (it tries to parse them as Python and generates hundreds of false errors)
+
+- **IIFE wrapper around the script block** — `render/report.py` wraps data variables + concatenated JS in `(function() { ... })();`.  In serve mode, `_strip_vanilla_js()` removes the module code but preserves the IIFE structure (globals + closing `})();`).  In the static render path, the full IIFE is intact.  If you break the IIFE closing, every init function silently fails — no console error, just a dead page
+
+- **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
+
+- **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
+
+_Superseded, kept as the record of how islands were mounted:_ React islands replace Jinja2 content at serve time via **marker-based substitution** — `<!-- bn-{name} -->` comments in `render/report.py` become `<div id="bn-{name}-root">` at serve time (regex replacement in `app.py:serve_report_html()`). Browser mounts React into the div via `main.tsx`.
+
+
+## Background passes, lifecycle and run-state tests
+
+- **A GET that starts a background pass when the disk looks stale must find every failure written down, or the grid's poll turns it into a loop.** `/tapestry` starts the strip job when a session's hover frames were taken for other turns, and answers `strips_pending`, which the grid polls up to 400 times. A failure that leaves no record (recording unreadable, a cloud download timing out, ffmpeg missing) looks stale for ever, so every poll would start another pass. Both reviewers of the 13 Oct 2026 build found it. The shape that holds: the worker writes a record carrying the *selection* it attempted with `complete: false`; the route compares selections only, so it is satisfied; the worker never treats an incomplete record as a cache hit, so its next ordinary pass retries; and the route asks only for sessions the worker can reach (`with_video`). `utils/turn_frames.py::extract_turn_frames` and `tests/test_serve_turn_frames.py` pin all four.
+
+- **A started run with no PID file reads as STRANDED, not in progress — so a test that wants "a run is in progress" must write `run.pid`.** `read_condition` judges a run with no terminus by `pid_file_liveness`, and an absent file is "not alive"; appending a `RunStartedEvent` alone therefore makes the reducer say `stranded`, and anything gated on `IN_PROGRESS` (the scene-strip job's deferral, `current_condition`) takes the not-running branch while the test believes a run is live. Use the real writer, `run_lifecycle._write_pid_file(output_dir, run_id, _ps_start_time(os.getpid()))`, so this process stands in for the run; the first draft of `test_a_failed_run_re_arms_a_deferred_job` asserted a deferral that never happened (12 Oct 2026). **And the watcher's first read of the log fires `on_change` at startup**, so a hook on `on_change` runs once from the lifespan and once more within a second; assert on order, not on an exact count.
+
+A route that `asyncio.create_task(...)`s a job (clip export, AutoCode) and a test
+that then polls a status route need **`with client:`** around both. Without it,
+Starlette's `TestClient` runs each request on its own event loop, which closes when
+that request returns, so the task the POST started is frozen and the job stays
+`running` until the test's deadline. It passed on this Mac and failed on three Linux
+cells in the 0.32.0 release (`test_export_writes_a_vtt_built_from_the_transcript`,
+fixed `56d24a73`); a 0.5 s fake clip reproduces it locally on demand. Tests that
+seed `_jobs` directly and read the status once don't need it.
+
+**Wait for the job to END, then read its status — never assert on a read taken while
+waiting.** A Stop sets a board job's status to `cancelled` at once, and a push that
+finishes anyway overwrites it with `completed`; a poll for `status != "running"` stops on
+the transient value, and a wait for the task that checks *after* reading still hands back
+the stale read. Each failed only on slow CI Macs and held 0.41.0 for a cycle apiece
+(`51625b23`, `91f69ea2`). Wait on `_board_jobs[pid]["task"].done()`, then GET the status
+afresh. Reproduce either shape locally with a `time.sleep` in the fake's last call or
+between the read and the check.
+
+- **`install_exit_logger()`** — registers signal/excepthook/atexit handlers that capture *why* the sidecar exited and emit one structured INFO line on shutdown: `sidecar_exit reason=<r> uptime_sec=<u> original_ppid=<o> current_ppid=<c> [exc=<e>]`. Reasons are `parent_death` (orphaned to launchd), `sigterm`, `sigint`, `uncaught_exception` (with exc type), or `normal_shutdown`. **Always installed** — useful for both CLI and desktop. Greppable from `<output_dir>/.bristlenose/bristlenose.log` — first stop when investigating "why did the sidecar die?"
+
+- **`install_parent_death_watcher()`** — daemon thread polls `os.getppid()` every 2s; if reparented (PID changed), records `parent_death` reason and SIGTERMs self for uvicorn's graceful-shutdown path. Sandbox-friendly (own-state observation only). **Only installed when `_BRISTLENOSE_HOSTED_BY_DESKTOP=1`** is set by the caller. The macOS desktop host (`ServeManager.swift`) sets this when spawning the bundled sidecar; CLI users don't get it (they may legitimately `nohup`).
+
+
+## MCP endpoint rules
+
+- **Optional dependency, and not imported at startup.** `pip install 'bristlenose[mcp]'` (also
+  in `dev` so CI runs the tests). `mount_mcp_server` (in `mcp_mount.py`) decides "installed" with
+  `find_spec`, which does not import the package; the SDK is imported, the server built and its
+  session manager started by `LazyMCP` on the FIRST `/mcp` request (4 Nov 2026: `import mcp` was
+  275–280 ms and the whole eager path about 420 ms of every launch; the first agent call now
+  pays 365–476 ms once, then 8–13 ms). Only an ABSENT package is "not installed"; a
+  present-but-broken one fails loudly on the first request (log + 500, retried on the next),
+  never as "not installed". **Keep `mcp_server.py` out of `create_app`'s import path, AND out of `/api/health`'s (`_project_key` lives in `mcp_mount` for that reason):** it imports
+  the SDK at load because `ToolInputError` must subclass its `ToolError`, so `app.py` imports
+  `mcp_mount` and `LazyMCP._build` imports `mcp_server` (`tests/test_mcp_lazy_mount.py` fails
+  if building the app, or a browser click on `/mcp/`, loads `mcp`).
+
+- **Lifespan composition must be the LAST lifespan touch in `create_app`.**
+  `_install_event_watcher` *assigns* `app.router.lifespan_context`; anything
+  composed earlier is silently overwritten. Since 4 Nov 2026 the composed piece only STOPS the
+  session manager that `LazyMCP` started on the first request (`aclose`, in the lifespan's
+  `finally`), so an overwritten composition now leaks that task at shutdown instead of 500ing
+  every `/mcp` call; `test_leaving_the_app_stops_the_session_manager_and_does_not_hang` is the
+  guard. The manager is one long-lived task because anyio's task group must be entered and
+  left in the same task.
+
+- **Auth is bearer-only.** `/mcp` is in `_AUTH_REQUIRED_PREFIXES`
+  unconditionally (fail closed when the extra is absent) and is explicitly
+  **exempt from the auth-cookie fallback** — MCP clients always send the
+  header, and excluding the cookie closes a same-host-different-port
+  ride-along. The one exemption is a browser-shaped `GET` (Accept prefers
+  `text/html`), which gets a static explainer page carrying no project data
+  and no token.
+
+- **The MCP token is scoped.** When `_BRISTLENOSE_MCP_TOKEN` is inherited
+  (the macOS host injects its durable per-project Keychain token), `/mcp`
+  validates against it ALONE and it opens nothing else — an agent holding
+  it cannot reach `/api/*` (participant names, curation writes). Absent
+  (the CLI), `/mcp` falls back to the server token. Pinned by
+  `TestScopedMcpToken`. Don't "simplify" the two tokens into one — the MCP
+  token is the only credential that deliberately leaves the trust boundary
+  (pasted into another vendor's config file).
+
+- **The handshake contract (desktop):** the Swift host writes
+  `mcp-handshake.json` (`{schema, port, token, instance_id, updated_at}`,
+  0600, Application Support/Bristlenose) when the fronted project has
+  Agent Access on and the serve is `.running`; the `.mcpb` proxy re-reads
+  it per tool call, probes `/api/health` unauthenticated, and only
+  transmits the bearer on an `instance_id` match. The sidecar deletes its
+  own on graceful exit (`lifecycle.install_handshake_cleanup`,
+  instance-matched, `_BRISTLENOSE_HOSTED_BY_DESKTOP` only). **If the CLI
+  ever writes a handshake, it must mint its own scoped token first** — on
+  the CLI `/mcp` falls back to `auth_token`, which opens all of `/api/*`;
+  writing THAT to a well-known path would falsify SECURITY.md item 7 for
+  every CLI user (design-mcp-extension §3.1: writing a handshake implies
+  scoping).
+
+- **`/api/health` carries `mcp: {mounted, instance_id, active}`** — read by
+  the desktop host (auth-exempt; the host needs it before it has a token).
+  `instance_id` is a nonce minted fresh per serve start (`create_app`): a
+  proxy holding a handshake file compares it here **before transmitting the
+  bearer**, because the port is kernel-assigned and a handshake surviving a
+  SIGKILL can name a port something else now owns. It also catches PID reuse
+  and makes "handshake names A while B is served" detectable. Safe on an
+  auth-exempt route — a nonce, not a secret. `active` is
+  a bare bool ("tool call within `MCP_ACTIVE_WINDOW_SECONDS`"), computed
+  server-side deliberately: elapsed seconds would hand any local process a
+  1s-resolution timeline of the researcher's agent usage. The clock is
+  monotonic and pauses across sleep — fine for a 2-minute freshness bool,
+  wrong for anything longer (comment in `health.py` is the contract).
+
+- **Stateless streamable HTTP + JSON responses** — no SSE through
+  `BaseHTTPMiddleware`, and aligned with the spec's sessionless direction.
+  Don't pass a `host` override: that silently disables the SDK's
+  DNS-rebinding protection.
+
+- **Tool errors never leak `str(exc)`** — SQLAlchemy messages carry SQL and
+  DB paths. Every tool body is wrapped: `logger.exception` server-side, a
+  sanitised sentence to the model. `ToolInputError` is the one exception —
+  its messages are written to *teach* (bad value + the valid vocabulary).
+
+- **Hard exclusions, pinned by tests:** no tool takes a filesystem path
+  (input-schema allowlist), no writes, no LLM calls (elaborations are
+  cache-only via `elaboration.load_cached_elaborations`). Names go through
+  ONE gate: `grounding.resolve_speaker_names`. Which Anonymise switch
+  governs is `_mcp_anonymise_active`: when `BRISTLENOSE_MCP_ANONYMISE` is
+  present (the desktop's v1 GLOBAL switch, injected by
+  `overlayPreferences`, applied via serve restart) it wins BOTH ways and
+  the per-project DB flag is ignored; absent (CLI/tests), the project's
+  `mcp_anonymise` flag applies as before (off by default like the export
+  toggles; `PUT /api/projects/{id}/agent-settings` still flips it, read
+  at tool-call time).
+  `mcp_server.py` itself still never imports `Person` (mechanical pin).
+
+- **Adding a tool?** Put `project_id` in the signature (folder scope is
+  phase 2), return JSON primitives only, cap the result size, and add a
+  through-protocol test — direct-call tests miss serialization failures.
+
+
+## AutoCode and the codebook builder
+
+- **`TagPrompt` is instance-scoped** (mirrors `TagDefinition`) — a code's boundary is a property of the concept, reusable across projects. **`TagPromptDecision` is project-scoped** via `quote_id`.
+
+- **Decision reasons are LOCAL ONLY** — free-text reasons + quote content never leave the device. Consistent with `docs/methodology/tag-rejections-are-great.md` (only opt-in aggregate *rates* go off-device). Don't add these to any export/telemetry.
+
+- **`version` is a content hash** (`sha256(definition\napply_when\nnot_this)[:8]`) — same discipline AutoCode/telemetry use; decisions record the exact version judged.
+
+- **`default=""` applies at INSERT, not attribute access** — a freshly-constructed `TagPrompt` has `None` text fields before flush. `edit_prompt` sets them explicitly so `prompt_version()` never sees `None`.
+
+- **Test LLM override**: routes read `app.state.settings` if set (tests inject a mock), else `load_settings()`. Mirror `tests/test_codebook_builder.py`.
+
+**Gotcha: one proposal per quote, on both store paths.** `ProposedTag` is unique on `(job_id, quote_id)` (`uq_proposed_tag_job_quote`), and the prompt asking for "the single best" tag does not stop a model returning two. `run_autocode_job`'s store loop and `reapply_to_new_quotes` each keep the highest-confidence assignment per quote. The first run lacked this until 11 Oct 2026, and one duplicate then rolled back the whole paid job, and every retry. A new path that stores proposals must collapse the same way. Pinned by `test_two_assignments_for_one_quote_keep_the_job`.
+
+**Gotcha — a fire-and-forget `asyncio.create_task()` MUST hold a strong ref.** The event loop only *weakly* references a bare task, so a suspended one (parked on an LLM call) can be GC'd mid-flight — its `finally` never runs and the `AutoCodeJob` is stranded `running` forever, which the UI shows as a permanently-disabled AutoCode button. Both serve-mode task sites now stash the task in a module-level `set` + `task.add_done_callback(the_set.discard)`: `_AUTOCODE_TASKS` (`routes/autocode.py`) and `_CATCH_UP_TASKS` (`routes/data.py`). Any new `create_task` in serve must do the same. **And one re-apply per codebook at a time:** the on-enable catch-up and a finished run's re-apply both register their task in `autocode._REAPPLY_IN_FLIGHT` (`routes/data.py`'s `_CATCH_UP_IN_FLIGHT` is the same dict); the run's waits for a live catch-up and no catch-up starts over a run's, because two coding one delta collide on `(job, quote)` and the loser rolls back (20 Oct 2026). A new re-apply path registers there too. **Apply's first-apply runner has the same rule (`_AUTOCODE_LIVE`, `routes/autocode.py`, 22 Oct 2026, #127):** a Stop sets the row `cancelled` at once while the batch already sent still answers, so Apply refuses (`already_running`) while that task lives; judged by the row, a second runner on the same job paid for the same quotes and its collision wrote `failed` over an applied job.
+
+**Gotcha — no AutoCode job survives a serve restart, so orphans are reconciled at boot.** A job lives only as an in-process task; a crash (SIGKILL, parent-death) leaves its row `running`/`pending` with no task to finish it. `reconcile_orphaned_jobs` (`autocode.py`, called from `app.py` startup after import) sweeps them: `completed_at IS NULL` (initial apply never finished) → `failed` + retryable message; `completed_at` set (a catch-up the restart cut off) → `failed`, unclassified ("Tagging failed."), its quotes still owed because it wrote no register rows (restored to `completed` at zero until 22 Oct 2026, RE#66 #63). The `completed_at` split — not `status` — is the load-bearing distinction (the "applied at least once" flag `reapply_active_frameworks` trusts). Spec: `docs/design-codebook-state-model.md` §4a.
+
+**Gotcha — which quotes a codebook has coded is its register of sent quotes, never a timestamp and never a session (30 Oct 2026, ruling 4; stamps 22 Oct 2026, RE#66).** `autocode_sent_quotes` (`AutoCodeSentQuote`, migration 025) holds one row per (job, quote) that went to the model in a batch that answered, written in the same transaction as the proposals, and **whether or not the model tagged it**: a quote it declined is on the register and is never paid for twice. `autocode.owed_quotes(db, job)` is the delta: the quotes that count (`speaker_slots.analysis_quotes`) and are not on the register (`sent_quote_ids` is the register plus any quote the job holds a proposal on). Every pass sends exactly that: the first apply, the on-enable catch-up, a finished run's re-apply and the trigger below. `completed_at` only means "applied at least once": it gates maintenance and the orphan sweep, and Apply refuses a job that has it. A new path that stores proposals calls `record_sent` with `_answered_quote_ids` (a batch that failed, or a Stop never sent, leaves its quotes owed); a path that deletes a job or a quote deletes its register rows first (`delete_jobs`; the importer's stale-quote block), or the foreign key refuses the delete. `record_sent` skips a quote already on the register, because a duplicate `(job, quote)` fails the commit and takes the proposals with it. **AutoCode sends and lists only quotes that count (N175, 25 Oct 2026):** a hidden quote and a recoded speaker's quotes are not sent while they do not count, not listed in the proposals review, and not touched by accept-all or deny-all (their proposals stay pending, so unhiding brings them back); Apply's `NO_QUOTES` check and the Codebook sidebar's tentative counts use the same predicate. Because the register is per quote, one that did not count when the codebook ran is simply owed: it is coded when it counts again (this closed N89, a quote added to a coded session, and the N175 residue, hide / Apply / unhide, which the per-session stamp could not). Migration 025 wrote the register from proposals and stamped sessions, leaving off the quotes hidden or recoded out at the time, and dropped `autocode_session_stamps`; its residuals (a quote added to a stamped session before the upgrade is on the register; a moved paragraph's quote is) are in its docstring. **The run's re-apply runs on its own task (`_REAPPLY_AFTER_RUN_TASKS` in `app.py`), never awaited by the run-completed handler**: the event watcher awaits that handler, so an inline re-apply, which waits on a live catch-up with no time limit, stopped the serve reading events.
+
+**Gotcha — a quote that starts counting is coded by itself, a few seconds on (ruling 4, 30 Oct 2026; `autocode_catch_up.py`).** An unhide (`PATCH`/`PUT /hidden`), a speaker recoded back in or swapped (`PUT …/speakers/{code}`) and a paragraph move made or undone (`POST …/reassign`, `DELETE …/layout-edits/{id}`) call `note_quotes_counting(app, project_id)` after their commit. It answers `[{framework_id, title, started_at}]` for every codebook that is applied, installed, switched on, owes a quote that counts, is not held (below) and has a cloud provider with a key, and arms a **debounced** pass: a trailing timer of `DEBOUNCE_S` (10 s) restarted by each gesture and capped at `CAP_S` (60 s) from the first, on the event loop (a sync route reaches it with `anyio.from_thread.run_sync`). At fire time it reads what is owed again (a quote hidden again in the wait is skipped and stays owed), takes the codebooks one at a time and, for each, re-checks that it is still on and not held, waits for any live re-apply of it, then sets the job `running` (`_start_catch_ups`) and runs the existing `reapply_to_new_quotes(track_status=True)` task (`routes/data.py` `launch_catch_up`): the thresholds the Apply stored, no review, a human tag untouched: the review dialog's three bands with its inequalities (`confidence >= applied_upper_threshold` accepts and tags, `confidence < applied_lower_threshold` denies, both 2 dp, and the band between stays `pending` with no `reviewed_at`, so the review lists it and the Codebook sidebar counts it as tentative). When no lower was stored the dialog's `DEFAULT_LOWER` (0.30, mirrored as `DEFAULT_DENY_THRESHOLD`) is used. A denial cannot be undone in the UI (409 `PROPOSAL_DENIED`), so a pass nobody watched never denies the band the researcher left tentative. One pass per codebook, one call per 25 quotes owed. The queue is not persisted: what is owed is derived from the register, so a quit in the wait loses nothing, and **nothing runs at serve start** because owed quotes exist, except one pass when the study carries the `autocode-awaiting-key` marker (a write found quotes owed with no key, or a pass failed for a key or credit reason) and a key is now set: the Mac restarts the serve on a key save, so saving a key codes what was owed (owner, 1 Nov 2026; `autocode_catch_up.py` docstring). The end of a first apply asks once more (a quote that counted again while it ran armed nothing, the job not yet applied). **The hold:** a pass that ends `failed` with `failure_kind` `invalid_key` or `out_of_credit` records the provider, the model and whether a key is set (`signature`; no key value is kept, read for the purpose or logged) in memory (`_BLOCKED`), and until that changes no trigger arms or calls, and `catchUp` is empty; the first failure shows the job's existing "Tagging failed" chip once. The job row must still say it failed that way, so any pass that works (a switch-on catch-up, a run's re-apply) lifts the hold. Memory, not the row: the row would hold a fixed key for ever, and the Mac restarts the serve when a key is saved. Topping up credit, or replacing a key with `bristlenose configure` while a CLI `serve` runs, changes none of the three, so the hold also lapses with the clock: `HOLD_S` (15 minutes, on the wall clock `_clock`, which a test replaces; `time.monotonic` stops while a Mac sleeps) after the failure the next trigger makes ONE attempt, and a failure for the same reason sets the hold again for another period (attempts for one codebook never overlap: `_catch_up` takes a per-(project, framework) `asyncio.Lock` for the whole check, pass and re-arm, so a second trigger during the attempt waits and then finds the hold set again). No timer runs and nothing is spent without a trigger. A provider with no key is not tried and nothing is written to the job. The trigger's own checks read `load_settings()` at most every 30 s (the credential store is a subprocess per key on the Mac); `launch_catch_up` reads it once more per pass. **The page learns of the pass from the write's answer** (`catchUp`, conditional): `api.ts` `announceCatchUp` raises `bn:catch-up-armed`, and `ActivityStore.watchForCatchUp` reads each named codebook's `/autocode/{fw}/status` every 3 s for 90 s until its `started_at` moves, then gives it the catch-up chip (which polls the job and ends with `bn:tags-changed`). `/autocode/jobs` lists only running jobs and could not show a pass the provider refused in a second. Tests: `tests/test_autocode_catch_up.py` (the real routes of a real app over a database FILE: an in-memory database is one connection shared by every thread, and a test that reads while the serve's loop writes rolls its transaction back), `tests/test_autocode_sent_register.py`, `tests/test_migration_025_autocode_sent_quotes.py`. Spec and the owner's ruling: `docs/design-codebook-state-model.md` §4a.
+
+**Gotcha — an AutoCode incremental DB write MUST be write-only + non-fatal, or a locked DB silently eats a whole batch's proposals (the "0 of 0 proposals" bug).** `busy_timeout` alone does NOT fix this class (verified 26 Jul 2026 on the bundled app — 38 proposals returned by the LLM, all lost, job reported a serene "AutoCoded in 50s ✓ — 0 proposals"). Two independent traps, both in `run_autocode_job`'s per-batch progress write: (1) **read-then-write in one transaction is unrescuable.** A `SELECT job … then UPDATE processed_quotes` takes a read snapshot and upgrades to a writer; if any other connection wrote since the snapshot, SQLite returns `database is locked` (`SQLITE_BUSY_SNAPSHOT`) **immediately** — it can't wait without risking deadlock, so `busy_timeout` is powerless. A bare `query(...).update({col: val}, synchronize_session=False)` is write-only (BEGIN→UPDATE→COMMIT, no snapshot) and `busy_timeout` serialises it cleanly. (2) **a cosmetic write must never sink the payload.** The progress counter's exception propagated out of the batch → `asyncio.gather(..., return_exceptions=True)` recorded the batch as failed → its computed proposals (the return value that never happened) were discarded. Wrap any best-effort/incremental write in its own try/except so it can't take the batch down. Rule for any new per-batch or fire-and-forget serve write under concurrency: **write-only (no prior SELECT) + wrapped non-fatal.** The proposals are the payload; progress/status counters are decoration. Regression: `tests/test_autocode_engine.py::test_progress_update_failure_does_not_discard_proposals`.
+
+
+## Route notes from the layout tree
+
+    tapestry.py   — GET /api/projects/{id}/tapestry (timeline slice under each Sessions row, and its closed strip; section flags are one per VISIT since 17 Oct 2026, `section_visits` — a label can repeat; reads scene colours from intermediate/scene-colours/ and scene strips from intermediate/scene-strips/, which server/scene_strips.py writes on a background thread after the report is readable — never the pipeline; each session says `frames_key` for the hover thumbnail, whose frames GET …/sessions/{sid}/turn-frames serves behind the bearer — participants' screens, never under /report/assets/, never in an export; turns come from tapestry_turns.py, shared with the job; also GET …/transcription-quality, each session's transcription diagnostics record from intermediate/transcription-quality/, fetched by the SPA only with the diagnostics preference on and SERVER_ONLY in the export)
+
+    screens.py    — GET /api/projects/{id}/screens, …/screens/still and …/screens/status (the Screens lens, on with BRISTLENOSE_SCREEN_TEXT=1 — the Mac app's default — or --dev; off, /screens and /screens/status answer 200 with `enabled: false` so a poller can see it, and /screens/still answers 404). `BRISTLENOSE_SCREEN_TEXT=0` is the researcher's explicit off: serve starts by deleting the project's intermediate/screen-text/ (indexes and stills), and --dev does not override it; unset deletes nothing. Failures and unavailability are reason codes (`screen_text/__init__.py`), never English. /screens/status is the cheap progress read for the Mac sidebar row and the lens's switch (`has_screens`, and `available`, the show-the-lens rule's one copy, `screens_available`, which the SPA and the Mac read rather than re-derive): durations from the DB, a stat per recording, and a derive only when the indexes' identity changes (cached in `_HAS_SCREENS`, shared with /screens), never per poll. Reads the screen-text indexes that server/screen_text_job.py writes to intermediate/screen-text/ on a background thread after the scene strips (Apple Vision; bristlenose/screen_text/), derives screens with screen_text/screens.py, and serves stills as data URIs behind the bearer. Participants' screens: SERVER_ONLY in the HTML export, and never sent anywhere by Bristlenose on its own, the LLM included; what the researcher chooses to export is open (docs/design-screens.md §4, corrected 17 Oct 2026). `routes/screens_export.py` writes every still, full size, to `bristlenose-output/screens/` (`screen_text/shots.py` orders them; `docs/design-screens-export.md`); at rest the index keeps no query strings, no fragments but an app's routes (identifiers masked), and no chrome where a recording has text-dense frames to find it by (a sparse one's call-tile names stay — local, like the video) (screen_text/address.py, index.py); an index from an older INDEX_VERSION is deleted with its stills at serve start and at each pass (`index.purge_stale`). Also the board's arrangements, a researcher edit: GET …/screens/arrangements and PUT …/screens/arrangement, one version (screen key, session) per write so a body never touches another version (`ScreenArrangement`, migration 018), none served and writes refused while the lens is off; an explicit off deletes them with the rest of screen text (`delete_arrangements`), since a screen key is a page's path from a participant's screen
+
+`bristlenose serve --dev` mounts three extra routes used by the alpha telemetry work. Stands in for the production `bristlenose.app/telemetry.php` so the React emission hook and Swift first-launch sheets can be tested before any PHP is deployed. Dev-only; the routes are absent without `--dev`.
+
+- `POST /api/dev/telemetry` — accepts `{"events": [{tag_id, prompt_version, event_type, researcher_id}, ...]}` and appends one JSON line per event to `<tempfile.gettempdir()>/bristlenose-dev-telemetry.jsonl` (`/tmp/...` on Linux, `/var/folders/.../T/...` on macOS — GET returns the exact path). Validates `event_type ∈ {suggested, accepted, rejected, edited}` and rejects payloads missing any required field
+- `GET /api/dev/telemetry` — returns everything written to the JSONL so far (debug helper)
+- `DELETE /api/dev/telemetry` — truncates the JSONL (debug helper; also used by the test fixture)
+
+The same request shape is what the real `telemetry.php` endpoint will accept, so React code that works against the stub works unchanged in production. Spec: `docs/methodology/tag-rejections-are-great.md`.
+
+## Data API (Phase 1) — reference
+
+Moved verbatim from `bristlenose/server/CLAUDE.md` on 5 Nov 2026.
+
+The data API replaces localStorage with HTTP.  Each endpoint mirrors one localStorage key.  The vanilla JS modules call `apiPut()` after every `localStorage.setItem()` — fire-and-forget background sync.
+
+### Endpoints
+
+| Method | Path | localStorage key | JS module | DB tables |
+|--------|------|------------------|-----------|-----------|
+| GET/PUT | `/projects/{id}/people` | `bristlenose-names` | `names.js` | Person, SessionSpeaker |
+| GET/PUT | `/projects/{id}/edits` | `bristlenose-edits` | `editing.js` | QuoteEdit, HeadingEdit |
+| GET/PUT | `/projects/{id}/tags` | `bristlenose-tags` | `tags.js` | QuoteTag, TagDefinition |
+| GET/PUT | `/projects/{id}/hidden` | `bristlenose-hidden` | `hidden.js` | QuoteState |
+| GET/PUT | `/projects/{id}/starred` | `bristlenose-starred` | `starred.js` | QuoteState |
+| GET/PUT | `/projects/{id}/deleted-badges` | `bristlenose-deleted-badges` | `tags.js` | DeletedBadge |
+
+### Data flow
+
+```
+User clicks star → JS updates DOM + in-memory map
+                 → localStorage.setItem() (immediate, synchronous)
+                 → if (isServeMode()) apiPut('/starred', map) (async, fire-and-forget)
+                                        ↓
+                                   FastAPI route
+                                        ↓
+                                   SQLite upsert
+```
+
+**localStorage remains the source of truth** for the current page session.  The API is a background sync — if it fails, a toast shows but no rollback occurs.
+
+### Serve-mode detection
+
+The server injects `<script>window.BRISTLENOSE_API_BASE = '/api/projects/1';</script>` into the HTML at serve time (`app.py:_mount_dev_report`).  When absent (static HTML opened from disk), `isServeMode()` returns false and all API calls are silently skipped.
+
+### Quote DOM ID ↔ DB mapping
+
+A quote's id is `q-{participant_id}-{int(start_timecode)}` (`q-p1-123`), with `-{ordinal}` appended for every quote after the first that the speaker starts in that second (`q-p1-123-1`). **One builder and one parser, both in `grounding.py`** — `quote_dom_id(participant_id, start, ordinal=0)` and `parse_quote_dom_id(dom_id) → (participant_id, start_second, ordinal)`; `tests/test_quote_dom_id.py` refuses any other spelling of a built id under `bristlenose/` (six spellings; it checks spellings, not that a caller passed the ordinal, which is why `ordinal` is a required argument). The `_quote_dom_id(quote)` wrappers in the routes call it with the row's `ordinal`. The API accepts these ids and resolves them server-side:
+
+- **`parse_quote_dom_id("q-p1-123")`** → `("p1", 123, 0)`; `"q-p1-123-1"` → `("p1", 123, 1)`. The tail is the numbers (a speaker code is `[pmo]\d+`, so a dashed participant still parses while its own tail is not two numbers); `q-p1-123-x` is refused, as is a number past the bounds
+- **`_resolve_quote(db, project_id, "q-p1-123")`** (`routes/data.py`) → queries `Quote` where `participant_id="p1"`, `start_timecode` is in `[123, 124)` (the `int()` truncation means we need a range match) **and `ordinal == 0`**; `export_core._resolve_quote_ids` filters the same way
+
+**Why the ordinal (R86, 21 Oct 2026).** Two quotes cut from one paragraph with one start overwrote each other; `Quote.ordinal` is a property of the row and is never re-ranked. [full entry](gotchas.md#quotes-headings-signals-and-the-data-api)
+
+### Bulk maps, and curation deltas
+
+The data endpoints use GET/PUT of full state maps.  This matches the localStorage pattern — each `set()` writes the entire JSON blob.
+
+**The curation maps take a PATCH, and the SPA sends only that (20 Oct 2026).** `edits`, `tags`, `hidden`, `starred` and `deleted-badges` each have a `PATCH` that changes only the keys it names; the whole-map `PUT` stays as the test contract. [full entry](gotchas.md#quotes-headings-signals-and-the-data-api)
+
+**The one deliberate exception: Screens arrangements** (`routes/screens.py`, `GET …/screens/arrangements`, `PUT …/screens/arrangement`). They live with the lens's routes, and each PUT replaces **one version** (a screen key and a session), never the project's whole map, because a full-map PUT is how a partial body once wiped the codebook switches. Don't "correct" them back to a full map in `data.py`.
+
+### Tag definitions
+
+User-defined tags auto-create `TagDefinition` rows.  New tags are assigned to an "Ungrouped" `CodebookGroup` (auto-created if needed by `_get_or_create_ungrouped()`).  The codebook UI can later reassign them to real groups.
+
+### Hidden + Starred share QuoteState
+
+Both `is_hidden` and `is_starred` live on the same `QuoteState` row (one per quote).  The PUT endpoints update only their respective field — they don't clobber each other.

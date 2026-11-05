@@ -120,7 +120,7 @@ for i in $(seq 1 20); do
 done
 ```
 
-20 × 90s = 30 min (recent releases run 23–25 min). If PyPI still reports the old version after 30 min, apply the tag-redelivery workaround: `git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>` (see CLAUDE.md "Post-push PyPI verification"). Log `bash .claude/skills/_shared/wflog.sh new-release verified "<X.Y.Z>"`.
+20 × 90s = 30 min (recent releases run 23–25 min). If PyPI still reports the old version after 30 min, apply the tag-redelivery workaround: `git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>` (see docs/release-timing.md "Post-push PyPI verification"). Log `bash .claude/skills/_shared/wflog.sh new-release verified "<X.Y.Z>"`.
 
 ## Step 6: Report
 

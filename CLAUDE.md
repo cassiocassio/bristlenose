@@ -11,7 +11,7 @@ The pipeline runs on the user's own machine; the analysis itself is a **cloud LL
 ## Commands
 
 - `.venv/bin/python -m pytest tests/` — run tests. **Free**: `addopts = -m "not slow"` in `pyproject.toml` deselects the `slow` marker, so the everyday command never makes a paid LLM call. It used to — until 3 Sep 2026 the bare command billed the account on every run, and a session following these instructions had no way to know without reading the test files
-- `.venv/bin/python -m pytest tests/ -m slow` — the **paid** suite: real LLM calls, ~$0.01/run (a `-m` on the command line overrides `addopts`). Opt in deliberately; it is excluded from CI and ratcheted by `scripts/check-ratchet.py` as coverage given up. With no credit it now **skips** with a "SKIPPED, NOT PASSED" message rather than erroring — a genuine `BAD_REQUEST` still fails
+- `.venv/bin/python -m pytest tests/ -m slow` — the **paid** suite: real LLM calls, **~$0.63 and ~8 min per full run** measured 3 Nov 2026 on Claude (Console balance delta; the `-m slow` run is dominated by `TestLiveNorman`, ~$0.29 for its 5 batched calls over 120 quotes, and one test in that class pays for the whole class because they share a cache). That figure leaves out the 6 `test_no_fake_success_acceptance.py` pipeline cases, which skip unless `BRISTLENOSE_ANTHROPIC_API_KEY` / `BRISTLENOSE_OPENAI_API_KEY` are set and cost more when they run (a `-m` on the command line overrides `addopts`). Opt in deliberately; it is excluded from CI and ratcheted by `scripts/check-ratchet.py` as coverage given up. With no credit it now **skips** with a "SKIPPED, NOT PASSED" message rather than erroring — a genuine `BAD_REQUEST` still fails
 - `.venv/bin/ruff check bristlenose/` — lint (no global ruff install)
 - `.venv/bin/ruff check --fix bristlenose/` — lint and auto-fix
 - `.venv/bin/mypy bristlenose/` — type check (informational, not a hard gate)
@@ -187,128 +187,25 @@ Area gotchas live with the code: React/TypeScript/frontend gotchas (routing, vid
   - `consent-gradient.md` — Level 0–3 data-governance gradient, sensitivity model, consent UX principles, sequencing discipline
   - `framework-arc-quarterly-review.md` — quarterly review template and the long-arc commitments it reviews against
 
-**Sibling CLAUDE.md files:** `frontend/`, `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `desktop/`
+**Sibling CLAUDE.md files:** `frontend/`, `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `desktop/`. Each keeps rules, conventions and a one-line-per-entry **Gotchas index**; the full entries sit in a `gotchas.md` beside it (`desktop/` also has `reference.md` for long prose sections). **Keep a CLAUDE.md short:** a new gotcha goes in that `gotchas.md` with its headline added to the index, never as a long entry in CLAUDE.md. A comment that cites "`<dir>/CLAUDE.md`" for a gotcha means that `gotchas.md`
 
 **Cross-cutting:**
 - `docs/design-feature-flags.md` — **read before gating anything.** Five mechanisms across three codebases, chosen by the question the gate answers: parked-feature flags (SPA only, `featureFlags.ts`), Swift compile-time conditions (`#if DEBUG`, `DistributionChannel`), runtime host detection (`_BRISTLENOSE_*`, `isEmbedded()`/`isExportMode()`), debug seeds (`BRISTLENOSE_DEBUG_*`), and the user diagnostics preference. Python and Swift have no parked-feature flag yet; the doc gives the shape to copy
 
-**Frontend / UI:**
-- `bristlenose/theme/js/MODULES.md`, `bristlenose/theme/CSS-REFERENCE.md` — JS + CSS component reference
-- `docs/design-sidebar-playground.md` — 6-column grid, overlay, drag-resize, minimap, dev playground
-- `docs/design-responsive-layout.md` — quote grid, density, breakpoints
-- `docs/design-react-migration.md` — active migration plan
-- `docs/design-react-component-library.md` — 16 primitives
-- `docs/design-minimap.md`, `docs/design-inspector-panel.md`, `docs/design-finding-weight.md`
-
-**Pipeline / backend:**
-- `docs/design-cloud-files.md` — **read before anything iCloud- or File-Provider-shaped.** The one statement of what can and cannot be known about cloud-backed files and what Bristlenose shows: a bounded read, an ordinary retryable failure, the existing can't-find pane; no wait label, no cloud glyph, no provider advice. Re-proposed five times before 22 Oct 2026; not reopened by a new framing
-- `docs/design-analysis-lifecycle.md` — **the cross-cutting view of analyse / re-analyse / incremental**: one state machine, sequence diagrams, the affordance inventory, and the observed failure modes (four outcomes, not three). Read before adding or changing any analysis-triggering control
-- `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
-- `docs/design-screens.md` — **the plan for screens (proposal, 13 Oct 2026; one project, Mac first, OCR engine pluggable):** joins what was said, what was on the shared screen and which screen they were on. Read before touching OCR, screen text, the Screens lens, or quote↔screen joins; its two evidence records are `design-screen-text-search.md` and `design-screens-lens.md`. **Its §4 privacy line was corrected 17 Oct 2026: Bristlenose never sends screens anywhere on its own (never to the LLM); anything the researcher chooses — exports, their cloud tools, MCP — is open.** The exports (folder, clipboard, Miro board) are planned in `design-screens-export.md`
-- `docs/design-project-identity.md` — **decided 13 Oct 2026, built 15–16 Oct (phases 2, 4, 5 and 6; phase 3 obviated): a study is its database plus a marker id (`study_marker.py`, with a visible `bristlenose-study.txt` beacon Locate… finds by Spotlight), a recording is a content fingerprint (`utils/fingerprint.py`, registry version 3), a path is a hint that heals.** §11a records where the build departed from the note and the known limits. Read before touching the project row match, `sessions.json` keys, `SourceFile.path`, the MCP project key, or the sidebar's drop and relocate code
-- `docs/design-lifecycle-failure-modes.md` — **read before changing where a project's database, output or events live, or anything that runs across a stash, restore, crash, rename or move.** The register of lifecycle failure modes, each designed out with its proving test or open with its reason (its § The score has the count); `tests/test_lifecycle_scenarios.py` engineers them against the real server and stash code, with strict xfails for the open ones
-- `docs/design-pipeline-diagnostic-popover.md` — **read before adding any new error / status / message that surfaces in the popover, the pill, the sidebar glyph, or any toast.** Five-kind `MessageKind` taxonomy (`bristlenose/ui_kinds.py`), length budgets, anti-patterns, flowchart for fitting new messages into the existing vocabulary instead of inventing new glyphs/colours
-- `docs/design-platform-transcripts.md`, `docs/design-transcript-coverage.md`
-- `docs/design-people.md` — **problem-first spec for person identity: jobs to be done, then UX, then data.** Read before touching names, speaker roles, or anything that renders a person. Owns the ranked sequence, the settled decision 1 (codes are globally-numbered slots, identity a layer above; renumbering falls out of renaming — supersedes §11c's (session,code)-rekey direction), the one still-open product call (decision 2: whose name survives an export), and §H's sequenced work packages
-- `docs/design-speaker-splitting.md`, `docs/design-speaker-role-detection.md`
-- `docs/design-speaker-editing.md`, `docs/design-transcript-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md`
-- `docs/design-multi-project.md` — scope rules (instance vs project tables)
-- `docs/design-session-management.md`
-- `docs/design-logging.md`
-
-**Export:**
-- `docs/design-export-html.md` (anonymisation), `docs/design-export-locale.md` (one language per deliverable — shipped in 0.28.0), `docs/design-export-quotes.md` (CSV/XLS), `docs/design-export-clips.md`, `docs/design-export-slides.md`, `docs/design-miro-bridge.md`, `docs/design-footer-feedback-react.md`
-
-**Desktop:**
-- `docs/archive/design-desktop-app.md`, `docs/design-desktop-security-audit.md`
-- `docs/design-modularity.md` — **canonical cross-channel component strategy** (CLI + macOS, Background Assets, no-fork principle, trickle-to-full-capability)
-- `docs/design-desktop-python-runtime.md` — Mac sidecar mechanics
-- `docs/private/road-to-app-store.md` — current Apple-side gate sequence (Sprint 2 plan archived; see 100days.md for live plan)
-- `docs/design-project-sidebar.md`, `docs/design-wkwebview-messaging.md`
-- `docs/design-desktop-menu-actions.md`, `docs/design-desktop-settings.md`
-
-**Assistant surfaces (MCP + chat lens):**
-- `docs/design-mcp-server.md` — the endpoint, its four tools, §6a's sheet-era as-built record (superseded, kept as history)
-- `docs/design-mcp-extension.md` — **the shipped Mac path**: handshake file (§3.1), proxy contract (§3.2, §5b's three states), Settings ▸ MCP Agents (§3.7), the Turn On/Off Agent Access verb swap (§3.6a), the exposure badge (§5a-bis), packaging + build gates (§4), and §5c's spike + live-install measurements
-- `docs/design-chat-lens.md` — the in-app cited question box (same grounding core)
-- `docs/design-mcp-native-proxy.md` — **read before touching agent access on macOS 27 or the ChatGPT channel.** Measured 29 Sep 2026: ChatGPT installs a local plugin in one click (`codex://plugins/<name>?marketplacePath=<marketplace.json>`), runs its tools in Work mode only, and does **not** supply Node; macOS 27 decides a container read by the *responsible* process, and a team-signed proxy launched as its own responsible process needs no grant — but that route is private SPI and was rejected for the App Store. What is built (on `main`, unreleased) is a sandboxed helper carrying the team app group, in `desktop/mcp-helper/`, gated by `desktop/scripts/check-mcp-helper.sh` (§6.9–§6.11)
-- `docs/design-mcp-files-and-folders.md` — the System Settings ▸ Files & Folders route for the Node proxy on macOS 27 (shipped copy, all 21 locales); now the fallback for a build without the native helper, and the recovery sentence
-
-**Analysis / research methodology:**
-- `docs/design-research-methodology.md` — read before changing prompts or analysis logic
-- `docs/academic-sources.html` — theoretical foundations
-- `docs/design-signals-future.md`, `docs/design-quote-sequences.md`, `docs/design-dashboard-stats.md`, `docs/design-signal-elaboration.md`
-
-**i18n:** `docs/design-i18n.md` — terminology table, implementation gotchas
-
-**Codebook:** `docs/design-codebook-norman.md` (**read before rewording any framework tag** — the decision register, the evidence policy for data that cannot be cited, and the harness; a decision there is reopened by a witness quote that fails, never by a hunch), and its siblings `design-codebook-garrett.md`, `design-codebook-morville.md`, `design-codebook-nielsen-register.md`, `design-codebook-yablonski.md` — every authored codebook has a register, a golden fixture under `tests/fixtures/codebook-golden/`, and `tests/test_codebook_registers.py` gates them: a settled decision without a witness fails, a fixture tag that does not exist fails, and **a `not_this` that points at a tag in another codebook which does not exist fails** (every 22 Sep 2026 audit found such pointers; `docs/codebook-audits/` holds the audits). A tag or group that changes name carries `renamed_from:` so `codebook_sync` migrates installed rows, `docs/design-codebook-v2.md` (the navigator that ships), `docs/design-codebook-state-model.md` (what the enable/disable switch means — the canonical spec), `docs/design-codebook-library.md`, `docs/design-codebook-focus.md`, `docs/design-moderator-question-pill.md`, `docs/design-dynamic-codebook-builder.md`. The v1 island's decision log is history: `docs/archive/design-codebook-island.md`
-
-**HTML report / dashboard / auth:**
-- `docs/design-html-report.md`, `docs/design-dashboard-navigation.md`
-- `docs/design-sentiment-charts.md`, `docs/design-badge-action-pill.md`
-- `docs/design-react-islands.md`, `docs/design-autocode.md`
-
-**Ops / release:**
-- `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
-- **`docs/testing/README.md` — the testing & acceptance hub (start here for anything test/QA/acceptance).** Three-tier model (CI · Playwright · acceptance matrix · human walk), `docs/testing/coverage-inventory.md` (the single source of surfaces: 27 formats · 5 exports · 5 lenses · 5 providers), `docs/testing/acceptance-matrix.md` (mechanical tier, Phase-1 plan), `docs/testing/test-data-generation.md` (fixture recipe). Built already: `tests/test_no_fake_success_acceptance.py` (skips without fixtures) + `e2e/`. The by-hand walk lives in the private QA doc.
-- `docs/design-ci.md`, `docs/archive/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
-- `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`, `docs/design-fedora-packaging.md` (Copr — **live since 28 Aug 2026**, see the status section; §7 holds the standing obligations, and the measured `ffmpeg-free` codec verdict)
-- `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md`
-- **The release chain has a board.** `.venv/bin/python scripts/release-board.py` draws `.release/<v>/board.html` from the files the train writes; `--serve` runs it live on loopback behind a per-run token; `release.sh run --board` starts one detached if none is serving and prints the link, and without the flag prints it only if one exists (the release never needs the board — §8 of the design doc has the five layers) — the feed is `desktop/scripts/sink.sh` teeing the `@bn` protocol into `.release/<v>/bn-events.log` (`docs/design-release-board.md`). Two rules that cost a day: the board reads and never derives (no data is a third state, and the driver writes its own boundary lines so an empty sink is *ran, no record*, not *did not run*), and `printf %q` + `shlex` is not a round-trip — values are normalised before quoting and the parser counts what it cannot read.
-- **The release chain is executable, and it is documented in three places, not one.** [`scripts/README.md`](scripts/README.md) is the index (what to type: `release.sh plan|run|verify`, the gates, the suites that prove the gates). [`desktop/scripts/REPORT-STYLE.md`](desktop/scripts/REPORT-STYLE.md) Part 2 is the *rules* a script follows — where constants live (`scripts/project.conf`), why probes are tri-state, what each exit code means (`75` = acts done, verification pending), the testability seams, and the shell traps this codebase has already paid for. `docs/design-release-machine.md` is the architecture and `docs/release-premortem.md` replays six months of release incidents against the current scripts. `docs/design-release-principles.md` is the *why* under all three — the saga/pivot shape, the tri-state-oracle and TOCTOU rules, gates-as-a-population, and what to measure — each line anchored to the incident that paid for it. **Four places, then.** Read the principles before adding a gate or a retry; they are what stops the next one being born dead.
-- `docs/design-decisions.md` (why)
-- `docs/ROADMAP.md`
+**Per-area reference docs** (frontend/UI, pipeline/backend, export, desktop, assistant surfaces, analysis and research methodology, i18n, codebook, HTML report/dashboard, ops/release) are in [`.claude/reference-docs.md`](.claude/reference-docs.md): read the group for the area you are working in. **Before touching the release chain** (`scripts/release.sh`, the gates), read the four release docs listed under Ops / release there: `scripts/README.md`, `desktop/scripts/REPORT-STYLE.md`, `docs/design-release-machine.md`, `docs/design-release-principles.md`.
 
 ## Working preferences
 
 ### Branch workflow (solo — trunk by default)
 
-**This is a solo project; the default is trunk.** Work directly on `main`, in the main repo, in the env that's already built. Commit at every green checkpoint. **Do not spin a branch/worktree per feature** — the cost is the worktree's env build (`.[dev,serve]` venv + frontend build + ffmpeg/model symlinks + smoke test), paid on creation *and* teardown, routinely out of proportion to the work. GitHub's branch-per-feature + PR flow is built for teams across timezones; for one person it's pure ceremony. (5 → 50 → 500 devs need it; a team of one does not.)
-
-**A branch is free; a worktree costs an env.** `git branch foo` is a 40-byte pointer — instant, no env. `git worktree add` is a second working copy that must be built and proven. Your safety net is git *history*, not worktree *isolation*:
-- **Commit often** — every green checkpoint is a rollback point.
-- **Checkpoint before risky surgery:** `git branch -f checkpoint` (free pointer); roll back with `git reset --hard checkpoint`.
-- **Undo something already committed:** `git revert <sha>` — safe, never loses history. This is the "plausible rollback".
-- **Rescue one file from a bad session:** `git restore -s <good-sha> -- <path>`.
-- **Panic button:** `git reflog` → `git reset --hard HEAD@{n}`. Nothing is lost for 90 days.
-- **Safe remote backup, no CI/release:** `git push origin main:wip`.
-
-`main` is not "released" until *you* push + tag (evening rule), so a half-done change on local `main` is fine — just don't push it. Trunk is also *safer* for this repo: the two worst recorded incidents (edits landing on the wrong working copy; stale `__pycache__` after an in-place switch) were both *caused by* the multi-worktree pattern. Fewer working copies = fewer feet to shoot.
-
-**Don't default to offering a new branch.** When a handoff/plan is written, the default next step is to do the work on `main`, NOT to hand back a `/new-branch` invocation. Only propose a worktree when the exception below genuinely applies, and say *why*. (Defaulting-to-branch is exactly how the retired "short-lived branches / one-branch-plus-nudges" rules accreted — don't regrow them. See memory `feedback_solo_trunk_default.md`.)
-
-**The worktree is the rare exception — only when two envs must be live at once:** a long pipeline run going while you code something else, or a genuine second parallel Claude session that would clobber the working tree. Then — and only then — use **`/new-branch`** (never hand-roll a worktree; DIY ones produce broken envs: missing extras, unbuilt frontend, missing symlinks). Checkpoint *pointers* (`git branch -f`) are not worktrees and need no skill.
-
-**Session-start check** (cheap, still worth it):
-
-```bash
-pwd
-git branch --show-current
-test -f .claude/setup-incomplete && cat .claude/setup-incomplete
-.venv/bin/python -c 'import sys; print("venv", ".".join(map(str, sys.version_info[:2])))'; grep '^python ' .tool-versions
-```
-
-**The venv's minor must match `.tool-versions`.** If it doesn't, the env has drifted off the pin — rebuild before doing real work (`rm -rf .venv && python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev,serve]'`), don't work around it. Drift is silent: the suite still passes on a neighbouring minor, so nothing fails until a release build disagrees with the dev box. Found 4 Aug 2026 — a crash-recovery `uv venv` had quietly rebuilt `.venv` on 3.11 **and** dropped `presidio-analyzer`/`presidio-anonymizer` (core deps, stage 7 PII removal) from the install, with a green suite throughout because those tests mock or skip. **Don't reach for `uv` or `mise` to fix it** — that migration is Phases 1–4 of `docs/design-dev-environment.md` and is explicitly gated post-TestFlight; the house mechanism is `python3.12 -m venv` + `pip install -e`. A stray untracked `uv.lock` is the tell.
-
-If you're in a worktree (rare) and `.claude/setup-incomplete` exists, its env isn't prepped — don't start real work until `/new-branch` finishes or setup is done manually (frontend build, venv, smoke test). A `PreToolUse` hook in `.claude/settings.json` blocks `git checkout`/`git switch` to feature branches from the main repo — harmless under trunk (you stay on `main`) and it still guards against accidental in-place checkouts.
-
-**Session-handoff sentinels:** `.claude/setup-incomplete` (negative — `/new-branch` setup didn't finish) and `.claude/last-end-session.json` (positive — `/end-session` signed off; carries `head_sha` for drift detection). Both gitignored.
-
-**Branch handoff plan:** if `HANDOFF.md` exists at a worktree root (gitignored symlink to `.claude/plans/<branch>.md`), it's the **starting brief** — read it first, don't synthesise from sandpit logs. Canonical home is `docs/private/handoffs/<branch>.md` (gitignored, backed up by `backup.sh`). **Handoffs are NOT specs** — before drafting a plan, run `git log -3 -p <files-the-handoff-names>` and grep commit bodies for decision-shapes ("not Y", "deferred to", "rejected", "chose X over Y", "post-TF", "status-only"). If a recent commit chose against an affordance the handoff proposes, raise it as a question BEFORE planning. Recent commits win unless the user overrides. (Memory `feedback_handoff_not_a_spec.md`.)
-
-**Skills for the worktree exception (not the default path):**
-- **`/new-branch <name>`** — creates branch + worktree + venv + symlinks + `docs/BRANCHES.md` entry. Use only for genuine parallel-env work; never hand-roll a worktree (DIY ones ship broken envs). If `disable-model-invocation` blocks auto-invocation, read `.claude/skills/new-branch/SKILL.md` and follow every step manually.
-- **`/new-feature <name>`** / **`/close-feature`** — the trunk default: start / finish work on `main`, no worktree. See `.claude/skills/WORKFLOW.md`.
-- **`/close-branch <name>`** — archives a merged worktree branch; reads `.claude/last-end-session.json` and prompts before archiving an un-end-sessioned or drifted branch.
-- **Reverting a merge:** `git revert -m 1 <merge-commit-hash>`.
-
-See `docs/BRANCHES.md` for any active worktrees and the parked set.
+**Solo project; the default is trunk.** Work directly on `main` in the main repo, commit at every green checkpoint, and do not spin a branch or worktree per feature (a branch is a free pointer; a worktree costs an env build). Checkpoint with `git branch -f checkpoint`; undo with `git revert <sha>`; the panic button is `git reflog`. A worktree is the rare exception, only when two envs must be live at once, and then only via `/new-branch` (never hand-rolled). Session-start check: `pwd`, `git branch --show-current`, the venv minor must match `.tool-versions`. Full text, rollback recipes and the handoff-is-not-a-spec rule: [`.claude/branch-workflow.md`](.claude/branch-workflow.md).
 
 ### General
 
 - Keep changes minimal and focused — don't refactor or add features beyond what's asked
 - **Self-check at end of task**: fewer unnecessary changes in the diff than last time? clarifying questions asked *before* implementing rather than after a wrong turn? no rewrite mid-task because the first pass was overcomplicated? If any of those is "no," that's the lesson for next time
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
+- **Fix commits carry a `Found-by:` trailer** naming how the defect surfaced: `review` (a review run or agent), `register` (the lifecycle or failure-mode register), `ci`, `own-use` (the maintainer's trial runs), or `user` (an outside report). Skip it on features and docs. It exists so the next defect count has fewer "unknown" sources (22% of serious fixes in the 5 Nov 2026 defect-mining pass had no recorded source); no hook, no gate
 - **Human QA after each task**: when you finish a task, suggest only the checks a human needs to do that automated tests can't cover (visual regression, browser interaction, UX feel). Skip this for pure data/logic work where unit tests are sufficient. Include copy-pasteable commands to make it easy (e.g. server start command, URL to open). Don't duplicate what pytest already covers
 - **NEVER use Claude Code preview tools (`preview_start`, `preview_screenshot`, `preview_snapshot`, `preview_eval`, etc.) for QA.** They consistently fail for Bristlenose — wrong port, missing Vite HMR, white-on-white rendering, incomplete React mount. Every attempt wastes time. Bristlenose needs the full stack (Vite dev server on 5173 + FastAPI serve on 8484) running together. For QA, tell the user to run the full stack in their own browser:
   ```
@@ -318,101 +215,7 @@ See `docs/BRANCHES.md` for any active worktrees and the parked set.
 
 ### Release timing (evening releases)
 
-Releases land after 9pm London on a **working day**; **the act that lands a
-release is the tag push.** Weekends and **UK bank holidays: any time** — the
-rule exists to keep release notifications out of client working hours, and on a
-day when clients are not working there is nothing to keep them out of. The `pypi` environment's required-reviewer hold was **removed on
-23 Aug 2026** — it had been the reason the tag could go out early, because a
-tagged run then waited for a human before publishing.
-
-**Why it went.** At the approval moment every fact is mechanical: both CI runs,
-the artefact's signature and staple, `tag == HEAD`, the version not already on
-PyPI. A human clicking Approve at 11pm re-verifies none of them. The click was
-a second asking of a question already answered by typing "release" — and at
-**97 releases in 204 days** that ceremony was expensive and the judgement empty.
-
-**Removing the hold did not remove the gate.** `publish` needs `build` needs
-`ci`, and `release.yml` invokes `ci.yml` with `strict-macos: true`. PyPI cannot
-receive a version whose full matrix, e2e and strict macOS suite did not pass on
-the tagged commit. `check-release-ready.sh`'s `publish gate` row asserts that
-chain and **fails** if it is ever broken — the click became assertions that
-actually inspect the artefact.
-
-Consequences:
-
-1. Push `main` **any time** — it never publishes and it buys CI signal.
-2. **The tag goes LAST**, after the Mac uploads and after a strict CI verdict on
-   `main`. `ci.yml` exposes `strict-macos` on `workflow_dispatch`, so the strict
-   verdict is obtainable without a tag — which is what preserves the 0.25.2
-   lesson (every verdict before every irreversible act) now that the tag is the
-   publishing act. `./scripts/release.sh run` encodes this order.
-3. **The tag push is what waits for 9pm — on working days only.** Weekends and
-   UK bank holidays: any time. Still two back-to-back commands, never one
-   `--tags` — the bundled push is how the tag-driven workflow gets debounced
-   into never firing.
-
-   **Check the holiday, don't derive it.** The UK government publishes the
-   official list, so this is one command and never a calculation:
-
-   ```bash
-   curl -s https://www.gov.uk/bank-holidays.json | jq -r --arg d "$(date +%F)" '."england-and-wales".events[] | select(.date==$d) | .title'
-   ```
-
-   Non-empty output is the answer — today is that holiday, so the window is
-   open now. Added 31 Aug 2026, when a release was scheduled to wait until 9pm
-   on the **Summer bank holiday**: "is it a weekday" was answered by `date +%u`,
-   which returns 1 for a Monday whether or not anyone is working. Reasoning it
-   out from "last Monday in August" is the same mistake one step later — the
-   division is *working day*, and England-and-Wales, Scotland and Northern
-   Ireland do not share a calendar, which is exactly why the feed is keyed by
-   nation.
-
-**Override:** push when something is urgent. This is a guideline, not a gate.
-
-**A running release freezes `main`, locally.** While a `release.sh run` driver is
-alive, the `release-freeze` pre-commit hook refuses commits in this checkout and
-its worktrees (not pushes of earlier commits, `--no-verify`, or other machines,
-and not the gap after a failed step, when a fix is supposed to land):
-a commit then would move HEAD under the release, forcing a rebuild and a fresh
-strict-CI run, and could change what ships (0.34.0 was planned as 0.33.1 and
-became a minor that way). The release's own commits pass; a fix the release
-needs goes in with `BN_RELEASE_FREEZE_OK=1 git commit …`. **Work that must not
-go live before the new version is on PyPI** (an install guide naming it, a
-one-liner that installs it) waits on a branch named `after-pypi/<version>`.
-The same holds for any channel: `after-<channel>/<version>[-anything]`
-(`after-winget/0.36.0` holds the docs that make winget the lead Windows route),
-in this repo or the website's. `release.sh verify` lists every hold in both
-repos with `land`, `wait` or `?` per channel. It lands a hold when that channel
-carries the version or a later one, without waiting for every channel to
-verify, and reports a misnamed `after-*` branch rather than skipping it.
-
-**Why:** avoids release notifications during client working hours; batches
-releases into a predictable window. Both halves of that purpose are about *when
-other people are at work*, which is the test to apply when a new edge case turns
-up — not the shape of the calendar.
-
-### Post-push PyPI verification (mandatory)
-
-A tag push that reaches GitHub is NOT the same as a release that reaches PyPI. The release pipeline silently stalled from v0.15.5 to v0.15.9 (five versions, ~6 days) because no step checked that PyPI actually accepted the upload. **After pushing the tag, verify before declaring the release done:**
-
-```sh
-for i in $(seq 1 20); do
-  sleep 90
-  pypi=$(curl -s https://pypi.org/pypi/bristlenose/json | jq -r .info.version)
-  echo "[$i] PyPI: $pypi"
-  [ "$pypi" = "<X.Y.Z>" ] && break
-done
-```
-
-20 iterations × 90s = 30 minutes. Recent releases have run 23–25 minutes (v0.15.13: 25m41s, v0.15.14: 23m22s); the original 15-minute budget routinely expired during a normal release. **v0.23.0 took ~2 hours across three attempts** — budget generously on a release that touches the test suite. If PyPI still reports the previous version after 30 minutes: `gh run view --workflow=release.yml` to check the workflow fired. Apply the v0.15.0 debouncing workaround (`git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>`) if it didn't.
-
-**`/pypi/<pkg>/json` is CDN-cached and CAN read stale — don't trust a single negative.** During the v0.23.0 verification the poll returned `0.23.0`, and a re-check seconds later returned `0.22.0` from a different edge node. A stale read looks exactly like "the release never published" and would send you into unnecessary tag surgery on an already-successful run. **Confirm with the version-specific endpoint**, which is authoritative and unambiguous:
-
-```sh
-curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/<X.Y.Z>/json   # 200 = published
-```
-
-A cache-busted index (`?cb=$RANDOM` + `Cache-Control: no-cache`) is the second check; `releases["<X.Y.Z>"]` should hold 2 files (sdist + wheel). Check `gh run view <id> --json conclusion` too — a `success` conclusion plus a 200 on the version URL means published, whatever the cached index says.
+**The act that lands a release is the tag push.** It waits for after 9pm London on a **working day**; weekends and UK bank holidays: any time (check the gov.uk feed, never derive the holiday). Push `main` any time; the tag goes **last**, after the Mac uploads and a strict CI verdict on `main`; push `main` and the tag as two separate pushes, never `--tags`. **A running `release.sh run` freezes `main` locally**; work that must not go live before PyPI waits on an `after-pypi/<version>` branch. After the tag, **verify on PyPI** with the version-specific endpoint (`/pypi/bristlenose/<X.Y.Z>/json`, 200 = published); the index JSON is CDN-cached and can read stale. Full rules, the holiday command, the poll loop and the reasoning: [`docs/release-timing.md`](docs/release-timing.md).
 
 ## Gate policy — no gate goes soft by default
 
@@ -459,41 +262,7 @@ X" or "enforced by X", `grep -rn X desktop/scripts .github/workflows scripts` fo
 
 ## Branch switching
 
-When the user says "let's switch to branch X" or similar, **automatically run this checklist before switching**:
-
-### Pre-switch checks (on current branch)
-
-1. **Check for uncommitted changes** — `git status`
-   - If changes exist, commit them with a descriptive message (ask user for message if unclear)
-   - Never leave uncommitted work when switching branches
-2. **Run tests** — `.venv/bin/python -m pytest tests/`
-   - If tests fail, warn the user before proceeding
-3. **Run linter** — `.venv/bin/ruff check .`
-   - If lint errors, fix them or warn before proceeding
-
-### Switch
-
-4. **Execute the switch** — `git checkout <branch-name>`
-   - If branch doesn't exist locally but exists on remote: `git checkout -b <branch-name> origin/<branch-name>`
-   - If branch doesn't exist anywhere, ask user if they want to create it
-
-### Post-switch cleanup
-
-5. **Clear Python cache** — `find . -name __pycache__ -exec rm -rf {} +`
-   - Editable installs cache imports; stale `.pyc` files cause mysterious bugs
-6. **Reinstall package** — `.venv/bin/pip install -e .`
-   - Shebang paths and import paths may reference old locations
-7. **Report status** — `git status` + `git log --oneline -3`
-   - Show user what branch they're on and recent commits
-
-### Why this matters
-
-Python editable installs (`pip install -e .`) write absolute paths into `.pth` files. Switching branches can leave stale bytecode that serves old code, causing:
-- `ImportError` for modules that don't exist on the new branch
-- Functions behaving like the old branch's version
-- Mysterious test failures
-
-The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused by exactly this — stale imports from a feature that was stashed on another branch.
+Before switching: commit, run the tests and `ruff check .`. After: clear `__pycache__`, `pip install -e .`, report `git status` and `git log --oneline -3` (stale editable-install bytecode caused the PreferencesFile incident). The checklist in full: [`.claude/branch-workflow.md`](.claude/branch-workflow.md).
 
 ## Session-end housekeeping
 
@@ -504,42 +273,7 @@ The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused b
 - On pickup, read this guidance, TODO, the relevant decision record and recent git history; inspect the working tree before editing. One agent owns a ruling's edits at a time in the shared checkout. Re-read files before changing them; preserve unrelated edits and stage only owned paths.
 - Respect `.claude/current-task.json`, workflow logs, review receipts and end-session sentinels as workflow state: do not overwrite another session's active task or mark a workflow completed unless its required steps actually ran. Claude auto-memory is supplementary; an agreed decision must also live in the shared project records.
 
-**30 Oct Codex consolidation complete:** the canonical checkout
-`/Users/cassio/Code/bristlenose` is clean on local `main`. It contains
-`0b7eb11d5` (Zoom UTC/DST range fix
-and deterministic startup-probe completion verification) and `c84c26606`
-(parked multi-Mac designs/mockups and trued register). Full Python gate on the
-resulting tree: **9,013 passed, 8 skipped, 133 deselected, 6 expected failures**;
-full native gate: **2,851 passed, 0 failed**. Mockup register, whole-repo Ruff,
-locale-key and staged-diff checks pass. `frontend/node_modules` is a generated
-untracked symlink and must not be committed.
-
-The canonical checkout's former 105 dirty/untracked
-paths were classified and checksum/mode-verified against the private snapshot;
-all three private preservation trees were also copied byte-for-byte outside the
-repository to
-`/Users/cassio/.codex/preservation/bristlenose-final-consolidation-2026-10-30`.
-Claude's organising session reports no owned edits or commits; it deliberately
-removed only the untracked root debris `the`, `with` and `uv.lock`. The explicit
-cleanup restored 42 tracked paths and removed 16 preserved untracked files;
-ignored private records remain. The redundant integration worktree, spent
-Signals branch and eight other fully merged Codex branches were retired.
-
-The larger reader/handover implementation remains intentionally **unmerged** at
-`codex/study-access-poc` (`e1f73c7136`). Its design/mockup records are now staged
-as parked supporting material; its full source and bundle are preserved in the
-private recovery archive and the external preservation copy. It is the deferred
-study reader prototype, not the About-page animation work. The Claude scratch
-worktree on `reliability/ruling-4-sent-register` is clean and still potentially
-Claude-owned; do not retire it without establishing that it is idle. Two stale
-app attachments (`study-access-poc`, `study-recovery-guard`) are already
-unregistered directories, not Git worktrees; app archival could not verify this
-chat's old primary checkout, so their directories were left intact. No push,
-tag, release or public changelog update is authorised.
-
-The complete cross-session map and preservation/cleanup account is
-[`docs/session-consolidation-2026-10-30.md`](docs/session-consolidation-2026-10-30.md).
-Read it before resuming any branch or stash named there.
+**Standing line from the 30 Oct 2026 consolidation:** no push, tag, release or public changelog update is authorised on the strength of that close-out. The full account (what was merged, preserved and retired, and which branches and stashes remain) is in [`docs/session-consolidation-2026-10-30.md`](docs/session-consolidation-2026-10-30.md); read it before resuming any branch or stash named there.
 
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 

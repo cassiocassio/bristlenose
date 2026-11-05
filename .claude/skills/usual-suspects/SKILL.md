@@ -195,6 +195,37 @@ confirms two consecutive quarters with no new fragility-class incident and no
 unreviewed workflow regression. Re-evaluate at the first post-TF retro; don't
 let this lens ossify unexamined.
 
+### Shape check
+
+Nearly all the serious defects fixed in October 2026 (silent harm the
+researcher cannot tell or undo) fit a handful of shapes. On every pass, tell
+`code-review` and `silent-failure-hunter` to ask which of these the change
+touches, and to look for the matching failure:
+
+- **Identity by name or loose key** at a persisted boundary (database rows,
+  `sessions.json`, the people file, tag and codebook ids, export round trips):
+  two things merge, or one splits, because they share a name or path.
+- **Input shape assumed** in a parser or ingest step: duplicate files, two
+  speakers, tables, odd encodings, malformed model output, so a result is wrong
+  or dropped without an error.
+- **Destructive step reaches too far**: a delete, cleanup, cascade or overwrite
+  that takes the researcher's hand-made work with it.
+- **Client write path**: a save that fails, a refetch that lands mid-edit, a
+  value that rolls back, or a save shown as done that was not.
+- **State lost across a hand-off** (restart, restore, stash, move, relaunch):
+  what was true before is not true after.
+- **Partial or failed result recorded as complete**: a "done" or cached marker
+  written when only some of the work succeeded.
+- **Two copies of a rule that disagree**: the same rule in Python, TypeScript
+  and Swift, or in a count and the thing it counts.
+- **What may leave or be read**: participant data reaching an export, a log or a
+  model call it should not.
+
+Report a hit only with the concrete input or sequence that produces it. "Could
+be a problem" is not a finding. This is a routing lens over existing reviewers,
+not a new agent; it adds no step and no output section. Provenance: the 5 Nov
+2026 defect-mining pass (private notes). No numbers live here on purpose.
+
 Announce which agents you're launching and why:
 ```
 Calling the usual suspects:

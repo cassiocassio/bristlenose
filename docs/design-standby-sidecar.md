@@ -55,3 +55,58 @@ Swift: a pure policy function (`StandbyPolicy`) decides start, claim, recycle an
 - **Tests:** 15 Python subprocess tests (`tests/test_standby.py`, four mutations killed); 43 Swift tests in `StandbySidecarTests.swift` (policy matrix, the process protocol against `/bin/sh` stand-ins, the pool, the manager's claim, `start()` itself), eight mutations killed; 190 Swift tests across the serve, fleet and project suites green, run in an isolated worktree because other sessions had uncommitted Swift in the tree.
 - **Not covered, only the real app can show:** that a standby spawned before the click can read a leased study under the sandbox; that a study added after launch is refused the claim and cold-spawns; the actual saving in the app.
 - **Kill switch:** `defaults write app.bristlenose BristlenoseStandbySidecar -bool NO`, or `BRISTLENOSE_STANDBY=0`.
+
+## Restored launches: starting earlier, and claiming a spare that is still booting (proposal, 5 Nov 2026)
+
+Under the platform default a restored window starts its study's sidecar within a fraction of a second of launch. The pool as built starts its spare 1.5 s after the first window appears, so a restored window never finds one. Two changes are proposed; this section stress-tests them and says what to build, what to measure first, and what to leave alone.
+
+### What the spare saves when the study asks before it is ready (measured)
+
+`experiments/perf/standby-early-claim.py`, dev, same bundle, real-size study, interleaved, 5 reps. The claim is written `d` seconds after the spare was spawned, without waiting for `standby-ready` (Python reads it when its imports finish):
+
+| claim sent d s after spawn | spawn → `Report:` | the study waits | saved vs cold (1.375 s) |
+|---|---|---|---|
+| 0.00 | 1.396 | 1.396 | −0.02 |
+| 0.15 | 1.410 | 1.260 | 0.12 |
+| 0.30 | 1.398 | 1.098 | 0.28 |
+| 0.45 | 1.394 | 0.944 | 0.43 |
+| 0.60 | 1.407 | 0.807 | 0.57 |
+| 0.90 | 1.650 | 0.750 | 0.62 |
+
+**The law: the total is `max(boot 0.64, d) + bind 0.75`, so claiming early gives the study exactly the head start the spare had, no more.** Boot and bind stay in series; there is no overlap to win. A claim at d = 0 is a cold start with extra steps. The Python side needs no change to accept an early claim (the line waits in the pipe).
+
+So the two changes depend on each other, and on a number nobody has: **t_w, the time from process launch to the restored window's `start()`**. The ledger has no launch-to-ready figure. Saving ≈ t_w − t_spare, capped at about 0.62 s.
+
+### Change A: start the spare earlier
+
+- Today: scheduled in the first window's `onAppear` plus 1.5 s. A restored window's `ContentView.onAppear` runs in the same pass, so the head start is ~0 even with the delay removed. **Removing the delay alone buys nothing.**
+- To get a real head start the start must come before window creation: `ProjectIndex.init` already does `load()` then `syncWatchers()`, so leases exist as soon as the `@StateObject` is first read (during the App's first body pass); the earliest reachable hook after that and before the windows is the app delegate (`applicationWillFinishLaunching`/`DidFinishLaunching`), which would need references to the fleet and index.
+- **Order constraint:** spawn only after the leases (a child inherits extensions held at spawn). Event-driven (a callback after `syncWatchers`), never a timer.
+- **Consent (found while reviewing this, and true of the build as shipped):** `ServeManager.start` is gated on AI consent so nothing runs before the disclosure is acknowledged (Apple 5.1.2(i)). The pool is not. The spare makes no calls, but a launch-time process holding a provider key and importing third-party packages before consent breaks the stated rule, and a dependency's import-time telemetry would be a real event. **Gate the pool on the same condition, now.**
+- Pros: the only way a restored launch gets any win; a Welcome launch loses nothing (thinking time is far longer than boot).
+- Cons: contends with launch for CPU/disk (unmeasured; the first launch after an install also pays code-signature validation of the bundle's ~219 Mach-Os, which a cold start would pay anyway); holds ~140 MB for a session that never opens a study (more sessions, since it now starts every launch); needs an app-delegate hook and a second reference path; a first launch before consent starts nothing (correct).
+
+### Change B: a restored window claims a spare that is still booting
+
+- Mechanism: allow `claim` in `.booting`. Write the claim; Python reads it after imports. Drop the late `standby-ready` line from the manager's output (it would land in the boot log tail).
+- Pros: turns a spare that is 0.3 s old into a 0.3 s saving instead of nothing; no Python change.
+- **The stress finding: failure behaviour changes.** Today a claim happens only after `standby-ready`, so a spare that cannot boot (an old bundle without `--standby`, an import crash) never reaches a study. With B, a study can be handed to a process that then dies before it is ready, and `handleTermination` reports `exitedBeforeReady` for a study that a cold spawn would have opened. That is a new user-visible failure on the path that used to work. Two ways to close it:
+  1. **Proven-binary rule (preferred):** claim a booting spare only if this sidecar binary's stamp has already booted a spare to ready, remembered across launches (a defaults key holding the proven stamp). The first launch after any rebuild or update pays one cold start; every later one is covered. No fallback machinery.
+  2. Fallback re-spawn on early death: transparent but more code and a re-entrancy risk in the most race-prone part of the app.
+- Other conditions, unchanged: fingerprint, stamp and lease checks are still done at claim time. A study that waits on a spare that then hangs in its imports waits the 90 s ceiling a cold start would have had.
+- Cons: only one window gets the spare (two restored windows: the second cold-starts); the watchdog starts at claim, so it also covers boot.
+
+### Verdict on the pair
+
+| | alone | together |
+|---|---|---|
+| A without B | the restored window finds the spare unready and cold-spawns; the spare then idles | no |
+| B without A | no spare exists yet at claim time | no |
+| A + B | the window waits `1.375 − head start` | saves up to ~0.6 s, **size unmeasured until t_w is** |
+
+### Recommendations (in order)
+
+1. **Gate the pool on AI consent now.** A small defect in the shipped build.
+2. **Settle the default** with `defaults read -g NSQuitAlwaysKeepsWindows` on a fresh guest. If restoring is the platform default, restored launches are the common case and A + B decide most of the feature's value; if not, the shipped build already serves the common case and A + B are an edge.
+3. **Measure t_w** (and launch-to-ready with and without a launch-time spare) in the real app, with the existing signposts. Without it A + B are a guess.
+4. If worthwhile: build A and B together, with the proven-binary rule, behind the same kill switch.

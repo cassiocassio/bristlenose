@@ -1466,6 +1466,13 @@ final class ProjectIndex: ObservableObject {
     /// project that doesn't have one; releases lease + removes watcher on
     /// each non-`.ready` project that does. Idempotent. Safe to call from
     /// `refreshAvailability()`, project switch, or any state change.
+    /// Paths of the projects whose security-scoped lease is open now. The standby sidecar is
+    /// spawned while these are held, so it inherits their sandbox extensions and can read them
+    /// (docs/design-standby-sidecar.md).
+    func leasedPaths() -> [String] {
+        projects.filter { leases[$0.id] != nil }.map(\.path)
+    }
+
     func syncWatchers() {
         let liveIDs = Set(projects.map(\.id))
         for stale in leases.keys where !liveIDs.contains(stale) {

@@ -123,6 +123,7 @@ struct BristlenoseApp: App {
     @State private var prefsFanOut: (any NSObjectProtocol)?
     /// Holds the agent-access observer that designates the exposed study.
     @State private var agentAccessFanOut: (any NSObjectProtocol)?
+    @State private var standbyScheduled = false
     @StateObject private var projectIndex = ProjectIndex()
 
     /// Owns the single import window's store. App-level rather than
@@ -229,6 +230,15 @@ struct BristlenoseApp: App {
                     // (Both objects are app-lifetime; the capture is benign.)
                     serveFleet.agentAccessResolver = { [weak projectIndex] path in
                         projectIndex?.agentAccess(forPath: path) ?? false
+                    }
+                    // A sidecar booted before a study is chosen, so opening one skips the boot.
+                    // Configured and scheduled once per process, like the observers below.
+                    if !standbyScheduled {
+                        standbyScheduled = true
+                        serveFleet.standby.configure(
+                            mode: { [weak serveFleet] in serveFleet?.frontedOrIdle.mode },
+                            leasedPaths: { [weak projectIndex] in projectIndex?.leasedPaths() ?? [] })
+                        serveFleet.standby.scheduleStart(after: StandbyPolicy.launchDelay)
                     }
                     // …and the same permission keyed by id, which is what
                     // `syncHandshake` reads. The path-keyed form resolves

@@ -771,14 +771,27 @@ final class ServeManager: ObservableObject {
         // unscoped token would open /api/* on every local QA build
         // (design §3.1, review Finding 3). Cost of the ephemeral path is
         // durability only.
-        mcpToken = MCPTokenStore.token(
-            forProjectPath: projectPath,
-            studyID: StudyMarker.read(folder: URL(fileURLWithPath: projectPath))
+        mcpToken = mcpTokenResolver(
+            projectPath,
+            StudyMarker.read(folder: URL(fileURLWithPath: projectPath))
         ) ?? MCPTokenStore.mintEphemeral()
         env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
         proc.environment = env
         instance.spawnedReadsScreens = Self.readsScreens(env)
         instance.spawnedEnvFingerprint = ServeEnvStaleness.fingerprint(env)
+
+        // A standby sidecar already booted and waiting takes this study if it can: the same
+        // process, the same pipe protocol and the same watchdog, minus the boot. Anything that
+        // stops it (no standby, stale environment, a study it could not read) is the cold spawn
+        // below, exactly as before. See docs/design-standby-sidecar.md.
+        if let adopted = claimStandby(projectPath: projectPath, mcpToken: mcpToken ?? "") {
+            self.process = adopted.process
+            readTask = adopted.readTask
+            adopted.replayHeld()
+            PerfSignpost.step("serve-claimed-standby")
+            armStartWatchdog()
+            return
+        }
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -829,9 +842,44 @@ final class ServeManager: ObservableObject {
             return
         }
 
-        // Watch the start, not the wall clock (R31): a first launch can spend
-        // well over 15 s in code-signature checks before Python prints a line.
-        // An exit is `handleTermination`'s to report; a live process gets
+        armStartWatchdog()
+    }
+
+    /// The durable per-study token, from the Keychain. A property only so a test of `start()` can
+    /// run without writing a real keychain item.
+    var mcpTokenResolver: (String, String?) -> String? = {
+        MCPTokenStore.token(forProjectPath: $0, studyID: $1)
+    }
+
+    /// Set by the fleet: where a booted standby sidecar waits.
+    weak var standbyPool: StandbyPool?
+
+    /// Take the pool's standby for `projectPath` if it is ready and still current. The checks and
+    /// the adoption are one synchronous step on the main actor, with no `await` between them.
+    func claimStandby(projectPath: String, mcpToken: String) -> StandbySidecar? {
+        guard let pool = standbyPool,
+              let sidecar = pool.claimable(projectPath: projectPath,
+                                           fingerprint: instance.spawnedEnvFingerprint ?? "",
+                                           stamp: instance.spawnedSidecarStamp) else { return nil }
+        let procID = ObjectIdentifier(sidecar.process)
+        let claimed = sidecar.claim(
+            projectPath: projectPath, mcpToken: mcpToken,
+            sink: { [weak self] line in self?.handleLine(line, fromProcessID: procID) },
+            onTerminated: { [weak self] status in
+                self?.handleTermination(processID: procID, status: status)
+            })
+        if claimed {
+            pool.didClaim(sidecar)
+            return sidecar
+        }
+        pool.claimFailed(sidecar)
+        return nil
+    }
+
+    /// Watch the start, not the wall clock (R31). Shared by the cold spawn and a claimed standby.
+    private func armStartWatchdog() {
+        // A first launch can spend well over 15 s in code-signature checks before
+        // Python prints a line. An exit is `handleTermination`'s to report; a live process gets
         // `ServeStartPolicy.ceiling`, measured on a clock that stops while the
         // Mac sleeps. `generation` keeps a watchdog from an earlier start from
         // failing this one.

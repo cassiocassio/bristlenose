@@ -106,6 +106,9 @@ final class ServeFleet: ObservableObject {
     /// spawning the bundle's real sidecar from the test host.
     private let makeManager: @MainActor () -> ServeManager
 
+    /// The one pre-booted sidecar a study can take instead of paying for a boot.
+    let standby = StandbyPool()
+
     init(screenReading: ScreenReadingStore = .shared,
          makeManager: @escaping @MainActor () -> ServeManager = { ServeManager() }) {
         self.screenReading = screenReading
@@ -122,6 +125,7 @@ final class ServeFleet: ObservableObject {
         if let existing = managers[project] { return existing }
         let created = makeManager()
         created.agentAccessResolver = agentAccessResolver
+        created.standbyPool = standby
         managers[project] = created
         created.onHandshakeDirty = { [weak self] in self?.syncHandshake() }
         created.onScreensProgress = { [weak self] progress in
@@ -293,6 +297,8 @@ final class ServeFleet: ObservableObject {
     /// screens restart spawns with an explicit `BRISTLENOSE_SCREEN_TEXT=0`,
     /// which is what tells the server to delete what it read.
     func applyEnvChange(defaults: UserDefaults = .standard) {
+        // The waiting standby baked the old environment in too.
+        standby.environmentChanged()
         // Read once, from the same source `overlayPreferences` builds the env
         // from, so "the new env would not read screens" is the env's own rule.
         var nextEnv: [String: String] = [:]

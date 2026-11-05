@@ -67,6 +67,14 @@ The one big lever left on opening a study. **Estimate, not measured:** about 0.8
 - **Cost and risk, each a reason it is a design decision and not a fix:** an idle process holding about 140 MB (the figure behind the earlier decline of "warm on hover"); the standby must be thrown away when anything its environment was built from changes (provider, Screens, Agent Access); the study-safety refusal and the project-identity checks must still run on the claim, not at standby start; the sandbox hands a child the app's access, but a study chosen by bookmark needs its scope open before the claim; a standby that crashes must fall back to today's cold spawn, never to a hang.
 - **Gate before building:** the interleaved sandboxed-app A/B (the open chip) must first show where the app's 851 ms really goes, because the dev numbers did not carry over once already.
 
+### Design note (5 Nov 2026, not built): lens revisit from the last-known data
+
+The lever behind the 92 ms Quotes revisit fetch (and Transcript's 76 ms): show a lens's last-known data at once and refresh it in the background, so a revisit costs the render (15 ms Quotes, 42 ms Transcript) instead of fetch plus render. **Estimate, not measured:** Quotes revisit p50 about 117 → 25–30 ms at real size, Transcript about 123 → 55 ms.
+
+- **Why it is not a small change:** `apiGet` (`utils/api.ts`) returns one promise, so it cannot hand back stale data and then fresh data. Each lens's loader (`QuotesContext`, the transcript page, the Sessions grid, Codebooks, Signals) would need a two-phase read, and the sharing-identical-reads experiment already showed that moving fetch time around can turn up as render time elsewhere.
+- **The risk is correctness, not speed:** after an edit (star, hide, tag, rename, a re-run) the revisit must not show the old value for a frame and then flip. The write path would have to invalidate or update the cache entry in the same step (a write epoch, as the dedupe experiment used), and an analysis run must clear it. A stale flash in a research tool is a trust problem, which is why this is the owner's call and not a tuning step.
+- **Cheapest honest spike, if wanted:** Quotes only, one cache keyed by project and a write epoch, A/B with `lens-content` at 242 and 1,500 quotes, mutation-prove the invalidation. Decide on that number.
+
 ### What is left of the Screens-on premium
 
 Delaying the Vision import does not remove it (1.5 s: 1,223 vs 1,191 ms; 4 s: 1,103–1,122 vs 1,070–1,124 ms; Screens off 927–969 ms), so about 100–150 ms at first health with Screens on is unexplained and inside this machine's noise: not chased. The `/screens` route handlers are plain `def`, so one that lands before the job's first check imports Vision in a threadpool thread, not on the event loop.

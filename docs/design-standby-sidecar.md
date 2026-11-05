@@ -104,9 +104,20 @@ So the two changes depend on each other, and on a number nobody has: **t_w, the 
 | B without A | no spare exists yet at claim time | no |
 | A + B | the window waits `1.375 − head start` | saves up to ~0.6 s, **size unmeasured until t_w is** |
 
+### Review outcome (5 Nov 2026: one correctness review, one parsimony review) and what changed
+
+- **Change B as written is dropped; the proven-binary rule goes with it.** The measured law above says a claim sent while the spare boots finishes at the same moment as a claim sent when it reports ready (`max(boot, d) + bind`). So a study that asks early can simply wait for `standby-ready`, in `.starting` like any other start, with a ceiling and a cold-spawn fallback on the spare's death. That keeps the invariant that a spare which cannot boot never reaches a study, and needs no cross-launch memory. If anything is built here, it is this wait, not an early claim.
+- **The consent gate was real and is fixed** (`d77bb270f`). `ServeManager.start` is gated on the AI disclosure (`hasConsent`) at every call site; the pool was not, so a returning user whose consent version had been bumped got a spare, holding their provider key, before answering the sheet. The pool now asks `StandbyPolicy.isAllowedNow()` (disclosure acknowledged, and an unexpired alpha build) before it spawns; "not yet" is not a failed attempt; granting consent schedules the spare.
+- **Change A (start earlier) waits for numbers.** Removing the delay alone buys nothing, because a restored window starts its serve in the same pass; a real head start needs a hook before window creation. Its value is unknown until t_w is.
+- **The premise is unverified in both directions.** The reviewer noted `desktop/CLAUDE.md` says restoration is a minority path, and that the window only starts its serve while key (`pendingStart` otherwise), so a restored study window may even lose to Welcome for key status.
+
+### Measured since: the platform default
+
+A disposable fresh macOS 15.7.7 guest (Cirrus vanilla image, deleted afterwards): `defaults read -g NSQuitAlwaysKeepsWindows` **does not exist**, as does `com.apple.loginwindow TALLogoutSavesState`. Together with Apple's own wording (the setting is turned **on** to stop reopening) and a Chromium source that reads a missing key as "restore", the factory default is very likely **restore**. The maintainer's Mac has the key explicitly set to 0 (windows closed on quit), so `desktop/CLAUDE.md`'s "ON by default... the macOS default" describes this machine, not the factory state. A live relaunch test in the guest was inconclusive (the scripting prompt could not be answered over SSH).
+
 ### Recommendations (in order)
 
-1. **Gate the pool on AI consent now.** A small defect in the shipped build.
-2. **Settle the default** with `defaults read -g NSQuitAlwaysKeepsWindows` on a fresh guest. If restoring is the platform default, restored launches are the common case and A + B decide most of the feature's value; if not, the shipped build already serves the common case and A + B are an edge.
-3. **Measure t_w** (and launch-to-ready with and without a launch-time spare) in the real app, with the existing signposts. Without it A + B are a guess.
-4. If worthwhile: build A and B together, with the proven-binary rule, behind the same kill switch.
+1. **Done:** the consent and alpha-liveness gate.
+2. **Measure t_w** in the real app (launch to the restored window's `serve-spawned`), and launch-to-ready with and without a launch-time spare; this needs a rebuilt sidecar, a quiet Mac and the sandboxed A/B. Everything below depends on it.
+3. If t_w shows a head start worth having: a wait-for-ready claim (B′), then an earlier start behind a hook that runs before window creation (A). Not before.
+4. Correct the default claim in `desktop/CLAUDE.md`.

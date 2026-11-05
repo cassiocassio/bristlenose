@@ -52,6 +52,21 @@ private func makeSidecar(_ args: [String], leased: [String] = ["/studies/a"],
         #expect(spawn(deaths: StandbyPolicy.maxConsecutiveDeaths - 1))
         #expect(!spawn(deaths: StandbyPolicy.maxConsecutiveDeaths))
     }
+    @Test func nothingRunsBeforeConsentOrOnAnExpiredAlpha() {
+        #expect(StandbyPolicy.isAllowed(consentVersion: 2, requiredVersion: 2, alphaExpired: false))
+        #expect(StandbyPolicy.isAllowed(consentVersion: 3, requiredVersion: 2, alphaExpired: false))
+        #expect(!StandbyPolicy.isAllowed(consentVersion: 0, requiredVersion: 2, alphaExpired: false))
+        #expect(!StandbyPolicy.isAllowed(consentVersion: 1, requiredVersion: 2, alphaExpired: false))   // a bumped disclosure
+        #expect(!StandbyPolicy.isAllowed(consentVersion: 2, requiredVersion: 2, alphaExpired: true))
+    }
+    @Test func theLiveGateReadsTheStoredConsentVersion() {
+        let suite = UserDefaults(suiteName: "standby-\(UUID().uuidString)")!
+        #expect(!StandbyPolicy.isAllowedNow(defaults: suite))                     // never answered
+        suite.set(AIConsentView.currentVersion, forKey: "aiConsentVersion")
+        #expect(StandbyPolicy.isAllowedNow(defaults: suite) == !AlphaBuild.isExpired())
+        suite.set(AIConsentView.currentVersion - 1, forKey: "aiConsentVersion")
+        #expect(!StandbyPolicy.isAllowedNow(defaults: suite))
+    }
     @Test func leaseRetriesAreBounded() {
         #expect(StandbyPolicy.maxLeaseRetries * Int(StandbyPolicy.leaseRetryInterval.components.seconds) <= 120)
     }
@@ -219,6 +234,13 @@ private func makeSidecar(_ args: [String], leased: [String] = ["/studies/a"],
         p.startIfWanted()
         #expect(first != nil && p.current === first)
         p.shutdown()
+    }
+
+    @Test func withoutConsentItStartsNothingAndCountsNoFailure() {
+        let p = pool(script: Self.ready, enabled: false)    // the app's gate answers "not yet"
+        p.startIfWanted()
+        #expect(p.current == nil)
+        #expect(p.consecutiveDeaths == 0)
     }
 
     @Test func startsNothingWithoutAStudyOrOutsideTheBundleOrWhenOff() {

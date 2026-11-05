@@ -237,7 +237,10 @@ struct BristlenoseApp: App {
                         standbyScheduled = true
                         serveFleet.standby.configure(
                             mode: { [weak serveFleet] in serveFleet?.frontedOrIdle.mode },
-                            leasedPaths: { [weak projectIndex] in projectIndex?.leasedPaths() ?? [] })
+                            leasedPaths: { [weak projectIndex] in projectIndex?.leasedPaths() ?? [] },
+                            // The same two gates a study's serve sits behind: the AI disclosure
+                            // acknowledged, and a build that has not expired.
+                            isEnabled: { StandbyPolicy.isEnabled() && StandbyPolicy.isAllowedNow() })
                         serveFleet.standby.scheduleStart(after: StandbyPolicy.launchDelay)
                     }
                     // …and the same permission keyed by id, which is what

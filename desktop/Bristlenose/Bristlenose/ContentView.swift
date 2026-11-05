@@ -1057,6 +1057,8 @@ struct ContentView: View {
         .onChange(of: consentVersion) { _, _ in
             // The Whisper download waits for the disclosure too.
             if hasConsent { WhisperDownloadModel.shared.checkAtLaunch() }
+            // The spare waits for the disclosure too; granting it is the moment to want one.
+            if hasConsent { serveFleet.standby.scheduleStart(after: StandbyPolicy.replaceDelay) }
             if hasConsent, let project = selectedProject {
                 if !project.path.isEmpty && project.isAvailable {
                     serveFleet.manager(for: project.id).start(projectPath: project.path)

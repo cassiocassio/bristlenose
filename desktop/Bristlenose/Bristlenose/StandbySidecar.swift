@@ -44,6 +44,21 @@ enum StandbyPolicy {
         return defaults.object(forKey: defaultsKey) as? Bool ?? true
     }
 
+    /// May a spare exist at all right now? The same two gates `ServeManager.start` sits behind:
+    /// nothing runs before the AI disclosure is acknowledged (Apple 5.1.2(i)), and an expired
+    /// alpha build serves nothing. "No" means not now: it is not a failed attempt, and it is asked
+    /// again when consent is granted.
+    static func isAllowed(consentVersion: Int, requiredVersion: Int, alphaExpired: Bool) -> Bool {
+        consentVersion >= requiredVersion && !alphaExpired
+    }
+
+    /// The live answer, for the app to hand the pool.
+    static func isAllowedNow(defaults: UserDefaults = .standard) -> Bool {
+        isAllowed(consentVersion: defaults.integer(forKey: "aiConsentVersion"),
+                  requiredVersion: AIConsentView.currentVersion,
+                  alphaExpired: AlphaBuild.isExpired())
+    }
+
     struct SpawnInputs {
         var enabled: Bool
         var isBundled: Bool

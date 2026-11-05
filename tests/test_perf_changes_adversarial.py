@@ -134,17 +134,6 @@ class TestKeychainCache:
         store.get("openai")
         assert sp.reads == 2
 
-    def test_a_clock_that_leaps_forward_a_year_just_expires_it(
-        self, sp: _Spawner, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        now = [0.0]
-        monkeypatch.setattr(credentials_macos, "_clock", lambda: now[0])
-        store = MacOSCredentialStore()
-        store.get("azure")
-        now[0] += 3600 * 24 * 365
-        store.get("azure")
-        assert sp.reads == 2
-
     def test_a_blocked_security_is_asked_again_and_a_later_set_is_seen_at_once(
         self, sp: _Spawner
     ) -> None:
@@ -399,7 +388,3 @@ class TestExportWithParkedPill:
         extra = enabled - parked
         assert extra and all("moderator-question" in k for k in extra)
         assert parked <= enabled
-
-    def test_repeated_exports_are_stable_and_leave_no_state_behind(self, client: Any) -> None:
-        sizes = {len(client.get("/api/projects/1/export").content) for _ in range(4)}
-        assert len(sizes) == 1

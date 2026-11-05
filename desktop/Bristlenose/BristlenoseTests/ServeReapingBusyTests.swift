@@ -119,6 +119,20 @@ struct ServeReapingBusyTests {
         #expect(fleet.managers[Self.a] != nil)
     }
 
+    @Test func aHeldServeIsLookedAtAgainOnItsOwnAndReapedOnceIdle() async throws {
+        // The timer is the decision: nothing else sweeps after the last window closes.
+        let fleet = ServeFleet()
+        let manager = fleet.manager(for: Self.a)
+        manager.instance.state = .running(port: 5000)
+        manager.instance.noteBackgroundBusy(true)
+
+        fleet.sweep(shownProjects: [], grace: .zero, busyRecheck: .milliseconds(50))
+        #expect(fleet.managers[Self.a] != nil, "held first")
+        manager.instance.noteBackgroundBusy(false)
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(fleet.managers[Self.a] == nil, "the recheck never came back to reap it")
+    }
+
     @Test func aWindowInTheMiddleRestartsTheCeiling() async throws {
         // The ceiling bounds one continuous window-less hold. A study looked at again, then closed,
         // is a fresh hold: it must not be reaped for time spent before the window came back.

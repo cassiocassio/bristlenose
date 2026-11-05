@@ -250,7 +250,8 @@ final class ServeFleet: ObservableObject {
     /// tab merged into another window may not fire at all.
     func sweep(shownProjects: Set<UUID>, memoryPressure: Bool = false,
                grace: Duration = ServeReaping.defaultGrace,
-               busyCeiling: Duration = ServeReaping.busyCeiling) {
+               busyCeiling: Duration = ServeReaping.busyCeiling,
+               busyRecheck: Duration = ServeReaping.busyRecheck) {
         // Scope is a function of this roster, so every sweep re-derives it.
         // Without this the only path to a re-derivation was some manager's
         // 20-second health poll, which made "closing a window is immediately
@@ -307,7 +308,7 @@ final class ServeFleet: ObservableObject {
         var comeBack: Duration?
         if verdicts.values.contains(.reapAfterGrace) { comeBack = ServeReaping.defaultGrace }
         if verdicts.values.contains(.keepWhileBusy) {
-            comeBack = min(comeBack ?? ServeReaping.busyRecheck, ServeReaping.busyRecheck)
+            comeBack = min(comeBack ?? busyRecheck, busyRecheck)
         }
         if let comeBack {
             reapTask = Task { [weak self] in
@@ -316,7 +317,8 @@ final class ServeFleet: ObservableObject {
                 // Re-read the roster rather than replaying the snapshot: a study
                 // that regained a window during the grace period must not be
                 // reaped out from under it.
-                self.sweep(shownProjects: WindowRoster.shared.shownProjects)
+                self.sweep(shownProjects: WindowRoster.shared.shownProjects, grace: grace,
+                           busyCeiling: busyCeiling, busyRecheck: busyRecheck)
             }
         }
     }

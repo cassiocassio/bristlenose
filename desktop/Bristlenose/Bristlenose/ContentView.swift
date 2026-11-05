@@ -3730,6 +3730,7 @@ struct ContentView: View {
             return
         }
         reportReloadTask = Task { @MainActor in
+            defer { lensAtRunStart[id] = nil }
             // Ride out the serve's ~1s re-import and any brief serve-restart or
             // webView-nil window. Wait through a not-yet-running serve rather
             // than bailing; abandon only if the user navigates away or the
@@ -3765,10 +3766,9 @@ struct ContentView: View {
                     })
                 let didReload = bridgeHandler.reloadWebView()
                 Self.reloadLog.info("reload attempt=\(attempt) didReload=\(didReload)")
-                if didReload { lensAtRunStart[id] = nil; return }
+                if didReload { return }
                 bridgeHandler.cancelHeldLens()
             }
-            lensAtRunStart[id] = nil
             Self.reloadLog.info("reload gave up")
         }
     }

@@ -104,6 +104,16 @@ final class ServeInstance: ObservableObject {
     /// real activity. A decrease means the sidecar restarted and the server's
     /// counter went back to 0: adopt the new baseline silently, because
     /// animating there would claim an agent asked something when nothing did.
+    /// Whether this serve said, on its last reading, that it has paid or unrecoverable work in
+    /// flight (`/api/background-work`). Deliberately not `@Published`: it is read by the fleet's
+    /// reap decision, not drawn, and a publish per poll would reach the menu bar (see
+    /// `noteAgentCallCount`). A failed reading leaves it as it was.
+    private(set) var backgroundBusy = false
+
+    func noteBackgroundBusy(_ busy: Bool) {
+        if busy != backgroundBusy { backgroundBusy = busy }
+    }
+
     func noteAgentCallCount(_ fresh: Int) -> Bool {
         // Write only on change. A `@Published` setter publishes on every
         // assignment, moved or not, and this runs every 1.5 s

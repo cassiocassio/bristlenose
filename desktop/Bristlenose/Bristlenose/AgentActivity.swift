@@ -76,6 +76,12 @@ enum AgentActivity {
     /// with no signal. Same standardisation `MCPTokenStore.accountKey` uses.
     /// It settles `.` / `..` and a trailing slash only: it resolves no link and
     /// keeps a `/private` prefix, so those two respellings still compare unequal.
+    /// `/api/background-work`'s answer: whether the serve has paid or unrecoverable work in flight.
+    /// nil for anything that is not that shape, so a bad reading leaves the last one standing.
+    static func parseBackgroundBusy(_ json: [String: Any]) -> Bool? {
+        json["busy"] as? Bool
+    }
+
     static func samePath(_ a: String?, _ b: String) -> Bool {
         guard let a else { return false }
         return URL(fileURLWithPath: a).standardizedFileURL.path

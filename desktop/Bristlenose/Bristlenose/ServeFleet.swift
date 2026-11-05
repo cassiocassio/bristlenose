@@ -1,5 +1,8 @@
 import Combine
 import Foundation
+import os
+
+private let log = Logger(subsystem: "app.bristlenose", category: "fleet")
 
 /// One serve per project, and the concerns that belong to the app rather than
 /// to any single sidecar.
@@ -161,6 +164,7 @@ final class ServeFleet: ObservableObject {
         managers[project]?.stop()
         SharedConfigStore.shared.release(projectID: project)
         unshownSince[project] = nil
+        busySince[project] = nil
         managers[project] = nil
         observations[project] = nil
         // The project is leaving the sidebar entirely, so its activity record
@@ -233,6 +237,8 @@ final class ServeFleet: ObservableObject {
     /// When each running project last had no window. `ServeReaping` turns this
     /// plus the roster into a verdict; nothing here is a refcount.
     private var unshownSince: [UUID: ContinuousClock.Instant] = [:]
+    /// When each held-for-being-busy study was first held (`sweep`).
+    private var busySince: [UUID: ContinuousClock.Instant] = [:]
     private var reapTask: Task<Void, Never>?
 
     /// Re-judge every running sidecar against the windows that exist now.
@@ -242,7 +248,9 @@ final class ServeFleet: ObservableObject {
     /// `.onDisappear` delays an answer by one sweep instead of stranding a
     /// sidecar forever — which a paired acquire/release cannot promise, and a
     /// tab merged into another window may not fire at all.
-    func sweep(shownProjects: Set<UUID>, memoryPressure: Bool = false) {
+    func sweep(shownProjects: Set<UUID>, memoryPressure: Bool = false,
+               grace: Duration = ServeReaping.defaultGrace,
+               busyCeiling: Duration = ServeReaping.busyCeiling) {
         // Scope is a function of this roster, so every sweep re-derives it.
         // Without this the only path to a re-derivation was some manager's
         // 20-second health poll, which made "closing a window is immediately
@@ -259,21 +267,47 @@ final class ServeFleet: ObservableObject {
         let running = Dictionary(uniqueKeysWithValues: runningProjects.map { id in
             (id, unshownSince[id].map { now - $0 })
         })
+        // A study whose server reported paid or unrecoverable work on its last poll is held rather
+        // than reaped, for at most `busyCeiling` from the first hold (`ServeReaping`).
+        var busyFor: [UUID: Duration] = [:]
+        for id in runningProjects where managers[id]?.instance.backgroundBusy == true {
+            busyFor[id] = busySince[id].map { now - $0 } ?? .zero
+        }
         let verdicts = ServeReaping.sweep(running: running,
                                           shownProjects: shownProjects,
-                                          memoryPressure: memoryPressure)
-        for (id, verdict) in verdicts where verdict == .reapNow {
-            discard(id, forgettingAgentActivity: false)
+                                          grace: grace,
+                                          memoryPressure: memoryPressure,
+                                          busyFor: busyFor,
+                                          busyCeiling: busyCeiling)
+        for (id, verdict) in verdicts {
+            switch verdict {
+            case .reapNow:
+                busySince[id] = nil
+                discard(id, forgettingAgentActivity: false)
+            case .keepWhileBusy:
+                if busySince[id] == nil {
+                    busySince[id] = now
+                    log.notice("holding a window-less study's server: it has work in flight")
+                }
+            case .keep, .reapAfterGrace:
+                if busyFor[id] == nil { busySince[id] = nil }
+            }
         }
-        // Something is waiting out its grace period — come back and finish the
-        // job. Without this the reap would only ever happen on the *next*
+        for id in busySince.keys where busyFor[id] == nil { busySince[id] = nil }
+        // Something is waiting out its grace period, or is held for being busy — come back and
+        // finish the job. Without this the reap would only ever happen on the *next*
         // roster change, so closing the last window and walking away would
         // leave the sidecar up indefinitely: the timer is the decision.
         reapTask?.cancel()
         reapTask = nil
-        if verdicts.values.contains(.reapAfterGrace) {
+        var comeBack: Duration?
+        if verdicts.values.contains(.reapAfterGrace) { comeBack = ServeReaping.defaultGrace }
+        if verdicts.values.contains(.keepWhileBusy) {
+            comeBack = min(comeBack ?? ServeReaping.busyRecheck, ServeReaping.busyRecheck)
+        }
+        if let comeBack {
             reapTask = Task { [weak self] in
-                try? await Task.sleep(for: ServeReaping.defaultGrace)
+                try? await Task.sleep(for: comeBack)
                 guard !Task.isCancelled, let self else { return }
                 // Re-read the roster rather than replaying the snapshot: a study
                 // that regained a window during the grace period must not be

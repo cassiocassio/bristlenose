@@ -34,7 +34,17 @@ enum ServeReaping {
         case reapAfterGrace
         /// Grace expired, or memory pressure — stop it now.
         case reapNow
+        /// Grace expired, but the server says it has paid or unrecoverable work in flight
+        /// (`bristlenose/server/busy.py`). Leave it, and look again in `busyRecheck`.
+        case keepWhileBusy
     }
+
+    /// How often to look again at a study held for being busy.
+    static let busyRecheck: Duration = .seconds(60)
+
+    /// The longest a window-less study is held for being busy, counted from the first hold. A job
+    /// that has wedged must not keep a server (about 140 MB, and a port) alive for ever.
+    static let busyCeiling: Duration = .seconds(30 * 60)
 
     /// Default grace period. **A guess until measured** — pick it against how
     /// often testers close-and-reopen, not by taste. Long enough that ⌘W then
@@ -51,15 +61,21 @@ enum ServeReaping {
     ///   - grace: the period before reaping.
     ///   - memoryPressure: true under system memory pressure — grace is skipped,
     ///     because a warm cache is not worth a swap storm.
+    ///   - busyFor: nil when the server reports no work in flight; otherwise how long it has been
+    ///     held for being busy (zero at the first hold). Past `busyCeiling` it is reaped anyway.
     static func verdict(project: UUID,
                         shownProjects: Set<UUID>,
                         unshownFor: Duration?,
                         grace: Duration = defaultGrace,
-                        memoryPressure: Bool = false) -> Verdict {
+                        memoryPressure: Bool = false,
+                        busyFor: Duration? = nil,
+                        busyCeiling: Duration = ServeReaping.busyCeiling) -> Verdict {
         if shownProjects.contains(project) { return .keep }
-        if memoryPressure { return .reapNow }
+        if memoryPressure { return .reapNow }   // a warm cache, and a busy job, are not worth a swap storm
         guard let unshownFor else { return .reapAfterGrace }
-        return unshownFor >= grace ? .reapNow : .reapAfterGrace
+        guard unshownFor >= grace else { return .reapAfterGrace }
+        if let busyFor, busyFor < busyCeiling { return .keepWhileBusy }
+        return .reapNow
     }
 
     /// The whole fleet at once — every running instance judged against the
@@ -68,13 +84,17 @@ enum ServeReaping {
     static func sweep(running: [UUID: Duration?],
                       shownProjects: Set<UUID>,
                       grace: Duration = defaultGrace,
-                      memoryPressure: Bool = false) -> [UUID: Verdict] {
+                      memoryPressure: Bool = false,
+                      busyFor: [UUID: Duration] = [:],
+                      busyCeiling: Duration = ServeReaping.busyCeiling) -> [UUID: Verdict] {
         running.reduce(into: [:]) { out, entry in
             out[entry.key] = verdict(project: entry.key,
                                      shownProjects: shownProjects,
                                      unshownFor: entry.value,
                                      grace: grace,
-                                     memoryPressure: memoryPressure)
+                                     memoryPressure: memoryPressure,
+                                     busyFor: busyFor[entry.key],
+                                     busyCeiling: busyCeiling)
         }
     }
 }

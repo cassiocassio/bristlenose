@@ -718,6 +718,7 @@ final class ServeManager: ObservableObject {
         // sets authToken directly via adoptFronted and never reaches here.
         authToken = nil
         serverVersion = nil
+        instance.noteBackgroundBusy(false)   // a new serve has said nothing yet
         // Nothing spawned yet; the spawn below records what it is given. An
         // external server was not spawned by us, so it stays false.
         instance.spawnedReadsScreens = false
@@ -1470,6 +1471,33 @@ final class ServeManager: ObservableObject {
         }
         if parsed.mounted != mcpMounted { mcpMounted = parsed.mounted }
         if parsed.active != agentActiveNow { agentActiveNow = parsed.active }
+        await pollBackgroundWork()
+    }
+
+    /// Does this serve have paid or unrecoverable work in flight? Behind the bearer (health is
+    /// auth-exempt and publishes nothing about when the researcher is working). The fleet's reap
+    /// decision reads the answer from `instance.backgroundBusy`; the 90 s grace is longer than this
+    /// poll's 20 s, so the answer it reads is never stale by more than a cycle. A failed reading
+    /// changes nothing: a server that is really gone is `handleTermination`'s to report.
+    func pollBackgroundWork() async {
+        guard case .running(let port) = state, let token = authToken,
+              let url = URL(string: "http://127.0.0.1:\(port)/api/background-work") else { return }
+        var request = URLRequest(url: url, timeoutInterval: 5)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        guard let json = await backgroundWorkReader(request),
+              let busy = AgentActivity.parseBackgroundBusy(json) else { return }
+        // A reading that lands after a restart must not describe the new serve.
+        guard case .running(let current) = state, current == port else { return }
+        instance.noteBackgroundBusy(busy)
+    }
+
+    /// How `/api/background-work` is read. A property only so the poll has a test that does not
+    /// open a socket; nil is "no usable answer", which changes nothing.
+    var backgroundWorkReader: (URLRequest) async -> [String: Any]? = { request in
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 
     /// One cycle of the antenna-animation poll.

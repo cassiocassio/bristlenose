@@ -2510,8 +2510,21 @@ def serve(
         bool,
         typer.Option("--check-startup-only", hidden=True),
     ] = False,
+    standby: Annotated[
+        bool,
+        typer.Option("--standby", hidden=True),
+    ] = False,
 ) -> None:
     """Open a previous report in your browser (no analysis)."""
+    if standby:
+        # The Mac app's pre-started sidecar: import now, take the study from stdin, then carry on
+        # exactly as if it had been given on the command line (docs/design-standby-sidecar.md).
+        if project_dir is not None or check_startup_only:
+            console.print("[red]--standby takes its study from stdin, not an argument.[/red]")
+            raise typer.Exit(2)
+        from bristlenose.standby import await_claim
+
+        project_dir = await_claim()
     if project_dir is not None:
         from bristlenose.output_paths import project_output_dir
 

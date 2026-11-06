@@ -25,7 +25,6 @@ why the key is a function and the match is the syntax tree.
 from __future__ import annotations
 
 import ast
-import re
 from pathlib import Path
 
 SERVER = Path(__file__).parent.parent / "bristlenose" / "server"
@@ -155,7 +154,8 @@ def test_nothing_in_the_server_imports_quote_under_another_name() -> None:
     # The census follows the name ``Quote``; an alias would hide a read from it.
     offenders = [
         p.relative_to(SERVER).as_posix() for p in SERVER.rglob("*.py")
-        if re.search(r"\bQuote\s+as\s+\w+", p.read_text(encoding="utf-8"))
+        if any(isinstance(n, ast.alias) and n.name.split(".")[-1] == "Quote" and n.asname
+               for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))))
     ]
     assert not offenders, f"import Quote under its own name so the census can see it: {offenders}"
 

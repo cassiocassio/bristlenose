@@ -161,13 +161,12 @@ def test_a_recording_added_later_never_renumbers_the_ones_already_numbered(
     with tempfile.TemporaryDirectory() as tmp:
         folder, reg = Path(tmp) / "in", Path(tmp) / "out"
         folder.mkdir()
-        _write(folder, [(name, i % 3) for i, name in enumerate(names)])
+        content = _write(folder, [(name, i % 3) for i, name in enumerate(names)])
         first_names = names[: max(1, min(cut, len(names) - 1))]
         before = _run(folder, reg, first_names)
         everything = list(names)
         rnd.shuffle(everything)
         after = _run(folder, reg, everything)
-        content = {name: i % 3 for i, name in enumerate(names)}  # as written above
         sid_of_content_before = {content[n]: sid for n, sid in before.items()}
         sid_of_content_after = {content[n]: sid for n, sid in after.items()}
         # By content, so a recording that went missing, or took a new number, is seen: the
@@ -175,3 +174,5 @@ def test_a_recording_added_later_never_renumbers_the_ones_already_numbered(
         for c, sid in sid_of_content_before.items():
             assert sid_of_content_after.get(c) == sid, f"content {c} was {sid}"
         assert len(set(after.values())) == len(after)
+        # One session per recording: a copy that took a number of its own would show here.
+        assert len({content[n] for n in after}) == len(after)

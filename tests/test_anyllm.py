@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 import types
 from pathlib import Path
@@ -1714,15 +1715,32 @@ def test_the_snap_and_fedora_packages_do_not_offer_a_pip_command_for_a_missing_s
     """They carry any-llm, but their Python has no usable pip, so the inject
     command for another provider's SDK was a dead end."""
     from bristlenose import doctor_fixes
+    from bristlenose.utils import install_channel
 
     ready = anyllm.Readiness("sdk-missing", model="cohere:command-r", inner="cohere")
     monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: method)
-    lines = anyllm.explain(ready)
-    assert "doesn't include" in lines[0]
-    assert "Mistral, OpenRouter and DeepSeek" in lines[1] and "pipx" in lines[1]
-    assert not any("pip install" in line or "inject" in line for line in lines)
+    said = " ".join(anyllm.explain(ready))
+    assert "pipx" in said
+    assert "pip install" not in said and "inject" not in said
     monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: "pip")
+    # inject_command reads sys.prefix, so say which channel this run is on.
+    monkeypatch.setattr(install_channel, "install_channel", lambda: "pip")
     assert "pip install" in " ".join(anyllm.explain(ready))
+
+
+@pytest.mark.parametrize("method", ["snap", "rpm"])
+@pytest.mark.parametrize("inner", ["mistral", "openrouter", "deepseek"])
+def test_a_packaged_install_that_cannot_load_a_bundled_provider_says_it_is_damaged(
+    monkeypatch: pytest.MonkeyPatch, method: str, inner: str
+) -> None:
+    """The three providers the packages carry must not be told "needs an add-on
+    this package doesn't include" and then "this package carries" them."""
+    from bristlenose import doctor_fixes
+
+    monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: method)
+    said = " ".join(anyllm.explain(anyllm.Readiness("sdk-missing", model=f"{inner}:m", inner=inner)))
+    assert "damaged" in said
+    assert "doesn't include" not in said and "pip install" not in said
 
 
 @pytest.mark.parametrize("method", ["snap", "rpm", "pip"])
@@ -1740,10 +1758,17 @@ def test_the_packaging_names_the_any_llm_extra_wherever_it_builds() -> None:
     """The snap, the SRPM script and the spec each name their extras; one that
     drops any-llm ships a package that says the provider is missing."""
     root = Path(__file__).resolve().parent.parent
-    assert '".[serve,voice,any-llm]"' in (root / "snap/snapcraft.yaml").read_text(encoding="utf-8")
-    assert 'BN_EXTRAS="serve,voice,any-llm"' in (root / "rpm/make-srpm.sh").read_text(encoding="utf-8")
-    spec = (root / "rpm/bristlenose.spec.in").read_text(encoding="utf-8")
-    assert '"%{name}[serve,voice,any-llm]==%{version}"' in spec
+
+    def code(rel: str) -> str:
+        """The file without its comment lines: a pin that survives only in a
+        comment is not a pin."""
+        lines = (root / rel).read_text(encoding="utf-8").splitlines()
+        return "\n".join(line for line in lines if not line.lstrip().startswith("#"))
+
+    assert re.search(r"\[serve,voice,any-llm\]", code("snap/snapcraft.yaml"))
+    assert re.search(r'BN_EXTRAS="serve,voice,any-llm"', code("rpm/make-srpm.sh"))
+    assert re.search(r"%\{name\}\[serve,voice,any-llm\]", code("rpm/bristlenose.spec.in"))
+    assert re.search(r"^any-llm = \[", code("pyproject.toml"), re.M), "the extra they all name"
 
 
 def test_the_newer_python_hint_keeps_what_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:

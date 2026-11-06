@@ -70,7 +70,7 @@ is not the bare spinner §4 warns about. Short version:
 |---|---|
 | Is this file a placeholder? | **Yes.** `SF_DATALESS`; on iCloud also `ubiquitousItemDownloadingStatus` |
 | Is it being fetched right now? | iCloud only, a yes/no flag. Other providers: no |
-| How far along is the fetch? | **No.** A percent key exists on paper, unmeasured from a sandboxed app; other providers have nothing |
+| How far along is the fetch? | **No.** A percent key exists on paper. Measured 5 Nov 2026 on macOS 27.0, unsandboxed: it comes back `nil` and allocated size jumps 0 to full, so only the yes/no flag moves (`experiments/icloud-progress-probe/`). Sandboxed app unmeasured; other providers have nothing |
 | How long will it take? | **No.** Nobody can say |
 | Will it stay local, or be evicted again? | **No** |
 | Does the study folder exist at its path? | **Yes.** An evicted folder is still at its path |

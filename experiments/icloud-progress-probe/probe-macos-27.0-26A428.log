@@ -1,0 +1,9 @@
+  0.00s BEFORE status=NotDownloaded isDownloading=false uploading=false uploaded=true dlErr=nil size=135206476 allocated=0 dataless=true
+  0.01s MDQ start -> true
+  0.10s startDownloadingUbiquitousItem OK
+  0.19s MDQ DidFinishGatheringNotification percentDownloaded=nil isDownloading=nil status=nil
+  0.35s POLL status=NotDownloaded isDownloading=false uploading=false uploaded=true dlErr=nil size=135206476 allocated=0 dataless=true
+  0.60s POLL status=NotDownloaded isDownloading=true uploading=false uploaded=true dlErr=nil size=135206476 allocated=0 dataless=true
+  8.61s POLL status=Current isDownloading=true uploading=false uploaded=true dlErr=nil size=135206476 allocated=135208960 dataless=false
+  9.85s POLL status=Current isDownloading=false uploading=false uploaded=true dlErr=nil size=135206476 allocated=135208960 dataless=false
+  9.85s END status=Current isDownloading=false uploading=false uploaded=true dlErr=nil size=135206476 allocated=135208960 dataless=false

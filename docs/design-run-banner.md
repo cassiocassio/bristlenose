@@ -51,7 +51,7 @@ So the proposal follows that pattern, and reverses my first draft (outcome in th
 **What the app has at the end of a run (checked 6 Nov 2026 against a recorded run's end event and `events.py`):**
 - **Sessions found, done and failed:** the end event's summary carries, per stage, how many were attempted and succeeded and which failed. The failed entries name sessions; turning them into session numbers is the implementer's job.
 - **Duration:** the end event carries the start and end times, so "38 min" is a fact. It also lets the researcher see how the run compared with the time they were told.
-- **The reason for a failure:** a failed run carries a structured cause. The categories include auth, out of credit, quota, model unavailable, server error, network, missing dependency or binary, disk, output truncated and unknown. **Name a reason only for the ones a researcher can act on or understand** (auth, out of credit, rate limit, network, model unavailable, disk); for the rest, say nothing. The earlier draft pointed at the Settings key-check strings; the run's own cause enum is the right source.
+- **The reason for a failure:** a failed run carries a structured cause category (the full list is in the next section). It is named for every category with a plain-words phrase.
 - **Not in the end event:** quote counts and theme counts. The summary's "themes" figure counts calls, not themes. A quote or theme count would need a separate read and is **not proposed**.
 - **Available but not proposed:** the token counts and the cost estimate are in the end event. Putting a cost in a banner is a different kind of statement (it is an estimate, and it is money); it is the owner's call, and I have left it out.
 
@@ -62,9 +62,33 @@ So the proposal follows that pattern, and reverses my first draft (outcome in th
 - **Counts are proposed, pending approval**, because the evidence on this audience is that counts and detail are normal.
 - **Strings.** "The analysis didn’t finish" is **shipped** (`failedTitle`). "Analysis finished" and "Analysis finished with failures" are new (a shipped tooltip, "Analysis finished with failures for {{project}}", is the nearest). "{{count}} sessions" and "{{failed}} of {{total}} sessions" need plural keys (CLDR via the app's i18n, not the CLI `inflect`). All need the 21 full locales and an entry in `docs/platform-text-map.md`. Provider names are product names (Claude, ChatGPT).
 - **Settings label:** "Notify when an analysis finishes or stops". New; a positive switch, on by default.
-- **The failure reason** comes from the run's own cause category (see the list above), in a short form ("Claude is out of credit"), and is omitted when the category is not one a researcher can use. It never invents a cause. The short forms are new strings.
+- **The failure reason** comes from the run's own cause category and is named whenever the category has a plain-words phrase (decided; the table below). It is never the raw cause message, which can hold file names and technical detail, and never an invented cause.
 - **Plain words.** "Analysis", not "run" or "pipeline" (`docs/glossary.md`). No exclamation, no emoji. The failed banner says what is true and does not tell the researcher what to do.
 - **When previews are hidden** the system shows only the icon and the word "Notification". Register one category per outcome with a generic placeholder with no project name ("Analysis finished" and "The analysis didn’t finish"). The placeholder is set when the categories are registered, so register them again if the researcher changes the app's language, or it stays in the old language.
+
+### The failure reason, by category
+
+Proposed English, for the owner's approval. The categories are the run's own (`CauseCategoryEnum` in `bristlenose/events.py`); I took their meanings from their names and comments, so each needs checking against what actually raises it. Provider names are product names (Claude, ChatGPT, Gemini, Azure OpenAI). All are new strings for the 21 locales. The reason follows "The analysis didn’t finish · ".
+
+| Category | Proposed phrase |
+|---|---|
+| auth | {{provider}} rejected the key |
+| out_of_credit | {{provider}} is out of credit |
+| quota | {{provider}} is rate-limited |
+| api_request | {{provider}} rejected the request |
+| model_unavailable | The model isn’t available |
+| api_server | {{provider}} had a server problem |
+| network | No connection to {{provider}} |
+| output_truncated | {{provider}}’s answer was cut short |
+| whisper | Transcription failed |
+| missing_input | A recording is missing |
+| unusable_input | A recording couldn’t be read |
+| cloud_fetch | A recording wasn’t downloaded in time |
+| disk | Couldn’t write to disk |
+| missing_dep, missing_binary | A required part is missing |
+| unknown, deferred, user_signal | none: say nothing beyond "The analysis didn’t finish" |
+
+Notes: the `cloud_fetch` phrase reuses the shape of an existing honest-failure string (the Screens lens already says a recording "wasn't downloaded to this Mac in time"); it is a plain statement of what happened, with no wait label, glyph or provider advice, which is what the settled cloud-files decision permits. `deferred` and `user_signal` are not failures the researcher needs told.
 
 ## The permission flow
 
@@ -212,10 +236,10 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 
 ## Not decided here
 
-1. Several runs ending close together: one banner each, grouped by project, or one summary.
-2. A count in the finished body.
-3. Whether the failed body names the reason when it is known (proposed: yes, only from the existing classified set).
-4. The reason strings' final form.
+1. *(Decided, owner, 6 Nov 2026: several runs ending together each post their own banner and say their own thing. No grouping or summary logic of ours; the one thread identifier per project is the system's own grouping and costs nothing.)*
+2. *(Decided, owner, 6 Nov 2026: the session count is in the body, because it is useful.)*
+3. *(Decided, owner, 6 Nov 2026: name the failure reason whenever the run's cause category has a plain-words form, not only for the ones a researcher can act on. Where there is no reason to give (unknown, or the researcher's own signal), say nothing more.)*
+4. The reason phrases: proposed in "The failure reason, by category"; the final wording and a check of each category against what actually raises it.
 5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
 
 6. The one-button pre-alert: now recommended rather than a fallback, because of the temporary banner (see the observation in the permission flow). Owner's call.
@@ -226,7 +250,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 10. *(Decided, owner, 6 Nov 2026: the default interruption level. It respects the researcher's Focus and Scheduled Summary, and Time Sensitive is not requested. A researcher who uses Scheduled Summary may therefore have the notice held, which is their own setting at work.)*
 11. Accept that a temporary banner vanishes in seconds and the list entry is what an away researcher finds.
 
-*Decided since the last draft (owner, 6 Nov):* default interruption level; sentence case and fragments; no Dock bounce; duration in the finished banner; "N of M sessions are done" on a failure, once "done" is defined.
+*Decided since the last draft (owner, 6 Nov):* each run's own banner when several end together; the session count; naming the failure reason; default interruption level; sentence case and fragments; no Dock bounce; duration in the finished banner; "N of M sessions are done" on a failure, once "done" is defined.
 
 ## What I could not verify
 

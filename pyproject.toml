@@ -232,7 +232,7 @@ voice = [
 # fails loudly, which beats an extra that silently installs nothing.
 any-llm = [
     "any-llm-sdk[mistral]==1.44.0",
-    "mistralai>=3.3,<3.4",
+    "mistralai>=3.3,<3.8",
 ]
 
 # Release-time tooling. Run on the release machine when cutting a

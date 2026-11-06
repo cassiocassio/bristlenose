@@ -82,6 +82,8 @@ def test_an_agency_document_with_an_ordinary_name_is_still_read(tmp_path: Path) 
     segments, outcome = _gather(_docx(tmp_path, "P3 interview transcript.docx", [
         "Interviewer: How did you find the checkout?",
         "Participant: I couldn't find the save button.",
+        "Interviewer: What did you do next?",
+        "Participant: I went back and tried again.",
     ]))
     assert outcome.failed == []
     assert list(segments) == ["s1"]

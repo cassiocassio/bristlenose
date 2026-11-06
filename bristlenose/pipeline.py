@@ -2173,7 +2173,7 @@ class Pipeline:
         from collections import Counter
 
         from bristlenose.llm.client import LLMClient
-        from bristlenose.stages.s01_ingest import ingest
+        from bristlenose.stages.s01_ingest import ingest, split_left_alone
         from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
@@ -2240,11 +2240,14 @@ class Pipeline:
         sessions = ingest(
             input_dir, declined, order_by_start=_may_order_by_start(output_dir)
         )
+        # Formats we never offered are left alone, not refused: counted here,
+        # named only in the log (`split_left_alone`).
+        declined, left_alone = split_left_alone(declined)
         if not sessions:
             # A failed run, as `run_transcription_only` has it: returning an
             # empty result ended "Done" with an empty report (R116). The files
             # it declined are named first, in the files bucket too (R119's twin).
-            self._record_ingest_outcome([], declined)
+            self._record_ingest_outcome([], declined, left_alone=left_alone)
             if not declined:  # else the failure line says it, after the list (#81)
                 console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
@@ -2436,7 +2439,9 @@ class Pipeline:
                 ),
                 time.perf_counter() - t0,
             )
-            self._record_ingest_outcome(sessions, declined, elapsed_s=ingest_elapsed)
+            self._record_ingest_outcome(
+                sessions, declined, elapsed_s=ingest_elapsed, left_alone=left_alone
+            )
             mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
             write_manifest(manifest, output_dir)
 
@@ -4198,7 +4203,7 @@ class Pipeline:
         import time
         from collections import Counter
 
-        from bristlenose.stages.s01_ingest import ingest
+        from bristlenose.stages.s01_ingest import ingest, split_left_alone
         from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
         from bristlenose.stages.s05b_identify_speakers import identify_speaker_roles_heuristic
         from bristlenose.stages.s06_merge_transcript import (
@@ -4219,9 +4224,12 @@ class Pipeline:
         sessions = ingest(
             input_dir, declined, order_by_start=_may_order_by_start(output_dir)
         )
+        # Formats we never offered are left alone, not refused: counted here,
+        # named only in the log (`split_left_alone`).
+        declined, left_alone = split_left_alone(declined)
         if not sessions:
             # Named first, in the files bucket too (R119's twin).
-            self._record_ingest_outcome([], declined)
+            self._record_ingest_outcome([], declined, left_alone=left_alone)
             if not declined:  # else the failure line says it, after the list (#81)
                 console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
@@ -4326,7 +4334,9 @@ class Pipeline:
                 ),
                 time.perf_counter() - t0,
             )
-            self._record_ingest_outcome(sessions, declined, elapsed_s=ingest_elapsed)
+            self._record_ingest_outcome(
+                sessions, declined, elapsed_s=ingest_elapsed, left_alone=left_alone
+            )
 
             # ── Stages 3-5: Transcribe ──
             status.update("[dim]Transcribing...[/dim]")
@@ -4975,13 +4985,16 @@ class Pipeline:
         declined: list[SkippedFile],
         *,
         elapsed_s: float | None = None,
+        left_alone: int = 0,
     ) -> None:
         """Put stages 1-2's per-file outcomes on the run summary.
 
         Two halves, one rollup, because they are one thing to the researcher: a
         recording that isn't in the findings. The scan **declined** some files
-        by extension; s02 **accepted** others and then couldn't read them. Both
-        are named, with a reason, on the terminus summary — the difference
+        for a reason of their own (an unopenable folder; a format we never offered
+        is *left alone* instead, and only counted: ``left_alone``); s02 **accepted**
+        others and then couldn't read them. Both are named, with a reason, on the
+        terminus summary — the difference
         between "17 files were silently dropped" and "17 files were refused, and
         here they are" (docs/design-analysis-lifecycle.md §5.1, outcomes 2 and 3).
 
@@ -5035,6 +5048,7 @@ class Pipeline:
             succeeded=succeeded,
             failed=failed,
             duration_ms=int(elapsed_s * 1000) if elapsed_s is not None else None,
+            left_alone=left_alone,
         )
         if failed:
             _print_refusals(failed)
@@ -5278,17 +5292,21 @@ class Pipeline:
                         source_file=chosen.file.path.name, reason=empty,
                         stage="s03_parse_subtitles", session_id=session.session_id,
                     ))
-                elif chosen.file.file_type == FileType.DOCX and is_meet_notes_name(
-                    chosen.file.path.name
-                ):
-                    # A Meet notes Doc with no timed transcript reads as nothing
+                elif chosen.file.file_type == FileType.DOCX:
+                    # A Word document with no transcript in it reads as nothing
                     # (s04 returns no segments): said as that, not as a recording
-                    # in which nothing was said (ruling 9). Whether or not a
+                    # in which nothing was said. A Meet "Notes by Gemini" Doc is
+                    # `notes_only` (ruling 9); any other, a discussion guide or a
+                    # brief, is `no_transcript` (6 Nov 2026). Whether or not a
                     # recording sits beside it: the realistic case is the Doc
                     # dropped next to its .mp4, whose audio_path stage 2 sets.
                     parse_failures.append(refusal_stage_failure(
                         source_file=chosen.file.path.name,
-                        reason=UnusableReason.NOTES_ONLY,
+                        reason=(
+                            UnusableReason.NOTES_ONLY
+                            if is_meet_notes_name(chosen.file.path.name)
+                            else UnusableReason.NO_TRANSCRIPT
+                        ),
                         stage="s04_parse_docx", session_id=session.session_id,
                     ))
                 for other in superseded:

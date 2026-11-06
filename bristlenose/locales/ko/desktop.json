@@ -423,6 +423,8 @@
       "noStructuredCause": "\uc790\uc138\ud55c \uc6d0\uc778\uc774 \uae30\ub85d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
       "reportError": "이 보고서를 여는 동안 Bristlenose에 예기치 않은 문제가 발생했습니다.",
       "overflow_other": "\u2026 \uc678 {{count}}\uac1c \uc2e4\ud328 \uc0dd\ub7b5\ub428",
+      "leftAlone": "건너뛴 다른 파일: {{count}}",
+      "supportedFormats": "지원되는 형식",
       "reason": {
         "unsupported_format": "Bristlenose가 읽을 수 있는 형식이 아닙니다.",
         "empty": "파일이 비어 있습니다 — 전송된 데이터가 없습니다.",
@@ -437,6 +439,7 @@
         "duplicate_transcript": "이 세션 전사본의 두 번째 사본입니다 — 다른 사본이 사용되었습니다.",
         "no_lines": "이 전사본에 줄이 없습니다 — 분석할 내용이 없습니다.",
         "notes_only": "이 문서에는 전사본이 없습니다 — 회의 노트만 있습니다.",
+        "no_transcript": "이 문서에는 전사본이 없습니다.",
         "added_after_analysis": "이 세션을 분석한 후에 추가되었습니다 — 세션은 분석에 사용한 파일을 그대로 유지합니다."
       }
     }

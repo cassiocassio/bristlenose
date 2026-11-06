@@ -313,6 +313,33 @@ struct ProjectDiagnosticPopover: View {
             if !summary.leftOutBySession.isEmpty {
                 leftOutGrid(summary.leftOutBySession)
             }
+            if let leftAlone = summary.ingest?.leftAlone, leftAlone > 0 {
+                leftAloneFooter(count: leftAlone)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The docs page that lists what Bristlenose reads. The docs root until the
+    /// website has a page of its own for it: a link to a page that 404s is worse
+    /// than one that lands on the index.
+    static let supportedFormatsURL = URL(string: "https://bristlenose.app/docs/supported-files.html")!
+
+    /// "Other files left alone: 28 · Supported formats": the only trace of files in a
+    /// format we never offered. Shown inside a popover that is already open for a real
+    /// failure; a clean run has no popover and so no footer (owner, 6 Nov 2026).
+    @ViewBuilder
+    private func leftAloneFooter(count: Int) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Divider()
+            HStack(spacing: 4) {
+                Text(i18n.t("desktop.pipeline.diagnostic.leftAlone", ["count": String(count)]))
+                    .foregroundStyle(.secondary)
+                Text("·").foregroundStyle(.tertiary)
+                Link(i18n.t("desktop.pipeline.diagnostic.supportedFormats"),
+                     destination: Self.supportedFormatsURL)
+            }
+            .font(.caption)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -741,6 +768,10 @@ struct ProjectDiagnosticPopover: View {
                     lines.append("  \(Self.kind(for: failure).glyph) \(who)  \(category)  \(message)")
                 }
             }
+            lines.append("")
+        }
+        if let leftAlone = summary.ingest?.leftAlone, leftAlone > 0 {
+            lines.append("Left alone (formats Bristlenose does not read): \(leftAlone)")
             lines.append("")
         }
         if !summary.leftOutBySession.isEmpty {

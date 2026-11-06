@@ -491,6 +491,8 @@
       "overflow_few": "… a {{count}} další chyby skryty",
       "overflow_many": "… a {{count}} další chyby skryto",
       "overflow_other": "… a {{count}} dalších chyb skryto",
+      "leftAlone": "Ostatní soubory ponechány stranou: {{count}}",
+      "supportedFormats": "Podporované formáty",
       "reason": {
         "unsupported_format": "Formát, který Bristlenose neumí přečíst.",
         "empty": "Soubor je prázdný — přenos nepřinesl žádná data.",
@@ -505,6 +507,7 @@
         "duplicate_transcript": "Druhá kopie přepisu tohoto sezení — použita byla ta druhá.",
         "no_lines": "V tomto přepisu nejsou žádné řádky — není co analyzovat.",
         "notes_only": "V tomto dokumentu není přepis — jen poznámky ze schůzky.",
+        "no_transcript": "V tomto dokumentu není přepis.",
         "added_after_analysis": "Přidáno až po analýze tohoto sezení — sezení si ponechává soubory, ze kterých bylo analyzováno."
       }
     }

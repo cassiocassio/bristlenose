@@ -74,6 +74,7 @@ MESSAGES: dict[UnusableReason, str] = {
     ),
     UnusableReason.NO_LINES: "No lines in this transcript — there is nothing to analyse.",
     UnusableReason.NOTES_ONLY: "No transcript in this document — only meeting notes.",
+    UnusableReason.NO_TRANSCRIPT: "No transcript in this document.",
     UnusableReason.ADDED_AFTER_ANALYSIS: (
         "Added after this session was analysed — the session keeps the files it was "
         "analysed from."

@@ -446,6 +446,8 @@
       "reportError": "O Bristlenose encontrou um problema inesperado ao abrir este relatório.",
       "overflow_one": "… e mais {{count}} falha truncada",
       "overflow_other": "… e mais {{count}} falhas truncadas",
+      "leftAlone": "Outros ficheiros ignorados: {{count}}",
+      "supportedFormats": "Formatos suportados",
       "reason": {
         "unsupported_format": "Não é um formato que o Bristlenose consiga ler.",
         "empty": "O ficheiro está vazio — a transferência não produziu dados.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Uma segunda cópia da transcrição desta sessão — foi usada a outra.",
         "no_lines": "Nenhuma linha nesta transcrição — não há nada para analisar.",
         "notes_only": "Nenhuma transcrição neste documento — apenas notas da reunião.",
+        "no_transcript": "Nenhuma transcrição neste documento.",
         "added_after_analysis": "Adicionado depois de esta sessão ter sido analisada — a sessão mantém os ficheiros a partir dos quais foi analisada."
       }
     }

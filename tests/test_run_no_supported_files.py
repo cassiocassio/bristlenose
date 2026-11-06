@@ -48,10 +48,9 @@ def test_a_folder_with_nothing_to_read_fails_rather_than_finishing(
 
     assert result.exit_code == 1, result.output
     assert "Done" not in result.output, result.output
-    # An empty folder keeps its line; one with refused files names them and
-    # then says nothing in it could be analysed (decision #81).
-    expected = "No analysable interviews found." if contents else "No supported files found"
-    assert expected in result.output, result.output
+    # Files in a format we never offered are left alone, not refused (6 Nov 2026),
+    # so a folder of only those reads as the empty folder it is to Bristlenose.
+    assert "No supported files found" in result.output, result.output
     terminus = _terminus(input_dir)
     assert terminus["event"] == "run_failed", terminus
     assert terminus["cause"]["category"] == "missing_input", terminus
@@ -77,15 +76,15 @@ def test_analyze_on_a_folder_with_no_transcripts_fails_rather_than_finishing(
 
 
 @pytest.mark.parametrize("command", ["run", "transcribe"])
-def test_a_folder_of_only_declined_files_names_each_one(
+def test_a_folder_of_only_unoffered_formats_is_left_alone_not_refused(
     runner, tmp_path: Path, command: str
 ) -> None:
-    """The run-side twin of R119: the files it declined went unnamed.
+    """The files a folder holds in formats we never offered are not named as refusals.
 
-    Ingest found nothing to analyse and the run stopped before the files
-    bucket was written, so `guide.pdf` and `notes.xlsx` were never said, in
-    the terminal or in `summary.ingest`. They are named with the existing
-    refusal reason, as when a run goes ahead beside them.
+    `guide.pdf` and `notes.xlsx` were never going to be analysed, so nothing is
+    missing: they are counted on `summary.ingest.left_alone` and appear in no
+    `failed` row, no "not analysed" line and no "Partial completion". The run still
+    stops, with the empty-folder line, because there was nothing to read.
     """
     input_dir = tmp_path / "interviews"
     input_dir.mkdir()
@@ -96,21 +95,41 @@ def test_a_folder_of_only_declined_files_names_each_one(
     result = runner.invoke(app, args)
 
     assert result.exit_code == 1, result.output
-    # The scan's own log lines named them already; the refusal block is the
-    # summary a run that goes ahead prints, and what the Mac reads.
-    assert "2 files not analysed" in result.output, result.output
-    assert "guide.pdf — Not a format Bristlenose reads." in result.output, result.output
-    assert "notes.xlsx — Not a format Bristlenose reads." in result.output, result.output
-    # Not "No supported files found." straight after naming two (decision #81).
-    assert "No supported files found" not in result.output, result.output
-    assert result.output.count("No analysable interviews found.") == 1, result.output
-    assert _terminus(input_dir)["cause"]["message"] == "No analysable interviews found."
-    ingest = _terminus(input_dir)["summary"]["ingest"]
+    assert "not analysed" not in result.output, result.output
+    assert "No supported files found" in result.output, result.output
+    terminus = _terminus(input_dir)
+    assert terminus["cause"]["message"] == "No supported files found in input directory."
+    ingest = terminus["summary"]["ingest"]
     assert ingest is not None
-    assert ingest["succeeded"] == 0, ingest
-    assert sorted(
-        (f["source_file"], f["cause"]["category"], f["cause"]["reason"]) for f in ingest["failed"]
-    ) == [
-        ("guide.pdf", "unusable_input", "unsupported_format"),
-        ("notes.xlsx", "unusable_input", "unsupported_format"),
-    ]
+    assert ingest["failed"] == [], ingest
+    assert ingest["left_alone"] == 2, ingest
+
+
+def test_strays_beside_a_real_session_are_counted_and_do_not_make_the_run_partial(
+    runner, tmp_path: Path
+) -> None:
+    """The Talismanic case end to end: one readable session plus stray files.
+
+    `transcribe` reads the `.vtt`, finds nothing it refused, and the terminus carries
+    the strays as a count. Deleting `left_alone=` from the call that follows a
+    successful ingest, or letting a stray into `failed`, fails this (6 Nov 2026).
+    """
+    input_dir = tmp_path / "interviews"
+    input_dir.mkdir()
+    (input_dir / "p1.vtt").write_text(
+        "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\n<v Moderator>How did you find it?\n\n"
+        "00:00:05.000 --> 00:00:09.000\n<v Participant>I could not find the save button.\n",
+        encoding="utf-8",
+    )
+    for name in ("build.py", "notes.txt", "labels.xlsx"):
+        (input_dir / name).write_text("x", encoding="utf-8")
+
+    result = runner.invoke(app, ["transcribe", str(input_dir)])
+
+    assert result.exit_code == 0, result.output
+    assert "not analysed" not in result.output, result.output
+    terminus = _terminus(input_dir)
+    ingest = terminus["summary"]["ingest"]
+    assert terminus["event"] == "run_completed", terminus
+    assert ingest["failed"] == [], ingest
+    assert ingest["left_alone"] == 3, ingest

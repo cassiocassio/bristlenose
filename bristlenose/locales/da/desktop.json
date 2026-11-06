@@ -446,6 +446,8 @@
       "reportError": "Bristlenose stødte på et uventet problem under åbning af denne rapport.",
       "overflow_one": "… og {{count}} yderligere fejl blev afkortet",
       "overflow_other": "… og {{count}} yderligere fejl blev afkortet",
+      "leftAlone": "Øvrige filer ladt urørt: {{count}}",
+      "supportedFormats": "Understøttede formater",
       "reason": {
         "unsupported_format": "Ikke et format, Bristlenose kan læse.",
         "empty": "Filen er tom — overførslen gav ingen data.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "En anden kopi af denne sessions transskription — den anden blev brugt.",
         "no_lines": "Ingen linjer i denne transskription — der er intet at analysere.",
         "notes_only": "Intet transskript i dette dokument — kun mødenoter.",
+        "no_transcript": "Intet transskript i dette dokument.",
         "added_after_analysis": "Tilføjet efter at denne session blev analyseret — sessionen beholder de filer, den blev analyseret ud fra."
       }
     }

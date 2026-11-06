@@ -170,11 +170,18 @@ struct StageOutcome: Codable, Equatable {
     /// null case.
     var durationMs: Int?
     var failed: [SessionFailure]
+    /// Files in the folder in a format Bristlenose never offered to read (a `.py`,
+    /// a `.txt`): not attempted, so neither failed nor counted in `attempted`.
+    /// **Optional**: an older sidecar's terminus omits it. A count only; the names
+    /// stay in the log. Read by the popover's quiet footer, and only when the
+    /// popover is already open for a real failure (6 Nov 2026).
+    var leftAlone: Int? = nil
 
     enum CodingKeys: String, CodingKey {
         case attempted, succeeded
         case durationMs = "duration_ms"
         case failed
+        case leftAlone = "left_alone"
     }
 }
 

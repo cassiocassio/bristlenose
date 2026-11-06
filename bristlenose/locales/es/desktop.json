@@ -446,6 +446,8 @@
       "reportError": "Bristlenose tuvo un problema inesperado al abrir este informe.",
       "overflow_one": "\u2026 y {{count}} fallo m\u00e1s truncado",
       "overflow_other": "\u2026 y {{count}} fallos m\u00e1s truncados",
+      "leftAlone": "Otros archivos ignorados: {{count}}",
+      "supportedFormats": "Formatos admitidos",
       "reason": {
         "unsupported_format": "No es un formato que Bristlenose pueda leer.",
         "empty": "El archivo está vacío — la transferencia no produjo datos.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Una segunda copia de la transcripción de esta sesión — se usó la otra.",
         "no_lines": "Esta transcripción no tiene líneas — no hay nada que analizar.",
         "notes_only": "Este documento no contiene transcripción — solo notas de la reunión.",
+        "no_transcript": "Este documento no contiene transcripción.",
         "added_after_analysis": "Añadido después de analizar esta sesión — la sesión conserva los archivos con los que se analizó."
       }
     }

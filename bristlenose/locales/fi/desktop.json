@@ -446,6 +446,8 @@
       "reportError": "Bristlenose kohtasi odottamattoman ongelman avatessaan tätä raporttia.",
       "overflow_one": "… ja {{count}} muu virhe typistetty",
       "overflow_other": "… ja {{count}} muuta virhettä typistetty",
+      "leftAlone": "Muut ohitetut tiedostot: {{count}}",
+      "supportedFormats": "Tuetut muodot",
       "reason": {
         "unsupported_format": "Ei ole muoto, jota Bristlenose osaa lukea.",
         "empty": "Tiedosto on tyhjä — siirto ei tuottanut lainkaan dataa.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin.",
         "no_lines": "Tässä litteroinnissa ei ole rivejä — analysoitavaa ei ole.",
         "notes_only": "Tässä asiakirjassa ei ole litterointia — vain kokousmuistiinpanot.",
+        "no_transcript": "Tässä asiakirjassa ei ole litterointia.",
         "added_after_analysis": "Lisätty tämän istunnon analysoinnin jälkeen — istunto säilyttää tiedostot, joista se analysoitiin."
       }
     }

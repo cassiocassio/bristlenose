@@ -486,6 +486,8 @@
       "noStructuredCause": "\u8a73\u7d30\u306a\u539f\u56e0\u306f\u8a18\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002",
       "reportError": "このレポートを開くときに、Bristlenose で予期しない問題が発生しました。",
       "overflow_other": "\u2026\u307b\u304b {{count}} \u4ef6\u306e\u5931\u6557\u3092\u7701\u7565\u3057\u307e\u3057\u305f",
+      "leftAlone": "対象外のその他のファイル: {{count}}",
+      "supportedFormats": "対応フォーマット",
       "reason": {
         "unsupported_format": "Bristlenose が読み取れる形式ではありません。",
         "empty": "ファイルが空です — 転送でデータが作成されませんでした。",
@@ -500,6 +502,7 @@
         "duplicate_transcript": "このセッションのトランスクリプトの2つ目のコピーです — もう一方が使用されました。",
         "no_lines": "このトランスクリプトには行がありません — 分析する対象がありません。",
         "notes_only": "このドキュメントにはトランスクリプトがありません — 会議のメモのみです。",
+        "no_transcript": "このドキュメントにはトランスクリプトがありません。",
         "added_after_analysis": "このセッションの分析後に追加されました — セッションは分析に使ったファイルをそのまま保持します。"
       }
     }

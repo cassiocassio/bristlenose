@@ -446,6 +446,8 @@
       "reportError": "Bristlenose ondervond een onverwacht probleem bij het openen van dit rapport.",
       "overflow_one": "… en {{count}} andere fout afgekapt",
       "overflow_other": "… en {{count}} andere fouten afgekapt",
+      "leftAlone": "Overige bestanden genegeerd: {{count}}",
+      "supportedFormats": "Ondersteunde formaten",
       "reason": {
         "unsupported_format": "Geen bestandsformaat dat Bristlenose kan lezen.",
         "empty": "Het bestand is leeg — de overdracht heeft geen gegevens opgeleverd.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Een tweede kopie van het transcript van deze sessie — de andere is gebruikt.",
         "no_lines": "Geen regels in dit transcript — er valt niets te analyseren.",
         "notes_only": "Geen transcript in dit document — alleen vergadernotities.",
+        "no_transcript": "Geen transcript in dit document.",
         "added_after_analysis": "Toegevoegd nadat deze sessie was geanalyseerd — de sessie houdt de bestanden waaruit ze is geanalyseerd."
       }
     }

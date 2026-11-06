@@ -187,8 +187,44 @@ def _parse_docx(path: Path) -> list[TranscriptSegment]:
         logger.warning("Meet notes with no timed transcript, not read: %s", path.name)
         return []
 
+    # Untimed paragraphs are a transcript only if they show who is speaking: a
+    # transcription agency's Word file or a hand-typed one carries "Interviewer:"
+    # / "Participant:" turns. A discussion guide, a brief or a screener has none,
+    # and read as paragraphs it became a session of quotes nobody said (the
+    # `notes_only` harm, for any filename). Refused here, named `no_transcript` by
+    # the pipeline (6 Nov 2026). An agency file that puts the speaker on a line of
+    # its own is refused too: accepted, and the message says to export .vtt/.srt.
+    if not _has_speaker_turns(lines):
+        logger.warning("No timecodes and no speaker turns, not read: %s", path.name)
+        return []
+
     logger.info("Parsing as plain text (no timecodes): %s", path.name)
     return _parse_plain_paragraphs(lines)
+
+
+# "Label: text" with a short label (three words at most), the shape of an
+# untimed transcript's turn. A label may contain digits ("P1", "Participant 2")
+# but not start with one, so "14:30 we met" is not a turn; the colon must be
+# followed by a space ("1:45" is a time) except the full-width colon (U+FF1A) of
+# a Japanese, Chinese or Korean transcript, which takes no space.
+_UNTIMED_TURN = re.compile(r"^(?P<label>[^\W\d_][^:\uff1a]{0,28})(?::\s+|\uff1a\s*)\S")
+
+
+def _has_speaker_turns(lines: list[str]) -> bool:
+    """Whether untimed *lines* read as a conversation: speakers who take turns.
+
+    Three labelled lines, two distinct labels, and at least one label that
+    recurs. A conversation has the same speaker twice; a discussion guide's
+    headed sections ("Objective:", "Warm-up:", "Probe:") are all different.
+    Deliberately narrow: a guide that repeats a label ("Q:") still passes, and a
+    two-line exchange does not.
+    """
+    labels: list[str] = []
+    for line in lines:
+        m = _UNTIMED_TURN.match(line)
+        if m and len(m.group("label").split()) <= 3:
+            labels.append(m.group("label").strip().lower())
+    return len(labels) >= 3 and len(set(labels)) >= 2 and max(labels.count(x) for x in set(labels)) >= 2
 
 
 def _document_lines(doc: object) -> list[str]:

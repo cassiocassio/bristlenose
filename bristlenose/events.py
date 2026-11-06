@@ -191,6 +191,13 @@ class UnusableReason(str, Enum):
     #: Judged by Meet's dated filename tail plus "nothing in it is timed", never
     #: by the localised tab headings.
     NOTES_ONLY = "notes_only"
+    #: A ``.docx`` we opened and found no transcript in: nothing timed and no
+    #: speaker turns, so a discussion guide, a brief or a screener, not what
+    #: anyone said. Read as untimed paragraphs it became a session of quotes
+    #: nobody said (the same harm as ``NOTES_ONLY``, which is the Meet-named
+    #: special case). A format we offer, so a failure with a reason — unlike an
+    #: extension we never offered, which is left alone (6 Nov 2026).
+    NO_TRANSCRIPT = "no_transcript"
     #: A file that joined a session after the session was analysed — a
     #: ``.vtt`` dropped beside an analysed recording, a track added to an
     #: analysed Zoom folder. Set aside so the analysis keeps the files it was
@@ -349,6 +356,13 @@ class StageOutcome(BaseModel):
     succeeded: int = 0
     failed: list[StageFailure] = Field(default_factory=list)
     duration_ms: int | None = None
+    #: Files in the folder whose format Bristlenose never offered to read (a
+    #: ``.py``, a ``.txt``, an ``.xlsx``): not attempted, so not failed and not in
+    #: ``attempted``. A count only — the names stay in the log, because this
+    #: summary reaches ``pipeline-events.jsonl``. The desktop popover says
+    #: "N other files left alone" from it, only when it is already open for a
+    #: real failure (6 Nov 2026).
+    left_alone: int = 0
 
 
 class PipelineSummary(BaseModel):

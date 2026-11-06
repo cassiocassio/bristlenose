@@ -446,6 +446,8 @@
       "reportError": "Bristlenose fick ett oväntat problem när den här rapporten öppnades.",
       "overflow_one": "… och {{count}} till fel avkortat",
       "overflow_other": "… och {{count}} till fel avkortade",
+      "leftAlone": "Övriga filer lämnades orörda: {{count}}",
+      "supportedFormats": "Format som stöds",
       "reason": {
         "unsupported_format": "Inte ett format som Bristlenose kan läsa.",
         "empty": "Filen är tom – överföringen gav inga data.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "En andra kopia av den här sessionens transkription – den andra användes.",
         "no_lines": "Inga rader i den här transkriptionen – det finns inget att analysera.",
         "notes_only": "Ingen transkription i det här dokumentet – bara mötesanteckningar.",
+        "no_transcript": "Ingen transkription i det här dokumentet.",
         "added_after_analysis": "Tillagd efter att den här sessionen analyserades – sessionen behåller filerna den analyserades från."
       }
     }

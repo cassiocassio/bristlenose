@@ -50,6 +50,27 @@ class SkippedFile(NamedTuple):
     detail: str | None = None
 
 
+def split_left_alone(declined: list[SkippedFile]) -> tuple[list[SkippedFile], int]:
+    """Separate what the scan *refused* from what it *left alone*.
+
+    A file in a format we never offered to read (a ``.py``, a ``.txt``, an
+    ``.xlsx``) was never attempted, so it is not a failure and must not turn a
+    clean run into "Partial completion": Talismanic read that way because 30
+    scripts and logs each counted as a refusal. Only files in a format we say we
+    read can fail, and they fail with a reason of their own (``empty``,
+    ``incomplete``, ``no_transcript``...), from later stages.
+
+    Returns ``(stated, left_alone_count)``. The count rides on the run summary;
+    the names stay in the log (``_try_add_file`` logs each at debug), because the
+    summary reaches ``pipeline-events.jsonl``. Unreadable folders and every other
+    reason stay stated. Discovery still *collects* the declined files so that
+    this one function decides (`ingest()` calls it for its own log lines too),
+    rather than the scan knowing the policy.
+    """
+    stated = [s for s in declined if s.reason is not UnusableReason.UNSUPPORTED_FORMAT]
+    return stated, len(declined) - len(stated)
+
+
 def _get_creation_time(path: Path) -> datetime:
     """Get the file creation time.
 
@@ -926,25 +947,28 @@ def ingest(
         skipped = []
     files = discover_files(input_dir, skipped)
 
-    # Say what was left out, by name. A count alone does not let a researcher
-    # work out which participant is missing.
-    for entry in skipped:
+    # Say what was refused, by name. A count alone does not let a researcher
+    # work out which participant is missing. Files in a format we never offered
+    # are left alone and are not named here (6 Nov 2026): they were never going
+    # to be analysed, so nothing is missing. `_try_add_file` logs each at debug.
+    refused, _ = split_left_alone(skipped)
+    for entry in refused:
         logger.warning(
             "Not analysed: %s — %s%s",
             entry.path.name,
             MESSAGES[entry.reason],
             f" ({entry.detail})" if entry.detail else "",
         )
-    if skipped:
+    if refused:
         logger.warning(
             "%d file(s) in %s were not analysed; see the lines above",
-            len(skipped),
+            len(refused),
             input_dir,
         )
 
     if not files:
         # Not "no supported files" straight after naming the ones refused (#81).
-        if not skipped:
+        if not refused:
             logger.warning("No supported files found in %s", input_dir)
         return []
 

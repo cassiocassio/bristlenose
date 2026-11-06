@@ -446,6 +446,8 @@
       "reportError": "Bristlenose a rencontré un problème inattendu en ouvrant ce rapport.",
       "overflow_one": "\u2026 et {{count}} autre \u00e9chec tronqu\u00e9",
       "overflow_other": "\u2026 et {{count}} autres \u00e9checs tronqu\u00e9s",
+      "leftAlone": "Autres fichiers laissés de côté : {{count}}",
+      "supportedFormats": "Formats pris en charge",
       "reason": {
         "unsupported_format": "Ce n'est pas un format que Bristlenose peut lire.",
         "empty": "Le fichier est vide — le transfert n'a produit aucune donnée.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Une seconde copie de la transcription de cet entretien — l'autre a été utilisée.",
         "no_lines": "Aucune ligne dans cette transcription — il n'y a rien à analyser.",
         "notes_only": "Aucune transcription dans ce document — uniquement des notes de réunion.",
+        "no_transcript": "Aucune transcription dans ce document.",
         "added_after_analysis": "Ajouté après l'analyse de cet entretien — l'entretien garde les fichiers à partir desquels il a été analysé."
       }
     }

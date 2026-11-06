@@ -446,6 +446,8 @@
       "reportError": "Bristlenose ist beim Öffnen dieses Berichts auf ein unerwartetes Problem gestoßen.",
       "overflow_one": "… und {{count}} weiterer Fehler gekürzt",
       "overflow_other": "… und {{count}} weitere Fehler gekürzt",
+      "leftAlone": "Weitere Dateien übergangen: {{count}}",
+      "supportedFormats": "Unterstützte Formate",
       "reason": {
         "unsupported_format": "Kein Format, das Bristlenose lesen kann.",
         "empty": "Die Datei ist leer — bei der Übertragung wurden keine Daten erzeugt.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Eine zweite Kopie des Transkripts dieses Interviews — die andere wurde verwendet.",
         "no_lines": "Keine Zeilen in diesem Transkript — es gibt nichts zu analysieren.",
         "notes_only": "Kein Transkript in diesem Dokument — nur Besprechungsnotizen.",
+        "no_transcript": "Kein Transkript in diesem Dokument.",
         "added_after_analysis": "Nach der Analyse dieses Interviews hinzugefügt — das Interview behält die Dateien, aus denen es analysiert wurde."
       }
     }

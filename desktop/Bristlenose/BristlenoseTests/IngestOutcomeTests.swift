@@ -35,6 +35,21 @@ import Foundation
         #expect(summary.allBuckets.first?.name == .ingest)
     }
 
+    @Test func theLeftAloneCountDecodesAndAnOlderSidecarOmitsIt() throws {
+        // Files in a format never offered are counted, not failed (6 Nov 2026).
+        let withCount = try decode("""
+        {"ingest": {"attempted": 5, "succeeded": 5, "failed": [], "left_alone": 28}}
+        """)
+        #expect(withCount.ingest?.leftAlone == 28)
+        #expect(withCount.ingest?.failed.isEmpty == true)
+
+        // An older sidecar's terminus has no such key: nil, and the whole summary still decodes.
+        let without = try decode("""
+        {"ingest": {"attempted": 5, "succeeded": 5, "failed": []}}
+        """)
+        #expect(without.ingest?.leftAlone == nil)
+    }
+
     @Test func aDeclinedFormatAndADamagedFileShareOneCategory() throws {
         // Different causes, same consequence — a participant missing from the
         // findings — so they carry the same weight on screen and differ only in

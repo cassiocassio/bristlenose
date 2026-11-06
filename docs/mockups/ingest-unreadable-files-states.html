@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unreadable files — status and popover scenarios</title>
+<style>
+  /* Native macOS approximation (not the web theme): the sidebar row and the
+     diagnostic popover are SwiftUI/AppKit, so this uses the same envelope as
+     pipeline-popover-sizing.html — SF at native point sizes, written as px. */
+  :root {
+    --sf: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --orange:#FF9F0A; --red:#FF3B30;
+    --label:rgba(0,0,0,.85); --secondary:rgba(0,0,0,.5); --tertiary:rgba(0,0,0,.3);
+    --pop-bg:rgba(246,246,246,.96); --pop-border:rgba(0,0,0,.12); --hair:rgba(0,0,0,.10);
+    --sb-bg:#E9E7EA; --sb-sel:rgba(0,0,0,.09); --sb-1:rgba(0,0,0,.85); --sb-2:rgba(0,0,0,.5);
+    --page:#F3F2F4; --ink:#1d1d1f; --muted:#5d5d63; --rule:#8a8a92;
+    --new:#0a62cc; --newbg:rgba(10,98,204,.09);
+  }
+  body.dark {
+    --label:rgba(255,255,255,.92); --secondary:rgba(255,255,255,.55); --tertiary:rgba(255,255,255,.32);
+    --pop-bg:rgba(44,44,46,.96); --pop-border:rgba(255,255,255,.12); --hair:rgba(255,255,255,.12);
+    --sb-bg:#26282B; --sb-sel:rgba(255,255,255,.12); --sb-1:rgba(255,255,255,.9); --sb-2:rgba(255,255,255,.55);
+    --page:#161719; --ink:#E7EAEE; --muted:#a2a9b3; --rule:#6b727c;
+    --new:#6BAFFF; --newbg:rgba(107,175,255,.14);
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font-family:var(--sf); background:var(--page); color:var(--ink);
+         padding:28px 24px 90px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  h1 { font-size:21px; font-weight:650; margin:0 0 6px; }
+  h2 { font-size:15px; font-weight:650; margin:0 0 4px; }
+  p { font-size:13px; line-height:1.55; color:var(--muted); margin:0 0 8px; max-width:78ch; }
+  p b { color:var(--ink); font-weight:600; }
+  code { font-family:var(--mono); font-size:11.5px; background:rgba(127,127,127,.15);
+         padding:1px 4px; border-radius:4px; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:14px 0 18px; }
+  .bar button { font:12px/1 var(--sf); padding:6px 11px; border-radius:7px; cursor:pointer;
+                border:.5px solid var(--rule); background:transparent; color:var(--ink); }
+  .bar button.on { background:var(--ink); color:var(--page); }
+
+  /* Key — separates "what ships" from "why it works" */
+  .key { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 6px; max-width:780px; }
+  .key div { font-size:12px; line-height:1.45; padding:8px 11px; border-radius:6px; color:var(--muted); }
+  .key .k-art { border:1px solid var(--hair); background:var(--pop-bg); }
+  .key .k-com { border:7px solid transparent; border-left:3px solid var(--rule); padding:2px 8px;
+    background:linear-gradient(var(--page),var(--page)) padding-box,
+    repeating-linear-gradient(135deg,var(--rule) 0 5px,transparent 5px 10px) border-box; }
+  .key b { color:var(--ink); }
+  .newtag { color:var(--new); background:var(--newbg); border-bottom:1px dotted var(--new); padding:0 2px; border-radius:2px; }
+
+  /* Scenario block */
+  .sc { padding:26px 0 8px; border-top:1px solid var(--hair); margin-top:22px; }
+  .sc .hd { display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
+  .chip { font-size:10.5px; font-weight:650; letter-spacing:.05em; text-transform:uppercase;
+          padding:2px 7px; border-radius:5px; color:#fff; }
+  .chip.today { background:#7a3a34; } .chip.prop { background:#2f6f4f; } .chip.open { background:#5a5330; }
+  .stage { display:grid; grid-template-columns:300px 380px 1fr; gap:26px; align-items:start; }
+  .stage.two { grid-template-columns:300px 380px; }
+  .cap { font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);
+         font-weight:650; margin:0 0 8px; }
+  .folder { font-size:11px; color:var(--muted); font-family:var(--mono); margin:0 0 8px; line-height:1.5; }
+
+  /* Artefact: sidebar */
+  .sb { background:var(--sb-bg); border:.5px solid var(--hair); border-radius:10px; padding:6px 0; width:300px; }
+  .r { display:grid; grid-template-columns:20px 1fr; column-gap:6px; align-items:start;
+       padding:7px 10px 0 12px; height:46px; }
+  .r.one { height:32px; align-items:center; padding-top:0; }
+  .r.sel { background:var(--sb-sel); margin:0 6px; border-radius:7px; padding-left:6px; }
+  .ico { width:20px; height:16px; display:flex; align-items:center; justify-content:center;
+         color:var(--sb-2); font-size:13px; }
+  .nm { font-size:13px; line-height:16px; color:var(--sb-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .st { display:flex; align-items:center; gap:4px; margin-top:1px; height:13px; }
+  .stx { font-size:10px; line-height:13px; color:var(--sb-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .st svg { width:10px; height:10px; flex:none; }
+  .dim .nm { color:var(--sb-2); }
+
+  /* Artefact: popover */
+  .popwrap { position:relative; padding-top:9px; }
+  .arrow { position:absolute; top:2px; left:38px; transform:rotate(45deg); width:14px; height:14px;
+    background:var(--pop-bg); border-left:.5px solid var(--pop-border); border-top:.5px solid var(--pop-border); }
+  .popover { width:360px; background:var(--pop-bg); border:.5px solid var(--pop-border); border-radius:11px;
+    box-shadow:0 10px 30px rgba(0,0,0,.22); padding:16px; color:var(--label); max-height:320px; overflow:hidden; }
+  .head { display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; }
+  .verb { font-size:13px; font-weight:600; flex:1; line-height:1.25; }
+  .btn { font:11px/1 var(--sf); padding:4px 8px; border-radius:5px; border:.5px solid var(--hair);
+         background:rgba(127,127,127,.13); color:var(--label); white-space:nowrap; }
+  .bucket { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+  .bhead { display:flex; align-items:baseline; gap:6px; }
+  .bname { font-size:12px; font-weight:600; } .bcount { font-size:10px; color:var(--secondary); }
+  .bnote { font-size:10px; color:var(--secondary); }
+  .grid { display:grid; grid-template-columns:auto minmax(0,auto) 1fr; column-gap:6px; row-gap:4px; align-items:start; }
+  .g { font-size:10px; line-height:1.45; padding-top:1px; color:var(--orange); }
+  .file { font-family:var(--mono); font-size:10px; color:var(--secondary); white-space:nowrap; overflow:hidden;
+          text-overflow:ellipsis; max-width:150px; line-height:1.45; }
+  .why { font-size:10px; line-height:1.45; }
+  .over { font-style:italic; color:var(--secondary); font-size:10px; grid-column:3; }
+  .left { border-top:.5px solid var(--hair); padding-top:8px; font-size:10px; line-height:1.5; color:var(--secondary); }
+  .left b { color:var(--label); font-weight:600; font-size:11px; }
+  .lnk { color:#0a62cc; text-decoration:none; cursor:default; }
+  body.dark .lnk { color:#6BAFFF; }
+  .absent { width:360px; min-height:90px; border:1px dashed var(--rule); border-radius:11px; padding:14px 16px;
+    font-size:12px; color:var(--muted); line-height:1.5; display:flex; align-items:center; }
+
+  /* Commentary — hatched edge band, never behind text */
+  .com { border:7px solid transparent; border-left:3px solid var(--rule); padding:2px 10px;
+    background:linear-gradient(var(--page),var(--page)) padding-box,
+    repeating-linear-gradient(135deg,var(--rule) 0 5px,transparent 5px 10px) border-box; }
+  .com p { font-size:12px; margin:0 0 7px; } .com .lab { font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .sub2 { margin:0 0 20px; }
+  table { border-collapse:collapse; font-size:12px; margin-top:8px; width:100%; max-width:980px; }
+  th,td { text-align:left; padding:6px 10px; border-bottom:1px solid var(--hair); vertical-align:top; color:var(--muted); }
+  th { font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink); }
+  td b, td code { color:var(--ink); }
+  @media (max-width:1000px) { .stage, .stage.two { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Unreadable files — what the row and the popover say</h1>
+<p>The rule, as settled: a file in a format <b>we say we read</b> (the docs list) that we opened and couldn't use
+   is a failure with a reason (“we tried, and it wasn’t a transcript when we looked inside”). A file in a format
+   <b>we never offered</b>, <code>.py</code> and <code>.txt</code> alike, is left alone and never changes the outcome.
+   Where a popover is already open for a real failure, a quiet footer says what was left alone and links to the formats we read.
+   Native approximation of <code>ProjectRow</code> and <code>ProjectDiagnosticPopover</code>; every sentence is a shipped
+   locale key unless it is marked <span class="newtag">new copy</span>.</p>
+
+<div class="key">
+  <div class="k-art"><b>Framed, product-coloured:</b> what would ship — the sidebar row and the popover, nothing else.</div>
+  <div class="k-com"><b>Hatched edge:</b> commentary. Not in the product.</div>
+</div>
+<div class="bar">
+  <button id="dk" onclick="document.body.classList.toggle('dark'); this.classList.toggle('on')">Dark</button>
+</div>
+
+<div id="out"></div>
+
+<div class="sc">
+  <h2>String plan</h2>
+  <p>Three pieces of copy are new. The other reasons reuse the shipped <code>desktop.pipeline.diagnostic.reason.*</code> keys.</p>
+  <table>
+    <tr><th>Where</th><th>Text</th><th>Status</th></tr>
+    <tr><td>Row line, run with unreadable sessions</td><td>“5 of 6 sessions analysed”</td><td>shipped (<code>partialSessions</code>)</td></tr>
+    <tr><td>Row line, unreadable files that were never sessions</td><td>“2 files not analysed”</td><td>shipped (<code>chrome.notAnalysedCount</code>), new use as a row line</td></tr>
+    <tr><td>Popover reasons</td><td>incomplete · empty · no audio · not a recording · not a format Bristlenose reads</td><td>shipped</td></tr>
+    <tr><td>Popover reason, a read format with no transcript inside</td><td><span class="newtag">No transcript in this document.</span></td><td>new key; shipped <code>notes_only</code> names “meeting notes”, which a guide is not</td></tr>
+    <tr><td>Popover footer, count</td><td><span class="newtag">N other files left alone</span> (plural)</td><td>new key, owner to write</td></tr>
+    <tr><td>Popover footer, link to the docs formats page</td><td><span class="newtag">Supported formats</span></td><td>new key, owner to write; needs a stable docs URL in the website repo</td></tr>
+  </table>
+</div>
+
+<div class="sc">
+  <h2>Correction to what I said earlier</h2>
+  <p>I said the popover’s “Done with warnings” outcome covers files that were left out. It doesn’t: it covers <b>quotes</b>
+     left out of a session (<code>leftOutCount</code>, <code>completedPartialAnalysed</code>). Files that couldn’t be
+     read have no such path, which is why Talismanic read “Partial completion”. Nothing in this page relies on that outcome.</p>
+</div>
+</div>
+
+<script>
+const WARN = '<svg viewBox="0 0 16 16"><path fill="#FF9F0A" d="M8 1.2 15.2 14H.8z"/><path fill="#fff" d="M7.3 5.6h1.4v4.4H7.3zM7.3 10.8h1.4v1.4H7.3z"/></svg>';
+const WARNg = '<span class="g">▲</span>';
+
+const SCENARIOS = [
+ { id:1, chip:'today', title:'Today — Talismanic as it stands',
+   folder:'Talismanic/ — 4 videos, 30 other files (scripts, .pyc, .json, .md, .xlsx)',
+   row:{ name:'Talismanic', sub:'Partial completion', warn:true },
+   pop:{ head:'Partial completion', files:'2/32', bucket:{ name:'10 files not analysed', rows:[
+     ['Discussion lens gold labels.xlsx','Not a format Bristlenose reads.'],
+     ['Project Ikea Discussion Guide.md','Not a format Bristlenose reads.'],
+     ['build_viz.cpython-312.pyc','Not a format Bristlenose reads.'],
+     ['build_viz.py','Not a format Bristlenose reads.'],
+     ['detailed.err','Not a format Bristlenose reads.'],
+   ], over:'… and 20 more failures truncated' } },
+   com:'Two interviews analysed and 30 files that were never interviews, all reported the same way as a real failure. The outcome is a warning and the report says “partial”. This is the screenshot you sent.' },
+
+ { id:2, chip:'prop', title:'Stray files only — the Talismanic folder under the new rule',
+   folder:'Talismanic/ — 2 interview sessions, 30 files that are clearly not interviews',
+   row:{ name:'Talismanic', sub:'5 Nov', warn:false },
+   pop:null,
+   absent:'No glyph, so no popover to open. The run was a success and says nothing else.',
+   com:'The same folder, same run. Source files, bytecode, logs and data are left alone and never counted. Silence is the correct answer here: the row ends in a date like any other analysed study. The files are named in the log for anyone who goes looking.' },
+
+ { id:3, chip:'prop', title:'A real interview couldn’t be read',
+   folder:'Interviews/ — 6 recordings; p4 stopped downloading halfway; notes.txt and guide.md beside them (formats we never offered)',
+   row:{ name:'Checkout study', sub:'5 of 6 sessions analysed', warn:true },
+   pop:{ head:'5 of 6 sessions analysed', files:'5/6', bucket:{ name:'1 file not analysed', rows:[
+     ['p4 Tom on Ikea.mp4','The file is incomplete — the transfer stopped early.'] ] },
+     left:'<span class="newtag">2 other files left alone</span> · <span class="newtag lnk">Supported formats</span>' },
+   com:'The case the whole rule exists for. The researcher sees the one interview that matters and what is wrong with it. The footer is the only trace of the ignored files, and “Supported formats” (a link to the docs page) answers “why wasn’t my other file picked up?”. It appears only because this popover is already open; a clean run has no popover and no footer.' },
+
+ { id:4, chip:'prop', title:'A transcript file with no transcript in it',
+   folder:'Interviews/ — 5 recordings analysed; Discussion guide.docx beside them (a format we read)',
+   row:{ name:'Checkout study', sub:'1 file not analysed', warn:true },
+   pop:{ head:'1 file not analysed', files:'5/6', bucket:{ name:'1 file not analysed', rows:[
+     ['Discussion guide.docx','<span class="newtag">No transcript in this document.</span>'] ] },
+     left:'<span class="newtag">1 other file left alone</span> · <span class="newtag lnk">Supported formats</span>' },
+   com:'We offer .docx, we opened it and found no turns or timecodes, so it is a failure with a reason. Today this probably becomes a session of untimed, unattributed segments (unmeasured; see the plain-text path in <code>s04_parse_docx.py</code>). The shipped sibling is “No transcript in this document — only meeting notes.” (<code>notes_only</code>), which names meeting notes and so is wrong for a discussion guide. The .vtt and .srt equivalents already refuse an empty file. This scenario assumes an untimed, speaker-less .docx counts as “no transcript”; that is a behaviour change and needs your call.' },
+
+ { id:5, chip:'open', title:'Open call — a recording in a format not on the list',
+   folder:'Interviews/ — 4 .mp4 sessions analysed; p5 Mia.opus beside them',
+   two:[
+     { cap:'Option A — ignored, as the docs rule says', row:{ name:'Checkout study', sub:'5 Nov', warn:false },
+       pop:null, absent:'No glyph and no popover. The recording is gone without a word.' },
+     { cap:'Option B — unrecognised media is named', row:{ name:'Checkout study', sub:'1 file not analysed', warn:true },
+       pop:{ head:'1 file not analysed', files:'4/5', bucket:{ name:'1 file not analysed', rows:[['p5 Mia.opus','Not a format Bristlenose reads.']] },
+         left:'<span class="newtag lnk">Supported formats</span>' } } ],
+   com:'The one place the “never offered, so ignored” rule costs a researcher an interview in silence. B needs a cheap <code>ffprobe</code> check that the unknown file really is audio or video, so a .py is never touched. Not decided. If .opus is added to the supported list this scenario disappears.' },
+
+ { id:6, chip:'open', title:'Open call — nothing in the folder is a format we read',
+   folder:'Interviews/ — only notes.txt and a guide.md',
+   row:{ name:'Checkout study', sub:'Drag Interviews Here', warn:false },
+   pop:null, absent:'No run happens, so no popover and no link. By the rule this is identical to an empty folder.',
+   com:'Unresolved and deliberately not given a link: you asked for “Supported formats” in the popover only. The row is the empty-folder state as it ships today.' }
+];
+
+function row(name, r) {
+  return `<div class="sb"><div class="r one dim"><div class="ico">▤</div><div class="nm">Ikea research videos</div></div>
+    <div class="r sel"><div class="ico" style="color:#3b82f6">◍</div><div><div class="nm">${name}</div>
+    <div class="st">${r.warn ? WARN : ''}<span class="stx">${r.sub}</span></div></div></div>
+    <div class="r one dim"><div class="ico">▤</div><div class="nm">Client X</div></div></div>`;
+}
+function pop(p) {
+  const b = p.bucket;
+  const rows = b.rows.map(r => `${WARNg}<span class="file">${r[0]}</span><span class="why">${r[1]}</span>`).join('');
+  return `<div class="popwrap"><div class="arrow"></div><div class="popover">
+    <div class="head"><div class="verb">${p.head}</div><div class="btn">Show Log</div><div class="btn">⎘</div></div>
+    <div class="bucket"><div class="bhead"><span class="bname">Files</span><span class="bcount">(${p.files})</span></div>
+      <div class="bnote">${b.name}</div><div class="grid">${rows}${b.over ? `<span class="over">${b.over}</span>` : ''}</div></div>
+    ${p.left ? `<div class="left">${p.left}</div>` : ''}</div></div>`;
+}
+function artefacts(x) {
+  return `<div><p class="cap">Sidebar row</p>${row('Talismanic' === x.row.name ? x.row.name : x.row.name, x.row)}</div>
+          <div><p class="cap">Popover</p>${x.pop ? pop(x.pop) : `<div class="absent">${x.absent}</div>`}</div>`;
+}
+document.getElementById('out').innerHTML = SCENARIOS.map(s => {
+  const body = s.two
+    ? s.two.map(o => `<div class="stage two sub2">${
+        `<div><p class="cap">${o.cap} — sidebar row</p>${row(o.row.name, o.row)}</div>` +
+        `<div><p class="cap">${o.cap} — popover</p>${o.pop ? pop(o.pop) : `<div class="absent">${o.absent}</div>`}</div>`}</div>`).join('')
+    : `<div class="stage">${artefacts(s)}<div class="com"><div class="lab">Commentary</div><p>${s.com}</p></div></div>`;
+  return `<div class="sc"><div class="hd"><span class="chip ${s.chip}">${{today:'Today',prop:'Proposed',open:'Open'}[s.chip]}</span>
+    <h2>${s.id}. ${s.title}</h2></div><p class="folder">${s.folder}</p>${body}
+    ${s.two ? `<div class="com"><div class="lab">Commentary</div><p>${s.com}</p></div>` : ''}</div>`;
+}).join('');
+</script>
+</body>
+</html>

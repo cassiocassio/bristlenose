@@ -306,29 +306,68 @@ class TestPlainAndRefusal:
     def test_untimed_word_document_still_parses_as_paragraphs(
         self, tmp_path: Path
     ) -> None:
-        """A hand-typed Word transcript has no timecodes — untimed is honest."""
+        """A hand-typed Word transcript has no timecodes — untimed is honest,
+        provided it shows who is speaking."""
         paragraphs = [
-            "Interview with participant one",
-            "They said the price was the first thing they noticed.",
-            "Then they mentioned checkout was slow.",
+            "Interviewer: How did you find the checkout?",
+            "Participant: The price was the first thing I noticed.",
+            "Participant: Then checkout was slow.",
         ]
         segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
 
         assert len(segments) == 3
         assert all(s.start_time == 0.0 for s in segments)
 
+    def test_untimed_document_with_no_speaker_turns_is_not_read(
+        self, tmp_path: Path
+    ) -> None:
+        """A discussion guide or a brief has no timecodes and no speakers: read as
+        paragraphs it became a session of quotes nobody said (6 Nov 2026)."""
+        paragraphs = [
+            "Project Ikea Discussion Guide",
+            "Warm-up: ask about the last time they bought furniture.",
+            "Probe on the checkout and the delivery options.",
+        ]
+        assert parse_docx_file(_make_docx(tmp_path, paragraphs)) == []
+
+    def test_numbered_labels_and_full_width_colons_are_turns(self, tmp_path: Path) -> None:
+        """"P1:" and "Participant 2:" are the commonest hand-typed labels, and a
+        CJK transcript uses U+FF1A with no space (review of 6 Nov 2026)."""
+        for paragraphs in (
+            ["M: How was it?", "P1: Fine.", "M: Why?", "P1: Because."],
+            ["Participant 1: Hello.", "Moderator: Hi.", "Participant 1: So.", "Participant 2: Yes."],
+            ["面接者：こんにちは", "参加者：はい", "面接者：どうでしたか", "参加者：良かったです"],
+        ):
+            segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+            assert len(segments) == len(paragraphs), paragraphs
+
+    def test_a_guide_with_headed_sections_is_not_a_conversation(self, tmp_path: Path) -> None:
+        """Every section head is a different label; nobody speaks twice."""
+        paragraphs = [
+            "Objective: learn about checkout",
+            "Warm-up: last purchase",
+            "Materials: prototype v2",
+            "Probe: delivery",
+        ]
+        assert parse_docx_file(_make_docx(tmp_path, paragraphs)) == []
+
+    def test_one_repeated_label_is_not_a_conversation(self, tmp_path: Path) -> None:
+        paragraphs = ["Q: Why?", "Q: And then?", "Q: Anything else?"]
+        assert parse_docx_file(_make_docx(tmp_path, paragraphs)) == []
+
     def test_incidental_clock_time_in_prose_does_not_trigger_refusal(
         self, tmp_path: Path
     ) -> None:
         """Only a paragraph that is *nothing but* a timecode is structural evidence."""
         paragraphs = [
+            "Interviewer: We met at 14:30 and talked for an hour.",
+            "Participant: They said the price was the first thing they noticed.",
+            "Interviewer: And then?",
             "Interview with participant one",
-            "We met at 14:30 and talked for an hour.",
-            "They said the price was the first thing they noticed.",
         ]
         segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
 
-        assert len(segments) == 3
+        assert len(segments) == 4
 
     def test_empty_document_returns_nothing(self, tmp_path: Path) -> None:
         assert parse_docx_file(_make_docx(tmp_path, [])) == []
@@ -544,14 +583,15 @@ class TestParagraphIsNotTheUnitOfStructure:
         untimed agency transcript silently acquires a fabricated participant.
         """
         paragraphs = [
-            "Interview with participant one",
+            "Interviewer: Total runtime 1:45",
+            "Participant: They said the price was the first thing they noticed.",
+            "Interviewer: And then?",
             "Total runtime 1:45",
-            "They said the price was the first thing they noticed.",
         ]
         segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
 
         assert all(s.speaker_label is None for s in segments)
-        assert len(segments) == 3
+        assert len(segments) == 4
 
 
 # ── Text inside a Word table ───────────────────────────────────────────────

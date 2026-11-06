@@ -446,6 +446,8 @@
       "reportError": "Bristlenose fikk et uventet problem da denne rapporten skulle åpnes.",
       "overflow_one": "… og {{count}} feil til ble avkortet",
       "overflow_other": "… og {{count}} feil til ble avkortet",
+      "leftAlone": "Øvrige filer hoppet over: {{count}}",
+      "supportedFormats": "Støttede formater",
       "reason": {
         "unsupported_format": "Ikke et format Bristlenose kan lese.",
         "empty": "Filen er tom – overføringen ga ingen data.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "En annen kopi av transkripsjonen for denne økten – den andre ble brukt.",
         "no_lines": "Ingen linjer i denne transkripsjonen – det er ingenting å analysere.",
         "notes_only": "Ingen transkripsjon i dette dokumentet – bare møtenotater.",
+        "no_transcript": "Ingen transkripsjon i dette dokumentet.",
         "added_after_analysis": "Lagt til etter at denne økten ble analysert – økten beholder filene den ble analysert fra."
       }
     }

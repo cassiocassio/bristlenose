@@ -117,8 +117,9 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
   - Google Meet: ` - {YYYY/MM/DD HH:MM} [TZ] - {kind}` dated tail (current), plus the older `({YYYY-MM-DD at ...})` parenthetical and `- Transcript` suffix
   - Legacy: `_transcript`, `_subtitles`, `_captions`, `_sub`, `_srt`
 
-**Ingest and session grouping** (7) — [full entries](gotchas.md#ingest-and-session-grouping)
+**Ingest and session grouping** (8) — [full entries](gotchas.md#ingest-and-session-grouping)
 
+- A format we never offered is left alone, not refused: `split_left_alone` counts it on `StageOutcome.left_alone`; `analyze` is the exception…
 - `_is_zoom_local_dir(dir_name)`: matches `YYYY-MM-DD HH.MM.SS Topic [MeetingID]`; the ID is optional since 22…
 - `group_into_sessions()`: Pass 1 groups Zoom local folder files by directory; Pass 2 (`_group_by_stem`) groups…
 - `_GMEET_TAIL_RE` strips the whole dated tail, and requires a trailing kind it does not read.
@@ -140,6 +141,8 @@ A session with several transcript files (Teams `.vtt` + `.docx`, cloud + hand-dr
 
 Google Meet's `.docx` export is Gemini notes plus a transcript, not a transcript; `s04_parse_docx.py` parses by LINE (not paragraph) and refuses a notes-only doc loudly (recorded, not just raised).
 Full account (observed 16 Aug 2026, seven things to know, residue, tests): [full entries](gotchas.md#platform-transcripts-and-docx-parsing).
+
+An untimed `.docx` with no speaker turns (a discussion guide) returns no segments and is stated `no_transcript` (6 Nov 2026): `_has_speaker_turns` in `s04_parse_docx.py`, narrow by design.
 
 ## Concurrent audio extraction (Stage 2)
 

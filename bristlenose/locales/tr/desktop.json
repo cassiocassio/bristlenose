@@ -446,6 +446,8 @@
       "reportError": "Bristlenose bu raporu açarken beklenmeyen bir sorunla karşılaştı.",
       "overflow_one": "… ve {{count}} hata daha kesildi",
       "overflow_other": "… ve {{count}} hata daha kesildi",
+      "leftAlone": "Yoksayılan diğer dosyalar: {{count}}",
+      "supportedFormats": "Desteklenen biçimler",
       "reason": {
         "unsupported_format": "Bristlenose'un okuyabileceği bir biçim değil.",
         "empty": "Dosya boş — aktarım hiç veri üretmedi.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Bu oturumun dökümünün ikinci bir kopyası — diğeri kullanıldı.",
         "no_lines": "Bu dökümde satır yok — analiz edilecek bir şey yok.",
         "notes_only": "Bu belgede döküm yok — yalnızca toplantı notları var.",
+        "no_transcript": "Bu belgede döküm yok.",
         "added_after_analysis": "Bu oturum analiz edildikten sonra eklendi — oturum, analiz edildiği dosyaları korur."
       }
     }

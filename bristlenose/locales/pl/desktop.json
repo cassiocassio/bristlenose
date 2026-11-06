@@ -492,6 +492,8 @@
       "overflow_few": "… oraz {{count}} kolejne niepowodzenia pominięto",
       "overflow_many": "… oraz {{count}} kolejnych niepowodzeń pominięto",
       "overflow_other": "… oraz {{count}} kolejnych niepowodzeń pominięto",
+      "leftAlone": "Pozostałe pliki pominięte: {{count}}",
+      "supportedFormats": "Obsługiwane formaty",
       "reason": {
         "unsupported_format": "To nie jest format, który Bristlenose potrafi odczytać.",
         "empty": "Plik jest pusty — transfer nie przyniósł żadnych danych.",
@@ -506,6 +508,7 @@
         "duplicate_transcript": "Druga kopia transkrypcji tej sesji — użyto innej.",
         "no_lines": "Brak wierszy w tej transkrypcji — nie ma czego analizować.",
         "notes_only": "Brak transkrypcji w tym dokumencie — tylko notatki ze spotkania.",
+        "no_transcript": "Brak transkrypcji w tym dokumencie.",
         "added_after_analysis": "Dodano po przeanalizowaniu tej sesji — sesja zachowuje pliki, z których została przeanalizowana."
       }
     }

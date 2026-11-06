@@ -423,6 +423,8 @@
       "noStructuredCause": "未擷取到詳細原因。",
       "reportError": "Bristlenose 開啟這份報告時發生未預期的問題。",
       "overflow_other": "⋯另有 {{count}} 則失敗被截斷",
+      "leftAlone": "其他略過的檔案：{{count}}",
+      "supportedFormats": "支援的格式",
       "reason": {
         "unsupported_format": "Bristlenose 無法讀取的格式。",
         "empty": "檔案是空的 — 傳輸未產生任何資料。",
@@ -437,6 +439,7 @@
         "duplicate_transcript": "此工作階段逐字稿的第二份副本 — 已使用另一份。",
         "no_lines": "這份逐字稿沒有任何內容行 — 沒有可分析的內容。",
         "notes_only": "這份文件沒有逐字稿 — 只有會議筆記。",
+        "no_transcript": "這份文件沒有逐字稿。",
         "added_after_analysis": "在此工作階段分析後才加入 — 工作階段保留分析時所用的檔案。"
       }
     }

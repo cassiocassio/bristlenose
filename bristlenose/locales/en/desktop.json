@@ -447,6 +447,8 @@
       "reportError": "Bristlenose hit an unexpected problem while opening this report.",
       "overflow_one": "… and {{count}} more failure truncated",
       "overflow_other": "… and {{count}} more failures truncated",
+      "leftAlone": "Other files left alone: {{count}}",
+      "supportedFormats": "Supported formats",
       "reason": {
         "unsupported_format": "Not a format Bristlenose reads.",
         "empty": "The file is empty — the transfer produced no data.",
@@ -461,6 +463,7 @@
         "duplicate_transcript": "A second copy of this session's transcript — the other one was used.",
         "no_lines": "No lines in this transcript — there is nothing to analyse.",
         "notes_only": "No transcript in this document — only meeting notes.",
+        "no_transcript": "No transcript in this document.",
         "added_after_analysis": "Added after this session was analysed — the session keeps the files it was analysed from."
       }
     }

@@ -446,6 +446,8 @@
       "reportError": "Bristlenose ha tingut un problema inesperat en obrir aquest informe.",
       "overflow_one": "… i {{count}} error més truncat",
       "overflow_other": "… i {{count}} errors més truncats",
+      "leftAlone": "Altres fitxers ignorats: {{count}}",
+      "supportedFormats": "Formats admesos",
       "reason": {
         "unsupported_format": "No és un format que Bristlenose pugui llegir.",
         "empty": "El fitxer és buit — la transferència no ha produït cap dada.",
@@ -460,6 +462,7 @@
         "duplicate_transcript": "Una segona còpia de la transcripció d'aquesta sessió — s'ha fet servir l'altra.",
         "no_lines": "Aquesta transcripció no té cap línia — no hi ha res a analitzar.",
         "notes_only": "Aquest document no té transcripció — només notes de la reunió.",
+        "no_transcript": "Aquest document no té transcripció.",
         "added_after_analysis": "Afegit després d'analitzar aquesta sessió — la sessió conserva els fitxers amb què es va analitzar."
       }
     }

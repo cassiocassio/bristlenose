@@ -2,8 +2,7 @@
 
 A platform transcript labels speakers with real names. identify_speaker_roles_llm logs its role map at INFO,
 keyed by those labels, ahead of PII redaction. The policy (bristlenose/logging.py) says logs carry no names.
-This is a KNOWN DEFECT held as a strict xfail: the day the line stops logging the label, the xfail turns into
-a failure and the marker must come off. Positive control: the same call must log through this stage's logger
+Fixed 6 Nov 2026: the line logs roles only. Positive control: the same call must log through this stage's logger
 at all, or the assertion proves nothing. Proven with docs/private/trust-map/audit_tools.py mutate (replace the
 logged role_map with its roles only: the strict xfail must then fail).
 """
@@ -53,8 +52,6 @@ def test_the_stage_logs_through_its_own_logger(caplog: pytest.LogCaptureFixture)
     assert _run(caplog), "no INFO record from the speaker-identification stage"
 
 
-@pytest.mark.xfail(strict=True, reason="F6-1: the INFO role map is keyed by the speaker label, which on "
-                   "platform transcripts is the participant's real name")
 def test_the_stage_does_not_log_a_speaker_label_that_is_a_name(caplog: pytest.LogCaptureFixture) -> None:
     messages = _run(caplog)
     assert messages, "positive control: nothing logged"

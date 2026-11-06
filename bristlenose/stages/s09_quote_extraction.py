@@ -456,9 +456,8 @@ async def _extract_one_pass(
         word_count = reading_length(item.text)
         if word_count < min_quote_words:
             logger.debug(
-                "Skipping short quote (%.1f words): %s",
+                "Skipping short quote (%.1f words)",
                 word_count,
-                item.text[:50],
             )
             continue
 

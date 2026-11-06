@@ -283,9 +283,8 @@ async def ask_question(
         resolved, rejected = resolve_quote_indices(claim.quote_indices, corpus)
         if rejected:
             logger.warning(
-                "chat_lens_invalid_citations | project=%s | claim=%r | rejected=%s",
+                "chat_lens_invalid_citations | project=%s | rejected=%s",
                 project_id,
-                claim.text[:80],
                 rejected,
             )
         claims.append(

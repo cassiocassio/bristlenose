@@ -15,8 +15,7 @@ Two sweeps, both derived from the running thing rather than a hand list:
    transcript content (quote text, segment text) and log identifiers, not names.
    An AST scan finds every ``log*.<level>(...)`` call whose arguments reference a
    quote-text or speaker-label attribute/name. Violations that already exist are
-   listed in ``_KNOWN_VIOLATIONS`` and each carries a strict xfail, so fixing one
-   turns its xfail into a failure that asks for the entry to be removed.
+   listed in ``_KNOWN_VIOLATIONS`` (empty now).
 """
 
 from __future__ import annotations
@@ -206,14 +205,10 @@ _FORBIDDEN = frozenset({
     "short_name",
 })
 
-# Existing violations at the time this gate was written (6 Nov 2026), keyed by
-# file and the offending expression, not by line number.
-_KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset({
-    # LLM claim text (derived from quotes) at WARNING.
-    ("bristlenose/server/chat_lens.py", "claim.text"),
-    # Quote text at DEBUG when a short quote is skipped.
-    ("bristlenose/stages/s09_quote_extraction.py", "item.text"),
-})
+# Existing violations, keyed by file and the offending expression, not by line number. Empty
+# since 6 Nov 2026 (the two found when this gate was written were fixed); a new entry needs a
+# reason and an owner.
+_KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset()
 
 
 def _is_logger_call(node: ast.AST) -> bool:
@@ -283,15 +278,3 @@ def test_no_new_log_calls_carry_quote_text_or_speaker_labels() -> None:
         "log call(s) interpolate quote text or speaker labels, which the policy in "
         f"bristlenose/logging.py forbids: {sorted(new)}"
     )
-
-
-@pytest.mark.parametrize(
-    "violation", sorted(_KNOWN_VIOLATIONS), ids=[f"{f}:{e}" for f, e in sorted(_KNOWN_VIOLATIONS)]
-)
-@pytest.mark.xfail(
-    strict=True,
-    reason="existing log call interpolates quote text against the logging.py PII policy; "
-    "when fixed, remove it from _KNOWN_VIOLATIONS",
-)
-def test_known_violation_is_fixed(violation: tuple[str, str]) -> None:
-    assert violation not in _scan_package()

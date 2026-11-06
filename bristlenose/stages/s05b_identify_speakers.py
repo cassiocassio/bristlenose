@@ -480,7 +480,11 @@ async def identify_speaker_roles_llm(
             if label in role_map:
                 seg.speaker_role = role_map[label]
 
-        logger.info("LLM speaker identification: %s", role_map)
+        # Roles only: on platform transcripts the label is the participant's real name.
+        logger.info(
+            "LLM speaker identification: %s",
+            sorted(role.value for role in role_map.values()),
+        )
         return infos
 
     except Exception as exc:

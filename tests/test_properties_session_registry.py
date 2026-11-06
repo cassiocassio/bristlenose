@@ -176,3 +176,30 @@ def test_a_recording_added_later_never_renumbers_the_ones_already_numbered(
         assert len(set(after.values())) == len(after)
         # One session per recording: a copy that took a number of its own would show here.
         assert len({content[n] for n in after}) == len(after)
+
+
+def test_a_transcript_that_takes_over_a_recordings_name_does_not_share_its_number() -> None:
+    # The `claimed` guard's case, which the generator above cannot reach (it builds recordings
+    # only): run 1 numbers alpha.wav (content A) s1. In run 2 alpha.wav is gone, a transcript
+    # alpha.vtt arrives under the same name, and a copy of A turns up as bravo.wav. The copy
+    # owns s1 by content; the transcript's name also maps to s1, and must not be handed it too.
+    with tempfile.TemporaryDirectory() as tmp:
+        folder, reg = Path(tmp) / "in", Path(tmp) / "out"
+        folder.mkdir()
+        (folder / "alpha.wav").write_bytes(b"recording A" * 20)
+        assert _run(folder, reg, ["alpha"]) == {"alpha": "s1"}
+
+        (folder / "alpha.wav").unlink()
+        (folder / "bravo.wav").write_bytes(b"recording A" * 20)
+        vtt = folder / "alpha.vtt"
+        vtt.write_text("WEBVTT\n\n00:00.000 --> 00:02.000\nHello there\n", encoding="utf-8")
+        recording = _sessions(folder, ["bravo"])[0]
+        transcript = InputSession(
+            session_id="s2", session_number=2, participant_id="p2", participant_number=2,
+            files=[InputFile(path=vtt, file_type=FileType.SUBTITLE_VTT, created_at=_T0,
+                             size_bytes=vtt.stat().st_size)],
+            has_existing_transcript=True, session_date=_T0)
+        registry = SessionRegistry.load(reg)
+        kept = registry.apply([recording, transcript], folder)
+        sids = [s.session_id for s in kept]
+        assert len(sids) == 2 and len(set(sids)) == 2, f"two sessions, one number: {sids}"

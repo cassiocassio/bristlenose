@@ -223,10 +223,10 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 8. The title/body order and the session count in the body (proposed above, following what the owner's own notifications look like).
 9. *(Done 6 Nov: see "What decides". Gate at the point of posting; confirm.)*
 
-10. The interruption level: the default (respects a researcher's Scheduled Summary and Focus) or Time Sensitive (overrides both, for an event they are waiting on). I lean to the default, and to checking how often a held notification actually happens.
+10. *(Decided, owner, 6 Nov 2026: the default interruption level. It respects the researcher's Focus and Scheduled Summary, and Time Sensitive is not requested. A researcher who uses Scheduled Summary may therefore have the notice held, which is their own setting at work.)*
 11. Accept that a temporary banner vanishes in seconds and the list entry is what an away researcher finds.
 
-*Decided since the last draft (owner, 6 Nov):* sentence case and fragments; no Dock bounce; duration in the finished banner; "N of M sessions are done" on a failure, once "done" is defined.
+*Decided since the last draft (owner, 6 Nov):* default interruption level; sentence case and fragments; no Dock bounce; duration in the finished banner; "N of M sessions are done" on a failure, once "done" is defined.
 
 ## What I could not verify
 

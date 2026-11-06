@@ -95,6 +95,7 @@ export type BridgeMessage =
   | { type: "store-miro-token"; token: string }
   | { type: "lens-availability"; lenses: Record<string, boolean> }
   | { type: "timeline-state"; available: boolean; on: boolean; lanes: number }
+  | { type: "quote-edits-state"; available: boolean; on: boolean }
   | ({ type: "timeline-menu" } & WireTimelineMenu)
   | { type: "llm-failure"; kind: string; provider: string }
   | { type: "report-error"; route: string; message: string; frames: string[] }
@@ -508,6 +509,16 @@ export function postPanelState(
  */
 export function postTimelineState(available: boolean, on: boolean, lanes: number): void {
   postNativeMessage({ type: "timeline-state", available, on, lanes });
+}
+
+/**
+ * Push whether a transcript is on screen and whether it is showing how each quote was made, so the
+ * native View menu can offer Show / Hide Quote Edits honestly (QuoteEditsStore, off at every launch).
+ * Posted from an effect keyed on the state, so it also fires on mount. No-ops outside the desktop
+ * WKWebView.
+ */
+export function postQuoteEditsState(available: boolean, on: boolean): void {
+  postNativeMessage({ type: "quote-edits-state", available, on });
 }
 
 /** The transcript split control's pulldown, drawn by the Mac as an NSMenu

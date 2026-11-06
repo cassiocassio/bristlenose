@@ -70,6 +70,8 @@
       "hideHeatmap": "Ocultar mapa de calor",
       "showSessionTimeline": "Mostrar línea temporal de la sesión",
       "hideSessionTimeline": "Ocultar línea temporal de la sesión",
+      "showQuoteEdits": "Mostrar los cambios en las citas",
+      "hideQuoteEdits": "Ocultar los cambios en las citas",
       "timelineDetail": "Detalle de la línea temporal",
       "hideAllSidebars": "Ocultar todas las barras laterales",
       "showAllSidebars": "Mostrar todas las barras laterales",

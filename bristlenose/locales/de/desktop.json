@@ -70,6 +70,8 @@
       "hideHeatmap": "Heatmap ausblenden",
       "showSessionTimeline": "Zeitleiste des Interviews einblenden",
       "hideSessionTimeline": "Zeitleiste des Interviews ausblenden",
+      "showQuoteEdits": "Zitatbearbeitungen einblenden",
+      "hideQuoteEdits": "Zitatbearbeitungen ausblenden",
       "timelineDetail": "Detailgrad der Zeitleiste",
       "hideAllSidebars": "Alle Seitenleisten ausblenden",
       "showAllSidebars": "Alle Seitenleisten einblenden",

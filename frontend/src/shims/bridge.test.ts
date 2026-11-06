@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import {
   postTimelineState,
+  postQuoteEditsState,
   installBridge,
   postRouteChange,
   postReady,
@@ -300,6 +301,14 @@ describe("postTimelineState", () => {
     const post = installMockWebkit();
     postTimelineState(true, false, 3);
     expect(post).toHaveBeenCalledWith({ type: "timeline-state", available: true, on: false, lanes: 3 });
+  });
+});
+
+describe("postQuoteEditsState", () => {
+  it("posts whether a transcript is on screen and whether quote edits are shown", () => {
+    const post = installMockWebkit();
+    postQuoteEditsState(true, false);
+    expect(post).toHaveBeenCalledWith({ type: "quote-edits-state", available: true, on: false });
   });
 });
 

@@ -70,6 +70,8 @@
       "hideHeatmap": "Hide Heatmap",
       "showSessionTimeline": "Show Session Timeline",
       "hideSessionTimeline": "Hide Session Timeline",
+      "showQuoteEdits": "Show Quote Edits",
+      "hideQuoteEdits": "Hide Quote Edits",
       "timelineDetail": "Timeline Detail",
       "hideAllSidebars": "Hide All Sidebars",
       "showAllSidebars": "Show All Sidebars",

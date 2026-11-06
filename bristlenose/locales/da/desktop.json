@@ -70,6 +70,8 @@
       "hideHeatmap": "Skjul heatmap",
       "showSessionTimeline": "Vis sessionens tidslinje",
       "hideSessionTimeline": "Skjul sessionens tidslinje",
+      "showQuoteEdits": "Vis citatredigeringer",
+      "hideQuoteEdits": "Skjul citatredigeringer",
       "timelineDetail": "Tidslinjens detaljer",
       "hideAllSidebars": "Skjul alle sidepaneler",
       "showAllSidebars": "Vis alle sidepaneler",

@@ -1245,6 +1245,22 @@ private struct ViewMenuContent: View {
         }
         .disabled(!(bridgeHandler.canDispatch && bridgeHandler.timelineAvailable))
 
+        // How the transcript became each quote (docs/design-quote-edits-view.md).
+        // Off by default and not remembered; no shortcut. Live only while a
+        // transcript is on screen. Parked behind a flag until the transcript can
+        // draw it: a shipped row would do nothing.
+        if BristlenoseFlags.quoteEdits {
+            let quoteEditsLive = bridgeHandler.canDispatch && bridgeHandler.quoteEditsAvailable
+            // `PanelToggle.labelKey`: a dimmed row reads "Show" whatever the mirror last
+            // said, since off the transcript the mirrored `on` describes the page just left.
+            Button(i18n.t(PanelToggle.labelKey(panel: "QuoteEdits",
+                                               isOpen: bridgeHandler.quoteEditsOn,
+                                               isAvailable: quoteEditsLive))) {
+                bridgeHandler.menuAction("quoteEdits")
+            }
+            .disabled(!quoteEditsLive)
+        }
+
         Divider()
 
         // ⌘R, as in Safari: the remedy for a part of the report that couldn't be

@@ -70,6 +70,8 @@
       "hideHeatmap": "Masquer la carte thermique",
       "showSessionTimeline": "Afficher la chronologie de l’entretien",
       "hideSessionTimeline": "Masquer la chronologie de l’entretien",
+      "showQuoteEdits": "Afficher les modifications des verbatim",
+      "hideQuoteEdits": "Masquer les modifications des verbatim",
       "timelineDetail": "Détail de la chronologie",
       "hideAllSidebars": "Masquer toutes les barres lat\u00e9rales",
       "showAllSidebars": "Afficher toutes les barres lat\u00e9rales",

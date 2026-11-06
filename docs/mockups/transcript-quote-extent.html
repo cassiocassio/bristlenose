@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript: quote extent and used words</title>
+<style>
+/* bn-accurate mockup, 4 Nov 2026. Tokens are the shipped ones (palette-default.css / palette-edo.css);
+   the transcript rules are lifted from transcript-gutter.css (paper, sheet, .bn-keylines) and
+   templates/transcript.css (.segment-body, .timecode, .segment-speaker, non-quoted opacity .6).
+   Which words were "used" is hand-marked against the cleaned quote; the product would take it from the
+   quote-to-words anchor (docs/design-transcript-editing.md, "The keystone"). */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-label: 12px; --bn-text-body: 15px;
+  --bn-weight-normal: 420; --bn-weight-emphasis: 490; --bn-weight-mono: 400; --bn-weight-mono-tag: 460;
+  --bn-radius-sm: 3px; --bn-radius-md: 6px; --bn-radius-lg: 8px;
+  --bn-transition-fast: .12s;
+  --bn-colour-bg:        light-dark(#ffffff, #111111);
+  --bn-colour-text:      light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:     light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:    light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:    light-dark(#007aff, #0a84ff);
+  --bn-colour-badge-bg:  light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:light-dark(#374151, #d1d5db);
+  --bn-colour-paper:     light-dark(#f6f7f8, #111111);
+  --bn-colour-sheet:     light-dark(#ffffff, #1c1c1e);
+  --bn-colour-badge-bg-paper: light-dark(#ebedf0, #252525);
+}
+:root[data-color-theme="edo"] {
+  --bn-colour-bg:        light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:      light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:     light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:    light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:    light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-badge-bg:  light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:light-dark(#2d3654, #c4b898);
+  --bn-colour-paper:     light-dark(#f7f2e6, #1a1816);
+  --bn-colour-sheet:     light-dark(#fdfbf7, #26221b);
+  --bn-colour-badge-bg-paper: light-dark(#e8dfc9, #2d2820);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text); font: var(--bn-weight-normal) 13px/1.45 var(--bn-font-body); }
+
+/* ── page chrome (not the product) ── */
+.page { max-width: 980px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; font-weight: var(--bn-weight-emphasis); margin: 0 0 4px; }
+.lede { color: var(--bn-colour-muted); max-width: 78ch; margin: 0 0 14px; }
+.key { display: flex; gap: 16px; font-size: 12px; color: var(--bn-colour-muted); margin-bottom: 12px; }
+.key i { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; border-radius: 2px; }
+.key .ka { border: 1px solid var(--bn-colour-border); background: var(--bn-colour-paper); }
+.key .kc { background: repeating-linear-gradient(135deg, var(--bn-colour-badge-bg) 0 4px, transparent 4px 8px); border: 1px solid var(--bn-colour-border); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 8px 0 12px; font-size: 12px; }
+.controls label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+.frame { border: 1px solid var(--bn-colour-border); border-radius: 8px; overflow: hidden; margin-bottom: 18px; }
+.chrome { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--bn-colour-border);
+  font: 11px var(--bn-font-mono); color: var(--bn-colour-muted); background: var(--bn-colour-badge-bg); }
+.chrome b { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+.commentary { border: 7px solid transparent; border-left: 3px solid var(--bn-colour-muted); border-radius: 6px; padding: 10px 14px; margin-top: 14px; font-size: 12.5px;
+  background: linear-gradient(var(--bn-colour-bg), var(--bn-colour-bg)) padding-box,
+              repeating-linear-gradient(135deg, var(--bn-colour-badge-bg) 0 5px, transparent 5px 10px) border-box; }
+.commentary b.lbl { font: 10px var(--bn-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bn-colour-muted); display: block; margin-bottom: 6px; }
+.commentary ul { margin: 0; padding-left: 18px; } .commentary li { margin: 4px 0; }
+.commentary code { font-family: var(--bn-font-mono); font-size: 11px; }
+
+/* ── the artefact: transcript paper ── */
+.stage { background: var(--bn-colour-paper); color: var(--bn-colour-text); padding: 20px 20px 24px; position: relative; }
+.tbody { position: relative; display: grid; grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr); column-gap: .5rem; }
+.seg { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; padding: .25rem 0; line-height: 1.7; }
+.tc { font: 13px var(--bn-font-mono); color: var(--bn-colour-accent); white-space: nowrap; }
+.tc .br { color: var(--bn-colour-muted); }
+.spk { justify-self: end; }
+.code { font-family: var(--bn-font-mono); font-size: 11.5px; font-weight: var(--bn-weight-mono); padding: .15rem .4rem;
+  background: var(--bn-colour-badge-bg-paper); color: var(--bn-colour-badge-text); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm); }
+.sb { grid-column: 3; font-size: var(--bn-text-body); line-height: 1.7; min-width: 0; }
+
+/* Words outside any quote: the shipped knocked-back ink (templates/transcript.css, .segment-body at .6). */
+.sb .o, .sb .x { opacity: .6; }
+
+/* Shipped today (transcript-gutter.css): the whole matched run lifts to the sheet. */
+.qx { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  transition: background-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast); }
+.m-today.hover .qx { background: var(--bn-colour-sheet); box-shadow: 0 0 0 3px var(--bn-colour-sheet); }
+
+/* Proposed: inside the extent, only the USED words lift; EXCISED words stay on the paper in the
+   knocked-back ink. At rest the extent is plain text in its normal ink (as shipped). */
+.m-new .u { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  transition: background-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast); }
+.m-new.hover .u { background: var(--bn-colour-sheet); box-shadow: 0 0 0 3px var(--bn-colour-sheet); }
+.m-new .x { opacity: 1; transition: opacity var(--bn-transition-fast); }
+.m-new.hover .x { opacity: .6; }
+body.rest-line .m-new .x { opacity: .6; }          /* option: excised ink is grey even at rest */
+
+/* The keyline (transcript-gutter.css .bn-keylines): 0.5px ink, notched at first and last line. */
+.keys { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
+.keys path { fill: none; stroke: var(--bn-colour-text); stroke-width: .5; stroke-linejoin: miter; }
+.keys { opacity: 0; transition: opacity var(--bn-transition-fast); }
+.hover .keys, body.rest-line .keys { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .qx, .u, .x, .keys { transition: none; } }
+@media (forced-colors: active) { .keys path { stroke: CanvasText; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Transcript: the extent considered, and the words used</h1>
+  <p class="lede">Proposal, 4 Nov 2026. Hovering a quote on the transcript page draws a keyline round the whole stretch the model considered
+    (first word to last), and lifts to white <b>only the words that made it into the cleaned quote</b>. Words inside the keyline that were
+    cut stay on the paper in the same knocked-back ink as text that never became a quote. The example is Ikea tom, session 1, 1:15, the
+    quote that reads "Well, you know, a lot of… household stuff [is] very… utilitarian…" in the Quotes lens.</p>
+  <div class="key"><span><i class="ka"></i>artefact: what the product would draw</span><span><i class="kc"></i>commentary: not the product</span></div>
+
+  <div class="controls">
+    <span>palette <label><input type="radio" name="pal" value="default" checked> default</label> <label><input type="radio" name="pal" value="edo"> edo</label></span>
+    <label><input type="checkbox" id="c-dark"> dark</label>
+    <label><input type="checkbox" id="c-rest"> keyline and grey cuts at rest too</label>
+    <label><input type="checkbox" id="c-live"> live hover on the third frame</label>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span><b>Today</b> · pointer over the quote</span><span>Sessions ▸ s1 ▸ transcript</span></div>
+    <div class="stage"><div class="tbody m-today hover" data-mode="today"></div></div>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span><b>Proposed</b> · pointer over the quote</span><span>Sessions ▸ s1 ▸ transcript</span></div>
+    <div class="stage"><div class="tbody m-new hover" data-mode="new"></div></div>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span><b>Proposed</b> · pointer elsewhere</span><span>Sessions ▸ s1 ▸ transcript</span></div>
+    <div class="stage"><div class="tbody m-new" id="rest" data-mode="new"></div></div>
+  </div>
+
+  <section class="commentary">
+    <b class="lbl">Commentary</b>
+    <ul>
+      <li><b>What changed from today.</b> Today the whole matched run goes white, so the white says "this was the quote" but includes cut filler,
+        a false start and two whole detours (the water seal; the plastic lids). Proposed: the keyline says what was <i>considered</i>, the white says
+        what was <i>kept</i>. The gaps in the white are the cleaned quote's "…".</li>
+      <li><b>Ink.</b> Cut words use the paragraph's existing knocked-back ink (<code>opacity: .6</code>), the same as words in no quote, so there is no
+        new colour. Inside the keyline they read as "looked at, not used".</li>
+      <li><b>Tokens only.</b> <code>--bn-colour-paper</code>, <code>--bn-colour-sheet</code>, <code>--bn-colour-text</code>, <code>--bn-colour-muted</code>
+        (keyline hairline for a hidden quote; unused here), the 0.5px keyline and the 3px lift radius are the shipped values. No new variables.</li>
+      <li><b>Contrast.</b> The lift is 1.07:1 off the paper (shipped, owner-accepted). Cut words at .6 opacity on paper are the same contrast as unquoted text
+        today. The white patches are small, so the keyline carries the extent; the white carries the used words.</li>
+      <li><b>Hover only.</b> At rest nothing changes from today. The checkbox shows the alternative where the keyline and grey cuts stay on all the time.</li>
+      <li><b>Not drawn: the editing handle.</b> The ends of the keyline (first and last words) are where a later "move this end" affordance would attach.
+        No handle is drawn here; it needs the persisted anchor first.</li>
+      <li><b>Not the product's output.</b> Which words are "used" was hand-marked against the cleaned text. Quotes the matcher only finds roughly
+        keep today's dashed keyline, and would have no reliable used/cut split.</li>
+      <li><b>Cost.</b> This needs a per-word used/cut flag the server does not send yet; <code>quoteExtents.ts</code> locates the extent, not the words kept.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+// kind: o = before the extent (no quote), x = inside the extent but cut, u = used in the cleaned quote
+const RUN = [
+ ["o","Maybe not so tech. Not so tech. Okay, so an object I’ve bought that I really like that’s in my house. Could be a vase or a bed or a bookcase or a lemon squeezer. probably not something from the technology aisle fine um i’ve got uh one of those old style crock pots that you use for fermentation oh interesting okay so but we put the water in it creates a seal so it’s kind of right and it’s yeah so it’s good because it’s kind of it’s a practical thing but it’s designed to kind of you know right be emotive i guess okay what is it that you like about it um "],
+ ["u","well you know a lot of "],["x","like "],["u","household stuff "],["x","uh "],["u","very "],["x","sort of you "],
+ ["u","quite utilitarian which is very good and this is "],["x","you know "],["u","it looks like it’s something from the past but yet it’s quite "],
+ ["x","you know it’s "],["u","modern "],["x","but it’s got like basic kind of you know "],["u","the design of it "],["x","so the design of it’s "],
+ ["u","good and it’s got "],["x","like um so you put a little bit of water in it and it kind of so when it’s fermenting the gas can come out as well so it’s kind of "],
+ ["u","a simple ingenious solution "],["x","your alternatives you just get like loads of plastic and you can get like these plastic lids that kind of burp things and stuff like that and kind of let the air out but "],
+ ["u","this is "],["x","kind of like this is "],["u","somehow a classic design "],["x","but do you know I mean it’s kind of yeah it’s a new kind of "],
+ ["u","it’s a new thing but "],["x","yeah so "],["u","it looks good and it’s practical "],["x","and you know"]
+];
+function build(root) {
+  const today = root.dataset.mode === "today";
+  const body = RUN.map(([k, t], i) => {
+    if (k === "o") return `<span class="o">${t}</span>`;
+    if (today) return `<span class="qx" data-ext>${t}</span>`;           // today: everything matched is one lift
+    return `<span class="${k}" data-ext>${t}</span>`;
+  }).join("");
+  root.innerHTML = `
+    <svg class="keys" aria-hidden="true"></svg>
+    <div class="seg"><div class="tc"><span class="br">[</span>01:15<span class="br">]</span></div><div class="spk"><span class="code">p1</span></div>
+      <div class="sb">${body}</div></div>
+    <div class="seg"><div class="tc"><span class="br">[</span>02:52<span class="br">]</span></div><div class="spk"><span class="code">p1</span></div>
+      <div class="sb"><span class="o">what do you think your choice of that object says about you and your personal style and your values and um</span></div></div>`;
+}
+// Notched keyline round the extent (first word to last), as useGutterHover draws it.
+function keyline(root) {
+  const svg = root.querySelector(".keys"); svg.innerHTML = "";
+  const spans = [...root.querySelectorAll("[data-ext]")]; if (!spans.length) return;
+  const base = root.getBoundingClientRect(), pad = 3, rects = [];
+  for (const s of spans) for (const r of s.getClientRects()) rects.push(r);
+  const lines = [];
+  for (const r of rects) {
+    const mid = (r.top + r.bottom) / 2, hit = lines.find((l) => mid > l.top && mid < l.bottom);
+    if (hit) { hit.left = Math.min(hit.left, r.left); hit.right = Math.max(hit.right, r.right); hit.top = Math.min(hit.top, r.top); hit.bottom = Math.max(hit.bottom, r.bottom); }
+    else lines.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+  }
+  lines.sort((a, b) => a.top - b.top);
+  const L = Math.min(...lines.map((l) => l.left)) - base.left - pad, R = Math.max(...lines.map((l) => l.right)) - base.left + pad;
+  const f = lines[0], l = lines[lines.length - 1];
+  const f_l = f.left - base.left - pad, l_r = l.right - base.left + pad;
+  const t1 = f.top - base.top - 1, b1 = f.bottom - base.top + 1, tn = l.top - base.top - 1, bn = l.bottom - base.top + 1;
+  const d = lines.length === 1
+    ? `M${f_l},${t1}H${l_r}V${bn}H${f_l}Z`
+    : `M${f_l},${t1}H${R}V${tn}H${l_r}V${bn}H${L}V${b1}H${f_l}Z`;
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", d); svg.appendChild(p);
+}
+const roots = [...document.querySelectorAll(".tbody")];
+const draw = () => roots.forEach((r) => { build(r); keyline(r); });
+draw(); addEventListener("resize", draw); document.fonts && document.fonts.ready.then(draw);
+const rest = document.getElementById("rest");
+rest.addEventListener("mouseenter", () => document.getElementById("c-live").checked && rest.classList.add("hover"));
+rest.addEventListener("mouseleave", () => rest.classList.remove("hover"));
+document.getElementById("c-rest").onchange = (e) => document.body.classList.toggle("rest-line", e.target.checked);
+document.getElementById("c-dark").onchange = (e) => document.documentElement.dataset.theme = e.target.checked ? "dark" : "light";
+document.querySelectorAll('input[name=pal]').forEach((r) => r.onchange = () => { document.documentElement.dataset.colorTheme = r.value; });
+</script>
+</body>
+</html>

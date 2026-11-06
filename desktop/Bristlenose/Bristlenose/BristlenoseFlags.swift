@@ -81,6 +81,19 @@ enum BristlenoseFlags {
         UserDefaults.standard.bool(forKey: boardClipLinksKey)
     }
 
+    /// Offer **View ▸ Show / Hide Quote Edits**. **Default off** — parked 6 Nov
+    /// 2026: step 1 is the menu item and its state only, and nothing in the
+    /// transcript draws the view yet (it needs a per-word used/cut record the
+    /// server does not send), so a shipped row would be live but inert. The SPA's
+    /// store (`QuoteEditsStore`) and the bridge state build and run regardless;
+    /// this hides the entry point only. `docs/design-quote-edits-view.md`.
+    ///
+    /// Flip with: `defaults write app.bristlenose BristlenoseQuoteEdits -bool YES`
+    static let quoteEditsKey = "BristlenoseQuoteEdits"
+    static var quoteEdits: Bool {
+        UserDefaults.standard.bool(forKey: quoteEditsKey)
+    }
+
     /// Transcribe a first run with **Apple's on-device speech model** while
     /// Whisper downloads behind it (`docs/design-apple-first-transcription.md`).
     /// **On by default since 22 Oct 2026** (owner: unpark now). This is the

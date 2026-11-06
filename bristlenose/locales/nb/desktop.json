@@ -70,6 +70,8 @@
       "hideHeatmap": "Skjul varmekart",
       "showSessionTimeline": "Vis øktens tidslinje",
       "hideSessionTimeline": "Skjul øktens tidslinje",
+      "showQuoteEdits": "Vis sitatredigeringer",
+      "hideQuoteEdits": "Skjul sitatredigeringer",
       "timelineDetail": "Detaljnivå for tidslinjen",
       "hideAllSidebars": "Skjul alle sidepaneler",
       "showAllSidebars": "Vis alle sidepaneler",

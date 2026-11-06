@@ -128,8 +128,10 @@ enum PanelToggle {
     ///
     /// - Parameter panel: The capitalised key suffix naming the panel
     ///   (`"Projects"`, `"Contents"`, `"Sessions"`, `"Codes"`, `"Signals"`,
-    ///   `"Tags"`, `"Heatmap"`). Both verbs exist for every one of these in
-    ///   `menu.view` — adding a row means adding both.
+    ///   `"DiscussionGuide"`, `"Screens"`, `"Tags"`, `"Heatmap"`, and the
+    ///   transcript's `"QuoteEdits"`). Both verbs exist for every one of these in
+    ///   `menu.view` — adding a row means adding both; the test table in
+    ///   `SidebarToggleTests` lists them all.
     static func labelKey(panel: String, isOpen: Bool, isAvailable: Bool) -> String {
         let verb = (isAvailable && isOpen) ? "hide" : "show"
         return "desktop.menu.view.\(verb)\(panel)"

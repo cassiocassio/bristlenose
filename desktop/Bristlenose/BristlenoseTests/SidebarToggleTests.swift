@@ -172,6 +172,8 @@ import Testing
             "Screens":  ("desktop.menu.view.showScreens",  "desktop.menu.view.hideScreens"),
             "Tags":     ("desktop.menu.view.showTags",     "desktop.menu.view.hideTags"),
             "Heatmap":  ("desktop.menu.view.showHeatmap",  "desktop.menu.view.hideHeatmap"),
+            // View ▸ Show / Hide Quote Edits (transcript page; parked behind BristlenoseFlags.quoteEdits).
+            "QuoteEdits": ("desktop.menu.view.showQuoteEdits", "desktop.menu.view.hideQuoteEdits"),
         ]
         for (panel, keys) in expected {
             #expect(PanelToggle.labelKey(panel: panel, isOpen: false, isAvailable: true) == keys.show)

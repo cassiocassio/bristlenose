@@ -52,8 +52,10 @@ import {
   postSubtitlePrefs,
   postPanelState,
   postTimelineState,
+  postQuoteEditsState,
 } from "../shims/bridge";
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
+import { setQuoteEdits, toggleQuoteEdits, useQuoteEdits } from "../contexts/QuoteEditsStore";
 import { getDisplayPrefs, setDisplayPref, subscribeDisplayPrefs, normaliseDensity, type Layout } from "../contexts/DisplayPrefsStore";
 import { useSubtitlePrefs } from "../utils/subtitlePrefs";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
@@ -430,6 +432,24 @@ function AppShell() {
     postTimelineState(transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes);
   }, [embedded, transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes]);
 
+  // View ▸ Show / Hide Quote Edits (QuoteEditsStore). Live only on a transcript, and cleared on
+  // leaving it, so the root class and the menu's tick never outlive the page they describe.
+  // Posted from an effect keyed on the state, so it also fires on mount (the re-sync after a
+  // reload or a project switch).
+  const quoteEditsOn = useQuoteEdits();
+  const onTranscript = !!isTranscript;
+  const onTranscriptRef = useRef(onTranscript);
+  onTranscriptRef.current = onTranscript;
+  useEffect(() => {
+    if (!onTranscript) setQuoteEdits(false);
+  }, [onTranscript]);
+  useEffect(() => {
+    if (!embedded) return;
+    // `on` is only ever reported with `available`: on leaving the transcript the clear above lands a
+    // render later, and the Mac must not see "unavailable, on" in between.
+    postQuoteEditsState(onTranscript, onTranscript && quoteEditsOn);
+  }, [embedded, onTranscript, quoteEditsOn]);
+
   // The report mounted, so a crash pane's Retry worked: the next crash is a
   // first crash again and offers Retry (`utils/reportRetry.ts`). A turn later,
   // and cancelled on unmount, so a layout that throws in render or in any of
@@ -719,6 +739,11 @@ function AppShell() {
           // cookbook in desktop/CLAUDE.md. Native mirrors the result back via
           // the `focus-mode` bridge post below.
           toggleFocusMode();
+          break;
+        case "quoteEdits":
+          // A stray dispatch off the transcript must not set the root class: the menu
+          // dims the row there, but the ref is the web side's own check.
+          if (onTranscriptRef.current) toggleQuoteEdits();
           break;
         // The native Display popover: it sends a choice, the store validates it
         // (an unknown value is ignored), saves it and mirrors it back above.

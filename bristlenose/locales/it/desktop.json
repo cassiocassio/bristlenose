@@ -70,6 +70,8 @@
       "hideHeatmap": "Nascondi la mappa di calore",
       "showSessionTimeline": "Mostra la timeline della sessione",
       "hideSessionTimeline": "Nascondi la timeline della sessione",
+      "showQuoteEdits": "Mostra le modifiche alle citazioni",
+      "hideQuoteEdits": "Nascondi le modifiche alle citazioni",
       "timelineDetail": "Dettaglio della timeline",
       "hideAllSidebars": "Nascondi tutte le barre laterali",
       "showAllSidebars": "Mostra tutte le barre laterali",

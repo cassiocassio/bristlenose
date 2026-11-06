@@ -70,6 +70,8 @@
       "hideHeatmap": "Verberg heatmap",
       "showSessionTimeline": "Toon tijdlijn van de sessie",
       "hideSessionTimeline": "Verberg tijdlijn van de sessie",
+      "showQuoteEdits": "Toon bewerkingen van citaten",
+      "hideQuoteEdits": "Verberg bewerkingen van citaten",
       "timelineDetail": "Detail van de tijdlijn",
       "hideAllSidebars": "Verberg alle navigatiekolommen",
       "showAllSidebars": "Toon alle navigatiekolommen",

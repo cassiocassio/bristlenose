@@ -552,3 +552,12 @@ The UI rides the cohort.
 - Python 3.10: no environment marker. `pip install "bristlenose[any-llm]"` on
   3.10 fails loudly (any-llm needs 3.11), which beats a silent no-op extra.
 
+## 13. Decisions after the walks (3 Nov 2026)
+
+Owner rulings on the second review round, recorded here so a later session does not re-open them.
+
+- **`configure any-llm` keeps a proven key and model when the host check fails** (finding 62). The key is good; the host was busy. A failed check is not a reason to make the researcher type it again.
+- **A resumed run still says how many quotes were left out of a cached session** (finding 48). The count is kept on the stage-9 session record and printed from there. Only THIS run's drops count towards "Done with warnings", so a study is not held at warnings on every unchanged re-run. The Mac shows the same count in the diagnostic popover and reads such a run as done with warnings (`quotes_left_out` on the run summary, contract v9).
+- **Ollama's last attempt salvages like the cloud providers** (finding 56): repair, then keep the items that validate, with the same majority ceiling. Earlier attempts still retry, so a retry that returns the whole reply wins.
+- **Per-attempt telemetry rows stay as they are** (finding 50), though `docs/design-llm-call-telemetry.md` says "terminal outcome only". Left on purpose; revisit with telemetry.
+- **The `anthropic<1` cap** that held the pin at 1.27.0 was lifted upstream in 1.44.0 (4 Nov 2026), and the exact pin is now `==1.44.0`.

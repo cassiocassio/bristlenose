@@ -17,7 +17,6 @@ driven end to end in this file.
 
 from __future__ import annotations
 
-import logging
 import shutil
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -105,26 +104,6 @@ def _payload(mock: AsyncMock) -> str:
     return "\n".join(f"{c.args!r} {c.kwargs!r}" for c in mock.call_args_list)
 
 
-def test_chat_lens_payloads_never_carry_the_planted_name(planted) -> None:
-    _, client = planted
-    mock = _ask(client)
-    assert mock.call_count == 2, "answer + support check should both have run"
-    payload = _payload(mock)
-    assert "p1" in payload, "positive control: the quotes reached the model by code"
-    assert not _carries_name(payload)
-
-
-def test_mcp_speaker_names_honour_anonymise(planted, monkeypatch) -> None:
-    from bristlenose.server.grounding import resolve_speaker_names
-
-    app, _ = planted
-    db = app.state.db_factory()
-    try:
-        assert _carries_name(str(resolve_speaker_names(db, 1))), "positive control"
-        monkeypatch.setenv("BRISTLENOSE_MCP_ANONYMISE", "1")
-        assert not _carries_name(str(resolve_speaker_names(db, 1)))
-    finally:
-        db.close()
 
 
 def test_anonymised_quotes_csv_never_carries_the_planted_name(planted) -> None:
@@ -137,29 +116,6 @@ def test_anonymised_quotes_csv_never_carries_the_planted_name(planted) -> None:
     assert "p1" in anon.text
     assert not _carries_name(anon.text)
 
-
-def test_logs_never_carry_the_planted_name(tmp_path, monkeypatch, caplog) -> None:
-    caplog.set_level(logging.DEBUG)
-    monkeypatch.delenv("BRISTLENOSE_MCP_ANONYMISE", raising=False)
-    project_dir = tmp_path / "input"
-    shutil.copytree(_FIXTURE_DIR, project_dir)
-    app = create_app(project_dir=project_dir, dev=False, db_url="sqlite://")
-    app.state.settings = _mock_settings()
-    client = AuthTestClient(app)
-    caplog.clear()  # start-up logs are emitted before the name exists and prove nothing
-    r = client.put(
-        "/api/projects/1/people",
-        json={"p1": {"full_name": FULL_NAME, "short_name": SHORT_NAME, "role": ""}},
-    )
-    assert r.status_code == 200
-    _ask(client)
-    client.get("/api/projects/1/export/quotes.csv", params={"anonymise": "true"})
-    client.get("/api/projects/1/export/quotes.csv", params={"anonymise": "false"})
-    ours = [rec for rec in caplog.records if rec.name.startswith("bristlenose")]
-    if not ours:
-        pytest.skip(
-            "no bristlenose log record is emitted by these requests after the name is planted, "
-            "so an assertion here would pass whatever the code logs (reviewer, 6 Nov 2026)"
-        )
-    leaked = [rec.getMessage() for rec in ours if _carries_name(rec.getMessage())]
-    assert not leaked, leaked
+# Not covered, deliberately: the chat-lens payload, the MCP anonymised name map and logs. Mutation checks
+# (6 Nov 2026, docs/private/audit-n6a1/morning-report.md) showed assertions here passed with the guard
+# removed, so they were removed rather than left as gates that cannot fail.

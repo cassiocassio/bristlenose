@@ -122,6 +122,8 @@ New keys, each in 21 locales (and Swift): **Display, Layout, Columns, Single col
 
 ## 11. After v1
 
+**Owner, 6 Nov 2026: the splitting as built is good enough for v1** ("1000x better than before"). The follow-ups below are filed in the maintainer's backlog (kind 8, Could, "Improve long-quote paragraph splitting after v1") and on the board. The first of them is to **tune the target and costs from the owner's own labels**: the lab (`docs/mockups/quotes-display-options.html`) has blind labelling, a compare view and F1 scoring over 31 Talismanic quotes, and no labels have been made yet, so the 35-word target is still a literature-based guess.
+
 The lab holds what is not for the product yet: a second level (phrase breaks) and its placement; a strength threshold ("more or fewer"); the researcher's own hand-placed breaks as an overlay (§3.4 of the anchor note: no pin, no "edited" mark, nothing downstream sees a `\n`); timing evidence (pauses, the difference between a short cut of filler and a long gap), which needs the persisted quote-to-transcript anchor; and a model's groupings of segments as the semantic arbiter. The classical precedent is Jerome's *per cola et commata*, sense-lines set out to show a reader where to breathe ([research-paragraph-length-benchmark.md](research-paragraph-length-benchmark.md) §3a). Everything after v1 builds on the same overlay and does not change what v1 stores, which is nothing.
 
 ## 12. Assumptions and what was not checked

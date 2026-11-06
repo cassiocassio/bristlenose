@@ -242,7 +242,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 4. The reason phrases: proposed in "The failure reason, by category"; the final wording and a check of each category against what actually raises it.
 5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
 
-6. The one-button pre-alert: now recommended rather than a fallback, because of the temporary banner (see the observation in the permission flow). Owner's call.
+6. *(Decided provisionally, owner, 6 Nov 2026: the one-button pre-alert goes in the first version, and the owner will judge how it feels. They do not love it; it is there because notifications are off until allowed and the system's own request is a temporary banner that is easy to miss. Easy to remove: it is one screen in front of one system call. Watch for reflex declines and for the screen feeling like a hurdle.)*
 7. The Dock bounce (recommended out of the first version).
 8. The title/body order and the session count in the body (proposed above, following what the owner's own notifications look like).
 9. *(Done 6 Nov: see "What decides". Gate at the point of posting; confirm.)*

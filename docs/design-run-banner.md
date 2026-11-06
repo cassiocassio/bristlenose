@@ -25,9 +25,9 @@ The run's end kinds are the ones `PipelineRunner` already distinguishes. Seam na
 
 | The run ended as… | Banner? | Title | Body |
 |---|---|---|---|
-| Completed (`run_completed`, no failed session) | yes | Analysis finished | the project name |
-| Completed with some sessions failed (`.completedPartial`) | yes | Analysis finished with failures | the project name |
-| Failed (`.failedWithDiagnostic`, or `.failed`) | yes | The analysis didn't finish | the project name, plus the reason when the app already knows it |
+| Completed (`run_completed`, no failed session) | yes | the project name | Analysis finished · N sessions |
+| Completed with some sessions failed (`.completedPartial`) | yes | the project name | Analysis finished with failures · N of M sessions |
+| Failed (`.failedWithDiagnostic`, or `.failed`) | yes | the project name | The analysis didn’t finish, plus the reason when the app already knows it |
 | Stopped by the researcher | **no**: they just pressed Stop, and "Analysis stopped" is plain in the window | | |
 | Ended because the app quit (`.stopped(interrupted: true)`) | **no**: nothing is alive to send it | | |
 
@@ -37,22 +37,25 @@ And only when **all** hold: the switch is on; macOS has allowed notifications; B
 
 ## The text
 
-All strings are new except where marked. All need the 21 full locales and an entry in `docs/platform-text-map.md`. Provider names are product names (Claude, ChatGPT), as everywhere.
+**Decided (owner, 6 Nov 2026):** the app's own sentence case, not Apple's title-style capitalization; fragments in the body are fine. **Real-life check:** the owner's own Notification Center (a screenshot, 6 Nov 2026) is full of notifications from Mac apps and scripts the same working audience uses, and none is title-cased. The pattern in every useful one is the same: the **title says what or where** (a project, a repo, a sender) and the **body says what happened**, often with counts and, on a failure, the detail (for example "N passed · M failed" followed by the first failing item). Researchers are used to this, so rich text is native, not intrusive.
 
-| Use | Proposed English | Notes |
+So the proposal follows that pattern, and reverses my first draft (outcome in the title, project in the body):
+
+| Case | Title | Body |
 |---|---|---|
-| Title, finished | "Analysis finished" | New. The shipped tooltip "Analysis finished with failures for {{project}}" is a different case. |
-| Title, finished with failures | "Analysis finished with failures" | New; mirrors that tooltip. |
-| Title, failed | "The analysis didn’t finish" | **Shipped** (`failedTitle`). |
-| Body, normal | "{{project}}" | The study's own name, which is Bristlenose's own and never follows the folder (ruling 10). |
-| Body, failed with a known reason | "{{project}} · {{reason}}" | Reason short form, see below. |
-| Settings label | "Notify when an analysis finishes or stops" | New; a positive switch, on by default. |
+| Finished | the project's name | "Analysis finished · {{count}} sessions" |
+| Finished with some sessions failed | the project's name | "Analysis finished with failures · {{failed}} of {{total}} sessions" |
+| Didn't finish, reason known | the project's name | "The analysis didn’t finish · {{reason}}" |
+| Didn't finish, reason not known | the project's name | "The analysis didn’t finish" |
 
-**Counts in the body ("8 sessions") are not in this proposal.** It is the same question as a "found so far" count and the owner has not decided it. The mockup shows one as an illustration only.
-
-**The failure reason.** The app already classifies why a provider call failed ("{{provider}} is out of credit", "rejected this key", "is rate-limited", in `llmSettings.validation`). The banner uses only a reason from that existing set, in a short form ("Claude is out of credit"), and says nothing more when the cause is unknown. It does not invent a cause. The short forms are new strings; whether they can reuse the existing ones with a trimmed tail is for the implementer to find.
-
-**Plain words.** "Analysis" not "run" or "pipeline" (`docs/glossary.md`). No exclamation, no emoji, no "success". The failed banner says what is true and nothing else; it does not tell the researcher what to do. A banner that stopped being news would be cut.
+- **The title is the study's own name**, which is Bristlenose's own and never follows the folder (ruling 10). The system supplies the app icon and a relative time ("52m ago" in the screenshot), so neither is in our text, and Apple's HIG says not to repeat the app name.
+- **Put the outcome first in the body.** The system truncates a long body at a few lines with an ellipsis (visible in the screenshot), so what matters leads.
+- **Counts are now proposed, pending approval**, because the evidence on this audience is that counts are normal ("3094 passed"). The session count is a fact the app already has. A quote count is a separate question (the same as a "found so far" count) and stays out.
+- **Strings.** "The analysis didn’t finish" is **shipped** (`failedTitle`). "Analysis finished" and "Analysis finished with failures" are new (a shipped tooltip, "Analysis finished with failures for {{project}}", is the nearest). "{{count}} sessions" and "{{failed}} of {{total}} sessions" need plural keys (CLDR via the app's i18n, not the CLI `inflect`). All need the 21 full locales and an entry in `docs/platform-text-map.md`. Provider names are product names (Claude, ChatGPT).
+- **Settings label:** "Notify when an analysis finishes or stops". New; a positive switch, on by default.
+- **The failure reason.** The app already classifies why a provider call failed ("{{provider}} is out of credit", "rejected this key", "is rate-limited", in `llmSettings.validation`). The banner uses only a reason from that existing set, in a short form ("Claude is out of credit"), and says nothing more when the cause is unknown. It does not invent a cause. The short forms are new strings.
+- **Plain words.** "Analysis", not "run" or "pipeline" (`docs/glossary.md`). No exclamation, no emoji. The failed banner says what is true and does not tell the researcher what to do.
+- **When previews are hidden** the system shows only the icon and the word "Notification". Register one category per outcome with a generic placeholder with no project name ("Analysis finished" and "The analysis didn’t finish"). The placeholder is set when the categories are registered, so register them again if the researcher changes the app's language, or it stays in the old language.
 
 ## The permission flow
 
@@ -75,16 +78,44 @@ From the HIG Notifications page (opened 6 Nov 2026). Where it bears on the propo
 
 | Guidance (in my words) | What it means here |
 |---|---|
-| Notifications do not appear when the app is in front; the app should show the information in the window instead (Mail simply adds the message to the list) | **The frontmost rule is the platform's default, not code we must write.** Do not make notifications present while the app is in front. The sidebar row already flips, which is the "discoverable, not distracting" treatment Apple describes. |
+| Notifications do not appear when the app is in front by default; show the information in the window instead (Mail adds the message to the list) | **Partly right, and I corrected it** after reading the developer documentation: see "What the platform already does for us" below. The default depends on a delegate being set. |
 | Avoid several notifications for the same thing | One banner per end, as designed. |
 | Avoid telling people to do a task in the app | The banner reports; it does not instruct. |
 | Use an **alert**, not a notification, for an error message | Applies to errors shown to someone in the app. A background run that did not finish is a status the researcher is away from, so a notification is the only channel; the error detail still appears in the window on return, as today. Noted as a tension, not a conflict. |
 | Avoid sensitive, personal or confidential information, because you cannot predict who sees it | The owner has decided the project name is in the banner by default. See the next row. |
 | Provide generic body text for when previews are hidden; the system then shows only the icon and "Notification" | **Use it.** Set the hidden-previews placeholder to a generic line without the project name (for example "Analysis finished"), so a researcher who has hidden previews system-wide, or is sharing a screen with previews off, never exposes a client name. This honours the owner's decision and Apple's guidance together, at no cost. |
-| Titles: short, title-style capitalization, no ending punctuation. Body: complete sentences, sentence case, proper punctuation. Let the system show the app name rather than a generic title | **Tension with the shipped strings**: "The analysis didn’t finish" is a sentence-case sentence. The proposed bodies ("Checkout study") are fragments. Decide whether to follow Apple's capitalization in titles or the app's existing sentence case; the owner's call. |
+| Titles: short, title-style capitalization; bodies: complete sentences. Let the system show the app name | **Decided (owner): the app's own sentence case, and fragments in the body.** Apple's guidance is not followed here, knowingly; the owner's own Notification Center shows the working Mac audience's real notifications do not follow it either. |
 | Consider a sound, but do not rely on it | System default sound; the text carries the meaning. |
 | Badges only for unread notification counts, never the only signal | No badge, as designed. |
 | Do not use an action that merely opens the app | No action button; clicking the banner opens the project, which is the expected default. |
+
+## What the platform already does for us (checked 6 Nov 2026)
+
+The aim is to use the system's notification behaviour and rebuild none of it. Sources opened: the UserNotifications documentation (`UNUserNotificationCenter`, `UNMutableNotificationContent`, the delegate's `willPresent`, handling notifications, `UNNotificationInterruptionLevel`, `hiddenPreviewsBodyPlaceholder`, `UNNotificationRequest`), the HIG Managing notifications page, and AppKit's `requestUserAttention`. "Verified" means that page says it; "inferred" means I am reading around what it says.
+
+**Free, so do not build it:**
+
+| The system gives us | Source and status | So we do not |
+|---|---|---|
+| The banner, the sound, the notification list entry, the relative time, the app icon | Notifications pages. Verified. | draw our own banner, chime, timestamp or icon |
+| The researcher's per-app choices in System Settings (style, sound, previews, grouping) and the option to silence everything | HIG Managing notifications. Verified. | build our own sound picker, preview toggle or grouping control. Our one in-app switch is enough, and Apple says an app should offer an in-app way to change the choice. |
+| Focus and scheduled summary: the default interruption level, "active", is delivered immediately but does **not** break through a Focus; the notification is still available the moment it arrives even if its alert is delayed | HIG and `UNNotificationInterruptionLevel`. Verified. | add any "do not disturb" logic of our own, or ask for Time Sensitive (which is for events relevant in the moment and breaks through Focus; a finished analysis does not justify that) |
+| Grouping: a thread identifier visually groups related notifications | `UNMutableNotificationContent`. Verified that it exists and what it is for. | build a grouped-banner of our own. Use one thread per project. |
+| The click: the researcher clicking a banner activates the app and calls our delegate with the notification's own data | Handling notifications. Verified for the delegate call; that it activates the app is the normal behaviour and I did not find the page stating it. | open the app ourselves. We only choose which project to show, from an id carried in the notification's data. |
+| Removing a stale notification once the researcher has dealt with it | `removeDeliveredNotifications`. Verified that it exists. | leave a "finished" entry sitting in the list for a run the researcher has already opened. Clear it when they open that project (a small recommendation, not a requirement). |
+| Hiding the preview when the researcher has chosen to | `hiddenPreviewsBodyPlaceholder`. Verified. | invent our own privacy mode. Set the placeholder (above). |
+| Authorization state and a one-time prompt | Asking permission. Verified. | build a re-ask or our own consent screen |
+
+**One correction to my earlier statement.** I had said the frontmost rule "is the platform's default, not code we must write." The developer documentation is more specific, and it matters:
+- If a delegate is set and it does **not** implement `willPresent`, the system treats the notification as not to be shown while the app is in the foreground. Verified.
+- If **no** delegate is set at all, the system uses the notification's own options and **would show a banner in the foreground**. Verified.
+- The Mac app has no notification code today, so **no delegate exists**. A delegate must be assigned before any notification is posted, and it is needed anyway to handle the click.
+
+So the platform-grain approach is: set the delegate, leave `willPresent` unimplemented (or return none), post the notification whenever a run ends, and let the system decide by its own idea of "foreground". That replaces the hand-rolled active-app check in the next section. **What I could not verify is that macOS's "foreground" matches the 99% case** (hidden, buried under other windows, another app in full screen, a different Space) or what it does for a minimised window. Whether "present none" also keeps the entry out of the notification list is not stated either. **A short spike on a real Mac settles all of it** (see "What decides"). Until then the explicit active-app check stays as the fallback.
+
+**The Dock bounce is the one place we would be doing something the notification system does not.** The attention request is a separate channel from the notification: Apple's page says activating the app cancels it, that it does nothing for an app that is already active, and that a spoken notification occurs if spoken notifications are enabled. It does not say whether the researcher's Focus or notification settings apply to it, and I could not confirm the difference between the informational and critical types (the page I read describes only the two names). A bounce that ignores the researcher's Notification settings would go against the platform's grain. **Recommendation: leave it out of the first version.** The banner, the sound and Focus already own attention, and one channel is one thing the researcher can switch off. It is recorded in § 10.4 as direction, so this is the owner's call.
+
+**Not following Apple on purpose:** Apple recommends localizing notification text with `localizedUserNotificationString` so the string is resolved at delivery. The app's strings come from its own locale files through the i18n layer, and the notification is delivered at once, so there is no gap for a language change to fall into. The one exception is the hidden-previews placeholder, above.
 
 ## The Settings switch
 
@@ -97,8 +128,9 @@ From the HIG Notifications page (opened 6 Nov 2026). Where it bears on the propo
 
 - **Click the banner:** opens Bristlenose with that project selected. The mechanism for selecting a project from outside (the project id, not the path: identity is never from a path) is for the implementer to confirm; I did not find an existing external route.
 - **Sound:** the system default notification sound.
-- **Dock:** one informational bounce, which stops by itself (`NSApp.requestUserAttention(.informationalRequest)`), as recorded in § 10.4. No badge, no sustained bounce.
-- **Grouping:** one thread per project, so several ends close together stack under the project rather than flooding. Whether several projects finishing together should group is still open.
+- **Dock:** nothing in the first version (see "What the platform already does for us"); the owner decides.
+- **Grouping:** one thread identifier per project, so several ends close together stack under that project. Whether several projects finishing together should also group is still open.
+- **One banner per end:** use the run's own id as the request identifier, so a re-delivered end cannot post twice. Whether a repeated identifier replaces the earlier entry is not stated on the pages I read; test it.
 - **Mac asleep:** macOS shows the banner on wake. Nothing for us to do.
 - **Focus modes and Do Not Disturb:** respected; we do not request Time Sensitive.
 - **VoiceOver:** an announcement of the end when the app is frontmost and no banner is shown ("Analysis complete" is the recorded string in § 10.4); keep it to what is already announced today unless approved separately.
@@ -107,9 +139,13 @@ From the HIG Notifications page (opened 6 Nov 2026). Where it bears on the propo
 
 The case this serves is the 99% one: the researcher has started a run and then **hidden Bristlenose, left it under a clutter of other windows, or gone full-screen in another app**. In all three, Bristlenose is not the app they are using, and the banner is how they find out.
 
-So the gate is whether Bristlenose is the **active application** when the run ends: `NSApp.isActive`, with `didBecomeActive` and `didResignActive` as the notifications. Active-ness, not visibility, is the test, which is why a Bristlenose window sitting visible but buried under another app's windows still gets a banner, and why a different app in full screen does too. **Not `scenePhase`**, which is unreliable on macOS for this (the recorded trap in § 10.4). If the sidebar is closed but the researcher is in the app, no banner (decided).
+**Preferred (platform grain):** post the notification whenever a run ends, with a delegate set and no `willPresent`, and let the system suppress it while Bristlenose is in the foreground. No gate of ours.
 
-One case to check when built: a researcher who minimises or hides Bristlenose's windows but leaves it as the active app (for example by minimising its only window to the Dock). If macOS keeps it active, the active-app test alone misses it, and the gate should also treat "no visible Bristlenose window" as not in the app (`NSApp.occlusionState` or the windows' own visibility). I have not verified how macOS behaves here.
+**Fallback, if the spike shows the system's idea of foreground is wrong for any of the cases:** an explicit test of whether Bristlenose is the **active application** when the run ends, `NSApp.isActive`, with `didBecomeActive` and `didResignActive`. Active-ness, not visibility, is the test, so a Bristlenose window visible but buried under another app's windows still gets a banner, and so does a different app in full screen. **Not `scenePhase`**, which is unreliable on macOS for this (the recorded trap in § 10.4). If a researcher has minimised Bristlenose's only window but the app is still active, the active-app test alone misses it, and the gate should also treat "no visible Bristlenose window" as not in the app.
+
+**If the sidebar is closed but the researcher is in the app, no banner** (decided).
+
+**The spike** (Debug build, a few lines, on the owner's Mac): post a notification from a button, then check whether it shows when the app is (1) active in front, (2) hidden with ⌘H, (3) behind another app's window, (4) behind another app in full screen, (5) on a different Space, (6) minimised; and whether it still appears in the notification list when it is suppressed. It also settles whether a repeated identifier replaces an earlier entry.
 
 This design does not address the app being quit. A run stops with the app (the 20 Oct 2026 decision), so there is nothing to alert about; that wider question has its own brief, `docs/brief-macos-background-run.md`.
 
@@ -125,10 +161,10 @@ This design does not address the app being quit. A run stops with the app (the 2
 | What | Why it can fail |
 |---|---|
 | Each end kind maps to exactly the right banner or none, including that Stop and Quit raise none | A new end kind that falls through to "banner" |
-| Not fired while Bristlenose is active; fired when it is not | The gate reads the wrong signal |
+| A delegate exists before the first post, and with Bristlenose in the foreground nothing is shown; with it hidden, buried or behind a full-screen app, a banner is | No delegate would show the banner in the foreground, the opposite of intent |
+| One request identifier per run | A re-attached or resumed run posting its end twice |
 | Not fired when the switch is off; the default on a fresh install is on, read through the one accessor | The `@AppStorage` default trap |
 | Not fired when the system permission is denied or undetermined | A banner raised through a back door |
-| One banner per end, never two for the same run | A completion event handled twice (a resumed or re-attached run) |
 | The hidden-previews placeholder carries no project name | The one place the project name could leak when the researcher has hidden previews |
 | Every new key exists in all 21 full locales | The locale check |
 | The decline path asks nothing a second time | A re-ask is needy |
@@ -143,11 +179,16 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 4. The reason strings' final form.
 5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
 
-6. Title capitalization: Apple's title-style, or the app's sentence case.
-7. Whether to test a one-line pre-alert if first runs show reflex declines.
+6. Whether to test a one-line pre-alert if first runs show reflex declines.
+7. The Dock bounce (recommended out of the first version).
+8. The title/body order and the session count in the body (proposed above, following what the owner's own notifications look like).
+9. Run the foreground spike before the gate is fixed.
+
+*Decided since the last draft:* sentence case and fragments (owner, 6 Nov).
 
 ## What I could not verify
 
+- That macOS's own foreground rule matches the hidden, buried, full-screen and other-Space cases, and its behaviour for a minimised window; whether suppression keeps the entry out of the notification list; whether a repeated request identifier replaces an earlier entry; what the Dock attention request does under Focus; that a nil trigger delivers at once (standard behaviour, not stated on the pages I read).
 - The exact entitlement or capability a sandboxed Mac App Store build needs to post local notifications: believed to be none, from memory.
 - Whether the system notification-permission alert on macOS can carry any wording of ours (it appears not to), and whether provisional authorization behaves the same on macOS as on iOS; the page I read describes it generally.
 - Behaviour of a notification across a quit of the app (not relevant to this proposal, since nothing fires after a quit).

@@ -49,3 +49,19 @@ def test_the_default_lower_cutoff_is_the_dialogs() -> None:
 def test_the_cutoff_grid_is_the_sliders() -> None:
     step = _ts_number(_SRC / "utils" / "confidenceStep.ts", "CONFIDENCE_STEP")
     assert CONFIDENCE_STEPS_PER_UNIT == round(1 / step)
+
+
+def _settings_reference_default(env_var: str) -> float:
+    # The Settings reference lists each of these as a string beside its name. A third copy.
+    text = (_SRC / "components" / "SettingsModal.tsx").read_text(encoding="utf-8")
+    match = re.search(rf'envVar:\s*"{env_var}",\s*default:\s*"([0-9]+(?:\.[0-9]+)?)"', text)
+    assert match, f"{env_var} default not found in SettingsModal.tsx: follow the rename"
+    return float(match.group(1))
+
+
+def test_the_settings_reference_tells_the_researcher_the_same_cutoffs() -> None:
+    dialog = _SRC / "components" / "ThresholdReviewModal.tsx"
+    assert _settings_reference_default("DEFAULT_LOWER") == _ts_number(dialog, "DEFAULT_LOWER")
+    assert _settings_reference_default("DEFAULT_UPPER") == _ts_number(dialog, "DEFAULT_UPPER")
+    assert _settings_reference_default("STEP") == _ts_number(
+        _SRC / "utils" / "confidenceStep.ts", "CONFIDENCE_STEP")

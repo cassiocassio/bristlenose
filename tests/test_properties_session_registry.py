@@ -9,7 +9,8 @@ boundary), so the invariants are stated once, for every study the generator can 
 the cases that happened to break. The registry is driven for real, over real files in a
 temporary folder; only the bytes are small. Placement rule: docs/design-test-philosophy.md.
 
-CI runs these derandomised (tests/conftest.py); a kill that matters is pinned with @example.
+CI runs these derandomised (tests/conftest.py). A kill that matters is found by the generator's
+steering (small alphabets, duplicate contents), not pinned: the mutation record is in the commits.
 """
 
 from __future__ import annotations

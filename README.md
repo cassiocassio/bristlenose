@@ -197,7 +197,7 @@ pipx install --force "bristlenose[any-llm]"    # or: uv tool install --force "br
 bristlenose configure any-llm
 ```
 
-If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages carry Mistral, OpenRouter and DeepSeek only; any other provider's add-on needs pipx or uv.
+If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages include the Mistral SDK, and providers that need no add-on (OpenRouter, DeepSeek and others) work too; any other provider's add-on needs pipx or uv.
 
 `configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already set in your shell (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`…; a `.env` file isn't read for these). It checks the key, stores it like the others, and makes it your provider. A key set in your shell takes precedence over the stored one. Switch between models you've set up with `bristlenose use deepseek:deepseek-v4-pro`, and back with `bristlenose use claude`.
 

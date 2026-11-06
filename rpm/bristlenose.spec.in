@@ -90,8 +90,9 @@ sentiment, friction points and user journeys, which the researcher edits,
 shares, and keeps as a file they own.
 
 The pipeline runs on your own machine. The analysis is a call to a cloud LLM —
-Claude, ChatGPT, Azure OpenAI, Gemini, or Mistral and OpenRouter through any-llm
-— configured with `bristlenose configure`. Local models via Ollama are supported as a slower alternative.
+Claude, ChatGPT, Azure OpenAI or Gemini, or Mistral, OpenRouter and DeepSeek
+through any-llm — configured with `bristlenose configure`. Local models via
+Ollama are supported as a slower alternative.
 
 Run `bristlenose doctor` after installing to check the environment.
 

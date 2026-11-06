@@ -230,6 +230,7 @@ state is still evidenced, the day is not.
 | `ollama-setup-popovers.html` | 3 Jun 2026 | PROPOSED 3 Jun 2026 · IMPLEMENTED — cited three times across the design docs; `OllamaDownloadPill.swift` ships |
 | `person-actions-everywhere.html` | 27 Aug 2026 | IMPLEMENTED — person actions ship across surfaces |
 | `perceived-wait-partial-report.html` | 4 Nov 2026 | PROPOSED 4 Nov 2026 — candidate 1 of `design-perceived-wait.md`: a partial Quotes lens says so; for owner scrutiny, not a spec |
+| `perceived-wait-run-banner.html` | 6 Nov 2026 | PROPOSED 6 Nov 2026 — candidate A of `design-perceived-wait.md`: the run-finished and didn't-finish banner, the Settings switch, a state diagram and an architecture diagram; for owner scrutiny, not a spec |
 | `progressive-lenses-replay.html` | 15 Oct 2026 | *unreviewed* — added by `68c38db2`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quote-card-layout-lab.html` | 15 Oct 2026 | *unreviewed* — added by `89efd0a9`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quote-grouping-control-lab.html` | 15 Oct 2026 | *unreviewed* — added by `c3f077da`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |

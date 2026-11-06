@@ -542,6 +542,9 @@ function SignalCard({
 
   // Fix: useEffect ensures expanded class is applied before maxHeight is set,
   // so both opacity and maxHeight transitions work together.
+  // The measure is repeated when Break long paragraphs changes: the quotes get taller by a
+  // half-line gap per break, and a pixel max-height taken before that would clip the last one.
+  const breaksOn = useDisplayBreaks();
   useEffect(() => {
     if (!expansionRef.current) return;
     if (expanded) {
@@ -549,7 +552,7 @@ function SignalCard({
     } else {
       expansionRef.current.style.maxHeight = "0";
     }
-  }, [expanded]);
+  }, [expanded, breaksOn]);
 
   const toggleExpand = useCallback(() => setExpanded((prev) => !prev), []);
   /** The metrics block, minimised by default and shared by every card: opening it on

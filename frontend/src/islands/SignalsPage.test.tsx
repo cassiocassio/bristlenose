@@ -237,6 +237,7 @@ const emptyCbData: CodebookSignalsListResponse = {
 let fetchMock: any;
 
 beforeEach(() => {
+  _resetDisplayPrefs();
   lensState.signalsWithheld = false;
     resetSignalWorkingStore();
     resetFeatureFlags();
@@ -250,6 +251,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  _resetDisplayPrefs();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -818,22 +820,29 @@ describe("SignalsPage", () => {
     expect(screen.getAllByTestId("bn-metric-dots")[0].getAttribute("data-size")).toBe("m");
   });
 
-  it("breaks a long evidence quote into blocks only when Break long paragraphs is on", async () => {
-    const long =
-      "Well, I can see the different sections... across the top quite easily — that makes it easier to select stuff. I'm... interested both in the... bed linen, ... that's... right there because that's something I've been looking at at the minute. I mean, it looks like an IKEA website. Then I scroll down and, so, I see the kitchen storage... which is what I came for, because I need jars and tins for the shelf. Fine, that works for me.";
+  const LONG_EVIDENCE_QUOTE =
+    "Well, I can see the different sections... across the top quite easily — that makes it easier to select stuff. I'm... interested both in the... bed linen, ... that's... right there because that's something I've been looking at at the minute. I mean, it looks like an IKEA website. Then I scroll down and, so, I see the kitchen storage... which is what I came for, because I need jars and tins for the shelf. Fine, that works for me.";
+
+  function cardsWithLongQuote(): CodebookSignalsListResponse {
     const data = structuredClone(mockCbData);
-    data.codebooks[0].signals[0].quotes[0].text = long;
-    mockFetchCodebookSignals(data);
+    data.codebooks[0].signals[0].quotes[0].text = LONG_EVIDENCE_QUOTE;
+    return data;
+  }
+
+  it("draws a long evidence quote as one run of words when Break long paragraphs is off", async () => {
+    mockFetchCodebookSignals(cardsWithLongQuote());
     act(() => setDisplayPref("breaks", "off"));
-    const { unmount } = render(<SignalsPage projectId="1" />);
+    render(<SignalsPage projectId="1" />);
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
-    expect(document.querySelectorAll(".signal-card-quotes .bn-block")).toHaveLength(0);
-    unmount();
+    expect(document.querySelectorAll(".bn-block")).toHaveLength(0);
+    expect(document.querySelector(".signal-card-quotes .quote-text")?.textContent).toBe(LONG_EVIDENCE_QUOTE);
+  });
 
+  it("breaks a long evidence quote into blocks, keeping every word, when Break long paragraphs is on", async () => {
+    mockFetchCodebookSignals(cardsWithLongQuote());
     act(() => setDisplayPref("breaks", "on"));
-    mockFetchCodebookSignals(data);
     render(<SignalsPage projectId="1" />);
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -841,8 +850,29 @@ describe("SignalsPage", () => {
     const blocks = Array.from(document.querySelectorAll(".signal-card-quotes .quote-text .bn-block"));
     expect(blocks.length).toBeGreaterThan(1);
     const words = (t: string) => t.split(/\s+/).filter(Boolean).join(" ");
-    expect(words(blocks.map((b) => b.textContent ?? "").join(" "))).toBe(words(long));
-    _resetDisplayPrefs();
+    expect(words(blocks.map((b) => b.textContent ?? "").join(" "))).toBe(words(LONG_EVIDENCE_QUOTE));
+    // Signals draws no quote marks, so the blocks add none.
+    expect(document.querySelectorAll(".signal-card-quotes .smart-quote")).toHaveLength(0);
+  });
+
+  it("measures an expanded card again when Break long paragraphs changes, so taller quotes are not clipped", async () => {
+    // jsdom has no layout: stand in for the height the browser would report.
+    let height = 100;
+    const spy = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(() => height);
+    mockFetchCodebookSignals(cardsWithLongQuote());
+    act(() => setDisplayPref("breaks", "off"));
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    fireEvent.click(screen.getAllByTestId("bn-signal-toggle")[0]);
+    const expansion = document.querySelector(".signal-card-expansion") as HTMLElement;
+    expect(expansion.style.maxHeight).toBe("100px");
+
+    height = 160;
+    act(() => setDisplayPref("breaks", "on"));
+    expect(expansion.style.maxHeight).toBe("160px");
+    spy.mockRestore();
   });
 
   /** Two cards for one place: the first and a second one under it. */

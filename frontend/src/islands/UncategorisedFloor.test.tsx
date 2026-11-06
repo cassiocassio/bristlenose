@@ -114,6 +114,9 @@ describe("UncategorisedFloor", () => {
     // The opening mark sits in the first block and the closing one in the last.
     expect(blocks[0].textContent?.startsWith("\u201c")).toBe(true);
     expect(blocks[blocks.length - 1].textContent?.endsWith("\u201d")).toBe(true);
+    // And nowhere else: a mark in every block would still pass the two checks above.
+    const marks = Array.from(container.querySelectorAll(".smart-quote")).map((m) => m.textContent);
+    expect(marks).toEqual(["\u201c", "\u201d"]);
   });
 
   it("leaves a short quote whole when Break long paragraphs is on", () => {

@@ -1,8 +1,8 @@
 /* Organism: display-prefs — how the quote content looks (Layout, Density,
    Break long paragraphs). The Display menu sets data-bn-layout / data-bn-density /
-   data-bn-breaks on <html> (DisplayPrefsStore.ts); every rule here is scoped to
-   the Quotes lens's groups (the card list; for Single column also the heading and
-   description above it), so the header, navigation,
+   data-bn-breaks on <html> (DisplayPrefsStore.ts); the Layout and Density rules
+   are scoped to the Quotes lens's groups (the card list; for Single column also the
+   heading and description above it), so the header, navigation,
    toolbar, contents list and sidebars never change size — that is what separates
    this from zoom. Density values are a rough first pass, not a design decision.
    Remove this file from _THEME_FILES to revert every surface to today's layout.
@@ -63,7 +63,8 @@ html[data-bn-density="custom"] .quote-group .quote-body {
     );
 }
 
-/* Break long paragraphs: QuoteCard draws a long quote as .bn-block spans.
+/* Break long paragraphs: QuoteCard, the Uncategorised floor and Signals evidence draw a
+   long quote as .bn-block spans. This rule is not scoped to a lens.
    A block is its own paragraph with a half-line gap after it; the gap sits on
    the block BEFORE, because the last block is inline so the closing quote and
    the speaker chip follow on its last line (an inline box ignores vertical

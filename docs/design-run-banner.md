@@ -248,7 +248,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 9. *(Done 6 Nov: see "What decides". Gate at the point of posting; confirm.)*
 
 10. *(Decided, owner, 6 Nov 2026: the default interruption level. It respects the researcher's Focus and Scheduled Summary, and Time Sensitive is not requested. A researcher who uses Scheduled Summary may therefore have the notice held, which is their own setting at work.)*
-11. Accept that a temporary banner vanishes in seconds and the list entry is what an away researcher finds.
+11. *(Decided, owner, 6 Nov 2026: accept it as the starting place. The banner is temporary by the system's default and the entry stays in the notification list; Persistent is the researcher's own setting. Revisit if researchers report missing it.)*
 
 *Decided since the last draft (owner, 6 Nov):* each run's own banner when several end together; the session count; naming the failure reason; default interruption level; sentence case and fragments; no Dock bounce; duration in the finished banner; "N of M sessions are done" on a failure, once "done" is defined.
 

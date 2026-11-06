@@ -456,6 +456,63 @@
 <p><b>Decision for you.</b> The centre (today) is safe and measured, but it is the place that folds into <code>»</code> and sits under the title. The trailing slot is where you want it and is the more fragile one. A DEBUG switch in Diagnostics that moves only the pill between the two would let you judge it on this machine without changing the shipping toolbar.</p>
 </div></div>
 
+
+<!-- ═════════ H ═════════ -->
+<h2><i>H</i>The network-blocks pill — when it lights, when it clears, when it never does <span class="decided">proposal · not built</span></h2>
+<p class="lede">Key rejected and out of credit are facts about <i>the account</i>, so they stay until the account changes. “This network can’t reach Claude” is a fact about <i>where you are</i>: it is true in the café and false at home. This section draws that difference. It adds no new control; the pill, popover, ✕ and bare glyph are the ones in A and D.</p>
+
+<div class="grid3">
+  <div class="frame"><div class="fbar"><span>1 · a call was refused, here</span><em>wording from E</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Network · can’t reach Claude</span></div></div></div>
+    <div class="anchor"><div class="tip"></div></div>
+    <div class="pop"><b>This network can’t reach Claude.</b><p>Try a different network.</p>
+      <div class="btns"><span class="btn">Switch provider…</span></div></div>
+  </div></div>
+
+  <div class="frame"><div class="fbar"><span>2 · the Mac joins a different network</span><em>clears by itself</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"></div></div></div>
+    <p style="font-size:11.5px;color:var(--dim);margin:10px 2px 0">No pill, no “resolved” message. The network path changed, so the old finding is not evidence about this one. Nothing is asked of you.</p>
+  </div></div>
+
+  <div class="frame"><div class="fbar"><span>3 · or the next call to Claude works</span><em>clears by itself</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"></div></div></div>
+    <p style="font-size:11.5px;color:var(--dim);margin:10px 2px 0">Same: a successful call removes it, whether or not the network changed. The ✕ is not needed to get rid of it, only to hide it sooner.</p>
+  </div></div>
+</div>
+
+<div class="grid3" style="margin-top:12px">
+  <div class="frame"><div class="fbar"><span>Settings ▸ LLM Provider, while 1 is lit</span><em>unchanged</em></div><div class="fbody">
+    <div class="pop" style="box-shadow:none"><b style="display:flex;justify-content:space-between">Claude <span style="font-weight:400;color:var(--dim)"><span style="color:var(--green)">●</span> Online</span></b>
+    <p>The key is fine and stays green. A network block says nothing about the key, so it is never written to the key’s saved verdict.</p></div>
+  </div></div>
+
+  <div class="frame"><div class="fbar"><span>Ollama refused a call</span><em>no network pill</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"></div></div></div>
+    <p style="font-size:11.5px;color:var(--dim);margin:10px 2px 0">Ollama is on this Mac, so the network is not the cause. It says what it says today (“Ollama isn’t running…”, <code>llmSettings.validation.ollamaUnreachable</code>), in place.</p>
+  </div></div>
+
+  <div class="frame"><div class="fbar"><span>Azure OpenAI: the endpoint doesn’t resolve</span><em>no network pill · wording proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"></div></div></div>
+    <p style="font-size:11.5px;color:var(--dim);margin:10px 2px 0"><b style="color:var(--ink)">Couldn’t reach Azure OpenAI.</b> Check the endpoint in Settings. Apple’s host answered, and a made-up Azure name fails the same way (measured), so a mistyped endpoint is likelier than a block. In place only.</p>
+  </div></div>
+</div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · H</div>
+<table class="wide">
+  <tr><th>Question</th><th>Proposal</th><th>Why</th></tr>
+  <tr><td>What lights it</td><td>A refused call, then one HTTPS check against Apple’s connectivity address: it answers, Claude didn’t, and the failed call died in connect, TLS or timeout, or came back from something that wasn’t Claude.</td><td>Rows 5–7 of E share these words, so the pill never says which of the three it was; the details keep that.</td></tr>
+  <tr><td>What clears it</td><td>A change of network path, or any successful call to that provider. <b>Not</b> a timer.</td><td>A timer is a guess about a place; a path change is the Mac saying the place changed. Matches D’s rule against a clock changing the toolbar under a glance.</td></tr>
+  <tr><td>Where it is kept</td><td>In memory only. Gone on quit.</td><td>It would hold where you were. It also must not become a key verdict: Settings would show a good key as bad, and the saved record would follow you home.</td></tr>
+  <tr><td>Whose refusal</td><td>Only the provider you currently use. Switch provider and it goes.</td><td>Otherwise the pill names a product you are no longer using.</td></tr>
+  <tr><td>Never for</td><td>Ollama; an Azure endpoint that doesn’t resolve; a refusal that carried the provider’s own reply (that is key, credit or rate limit, and says so).</td><td>None of those is “this network”. Saying so would be wrong, which is worse than saying nothing.</td></tr>
+  <tr><td>Behind a proxy that answers instead of Claude</td><td>Lights this pill, not “key rejected”.</td><td>A block page’s 403 reads as a rejected key today (measured on the stub). That is a fix to the classifier, not to the pill.</td></tr>
+  <tr><td>Already decided, reused as is</td><td>Warning glyph and flat envelope (A); ✕ on hover, hides it, and a new refused call or a changed condition brings it back (D); the bare glyph after a day; no menu twin.</td><td>Owner, 2 Nov 2026.</td></tr>
+  <tr><td>Not drawn</td><td>The ladder behind “Connection details”; the sign-in (captive portal) line.</td><td>Both deferred in the build plan. F still shows what they would look like.</td></tr>
+</table>
+<p><b>Where this could be wrong.</b> A managed Mac with an inspecting proxy whose root certificate is installed passes the Apple check <i>and</i> may pass Claude’s TLS in the system’s store while the app’s own Python connection (which uses its own bundle of roots) fails. Then the pill must come from the failed call’s own TLS error, not from the check, or it will not light at all. The wording is the same; only what triggers it differs. Nothing here has been seen on a real hostile network: every state in the list above is expected, not measured.</p>
+<p><b>Decision for you.</b> Is “clears when the network changes, or a call works” the right persistence for this pill, with key and credit unchanged (they stay until the account is fixed)? And is the in-place Azure line acceptable as proposed wording?</p>
+</div></div>
+
 <!-- ═════════ comparison ═════════ -->
 <h2><i>·</i>Side by side</h2>
 <div class="com"><div class="in"><div class="tag">Commentary · comparison</div>
@@ -481,6 +538,8 @@
   <tr><td>Open Settings…</td><td>proposed</td></tr>
   <tr><td>Claude key rejected, Claude unavailable (footer)</td><td>proposed</td></tr>
   <tr><td>Not updated — Claude key rejected</td><td>proposed, wording not drafted</td></tr>
+  <tr><td>Couldn’t reach Azure OpenAI. Check the endpoint in Settings.</td><td>proposed (section H), in place only</td></tr>
+  <tr><td>Network · can’t reach Claude, This network can’t reach Claude., Try a different network.</td><td>proposed (A, E); the pill’s clearing rule is section H</td></tr>
 </table></div></div>
 
 </div>

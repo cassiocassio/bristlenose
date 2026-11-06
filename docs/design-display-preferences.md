@@ -113,6 +113,13 @@ New keys, each in 21 locales (and Swift): **Display, Layout, Columns, Single col
 
 **Decided 4 Nov 2026 (owner), in addition:** the Uncategorised floor follows Display fully (Layout, Density and Break). A search highlight that would span a block break is not highlighted across it; the owner thinks it unlikely to matter, so it is left as built (`highlightTerms` runs per block). The "Display" wording in nine locales is being checked against the Apple and Microsoft glossaries.
 
+## 10a. Owner rulings, 6 Nov 2026
+
+- **View menu: yes.** View ▸ Display (Mac) is a submenu with Columns, Single column, the three density stops and Break long paragraphs, sent through the same `menuAction` values as the popover. Dimmed outside Quotes and Signals, like Focus Mode (`MenuCommands.displayTabs`). Density shows a tick only on exactly a stop.
+- **Scope: Quotes and Signals only.** Density and Layout stay on the Quotes groups; Break also reaches the Signals evidence quotes and the Uncategorised floor. Discussion and Screens do not follow. Revisit after use.
+- **Wording: keep "Display".** English is not Apple's word (Apple says View / View Options); fi, uk and tr toolbar words are Apple's Appearance and want a native check. The Microsoft side was never measured.
+- **Escape guard: kept, now pinned.** The cascade yields to any open `[role="menu"]`; `hooks/escapeGuardMenus.test.ts` fails if a menu is drawn that neither uses the dropdown hooks nor handles Escape itself.
+
 ## 11. After v1
 
 The lab holds what is not for the product yet: a second level (phrase breaks) and its placement; a strength threshold ("more or fewer"); the researcher's own hand-placed breaks as an overlay (§3.4 of the anchor note: no pin, no "edited" mark, nothing downstream sees a `\n`); timing evidence (pauses, the difference between a short cut of filler and a long gap), which needs the persisted quote-to-transcript anchor; and a model's groupings of segments as the semantic arbiter. The classical precedent is Jerome's *per cola et commata*, sense-lines set out to show a reader where to breathe ([research-paragraph-length-benchmark.md](research-paragraph-length-benchmark.md) §3a). Everything after v1 builds on the same overlay and does not change what v1 stores, which is nothing.

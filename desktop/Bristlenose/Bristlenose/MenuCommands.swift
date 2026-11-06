@@ -896,6 +896,9 @@ private struct ViewMenuContent: View {
     /// transform in `templates/focus-mode.css`; the bare `z` route gate in
     /// `useKeyboardShortcuts.ts` lists the same lenses, and the two must agree.
     static let focusModeTabs: Set<Tab> = [.quotes, .signals]
+    /// The lenses whose quote cards the Display settings change (the Quotes groups, and the
+    /// Signals evidence quotes and card stack). Dimmed elsewhere, like Focus Mode.
+    static let displayTabs: Set<Tab> = [.quotes, .signals]
 
     /// Timeline Detail ▸, in the order the web pulldown lists them; the names
     /// are the web's own keys (common.sessions.tapestry.*), shared.
@@ -1182,6 +1185,36 @@ private struct ViewMenuContent: View {
         ))
         .keyboardShortcut("f", modifiers: [.command, .option])
         .disabled(!(bridgeHandler.commandTab.map(Self.focusModeTabs.contains) ?? false))
+
+        // The Display settings, the same choices as the toolbar popover and sent the
+        // same way (`menuAction` with a value; the SPA validates, saves and mirrors
+        // back as `display-prefs`). One submenu so the View menu gains one row.
+        // Density offers its three named stops; the slider's in-between values tick
+        // none of them, as on the web menu. docs/design-display-preferences.md §10.6.
+        Menu(i18n.t("common.toolbar.display")) {
+            let prefs = bridgeHandler.displayPrefs
+            Toggle(i18n.t("common.toolbar.displayColumns"), isOn: Binding(
+                get: { prefs.layout == "columns" },
+                set: { _ in bridgeHandler.menuAction("setDisplayLayout", payload: ["value": "columns"]) }
+            ))
+            Toggle(i18n.t("common.toolbar.displaySingleColumn"), isOn: Binding(
+                get: { prefs.layout == "single" },
+                set: { _ in bridgeHandler.menuAction("setDisplayLayout", payload: ["value": "single"]) }
+            ))
+            Divider()
+            ForEach([("displayCompact", 0.0), ("displayNormal", 0.5), ("displaySpacious", 1.0)], id: \.0) { key, stop in
+                Toggle(i18n.t("common.toolbar." + key), isOn: Binding(
+                    get: { prefs.density == stop },
+                    set: { _ in bridgeHandler.menuAction("setDisplayDensity", payload: ["value": stop]) }
+                ))
+            }
+            Divider()
+            Toggle(i18n.t("common.toolbar.displayBreakParagraphs"), isOn: Binding(
+                get: { prefs.breaksOn },
+                set: { _ in bridgeHandler.menuAction("setDisplayBreaks", payload: ["value": prefs.breaksOn ? "off" : "on"]) }
+            ))
+        }
+        .disabled(!(bridgeHandler.commandTab.map(Self.displayTabs.contains) ?? false))
 
         Divider()
 

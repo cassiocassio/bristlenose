@@ -152,7 +152,7 @@ def test_an_unreadable_held_manifest_is_ignored(tmp_path: Path) -> None:
     _drive(tmp_path, 2, {})
     with pytest.raises(KeyboardInterrupt):
         _drive(tmp_path, 3, {}, stop_in="stage2")
-    _resume_file(tmp_path).write_text("{ truncated")
+    _resume_file(tmp_path).write_text("{ truncated", encoding="utf-8")
 
     after: dict = {}
     _drive(tmp_path, 3, after)  # must not crash; it just has less to reuse

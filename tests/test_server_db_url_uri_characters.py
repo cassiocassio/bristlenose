@@ -197,7 +197,7 @@ def test_the_note_is_made_once_not_on_every_open(
 def test_a_file_that_is_not_a_database_is_not_reported(
     tmp_path: Path, caplog: pytest.LogCaptureFixture,
 ) -> None:
-    _stray_for(tmp_path).write_text("meeting notes")
+    _stray_for(tmp_path).write_text("meeting notes", encoding="utf-8")
     study = tmp_path / "Who? Inc" / "Study A"
     study.mkdir(parents=True)
     with caplog.at_level("WARNING", logger="bristlenose.server.db"):

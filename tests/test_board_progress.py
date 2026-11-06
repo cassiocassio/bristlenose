@@ -163,8 +163,7 @@ def test_rates_kept_from_earlier_builds_earn_the_estimate_at_once(tmp_path: Path
     assert second.eta_seconds() == pytest.approx((8 + 212 + 1) * 0.4)
 
 
-def test_no_folder_means_nothing_is_read_or_written(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
+def test_no_folder_means_nothing_is_read_or_written(tmp_path: Path, fake_home: Path) -> None:
     p = BoardProgress("quotes")
     p.plan({"bulk": 5})
     p.enter("quotes", 5)
@@ -481,7 +480,7 @@ def test_a_token_refused_after_the_screens_board_exists_keeps_its_link(
 @pytest.mark.parametrize("content", ['{"profiles": []}', '{"profiles": {"miro": []}}',
                                      '{"profiles": {"miro": {"group": {"mean": "x"}}}}', "not json"])
 def test_a_malformed_rates_file_costs_the_estimate_not_the_export(tmp_path: Path, content: str) -> None:
-    (tmp_path / "board-timing.json").write_text(content)
+    (tmp_path / "board-timing.json").write_text(content, encoding="utf-8")
     p = BoardProgress("quotes", history_dir=tmp_path)  # raised inside every board's start
     p.plan({"group": 5})
     p.enter("groups", 5)

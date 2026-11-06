@@ -146,5 +146,5 @@ def test_the_link_checker_sees_the_forms_that_rot() -> None:
 
 def test_anchors_number_repeated_headings_and_ignore_fences_and_hashtags(tmp_path: Path) -> None:
     doc = tmp_path / "d.md"
-    doc.write_text("# Foo\n\n```\n# not a heading\n```\n\n## Foo\n\n#hashtag\n\n## Foo\n")
+    doc.write_text("# Foo\n\n```\n# not a heading\n```\n\n## Foo\n\n#hashtag\n\n## Foo\n", encoding="utf-8")
     assert _anchors(doc) == {"foo", "foo-1", "foo-2"}

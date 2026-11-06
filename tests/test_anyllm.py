@@ -14,6 +14,7 @@ import asyncio
 import json
 import sys
 import types
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -995,7 +996,7 @@ def test_a_dotenv_that_overrides_the_choice_is_named(
     from bristlenose.cli import app
 
     project_env = tmp_path / ".env"
-    project_env.write_text("BRISTLENOSE_LLM_PROVIDER=anthropic\n")
+    project_env.write_text("BRISTLENOSE_LLM_PROVIDER=anthropic\n", encoding="utf-8")
     monkeypatch.setattr(config, "_find_env_files", lambda: [Path(project_env)])
     monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
     result = CliRunner().invoke(app, ["use", "local"])
@@ -1706,18 +1707,43 @@ def test_use_any_llm_with_no_model_refuses_rather_than_switching(
     assert "needs a model" in result.output
 
 
-def test_the_snap_and_fedora_packages_say_any_llm_isnt_in_them(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("method", ["snap", "rpm"])
+def test_the_snap_and_fedora_packages_do_not_offer_a_pip_command_for_a_missing_sdk(
+    monkeypatch: pytest.MonkeyPatch, method: str
 ) -> None:
-    """Their Python has no usable pip, so the pip command was a dead end."""
+    """They carry any-llm, but their Python has no usable pip, so the inject
+    command for another provider's SDK was a dead end."""
     from bristlenose import doctor_fixes
 
-    monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: "snap")
-    lines = anyllm.explain(anyllm.Readiness("not-installed", model=MODEL))
-    assert "isn't part of this package" in lines[0]
-    assert not any("pip install" in line for line in lines)
+    ready = anyllm.Readiness("sdk-missing", model="cohere:command-r", inner="cohere")
+    monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: method)
+    lines = anyllm.explain(ready)
+    assert "doesn't include" in lines[0]
+    assert "Mistral, OpenRouter and DeepSeek" in lines[1] and "pipx" in lines[1]
+    assert not any("pip install" in line or "inject" in line for line in lines)
     monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: "pip")
-    assert "pip install" in " ".join(anyllm.explain(anyllm.Readiness("not-installed", model=MODEL)))
+    assert "pip install" in " ".join(anyllm.explain(ready))
+
+
+@pytest.mark.parametrize("method", ["snap", "rpm", "pip"])
+def test_first_run_guidance_offers_any_llm_on_every_channel(
+    monkeypatch: pytest.MonkeyPatch, method: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from bristlenose import cli, doctor_fixes
+
+    monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: method)
+    cli._print_provider_guidance()
+    assert "configure any-llm" in capsys.readouterr().out
+
+
+def test_the_packaging_names_the_any_llm_extra_wherever_it_builds() -> None:
+    """The snap, the SRPM script and the spec each name their extras; one that
+    drops any-llm ships a package that says the provider is missing."""
+    root = Path(__file__).resolve().parent.parent
+    assert '".[serve,voice,any-llm]"' in (root / "snap/snapcraft.yaml").read_text(encoding="utf-8")
+    assert 'BN_EXTRAS="serve,voice,any-llm"' in (root / "rpm/make-srpm.sh").read_text(encoding="utf-8")
+    spec = (root / "rpm/bristlenose.spec.in").read_text(encoding="utf-8")
+    assert '"%{name}[serve,voice,any-llm]==%{version}"' in spec
 
 
 def test_the_newer_python_hint_keeps_what_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:

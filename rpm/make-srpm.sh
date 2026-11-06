@@ -176,9 +176,11 @@ done
 echo "    pass B: the rest, as x86_64 wheels"
 # The extras the RPM ships. `voice` is the speaker voice pass (stage 5b:
 # kaldi-native-fbank, plus the onnxruntime faster-whisper already brings); it
-# is here for parity with the CLI and the Mac app. The spec's %install names the
-# same list; change both together.
-BN_EXTRAS="serve,voice"
+# is here for parity with the CLI and the Mac app. `any-llm` is the sixth
+# provider (Mistral, OpenRouter, DeepSeek): eight pure-Python wheels, 2.7 MB,
+# which are ours to track for CVEs. The spec's %install names the same list;
+# change both together.
+BN_EXTRAS="serve,voice,any-llm"
 # Resolve against the metadata of the wheel that will actually ship. Against
 # PyPI's, a release candidate that adds an extra the published version lacks
 # resolves WITHOUT it — pip says only "does not provide the extra" and goes on
@@ -234,11 +236,11 @@ done
 # An extra that the resolved bristlenose does not declare is a WARNING to pip,
 # not an error, so a dropped extra produces a complete-looking wheelhouse. Ask
 # the wheelhouse for each extra's own native wheels rather than trusting exit 0.
-for _w in "kaldi_native_fbank-*-cp${BN_TARGET_PY//./}-*.whl"; do
+for _w in "kaldi_native_fbank-*-cp${BN_TARGET_PY//./}-*.whl" "any_llm_sdk-*-py3-none-any.whl" "mistralai-*-py3-none-any.whl"; do
     ls "$WORK/vendor/"$_w >/dev/null 2>&1 || {
-        echo "error: no $_w in the wheelhouse — the voice extra did not resolve." >&2
+        echo "error: no $_w in the wheelhouse — the voice or any-llm extra did not resolve." >&2
         echo "       Does bristlenose $VERSION declare it? (PyPI releases before" >&2
-        echo "       the voice pass do not; build those without it.)" >&2
+        echo "       the voice pass or before 0.43.0's any-llm do not; build those without it.)" >&2
         exit 1
     }
 done

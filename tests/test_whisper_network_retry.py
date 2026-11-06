@@ -364,7 +364,7 @@ def test_a_filesystem_without_flock_does_not_lose_the_writers_partial(monkeypatc
     lockdir = hub / ".locks" / repo.name
     lockdir.mkdir(parents=True)
     lock = lockdir / "abc123.lock"
-    lock.write_text("")
+    lock.write_text("", encoding="utf-8")
 
     def no_flock(fd, **_kw):
         raise OSError(errno.ENOSYS, "no flock here")
@@ -381,7 +381,7 @@ def test_a_lock_file_that_cannot_be_opened_keeps_the_partial(monkeypatch, tmp_pa
     _old(repo / "blobs" / "abc123.deadbeef.incomplete")
     lockdir = hub / ".locks" / repo.name
     lockdir.mkdir(parents=True)
-    (lockdir / "abc123.lock").write_text("")
+    (lockdir / "abc123.lock").write_text("", encoding="utf-8")
     import os
 
     real_open = os.open

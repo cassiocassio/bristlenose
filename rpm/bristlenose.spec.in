@@ -90,8 +90,8 @@ sentiment, friction points and user journeys, which the researcher edits,
 shares, and keeps as a file they own.
 
 The pipeline runs on your own machine. The analysis is a call to a cloud LLM —
-Claude, ChatGPT, Azure OpenAI or Gemini — configured with `bristlenose
-configure`. Local models via Ollama are supported as a slower alternative.
+Claude, ChatGPT, Azure OpenAI, Gemini, or Mistral and OpenRouter through any-llm
+— configured with `bristlenose configure`. Local models via Ollama are supported as a slower alternative.
 
 Run `bristlenose doctor` after installing to check the environment.
 
@@ -111,12 +111,12 @@ python3 -m venv %{buildroot}%{bn_prefix}
 # --no-index is the whole point: if this ever reaches for the network, the
 # build must fail rather than quietly produce a differently-resolved package.
 # The extras match BN_EXTRAS in rpm/make-srpm.sh; `voice` is the speaker voice
-# pass (onnxruntime + kaldi-native-fbank). Its 40 MB model is NOT packaged: it is fetched on first
+# pass (onnxruntime + kaldi-native-fbank), `any-llm` the sixth provider. Its 40 MB model is NOT packaged: it is fetched on first
 # use into ~/.cache/bristlenose/models/, hash-pinned, exactly as on the CLI and
 # the Mac app (docs/design-voice-diarization.md).
 %{buildroot}%{bn_prefix}/bin/pip install \
     --no-index --find-links=vendor --no-cache-dir --no-compile \
-    "%{name}[serve,voice]==%{version}"
+    "%{name}[serve,voice,any-llm]==%{version}"
 
 # No spaCy model here. --redact-pii needs en_core_web_lg (~400 MB); this used
 # to install en_core_web_sm, which nothing loads.

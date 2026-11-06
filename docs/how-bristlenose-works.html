@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Bristlenose works</title>
+<!--
+  One picture of docs/ARCHITECTURE.md. Self-contained: no network, no scripts.
+  Trued 4 Nov 2026 against the tree: the 12-stage pipeline, the cloud LLM call,
+  serve mode (FastAPI + SQLite), the React SPA in a browser tab or the Mac app's
+  WKWebView, the read-only MCP endpoint, and the HTML export.
+  Keep it in step with ARCHITECTURE.md; when the two disagree, the doc wins.
+-->
+<style>
+:root{
+  --bg:#fbfaf8; --ink:#1d1d1f; --mute:#6b6b70; --line:#cfccc6; --card:#fff;
+  --read:#4f7cac; --trans:#6a994e; --und:#c97b2c; --rend:#8a5fb0; --out:#444;
+  --llm:#c0392b; --hot:#e8b923;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#17171a; --ink:#ececf0; --mute:#9a9aa3; --line:#3a3a42; --card:#202025; --out:#bbb; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 28px}
+h1{font-size:20px;margin:0 0 2px}
+p.sub{margin:0 0 12px;color:var(--mute)}
+svg{width:100%;height:auto;display:block}
+text{font-family:inherit;fill:var(--ink)}
+.t-mute{fill:var(--mute)}
+.box{fill:var(--card);stroke:var(--line);stroke-width:1.2}
+.chip{fill:var(--card);stroke:var(--line);stroke-width:1}
+.cap{font-size:12.5px}
+.sm{font-size:11px}
+.lbl{font-size:12px;font-weight:600}
+.flow{fill:none;stroke:var(--line);stroke-width:2;stroke-dasharray:5 5}
+.llm{stroke:var(--llm)}
+/* each group lights up in turn over a 16s loop */
+.grp rect.g{fill:none;stroke-width:2;opacity:.35;animation:pulse 16s infinite}
+.g1 rect.g{stroke:var(--read);animation-delay:0s}
+.g2 rect.g{stroke:var(--trans);animation-delay:2.2s}
+.g3 rect.g{stroke:var(--und);animation-delay:4.4s}
+.g4 rect.g{stroke:var(--rend);animation-delay:6.6s}
+@keyframes pulse{0%{opacity:.25;stroke-width:2}3%,12%{opacity:1;stroke-width:4}18%,100%{opacity:.25;stroke-width:2}}
+.step{opacity:0;animation:cap 16s infinite}
+.s1{animation-delay:0s}.s2{animation-delay:2.2s}.s3{animation-delay:4.4s}.s4{animation-delay:6.6s}
+.s5{animation-delay:9s}.s6{animation-delay:12s}
+@keyframes cap{0%{opacity:0}2%,12%{opacity:1}16%,100%{opacity:0}}
+.s5,.s6{animation-name:cap2}
+@keyframes cap2{0%{opacity:0}2%,18%{opacity:1}22%,100%{opacity:0}}
+.surf{opacity:.35;animation:surf 16s infinite}
+.u1{animation-delay:9s}.u2{animation-delay:9.6s}.u3{animation-delay:10.2s}.u4{animation-delay:10.8s}
+@keyframes surf{0%{opacity:.35}2%,22%{opacity:1}28%,100%{opacity:.35}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;color:var(--mute);font-size:13px}
+.legend b{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){
+  .grp rect.g{animation:none;opacity:1}
+  .step{animation:none;opacity:1;position:static}
+  .surf{animation:none;opacity:1}
+  animateMotion{display:none}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>How Bristlenose works</h1>
+<p class="sub">A folder of interview recordings in. A report you edit, share and keep as a file out.</p>
+
+<svg viewBox="0 0 960 640" role="img" aria-label="Diagram: a folder of recordings flows through the four groups of the twelve-stage pipeline, calling a cloud language model during analysis, into an output folder and SQLite database; the serve process then feeds the React report in a browser tab or the Mac app, a read-only agent endpoint, and a single-file HTML export.">
+
+  <!-- recordings -->
+  <g>
+    <rect class="box" x="20" y="150" width="130" height="86" rx="10"/>
+    <text class="lbl" x="85" y="178" text-anchor="middle">Interview folder</text>
+    <text class="sm t-mute" x="85" y="198" text-anchor="middle">audio · video</text>
+    <text class="sm t-mute" x="85" y="214" text-anchor="middle">transcripts · docx</text>
+  </g>
+
+  <!-- cloud LLM -->
+  <g>
+    <rect class="box" x="500" y="10" width="320" height="72" rx="10" style="stroke:var(--llm)"/>
+    <text class="lbl" x="660" y="32" text-anchor="middle">Cloud LLM</text>
+    <text class="sm t-mute" x="660" y="50" text-anchor="middle">Claude · ChatGPT · Azure OpenAI · Gemini</text>
+    <text class="sm t-mute" x="660" y="67" text-anchor="middle">local Ollama is the supported minority option</text>
+  </g>
+
+  <!-- pipeline groups -->
+  <g class="grp g1">
+    <rect class="box" x="180" y="120" width="170" height="146" rx="10"/><rect class="g" x="180" y="120" width="170" height="146" rx="10"/>
+    <text class="lbl" x="265" y="142" text-anchor="middle" style="fill:var(--read)">1 · Read</text>
+    <text class="sm" x="265" y="166" text-anchor="middle">ingest</text>
+    <text class="sm" x="265" y="184" text-anchor="middle">extract audio</text>
+    <text class="sm" x="265" y="202" text-anchor="middle">parse subtitles</text>
+    <text class="sm" x="265" y="220" text-anchor="middle">parse docx</text>
+    <text class="sm t-mute" x="265" y="250" text-anchor="middle">FFmpeg</text>
+  </g>
+  <g class="grp g2">
+    <rect class="box" x="362" y="120" width="170" height="146" rx="10"/><rect class="g" x="362" y="120" width="170" height="146" rx="10"/>
+    <text class="lbl" x="447" y="142" text-anchor="middle" style="fill:var(--trans)">2 · Transcribe &amp; clean</text>
+    <text class="sm" x="447" y="166" text-anchor="middle">transcribe</text>
+    <text class="sm" x="447" y="184" text-anchor="middle">identify speakers</text>
+    <text class="sm" x="447" y="202" text-anchor="middle">merge transcript</text>
+    <text class="sm" x="447" y="220" text-anchor="middle">PII removal</text>
+    <text class="sm t-mute" x="447" y="250" text-anchor="middle">on your machine</text>
+  </g>
+  <g class="grp g3">
+    <rect class="box" x="544" y="120" width="170" height="146" rx="10"/><rect class="g" x="544" y="120" width="170" height="146" rx="10"/>
+    <text class="lbl" x="629" y="142" text-anchor="middle" style="fill:var(--und)">3 · Understand</text>
+    <text class="sm" x="629" y="166" text-anchor="middle">topic segmentation</text>
+    <text class="sm" x="629" y="184" text-anchor="middle">quote extraction</text>
+    <text class="sm" x="629" y="202" text-anchor="middle">quote clustering</text>
+    <text class="sm" x="629" y="220" text-anchor="middle">thematic grouping</text>
+    <text class="sm" x="629" y="250" text-anchor="middle" style="fill:var(--llm)">LLM calls</text>
+  </g>
+  <g class="grp g4">
+    <rect class="box" x="726" y="120" width="124" height="146" rx="10"/><rect class="g" x="726" y="120" width="124" height="146" rx="10"/>
+    <text class="lbl" x="788" y="142" text-anchor="middle" style="fill:var(--rend)">4 · Render</text>
+    <text class="sm" x="788" y="172" text-anchor="middle">report data</text>
+    <text class="sm" x="788" y="190" text-anchor="middle">output files</text>
+    <text class="sm t-mute" x="788" y="250" text-anchor="middle">one report file</text>
+  </g>
+
+  <!-- connectors -->
+  <path class="flow" d="M150 193 H180"/>
+  <path class="flow" d="M350 193 H362"/>
+  <path class="flow" d="M532 193 H544"/>
+  <path class="flow" d="M714 193 H726"/>
+  <path class="flow llm" d="M629 120 V82"/>
+  <path class="flow llm" d="M690 120 V82"/>
+
+  <!-- traveller: one recording working through the stages -->
+  <circle r="7" fill="var(--hot)" stroke="var(--ink)" stroke-width="1">
+    <animateMotion dur="16s" repeatCount="indefinite"
+      path="M85 193 H265 H447 H629 H788 V300 H480 V345"/>
+  </circle>
+
+  <!-- output store -->
+  <g>
+    <rect class="box" x="300" y="330" width="360" height="84" rx="10"/>
+    <text class="lbl" x="480" y="356" text-anchor="middle">Output folder · SQLite</text>
+    <text class="sm t-mute" x="480" y="376" text-anchor="middle">transcripts · quotes JSON · manifest · event log</text>
+    <text class="sm t-mute" x="480" y="394" text-anchor="middle">researcher edits live in the per-project database</text>
+  </g>
+
+  <!-- serve -->
+  <g>
+    <rect class="box" x="360" y="440" width="240" height="52" rx="10"/>
+    <text class="lbl" x="480" y="462" text-anchor="middle">bristlenose serve</text>
+    <text class="sm t-mute" x="480" y="480" text-anchor="middle">FastAPI · 127.0.0.1 only · bearer token</text>
+  </g>
+  <path class="flow" d="M480 414 V440"/>
+
+  <!-- surfaces -->
+  <g class="surf u1">
+    <rect class="box" x="60" y="545" width="200" height="66" rx="10"/>
+    <text class="lbl" x="160" y="570" text-anchor="middle">Browser tab</text>
+    <text class="sm t-mute" x="160" y="590" text-anchor="middle">React report (the product UI)</text>
+  </g>
+  <g class="surf u2">
+    <rect class="box" x="280" y="545" width="200" height="66" rx="10"/>
+    <text class="lbl" x="380" y="570" text-anchor="middle">Mac app</text>
+    <text class="sm t-mute" x="380" y="588" text-anchor="middle">SwiftUI shell + WKWebView</text>
+    <text class="sm t-mute" x="380" y="603" text-anchor="middle">runs serve as a bundled sidecar</text>
+  </g>
+  <g class="surf u3">
+    <rect class="box" x="500" y="545" width="200" height="66" rx="10"/>
+    <text class="lbl" x="600" y="570" text-anchor="middle">Your own agent</text>
+    <text class="sm t-mute" x="600" y="588" text-anchor="middle">read-only MCP endpoint</text>
+    <text class="sm t-mute" x="600" y="603" text-anchor="middle">scoped token, one project</text>
+  </g>
+  <g class="surf u4">
+    <rect class="box" x="720" y="545" width="200" height="66" rx="10"/>
+    <text class="lbl" x="820" y="570" text-anchor="middle">HTML export</text>
+    <text class="sm t-mute" x="820" y="588" text-anchor="middle">one file you own, opens offline</text>
+    <text class="sm t-mute" x="820" y="603" text-anchor="middle">drops into Drive or SharePoint</text>
+  </g>
+  <path class="flow" d="M420 492 V520 H160 V545"/>
+  <path class="flow" d="M450 492 V520 H380 V545"/>
+  <path class="flow" d="M510 492 V520 H600 V545"/>
+  <path class="flow" d="M540 492 V520 H820 V545"/>
+
+  <!-- captions, one at a time -->
+  <g transform="translate(20,296)">
+    <text class="cap step s1" x="0" y="0">1. A folder goes in: audio, video, subtitles or existing transcripts.</text>
+    <text class="cap step s2" x="0" y="0">2. Words are transcribed on your machine and personal details redacted.</text>
+    <text class="cap step s3" x="0" y="0">3. Quotes, themes and sentiment come from one outbound call to your chosen model.</text>
+    <text class="cap step s4" x="0" y="0">4. Everything lands as files in a folder you own, plus a database for your edits.</text>
+    <text class="cap step s5" x="0" y="0">5. Serve mode turns that folder into the interactive report.</text>
+    <text class="cap step s6" x="0" y="0">6. Read it, ask it, or carry it away: the same code runs on the CLI and in the Mac app.</text>
+  </g>
+</svg>
+
+<p class="legend">
+  <span><b>Same code everywhere:</b> the CLI and the Mac app run the same Python; only packaging differs.</span>
+  <span><b>Cloud call:</b> the analysis stages are the only outbound LLM traffic.</span>
+  <span><b>Screens</b> never leave the machine unless you choose to export them.</span>
+</p>
+<p class="legend">Detail for every box: <a href="ARCHITECTURE.md">ARCHITECTURE.md</a>.</p>
+</main>
+</body>
+</html>

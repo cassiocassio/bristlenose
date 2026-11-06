@@ -176,7 +176,7 @@ def test_an_unsafe_study_is_refused_after_a_claim_like_a_cold_start(standby, stu
     # same refusal, with the same exit code, as `serve <path>` does.
     marker = pid_file_path(project_output_dir(study))
     marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text("{}")
+    marker.write_text("{}", encoding="utf-8")
     cold = subprocess.run(
         [sys.executable, "-m", "bristlenose", "serve", "--no-open", "--port", "0", str(study)],
         capture_output=True, text=True, env=_env(), timeout=90, stdin=subprocess.DEVNULL,

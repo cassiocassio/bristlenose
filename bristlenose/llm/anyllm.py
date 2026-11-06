@@ -382,10 +382,12 @@ def insecure_base(inner: str) -> bool:
 
 
 def packaged() -> bool:
-    """True in the Snap or the Fedora package, which don't carry any-llm.
+    """True in the Snap or the Fedora package.
 
-    Their Python is read-only (the snap) or has no pip (the RPM's venv), so the
-    pip command ``install_hint`` would print can't work there.
+    They carry any-llm with Mistral and OpenRouter (DeepSeek rides on the openai
+    SDK), but their Python is read-only (the snap) or has no pip (the RPM's
+    venv), so the pip command ``inject_hint`` would print for any other inner
+    provider's SDK can't work there.
     """
     from bristlenose.doctor_fixes import detect_install_method
 
@@ -455,11 +457,6 @@ def explain(ready: Readiness) -> list[str]:
     inner = ready.inner
     name = display_name(inner) if inner else ""
     if ready.status == "not-installed":
-        if packaged():
-            return [
-                "any-llm isn't part of this package.",
-                "To use it, install Bristlenose with pipx, uv or pip instead.",
-            ]
         return [
             "any-llm isn't installed in this copy of Bristlenose.",
             f"Add it:  {install_hint()}",
@@ -498,6 +495,12 @@ def explain(ready: Readiness) -> list[str]:
             line += f" Did you mean {ready.suggestion}?"
         return [line, "Providers: https://mozilla-ai.github.io/any-llm/providers/"]
     if ready.status == "sdk-missing":
+        if packaged():
+            return [
+                f"{name} needs an add-on this package doesn't include.",
+                "This package carries Mistral, OpenRouter and DeepSeek. For "
+                f"{name}, install Bristlenose with pipx, uv or pip instead.",
+            ]
         return [
             f"{name} needs an add-on this install doesn't have.",
             f"Add it:  {inject_hint(inner)}",

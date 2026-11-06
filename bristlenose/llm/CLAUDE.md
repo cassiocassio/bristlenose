@@ -68,7 +68,7 @@ API keys are stored securely in the system keychain. Uses native CLI tools — n
 
 ## any-llm (the sixth provider)
 
-`bristlenose/llm/anyllm.py` holds everything specific to mozilla-ai/any-llm (`any-llm-sdk`, optional extra `bristlenose[any-llm]`, exact pin `==1.44.0`, the first release allowing `anthropic>=1`; 1.27.1 to 1.43.0 cap `anthropic<1`). Provider id `anyllm` (aliases `any-llm`, `any_llm`), model in `anyllm_model` / `BRISTLENOSE_ANYLLM_MODEL` as `provider:model`. Plan and rationale: `docs/design-any-llm.md`.
+`bristlenose/llm/anyllm.py` holds everything specific to mozilla-ai/any-llm (`any-llm-sdk`, optional extra `bristlenose[any-llm]`, exact pin `==1.44.0`: it is the first release since 1.27.0 that allows `anthropic>=1.0` (1.27.1 to 1.43.0 cap `anthropic<1`, a resolver conflict with our floor). Carried by pip/pipx/uv, Homebrew, the Snap and the Fedora RPM, not the Mac app; the Snap and RPM can't add another inner provider's SDK, so `explain` points them at pipx). Provider id `anyllm` (aliases `any-llm`, `any_llm`), model in `anyllm_model` / `BRISTLENOSE_ANYLLM_MODEL` as `provider:model`. Plan and rationale: `docs/design-any-llm.md`.
 
 **The working rules for the any-llm provider (one readiness answer, schema as a dict, typed errors, no `temperature`/`max_tokens`, thinking off, gateway errors, refused inner prefixes, destination, retries, keys, telemetry, logging via `failure_summary`, Rich escaping, tests, per-inner-provider keys) are in [`gotchas.md`](gotchas.md#any-llm-the-sixth-provider), 17 bullets.** Read them before touching `bristlenose/llm/anyllm.py` or `--anyllm`. Design: `docs/design-any-llm.md`.
 

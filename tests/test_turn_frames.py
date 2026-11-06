@@ -59,7 +59,7 @@ def test_extract_writes_one_jpeg_per_frame_and_caches(tmp_path: Path) -> None:
     grab = _Grab()
     path = tf.extract_turn_frames("s1", video, frames, tmp_path / "out", grabber=grab)
     assert path == tmp_path / "out" / "s1.json"
-    rec = json.loads(path.read_text())
+    rec = json.loads(path.read_text(encoding="utf-8"))
     assert [f["t"] for f in rec["frames"]] == [15.0, 32.0]
     assert all(f["jpg"] for f in rec["frames"])
     assert rec["selection"] == tf.selection_key(frames)
@@ -88,19 +88,19 @@ def test_no_ffmpeg_is_written_down_as_incomplete_and_tried_again(tmp_path: Path)
 
     path = tf.extract_turn_frames("s1", video, frames, tmp_path, grabber=no_ffmpeg)
     assert path is not None
-    rec = json.loads(path.read_text())
+    rec = json.loads(path.read_text(encoding="utf-8"))
     assert rec["complete"] is False and rec["frames"] == [] and rec["selection"] == tf.selection_key(frames)
     grab = _Grab()
     tf.extract_turn_frames("s1", video, frames, tmp_path, grabber=grab)
     assert grab.calls == [15.0, 32.0]
-    assert json.loads(path.read_text())["complete"] is True
+    assert json.loads(path.read_text(encoding="utf-8"))["complete"] is True
 
 
 def test_a_missing_recording_is_written_down_too(tmp_path: Path) -> None:
     frames = tf.select_frames([(10.0, 50.0)], [])
     path = tf.extract_turn_frames("s1", tmp_path / "gone.mp4", frames, tmp_path, grabber=_Grab())
     assert path is not None
-    rec = json.loads(path.read_text())
+    rec = json.loads(path.read_text(encoding="utf-8"))
     assert rec["complete"] is False and rec["key"] is None and rec["selection"] == tf.selection_key(frames)
 
 
@@ -111,7 +111,7 @@ def test_a_record_is_written_even_when_every_grab_fails(tmp_path: Path) -> None:
     frames = tf.select_frames([(10.0, 50.0)], [])
     path = tf.extract_turn_frames("s1", video, frames, tmp_path, grabber=_Grab(fail=True))
     assert path is not None
-    rec = json.loads(path.read_text())
+    rec = json.loads(path.read_text(encoding="utf-8"))
     assert rec["frames"] == [] and rec["selection"] == tf.selection_key(frames)
     assert rec["complete"] is False
 

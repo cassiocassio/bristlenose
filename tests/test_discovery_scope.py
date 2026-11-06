@@ -93,17 +93,16 @@ class TestRefusal:
         assert s01_ingest._refuse_reason(tmp_path) is None
 
     def test_the_account_home_is_refused_when_home_is_a_container(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self, fake_home: Path,
     ) -> None:
         """The Mac app's sidecar runs with $HOME set to its sandbox container,
         so Path.home() alone never named /Users/<name> (RE#20 review, #110)."""
         pwd = pytest.importorskip("pwd")
         import os
 
-        monkeypatch.setenv("HOME", str(tmp_path))
         account_home = Path(pwd.getpwuid(os.getuid()).pw_dir)
         assert s01_ingest._refuse_reason(account_home) == "it is your home folder"
-        assert s01_ingest._refuse_reason(tmp_path) == "it is your home folder"
+        assert s01_ingest._refuse_reason(fake_home) == "it is your home folder"
 
     def test_refusal_happens_before_any_walking(self, tmp_path: Path,
                                                 monkeypatch: pytest.MonkeyPatch) -> None:

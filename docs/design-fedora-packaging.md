@@ -692,6 +692,13 @@ still open:**
    wheelhouse and a re-proof, and it happens on Fedora's schedule, not on release
    boundaries — the one recurring cost that is genuinely outside our control.
 5. **823 MB installed**, which the deferred split below says is the wrong shape.
+6. **The `any-llm` extra adds eight wheels to the CVE watch** (4 Nov 2026): `any-llm-sdk`
+   (exact-pinned in `pyproject.toml`), `mistralai`, `openresponses-types`,
+   `eval_type_backport`, `jsonpath-python`, `opentelemetry-semantic-conventions`,
+   `python-dateutil`, `tzdata`. All pure Python (`py3-none-any`), 2.7 MB, Apache-2.0, MIT
+   or BSD, so the `License:` line already covers them and the wheelhouse arch check
+   passes. `make-srpm.sh` asserts the any-llm and mistralai wheels the way it asserts
+   `kaldi_native_fbank`.
 
 ### What publishing obliges
 

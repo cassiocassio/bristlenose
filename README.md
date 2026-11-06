@@ -2,6 +2,8 @@
 
 Open-source user-research transcript analysis.
 
+**[Website](https://bristlenose.app)** · **[Docs](https://bristlenose.app/docs/)** · **[Install](#install)** ([full guide](INSTALL.md)) · **[Changelog](CHANGELOG.md)**
+
 Point Bristlenose at a folder of interview recordings – videos, audio or transcripts from Zoom, Teams or Google Meet. 
 
 It transcribes, identifies moderators and participants, extracts good verbatim quotes, groups them by screen and theme. Filler words are stripped, editorial context is (sparingly) added `[thus]`. Emotion and strong language are preserved.
@@ -45,19 +47,21 @@ The report includes:
 - **Clickable timecodes** -- jump to the exact moment in a **popout video player**
 - **Starred quotes** -- star, reorder
 - **Inline editing** -- fix transcription errors directly in the report
-- **Editable participant names** -- click the pencil icon to name participants in-browser; export edits as YAML
+- **Speaker names** -- click a speaker to confirm the name found, pick another or type one; undo with Cmd+Z
 - Filter and **export as CSV** into **Miro** and more
 - **Keyboard shortcuts** -- j/k navigation, s to star, t to tag, / to search, ? for help; multi-select with Cmd+click or Shift+j/k for bulk actions
 - **Codebook frameworks** -- import Nielsen's 10 Heuristics, Yablonski's Laws, Don Norman, Jesse James Garrett, or the Morville honeycomb, or build your own
 - **AutoCode** -- LLM proposes tags from your codebook; review with a confidence threshold
-- **Inspector panel** -- DevTools-style heatmaps and signal cards with Win/Problem/Niggle/Surprise flags
+- **Signals** -- cards for where a theme or sentiment concentrates, flagged Win, Problem, Niggle, Success or Surprising
+- **Discussion guide** -- a folder named "Discussion guide" beside the recordings; each question lists every session's answers
+- **Session timelines** -- each session opens into a strip of who spoke; in the Mac app, the shared screen too, with a Screens lens
 - **Word-level transcript highlighting** -- karaoke-style sync with video playback
-- **Video clip extraction** -- export starred quotes as video clips (FFmpeg stream-copy)
+- **Video clip extraction** -- export starred quotes as video clips, with optional subtitles
 - **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
 - **Send to Miro** -- push analysed quotes straight onto a Miro board (a native sheet on macOS; a panel in the browser report)
 - **Incremental analysis** -- add more interviews to a finished project and re-run; your starred, tagged, and edited quotes carry across, and new material is flagged
-- **Ask your study from your own agent** -- a read-only MCP endpoint hands Claude, Claude Code, ChatGPT or Codex four tools over your curated quotes, themes, signals and codebook; on macOS it installs into Claude Desktop as a one-click extension and into the ChatGPT app as a one-click plugin, with no address, token or permission to set, and each project is exposed only when you turn agent access on
-- **22 UI languages** -- en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; ten are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/) -- Catalan is the exception among them, seeded on top of a glossary its native reviewers ratified first)
+- **Ask your study from your own agent** -- a read-only MCP endpoint gives Claude, Claude Code, ChatGPT or Codex four tools over your quotes, themes, signals and codebook; on macOS it installs into Claude Desktop and the ChatGPT app in one click, and a project is exposed only when you turn agent access on
+- **22 UI languages** -- en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; most are machine-seeded previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
 
 
 ## Install
@@ -66,11 +70,11 @@ For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemin
 
 ### macOS (desktop app) — easiest
 
-Download **[Bristlenose.dmg](https://bristlenose.app/dmg/Bristlenose.dmg)**, drag to Applications, open it. The app prompts for your Claude API key on first launch and bundles everything else (Python, FFmpeg, Whisper). No terminal needed.
+Download **[Bristlenose.dmg](https://bristlenose.app/dmg/Bristlenose.dmg)**, drag to Applications, open it. It bundles Python and FFmpeg; Whisper downloads after launch. Accept the AI disclosure, then add a provider key in Settings ▸ LLM Provider. No terminal needed.
 
 First launch: because it's downloaded from the internet, macOS shows a "are you sure you want to open it?" confirmation — click **Open**. One time only. (The app is signed and notarised, so there's no "unidentified developer" block to work around.)
 
-Requires macOS 15 Sequoia, Apple Silicon (M1+).
+Requires macOS 15 Sequoia, Apple Silicon (M1+). The `.dmg` is a preview that stops working 30 days after it was built; it doesn't update itself.
 
 ### macOS (Homebrew), Linux, Windows
 
@@ -88,6 +92,9 @@ sudo snap install bristlenose --edge
 sudo dnf copr enable cassiocassio/bristlenose
 sudo dnf install bristlenose
 
+# Windows (PowerShell) -- installs uv, FFmpeg and Bristlenose, no administrator needed
+irm https://bristlenose.app/install.ps1 | iex
+
 # Linux / macOS / Windows (pipx or uv)
 pipx install bristlenose
 uv tool install bristlenose    # alternative
@@ -97,9 +104,9 @@ The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps
 
 The Snap and the Fedora package are both **amd64/x86_64 only** — on ARM Linux, use pipx.
 
-The `[voice]` extra is optional: `pipx install "bristlenose[voice]"` (add `--force` if Bristlenose is already installed) adds a voice pass to speaker identification, which tells two speakers apart by how they sound when the transcript doesn't already say who is speaking. It downloads a 40 MB model on first use (or with `bristlenose doctor --fetch`), runs on your machine, and is skipped without the extra. Set `BRISTLENOSE_VOICE_PASS=false` to turn it off. It isn't available on Windows with Python 3.14 yet, because one of its libraries has no Windows build for 3.14; Python 3.13 or earlier has it. (Quote the spec: `zsh` reads bare brackets as a glob, and only double quotes work in every shell, Windows `cmd` included.)
+The `[voice]` extra is optional: `pipx install "bristlenose[voice]"` (add `--force` if Bristlenose is already installed) adds a voice pass to speaker identification, which tells two speakers apart by how they sound when the transcript doesn't already say who is speaking. It downloads a 40 MB model on first use (or with `bristlenose doctor --fetch`), runs on your machine, and is skipped without the extra. Set `BRISTLENOSE_VOICE_PASS=false` to turn it off. It isn't available on Windows with Python 3.14 yet; use 3.13 or earlier. (Quote the spec: `zsh` reads bare brackets as a glob, and only double quotes work in every shell, Windows `cmd` included.)
 
-If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install --id Gyan.FFmpeg -e --source winget` on Windows).
+If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install --id Gyan.FFmpeg -e --source winget` on Windows). The Windows line above installs it.
 
 If you have Anaconda installed, its bundled Python may shadow newer system Pythons. Either `conda deactivate` before running pip/pipx, or install via Homebrew (which uses its own bundled Python 3.12).
 
@@ -172,32 +179,25 @@ bristlenose run interviews -o results/ --llm gemini
 
 ### Option E: Local AI (via Ollama) — free, no signup
 
-Run analysis entirely on your machine using open-source models. No account, no API key, no cost.
-
-1. Install [Ollama](https://ollama.com) (one download, no signup)
-2. Run bristlenose — it will offer to set up local AI automatically:
+Open-source models on your machine. No account, no API key, no cost.
 
 ```bash
-bristlenose interviews
-
-# Or explicitly:
+bristlenose configure local          # installs Ollama if needed (Homebrew, snap or winget), starts it, downloads a model
 bristlenose run interviews --llm local
 ```
 
-If Ollama isn't installed, bristlenose will offer to install it for you (via Homebrew on macOS, snap on Linux).
-
-**Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
+**Trade-offs:** Local models are slower and less reliable than a cloud model. Good for trying the tool; use a cloud provider for production quality.
 
 ### Option F: Other providers, through any-llm
 
-On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew includes it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
+On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew, the Snap and the Fedora package include it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
 
 ```bash
 pipx install --force "bristlenose[any-llm]"    # or: uv tool install --force "bristlenose[any-llm]"
 bristlenose configure any-llm
 ```
 
-If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages don't include it.
+If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages carry Mistral, OpenRouter and DeepSeek only; any other provider's add-on needs pipx or uv.
 
 `configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already set in your shell (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`…; a `.env` file isn't read for these). It checks the key, stores it like the others, and makes it your provider. A key set in your shell takes precedence over the stored one. Switch between models you've set up with `bristlenose use deepseek:deepseek-v4-pro`, and back with `bristlenose use claude`.
 
@@ -263,7 +263,7 @@ Then open a new terminal window (or run `source ~/.zshrc` / `source ~/.bashrc`).
 bristlenose interviews
 ```
 
-That's it. Point it at a folder containing your recordings and it will produce the report inside that folder. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
+Once a provider is configured, that's it. Point it at a folder containing your recordings and it will produce the report inside that folder. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
 
 Open `interviews/bristlenose-output/bristlenose-interviews-report.html` in your browser.
 
@@ -323,7 +323,7 @@ Via a `.env` file or environment variables (prefix `BRISTLENOSE_`). See `.env.ex
 
 ### Hardware
 
-Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU.
+Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU. The Mac app on macOS 26+ uses Apple's on-device speech while Whisper downloads.
 
 ---
 
@@ -331,7 +331,7 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 
 ### Analysis
 
-- **Your own themes** -- create, rename and reorder themes manually, not just the AI-generated ones
+- **Your own themes** -- create and reorder themes manually, not just the AI-generated ones
 
 ### Sharing
 
@@ -339,7 +339,7 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 
 ### Platform
 
-- **Windows installer** -- native setup wizard so you don't need Python or the command line
+- **Windows installer** -- a click-through setup (the PowerShell line above is the interim)
 - **Moderator identity across sessions** -- name each session's moderator from the meeting platform's own label or your pick, so sessions run by different people stop sharing one moderator name
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
@@ -382,7 +382,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~4300 Python tests; frontend has ~1700 Vitest tests (`npm test` in frontend/)
+.venv/bin/python -m pytest tests/    # ~9,000 Python tests; frontend has 3,000+ Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```
@@ -403,7 +403,7 @@ for the full project layout. The short version:
 - `bristlenose/server/` -- FastAPI + SQLite + SQLAlchemy data layer behind serve mode
 - `bristlenose/stages/` -- 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/llm/` -- multi-provider client + prompt templates (Markdown)
-- `bristlenose/locales/` -- 22 UI locales (en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr)
+- `bristlenose/locales/` -- 22 UI locales
 - `desktop/` -- SwiftUI macOS shell that bundles a signed PyInstaller sidecar
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point
@@ -411,7 +411,7 @@ for the full project layout. The short version:
 
 ### Releasing
 
-Edit `bristlenose/__init__.py` (the single source of truth for version), commit, tag, push. GitHub Actions handles CI, build, and PyPI publishing automatically. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Run `scripts/bump-version.py` (`bristlenose/__init__.py` is the single source of the version), commit, tag, then push `main` and the tag separately. GitHub Actions handles CI, build, and PyPI publishing. `scripts/release.sh` drives the whole chain; see [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/release.md](docs/release.md).
 
 ---
 

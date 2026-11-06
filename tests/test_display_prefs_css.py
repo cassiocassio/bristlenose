@@ -44,7 +44,7 @@ def test_registered_after_the_grid_rule_it_overrides() -> None:
 def test_single_column_reuses_the_existing_reading_width_not_a_second_one() -> None:
     """Discussion already caps at --bn-max-width; Single column must use the same token."""
     assert "max-width: var(--bn-max-width)" in CSS
-    assert "--bn-quote-single-width" not in (THEME / "tokens.css").read_text()
+    assert "--bn-quote-single-width" not in (THEME / "tokens.css").read_text(encoding="utf-8")
     assert "--bn-quote-single-width" not in CSS
 
 

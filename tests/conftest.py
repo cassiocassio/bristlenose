@@ -270,6 +270,22 @@ def no_discussion_stage(monkeypatch):
     monkeypatch.setattr(Pipeline, "_run_discussion", AsyncMock(return_value=None))
 
 
+@pytest.fixture
+def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """An empty ``tmp_path / "home"`` that ``Path.home()`` returns on every OS.
+
+    ``HOME`` alone reaches it on macOS and Linux only: Windows' ``Path.home()``
+    reads ``USERPROFILE``, so the tests that set ``HOME`` by hand ran against
+    the runner's real profile on windows-latest (0.43.0, 24 Oct 2026). Fake the
+    home folder here rather than with a bare ``setenv("HOME")``.
+    """
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    return home
+
+
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(

@@ -285,7 +285,7 @@ def test_transcribe_redoes_a_session_the_cache_file_does_not_hold(tmp_path: Path
     # Recorded complete in the manifest but not in the file: transcribed, not
     # lost (and not reported as a silent recording).
     assert after["transcribed"] == [["s2"]], after
-    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text()
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text(encoding="utf-8")
 
 
 def test_transcribe_redoes_everything_over_a_corrupt_cache_file(tmp_path: Path) -> None:
@@ -380,9 +380,9 @@ def test_a_run_after_analyze_keeps_what_analyze_paid_for(tmp_path: Path) -> None
     # At HEAD: {'quoted': [['s1', 's2']], 'topics': [['s1', 's2']]}.
     assert not {"topics", "quoted", "clustered"} & set(after), after
     # It kept analyze's analysis, not the run's older one.
-    maps = json.loads(_intermediate(tmp_path, "topic_boundaries.json").read_text())
+    maps = json.loads(_intermediate(tmp_path, "topic_boundaries.json").read_text(encoding="utf-8"))
     assert {m["boundaries"][0]["topic_label"] for m in maps} == {"Analysed"}, maps
-    quotes = json.loads(_intermediate(tmp_path, "extracted_quotes.json").read_text())
+    quotes = json.loads(_intermediate(tmp_path, "extracted_quotes.json").read_text(encoding="utf-8"))
     assert {q["text"].split(" from")[0] for q in quotes} == {"Quote 10", "Quote 11", "Quote 12"}
 
     # And the run after that, on the run's own record, redoes nothing.
@@ -439,7 +439,7 @@ def test_a_copy_beside_its_transcript_is_never_vouched_for(tmp_path: Path) -> No
     _drive(tmp_path, "run", 2, after)
 
     assert after.get("quoted") == [["s1"]], after
-    maps = json.loads(_intermediate(tmp_path, "topic_boundaries.json").read_text())
+    maps = json.loads(_intermediate(tmp_path, "topic_boundaries.json").read_text(encoding="utf-8"))
     assert sorted(m["session_id"] for m in maps) == ["s1", "s2"], maps
 
 
@@ -607,7 +607,7 @@ def test_run_transcribes_a_session_the_cache_file_does_not_hold(tmp_path: Path) 
     assert result.summary.transcripts.failed == [], result.summary.transcripts
     # s3 is the one new interview; s2 is one the project already had.
     assert result.summary.new_sessions == 1, result.summary
-    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text()
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text(encoding="utf-8")
 
 
 def test_run_transcribes_a_session_a_verified_cache_file_does_not_hold(
@@ -622,9 +622,9 @@ def test_run_transcribes_a_session_a_verified_cache_file_does_not_hold(
 
     assert after["transcribed"] == [["s2"]], after
     assert result is not None and result.summary.new_sessions is None, result
-    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text()
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text(encoding="utf-8")
     # And the run heals the file, so the next one serves s2 from it.
-    assert "s2" in json.loads(_intermediate(tmp_path, "session_segments.json").read_text())
+    assert "s2" in json.loads(_intermediate(tmp_path, "session_segments.json").read_text(encoding="utf-8"))
     again: dict = {}
     _drive(tmp_path, "run", 2, again)
     assert "transcribed" not in again, again
@@ -877,7 +877,7 @@ def test_an_unreadable_transcript_beside_one_that_worked_is_not_a_failed_session
     # so it is complete. Recorded failed, it was transcribed again every run.
     _drive(tmp_path, "run", 1, {}, broken_docx=True, beside=beside)
     manifest = json.loads(
-        (tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json").read_text()
+        (tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["stages"]["transcribe"]["sessions"]["s2"]["status"] == "complete"
 
@@ -916,7 +916,7 @@ def test_run_identifies_again_over_a_malformed_speaker_cache(
 
     # Before the fix: a ValidationError out of run(). Now s1 is asked again.
     assert any("s1 session" in text for text in log.get("roles", [])), log
-    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s1.txt").read_text()
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s1.txt").read_text(encoding="utf-8")
 
 
 # ── transcribe: the line says what it did ────────────────────────────────────

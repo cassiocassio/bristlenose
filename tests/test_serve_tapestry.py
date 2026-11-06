@@ -96,7 +96,7 @@ def test_scene_colours_are_matched_to_turns_by_time(tmp_path: Path) -> None:
         # The pipeline's last turn ends at the last speech, short of the recording's end; the
         # route's last turn runs to the end, so its midpoint can fall past this one.
         {"t0": 30, "t1": 40, "speaker": "x", "colour": "#112233", "share": 0.3},
-    ]}))
+    ]}), encoding="utf-8")
     client = AuthTestClient(create_app(project_dir=project, dev=True, db_url="sqlite://"))
     turns = _session(client)["turns"]
     for t in turns:
@@ -109,7 +109,7 @@ def test_an_unreadable_colours_file_degrades_to_none(tmp_path: Path) -> None:
     shutil.copytree(_FIXTURE_DIR, project)
     out = project / "bristlenose-output" / ".bristlenose" / "intermediate" / "scene-colours"
     out.mkdir(parents=True)
-    out.joinpath("s1.json").write_text("{not json")
+    out.joinpath("s1.json").write_text("{not json", encoding="utf-8")
     client = AuthTestClient(create_app(project_dir=project, dev=True, db_url="sqlite://"))
     assert all(t["colour"] is None for t in _session(client)["turns"])
 
@@ -123,7 +123,7 @@ def test_an_unreadable_strip_file_degrades_to_none(tmp_path: Path) -> None:
     shutil.copytree(_FIXTURE_DIR, project)
     out = project / "bristlenose-output" / ".bristlenose" / "intermediate" / "scene-strips"
     out.mkdir(parents=True)
-    out.joinpath("s1.json").write_text('{"fps": 4}')  # half a record: serve may be mid-write
+    out.joinpath("s1.json").write_text('{"fps": 4}', encoding="utf-8")  # half a record: serve may be mid-write
     client = AuthTestClient(create_app(project_dir=project, dev=True, db_url="sqlite://"))
     assert _session(client)["strip"] is None
 

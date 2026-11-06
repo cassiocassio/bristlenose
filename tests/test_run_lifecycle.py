@@ -770,7 +770,7 @@ def _owned_attempt(out: Path, monkeypatch, *, pid: int, start: str) -> None:
         process=Process(pid=pid, start_time=start, hostname="test", user="u",
                         bristlenose_version="0", python_version="3.12", os="test")))
     pid_file_path(out).write_text(json.dumps({
-        "pid": pid, "start_time": start, "run_id": "OLD", "machine_id": "test-machine"}))
+        "pid": pid, "start_time": start, "run_id": "OLD", "machine_id": "test-machine"}), encoding="utf-8")
 
 
 def test_stale_pid_file_with_dead_pid_does_not_refuse(tmp_path: Path, monkeypatch):
@@ -1168,7 +1168,7 @@ def _run_whose_parent_leaves(tmp_path: Path, host_env: dict[str, str]):
             check=True, timeout=90,
         )
     finally:
-        go.write_text("app gone")
+        go.write_text("app gone", encoding="utf-8")
     landed = _wait_for_event(
         f, lambda e: isinstance(e, (RunCancelledEvent, RunFailedEvent)), timeout=60.0,
     )

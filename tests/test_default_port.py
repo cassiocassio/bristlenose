@@ -52,7 +52,7 @@ MIRRORS = {
 
 @pytest.mark.parametrize("path", sorted(MIRRORS))
 def test_text_mirrors_carry_the_constant(path: str) -> None:
-    text = (ROOT / path).read_text()
+    text = (ROOT / path).read_text(encoding="utf-8")
     found = {int(n) for n in re.findall(MIRRORS[path], text)}
     assert DEFAULT_SERVE_PORT in found, f"{path} does not mention {DEFAULT_SERVE_PORT}"
     if path.startswith(("frontend/vite", "e2e/")):
@@ -60,7 +60,7 @@ def test_text_mirrors_carry_the_constant(path: str) -> None:
 
 
 def test_launch_json_serve_main_port() -> None:
-    cfg = json.loads((ROOT / ".claude/launch.json").read_text())
+    cfg = json.loads((ROOT / ".claude/launch.json").read_text(encoding="utf-8"))
     serve = next(c for c in cfg["configurations"] if c["name"] == "serve-main")
     assert serve["port"] == DEFAULT_SERVE_PORT
 

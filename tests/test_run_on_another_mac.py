@@ -287,7 +287,7 @@ def test_startup_recovery_requires_positive_ownership(tmp_path, monkeypatch, mar
     _seed_report(output_backup.backup_path_for(out), "THE PREVIOUS REPORT")
     _seed_run_in_flight(out, host=socket.gethostname())
     path = pid_file_path(out)
-    marker = json.loads(path.read_text())
+    marker = json.loads(path.read_text(encoding="utf-8"))
     if marker_kind == "foreign":
         marker["machine_id"] = "another-machine"
     elif marker_kind == "legacy":
@@ -296,11 +296,11 @@ def test_startup_recovery_requires_positive_ownership(tmp_path, monkeypatch, mar
         marker["run_id"] = "different-run"
     elif marker_kind == "unknown-local":
         monkeypatch.setattr("bristlenose.utils.machine_identity.machine_id", lambda: None)
-    path.write_text(json.dumps(marker))
+    path.write_text(json.dumps(marker), encoding="utf-8")
     if marker_kind == "missing":
         path.unlink()
     elif marker_kind == "malformed":
-        path.write_text("{broken")
+        path.write_text("{broken", encoding="utf-8")
     before = {p.relative_to(out.parent): p.read_bytes()
               for p in out.parent.rglob("*") if p.is_file()}
 
@@ -316,7 +316,7 @@ def test_pid_writer_records_machine_ownership(tmp_path, monkeypatch):
 
     monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "stable-owner")
     path = _write_pid_file(tmp_path, "attempt", "process-start")
-    assert json.loads(path.read_text())["machine_id"] == "stable-owner"
+    assert json.loads(path.read_text(encoding="utf-8"))["machine_id"] == "stable-owner"
 
 
 @pytest.mark.parametrize("ownership", ["foreign", "legacy", "wrong-run"])
@@ -331,12 +331,12 @@ def test_server_factory_preserves_uncertain_run_before_first_write(tmp_path, mon
     _seed_report(output_backup.backup_path_for(out), "PREVIOUS")
     _seed_run_in_flight(out, host=_OTHER_MAC)
     marker_path = pid_file_path(out)
-    marker = json.loads(marker_path.read_text())
+    marker = json.loads(marker_path.read_text(encoding="utf-8"))
     if ownership == "legacy":
         marker.pop("machine_id")
     elif ownership == "wrong-run":
         marker.update(machine_id=machine_id(), run_id="another-attempt")
-    marker_path.write_text(json.dumps(marker))
+    marker_path.write_text(json.dumps(marker), encoding="utf-8")
     before = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
 
     class FirstWriterReachedError(Exception):
@@ -361,9 +361,9 @@ def test_local_malformed_process_marker_never_authorises_recovery(tmp_path, key,
     _seed_report(output_backup.backup_path_for(out), "PREVIOUS")
     _seed_run_in_flight(out, host=socket.gethostname())
     path = pid_file_path(out)
-    marker = json.loads(path.read_text())
+    marker = json.loads(path.read_text(encoding="utf-8"))
     marker[key] = value
-    path.write_text(json.dumps(marker))
+    path.write_text(json.dumps(marker), encoding="utf-8")
     before = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
     assert output_backup.reclaim_after_crash(out) is output_backup.RestoreOutcome.NOTHING_TO_DO
     after = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}

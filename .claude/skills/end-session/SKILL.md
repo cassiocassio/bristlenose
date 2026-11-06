@@ -505,7 +505,7 @@ If this session did **not** identify follow-up branches, skip this step.
 
 16. **Branch cleanup** — check for merged feature branches that can be deleted. Ask before deleting.
 
-17. **Push decision** — don't push by default. Remind about the evening release rule (after 9pm London on working days; weekends and UK bank holidays any time). If they want to see work remotely before release: `git push origin main:wip`. Push only if the user says to.
+17. **Push decision** — don't push by default, and say nothing about pushing unless there is a reason to. Pushing `main` publishes nothing and is allowed at any hour (the **tag** is the release act, and it is what waits for the evening window), but the standing line is that nothing is pushed without the owner's say, and the owner avoids pushing in the London working day. **Don't suggest `git push origin main:wip`:** it is a dev-world convention the owner does not use (solo, trunk on `main`); it began in Feb 2026 as a release-window workaround and that job was retired on 23 Aug 2026 (`docs/release-channels.md`). The one reason to raise an off-machine copy is a failing local backup (`ls ~/.config/code-backup/ | grep HEALTHCHECK` shows `HEALTHCHECK-FAILING`): then say so, and ask first.
 
 18. **CI verification** — only if pushed. Check the latest push passes CI.
 
@@ -527,5 +527,5 @@ End of session:
 - Sentinel: wrote .claude/last-end-session.json (HEAD <short-sha>)
 - Maintenance: nothing due (or "May 2026 dep review is due")
 - QA backlog: 0 unacked (or "3 items need review")
-- Not pushed (evening release rule — push with `git push origin main`)
+- Not pushed (N commits ahead of `origin/main`)
 ```

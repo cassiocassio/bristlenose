@@ -74,8 +74,18 @@ macOS delivers nothing until the researcher has allowed it, so "on by default" m
 2. **How:** the system's own prompt, from the standard authorization request for alert and sound (no badge: see below). **The system alert has no text of ours in it that I could find**, so the in-context moment is the only explanation the researcher gets. That is a real risk: a bare "Bristlenose would like to send you notifications" arriving as an analysis starts could be declined by reflex. I did not verify whether macOS lets an app supply any wording in this alert; for notifications it appears not to. Test it on a first run.
 3. **A pre-alert screen of our own is allowed, but not needed, and not proposed.** Apple permits one "if it's essential to provide additional details", with strict rules: a single button called "Continue" or "Next" that opens the system alert, and no Cancel or Close. The privacy page names camera, microphone, location, contacts, calendar and tracking in that guidance, not notifications, so I am applying it by analogy. If the first-run test shows reflex declines, a one-line pre-alert is the fallback, built to those rules.
 4. **If allowed:** nothing more to say.
-5. **If declined:** nothing is asked again, and **the platform enforces this**: Apple's documentation says later authorization requests do not prompt. The app can only point the researcher to System Settings. The Settings row reads as unavailable with one line saying why, and has no button that re-asks.
+5. **If declined:** nothing is asked again, and **the platform enforces this**: Apple's documentation says later authorization requests do not prompt. The app can only point the researcher to System Settings. The Settings row reads as unavailable with one line saying why, and an "Open Notification Settings…" button (see the observation below); it never re-asks.
 6. **If never asked or declined, and a run ends:** no banner and no fallback chime. Check the authorization status before posting anything (Apple's guidance: people can change it at any time).
+
+**Observed on this Mac, macOS 27.0 (6 Nov 2026), in the spike** (two screenshots from the owner, and the spike's log):
+- **The permission request is a temporary banner, not a modal alert.** It reads "“SpikeSubject” Notifications — Notifications may include alerts, sounds and icon badges." That is the system's fixed text, which confirms the earlier worry: **no wording of ours can be in it.**
+- **In the spike the request came back "not granted" 4.5 seconds after it started, and System Settings then showed Allow notifications switched off for the app.** I cannot tell from the screenshots whether the banner was clicked or expired unattended. If an unanswered banner resolves as a denial, then a researcher who clicks Analyse and looks away loses the feature **silently and for good**, because the app cannot ask again. Either way the design should not leave the one chance to the luck of where their eyes are.
+- **Two responses, both small:** (a) reconsider the one-button pre-alert (Apple's "Continue" rules, above): it makes the researcher stop and look at the moment the system banner appears, so it is no longer "not needed", it is the thing that stops a missed banner becoming a permanent denial. (b) The Settings row, when notifications are off in System Settings, carries an **"Open Notification Settings…" button**. That is not a re-ask (it opens the system pane for the app, the one place a decision can be changed); my earlier line "no button" should have said "no button that re-asks".
+
+**What System Settings gives the researcher, per app** (same screenshot): where it appears (desktop, Notification Centre, Lock Screen), **Alert style (Temporary or Persistent)**, sound, previews (Default), grouping (Automatic), and "Summarise notifications" **switched on by default for the app**. Three consequences for us:
+- **A temporary banner goes away after a few seconds.** The whole case here is the researcher being away, so what they will actually find is the entry in the notification list (and the Lock Screen, if locked). The banner is a first nudge, not a sign that waits for them. Researchers who want it to stay can set Persistent; we cannot force that.
+- **If a researcher uses Scheduled Summary, an ordinary notification can be held for the next summary**, which would delay "finished" by hours without any error. Apple's interruption levels are the lever: Time Sensitive overrides scheduled delivery and breaks through a Focus; the default does not. I proposed the default (respect the researcher's schedule). That is now an open decision, not a settled one (below).
+- **Everything in that pane is the researcher's; we build none of it.** (Consistent with "what the platform already does for us".)
 
 **Provisional ("quiet trial") authorization is confirmed unsuitable.** Apple's page says provisional notifications are delivered quietly: no sound, no banner, no lock screen, only an entry in Notification Center history, with Keep and Turn Off buttons. Its one real advantage is that it needs no up-front prompt. Its cost is that the first "your analysis finished" would arrive silently, which is exactly when the researcher has walked away. So it is not used, with the trade-off stated.
 
@@ -188,15 +198,19 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 4. The reason strings' final form.
 5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
 
-6. Whether to test a one-line pre-alert if first runs show reflex declines.
+6. The one-button pre-alert: now recommended rather than a fallback, because of the temporary banner (see the observation in the permission flow). Owner's call.
 7. The Dock bounce (recommended out of the first version).
 8. The title/body order and the session count in the body (proposed above, following what the owner's own notifications look like).
 9. Run the foreground spike before the gate is fixed.
 
-*Decided since the last draft:* sentence case and fragments (owner, 6 Nov).
+10. The interruption level: the default (respects a researcher's Scheduled Summary and Focus) or Time Sensitive (overrides both, for an event they are waiting on). I lean to the default, and to checking how often a held notification actually happens.
+11. Accept that a temporary banner vanishes in seconds and the list entry is what an away researcher finds.
+
+*Decided since the last draft (owner, 6 Nov):* sentence case and fragments; no Dock bounce; duration in the finished banner; "N of M sessions are done" on a failure, once "done" is defined.
 
 ## What I could not verify
 
+- **Spike status (6 Nov):** a notifying app was refused ("Failed to find or validate client") while it sat in a temporary folder, ad-hoc or development-signed, and validated once copied into `~/Applications`. A Debug build run from Xcode's DerivedData folder should be checked for the same thing before anyone concludes notifications do not work in a dev build. The foreground cases have not been run yet: the app was denied permission (above) and needs Allow switched on in System Settings.
 - That macOS's own foreground rule matches the hidden, buried, full-screen and other-Space cases, and its behaviour for a minimised window; whether suppression keeps the entry out of the notification list; whether a repeated request identifier replaces an earlier entry; what the Dock attention request does under Focus; that a nil trigger delivers at once (standard behaviour, not stated on the pages I read).
 - The exact entitlement or capability a sandboxed Mac App Store build needs to post local notifications: believed to be none, from memory.
 - Whether the system notification-permission alert on macOS can carry any wording of ours (it appears not to), and whether provisional authorization behaves the same on macOS as on iOS; the page I read describes it generally.

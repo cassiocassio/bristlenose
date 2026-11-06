@@ -306,6 +306,14 @@ the evidence sits.
 - **`commit-msg` hook scans for private-content leakage.** A `commit-msg` hook (`~/.bristlenose-leak-patterns`) blocks commits whose **message** references private-only patterns. The pre-commit hook only blocks the diff; this one blocks the message. Workaround: rephrase the message to drop the reference (e.g. "see the gitignored plan note" or just omit the pointer). Don't `--no-verify` — fix the message. The hook list lives at `~/.bristlenose-leak-patterns`. **The leak patterns include filename stems too**, not just paths: `road-to-alpha`, `sprint2-tracks`, `100days`, `qa-backlog`, `succession-plan` — referencing any of these in a commit message (or in a public doc, via the PreToolUse `leak-scan.sh` hook) blocks. Use indirect language: "alpha-checkpoint planning notes" instead of "road-to-alpha", "sprint planning notes" instead of "sprint2-tracks". The same `leak-scan.sh` hook also fires on Edit/Write to public docs that contain these strings — applies symmetrically. **The bare directory path `docs/private/` is itself a blocked pattern**, not just the filename stems — so a new public doc can't even name the directory when pointing at maintainer-only material. Write "the maintainer's private planning notes, kept outside the public repo/tree" instead of `docs/private/<file>` (cost two write-retries authoring `docs/ARCHITECTURE.md`, 14 Jul 2026).
 - **Python 3.14's `ensurepip` is broken for `python -m venv` on some macOS installs.** If default `python3` points at 3.14 (brew-installed), `/new-branch` (or plain `python3 -m venv .venv`) fails with `ensurepip --upgrade --default-pip returned non-zero exit status 1`. Fix: use `python3.12 -m venv .venv` explicitly — 3.12 is what CI uses and what every other worktree uses. This will shake out when 3.14 tooling stabilises, but as of April 2026 it's a real papercut on fresh worktree setup
 
+### A fresh venv's bundled pip (24.0) can stall for twenty minutes on a heavy extras install — upgrade pip first
+
+`python3.12 -m venv` ships whatever pip the interpreter bundled (24.0 here). Installing `-e ".[dev,serve,voice,any-llm]"` with it sat at about 1% CPU for over 20 minutes with an empty log, then had to be killed; the same install after `pip install -U pip` finished in about 45 seconds. Nothing errors, so it looks like a slow network. **Tell:** a resolver that is quiet and idle. Run `python -m pip install -U pip` in every new venv before installing extras, and use `--progress-bar off` plus a log file when it runs in the background. (6 Nov 2026, the any-llm 1.44.0 trial.)
+
+### `pkill -f <pattern>` kills the shell that contains `<pattern>`
+
+The Bash tool's command line holds the pattern too, so `pkill -f 'scratchpad/dev/bin/python'` matched and killed its own shell: exit code 144, and every later line of the call never ran (the install log it was meant to protect was left stale, which read as "install exit 143"). Same family as the `pgrep -f` waiter that matches itself, with a worse outcome. Kill by PID from `ps -eo pid,etime,cmd`, or start the job under `setsid nohup` and keep its PID. (6 Nov 2026.)
+
 ## Git, worktrees and concurrent sessions
 
 ### A guard that gates the COMMIT does not gate the PUSH — and pre-commit's pre-push stage checks ONE ref
@@ -397,6 +405,10 @@ A live `release.sh run` makes the `release-freeze` hook refuse commits in this c
 - **Land with `git merge`, not cherry-pick**, so the hold's commit ids stay the ones another session or `verify` sees as merged.
 - **The freeze guards commits, not your uncommitted edits — and those are the bigger risk.** The release builds the sidecar from the main working tree, so edits you have in progress there when it starts either fail its dirty-tree check (a lost release night) or get bundled into what ships. When `.release/<v>/.lock` appears, move your uncommitted work off main before anything else: back it up (`git diff HEAD > patch`, tar the untracked files), apply it in the clone, compare byte for byte, then put each tracked file back with `git show HEAD:<path> > <path>` and delete your untracked files. Done 18 Oct 2026 for the Apple-first work, at 0.41.0's confirm prompt, before its sidecar build.
 - **`git merge -F -` does not read stdin** (unlike `git commit -F -`): it fails `could not read file '-'` and merges nothing. Write the message to a file and pass its path.
+
+### `git commit -F- -- <path>` refuses a file git has never seen
+
+For a brand-new file the pathspec form errors with `pathspec '<path>' did not match any file(s) known to git` and commits nothing, and the push that follows says "Everything up-to-date", so it reads as success. `git add <path>` first (it stages only that file, which the shared-index rule is happy with), then the usual `git commit -F- -- <paths>`. Check `git log --oneline -1` before pushing. (6 Nov 2026.)
 
 ## Tests, gates and verification
 

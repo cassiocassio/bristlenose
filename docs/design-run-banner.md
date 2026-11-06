@@ -25,9 +25,9 @@ The run's end kinds are the ones `PipelineRunner` already distinguishes. Seam na
 
 | The run ended as… | Banner? | Title | Body |
 |---|---|---|---|
-| Completed (`run_completed`, no failed session) | yes | Bristlenose · project | Analysis finished · N sessions |
-| Completed with some sessions failed (`.completedPartial`) | yes | Bristlenose · project | Analysis finished with failures · N of M sessions |
-| Failed (`.failedWithDiagnostic`, or `.failed`) | yes | Bristlenose · project | The analysis didn’t finish, plus the reason (from the run's cause category) and the sessions done |
+| Completed (`run_completed`, no failed session) | yes | the project name | Analysis finished · N sessions |
+| Completed with some sessions failed (`.completedPartial`) | yes | the project name | Analysis finished with failures · N of M sessions |
+| Failed (`.failedWithDiagnostic`, or `.failed`) | yes | the project name | The analysis didn’t finish, plus the reason (from the run's cause category) and the sessions done |
 | Stopped by the researcher | **no**: they just pressed Stop, and "Analysis stopped" is plain in the window | | |
 | Ended because the app quit (`.stopped(interrupted: true)`) | **no**: nothing is alive to send it | | |
 
@@ -43,10 +43,10 @@ So the proposal follows that pattern, and reverses my first draft (outcome in th
 
 | Case | Title | Body (proposed; what each fact is read from is in the next list) |
 |---|---|---|
-| Finished | "Bristlenose · {{project}}" | "Analysis finished · {{count}} sessions · {{duration}}" |
-| Finished with some sessions failed | "Bristlenose · {{project}}" | "Analysis finished with failures · {{done}} of {{total}} sessions · sessions {{list}} didn’t finish" |
-| Didn't finish, reason known | "Bristlenose · {{project}}" | "The analysis didn’t finish · {{reason}} · {{done}} of {{total}} sessions are done" |
-| Didn't finish, reason not known | "Bristlenose · {{project}}" | "The analysis didn’t finish · {{done}} of {{total}} sessions are done" |
+| Finished | the project's name | "Analysis finished · {{count}} sessions · {{duration}}" |
+| Finished with some sessions failed | the project's name | "Analysis finished with failures · {{done}} of {{total}} sessions · sessions {{list}} didn’t finish" |
+| Didn't finish, reason known | the project's name | "The analysis didn’t finish · {{reason}} · {{done}} of {{total}} sessions are done" |
+| Didn't finish, reason not known | the project's name | "The analysis didn’t finish · {{done}} of {{total}} sessions are done" |
 
 **What the app has at the end of a run (checked 6 Nov 2026 against a recorded run's end event and `events.py`):**
 - **Sessions found, done and failed:** the end event's summary carries, per stage, how many were attempted and succeeded and which failed. The failed entries name sessions; turning them into session numbers is the implementer's job.
@@ -57,7 +57,7 @@ So the proposal follows that pattern, and reverses my first draft (outcome in th
 
 **On the numbers in "{{done}} of {{total}} sessions are done":** this is the one place the text makes a claim about work kept. It is true only if "done" is defined as a session that has finished the stages that the next Analyse would otherwise redo. Define it once, from the manifest, and test it against a run that stopped halfway. Until it is defined, the banner shows the session total and the reason and leaves the done count out.
 
-- **The title: the app's name is not shown by the system, so we put it in.** On macOS 27 a notification shows the app's icon, the title, a relative time and the body, and **no app name** (the owner's Notification Center, and how the researcher's own scripts already title theirs: "Bristlenose · macOS guests"). Apple's HIG says not to repeat the app name, which was written for a display that shows it. The proposal follows what the researcher already does: **"Bristlenose · {{project}}"** (the study's own name, which is Bristlenose's own and never follows the folder, ruling 10). **Trade-off:** a long project name is truncated at the end of the title, so the part that is cut is the part that identifies the study. The alternative is the project name alone and the icon as identity. Owner's call. The system supplies the icon and the relative time, so neither is in our text.
+- **The title is the project name alone (decided, owner, 6 Nov 2026).** On macOS 27 a notification shows the app's icon, the title, a relative time and the body, and no app name (the owner's Notification Center). The icon identifies Bristlenose; the title carries what matters, and a long project name is not cut short by a prefix. Apple's HIG also says not to repeat the app name. The title is the study's own name, which is Bristlenose's own and never follows the folder (ruling 10). The system supplies the icon and the relative time, so neither is in our text.
 - **Put the outcome first in the body.** The system truncates a long body at a few lines with an ellipsis (visible in the screenshot), so what matters leads.
 - **Counts are proposed, pending approval**, because the evidence on this audience is that counts and detail are normal.
 - **Strings.** "The analysis didn’t finish" is **shipped** (`failedTitle`). "Analysis finished" and "Analysis finished with failures" are new (a shipped tooltip, "Analysis finished with failures for {{project}}", is the nearest). "{{count}} sessions" and "{{failed}} of {{total}} sessions" need plural keys (CLDR via the app's i18n, not the CLI `inflect`). All need the 21 full locales and an entry in `docs/platform-text-map.md`. Provider names are product names (Claude, ChatGPT).

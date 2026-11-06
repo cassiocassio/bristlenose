@@ -194,3 +194,16 @@ def test_pii_summary_written_owner_only(tmp_path: Path) -> None:
     )
     assert path is not None and path.is_file()
     assert _mode(path) == _OWNER_ONLY
+
+
+def test_pii_summary_tightens_a_preexisting_loose_file(tmp_path: Path) -> None:
+    """The mode passed at open applies only on create: a summary left 0o644 by an older run must be tightened."""
+    from bristlenose.stages.s07_pii_removal import PiiRedaction, write_pii_summary
+
+    redactions = [PiiRedaction(entity_type="PERSON", original_text="Zephyrine Quillfeather",
+                               replacement="[NAME]", score=0.9, timecode=0.0)]
+    path = write_pii_summary(redactions, tmp_path)
+    assert path is not None
+    os.chmod(path, 0o644)
+    write_pii_summary(redactions, tmp_path)
+    assert _mode(path) == _OWNER_ONLY

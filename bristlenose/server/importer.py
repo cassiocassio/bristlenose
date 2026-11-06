@@ -16,6 +16,7 @@ import bisect
 import difflib
 import json
 import logging
+import math
 import os
 import re
 import uuid
@@ -32,7 +33,7 @@ from sqlalchemy import text as sa_text  # `text` clashes with a loop var below
 from sqlalchemy.orm import Session
 
 from bristlenose.models import INAUDIBLE_TOKEN
-from bristlenose.server.grounding import quote_dom_id
+from bristlenose.server.grounding import _MAX_DOM_TIMECODE, quote_dom_id
 from bristlenose.server.models import (
     AutoCodeSentQuote,
     ClusterQuote,
@@ -1825,13 +1826,33 @@ def rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int]
     return ranks
 
 
+def clean_start_timecode(value: Any) -> float:
+    """A quote's start second as the id and the stable key can carry it.
+
+    Model output is not trusted to be a sane number: a NaN stops the import at ``int()``, a
+    negative builds an id that reads back as another quote, and one past the id bounds builds
+    an id the parser refuses. Any of those, or a value that is not a number, is stored as 0.0
+    (the same second a missing start already gets), and the log says so without the quote's
+    words (owner ruling, 6 Nov 2026: validate at the import boundary).
+    """
+    try:
+        start = float(value or 0.0)
+    except (TypeError, ValueError):
+        start = float("nan")
+    if not math.isfinite(start) or start < 0 or start > _MAX_DOM_TIMECODE:
+        logger.warning("quote start timecode %r is outside 0..%d s; stored as 0", value,
+                       _MAX_DOM_TIMECODE)
+        return 0.0
+    return start
+
+
 def _rank_key(quote_data: dict[str, Any]) -> QuoteRankKey:
     """Mirrored by ``021_quote_ordinal._rank_key_from_row``: nulls and the text fallback
     read alike on both."""
     return (
         str(quote_data.get("session_id", "")),
         str(quote_data.get("participant_id", "")),
-        float(quote_data.get("start_timecode") or 0.0),
+        clean_start_timecode(quote_data.get("start_timecode")),
         float(quote_data.get("end_timecode") or 0.0),
         _content(quote_data),
         0,
@@ -2010,7 +2031,7 @@ def _get_or_create_quote(
     """
     session_id = quote_data.get("session_id", "")
     participant_id = quote_data.get("participant_id", "")
-    start_timecode = float(quote_data.get("start_timecode", 0.0))
+    start_timecode = clean_start_timecode(quote_data.get("start_timecode"))
     ordinal = int(quote_data["ordinal"])
 
     # Try to find existing quote by stable key

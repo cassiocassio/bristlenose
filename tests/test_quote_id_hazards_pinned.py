@@ -1,7 +1,10 @@
 """Quote-id hazards found by the usual-suspects fresh-eyes review (6 Nov 2026), pinned strict.
 
-None is reachable from the pipeline today: each needs an input the pipeline should never produce
-(a negative or enormous start, a dashed participant code, a NaN timecode). They are real in the
+The start-time hazards (negative, enormous, NaN) are closed at the import boundary by
+``clean_start_timecode`` (owner, 6 Nov 2026) and tested above. What stays pinned is the builder's
+dashed-participant collision, which needs a ruling on participant codes.
+
+The pinned one needs an input the pipeline should never produce (a dashed participant code). They are real in the
 code, reproduced with concrete inputs, and pinned on invariants that need no ruling to state:
 
 * an id must never read back as a different quote (refusing is fine; guessing is not);
@@ -20,7 +23,7 @@ from __future__ import annotations
 import pytest
 
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
-from bristlenose.server.importer import _rank_key, rank_quote_ordinals
+from bristlenose.server.importer import _rank_key, clean_start_timecode, rank_quote_ordinals
 
 
 def test_the_ordinary_case_round_trips() -> None:
@@ -28,31 +31,24 @@ def test_the_ordinary_case_round_trips() -> None:
     assert parse_quote_dom_id(quote_dom_id("p1", 123.9, 2)) == ("p1", 123, 2)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="a negative start builds q-p1--1, which reads back as ('p1-', 1, 0)")
-def test_a_negative_start_never_reads_back_as_a_different_quote() -> None:
-    built = quote_dom_id("p1", -1.5, 0)
-    try:
-        parsed = parse_quote_dom_id(built)
-    except ValueError:
-        return  # refusing is fine
-    assert parsed == ("p1", int(-1.5), 0), f"{built} read back as {parsed}"
+@pytest.mark.parametrize("bad", [-1.5, -0.5, 360_001.0, float("nan"), float("inf"), "x", None])
+def test_the_import_boundary_cleans_a_start_the_id_cannot_carry(bad: object) -> None:
+    # Owner ruling, 6 Nov 2026: validate at import. A negative, huge, NaN or non-numeric start
+    # is stored as 0, so the id round-trips and one bad timecode does not stop the import.
+    row = {"session_id": "s1", "participant_id": "p1", "start_timecode": bad}
+    start = _rank_key(row)[2]
+    assert start == 0.0
+    assert rank_quote_ordinals([_rank_key(row)])
+    assert parse_quote_dom_id(quote_dom_id("p1", start, 0)) == ("p1", 0, 0)
+
+
+def test_a_sane_start_is_kept_as_it_was() -> None:
+    assert clean_start_timecode(123.9) == 123.9
+    assert clean_start_timecode(0) == 0.0
+    assert clean_start_timecode(360_000.0) == 360_000.0
 
 
 @pytest.mark.xfail(strict=True, raises=AssertionError,
                    reason="('p1-2', 5s, 0) and ('p1', 2s, 5) are both q-p1-2-5")
 def test_a_dashed_participant_does_not_share_an_id_with_another_quote() -> None:
     assert quote_dom_id("p1-2", 5.0, 0) != quote_dom_id("p1", 2.0, 5)
-
-
-@pytest.mark.xfail(strict=True, raises=ValueError,
-                   reason="a start over 100 h builds an id the parser then refuses")
-def test_an_id_the_builder_emits_is_one_the_parser_accepts() -> None:
-    parse_quote_dom_id(quote_dom_id("p1", 360_001.0, 0))
-
-
-@pytest.mark.xfail(strict=True, raises=ValueError,
-                   reason="a NaN start reaches int() and stops the import with 'cannot convert'")
-def test_one_nan_timecode_does_not_stop_the_ranking() -> None:
-    row = {"session_id": "s1", "participant_id": "p1", "start_timecode": float("nan")}
-    rank_quote_ordinals([_rank_key(row)])

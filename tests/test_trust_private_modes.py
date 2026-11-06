@@ -87,11 +87,6 @@ def test_preflight_state_written_owner_only(_state_home: Path) -> None:
     assert _mode(_state_home) == _OWNER_ONLY
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="write_state opens with O_CREAT|O_TRUNC 0o600 but never chmods: the mode "
-    "applies only on create, so a state.json that already exists 0o644 stays 0o644",
-)
 def test_preflight_state_tightens_a_preexisting_loose_file(_state_home: Path) -> None:
     from bristlenose.preflight.api_key import write_state
 
@@ -189,11 +184,6 @@ def test_shoal_feed_written_owner_only(tmp_path: Path, monkeypatch) -> None:
 # -- pii_summary.txt --------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="write_pii_summary uses Path.write_text, so pii_summary.txt (original "
-    "personal data, a re-identification key) takes the umask default 0o644",
-)
 def test_pii_summary_written_owner_only(tmp_path: Path) -> None:
     from bristlenose.stages.s07_pii_removal import PiiRedaction, write_pii_summary
 

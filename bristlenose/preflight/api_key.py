@@ -141,6 +141,8 @@ def write_state(state: dict[str, Any]) -> None:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(payload)
+    # The mode above applies only on create: tighten a file that already exists looser.
+    os.chmod(path, 0o600)
 
 
 def request_fingerprint(

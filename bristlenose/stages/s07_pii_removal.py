@@ -21,6 +21,7 @@ from bristlenose.models import (
     format_timecode,
 )
 from bristlenose.stages.s06_merge_transcript import _language_header
+from bristlenose.utils.fs import open_private
 from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
@@ -738,6 +739,19 @@ def write_cooked_transcripts_md(
     return paths
 
 
+def _write_owner_only(path: Path, text: str) -> None:
+    """Write ``text`` to ``path`` readable by its owner only.
+
+    The summary holds original personal data (a re-identification key). The mode passed to
+    ``open_private`` applies only when the file is created, so an existing looser file is
+    tightened explicitly.
+    """
+    fd = open_private(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.chmod(path, 0o600)
+
+
 def write_pii_summary(
     redactions: list[PiiRedaction],
     output_dir: Path,
@@ -770,7 +784,7 @@ def write_pii_summary(
 
     if not redactions:
         lines.append("No PII entities were detected in any transcript.")
-        path.write_text("\n".join(lines), encoding="utf-8")
+        _write_owner_only(path, "\n".join(lines))
         logger.info("Wrote PII summary (no redactions): %s", path)
         return path
 
@@ -803,7 +817,7 @@ def write_pii_summary(
     lines.append("# Review this file to check for false positives (over-redaction)")
     lines.append("# or false negatives (PII that was missed).")
 
-    path.write_text("\n".join(lines), encoding="utf-8")
+    _write_owner_only(path, "\n".join(lines))
     logger.info("Wrote PII summary: %s", path)
     return path
 

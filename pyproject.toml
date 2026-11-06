@@ -57,7 +57,7 @@ dependencies = [
     # 2.2.364 + cryptography 48.0.1, both with wheels. Everywhere else 50.x
     # resolves and is wanted (it closes three CVEs on 48.0.1). Lift when Intel
     # Macs stop being a CLI target. docs/dependency-premortem-log.md Entry 9.
-    "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "cryptography<51; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     # Ceiling <2 since 24 Oct 2026: anthropic 2.0.0 sends API version
     # 2026-10-21, which answers any request carrying `temperature` with a 400,
     # and client.py sends it via `extra_body` for every model in

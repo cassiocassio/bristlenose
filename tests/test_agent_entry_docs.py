@@ -31,14 +31,20 @@ ROOT_DOCS = {"AGENTS.md", "CLAUDE.md", "CODEX.md", "TODO.md", "README.md"}
 
 def test_every_path_the_entry_docs_cite_exists() -> None:
     missing = []
+    checked = 0
     for rel in ENTRY:
         for path in sorted(set(_BACKTICK_PATH.findall(_text(rel)))):
             # A bare name like SKILL.md is prose about a family of files; only a path with a
             # directory, or a named root document, can be checked.
             checkable = "/" in path or path in ROOT_DOCS
-            if checkable and not (ROOT / path).exists():
+            if not checkable:
+                continue
+            checked += 1
+            if not (ROOT / path).exists():
                 missing.append(f"{rel}: {path}")
     assert not missing, "cited but absent:\n" + "\n".join(missing)
+    # A floor, so rewriting the docs without backticks cannot make this pass by finding nothing.
+    assert checked >= 5, f"only {checked} checkable paths found in {ENTRY}; did the citation style change?"
 
 
 def test_the_two_entry_points_name_each_other() -> None:

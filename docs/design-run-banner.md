@@ -27,7 +27,7 @@ The run's end kinds are the ones `PipelineRunner` already distinguishes. Seam na
 |---|---|---|---|
 | Completed (`run_completed`, no failed session) | yes | the project name | Analysis finished · N sessions |
 | Completed with some sessions failed (`.completedPartial`) | yes | the project name | Analysis finished with failures · N of M sessions |
-| Failed (`.failedWithDiagnostic`, or `.failed`) | yes | the project name | The analysis didn’t finish, plus the reason when the app already knows it |
+| Failed (`.failedWithDiagnostic`, or `.failed`) | yes | the project name | The analysis didn’t finish, plus the reason (from the run's cause category) and the sessions done |
 | Stopped by the researcher | **no**: they just pressed Stop, and "Analysis stopped" is plain in the window | | |
 | Ended because the app quit (`.stopped(interrupted: true)`) | **no**: nothing is alive to send it | | |
 
@@ -39,21 +39,30 @@ And only when **all** hold: the switch is on; macOS has allowed notifications; B
 
 **Decided (owner, 6 Nov 2026):** the app's own sentence case, not Apple's title-style capitalization; fragments in the body are fine. **Real-life check:** the owner's own Notification Center (a screenshot, 6 Nov 2026) is full of notifications from Mac apps and scripts the same working audience uses, and none is title-cased. The pattern in every useful one is the same: the **title says what or where** (a project, a repo, a sender) and the **body says what happened**, often with counts and, on a failure, the detail (for example "N passed · M failed" followed by the first failing item). Researchers are used to this, so rich text is native, not intrusive.
 
-So the proposal follows that pattern, and reverses my first draft (outcome in the title, project in the body):
+So the proposal follows that pattern, and reverses my first draft (outcome in the title, project in the body). **It also reverses my first draft's length:** I wrote one short line, and the notifications in the screenshot run to two or three lines of real detail before the system truncates them. So the body leads with the outcome and then carries the facts the app already has at the end of a run.
 
-| Case | Title | Body |
+| Case | Title | Body (proposed; what each fact is read from is in the next list) |
 |---|---|---|
-| Finished | the project's name | "Analysis finished · {{count}} sessions" |
-| Finished with some sessions failed | the project's name | "Analysis finished with failures · {{failed}} of {{total}} sessions" |
-| Didn't finish, reason known | the project's name | "The analysis didn’t finish · {{reason}}" |
-| Didn't finish, reason not known | the project's name | "The analysis didn’t finish" |
+| Finished | the project's name | "Analysis finished · {{count}} sessions · {{duration}}" |
+| Finished with some sessions failed | the project's name | "Analysis finished with failures · {{done}} of {{total}} sessions · sessions {{list}} didn’t finish" |
+| Didn't finish, reason known | the project's name | "The analysis didn’t finish · {{reason}} · {{done}} of {{total}} sessions are done" |
+| Didn't finish, reason not known | the project's name | "The analysis didn’t finish · {{done}} of {{total}} sessions are done" |
+
+**What the app has at the end of a run (checked 6 Nov 2026 against a recorded run's end event and `events.py`):**
+- **Sessions found, done and failed:** the end event's summary carries, per stage, how many were attempted and succeeded and which failed. The failed entries name sessions; turning them into session numbers is the implementer's job.
+- **Duration:** the end event carries the start and end times, so "38 min" is a fact. It also lets the researcher see how the run compared with the time they were told.
+- **The reason for a failure:** a failed run carries a structured cause. The categories include auth, out of credit, quota, model unavailable, server error, network, missing dependency or binary, disk, output truncated and unknown. **Name a reason only for the ones a researcher can act on or understand** (auth, out of credit, rate limit, network, model unavailable, disk); for the rest, say nothing. The earlier draft pointed at the Settings key-check strings; the run's own cause enum is the right source.
+- **Not in the end event:** quote counts and theme counts. The summary's "themes" figure counts calls, not themes. A quote or theme count would need a separate read and is **not proposed**.
+- **Available but not proposed:** the token counts and the cost estimate are in the end event. Putting a cost in a banner is a different kind of statement (it is an estimate, and it is money); it is the owner's call, and I have left it out.
+
+**On the numbers in "{{done}} of {{total}} sessions are done":** this is the one place the text makes a claim about work kept. It is true only if "done" is defined as a session that has finished the stages that the next Analyse would otherwise redo. Define it once, from the manifest, and test it against a run that stopped halfway. Until it is defined, the banner shows the session total and the reason and leaves the done count out.
 
 - **The title is the study's own name**, which is Bristlenose's own and never follows the folder (ruling 10). The system supplies the app icon and a relative time ("52m ago" in the screenshot), so neither is in our text, and Apple's HIG says not to repeat the app name.
 - **Put the outcome first in the body.** The system truncates a long body at a few lines with an ellipsis (visible in the screenshot), so what matters leads.
-- **Counts are now proposed, pending approval**, because the evidence on this audience is that counts are normal ("3094 passed"). The session count is a fact the app already has. A quote count is a separate question (the same as a "found so far" count) and stays out.
+- **Counts are proposed, pending approval**, because the evidence on this audience is that counts and detail are normal.
 - **Strings.** "The analysis didn’t finish" is **shipped** (`failedTitle`). "Analysis finished" and "Analysis finished with failures" are new (a shipped tooltip, "Analysis finished with failures for {{project}}", is the nearest). "{{count}} sessions" and "{{failed}} of {{total}} sessions" need plural keys (CLDR via the app's i18n, not the CLI `inflect`). All need the 21 full locales and an entry in `docs/platform-text-map.md`. Provider names are product names (Claude, ChatGPT).
 - **Settings label:** "Notify when an analysis finishes or stops". New; a positive switch, on by default.
-- **The failure reason.** The app already classifies why a provider call failed ("{{provider}} is out of credit", "rejected this key", "is rate-limited", in `llmSettings.validation`). The banner uses only a reason from that existing set, in a short form ("Claude is out of credit"), and says nothing more when the cause is unknown. It does not invent a cause. The short forms are new strings.
+- **The failure reason** comes from the run's own cause category (see the list above), in a short form ("Claude is out of credit"), and is omitted when the category is not one a researcher can use. It never invents a cause. The short forms are new strings.
 - **Plain words.** "Analysis", not "run" or "pipeline" (`docs/glossary.md`). No exclamation, no emoji. The failed banner says what is true and does not tell the researcher what to do.
 - **When previews are hidden** the system shows only the icon and the word "Notification". Register one category per outcome with a generic placeholder with no project name ("Analysis finished" and "The analysis didn’t finish"). The placeholder is set when the categories are registered, so register them again if the researcher changes the app's language, or it stays in the old language.
 

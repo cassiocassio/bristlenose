@@ -4,6 +4,10 @@ Each area keeps rules and a one-line-per-entry index in CLAUDE.md; the full entr
 gotchas.md (or reference.md) beside it. Two things rot silently: a CLAUDE.md that regrows an
 86 KB gotchas section because nobody was obliged to look, and a relative link or anchor that
 stops resolving after a move. Both are checked here.
+
+Known limits (usual-suspects review, 6 Nov 2026): only links in Markdown link syntax are followed,
+not the paths written in backticks, which is the dominant citation style in these files; several
+of the checked files hold no links today and pass trivially, guarding the day they gain one.
 """
 
 from __future__ import annotations

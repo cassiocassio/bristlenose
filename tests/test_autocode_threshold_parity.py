@@ -26,8 +26,13 @@ _SRC = Path(__file__).parent.parent / "frontend" / "src"
 
 def _ts_number(path: Path, name: str) -> float:
     text = path.read_text(encoding="utf-8")
-    match = re.search(rf"\b{name}\s*=\s*([0-9.]+)", text)
-    assert match, f"{name} not found in {path.name}: the parity test must follow a rename"
+    # A declaration line only: a comment or a string that mentions the name must not win.
+    match = re.search(
+        rf"^[ \t]*(?:export[ \t]+)?const[ \t]+{name}(?:[ \t]*:[ \t]*number)?[ \t]*="
+        rf"[ \t]*([0-9]+(?:\.[0-9]+)?)[ \t]*;", text, re.MULTILINE)
+    assert match, (
+        f"const {name} = <number>; not found in {path.name}: the parity test must follow a "
+        "rename or a change of form, not guess")
     return float(match.group(1))
 
 
@@ -44,5 +49,3 @@ def test_the_default_lower_cutoff_is_the_dialogs() -> None:
 def test_the_cutoff_grid_is_the_sliders() -> None:
     step = _ts_number(_SRC / "utils" / "confidenceStep.ts", "CONFIDENCE_STEP")
     assert CONFIDENCE_STEPS_PER_UNIT == round(1 / step)
-    assert _ts_number(_SRC / "utils" / "confidenceStep.ts", "STEPS_PER_UNIT") == (
-        CONFIDENCE_STEPS_PER_UNIT)

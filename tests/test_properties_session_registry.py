@@ -146,3 +146,26 @@ def test_a_recording_keeps_its_number_when_the_names_swap_under_it(
         after = _run(folder, reg, names)
         assert {rotated[name]: sid for name, sid in after.items()} == sid_of_content
         assert len(set(after.values())) == len(after)
+
+
+@settings(max_examples=60)
+@given(st.lists(st.sampled_from(NAMES), min_size=2, max_size=6, unique=True),
+       st.integers(min_value=1, max_value=5), st.randoms(use_true_random=False))
+def test_a_recording_added_later_never_renumbers_the_ones_already_numbered(
+    names: list, cut: int, rnd: random.Random,
+) -> None:
+    # Analyse a study, then drop more recordings into the folder (some of them older, some
+    # copies of ones already there): the numbers the researcher has already seen must not move,
+    # and what arrives takes numbers nobody holds.
+    with tempfile.TemporaryDirectory() as tmp:
+        folder, reg = Path(tmp) / "in", Path(tmp) / "out"
+        folder.mkdir()
+        _write(folder, [(name, i % 3) for i, name in enumerate(names)])
+        first_names = names[: max(1, min(cut, len(names) - 1))]
+        before = _run(folder, reg, first_names)
+        everything = list(names)
+        rnd.shuffle(everything)
+        after = _run(folder, reg, everything)
+        for name, sid in before.items():
+            assert after.get(name, sid) == sid, f"{name} moved from {sid}"
+        assert len(set(after.values())) == len(after)

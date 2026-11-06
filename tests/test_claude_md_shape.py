@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 
@@ -43,25 +44,32 @@ LINKED = [
     "docs/release-timing.md",
 ]
 
-_LINK = re.compile(r"\]\(([^)\s]*)\)")
+# A target, with an optional "title": [a](b.md "title") is a link too.
+_LINK = re.compile(r'\]\(([^)\s]*)(?:\s+"[^"]*")?\)')
 _FENCE = re.compile(r"^(```|~~~)")
 
 
 def _slug(heading: str) -> str:
-    """GitHub's anchor rule: lower-case, drop punctuation, spaces to hyphens."""
-    text = re.sub(r"[`*_]", "", heading.strip().lower())
+    """GitHub's anchor rule: lower-case, drop punctuation (underscores stay), spaces to hyphens."""
+    text = re.sub(r"[`*]", "", heading.strip().lower())
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # a heading link keeps its text only
     text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
     return re.sub(r"\s", "-", text)
 
 
 def _anchors(path: Path) -> set[str]:
+    """Every anchor GitHub gives the file's headings, repeats numbered -1, -2 as it does."""
     out: set[str] = set()
+    seen: dict[str, int] = {}
     fenced = False
     for line in path.read_text(encoding="utf-8").splitlines():
         if _FENCE.match(line):
             fenced = not fenced
         elif not fenced and line.startswith("#"):
-            out.add(_slug(line.lstrip("#")))
+            slug = _slug(line.lstrip("#"))
+            n = seen.get(slug, 0)
+            seen[slug] = n + 1
+            out.add(slug if n == 0 else f"{slug}-{n}")
     return out
 
 
@@ -88,15 +96,28 @@ def test_claude_md_stays_under_its_ceiling(rel: str) -> None:
     )
 
 
+def _exists_with_exact_case(path: Path) -> bool:
+    """macOS is case-insensitive and GitHub and Linux CI are not: a link must match the name."""
+    return path.exists() and path.name in {p.name for p in path.parent.iterdir()}
+
+
 @pytest.mark.parametrize("rel", LINKED)
 def test_links_out_of_claude_md_files_resolve(rel: str) -> None:
     path = ROOT / rel
     broken = []
     for n, target in _links(path):
-        file_part, _, anchor = target.partition("#")
+        file_part, _, anchor = unquote(target).partition("#")
         dest = path if not file_part else (path.parent / file_part).resolve()
-        if not dest.exists():
-            broken.append(f"{rel}:{n} -> {target} (no such file)")
+        if not _exists_with_exact_case(dest):
+            broken.append(f"{rel}:{n} -> {target} (no such file, or the case differs)")
         elif anchor and dest.suffix == ".md" and anchor not in _anchors(dest):
             broken.append(f"{rel}:{n} -> {target} (no such heading)")
     assert not broken, "\n".join(broken)
+
+
+def test_the_link_checker_sees_the_forms_that_rot() -> None:
+    # Its own proof of reach: a plain link, a titled link, a repeated heading and an underscore.
+    assert _LINK.findall('[a](b.md#x) [c](d.md "a title") [e](f.md#g_h)') == [
+        "b.md#x", "d.md", "f.md#g_h"]
+    assert _slug("Foo_bar `code` **bold**") == "foo_bar-code-bold"
+    assert _slug("A [link](x.md) here") == "a-link-here"

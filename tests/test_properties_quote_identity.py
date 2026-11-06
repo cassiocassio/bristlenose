@@ -34,8 +34,10 @@ KEY_LISTS = st.lists(KEYS, min_size=1, max_size=12)
 # A speaker code is [pmo]\d+ (assign_speaker_codes): the only participants an id is built for.
 CODES = st.builds(lambda letter, n: f"{letter}{n}", st.sampled_from("pmo"),
                   st.integers(min_value=1, max_value=999))
-SECONDS = st.integers(min_value=0, max_value=100 * 3600)
-ORDINALS = st.integers(min_value=0, max_value=10_000)
+# Small values are drawn on purpose: ids that differ by one second or one ordinal are the near
+# misses a collision lives in, and a wide range alone reaches them only by chance.
+SECONDS = st.one_of(st.integers(min_value=0, max_value=3), st.integers(min_value=0, max_value=100 * 3600))
+ORDINALS = st.one_of(st.integers(min_value=0, max_value=3), st.integers(min_value=0, max_value=10_000))
 
 
 def _group(key: QuoteRankKey) -> tuple[str, str, int]:

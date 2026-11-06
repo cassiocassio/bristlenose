@@ -9,7 +9,10 @@
     "inProvider": "i {{provider}}",
     "volumeOffline": "P\u00e5 \u00ab{{volume}}\u00bb, som ikke er tilkoblet.",
     "folderDeleted": "Denne mappen er slettet.",
-    "fallbackNote": "Nye prosjekter opprettes p\u00e5 sist brukte plassering."
+    "fallbackNote": "Nye prosjekter opprettes p\u00e5 sist brukte plassering.",
+    "notifyLabel": "Varsle n\u00e5r en analyse er ferdig",
+    "notifyOffInSystem": "Varsler for Bristlenose er sl\u00e5tt av i Systeminnstillinger.",
+    "notifyOpenSystemSettings": "\u00c5pne varselinnstillinger\u2026"
   },
   "heading": "Innstillinger",
   "video": {

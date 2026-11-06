@@ -9,7 +9,10 @@
     "inProvider": "ve slu\u017eb\u011b {{provider}}",
     "volumeOffline": "Na disku \u201e{{volume}}\u201c, kter\u00fd nen\u00ed p\u0159ipojen.",
     "folderDeleted": "Tato slo\u017eka byla smaz\u00e1na.",
-    "fallbackNote": "Nov\u00e9 projekty se budou vytv\u00e1\u0159et v posledn\u00edm pou\u017eit\u00e9m um\u00edst\u011bn\u00ed."
+    "fallbackNote": "Nov\u00e9 projekty se budou vytv\u00e1\u0159et v posledn\u00edm pou\u017eit\u00e9m um\u00edst\u011bn\u00ed.",
+    "notifyLabel": "Upozornit po dokon\u010den\u00ed anal\u00fdzy",
+    "notifyOffInSystem": "Ozn\u00e1men\u00ed pro Bristlenose jsou vypnut\u00e1 v Nastaven\u00ed syst\u00e9mu.",
+    "notifyOpenSystemSettings": "Otev\u0159\u00edt nastaven\u00ed ozn\u00e1men\u00ed\u2026"
   },
   "heading": "Nastavení",
   "video": {

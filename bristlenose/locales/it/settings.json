@@ -9,7 +9,10 @@
     "inProvider": "in {{provider}}",
     "volumeOffline": "Su \u201c{{volume}}\u201d, che non \u00e8 collegato.",
     "folderDeleted": "Questa cartella \u00e8 stata eliminata.",
-    "fallbackNote": "I nuovi progetti verranno creati nell\u2019ultima posizione utilizzata."
+    "fallbackNote": "I nuovi progetti verranno creati nell\u2019ultima posizione utilizzata.",
+    "notifyLabel": "Notifica quando un'analisi \u00e8 completata",
+    "notifyOffInSystem": "Le notifiche di Bristlenose sono disattivate in Impostazioni di Sistema.",
+    "notifyOpenSystemSettings": "Apri impostazioni notifiche\u2026"
   },
   "heading": "Impostazioni",
   "video": {

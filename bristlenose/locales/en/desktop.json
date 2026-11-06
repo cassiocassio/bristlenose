@@ -1321,5 +1321,16 @@
     "consequence": "This study cannot be viewed or edited here.",
     "anotherMac": "another Mac",
     "todayAt": "today at {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analysis finished",
+    "finishedWithFailures": "Analysis finished with failures",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessions",
+    "prealert": {
+      "title": "Notify me when analysis finishes",
+      "body": "macOS will ask next whether Bristlenose can send notifications. You can change this in {{path}}.",
+      "continue": "Continue"
+    }
   }
 }

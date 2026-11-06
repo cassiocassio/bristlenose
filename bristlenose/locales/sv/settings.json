@@ -9,7 +9,10 @@
     "inProvider": "i {{provider}}",
     "volumeOffline": "P\u00e5 \u201d{{volume}}\u201d, som inte \u00e4r ansluten.",
     "folderDeleted": "Den h\u00e4r mappen har raderats.",
-    "fallbackNote": "Nya projekt skapas p\u00e5 den senast anv\u00e4nda platsen."
+    "fallbackNote": "Nya projekt skapas p\u00e5 den senast anv\u00e4nda platsen.",
+    "notifyLabel": "Meddela n\u00e4r en analys \u00e4r klar",
+    "notifyOffInSystem": "Aviseringar f\u00f6r Bristlenose \u00e4r avst\u00e4ngda i Systeminst\u00e4llningar.",
+    "notifyOpenSystemSettings": "\u00d6ppna aviseringsinst\u00e4llningar\u2026"
   },
   "heading": "Inställningar",
   "video": {

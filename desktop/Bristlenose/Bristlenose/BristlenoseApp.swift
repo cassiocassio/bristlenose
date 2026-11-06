@@ -1,5 +1,6 @@
 import OSLog
 import SwiftUI
+import UserNotifications
 
 private let appLog = Logger(subsystem: "app.bristlenose", category: "app")
 
@@ -31,6 +32,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // has to apply the Settings ▸ Appearance preference itself. See
         // `AppAppearance`. AppKit calls this delegate method on the main thread.
         MainActor.assumeIsolated { AppAppearance.beginApplying() }
+
+        // The run-finished banner. The notification delegate must exist before
+        // this method returns: a banner entry outlives the app, and a click on
+        // one relaunches us and delivers its response to whatever delegate is
+        // there by then. The preference's default is registered here so the one
+        // accessor and the Settings switch agree on a fresh install.
+        RunBannerPreference.registerDefaults()
+        UNUserNotificationCenter.current().delegate = RunBannerNotificationDelegate.shared
 
         // The expired-alpha `.dmg` block is presented by `AlphaExpiryFlow` as
         // SwiftUI modals over the (serve-less) main window — see ContentView's
@@ -131,6 +140,11 @@ struct BristlenoseApp: App {
     /// would race for the same destination with two tick sets.
     @StateObject private var cloudImport = CloudImportCoordinator()
     @StateObject private var pipelineRunner = PipelineRunner()
+    /// The run-finished banner's decision-maker. Held here so the runner's weak
+    /// reference stays valid; built once the app's `i18n` exists (see `.task`).
+    @State private var runBannerCoordinator: RunBannerCoordinator?
+    /// Watches what AppKit cannot say: display asleep, screen locked.
+    @State private var screenState = ScreenState()
     @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var removalStore = UndoableRemovalStore()
     @StateObject private var copyMachinery = CopyMachinery()
@@ -287,6 +301,16 @@ struct BristlenoseApp: App {
                         }
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
+                    if runBannerCoordinator == nil {
+                        let screen = screenState
+                        let coordinator = RunBannerCoordinator(
+                            system: SystemRunBannerSystem(),
+                            preAlert: NSAlertRunBannerPreAlert(),
+                            i18n: i18n,
+                            attention: { screen.attention() })
+                        runBannerCoordinator = coordinator
+                        pipelineRunner.runBanner = coordinator
+                    }
                     // Whisper starts downloading in the background once the AI
                     // disclosure is acknowledged; once per process.
                     WhisperDownloadModel.shared.runIsLive = { [weak pipelineRunner] in

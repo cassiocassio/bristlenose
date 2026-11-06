@@ -1316,5 +1316,16 @@
     "consequence": "Questo studio non può essere visualizzato né modificato qui.",
     "anotherMac": "un altro Mac",
     "todayAt": "oggi alle {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analisi completata",
+    "finishedWithFailures": "Analisi completata con errori",
+    "sessions_one": "{{count}} sessione",
+    "sessions_other": "{{count}} sessioni",
+    "prealert": {
+      "title": "Avvisami quando l'analisi \u00e8 completata",
+      "body": "macOS ti chieder\u00e0 ora se Bristlenose pu\u00f2 inviare notifiche. Puoi cambiare questa scelta in {{path}}.",
+      "continue": "Continua"
+    }
   }
 }

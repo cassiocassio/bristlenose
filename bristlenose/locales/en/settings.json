@@ -9,7 +9,10 @@
     "inProvider": "in {{provider}}",
     "volumeOffline": "On {{volume}}, which isn’t connected.",
     "folderDeleted": "This folder has been deleted.",
-    "fallbackNote": "New projects will start in your last location."
+    "fallbackNote": "New projects will start in your last location.",
+    "notifyLabel": "Notify when an analysis finishes",
+    "notifyOffInSystem": "Notifications are off for Bristlenose in System Settings.",
+    "notifyOpenSystemSettings": "Open Notification Settings\u2026"
   },
   "heading": "Settings",
   "video": {

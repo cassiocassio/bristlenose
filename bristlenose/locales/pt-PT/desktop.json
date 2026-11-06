@@ -1316,5 +1316,16 @@
     "consequence": "Este estudo não pode ser visto nem editado aqui.",
     "anotherMac": "outro Mac",
     "todayAt": "hoje às {{time}}"
+  },
+  "runBanner": {
+    "finished": "An\u00e1lise conclu\u00edda",
+    "finishedWithFailures": "An\u00e1lise conclu\u00edda com falhas",
+    "sessions_one": "{{count}} sess\u00e3o",
+    "sessions_other": "{{count}} sess\u00f5es",
+    "prealert": {
+      "title": "Avisar-me quando a an\u00e1lise terminar",
+      "body": "O macOS vai perguntar a seguir se o Bristlenose pode enviar notifica\u00e7\u00f5es. Pode alterar isto em {{path}}.",
+      "continue": "Continuar"
+    }
   }
 }

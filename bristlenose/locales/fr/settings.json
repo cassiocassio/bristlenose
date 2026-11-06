@@ -9,7 +9,10 @@
     "inProvider": "dans {{provider}}",
     "volumeOffline": "Sur \u00ab {{volume}} \u00bb, qui n\u2019est pas connect\u00e9.",
     "folderDeleted": "Ce dossier a \u00e9t\u00e9 supprim\u00e9.",
-    "fallbackNote": "Les nouveaux projets seront cr\u00e9\u00e9s au dernier emplacement utilis\u00e9."
+    "fallbackNote": "Les nouveaux projets seront cr\u00e9\u00e9s au dernier emplacement utilis\u00e9.",
+    "notifyLabel": "Notifier \u00e0 la fin d\u2019une analyse",
+    "notifyOffInSystem": "Les notifications de Bristlenose sont d\u00e9sactiv\u00e9es dans R\u00e9glages Syst\u00e8me.",
+    "notifyOpenSystemSettings": "Ouvrir les r\u00e9glages de notifications\u2026"
   },
   "heading": "Réglages",
   "video": {

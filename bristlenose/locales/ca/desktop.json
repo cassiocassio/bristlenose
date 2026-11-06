@@ -1316,5 +1316,16 @@
     "consequence": "Aquest estudi no es pot veure ni editar aquí.",
     "anotherMac": "un altre Mac",
     "todayAt": "avui a les {{time}}"
+  },
+  "runBanner": {
+    "finished": "An\u00e0lisi acabada",
+    "finishedWithFailures": "An\u00e0lisi acabada amb errors",
+    "sessions_one": "{{count}} sessi\u00f3",
+    "sessions_other": "{{count}} sessions",
+    "prealert": {
+      "title": "Avisa'm quan acabi l'an\u00e0lisi",
+      "body": "A continuaci\u00f3, macOS et preguntar\u00e0 si Bristlenose pot enviar notificacions. Ho pots canviar a {{path}}.",
+      "continue": "Continua"
+    }
   }
 }

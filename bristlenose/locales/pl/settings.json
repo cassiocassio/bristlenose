@@ -9,7 +9,10 @@
     "inProvider": "w us\u0142udze {{provider}}",
     "volumeOffline": "Na \u201e{{volume}}\u201d, kt\u00f3ry nie jest pod\u0142\u0105czony.",
     "folderDeleted": "Ten folder zosta\u0142 usuni\u0119ty.",
-    "fallbackNote": "Nowe projekty b\u0119d\u0105 tworzone w ostatnio u\u017cywanej lokalizacji."
+    "fallbackNote": "Nowe projekty b\u0119d\u0105 tworzone w ostatnio u\u017cywanej lokalizacji.",
+    "notifyLabel": "Powiadamiaj o zako\u0144czeniu analizy",
+    "notifyOffInSystem": "Powiadomienia dla Bristlenose s\u0105 wy\u0142\u0105czone w Ustawieniach systemowych.",
+    "notifyOpenSystemSettings": "Otw\u00f3rz ustawienia powiadomie\u0144\u2026"
   },
   "heading": "Ustawienia",
   "video": {

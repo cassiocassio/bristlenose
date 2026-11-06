@@ -1316,5 +1316,16 @@
     "consequence": "Bu çalışma burada görüntülenemez veya düzenlenemez.",
     "anotherMac": "başka bir Mac",
     "todayAt": "bugün saat {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analiz tamamland\u0131",
+    "finishedWithFailures": "Analiz hatalarla tamamland\u0131",
+    "sessions_one": "{{count}} oturum",
+    "sessions_other": "{{count}} oturum",
+    "prealert": {
+      "title": "Analiz bitince beni bilgilendir",
+      "body": "macOS \u015fimdi Bristlenose'un bildirim g\u00f6nderip g\u00f6nderemeyece\u011fini soracak. Bunu {{path}} b\u00f6l\u00fcm\u00fcnden de\u011fi\u015ftirebilirsiniz.",
+      "continue": "S\u00fcrd\u00fcr"
+    }
   }
 }

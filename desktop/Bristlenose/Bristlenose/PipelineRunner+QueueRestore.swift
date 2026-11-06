@@ -90,7 +90,8 @@ extension PipelineRunner {
             if entry.inFlight { resumingAfterQuit.insert(project.id) }
             start(
                 project: project, clean: entry.clean,
-                requested: .init(at: entry.enqueuedAt, studyID: entry.studyID ?? project.studyID)
+                requested: .init(at: entry.enqueuedAt, studyID: entry.studyID ?? project.studyID),
+                origin: .automatic
             )
             resumingAfterQuit.remove(project.id)
         }

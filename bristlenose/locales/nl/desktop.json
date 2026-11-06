@@ -1316,5 +1316,16 @@
     "consequence": "Dit onderzoek kan hier niet worden bekeken of bewerkt.",
     "anotherMac": "een andere Mac",
     "todayAt": "vandaag om {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analyse voltooid",
+    "finishedWithFailures": "Analyse voltooid met fouten",
+    "sessions_one": "{{count}} sessie",
+    "sessions_other": "{{count}} sessies",
+    "prealert": {
+      "title": "Waarschuw me als de analyse klaar is",
+      "body": "macOS vraagt nu of Bristlenose meldingen mag sturen. Je kunt dit wijzigen in {{path}}.",
+      "continue": "Ga door"
+    }
   }
 }

@@ -1316,5 +1316,16 @@
     "consequence": "Tätä tutkimusta ei voi katsella eikä muokata tässä.",
     "anotherMac": "toisella Macilla",
     "todayAt": "tänään klo {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analyysi valmis",
+    "finishedWithFailures": "Analyysi valmis virheiden kanssa",
+    "sessions_one": "{{count}} istunto",
+    "sessions_other": "{{count}} istuntoa",
+    "prealert": {
+      "title": "Ilmoita minulle, kun analyysi on valmis",
+      "body": "Seuraavaksi macOS kysyy, saako Bristlenose l\u00e4hett\u00e4\u00e4 ilmoituksia. Voit muuttaa t\u00e4m\u00e4n kohdassa {{path}}.",
+      "continue": "Jatka"
+    }
   }
 }

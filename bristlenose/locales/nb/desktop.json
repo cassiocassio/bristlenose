@@ -1316,5 +1316,16 @@
     "consequence": "Denne studien kan ikke vises eller redigeres her.",
     "anotherMac": "en annen Mac",
     "todayAt": "i dag kl. {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analysen er ferdig",
+    "finishedWithFailures": "Analysen er ferdig med feil",
+    "sessions_one": "{{count}} \u00f8kt",
+    "sessions_other": "{{count}} \u00f8kter",
+    "prealert": {
+      "title": "Varsle meg n\u00e5r analysen er ferdig",
+      "body": "macOS sp\u00f8r n\u00e5 om Bristlenose kan sende varsler. Du kan endre dette i {{path}}.",
+      "continue": "Fortsett"
+    }
   }
 }

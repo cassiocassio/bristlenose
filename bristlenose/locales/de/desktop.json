@@ -1316,5 +1316,16 @@
     "consequence": "Diese Studie kann hier nicht angesehen oder bearbeitet werden.",
     "anotherMac": "einem anderen Mac",
     "todayAt": "heute um {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analyse abgeschlossen",
+    "finishedWithFailures": "Analyse mit Fehlern abgeschlossen",
+    "sessions_one": "{{count}} Interview",
+    "sessions_other": "{{count}} Interviews",
+    "prealert": {
+      "title": "Mich benachrichtigen, wenn die Analyse abgeschlossen ist",
+      "body": "macOS fragt als N\u00e4chstes, ob Bristlenose Mitteilungen senden darf. Das l\u00e4sst sich unter {{path}} \u00e4ndern.",
+      "continue": "Fortfahren"
+    }
   }
 }

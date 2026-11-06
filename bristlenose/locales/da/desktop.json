@@ -1316,5 +1316,16 @@
     "consequence": "Dette studie kan ikke vises eller redigeres her.",
     "anotherMac": "en anden Mac",
     "todayAt": "i dag kl. {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analysen er f\u00e6rdig",
+    "finishedWithFailures": "Analysen er f\u00e6rdig med fejl",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessioner",
+    "prealert": {
+      "title": "Giv mig besked, n\u00e5r analysen er f\u00e6rdig",
+      "body": "macOS sp\u00f8rger nu, om Bristlenose m\u00e5 sende notifikationer. Du kan \u00e6ndre det i {{path}}.",
+      "continue": "Forts\u00e6t"
+    }
   }
 }

@@ -1271,5 +1271,15 @@
     "consequence": "這個研究無法在這裡檢視或編輯。",
     "anotherMac": "另一部 Mac",
     "todayAt": "今天 {{time}}"
+  },
+  "runBanner": {
+    "finished": "\u5206\u6790\u5df2\u5b8c\u6210",
+    "finishedWithFailures": "\u5206\u6790\u5df2\u5b8c\u6210\uff0c\u4f46\u6709\u5931\u6557\u9805\u76ee",
+    "sessions_other": "{{count}} \u500b\u5de5\u4f5c\u968e\u6bb5",
+    "prealert": {
+      "title": "\u5206\u6790\u5b8c\u6210\u6642\u901a\u77e5\u6211",
+      "body": "\u63a5\u4e0b\u4f86 macOS \u6703\u8a62\u554f\u662f\u5426\u5141\u8a31 Bristlenose \u50b3\u9001\u901a\u77e5\u3002\u4f60\u53ef\u4ee5\u5728\u300c{{path}}\u300d\u4e2d\u66f4\u6539\u3002",
+      "continue": "\u7e7c\u7e8c"
+    }
   }
 }

@@ -9,7 +9,10 @@
     "inProvider": "a {{provider}}",
     "volumeOffline": "A \u00ab{{volume}}\u00bb, que no est\u00e0 connectat.",
     "folderDeleted": "Aquesta carpeta s'ha eliminat.",
-    "fallbackNote": "Els projectes nous comen\u00e7aran a l'\u00faltima ubicaci\u00f3 utilitzada."
+    "fallbackNote": "Els projectes nous comen\u00e7aran a l'\u00faltima ubicaci\u00f3 utilitzada.",
+    "notifyLabel": "Notifica quan acabi una an\u00e0lisi",
+    "notifyOffInSystem": "Les notificacions de Bristlenose estan desactivades a Configuraci\u00f3 del Sistema.",
+    "notifyOpenSystemSettings": "Obre la configuraci\u00f3 de notificacions\u2026"
   },
   "heading": "Configuració",
   "video": {

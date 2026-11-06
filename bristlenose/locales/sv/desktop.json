@@ -1316,5 +1316,16 @@
     "consequence": "Den här studien kan inte visas eller redigeras här.",
     "anotherMac": "en annan Mac",
     "todayAt": "i dag kl. {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analysen \u00e4r klar",
+    "finishedWithFailures": "Analysen \u00e4r klar med fel",
+    "sessions_one": "{{count}} session",
+    "sessions_other": "{{count}} sessioner",
+    "prealert": {
+      "title": "Meddela mig n\u00e4r analysen \u00e4r klar",
+      "body": "D\u00e4refter fr\u00e5gar macOS om Bristlenose f\u00e5r skicka aviseringar. Du kan \u00e4ndra detta i {{path}}.",
+      "continue": "Forts\u00e4tt"
+    }
   }
 }

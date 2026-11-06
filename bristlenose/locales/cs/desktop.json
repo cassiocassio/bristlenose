@@ -1387,5 +1387,17 @@
     "consequence": "Tuto studii zde nelze zobrazit ani upravovat.",
     "anotherMac": "jiném Macu",
     "todayAt": "dnes v {{time}}"
+  },
+  "runBanner": {
+    "finished": "Anal\u00fdza dokon\u010dena",
+    "finishedWithFailures": "Anal\u00fdza dokon\u010dena s chybami",
+    "sessions_one": "{{count}} sezen\u00ed",
+    "sessions_few": "{{count}} sezen\u00ed",
+    "sessions_other": "{{count}} sezen\u00ed",
+    "prealert": {
+      "title": "Upozornit m\u011b po dokon\u010den\u00ed anal\u00fdzy",
+      "body": "macOS se v\u00e1s te\u010f zept\u00e1, zda sm\u00ed Bristlenose pos\u00edlat ozn\u00e1men\u00ed. Toto m\u016f\u017eete zm\u011bnit v {{path}}.",
+      "continue": "Pokra\u010dovat"
+    }
   }
 }

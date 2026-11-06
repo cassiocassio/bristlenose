@@ -1406,5 +1406,18 @@
     "consequence": "Tego badania nie można tu wyświetlić ani edytować.",
     "anotherMac": "innym Macu",
     "todayAt": "dziś o {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analiza zako\u0144czona",
+    "finishedWithFailures": "Analiza zako\u0144czona z b\u0142\u0119dami",
+    "sessions_one": "{{count}} sesja",
+    "sessions_few": "{{count}} sesje",
+    "sessions_many": "{{count}} sesji",
+    "sessions_other": "{{count}} sesji",
+    "prealert": {
+      "title": "Powiadom mnie po zako\u0144czeniu analizy",
+      "body": "macOS zapyta teraz, czy Bristlenose mo\u017ce wysy\u0142a\u0107 powiadomienia. Mo\u017cesz to zmieni\u0107 w {{path}}.",
+      "continue": "Kontynuuj"
+    }
   }
 }

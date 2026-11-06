@@ -9,7 +9,10 @@
     "inProvider": "palvelussa {{provider}}",
     "volumeOffline": "Taltiolla \u201d{{volume}}\u201d, jota ei ole yhdistetty.",
     "folderDeleted": "T\u00e4m\u00e4 kansio on poistettu.",
-    "fallbackNote": "Uudet projektit luodaan viimeksi k\u00e4ytettyyn sijaintiin."
+    "fallbackNote": "Uudet projektit luodaan viimeksi k\u00e4ytettyyn sijaintiin.",
+    "notifyLabel": "Ilmoita, kun analyysi on valmis",
+    "notifyOffInSystem": "Bristlenosen ilmoitukset on poistettu k\u00e4yt\u00f6st\u00e4 J\u00e4rjestelm\u00e4asetuksissa.",
+    "notifyOpenSystemSettings": "Avaa ilmoitusasetukset\u2026"
   },
   "heading": "Asetukset",
   "video": {

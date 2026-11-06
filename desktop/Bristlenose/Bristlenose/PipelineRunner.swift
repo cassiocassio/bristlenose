@@ -580,6 +580,12 @@ final class PipelineRunner: ObservableObject {
     /// `.failed` (pipeline errored). Cleared on each `spawn`.
     private var cancellationRequested: Bool = false { didSet { journalQueue() } }
 
+    /// Told when a run this app started ends, and when the researcher starts
+    /// one. Set once by the app (`BristlenoseApp`). Called from the termination
+    /// paths only, by an explicit call, never from a state observer or a scan:
+    /// a scan at launch reads last week's run, and must say nothing.
+    weak var runBanner: RunBannerNoting?
+
     /// Manifest timestamps include fractional seconds
     /// (`2026-04-17T00:37:27.480978+00:00`), which the default
     /// `ISO8601DateFormatter` does not parse.
@@ -845,7 +851,7 @@ final class PipelineRunner: ObservableObject {
             Self.logger.info(
                 "re-running for deferred sessions project=\(id.uuidString, privacy: .public)"
             )
-            start(project: project)
+            start(project: project, origin: .automatic)
         }
     }
 
@@ -1552,6 +1558,10 @@ final class PipelineRunner: ObservableObject {
             )
         } else {
             leftBehind?.cancel()
+            // An attached run the app watched end: a witnessed end.
+            announceEnd(
+                of: project, state: state[project.id] ?? .idle, stopRequested: false,
+                priorRunId: priorTerminus)
         }
     }
 
@@ -1985,7 +1995,8 @@ final class PipelineRunner: ObservableObject {
     ///   re-analyse CTA in the failed-popover. Destructive — caller must
     ///   confirm with the user first. Default false.
     func start(
-        project: Project, clean: Bool = false, requested: RunQueueJournal.Stamp? = nil
+        project: Project, clean: Bool = false, requested: RunQueueJournal.Stamp? = nil,
+        origin: RunStartOrigin = .researcher
     ) {
         guard hasConsent() else {
             Self.logger.warning(
@@ -2034,6 +2045,11 @@ final class PipelineRunner: ObservableObject {
             state[project.id] = refusal
             return
         }
+
+        // The run's end banner needs the researcher's permission, asked once, at
+        // a start they chose: not at a queue restore at launch, not at the
+        // automatic re-run when Whisper arrives.
+        if origin == .researcher { runBanner?.researcherStartedRun() }
 
         if currentlyRunning == nil {
             queueJournal.stamp(project.id, studyID: project.studyID, fresh: true, as: requested)
@@ -2671,6 +2687,9 @@ var args = ["run", project.path, "--no-serve"]
         // Everything downstream has always keyed off this number; ProcessOutcome
         // adds the meaning the number was missing, it does not redefine it.
         let status = outcome.rawStatus
+        // Read before any branch below clears it. A Stop that still exits 0
+        // keeps the result as finished; that is the researcher's own act.
+        let stopWasRequested = cancellationRequested
 
         let project = projectIndex?.projects.first(where: { $0.id == projectID })
         if let project {
@@ -2795,6 +2814,9 @@ var args = ["run", project.path, "--no-serve"]
                     adopting: leftBehind
                 )
             }
+            announceEnd(
+                of: project, state: final, stopRequested: stopWasRequested,
+                priorRunId: priorRunIds[projectID])
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
                     provider: provider, project: project,
@@ -2815,9 +2837,28 @@ var args = ["run", project.path, "--no-serve"]
                 outcome: outcome, lines: lines,
                 runProvider: provider, runKeyFingerprint: keyFingerprint
             )
+            announceEnd(
+                of: project, state: state[projectID] ?? .idle,
+                stopRequested: stopWasRequested, priorRunId: priorRunIds[projectID])
         }
 
         startNextQueued()
+    }
+
+    /// Tell the banner a run this app watched has ended. Never called from a
+    /// scan, a launch read, a foreign (CLI) run's end, a queue restore or a debug
+    /// fixture. `priorRunId` is the run newest on disk before this one began: a
+    /// terminus with that id is the previous run's, so its times are not ours.
+    private func announceEnd(
+        of project: Project?, state final: PipelineState, stopRequested: Bool, priorRunId: String?
+    ) {
+        guard let project, let sink = runBanner else { return }
+        var terminus = EventLogReader.tailEvent(at: Self.eventsURL(for: project))
+        if terminus?.runId == priorRunId { terminus = nil }
+        sink.runDidEnd(
+            projectID: project.id, projectName: project.name, state: final,
+            terminus: terminus, stopRequested: stopRequested,
+            runKey: terminus?.runId ?? UUID().uuidString)
     }
 
     /// Read a run's end state again after its read timed out (R29).
@@ -2872,6 +2913,10 @@ var args = ["run", project.path, "--no-serve"]
                 self.applyScanResult(resolved, for: projectID)
                 if case .running = self.state[projectID], !self.ownsRun(projectID) {
                     self.watchForeignRun(project)
+                } else {
+                    // A late read of a run this app started: still a witnessed end.
+                    self.announceEnd(
+                        of: project, state: resolved, stopRequested: false, priorRunId: priorRunId)
                 }
                 if case .ready = resolved {
                     self.noteCreditIfTheRunUsedAnLLM(

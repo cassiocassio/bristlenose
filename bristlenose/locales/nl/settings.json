@@ -9,7 +9,10 @@
     "inProvider": "in {{provider}}",
     "volumeOffline": "Op \u2018{{volume}}\u2019, dat niet is aangesloten.",
     "folderDeleted": "Deze map is verwijderd.",
-    "fallbackNote": "Nieuwe projecten worden aangemaakt op de laatstgebruikte locatie."
+    "fallbackNote": "Nieuwe projecten worden aangemaakt op de laatstgebruikte locatie.",
+    "notifyLabel": "Melding geven als een analyse klaar is",
+    "notifyOffInSystem": "Meldingen voor Bristlenose staan uit in Systeeminstellingen.",
+    "notifyOpenSystemSettings": "Open meldingsinstellingen\u2026"
   },
   "heading": "Instellingen",
   "video": {

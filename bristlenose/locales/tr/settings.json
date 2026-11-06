@@ -9,7 +9,10 @@
     "inProvider": "{{provider}} i\u00e7inde",
     "volumeOffline": "Ba\u011fl\u0131 olmayan \u201c{{volume}}\u201d biriminde.",
     "folderDeleted": "Bu klas\u00f6r silinmi\u015f.",
-    "fallbackNote": "Yeni projeler son kullan\u0131lan konumda olu\u015fturulacak."
+    "fallbackNote": "Yeni projeler son kullan\u0131lan konumda olu\u015fturulacak.",
+    "notifyLabel": "Analiz bitince bildir",
+    "notifyOffInSystem": "Bristlenose bildirimleri Sistem Ayarlar\u0131'nda kapal\u0131.",
+    "notifyOpenSystemSettings": "Bildirim Ayarlar\u0131n\u0131 A\u00e7\u2026"
   },
   "heading": "Ayarlar",
   "video": {

@@ -1316,5 +1316,16 @@
     "consequence": "Cette étude ne peut pas être consultée ni modifiée ici.",
     "anotherMac": "un autre Mac",
     "todayAt": "aujourd’hui à {{time}}"
+  },
+  "runBanner": {
+    "finished": "Analyse termin\u00e9e",
+    "finishedWithFailures": "Analyse termin\u00e9e avec des \u00e9checs",
+    "sessions_one": "{{count}} entretien",
+    "sessions_other": "{{count}} entretiens",
+    "prealert": {
+      "title": "Me pr\u00e9venir \u00e0 la fin de l\u2019analyse",
+      "body": "macOS va maintenant vous demander si Bristlenose peut envoyer des notifications. Vous pouvez modifier ce choix dans {{path}}.",
+      "continue": "Continuer"
+    }
   }
 }

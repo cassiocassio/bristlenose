@@ -37,6 +37,15 @@ struct GeneralSettingsView: View {
     /// appear and after each action is sufficient.
     @State private var configured: ProjectFolderDefaults.Configured = .notSet
 
+    /// The run-finished banner switch (design-run-banner.md). On by default;
+    /// the same key and default as `RunBannerPreference`, which the app registers
+    /// at launch.
+    @AppStorage(RunBannerPreference.key) private var notifyOnRunEnd = true
+    /// What the system says, nil until it has answered. Read when the pane
+    /// appears and whenever the app becomes active again, because the
+    /// researcher changes it in System Settings, not here.
+    @State private var notificationAuthorization: RunBannerAuthorization?
+
     var body: some View {
         Form {
             Section {
@@ -62,11 +71,57 @@ struct GeneralSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                // Notify when an analysis finishes. When the system has
+                // notifications off for Bristlenose, the switch has nothing to
+                // switch: say so and open the one pane that can change it. It
+                // never asks again (the system will not prompt twice).
+                LabeledContent {
+                    if notificationAuthorization == .denied {
+                        Button(i18n.t("settings.general.notifyOpenSystemSettings")) {
+                            Self.openNotificationSettings()
+                        }
+                    } else {
+                        Toggle("", isOn: $notifyOnRunEnd).labelsHidden()
+                    }
+                } label: {
+                    Text(i18n.t("settings.general.notifyLabel"))
+                    if notificationAuthorization == .denied {
+                        Text(i18n.t("settings.general.notifyOffInSystem"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
         }
         .formStyle(.grouped)
         .frame(width: 660)
-        .task { refresh() }
+        .task {
+            refresh()
+            await refreshNotificationAuthorization()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+        ) { _ in
+            Task { await refreshNotificationAuthorization() }
+        }
+    }
+
+    // MARK: - Notifications
+
+    private func refreshNotificationAuthorization() async {
+        notificationAuthorization = await SystemRunBannerSystem().authorization()
+    }
+
+    /// Opens Notifications settings for this app. The anchor is not documented
+    /// by Apple; if it stops resolving, fall back to System Settings itself
+    /// rather than to a button that does nothing (the same fallback
+    /// `MCPAgentsSettingsView.openFilesAndFolders` uses).
+    static func openNotificationSettings() {
+        let id = Bundle.main.bundleIdentifier ?? "app.bristlenose"
+        let pane = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!
+        if !NSWorkspace.shared.open(pane) {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:")!)
+        }
     }
 
     // MARK: - The control

@@ -9,7 +9,10 @@
     "inProvider": "in {{provider}}",
     "volumeOffline": "Auf \u201e{{volume}}\u201c, das nicht angeschlossen ist.",
     "folderDeleted": "Dieser Ordner wurde gel\u00f6scht.",
-    "fallbackNote": "Neue Projekte werden am zuletzt verwendeten Ort erstellt."
+    "fallbackNote": "Neue Projekte werden am zuletzt verwendeten Ort erstellt.",
+    "notifyLabel": "Benachrichtigen, wenn eine Analyse abgeschlossen ist",
+    "notifyOffInSystem": "Mitteilungen f\u00fcr Bristlenose sind in den Systemeinstellungen ausgeschaltet.",
+    "notifyOpenSystemSettings": "Mitteilungseinstellungen \u00f6ffnen \u2026"
   },
   "heading": "Einstellungen",
   "video": {

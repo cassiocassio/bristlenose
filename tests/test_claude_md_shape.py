@@ -55,7 +55,8 @@ _FENCE = re.compile(r"^(```|~~~)")
 
 def _slug(heading: str) -> str:
     """GitHub's anchor rule: lower-case, drop punctuation (underscores stay), spaces to hyphens."""
-    text = re.sub(r"[`*]", "", heading.strip().lower())
+    text = re.sub(r"\s+#+\s*$", "", heading.strip())  # a closing run of #s is not part of it
+    text = re.sub(r"[`*]", "", text.lower())
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # a heading link keeps its text only
     text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
     return re.sub(r"\s", "-", text)
@@ -69,8 +70,8 @@ def _anchors(path: Path) -> set[str]:
     for line in path.read_text(encoding="utf-8").splitlines():
         if _FENCE.match(line):
             fenced = not fenced
-        elif not fenced and line.startswith("#"):
-            slug = _slug(line.lstrip("#"))
+        elif not fenced and (m := re.match(r"#{1,6}[ \t]+(.*)", line)):  # "#tag" is no heading
+            slug = _slug(m.group(1))
             n = seen.get(slug, 0)
             seen[slug] = n + 1
             out.add(slug if n == 0 else f"{slug}-{n}")
@@ -101,8 +102,20 @@ def test_claude_md_stays_under_its_ceiling(rel: str) -> None:
 
 
 def _exists_with_exact_case(path: Path) -> bool:
-    """macOS is case-insensitive and GitHub and Linux CI are not: a link must match the name."""
-    return path.exists() and path.name in {p.name for p in path.parent.iterdir()}
+    """macOS is case-insensitive and GitHub and Linux CI are not: every part of a link's path
+    must match the name on disk, not only the last."""
+    if not path.exists():
+        return False
+    try:
+        parts = path.relative_to(ROOT).parts
+    except ValueError:
+        return path.name in {p.name for p in path.parent.iterdir()}
+    here = ROOT
+    for part in parts:
+        if part not in {p.name for p in here.iterdir()}:
+            return False
+        here = here / part
+    return True
 
 
 @pytest.mark.parametrize("rel", LINKED)
@@ -125,3 +138,13 @@ def test_the_link_checker_sees_the_forms_that_rot() -> None:
         "b.md#x", "d.md", "f.md#g_h"]
     assert _slug("Foo_bar `code` **bold**") == "foo_bar-code-bold"
     assert _slug("A [link](x.md) here") == "a-link-here"
+    assert _slug("Foo ##") == "foo"
+    assert _exists_with_exact_case(ROOT / "CLAUDE.md")
+    assert not _exists_with_exact_case(ROOT / "DOCS" / "release-timing.md")
+    assert not _exists_with_exact_case(ROOT / "claude.md")
+
+
+def test_anchors_number_repeated_headings_and_ignore_fences_and_hashtags(tmp_path: Path) -> None:
+    doc = tmp_path / "d.md"
+    doc.write_text("# Foo\n\n```\n# not a heading\n```\n\n## Foo\n\n#hashtag\n\n## Foo\n")
+    assert _anchors(doc) == {"foo", "foo-1", "foo-2"}

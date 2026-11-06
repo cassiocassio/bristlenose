@@ -12,10 +12,12 @@ whether it is a COUNT (go through ``analysis_quotes``) or a LOOKUP (an id, a DOM
 filter itself) and says so below. Same family as ``tests/test_serve_export_coverage.py``.
 
 This is a tripwire, not a census. It reads the syntax tree for ``query(...)`` / ``select(...)`` /
-``join(...)`` / ``outerjoin(...)`` with ``Quote`` among the arguments (``query(Quote)``,
-``query(Quote.id)``, ``.join(Quote, ...)``) and for ``db.get(Quote, id)``. It does not see
-relationship traversal (``session.quotes``), raw SQL, or a reader that receives rows from
-another function. The first version matched only ``query(Quote)`` and missed the joins and column
+``join(...)`` / ``outerjoin(...)`` / ``select_from(...)`` / ``aliased(...)`` with ``Quote`` (or
+``models.Quote``) among the arguments, keyword or positional, and for ``db.get(Quote, id)``. The
+count is of calls, not of logical reads (``query(Quote).join(QuoteTag, ... Quote.id)`` is 2).
+It does not see relationship traversal (``session.quotes``), a column list built beforehand and
+splatted in, writes through ``insert``/``update``/``delete``, raw SQL, or a reader that receives
+rows from another function; an import alias is refused by its own test. The first version matched only ``query(Quote)`` and missed the joins and column
 reads where the count-shaped consumers actually live (usual-suspects review, 6 Nov 2026), which is
 why the key is a function and the match is the syntax tree.
 """
@@ -23,10 +25,11 @@ why the key is a function and the match is the syntax tree.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 SERVER = Path(__file__).parent.parent / "bristlenose" / "server"
-_JOINS = {"query", "select", "join", "outerjoin"}
+_JOINS = {"query", "select", "join", "outerjoin", "select_from", "aliased"}
 
 # Reason categories, so a reader can scan the table:
 FILTER = "the filter itself"
@@ -87,8 +90,13 @@ LISTED: dict[str, tuple[int, str]] = {
 }
 
 
-def _names(node: ast.AST) -> set[str]:
-    return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+def _mentions_quote(node: ast.AST) -> bool:
+    """``Quote``, ``Quote.id`` or ``models.Quote`` anywhere inside the node."""
+    return any(
+        (isinstance(n, ast.Name) and n.id == "Quote")
+        or (isinstance(n, ast.Attribute) and n.attr == "Quote")
+        for n in ast.walk(node)
+    )
 
 
 def _reads(source: str) -> dict[str, int]:
@@ -103,10 +111,12 @@ def _reads(source: str) -> dict[str, int]:
             attr = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", None)
             hit = False
             if attr in _JOINS:
-                hit = any("Quote" in _names(a) for a in node.args)
-            elif attr == "get" and isinstance(f, ast.Attribute) and node.args:
-                first = node.args[0]
-                hit = isinstance(first, ast.Name) and first.id == "Quote"
+                hit = any(_mentions_quote(a) for a in [*node.args, *(k.value for k in node.keywords)])
+            elif attr == "get" and isinstance(f, ast.Attribute):
+                first = node.args[0] if node.args else next(
+                    (k.value for k in node.keywords if k.arg == "entity"), None)
+                hit = first is not None and _mentions_quote(first) and not isinstance(
+                    first, ast.Constant)
             if hit:
                 found[fn or "<module>"] = found.get(fn or "<module>", 0) + 1
         for child in ast.iter_child_nodes(node):
@@ -133,8 +143,21 @@ def test_the_census_sees_the_shapes_the_first_version_missed() -> None:
         "def c(db):\n    return db.query(QuoteTag).join(Quote, QuoteTag.quote_id == Quote.id)\n"
         "def d(db, i):\n    return db.get(Quote, i)\n"
         "def e(db):\n    return db.query(QuoteTag).all()\n"
+        "def f(db):\n    return db.query(models.Quote).all()\n"
+        "def g(db, i):\n    return db.get(entity=Quote, ident=i)\n"
+        "def h(db):\n    return db.query(QuoteTag).select_from(Quote)\n"
+        "def i(db):\n    return aliased(Quote)\n"
     )
-    assert _reads(src) == {"a": 1, "b": 1, "c": 1, "d": 1}
+    assert _reads(src) == {"a": 1, "b": 1, "c": 1, "d": 1, "f": 1, "g": 1, "h": 1, "i": 1}
+
+
+def test_nothing_in_the_server_imports_quote_under_another_name() -> None:
+    # The census follows the name ``Quote``; an alias would hide a read from it.
+    offenders = [
+        p.relative_to(SERVER).as_posix() for p in SERVER.rglob("*.py")
+        if re.search(r"\bQuote\s+as\s+\w+", p.read_text(encoding="utf-8"))
+    ]
+    assert not offenders, f"import Quote under its own name so the census can see it: {offenders}"
 
 
 def test_every_function_that_reads_quote_rows_is_listed_with_its_reason() -> None:

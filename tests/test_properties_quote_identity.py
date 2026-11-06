@@ -126,7 +126,8 @@ def test_a_quote_elsewhere_does_not_renumber_these(keys: list, other: QuoteRankK
 def test_identical_rows_stay_distinct_and_rank_in_row_order(
     session: str, speaker: str, second: int, rows: int,
 ) -> None:
-    # Migration 021's backfill: two identical rows must stay two, ranked by the row-id tiebreak.
+    # The backfill's case: two identical rows must stay two, ranked by the row-id tiebreak (migration
+    # 021 carries a copy of the ranking, held to the same answers by its own test).
     keys = [(session, speaker, float(second), 1.0, "same words", i) for i in range(rows)]
     ranks = rank_quote_ordinals(reversed(keys))
     assert [ranks[k] for k in keys] == list(range(rows))
@@ -139,10 +140,7 @@ def test_a_later_quote_in_the_second_takes_a_new_ordinal_and_moves_no_other(
     # The backward-compatibility promise without the comparator: a quote that starts after
     # every quote already in its second joins the end, and nothing already numbered moves.
     same_second = [k for k in keys if (k[0], k[1], int(k[2])) == (session, speaker, second)]
-    latest = max((k[2] for k in same_second), default=float(second))
-    assume(latest < second + 0.99)
-    new = (session, speaker, second + 0.99, 9.0, "arrived later", 0)
-    assume(new not in keys)
+    new = (session, speaker, second + 0.99, 9.0, "arrived later", 0)  # after every STARTS value
     before = rank_quote_ordinals(keys)
     after = rank_quote_ordinals([*keys, new])
     assert all(after[k] == before[k] for k in before)

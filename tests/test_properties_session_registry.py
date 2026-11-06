@@ -167,6 +167,11 @@ def test_a_recording_added_later_never_renumbers_the_ones_already_numbered(
         everything = list(names)
         rnd.shuffle(everything)
         after = _run(folder, reg, everything)
-        for name, sid in before.items():
-            assert after.get(name, sid) == sid, f"{name} moved from {sid}"
+        content = {name: i % 3 for i, name in enumerate(names)}  # as written above
+        sid_of_content_before = {content[n]: sid for n, sid in before.items()}
+        sid_of_content_after = {content[n]: sid for n, sid in after.items()}
+        # By content, so a recording that went missing, or took a new number, is seen: the
+        # kept name may legitimately change among identical copies, the number may not.
+        for c, sid in sid_of_content_before.items():
+            assert sid_of_content_after.get(c) == sid, f"content {c} was {sid}"
         assert len(set(after.values())) == len(after)

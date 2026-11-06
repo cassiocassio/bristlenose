@@ -86,7 +86,7 @@ Proposed English, for the owner's approval. The categories are the run's own (`C
 | cloud_fetch | A recording wasn’t downloaded in time |
 | disk | Couldn’t write to disk |
 | missing_dep, missing_binary | A required part is missing |
-| unknown, deferred, user_signal | none: say nothing beyond "The analysis didn’t finish" |
+| unknown, deferred, user_signal | none: say nothing beyond "The analysis didn’t finish". **The banner never says "unknown" or "no reason given" (owner, 6 Nov 2026): the researcher goes to look.** |
 
 Notes: the `cloud_fetch` phrase reuses the shape of an existing honest-failure string (the Screens lens already says a recording "wasn't downloaded to this Mac in time"); it is a plain statement of what happened, with no wait label, glyph or provider advice, which is what the settled cloud-files decision permits. `deferred` and `user_signal` are not failures the researcher needs told.
 

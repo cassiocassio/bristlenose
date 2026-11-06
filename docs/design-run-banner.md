@@ -8,6 +8,8 @@ When an analysis ends and the researcher is not in Bristlenose, the Mac raises o
 
 It stays on the Mac. Nothing here reaches an iPhone or Watch; that is a separate decision (`design-perceived-wait.md`, "Reaching the phone and Watch").
 
+**The purpose of the banner (owner, 6 Nov 2026): "do I need to look at this?"** Every word is tested against that. The banner is a triage: it tells a researcher who has gone away whether something needs them, and how much. A finished run says *nothing needs you, open it when you like*; a failed or partly failed one says *it needs you*, and how bad it is (which stage, how many sessions are done). Anything that does not help that decision is a candidate to cut, and the system truncates a long body, so the order is by how much each fact helps the decision: the outcome first, then what says how bad (the reason, the sessions done), then facts that only inform (the duration last, so truncation drops it first).
+
 ## Decided by the owner (6 Nov 2026)
 
 | Decision | Ruling |

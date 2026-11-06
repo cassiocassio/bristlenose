@@ -1319,7 +1319,7 @@
   },
   "runBanner": {
     "finished": "Analysen er f\u00e6rdig",
-    "finishedWithFailures": "Analysen er f\u00e6rdig med fejl",
+    "finishedWithFailures": "Analysen er f\u00e6rdig, men med fejl",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessioner",
     "prealert": {

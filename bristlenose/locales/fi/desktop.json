@@ -1319,7 +1319,7 @@
   },
   "runBanner": {
     "finished": "Analyysi valmis",
-    "finishedWithFailures": "Analyysi valmis virheiden kanssa",
+    "finishedWithFailures": "Analyysi valmis, mutta osa epäonnistui",
     "sessions_one": "{{count}} istunto",
     "sessions_other": "{{count}} istuntoa",
     "prealert": {

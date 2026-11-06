@@ -132,6 +132,25 @@ private func terminus(
         }
     }
 
+    @Test func anOverflowRowCountsAsAFailureBecauseTheWireTruncatedTheList() {
+        // More failures than the wire carries: the visible ones may all be
+        // deferred, but the hidden ones are failures.
+        let overflow = SessionFailure(
+            sessionId: nil, sourceFile: nil, cause: Cause(category: .network, message: "... and 3 more"))
+        let s = summary(quoteFailures: [cause(.deferred, session: "s1"), overflow])
+        #expect(RunBanner.hasSessionFailure(s))
+    }
+
+    /// `dominantCategory()` returns the wire's `CauseCategory`; the banner reads
+    /// it as the row's `PipelineFailureCategory` by raw value. Two enums nothing
+    /// else keeps in step: this pins which wire categories have no row category
+    /// (and so name no reason).
+    @Test func theWireCategoriesWithNoRowCategoryAreExactlyTheKnownTwo() {
+        let unmapped = CauseCategory.allCases
+            .filter { PipelineFailureCategory(rawValue: $0.rawValue) == nil }
+        #expect(Set(unmapped) == [.cloudFetch, .deferred])
+    }
+
     // Duration.
 
     @Test func theDurationIsOmittedWhenAnEndTimeIsMissing() throws {
@@ -192,16 +211,60 @@ struct RunBannerTextTests {
         #expect(names == ["kind", "sessionCount", "analysed", "reason", "durationSeconds"])
     }
 
-    @Test func everyLocaleHasEveryKeyTheBannerReads() throws {
-        // The locale gate (`scripts/check-locales.py --strict`) is the pin; this
-        // reads the one English value that would render as a raw key if missing.
+    /// The locale gate (`scripts/check-locales.py --strict`) is the pin for key
+    /// coverage; this reads each key through the runtime in every locale, so a
+    /// key the runtime cannot resolve (a raw key on screen) fails here too.
+    @Test func everyLocaleResolvesEveryKeyTheBannerReads() throws {
         let i18n = try english()
-        for key in ["desktop.runBanner.finished", "desktop.runBanner.finishedWithFailures",
-                    "desktop.runBanner.prealert.title", "desktop.runBanner.prealert.body",
-                    "desktop.runBanner.prealert.continue", "settings.general.notifyLabel",
-                    "settings.general.notifyOffInSystem", "settings.general.notifyOpenSystemSettings"] {
-            #expect(i18n.t(key) != key, "\(key) is missing from en")
+        for locale in I18n.supportedLocales {
+            i18n.setLocale(locale)
+            for key in ["desktop.runBanner.finished", "desktop.runBanner.finishedWithFailures",
+                        "desktop.runBanner.prealert.title", "desktop.runBanner.prealert.body",
+                        "desktop.runBanner.prealert.continue", "desktop.chrome.failedTitle",
+                        "settings.general.notifyLabel", "settings.general.notifyOffInSystem",
+                        "settings.general.notifyOpenSystemSettings",
+                        "settings.heading", "desktop.settingsTabs.general"] {
+                #expect(i18n.t(key) != key, "\(key) does not resolve in \(locale)")
+            }
+            for count in [1, 2, 5] {
+                let word = i18n.plural("desktop.runBanner.sessions", count: count)
+                #expect(!word.hasPrefix("desktop."), "sessions plural for \(count) does not resolve in \(locale)")
+            }
+            #expect(i18n.t("desktop.runBanner.prealert.body").contains("{{path}}"), "\(locale) lost the {{path}} placeholder")
+            for category in PipelineFailureCategory.allMentionableForBanner {
+                #expect(i18n.t(category.labelKey) != category.labelKey, "\(category) label missing in \(locale)")
+            }
         }
+    }
+}
+
+private extension PipelineFailureCategory {
+    /// Every category the banner may name, as `RunBanner.mentionable` decides.
+    static var allMentionableForBanner: [PipelineFailureCategory] {
+        [.auth, .outOfCredit, .network, .quota, .disk, .whisper, .apiRequest, .modelUnavailable,
+         .apiServer, .missingDep, .missingInput, .missingBinary, .outputTruncated, .unusableInput]
+            .compactMap { RunBanner.mentionable($0) }
+    }
+}
+
+@Suite struct RunBannerClickTests {
+    @Test func aWellFormedClickNamesItsProject() {
+        let id = UUID()
+        #expect(RunBannerClick.projectID(from: ["projectID": id.uuidString]) == id)
+    }
+
+    @Test func anythingElseNamesNothing() {
+        #expect(RunBannerClick.projectID(from: nil) == nil)
+        #expect(RunBannerClick.projectID(from: [:]) == nil)
+        #expect(RunBannerClick.projectID(from: ["projectID": "not a uuid"]) == nil)
+        #expect(RunBannerClick.projectID(from: ["projectID": 7]) == nil)
+    }
+
+    @Test func onlyTheFrontWindowActsAndOnlyOnAStudyStillInTheSidebar() {
+        let id = UUID()
+        #expect(RunBannerClick.shouldSelect(id, known: [id], windowIsFront: true))
+        #expect(!RunBannerClick.shouldSelect(id, known: [id], windowIsFront: false), "a back window must not change study")
+        #expect(!RunBannerClick.shouldSelect(id, known: [UUID()], windowIsFront: true), "a removed study is a quiet no-op")
     }
 }
 
@@ -230,17 +293,18 @@ struct RunBannerTextTests {
 
 struct RunBannerPreferenceTests {
 
-    private func defaults() -> UserDefaults {
-        let d = UserDefaults(suiteName: "runbanner-\(UUID().uuidString)")!
-        return d
+    private func defaults() -> (UserDefaults, String) {
+        let name = "runbanner-\(UUID().uuidString)"
+        return (UserDefaults(suiteName: name)!, name)
     }
 
     @Test func itIsOnWhenNeverSetThroughTheOneAccessor() {
-        #expect(RunBannerPreference.isOn(defaults()))
+        let (d, name) = defaults(); defer { d.removePersistentDomain(forName: name) }
+        #expect(RunBannerPreference.isOn(d))
     }
 
     @Test func itIsOnAfterRegisteringDefaultsAndOffWhenTheSwitchIsOff() {
-        let d = defaults()
+        let (d, name) = defaults(); defer { d.removePersistentDomain(forName: name) }
         RunBannerPreference.registerDefaults(d)
         #expect(d.bool(forKey: RunBannerPreference.key), "a plain read of the key must agree with the accessor")
         d.set(false, forKey: RunBannerPreference.key)
@@ -468,6 +532,63 @@ struct RunBannerRunnerTests {
         await settle()
 
         #expect(sink.ends.isEmpty, "a scan reads a past run; it must not announce it")
+    }
+
+    /// The end read timed out on a slow disk and settled later, as R29 reads it.
+    private func slowEndRig() -> PipelineRunnerQueueTests.Rig {
+        PipelineRunnerQueueTests.Rig(
+            manifestRead: { _ in
+                try? await Task.sleep(for: .milliseconds(120))
+                return .ready(Date())
+            },
+            endStateTimeout: .milliseconds(40))
+    }
+
+    @Test func aFinishedRunWhoseEndReadTimedOutIsAnnouncedWhenItIsReadAgain() async {
+        let rig = slowEndRig(); defer { rig.cleanUp() }
+        let sink = BannerSink(); rig.runner.runBanner = sink
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: 10)
+        rig.launches[0].exit()
+        await PipelineRunnerQueueTests.until { !sink.ends.isEmpty }
+        await settle()
+
+        #expect(sink.ends.count == 1, "a late end is still a witnessed end, once")
+        #expect(sink.ends.first?.stop == false)
+    }
+
+    @Test func aStopWhoseEndReadTimedOutDoesNotAnnounceFinishedWhenItIsReadAgain() async {
+        let rig = slowEndRig(); defer { rig.cleanUp() }
+        let sink = BannerSink(); rig.runner.runBanner = sink
+        rig.onSignal = { launch, sig in if sig == SIGINT { launch.exit(.exited(code: 1)) } }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: 10)
+        rig.runner.cancel(project: a)
+        await PipelineRunnerQueueTests.until {
+            if case .ready = rig.runner.state[a.id] { return true }; return false
+        }
+        await settle()
+
+        #expect(sink.ends.allSatisfy { $0.stop }, "the researcher's Stop must reach the banner as a stop, even when the end is read late")
+    }
+
+    @Test func aTerminusFromBeforeThisRunIsNotThisRunsAndGetsAStableKey() async {
+        let rig = PipelineRunnerQueueTests.Rig(); defer { rig.cleanUp() }
+        let sink = BannerSink(); rig.runner.runBanner = sink
+        let a = rig.project("A")
+        // A finished run is already on disk when this one starts, and this one
+        // writes no terminus of its own: the one on disk is the previous run's.
+        rig.writeFinishedRun(in: a, runId: "previous", tokens: nil)
+        rig.runner.start(project: a)
+        rig.launches[0].exit()
+        await PipelineRunnerQueueTests.until { !sink.ends.isEmpty }
+        await settle()
+
+        #expect(sink.ends.count == 1)
+        #expect(sink.ends.first?.runKey == "no-terminus-\(a.id.uuidString)",
+                "a previous run's id must not key this run, and the fallback is stable")
     }
 
     @Test func onlyAStartTheResearcherChoseIsAskedAbout() async {

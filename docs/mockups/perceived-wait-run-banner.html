@@ -3,8 +3,8 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Perceived wait: the run-finished banner · Bristlenose mockups</title>
 <style>
-/* ===== THEME TOKENS, VERBATIM from the committed tree @ 587c39863: tokens*.css and colors/*.css only. Not edited. ===== */
-/* ════ bristlenose/theme/tokens.css @ 587c39863 ════ */
+/* ===== THEME TOKENS, VERBATIM from the committed tree @ aa3325468: tokens*.css and colors/*.css only. Not edited. ===== */
+/* ════ bristlenose/theme/tokens.css @ aa3325468 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -450,7 +450,7 @@
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/tokens-typography.css @ aa3325468 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -552,7 +552,7 @@
     }
 }
 
-/* ════ bristlenose/theme/tokens-desktop.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/tokens-desktop.css @ aa3325468 ════ */
 /* Desktop typography overrides — SF Pro for macOS native feel.
    Active when data-platform="desktop" is set on <html> AND the user hasn't
    opted back to Inter. The macOS app sets data-platform via
@@ -624,7 +624,7 @@
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/colors/palette-default.css @ aa3325468 ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -802,7 +802,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/colors/palette-edo.css @ aa3325468 ════ */
 /* palette-edo — Edo-period Japanese art colour theme.
    Sampled from three artworks seen at the British Museum Samurai exhibition,
    1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
@@ -993,7 +993,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-catppuccin.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/colors/palette-catppuccin.css @ aa3325468 ════ */
 /* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
    Source: https://github.com/catppuccin/palette (catppuccin.com/palette).
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1155,7 +1155,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-gruvbox.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/colors/palette-gruvbox.css @ aa3325468 ════ */
 /* palette-gruvbox — Gruvbox, light and dark, medium contrast.
    Source: https://github.com/morhetz/gruvbox. Light uses the faded accents, dark the bright ones.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1317,7 +1317,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-rose-pine.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/colors/palette-rose-pine.css @ aa3325468 ════ */
 /* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
    Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1480,7 +1480,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-solarized.css @ 587c39863 ════ */
+/* ════ bristlenose/theme/colors/palette-solarized.css @ aa3325468 ════ */
 /* palette-solarized — Solarized, light and dark.
    Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1711,20 +1711,20 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <div class="m-key"><span><i></i>Artefact: what the researcher would see (macOS banners and the Settings row are system or SwiftUI chrome, approximated, drawn as macOS 27 draws them: icon, title, time, body, no app name; token colours verbatim)</span><span><i class="c"></i>Commentary and diagrams: not product</span></div>
 
 <div class="m-grid">
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished, Bristlenose in the background</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">Analysis finished · 8 sessions · 38 min</div></div></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">The analysis didn’t finish · Claude is out of credit · 5 of 8 sessions are done</div></div></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished with failures</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">Analysis finished with failures · 6 of 8 sessions · sessions 3 and 7 didn’t finish</div></div></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason not known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">The analysis didn’t finish · 5 of 8 sessions are done</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished, Bristlenose in the background</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">Analysis finished · 8 sessions · 38m</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">The analysis didn’t finish · Out of credit · 5 of 8 sessions analysed</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished with failures</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">Analysis finished with failures · 6 of 8 sessions analysed · 38m</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason not known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Checkout study</span><span>now</span></div><div class="m-bb">The analysis didn’t finish · 5 of 8 sessions analysed</div></div></div></div></figure>
 <figure class="m-frame"><div class="m-chrome"><b>Settings</b><span class="m-flabel">Settings ▸ General, on by default</span></div><div class="m-form">
 <div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div>
-<div class="m-row"><div>Notify when an analysis finishes or stops</div><span class="m-sw"></span></div>
+<div class="m-row"><div>Notify when an analysis finishes</div><span class="m-sw"></span></div>
 </div></figure>
 <figure class="m-frame"><div class="m-chrome"><b>Settings</b><span class="m-flabel">Settings ▸ General, muted</span></div><div class="m-form">
 <div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div>
-<div class="m-row"><div>Notify when an analysis finishes or stops</div><span class="m-sw off"></span></div>
+<div class="m-row"><div>Notify when an analysis finishes</div><span class="m-sw off"></span></div>
 </div></figure>
 <figure class="m-frame"><div class="m-chrome"><b>Sheet</b><span class="m-flabel">first analysis: our one-button screen, then the system's request</span></div><div class="m-sheetwrap"><div class="m-sheet"><div class="m-sicon">B</div><h4>Notify me when analysis finishes</h4><p>macOS will ask next whether Bristlenose can send notifications. You can change this in Settings &gt; General.</p><span class="m-btn">Continue</span></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Settings</b><span class="m-flabel">Settings ▸ General, notifications off in System Settings</span></div><div class="m-form"><div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div><div class="m-row"><div>Notify when an analysis finishes or stops<small>Notifications are off for Bristlenose in System Settings.</small></div><span class="m-link">Open Notification Settings…</span></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Settings</b><span class="m-flabel">Settings ▸ General, notifications off in System Settings</span></div><div class="m-form"><div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div><div class="m-row"><div>Notify when an analysis finishes<small>Notifications are off for Bristlenose in System Settings.</small></div><span class="m-link">Open Notification Settings…</span></div></div></figure>
 </div>
 
 <div class="m-comment">
@@ -1740,9 +1740,9 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <tr><td>"{{project}} · {{count}} sessions · {{duration}}"</td><td>New, with a plural. Whether the count belongs is open (the same question as a "found so far" count).</td></tr>
 <tr><td>Sheet: "Notify me when analysis finishes", "macOS will ask next whether Bristlenose can send notifications. You can change this in Settings &gt; General.", button "Continue"</td><td><b>New. Owner-written wording (6 Nov).</b> One button, titled Continue, that opens the system request; no Cancel (Apple's rules for a screen before a permission request). The analysis starts either way.</td></tr>
 <tr><td>"Notifications are off for Bristlenose in System Settings." and "Open Notification Settings…"</td><td><b>New, owner-written proposals.</b> The button opens the system pane for the app. It never re-asks.</td></tr>
-<tr><td>"Notify when an analysis finishes or stops"</td><td>New, owner-written proposal. Reads positively, on by default. General tab holds one row today.</td></tr>
+<tr><td>"Notify when an analysis finishes"</td><td>New, owner-written proposal. Reads positively, on by default. General tab holds one row today.</td></tr>
 </table>
-<p>All new strings need the 21 full locales. Not drawn: the Dock bounce (one informational bounce, then it stops) and the sound.</p>
+<p>All new strings need the 21 full locales. Not drawn: the sound. There is no Dock bounce (decided).</p>
 
 <h3>When a run's end becomes a banner</h3>
 <svg viewBox="0 0 980 330" role="img" aria-label="State diagram: when a run's end becomes a banner">
@@ -1753,9 +1753,9 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <rect class="b" x="250" y="180" width="130" height="50" rx="8"/><text x="315" y="210" text-anchor="middle">Stopped (Stop)</text>
 <rect class="b" x="250" y="260" width="130" height="50" rx="8"/><text x="315" y="290" text-anchor="middle">App quit (⌘Q)</text>
 <path class="a" d="M140 150L250 50"/><path class="a" d="M140 155L250 125"/><path class="a" d="M140 165L250 205"/><path class="a" d="M140 175L250 285"/>
-<rect class="b" x="470" y="60" width="190" height="64" rx="8"/><text x="565" y="86" text-anchor="middle">Is Bristlenose the</text><text x="565" y="104" text-anchor="middle">frontmost app, or muted?</text>
+<rect class="b" x="470" y="60" width="190" height="64" rx="8"/><text x="565" y="86" text-anchor="middle">Is the researcher looking</text><text x="565" y="104" text-anchor="middle">at it, or is it muted?</text>
 <path class="a" d="M380 45L470 80"/><path class="a" d="M380 125L470 105"/>
-<rect class="go" x="760" y="20" width="200" height="70" rx="8"/><text x="860" y="48" text-anchor="middle">Banner + sound</text><text x="860" y="66" text-anchor="middle">one Dock bounce</text><text class="m" x="860" y="82" text-anchor="middle">click opens the project</text>
+<rect class="go" x="760" y="20" width="200" height="70" rx="8"/><text x="860" y="48" text-anchor="middle">Banner + sound</text><text x="860" y="66" text-anchor="middle">click brings the app forward</text><text class="m" x="860" y="82" text-anchor="middle">the system's own click behaviour</text>
 <rect class="n" x="760" y="130" width="200" height="60" rx="8"/><text x="860" y="156" text-anchor="middle">Nothing</text><text class="m" x="860" y="174" text-anchor="middle">the sidebar row flips, as today</text>
 <path class="a" d="M660 80L760 55"/><text class="m" x="690" y="58">no, and not muted</text>
 <path class="a" d="M660 105L760 150"/><text class="m" x="690" y="150">yes, or muted</text>
@@ -1765,13 +1765,13 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <path class="ad" d="M380 285L470 289"/>
 </svg>
 <table>
-<tr><th>The run…</th><th>Bristlenose frontmost (any project)</th><th>Not frontmost</th><th>Muted in Settings</th></tr>
+<tr><th>The run…</th><th>Researcher looking</th><th>Away</th><th>Muted in Settings</th></tr>
 <tr><td>finished</td><td>no banner; sidebar row flips</td><td><b>banner</b></td><td>no banner</td></tr>
 <tr><td>didn't finish</td><td>no banner; the failure shows as today</td><td><b>banner</b></td><td>no banner</td></tr>
 <tr><td>was stopped by the researcher</td><td colspan="3">no banner: they just did it, and "Analysis stopped" is already plain</td></tr>
 <tr><td>ended because the app quit</td><td colspan="3">no banner: nothing is alive to send it (today's rule)</td></tr>
 </table>
-<p><b>Decided (owner, 6 Nov 2026):</b> if Bristlenose is the frontmost app there is no banner, whichever project is on screen. The researcher is in the app and has the sidebar; a run finishing in another project shows there as it does today. A closed sidebar is a wrinkle to play with once it is built, not a reason to banner.</p><p><b>Still to settle:</b> several runs finishing close together (one banner each, or grouped; macOS can thread them by project); a run that finished while the Mac was asleep (macOS shows it on wake).</p>
+<p><b>Decided (owner, 6 Nov 2026):</b> when the researcher is looking at Bristlenose (the app is active, a window is visible, the display is awake, the screen is unlocked and the session is active) there is no banner, whichever project is on screen. The researcher is in the app and has the sidebar; a run finishing in another project shows there as it does today. A closed sidebar is a wrinkle to play with once it is built, not a reason to banner.</p><p><b>Still to settle:</b> several runs finishing close together (one banner each, or grouped; macOS can thread them by project); a run that finished while the Mac was asleep (macOS shows it on wake).</p>
 
 <h3>Your question: could the web app ask its platform to send the alert? (Parked by the owner, 6 Nov 2026: kept for the record, not being pursued.)</h3>
 <svg viewBox="0 0 980 360" role="img" aria-label="Architecture: who can raise a banner">
@@ -1780,7 +1780,7 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <rect class="b" x="20" y="34" width="190" height="56" rx="8"/><text x="115" y="58" text-anchor="middle">bristlenose run</text><text class="m" x="115" y="76" text-anchor="middle">writes the events log</text>
 <rect class="go" x="270" y="34" width="210" height="56" rx="8"/><text x="375" y="58" text-anchor="middle">PipelineRunner (Swift)</text><text class="m" x="375" y="76" text-anchor="middle">knows the run ended, and how</text>
 <rect class="b" x="540" y="34" width="190" height="56" rx="8"/><text x="635" y="58" text-anchor="middle">Notification Center</text><text class="m" x="635" y="76" text-anchor="middle">UNUserNotificationCenter</text>
-<rect class="b" x="790" y="34" width="170" height="56" rx="8"/><text x="875" y="58" text-anchor="middle">Banner on this Mac</text><text class="m" x="875" y="76" text-anchor="middle">+ Dock bounce</text>
+<rect class="b" x="790" y="34" width="170" height="56" rx="8"/><text x="875" y="58" text-anchor="middle">Banner on this Mac</text><text class="m" x="875" y="76" text-anchor="middle">+ sound</text>
 <path class="a" d="M210 62L270 62"/><path class="a" d="M480 62L540 62"/><path class="a" d="M730 62L790 62"/>
 <text class="m" x="20" y="132">The web report (React) in the app's web view</text>
 <rect class="n" x="20" y="144" width="250" height="64" rx="8"/><text x="145" y="168" text-anchor="middle">Report page</text><text class="m" x="145" y="186" text-anchor="middle">has no run-progress channel</text><text class="m" x="145" y="200" text-anchor="middle">(only a data version and lens flags)</text>

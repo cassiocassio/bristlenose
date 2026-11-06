@@ -1319,7 +1319,7 @@
   },
   "runBanner": {
     "finished": "Analysen \u00e4r klar",
-    "finishedWithFailures": "Analysen \u00e4r klar med fel",
+    "finishedWithFailures": "Analysen blev klar, men med fel",
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessioner",
     "prealert": {

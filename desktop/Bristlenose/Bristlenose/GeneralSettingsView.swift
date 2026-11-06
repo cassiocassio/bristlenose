@@ -72,23 +72,23 @@ struct GeneralSettingsView: View {
                     }
                 }
 
-                // Notify when an analysis finishes. When the system has
-                // notifications off for Bristlenose, the switch has nothing to
-                // switch: say so and open the one pane that can change it. It
-                // never asks again (the system will not prompt twice).
-                LabeledContent {
-                    if notificationAuthorization == .denied {
-                        Button(i18n.t("settings.general.notifyOpenSystemSettings")) {
-                            Self.openNotificationSettings()
-                        }
-                    } else {
-                        Toggle("", isOn: $notifyOnRunEnd).labelsHidden()
-                    }
-                } label: {
+                // Notify when an analysis finishes. The stock switch row (title, and
+                // a secondary line when there is something to say), so VoiceOver reads
+                // its label like every other switch in Settings. When the system has
+                // notifications off for Bristlenose the switch is dimmed and the one
+                // pane that can change that opens from a button. It never asks again
+                // (the system will not prompt twice).
+                Toggle(isOn: $notifyOnRunEnd) {
                     Text(i18n.t("settings.general.notifyLabel"))
-                    if notificationAuthorization == .denied {
+                    if notificationsDeniedBySystem {
                         Text(i18n.t("settings.general.notifyOffInSystem"))
                             .foregroundStyle(.secondary)
+                    }
+                }
+                .disabled(notificationsDeniedBySystem)
+                if notificationsDeniedBySystem {
+                    Button(i18n.t("settings.general.notifyOpenSystemSettings")) {
+                        Self.openNotificationSettings()
                     }
                 }
             }
@@ -104,9 +104,17 @@ struct GeneralSettingsView: View {
         ) { _ in
             Task { await refreshNotificationAuthorization() }
         }
+        // The row grows when the system says off, after the pane was sized, and a
+        // pane refits only on tab activation unless it asks (the Transcription
+        // pane's sibling pattern).
+        .onChange(of: notificationAuthorization) { _, _ in
+            DispatchQueue.main.async { SettingsWindow.shared.refitToContent() }
+        }
     }
 
     // MARK: - Notifications
+
+    private var notificationsDeniedBySystem: Bool { notificationAuthorization == .denied }
 
     private func refreshNotificationAuthorization() async {
         notificationAuthorization = await SystemRunBannerSystem().authorization()

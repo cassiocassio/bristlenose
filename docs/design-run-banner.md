@@ -1,6 +1,6 @@
 # The run-finished banner: a design for approval
 
-Status: proposal for owner approval, 6 Nov 2026. Nothing is built. Under the R114 UX gate (complete mockup, review and explicit approval before new UX is implemented) this is the review artefact; the mockup is `docs/mockups/perceived-wait-run-banner.html`. Why it exists, and the evidence behind it: `docs/design-perceived-wait.md`, candidate A. Earlier direction it builds on: `docs/design-desktop-nav-toolbar-rearrangement.md` § 10.4.
+Status: **built 6 Nov 2026** (commit `aa3325468`, with the review's fixes after it; see "As built" below). It began as a proposal for owner approval. Under the R114 UX gate (complete mockup, review and explicit approval before new UX is implemented) this is the review artefact; the mockup is `docs/mockups/perceived-wait-run-banner.html`. Why it exists, and the evidence behind it: `docs/design-perceived-wait.md`, candidate A. Earlier direction it builds on: `docs/design-desktop-nav-toolbar-rearrangement.md` § 10.4.
 
 ## Fixes from the Fable review (6 Nov 2026), and what each changed
 
@@ -25,6 +25,24 @@ An independent review on the Fable model (17 findings, three blockers) checked t
 | 15 to 17 | Mockup and plan disagreed; decided items sat under "Not decided"; the beta rule was not named. | Mockup and plan brought into line. **The owner is making this banner the sanctioned exception to "beta means almost no new features"** (stated by the goal, 6 Nov 2026). |
 
 Day-one items the review added: a Debug build run from Xcode's build folder fails notification validation ("Failed to find or validate client"), so QA of this feature needs the app installed in a normal location; the Settings row refreshes the system permission state when the Settings window appears and when the app becomes active; the click's `userInfo` carries the project id only; the preference default is read through one accessor and registered with `UserDefaults.register(defaults:)`.
+
+## As built (6 Nov 2026)
+
+**Built:** `RunBanner.swift` (the decision, the words, the preference, the gate), `RunBannerCoordinator.swift` (the one seam to macOS, the coordinator, the notification delegate, the one-button screen, the screen-state watcher), `RunBannerClickRouting.swift`, hooks in `PipelineRunner.swift`, the delegate and preference registration in `BristlenoseApp.swift`, the switch in `GeneralSettingsView.swift`, and the strings in the 21 locales.
+
+**Where the build departs from the design, on purpose:**
+- **The body does not name sessions.** It says "N of M sessions analysed" (the shipped phrase and count), never "sessions 3 and 7": shorter, and nothing in it can be participant-bearing.
+- **The reason is the shipped category label** ("Out of credit", "Network error"), not a new phrase table. A provider is not named.
+- **The duration is the shared format** (`DurationFormat.human`: "38m", "1h 12m"), so the prose's "38 min" reads "38m" on screen.
+- **The Settings row is the stock switch row.** When the system has notifications off the switch is dimmed with one line saying why, and a button opens the Notifications pane. The row refits the Settings window when the state changes.
+- **The text is composed from fragments joined by " · "**, as the sidebar's status line is, each a keyed string; not one key per body.
+- **A click opens the project** (the front window selects it if it is still in the sidebar). This was missing in the first build and found by the second review.
+
+**Tests:** 45 in `RunBannerTests.swift`, run through the app's own rig. The fixes the reviews found are each pinned by a test that goes red when the fix is removed alone (checked by mutation): the gate, the partial-run branching, the dedupe, the origin-gated ask, a scan announcing, the accept-path announce, the Stop flag on a slow re-read, and the front-window rule on a click.
+
+**Not verified, because it needs a real Mac and a person:** that a banner appears on screen in each away state; the lock-screen and display-sleep behaviour of `occlusionState` (the gate does not depend on it, because lock and sleep are tracked separately, but the notification names for lock are undocumented); the permission request as a temporary banner (seen once, on one Mac); macOS 15 and 26; VoiceOver on the Settings switch; a release-signed build, where a notifying app must live in a normal location (a Debug build run from Xcode's build folder fails notification validation).
+
+**Known gaps:** no "clear the banner when the researcher opens the project" (the entry stays in the notification list until dismissed); the minimised-and-frontmost case posts nothing (accepted); only a run this app started or attached to announces its end.
 
 ## What it is
 
@@ -307,4 +325,4 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 4. The Settings row and its wording.
 5. The open items, or which of them to decide now.
 
-Nothing is implemented until these are approved.
+The owner set this build going on 6 Nov 2026 (the goal named in the session).

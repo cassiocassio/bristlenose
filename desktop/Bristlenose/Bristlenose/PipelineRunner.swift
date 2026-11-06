@@ -1561,7 +1561,7 @@ final class PipelineRunner: ObservableObject {
             // An attached run the app watched end: a witnessed end.
             announceEnd(
                 of: project, state: state[project.id] ?? .idle, stopRequested: false,
-                priorRunId: priorTerminus)
+                priorRunId: priorTerminus, terminus: Self.readTerminus(project))
         }
     }
 
@@ -2748,7 +2748,8 @@ var args = ["run", project.path, "--no-serve"]
             state[projectID] = stopped
             if stopped == .unreachable(reason: .timedOut), let project {
                 rereadAfterSlowEnd(
-                    project, priorRunId: priorRunIds[projectID], adopting: leftBehind
+                    project, priorRunId: priorRunIds[projectID], adopting: leftBehind,
+                    stopRequested: true
                 )
             }
             Self.logger.info(
@@ -2811,16 +2812,17 @@ var args = ["run", project.path, "--no-serve"]
             if final == .unreachable(reason: .timedOut), let project {
                 rereadAfterSlowEnd(
                     project, provider: provider, priorRunId: priorRunIds[projectID],
-                    adopting: leftBehind
+                    adopting: leftBehind, stopRequested: stopWasRequested
                 )
             }
+            let endTerminus = Self.readTerminus(project)
             announceEnd(
                 of: project, state: final, stopRequested: stopWasRequested,
-                priorRunId: priorRunIds[projectID])
+                priorRunId: priorRunIds[projectID], terminus: endTerminus)
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
                     provider: provider, project: project,
-                    terminus: project.flatMap { EventLogReader.tailEvent(at: Self.eventsURL(for: $0)) },
+                    terminus: endTerminus,
                     priorRunId: priorRunIds[projectID]
                 )
                 Self.logger.info(
@@ -2839,7 +2841,8 @@ var args = ["run", project.path, "--no-serve"]
             )
             announceEnd(
                 of: project, state: state[projectID] ?? .idle,
-                stopRequested: stopWasRequested, priorRunId: priorRunIds[projectID])
+                stopRequested: stopWasRequested, priorRunId: priorRunIds[projectID],
+                terminus: Self.readTerminus(project))
         }
 
         startNextQueued()
@@ -2850,15 +2853,31 @@ var args = ["run", project.path, "--no-serve"]
     /// fixture. `priorRunId` is the run newest on disk before this one began: a
     /// terminus with that id is the previous run's, so its times are not ours.
     private func announceEnd(
-        of project: Project?, state final: PipelineState, stopRequested: Bool, priorRunId: String?
+        of project: Project?, state final: PipelineState, stopRequested: Bool,
+        priorRunId: String?, terminus read: EventLogReader.Event?
     ) {
         guard let project, let sink = runBanner else { return }
-        var terminus = EventLogReader.tailEvent(at: Self.eventsURL(for: project))
-        if terminus?.runId == priorRunId { terminus = nil }
+        // Only a real end. A read that timed out is not one: the run's end is
+        // announced when the re-read settles it.
+        switch final {
+        case .unreachable, .running, .scanning, .queued, .idle: return
+        default: break
+        }
+        // The terminus is read once by the caller, who may share it with the
+        // credit check: it is a blocking read of a folder that may be slow.
+        let terminus = read?.runId == priorRunId ? nil : read
         sink.runDidEnd(
             projectID: project.id, projectName: project.name, state: final,
             terminus: terminus, stopRequested: stopRequested,
-            runKey: terminus?.runId ?? UUID().uuidString)
+            // With no terminus of this run there is nothing stable to key on, so
+            // the fallback is the project's own id: a second announce of the same
+            // end finds the first and does not post twice.
+            runKey: terminus?.runId ?? "no-terminus-\(project.id.uuidString)")
+    }
+
+    /// The run's own terminal event, read once.
+    private static func readTerminus(_ project: Project?) -> EventLogReader.Event? {
+        project.flatMap { EventLogReader.tailEvent(at: Self.eventsURL(for: $0)) }
     }
 
     /// Read a run's end state again after its read timed out (R29).
@@ -2882,7 +2901,8 @@ var args = ["run", project.path, "--no-serve"]
     /// end read and its re-reads are one read at a time too.
     private func rereadAfterSlowEnd(
         _ project: Project, provider: LLMProvider? = nil, priorRunId: String?,
-        adopting leftBehind: Task<PipelineState, Never>? = nil
+        adopting leftBehind: Task<PipelineState, Never>? = nil,
+        stopRequested: Bool = false
     ) {
         let projectID = project.id
         let url = Self.manifestURL(for: project)
@@ -2913,15 +2933,18 @@ var args = ["run", project.path, "--no-serve"]
                 self.applyScanResult(resolved, for: projectID)
                 if case .running = self.state[projectID], !self.ownsRun(projectID) {
                     self.watchForeignRun(project)
-                } else {
-                    // A late read of a run this app started: still a witnessed end.
-                    self.announceEnd(
-                        of: project, state: resolved, stopRequested: false, priorRunId: priorRunId)
+                    break
                 }
+                // A late read of a run this app started: still a witnessed end.
+                // The terminus is read once and shared with the credit check.
+                let terminus = Self.readTerminus(project)
+                self.announceEnd(
+                    of: project, state: resolved, stopRequested: stopRequested,
+                    priorRunId: priorRunId, terminus: terminus)
                 if case .ready = resolved {
                     self.noteCreditIfTheRunUsedAnLLM(
                         provider: provider, project: project,
-                        terminus: EventLogReader.tailEvent(at: Self.eventsURL(for: project)),
+                        terminus: terminus,
                         priorRunId: priorRunId
                     )
                 }

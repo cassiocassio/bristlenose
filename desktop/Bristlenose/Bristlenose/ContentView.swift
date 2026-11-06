@@ -1277,6 +1277,12 @@ struct ContentView: View {
                 selection = restored
             }
         }
+        // A click on a run-finished banner opens the study it was about.
+        .modifier(RunBannerClickRouting(
+            selection: $selection,
+            knownProjects: { Set(projectIndex.projects.map(\.id)) },
+            windowIsFront: { windowIsKey }
+        ))
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
                 isReviewMode: aiConsentReviewMode,

@@ -3,8 +3,8 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Perceived wait: the run-finished banner · Bristlenose mockups</title>
 <style>
-/* ===== THEME TOKENS, VERBATIM from the committed tree @ 9e48abbc6: tokens*.css and colors/*.css only. Not edited. ===== */
-/* ════ bristlenose/theme/tokens.css @ 9e48abbc6 ════ */
+/* ===== THEME TOKENS, VERBATIM from the committed tree @ d3480c90e: tokens*.css and colors/*.css only. Not edited. ===== */
+/* ════ bristlenose/theme/tokens.css @ d3480c90e ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -450,7 +450,7 @@
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/tokens-typography.css @ d3480c90e ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -552,7 +552,7 @@
     }
 }
 
-/* ════ bristlenose/theme/tokens-desktop.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/tokens-desktop.css @ d3480c90e ════ */
 /* Desktop typography overrides — SF Pro for macOS native feel.
    Active when data-platform="desktop" is set on <html> AND the user hasn't
    opted back to Inter. The macOS app sets data-platform via
@@ -624,7 +624,7 @@
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/colors/palette-default.css @ d3480c90e ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -802,7 +802,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/colors/palette-edo.css @ d3480c90e ════ */
 /* palette-edo — Edo-period Japanese art colour theme.
    Sampled from three artworks seen at the British Museum Samurai exhibition,
    1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
@@ -993,7 +993,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-catppuccin.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/colors/palette-catppuccin.css @ d3480c90e ════ */
 /* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
    Source: https://github.com/catppuccin/palette (catppuccin.com/palette).
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1155,7 +1155,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-gruvbox.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/colors/palette-gruvbox.css @ d3480c90e ════ */
 /* palette-gruvbox — Gruvbox, light and dark, medium contrast.
    Source: https://github.com/morhetz/gruvbox. Light uses the faded accents, dark the bright ones.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1317,7 +1317,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-rose-pine.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/colors/palette-rose-pine.css @ d3480c90e ════ */
 /* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
    Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1480,7 +1480,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-solarized.css @ 9e48abbc6 ════ */
+/* ════ bristlenose/theme/colors/palette-solarized.css @ d3480c90e ════ */
 /* palette-solarized — Solarized, light and dark.
    Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1748,7 +1748,7 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <path class="a" d="M660 105L760 150"/><text class="m" x="690" y="150">yes, or muted</text>
 <rect class="n" x="470" y="200" width="490" height="50" rx="8"/><text x="715" y="222" text-anchor="middle">Stopped: the researcher just pressed Stop. An expected outcome, so no banner.</text><text class="m" x="715" y="240" text-anchor="middle">"Analysis stopped" stays in the window, as today.</text>
 <path class="ad" d="M380 205L470 225"/>
-<rect class="n" x="470" y="268" width="490" height="42" rx="8"/><text x="715" y="288" text-anchor="middle">App quit: a run stops with the app (R19), so nothing is alive to send one.</text><text class="m" x="715" y="303" text-anchor="middle">This is the v2 idea. Not drawn.</text>
+<rect class="n" x="470" y="268" width="490" height="42" rx="8"/><text x="715" y="288" text-anchor="middle">App quit: a run stops with the app (R19), so nothing is alive to send one.</text>
 <path class="ad" d="M380 285L470 289"/>
 </svg>
 <table>
@@ -1756,7 +1756,7 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <tr><td>finished</td><td>no banner; sidebar row flips</td><td><b>banner</b></td><td>no banner</td></tr>
 <tr><td>didn't finish</td><td>no banner; the failure shows as today</td><td><b>banner</b></td><td>no banner</td></tr>
 <tr><td>was stopped by the researcher</td><td colspan="3">no banner: they just did it, and "Analysis stopped" is already plain</td></tr>
-<tr><td>ended because the app quit</td><td colspan="3">no banner: nothing is alive to send it (today's rule; the v2 idea would change this)</td></tr>
+<tr><td>ended because the app quit</td><td colspan="3">no banner: nothing is alive to send it (today's rule)</td></tr>
 </table>
 <p><b>Decided (owner, 6 Nov 2026):</b> if Bristlenose is the frontmost app there is no banner, whichever project is on screen. The researcher is in the app and has the sidebar; a run finishing in another project shows there as it does today. A closed sidebar is a wrinkle to play with once it is built, not a reason to banner.</p><p><b>Still to settle:</b> several runs finishing close together (one banner each, or grouped; macOS can thread them by project); a run that finished while the Mac was asleep (macOS shows it on wake).</p>
 

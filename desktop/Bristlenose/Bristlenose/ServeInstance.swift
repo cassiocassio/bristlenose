@@ -162,6 +162,13 @@ final class ServeInstance: ObservableObject {
     /// it was spawned a moment after the change with the new env already in it.
     var spawnedEnvFingerprint: String?
 
+    /// `LLMValidator.keyFingerprint` of each provider key this sidecar was spawned
+    /// with, by the provider's slug. A refusal the sidecar reports is about the key
+    /// it holds, baked at spawn; if the key held now is another one, it says nothing
+    /// about it (`ProviderProblemModel.recordRefusal`'s replaced-key guard). Empty
+    /// before a spawn and for a keyless provider.
+    var spawnedKeyFingerprints: [String: String] = [:]
+
     /// The MCP-scoped token this sidecar was spawned with — what the Connect
     /// Agent sheet hands out and what the handshake carries. Durable (Keychain,
     /// per project) normally; an *ephemeral process-lifetime scoped* token when

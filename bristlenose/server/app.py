@@ -311,6 +311,12 @@ def create_app(
     # terminal scrollback and any log its stdout is piped to.
     if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
         print(f"[bristlenose] auth-token: {auth_token}", flush=True)
+        # Tell the host when a call this sidecar makes on its own is refused (a signal
+        # refresh, the re-apply after a run): nothing else carries it there. Registered
+        # only here, so a run subprocess and a CLI serve print nothing.
+        from bristlenose.llm.refusal_report import set_refusal_sink
+
+        set_refusal_sink(lambda line: print(line, flush=True))
 
     # Cache-Control: no-store on /api/projects/* — defence-in-depth for the
     # desktop multi-project switch. WKWebView is torn down on project change

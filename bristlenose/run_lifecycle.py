@@ -607,6 +607,7 @@ _LLM_KIND_TO_CAUSE = {
     _LLMFailureKind.SERVER_ERROR: CauseCategoryEnum.API_SERVER,
     _LLMFailureKind.BAD_REQUEST: CauseCategoryEnum.API_REQUEST,
     _LLMFailureKind.MODEL_UNAVAILABLE: CauseCategoryEnum.MODEL_UNAVAILABLE,
+    _LLMFailureKind.NETWORK: CauseCategoryEnum.NETWORK,
 }
 
 # Filesystem path token — any run of non-whitespace, non-quote characters
@@ -862,6 +863,14 @@ def _build_cause(
         if provider:
             parts.append(f"on {provider}")
         message = " ".join(parts)
+    if http_status is None and provider is not None:
+        # The HTTP status the provider answered with, when it answered: the first
+        # structured fact the host can use to tell a reply from a dropped call (no caller
+        # passed one, so ``code`` was always empty). Only at an LLM call site, where a
+        # status attribute is the SDK's own.
+        from bristlenose.llm.failure_classifier import _extract_status
+
+        http_status = _extract_status(exc)
     return Cause(
         category=category,
         stage=stage,

@@ -83,6 +83,11 @@ class _Rule:
         if self.message is not None:
             object.__setattr__(self, "_msg_re", re.compile(self.message, re.IGNORECASE))
 
+    @property
+    def status_only(self) -> bool:
+        """True for a rule that reads the HTTP status and nothing the provider said."""
+        return self._code_re is None and self._msg_re is None
+
     def matches(
         self, provider: str | None, status: int | None, code: str | None, message: str | None
     ) -> bool:
@@ -206,8 +211,18 @@ def classify_llm_failure(
     status: int | None = None,
     error_code: str | None = None,
     message: str | None = None,
+    provider_signature: bool | None = None,
 ) -> LLMFailureKind:
     """Classify an LLM failure from its structured signals.
+
+    ``provider_signature`` says whether the reply was the provider's own: ``True``
+    (its JSON error shape), ``False`` (positive evidence it was something else, such
+    as an HTML block page from a proxy), or ``None`` (not known: today's behaviour,
+    and the answer for any-llm, for an exception with no body, and for a log written
+    before the field existed). When it is ``False`` a rule that reads only the HTTP
+    status is skipped, so a proxy's 403 is not "your key was rejected" and its 502 is
+    not "Claude is unavailable". A rule that reads the provider's own code or message
+    still applies.
 
     ``provider`` is the internal slug (``anthropic`` / ``openai`` / ``azure`` /
     ``google``); ``None`` runs the rules provider-agnostically (best-effort,
@@ -218,6 +233,8 @@ def classify_llm_failure(
     matches.
     """
     for rule in _RULES:
+        if provider_signature is False and rule.status_only:
+            continue
         if rule.matches(provider, status, error_code, message):
             return rule.kind
     return LLMFailureKind.UNKNOWN
@@ -247,9 +264,56 @@ def classify_fields(provider: str | None, exc: BaseException) -> LLMFailureKind:
     status = _extract_status(exc)
     code = _extract_code(exc)
     message = str(exc) or exc.__class__.__name__
-    return classify_llm_failure(
-        provider, status=status, error_code=code, message=message
+    kind = classify_llm_failure(
+        provider,
+        status=status,
+        error_code=code,
+        message=message,
+        provider_signature=extract_provider_signature(exc, status),
     )
+    if kind is LLMFailureKind.UNKNOWN and status is None:
+        # No reply at all: the call never reached the provider's server. Decided by the
+        # transport class down the exception chain, never by the words (an SDK's text
+        # for a dropped connection varies); a reply with a status is not this.
+        from bristlenose.llm.anyllm import is_network_error
+
+        if is_network_error(exc):
+            return LLMFailureKind.NETWORK
+    return kind
+
+
+def extract_provider_signature(exc: BaseException, status: int | None = None) -> bool | None:
+    """Whether the reply behind ``exc`` was the provider's own.
+
+    ``True`` when the body is the provider's JSON error shape (a mapping with an
+    ``error`` object, or the Anthropic ``{"type": "error"}`` envelope). ``False`` only
+    on positive evidence of another sender: the reply is HTML, or its body is text that
+    is not JSON. ``None`` otherwise. A ``request-id`` header alone is deliberately not
+    a signature: proxies and gateways add and forward it.
+    """
+    if status is None:
+        return None
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        err = body.get("error")
+        if isinstance(err, dict) or body.get("type") == "error":
+            return True
+        if any(k in body for k in ("code", "message", "type")):
+            return True  # an SDK that hands over the inner error object
+    resp = getattr(exc, "response", None)
+    headers = getattr(resp, "headers", None)
+    ctype = ""
+    try:
+        ctype = str(headers.get("content-type", "")).lower() if headers is not None else ""
+    except Exception:
+        ctype = ""
+    if "html" in ctype:
+        return False
+    if isinstance(body, str) and body.strip():
+        s = body.lstrip()
+        if s[:1] in "<" or not s.startswith(("{", "[")):
+            return False
+    return None
 
 
 def _extract_status(exc: BaseException) -> int | None:

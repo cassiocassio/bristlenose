@@ -788,6 +788,7 @@ final class ServeManager: ObservableObject {
         proc.environment = env
         instance.spawnedReadsScreens = Self.readsScreens(env)
         instance.spawnedEnvFingerprint = ServeEnvStaleness.fingerprint(env)
+        instance.spawnedKeyFingerprints = Self.keyFingerprints(in: env)
 
         // A standby sidecar already booted and waiting takes this study if it can: the same
         // process, the same pipe protocol and the same watchdog, minus the boot. Anything that
@@ -1713,6 +1714,44 @@ final class ServeManager: ObservableObject {
         return BristlenoseShared.redactKeys(in: clean)
     }
 
+    /// Where a refusal the sidecar reported goes. The default is the pill's model; a test
+    /// substitutes its own so no defaults or Keychain are touched.
+    var llmRefusalRecorder: (ProviderProblemCondition, LLMProvider, String?) -> Void = {
+        ProviderProblemModel.recordRefusal($0, provider: $1, explicit: false, keyFingerprint: $2)
+    }
+
+    /// `LLMValidator.keyFingerprint` of every provider key in a spawn environment, by the
+    /// provider's slug (`BRISTLENOSE_<SLUG>_API_KEY`).
+    nonisolated static func keyFingerprints(in env: [String: String]) -> [String: String] {
+        var out: [String: String] = [:]
+        for slug in BristlenoseShared.cloudProviders {
+            if let key = env["BRISTLENOSE_\(slug.uppercased())_API_KEY"], !key.isEmpty {
+                out[slug] = LLMValidator.keyFingerprint(key)
+            }
+        }
+        return out
+    }
+
+    /// Act on a refusal line. Only the provider's own answer counts (no credit, a rejected
+    /// key), and only for a key this sidecar was spawned with: with none on record there is
+    /// nothing to say it is still the key in force, so the refusal is dropped. Every drop is
+    /// logged.
+    func noteLLMRefusal(_ line: LLMRefusalLine) {
+        guard let condition = line.condition else {
+            log.info("llm-refusal kind=\(line.kind, privacy: .public) not acted on")
+            return
+        }
+        guard let provider = line.llmProvider else {
+            log.notice("llm-refusal \(condition.rawValue, privacy: .public) for a provider this build cannot read (\(line.provider, privacy: .public)): not recorded")
+            return
+        }
+        guard let fingerprint = instance.spawnedKeyFingerprints[provider.rawValue] else {
+            log.notice("llm-refusal \(condition.rawValue, privacy: .public) on \(provider.rawValue, privacy: .public): this sidecar was not given that provider's key: not recorded")
+            return
+        }
+        llmRefusalRecorder(condition, provider, fingerprint)
+    }
+
     func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
@@ -1736,6 +1775,13 @@ final class ServeManager: ObservableObject {
                 if entry.buffer.count > 50 { entry.buffer.removeFirst(entry.buffer.count - 50) }
                 parked = entry
             }
+            return
+        }
+
+        // An LLM call this sidecar made was refused. Taken before anything can publish the
+        // line: it is not output for the boot pane or an exit error.
+        if let refusal = LLMRefusalLine.fromLine(clean) {
+            noteLLMRefusal(refusal)
             return
         }
 

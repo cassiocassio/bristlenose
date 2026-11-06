@@ -25,6 +25,7 @@ from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
 from bristlenose.llm.pricing import PRICE_TABLE_VERSION
 from bristlenose.llm.prompts import PromptTemplate
+from bristlenose.llm.refusal_report import report_refusal
 from bristlenose.llm.structured import (
     drop_nulls,
     openai_strict_schema,
@@ -748,6 +749,8 @@ class LLMClient:
                     type(exc).__name__,
                     failure_summary(exc),
                 )
+                # Tell the macOS host, when this is the serve sidecar (no sink in a run).
+                report_refusal(self.provider, exc)
                 raise
         finally:
             elapsed_ms = int((time.perf_counter() - t0) * 1000)

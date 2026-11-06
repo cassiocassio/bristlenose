@@ -118,6 +118,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 - **A `pgrep -f` / `ps | grep` waiter matches its own command line**; never edit a bash script while a run of it is in flight; a scripted import insert can land inside a parenthesised import (import the module after); U+00A0 shows as a space (check `repr()` before believing an Edit mismatch).
 - **Subagents share the scratchpad**: put a session-unique token in paths you'll re-read, and have a probe assert its own identity.
 - **Venvs**: make them with `python3.12 -m venv`; `Path.resolve()` on a venv's python gives the base interpreter (use `.absolute()`); renaming the repo folder breaks the venv (clear `__pycache__`, reinstall `-e`).
+- **A repo-wide regex replace of a number rewrites dated evidence** (a measured result, an incident, a spike): sort hits by class and change only the default and current docs.
 - **`/sync-board`** joins doc and board on exact titles: put tags after the em dash, register a new numbered category in `KIND_MAP`, archive (never Done) a duplicate title.
 
 **Git, worktrees and concurrent sessions** — [full entries](.claude/gotchas.md#git-worktrees-and-concurrent-sessions)

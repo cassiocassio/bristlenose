@@ -3,8 +3,8 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Perceived wait: the run-finished banner · Bristlenose mockups</title>
 <style>
-/* ===== THEME TOKENS, VERBATIM from the committed tree @ 828baee2b: tokens*.css and colors/*.css only. Not edited. ===== */
-/* ════ bristlenose/theme/tokens.css @ 828baee2b ════ */
+/* ===== THEME TOKENS, VERBATIM from the committed tree @ 587c39863: tokens*.css and colors/*.css only. Not edited. ===== */
+/* ════ bristlenose/theme/tokens.css @ 587c39863 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -450,7 +450,7 @@
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/tokens-typography.css @ 587c39863 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -552,7 +552,7 @@
     }
 }
 
-/* ════ bristlenose/theme/tokens-desktop.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/tokens-desktop.css @ 587c39863 ════ */
 /* Desktop typography overrides — SF Pro for macOS native feel.
    Active when data-platform="desktop" is set on <html> AND the user hasn't
    opted back to Inter. The macOS app sets data-platform via
@@ -624,7 +624,7 @@
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/colors/palette-default.css @ 587c39863 ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -802,7 +802,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/colors/palette-edo.css @ 587c39863 ════ */
 /* palette-edo — Edo-period Japanese art colour theme.
    Sampled from three artworks seen at the British Museum Samurai exhibition,
    1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
@@ -993,7 +993,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-catppuccin.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/colors/palette-catppuccin.css @ 587c39863 ════ */
 /* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
    Source: https://github.com/catppuccin/palette (catppuccin.com/palette).
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1155,7 +1155,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-gruvbox.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/colors/palette-gruvbox.css @ 587c39863 ════ */
 /* palette-gruvbox — Gruvbox, light and dark, medium contrast.
    Source: https://github.com/morhetz/gruvbox. Light uses the faded accents, dark the bright ones.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1317,7 +1317,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-rose-pine.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/colors/palette-rose-pine.css @ 587c39863 ════ */
 /* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
    Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1480,7 +1480,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-solarized.css @ 828baee2b ════ */
+/* ════ bristlenose/theme/colors/palette-solarized.css @ 587c39863 ════ */
 /* palette-solarized — Solarized, light and dark.
    Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1723,7 +1723,7 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div>
 <div class="m-row"><div>Notify when an analysis finishes or stops</div><span class="m-sw off"></span></div>
 </div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Sheet</b><span class="m-flabel">first analysis: our one-button screen, then the system's request</span></div><div class="m-sheetwrap"><div class="m-sheet"><div class="m-sicon">B</div><h4>Alert me when analysis finishes</h4><p>macOS will ask next whether Bristlenose can send notifications. You can change this in Settings &gt; General.</p><span class="m-btn">Continue</span></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Sheet</b><span class="m-flabel">first analysis: our one-button screen, then the system's request</span></div><div class="m-sheetwrap"><div class="m-sheet"><div class="m-sicon">B</div><h4>Notify me when analysis finishes</h4><p>macOS will ask next whether Bristlenose can send notifications. You can change this in Settings &gt; General.</p><span class="m-btn">Continue</span></div></div></figure>
 <figure class="m-frame"><div class="m-chrome"><b>Settings</b><span class="m-flabel">Settings ▸ General, notifications off in System Settings</span></div><div class="m-form"><div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div><div class="m-row"><div>Notify when an analysis finishes or stops<small>Notifications are off for Bristlenose in System Settings.</small></div><span class="m-link">Open Notification Settings…</span></div></div></figure>
 </div>
 
@@ -1738,7 +1738,7 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 <tr><td>"Claude is out of credit"</td><td>Shape shipped (<code>llmSettings.validation.outOfCredit</code>: "{{provider}} is out of credit…"); the short form is new</td></tr>
 <tr><td>Title: the project name; body: "Analysis finished · {{count}} sessions · {{duration}}"</td><td>New, with a plural. Order follows the owner's own Notification Center (what or where first, then what happened). Sentence case decided by the owner. There is a shipped tooltip "Analysis finished with failures for {{project}}", which is a different case.</td></tr>
 <tr><td>"{{project}} · {{count}} sessions · {{duration}}"</td><td>New, with a plural. Whether the count belongs is open (the same question as a "found so far" count).</td></tr>
-<tr><td>Sheet: "Alert me when analysis finishes", "macOS will ask next whether Bristlenose can send notifications. You can change this in Settings &gt; General.", button "Continue"</td><td><b>New. Owner-written wording (6 Nov).</b> One button, titled Continue, that opens the system request; no Cancel (Apple's rules for a screen before a permission request). The analysis starts either way.</td></tr>
+<tr><td>Sheet: "Notify me when analysis finishes", "macOS will ask next whether Bristlenose can send notifications. You can change this in Settings &gt; General.", button "Continue"</td><td><b>New. Owner-written wording (6 Nov).</b> One button, titled Continue, that opens the system request; no Cancel (Apple's rules for a screen before a permission request). The analysis starts either way.</td></tr>
 <tr><td>"Notifications are off for Bristlenose in System Settings." and "Open Notification Settings…"</td><td><b>New, owner-written proposals.</b> The button opens the system pane for the app. It never re-asks.</td></tr>
 <tr><td>"Notify when an analysis finishes or stops"</td><td>New, owner-written proposal. Reads positively, on by default. General tab holds one row today.</td></tr>
 </table>

@@ -3,8 +3,8 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Perceived wait: the run-finished banner · Bristlenose mockups</title>
 <style>
-/* ===== THEME TOKENS, VERBATIM from the committed tree @ 3d998a5d9: tokens*.css and colors/*.css only. Not edited. ===== */
-/* ════ bristlenose/theme/tokens.css @ 3d998a5d9 ════ */
+/* ===== THEME TOKENS, VERBATIM from the committed tree @ 310ce76ee: tokens*.css and colors/*.css only. Not edited. ===== */
+/* ════ bristlenose/theme/tokens.css @ 310ce76ee ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -450,7 +450,7 @@
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/tokens-typography.css @ 310ce76ee ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -552,7 +552,7 @@
     }
 }
 
-/* ════ bristlenose/theme/tokens-desktop.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/tokens-desktop.css @ 310ce76ee ════ */
 /* Desktop typography overrides — SF Pro for macOS native feel.
    Active when data-platform="desktop" is set on <html> AND the user hasn't
    opted back to Inter. The macOS app sets data-platform via
@@ -624,7 +624,7 @@
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/colors/palette-default.css @ 310ce76ee ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -802,7 +802,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/colors/palette-edo.css @ 310ce76ee ════ */
 /* palette-edo — Edo-period Japanese art colour theme.
    Sampled from three artworks seen at the British Museum Samurai exhibition,
    1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
@@ -993,7 +993,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-catppuccin.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/colors/palette-catppuccin.css @ 310ce76ee ════ */
 /* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
    Source: https://github.com/catppuccin/palette (catppuccin.com/palette).
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1155,7 +1155,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-gruvbox.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/colors/palette-gruvbox.css @ 310ce76ee ════ */
 /* palette-gruvbox — Gruvbox, light and dark, medium contrast.
    Source: https://github.com/morhetz/gruvbox. Light uses the faded accents, dark the bright ones.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1317,7 +1317,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-rose-pine.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/colors/palette-rose-pine.css @ 310ce76ee ════ */
 /* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
    Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1480,7 +1480,7 @@
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-solarized.css @ 3d998a5d9 ════ */
+/* ════ bristlenose/theme/colors/palette-solarized.css @ 310ce76ee ════ */
 /* palette-solarized — Solarized, light and dark.
    Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1667,8 +1667,8 @@ body { margin:0; padding:24px 16px 72px; background:var(--bn-colour-bg); color:v
 .m-banner { display:flex; gap:10px; padding:10px 12px; border-radius:14px; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); box-shadow:0 4px 16px rgba(0,0,0,.10); }
 .m-icon { flex:none; width:36px; height:36px; border-radius:8px; background:var(--bn-colour-accent); color:#fff; display:flex; align-items:center; justify-content:center; font:600 15px var(--bn-font-body); }
 .m-btxt { flex:1; min-width:0; }
-.m-bhead { display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--bn-colour-muted); }
-.m-bhead b { color:var(--bn-colour-text); font-weight:490; }
+.m-bhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:12px; color:var(--bn-colour-muted); }
+
 .m-bt { font-weight:490; font-size:13px; }
 .m-bb { font-size:13px; color:var(--bn-colour-muted); }
 /* settings, approximated from the SwiftUI grouped Form (General tab) */
@@ -1700,13 +1700,13 @@ svg .ad { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; stroke-das
 </style>
 </head>
 <body><div class="m-wrap">
-<div class="m-key"><span><i></i>Artefact: what the researcher would see (macOS banners and the Settings row are system or SwiftUI chrome, approximated; token colours verbatim)</span><span><i class="c"></i>Commentary and diagrams: not product</span></div>
+<div class="m-key"><span><i></i>Artefact: what the researcher would see (macOS banners and the Settings row are system or SwiftUI chrome, approximated, drawn as macOS 27 draws them: icon, title, time, body, no app name; token colours verbatim)</span><span><i class="c"></i>Commentary and diagrams: not product</span></div>
 
 <div class="m-grid">
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished, Bristlenose in the background</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><b>Bristlenose</b><span>now</span></div><div class="m-bt">Checkout study</div><div class="m-bb">Analysis finished · 8 sessions · 38 min</div></div></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><b>Bristlenose</b><span>now</span></div><div class="m-bt">Checkout study</div><div class="m-bb">The analysis didn’t finish · Claude is out of credit · 5 of 8 sessions are done</div></div></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished with failures</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><b>Bristlenose</b><span>now</span></div><div class="m-bt">Checkout study</div><div class="m-bb">Analysis finished with failures · 6 of 8 sessions · sessions 3 and 7 didn’t finish</div></div></div></div></figure>
-<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason not known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><b>Bristlenose</b><span>now</span></div><div class="m-bt">Checkout study</div><div class="m-bb">The analysis didn’t finish · 5 of 8 sessions are done</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished, Bristlenose in the background</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Bristlenose · Checkout study</span><span>now</span></div><div class="m-bb">Analysis finished · 8 sessions · 38 min</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Bristlenose · Checkout study</span><span>now</span></div><div class="m-bb">The analysis didn’t finish · Claude is out of credit · 5 of 8 sessions are done</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">finished with failures</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Bristlenose · Checkout study</span><span>now</span></div><div class="m-bb">Analysis finished with failures · 6 of 8 sessions · sessions 3 and 7 didn’t finish</div></div></div></div></figure>
+<figure class="m-frame"><div class="m-chrome"><b>Notification</b><span class="m-flabel">did not finish, reason not known</span></div><div class="m-stage"><div class="m-banner"><div class="m-icon">B</div><div class="m-btxt"><div class="m-bhead"><span class="m-bt">Bristlenose · Checkout study</span><span>now</span></div><div class="m-bb">The analysis didn’t finish · 5 of 8 sessions are done</div></div></div></div></figure>
 <figure class="m-frame"><div class="m-chrome"><b>Settings</b><span class="m-flabel">Settings ▸ General, on by default</span></div><div class="m-form">
 <div class="m-row"><div>Default location for new projects</div><span class="m-pop">Last location used</span></div>
 <div class="m-row"><div>Notify when an analysis finishes or stops</div><span class="m-sw"></span></div>

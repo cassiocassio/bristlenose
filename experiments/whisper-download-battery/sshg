@@ -1,0 +1,4 @@
+#!/bin/bash
+# sshg <vm> <cmd…> — ssh into a battery guest with the harness key (BATTERY_KEY, default ~/.ssh/id_ed25519_tartvm).
+vm=$1; shift
+exec ssh -i ${BATTERY_KEY:-$HOME/.ssh/id_ed25519_tartvm} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR -o BatchMode=yes admin@$(tart ip $vm) "$@"

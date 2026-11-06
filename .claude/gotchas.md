@@ -400,6 +400,19 @@ A live `release.sh run` makes the `release-freeze` hook refuse commits in this c
 
 ## Tests, gates and verification
 
+### Synthetic failure batteries in Tart guests — five traps that each gave a wrong answer (30 Oct to 6 Nov 2026)
+
+The Whisper download battery (`experiments/whisper-download-battery/`, README there) found four real defects by running the frozen sidecar
+in clean guests, and gave five wrong answers on the way. (1) **A non-interactive shell starts background jobs with SIGINT ignored**, so
+Python never sees Ctrl+C: it made "Stop leaves a partial" look true, and three `test_package_install` Ctrl+C tests fail when pytest was
+launched as a background job (also in a backgrounded `bash -c 'set -m; pytest'`, which inherits the ignore; run it as an ordinary
+foreground call). (2) **expect's one-line `expect { … }` form never matches**; use the multi-line form. (3) **A fresh clone needs minutes
+before password ssh works**; a key copied early fails silently, so retry. (4) **macOS runs two guests at once per host**; a third does
+not start and says little. (5) **APFS free space drifts by about 200 MB** after a delete, so a low-disk or boundary row needs a margin
+(3.1 GB for a 2.6 GB ask) and a fill loop that re-reads `df`. Also: the sidecar is signed sandbox+inherit and traps from a shell, so
+re-sign the main binary ad hoc; taking the interface down kills ssh, so network rows run detached; and a wait loop that greps "passed"
+matches ruff's "All checks passed!" (anchor on `[0-9]+ passed`).
+
 ### Ruff F401 (unused imports) — reports only, won't auto-fix
 
 F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the PostToolUse hook) won't delete imports during incremental edits. Ruff still *reports* unused imports — remove them manually when they're genuinely unused.

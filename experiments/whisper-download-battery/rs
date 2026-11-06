@@ -1,0 +1,4 @@
+#!/bin/bash
+# rs <vm> <src/> <dest-in-home/> — rsync a directory into a battery guest.
+vm=$1; src=$2; dst=$3
+rsync -a -e "ssh -i ${BATTERY_KEY:-$HOME/.ssh/id_ed25519_tartvm} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR" "$src" "admin@$(tart ip $vm):$dst"

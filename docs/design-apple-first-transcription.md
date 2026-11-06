@@ -245,7 +245,7 @@ no longer names a language or a cause (below).
   line said whole, as the running ladder is, not a further condition. Reviewers suggested a
   per-session note in the report instead (open, below).
 - **The pill says *Downloading Whisper*** (one name for one thing; Apple's model is also a
-  speech model). It stays up after a failure with Retry, and goes after a deliberate Stop.
+  speech model). It stays up after a failure with Retry, and goes after a deliberate Stop. **From 2 Nov 2026 the failed popover and the Settings row name the cause when it is one of three a researcher can act on** (disk full, the connection dropped and did not come back, a security certificate not trusted: `WhisperFailureCause`, read from the job's last stderr lines) in place of "The download didn't finish."; an unrecognised cause keeps that sentence and **no raw Python error is ever shown** (decision, `7675848e0`). The job also waits out a dropped network and restarts by itself (an outage over about 15 s used to end the download and Retry began at zero); how that was measured, on which OSes, and the traps: `experiments/whisper-download-battery/README.md`.
 - **A deliberate Stop Download is remembered** across launches: the app does not restart
   1.6 GB on its own until Download Now. A download the app quits on stops with it, and the
   sidecar's parent-death watcher is the backstop.

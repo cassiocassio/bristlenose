@@ -66,55 +66,24 @@ that needs a quiet mark (never a modal) is a mockup under the R114 UX gate. Card
 
 **2 Nov 2026 — 0.44.0 is staged and not released: one thing is needed from the owner (Claude, unattended run).** Everything is pushed to `main`; CHANGELOG and README carry the 0.44.0 entry (dated 2 Nov); the version bump is not done (the driver does it). The only red preflight row is **`providers live`: the Claude API key (Keychain) has no credit** (`check-providers-live.py --provider anthropic` says "credit balance is too low"), so the driver stops at step 1. I did not top up (financial) and did not bypass the gate (Claude is the default provider and `llm/client.py` changed this window). **To finish:** add credit, confirm `.venv/bin/python scripts/check-providers-live.py --provider anthropic` shows 3/3, then `./scripts/release.sh run 0.44.0 --bump minor --yes` (add `--board` to watch). Website after PyPI has 0.44.0: deploy from a worktree of the website's HEAD with `BRISTLENOSE_PUBLIC_REPO` at a worktree of `v0.43.0` until then, land `after-pypi/0.44.0` (website repo; renamed from `after-pypi/0.43.1`), `./scripts/release.sh verify`. Monday is a working day: the evening rule says tag after 21:00 London (guideline). **The full account is private:** `docs/private/release-0.44.0-report.md` (state, what I decided, owner calls) and `docs/private/release-0.44.0-log.md` (every step, every finding). Highlights: real bugs found and fixed on the way include a broken logo in serve mode for studies not rendered on this machine (4e8cc854a, unreleased), a false "export could not be saved" alert on a second Export press (shipped in 0.43.0, now in the changelog), a sqlite hybrid-file race on a failed re-analyse (642f49a7d, bounded by b69878b5f), AutoCode proposal badges all drawn in colour 0 since 21 Oct (e3c9db884), and `?`/`%` folder names landing in a stray database on SQLAlchemy 2.0.x (593d2c358). Open owner calls (none blocks): the Agent Access alert was removed so a failed save is now silent; N166 re-analyse drops a moved quote's curation; telemetry records refusals as ok; content blocks count toward stage 9's early-stop; the four unreviewed-by-owner string checks (tr, fi, ko, ja/zh-Hant); Intel-Mac cryptography cap; the venv pins no pytest ceiling (CI floated to 9.2.0 and broke a harness).
 
-**30 Oct — Whisper first run on a clean Mac (Claude; committed 4ba513387, not pushed).**
-Plan and Fable review: `docs/private/plan-whisper-first-run-2026-10-30.md`. Found on clean Tart
-guests with the 0.43.0 DMG: macOS 15.7.7 sidecar SIGTRAPs in `mlx::core::metal::Device::Device()` 2 s
-after launch (red pill, Retry dies instantly); 26.6.2 and 27.0 fine. Cause: pip took MLX's
-`macosx_26_0` wheels (minos 26.2) on the macOS 27 build host for an app with a 15.0 floor. Proven by
-swapping only the MLX files for the `macosx_15_0` wheels in the same bundle (exits 0).
-Changed: `build-sidecar.sh` (`_pin_mlx_to_floor`, `_mlx_wheel_tags` in the deps fingerprint),
-`desktop/scripts/check-sidecar-mlx-floor.sh` (new gate, wired into build-sidecar / dmg / pkg
-checks), `utils/hardware.py` `module_installed` + `doctor.check_backend` (installed, not imported),
-`preflight/whisper.py` `ensure_disk_room` + `locales/en/preflight.json`, `WhisperDownloadModel`
-auto-start floor 20 GB -> 10 GB (+ test, SECURITY.md, three design docs). Tests: `test_sidecar_mlx_floor.py`,
-`test_whisper_disk_room.py`, `test_hardware.py`, `test_doctor.py`. Website branches (not deployed):
-`docs/install-whisper-requirements` (true now) and `after-pypi/0.43.1` (the 10 GB figure; hold).
-**Independent review of the diff (30 Oct, Fable + silent-failure-hunter, claude-side; fixes in the same tree):** no blockers.
-Fixed from review: gate read only the first `mlx-*.dist-info` (a stale one could decide), an unreadable binary made it exit
-silently, version compare normalised (`15` vs `15.0`), `module_installed` and the free-space read now log when they give up,
-wiring tests assert a live branching call, not a name. Found by measurement, not review: a killed/crashed download leaves its
-`.incomplete` behind and a restart does not reclaim it (635 MB orphan -> 2,174 MB peak), so Retry on a flaky line stacked
-partials: `discard_stale_partials` (untouched >120 s) now runs before every fetch. Both reviewers' HIGH: `doctor` said OK for a
-Mac whose MLX cannot start and the run then died by signal, classified "unknown": `doctor --mlx-probe` (hidden) is asked of a
-CHILD process by `check_backend` (crash = no, timeout = inconclusive), FAIL `mlx_cannot_start` + Swift `.whisper` pattern.
-Cost: one extra sidecar start (~1.1 s CPU; 9.5 s on a cold fresh guest) per run preflight. Not changed on purpose: the disk check
-still asks for the full model on a partial cache (measured: a restart needs it on top of the orphan).
-Still open from review: the download JOB's refusal ("Disk full") reaches `os_log` only, the pill says "failed" and Retry repeats
-it; `statvfs` free vs the app's `volumeAvailableCapacityForImportantUsage` (purgeable) can disagree, so a CLI fetch may refuse where
-Finder shows room (message now says "not counting space macOS can clear").
-**Synthetic matrix on clean Tart guests (macOS 15.7.7 / 26.6.2 / 27.0, real frozen sidecar, 30 Oct 2026):** harness `/private/tmp/claude-501/wl/bat.sh`
-+ `osrun.sh` (scratch, not committed; the shape is in this paragraph). Found and fixed by running it, not by reading: a network outage over ~15 s
-(12 s survived, 18 s killed) ends the 1.6 GB download and Retry restarts from zero -> `_fetch_retrying_network_loss` (quiet wait-for-Hub + restart,
-bounded: 5 restarts, 300 s per wait, 10 s per Hub question); a killed download's partial stays and a restart peaks at model + orphan -> start sweep
-(>120 s) + settled sweep after success (>20 s), both skipping a partial whose HF flock is held (verified held during a real hf_xet download);
-"connection refused" (dead proxy) is not retried (waited 5 min before); the same helper now guards the terminal first run. Harness lessons, each
-cost a wrong conclusion: a non-interactive shell's `&` starts jobs with SIGINT IGNORED (fooled the SIGINT test AND three `test_package_install`
-Ctrl+C tests when pytest was launched as a background job: run pytest as an ordinary foreground tool call); expect's one-line `expect { ... }` form
-does not match (prep-base.sh says so); macOS allows 2 VMs at once; a fresh clone needs minutes before password login works.
-Reviewed by Fable in 4 rounds + silent-failure-hunter; round-4 had no blockers. Open: the app's download JOB still shows only "failed" with the reason
-in os_log; a captive-portal HTML page fails fast but with "Expecting value: line 1 column 1"; 407/403 portal pages are not retried; the per-run
-`--mlx-probe` cost; Apple speech and M5 not exercised; full Python = 9,228 passed, 2 failed (`test_no_improvised_icons`, another session's IntensityDots.tsx).
-**Download-failure reason (2 Nov 2026, Claude, committed with this note):** the pill popover and the Settings row now say WHY a Whisper download failed
-when it is one of three a researcher can act on (disk full, the connection dropped and did not come back, a security certificate not trusted), in place
-of "The download didn't finish." (unrecognised causes keep the old line; nothing new on screen, no layout change). `WhisperFailureCause.classify` reads
-the last stderr lines; `tests/test_whisper_failure_cause.py` pins every Python retry marker, the real Disk full message and the three locale keys
-(`desktop.modelDownload.cause{Disk,Network,Certificate}`, all 21 languages). NOT seen rendered in the app: the Whisper `debugApply` harness has no menu
-entry. Release-note candidate: **A failed Whisper download now says why** (disk full, the connection, a certificate), where it only said it failed.
-Release-note candidate (patch): **Whisper never arrived on macOS 15.** The speech-model check crashed
-on Sequoia, so the toolbar showed a failed download that Retry could not clear. Fixed by building for
-macOS 15; the automatic download now starts with 10 GB free (was 20 GB), and a Mac too full for the model
-now says so before downloading. **Not done:** a non-MLX fallback; a child-process Metal probe; the 65
-bundle binaries with minos above 15 (Python is 26.0) run on 15 today; Apple speech on 26/27 untested.
+**30 Oct to 6 Nov 2026 — Whisper first run on a clean Mac (Claude; `4ba513387` and the Windows lock-probe fixes `0223fa1e2`, `a8d9fc138` (other sessions) are in v0.44.0; `7675848e0` is after the tag, unreleased; `main` is not pushed).**
+Found on clean Tart guests (macOS 15.7.7 / 26.6.2 / 27.0) running the 0.43.0 DMG's real sidecar: on 15 it SIGTRAPs in `mlx::core::metal::Device::Device()` 2 s
+after launch (red pill, Retry dies at once); 26 and 27 fine. Cause: pip took MLX's `macosx_26_0` wheels (minos 26.2) on the macOS 27 build host for a 15.0-floor
+app. Proven by swapping only the MLX files for the `macosx_15_0` wheels in the same bundle. Plan and review notes: `docs/private/plan-whisper-first-run-2026-10-30.md`.
+**In 0.44.0:** `build-sidecar.sh` pins the 15 wheels (`_pin_mlx_to_floor`, tags in the deps fingerprint) and `check-sidecar-mlx-floor.sh` refuses a bundle that does not
+(wired into build-sidecar / dmg / pkg); `doctor` and the status probe ask `module_installed`, and a CHILD process (`doctor --mlx-probe`) asks whether MLX starts (+1 sidecar
+start per run preflight: ~1.1 s CPU, 9.5 s on a cold guest); `ensure_disk_room` refuses a fetch the disk cannot hold (model + 1 GB); auto-start floor 20 -> 10 GB;
+`_fetch_retrying_network_loss` waits out a dropped network and restarts (an outage over ~15 s killed the download and Retry began at zero; bounded: 5 restarts, 300 s per
+wait, 10 s per Hub question; the terminal first run too); dead-download partials are swept at the start (>120 s) and after success (>20 s), never one whose HF flock is held.
+**After the tag:** `WhisperFailureCause` — the pill popover and Settings row say disk full / the connection dropped / a certificate not trusted in place of "The download
+didn't finish." (unrecognised causes keep the old line; no new element; `desktop.modelDownload.cause{Disk,Network,Certificate}` in all 21 languages;
+`tests/test_whisper_failure_cause.py` pins the Swift patterns to Python's retry markers). NOT seen rendered in the app: the Whisper `debugApply` harness has no menu entry.
+**Website, live:** install page (no longer claims the model is bundled; ~4 GB free), docs privacy page, and the top-level `privacy.html` all say 10 GB (`2081472`, `ca48063`, `1cd2d29`).
+**Method and results:** `experiments/whisper-download-battery/` (README: the matrix per OS, the measured thresholds, the traps) — the harness was in a scratch dir and was
+lost on 4 Nov, reconstructed 6 Nov and re-run on a clean guest. Reviewed 4 rounds by Fable plus silent-failure-hunter (no blockers in the last); full Python 9,228 passed, Swift 2,911.
+**Open:** a captive-portal HTML page fails fast but reads "Expecting value: line 1 column 1" (a fourth sentence in 21 languages); 407 / portal-403 are not retried; the probe has no
+cache; Apple speech, an M5 and a real macOS 15 Mac are untested; Sarah's macOS version is unknown; the 0.44.0 changelog says the download "resumes" (it starts again from zero).
+Release-note candidate (unreleased): **A failed Whisper download now says why** (disk full, the connection, a certificate), where it only said it failed.
 
 **30 Oct to 1 Nov 2026 - Signals lens: grey until its first report exists; card click and scroll; sidebar "Picking up Signals…" (Claude Sonnet 5.5, the Signals session; on `origin/main`, unreleased).** Owner ask: no bare unfilled page; the lens greyed and unclickable, progress under the project name. Plan and as-built: `docs/design-signals-lens-readiness.md` (decisions §8, departures §9). Server `75179d809` + `3079045c6` (a counter noted where a run's overlay ends and for a whole codebook apply, ended in a `finally`; `/condition` withholds Signals only while no report with cards exists; `/signals/snapshot` says `pending`), page `b5982c72a` + `3079045c6`, 21 locale strings `4c2dc9a2f`, Mac `fde55d8f2` + `e099e3b4d` + `14c6227c1` + the real-cell render test, card click and scroll `8cc10ddec` + `72824bacf`, keyline `281c707e7`, `aria-current` `6cda170ba`. Every slice reviewed by Fable and fixed; reverse-edit checks on each fix. Verified: Swift 2,899 green, front-end 3,781 green (Node 24), targeted Python green, the withheld lens, the report landing, card click and scroll in Chromium and WebKit on a real server, and **in the running Mac app (1 Nov): lens dim and "Picking up Signals…" for about 59 s, Export Report disabled, then everything recovers.** Owner calls recorded: a card click switches the inspector tab; short pages are not padded; the crash pane offers feedback, no Retry; a double-click selecting a word also selects the card (accepted). **Open:** the "Show animation while analysing" label now also governs the status shimmer; a clean re-analysis misses the hand-over prior (one collapse and regrow); a codebook apply on a study with no report shows the line for the whole job; no cloud model can show it for up to two seconds; the German phrase is the shorter of two. `ActivityStore` vitest failures were this shell's Node 26, not the code. Release-note candidate (minor): **The first Signals report no longer shows half a page.** The Signals lens stays greyed with "Picking up Signals…" under the project name until its first report is ready, and then opens full. Selecting a card by clicking it, and a full outline on the selected card, are new in the same pass.
 

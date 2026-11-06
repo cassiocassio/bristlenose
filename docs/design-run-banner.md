@@ -87,8 +87,10 @@ Proposed English, for the owner's approval. The categories are the run's own (`C
 | unusable_input | A recording couldn’t be read |
 | cloud_fetch | A recording wasn’t downloaded in time |
 | disk | Couldn’t write to disk |
-| missing_dep, missing_binary | A required part is missing |
+| missing_dep, missing_binary | A required part is missing *(accepted, owner, 6 Nov 2026)* |
 | unknown, deferred, user_signal | none: say nothing beyond "The analysis didn’t finish". **The banner never says "unknown" or "no reason given" (owner, 6 Nov 2026): the researcher goes to look.** |
+
+**Principle (owner, 6 Nov 2026):** the phrase only has to say that Bristlenose needs help and roughly what kind. The detail is in the app, and the researcher can dig into it there. So a phrase may be general, as "A required part is missing" is for two categories; it does not need to be the precise cause.
 
 Notes: the `cloud_fetch` phrase reuses the shape of an existing honest-failure string (the Screens lens already says a recording "wasn't downloaded to this Mac in time"); it is a plain statement of what happened, with no wait label, glyph or provider advice, which is what the settled cloud-files decision permits. `deferred` and `user_signal` are not failures the researcher needs told.
 

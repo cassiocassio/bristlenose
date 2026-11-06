@@ -146,6 +146,7 @@ def test_logs_never_carry_the_planted_name(tmp_path, monkeypatch, caplog) -> Non
     app = create_app(project_dir=project_dir, dev=False, db_url="sqlite://")
     app.state.settings = _mock_settings()
     client = AuthTestClient(app)
+    caplog.clear()  # start-up logs are emitted before the name exists and prove nothing
     r = client.put(
         "/api/projects/1/people",
         json={"p1": {"full_name": FULL_NAME, "short_name": SHORT_NAME, "role": ""}},
@@ -154,6 +155,11 @@ def test_logs_never_carry_the_planted_name(tmp_path, monkeypatch, caplog) -> Non
     _ask(client)
     client.get("/api/projects/1/export/quotes.csv", params={"anonymise": "true"})
     client.get("/api/projects/1/export/quotes.csv", params={"anonymise": "false"})
-    assert caplog.records, "positive control: something was logged"
-    leaked = [rec.getMessage() for rec in caplog.records if _carries_name(rec.getMessage())]
+    ours = [rec for rec in caplog.records if rec.name.startswith("bristlenose")]
+    if not ours:
+        pytest.skip(
+            "no bristlenose log record is emitted by these requests after the name is planted, "
+            "so an assertion here would pass whatever the code logs (reviewer, 6 Nov 2026)"
+        )
+    leaked = [rec.getMessage() for rec in ours if _carries_name(rec.getMessage())]
     assert not leaked, leaked

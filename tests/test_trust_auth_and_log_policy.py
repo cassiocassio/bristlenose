@@ -112,13 +112,30 @@ def _concrete(path: str) -> str:
 
 
 # Collected once at import: parametrisation needs the live surface by name.
-_SURFACE = _surface(_build_app())
+def _isolated_app():
+    """Build the app under the conftest isolation, which a module-level build runs BEFORE."""
+    import tempfile
+    from types import SimpleNamespace
+
+    from tests.conftest import _isolate_machine_config
+
+    base = Path(tempfile.mkdtemp(prefix="bn-trust-")).resolve()
+    factory = SimpleNamespace(
+        getbasetemp=lambda: base,
+        mktemp=lambda name, numbered=True: Path(tempfile.mkdtemp(prefix=name, dir=base)),
+    )
+    with pytest.MonkeyPatch.context() as mp:
+        _isolate_machine_config(mp, factory)
+        return _build_app()
+
+
+_SURFACE = _surface(_isolated_app())
 _GATED = [(m, p) for m, p in _SURFACE if p not in _PINNED_UNGATED_PATHS]
 
 
 @pytest.fixture(scope="module")
 def bare_client():
-    app = _build_app()
+    app = _isolated_app()
     assert app.state.auth_token
     return app, TestClient(app, base_url="http://127.0.0.1")
 

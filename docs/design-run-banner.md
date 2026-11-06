@@ -206,7 +206,10 @@ What it shows:
 
 **Correction after a re-test (6 Nov 2026).** I re-ran the minimised case with a delegate that tells the system to present the notification. This time the app was **not** active after it was minimised (`isActive=false`), the system did not ask the app at all, and so it would have presented the banner itself. In the first run the app was still active in that state, but my test code had re-activated it after minimising, so that run may have created the condition it measured. **Whether a real ⌘M leaves the app active is unverified, so the minimised case is unresolved, not a confirmed gap.** I also could not capture the screen to see a banner (the capture produced no file), so no banner has been seen on screen in any run.
 
-**A third attempt, with the researcher pressing a real ⌘M (6 Nov 2026), was inconclusive.** The log did not match the instructions: in round 1 (⌘M, then touch nothing) the app was inactive with no visible window but not flagged as minimised, and the system did not ask the app, so it would have presented a banner; in round 2 (⌘M, then click another app) the app was active and visible at post time, so the minimise evidently did not happen in time. I did not get a report of whether a banner was seen. The minimised case therefore stays unresolved; it needs a retry when someone is at the screen and ready, and a report of what appeared.
+**A fourth attempt, with the researcher pressing a real ⌘M and present at the screen (6 Nov 2026), settles the state question.**
+- **Round 1: ⌘M, then touch nothing.** The app stayed **active** (`isActive=true`) with its window minimised and nothing visible. The system **did** treat it as foreground (it called `willPresent`). So a real ⌘M leaves Bristlenose active, and the system's own rule would suppress a banner here. The gap is real.
+- **Round 2: ⌘M, then click another app.** The app became inactive, the system did not ask the app, and it presents the banner itself. This is the buried case and is covered.
+- **So the gate at posting is needed, and the delegate must present** (`willPresent` returning banner, list and sound) for round 1 to show a banner. Whether it then **appears on screen** in round 1 is the one thing still unseen; the owner is to report what they saw.
 
 What follows from that, and holds either way:
 - The gate at posting (`NSApp.isActive && NSApp.occlusionState.contains(.visible)` means do not post) is right in both readings.
@@ -248,7 +251,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 2. *(Decided, owner, 6 Nov 2026: the session count is in the body, because it is useful.)*
 3. *(Decided, owner, 6 Nov 2026: name the failure reason whenever the run's cause category has a plain-words form, not only for the ones a researcher can act on. Where there is no reason to give (unknown, or the researcher's own signal), say nothing more.)*
 4. The reason phrases: proposed in "The failure reason, by category"; the final wording and a check of each category against what actually raises it.
-5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
+5. *(State question settled 6 Nov 2026: a real ⌘M leaves the app active and the system suppresses the banner, so the gate also tests for a visible window. Still to confirm by eye: that the banner appears in that case once the delegate presents.)*
 
 6. *(Decided provisionally, owner, 6 Nov 2026: the one-button pre-alert goes in the first version, and the owner will judge how it feels. They do not love it; it is there because notifications are off until allowed and the system's own request is a temporary banner that is easy to miss. Easy to remove: it is one screen in front of one system call. Watch for reflex declines and for the screen feeling like a hurdle.)*
 7. The Dock bounce (recommended out of the first version).

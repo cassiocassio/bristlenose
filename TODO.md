@@ -4,7 +4,7 @@
 every known Claude/Codex session, merge result, parked item, stash, preservation
 copy and remaining worktree after the 30 October consolidation.
 
-**How this file works.** It holds the last week's entries (30 Oct onward), newest context first where it matters, and nothing older. Everything before 30 Oct is in [`docs/todo-archive.md`](docs/todo-archive.md), moved verbatim on 6 Nov 2026 (126 entries; nothing was edited or dropped). Backlog lives in `docs/private/100days.md`; add a new entry at the top and move it to the archive when it is a week old and closed.
+**How this file works.** It holds the last week's entries (30 Oct onward), newest context first where it matters, and nothing older. Everything before 30 Oct is in [`docs/todo-archive.md`](docs/todo-archive.md), moved verbatim on 6 Nov 2026 (126 entries; nothing was edited or dropped). The standing sections at the bottom (task tracking, dependency maintenance, risk register, key files, URLs, design docs) stay here. Backlog lives in `docs/private/100days.md`; add a new entry at the top and move it to the archive when it is a week old and closed.
 
 **Pushed state, checked 6 Nov 2026 against `origin/main`.** On `origin/main`: `cfe9697c3`, `62f8cc65f`, `4dda06ea6`, `28ef8783b`. Not found in the GitHub clone, so possibly local-only on the maintainer's Mac or rewritten since: `c344fdcd3`, `a672d2715`, `4ba513387`, `56b46608a`, `5a7830935`, `2bc0c5196`. An entry below that says "not pushed" for one of the second group may still be true; check the working checkout before assuming it landed. The `v0.44.0` tag is on `2a9e0769d` (released 2 Nov); the entry that said 0.44.0 was staged and unreleased is in the archive.
 
@@ -149,3 +149,113 @@ this is not a global green/release sign-off. Evidence, limits and archival:
 **6 Nov 2026 — defect-gates session (Claude).** Local commits only (`4dda06ea6`..`28ef8783b`), nothing pushed. Owner triage still open: (1) byte ceilings in `tests/test_claude_md_shape.py` keep or drop; (2) cutoff parity stays a regex test vs shared JSON fixture; (3) validate quote ids at the import boundary? (4 strict xfails in `tests/test_quote_id_hazards_pinned.py`). Hidden-exemplar gap was fixed by `750b4a162`. Report: `docs/private/bristlenose-defect-mining-2026-11-05/morning-report.md`. No uncommitted work of mine.
 
 **30 Oct 2026 — tests no longer write the real `~/.config/bristlenose/timing.json` (`2bc0c5196`; Claude Code, self-reviewed only, not pushed).** The suite had given the default profile (mlx, `claude-sonnet-4-6`) n=16,262 `render` and ~12,000 per LLM stage at ~0.02 s per session, against 15 real runs, and a second profile (apple-speech) n=484, all tests. Cause: `cli._DOCTOR_SENTINEL_DIR` ignores `XDG_CONFIG_HOME`; conftest now redirects it and refuses an estimator on the real folder. The live file was cleaned by hand (apple-speech profile deleted; `render` and the four LLM stages deleted from the `sonnet-4-6` profile; `render` from the `sonnet-4-20250514` one; backups in the session scratchpad, not kept in the repo), so the ring has no stage weights and the ETA is transcription-only on this Mac until a few real runs refill it. **Owed:** an incremental run records new-session time over the whole session count (`pipeline.py` `input_size=_n_sessions`, ~3119/3527/3792/3915), which understates the rate; and `docs/design-progress-layer.md` §5's precondition can now be marked met. Full suite at this commit: 9,229 passed, 3 failed (two `test_no_improvised_icons`, one `test_swift_python_contract` issuesURL), all other sessions' in-flight work.
+
+---
+
+## Task tracking
+
+**GitHub Issues is the source of truth for actionable tasks:** https://github.com/cassiocassio/bristlenose/issues
+
+**Launch plan:** `docs/private/100days.md` — triaged by topic and MoSCoW priority.
+
+This file contains: session reminders, untriaged captures, dependency maintenance, and reference tables.
+
+---
+
+## Dependency maintenance
+
+Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NLP. CI runs `pip-audit` + `npm audit` on every push (informational, non-blocking). Dependabot opens weekly PRs for both ecosystems. CodeQL SAST runs on push + weekly. See `SECURITY.md` for remediation SLA.
+
+### Quarterly dep review (next: May 2026, then Aug 2026, Nov 2026)
+
+- [x] **May 2026** — Run `pip list --outdated`. Bump floor pins in `pyproject.toml` only if there's a security fix, a feature you need, or the floor is 2+ major versions behind _(prophecy 8 Jun 2026 via Cassandra Entries 1+2; execution 9 Jun 2026: security wave `5c96058` (presidio + cryptography 44→48, cleared 3 OSVs, floor bumped) + graduated-holds wave `e3c0a87` (starlette 1.x pair + WTForms 3.2 pair, dependabot config updated). Cassandra tally 4/4/0. Wave-3 greens deferred — see `docs/private/handoffs/dep-wave-3-greens.md`.)_
+- [x] **Aug 2026** — Done 3–5 Sep 2026 (Entry 7 in `docs/dependency-premortem-log.md`): nine Dependabot PRs triaged, Actions pins moved (codeql 4.37.9 as one SHA across init/autobuild/analyze, setup-node 7, download-artifact 8, repository-dispatch 4, `actions/attest`), `snapcore/*` → `canonical/*` on node24 (snap edge rev 14), Held register re-grounded — four release-predicates could never fire. Python floor decided in a sibling session: `>=3.12` on 1 Nov 2026 (`docs/design-python-floor.md`)
+- [ ] **Nov 2026** — Same. Start with `scripts/check-python-band.py --latest`, `scripts/check-providers-live.py` and `scripts/check-whisper-sizes.py` (the banner's download sizes against the Hub); execute the 1 Nov floor move if it has not happened; the 3.15 / presidio ceiling question is due ~Mar 2027, not this review
+
+### Annual review (next: Feb 2027)
+
+- [ ] **Feb 2027** — Full annual review:
+  - Python floor is 3.12 from 1 Nov 2026 — re-run `scripts/check-python-band.py --latest`; the 3.15 ceiling waits on presidio
+  - Check faster-whisper / ctranslate2 project health
+  - Check spaCy major version
+  - Check Pydantic major version
+  - Rebuild snap; review `pip-audit` CI output
+
+### Risk register
+
+| Dependency | Risk | Escape hatch |
+|---|---|---|
+| faster-whisper / ctranslate2 | High — fragile chain, maintenance varies | `mlx-whisper` (macOS), `whisper.cpp` bindings |
+| spaCy + thinc + presidio | Medium — spaCy 3.x pins thinc 8.x | Contained to PII stage; can pin 3.x indefinitely |
+| anthropic / openai SDKs | Medium — anthropic 1.x removed `temperature` from `messages.create`; GPT-5+ rejects `max_tokens` and non-default temperature; `AsyncMock` cannot see either | `tests/test_llm_sampling_params.py` introspects the installed signature; sunset lists in `client.py` fail closed |
+| Pydantic | Low — stable at 2.x | Large migration but not urgent |
+| Python itself | Decided — floor moves to 3.12 on 1 Nov 2026; band 3.12–3.14 (`docs/design-python-floor.md`) | `scripts/check-python-band.py` measures the band from wheel tags; ceiling waits on presidio `<3.15` |
+| protobuf (transitive) | Low — CVE-2026-0994 (DoS); we don't parse untrusted protobuf | Resolves when patched |
+
+---
+
+## Key files to know
+
+| File | What it does |
+|------|-------------|
+| `pyproject.toml` | Package metadata, deps, tool config (version is dynamic — from `__init__.py`) |
+| `bristlenose/__init__.py` | **Single source of truth for version** (`__version__`) |
+| `bristlenose/cli.py` | Typer CLI entry point |
+| `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
+| `bristlenose/pipeline.py` | Pipeline orchestrator |
+| `bristlenose/people.py` | People file: load, compute stats, merge, write, display name map |
+| `bristlenose/stages/s12_render/` | HTML report renderer package |
+| `bristlenose/theme/` | Atomic CSS design system |
+| `bristlenose/theme/js/` | Report JavaScript modules (frozen — static render path only) |
+| `bristlenose/llm/prompts/` | LLM prompt templates |
+| `bristlenose/doctor.py` | Doctor check logic |
+| `frontend/` | Vite + React + TypeScript SPA |
+| `.github/workflows/` | CI (ci.yml), release (release.yml), snap (snap.yml) |
+| `snap/snapcraft.yaml` | Snap recipe |
+
+## Key URLs
+
+- **Repo:** https://github.com/cassiocassio/bristlenose
+- **Issues:** https://github.com/cassiocassio/bristlenose/issues
+- **PyPI:** https://pypi.org/project/bristlenose/
+- **Homebrew tap:** https://github.com/cassiocassio/homebrew-bristlenose
+- **CI runs:** https://github.com/cassiocassio/bristlenose/actions
+
+---
+
+## Design docs
+
+| Document | Covers |
+|----------|--------|
+| `docs/archive/design-reactive-ui.md` | Framework comparison, risk assessment (partially superseded by React migration) |
+| `docs/design-react-migration.md` | **React migration plan** (Steps 1–10, all complete) |
+| `docs/design-react-component-library.md` | 16-primitive component library (complete) |
+| `docs/design-llm-providers.md` | Provider roadmap |
+| `docs/design-performance.md` | Performance audit |
+| `docs/design-export-sharing.md` | Export and sharing phases 0–5 (**superseded** — see 4 feature docs below) |
+| `docs/design-export-slides.md` | Export dropdown (scope→format), per-quote copy icon, PowerPoint quote slides |
+| `docs/design-export-quotes.md` | CSV + XLS spreadsheet export (11-column table) |
+| `docs/design-export-clips.md` | Video clip extraction via FFmpeg |
+| `docs/design-export-html.md` | Self-contained HTML export + cross-cutting export concerns |
+| `docs/design-miro-bridge.md` | Miro API integration (OAuth, board creation, layout — post-beta) |
+| `docs/design-html-report.md` | HTML report, people file, transcript pages |
+| `docs/design-discussion-lens.md` | Discussion lens — the researcher's guide merged with the questions actually asked, as a navigator over quotes grouped by question; both channels. Shipped for beta 3 Oct 2026 (stage on by default, lens in nav, Mac rail and export); plan and what's owed: `docs/design-discussion-lens-plan.md` banner — real-corpus scoring, overrides, cohort baselines, a guide-language steer, a fail-closed anonymiser gate, the CHANGELOG entry (the guide as a left panel, the guide tabs and the Mac guide panel landed 4 Oct) |
+| `docs/design-responsive-layout.md` | Responsive layout, density setting, breakpoints |
+| `docs/design-doctor-and-snap.md` | Doctor command, snap packaging |
+| `docs/design-serve-doctor.md` | Serve-mode doctor checks, Vite auto-discovery |
+| `docs/design-research-methodology.md` | Quote selection, sentiment taxonomy, clustering rationale |
+| `docs/design-pipeline-resilience.md` | Manifest, event sourcing, resume, provenance |
+| `docs/design-logging.md` | Persistent log file, two-knob system |
+| `docs/design-test-strategy.md` | Gap audit, Playwright plan, `data-testid` convention |
+| `docs/design-desktop-app.md` | macOS app, SwiftUI, PyInstaller sidecar |
+| `docs/design-session-management.md` | Re-import, enable/disable, quarantine |
+| `docs/archive/design-codebook-island.md` | Migration audit, API design, drag-drop (v1 lens, archived 20 Sep 2026) |
+| `docs/design-signal-elaboration.md` | Interpretive names, pattern types |
+| `docs/design-transcript-editing.md` | Section strike, text correction, prior art |
+| `docs/design-speaker-splitting.md` | LLM splitting for single-speaker transcripts |
+| `docs/design-speaker-role-detection.md` | Generalised role detection (oral history, journalism, etc.) |
+| `docs/design-speaker-editing.md` | Four transcript editing operations (name, reassign, split, merge) |
+| `docs/design-transcript-speaker-editing-roadmap.md` | 11-layer work breakdown for transcript + speaker editing |
+| `docs/design-sidebar.md` | Dual-sidebar layout (TOC left, Tags right) |
+| `docs/design-windows-port.md` | Windows status: the CLI on Windows, CI, what is unexercised |
+| `docs/design-winget.md` | winget plan (steps 1–6) and its decisions; `docs/release-winget.md` is the per-release procedure |

@@ -83,9 +83,15 @@ Why not ask at first launch: a permission prompt before the researcher has any r
 - **Focus modes and Do Not Disturb:** respected; we do not request Time Sensitive.
 - **VoiceOver:** an announcement of the end when the app is frontmost and no banner is shown ("Analysis complete" is the recorded string in § 10.4); keep it to what is already announced today unless approved separately.
 
-## What decides "frontmost"
+## What decides "not in the app"
 
-The gate is whether Bristlenose is the active application at the moment the run ends: `NSApp.isActive`, with `didBecomeActive` and `didResignActive` as the notifications. **Not `scenePhase`**, which is unreliable on macOS for this (the existing recorded trap in § 10.4). If the sidebar is closed, the researcher is still in the app and gets no banner (decided).
+The case this serves is the 99% one: the researcher has started a run and then **hidden Bristlenose, left it under a clutter of other windows, or gone full-screen in another app**. In all three, Bristlenose is not the app they are using, and the banner is how they find out.
+
+So the gate is whether Bristlenose is the **active application** when the run ends: `NSApp.isActive`, with `didBecomeActive` and `didResignActive` as the notifications. Active-ness, not visibility, is the test, which is why a Bristlenose window sitting visible but buried under another app's windows still gets a banner, and why a different app in full screen does too. **Not `scenePhase`**, which is unreliable on macOS for this (the recorded trap in § 10.4). If the sidebar is closed but the researcher is in the app, no banner (decided).
+
+One case to check when built: a researcher who minimises or hides Bristlenose's windows but leaves it as the active app (for example by minimising its only window to the Dock). If macOS keeps it active, the active-app test alone misses it, and the gate should also treat "no visible Bristlenose window" as not in the app (`NSApp.occlusionState` or the windows' own visibility). I have not verified how macOS behaves here.
+
+This design does not address the app being quit. A run stops with the app (the 20 Oct 2026 decision), so there is nothing to alert about; that wider question has its own brief, `docs/brief-macos-background-run.md`.
 
 ## Honesty check
 
@@ -114,7 +120,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 2. A count in the finished body.
 3. Whether the failed body names the reason when it is known (proposed: yes, only from the existing classified set).
 4. The reason strings' final form.
-5. Whether a researcher who has the app frontmost but minimised or on another Space counts as "in the app" (`NSApp.isActive` is true for neither a minimised nor a hidden app; this should be checked when built).
+5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
 
 ## What I could not verify
 

@@ -1,5 +1,7 @@
 # Bristlenose — Project Context for Claude
 
+Claude Code's entry point. Other harnesses (Codex and others) start at `AGENTS.md`; the two share these rules and must not disagree. If they conflict, this file wins: fix `AGENTS.md` in the same commit.
+
 ## What this is
 
 Bristlenose takes a folder of interview recordings (audio, video, or existing transcripts) and produces a browsable HTML report — extracted quotes, themes, sentiment, friction points, user journeys — that the researcher edits, shares, and keeps as a file they own. The user is a working researcher under deadline, not an engineer.

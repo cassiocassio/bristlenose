@@ -1,4 +1,11 @@
-# Codex instructions for Bristlenose
+# Agent instructions for Bristlenose (cross-harness)
+
+This is the entry point for any coding agent that isn't Claude Code (Codex and
+others); Claude Code starts at `CLAUDE.md`. The two files share one set of
+rules and must not disagree: `CLAUDE.md` holds the repository conventions and
+the shared handoff rules (§ Session-end housekeeping), this file holds the
+workflow for harnesses without Claude's slash commands. If they conflict,
+`CLAUDE.md` wins; fix the other one in the same commit.
 
 Read `CLAUDE.md` for repository conventions and the relevant directory's
 `CLAUDE.md` before working there. The workflows in `.claude/skills/` apply to
@@ -8,8 +15,9 @@ with a generic branch/worktree routine.
 
 ## Shared checkout is the default
 
-Ordinary work belongs in the established checkout at
-`/Users/cassio/Code/bristlenose`, normally on `main`, using its working environment.
+Ordinary work belongs in the established main checkout (the maintainer's is
+`/Users/cassio/Code/bristlenose`; in a cloud session it is the clone you were
+given), normally on `main`, using its working environment.
 This is a solo-owner project with parallel agent sessions. Working concurrently
 on mostly different files is intentional. A dirty tree or another active session
 is not by itself a reason to create a branch or worktree.

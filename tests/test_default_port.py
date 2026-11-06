@@ -28,6 +28,25 @@ def test_serve_option_default_is_the_constant() -> None:
     assert port.default == DEFAULT_SERVE_PORT
 
 
+def test_port_scan_starts_at_the_constant() -> None:
+    import inspect
+
+    from bristlenose.cli import _find_open_port
+
+    start = inspect.signature(_find_open_port).parameters["start"].default
+    assert start == DEFAULT_SERVE_PORT
+
+
+def test_the_retired_default_is_gone_from_the_package() -> None:
+    # 8150 was the default until 3 Nov 2026. A Python source still saying it is a
+    # fallback that was never moved (the sweep below looks only for the new value).
+    old = re.compile(r"\b8150\b")
+    hits = [f"{p.relative_to(ROOT)}:{n}" for p in (ROOT / "bristlenose").rglob("*.py")
+            for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+            if old.search(line)]
+    assert not hits, f"the retired default 8150 is still in: {hits}"
+
+
 def test_dev_url_fallback_is_the_constant(monkeypatch: pytest.MonkeyPatch) -> None:
     from bristlenose.server import app as server_app
 
@@ -39,14 +58,15 @@ def test_dev_url_fallback_is_the_constant(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 MIRRORS = {
-    "frontend/vite.config.ts": r'"/(?:api|report)": "http://localhost:(\d+)"',
+    "frontend/vite.config.ts": r'"/[a-z]+": "http://localhost:(\d+)"',
     "e2e/playwright.config.ts": r"BN_E2E_PORT \?\? '(\d+)'",
     "frontend/src/components/SettingsModal.tsx": r'envVar: "_BRISTLENOSE_PORT", default: "(\d+)"',
     "experiments/icon-system/capture_icons.mjs": r"127\.0\.0\.1:(\d+)",
     "desktop/scripts/perf/profile-resize.sh": r"BRISTLENOSE_DEV_EXTERNAL_PORT:-(\d+)",
     "bristlenose/data/bristlenose.1": r"Port to serve on\. Default: \\fB(\d+)\\fR",
     "desktop/Bristlenose/Bristlenose.xcodeproj/xcshareddata/xcschemes/"
-    "Bristlenose (External Server).xcscheme": r'value = "(\d+)"',
+    "Bristlenose (External Server).xcscheme":
+        r'key = "BRISTLENOSE_DEV_EXTERNAL_PORT"\s+value = "(\d+)"',
 }
 
 
@@ -54,9 +74,8 @@ MIRRORS = {
 def test_text_mirrors_carry_the_constant(path: str) -> None:
     text = (ROOT / path).read_text(encoding="utf-8")
     found = {int(n) for n in re.findall(MIRRORS[path], text)}
-    assert DEFAULT_SERVE_PORT in found, f"{path} does not mention {DEFAULT_SERVE_PORT}"
-    if path.startswith(("frontend/vite", "e2e/")):
-        assert found == {DEFAULT_SERVE_PORT}, f"{path} has a stale port: {found}"
+    assert found, f"{path}: the pattern matched nothing, so it pins nothing"
+    assert found == {DEFAULT_SERVE_PORT}, f"{path} carries {found}, not {DEFAULT_SERVE_PORT}"
 
 
 def test_launch_json_serve_main_port() -> None:
@@ -68,11 +87,13 @@ def test_launch_json_serve_main_port() -> None:
 # ── the stray-literal sweep ──────────────────────────────────────────────
 # MIRRORS only knows the copies someone listed. This finds the one nobody did.
 # Code files only: prose (docs, changelog, TODO) is not a copy a program reads.
-# The old value is deliberately not swept — 8150 is still the desktop's
-# per-project range and an arbitrary fixture port in the Swift tests.
+# The old value is not swept across the repo — 8150 is an arbitrary fixture port
+# in the Swift tests and still in desktop/scripts/reset-sandbox-state.sh. The
+# package itself is checked for it above.
 
 SWEPT_SUFFIXES = (".py", ".ts", ".tsx", ".mjs", ".swift", ".sh", ".ps1",
-                  ".yaml", ".yml", ".json", ".xcscheme", ".1")
+                  ".yaml", ".yml", ".json", ".xcscheme", ".1", ".toml", ".plist",
+                  ".html", ".js", ".cjs", ".mts", ".cfg", ".entitlements")
 UNSWEPT_PREFIXES = ("docs/", "trial-runs/", "experiments/", ".claude/", "tests/",
                     "desktop/Bristlenose/Resources/", "desktop/build/", "frontend/trial-runs/")
 # Copies that sit in a comment, so nothing reads them: they explain the port, not set it.

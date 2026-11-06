@@ -4,7 +4,7 @@ Clone the repo.
 
 ## Prerequisites
 
-- **Python 3.12** — the version pinned in `.tool-versions`, what CI's primary cells and the macOS sidecar build use. The package itself supports 3.10+ (CI tests 3.10–3.13), but build a contributor venv on 3.12.
+- **Python 3.12** — the version pinned in `.tool-versions`, what CI's primary cells and the macOS sidecar build use. The package supports 3.10+ (CI tests 3.10 to 3.14; `.github/workflows/ci.yml` says which cells ship to users), but build a contributor venv on 3.12.
 - **Node.js 24** (also pinned in `.tool-versions`) + npm
 - **FFmpeg** (`brew install ffmpeg` / `apt install ffmpeg`)
 - **git**
@@ -33,10 +33,7 @@ Done. You can now run the pipeline or the dev server.
 # Full pipeline (transcribe + analyse + render)
 .venv/bin/bristlenose run path/to/interviews/
 
-# Serve mode (React SPA + API — the active development experience)
-.venv/bin/bristlenose serve path/to/interviews/ --dev
-
-# Dev server (FastAPI + Vite HMR in one command)
+# Serve mode with dev tooling (FastAPI + React SPA + Vite HMR — the active development experience)
 .venv/bin/bristlenose serve path/to/interviews/ --dev
 ```
 
@@ -46,14 +43,14 @@ Done. You can now run the pipeline or the dev server.
 
 ```bash
 # Python
-.venv/bin/python -m pytest tests/           # all tests (~1,800)
+.venv/bin/python -m pytest tests/           # ~9,000 tests; free, never calls a paid LLM (`-m slow` opts in)
 .venv/bin/ruff check .                      # lint (entire repo, not just bristlenose/)
 .venv/bin/ruff check --fix .                # lint + auto-fix
 .venv/bin/mypy bristlenose/                 # type check (informational, not gated)
 
 # Frontend
 cd frontend
-npm test                                     # Vitest (~635 tests)
+npm test                                     # Vitest (3,000+ tests)
 npm run build                                # tsc type-check + Vite build
 ```
 
@@ -75,10 +72,11 @@ Copy `.env.example` to `.env`. You only need one LLM provider key:
 
 | Variable | What |
 |----------|------|
-| `BRISTLENOSE_LLM_PROVIDER` | `anthropic`, `openai`, `azure`, `google`, or `local` |
+| `BRISTLENOSE_LLM_PROVIDER` | `anthropic`, `openai`, `azure`, `google`, `local` or `anyllm` (the CLI normally gets this from `bristlenose configure` / `use`) |
 | `BRISTLENOSE_ANTHROPIC_API_KEY` | Claude key (from console.anthropic.com) |
 | `BRISTLENOSE_OPENAI_API_KEY` | ChatGPT key (from platform.openai.com) |
 | `BRISTLENOSE_GOOGLE_API_KEY` | Gemini key (from aistudio.google.com) |
+| `BRISTLENOSE_ANYLLM_MODEL` | any-llm model as `provider:model`, e.g. `mistral:mistral-large-latest` (needs the `any-llm` extra) |
 | `BRISTLENOSE_WHISPER_BACKEND` | `auto`, `mlx` (Apple Silicon), `faster-whisper` (CUDA/CPU) |
 
 For Ollama (free, no key): set `BRISTLENOSE_LLM_PROVIDER=local` and install [Ollama](https://ollama.com). See `.env.example` for all options.
@@ -108,64 +106,17 @@ Updates `bristlenose/__init__.py`, the man page and the pbxproj; stages them. It
 1. Add changelog entry to `README.md` and `CHANGELOG.md`
 2. Update version in `CLAUDE.md` "Current status" section
 3. Commit, then `git tag vX.Y.Z` (after the commit, so it points at it)
-4. Push branch and tag as two commands — `git push origin main` then
+4. Push `main` and the tag as two commands — `git push origin main` then
    `git push origin vX.Y.Z` (never one `--tags`; it debounces the release
-   workflow). The publish job then waits for approval on the run page —
-   see docs/release.md for the full flow
+   workflow). The tag push is what publishes: there is no approval step, and
+   it waits for after 9pm London on a working day (CLAUDE.md § Release
+   timing). `scripts/release.sh` drives the whole chain; see docs/release.md
 
-## Git worktrees
+## Branches and worktrees
 
-Feature branches live in separate worktrees so multiple tasks can run in parallel:
+The maintainer works on `main`, in one checkout, committing at each green checkpoint: no branch or worktree per feature. A branch is a free pointer (`git branch -f checkpoint` before risky work, `git revert <sha>` to undo); a worktree costs a whole environment build. A worktree is the exception, for when two environments must be live at once (a long pipeline run while you code something else), and it is made with the `/new-branch` skill, never by hand, because a hand-made one ships without the extras, the frontend build and the symlinks. The rules, with the rollback recipes: [`.claude/branch-workflow.md`](.claude/branch-workflow.md) and `CLAUDE.md` § Working preferences.
 
-```
-bristlenose/                              # main — always on main
-bristlenose_branch react-router/          # react-router branch
-bristlenose_branch codebook/              # codebook branch
-```
-
-```bash
-# Create a new feature branch + worktree
-cd /Users/cassio/Code/bristlenose
-git branch my-feature main
-git worktree add "../bristlenose_branch my-feature" my-feature
-cd "../bristlenose_branch my-feature"
-python3.12 -m venv .venv
-.venv/bin/pip install -e ".[dev,serve]"
-```
-
-Each worktree needs its own `.venv`. Commits are shared instantly across all worktrees.
-
-**Never check out a feature branch inside the main `bristlenose/` directory** — use worktrees instead.
-
-### Collaborative development example
-
-Each person clones the repo to their own machine and creates their own worktree. 
-
-```bash
-# 1. Clone (one-time)
-git clone git@github.com:USER/REPO.git ~/Code/bristlenose
-cd ~/Code/bristlenose
-
-# 2. Create your feature branch + worktree
-git branch my-feature main
-git worktree add "../bristlenose_branch my-feature" my-feature
-cd "../bristlenose_branch my-feature"
-
-# 3. Set up local env
-python3.12 -m venv .venv
-.venv/bin/pip install -e ".[dev,serve]"
-cd frontend && npm install && cd ..
-git push -u origin my-feature
-
-# 4. Work, commit, push
-git add -A && git commit -m "description"
-git push
-
-# 5. See what the other person is doing
-git fetch origin && git log --oneline origin/their-branch -5
-```
-
- Only `push`/`pull`/`fetch` touch the network. Merge to `main` via PR when done.
+Outside contributors fork the repo and branch in their own fork as usual; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Troubleshooting
 

@@ -158,13 +158,27 @@ So the platform-grain approach is: set the delegate, leave `willPresent` unimple
 
 The case this serves is the 99% one: the researcher has started a run and then **hidden Bristlenose, left it under a clutter of other windows, or gone full-screen in another app**. In all three, Bristlenose is not the app they are using, and the banner is how they find out.
 
-**Preferred (platform grain):** post the notification whenever a run ends, with a delegate set and no `willPresent`, and let the system suppress it while Bristlenose is in the foreground. No gate of ours.
+**Measured, 6 Nov 2026 (the spike).** A throwaway two-app test, outside the repo: one app posted a notification in each state with a notification delegate set that logs when the system calls `willPresent` (which it does only when it considers the app foreground), and a second app went full screen to be the "other app". macOS 27.0 (26A428), one Mac, a development-signed app.
 
-**Fallback, if the spike shows the system's idea of foreground is wrong for any of the cases:** an explicit test of whether Bristlenose is the **active application** when the run ends, `NSApp.isActive`, with `didBecomeActive` and `didResignActive`. Active-ness, not visibility, is the test, so a Bristlenose window visible but buried under another app's windows still gets a banner, and so does a different app in full screen. **Not `scenePhase`**, which is unreliable on macOS for this (the recorded trap in § 10.4). If a researcher has minimised Bristlenose's only window but the app is still active, the active-app test alone misses it, and the gate should also treat "no visible Bristlenose window" as not in the app.
+| State when the run ends | Did the system treat the app as foreground? (`willPresent` called) | In the notification list afterwards |
+|---|---|---|
+| 1. Active, in front | **Yes**, so the banner is suppressed | **Yes**, even though suppressed |
+| 2. Hidden (⌘H) | No, so the system shows the banner | Yes |
+| 3. Another app active, our window visible behind it | No, so the system shows the banner | Yes |
+| 4. Our only window minimised, app still the active app | **Yes**, so **no banner** | Yes |
+| 5. Another app in full screen on its own Space | No, so the system shows the banner | Yes |
+
+What it shows:
+- **The system's idea of foreground is "the app is active"** (cases 1 and 4), and it matches what the researcher is doing in cases 2, 3 and 5: hidden, buried and full-screen-elsewhere all get a banner. The 99% case works with no code of ours.
+- **One gap, case 4:** a researcher who minimises Bristlenose's only window but leaves it as the active app (looking at the Dock or an empty desktop) gets no banner, because the system still counts it as foreground. It is a narrow case, not a common one: most people move to another app after minimising, which is case 3.
+- **A suppressed notification still lands in the notification list** (case 1). So if we let the system suppress it, a researcher who was watching still gets a "finished" entry in Notification Centre for a run they already saw. That is the stale entry the design says to avoid.
+- **Not observed:** I could not see a banner on screen in cases 2, 3 and 5; the inference is from the system not asking the app and from the list entry. Someone should look once on a real run.
+
+**Decision (my recommendation, owner to confirm): gate at the point of posting, with one test, and use the delegate for the click.** Post the notification only if Bristlenose is **not** both active and showing a window: `NSApp.isActive && NSApp.occlusionState.contains(.visible)` means "the researcher is looking at it, update the window, post nothing". That covers case 4 and leaves no stale list entry in case 1, for one line of our code. It matches the system's own rule everywhere else, so it reinvents nothing. The delegate still has to exist (for the click, and so a stray notification is never shown in the foreground by default). Do not use `scenePhase`.
 
 **If the sidebar is closed but the researcher is in the app, no banner** (decided).
 
-**The spike** (Debug build, a few lines, on the owner's Mac): post a notification from a button, then check whether it shows when the app is (1) active in front, (2) hidden with ⌘H, (3) behind another app's window, (4) behind another app in full screen, (5) on a different Space, (6) minimised; and whether it still appears in the notification list when it is suppressed. It also settles whether a repeated identifier replaces an earlier entry.
+**Other things the spike did not settle:** whether a repeated request identifier replaces an earlier list entry; behaviour on macOS 15 and 26 (the floor is 15.0; the spike ran on 27.0 only); a release-signed, sandboxed build (the spike was a plain development-signed app, and a notifying app was refused until it sat in `~/Applications`, so a Debug build run from Xcode's build folder should be checked).
 
 This design does not address the app being quit. A run stops with the app (the 20 Oct 2026 decision), so there is nothing to alert about; that wider question has its own brief, `docs/brief-macos-background-run.md`.
 
@@ -180,7 +194,7 @@ This design does not address the app being quit. A run stops with the app (the 2
 | What | Why it can fail |
 |---|---|
 | Each end kind maps to exactly the right banner or none, including that Stop and Quit raise none | A new end kind that falls through to "banner" |
-| A delegate exists before the first post, and with Bristlenose in the foreground nothing is shown; with it hidden, buried or behind a full-screen app, a banner is | No delegate would show the banner in the foreground, the opposite of intent |
+| With Bristlenose active and a window visible, nothing is posted; hidden, buried, behind a full-screen app, or active with its only window minimised, a banner is posted. A delegate exists before the first post. | The one-line gate reads the wrong signal (the minimised case is the one the system's own rule misses) |
 | One request identifier per run | A re-attached or resumed run posting its end twice |
 | Not fired when the switch is off; the default on a fresh install is on, read through the one accessor | The `@AppStorage` default trap |
 | Not fired when the system permission is denied or undetermined | A banner raised through a back door |
@@ -201,7 +215,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 6. The one-button pre-alert: now recommended rather than a fallback, because of the temporary banner (see the observation in the permission flow). Owner's call.
 7. The Dock bounce (recommended out of the first version).
 8. The title/body order and the session count in the body (proposed above, following what the owner's own notifications look like).
-9. Run the foreground spike before the gate is fixed.
+9. *(Done 6 Nov: see "What decides". Gate at the point of posting; confirm.)*
 
 10. The interruption level: the default (respects a researcher's Scheduled Summary and Focus) or Time Sensitive (overrides both, for an event they are waiting on). I lean to the default, and to checking how often a held notification actually happens.
 11. Accept that a temporary banner vanishes in seconds and the list entry is what an away researcher finds.
@@ -210,7 +224,7 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 
 ## What I could not verify
 
-- **Spike status (6 Nov):** a notifying app was refused ("Failed to find or validate client") while it sat in a temporary folder, ad-hoc or development-signed, and validated once copied into `~/Applications`. A Debug build run from Xcode's DerivedData folder should be checked for the same thing before anyone concludes notifications do not work in a dev build. The foreground cases have not been run yet: the app was denied permission (above) and needs Allow switched on in System Settings.
+- **Spike (6 Nov), setup note:** a notifying app was refused ("Failed to find or validate client") while it sat in a temporary folder, ad-hoc or development-signed, and validated once copied into `~/Applications`. A Debug build run from Xcode's DerivedData folder should be checked for the same thing before anyone concludes notifications do not work in a dev build. The foreground cases then ran (see "What decides").
 - That macOS's own foreground rule matches the hidden, buried, full-screen and other-Space cases, and its behaviour for a minimised window; whether suppression keeps the entry out of the notification list; whether a repeated request identifier replaces an earlier entry; what the Dock attention request does under Focus; that a nil trigger delivers at once (standard behaviour, not stated on the pages I read).
 - The exact entitlement or capability a sandboxed Mac App Store build needs to post local notifications: believed to be none, from memory.
 - Whether the system notification-permission alert on macOS can carry any wording of ours (it appears not to), and whether provisional authorization behaves the same on macOS as on iOS; the page I read describes it generally.

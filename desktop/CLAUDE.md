@@ -340,8 +340,9 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 
 **The full entries — the incident, the measurement, the fix — are in [`gotchas.md`](gotchas.md), by theme.** Read the theme's section before working in that area. This index is the rule and the tell, nothing more: one line per entry, same order as the file. Add a new gotcha to `gotchas.md` and its headline here.
 
-**Serve lifecycle and the bridge** (27) — [full entries](gotchas.md#serve-lifecycle-and-the-bridge)
+**Serve lifecycle and the bridge** (28) — [full entries](gotchas.md#serve-lifecycle-and-the-bridge)
 
+- A profile of the app needs a rendered report, and the dev-server flag leaves the bridge dead: a study with no report shows a native pane, and the external server gives the app no token, so `ready` never posts and signposts never end.
 - "Picking up Signals…" is the idle tier's status for a first report being built, derived…
 - "Is this progress line the current run's?" has a blind window: from spawn until the new…
 - A popout from `WKUIDelegate.createWebViewWith` gets a live `window.opener` — the…
@@ -370,8 +371,9 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - `ServeManager.start()` MUST reset `authToken` (and `serverVersion`) — `handleLine`'s…
 - Zombie cleanup is delegated to the sidecar (Apr 2026, A6 redesign)
 
-**Sidebar, toolbar and window layout** (28) — [full entries](gotchas.md#sidebar-toolbar-and-window-layout)
+**Sidebar, toolbar and window layout** (29) — [full entries](gotchas.md#sidebar-toolbar-and-window-layout)
 
+- A window drag is a per-frame load test: `@State` written per frame re-runs the whole `ContentView` body (use a reference box), and the outline reload per republish is held until the live resize ends; 10 → 58 window updates a second (`docs/design-client-performance.md`).
 - `NavigationSplitView`'s `columnVisibility` binding is not only your writes — AppKit…
 - Driving the Mac app from outside needs care, and the first-build window needs a recipe…
 - A native popover anchored to web content must add the web view's top safe-area inset

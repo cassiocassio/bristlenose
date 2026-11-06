@@ -7,10 +7,8 @@ quotes (``routes/codebook_builder._coded_quotes``, the exemplars a tag's prompt 
 from, and the count that says "ready to synthesize") are read with no such filter: a hidden quote
 still carrying the tag is counted, and its words are sent to the model as a definition's evidence.
 
-Pinned strict because the rule's reach over exemplars is the owner's to rule on (they are the
-researcher's own hand-coding, which hiding may not be meant to undo); if the ruling is "hidden
-means hidden", delete the xfail and fix ``_coded_quotes`` to go through
-``speaker_slots.analysis_quotes``. Same shape as the other pins that wait on a ruling.
+Ruled 6 Nov 2026: hidden means hidden, exemplars included. ``_coded_quotes`` goes through
+``speaker_slots.analysis_quotes``; this test was a strict xfail until then.
 
 The setup (the hide, and proof that it took) lives in a fixture, outside the xfail, and the xfail
 names ``AssertionError``: a broken setup is an ERROR and a changed route is an exception, never
@@ -49,10 +47,6 @@ def one_coded_quote_hidden(client_with_coded_tag):  # noqa: F811
     return client, tag_id
 
 
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError,
-    reason="awaits the owner's ruling: does hidden discount an exemplar? (5 Nov 2026)",
-)
 def test_a_hidden_quote_is_not_counted_as_an_exemplar(one_coded_quote_hidden) -> None:
     client, tag_id = one_coded_quote_hidden
     assert _coded_count(client, tag_id) == 2

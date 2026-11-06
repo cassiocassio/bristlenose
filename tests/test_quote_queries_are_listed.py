@@ -83,9 +83,6 @@ LISTED: dict[str, tuple[int, str]] = {
     "miro_export.py::load_pauses": (1, CHOSEN),
     "journey.py::derive_journeys_with_anchors": (
         1, "a hidden quote keeps its journey step (owner, 22 Oct 2026); evidence_quotes gates it"),
-    "routes/codebook_builder.py::_coded_quotes": (
-        2, "KNOWN GAP: counts hidden exemplars; pinned strict in"
-           " tests/test_hidden_counts_nowhere_exemplars.py until the owner rules"),
 }
 
 

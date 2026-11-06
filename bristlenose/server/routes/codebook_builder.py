@@ -154,13 +154,20 @@ def _draft_from_row(row: TagPrompt | None) -> cb.PromptDraft | None:
 
 
 def _coded_quotes(db: Session, project_id: int, tag_id: int) -> list[Quote]:
-    """Quotes in this project that already carry the tag — the exemplars."""
-    return (
-        db.query(Quote)
-        .join(QuoteTag, QuoteTag.quote_id == Quote.id)
-        .filter(Quote.project_id == project_id, QuoteTag.tag_definition_id == tag_id)
-        .all()
-    )
+    """Quotes in this project that already carry the tag — the exemplars.
+
+    Only quotes that count: a hidden quote is discounted evidence and is neither counted
+    nor sent to the model as an exemplar (owner, 6 Nov 2026, extending the 22 Oct ruling).
+    """
+    from bristlenose.server.speaker_slots import analysis_quotes
+
+    carrying = {
+        quote_id
+        for (quote_id,) in db.query(QuoteTag.quote_id).filter(
+            QuoteTag.tag_definition_id == tag_id
+        )
+    }
+    return [q for q in analysis_quotes(db, project_id) if q.id in carrying]
 
 
 def _example(q: Quote) -> cb.ExampleQuote:

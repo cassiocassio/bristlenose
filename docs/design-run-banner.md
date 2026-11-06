@@ -56,15 +56,35 @@ All strings are new except where marked. All need the 21 full locales and an ent
 
 ## The permission flow
 
-macOS delivers nothing until the researcher has allowed it, so "on by default" means asking once, in context, not silently.
+macOS delivers nothing until the researcher has allowed it, so "on by default" means asking once, in context, not silently. **Checked against Apple's text on 6 Nov 2026** (sources at the end of this section); the first draft of this section was written from assumption and is replaced.
 
-1. **When:** the first time an analysis starts after the feature ships (not at launch, not in Settings). That is the moment the banner becomes relevant and the researcher is already deciding about leaving.
-2. **How:** the system's own prompt, through the standard authorization request, with no pre-prompt sheet of ours. Provisional (quiet) authorization exists on macOS but delivers silently to Notification Center, which defeats the purpose, so it is not used.
-3. **If allowed:** nothing more to say.
-4. **If declined:** the app says nothing and asks nothing again (not needy). The Settings switch stays as the researcher left it; when the system permission is off, the row reads as unavailable and says why in one line, with no button that re-asks. The researcher changes it in System Settings.
-5. **If already declined or never asked, and a run ends:** no banner, no fallback chime.
+1. **When:** the first time an analysis starts after the feature ships. Apple's own developer guidance says to make the request "in a context that helps people understand why", gives the example of asking after a first reminder is scheduled, and says this is better than asking on first launch. The privacy guidance agrees: ask when the person uses a feature that needs it, not at launch unless the app cannot work without it.
+2. **How:** the system's own prompt, from the standard authorization request for alert and sound (no badge: see below). **The system alert has no text of ours in it that I could find**, so the in-context moment is the only explanation the researcher gets. That is a real risk: a bare "Bristlenose would like to send you notifications" arriving as an analysis starts could be declined by reflex. I did not verify whether macOS lets an app supply any wording in this alert; for notifications it appears not to. Test it on a first run.
+3. **A pre-alert screen of our own is allowed, but not needed, and not proposed.** Apple permits one "if it's essential to provide additional details", with strict rules: a single button called "Continue" or "Next" that opens the system alert, and no Cancel or Close. The privacy page names camera, microphone, location, contacts, calendar and tracking in that guidance, not notifications, so I am applying it by analogy. If the first-run test shows reflex declines, a one-line pre-alert is the fallback, built to those rules.
+4. **If allowed:** nothing more to say.
+5. **If declined:** nothing is asked again, and **the platform enforces this**: Apple's documentation says later authorization requests do not prompt. The app can only point the researcher to System Settings. The Settings row reads as unavailable with one line saying why, and has no button that re-asks.
+6. **If never asked or declined, and a run ends:** no banner and no fallback chime. Check the authorization status before posting anything (Apple's guidance: people can change it at any time).
 
-Why not ask at first launch: a permission prompt before the researcher has any reason to want it is the worst-converting place to ask, and the first launch has enough else going on.
+**Provisional ("quiet trial") authorization is confirmed unsuitable.** Apple's page says provisional notifications are delivered quietly: no sound, no banner, no lock screen, only an entry in Notification Center history, with Keep and Turn Off buttons. Its one real advantage is that it needs no up-front prompt. Its cost is that the first "your analysis finished" would arrive silently, which is exactly when the researcher has walked away. So it is not used, with the trade-off stated.
+
+Sources opened 6 Nov 2026: Apple HIG, Notifications and Privacy; Apple developer documentation, "Asking permission to use notifications".
+
+## What Apple's guidance says about the banner itself
+
+From the HIG Notifications page (opened 6 Nov 2026). Where it bears on the proposal:
+
+| Guidance (in my words) | What it means here |
+|---|---|
+| Notifications do not appear when the app is in front; the app should show the information in the window instead (Mail simply adds the message to the list) | **The frontmost rule is the platform's default, not code we must write.** Do not make notifications present while the app is in front. The sidebar row already flips, which is the "discoverable, not distracting" treatment Apple describes. |
+| Avoid several notifications for the same thing | One banner per end, as designed. |
+| Avoid telling people to do a task in the app | The banner reports; it does not instruct. |
+| Use an **alert**, not a notification, for an error message | Applies to errors shown to someone in the app. A background run that did not finish is a status the researcher is away from, so a notification is the only channel; the error detail still appears in the window on return, as today. Noted as a tension, not a conflict. |
+| Avoid sensitive, personal or confidential information, because you cannot predict who sees it | The owner has decided the project name is in the banner by default. See the next row. |
+| Provide generic body text for when previews are hidden; the system then shows only the icon and "Notification" | **Use it.** Set the hidden-previews placeholder to a generic line without the project name (for example "Analysis finished"), so a researcher who has hidden previews system-wide, or is sharing a screen with previews off, never exposes a client name. This honours the owner's decision and Apple's guidance together, at no cost. |
+| Titles: short, title-style capitalization, no ending punctuation. Body: complete sentences, sentence case, proper punctuation. Let the system show the app name rather than a generic title | **Tension with the shipped strings**: "The analysis didn’t finish" is a sentence-case sentence. The proposed bodies ("Checkout study") are fragments. Decide whether to follow Apple's capitalization in titles or the app's existing sentence case; the owner's call. |
+| Consider a sound, but do not rely on it | System default sound; the text carries the meaning. |
+| Badges only for unread notification counts, never the only signal | No badge, as designed. |
+| Do not use an action that merely opens the app | No action button; clicking the banner opens the project, which is the expected default. |
 
 ## The Settings switch
 
@@ -109,6 +129,7 @@ This design does not address the app being quit. A run stops with the app (the 2
 | Not fired when the switch is off; the default on a fresh install is on, read through the one accessor | The `@AppStorage` default trap |
 | Not fired when the system permission is denied or undetermined | A banner raised through a back door |
 | One banner per end, never two for the same run | A completion event handled twice (a resumed or re-attached run) |
+| The hidden-previews placeholder carries no project name | The one place the project name could leak when the researcher has hidden previews |
 | Every new key exists in all 21 full locales | The locale check |
 | The decline path asks nothing a second time | A re-ask is needy |
 
@@ -122,9 +143,13 @@ Use the standard "prove each test can fail" discipline: mutate the gate and the 
 4. The reason strings' final form.
 5. The minimised-window case in "What decides not in the app": confirm on a real Mac, and add a visible-window test if the active-app test alone misses it.
 
+6. Title capitalization: Apple's title-style, or the app's sentence case.
+7. Whether to test a one-line pre-alert if first runs show reflex declines.
+
 ## What I could not verify
 
-- The exact entitlement or capability a sandboxed Mac App Store build needs to post local notifications: believed to be none, from memory; Apple's documentation page returned only a title when fetched.
+- The exact entitlement or capability a sandboxed Mac App Store build needs to post local notifications: believed to be none, from memory.
+- Whether the system notification-permission alert on macOS can carry any wording of ours (it appears not to), and whether provisional authorization behaves the same on macOS as on iOS; the page I read describes it generally.
 - Behaviour of a notification across a quit of the app (not relevant to this proposal, since nothing fires after a quit).
 - Any existing deep-link route into a project from outside the app.
 - That the run-end seam is a single place; the end kinds exist in `PipelineRunner`, but I did not trace where a banner would hook in.

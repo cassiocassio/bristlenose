@@ -238,9 +238,9 @@ done
 # the wheelhouse for each extra's own native wheels rather than trusting exit 0.
 for _w in "kaldi_native_fbank-*-cp${BN_TARGET_PY//./}-*.whl" "any_llm_sdk-*-py3-none-any.whl" "mistralai-*-py3-none-any.whl"; do
     ls "$WORK/vendor/"$_w >/dev/null 2>&1 || {
-        echo "error: no $_w in the wheelhouse — the voice or any-llm extra did not resolve." >&2
-        echo "       Does bristlenose $VERSION declare it? (PyPI releases before" >&2
-        echo "       the voice pass or before 0.43.0's any-llm do not; build those without it.)" >&2
+        echo "error: no $_w in the wheelhouse — the extra that brings it did not resolve." >&2
+        echo "       Does bristlenose $VERSION declare it? PyPI releases before the voice" >&2
+        echo "       pass, or before 0.43.0's any-llm, do not, and this script cannot build them." >&2
         exit 1
     }
 done

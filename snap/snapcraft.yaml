@@ -145,6 +145,18 @@ parts:
           sys.exit("voice runtime will not work: " + r.detail)
       print("voice runtime:", r.detail)
       PY
+      # Fail loud if any-llm will not load either. snapcraft only warns when an
+      # extra is missing, and a strict snap cannot add packages afterwards, so a
+      # build without it would ship and then tell its users to pip install one.
+      $CRAFT_PART_INSTALL/bin/python3 - <<'PY'
+      import sys
+      try:
+          import any_llm
+          import mistralai
+      except Exception as exc:
+          sys.exit(f"any-llm will not load from the snap: {exc}")
+      print("any-llm:", any_llm.__name__, "and mistralai load")
+      PY
       # No spaCy model here. --redact-pii needs en_core_web_lg (~400 MB),
       # and this used to download en_core_web_sm, which nothing loads.
       # Install man page (canonical location: bristlenose/data/). Reference the

@@ -151,7 +151,7 @@
 <figure>
   <div class="legend"><span><i style="background:var(--s3)"></i>load call to navigation start</span><span><i style="background:var(--s4)"></i>navigation start to did-finish</span><span><i style="background:var(--s5)"></i>did-finish to ready</span></div>
   <div id="c-web"></div>
-  <figcaption>The same report, a real-size study. Bare WKWebView outside the app: warm process 57 / 67 / 46 ms; first load of a process (which pays about 110 ms of content-process launch) 166 / 134 / 57 ms. In the app: 168 / 272 / 148 ms, 14 launches, plus 23 ms of our own view setup before the load call. Against the equally cold bare load the app is about 230 ms slower, and the gap sits in the load phase (272 vs 134 ms) and the mount phase (148 vs 57 ms), not in process start (168 vs 166 ms). A Release build did not close it (see the caveat section), so the cause is the sandboxed network path or contention: still a hypothesis, no sandbox-off run.</figcaption>
+  <figcaption>The same report, a real-size study. Bare WKWebView outside the app: warm process 57 / 67 / 46 ms; first load of a process (which pays about 110 ms of content-process launch) 166 / 134 / 57 ms. In the app: 168 / 272 / 148 ms, 14 launches, plus 23 ms of our own view setup before the load call. Against the equally cold bare load the app is about 230 ms slower, and the gap sits in the load phase (272 vs 134 ms) and the mount phase (148 vs 57 ms), not in process start (168 vs 166 ms). A Release build did not close it, and a main-thread sample points at our own UI work at a project switch (see the caveat section).</figcaption>
 </figure>
 
 <h3>A restored launch</h3>
@@ -196,11 +196,13 @@
   <li><strong>Shared working trees bite.</strong> One commit swept in another session's uncommitted edit. Stage by explicit path, read <code>git diff</code> for hunks you did not write, and never rewrite another session's work to tidy up.</li>
 </ul>
 
-<h2 id="caveat">The biggest caveat, and the check we then ran</h2>
+<h2 id="caveat">The biggest caveat, and the checks we then ran</h2>
 <div class="callout warn">
-<p><strong>Every app number above is from a Debug build</strong>, and the in-app web side runs about 230 ms slower than bare WebKit. The obvious suspect was Debug (unoptimised SwiftUI drives the web view). We re-ran the whole click-to-ready harness on a Release build, built with the same signing and sandbox entitlements as Debug so that optimisation was the only change.</p>
-<p><strong>Result: it does not close the gap.</strong> View made to ready was 596 ms (standby off) and 567 ms (on), against 604 ms in Debug. The mount phase may be about 40 ms faster (104 against 148 ms), which is inside the spread. Click to report ready was 1,747 and 1,757 ms. Debug is not the cause. What is left is the sandboxed network path and contention, and neither is something we would change cheaply. (Neither arm claimed a standby: the study was restored at launch, as the earlier section explains.)</p>
-<p>The Release app here is a measurement build only: Debug entitlements, no hardened runtime. It says nothing about an App Store build's signing cost.</p>
+<p><strong>Every app number above is from a Debug build</strong> (apart from the checks below), and the in-app web side runs about 230 ms slower than bare WebKit. We tested the obvious suspects in turn.</p>
+<p><strong>1. Release build.</strong> Same signing and sandbox entitlements as Debug, so optimisation was the only change. View made to ready was 596 ms (standby off) and 567 ms (on), against 604 ms in Debug; the mount phase may be about 40 ms faster (inside the spread). <em>Debug is not the cause.</em></p>
+<p><strong>2. Settling the sidecar and warming the process</strong> (a busy Mac, load 4 to 13). After the sidecar had settled, loads made by switching away and back took 460 ms median (383 to 528), against 671 ms for the first load: about 210 ms of the first-load premium is the cold process and the sidecar's own startup work. But a floor stays: made to navigation start is still 200 to 230 ms in the app against 57 ms bare.</p>
+<p><strong>3. A main-thread sample.</strong> One sample of the app's main thread during a project switch: of 746 samples, about 460 are in the Core Animation transaction flush, about 330 of them AppKit layout (the sidebar creating row views, the toolbar's layout, <code>NSHostingView</code> layout) and about 90 to 150 SwiftUI view-graph updates. The web view cannot start navigating while the main thread is in that. <em>The cause is most likely our own UI work at a project switch, not the sandbox.</em> One sample, not repeated; the bare view was not run sandboxed, so the sandbox is not ruled out.</p>
+<p>The Release app is a measurement build only: Debug entitlements, no hardened runtime. It says nothing about an App Store build's signing cost.</p>
 </div>
 
 <h2 id="backlog">Backlog: opportunities, costs, pros and cons</h2>
@@ -211,7 +213,7 @@
 <tr><td>1</td><td><strong>Re-run the app harness on a Release build</strong> <span class="tag m">done</span></td><td>Decided items 3 and 4</td><td><span class="tag m">measured</span> no change: 596 / 567 ms against 604 in Debug; about 40 ms at most in the mount phase</td><td>S (an hour)</td><td>Removed the biggest caveat.</td><td>Measurement build only (Debug entitlements, no hardened runtime).</td></tr>
 <tr><td>2</td><td><strong>Idle CPU and energy measurement</strong> (<code>powermetrics</code>)</td><td>App open all day, continuous</td><td><span class="tag u">unmeasured</span> polls: agent pulse 1.5 s, screens 3 s, run 1 s, plus the web content process</td><td>S (needs sudo)</td><td>For an app that stays open, battery is felt more than a 100 ms open.</td><td>Needs an idle machine and an elevated run; may find nothing to fix.</td></tr>
 <tr><td>3</td><td><strong>Web view start-up</strong>: re-test pre-warm with the bare numbers (about 110 ms is content-process launch)</td><td>First study open of a session, daily</td><td><span class="tag e">estimate</span> ≤ 110 ms, first open only</td><td>S (a day)</td><td>Small and contained; harness exists.</td><td>Earlier in-app test said it does not pay. Hidden pre-emptive work must be invisible and failure our problem, never the user's.</td></tr>
-<tr><td>4</td><td><strong>Close the in-app web premium</strong> (sandboxed network path, contention)</td><td>Every study open</td><td><span class="tag e">estimate</span> up to about 230 ms, but not Debug (item 1)</td><td>M, cause unknown</td><td>The largest remaining piece outside the server.</td><td>What is left is the sandbox, which we will not change, and contention. Park unless a sandbox-off run (a measurement build) shows it is the sandbox and a cheaper route exists.</td></tr>
+<tr><td>4</td><td><strong>Free the main thread at a project switch</strong>: the web view cannot start navigating while the app is busy laying out the sidebar, toolbar and SwiftUI graph</td><td>Every study open and every study switch, daily</td><td><span class="tag e">estimate</span> up to about 170 ms of the made-to-start phase (228 ms in app against 57 bare); one main-thread sample, not repeated</td><td>M (profile, then change)</td><td>Our own code, so it is actionable; helps every switch, not only the first open.</td><td>One sample on a busy Mac. Needs a Time Profiler pass to find what rebuilds the sidebar rows and re-lays-out the toolbar; the cure may touch the AppKit sidebar, which is risky ground.</td></tr>
 <tr><td>5</td><td><strong><code>QuoteCard</code> memoisation and selector subscriptions</strong></td><td>Search, tag, star, keyboard moves; many a day</td><td><span class="tag e">estimate</span> search echo 170 → under 16 ms at 1,500 quotes. At real size the Quotes revisit render is only 15 ms of 117 (fetch is 92)</td><td>S to M</td><td>Protects large studies; low blast radius.</td><td>At typical size the gain is small. Ownership overlapped another session's display-preferences work.</td></tr>
 <tr><td>6</td><td><strong>Lens revisit from last-known data</strong> (stale while revalidate), with per-lens scroll position</td><td>Switching lenses, many a day</td><td><span class="tag e">estimate</span> Quotes revisit about 117 ms → near 0 to 20 ms perceived</td><td>M</td><td>The most felt interaction gain; pairs with remembering scroll position.</td><td>Staleness and invalidation bugs are the classic failure; owner's call, parked.</td></tr>
 <tr><td>7</td><td><strong>Per-study warm worker / split bind from the study</strong></td><td>Every study open, daily</td><td><span class="tag m">measured</span> bind is about 440 ms; and would let a restored launch benefit from a spare</td><td>L (weeks)</td><td>The biggest remaining lever; also fixes the restored-launch case.</td><td>Core server refactor; paid-job risk; changes lifecycle and the sandbox lease story. Do as a designed project, not a patch.</td></tr>
@@ -232,7 +234,7 @@
 </figure>
 <ol class="steps">
   <li><strong>Now (measure only):</strong> the Release-build re-run (#1) is done and ruled Debug out. Idle energy (#2) is next: it changes nothing in the product and can kill or confirm other items.</li>
-  <li><strong>Next (small, contained):</strong> web view start-up re-test (#3). The in-app gap (#4) is parked: Release did not close it, and what is left is the sandbox. Memoisation and selectors (#5) when the display-preferences work has landed.</li>
+  <li><strong>Next (small, contained):</strong> web view start-up re-test (#3). The in-app gap (#4) is reopened with a better cause: the main thread is busy with our own layout at a project switch. It needs a profiler pass before any change. Memoisation and selectors (#5) when the display-preferences work has landed.</li>
   <li><strong>After launch:</strong> lens revisit from last-known data together with per-lens scroll position (#6), since they share the same state model; then the regression gate (#8) once the numbers have stopped moving.</li>
   <li><strong>As a designed project:</strong> the warm worker (#7). It deserves its own design note first, and its decision rule is the standby's law: it must beat bind (440 ms) by more than it costs in memory and lifecycle complexity.</li>
 </ol>
@@ -400,7 +402,7 @@
     var W = 920, H = 360, L = 64, R = 20, T = 16, B = 50;
     var s = svg('c-matrix', W, H);
     var items = [
-      [1, 'Release re-run (done)', 0.15, 6.2, 'n'], [2, 'Idle energy', 0.2, 4.4, 'u'], [3, 'Web view start', 1, 3.2, 'e'], [4, 'In-app web gap', 3, 6.6, 'e'],
+      [1, 'Release re-run (done)', 0.15, 6.2, 'n'], [2, 'Idle energy', 0.2, 4.4, 'u'], [3, 'Web view start', 1, 3.2, 'e'], [4, 'Free main thread at switch', 3, 6.6, 'e'],
       [5, 'Memo + selectors', 2, 3.0, 'e'], [6, 'Lens revisit cache', 4, 7.6, 'e'], [7, 'Warm worker', 20, 9.0, 'm'], [8, 'Regression gate', 4, 2.6, 'n'], [9, 'Importer skip', 4, 1.4, 'm']
     ];
     var xs = function (c) { return L + (W - L - R) * Math.log10(c * 10) / Math.log10(250); }, ys = function (v) { return H - B - (H - B - T) * v / 10; };
@@ -443,7 +445,7 @@
     [[0, 1], [1, 2], [2, 3]].forEach(function (a) {
       el('path', { d: 'M' + (xs[a[0]] + wcol - 14) + ' 22 L' + (xs[a[1]] - 2) + ' 22', stroke: css('--accent'), 'stroke-width': 2, fill: 'none' }, null, s);
     });
-    el('text', { x: xs[0], y: H - 12, 'class': 'muted' }, '#1 is done: it ruled Debug out and parked #4. #6 and per-lens scroll share one state model. #7 is not on the critical path of anything shippable.', s);
+    el('text', { x: xs[0], y: H - 12, 'class': 'muted' }, '#1 is done: it ruled Debug out, and the sample moved #4 to our own UI thread. #6 and per-lens scroll share one state model. #7 is not on the critical path of anything shippable.', s);
   }
 
   function draw() { gains(); waterfall(); law(); web(); restore(); matrix(); seq(); }

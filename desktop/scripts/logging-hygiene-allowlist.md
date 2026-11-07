@@ -20,7 +20,7 @@ Format:
 The script runs each candidate line through these patterns and skips any
 that match.
 
-Current entries: HYG-1, HYG-2, HYG-3, HYG-4, HYG-5.
+Current entries: HYG-1, HYG-2, HYG-3, HYG-4, HYG-5, HYG-6, HYG-7.
 
 <!-- Add new entries below this line. Renumber contiguously. -->
 
@@ -99,8 +99,43 @@ The env-dump pattern (`print[[:space:]]*\(.*env\b`) has no word boundary, so
 it matches the tail of `fingerprint(`. `ServeEnvStaleness.fingerprint(_:)` (R35)
 takes the sidecar env and returns its SHA-256 digest, with the `_`-prefixed
 per-spawn variables left out, precisely so that no API key is kept in the
-clear; `ServeManager` stores that digest. Neither line prints or logs anything.
+clear; `ServeManager` stores that digest, and `StandbySidecar` (`spawn`, the
+warm standby) passes the same digest to the sidecar it constructs. None of the
+three lines prints or logs anything.
 
-The pattern pins the declaration and the one call site exactly.
+The pattern pins the declaration and the two call sites exactly.
 
-<!-- ci-allowlist: HYG-5 --> (static func fingerprint\(_ env: \[String: String\]\) -> String \{|instance\.spawnedEnvFingerprint = ServeEnvStaleness\.fingerprint\(env\))[[:space:]]*$
+<!-- ci-allowlist: HYG-5 --> (static func fingerprint\(_ env: \[String: String\]\) -> String \{|instance\.spawnedEnvFingerprint = ServeEnvStaleness\.fingerprint\(env\)|fingerprint: ServeEnvStaleness\.fingerprint\(env\),)[[:space:]]*$
+
+## HYG-6 — a refusal condition and a provider name, not a credential
+
+`ProviderProblemModel.swift` (the provider-refusal pill: `refresh`'s
+replaced-key check, `recordRefusal`'s three guards, and `noteRunSucceeded`'s
+unreadable-key branch) logs which *condition* was refused (`condition.rawValue`,
+an enum case such as `insufficient_credit`) on which *provider*
+(`provider.rawValue`, `anthropic` / `openai` / …) at `privacy: .public`, plus one
+two-literal ternary (`hadRecord ? "cleared" : "absent"`). The message text says
+"key" because the record is about one key, and whether that key still exists or
+was replaced is the thing being logged; the key itself is `key` in the same
+scope and is never interpolated — only `LLMValidator.keyFingerprint(key)` is
+compared, never printed.
+
+One entry covers the five lines; each alternative pins the full call through its
+closing parenthesis, so interpolating `key`, the fingerprint, or anything else
+into any of them stops the match.
+
+<!-- ci-allowlist: HYG-6 --> (Self\.log\.info\("\\\(record\.condition\.rawValue, privacy: \.public\) on \\\(provider\.rawValue, privacy: \.public\) was about a key that has been replaced: cleared"\)|log\.notice\("\\\(what, privacy: \.public\) refusal not recorded: \\\(provider\.rawValue, privacy: \.public\) has no key to refuse"\)|log\.notice\("\\\(what, privacy: \.public\) refusal not recorded: no readable key for \\\(provider\.rawValue, privacy: \.public\)"\)|log\.notice\("\\\(what, privacy: \.public\) refusal for \\\(provider\.rawValue, privacy: \.public\) not recorded: the key was replaced after the call was made"\)|log\.notice\("a run worked on \\\(provider\.rawValue, privacy: \.public\) but its key could not be read: record \\\(hadRecord \? "cleared" : "absent"\), verdict left as it is"\))[[:space:]]*$
+
+## HYG-7 — a refusal condition and a provider name, not a credential
+
+`ServeManager.swift` (`noteLLMRefusal`, the sidecar's `llm-refusal` stdout line
+reaching the pill) logs the refused condition (`condition.rawValue`) and the
+provider (`provider.rawValue`) at `privacy: .public` when this sidecar was never
+given that provider's key, so the refusal cannot be tied to one. The
+interpolations are the same two enum cases as HYG-6; the message says "key"
+because the absence of one is the reason. `instance.spawnedKeyFingerprints`
+holds digests, not keys, and is not interpolated here either.
+
+The pattern pins the full call through its closing parenthesis.
+
+<!-- ci-allowlist: HYG-7 --> log\.notice\("llm-refusal \\\(condition\.rawValue, privacy: \.public\) on \\\(provider\.rawValue, privacy: \.public\): this sidecar was not given that provider's key: not recorded"\)[[:space:]]*$

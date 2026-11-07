@@ -120,11 +120,11 @@ procurement; under-listing would be a compliance risk.
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.162.0 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.2.6 | MIT | <https://github.com/tox-dev/filelock> |
+| `filelock` | 4.2.9 | MIT | <https://github.com/tox-dev/filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.62.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
-| `google-genai` | 2.34.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `google-auth` | 2.62.1 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-genai` | 3.0.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.8.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
@@ -141,7 +141,7 @@ procurement; under-listing would be a compliance risk.
 | `jiter` | 0.18.0 | MIT | <https://github.com/pydantic/jiter/> |
 | `jsonschema` | 4.26.0 | MIT | <https://github.com/python-jsonschema/jsonschema> |
 | `jsonschema-specifications` | 2025.9.1 | MIT | <https://github.com/python-jsonschema/jsonschema-specifications> |
-| `kaldi_native_fbank` | 1.22.5 | Apache-2.0 | <https://github.com/csukuangfj/kaldi-native-fbank> |
+| `kaldi_native_fbank` | 1.23.0 | Apache-2.0 | <https://github.com/csukuangfj/kaldi-native-fbank> |
 | `llvmlite` | 0.50.0 | BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | <http://llvmlite.readthedocs.io> |
 | `lxml` | 6.1.3 | BSD-3-Clause | <https://lxml.de/> |
 | `Mako` | 1.4.3 | MIT | <https://www.makotemplates.org/> |
@@ -160,7 +160,7 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.1 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.31.1 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.42.1 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.46.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.2 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -170,9 +170,9 @@ procurement; under-listing would be a compliance risk.
 | `pyasn1` | 0.6.5 | BSD-2-Clause | <https://github.com/pyasn1/pyasn1> |
 | `pyasn1_modules` | 0.4.2 | BSD License | <https://github.com/pyasn1/pyasn1-modules> |
 | `pycparser` | 3.12 | BSD-3-Clause | <https://github.com/eliben/pycparser> |
-| `pydantic` | 2.14.2 | MIT | <https://github.com/pydantic/pydantic> |
+| `pydantic` | 2.14.3 | MIT | <https://github.com/pydantic/pydantic> |
 | `pydantic-settings` | 2.16.2 | MIT | <https://github.com/pydantic/pydantic-settings> |
-| `pydantic_core` | 2.50.2 | MIT | <https://github.com/pydantic> |
+| `pydantic_core` | 2.50.4 | MIT | <https://github.com/pydantic> |
 | `Pygments` | 2.21.0 | BSD-2-Clause | <https://pygments.org> |
 | `PyJWT` | 2.15.1 | MIT | <https://github.com/jpadilla/pyjwt> |
 | `pyobjc-core` | 13.0 | MIT | <https://github.com/ronaldoussoren/pyobjc> |
@@ -193,13 +193,13 @@ procurement; under-listing would be a compliance risk.
 | `rpds-py` | 2026.9.1 | MIT | <https://github.com/crate-py/rpds> |
 | `scipy` | 1.18.1 | BSD License | <https://scipy.org/> |
 | `shellingham` | 1.5.4 | ISC License (ISCL) | <https://github.com/sarugaku/shellingham> |
-| `smart_open` | 9.0.1 | MIT License | <https://github.com/piskvorky/smart_open> |
+| `smart_open` | 9.0.2 | MIT License | <https://github.com/piskvorky/smart_open> |
 | `sniffio` | 1.3.1 | Apache Software License; MIT License | <https://github.com/python-trio/sniffio> |
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
-| `SQLAlchemy` | 2.1.6 | MIT | <https://www.sqlalchemy.org> |
-| `srsly` | 2.5.5 | MIT License | <https://github.com/explosion/srsly> |
+| `SQLAlchemy` | 2.1.8 | MIT | <https://www.sqlalchemy.org> |
+| `srsly` | 2.5.6 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.6.0 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.10.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
@@ -211,7 +211,7 @@ procurement; under-listing would be a compliance risk.
 | `tqdm` | 4.70.1 | MPL-2.0 AND MIT | <https://tqdm.github.io> |
 | `truststore` | 0.10.5 | MIT | <https://github.com/sethmlarson/truststore> |
 | `typeguard` | 4.6.0 | MIT | <https://typeguard.readthedocs.io/en/latest/> |
-| `typer` | 0.27.3 | MIT | <https://github.com/fastapi/typer> |
+| `typer` | 0.28.0 | MIT | <https://github.com/fastapi/typer> |
 | `typing_extensions` | 4.16.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | `urllib3` | 2.8.0 | MIT | <https://github.com/urllib3/urllib3/blob/main/CHANGES.rst> |
 | `uvicorn` | 0.54.0 | BSD-3-Clause | <https://uvicorn.dev/> |

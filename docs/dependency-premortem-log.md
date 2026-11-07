@@ -1313,3 +1313,30 @@ Recommend adding to the catalog in `docs/design-dependency-premortem.md`:
      from wheels. -->
 
 ### SCORE — pending
+
+## Entry 10 — 2026-11-07 — google-genai 3.0, blocking the 0.45.0 preflight
+
+- **Grounded against:** `.venv-sidecar` installed metadata (built 6 Nov; google-genai 3.0.0 requires `httpx2>=2.0.0,<3`, plain `httpx` only under the `[httpx]` extra), `.venv` (google-genai **2.28.0**, not the 2.34.0 the inventory records), the 2.34.0 and 3.0.0 wheels diffed, `THIRD-PARTY-BINARIES.md` (the 0.44.0 closure), `packaging/windows/constraints.txt` (hard pin 2.28.0), CI on `main` red on two `tests/test_gemini.py::TestGeminiCallEnds` tests on all three OSes
+- **Prior calibration applied:** Entry 8/9, *"mocked tests cannot see it"*, and Entry 7's latent note that the next SDK to move transports would look isolated and would not be. Both held: this major IS the httpx→httpx2 move, and it is what reddened CI. So the green rests on real calls through 3.0.0, not on the suite
+- **Trigger:** `check-release-ready.sh 0.45.0`, row *dependency majors*: one MAJOR, `google-genai 2.34.0 -> 3.0.0` (published 6 Nov 2026 02:29 UTC, one day old: no field reports exist yet, so there is no gossip to weigh, only what was run)
+
+### Prophecy
+
+| Bump (from→to) | Verdict | Surface | Receipt |
+|----------------|---------|---------|---------|
+| **google-genai** 2.34.0 → **3.0.0**, request path | 🟢 SAFE | — | 3.0's two changes on our path: default transport `httpx2` (`_api_client._DEFAULT_HTTP_CLIENT_BACKEND`), and the Developer API default version `v1` (was `v1beta`). Its removals (AFC from direct `generate_content`, `Live.send`, `GenerationConfigThinkingConfig`, `generate_videos` args) touch nothing we call. `scripts/check-providers-live.py --provider google` under the sidecar's 3.0.0: **2/2 shipped models PASS** (gemini-3.8-flash, gemini-3.5-flash-lite; preflight + s10 + s11, so `response_schema`, `system_instruction`, `response_mime_type` all accepted on `v1`); same on `.venv` 2.28.0. A local probe under 3.0.0: the 600 s timeout reaches the wire (`{'connect': 600.0, …}` on the `httpx2` request), `HttpRetryOptions` gives 7 attempts to a silent peer, the `ReadTimeout` classifies `NETWORK` (by name, `anyllm._NETWORK_NAMES`). `FinishReason.MAX_TOKENS` and every `_GEMINI_BLOCKS` name still exist; `APIError` still sets `.details/.status/.code` |
+| google-genai 3.0.0, **key preflight offline** | ⚠️ LATENT (small runtime regression, not a broken call) | runtime | `preflight/api_key.py::_classify_network_error` tests `isinstance(exc, httpx.ConnectError)` with httpx 0.x. Under 3.0 a refused connection is `httpx2.ConnectError`: probe gives `error_class=None` ("google validation unknown error: ConnectError") where 2.28 gives `network` ("Network connect failed — check DNS / VPN…"). Gemini only: Claude and ChatGPT arrive as their SDKs' `APIConnectionError`. One-line fix owed (match by class name, as `is_network_error` does); not a reason to cap |
+| the two red CI tests | not a product break | test | They pin httpx 0.x. `test_request_carries_ten_minutes` patches `httpx.AsyncClient.send`; 3.0 sends through `httpx2.AsyncClient`, so the spy never fires and the test makes a **real call to Google** with the dummy key: `ClientError 400 API key not valid`. `test_silent_peer_raises_instead_of_hanging` asserts `isinstance(…, httpx.TimeoutException)`; the call does end, after 7 attempts, but with `httpx2.ReadTimeout`. Both pass on 2.x. Owned by another worker |
+
+Windows: `packaging/windows/constraints.txt` hard-pins 2.28.0 and is not re-locked here (no pyproject input changed).
+
+### Applied
+
+No cap. `THIRD-PARTY-BINARIES.md` regenerated from the sidecar venv (google-genai 3.0.0 plus the patch/minor tail: openai 3.46.0, typer 0.28.0, kaldi-native-fbank 1.23.0, pydantic 2.14.3, google-auth 2.62.1, SQLAlchemy 2.1.8, filelock, smart_open, srsly), which turns the preflight row green; `build-all.sh` step 2b regenerates it again from the release resolve.
+
+### OUTCOME — open
+<!-- /cassandra --score: the 🟢 scores on 0.45.0 in the field: a real Gemini run in the
+     sandboxed app (httpx2 under the sidecar; not measured here) and on a CLI install. The
+     ⚠️ scores when the preflight classifier is fixed or a user reports the offline message. -->
+
+### SCORE — pending

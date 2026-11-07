@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -342,6 +345,26 @@ def _fast_gemini_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(var, raising=False)
 
 
+def _gemini_http_libs() -> list[ModuleType]:
+    """The HTTP libraries google-genai may send through.
+
+    Up to 2.x the SDK sends through ``httpx``; from 3.0.0 its default is
+    ``httpx2`` (pydantic's fork, a separate package with its own, unrelated
+    exception classes). A test that patches or expects only ``httpx`` reaches
+    the real API under 3.0.0 (CI, 6 Nov 2026: ``400 API key not valid`` from
+    Google). Patch both; whichever the installed SDK uses is the one that fires.
+    """
+    import httpx
+
+    libs: list[ModuleType] = [httpx]
+    try:
+        import httpx2
+    except ImportError:
+        return libs
+    libs.append(httpx2)
+    return libs
+
+
 class TestGeminiCallEnds:
     """A Gemini call to a peer that has gone quiet ends, it doesn't hang (R30).
 
@@ -357,7 +380,6 @@ class TestGeminiCallEnds:
     ) -> None:
         import asyncio
 
-        import httpx
         from pydantic import BaseModel
 
         from bristlenose.llm import client as client_mod
@@ -387,7 +409,8 @@ class TestGeminiCallEnds:
             if not done:
                 call.cancel()
             assert done, "the Gemini call was still waiting after 10 s"
-            assert isinstance(call.exception(), httpx.TimeoutException)
+            timeouts = tuple(lib.TimeoutException for lib in _gemini_http_libs())
+            assert isinstance(call.exception(), timeouts), repr(call.exception())
             # Each timed-out attempt is retried, as a lost connection after wake is.
             assert len(reached) == client_mod._CLOUD_MAX_RETRIES + 1
         finally:
@@ -438,22 +461,31 @@ class TestGeminiCallEnds:
 
     @pytest.mark.asyncio
     async def test_request_carries_ten_minutes(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The SDK reads the timeout in milliseconds: pin the seconds on the wire."""
-        import httpx
+        """The SDK reads the timeout in milliseconds: pin the seconds on the wire.
+
+        The spy sits on the client's ``send``, the last step before a socket, in
+        every library the SDK may send through, and ends the call there: no
+        network, no key.
+        """
         from pydantic import BaseModel
 
         class SimpleResult(BaseModel):
             answer: str
 
+        libs = _gemini_http_libs()
         seen: list[object] = []
 
-        async def spy_send(self: httpx.AsyncClient, request: httpx.Request, **kw: object) -> None:
-            seen.append(request.extensions.get("timeout"))
-            raise httpx.ConnectError("stop here", request=request)
+        def spy_for(lib: ModuleType) -> Callable[..., Awaitable[None]]:
+            async def spy_send(self: object, request: Any, **kw: object) -> None:
+                seen.append(request.extensions.get("timeout"))
+                raise lib.ConnectError("stop here", request=request)
+
+            return spy_send
 
         _fast_gemini_backoff(monkeypatch)
-        monkeypatch.setattr(httpx.AsyncClient, "send", spy_send)
-        with pytest.raises(httpx.ConnectError):
+        for lib in libs:
+            monkeypatch.setattr(lib.AsyncClient, "send", spy_for(lib))
+        with pytest.raises(tuple(lib.ConnectError for lib in libs)):
             await LLMClient(_google_settings()).analyze("s", "u", SimpleResult)
         assert seen and seen[0] == {"connect": 600.0, "read": 600.0, "write": 600.0, "pool": 600.0}
 

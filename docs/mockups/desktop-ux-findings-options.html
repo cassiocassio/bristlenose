@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktop UX findings — triage</title>
+<style>
+  /* ════ shipped tokens, copied by value (tokens.css, tokens-typography.css, palette-default.css) ════ */
+  :root {
+    color-scheme: light dark;
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-text-caption: 0.75rem; --bn-text-label: 0.8125rem; --bn-text-body: 0.9375rem;
+    --bn-text-title: 1.375rem; --bn-text-display: 1.75rem;
+    --bn-weight-normal: 420; --bn-weight-emphasis: 490; --bn-weight-mono-tag: 460;
+    --bn-text-badge: 0.72rem;
+    --bn-space-sm: 0.35rem; --bn-space-md: 0.75rem; --bn-space-lg: 1.5rem;
+    --bn-radius-md: 6px; --bn-radius-lg: 8px;
+    --bn-colour-bg:       light-dark(#ffffff, #111111);
+    --bn-colour-text:     light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted:    light-dark(#6b7280, #9ca3af);
+    --bn-colour-border:   light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-accent:   light-dark(#007aff, #0a84ff);
+    --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+    --bn-colour-badge-bg: light-dark(#eef0f3, #262626);
+    --bn-positive:        light-dark(#16a34a, #4ade80);
+
+    /* native macOS approximation (NOT the web theme) — as detail-pane-states.html */
+    --sf: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --n-1: light-dark(rgba(0,0,0,0.85), rgba(255,255,255,0.86));
+    --n-2: light-dark(rgba(0,0,0,0.50), rgba(255,255,255,0.55));
+    --n-3: light-dark(rgba(0,0,0,0.25), rgba(255,255,255,0.25));
+    --n-win: light-dark(#ffffff, #1e1e1e);
+    --n-tb: light-dark(#f6f6f6, #2b2b2d);
+    --n-hair: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.12));
+    --n-field: light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.08));
+    --n-accent: light-dark(#007aff, #0a84ff);
+    --sb-bg: light-dark(#f2f2f4, #232325);
+    --sb-sel: light-dark(rgba(0,0,0,0.07), rgba(255,255,255,0.10));
+    --page: light-dark(#eef0f3, #08090b);
+    --hatch: light-dark(rgba(0,0,0,0.14), rgba(255,255,255,0.16));
+    --open: light-dark(#b45309, #fbbf24);
+    --done: var(--bn-positive);
+    --obs: var(--bn-colour-muted);
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"]  { color-scheme: dark; }
+
+  html, body { margin: 0; background: var(--page); color: var(--bn-colour-text);
+    font: var(--bn-weight-normal) var(--bn-text-body)/1.5 var(--bn-font-body); }
+  main { max-width: 1240px; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  h1 { font-size: var(--bn-text-display); line-height: 1.2; font-weight: var(--bn-weight-emphasis); margin: .25rem 0 .5rem; }
+  h2 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 3rem 0 .75rem; padding-top: 1rem; border-top: 1px solid var(--bn-colour-border); }
+  h3 { font-size: 1.05rem; font-weight: var(--bn-weight-emphasis); margin: 1.5rem 0 .5rem; }
+  p, li { max-width: 72ch; }
+  code { font-family: var(--bn-font-mono); font-size: 0.86em; }
+  .muted { color: var(--bn-colour-muted); }
+  .banner { font: 500 13px/1.45 var(--bn-font-body); padding: 10px 14px; border-radius: 8px;
+    background: light-dark(#fff7cc, #3a2f05); color: light-dark(#5a4300, #ffe58a); border: 1px solid light-dark(#e9d47a, #7a6410); margin-bottom: 1rem; }
+  .chrome-bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; justify-content: flex-end; padding: 8px 0; }
+  .chrome-bar button { font: 500 12px var(--bn-font-body); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+  .chrome-bar button.on { background: var(--bn-colour-accent); color: #fff; border-color: transparent; }
+
+  .key { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: .5rem 0 1.5rem; }
+  .key span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+  .key .k-art::before { background: var(--n-win); border: 1px solid var(--n-hair); }
+  .key .k-com::before { background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); }
+
+  .com { margin: .75rem 0 0; padding: .85rem 1rem; border: 7px solid transparent; border-left: 3px solid var(--bn-colour-muted); border-radius: 4px;
+    background: linear-gradient(var(--page), var(--page)) padding-box,
+                repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box; }
+  .com .lab { font: 500 11px/1 var(--bn-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bn-colour-muted); margin-bottom: .5rem; }
+  .com p { margin: .35rem 0; } .com ul { margin: .35rem 0 .35rem 1.1rem; padding: 0; }
+
+  .pill { display: inline-block; font: 500 11px/1 var(--bn-font-mono); padding: 4px 8px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .pill.done { background: var(--done); } .pill.diff { background: light-dark(#0f766e, #2dd4bf); } .pill.obs { background: var(--obs); }
+  .pill.open { background: var(--open); } .pill.skip { background: transparent; color: var(--bn-colour-muted); border: 1px solid var(--bn-colour-border); }
+
+  table { border-collapse: collapse; width: 100%; font-size: var(--bn-text-label); margin: .75rem 0 1rem; background: var(--bn-colour-bg); }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--bn-colour-border); }
+  th { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); }
+  td.n { color: var(--bn-colour-muted); font-family: var(--bn-font-mono); font-size: .8rem; }
+  td.c { text-align: center; }
+
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; align-items: start; }
+  .opt { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); padding: 1rem; }
+  .opt h3 { margin: 0 0 .25rem; } .opt .sub { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin-bottom: .75rem; }
+  .opt .cons { font-size: var(--bn-text-label); border-top: 1px solid var(--bn-colour-border); margin-top: .75rem; padding-top: .6rem; }
+  .opt .cons dt { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); margin-top: .4rem; } .opt .cons dd { margin: 0; }
+  .cost { font: 600 11px/1 var(--bn-font-mono); padding: 3px 6px; border-radius: 4px; background: var(--bn-colour-border); }
+  .frame-cap { font: 500 11px/1.3 var(--bn-font-mono); color: var(--bn-colour-muted); margin: 0 0 2px; letter-spacing: .04em; }
+
+  /* ════ Mac frame: sidebar-only crop ════ */
+  .win { background: var(--n-win); border: 1px solid var(--n-hair); border-radius: 10px; overflow: hidden; font-family: var(--sf);
+    box-shadow: 0 6px 20px light-dark(rgba(0,0,0,.08), rgba(0,0,0,.5)); margin: .5rem 0; }
+  .win .tb { height: 38px; background: var(--n-tb); border-bottom: 1px solid var(--n-hair); display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+  .win .tb .lights span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; background: var(--n-3); }
+  .win .wb { display: grid; grid-template-columns: 210px 1fr; min-height: 250px; }
+  .win .sb { background: var(--sb-bg); border-right: 1px solid var(--n-hair); padding: 8px 6px 6px; font-size: 13px; display: flex; flex-direction: column; }
+  .win .sb .hd { font: 600 11px var(--sf); color: var(--n-2); padding: 4px 10px 6px; }
+  .win .row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 6px; color: var(--n-1); line-height: 1.2; }
+  .win .row.sel { background: var(--sb-sel); }
+  .win .row .ic { width: 16px; height: 16px; border-radius: 4px; background: var(--n-3); flex: none; }
+  .win .row .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .win .row .nm mark { background: transparent; color: inherit; text-decoration: underline; text-decoration-color: var(--n-accent); text-underline-offset: 2px; }
+  .win .row .cnt { font-size: 11px; color: var(--n-2); }
+  .win .row.dim { opacity: .35; }
+  .win .sb .spacer { flex: 1; }
+  .win .field { display: flex; align-items: center; gap: 6px; margin: 6px 4px 2px; padding: 3px 8px; border-radius: 6px; background: var(--n-field); font: 400 12px var(--sf); color: var(--n-2); }
+  .win .field svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .win .field .typed { color: var(--n-1); }
+  .win .field .caret { display: inline-block; width: 1px; height: 13px; background: var(--n-1); vertical-align: -2px; }
+  .win .typesel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 400 13px var(--sf); color: var(--n-2); }
+  .win .detail { position: relative; color: var(--n-2); font: 400 13px var(--sf); display: flex; align-items: center; justify-content: center; }
+  .win .footer { border-top: 1px solid var(--n-hair); margin-top: 6px; padding-top: 6px; }
+
+  /* ════ web frame: a quote card with a cursor glyph beside the pointer position ════ */
+  .web { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: 10px; padding: 18px 20px; position: relative; margin: .5rem 0; min-height: 150px; }
+  .card { background: var(--bn-colour-quote-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); padding: 12px 14px; max-width: 520px; }
+  .card .q { font-size: var(--bn-text-body); line-height: 1.5; margin: 0 0 .5rem; }
+  .card .meta { display: flex; gap: 8px; align-items: center; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+  .badge { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); font-weight: var(--bn-weight-mono-tag); background: var(--bn-colour-badge-bg); padding: 2px 7px; border-radius: 999px; color: var(--bn-colour-text); }
+  .tc { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
+  .cur { position: absolute; width: 18px; height: 22px; pointer-events: none; }
+  .cur svg { width: 100%; height: 100%; }
+  .cur.ibeam svg { stroke: var(--bn-colour-text); fill: none; stroke-width: 1.6; }
+  .cur.arrow svg path { fill: #fff; stroke: #000; stroke-width: 1.2; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<main>
+<div class="banner">PROPOSED 7 Nov 2026 · a triage of the 22 Mar 2026 findings at HEAD, with options only for what is still open · nothing here is built. Window state restoration is left out on purpose (another agent covers it).</div>
+<div class="chrome-bar"><button id="t-light">Light</button><button id="t-dark">Dark</button><button id="t-sys" class="on">System</button></div>
+
+<h1>Desktop UX review findings (22 Mar 2026) — what HEAD already answered, and the three that are left</h1>
+<p class="muted">100days [trust] [mental-model?] row of that name, filed the day the <code>macos-app</code> branch merged. The row says "full checklist in session notes"; no file under <code>docs/private/</code> at HEAD carries that checklist (the stems searched: What's New, Stage 4 of 12, cursor reset, searchable), so the thirteen items are triaged from the row text itself. Where the original finding's context is lost, the table says so rather than guessing it.</p>
+
+<div class="key">
+  <span class="k-art">Artefact — the surface as it would ship</span>
+  <span class="k-com">Commentary — why, cost, what it rules out</span>
+</div>
+
+<h2 id="triage">1 · Triage at HEAD</h2>
+<table>
+  <tr><th style="width:4%">#</th><th style="width:22%">Finding (22 Mar 2026)</th><th style="width:11%">At HEAD</th><th>Evidence</th></tr>
+  <tr><td class="n">1</td><td>v0.1 → v1 transition story (a What's New sheet)</td><td><span class="pill obs">obsolete as stated</span></td><td>v0.1 (Feb 2026, <code>desktop/v0.1-archive/</code>) never left the maintainer's Mac; the app has been on internal TestFlight only since 14 Jul 2026, so there is no v0.1 population to carry across. Nothing named What's New exists in <code>desktop/</code> or the locales. A <i>general</i> release-notes surface is a different, post-launch question — noted in §5, not mocked: "beta means no new features" (19 Oct 2026), and the App Store listing's own What's New field is the sibling that will exist first.</td></tr>
+  <tr><td class="n">2</td><td>Pipeline progress "Stage 4 of 12"</td><td><span class="pill diff">done differently</span></td><td>The row's line names the stage in plain words (<code>desktop.chrome.pipeline.stage.*</code>: Transcribing, Finding quotes, Grouping themes…) with sessions done and an earned estimate (<code>RunProgressSubtitle.compose</code>), and the ring is stage-weighted so position tracks time (R27, <code>9de197b1</code>, 21 Oct 2026). A count would be false anyway: of the 12 pipeline stages the Mac narrates nine; "4 of 12" is an engineer's number.</td></tr>
+  <tr><td class="n">3</td><td>Bare-key shortcuts in the menu bar</td><td><span class="pill done">done</span></td><td>Rule in <code>desktop/reference.md</code> § Menu bar: no bare-key menu shortcuts while a report is in front (<code>s h [ ] m ?</code> work only in web focus); the popout player is the one exception (29 Sep 2026). First recorded <code>6c1cf05eb</code>. Every <code>.keyboardShortcut</code> in <code>MenuCommands.swift</code> carries a modifier.</td></tr>
+  <tr><td class="n">4</td><td>"Remove" not "Delete" for projects</td><td><span class="pill done">done</span></td><td><code>desktop.menu.project.removeFromSidebar</code> = "Remove from Sidebar", undoable from Edit ▸ Undo with no confirm (<code>e0259aaab</code>). <code>menu.project.delete</code> ("Delete…") is a retained key with no caller in Swift.</td></tr>
+  <tr><td class="n">5</td><td>Disambiguate the three sidebars (Project Sidebar / Sections Panel / Tags Panel)</td><td><span class="pill done">done</span></td><td>View menu names each by content, never by chrome: Show/Hide <b>Projects</b> (<code>abf6002c4</code>); the lens's own left panel — Contents, Codes, Signals, Discussion Guide, Screens, Sessions (<code>0d796a98e</code>, contextual labels); Show/Hide <b>Tags</b>; Show/Hide <b>Heatmap</b>; Hide All Sidebars. The toolbar tooltips carry the same nouns. The dead <code>toolbar.sidebar</code> = "Sidebar" key has no caller.</td></tr>
+  <tr><td class="n">6</td><td>Archive undo toast</td><td><span class="pill obs">obsolete</span></td><td>Archive was withdrawn from Project and Folder menus 20 Oct 2026 (R66, <code>22ca42ed4</code>). The undo it would have advertised exists for Remove: <code>UndoableRemovalStore</code>, Edit ▸ Undo named "Undo Remove ‹name›", and the toast that carried it was deliberately removed with its 8-second fuse (<code>5598bd395</code>, 19 Aug 2026) — a Mac user's one assumption about undo is that it waits.</td></tr>
+  <tr><td class="n">7</td><td>Sidebar <code>.searchable()</code></td><td><span class="pill open">open · UX</span></td><td><code>.searchable</code> was spiked and rejected by measurement: on the detail column it imposed a 938 pt minimum nothing declared and overflowed the split view (3 Oct 2026, <code>desktop/gotchas.md</code>). The projects sidebar is an <code>NSOutlineView</code> (<code>ProjectSidebarOutline</code>), which has AppKit type-select on by default and no override in our code — unverified in hands. The <i>want</i> behind the finding — find a project in a long list — is still live. §2.</td></tr>
+  <tr><td class="n">8</td><td>Simplify the drop-zone flow</td><td><span class="pill done">done</span></td><td>Every study is a folder study (<code>d94edf6d1</code>); loose files go into a folder chosen in a save panel (<code>0ac2136d3</code>); one routing decision, <code>DropDecision</code> in <code>DropRouting.swift</code>, tested; the Welcome window has no drop card and the no-selection pane is the drop target (<code>c098e1a8c</code>).</td></tr>
+  <tr><td class="n">9</td><td>Toolbar fixed min-width</td><td><span class="pill diff">done differently</span></td><td>Not a toolbar number: the report declares the width it needs over the bridge and the Mac collapses the projects column to give it (<code>DetailFloor</code>, <code>SidebarAutoCollapse.windowMinWidth</code>, <code>94dc52e40</code>; measured 20 Sep 2026 — NSSplitView never clamps, so a fixed minimum was the wrong tool).</td></tr>
+  <tr><td class="n">10</td><td>Window state restoration</td><td><span class="pill skip">skipped</span></td><td>Another agent's question tonight.</td></tr>
+  <tr><td class="n">11</td><td>Dark-mode re-sync (KVO)</td><td><span class="pill done">done</span></td><td>One seam: <code>AppAppearance.beginApplying()</code> sets <code>NSApp.appearance</code> from the preference and every AppKit surface inherits it; the web view follows through <code>prefers-color-scheme</code>; no per-surface KVO and no bridge channel (<code>ee6c3e6c2</code>; gate <code>check-appearance-seam.sh</code>).</td></tr>
+  <tr><td class="n">12</td><td>Embedded font token</td><td><span class="pill done">done</span></td><td><code>bristlenose/theme/tokens-desktop.css</code>: body 15 px on the macOS title3 step, platform-detected (<code>21f0ea158</code>). The sibling P0 "13 pt font injection" in the Mac-nativeness row is the same fix.</td></tr>
+  <tr><td class="n">13</td><td>Cursor reset scope</td><td><span class="pill open">open · UX, small</span></td><td>The finding's wording is lost with the notes. Reading it as the one cursor question an embedded web view raises — the I-beam over static text that a native app shows an arrow over — nothing at HEAD addresses it as a rule: eleven scattered <code>cursor: default</code> declarations on individual controls (<code>discussion.css</code>, <code>screens.css</code>, <code>codebook-panel.css</code>, the gutter marks), none on the quote text itself, none keyed on embedded mode. §3.</td></tr>
+</table>
+<div class="com"><div class="lab">Commentary — the shape of the triage</div>
+<p>Eight of thirteen are done or done differently, two are obsolete because the thing they would have decorated was removed, one is skipped by instruction, and two remain. Both remaining items are small and both are about Mac feel rather than function, which is where a 22 Mar review of a two-week-old shell would be expected to leave its residue. Neither is a trust item in the row's sense; the [trust] tag belonged to items 2, 4 and 6, and those are closed.</p></div>
+
+<h2 id="find">2 · Finding a project in a long sidebar (item 7)</h2>
+<p>The 22 Mar ask was a mechanism (<code>.searchable()</code>). That mechanism is measured dead on this split view. The need is still real for a researcher with twenty studies. Three ways to meet it; the frames crop to the sidebar, because that is all that changes.</p>
+
+<div class="opts">
+  <div class="opt">
+    <h3>A · Type-select, as AppKit gives it</h3>
+    <div class="sub">Sibling: Finder's sidebar and every <code>NSOutlineView</code>; our own <code>PersonPickerPopover</code> implements <code>typeSelectStringFor</code> by hand for word-start matching.</div>
+    <p class="frame-cap">the researcher has typed "ro" with the sidebar focused</p>
+    <div class="win" data-spec='{"rows":[["Checkout study",6],["Diary — onboarding",4],["Rockclimbing",7,"sel","Ro"],["Pricing page",3],["Support calls",9]],"detail":"(the selected project’s report)"}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — possibly nil: <code>allowsTypeSelect</code> defaults to true and nothing in <code>ProjectSidebarOutline</code> turns it off. Verify in hands; if a row's cell view hides its string from AppKit, implement <code>typeSelectStringFor</code> as the person picker does (word-start match, so "on" finds "Diary — onboarding").</dd>
+      <dt>Layers touched</dt><dd><code>ProjectSidebarOutline.swift</code> at most.</dd>
+      <dt>Risks</dt><dd>Invisible until known; no affordance says it exists. That is the Mac norm for sidebars (Finder, Mail), and it fits "not needy UX".</dd>
+      <dt>Rules out</dt><dd>Nothing. B can sit on top.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>B · A filter field in the sidebar column</h3>
+    <div class="sub">Sibling: <code>CloudImportWindow</code>'s <code>.searchable(placement: .toolbar)</code> filter (its own window, so the split-view trap does not apply); Xcode's navigator filter at the column's foot.</div>
+    <p class="frame-cap">a filter field at the column's foot; rows that do not match fall away</p>
+    <div class="win" data-spec='{"rows":[["Checkout study",6,"dim"],["Diary — onboarding",4,"dim"],["Rockclimbing",7,"sel","Ro"],["Pricing page",3,"dim"],["Support calls",9,"dim"]],"filter":"Ro","detail":"(the selected project’s report)"}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">M</span> — an <code>NSSearchField</code> hosted in the sidebar column's footer (<code>sidebarWithFooter</code> is where a sidebar item goes, per the gotcha), a filter on the outline's data source that keeps folders whose children match, and a way to clear it when the selection changes. Not <code>.searchable</code>.</dd>
+      <dt>Layers touched</dt><dd><code>ProjectSidebarOutline.swift</code>, <code>ContentView</code>'s sidebar footer, one new key in 21 locales (the placeholder).</dd>
+      <dt>Risks</dt><dd>A field that is empty 99% of the time takes 28 pt from a column that already fights for height (the lens rail, the footer version line). Filtering an outline with folders is a classic source of "where did my project go" when the filter is forgotten. Finder, Mail and Notes do not do this for their sidebars; Xcode does because its navigator holds thousands of rows.</dd>
+      <dt>Rules out</dt><dd>Nothing, but it occupies the footer slot that the sidebar status roll (10 Nov decisions pending) may also want.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>C · Nothing further — the menu bar is the finder</h3>
+    <div class="sub">Sibling: Help ▸ Search already indexes every menu item; Window menu lists open windows.</div>
+    <p class="frame-cap">no change to the sidebar</p>
+    <div class="win" data-spec='{"rows":[["Checkout study",6],["Diary — onboarding",4],["Rockclimbing",7,"sel"],["Pricing page",3],["Support calls",9]],"detail":"(the selected project’s report)"}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">—</span></dd>
+      <dt>Risks</dt><dd>Help ▸ Search finds menu items, not projects; the sidebar's folders and drag-to-reorder are the sanctioned way to keep a long list findable. At twenty studies this holds; at eighty it does not, and the sessions-are-1:1 research pattern (18 Oct 2026) says most researchers run a handful of studies a year.</dd>
+      <dt>Rules out</dt><dd>Nothing.</dd>
+    </dl>
+  </div>
+</div>
+<div class="com"><div class="lab">Commentary — §2, is this Bristlenosey?</div>
+<p><b>Kind:</b> navigating the project sidebar (ruling docs: <code>design-project-sidebar.md</code>, <code>design-desktop-sidebar-appkit.md</code>). <b>A follows</b> the outline's own primitive and needs nothing new unless a check proves type-select off; <b>B departs</b> with a sentence ("the sidebar is an outline; we add a filter because the list can outgrow a screen") that Xcode supports and Finder, Mail and Notes do not; <b>C</b> is the status quo. The one thing <i>not</i> to do is re-spike <code>.searchable</code> on the split view: the measurements are in <code>docs/design-desktop-toolbar-appkit.md</code> so that nobody re-derives them.</p>
+<p>Open fact the owner can settle in ten seconds: click a project row, type the first letters of another project's name, see whether the selection moves. If it does, A is already shipped and this item closes as <i>done</i> with no commit.</p></div>
+
+<h2 id="cursor">3 · The pointer over static text in the Mac app (item 13)</h2>
+<p>In a browser, text shows an I-beam because any text might be selected. In a Mac app, static text shows the arrow; the I-beam appears over fields. The embedded report is a web page inside a Mac window, so it currently behaves as a browser. Three positions.</p>
+
+<div class="opts">
+  <div class="opt">
+    <h3>A · Leave the web default</h3>
+    <div class="sub">Sibling: every WKWebView-hosted surface on the Mac (Mail's message body shows an I-beam over the text too).</div>
+    <p class="frame-cap">pointer resting on the quote text</p>
+    <div class="web" data-cursor="ibeam" data-at="46,38"><div class="card"><p class="q">“I didn’t realise the belay check was mandatory until the instructor stopped me at the wall.”</p><div class="meta"><span class="badge">p3</span><span class="tc">12:04</span><span class="badge">onboarding</span></div></div></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">—</span></dd>
+      <dt>Risks</dt><dd>It is the loudest remaining web-view tell after the font fix, and it is honest: the quote text <i>is</i> selectable and copyable, and the I-beam says so. Mail's own message body does the same.</dd>
+      <dt>Rules out</dt><dd>Nothing.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>B · Arrow over static text in embedded mode; I-beam only where you can type or select deliberately</h3>
+    <div class="sub">Sibling: <code>export.css</code> already sets <code>cursor: default !important</code> on controls the export hides (a mode-scoped cursor rule exists); the platform fork lives in <code>tokens-desktop.css</code>.</div>
+    <p class="frame-cap">pointer resting on the quote text; the I-beam returns over an edit in progress and the search field</p>
+    <div class="web" data-cursor="arrow" data-at="46,38"><div class="card"><p class="q">“I didn’t realise the belay check was mandatory until the instructor stopped me at the wall.”</p><div class="meta"><span class="badge">p3</span><span class="tc">12:04</span><span class="badge">onboarding</span></div></div></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — one rule in the desktop token file's scope: <code>html[data-platform="desktop"] :where(body) { cursor: default }</code> with <code>cursor: text</code> restored on <code>[contenteditable="true"]</code>, inputs, textareas and the transcript's selectable turns; <code>cursor: pointer</code> on links and cards stays as it is.</dd>
+      <dt>Layers touched</dt><dd><code>bristlenose/theme/tokens-desktop.css</code> (or a sibling file in the same platform fork). No Swift, no locale, no React.</dd>
+      <dt>Risks</dt><dd>Hides that quote text is selectable with the pointer; a researcher who drags to copy still can, but the pointer no longer invites it. The scope must be the embedded host only — the browser report keeps the I-beam, or Safari users lose a cue they expect. A quote card under edit must flip back to the I-beam the instant editing starts (the <code>contenteditable</code> selector covers that).</dd>
+      <dt>Rules out</dt><dd>Nothing; one rule, reversible.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>C · Per-component, as today, extended case by case</h3>
+    <div class="sub">Sibling: the eleven existing <code>cursor: default</code> declarations on disabled buttons, gutter marks and group titles.</div>
+    <p class="frame-cap">pointer on the quote text (unchanged); arrow only where a rule was written</p>
+    <div class="web" data-cursor="ibeam" data-at="46,38"><div class="card"><p class="q">“I didn’t realise the belay check was mandatory until the instructor stopped me at the wall.”</p><div class="meta"><span class="badge">p3</span><span class="tc">12:04</span><span class="badge">onboarding</span></div></div></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S each, open-ended</span></dd>
+      <dt>Risks</dt><dd>This is what "cursor reset scope" probably named in March: a scope question answered one selector at a time never converges, and each new island re-decides it. It also leaks into the browser build, where the arrow over text is wrong.</dd>
+      <dt>Rules out</dt><dd>Nothing, and settles nothing.</dd>
+    </dl>
+  </div>
+</div>
+<div class="com"><div class="lab">Commentary — §3</div>
+<p>The glyphs drawn beside each card are the macOS arrow and I-beam at roughly 1×, placed where the pointer rests; they are not part of the page. B is the only option that treats the question as a <i>scope</i>, which is the word the finding used. Its cost is one rule because the platform fork already exists for type (<code>tokens-desktop.css</code>); it is where this belongs, not in React and not in Swift (WKWebView cannot override a page's cursor without injecting CSS, which is the same rule in a worse place). A is a defensible no, with Mail as the precedent; it should be a decision rather than a default.</p></div>
+
+<h2 id="deferred">4 · Not mocked, and why</h2>
+<ul>
+  <li><b>Item 1, a What's New sheet.</b> Obsolete for its stated population. The general question — does the Mac app tell a returning researcher what changed — is real but belongs after launch (28 Jan 2027), when there is a second version to describe. Its nearest siblings when it comes: the Welcome window (Help ▸ Welcome to Bristlenose, <code>abf6002c4</code>) for a surface, and the App Store listing's What's New field for the words, so the same release notes are written once. Nothing to pick tonight.</li>
+  <li><b>Item 2, a stage count.</b> Done differently and better; re-adding "N of 12" would put an internal number on a line that now says what is happening.</li>
+  <li><b>Item 10.</b> Another agent's.</li>
+</ul>
+
+<h2 id="compare">Comparison</h2>
+<table>
+  <tr><th>Item</th><th>Option</th><th class="c">Cost</th><th>Layers</th><th>Nearest sibling</th><th>Verdict</th></tr>
+  <tr><td rowspan="3">7 · find a project</td><td>A · type-select</td><td class="c">S / nil</td><td>ProjectSidebarOutline (maybe)</td><td>NSOutlineView, Finder sidebar</td><td>follows</td></tr>
+  <tr><td>B · footer filter field</td><td class="c">M</td><td>outline, sidebar footer, 21 locales</td><td>Xcode navigator; CloudImportWindow filter</td><td>departs, justified only at scale</td></tr>
+  <tr><td>C · nothing</td><td class="c">—</td><td>—</td><td>Finder, Mail, Notes</td><td>follows</td></tr>
+  <tr><td rowspan="3">13 · pointer over text</td><td>A · web default</td><td class="c">—</td><td>—</td><td>Mail message body</td><td>follows</td></tr>
+  <tr><td>B · one embedded-scoped rule</td><td class="c">S</td><td>tokens-desktop.css</td><td>the platform type fork; export.css mode rule</td><td>follows</td></tr>
+  <tr><td>C · per component</td><td class="c">S, open-ended</td><td>every island's CSS</td><td>today's eleven declarations</td><td>departs, unjustified</td></tr>
+</table>
+
+<h2 id="rec">Recommendation</h2>
+<p><b>Close the row.</b> Ten of its thirteen items are done, done better or made moot by later decisions, and the two that remain are small enough to settle in a morning. Re-file the two as their own one-line items so the 22 Mar bundle stops reading as open work.</p>
+<p><b>Item 7: A, after a ten-second check.</b> Click a row and type; if the selection moves, it is shipped. If it does not, implement <code>typeSelectStringFor</code> on the outline the way the person picker does, and leave it invisible, as Finder does. Do not build the filter field until a real researcher has more studies than a screen holds; the sidebar status roll wants that footer first.</p>
+<p><b>Item 13: B, as one rule in the desktop token fork</b>, scoped to the embedded host only, with the I-beam restored over anything editable. It is the smallest change that treats the question as scope, and it is reversible in one line if the owner prefers Mail's honesty (A). Either way, decide it rather than inherit it.</p>
+<p><b>Item 1:</b> no sheet now; revisit after the first public update, with the App Store What's New copy as the single source of the words.</p>
+
+</main>
+<script>
+(() => {
+  const root = document.documentElement;
+  const btns = { light: 't-light', dark: 't-dark', sys: 't-sys' };
+  for (const [mode, id] of Object.entries(btns)) {
+    document.getElementById(id).addEventListener('click', () => {
+      if (mode === 'sys') delete root.dataset.theme; else root.dataset.theme = mode;
+      for (const other of Object.values(btns)) document.getElementById(other).classList.toggle('on', other === id);
+    });
+  }
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const mag = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+
+  document.querySelectorAll('.win[data-spec]').forEach(w => {
+    const s = JSON.parse(w.dataset.spec);
+    const rows = s.rows.map(([name, count, flag, typed]) => {
+      let nm = esc(name);
+      if (typed && name.toLowerCase().startsWith(typed.toLowerCase())) nm = `<mark>${esc(name.slice(0, typed.length))}</mark>${esc(name.slice(typed.length))}`;
+      return `<div class="row${flag === 'sel' ? ' sel' : ''}${flag === 'dim' ? ' dim' : ''}"><span class="ic"></span><span class="nm">${nm}</span><span class="cnt">${count}</span></div>`;
+    }).join('');
+    const filter = s.filter !== undefined
+      ? `<div class="spacer"></div><div class="footer"><div class="field">${mag}<span class="typed">${esc(s.filter)}</span><span class="caret"></span></div></div>` : '';
+    w.innerHTML = `<div class="tb"><span class="lights"><span></span><span></span><span></span></span></div>
+      <div class="wb"><div class="sb"><div class="hd">Projects</div>${rows}${filter}</div><div class="detail">${esc(s.detail || '')}</div></div>`;
+  });
+
+  // the pointer glyphs — macOS arrow and I-beam, drawn once, placed by percentage
+  const ARROW = '<svg viewBox="0 0 18 22"><path d="M2 1 L2 17 L6 13.5 L9 20 L11.5 19 L8.5 12.5 L14 12.5 Z"/></svg>';
+  const IBEAM = '<svg viewBox="0 0 18 22"><path d="M6 2 h2 q1 0 1 1 v16 q0 1 -1 1 h-2 M12 2 h-2 q-1 0 -1 1 v16 q0 1 1 1 h2"/><path d="M9 3 v16"/></svg>';
+  document.querySelectorAll('.web[data-cursor]').forEach(f => {
+    const [x, y] = f.dataset.at.split(',').map(Number);
+    const kind = f.dataset.cursor;
+    const el = document.createElement('span');
+    el.className = `cur ${kind}`;
+    el.style.left = `${x}%`; el.style.top = `${y}%`;
+    el.innerHTML = kind === 'arrow' ? ARROW : IBEAM;
+    el.setAttribute('aria-label', kind === 'arrow' ? 'arrow pointer' : 'I-beam pointer');
+    f.appendChild(el);
+  });
+})();
+</script>
+</body>
+</html>

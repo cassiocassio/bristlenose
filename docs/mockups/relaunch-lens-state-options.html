@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relaunch lens state — options</title>
+<style>
+/* ── Banner: self-styled, cannot clash with the page ─────────────────────── */
+.bn-mockup-banner{font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;background:#fff3cd;color:#5c4300;border-bottom:1px solid #e0c36a;padding:10px 24px;}
+.bn-mockup-banner code{font:12px ui-monospace,Menlo,monospace;background:#fff8e1;padding:0 4px;border-radius:3px;}
+@media (prefers-color-scheme:dark){.bn-mockup-banner{background:#3a2f12;color:#f5d87a;border-color:#6b5520;}.bn-mockup-banner code{background:#2a2210;}}
+
+/* ── REAL Bristlenose tokens (bristlenose/theme/tokens.css + colors/palette-default.css),
+      copied from docs/mockups/codebook-library-states.html — the web report frames use these ── */
+:root{
+  color-scheme:light dark;
+  --bn-font-body:"Inter","Segoe UI Variable",system-ui,-apple-system,sans-serif;
+  --bn-font-mono:ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+  --bn-text-micro:.6rem;--bn-text-badge:.72rem;--bn-text-caption:.75rem;--bn-text-label:.8125rem;
+  --bn-text-body:.9375rem;--bn-text-heading:1.125rem;--bn-text-title:1.375rem;--bn-text-display:1.75rem;
+  --bn-weight-normal:420;--bn-weight-emphasis:490;--bn-weight-strong:700;
+  --bn-weight-mono:400;--bn-weight-mono-tag:460;
+  --bn-space-xs:.15rem;--bn-space-sm:.35rem;--bn-space-md:.75rem;--bn-space-lg:1.5rem;--bn-space-xl:2rem;
+  --bn-radius-sm:3px;--bn-radius-md:6px;--bn-radius-lg:8px;--bn-radius-pill:999px;
+  --bn-emo-1-bg:light-dark(oklch(94% 0.03 340),oklch(50% 0.12 340));
+  --bn-task-1-bg:light-dark(oklch(94% 0.03 130),oklch(50% 0.10 130));
+  --bn-ux-1-bg:light-dark(oklch(94% 0.03 225),oklch(50% 0.12 225));
+}
+:root,[data-color-theme="default"]{
+  --bn-colour-bg:light-dark(#ffffff,#111111);--bn-colour-text:light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted:light-dark(#6b7280,#9ca3af);--bn-colour-border:light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent:light-dark(#007aff,#0a84ff);--bn-colour-hover:light-dark(#e8f0fe,#1e293b);
+  --bn-colour-quote-bg:light-dark(#f9fafb,#1a1a1a);--bn-colour-badge-bg:light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text:light-dark(#374151,#d1d5db);--bn-colour-border-hover:light-dark(#d1d5db,#3a3a3a);
+  --bn-colour-shadow:light-dark(rgba(0,0,0,.1),rgba(0,0,0,.4));--bn-off-track:light-dark(#c7ccd1,#3a3f45);
+}
+/* ── macOS chrome stand-ins (native frames: sidebar, title bar) ── */
+:root{
+  --mac-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  --mac-win-chrome:light-dark(#e9e9ec,#333335);--mac-win-side:light-dark(#f2f2f5,#2a2a2c);
+  --mac-win-edge:light-dark(#cfcfd4,#444447);--mac-text:light-dark(#1d1d1f,#f2f2f7);
+  --mac-sec:light-dark(#6e6e73,#98989d);--mac-accent:light-dark(#007aff,#0a84ff);
+  --mac-sel:light-dark(#d9d9de,#3b3b3f);
+  --page-bg:light-dark(#f4f4f6,#161618);--rule:light-dark(#d9d9de,#3a3a3c);
+  --com-bg:light-dark(#fbfbfc,#1c1c1e);--com-rule:light-dark(#8e8e93,#8e8e93);--hatch:light-dark(#c9c9ce,#3f3f44);
+  --ok:light-dark(#1c6b38,#7fdaa1);--warn:light-dark(#8a5a00,#f5c563);--bad:light-dark(#9a2020,#ff8a8a);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page-bg);color:var(--bn-colour-text);font-family:var(--mac-ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 120px}
+h1{font-size:28px;line-height:1.2;font-weight:600;margin:.2em 0 .3em;letter-spacing:-.01em}
+h2{font-size:21px;font-weight:600;margin:2.2em 0 .5em}
+h3{font-size:16px;font-weight:600;margin:1.4em 0 .4em}
+p{max-width:78ch}
+.eyebrow{font:500 12px/1 var(--bn-font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mac-sec)}
+code,kbd{font:12.5px var(--bn-font-mono);background:light-dark(#eeeef1,#26262a);padding:0 .3em;border-radius:3px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:.6em 0 1em}
+th,td{text-align:left;vertical-align:top;padding:.45em .6em;border-bottom:1px solid var(--rule)}
+th{font-weight:600;color:var(--mac-sec);font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+td.ok{color:var(--ok)} td.warn{color:var(--warn)} td.bad{color:var(--bad)}
+.key{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 6px;font-size:13px;color:var(--mac-sec)}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key i{display:inline-block;width:26px;height:14px;border-radius:3px}
+.key i.art{background:var(--mac-win-chrome);border:1px solid var(--mac-win-edge)}
+.key i.com{border:4px solid transparent;border-left:3px solid var(--com-rule);background:linear-gradient(var(--com-bg),var(--com-bg)) padding-box,repeating-linear-gradient(135deg,var(--hatch) 0 4px,transparent 4px 8px) border-box}
+
+/* ── Artefact frame ── */
+.frame{background:var(--mac-win-chrome);border:1px solid var(--mac-win-edge);border-radius:10px;overflow:hidden;box-shadow:0 10px 30px var(--bn-colour-shadow)}
+.frame .bar{display:flex;align-items:center;gap:8px;padding:7px 12px;font:12px var(--bn-font-mono);color:var(--mac-sec);border-bottom:1px solid var(--mac-win-edge);background:var(--mac-win-chrome)}
+.frame .bar .dots{display:inline-flex;gap:5px;margin-right:4px}
+.frame .bar .dots i{width:10px;height:10px;border-radius:50%;background:light-dark(#d4d4d8,#4a4a4e);display:block}
+.frame .bar b{color:var(--mac-text);font-weight:600}
+.win{display:grid;grid-template-columns:168px 1fr;min-height:300px;background:var(--bn-colour-bg)}
+.side{background:var(--mac-win-side);border-right:1px solid var(--mac-win-edge);padding:10px 8px;font-size:13px;color:var(--mac-text)}
+.side .sec{font-size:11px;font-weight:600;color:var(--mac-sec);text-transform:uppercase;letter-spacing:.04em;padding:4px 8px;margin-top:8px}
+.side .row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;line-height:1.25}
+.side .row.sel{background:var(--mac-sel)}
+.side .row .ic{width:16px;height:16px;flex:none;color:var(--mac-accent)}
+.side .row small{display:block;font-size:11px;color:var(--mac-sec)}
+.side .row.lens{padding-left:28px;color:var(--mac-text)}
+.side .row.lens.on{background:var(--mac-sel)}
+/* web report inside the detail column */
+.report{font-family:var(--bn-font-body);color:var(--bn-colour-text);background:var(--bn-colour-bg);position:relative;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bn-colour-border);font-size:var(--bn-text-label)}
+.toolbar .search{flex:1;max-width:260px;display:flex;align-items:center;gap:6px;border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-pill);padding:3px 10px;color:var(--bn-colour-muted);background:var(--bn-colour-quote-bg)}
+.toolbar .search b{color:var(--bn-colour-text);font-weight:var(--bn-weight-normal)}
+.toolbar .chip{font:var(--bn-weight-mono-tag) var(--bn-text-badge) var(--bn-font-mono);padding:2px 8px;border-radius:var(--bn-radius-pill);background:var(--bn-ux-1-bg);color:var(--bn-colour-badge-text)}
+.toolbar .count{margin-left:auto;color:var(--bn-colour-muted);font-size:var(--bn-text-caption)}
+.cols{display:grid;grid-template-columns:150px 1fr 150px;height:240px}
+.cols.notags{grid-template-columns:150px 1fr}
+.toc{border-right:1px solid var(--bn-colour-border);padding:10px 12px;font-size:var(--bn-text-caption);color:var(--bn-colour-muted)}
+.toc div{padding:3px 0}.toc div.on{color:var(--bn-colour-text);font-weight:var(--bn-weight-emphasis)}
+.tags{border-left:1px solid var(--bn-colour-border);padding:10px 12px;font-size:var(--bn-text-caption);color:var(--bn-colour-muted)}
+.tags .badge{margin:2px 2px 2px 0}
+.centre{position:relative;overflow:hidden;padding:0 18px}
+.sticky{position:sticky;top:0;background:var(--bn-colour-bg);padding:8px 0 4px;border-bottom:1px solid var(--bn-colour-border);font-size:var(--bn-text-caption);color:var(--bn-colour-muted)}
+.gh{font-size:var(--bn-text-heading);font-weight:var(--bn-weight-emphasis);margin:12px 0 6px}
+.gh small{font-size:var(--bn-text-caption);color:var(--bn-colour-muted);font-weight:var(--bn-weight-normal);margin-left:.5em}
+.card{background:var(--bn-colour-quote-bg);border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-lg);padding:10px 12px;margin:8px 0;font-size:var(--bn-text-label)}
+.card.focus{outline:2px solid var(--bn-colour-accent);outline-offset:1px}
+.card .meta{display:flex;gap:8px;align-items:center;font:var(--bn-weight-mono) var(--bn-text-badge) var(--bn-font-mono);color:var(--bn-colour-muted);margin-bottom:4px}
+.card .meta .p{background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text);padding:0 5px;border-radius:var(--bn-radius-sm)}
+.card .tagline{margin-top:6px}
+.badge{display:inline-block;font:var(--bn-weight-mono-tag) var(--bn-text-badge) var(--bn-font-mono);padding:var(--bn-space-xs) .45rem;border-radius:var(--bn-radius-sm);background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text);white-space:nowrap}
+.fade{position:absolute;left:0;right:0;bottom:0;height:46px;background:linear-gradient(transparent,var(--bn-colour-bg));pointer-events:none}
+.scrollmark{position:absolute;right:4px;top:0;bottom:0;width:4px;background:var(--bn-colour-border);border-radius:2px}
+.scrollmark i{position:absolute;left:0;right:0;background:var(--bn-colour-muted);border-radius:2px;opacity:.7}
+.empty{padding:40px 10px;text-align:center;color:var(--bn-colour-muted);font-size:var(--bn-text-label)}
+.transcript .turn{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:6px 0;font-size:var(--bn-text-label);border-bottom:1px dashed var(--bn-colour-border)}
+.transcript .turn .tc{font:var(--bn-weight-mono) var(--bn-text-badge) var(--bn-font-mono);color:var(--bn-colour-muted)}
+.transcript .turn.focus{background:var(--bn-colour-hover);margin:0 -8px;padding:6px 8px;border-radius:var(--bn-radius-md)}
+
+/* ── Commentary ── */
+.com{margin:14px 0 0;padding:14px 18px;border:7px solid transparent;border-left:3px solid var(--com-rule);background:linear-gradient(var(--com-bg),var(--com-bg)) padding-box,repeating-linear-gradient(135deg,var(--hatch) 0 5px,transparent 5px 10px) border-box;border-radius:6px;font-size:14px}
+.com .lbl{font:500 11px/1 var(--bn-font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mac-sec);margin-bottom:8px}
+.com ul{margin:.3em 0 .3em 1.1em;padding:0}.com li{margin:.25em 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media (max-width:980px){.grid2,.grid3{grid-template-columns:1fr}}
+.option{margin-top:38px;padding-top:12px;border-top:2px solid var(--rule)}
+.option h2{margin-top:.2em}
+.cost{display:inline-block;font:600 11px/1 var(--bn-font-mono);padding:4px 7px;border-radius:4px;background:light-dark(#e8e8ec,#2c2c30);color:var(--mac-text);margin-right:6px}
+.cost.S{background:light-dark(#e6f6ec,#16301f);color:var(--ok)}.cost.M{background:light-dark(#fff4e0,#3a2f18);color:var(--warn)}.cost.L{background:light-dark(#ffe9e9,#3a1f1f);color:var(--bad)}
+.store{font:12px/1.5 var(--bn-font-mono);background:light-dark(#f7f7f9,#1a1a1d);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;white-space:pre;overflow:auto;margin:8px 0}
+.store .k{color:var(--mac-accent)}.store .n{color:var(--warn)}.store .c{color:var(--mac-sec)}
+/* state diagram */
+.flow{display:flex;align-items:stretch;gap:0;margin:10px 0 4px;font-size:12.5px}
+.flow .st{flex:1;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:var(--com-bg)}
+.flow .st b{display:block;font-size:12px;color:var(--mac-sec);font-weight:600;margin-bottom:2px}
+.flow .arr{width:26px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mac-sec)}
+.timeline{display:grid;grid-template-columns:90px 1fr;gap:4px 14px;font-size:13.5px;margin:10px 0}
+.timeline .t{font:12px var(--bn-font-mono);color:var(--mac-sec);padding-top:2px}
+.rec{border:1px solid var(--rule);border-left:4px solid var(--mac-accent);border-radius:8px;padding:16px 20px;background:var(--com-bg)}
+</style>
+</head>
+<body>
+<div class="bn-mockup-banner">PROPOSED 7 Nov 2026 · options mockup for decision #182 / #220 (owner-priority 2) · <code>LensMemory</code> + <code>LensAnchor</code> (16 Aug 2026) and the report-pref mirror R89 (<code>d867c255a</code>, 23 Oct 2026) are built; only the remainder is designed here. Not implemented.</div>
+<div class="wrap">
+
+<div class="eyebrow">Mac app · relaunch · decision #182</div>
+<h1>What should the Mac app remember about each lens when it relaunches?</h1>
+
+<div class="key"><span><i class="art"></i> artefact — what would ship</span><span><i class="com"></i> commentary — why, cost, risk</span></div>
+
+<h2>The question</h2>
+<p>The owner asked for “state for these and more, e.g. scroll depth, on all lenses” to be normal on relaunch. Zoom, quote grouping and panel sizes already are (R89). What is left is <em>how fine</em> a place each lens comes back to, and whether anything beyond the place — filters, search, the selected quote, open disclosures — comes back with it. The Mac norm is <em>the place you were, not the filters</em> (Finder restores a folder’s view and scroll; Mail clears search). This page lays out three widths of answer and what each costs when the content changed, when two windows show one study, in the HTML export, and in where the state has to live.</p>
+
+<h3>What is already true at HEAD (verified 7 Nov 2026)</h3>
+<table>
+<tr><th style="width:26%">Restores today</th><th>Mechanism</th><th style="width:22%">Where it lives</th></tr>
+<tr><td>The window set, and each window’s study and lens</td><td><code>WindowGroup(id:"main", for: WindowSeed.self)</code>; macOS restores the seeds. A window with a <code>place</code> arrives there once, then forgets it.</td><td>macOS window restoration</td></tr>
+<tr><td>The lens a study was left on</td><td><code>LensMemory.restore</code> from <code>Project.lastLens</code>; written on every <code>route-change</code>.</td><td><code>projects.json</code> → <code>last_lens</code> (machine-local, outside the study folder)</td></tr>
+<tr><td>A coarse place in the lens</td><td><code>LensAnchor</code>: Quotes → group heading id (<code>theme-…</code>/<code>section-…</code>), Codebook → framework section id, Sessions → session id (navigate, from <code>SessionsRouteMemory</code>). Signals, Project, Discussion, Screens → top, decided 16 Aug.</td><td><code>projects.json</code> → <code>last_anchor</code></td></tr>
+<tr><td>Zoom, panels open/width, display layout/density/breaks, focus mode, quote grouping, subtitle prefs</td><td>R89 <code>report-pref</code> mirror: 16 keys + 1 prefix, seeded into each new web view before the SPA reads. App-wide, last write wins.</td><td>UserDefaults <code>reportPrefs</code></td></tr>
+<tr><td>Projects sidebar column width</td><td>AppKit <code>NSSplitView</code> autosave (measured 25 Sep).</td><td>UserDefaults (AppKit’s own key)</td></tr>
+<tr><th>Deliberately not restored</th><th colspan="2">Search and filter — “a query restored days later shows 6 of 312 quotes and reads as data loss” (<code>LensMemory.swift</code>; Mail precedent). Carve-out standing, ruling 12.</th></tr>
+<tr><th>Not restored, undecided</th><th colspan="2">The offset <em>inside</em> a long group; the place in a transcript (session is kept, the moment is not); the Signals row you were on; a Codebook code rather than its framework; the Discussion question; the selected quote; moderator-question pins (<code>bristlenose-mod-questions</code>); transcript timeline on/lanes (<code>bn-transcript-timeline</code>); inspector source (<code>bn-inspector-source</code>); signal working panel (<code>bn-signal-working-open</code>) — the last four are written to localStorage, which the Mac discards, and are <em>not</em> in the R89 list.</th></tr>
+</table>
+
+<h2>The scene both days share</h2>
+<p>Tuesday 17:40. One window on <b>Quotes</b>: tags sidebar open at 260 px, zoom 110 %, search <code>tutorial</code>, tag filter <code>onboarding</code>, reading the second quote under <b>Onboarding gaps</b>. A second window on <b>Sessions</b>, in <code>s1</code>’s transcript at 1:06. Quit. Wednesday 09:10, launch. Every option below keeps what R89 keeps (panels, zoom, grouping); they differ in where each window lands and what else is on screen.</p>
+
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Tue 17:40</b> · before Quit · Quotes window</div>
+  <div class="win">
+    <div class="side">
+      <div class="sec">Projects</div>
+      <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>4 sessions</small></div></div>
+      <div class="row lens">Project</div><div class="row lens">Sessions</div><div class="row lens on">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div>
+    </div>
+    <div class="report">
+      <div class="toolbar"><span class="search">⌕ <b>tutorial</b></span><span class="chip">onboarding ×</span><span class="count">1 of 4 quotes</span></div>
+      <div class="cols">
+        <div class="toc"><div>Sections</div><div>Dashboard</div><div>Search</div><div class="on">Onboarding gaps</div></div>
+        <div class="centre">
+          <div class="sticky">Onboarding gaps</div>
+          <div class="card focus"><div class="meta"><span class="p">p1</span><span>01:06</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div>I think the onboarding could be better. When I first signed up I had no idea what to do. A quick <mark>tutorial</mark> or walkthrough would have helped a lot.<div class="tagline"><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding</span></div></div>
+          <div class="fade"></div>
+          <div class="scrollmark"><i style="top:62%;height:18%"></i></div>
+        </div>
+        <div class="tags"><div style="margin-bottom:6px">Tags</div><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding 1</span> <span class="badge">navigation 2</span> <span class="badge">search 1</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="com"><div class="lbl">Commentary</div>What is written to disk at this moment, today: <code>last_lens: "quotes"</code>, <code>last_anchor: "theme-onboarding-gaps"</code> (the heading above the card, reported on scroll-settle), and in UserDefaults <code>bn-tags-open: "true"</code>, <code>bn-tags-width: "260"</code>, <code>bristlenose-zoom: "1.1"</code>. The search, the filter, the focused card and the scroll offset are in the web view’s <code>.nonPersistent()</code> storage and in React state; both are gone at Quit. The Sessions window writes <code>last_anchor: "s1"</code> — the same field, last writer wins, which is the first consequence to keep in view.</div>
+
+<!-- ───────────────────────────── OPTION A ───────────────────────────── -->
+<div class="option" id="a">
+<div class="eyebrow">Option A</div>
+<h2>Nothing more: the lens and the heading you were under</h2>
+<p>Ship as is. Each window comes back on its lens; Quotes and Codebook scroll to the group heading you were under; Sessions reopens the transcript at the top; Signals, Project, Discussion and Screens open at the top. Search and filter cleared.</p>
+
+<div class="grid2">
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Wed 09:10</b> · Quotes window · option A</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>4 sessions</small></div></div><div class="row lens">Project</div><div class="row lens">Sessions</div><div class="row lens on">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div></div>
+    <div class="report">
+      <div class="toolbar"><span class="search">⌕ Search quotes</span><span class="count">4 quotes</span></div>
+      <div class="cols">
+        <div class="toc"><div>Sections</div><div>Dashboard</div><div>Search</div><div class="on">Onboarding gaps</div></div>
+        <div class="centre">
+          <div class="gh">Onboarding gaps <small>1 quote</small></div>
+          <div class="card"><div class="meta"><span class="p">p1</span><span>01:06</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div>I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.<div class="tagline"><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding</span></div></div>
+          <div class="fade"></div><div class="scrollmark"><i style="top:58%;height:18%"></i></div>
+        </div>
+        <div class="tags"><div style="margin-bottom:6px">Tags</div><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding 1</span> <span class="badge">navigation 2</span> <span class="badge">search 1</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Wed 09:10</b> · Sessions window · option A</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>4 sessions</small></div></div><div class="row lens">Project</div><div class="row lens on">Sessions</div><div class="row lens">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div></div>
+    <div class="report">
+      <div class="toolbar"><span style="color:var(--bn-colour-muted)">All Sessions ›</span> <b style="font-weight:var(--bn-weight-emphasis)">s1</b><span class="count">8 min</span></div>
+      <div class="cols notags">
+        <div class="toc"><div>Topics</div><div class="on">Dashboard</div><div>Search</div><div>Onboarding</div></div>
+        <div class="centre transcript">
+          <div class="turn"><span class="tc">00:00</span><span><b>m1</b> Thanks for joining. Shall we start with the dashboard?</span></div>
+          <div class="turn"><span class="tc">00:10</span><span><b>p1</b> I found the dashboard pretty confusing at first. I couldn’t figure out where my settings were.</span></div>
+          <div class="turn"><span class="tc">00:26</span><span><b>p1</b> The navigation was hidden behind a hamburger menu. I kept looking for a sidebar but there wasn’t one.</span></div>
+          <div class="fade"></div><div class="scrollmark"><i style="top:0;height:14%"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="com"><div class="lbl">Commentary · what changes · consequences</div>
+<p style="margin:.2em 0"><span class="cost S">S · 0</span> nothing to build. Layers touched: none. Sibling: this <em>is</em> the shipped sibling.</p>
+<ul>
+<li><b>What the researcher sees:</b> the Quotes window lands with the heading at the top (one group above where they were, since the heading is the anchor). A 40-quote theme means scrolling back down to find the quote. The Sessions window lands at 00:00 of an 8-minute transcript; a 90-minute one is the cost case.</li>
+<li><b>Content changed overnight:</b> a theme renamed changes its heading id → falls to the top, honestly. A re-analysis that renumbers sessions is already handled: <code>SessionsRouteMemory</code> is cleared on run completion so a stale <code>s3</code> cannot open the wrong participant.</li>
+<li><b>Two windows on one study:</b> <code>last_anchor</code> is per study, not per window. Two Quotes windows on one study both land at the same heading. Tolerable at heading granularity.</li>
+<li><b>Export HTML:</b> no bridge, nothing applies; the browser does its own thing. Same under every option.</li>
+<li><b>Rules out:</b> nothing; A is the floor every other option stands on.</li>
+</ul></div>
+</div>
+
+<!-- ───────────────────────────── OPTION B ───────────────────────────── -->
+<div class="option" id="b">
+<div class="eyebrow">Option B</div>
+<h2>The place, finer: the quote, the moment, the row — and the four view toggles that went missing</h2>
+<p>Two small moves on shipped seams. <b>B1</b>: <code>LensAnchor</code>’s table and <code>useAnchorReporter</code>’s selectors get one finer entry per lens, still an element id and never a pixel offset. <b>B2</b>: the view toggles that are preferences rather than filters join the R89 list. Search and filter stay cleared; the selected quote is not restored.</p>
+
+<div class="grid2">
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Wed 09:10</b> · Quotes window · option B</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>4 sessions</small></div></div><div class="row lens">Project</div><div class="row lens">Sessions</div><div class="row lens on">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div></div>
+    <div class="report">
+      <div class="toolbar"><span class="search">⌕ Search quotes</span><span class="count">4 quotes</span></div>
+      <div class="cols">
+        <div class="toc"><div>Sections</div><div>Dashboard</div><div>Search</div><div class="on">Onboarding gaps</div></div>
+        <div class="centre">
+          <div class="sticky">Onboarding gaps</div>
+          <div class="card"><div class="meta"><span class="p">p1</span><span>01:06</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div>I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.<div class="tagline"><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding</span></div></div>
+          <div class="fade"></div><div class="scrollmark"><i style="top:62%;height:18%"></i></div>
+        </div>
+        <div class="tags"><div style="margin-bottom:6px">Tags</div><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding 1</span> <span class="badge">navigation 2</span> <span class="badge">search 1</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Wed 09:10</b> · Sessions window · option B</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>4 sessions</small></div></div><div class="row lens">Project</div><div class="row lens on">Sessions</div><div class="row lens">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div></div>
+    <div class="report">
+      <div class="toolbar"><span style="color:var(--bn-colour-muted)">All Sessions ›</span> <b style="font-weight:var(--bn-weight-emphasis)">s1</b><span class="count">8 min</span></div>
+      <div class="cols notags">
+        <div class="toc"><div>Topics</div><div>Dashboard</div><div>Search</div><div class="on">Onboarding</div></div>
+        <div class="centre transcript">
+          <div class="turn"><span class="tc">00:58</span><span><b>m1</b> Anything else before we finish?</span></div>
+          <div class="turn focus"><span class="tc">01:06</span><span><b>p1</b> I think the onboarding could be better. When I first signed up I had no idea what to do. A quick tutorial or walkthrough would have helped a lot.</span></div>
+          <div class="turn"><span class="tc">01:18</span><span><b>m1</b> Thank you, that’s really useful.</span></div>
+          <div class="fade"></div><div class="scrollmark"><i style="top:80%;height:14%"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="store"><span class="c">// projects.json — the shipped fields, finer values (B1)</span>
+{ <span class="k">"last_lens"</span>: "quotes",   <span class="k">"last_anchor"</span>: <span class="n">"q-p1-66"</span> }        <span class="c">// was "theme-onboarding-gaps"</span>
+{ <span class="k">"last_lens"</span>: "sessions", <span class="k">"last_anchor"</span>: <span class="n">"s1/01:06"</span> }        <span class="c">// was "s1" — session + the moment; exact shape to settle</span>
+{ <span class="k">"last_lens"</span>: "codebook", <span class="k">"last_anchor"</span>: <span class="n">"code-…"</span> }          <span class="c">// the code row, not its framework header</span>
+{ <span class="k">"last_lens"</span>: "signals",  <span class="k">"last_anchor"</span>: <span class="n">"signal-row-…"</span> }    <span class="c">// the section row; was "top" by decision</span>
+{ <span class="k">"last_lens"</span>: "discussion", <span class="k">"last_anchor"</span>: <span class="n">"question-…"</span> }   <span class="c">// the question; was "top"</span>
+<span class="c">// Project dashboard and Screens board: still the top (no stable structural position).</span>
+
+<span class="c">// tests/fixtures/report-prefs-contract.json — three keys join the R89 list (B2)</span>
+"keys": [ …, <span class="n">"bn-transcript-timeline"</span>, <span class="n">"bn-inspector-source"</span>, <span class="n">"bn-signal-working-open"</span> ]
+<span class="c">// bristlenose-mod-questions stays out: a JSON array of quote ids, per study, over the 32-char value cap — it is content state, not a preference.</span></div>
+
+<div class="com"><div class="lbl">Commentary · what changes · consequences</div>
+<p style="margin:.2em 0"><span class="cost S">S</span> B2: six lines across two lists and the contract JSON, both sides already asserted. <span class="cost M">M</span> B1: one selector per lens in <code>ANCHOR_SELECTORS</code>, one arm per lens in <code>LensAnchor.action</code>, and a new <code>.session(id, moment)</code> apply path (navigate, then scroll — <code>WindowPlace</code> already carries <code>path + anchor</code>, so the shape exists). Layers: <code>frontend/src/hooks/useAnchorReporter.ts</code>, <code>LensAnchor.swift</code>, <code>ContentView.restoreAnchor</code>, their tests. No new message, no new store, no new key in <code>projects.json</code>.</p>
+<ul>
+<li><b>Nearest siblings:</b> <code>LensAnchor</code>/<code>useAnchorReporter</code> (16 Aug), which already say “an id either resolves or falls back honestly”; the report’s <em>Open … in New Window</em>, which already lands a window on a transcript at a moment through <code>WindowPlace</code>. B1 reuses that arrival for a restore. B2’s sibling is R89 itself. Everything here <b>follows</b>; nothing invents.</li>
+<li><b>Content changed overnight:</b> a quote id <code>q-p1-66</code> survives edits, stars, tags and renames. A hidden quote is out of the DOM → <code>scrollToAnchor</code> retries, gives up at the top. A re-analysis can renumber participants, so <code>q-p1-66</code> could resolve to a <em>different</em> quote that looks right — the exact objection <code>SessionsRouteMemory</code> answers by clearing on run completion. <b>Rule to carry over:</b> clear <code>last_anchor</code> when a run completes, for every lens, as the route memory already does for Sessions. One line, and it is the thing that makes finer anchors safe.</li>
+<li><b>Two windows on one study:</b> still per study. Two Quotes windows land on the same quote; at quote granularity that is more visible than at heading granularity, but it is a tie, not an error. Per-window needs C’s store.</li>
+<li><b>Export HTML:</b> unchanged. The anchor reporter runs only when <code>embedded</code>; a browser keeps its own localStorage, so B2’s three toggles already persist there.</li>
+<li><b>Risk:</b> B1’s Signals and Discussion entries reverse a 16 Aug “top” decision. Signals rows are regenerated by elaboration; if their ids are not stable the restore falls to the top, which is where it is today. Low.</li>
+<li><b>Rules out:</b> nothing later. C is B plus a store.</li>
+</ul></div>
+</div>
+
+<!-- ───────────────────────────── OPTION C ───────────────────────────── -->
+<div class="option" id="c">
+<div class="eyebrow">Option C</div>
+<h2>The whole view: place plus search, filter, selection and disclosures, per window</h2>
+<p>Everything in B, and the window comes back with its search, tag filter, focused quote and pinned moderator questions as they were — per window, not per study, so two windows on one study each return to their own view.</p>
+
+<div class="grid2">
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Wed 09:10</b> · Quotes window · option C · nothing changed overnight</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>4 sessions</small></div></div><div class="row lens">Project</div><div class="row lens">Sessions</div><div class="row lens on">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div></div>
+    <div class="report">
+      <div class="toolbar"><span class="search">⌕ <b>tutorial</b></span><span class="chip">onboarding ×</span><span class="count">1 of 4 quotes</span></div>
+      <div class="cols">
+        <div class="toc"><div>Sections</div><div>Dashboard</div><div>Search</div><div class="on">Onboarding gaps</div></div>
+        <div class="centre">
+          <div class="sticky">Onboarding gaps</div>
+          <div class="card focus"><div class="meta"><span class="p">p1</span><span>01:06</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div>I think the onboarding could be better. When I first signed up I had no idea what to do. A quick <mark>tutorial</mark> or walkthrough would have helped a lot.<div class="tagline"><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding</span></div></div>
+          <div class="fade"></div><div class="scrollmark"><i style="top:62%;height:18%"></i></div>
+        </div>
+        <div class="tags"><div style="margin-bottom:6px">Tags</div><span class="badge" style="background:var(--bn-ux-1-bg)">onboarding 1</span> <span class="badge">navigation 2</span> <span class="badge">search 1</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>Wed 09:10</b> · Quotes window · option C · re-analysed overnight, tag renamed</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div>Smoke test<small>5 sessions</small></div></div><div class="row lens">Project</div><div class="row lens">Sessions</div><div class="row lens on">Quotes</div><div class="row lens">Codebook</div><div class="row lens">Signals</div></div>
+    <div class="report">
+      <div class="toolbar"><span class="search">⌕ <b>tutorial</b></span><span class="chip">onboarding ×</span><span class="count">0 of 312 quotes</span></div>
+      <div class="cols">
+        <div class="toc"><div>Sections</div><div>Dashboard</div><div>Search</div><div>First-run setup</div></div>
+        <div class="centre"><div class="empty">No quotes match.</div></div>
+        <div class="tags"><div style="margin-bottom:6px">Tags</div><span class="badge">first-run 9</span> <span class="badge">navigation 41</span> <span class="badge">search 17</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="store"><span class="c">// Where it has to live: per WINDOW, so not projects.json (per study) and not UserDefaults (app-wide).</span>
+<span class="c">// The native primitive is @SceneStorage, which macOS saves with the window — the one store this app does not use yet (100days row, 12 Sep).</span>
+@SceneStorage(<span class="n">"viewState"</span>) var viewState: String   <span class="c">// JSON: {lens, anchor, search, tagFilter, focusedQuoteId, pins:[…]}</span>
+
+<span class="c">// A new inbound message, every time any of those change (debounced), and a new seed the SPA reads before QuotesContext/Toolbar mount:</span>
+{ type: <span class="n">"view-state"</span>, lens, anchor, search, tagFilter: {…}, focusedQuoteId, pins: [...] }</div>
+
+<div class="com"><div class="lbl">Commentary · what changes · consequences</div>
+<p style="margin:.2em 0"><span class="cost L">L</span> A new bridge message both ways, a per-window store, and the SPA accepting initial search/filter/selection state at mount in <code>QuotesContext</code>, <code>Toolbar</code> and <code>QuoteGroup</code> (today they start empty by construction). Per-window selection is not even per-window in the SPA yet. Layers: Swift (<code>@SceneStorage</code>, <code>BridgeHandler</code>, <code>ContentView</code>), TypeScript (four stores and a seed), both test suites, and the <code>LensMemory</code> doc comment, which has to be rewritten because it argues the opposite.</p>
+<ul>
+<li><b>Nearest sibling:</b> none for the filter half — the shipped position is the carve-out. For the store half, <code>WindowSeed</code> is the per-window value macOS restores, but it is identity, not state; <code>@SceneStorage</code> is the right primitive and is unused. <b>Departs</b> from <code>LensMemory</code>’s stated rule; the departure clause would have to be “a filter restored is a filter the researcher set yesterday, so it is theirs” — which the right-hand frame answers.</li>
+<li><b>Content changed overnight (right frame):</b> the search and the filter return over re-analysed content: <em>0 of 312</em>, a chip naming a tag that no longer exists, an empty centre. Nothing is lost, and it reads as if everything is. Mail clears search for this reason; so did we.</li>
+<li><b>Two windows on one study:</b> solved — each window carries its own view. This is the one thing only C buys, and only because the store moves per window; B1’s anchor could ride the same store without the filters.</li>
+<li><b>Export HTML:</b> unchanged (no bridge). The browser keeps search in React state only; a reload clears it there too, so the export and the Mac would now disagree about what a reopen does.</li>
+<li><b>Rules out:</b> the simple sentence “it opens where you were; what you were looking for is yours to type again”. Once filters restore, every later filter (the parked Quotes filter menu) inherits the question of whether it survives a relaunch.</li>
+</ul></div>
+</div>
+
+<!-- ───────────────────────────── MATRIX ───────────────────────────── -->
+<h2>Consequences side by side</h2>
+<table>
+<tr><th style="width:22%"></th><th>A · lens + heading (today)</th><th>B · finer place + the four toggles</th><th>C · whole view, per window</th></tr>
+<tr><td>Where the Quotes window lands</td><td>top of the group you were in</td><td>the quote you were reading</td><td>the quote, with your search and filter back</td></tr>
+<tr><td>Where the transcript lands</td><td>00:00 of the right session</td><td>the moment you were at</td><td>the moment; plus timeline state (B2 gives that too)</td></tr>
+<tr><td>Signals · Codebook · Discussion</td><td>top · framework header · top</td><td>the row · the code · the question</td><td>as B, plus the inspector’s selection</td></tr>
+<tr><td>Study re-analysed overnight</td><td class="ok">falls to the top honestly</td><td class="ok">falls to the top honestly <em>if</em> <code>last_anchor</code> is cleared on run completion (carry the Sessions rule)</td><td class="bad">“0 of 312”, a dead tag chip, an empty page</td></tr>
+<tr><td>A quote hidden or deleted</td><td class="ok">unaffected</td><td class="ok">retry, then the top</td><td class="warn">selection points at nothing; filter may now match nothing</td></tr>
+<tr><td>Two windows on one study</td><td class="warn">same heading (per study)</td><td class="warn">same quote (per study; a tie)</td><td class="ok">each its own view</td></tr>
+<tr><td>HTML export</td><td colspan="3">unchanged under every option: no bridge, so no restore; the browser’s own storage keeps the R89 keys as it always did</td></tr>
+<tr><td>Where the state lives</td><td><code>projects.json</code> + UserDefaults</td><td>the same two files, finer values and three more keys</td><td>a new per-window <code>@SceneStorage</code> blob, plus a new bridge message</td></tr>
+<tr><td>Keys</td><td><code>last_lens</code>, <code>last_anchor</code>, <code>reportPrefs</code>[16+1]</td><td>as A; <code>reportPrefs</code>[19+1]</td><td>as B; <code>viewState</code> per scene</td></tr>
+<tr><td>Build cost</td><td><span class="cost S">S · 0</span></td><td><span class="cost S">S</span> B2 · <span class="cost M">M</span> B1</td><td><span class="cost L">L</span></td></tr>
+<tr><td>Reverses a written decision</td><td>no</td><td>“Signals/Discussion restore to the top” (16 Aug) — a table entry each</td><td>the search/filter carve-out (<code>LensMemory</code>, ruling 12)</td></tr>
+<tr><td>Is it Bristlenosey</td><td>it is the sibling</td><td>follows (anchor table, R89 list, <code>WindowPlace</code> arrival)</td><td>departs, unjustified on the filter half; new store on the other</td></tr>
+</table>
+
+<h2>The researcher’s path, option B</h2>
+<div class="flow">
+  <div class="st"><b>Tuesday, reading</b>scroll settles · SPA posts <code>anchor-change {lens:"quotes", anchor:"q-p1-66"}</code> · Swift writes <code>last_anchor</code> only on change</div><div class="arr">→</div>
+  <div class="st"><b>Quit</b>macOS keeps the window seeds · web storage discarded · <code>projects.json</code> and UserDefaults already current</div><div class="arr">→</div>
+  <div class="st"><b>Wednesday, launch</b>seeds restore windows · <code>ready</code> → <code>LensMemory.restore</code> → <code>activateLens</code> → <code>restoreAnchor</code>: scroll to <code>q-p1-66</code>; retry, then top</div><div class="arr">→</div>
+  <div class="st"><b>If a run completed meanwhile</b><code>last_anchor</code> cleared at run completion (new, mirrors <code>SessionsRouteMemory</code>) → lands at the lens top, never on a lookalike</div>
+</div>
+
+<!-- ───────────────────────────── RECOMMENDATION ───────────────────────────── -->
+<h2>Recommendation</h2>
+<div class="rec">
+<p><b>Option B</b>, in two commits: B2 first (three keys into the R89 contract — an afternoon), then B1 (finer anchors through the shipped <code>LensAnchor</code> table), with one rule carried over from Sessions: <b>clear <code>last_anchor</code> when a run completes</b>. Keep the search/filter carve-out exactly as written.</p>
+<p><b>Why.</b> The owner’s phrase is “scroll depth”, and the honest unit of scroll depth in this product is an element, not a pixel: the quote, the turn, the row. B gives the place at that unit on every lens that has one, through seams that already exist and are already tested on both sides, and it never restores anything that could make yesterday’s content look lost. C’s only unique gain is per-window views; the right-hand frame of C shows what its filter half costs, and the only researcher who meets the two-windows case gets a tie, not an error. A is what ships today and the owner has already said it is not enough.</p>
+<p><b>Sequence.</b> B2 → B1 (Quotes quote id, Sessions moment, Codebook code) → the Signals and Discussion entries once their row ids are confirmed stable across elaboration. Per-window state waits for a case that needs it; if one comes, the anchor moves into <code>@SceneStorage</code> without changing anything the SPA reports.</p>
+</div>
+
+<h2>What the owner still has to settle</h2>
+<ul>
+<li><b>Per study or per window?</b> Today the place is per study (<code>projects.json</code>). Two windows on one study land together. Accept the tie for now, or move the anchor into <code>@SceneStorage</code> as part of B1 (adds a day; no SPA change)?</li>
+<li><b>The transcript’s moment:</b> the turn you were reading, or the playhead if the video was playing? B1 proposes the turn in view; the player’s position is a different thing and already has its own memory in the popout.</li>
+<li><b>Do Signals and Discussion get a place?</b> 16 Aug said top. B1 says the row and the question. Cheap to reverse either way; the mockup recommends yes, after the id check.</li>
+<li><b>Is “clear the place when a run completes” acceptable on Quotes?</b> It means a re-analysis sends you to the top of Quotes once. The alternative is a quote that looks right and is not.</li>
+</ul>
+
+<h2>Is this Bristlenosey</h2>
+<table>
+<tr><th>Part</th><th>Proposal (B)</th><th>Sibling</th><th>Verdict</th></tr>
+<tr><td>Surface</td><td>no new UI; the window lands somewhere</td><td><code>LensMemory</code> / <code>LensAnchor</code></td><td class="ok">follows</td></tr>
+<tr><td>Data path</td><td><code>anchor-change</code> inbound, <code>scrollToAnchor</code> / navigate outbound</td><td>the same messages, 16 Aug; <code>WindowPlace</code> arrival for path + anchor</td><td class="ok">follows</td></tr>
+<tr><td>Store</td><td><code>projects.json</code> <code>last_anchor</code>; UserDefaults <code>reportPrefs</code></td><td>the same fields and dictionary</td><td class="ok">follows</td></tr>
+<tr><td>Vocabulary</td><td>element ids per lens, listed in one table on each side</td><td><code>ANCHOR_SELECTORS</code> ↔ <code>LensAnchor.action</code></td><td class="ok">follows</td></tr>
+<tr><td>Content safety</td><td>clear on run completion</td><td><code>SessionsRouteMemory.clear()</code> at run completion</td><td class="ok">follows</td></tr>
+<tr><td>Precedence</td><td>a seed’s place still wins over the remembered one</td><td><code>placeArrival</code> ordering in <code>ContentView</code></td><td class="ok">follows</td></tr>
+<tr><td>Strings</td><td>none</td><td>—</td><td class="ok">—</td></tr>
+<tr><td>Signals / Discussion anchors</td><td>a place where the table said top</td><td>decision 16 Aug</td><td class="warn">departs: “a row is a stable structural position once ids are stable” — verify, else keep top</td></tr>
+</table>
+<p class="eyebrow" style="margin-top:28px">Sources read: LensMemory.swift · LensAnchor.swift · useAnchorReporter.ts · nativePrefs.ts · BridgeHandler.swift (report-pref, anchor-change) · ContentView.swift (restoreAnchor, placeArrival) · WindowSeed.swift · ContextPlace.swift · SessionsRouteMemory.swift · tests/fixtures/report-prefs-contract.json · docs/design-workspace.md §P3a/P3b · 100days rows “Scene-level state restoration” and “A per-study, per-lens scroll position survives a relaunch”</p>
+</div>
+</body>
+</html>

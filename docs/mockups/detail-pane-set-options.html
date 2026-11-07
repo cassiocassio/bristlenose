@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detail panes — what is still open</title>
+<style>
+  /* ════ shipped tokens (bristlenose/theme/tokens.css, tokens-typography.css,
+         colors/palette-default.css), copied by value — as detail-pane-states.html ════ */
+  :root {
+    color-scheme: light dark;
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-text-caption: 0.75rem; --bn-text-label: 0.8125rem; --bn-text-body: 0.9375rem;
+    --bn-text-title: 1.375rem; --bn-text-display: 1.75rem;
+    --bn-weight-normal: 420; --bn-weight-emphasis: 490; --bn-weight-strong: 700;
+    --bn-space-xs: 0.2rem; --bn-space-sm: 0.35rem; --bn-space-md: 0.75rem; --bn-space-lg: 1.5rem; --bn-space-xl: 2rem;
+    --bn-radius-md: 6px; --bn-radius-lg: 8px;
+    --bn-colour-bg:       light-dark(#ffffff, #111111);
+    --bn-colour-text:     light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted:    light-dark(#6b7280, #9ca3af);
+    --bn-colour-border:   light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-accent:   light-dark(#007aff, #0a84ff);
+    --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+    --bn-positive:        light-dark(#16a34a, #4ade80);
+    --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
+
+    /* ════ native macOS approximation (NOT the web theme). Pane metrics were
+           MEASURED from a real ContentUnavailableView through ImageRenderer
+           (22 Oct 2026, detail-pane-states.html): ~30pt symbol in tertiary,
+           15pt bold title and 15pt description in secondary, description wraps
+           at ~355pt, push button 23pt. ════ */
+    --sf: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --n-1: light-dark(rgba(0,0,0,0.85), rgba(255,255,255,0.86));
+    --n-2: light-dark(rgba(0,0,0,0.50), rgba(255,255,255,0.55));
+    --n-3: light-dark(rgba(0,0,0,0.25), rgba(255,255,255,0.25));
+    --n-win: light-dark(#ffffff, #1e1e1e);
+    --n-tb: light-dark(#f6f6f6, #2b2b2d);
+    --n-hair: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.12));
+    --n-btn: light-dark(rgba(0,0,0,0.07), rgba(255,255,255,0.14));
+    --n-accent: light-dark(#007aff, #0a84ff);
+    --n-orange: light-dark(#ff9500, #ff9f0a);
+    --n-red: light-dark(#ff3b30, #ff453a);
+    --n-green: light-dark(#34c759, #30d158);
+    --sb-bg: light-dark(#f2f2f4, #232325);
+    --sb-sel: light-dark(rgba(0,0,0,0.07), rgba(255,255,255,0.10));
+    --sb-track: light-dark(rgba(0,0,0,0.15), rgba(255,255,255,0.18));
+    --page: light-dark(#eef0f3, #08090b);
+    --hatch: light-dark(rgba(0,0,0,0.14), rgba(255,255,255,0.16));
+    --open: light-dark(#b45309, #fbbf24);
+    --done: var(--bn-positive);
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"]  { color-scheme: dark; }
+
+  html, body { margin: 0; background: var(--page); color: var(--bn-colour-text);
+    font: var(--bn-weight-normal) var(--bn-text-body)/1.5 var(--bn-font-body); }
+  main { max-width: 1240px; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  h1 { font-size: var(--bn-text-display); line-height: 1.2; font-weight: var(--bn-weight-emphasis); margin: .25rem 0 .5rem; }
+  h2 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 3rem 0 .75rem; padding-top: 1rem; border-top: 1px solid var(--bn-colour-border); }
+  h3 { font-size: 1.05rem; font-weight: var(--bn-weight-emphasis); margin: 1.75rem 0 .5rem; }
+  p, li { max-width: 72ch; }
+  code, .mono { font-family: var(--bn-font-mono); font-size: 0.86em; }
+  a { color: var(--bn-colour-accent); }
+  .muted { color: var(--bn-colour-muted); }
+
+  .banner { font: 500 13px/1.45 var(--bn-font-body); padding: 10px 14px; border-radius: 8px;
+    background: light-dark(#fff7cc, #3a2f05); color: light-dark(#5a4300, #ffe58a); border: 1px solid light-dark(#e9d47a, #7a6410); margin-bottom: 1rem; }
+  .chrome-bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; justify-content: flex-end; padding: 8px 0; }
+  .chrome-bar button { font: 500 12px var(--bn-font-body); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+  .chrome-bar button.on { background: var(--bn-colour-accent); color: #fff; border-color: transparent; }
+
+  /* key */
+  .key { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: .5rem 0 1.5rem; }
+  .key span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+  .key .k-art::before { background: var(--n-win); border: 1px solid var(--n-hair); }
+  .key .k-com::before { background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); }
+  .key .k-done::before { background: var(--done); }
+  .key .k-open::before { background: var(--open); }
+
+  /* commentary: hatching in the edge band only, never behind text */
+  .com { margin: .75rem 0 0; padding: .85rem 1rem; border: 7px solid transparent; border-left: 3px solid var(--bn-colour-muted); border-radius: 4px;
+    background: linear-gradient(var(--page), var(--page)) padding-box,
+                repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box; }
+  .com .lab { font: 500 11px/1 var(--bn-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bn-colour-muted); margin-bottom: .5rem; }
+  .com p { margin: .35rem 0; }
+  .com ul { margin: .35rem 0 .35rem 1.1rem; padding: 0; }
+
+  /* status pills */
+  .pill { display: inline-block; font: 500 11px/1 var(--bn-font-mono); padding: 4px 8px; border-radius: 999px; color: #fff; vertical-align: 1px; }
+  .pill.done { background: var(--done); } .pill.open { background: var(--open); } .pill.part { background: var(--bn-colour-muted); }
+
+  /* tables */
+  table { border-collapse: collapse; width: 100%; font-size: var(--bn-text-label); margin: .75rem 0 1rem; background: var(--bn-colour-bg); }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--bn-colour-border); }
+  th { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); }
+  td.c { text-align: center; }
+
+  /* options grid */
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; align-items: start; }
+  .opt { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); padding: 1rem; }
+  .opt h3 { margin: 0 0 .25rem; } .opt .sub { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin-bottom: .75rem; }
+  .opt .cons { font-size: var(--bn-text-label); border-top: 1px solid var(--bn-colour-border); margin-top: .75rem; padding-top: .6rem; }
+  .opt .cons dt { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); margin-top: .4rem; }
+  .opt .cons dd { margin: 0; }
+  .cost { font: 600 11px/1 var(--bn-font-mono); padding: 3px 6px; border-radius: 4px; background: var(--bn-colour-border); }
+
+  /* ════ the Mac frame ════ */
+  .win { background: var(--n-win); border: 1px solid var(--n-hair); border-radius: 10px; overflow: hidden; font-family: var(--sf);
+    box-shadow: 0 6px 20px light-dark(rgba(0,0,0,.08), rgba(0,0,0,.5)); margin: .5rem 0; }
+  .win .tb { height: 38px; background: var(--n-tb); border-bottom: 1px solid var(--n-hair); display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+  .win .tb .lights span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; background: var(--n-3); }
+  .win .tb .ttl { flex: 1; text-align: center; font: 600 13px var(--sf); color: var(--n-1); }
+  .win .tb .ttl small { display: block; font: 400 11px var(--sf); color: var(--n-2); }
+  .win .wb { display: grid; grid-template-columns: 190px 1fr; min-height: 300px; }
+  .win .sb { background: var(--sb-bg); border-right: 1px solid var(--n-hair); padding: 8px 6px; font-size: 13px; }
+  .win .sb .hd { font: 600 11px var(--sf); color: var(--n-2); padding: 4px 10px 6px; }
+  .win .row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 6px; color: var(--n-1); line-height: 1.2; }
+  .win .row.sel { background: var(--sb-sel); }
+  .win .row .ic { width: 16px; height: 16px; border-radius: 4px; background: var(--n-3); flex: none; }
+  .win .row .nm { flex: 1; min-width: 0; }
+  .win .row .st { display: block; font-size: 11px; color: var(--n-2); }
+  .win .row .cnt { font-size: 11px; color: var(--n-2); }
+  .win .row .ring { width: 14px; height: 14px; flex: none; }
+  .win .detail { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 24px; text-align: center; }
+  .cuv .sym { width: 30px; height: 30px; color: var(--n-3); margin: 0 auto 10px; }
+  .cuv .sym svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .cuv .sym.ring { width: 30px; height: 30px; }
+  .cuv .hl { font: 700 15px/1.3 var(--sf); color: var(--n-2); margin: 0 auto; max-width: 355px; }
+  .cuv .bd { font: 400 15px/1.35 var(--sf); color: var(--n-2); margin: 6px auto 0; max-width: 355px; }
+  .cuv .acts { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+  .btn { font: 400 13px/23px var(--sf); padding: 0 12px; border-radius: 6px; background: var(--n-btn); color: var(--n-1); border: 0; }
+  .btn.def { background: var(--n-accent); color: #fff; }
+  .win.shoal .detail { background: radial-gradient(ellipse at 40% 60%, light-dark(#eaf3fb,#0e1a24), var(--n-win) 70%); position: relative; }
+  .fish { position: absolute; width: 22px; height: 10px; color: var(--n-3); }
+  .fish svg { width: 100%; height: 100%; fill: currentColor; }
+  .frame-cap { font: 500 11px/1.3 var(--bn-font-mono); color: var(--bn-colour-muted); margin: 0 0 2px; letter-spacing: .04em; }
+
+  /* ════ the map ════ */
+  .map { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); padding: 1rem; overflow-x: auto; }
+  .map svg { width: 100%; min-width: 860px; height: auto; font-family: var(--bn-font-body); }
+  .map .node rect { fill: var(--bn-colour-quote-bg); stroke: var(--bn-colour-border); }
+  .map .node.done rect { stroke: var(--done); }
+  .map .node.open rect { stroke: var(--open); stroke-dasharray: 4 3; }
+  .map text { fill: var(--bn-colour-text); font-size: 12px; }
+  .map text.s { fill: var(--bn-colour-muted); font-size: 10.5px; }
+  .map path, .map line { stroke: var(--bn-colour-muted); fill: none; stroke-width: 1.2; marker-end: url(#arr); }
+  .map .lbl { fill: var(--bn-colour-muted); font-size: 10.5px; }
+
+  /* code shapes (commentary, mono) */
+  pre { font: 12px/1.45 var(--bn-font-mono); background: var(--bn-colour-quote-bg); border: 1px solid var(--bn-colour-border); border-radius: 6px; padding: .6rem .8rem; overflow-x: auto; margin: .5rem 0; }
+
+  .icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .75rem; }
+  .icons .ic { background: var(--n-win); border: 1px solid var(--n-hair); border-radius: 8px; padding: 12px 8px; text-align: center; font-family: var(--sf); }
+  .icons .ic .sym { width: 30px; height: 30px; margin: 0 auto 8px; color: var(--n-3); }
+  .icons .ic .sym svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icons .ic .n { font: 500 11px var(--bn-font-mono); color: var(--n-1); word-break: break-all; }
+  .icons .ic .u { font: 400 11px var(--sf); color: var(--n-2); margin-top: 3px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-tray" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M12 4v7m-3-3 3 3 3-3"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-folder-q" viewBox="0 0 24 24"><path d="M10.7 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v4.1"/><path d="m21 21-1.9-1.9"/><circle cx="17" cy="17" r="3"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-drive" viewBox="0 0 24 24"><path d="M10 16h.01"/><path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M21.946 12.013H2.054"/><path d="M6 16h.01"/><path d="m15 15 4 4m0-4-4 4"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <g id="fishg"><path d="M0 5 q11 -7 22 0 q-11 7 -22 0z M22 5 l6 -4 v8z"/></g>
+  </defs>
+</svg>
+
+<main>
+<div class="banner">PROPOSED 7 Nov 2026 · options for the owner's morning pick · nothing here is built. The set itself is <b>IMPLEMENTED</b> (24 Oct 2026, <code>e1665d02c</code>, <code>46c17ad30</code>, <code>229db9887</code>); this file covers only what the 100days row still asks for beyond that.</div>
+<div class="chrome-bar"><button id="t-light">Light</button><button id="t-dark">Dark</button><button id="t-sys" class="on">System</button></div>
+
+<h1>The detail panes as one set — what is still open, and the options</h1>
+<p class="muted">100days [trust] row "Design the detail panes as a coherent set". Grounded in <code>docs/design-detail-panes-catalogue.md</code> and the spec it records, <code>docs/mockups/detail-pane-states.html</code> (owner's seven answers, 24 Oct 2026). Native macOS surface, so the frames mimic AppKit chrome, not the web theme.</p>
+
+<div class="key">
+  <span class="k-art">Artefact — the pane as it would ship</span>
+  <span class="k-com">Commentary — why, cost, what it rules out</span>
+  <span class="k-done">Shipped at HEAD</span>
+  <span class="k-open">Still open — this file</span>
+</div>
+
+<h2 id="q">The question, as found at HEAD</h2>
+<p>The row asks for four things. Three of them landed on 24 Oct 2026 while the row text stood still. The table is the audit; everything below it is the remainder.</p>
+<table>
+  <tr><th style="width:28%">The row asks for</th><th style="width:12%">At HEAD</th><th>Evidence</th></tr>
+  <tr><td>Rewrite all detail-pane copy end to end</td><td><span class="pill done">done</span></td><td>Every pane headline is a shipped <code>desktop.chrome.*</code> / <code>desktop.boot.*</code> key in sentence case with no full stop, as decision 3 rules; the browser twins say the same words (<code>server.statusPage.*</code>). One straggler: <code>chrome.unsuitableFolder</code> is two sentences with full stops drawn as a headline (§5). One dead Title Case key, <code>chrome.noProjectSelected</code>, is retained on purpose and drawn nowhere.</td></tr>
+  <tr><td>Redesign the placeholder icons</td><td><span class="pill done">done</span></td><td>The icon sheet's three changes are in <code>ContentView.swift</code>: <code>tray.and.arrow.down</code> (empty, files counted, no selection), <code>externaldrive.badge.xmark</code> (drive), <code>network.slash</code> (share); <code>RunCoverPane.swift</code> draws <code>clock</code>, <code>stop.circle</code>, <code>key</code>, <code>exclamationmark.triangle</code> and the run ring in the icon slot. §4 shows the family for a final yes.</td></tr>
+  <tr><td>Build the shared StatePane molecule (≈10 panes collapse into one component)</td><td><span class="pill open">open</span></td><td>No <code>StatePane</code> type exists. The panes are 20 direct <code>ContentUnavailableView</code> sites (9 in <code>ContentView</code>, 8 in <code>RunCoverPane</code>, 3 in <code>BootView</code>) switched by <code>DetailPaneKind</code> and <code>DetailPaneKind.RunCover</code>. Whether a wrapper is wanted at all is the question — §2.</td></tr>
+  <tr><td>Design the missing "analysing" detail pane</td><td><span class="pill part">built, two calls left</span></td><td>Two analysing panes ship: the <b>shoal</b> (<code>ShoalRunView</code>, wordless, when the animation preference is on and Reduce Motion is off) and the <b>quiet cover pane</b> (<code>RunCoverPane.analysing</code>: the row's ring in the icon slot, the row's line as headline, body "The report opens as soon as the first interview is readable."). Both give way to the report at the first readable session (<code>shoalTakesPane</code>; the serve's <code>page_for(sessions_imported:)</code>). Neither carries Stop, and the two say different amounts about the same run — §3.</td></tr>
+</table>
+<div class="com"><div class="lab">Commentary — scope</div>
+<p>The prompt's three analysing options are all partly shipped: (A) "the sidebar suffices" is the shoal's stance; (B) "a quiet pane with the stage line" is the cover pane minus Stop; (C) "the partial report becoming readable" is progressive lenses phase 1 (<code>35b1db6b3</code>). So §3 does not re-pick between them; it asks the two things the shipped code left open. §2 is the only part of the row with nothing built against it.</p></div>
+
+<h2 id="map">1 · The set as one map — every pane, and where the open calls sit</h2>
+<div class="map">
+<svg viewBox="0 0 980 470" role="img" aria-label="State map of the detail panes">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" style="color:var(--bn-colour-muted)"/></marker></defs>
+  <!-- row 1: the happy path -->
+  <g class="node done"><rect x="20" y="40" width="130" height="54" rx="8"/><text x="85" y="62" text-anchor="middle">Drag interviews here</text><text x="85" y="78" text-anchor="middle" class="s">Recordings or transcripts.</text></g>
+  <g class="node done"><rect x="190" y="40" width="130" height="54" rx="8"/><text x="255" y="62" text-anchor="middle">6 files to analyse</text><text x="255" y="78" text-anchor="middle" class="s">[ Analyse ]</text></g>
+  <g class="node done"><rect x="360" y="40" width="130" height="54" rx="8"/><text x="425" y="62" text-anchor="middle">Queued · position 2</text><text x="425" y="78" text-anchor="middle" class="s">Starts when the analysis before it finishes.</text></g>
+  <g class="node open"><rect x="530" y="20" width="150" height="46" rx="8"/><text x="605" y="40" text-anchor="middle">Shoal (wordless)</text><text x="605" y="55" text-anchor="middle" class="s">animation on · Reduce Motion off</text></g>
+  <g class="node open"><rect x="530" y="76" width="150" height="46" rx="8"/><text x="605" y="96" text-anchor="middle">Transcribing · 3 of 8 · ~12 min</text><text x="605" y="111" text-anchor="middle" class="s">quiet pane · ring in the icon slot</text></g>
+  <g class="node done"><rect x="730" y="40" width="130" height="54" rx="8"/><text x="795" y="62" text-anchor="middle">The report</text><text x="795" y="78" text-anchor="middle" class="s">Sessions lens first (progressive)</text></g>
+  <line x1="150" y1="67" x2="188" y2="67"/><line x1="320" y1="67" x2="358" y2="67"/>
+  <path d="M490 60 C 510 60, 510 43, 528 43"/><path d="M490 74 C 510 74, 510 99, 528 99"/>
+  <path d="M680 43 C 705 43, 705 60, 728 60"/><path d="M680 99 C 705 99, 705 74, 728 74"/>
+  <text x="704" y="36" class="lbl" text-anchor="middle">first readable</text>
+  <text x="704" y="124" class="lbl" text-anchor="middle">session</text>
+  <!-- row 2: the ways a run ends early -->
+  <text x="20" y="165" class="lbl">A run that does not finish (from either analysing pane)</text>
+  <g class="node done"><rect x="20" y="180" width="150" height="62" rx="8"/><text x="95" y="200" text-anchor="middle">Analysis stopped</text><text x="95" y="215" text-anchor="middle" class="s">[ Resume Analysis ]</text><text x="95" y="230" text-anchor="middle" class="s">only when no report exists (D4-B)</text></g>
+  <g class="node done"><rect x="190" y="180" width="170" height="62" rx="8"/><text x="275" y="200" text-anchor="middle">The analysis stopped before it finished</text><text x="275" y="215" text-anchor="middle" class="s">The app quit, or the Mac lost power.</text><text x="275" y="230" text-anchor="middle" class="s">[ Resume Analysis ]</text></g>
+  <g class="node done"><rect x="380" y="180" width="170" height="62" rx="8"/><text x="465" y="200" text-anchor="middle">The analysis didn’t finish</text><text x="465" y="215" text-anchor="middle" class="s">the category’s own sentence</text><text x="465" y="230" text-anchor="middle" class="s">[ remedy ] [ Show details ]</text></g>
+  <g class="node done"><rect x="570" y="180" width="190" height="62" rx="8"/><text x="665" y="200" text-anchor="middle">Choose an AI provider to analyse this project</text><text x="665" y="215" text-anchor="middle" class="s">…such as Claude or ChatGPT. Pick one in Settings.</text><text x="665" y="230" text-anchor="middle" class="s">[ Set Up Provider… ]</text></g>
+  <g class="node done"><rect x="780" y="180" width="180" height="62" rx="8"/><text x="870" y="200" text-anchor="middle">Stopped, with an earlier report</text><text x="870" y="215" text-anchor="middle" class="s">the pane shows that report</text><text x="870" y="230" text-anchor="middle" class="s">the row says Stopped</text></g>
+  <path d="M605 122 L 605 150 L 95 150 L 95 178"/><path d="M605 150 L 275 150 L 275 178"/><path d="M605 150 L 465 150 L 465 178"/><path d="M605 150 L 665 150 L 665 178"/><path d="M605 150 L 870 150 L 870 178"/>
+  <!-- row 3: not about a run -->
+  <text x="20" y="295" class="lbl">Not about a run</text>
+  <g class="node done"><rect x="20" y="310" width="150" height="54" rx="8"/><text x="95" y="330" text-anchor="middle">“Field Drive” isn’t connected</text><text x="95" y="346" text-anchor="middle" class="s">Reconnect to continue.</text></g>
+  <g class="node done"><rect x="190" y="310" width="150" height="54" rx="8"/><text x="265" y="330" text-anchor="middle">Share unreachable</text><text x="265" y="346" text-anchor="middle" class="s">Reconnect to continue.</text></g>
+  <g class="node done"><rect x="360" y="310" width="150" height="54" rx="8"/><text x="435" y="330" text-anchor="middle">Folder moved</text><text x="435" y="346" text-anchor="middle" class="s">[ Locate… ]</text></g>
+  <g class="node done"><rect x="530" y="310" width="150" height="54" rx="8"/><text x="605" y="330" text-anchor="middle">3 projects selected</text><text x="605" y="346" text-anchor="middle" class="s">Choose one to see its report.</text></g>
+  <g class="node open"><rect x="700" y="310" width="260" height="54" rx="8"/><text x="830" y="330" text-anchor="middle">Bristlenose can’t analyse your home folder or a system…</text><text x="830" y="346" text-anchor="middle" class="s">two sentences, full stops, as a headline — §5</text></g>
+  <!-- row 4: boot -->
+  <text x="20" y="410" class="lbl">Around the report (BootView)</text>
+  <g class="node done"><rect x="20" y="420" width="150" height="40" rx="8"/><text x="95" y="444" text-anchor="middle">Starting Bristlenose…</text></g>
+  <g class="node done"><rect x="190" y="420" width="150" height="40" rx="8"/><text x="265" y="444" text-anchor="middle">Loading report…</text></g>
+  <g class="node done"><rect x="360" y="420" width="190" height="40" rx="8"/><text x="455" y="444" text-anchor="middle">Couldn’t start Bristlenose</text></g>
+  <text x="570" y="444" class="lbl">— N08 in the plain family; its buttons are decided in design-feedback-native.md</text>
+</svg>
+</div>
+<div class="com"><div class="lab">Commentary — §1</div>
+<p>Solid green borders are panes that ship with the words shown; the words are the <code>en</code> locale values, not paraphrases. Dashed amber marks the three places this file has something to say: the two analysing panes (§3) and the one headline that breaks the casing decision (§5). The StatePane question (§2) is about the plumbing under every green box, so it has no box of its own.</p>
+<p>What this map is for: the "coherent set" was the point of the row, and the catalogue's five groups (nothing here yet, working, needs you, can't reach it, it broke) are now all drawn by one stock primitive. Nothing on the map is a second idiom.</p></div>
+
+<h2 id="statepane">2 · The StatePane molecule — three ways to have one, including not</h2>
+<p>The catalogue (§"The collapse map") asked for one component instantiated ten times. SwiftUI shipped that component in 2023: <code>ContentUnavailableView</code> is the centred {icon, headline, body, 0–1 action} molecule, and every pane already uses it. So the question at HEAD is narrower: is a Bristlenose wrapper over the stock primitive worth having, and if so what does it buy that a test could not.</p>
+<p>The artefact is identical across the three options by construction — same pixels, different plumbing — so one frame stands for all three. The options differ in the right-hand column of the comparison table, not in the picture.</p>
+
+<p class="frame-cap">the pane every option draws (shipped: the failed cover, quota category)</p>
+<div class="win" data-spec='{"sel":"Rockclimbing","st":"Failed","glyph":"err","pane":{"icon":"i-warn","hl":"The analysis didn’t finish","bd":"Claude is out of quota for now. Try again in a few minutes.","acts":["Retry","Show details"]}}'></div>
+
+<div class="opts">
+  <div class="opt">
+    <h3>A · No wrapper — the primitive is the molecule <span class="pill done" style="background:var(--bn-colour-muted)">shipped</span></h3>
+    <div class="sub">Nearest sibling: every other <code>ContentUnavailableView</code> in the app (BootView, CloudImportWindow ×9, DoctorReportView).</div>
+    <p>Keep the 20 call sites. The variation table the catalogue wanted already exists as data: <code>DetailPaneKind</code> (which pane), <code>RunCover</code> (which cover), <code>FailureRemedy.of</code> (which button). Add one cheap test, not a type: every <code>desktop.chrome.*</code> and <code>desktop.boot.*</code> headline key ends without a full stop and is not Title Case, so decision 3 cannot drift by accident.</p>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — one pytest over <code>en/desktop.json</code>; no Swift change.</dd>
+      <dt>Layers touched</dt><dd><code>tests/</code> only.</dd>
+      <dt>Risks</dt><dd>A new pane written in a hurry copies a site and forgets a convention the test does not cover (the ring-in-icon-slot idiom, the Show details disclosure). Two idioms are hand-written twice today and would be three times.</dd>
+      <dt>Rules out</dt><dd>Nothing. B or C can be added later; A is their baseline.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>B · A thin <code>StatePane</code> over the primitive, driven by a spec</h3>
+    <div class="sub">Nearest sibling: <code>DetailPaneKind.resolve</code> itself — a view's decision lifted into a testable helper (house convention, desktop/CLAUDE.md § Conventions).</div>
+<pre>struct StatePaneSpec: Equatable {
+    let symbol: String?          // nil = the run ring takes the slot
+    let headlineKey: String
+    let bodyKey: String?
+    let actions: [StatePaneAction]  // .resume, .retry, .setUpProvider, .locate, .showDetails
+}
+extension DetailPaneKind.RunCover { var spec: StatePaneSpec { … } }
+struct StatePane: View { let spec: StatePaneSpec … ContentUnavailableView { … } }</pre>
+    <p>The sentence the native-primitives rule asks for: <i>the system primitive is <code>ContentUnavailableView</code>; we wrap because twenty sites share two idioms it does not have (a live ring in the icon slot, a Show details disclosure), and a spec lets one test assert that every case names keys that exist in all 21 locales.</i></p>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">M</span> — ~150 lines of Swift, a <code>StatePaneSpecTests</code> that walks every case, 20 sites rewritten; no new strings.</dd>
+      <dt>Layers touched</dt><dd><code>desktop/</code> views and tests. Locales untouched.</dd>
+      <dt>Risks</dt><dd>A wrapper that has to carry an escape hatch for the startup-refusal pane (two body paragraphs, a default-action button) and the analysing pane (observes per-second progress) is two special cases on day one; if the spec grows a closure it has stopped being data. Rewriting 20 working sites is a regression surface the owner does not see as a feature.</dd>
+      <dt>Rules out</dt><dd>Nothing in the product. It does tie future panes to the spec's vocabulary, which is the point and the cost.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>C · A pane contract shared with the browser, asserted from both languages</h3>
+    <div class="sub">Nearest sibling: <code>tests/fixtures/*-contract.json</code> read by pytest and vitest (CLAUDE.md § Seams, "a contract in data, asserted from both languages").</div>
+<pre>tests/fixtures/detail-pane-contract.json
+{ "stopped":   { "mac": "desktop.chrome.analysisStopped",
+                 "web": "server.statusPage.cancelledShort",
+                 "symbol": "stop.circle", "glyph": "⚠", "action": "resume" },
+  "needsProvider": { … }, "interrupted": { … }, "failed": { … } }</pre>
+    <p>Decision 5 says pane and row (and the browser twin) may word a state differently but never state a different fact. Today that is pinned only for provider naming (<code>229db9887</code>). A contract makes the pairing itself the thing a test reads: Swift asserts each <code>RunCover</code> case resolves to its <code>mac</code> key; pytest asserts <code>status_page.py</code> emits the <code>web</code> key for the same outcome.</p>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">M–L</span> — the JSON, a Swift test, a pytest, and the small refactor that lets <code>status_page.py</code> name its outcome → key table.</dd>
+      <dt>Layers touched</dt><dd><code>tests/fixtures</code>, <code>desktop/…Tests</code>, <code>bristlenose/server/status_page.py</code>, <code>tests/test_server_status_page.py</code>.</dd>
+      <dt>Risks</dt><dd>Over-pinning: the Mac deliberately says more than the browser (the stranded body, the no-provider examples), so the contract pins the <i>fact</i> (which key family) not the sentence, or it fights decision 5. A fourth seam mechanism must join an existing one, not invent one — this joins "contract in data".</dd>
+      <dt>Rules out</dt><dd>Nothing; composes with A or B.</dd>
+    </dl>
+  </div>
+</div>
+<div class="com"><div class="lab">Commentary — §2, is this Bristlenosey?</div>
+<p><b>Kind:</b> a native empty/status pane, one of 20. <b>Sibling:</b> <code>ContentUnavailableView</code> everywhere, with the decision in a helper (<code>DetailPaneKind</code>). <b>A follows</b> the sibling exactly. <b>B departs</b> with a written sentence; it is the catalogue's own proposal, but written before the panes were built on the stock primitive, when there were still three idioms to unify (two <code>VStack</code> hand-layouts and a Jinja page). <b>C follows</b> the Seams mechanism and addresses the one guarantee nothing gives today. None <b>invents</b>.</p>
+<p>The dispatch-table lesson in CLAUDE.md (§ Gate policy: "any name-to-runner table needs a structural test that every listed name resolves") is the strongest argument for either B or C over A: today nothing asserts that every <code>RunCover</code> case has a pane with keys in all 21 locales — <code>check-locales.py</code> proves the keys exist, not that the switch reaches them.</p></div>
+
+<h2 id="analysing">3 · The analysing pane — two panes for one run, and no Stop on either</h2>
+<p>Both analysing panes ship. The open calls are (a) whether the pane carries Stop, and (b) whether the wordless shoal and the worded quiet pane should state the same amount. Frames below show the run at the same moment on both paths.</p>
+
+<div class="opts">
+  <div>
+    <p class="frame-cap">path 1 · shoal (animation on, Reduce Motion off) — shipped</p>
+    <div class="win shoal" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"shoal":true}'></div>
+  </div>
+  <div>
+    <p class="frame-cap">path 2 · quiet cover pane (animation off or Reduce Motion on) — shipped</p>
+    <div class="win" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"pane":{"ring":0.35,"hl":"Transcribing · 3 of 8 · ~12 min left","bd":"The report opens as soon as the first interview is readable.","acts":[]}}'></div>
+  </div>
+</div>
+
+<h3>3a · Stop on the pane</h3>
+<div class="opts">
+  <div class="opt">
+    <h3>A · As shipped — no Stop on the pane</h3>
+    <div class="sub">Sibling: the row's ring (hover swaps to a stop glyph), Project ▸ Stop Analysis, the row's context menu.</div>
+    <div class="win" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"pane":{"ring":0.35,"hl":"Transcribing · 3 of 8 · ~12 min left","bd":"The report opens as soon as the first interview is readable.","acts":[]}}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — nothing.</dd>
+      <dt>Risks</dt><dd>The one pane in the family whose sibling panes offer the opposite verb (Resume Analysis on stopped and stranded) offers nothing. A researcher reading the pane has to know the ring is a button.</dd>
+      <dt>Rules out</dt><dd>Nothing.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>B · Stop Analysis in the actions slot</h3>
+    <div class="sub">Sibling: the stopped and interrupted panes' Resume Analysis button in the same slot; the string is the shipped <code>desktop.menu.project.stopAnalysis</code>.</div>
+    <div class="win" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"pane":{"ring":0.35,"hl":"Transcribing · 3 of 8 · ~12 min left","bd":"The report opens as soon as the first interview is readable.","acts":["Stop Analysis"]}}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — one <code>Button</code> in <code>RunCoverPane.analysing</code> calling the existing stop path; hidden while <code>isStopping</code> (the pane already says "Stopping…" then). No new key.</dd>
+      <dt>Layers touched</dt><dd><code>RunCoverPane.swift</code>, one test.</dd>
+      <dt>Risks</dt><dd>Stop is a committed act with a confirm elsewhere? No: Stop Analysis in the menu has no confirm, and Resume is one click away, so a plain button matches. A default-action style would be wrong — it is not the expected next step; plain push button.</dd>
+      <dt>Rules out</dt><dd>Nothing. Pairs with C.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>C · The pane's ring behaves like the row's</h3>
+    <div class="sub">Sibling: <code>ProjectRowActivityIndicator</code> — "hovering the running indicator swaps the spinner for a grey stop" (design-sidebar-activity-indicators.md). Rule: same element, same action.</div>
+    <div class="win" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"pane":{"ringStop":true,"hl":"Transcribing · 3 of 8 · ~12 min left","bd":"The report opens as soon as the first interview is readable.","acts":[]}}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S–M</span> — reuse the row's hover-stop view at <code>.controlSize(.large)</code> in the icon slot instead of a bare <code>ProgressView</code>.</dd>
+      <dt>Risks</dt><dd>A 30pt hover-only control in a <code>ContentUnavailableView</code> icon slot is discoverable only by accident — the row's is tolerable because the row is where the pointer already goes. On its own it is the weakest; alongside B it is the consistency rule honoured.</dd>
+      <dt>Rules out</dt><dd>Nothing.</dd>
+    </dl>
+  </div>
+</div>
+
+<h3>3b · What the shoal says</h3>
+<div class="opts">
+  <div class="opt">
+    <h3>A · Wordless, as shipped</h3>
+    <div class="sub">Sibling: <code>BootView</code> — "an indeterminate bar and no words, deliberately" (progress domain).</div>
+    <div class="win shoal" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"shoal":true}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — nothing.</dd>
+      <dt>Risks</dt><dd>Two researchers with different Accessibility settings see panes that say different amounts about the same run. The row narrates for both, so the fact is never missing — only the pane's say-so differs.</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3>B · The shoal with the row's line beneath</h3>
+    <div class="sub">Sibling: the quiet pane's headline (same <code>RunProgressSubtitle.compose</code> call); the welcome window's caption-under-illustration layout.</div>
+    <div class="win shoal" data-spec='{"sel":"Rockclimbing","st":"Transcribing · 3 of 8 · ~12 min left","ring":0.35,"shoal":true,"caption":"Transcribing · 3 of 8 · ~12 min left"}'></div>
+    <dl class="cons">
+      <dt>Build cost</dt><dd><span class="cost">S</span> — a <code>Text</code> under <code>ShoalRunView</code> bound to the same live data the quiet pane reads.</dd>
+      <dt>Risks</dt><dd>The shoal was designed as a decoration so the eye rests; a per-second line under it is a second clock on screen with the row's. Motion plus words is more, not clearer.</dd>
+      <dt>Rules out</dt><dd>Nothing; one line can be removed.</dd>
+    </dl>
+  </div>
+</div>
+<div class="com"><div class="lab">Commentary — §3</div>
+<p><b>What was checked.</b> The body line "The report opens as soon as the first interview is readable." is a promise; the original mockup flagged it as needing a check on the cover path. At HEAD the Mac side hands over through <code>shoalTakesPane</code> only for the shoal; on the cover path the serve decides: <code>page_for(…, sessions_imported:)</code> returns the SPA once <code>ProgressiveImport.follow</code> has imported a session, and <code>RunCover.analysing</code> only draws over a <code>.statusPage</code> document. So the promise holds on both paths in code; it has not been watched on a real run with the animation preference off, and that is a human QA item, not a design one.</p>
+<p><b>Why 3a-B is the Bristlenosey pick.</b> The stopped and stranded panes put their verb (Resume Analysis) in the actions slot; the analysing pane is the same molecule in the same family and is the one state where the researcher might want the opposite verb. "Not needy UX" cuts the other way here: a single plain button that names a real act is not a retry loop or a nag. C alone fails discoverability; C with B costs little and honours "same element, same action" for anyone who learned the row's ring.</p>
+<p><b>Why 3b-A.</b> The shoal already yields to the report at the first readable session, and the row never stops narrating. Adding words to a surface whose design rationale is wordlessness re-litigates a settled call for parity's sake; the parity rule (decision 5) is about facts, not quantity.</p></div>
+
+<h2 id="icons">4 · The icon family — shipped, shown once for a yes</h2>
+<p>One concept, one SF Symbol, drawn in the pane's tertiary grey at the measured ~30pt. These are the symbols the Swift sites name at HEAD; the glyphs below are their Lucide twins drawn inline (the browser's status page draws text glyphs ℹ ⚠ ✗ instead and this proposal leaves that alone).</p>
+<div class="icons">
+  <div class="ic"><div class="sym"><svg><use href="#i-tray"/></svg></div><div class="n">tray.and.arrow.down</div><div class="u">empty · files counted · no selection</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-layers"/></svg></div><div class="n">square.stack</div><div class="u">several selected</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-clock"/></svg></div><div class="n">clock</div><div class="u">queued</div></div>
+  <div class="ic"><div class="sym ring" data-ring="0.35"></div><div class="n">— (the run ring)</div><div class="u">analysing</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-stop"/></svg></div><div class="n">stop.circle</div><div class="u">stopped</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-warn"/></svg></div><div class="n">exclamationmark.triangle</div><div class="u">interrupted · failed · can’t start</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-key"/></svg></div><div class="n">key</div><div class="u">needs a provider</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-drive"/></svg></div><div class="n">externaldrive.badge.xmark</div><div class="u">drive not connected</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-wifi-off"/></svg></div><div class="n">network.slash</div><div class="u">share unreachable</div></div>
+  <div class="ic"><div class="sym"><svg><use href="#i-folder-q"/></svg></div><div class="n">questionmark.folder</div><div class="u">folder moved</div></div>
+</div>
+<div class="com"><div class="lab">Commentary — §4, the family options</div>
+<ul>
+  <li><b>A · SF Symbols, as shipped.</b> Sibling: every <code>ContentUnavailableView</code> on macOS (Mail, Notes, Finder's "No Items"). Follows. Cost nil. <b>Recommended</b>; the row's "placeholder icons" were the pre-24-Oct <code>square.and.arrow.down</code>, <code>externaldrive.trianglebadge.exclamationmark</code> and <code>waveform</code>, and those are gone.</li>
+  <li><b>B · A drawn family in the welcome window's style</b> (<code>WelcomeIllustrations.swift</code>). Invents: the welcome window is a launcher with a brand block; decision 2 took the brand block <i>off</i> N08 so no pane keeps it. A drawn icon set would put bespoke art in the one place macOS users expect the system vocabulary. Cost L, and 21 locales' worth of nothing — but a departure the owner has already ruled against in kind. Not drawn here on purpose.</li>
+  <li><b>C · Lucide twins on the browser status page</b> in place of ℹ ⚠ ✗. Departs from the CLI-glyph sibling (<code>CLI_GLYPH</code>) that the status page shares with the terminal. Cost S; a web-only change; defensible but not asked for by anyone who has seen the page. Leave.</li>
+</ul></div>
+
+<h2 id="strings">5 · String table — every word above is a shipped key, bar one proposal</h2>
+<table>
+  <tr><th style="width:30%">Key</th><th>en value</th><th style="width:14%">Status</th></tr>
+  <tr><td><code>desktop.chrome.dragInterviews</code> / <code>…Description</code></td><td>Drag interviews here · Recordings or transcripts.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.filesToAnalyse_one/_other</code></td><td>{{count}} file(s) to analyse</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.pipeline.queuedPosition</code> / <code>queuedHint</code></td><td>Queued · position {{position}} · Starts when the analysis before it finishes.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.pipeline.analysingHint</code></td><td>The report opens as soon as the first interview is readable.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.pipeline.stopping</code></td><td>Stopping…</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.analysisStopped</code> · <code>resumeAnalysis</code></td><td>Analysis stopped · Resume Analysis</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.analysisInterrupted</code> / <code>…Hint</code></td><td>The analysis stopped before it finished · The app quit, or the Mac lost power.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.failedTitle</code></td><td>The analysis didn’t finish</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.providerNeeded</code> / <code>…Hint</code></td><td>Choose an AI provider to analyse this project · Bristlenose sends the transcripts to an AI provider such as Claude or ChatGPT. Pick one in Settings.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.projectUnavailable</code> / <code>…Hint</code> · <code>shareUnreachable</code></td><td>“{{name}}” isn’t connected · Reconnect to continue.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.multipleSelected_*</code> / <code>…Hint</code></td><td>{{count}} projects selected · Choose one to see its report.</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.menu.project.stopAnalysis</code> (reused by 3a-B)</td><td>Stop Analysis</td><td><span class="pill done">shipped</span></td></tr>
+  <tr><td><code>desktop.chrome.unsuitableFolder</code></td><td>Bristlenose can’t analyse your home folder or a system folder. Choose the folder that holds your interviews.</td><td><span class="pill open">straggler</span></td></tr>
+  <tr><td><i>proposed split</i> — headline / body, <b>owner-written, not a key</b></td><td>This folder can’t be analysed · It’s your home folder or a system folder. Choose the folder that holds your interviews.</td><td><span class="pill open">proposal</span></td></tr>
+  <tr><td><code>desktop.chrome.noProjectSelected</code></td><td>No Project Selected</td><td><span class="pill part">dead, retained</span></td></tr>
+</table>
+<div class="com"><div class="lab">Commentary — §5</div>
+<p>The straggler is drawn as a <code>ContentUnavailableView</code> headline in <code>ContentView.unsuitableFolder</code>: 15pt bold, two sentences, two full stops. Decision 3 (sentence case, no full stop on headlines) was taken after that pane landed (<code>130647d6b</code>, 22 Oct). The browser twin uses the same sentence as its page body, which is fine there. Splitting it is a 21-locale change under the "rewording an <code>en</code> value" rule, so it is listed, not assumed.</p></div>
+
+<h2 id="compare">Comparison</h2>
+<table>
+  <tr><th>Call</th><th>Option</th><th class="c">Cost</th><th>Layers</th><th>Nearest sibling</th><th>Verdict</th></tr>
+  <tr><td rowspan="3">§2 StatePane</td><td>A · no wrapper + casing test</td><td class="c">S</td><td>tests</td><td>ContentUnavailableView everywhere</td><td>follows</td></tr>
+  <tr><td>B · StatePane + spec</td><td class="c">M</td><td>desktop views, Swift tests</td><td>decision-in-a-helper convention</td><td>departs, justified</td></tr>
+  <tr><td>C · pane contract JSON</td><td class="c">M–L</td><td>fixtures, Swift tests, status_page.py, pytest</td><td>Seams: contract in data</td><td>follows</td></tr>
+  <tr><td rowspan="3">§3a Stop</td><td>A · none</td><td class="c">S</td><td>—</td><td>row ring, menu</td><td>follows</td></tr>
+  <tr><td>B · Stop Analysis button</td><td class="c">S</td><td>RunCoverPane</td><td>Resume Analysis on sibling panes</td><td>follows</td></tr>
+  <tr><td>C · hover-stop ring</td><td class="c">S–M</td><td>RunCoverPane</td><td>row's activity indicator</td><td>follows (weak alone)</td></tr>
+  <tr><td rowspan="2">§3b Shoal words</td><td>A · wordless</td><td class="c">S</td><td>—</td><td>BootView</td><td>follows</td></tr>
+  <tr><td>B · row's line beneath</td><td class="c">S</td><td>ShoalRunView</td><td>quiet pane</td><td>departs from the shoal's own rationale</td></tr>
+  <tr><td>§4 Icons</td><td>A · SF Symbols as shipped</td><td class="c">—</td><td>—</td><td>macOS</td><td>follows</td></tr>
+  <tr><td>§5 Straggler</td><td>split headline / body</td><td class="c">S (×21 locales)</td><td>locales, ContentView</td><td>every other pane</td><td>follows decision 3</td></tr>
+</table>
+
+<h2 id="rec">Recommendation</h2>
+<p><b>§2: A now, C when the next wording change touches both surfaces.</b> The molecule the row asked for exists — it is the stock primitive, and the decision table is already data. A wrapper (B) would have been right in June when three idioms needed unifying; today it rewrites twenty working sites to gain a test, and the test is the valuable part. Write the casing test now (S). The guarantee nothing gives today is pane↔browser fact parity; that is a seam, and the house mechanism for a seam is a contract fixture read from both languages (C), not a Swift type. Build C the first time someone changes one of those sentences, so the test is born with a reason.</p>
+<p><b>§3a: B, with C folded in if it costs under an hour.</b> Stop Analysis in the actions slot is the same slot, the same family and an existing string; it is the only pane in the set whose siblings offer the opposite verb and it offers nothing. Hide it while "Stopping…" shows. <b>§3b: A.</b> Leave the shoal wordless; the row narrates, and the pane yields at the first readable session.</p>
+<p><b>§4: A</b> — the icons are no longer placeholders; this is a yes/no. <b>§5:</b> split the one straggler when a locale pass is next open anyway.</p>
+<p><b>Human QA owed regardless of pick:</b> watch one real multi-session run with the shoal preference off and confirm the quiet pane hands over to the Sessions lens at the first readable session (the body line is a promise). Not a mockup question.</p>
+
+</main>
+<script>
+(() => {
+  const root = document.documentElement;
+  const btns = { light: 't-light', dark: 't-dark', sys: 't-sys' };
+  for (const [mode, id] of Object.entries(btns)) {
+    document.getElementById(id).addEventListener('click', () => {
+      if (mode === 'sys') delete root.dataset.theme; else root.dataset.theme = mode;
+      for (const other of Object.values(btns)) document.getElementById(other).classList.toggle('on', other === id);
+    });
+  }
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  // the run ring — SidebarActivityRing, determinate; `stop` draws the hover-stop glyph
+  const ring = (frac, size, stop) => {
+    const r = size === 'lg' ? 12 : 5.5, c = 2 * Math.PI * r, box = r * 2 + 4, mid = box / 2;
+    const sw = size === 'lg' ? 2.5 : 1.6;
+    return `<svg viewBox="0 0 ${box} ${box}" width="100%" height="100%" aria-hidden="true">
+      <circle cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke="var(--sb-track)" stroke-width="${sw}"/>
+      <circle cx="${mid}" cy="${mid}" r="${r}" fill="none" stroke="var(--n-accent)" stroke-width="${sw}" stroke-linecap="round"
+        stroke-dasharray="${(c*frac).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 ${mid} ${mid})"/>
+      ${stop ? `<rect x="${mid-r*0.42}" y="${mid-r*0.42}" width="${r*0.84}" height="${r*0.84}" rx="1.5" fill="var(--n-2)"/>` : ''}
+    </svg>`;
+  };
+  document.querySelectorAll('[data-ring]').forEach(el => { el.innerHTML = ring(parseFloat(el.dataset.ring), 'lg', false); });
+
+  const row = (name, count, sel, st, glyph, frac) => {
+    let right = '';
+    if (frac !== undefined) right = `<span class="ring">${ring(frac, 'sm', false)}</span>`;
+    else if (count !== undefined) right = `<span class="cnt">${count}</span>`;
+    const g = glyph === 'err' ? '<span style="color:var(--n-red)">✕ </span>' : glyph === 'warn' ? '<span style="color:var(--n-orange)">▲ </span>' : '';
+    return `<div class="row${sel ? ' sel' : ''}"><span class="ic"></span><span class="nm">${esc(name)}${st ? `<span class="st">${g}${esc(st)}</span>` : ''}</span>${right}</div>`;
+  };
+  const fish = (x, y, flip) => `<span class="fish" style="left:${x}%;top:${y}%;transform:scaleX(${flip?-1:1})"><svg viewBox="0 0 28 10"><use href="#fishg"/></svg></span>`;
+
+  document.querySelectorAll('.win[data-spec]').forEach(w => {
+    const s = JSON.parse(w.dataset.spec);
+    const rows = row('Checkout study', 6) + row(s.sel || 'Rockclimbing', 7, true, s.st, s.glyph, s.ring) + row('Onboarding diary', 4);
+    let detail = '';
+    if (s.shoal) {
+      detail = [[18,30,0],[34,52,1],[55,22,0],[62,66,0],[78,40,1],[44,80,0]].map(([x,y,f]) => fish(x,y,f)).join('')
+        + (s.caption ? `<div class="cuv" style="position:absolute;left:0;right:0;bottom:22px"><div class="bd">${esc(s.caption)}</div></div>` : '');
+    } else if (s.pane) {
+      const p = s.pane;
+      const sym = p.ringStop ? `<div class="sym ring">${ring(0.35, 'lg', true)}</div>`
+        : p.ring !== undefined ? `<div class="sym ring">${ring(p.ring, 'lg', false)}</div>`
+        : `<div class="sym"><svg><use href="#${p.icon}"/></svg></div>`;
+      const acts = (p.acts || []).map((a, i) => `<button class="btn${a === 'Retry' && i === 0 ? ' def' : ''}">${esc(a)}</button>`).join('');
+      detail = `<div class="cuv">${sym}<div class="hl">${esc(p.hl)}</div>${p.bd ? `<div class="bd">${esc(p.bd)}</div>` : ''}${acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
+    }
+    w.innerHTML = `<div class="tb"><span class="lights"><span></span><span></span><span></span></span><span class="ttl">${esc(s.sel || 'Rockclimbing')}${s.st ? `<small>${esc(s.st)}</small>` : ''}</span><span style="width:54px"></span></div>
+      <div class="wb"><div class="sb"><div class="hd">Projects</div>${rows}</div><div class="detail">${detail}</div></div>`;
+  });
+})();
+</script>
+</body>
+</html>

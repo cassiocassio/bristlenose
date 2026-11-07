@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>“This recording may have a transcript” — where to say it, and whether it still pays</title>
+<!--
+  Options mockup for the 100days row '"This recording may have a transcript"
+  before the Whisper download' [trust], added 18 Oct 2026. Drawn 7 Nov 2026
+  against HEAD e5b539b0c.
+
+  MEDIUM-FIDELITY mock of NATIVE macOS chrome (sidebar row, detail pane,
+  popover, sheet) and one terminal frame, in the drawing style of
+  apple-first-first-run.html. AppKit's semantic colours are approximated with
+  light-dark() pairs. Every string inside an artefact frame is a shipped locale
+  key, or is flagged NEW in that frame's chrome bar. File names in frames are
+  the observed Teams/Zoom/Meet specimens from s01_ingest.py with the
+  maintainer's own name replaced by a study title; no participant is named.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --label: light-dark(#1d1d1f, #e8e8ed);
+    --secondary: light-dark(rgba(60,60,67,0.62), rgba(235,235,245,0.60));
+    --tertiary: light-dark(rgba(60,60,67,0.40), rgba(235,235,245,0.32));
+    --accent: light-dark(#0a6cff, #3d8cff);
+    --sep: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.12));
+    --red: light-dark(#e0301a, #ff6b57);
+    --green: light-dark(#1f8f3a, #5fd07a);
+    --orange: light-dark(#c2410c, #ff9f5a);
+    --info: light-dark(#0a6cff, #5aa0ff);
+    --pop-bg: light-dark(#f4f4f5, #2c2c2e);
+    --pop-stroke: light-dark(rgba(0,0,0,0.12), rgba(255,255,255,0.14));
+    --side: light-dark(#ecebf0, #27262a);
+    --win: light-dark(#ffffff, #1e1e20);
+    --tbar: light-dark(linear-gradient(#fbfbfc,#ededf0), linear-gradient(#333336,#2a2a2d));
+    --pane: light-dark(#f5f5f7, #1b1b1d);
+    --card: light-dark(#ffffff, #2a2a2d);
+    --page: light-dark(#e7e7ea, #121214);
+    --page-ink: light-dark(#1d1d1f, #e7e7ea);
+    --page-muted: light-dark(#5b5b62, #a1a1aa);
+    --new: light-dark(#b4530d, #f0a060);
+    --shipped: light-dark(#2d6a2d, #86d486);
+    --com-bg: light-dark(#f8f5ec, #2a2822);
+    --com-rule: light-dark(#b9a77a, #8a7a52);
+    --com-hatch: light-dark(#e6dfc9, #3a3528);
+    --com-ink: light-dark(#4a4434, #d9d0b5);
+    --com-lab: light-dark(#8a7a52, #b9a77a);
+    --sel: light-dark(rgba(0,0,0,0.08), rgba(255,255,255,0.10));
+    --track: light-dark(rgba(0,0,0,0.12), rgba(255,255,255,0.16));
+    --btn-bg: light-dark(#ffffff, #3a3a3d);
+    --btn-stroke: light-dark(rgba(0,0,0,0.2), rgba(255,255,255,0.22));
+    --term-bg: light-dark(#1e1e22, #0f0f12);
+    --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    font-synthesis: none; -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif; background: var(--page); color: var(--page-ink);
+         padding: 28px 16px 80px; font-size: 13px; line-height: 1.45; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 21px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; font-weight: 600; margin: 36px 0 10px; }
+  h3 { font-size: 13.5px; font-weight: 600; margin: 0 0 8px; }
+  p { margin: 0 0 8px; }
+  .lede { color: var(--page-muted); max-width: 880px; }
+  code { font-family: var(--mono); font-size: 11.5px; }
+  .banner { border: 1px solid var(--new); border-radius: 8px; padding: 8px 12px; font-size: 12px; margin: 0 0 18px; background: light-dark(#fff8f0, #2d2419); }
+  .banner b { color: var(--new); font-family: var(--mono); font-size: 11px; letter-spacing: .3px; }
+  .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--page-muted); margin: 8px 0 22px; }
+  .key span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+  .swatch.art { background: var(--win); border: 0.5px solid var(--btn-stroke); }
+  .swatch.com { background: var(--com-bg); border-left: 3px solid var(--com-rule); }
+
+  .facts { background: var(--card); border: 0.5px solid var(--sep); border-radius: 10px; padding: 12px 16px; margin: 0 0 10px; }
+  .facts ul { margin: 4px 0 0; padding-left: 18px; } .facts li { margin: 3px 0; }
+  .ok { color: var(--shipped); font-weight: 600; font-family: var(--mono); font-size: 11px; }
+  .gap { color: var(--new); font-weight: 600; font-family: var(--mono); font-size: 11px; }
+
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 980px) { .options { grid-template-columns: 1fr; } }
+  .opt { background: var(--card); border: 0.5px solid var(--sep); border-radius: 12px; padding: 14px 16px 16px; }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; padding: 2px 7px; border-radius: 999px; border: 0.5px solid var(--sep); color: var(--page-muted); margin-left: 6px; vertical-align: middle; }
+  .tag.rec { color: var(--shipped); border-color: var(--shipped); } .tag.no { color: var(--red); border-color: var(--red); } .tag.defer { color: var(--new); border-color: var(--new); }
+  .col-label { font-family: var(--mono); font-size: 11px; color: var(--tertiary); margin: 10px 0 6px; letter-spacing: .3px; }
+
+  .shot { background: var(--win); border: 0.5px solid var(--btn-stroke); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+  .chrome { font-family: var(--mono); font-size: 10.5px; color: var(--tertiary); background: var(--pane); border-bottom: 0.5px solid var(--sep); padding: 5px 10px; line-height: 1.5; }
+  .chrome b { color: var(--secondary); font-weight: 600; } .chrome .new { color: var(--new); font-weight: 600; } .chrome .sys { color: var(--accent); font-weight: 600; }
+
+  .win { display: grid; grid-template-columns: 210px 1fr; grid-template-rows: 38px 1fr; min-height: 236px; position: relative; color: var(--label); }
+  .win .tb { grid-column: 1 / -1; height: 38px; background: var(--tbar); border-bottom: 0.5px solid var(--sep); display: flex; align-items: center; padding: 0 10px; gap: 8px; }
+  .lights { display: flex; gap: 6px; } .lights i { width: 11px; height: 11px; border-radius: 50%; background: light-dark(#d8d8dc, #5a5a5e); display: block; }
+  .tb .title { font-size: 12.5px; font-weight: 600; margin-left: 56px; }
+  .side { background: var(--side); border-right: 0.5px solid var(--sep); padding: 10px 8px; }
+  .side .group { font-size: 10.5px; font-weight: 600; color: var(--tertiary); margin: 2px 6px 6px; }
+  .row { display: grid; grid-template-columns: 18px 1fr 16px; gap: 7px; align-items: start; padding: 6px 7px; border-radius: 6px; }
+  .row.sel { background: var(--sel); }
+  .row .ic { width: 16px; height: 16px; color: var(--secondary); margin-top: 1px; }
+  .row .nm { font-size: 12.5px; line-height: 1.25; }
+  .row .st { font-size: 11px; color: var(--secondary); line-height: 1.3; margin-top: 1px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
+  .row .st .g { color: var(--info); font-size: 10px; }
+  .row > div { min-width: 0; }
+  .ring { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--track); margin-top: 2px; }
+  .ring.det { border-top-color: var(--accent); border-right-color: var(--accent); }
+  .detail { padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 198px; }
+  .cuv .sym { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--track); border-top-color: var(--accent); border-right-color: var(--accent); margin: 0 auto 10px; }
+  .cuv .sym.tray { border: 0; border-radius: 0; width: 30px; height: 30px; color: var(--secondary); }
+  .cuv .hl { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .cuv .ds { font-size: 12px; color: var(--secondary); max-width: 340px; margin: 0 auto 4px; line-height: 1.4; }
+  .cuv .acts { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+  .btn { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 7px; border: 0.5px solid var(--btn-stroke); background: var(--btn-bg); color: var(--label); display: inline-block; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+
+  .pop { position: absolute; width: 296px; background: var(--pop-bg); border: 0.5px solid var(--pop-stroke); border-radius: 11px; box-shadow: 0 12px 34px rgba(0,0,0,0.22); padding: 12px 14px; z-index: 2; text-align: left; color: var(--label); }
+  .pop::before { content: ""; position: absolute; top: 24px; left: -7px; width: 13px; height: 13px; background: var(--pop-bg); border-left: 0.5px solid var(--pop-stroke); border-bottom: 0.5px solid var(--pop-stroke); transform: rotate(45deg); }
+  .pop .ptitle { font-size: 12.5px; font-weight: 600; margin: 0 0 6px; }
+  .pop .pbody { font-size: 11.5px; line-height: 1.42; color: var(--secondary); margin: 0 0 8px; }
+  .pop .files { font-size: 11px; margin: 0 0 8px; padding: 0; list-style: none; }
+  .pop .files li { display: flex; gap: 6px; align-items: baseline; padding: 2px 0; border-bottom: 0.5px solid var(--sep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pop .files li::before { content: "▸"; color: var(--tertiary); font-size: 9px; }
+  .pop .acts { display: flex; justify-content: flex-end; gap: 8px; }
+  .tip { position: absolute; max-width: 260px; background: light-dark(#fdfdfd, #333336); border: 0.5px solid var(--btn-stroke); border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,0.18); padding: 4px 7px; font-size: 11px; line-height: 1.35; color: var(--label); z-index: 2; text-align: left; }
+
+  /* sheet */
+  .sheetwrap { position: relative; }
+  .scrim { position: absolute; inset: 38px 0 0 0; background: light-dark(rgba(0,0,0,0.18), rgba(0,0,0,0.4)); z-index: 2; }
+  .sheet { position: absolute; left: 50%; top: 38px; transform: translateX(-50%); width: 400px; background: var(--pop-bg); border: 0.5px solid var(--pop-stroke); border-radius: 0 0 12px 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); padding: 18px 20px 16px; z-index: 3; text-align: left; color: var(--label); }
+  .sheet .stitle { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+  .sheet .sbody { font-size: 12px; color: var(--secondary); line-height: 1.45; margin: 0 0 12px; }
+  .sheet .acts { display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* terminal */
+  .term { background: var(--term-bg); color: #d8d8dc; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; padding: 12px 14px; white-space: pre; overflow-x: auto; }
+  .term .ok { color: #5fd07a; font-family: inherit; font-weight: 400; } .term .inf { color: #58c7e6; } .term .dim { color: #8a8a90; } .term .wait { color: #e0b65a; }
+
+  .cons { margin-top: 12px; border: 0.5px solid var(--sep); border-radius: 9px; padding: 10px 12px; font-size: 12px; background: var(--pane); }
+  .cost { font-family: var(--mono); font-size: 11px; display: inline-block; padding: 1px 7px; border-radius: 4px; margin-right: 6px; }
+  .cost.S { background: light-dark(#e3f4e6, #1f3a24); color: var(--shipped); } .cost.M { background: light-dark(#fff2d6, #3a2f14); color: var(--orange); } .cost.L { background: light-dark(#fde2dc, #3a1f1a); color: var(--red); }
+  .cons dl { display: grid; grid-template-columns: 96px 1fr; gap: 4px 10px; margin: 6px 0 0; } .cons dt { color: var(--page-muted); } .cons dd { margin: 0; }
+  .changes { font-size: 12px; margin: 8px 0 0; padding-left: 16px; } .changes li { margin: 2px 0; }
+
+  .comment { margin-top: 10px; border: 7px solid transparent; border-left: 3px solid var(--com-rule); border-radius: 0 6px 6px 0;
+             background: linear-gradient(var(--com-bg), var(--com-bg)) padding-box, repeating-linear-gradient(135deg, var(--com-hatch) 0 5px, transparent 5px 10px) border-box;
+             padding: 8px 12px; font-size: 12px; line-height: 1.45; color: var(--com-ink); }
+  .comment .lab { font-family: var(--mono); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--com-lab); display: block; margin-bottom: 2px; }
+
+  /* state/time figure */
+  .flow { background: var(--card); border: 0.5px solid var(--sep); border-radius: 10px; padding: 14px 16px; overflow-x: auto; }
+  .lane { display: grid; grid-template-columns: 190px 1fr; gap: 10px; align-items: center; margin: 0 0 10px; }
+  .lane .who { font-size: 12px; line-height: 1.3; } .lane .who small { display: block; color: var(--page-muted); font-size: 11px; }
+  .steps { display: flex; align-items: stretch; gap: 0; min-width: 640px; }
+  .step { flex: 0 0 auto; padding: 6px 9px; border: 0.5px solid var(--sep); font-size: 11px; line-height: 1.3; background: var(--pane); position: relative; }
+  .step:first-child { border-radius: 6px 0 0 6px; } .step:last-child { border-radius: 0 6px 6px 0; }
+  .step + .step { border-left: 0; }
+  .step b { display: block; font-weight: 600; font-size: 11px; }
+  .step.win { background: light-dark(#e6f0ff, #1d2a44); border-color: var(--accent); color: var(--label); }
+  .step.late { background: light-dark(#fde2dc, #3a1f1a); }
+  .step.none { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--sep) 4px 5px); color: var(--page-muted); }
+  .flow .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--page-muted); margin-top: 4px; }
+  .flow .legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; border: 0.5px solid var(--sep); }
+
+  table.cmp, table.strings { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--card); border-radius: 8px; overflow: hidden; }
+  .cmp th, .cmp td, .strings th, .strings td { text-align: left; padding: 7px 9px; border-bottom: 0.5px solid var(--sep); vertical-align: top; }
+  .cmp th, .strings th { font-weight: 600; color: var(--page-muted); background: var(--pane); }
+  td.y { color: var(--shipped); } td.n { color: var(--red); } td.m { color: var(--orange); }
+  .rec { background: var(--card); border: 1px solid var(--shipped); border-radius: 12px; padding: 14px 18px; }
+  .rec ol { margin: 6px 0 0; padding-left: 20px; } .rec li { margin: 4px 0; }
+  .tag-new { color: var(--new); font-weight: 600; } .tag-ship { color: var(--shipped); font-weight: 600; }
+  .rule { background: var(--pane); border: 0.5px solid var(--sep); border-radius: 8px; padding: 10px 12px; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="banner"><b>PROPOSED 7 Nov 2026</b> — options for the owner's morning pick, not a spec. Nothing of this row is built; the facts it rests on have moved since 18 Oct (Apple's model, the background download, the "added after analysis" rule). Not built.</div>
+
+<h1>“This recording may have a transcript” — where to say it, and whether it still pays</h1>
+<p class="lede">100days row added 18 Oct 2026 [trust]: when every session to transcribe is a recording whose <em>file name</em> says it came from Teams (or Zoom, or Meet) and none has a transcript beside it, say so <em>before</em> fetching 1.5 GB — the platform may hold a transcript, which the researcher can add and skip the wait. This page checks what is true at HEAD, shows the window in which such a hint can still help, then lays out four places it could appear, with copy, and what each costs and risks.</p>
+
+<div class="key"><span><i class="swatch art"></i> artefact — what ships (real pixels, shipped strings unless flagged NEW)</span><span><i class="swatch com"></i> commentary — why, cost, what it rules out</span></div>
+
+<h2>At HEAD (e5b539b0c, 7 Nov 2026)</h2>
+<div class="facts"><ul>
+  <li><span class="ok">SHIPPED</span> <b>Pairing by name.</b> <code>_normalise_stem</code> in <code>s01_ingest.py</code> strips the Teams tail (<code>_TEAMS_SUFFIX_RE</code>, two observed specimens), Zoom cloud and web-portal names, Zoom local folders, Meet's dated tail (<code>_GMEET_TAIL_RE</code>) and Bristlenose's own download prefix, so a recording and a hand-fetched transcript become one session, and a session with a transcript never reaches ffmpeg or Whisper (<code>has_existing_transcript</code>). <b>Nothing records which platform matched</b>: the knowledge exists for a moment inside the normaliser and is thrown away.</li>
+  <li><span class="ok">SHIPPED</span> Swift already parses Teams names (<code>TeamsRecordingName.swift</code>, for the import window) and walks a study's folder exactly as <code>run</code> does (<code>ScanSelection</code>, pinned by <code>scan-selection-contract.json</code>). Zoom and Meet have no Swift twins.</li>
+  <li><span class="ok">SHIPPED</span> <b>Teams, Zoom and Meet import windows</b> ship (File ▸ Import; <code>cloud-import-three-platforms.html</code>). <b>But the Teams importer brings no transcript</b>: it is admin-consent only and waits on Phase 3 (<code>TeamsSource.swift</code>: <code>transcript: .needsAdminApproval</code>, "brings no Transcript column"). Zoom import is a Diagnostics-gated beta. So "import from Teams" is not, today, a way to the transcript; downloading it by hand from Teams and dropping it beside the recording is.</li>
+  <li><span class="ok">SHIPPED 22 Oct</span> <b>Apple's model transcribes the first run on macOS 26+</b> in nine languages while Whisper downloads behind it; on those Macs the run has <em>no download stage at all</em> (<code>_needs_whisper … and not self._apple_speech_run()</code>). The 1.5 GB wait this row targets is now macOS 15, non-Apple languages, <em>Whisper only</em>, or a slow network. See <code>whisper-first-wait-options.html</code> for the lanes.</li>
+  <li><span class="ok">SHIPPED 22 Oct</span> The download starts in the background at the AI disclosure, before any drop (<code>fc2fea73f</code>), so the researcher often does not meet it.</li>
+  <li><span class="ok">DECIDED 23 Oct</span> <b>An analysed session keeps the files it was analysed from</b> (decision #129): a <code>.vtt</code> dropped beside an analysed recording is set aside as <code>added_after_analysis</code>; only Re-analyse reads it (the nuclear option). <b>So the hint has a window, and it closes when transcription starts</b>, not when the report lands.</li>
+  <li><span class="ok">SHIPPED</span> A folder drop auto-runs ("Folder-drop is the explicit signal to analyse"; <code>ContentView.swift</code>). There is no confirm before a first analysis; <code>Re-analyse…</code> has a sheet because it destroys work. The only pre-run resting surfaces are the <em>N files to analyse</em> pane and the <em>+N unanalysed</em> row delta with its popover (for files added later).</li>
+  <li><span class="ok">EXISTS</span> Vocabulary: <code>MessageKind.info</code> (ℹ, <code>info.circle</code> outline, blue) is "a neutral note, no action needed"; the row's glyph rule is "news, not opportunity", and a door only where there is a list with no other home (<code>design-desktop-project-status.md</code>). The shipped <em>Waiting for Whisper</em> row carries its one sentence in the row tooltip (<code>waitingForWhisperHint</code>).</li>
+  <li><span class="gap">OPEN</span> No surface anywhere says "this looks like a platform recording without its transcript" — not the CLI, not the row, not the pane. Cluster 6c of <code>design-platform-transcripts.md</code> ("a doctor check or pipeline warning when a video has no matching transcript") is unticked.</li>
+</ul></div>
+
+<h2>The question, as it stands now</h2>
+<p class="lede">The 18 Oct argument was <em>skip the wait</em>. On macOS 26 there is usually no wait to skip. What survives is the second argument the ingest comments make: a hand-fetched platform transcript gives <b>accurate speaker names</b> from the directory, which no model guesses, and it costs no transcription at all. <b>So: where does a non-blocking hint go, in the short window before transcription starts, that can be wrong without costing the researcher anything, and how is it worded so a false positive is harmless?</b></p>
+
+<h2>The window in which a hint can still help</h2>
+<div class="flow">
+  <div class="lane"><div class="who">macOS 15, or a language Apple lacks<small>the row's original case</small></div>
+    <div class="steps"><div class="step"><b>drop</b>auto-run</div><div class="step"><b>ingest</b>≈ 2 s · knows the names</div><div class="step win"><b>Downloading Whisper</b>1.6 GB · 3–11 min · <em>hint is useful here</em></div><div class="step"><b>Transcribing</b>Whisper</div><div class="step late"><b>analysed</b>a transcript added now is set aside (#129) → Re-analyse</div></div></div>
+  <div class="lane"><div class="who">macOS 26, English UI<small>the common case since 22 Oct</small></div>
+    <div class="steps"><div class="step"><b>drop</b>auto-run</div><div class="step"><b>ingest</b>≈ 2 s · knows the names</div><div class="step none"><b>no download stage</b>Apple's model is on the Mac</div><div class="step win" style="flex-basis:120px"><b>Transcribing</b>≈ 15 s for 18 min · <em>window ≈ 0</em></div><div class="step late"><b>analysed</b>names from the speaker split, not the directory</div></div></div>
+  <div class="lane"><div class="who">Any Mac, files added to an existing study<small>+ New Project, Add Files…, or a later drop</small></div>
+    <div class="steps"><div class="step win"><b>N files to analyse</b>pane with Analyse · <em>hint fits here</em></div><div class="step win"><b>+N unanalysed</b>row ⓘ · popover with the list and Analyse · <em>and here</em></div><div class="step"><b>Analyse</b>the researcher clicks</div><div class="step"><b>ingest → transcribe</b></div><div class="step late"><b>analysed</b></div></div></div>
+  <div class="lane"><div class="who">CLI<small><code>bristlenose run folder/</code></small></div>
+    <div class="steps"><div class="step"><b>ingest</b>"Ingested 3 sessions (3 video)"</div><div class="step win"><b>preflight block</b>Whisper fetch, HF's own bar · <em>an ℹ line fits here</em></div><div class="step"><b>Transcribing</b></div><div class="step late"><b>analysed</b></div></div></div>
+  <div class="legend"><span><i style="background:light-dark(#e6f0ff,#1d2a44);border-color:var(--accent)"></i>a hint here can still change what the run reads</span><span><i style="background:light-dark(#fde2dc,#3a1f1a)"></i>too late without Re-analyse</span><span><i style="background:repeating-linear-gradient(135deg,transparent 0 4px,var(--sep) 4px 5px)"></i>stage absent on this lane</span></div>
+</div>
+<div class="comment"><span class="lab">Commentary</span>
+  The 18 Oct row assumed the hint sits "before fetching 1.5 GB" and that the fetch is where the researcher is stuck. Two of the four lanes now have no such moment: on macOS 26 the first run transcribes in seconds, and a hint shown then is a hint about a thing already done. The honest window on the common lane is the <em>pre-run</em> surfaces, which exist only when files are added rather than dropped. The drop lane on macOS 15 keeps the original window, three to eleven minutes wide. Any design that only lives in the download stage is therefore a macOS 15 feature.</div>
+
+<h2>What the hint would be, in every option</h2>
+<div class="rule">Detection (Python, s01 ingest; single source for CLI and Mac):
+  for each session with media and no transcript file:
+      platform = the rule that changed its stem (teams | zoom | meet), else none
+  hint fires when every such session has a platform, and all are the same platform
+      → reason code  platform_transcript_possible,  platform, count
+  mixed platforms → fires with platform = "meeting"  (owner call: or stay silent)
+  never fires when any session already has a transcript, or when the drop is transcripts only
+
+Carried as a reason code and a count on the run (events log / preflight line), never as a sentence
+and never with a file name: «never an id, filename, speaker label» (events.py). The Mac renders the
+sentence from the code in its language (rule 1 of desktop/CLAUDE.md: errors carry a case, not a sentence).</div>
+<div class="comment"><span class="lab">Commentary</span>
+  Why Python, not Swift at drop time: Swift knows Teams names only; Zoom and Meet have three regex families each on the Python side, with observed-specimen tests. Porting them is a second copy pinned by a contract (the <code>ScanSelection</code> pattern), affordable but a cost for a hint. Ingest runs within seconds of the drop anyway, and the CLI needs the same detection. <b>False positives</b>: a Teams recording made with transcription off, a recording the researcher is not the organiser of (Teams lets only the organiser download the transcript), a Zoom account with "Create audio transcript" off (the importer already has a sentence for that: <code>cloudImport.zoomTranscriptOff</code>). The copy says <em>may</em>, names no file, and asks for nothing — a wrong hint costs a glance.</div>
+
+<h2>Options</h2>
+<div class="options">
+
+<!-- A -->
+<div class="opt">
+  <h3>A · A pre-flight note in a confirm sheet before the run <span class="tag no">not recommended</span></h3>
+  <p>A folder drop stops auto-running when the hint fires. A sheet names what was noticed and offers to analyse anyway or to wait for the transcripts.</p>
+  <p class="col-label">PROPOSED</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> reAnalyseConfirm sheet shape · <span class="new">NEW</span> a first-analysis sheet · <span class="new">NEW</span> 4 strings</div>
+    <div class="win sheetwrap">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st">3 files to analyse</div></div><span></span></div>
+      </div>
+      <div class="detail cuv"></div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <p class="stitle">Analyse “Checkout study”?</p>
+        <p class="sbody">These look like Teams recordings with no transcript beside them. If transcription was on in the meeting, Teams has one — add it beside each recording and Bristlenose will use it instead of transcribing.</p>
+        <div class="acts"><span class="btn">Add Transcripts First</span><span class="btn primary">Analyse</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li>Swift would need to know before the run spawns: either a Swift port of the three platform rule sets, or a dry <code>run --plan</code> round trip before every drop.</li>
+    <li>A new sheet kind for a first analysis; the Re-analyse sheet is its only sibling, and that one exists because of a loss.</li>
+  </ul>
+  <div class="cons"><span class="cost M">M</span> <b>Swift (+ Python if a plan call), 4 strings ×21.</b>
+    <dl><dt>Blocks?</dt><dd><b>Yes.</b> Every Teams-named drop stops for a question, including the many where no transcript exists.</dd>
+        <dt>Wrong?</dt><dd>A false positive becomes a dialog the researcher must dismiss; the usual case for a recording downloaded without its transcript.</dd>
+        <dt>Rules out</dt><dd>The auto-run happy path ("~90%") for platform-named folders; "confirm only for a real loss" (there is no loss here); "dialogs never close on click outside" applies, so Esc or a button.</dd>
+        <dt>Apple lane</dt><dd>It would block a run that would otherwise be done in 15 s.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Departs, unjustified: the only shipped confirm before an analysis is Re-analyse's, justified by a counted loss. A hint is not a loss, and "the appliance copes" says the run should proceed. Drawn so it is seen and not picked.</div>
+</div>
+
+<!-- B -->
+<div class="opt">
+  <h3>B · The row's line and a door during the download stage <span class="tag defer">defer · a running row has never carried a door</span></h3>
+  <p>While the run is in its download stage, the row's status line gains the ⓘ glyph and a door; the popover names the recordings (Swift's own folder scan, not persisted) and offers Stop Analysis so the researcher can add the transcripts and analyse again.</p>
+  <p class="col-label">PROPOSED</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> stage.download · ⓘ = MessageKind.info · filesPopover shape · menu.project.stopAnalysis · <span class="new">NEW</span> a door on a running row · <span class="new">NEW</span> 2 strings</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st"><span class="g">ⓘ</span>Downloading speech model</div></div><span class="ring det"></span></div>
+      </div>
+      <div class="detail cuv"><div class="sym"></div><p class="hl">Downloading speech model</p></div>
+      <div class="pop" style="left:214px; top:62px">
+        <p class="ptitle">Teams may have transcripts of these</p>
+        <p class="pbody">If transcription was on in the meeting, download the transcript from Teams and drop it beside the recording. Bristlenose will use it instead of transcribing.</p>
+        <ul class="files"><li>Checkout study P1-20261027_100312-Meeting Recording.mp4</li><li>Checkout study P2-20261028_140007-Meeting Recording.mp4</li><li>Checkout study P3-20261029_091500UTC-Meeting Recording.mp4</li></ul>
+        <div class="acts"><span class="btn">Stop Analysis</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li>Python emits the reason code on the download-stage <code>run_progress</code> event; Swift's <code>SubtitleVariant</code> gains a glyph and a door for a <em>running</em> row (today only resting variants have one).</li>
+    <li>The popover's list is drawn from <code>ScanSelection</code> locally, as the unanalysed popover does, so no file name is persisted.</li>
+  </ul>
+  <div class="cons"><span class="cost M">M</span> <b>Python + Swift + 2 strings ×21.</b>
+    <dl><dt>Blocks?</dt><dd>No. The download and the run continue; Stop is the researcher's choice.</dd>
+        <dt>Wrong?</dt><dd>A false positive is a glyph and a popover nobody needs to open.</dd>
+        <dt>Precedence</dt><dd>One winner per line: the running line keeps its text; the glyph joins it. But the ring already occupies the trailing slot and is itself the Stop control — two controls on one running row.</dd>
+        <dt>Apple lane</dt><dd>Never shows: there is no download stage.</dd>
+        <dt>Rules out</dt><dd>Nothing, but it sets a precedent: a running row can carry news other than progress.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    The nearest sibling is the resting <code>+N unanalysed</code> delta — ⓘ, a list, an action — and the fit is good <em>except</em> that it rides a running row, whose rules are the run's (`RunProgressSubtitle` owns the line; the ring is the door). Invents, in a small way. The list it shows is the folder the researcher just dropped: "detail with no other home" is a stretch. Keep the drawing; build it only if C's sentence proves too quiet in use.</div>
+</div>
+
+<!-- C -->
+<div class="opt">
+  <h3>C · The cover pane's sentence, the row tooltip, and a CLI ℹ line — nothing blocks <span class="tag rec">recommended, with D</span></h3>
+  <p>During the download stage the detail pane's cover (<code>RunCoverPane.analysing</code>) carries the hint as its description; the running row's tooltip carries the same sentence (the <em>Waiting for Whisper</em> mechanism); the CLI prints one ℹ line in the preflight block. The researcher who wants the transcripts stops from the ring or the menu, as today.</p>
+  <p class="col-label">PROPOSED — Mac</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> stage.download · RunCoverPane.analysing · row tooltip parts (SidebarSubtitleText) · <span class="new">NEW</span> 1 string, plural, {{platform}}</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st">Downloading speech model</div></div><span class="ring det"></span></div>
+        <div class="tip" style="left:20px; top:98px">Downloading speech model. These 3 recordings look like Teams recordings with no transcript. If transcription was on, Teams has one — drop it beside each recording to skip transcribing.</div>
+      </div>
+      <div class="detail cuv"><div class="sym"></div><p class="hl">Downloading speech model</p>
+        <p class="ds">These 3 recordings look like Teams recordings with no transcript. If transcription was on, Teams has one — drop it beside each recording to skip transcribing.</p></div>
+    </div>
+  </div>
+  <p class="col-label">PROPOSED — CLI (English by design)</p>
+  <div class="shot"><div class="chrome"><b>shipped</b> _print_stage · ui_kinds.INFO · count_noun · <span class="new">NEW</span> one line</div>
+<div class="term"><span class="dim">  3 sessions in checkout-study/</span>
+
+<span class="ok">✓</span> Ingested 3 sessions (3 video)                                 <span class="dim">0.4s</span>
+<span class="inf">ℹ</span> 3 Teams recordings have no transcript beside them. If transcription
+  was on, Teams has one — add it next to each recording to skip transcribing.
+<span class="wait">⠋</span> Fetching Whisper model (1.6 GB) into ~/.cache/huggingface/hub …
+  <span class="dim">████████████░░░░░░░░░░░░░░░░░░░░  38%  600 MB / 1.6 GB  10.2 MB/s  Ctrl+C to stop</span></div></div>
+  <ul class="changes">
+    <li>Python: ingest records <code>platform</code> per session (the rule that matched); the preflight block prints the ℹ line when the hint fires; the download-stage <code>run_progress</code> carries <code>note: platform_transcript_possible</code>, <code>note_platform</code>, <code>note_count</code> (counts and a code, never names).</li>
+    <li>Swift: <code>RunCoverPane.analysing</code> shows the sentence as the description when the stage is download and the note is present; <code>SidebarSubtitleText</code> appends it to the running row's tooltip parts, as <code>waitingForWhisperHint</code> is appended.</li>
+    <li>One locale key with CLDR plurals and a <code>{{platform}}</code> slot (platform names are not translated), 21 files.</li>
+  </ul>
+  <div class="cons"><span class="cost S">S</span> <b>Python + Swift, 1 string (plural) ×21.</b>
+    <dl><dt>Blocks?</dt><dd>No. Nothing to dismiss, nothing to click.</dd>
+        <dt>Wrong?</dt><dd>A false positive is a sentence that was not true for them; it names no file and asks nothing.</dd>
+        <dt>Seen by</dt><dd>macOS 15 and non-Apple-language researchers for the whole download (minutes); the pane only when the shoal is off, the tooltip on hover, the CLI always.</dd>
+        <dt>Apple lane</dt><dd>Never shows (no download stage) — by design, since the run is done before anyone could act.</dd>
+        <dt>"Add it" path</dt><dd>Stop (ring or Project ▸ Stop Analysis) → <em>Analysis stopped</em> → download the transcript from Teams → drop it beside the recording → Resume Analysis. Ingest re-runs, pairs by stem, the session skips Whisper. Already works today; the hint only tells them it does.</dd>
+        <dt>Rules out</dt><dd>Nothing. B can be added on top if the sentence is missed.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Follows three shipped mechanisms exactly: the cover pane "draws the row's own strings where the row has one"; the running row's tooltip already carries one explanatory sentence for <em>Waiting for Whisper</em>; the CLI preflight block is where ℹ lines about fetchable things go ("front-load the entire decision tree"). Kind: <code>info</code>, no glyph on the row (a glyph buys attention; the sentence is in the pane and the tooltip, and the researcher caused the drop). The one invention is the reason code on a progress event; its sibling is the deferral the <code>run_completed</code> summary carries. Not needy: no button offers to stop for them.</div>
+</div>
+
+<!-- D -->
+<div class="opt">
+  <h3>D · The pre-run resting surfaces: the files pane and the unanalysed popover <span class="tag rec">recommended, with C</span></h3>
+  <p>For files that arrive without a drop-run (Add Files…, + New Project, a later drop onto an existing study), the <em>N files to analyse</em> pane and the <em>+N unanalysed</em> popover carry the same sentence under their title. This is the only lane where a macOS 26 researcher can still act before the run.</p>
+  <p class="col-label">PROPOSED</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> chrome.filesToAnalyse · menu.project.analyse · chrome.unanalysedSubtitle · filesPopover.unanalysedTitle · <span class="new">NEW</span> the same string as C</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st"><span class="g">ⓘ</span>+3 unanalysed</div></div><span></span></div>
+      </div>
+      <div class="detail cuv"><svg class="sym tray" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/><path d="M12 3v11M8 10l4 4 4-4"/></svg><p class="hl">3 files to analyse</p>
+        <p class="ds">These 3 recordings look like Teams recordings with no transcript. If transcription was on, Teams has one — drop it beside each recording to skip transcribing.</p>
+        <div class="acts"><span class="btn">Analyse</span></div></div>
+      <div class="pop" style="left:214px; top:62px; width:280px">
+        <p class="ptitle">Unanalysed files</p>
+        <ul class="files"><li>Checkout study P1-20261027_100312-Meeting Recording.mp4</li><li>Checkout study P2-20261028_140007-Meeting Recording.mp4</li><li>Checkout study P3-20261029_091500UTC-Meeting Recording.mp4</li></ul>
+        <p class="pbody">These 3 recordings look like Teams recordings with no transcript. If transcription was on, Teams has one — drop it beside each recording to skip transcribing.</p>
+        <div class="acts"><span class="btn">Analyse</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li>Swift decides here, before any run exists: <code>ProjectFolderWatcher</code>'s count already classifies files; a Teams check reuses <code>TeamsRecordingName</code>; Zoom and Meet need a port of the two stem rules, pinned by a contract fixture against <code>_normalise_stem</code> (the <code>ScanSelection</code> precedent).</li>
+    <li>The sentence is the same key as C; the pane's description and the popover's footer are existing slots (<code>filesPopover.unanalysedTitle</code> has a footer sibling, <code>missingFooter</code>).</li>
+  </ul>
+  <div class="cons"><span class="cost M">M</span> <b>Swift (+ a Python contract fixture), same string as C.</b>
+    <dl><dt>Blocks?</dt><dd>No; the pane and popover already wait for Analyse.</dd>
+        <dt>Wrong?</dt><dd>Same as C. The popover's list already names the files (local, not persisted).</dd>
+        <dt>Seen by</dt><dd>Everyone who adds files rather than dropping a folder — on every macOS, before transcription. This is the only place the Apple lane can still choose the directory names over the model's guess.</dd>
+        <dt>Rules out</dt><dd>Nothing. Without a Swift twin for Zoom/Meet, D could ship Teams-only first (the row's own wording) and grow.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Follows: these two surfaces are the shipped resting places for "files are waiting", with the Analyse door already there. The sentence is a description, not a new control. The cost is the second detection site (Swift, before a run), which is the price of a hint that lives before the run on a lane where the run is seconds long. If the owner wants one detection site only, D narrows to Teams (Swift already knows it) and leaves Zoom/Meet to C.</div>
+</div>
+
+</div>
+
+<h2>Copy variants (owner to pick one register)</h2>
+<table class="strings">
+  <tr><th>Variant</th><th>English (count = 3, platform = Teams)</th><th>Chars</th><th>Fits</th></tr>
+  <tr><td><b>V1 plain</b> (drawn above)</td><td>These 3 recordings look like Teams recordings with no transcript. If transcription was on, Teams has one — drop it beside each recording to skip transcribing.</td><td>156</td><td>pane description, popover body, tooltip (two lines), CLI (wrapped)</td></tr>
+  <tr><td><b>V2 shorter</b></td><td>Teams may have transcripts of these 3 recordings. Drop each beside its recording and Bristlenose uses it instead of transcribing.</td><td>128</td><td>same; loses the "only if transcription was on" caveat, so a false positive reads as a promise — not recommended</td></tr>
+  <tr><td><b>V3 two sentences, names the gain</b></td><td>No transcripts came with these 3 Teams recordings. If transcription was on in the meeting, Teams has one with everyone's names — drop it beside the recording and skip transcribing.</td><td>173</td><td>pane and popover; long for a tooltip</td></tr>
+  <tr><td><b>Singular</b> (CLDR <code>_one</code>)</td><td>This recording looks like a Teams recording with no transcript. If transcription was on, Teams has one — drop it beside the recording to skip transcribing.</td><td>152</td><td>all</td></tr>
+  <tr><td><b>Mixed platforms</b></td><td>…look like meeting recordings with no transcript. If transcription was on, the meeting platform has one…</td><td>—</td><td>or stay silent on a mixed drop (owner call)</td></tr>
+  <tr><td><b>Row label</b> (only if B)</td><td>Teams recordings, no transcripts</td><td>31</td><td>over the 24-char row budget in English — B would need the pane's sentence, not a row label</td></tr>
+</table>
+<div class="comment"><span class="lab">Commentary</span>
+  Man bites dog: the news is "the platform may already have what Whisper is about to make, with names". Not news: that Bristlenose transcribes, that a download is running (the headline says so). "May" and "if transcription was on" carry the uncertainty honestly; nothing promises a transcript exists. Glossary: <em>recording</em> for the file, <em>transcript</em> for the platform's export, <em>transcribing</em> as the verb; never "session" here (the researcher is looking at files). "Teams", "Zoom", "Meet" are product names in every locale; the sentence takes <code>{{platform}}</code>. British spelling throughout.</div>
+
+<h2>Comparison</h2>
+<table class="cmp">
+  <tr><th></th><th>A · confirm sheet</th><th>B · row door during download</th><th>C · pane + tooltip + CLI</th><th>D · pre-run surfaces</th></tr>
+  <tr><td>Blocks the run</td><td class="n">yes</td><td class="y">no</td><td class="y">no</td><td class="y">no (already waiting)</td></tr>
+  <tr><td>False positive costs</td><td class="n">a dialog to dismiss</td><td class="m">a glyph nobody opens</td><td class="y">a sentence</td><td class="y">a sentence</td></tr>
+  <tr><td>Shows on macOS 26 drop lane</td><td class="m">yes — and blocks a 15 s run</td><td class="n">never (no download stage)</td><td class="n">never (no download stage)</td><td class="y">n/a — shows on the add-files lane</td></tr>
+  <tr><td>Shows on macOS 15 drop lane</td><td class="y">yes</td><td class="y">yes, for minutes</td><td class="y">yes, for minutes</td><td class="m">only on the add-files lane</td></tr>
+  <tr><td>Detection site</td><td>Swift before run (port) or plan call</td><td>Python ingest → event</td><td>Python ingest → event + CLI</td><td>Swift before run (Teams exists; Zoom/Meet ported)</td></tr>
+  <tr><td>Build cost</td><td class="m">M</td><td class="m">M</td><td class="y">S</td><td class="m">M (S for Teams only)</td></tr>
+  <tr><td>New strings ×21</td><td>4</td><td>2</td><td>1 (plural, {{platform}})</td><td>same 1 as C</td></tr>
+  <tr><td>CLI parity</td><td class="n">none</td><td class="m">needs C's line anyway</td><td class="y">one ℹ line</td><td class="m">CLI has no resting state; C covers it</td></tr>
+  <tr><td>Nearest sibling</td><td class="n">Re-analyse sheet (justified by loss)</td><td class="m">+N unanalysed ⓘ — but on a running row</td><td class="y">cover pane = row's strings; Waiting-for-Whisper tooltip; preflight ℹ</td><td class="y">files pane, unanalysed popover</td></tr>
+  <tr><td>Verdict (is-this-bristlenosey)</td><td class="n">departs, unjustified</td><td class="m">mostly; one invention</td><td class="y">Bristlenosey</td><td class="y">Bristlenosey</td></tr>
+</table>
+
+<h2>Recommendation</h2>
+<div class="rec">
+  <p><b>C and D together, one sentence, no new control; B held; A not.</b></p>
+  <ol>
+    <li><b>Detect once, in Python ingest</b>, and record the platform that matched on the session. Emit it as a reason code with a count on the download-stage progress event, and print the ℹ line in the CLI's preflight block. This is the row as written ("cheap, no engine change") and it is where the file-name knowledge already exists.</li>
+    <li><b>C on the Mac</b>: the cover pane's description and the running row's tooltip during the download stage. Nothing blocks, nothing is dismissed; the Stop the researcher may want is the ring they already have. This covers the lane the row was written for (macOS 15, non-Apple languages) for the whole download.</li>
+    <li><b>D for the add-files lane</b>, Teams first (Swift already parses it), because on macOS 26 it is the only moment before transcription in which the hint can change anything. Zoom and Meet twins follow with a contract fixture, or wait for C's Python side to be reachable from Swift.</li>
+    <li><b>Say in the mockup's changelog, and in the row, that the "skip the wait" argument has mostly gone</b>: on macOS 26 the hint's value is the names, not the minutes. If the owner judges names-only not worth a 21-locale string, close the row rather than build A or B.</li>
+    <li><b>Re-open B</b> only if the C sentence is missed in use (the shoal hides the pane while animation is on; the tooltip needs a hover). Cluster 6c of <code>design-platform-transcripts.md</code> is this row; tick it when C lands.</li>
+  </ol>
+</div>
+
+<h2>String plan</h2>
+<table class="strings">
+  <tr><th>Key</th><th>English</th><th>Status</th></tr>
+  <tr><td><code>desktop.chrome.pipeline.platformTranscriptHint_one</code> / <code>_other</code></td><td>V1 above, with <code>{{count}}</code> and <code>{{platform}}</code></td><td><span class="tag-new">NEW</span> 21 locales (zh-Hant-HK overrides only); owner to pick the register</td></tr>
+  <tr><td><code>desktop.chrome.pipeline.stage.download</code></td><td>Downloading speech model</td><td><span class="tag-ship">shipped</span> (renamed to <em>Downloading Whisper</em> if the first-wait mockup's option A is picked)</td></tr>
+  <tr><td><code>desktop.chrome.filesToAnalyse_*</code>, <code>chrome.filesPopover.unanalysedTitle</code>, <code>menu.project.analyse</code>, <code>menu.project.stopAnalysis</code></td><td>as shipped</td><td><span class="tag-ship">shipped</span> reused</td></tr>
+  <tr><td>CLI line</td><td>3 Teams recordings have no transcript beside them. If transcription was on, Teams has one — add it next to each recording to skip transcribing.</td><td>English by design (<code>count_noun</code>); no key</td></tr>
+  <tr><td>Python reason code</td><td><code>platform_transcript_possible</code> + <code>platform</code> + <code>count</code> on <code>RunProgressEvent</code> (download stage)</td><td><span class="tag-new">NEW</span> field, pinned by the Swift↔Python contract fixture; never a filename</td></tr>
+  <tr><td>B only: <code>chrome.platformTranscriptTitle</code></td><td>Teams may have transcripts of these</td><td><span class="tag-new">NEW</span> only if B</td></tr>
+</table>
+
+<h2>Open sub-questions for the owner</h2>
+<div class="facts"><ul>
+  <li><b>Is names-only worth it?</b> On the common lane (macOS 26, English) the hint never shows during a drop-run and the run is done in seconds; the value left is the directory names on the add-files lane (D). If that does not earn a 21-locale string, close the row.</li>
+  <li><b>Mixed platforms</b> in one drop: fire with "meeting platform", or stay silent? The mockup leans silent (a hedge about two platforms is not news).</li>
+  <li><b>Zoom and Meet in the first cut</b>, or Teams only? Teams is the row's own case and has a Swift parser; Zoom's cloud transcript exists only with "Create audio transcript" on (the importer already says so); Meet's transcript is a Google Doc the researcher must export as <code>.docx</code>.</li>
+  <li><b>Should the hint also appear once Teams import brings transcripts</b> (Phase 3, admin consent)? Then the sentence could end "or import them from Teams" and the popover could offer the import window. Not drawn; it depends on a consent flow that is not built.</li>
+  <li><b>The shoal:</b> with the analysis animation on, the cover pane (and C's sentence) is hidden until the first session is readable — i.e. for the whole download. The same question as the first-wait mockup: should the download stage show the shoal at all?</li>
+</ul></div>
+
+<p class="lede" style="margin-top:28px">Sources read: <code>bristlenose/stages/s01_ingest.py</code> (platform patterns, <code>_normalise_stem</code>, <code>group_into_sessions</code>), <code>bristlenose/pipeline.py</code> (preflight block, ingest line), <code>bristlenose/events.py</code> (<code>ADDED_AFTER_ANALYSIS</code>, progress fields), <code>bristlenose/ui_kinds.py</code>, <code>TeamsRecordingName.swift</code>, <code>TeamsSource.swift</code>, <code>ScanSelection.swift</code>, <code>RunCoverPane.swift</code>, <code>DetailPaneKind.swift</code>, <code>SidebarSubtitleText.swift</code>, <code>ContentView.swift</code> (drop auto-run, <code>dragInterviewsPane</code>), <code>docs/design-pipeline-diagnostic-popover.md</code>, <code>docs/design-platform-transcripts.md</code>, <code>docs/design-cloud-import-transcripts.md</code>, <code>docs/design-desktop-project-status.md</code> (glyph and door rule), <code>docs/design-apple-first-transcription.md</code>, <code>docs/glossary.md</code>; sibling mockup <code>whisper-first-wait-options.html</code>.</p>
+
+</div>
+</body>
+</html>

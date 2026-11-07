@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Half-done study — options</title>
+<style>
+.bn-mockup-banner{font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;background:#fff3cd;color:#5c4300;border-bottom:1px solid #e0c36a;padding:10px 24px;}
+.bn-mockup-banner code{font:12px ui-monospace,Menlo,monospace;background:#fff8e1;padding:0 4px;border-radius:3px;}
+@media (prefers-color-scheme:dark){.bn-mockup-banner{background:#3a2f12;color:#f5d87a;border-color:#6b5520;}.bn-mockup-banner code{background:#2a2210;}}
+
+:root{
+  color-scheme:light dark;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
+  --page-bg:light-dark(#f4f4f6,#161618);--fg:light-dark(#1d1d1f,#f2f2f7);--sec:light-dark(#6e6e73,#98989d);
+  --rule:light-dark(#d9d9de,#3a3a3c);--accent:light-dark(#007aff,#0a84ff);
+  --win-chrome:light-dark(#e9e9ec,#333335);--win-side:light-dark(#f2f2f5,#2a2a2c);--win-body:light-dark(#ffffff,#1e1e20);
+  --win-edge:light-dark(#cfcfd4,#444447);--sel:light-dark(#d9d9de,#3b3b3f);
+  --menu-bg:light-dark(#f6f6f8,#2e2e30);--menu-edge:light-dark(#00000022,#ffffff1f);--menu-sep:light-dark(#0000001a,#ffffff1a);--menu-dim:light-dark(#9a9a9f,#78787d);
+  --com-bg:light-dark(#fbfbfc,#1c1c1e);--com-rule:#8e8e93;--hatch:light-dark(#c9c9ce,#3f3f44);
+  --ok:light-dark(#1c6b38,#7fdaa1);--warn:light-dark(#8a5a00,#f5c563);--bad:light-dark(#9a2020,#ff8a8a);
+  --warn-glyph:light-dark(#f0a500,#f5c04a);--info-glyph:light-dark(#007aff,#0a84ff);
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{background:var(--page-bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 120px}
+h1{font-size:28px;line-height:1.2;font-weight:600;margin:.2em 0 .3em;letter-spacing:-.01em}
+h2{font-size:21px;font-weight:600;margin:2.2em 0 .5em}
+h3{font-size:16px;font-weight:600;margin:1.4em 0 .4em}
+p{max-width:78ch}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sec)}
+code{font:12.5px var(--mono);background:light-dark(#eeeef1,#26262a);padding:0 .3em;border-radius:3px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:.6em 0 1em}
+th,td{text-align:left;vertical-align:top;padding:.45em .6em;border-bottom:1px solid var(--rule)}
+th{font-weight:600;color:var(--sec);font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+td.ok{color:var(--ok)}td.warn{color:var(--warn)}td.bad{color:var(--bad)}
+.key{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 6px;font-size:13px;color:var(--sec)}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key i{display:inline-block;width:26px;height:14px;border-radius:3px}
+.key i.art{background:var(--win-chrome);border:1px solid var(--win-edge)}
+.key i.com{border:4px solid transparent;border-left:3px solid var(--com-rule);background:linear-gradient(var(--com-bg),var(--com-bg)) padding-box,repeating-linear-gradient(135deg,var(--hatch) 0 4px,transparent 4px 8px) border-box}
+.pill{display:inline-block;font:600 11px/1 var(--mono);padding:3px 7px;border-radius:4px;margin-right:6px;vertical-align:middle}
+.pill.done{background:light-dark(#e6f6ec,#16301f);color:var(--ok)}.pill.open{background:light-dark(#fff4e0,#3a2f18);color:var(--warn)}.pill.moot{background:light-dark(#e8e8ec,#2c2c30);color:var(--sec)}
+
+/* frames */
+.frame{background:var(--win-chrome);border:1px solid var(--win-edge);border-radius:10px;overflow:hidden;box-shadow:0 10px 30px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.45))}
+.bar{display:flex;align-items:center;gap:8px;padding:7px 12px;font:12px var(--mono);color:var(--sec);border-bottom:1px solid var(--win-edge)}
+.bar .dots{display:inline-flex;gap:5px;margin-right:4px}.bar .dots i{width:10px;height:10px;border-radius:50%;background:light-dark(#d4d4d8,#4a4a4e);display:block}
+.bar b{color:var(--fg);font-weight:600}
+.win{display:grid;grid-template-columns:200px 1fr;min-height:250px;background:var(--win-body)}
+.win.sideonly{grid-template-columns:1fr;min-height:0}
+.side{background:var(--win-side);border-right:1px solid var(--win-edge);padding:10px 8px;font-size:13px;color:var(--fg)}
+.side .sec{font-size:11px;font-weight:600;color:var(--sec);text-transform:uppercase;letter-spacing:.04em;padding:4px 8px;margin-top:4px}
+.row{display:grid;grid-template-columns:18px 1fr auto;column-gap:8px;align-items:start;padding:5px 8px;border-radius:6px;line-height:1.25;position:relative}
+.row.sel{background:var(--sel)}
+.row .ic{width:16px;height:16px;color:var(--accent);margin-top:1px}
+.row .t{display:flex;justify-content:space-between;gap:8px}
+.row .t .n{font-weight:400}.row .t .c{color:var(--sec);font-variant-numeric:tabular-nums}
+.row .s{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--sec);margin-top:1px;min-height:14px}
+.row .s .g{width:11px;height:11px;flex:none}
+.row .s .g.warn{color:var(--warn-glyph)}.row .s .g.info{color:var(--info-glyph)}
+.row .ring{width:14px;height:14px;border-radius:50%;border:2px solid var(--rule);border-top-color:var(--accent);border-right-color:var(--accent);margin-top:2px}
+.tip{position:absolute;left:50%;transform:translateX(-50%);top:100%;margin-top:6px;background:light-dark(#f5f5f7,#3a3a3c);color:var(--fg);border:1px solid var(--win-edge);border-radius:6px;padding:4px 8px;font-size:11px;white-space:nowrap;box-shadow:0 4px 14px light-dark(rgba(0,0,0,.12),rgba(0,0,0,.5));z-index:2}
+.tip.none{color:var(--sec);font-style:italic}
+/* ContentUnavailableView */
+.cuv{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:36px 24px;color:var(--fg);min-height:250px}
+.cuv .sym{width:44px;height:44px;color:var(--sec);margin-bottom:12px}
+.cuv .t{font-size:17px;font-weight:600;margin:0 0 4px}
+.cuv .d{font-size:13px;color:var(--sec);margin:0 0 14px;max-width:34ch}
+.btn{display:inline-block;font:13px var(--ui);padding:4px 12px;border-radius:6px;background:var(--accent);color:#fff;border:none}
+.btn.plain{background:light-dark(#fff,#4a4a4e);color:var(--fg);border:1px solid var(--win-edge)}
+/* context menu */
+.menu{display:inline-block;background:var(--menu-bg);border:1px solid var(--menu-edge);border-radius:8px;padding:5px;min-width:200px;font-size:13px;box-shadow:0 12px 34px light-dark(rgba(0,0,0,.15),rgba(0,0,0,.5))}
+.menu div{padding:3px 20px 3px 10px;border-radius:4px;display:flex;justify-content:space-between}
+.menu div.dim{color:var(--menu-dim)}.menu hr{border:0;border-top:1px solid var(--menu-sep);margin:4px 8px}
+.menu div.new{outline:1.5px dashed var(--accent);outline-offset:-1px}
+/* commentary */
+.com{margin:14px 0 0;padding:14px 18px;border:7px solid transparent;border-left:3px solid var(--com-rule);background:linear-gradient(var(--com-bg),var(--com-bg)) padding-box,repeating-linear-gradient(135deg,var(--hatch) 0 5px,transparent 5px 10px) border-box;border-radius:6px;font-size:14px}
+.com .lbl{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sec);margin-bottom:8px}
+.com ul{margin:.3em 0 .3em 1.1em;padding:0}.com li{margin:.25em 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media (max-width:980px){.grid2,.grid3{grid-template-columns:1fr}}
+.option{margin-top:38px;padding-top:12px;border-top:2px solid var(--rule)}.option h2{margin-top:.2em}
+.cost{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;background:light-dark(#e8e8ec,#2c2c30);color:var(--fg);margin-right:6px}
+.cost.S{background:light-dark(#e6f6ec,#16301f);color:var(--ok)}.cost.M{background:light-dark(#fff4e0,#3a2f18);color:var(--warn)}.cost.L{background:light-dark(#ffe9e9,#3a1f1f);color:var(--bad)}
+.flow{display:flex;align-items:stretch;margin:10px 0 4px;font-size:12.5px}
+.flow .st{flex:1;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:var(--com-bg)}
+.flow .st b{display:block;font-size:12px;color:var(--sec);font-weight:600;margin-bottom:2px}
+.flow .arr{width:26px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--sec)}
+.rec{border:1px solid var(--rule);border-left:4px solid var(--accent);border-radius:8px;padding:16px 20px;background:var(--com-bg)}
+.caplabel{font:12px var(--mono);color:var(--sec);margin:14px 0 6px}
+.store{font:12px/1.5 var(--mono);background:light-dark(#f7f7f9,#1a1a1d);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;white-space:pre;overflow:auto;margin:8px 0}
+.store .k{color:var(--accent)}.store .n{color:var(--warn)}.store .c{color:var(--sec)}
+</style>
+</head>
+<body>
+<div class="bn-mockup-banner">PROPOSED 7 Nov 2026 · options mockup for the 100days row “Half-done project lifecycle” (owner-priority 5). Most of the row has landed since 24 Oct: this page verifies (a)–(c) at HEAD first and mocks only what is still open. Not implemented.</div>
+<div class="wrap">
+
+<div class="eyebrow">Mac app · analysis lifecycle · owner-priority 5</div>
+<h1>A run that stopped or failed part-way: what the row says, what the pane offers, and whether a fresh start needs its own verb</h1>
+<div class="key"><span><i class="art"></i> artefact — what would ship</span><span><i class="com"></i> commentary — why, cost, risk</span></div>
+
+<h2>The question</h2>
+<p>A researcher drops eight interviews, presses Analyse, and stops it (or it fails) after three. The folder holds the recordings and a partial <code>bristlenose-output/</code>, and there may be no report yet. The row’s original worry was that this looked like an empty study. The 100days row listed four remainders: (a) what the row says when the database cannot tell what has been ingested, (b) an honest empty state (“N interviews ready · Analyse”), (c) a separate Clean / Start Fresh, (d) the stopped state’s Resume and Re-analyse… CTAs. Checked at HEAD on 7 Nov 2026, most of it is built. What follows separates the done from the open and mocks the open.</p>
+
+<h3>Verified at HEAD</h3>
+<table>
+<tr><th style="width:4%"></th><th style="width:30%">Remainder</th><th>What ships</th><th style="width:22%">Still open</th></tr>
+<tr><td><span class="pill done">done</span></td><td>(d) Resume / Re-analyse… on stopped rows</td><td><b>Analyse</b> is offered on stopped, failed, failed-with-diagnostic and partial-with-real-failure rows (<code>analyseIsOffered</code>, RE#R3 <code>10af9e8fc</code>); it resumes from the manifest. <b>Re-analyse…</b> is the fresh start (decision 1b, <code>33a6e01cb</code>), offered when <code>sessionCount &gt; 0</code> and the pipeline is free.</td><td>—</td></tr>
+<tr><td><span class="pill done">done</span></td><td>(b) honest empty state</td><td>Never-run folder with files: <b>“8 files to analyse”</b> + <b>Analyse</b> (19 Aug, §6.3). Stopped with no report: <b>“Analysis stopped”</b> + <b>Resume Analysis</b>; stranded: <b>“Analysis interrupted”</b> + body + <b>Resume Analysis</b> (24 Oct, <code>46c17ad30</code>, decision 4). Browser twin: “Not analysed yet.” when interviews are present.</td><td>the stopped pane says nothing about how far it got</td></tr>
+<tr><td><span class="pill moot">moot</span></td><td>(a) “+N unanalysed” on a half-done row</td><td>Not suppressed by <code>driftGated</code> after all: <code>.stopped</code>, <code>.partial</code> and <code>.failed</code> return from <code>ProjectSubtitle.resolve</code> <em>before</em> the idle tier, so no delta ever shows on such a row, whatever the database says. The row says <b>Stopped</b> / <b>Partial run</b> / <b>Transcribed</b> / the failure. The title’s count shows only when the DB has sessions (nil → no count). The tooltip carries “N interviews · M waiting” when the DB can count, nothing when it cannot.</td><td><b>reframed:</b> should a stopped or partial row say how far it got?</td></tr>
+<tr><td><span class="pill open">open</span></td><td>(c) Clean / Start Fresh</td><td>Re-analyse… is <code>--clean</code>: deletes the output and runs every stage. Gated on <code>sessionCount &gt; 0</code>, so a run stopped before any session reached the database has no fresh-start verb — Analyse resumes instead.</td><td>is a fresh start needed where the gate hides it?</td></tr>
+</table>
+
+<h2>The scene</h2>
+<div class="flow">
+  <div class="st"><b>Tue 17:31</b>8 interviews dropped · Analyse · row: “Transcribing · 1 of 8 · ~22 min left”</div><div class="arr">→</div>
+  <div class="st"><b>Tue 17:52</b>Stop · 3 transcribed; since progressive import, 3 sessions are already in the database · row: “Stopped”</div><div class="arr">→</div>
+  <div class="st"><b>Quit</b>manifest and events log on disk record the stop</div><div class="arr">→</div>
+  <div class="st"><b>Wed 09:10</b>launch · the row and pane below · Analyse resumes, paying only for the five</div>
+</div>
+<p>Two variants matter for (a). <b>S1</b>: stopped before any session reached the database — the DB is absent or has no sessions (<code>sessionCount</code> nil). <b>S2</b>: stopped with three sessions imported (<code>sessionCount</code> 3; five files not in <code>source_files</code>). A failed run and a <code>.partial</code> (transcribe-only) run take the same shape with a different word.</p>
+
+<h2>Today, at HEAD</h2>
+<div class="grid2">
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>today</b> · S1 · stopped before any import · hover shows the tooltip</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div>
+      <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c"></span></div><div class="s">Stopped</div></div><span></span><div class="tip none">no tooltip</div></div>
+      <div class="row"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Smoke test</span><span class="c">4</span></div><div class="s"></div></div></div>
+    </div>
+    <div class="cuv"><svg class="sym" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/></svg><p class="t">Analysis stopped</p><span class="btn">Resume Analysis</span></div>
+  </div>
+</div>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>today</b> · S2 · stopped with 3 of 8 imported · hover shows the tooltip</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div>
+      <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c">3</span></div><div class="s">Stopped</div></div><span></span><div class="tip">3 interviews · 5 waiting</div></div>
+      <div class="row"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Smoke test</span><span class="c">4</span></div><div class="s"></div></div></div>
+    </div>
+    <div class="cuv"><svg class="sym" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/></svg><p class="t">Analysis stopped</p><span class="btn">Resume Analysis</span></div>
+  </div>
+</div>
+</div>
+<div class="com"><div class="lbl">Commentary</div>
+<ul>
+<li><b>S1 says “Stopped” and nothing else</b>, in the row, the tooltip and the pane. The database cannot count, so the title line has no number — “unknown is not a licence to shout” holds, and it is right. What the researcher cannot see is that eight recordings are there and all eight are still to do.</li>
+<li><b>S2 knows the answer and spreads it over two places:</b> the title’s <code>3</code> (sessions in the DB) and a hover that says “3 interviews · 5 waiting”. The row line itself says only “Stopped”. If a report existed before the stop, the pane shows that report instead (decision 4), and the count is then on the dashboard.</li>
+<li><b>The pane names the act and not the extent.</b> “Analysis stopped” + Resume Analysis is correct and plain; it is also the same sentence for S1 and S2, and the one question a researcher brings to a stopped study is “how much is left?”.</li>
+<li>Glyph: none, by the 18 Jun rule — they stopped it, so it is not news. Door: none; the files popover opens only from a delta glyph, and there is none here. Both stay as they are in every option below.</li>
+</ul></div>
+
+<!-- ───────────────────────── (a) ROW ───────────────────────── -->
+<div class="option" id="a">
+<div class="eyebrow">(a) · what a half-done row says</div>
+<h2>Should a stopped or partial row say how far it got?</h2>
+
+<h3>Option A1 · as today: the word, and the count only where the database has one</h3>
+<div class="frame"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>A1</b> · S1 and S2 rows</div>
+  <div class="win sideonly"><div class="side" style="border-right:0;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div><div class="sec">S1</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c"></span></div><div class="s">Stopped</div></div></div></div>
+    <div><div class="sec">S2</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c">3</span></div><div class="s">Stopped</div></div></div></div>
+  </div></div></div>
+<div class="com"><div class="lbl">Commentary</div><p style="margin:.2em 0"><span class="cost S">S · 0</span> nothing to build. Sibling: itself. Says only what happened; the extent lives in the tooltip (S2) or nowhere (S1). Consistent with “they already know” — true at 17:52, less true on Wednesday.</p></div>
+
+<h3>Option A2 · the row keeps the ladder’s count after the stop: “Stopped · 3 of 8”</h3>
+<div class="frame"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>A2</b> · the line after Stop is the line before it, minus the verb</div>
+  <div class="win sideonly"><div class="side" style="border-right:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+    <div><div class="sec">S1 · the DB cannot count</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c"></span></div><div class="s">Stopped · 0 of 8</div></div></div></div>
+    <div><div class="sec">S2</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c">3</span></div><div class="s">Stopped · 3 of 8</div></div></div></div>
+    <div><div class="sec">failed part-way</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c">3</span></div><div class="s"><svg class="g warn" viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg> 3 of 8 sessions analysed</div></div></div></div>
+  </div></div></div>
+<div class="store"><span class="c">// Where the two numbers come from, so the row never counts files and calls them sessions:</span>
+done  = <span class="k">sessions complete through the stage reached</span>, from the manifest’s per-session map (parseManifest already opens and parses "stages")
+total = <span class="k">the run’s own session total</span>, the same figure the ladder showed as "{{complete}} of {{total}}" (run_started / progress events)
+<span class="c">// Neither is the folder’s file count: eight files can be three sessions (Teams exports), and the detail pane counts files for that reason.</span>
+<span class="c">// Rendered through the shipped key desktop.chrome.pipeline.sessionsCount — no new string; the separator is the row’s own " · ".</span></div>
+<div class="com"><div class="lbl">Commentary</div>
+<p style="margin:.2em 0"><span class="cost M">M</span> <code>.stopped</code> and <code>.partial</code> gain <code>done/total</code> from the manifest (Swift: <code>parseManifest</code>, <code>EventLogReader.deriveState</code>, <code>SubtitleVariant</code>, <code>SidebarSubtitleText</code>, tests); Python writes nothing new if the per-session map already carries stage status (to confirm against <code>manifest.py</code>). No new locale key.</p>
+<ul>
+<li><b>Siblings:</b> <code>.completedPartial</code> says “6 of 8 sessions analysed” on the row (decision #139) — a fell-short outcome <em>already</em> carries its count on the line. The cloud batch says “3 of 4” because “a count is the question a closed window leaves”. The running ladder shows “3 of 8” the second before Stop. A2 <b>follows</b> all three; the continuity is the point: the line after Stop is the line before it, minus the verb.</li>
+<li><b>S1 under A2:</b> “0 of 8” answers the (a) question directly — the database cannot count, but the manifest can, and it is the manifest the stop was written to. If even the manifest cannot say (no manifest, events log only), the row falls back to bare “Stopped”: unknown still is not a licence to shout.</li>
+<li><b>Glyph and door unchanged:</b> no glyph (they stopped it), no popover (the count is on the line; nothing left to disclose). The tooltip can drop “N interviews · M waiting” for stopped rows, or keep it; it would repeat the line.</li>
+<li><b>Risk:</b> two totals disagreeing — the run’s session total versus the folder’s current file count after the researcher adds a file overnight. The row uses the run’s total; the pane (below) can say “and 1 new file” from <code>newFiles</code> once the DB has a baseline. Keep the two numbers apart as the code already does.</li>
+<li><b>Rules out:</b> nothing. The sidebar status roll (if built) rolls this line like any other stopped/partial line (decision 1 of that plan).</li>
+</ul></div>
+
+<h3>Option A3 · the row stays “Stopped”; the pane carries the count</h3>
+<div class="grid2">
+<div class="frame"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>A3</b> · S2 · row unchanged, pane says the extent</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c">3</span></div><div class="s">Stopped</div></div></div></div>
+    <div class="cuv"><svg class="sym" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/></svg><p class="t">Analysis stopped</p><p class="d">3 of 8 interviews analysed</p><span class="btn">Resume Analysis</span></div>
+  </div></div>
+<div class="frame"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><b>A2 + A3</b> · S1 · row and pane both say it (the recommended pair)</div>
+  <div class="win">
+    <div class="side"><div class="sec">Projects</div><div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><div><div class="t"><span class="n">Checkout study</span><span class="c"></span></div><div class="s">Stopped · 0 of 8</div></div></div></div>
+    <div class="cuv"><svg class="sym" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" stroke="none"/></svg><p class="t">Analysis stopped</p><p class="d">0 of 8 interviews analysed</p><span class="btn">Resume Analysis</span></div>
+  </div></div>
+</div>
+<div class="com"><div class="lbl">Commentary</div>
+<p style="margin:.2em 0"><span class="cost S">S</span> once A2’s numbers exist: one description line in <code>RunCoverPane</code>, one plural key (<code>desktop.chrome.analysedOfTotal</code>, 21 locales). Sibling: decision 5 — “the row is the status, the pane the instruction”, and the pane’s description slot is where the stranded pane already puts its one sentence.</p>
+<ul>
+<li><b>A3 alone</b> keeps the row terse and tells the researcher the extent only once they click the study. For a sidebar of six studies, the row is where the comparison happens; the pane answers one study at a time.</li>
+<li><b>A2 + A3 together</b> state one fact at two fidelities, which is the exact relationship <code>ProjectSubtitle</code>’s header comment describes for a future detail pane (“same arbitrated state rendered at two fidelities”). The stopped pane shows only when there is no earlier report; when there is one, the dashboard’s own counts take over and the row line is the only place the extent is said — another reason for A2.</li>
+<li><b>Wording:</b> “interviews” is the Mac’s word on these panes (“Adding N interviews…”); the row says “sessions” in the completedPartial line. Both are shipped; the pane follows the pane’s register and the row the row’s.</li>
+</ul></div>
+</div>
+
+<!-- ───────────────────────── (c) FRESH START ───────────────────────── -->
+<div class="option" id="c">
+<div class="eyebrow">(c) · a fresh start where Re-analyse… is hidden</div>
+<h2>Does S1 need a way to throw the partial output away?</h2>
+<p>Re-analyse… is the fresh start and it is gated on <code>sessionCount &gt; 0</code>. In S1 nothing reached the database, so the context menu offers Analyse (resume) and nothing destructive. Three positions:</p>
+
+<div class="grid3">
+<div>
+<div class="caplabel">C1 · today — no fresh-start verb on S1</div>
+<div class="menu"><div>Analyse</div><div class="dim">Re-analyse…</div><hr><div>Show in Finder</div><div>Rename…</div><hr><div>Remove from Sidebar</div></div>
+<div class="com"><div class="lbl">Commentary</div><p style="margin:.2em 0"><span class="cost S">S · 0</span> Resume reuses the three transcriptions and pays for five. A fresh start would pay for eight and keep nothing the researcher made, because nothing was made. There is no loss to protect and no saving to offer. The one case it does not cover is a cache that is <em>wrong</em> rather than partial — and a damaged manifest already routes to Analyse, which sets it aside and rebuilds (decision #18).</p></div>
+</div>
+<div>
+<div class="caplabel">C2 · widen the gate: Re-analyse… wherever an output folder exists</div>
+<div class="menu"><div>Analyse</div><div class="new">Re-analyse…</div><hr><div>Show in Finder</div><div>Rename…</div><hr><div>Remove from Sidebar</div></div>
+<div class="com"><div class="lbl">Commentary</div><p style="margin:.2em 0"><span class="cost S">S</span> one predicate (<code>reAnalyseIsOffered</code>: <code>sessionCount &gt; 0 || outputExists</code>) and a test. The confirm sheet behaves by decision #1: no database is a real zero, so it runs unasked — a silent delete-and-rerun from a menu. Sibling: the same verb, same sheet. <b>Departs</b> from “Re-analyse has two jobs and only two” (13 Oct) only if S1 is neither a reset of the researcher’s work nor first aid for a broken report; it is arguably first aid for a broken cache. Cost to the researcher: a second item that pays for eight where the first pays for five, with nothing to show for the difference.</p></div>
+</div>
+<div>
+<div class="caplabel">C3 · a fourth verb: Start Fresh / Remove Analysis</div>
+<div class="menu"><div>Analyse</div><div class="dim">Re-analyse…</div><div class="new">Start Fresh…</div><hr><div>Show in Finder</div><div>Rename…</div><hr><div>Remove from Sidebar</div></div>
+<div class="com"><div class="lbl">Commentary</div><p style="margin:.2em 0"><span class="cost M">M</span> a verb, a sheet, 21 locales, a menu-bar twin, a CLI twin. <b>Invents:</b> the lifecycle doc’s first rule is “three verbs, and why they must stay three — the failure mode to design against is collapsing them”; a fourth that overlaps Re-analyse… is the other half of the same failure. Nothing it does differs from C2.</p></div>
+</div>
+</div>
+</div>
+
+<h2>Comparison</h2>
+<table>
+<tr><th style="width:22%"></th><th>A1 · today</th><th>A2 · “Stopped · 3 of 8” on the row</th><th>A3 · count on the pane</th><th>A2 + A3</th></tr>
+<tr><td>S1 row (DB cannot count)</td><td>Stopped</td><td>Stopped · 0 of 8 (manifest); bare Stopped if even that is absent</td><td>Stopped</td><td>Stopped · 0 of 8</td></tr>
+<tr><td>S2 row</td><td>Stopped; tooltip 3 interviews · 5 waiting</td><td>Stopped · 3 of 8</td><td>Stopped</td><td>Stopped · 3 of 8</td></tr>
+<tr><td>Pane with no report</td><td>Analysis stopped · Resume Analysis</td><td>unchanged</td><td>+ “3 of 8 interviews analysed”</td><td>+ “3 of 8 interviews analysed”</td></tr>
+<tr><td>Pane with an earlier report</td><td colspan="4">the report (decision 4) — the row is the only place the extent is said, so A3 alone says it nowhere there</td></tr>
+<tr><td>Also covers</td><td>—</td><td>Partial run · 8 of 8, Transcribed · 8 of 8, failed part-way (already “3 of 8 sessions analysed”)</td><td>stranded (“Analysis interrupted”) too</td><td>both</td></tr>
+<tr><td>Glyph / door</td><td colspan="4">none / none in every option — the 18 Jun rule and the glyph-buys-attention rule are untouched</td></tr>
+<tr><td>New strings</td><td>0</td><td>0 (reuses <code>pipeline.sessionsCount</code>)</td><td>1 plural key</td><td>1 plural key</td></tr>
+<tr><td>Layers</td><td>—</td><td>Swift (<code>PipelineRunner</code>, <code>SubtitleVariant</code>, <code>SidebarSubtitleText</code>), maybe <code>manifest.py</code></td><td>Swift (<code>RunCoverPane</code>), locales</td><td>both</td></tr>
+<tr><td>Cost</td><td><span class="cost S">S · 0</span></td><td><span class="cost M">M</span></td><td><span class="cost S">S</span> given A2</td><td><span class="cost M">M</span></td></tr>
+</table>
+<table>
+<tr><th style="width:22%"></th><th>C1 · no fresh start on S1 (today)</th><th>C2 · widen Re-analyse…’s gate</th><th>C3 · a fourth verb</th></tr>
+<tr><td>What S1 can do</td><td>Analyse (resume, pays for 5)</td><td>Analyse, or Re-analyse… (pays for 8, no confirm: nothing to lose)</td><td>as C2 under a new name</td></tr>
+<tr><td>Covers a wrong cache</td><td>damaged manifest → Analyse rebuilds (decision #18); other corruption: not covered</td><td>yes</td><td>yes</td></tr>
+<tr><td>Three-verbs rule</td><td class="ok">kept</td><td class="warn">kept; the gate’s meaning widens</td><td class="bad">broken</td></tr>
+<tr><td>Cost</td><td><span class="cost S">S · 0</span></td><td><span class="cost S">S</span></td><td><span class="cost M">M</span></td></tr>
+</table>
+
+<h2>Recommendation</h2>
+<div class="rec">
+<p><b>(a)/(b): A2 + A3.</b> A stopped or partial row keeps the count the ladder was showing when it stopped — “Stopped · 3 of 8”, from the manifest, in the shipped <code>{{complete}} of {{total}}</code> form — falling back to bare “Stopped” only when even the manifest cannot say. The stopped and interrupted panes add one line, “3 of 8 interviews analysed”, under their headline. No glyph, no popover, no new row state. This answers the (a) question as reframed: when the <em>database</em> cannot count, the row says what the <em>manifest</em> knows, and stays silent when nothing does.</p>
+<p><b>Why.</b> The completedPartial row already puts its count on the line; the running ladder already shows this exact pair; the cloud batch’s rationale (“a count is the question a closed window leaves”) is this situation to the letter. It is continuity, not a new pattern. The one thing a researcher wants from a stopped study on Wednesday is how much is left, and today that is in a hover on S2 and nowhere on S1.</p>
+<p><b>(c): C1 — no new verb, no gate change.</b> Resume is strictly cheaper than a fresh start on S1 and loses nothing, because nothing was made. The damaged-cache case already routes to Analyse. If a real corrupt-but-parseable cache ever shows up in a trial run, C2 is a one-line gate change with the sheet behaving as decision #1 already specifies; it does not need to be built ahead of the case.</p>
+</div>
+
+<h2>What the owner still has to settle</h2>
+<ul>
+<li><b>The denominator.</b> “of 8” is the run’s session total from the manifest/events, not the folder’s file count. If a file is added overnight the row still says “3 of 8” until the next run; the tooltip’s “M waiting” (S2 only) is where the new file shows. Accept, or should the row say “3 of 8 · +1” — which the status-roll plan would then also have to carry?</li>
+<li><b>Does “Transcribed · 8 of 8” earn its count?</b> A transcribe-only run that finished has done everything it set out to; the count is confirmation, not news. Recommend the count only on <code>.stopped</code> and on <code>.partial(transcribeOnly: false)</code>, not on Transcribed.</li>
+<li><b>Register on the pane:</b> “interviews” (the pane’s word) or “sessions” (the row’s)? Recommend interviews on the pane, sessions on the row, as shipped.</li>
+<li><b>Is there a known wrong-cache case?</b> If a trial run has produced a partial output that Analyse cannot resume from and the manifest is not damaged, C2 is justified today; otherwise C1 stands.</li>
+</ul>
+
+<h2>Is this Bristlenosey</h2>
+<table>
+<tr><th>Part</th><th>Proposal (A2 + A3, C1)</th><th>Sibling</th><th>Verdict</th></tr>
+<tr><td>Row line</td><td>“Stopped · 3 of 8”</td><td><code>.completedPartial(analysed:)</code> “6 of 8 sessions analysed” (decision #139); running ladder <code>sessionsCount</code>; batch “3 of 4”</td><td class="ok">follows</td></tr>
+<tr><td>Precedence</td><td>unchanged: the verb-led arms return before the idle tier</td><td><code>ProjectSubtitle.resolve</code></td><td class="ok">follows</td></tr>
+<tr><td>Glyph / door</td><td>none / none</td><td><code>glyphKind</code>: “.stopped and .partial have an available act and still get nothing”</td><td class="ok">follows</td></tr>
+<tr><td>Data source</td><td>manifest per-session map + run total</td><td><code>parseManifest</code> already parses <code>stages</code>; the ladder’s <code>sessionsTotal</code></td><td class="ok">follows (field names to confirm in <code>manifest.py</code>)</td></tr>
+<tr><td>Pane line</td><td>description under “Analysis stopped”</td><td>stranded pane’s description slot; decision 5 (row = status, pane = instruction)</td><td class="ok">follows</td></tr>
+<tr><td>Strings</td><td>row: shipped key; pane: one new plural key, 21 locales</td><td><code>desktop.chrome.pipeline.sessionsCount</code>; the authoring rule</td><td class="ok">follows</td></tr>
+<tr><td>Verbs</td><td>none added; gate unchanged</td><td>“three verbs, and why they must stay three”</td><td class="ok">follows</td></tr>
+<tr><td>Unknowns</td><td>bare “Stopped” when nothing can count</td><td><code>driftGated</code>: “unknown is not a licence to shout”</td><td class="ok">follows</td></tr>
+</table>
+<p class="eyebrow" style="margin-top:28px">Sources read: ProjectSubtitle.swift · ProjectIndex.swift (driftGated) · ProjectFolderWatcher.swift · SourceFilesReader.swift · ProjectSidebarOutline.swift (analyseIsOffered, reAnalyseIsOffered, hasWorkToDo, title count) · SidebarSubtitleText.swift (tooltip) · DetailPaneKind.swift (runCover) · RunCoverPane.swift · PipelineRunner.swift (parseManifest) · status_page.py · desktop.json · docs/design-analysis-lifecycle.md §1, §4.1 · docs/design-detail-panes-catalogue.md § Decisions · docs/mockups/detail-pane-states.html · docs/mockups/analysis-lifecycle-states.html</p>
+</div>
+</body>
+</html>

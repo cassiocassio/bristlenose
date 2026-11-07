@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning picks, 8 Nov</title>
+<style>
+:root{
+  --bg:#fbfbfa;--fg:#1d1d1f;--muted:#6e6e73;--rule:#e3e3e0;--card:#ffffff;
+  --accent:#2f6fde;--rec:#e8f2e6;--rec-fg:#1f5a1a;--open:#fff4e0;--open-fg:#7a4b00;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1c1e;--fg:#f2f2f7;--muted:#a1a1a6;--rule:#38383a;--card:#242426;
+    --accent:#7aa7ff;--rec:#1f3320;--rec-fg:#a8dca2;--open:#3a2c12;--open-fg:#f2c97a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1c1e;--fg:#f2f2f7;--muted:#a1a1a6;--rule:#38383a;--card:#242426;
+  --accent:#7aa7ff;--rec:#1f3320;--rec-fg:#a8dca2;--open:#3a2c12;--open-fg:#f2c97a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}
+.lede{color:var(--muted);margin:0 0 28px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:36px 0 10px}
+.q{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;margin:0 0 12px}
+.q h3{margin:0 0 6px;font-size:17px}
+.q h3 a{color:var(--accent);text-decoration:none}
+.q h3 a:hover{text-decoration:underline}
+.n{color:var(--muted);font-weight:500;margin-right:6px}
+.found{color:var(--muted);margin:0 0 8px}
+ul{margin:4px 0 8px;padding-left:20px}
+li{margin:2px 0}
+.rec,.calls{border-radius:6px;padding:8px 10px;margin-top:8px}
+.rec{background:var(--rec);color:var(--rec-fg)}
+.calls{background:var(--open);color:var(--open-fg)}
+.rec b,.calls b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{color:var(--muted);font-weight:500}
+</style>
+</head>
+<body>
+<main>
+<h1>Morning picks</h1>
+<p class="lede">Ten open questions, each with an options mockup made overnight on 7 Nov 2026. Each card below has the state found at HEAD, the options, the recommendation and the calls only you can make. None of these is built, and none is approved.</p>
+
+<h2>Study state and the sidebar</h2>
+
+<div class="q">
+<h3><span class="n">1</span><a href="relaunch-lens-state-options.html">What survives a relaunch, per lens (#182)</a></h3>
+<p class="found">Already restored: windows with their study and lens, the group heading in Quotes and Codebook, the session in Sessions, and R89's zoom, panels and grouping. Still lost: the place inside a group or transcript, the selected quote, and four toggles that still write <code>localStorage</code>.</p>
+<ul>
+<li><b>A</b> — nothing more.</li>
+<li><b>B</b> — a finer place through the shipped <code>last_anchor</code> seam (quote, transcript moment, code), and three toggles join R89.</li>
+<li><b>C</b> — the whole view per window, including search, filter and selection; a filter that comes back on new content shows "0 of 312".</li>
+</ul>
+<div class="rec"><b>Recommended</b>B, in two commits.</div>
+<div class="calls"><b>Your calls</b>Per study or per window? For a transcript, the turn in view or the playhead? Do Signals and Discussion get a place (reversing 16 Aug)? Is it acceptable that the Quotes place clears after a run?</div>
+</div>
+
+<div class="q">
+<h3><span class="n">2</span><a href="half-done-study-options.html">A study stopped or failed partway</a></h3>
+<p class="found">Resume and the honest empty state are both done. Still open: a stopped row says a bare "Stopped" with no count, and a run stopped before anything was imported has no fresh-start verb.</p>
+<ul>
+<li><b>Row:</b> A1 as today · A2 "Stopped · 3 of 8", counted from the manifest · A3 the count on the pane.</li>
+<li><b>Fresh start:</b> C1 no new verb · C2 Re-analyse… allowed on any output folder · C3 a separate Start Fresh.</li>
+</ul>
+<div class="rec"><b>Recommended</b>A2 + A3, and C1.</div>
+<div class="calls"><b>Your calls</b>Which denominator: the run's sessions, or the files in the folder? On the pane, "interviews" or "sessions"? Has any trial run shown a damaged cache that would justify C2 now?</div>
+</div>
+
+<h2>First run and transcription</h2>
+
+<div class="q">
+<h3><span class="n">3</span><a href="whisper-first-wait-options.html">The first-run Whisper wait</a></h3>
+<p class="found">Mostly resolved. The download starts in the background after the AI disclosure (<code>fc2fea73f</code>), the row and pill show real progress, and on macOS 26 Apple's speech model transcribes first runs in nine languages. Left: one name for the download ("speech model" or "Whisper") and the cover pane.</p>
+<ul>
+<li><b>A</b> — honest progress only, on the cover pane too, under one name.</li>
+<li><b>B</b> — a bundled sample study.</li>
+<li><b>C</b> — a Welcome link.</li>
+<li><b>D</b> — start earlier (already shipped).</li>
+</ul>
+<div class="rec"><b>Recommended</b>A, then close the row. Move the sample to the Demo dataset row.</div>
+<div class="calls"><b>Your calls</b>Which name wins? Should the shoal show during the download? Does a fresh-Mac check have to happen before the row is struck?</div>
+</div>
+
+<div class="q">
+<h3><span class="n">4</span><a href="platform-transcript-hint-options.html">"This recording may have a transcript"</a></h3>
+<p class="found">Nothing is built, and the premise has shifted. Apple-first transcription removed most of the wait. The Teams importer brings no transcript yet. A transcript added after analysis is set aside (#129).</p>
+<ul>
+<li><b>A</b> — a confirm sheet before the run (blocks).</li>
+<li><b>B</b> — a door on the running row.</li>
+<li><b>C</b> — the cover pane, the row tooltip and one CLI line.</li>
+<li><b>D</b> — the pre-run "N files to analyse" pane.</li>
+</ul>
+<div class="rec"><b>Recommended</b>C + D with one plural string, or close the row.</div>
+<div class="calls"><b>Your calls</b>Is a hint based only on file names worth a string in 21 languages? Teams only first, or Zoom and Meet too? What happens with a mixed-platform drop?</div>
+</div>
+
+<h2>Native panes and chrome</h2>
+
+<div class="q">
+<h3><span class="n">5</span><a href="detail-pane-set-options.html">The detail panes as a set</a></h3>
+<p class="found">Three of the row's four asks landed on 24 Oct: the copy, the icons and two analysing panes. Still open: no <code>StatePane</code> type (20 direct <code>ContentUnavailableView</code> sites), no Stop on the analysing pane, and one headline that ends with a full stop.</p>
+<ul>
+<li><b>StatePane:</b> A none (the stock view is the molecule), plus a casing test · B a thin wrapper · C a contract fixture.</li>
+<li><b>Stop on the pane:</b> A none · B Stop Analysis in the actions slot · C hover-stop on the ring.</li>
+<li><b>Icons:</b> keep SF Symbols.</li>
+</ul>
+<div class="rec"><b>Recommended</b>StatePane A now (C later), Stop B, icons as shipped.</div>
+<div class="calls"><b>Your calls</b>Contract fixture now or on first need? And by hand: watch one real run with the shoal off.</div>
+</div>
+
+<div class="q">
+<h3><span class="n">6</span><a href="desktop-ux-findings-options.html">The 22 Mar desktop review findings</a></h3>
+<p class="found">Of 13 items, 8 are done, 2 are obsolete and 1 is covered by question 1. Two remain.</p>
+<ul>
+<li><b>Find a project:</b> A AppKit type-select (probably already works) · B a filter field in the sidebar footer · C nothing.</li>
+<li><b>Pointer over static text:</b> A I-beam as now · B one embedded-only <code>cursor: default</code> rule · C per component.</li>
+</ul>
+<div class="rec"><b>Recommended</b>Close the row and re-file the two. Find: A after a ten-second check. Pointer: B.</div>
+<div class="calls"><b>Your calls</b>Does typing in the projects sidebar already move the selection?</div>
+</div>
+
+<h2>Motion</h2>
+
+<div class="q">
+<h3><span class="n">7</span><a href="microinteractions-options.html">Microinteractions</a></h3>
+<p class="found">Most has shipped. Left: bulk hide lost its stagger on 22 Sep, the toolbar dropdowns snap open, and the badge keyframes ignore Reduce Motion. The row's 150 ms per card holds Undo hostage: 7.65 s for 50 cards.</p>
+<ul>
+<li><b>A</b> — restraint: a capped stagger (≤300 ms), a flash on the hidden-quotes counter, a global Reduce Motion rule. S.</li>
+<li><b>B</b> — three motion tokens applied everywhere. M.</li>
+<li><b>C</b> — the full set. L.</li>
+</ul>
+<div class="rec"><b>Recommended</b>A.</div>
+<div class="calls"><b>Your calls</b>Stagger cadence: a 50 ms cap per card, or a fixed total? Under Reduce Motion, the counter flash or nothing? Land the global reduce rule now?</div>
+</div>
+
+<div class="q">
+<h3><span class="n">8</span><a href="confirm-flash-options.html">The acceptance flash as a shared pattern</a></h3>
+<p class="found">The same block is written out four times. Its 400 ms animation is cleared by a 500 ms timer, a second press within 500 ms is swallowed, and the timers are never cleared on unmount.</p>
+<ul>
+<li><b>A</b> — a CSS atom only.</li>
+<li><b>B</b> — the atom plus a <code>useConfirmFlash()</code> hook.</li>
+<li><b>C</b> — fold into the motion tokens.</li>
+<li><b>D</b> — leave it.</li>
+</ul>
+<div class="rec"><b>Recommended</b>B in two commits; pairs with 7A.</div>
+<div class="calls"><b>Your calls</b>React state, or a DOM mark? Should the hook live in <code>FocusContext</code> or stand alone?</div>
+</div>
+
+<h2>Architecture</h2>
+
+<div class="q">
+<h3><span class="n">9</span><a href="signal-snapshot-options.html">The durable signal snapshot</a></h3>
+<p class="found">Much more is built than the design doc says. Missing: any record of drift, a framework on/off writer, and the case of an empty study with no model.</p>
+<ul>
+<li><b>Drift:</b> A a counter · B a counter plus a per-reason tally · C a ledger table · D a fingerprint on read.</li>
+<li><b>Writers:</b> A as today · B add framework on/off · C a debounced refresh.</li>
+<li><b>Frozen lens with no model:</b> V0 nothing drawn · V1–V2 a date line · V3 withhold the lens.</li>
+</ul>
+<div class="rec"><b>Recommended</b>B + B + V0/V3 now. Mark the design doc as partly built.</div>
+<div class="calls"><b>Your calls</b>Does turning a framework on or off write a snapshot? Do hides count as drift? Does V3 need its own subtitle?</div>
+</div>
+
+<div class="q">
+<h3><span class="n">10</span><a href="review-gallery-phase2-3-options.html">Review Gallery, phases 2 and 3</a></h3>
+<p class="found">Phase 2 is half built: 22 recipes and 3 doors. Phase 3: two real specimen routes ship in every release build, there is no dev page, and nothing scans the sidecar's static JS.</p>
+<ul>
+<li><b>Phase 2:</b> A recipe only · B recipe plus a door with a named seed · C full baton.</li>
+<li><b>Phase 3:</b> A hand-written HTML · B real components on a shipped route · C a dev-only page with an asset scan.</li>
+</ul>
+<div class="rec"><b>Recommended</b>Phase 2 B, phase 3 C. The real budget is whether a fault injector can exist in a researcher's binary, not bytes.</div>
+<div class="calls"><b>Your calls</b>May a dev-only page be the only home for web states? Does the gallery promise an Undo Seed?</div>
+</div>
+
+<h2>Already settled, or taken elsewhere</h2>
+<table>
+<tr><th>Item</th><th>Where it stands</th></tr>
+<tr><td>Click-to-visible latency budget</td><td>You picked it; the "Scope one of the 8 open trust rows" session is building it now.</td></tr>
+<tr><td>Website privacy sentence</td><td>Already corrected on the site: it describes the background download and Apple's speech model.</td></tr>
+<tr><td>Meet doc with an empty Transcript tab</td><td>Done, ruling 9 option B (<code>56ba387a2</code>, <code>0375b2767</code>).</td></tr>
+<tr><td>Folder renamed in Finder</td><td>Ruling 10: the project's name is Bristlenose's own and never follows the folder.</td></tr>
+<tr><td>"in iCloud Drive" in Settings</td><td>Kept, by your 22 Oct ruling.</td></tr>
+<tr><td>Two eye checks (style flash on cold open, scroll anchoring)</td><td>Still waiting on a one-minute look in the app.</td></tr>
+</table>
+</main>
+</body>
+</html>

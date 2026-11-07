@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal snapshot lifecycle: options</title>
+<!-- Options mockup. Lifecycle: PROPOSED 7 Nov 2026 (see docs/mockups/STATUS.md).
+     Reviews the open questions in docs/design-signal-snapshot-lifecycle.md against HEAD.
+     Real --bn-* tokens inlined from bristlenose/theme/ (via codebook-library-states.html);
+     signal-card frames carry no participant speech — quote rows are drawn as bars. -->
+<style>
+/* ════ REAL Bristlenose tokens (tokens.css + colors/palette-*.css), inlined ════ */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-weight-mono:400; --bn-weight-mono-tag:light-dark(460,400); --bn-weight-mono-emphasis:560;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+/* ════ mockup chrome (not product) ════ */
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body);
+  font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1180px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.banner { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); border:1px solid var(--bn-colour-border);
+  border-left:3px solid var(--bn-colour-accent); border-radius:var(--bn-radius-md); padding:.5rem .8rem; margin-bottom:1.5rem; color:var(--bn-colour-muted); }
+.banner b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+h1 { font-size:clamp(1.4rem,3.5vw,1.9rem); font-weight:var(--bn-weight-emphasis); margin:.2rem 0 .4rem; line-height:1.25; }
+h2 { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); margin:3rem 0 .4rem; }
+h3 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:1.4rem 0 .4rem; }
+p.lede { color:var(--bn-colour-muted); max-width:78ch; margin:.3rem 0 1rem; }
+.key { display:flex; gap:1.2rem; flex-wrap:wrap; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.6rem 0 1.6rem; }
+.key span::before { content:""; display:inline-block; width:14px; height:14px; vertical-align:-2px; margin-right:.4rem; border-radius:3px; }
+.key .k-art::before { border:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.key .k-com::before { border-left:3px solid var(--bn-colour-muted); background:
+  repeating-linear-gradient(135deg, var(--bn-colour-border) 0 3px, transparent 3px 6px); }
+/* built-at-HEAD box */
+.built { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem 1.2rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem 2rem; font-size:var(--bn-text-label); }
+.built h4 { margin:0 0 .4rem; font-size:var(--bn-text-label); text-transform:uppercase; letter-spacing:.05em; color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); }
+.built ul { margin:0; padding-left:1.1rem; } .built li { margin:.2rem 0; }
+code, .mono { font-family:var(--bn-font-mono); font-size:.92em; font-weight:var(--bn-weight-mono); }
+code { background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:0 .3em; border-radius:var(--bn-radius-sm); }
+/* commentary: hatched EDGE band only, never behind text */
+.com { border:7px solid transparent; border-left:3px solid var(--bn-colour-muted); border-radius:var(--bn-radius-md);
+  background: linear-gradient(var(--bn-colour-bg), var(--bn-colour-bg)) padding-box,
+              repeating-linear-gradient(135deg, var(--bn-colour-border) 0 5px, transparent 5px 10px) border-box;
+  padding:.6rem .9rem; font-size:var(--bn-text-label); color:var(--bn-colour-text); margin-top:.8rem; }
+.com .lab { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); display:block; margin-bottom:.25rem; }
+.com ul { margin:.3rem 0 0; padding-left:1.1rem; } .com li { margin:.15rem 0; }
+/* artefact frame */
+.art { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); background:var(--bn-colour-quote-bg); overflow:hidden; }
+.art .bar { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); padding:.3rem .7rem; border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); display:flex; justify-content:space-between; gap:1rem; }
+.art .bar i { font-style:normal; color:var(--bn-colour-accent); }
+.art .body { padding:1rem; background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+/* option grid */
+.opts { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:1.2rem; margin-top:1rem; }
+.opt { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem; display:flex; flex-direction:column; gap:.7rem; }
+.opt.rec { border-color:var(--bn-colour-accent); box-shadow:0 0 0 1px var(--bn-colour-accent) inset; }
+.opt h3 { margin:0; font-size:var(--bn-text-body); display:flex; align-items:baseline; gap:.5rem; }
+.opt h3 .ltr { font-family:var(--bn-font-mono); color:var(--bn-colour-accent); font-weight:var(--bn-weight-mono-emphasis); }
+.opt .sib { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.opt .sib b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.cons { font-size:var(--bn-text-caption); border-top:1px solid var(--bn-colour-border); padding-top:.6rem; display:grid; grid-template-columns:auto 1fr; gap:.2rem .7rem; }
+.cons dt { color:var(--bn-colour-muted); } .cons dd { margin:0; }
+.cost { font-family:var(--bn-font-mono); font-weight:var(--bn-weight-mono-emphasis); }
+.cost.S { color:var(--bn-positive); } .cost.M { color:light-dark(#b45309,#fbbf24); } .cost.L { color:light-dark(#b91c1c,#f87171); }
+/* timeline */
+.tl { display:grid; grid-template-columns:150px repeat(5, 1fr); gap:2px; font-size:var(--bn-text-caption); margin-top:1rem; }
+.tl > div { padding:.5rem .6rem; background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-sm); min-height:2.6rem; }
+.tl .rh { background:transparent; color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); padding-left:0; }
+.tl .ev { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); font-weight:var(--bn-weight-emphasis); }
+.tl .ev small { display:block; color:var(--bn-colour-muted); font-weight:var(--bn-weight-normal); }
+.tl .w { border-left:3px solid var(--bn-colour-accent); }   /* a write */
+.tl .f { border-left:3px solid var(--bn-off-track); }        /* frozen */
+.tl .x { border-left:3px solid light-dark(#b45309,#fbbf24); } /* drift */
+.st { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); padding:.05rem .4rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.st.on { background:var(--bn-colour-accent); color:#fff; }
+.st.warn { background:light-dark(#fef3c7,#78350f); color:light-dark(#78350f,#fef3c7); }
+/* ════ the real Signals card, simplified to its shipped anatomy ════ */
+.sig-loc { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:0 0 var(--bn-space-md); }
+.card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:var(--bn-space-md) var(--bn-space-lg); background:var(--bn-colour-bg); }
+.card + .card { margin-top:-1px; border-top-left-radius:0; border-top-right-radius:0; }
+.card:has(+ .card) { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+.chip { display:inline-flex; align-items:center; gap:.4rem; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); font-weight:var(--bn-weight-mono-tag);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); border-radius:var(--bn-radius-sm); padding:.1rem .5rem; }
+.chip .dot { width:7px; height:7px; border-radius:50%; background:light-dark(#dc2626,#f87171); }
+.sig-name { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:.5rem 0 .2rem; }
+.sig-claim { margin:0 0 .4rem; }
+.sig-sum { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 .6rem; }
+.q { display:grid; grid-template-columns:auto 1fr; gap:.6rem; align-items:center; padding:.3rem 0; border-top:1px solid var(--bn-colour-border); }
+.q .tc { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.q .ln { height:.55em; border-radius:2px; background:var(--bn-colour-badge-bg); }
+.q .ln.s { width:72%; } .q .ln.m { width:88%; } .q .ln.l { width:96%; }
+.q.hidden { display:none; }
+.q.gone { opacity:.35; text-decoration:line-through; }
+.showall { font-size:var(--bn-text-label); color:var(--bn-colour-accent); margin-top:.4rem; }
+.datum { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:0 0 .6rem; font-variant-numeric:tabular-nums; }
+.datum.sub { margin-top:-.4rem; }
+/* skeleton (fallback today) */
+.skel .sig-name, .skel .sig-claim, .skel .sig-sum { display:none; }
+/* withheld lens nav */
+.nav { display:flex; gap:1.1rem; font-size:var(--bn-text-label); border-bottom:1px solid var(--bn-colour-border); padding-bottom:.4rem; margin-bottom:.8rem; }
+.nav b { font-weight:var(--bn-weight-emphasis); } .nav .dim { color:var(--bn-colour-muted); opacity:.55; }
+/* comparison table */
+table { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin-top:.8rem; }
+th, td { text-align:left; vertical-align:top; padding:.45rem .6rem; border-bottom:1px solid var(--bn-colour-border); }
+th { color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-caption); }
+td.rec { font-weight:var(--bn-weight-emphasis); }
+.reco { border:1px solid var(--bn-colour-accent); border-radius:var(--bn-radius-lg); padding:1rem 1.2rem; margin-top:1.2rem; }
+.reco ol { margin:.4rem 0 0; padding-left:1.2rem; } .reco li { margin:.3rem 0; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+@media (max-width:900px){ .two, .built { grid-template-columns:1fr; } .tl { grid-template-columns:110px repeat(5,1fr); } }
+@media (max-width:700px){ .tl { font-size:var(--bn-text-micro); } }
+@media (prefers-reduced-motion:reduce){ * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="banner"><b>PROPOSED 7 Nov 2026</b> · options for the owner · reviews <code>docs/design-signal-snapshot-lifecycle.md</code> against HEAD (<code>e5b539b0c</code>). Not a design of record until a column is picked.</div>
+
+<h1>Signal snapshots: when one is written, what drift is recorded, and what the lens shows while it is frozen</h1>
+<p class="lede">The 100days <code>[trust]</code> row asks for three things: persist the last complete signal cards so the lens reads without Claude; refresh the affected cards when a new codebook is applied; and record internally that hand edits have drifted from the stored cards, while deferring the user-facing freshness UX. The first two are built. This page is about the third, and about the two moments the design doc leaves open: what the lens shows when it is frozen and no model is configured, and which later events earn a rebuild.</p>
+
+<div class="key"><span class="k-art">Artefact: what ships, real tokens</span><span class="k-com">Commentary: why, cost, risk</span></div>
+
+<div class="built">
+  <div>
+    <h4>Built at HEAD (the doc still says “proposed”)</h4>
+    <ul>
+      <li><code>SignalSnapshot</code> row, whole-payload JSON: <code>source</code>, <code>payload_version</code>, <code>computed_at</code> (migrations 023–024).</li>
+      <li>Three writers, all LLM-backed: codebook apply (<code>routes/autocode.py</code>), new interviews after <code>run_completed</code>, and a startup repair when the row is missing or on an older contract version (<code>app.py</code>). A build that cannot narrate every card is skipped and the old row kept.</li>
+      <li>Reader <code>GET …/signals/snapshot</code> never calculates; it filters hidden quotes on read (<code>752cb6b50</code>, 30 Oct) and only ever removes.</li>
+      <li>The lens is withheld while the first report builds; “Picking up Signals…” under the project name (<code>75179d809</code>, <code>fde55d8f2</code>).</li>
+      <li><code>active_project_groups</code> honours a framework’s enabled state, so the doc’s §1 “split-brain” resolver is done.</li>
+      <li>Export embeds the filtered snapshot; the offline report reads the same cards.</li>
+    </ul>
+  </div>
+  <div>
+    <h4>Not built — this page’s remainder</h4>
+    <ul>
+      <li>No record of drift anywhere: no <code>analysis_revision</code>, no fingerprint, no ledger. The row’s “record that drift internally” is unmet.</li>
+      <li>A framework switched off stays in the frozen cards until the next LLM-backed run (the reader filters quotes, not codebooks).</li>
+      <li>No snapshot <em>and</em> no cloud model: the lens is lit and shows the sentiment-only fallback (bare cards), the state the owner walked and rejected on 30 Oct.</li>
+      <li><code>computed_at</code> and <code>source</code> arrive at <code>SignalsPage.tsx</code> and are not drawn.</li>
+      <li>The coordinator, outbox, lease and <code>candidate_partial</code> (doc §4) — deliberately out of scope here; the row defers the repair UX.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2>1 · One study, five moments</h2>
+<p class="lede">The same study through analyse, hand edits, a new codebook, the provider key removed, and a later open. Rows show what the store does today; the last row shows what the recommended drift record (§2, option B) would hold at each moment. Left rules: <span class="st on">write</span> a snapshot is written · <span class="st">frozen</span> read as stored · <span class="st warn">drift</span> inputs moved, snapshot did not.</p>
+
+<div class="tl" role="table" aria-label="Lifecycle timeline">
+  <div class="rh"></div>
+  <div class="ev">1 · Analyse<small>first run completes, 6 sessions</small></div>
+  <div class="ev">2 · Hand edits<small>hide 2 quotes, add a tag to 4, rename a theme</small></div>
+  <div class="ev">3 · New codebook<small>Norman applied, AutoCode finishes</small></div>
+  <div class="ev">4 · Key removed<small>Settings ▸ LLM Provider, key deleted</small></div>
+  <div class="ev">5 · Opened a week later<small>no model configured</small></div>
+
+  <div class="rh">What happens</div>
+  <div class="w">Re-apply runs, then the snapshot build; lens grey with “Picking up Signals…” until cards exist.</div>
+  <div class="x">Mutations commit. Nothing in the signals path hears them.</div>
+  <div class="w">Build runs after the apply; cached narratives reused for unchanged cards, new cards narrated.</div>
+  <div class="f">No writer can run. Nothing is deleted.</div>
+  <div class="f">Reader returns the row from moment 3.</div>
+
+  <div class="rh">Snapshot store</div>
+  <div class="w"><span class="st on">write</span> source <code>new_interviews</code>, v6</div>
+  <div class="f"><span class="st">frozen</span> row from 1</div>
+  <div class="w"><span class="st on">write</span> source <code>codebook_apply</code>, v6</div>
+  <div class="f"><span class="st">frozen</span> row from 3</div>
+  <div class="f"><span class="st">frozen</span> row from 3</div>
+
+  <div class="rh">What the lens reads</div>
+  <div>Complete cards, every one with a title and claim.</div>
+  <div>Same cards; the 2 hidden quotes are gone from their cards on read; the 4 tags and the rename are not seen.</div>
+  <div>Complete cards incl. Norman; hides still filtered; the rename is now in the heading.</div>
+  <div>Identical to 3.</div>
+  <div>Identical to 3. No spinner, no sentence. Export reads the same.</div>
+
+  <div class="rh">Drift record (§2 B)</div>
+  <div><code>rev 12 · since: {}</code></div>
+  <div class="x"><span class="st warn">drift</span> <code>rev 19 · since: {hide:2, tag:4, rename:1}</code></div>
+  <div><code>rev 24 · since: {}</code> (reset at write; the apply’s own tag writes do not count against itself)</div>
+  <div><code>rev 24 · since: {}</code></div>
+  <div><code>rev 24 · since: {}</code></div>
+</div>
+
+<div class="com"><span class="lab">Commentary</span>
+Moment 5 is already right by construction: a frozen row is a complete report, and the reader does not need a provider to serve it. Moment 2 is the gap the row names: the inputs moved and nothing wrote that down, so a later freshness treatment, a scoped refresh, or even a log line has nothing to read. Moment 4 is a non-event for the store, which is the point of the design, and worth saying in the doc’s status line.</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2>2 · Decision 1 — what counts as drift, and where it is written</h2>
+<p class="lede">Every option writes in the same transaction as the mutation (the doc’s rule), at the five sites that already change signal inputs: a hide or unhide, a tag accepted, denied or hand-edited, a framework switched on or off, a section or theme edit, and a quote edit or removal. Opening the lens is never one. The nearest shipped sibling for “a mutation leaves a durable mark that a later pass reads” is AutoCode’s <b>register of sent quotes</b> (<code>AutoCodeSentQuote</code>): a row per fact, never a timestamp.</p>
+
+<div class="opts">
+  <div class="opt">
+    <h3><span class="ltr">A</span> Revision counter</h3>
+    <div class="sib">Sibling: <b><code>data_version</code></b> on <code>/condition</code> — one integer that says “something changed”.</div>
+    <div class="art"><div class="bar">projects row + snapshot row <i>schema</i></div><div class="body mono" style="font-size:var(--bn-text-label)">
+projects.analysis_revision = 19<br>
+signal_snapshots.observed_revision = 12<br>
+<span style="color:var(--bn-colour-muted)">drift = 19 − 12 = 7 mutations, of unknown kind</span></div></div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost S">S</span> · one column each side, one increment helper, five call sites</dd>
+      <dt>Layers</dt><dd>models, migration 025, five mutation routes</dd>
+      <dt>Says</dt><dd>whether the snapshot is behind, and by how many acts</dd>
+      <dt>Cannot say</dt><dd>which cards, or whether the acts matter (a rename is 1, so is a hide)</dd>
+      <dt>Rules out</dt><dd>nothing; B and C can be added on top</dd>
+    </dl>
+  </div>
+
+  <div class="opt rec">
+    <h3><span class="ltr">B</span> Counter + tally by reason</h3>
+    <div class="sib">Sibling: the <b>source breakdown</b> a card already carries (<code>accepted / pending</code> counts): a small typed count, not a log.</div>
+    <div class="art"><div class="bar">one JSON column on the snapshot row <i>schema</i></div><div class="body mono" style="font-size:var(--bn-text-label)">
+projects.analysis_revision = 19<br>
+signal_snapshots.observed_revision = 12<br>
+signal_snapshots.drift_since = {<br>
+&nbsp;&nbsp;"hide": 2, "tag": 4, "rename": 1,<br>
+&nbsp;&nbsp;"framework": 0, "quote": 0, "last_at": "2026-11-03T14:02Z"<br>
+}<br>
+<span style="color:var(--bn-colour-muted)">reset to {} when a successor snapshot is written</span></div></div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost S">S</span>+ · A plus one JSON column and a six-key enum; the increment helper takes a reason</dd>
+      <dt>Layers</dt><dd>as A, plus one serialiser field on <code>/signals/snapshot</code> (undrawn)</dd>
+      <dt>Says</dt><dd>how far behind, in what way; enough for a later “tags changed since” line or a log line at build time</dd>
+      <dt>Cannot say</dt><dd>which cards (that needs C)</dd>
+      <dt>Rules out</dt><dd>nothing; the tally is what a later freshness line would read</dd>
+    </dl>
+  </div>
+
+  <div class="opt">
+    <h3><span class="ltr">C</span> Drift ledger table</h3>
+    <div class="sib">Sibling: <b><code>AutoCodeSentQuote</code></b> and <b><code>ImportConflict</code></b> — a row per fact, pruned by a rule.</div>
+    <div class="art"><div class="bar">signal_drift_events <i>schema</i></div><div class="body" style="padding:.5rem .7rem">
+<table style="margin:0;font-size:var(--bn-text-caption)"><tr><th>at</th><th>reason</th><th>scope</th></tr>
+<tr><td class="mono">14:01</td><td>hide</td><td class="mono">q-p3-412</td></tr>
+<tr><td class="mono">14:01</td><td>hide</td><td class="mono">q-p5-88</td></tr>
+<tr><td class="mono">14:02</td><td>tag</td><td class="mono">q-p1-26 × group 7</td></tr>
+<tr><td class="mono">14:02</td><td>rename</td><td class="mono">theme 3</td></tr></table></div></div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost M">M</span> · a table, FKs/cascades, a prune rule, and a deletion path (a hidden quote’s id is a re-identification key in an export)</dd>
+      <dt>Layers</dt><dd>models, migration, five routes, export classification (<code>SERVER_ONLY</code>), deletion tests</dd>
+      <dt>Says</dt><dd>exactly which cards are stale; what the doc’s scoped refresh (§4) needs</dd>
+      <dt>Cost of being early</dt><dd>rows nobody reads until the coordinator exists; a second place quote ids live</dd>
+      <dt>Rules out</dt><dd>nothing, but pays now for a refresh the row defers</dd>
+    </dl>
+  </div>
+
+  <div class="opt">
+    <h3><span class="ltr">D</span> Fingerprint on read</h3>
+    <div class="sib">Sibling: the <b>elaboration cache key</b> — a content hash, computed when asked.</div>
+    <div class="art"><div class="bar">no schema; computed per GET <i>runtime</i></div><div class="body mono" style="font-size:var(--bn-text-label)">
+hash(active groups, counted quotes, accepted tags) at read<br>
+≠ snapshot.input_hash → <span style="color:var(--bn-colour-muted)">behind</span></div></div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost M">M</span> · a canonical hash over three tables on every read; one column</dd>
+      <dt>Layers</dt><dd>reader route only</dd>
+      <dt>Says</dt><dd>behind or not; nothing else</dd>
+      <dt>Risk</dt><dd>a read stays cheap today (“reads stay cheap”, <code>eee11f91c</code>); this makes every open a three-table walk, and a “rename” flips it the same as twenty tags</dd>
+      <dt>Rules out</dt><dd>the “write in the mutation’s transaction” rule the doc sets</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="com"><span class="lab">Commentary</span>
+<b>B is A with a name on each act.</b> It costs one more column than A and gives the only datum a later freshness line could honestly print (“4 tags changed since”), and the only datum a build can log (“rebuilt after 7 edits: 2 hides, 4 tags, 1 rename”). C is the right shape for the deferred coordinator and the wrong time: a per-quote table is a second home for quote ids, with the export and deletion obligations that brings, in exchange for a scoping the row says not to build yet. D breaks the doc’s own rule and makes the read pay.</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2>3 · Decision 2 — which events write a snapshot</h2>
+<p class="lede">A snapshot write is an LLM-backed pass: <code>materialise_completed_signal_snapshot</code> builds every card and narrates the changed ones (the elaboration cache returns the rest). The question is which later events earn one. The three that exist stay; the options differ on what is added.</p>
+
+<div class="opts">
+  <div class="opt">
+    <h3><span class="ltr">A</span> As today</h3>
+    <div class="sib">Writers: <b>codebook apply · new interviews · startup repair</b>. Hand edits never.</div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost S">S</span> · nothing</dd>
+      <dt>Researcher sees</dt><dd>a framework switched off keeps its cards until the next run or apply; its tags are gone from Quotes, present in Signals</dd>
+      <dt>Risk</dt><dd>the one visible contradiction between lenses that no read-time filter removes</dd>
+    </dl>
+  </div>
+  <div class="opt rec">
+    <h3><span class="ltr">B</span> Today + framework on/off</h3>
+    <div class="sib">Sibling: the same <b>apply-completion hook</b> in <code>routes/autocode.py</code>, called from the framework-state route after its commit.</div>
+    <div class="art"><div class="bar">what the build costs on a toggle <i>measured shape</i></div><div class="body" style="font-size:var(--bn-text-label)">
+<b>Switch off</b>: cards for that codebook drop; every other card’s evidence is unchanged → cache hits, <b>0 model calls</b>.<br>
+<b>Switch on</b> (already coded): its cards return; narratives for them were cached at the last apply → <b>0 model calls</b> unless evidence moved.<br>
+No cloud model: the build is skipped as today and the snapshot stays; the drift tally (§2 B) records <code>framework: 1</code>.</div></div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost S">S</span> · one call after the framework-state commit, behind the existing <code>begin/end_signals_preparing</code> so a rebuild never greys a lens that has a report</dd>
+      <dt>Layers</dt><dd>one route; a lifecycle test (“a disabled framework leaves the next snapshot”, the doc’s invariant 1)</dd>
+      <dt>Researcher sees</dt><dd>Signals agrees with Codebook within the build’s seconds; nothing announced</dd>
+      <dt>Risk</dt><dd>a researcher toggling to compare pays a build each time; cheap because cached, but <code>busy.working("signals")</code> holds the reaper during it</dd>
+    </dl>
+  </div>
+  <div class="opt">
+    <h3><span class="ltr">C</span> Today + debounced refresh after hand edits</h3>
+    <div class="sib">Sibling: <b>AutoCode catch-up</b> (<code>autocode_catch_up.py</code>): a debounced background pass a mutation schedules.</div>
+    <dl class="cons">
+      <dt>Build</dt><dd><span class="cost L">L</span> · the doc’s §4 coordinator: outbox, lease, consent gate, interleaving tests</dd>
+      <dt>Researcher sees</dt><dd>cards re-rank and re-word a minute after a hide: a signal that moves under the reader</dd>
+      <dt>Cost</dt><dd>model calls on every edit burst; the row says this is “not a v1 problem”</dd>
+      <dt>Rules out</dt><dd>the frozen contract readers can trust (“the written headline stays as built”, <code>design-signals-follow-hide.md</code>)</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="com"><span class="lab">Commentary</span>
+A framework toggle is not a hand edit: it changes the analytical vocabulary, the one thing the follow-hide filter cannot subtract, and it is already an LLM-adjacent act (the apply that coded it). It is also nearly free, since every other card hits the narrative cache. That is why B is the one addition worth making now, and C is the one the row explicitly defers.</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2>4 · Decision 3 — what the lens shows while frozen and no model is configured</h2>
+<p class="lede">Three states. The first two are the same cards with and without a datum line; the third is the empty case. The nav, heading and card anatomy are the shipped ones (<code>signals.css</code>, design A); the quote rows are drawn as bars so no participant speech appears here.</p>
+
+<div class="two">
+  <div>
+    <div class="art">
+      <div class="bar"><span>V0 · frozen, drift recorded, nothing drawn</span><i>recommended now</i></div>
+      <div class="body">
+        <div class="nav"><span>Project</span><span>Sessions</span><span>Quotes</span><span>Codebook</span><b>Signals</b></div>
+        <h3 class="sig-loc" style="margin-top:0">Checkout</h3>
+        <div class="card">
+          <span class="chip"><span class="dot"></span>Problem · strong</span>
+          <div class="sig-name">Delivery slot costs read as a penalty</div>
+          <p class="sig-claim">Five of six participants treated the slot fee as a charge for being late rather than a price for a time.</p>
+          <p class="sig-sum">Four describe it as an extra charge, two compare it with a parking fine; the one dissenter had used a competitor’s free slots.</p>
+          <div class="q"><span class="tc">p1 · 04:12</span><span class="ln l"></span></div>
+          <div class="q"><span class="tc">p3 · 11:40</span><span class="ln m"></span></div>
+          <div class="q gone"><span class="tc">p3 · 12:02</span><span class="ln s"></span></div>
+          <div class="q"><span class="tc">p5 · 02:55</span><span class="ln m"></span></div>
+          <div class="showall">Show all 7 quotes →</div>
+        </div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">Commentary</span>The struck row stands for a quote hidden after the build: it is gone on read (shipped). Nothing else changes. The 4 tags added since are not seen and not mentioned. This is the row text (“defer the user-facing freshness UX”) drawn literally, and it is already what HEAD does — once §2 B lands, the only new thing is a tally nobody sees.</div>
+  </div>
+
+  <div>
+    <div class="art">
+      <div class="bar"><span>V1 · a datum line, date only</span><i>later, if wanted</i></div>
+      <div class="body">
+        <div class="nav"><span>Project</span><span>Sessions</span><span>Quotes</span><span>Codebook</span><b>Signals</b></div>
+        <p class="datum">Signals from 3 Nov 2026</p>
+        <h3 class="sig-loc" style="margin-top:0">Checkout</h3>
+        <div class="card">
+          <span class="chip"><span class="dot"></span>Problem · strong</span>
+          <div class="sig-name">Delivery slot costs read as a penalty</div>
+          <p class="sig-claim">Five of six participants treated the slot fee as a charge for being late rather than a price for a time.</p>
+          <p class="sig-sum">Four describe it as an extra charge, two compare it with a parking fine; the one dissenter had used a competitor’s free slots.</p>
+          <div class="q"><span class="tc">p1 · 04:12</span><span class="ln l"></span></div>
+          <div class="q"><span class="tc">p3 · 11:40</span><span class="ln m"></span></div>
+          <div class="q"><span class="tc">p5 · 02:55</span><span class="ln m"></span></div>
+          <div class="showall">Show all 6 quotes →</div>
+        </div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">Commentary</span>One line, page level, in the muted caption that the heatmap pane’s “Based on N tags” banner already uses. It reads <code>computed_at</code>, which is on the wire and undrawn today, through <code>format_finder_date</code> (register: <code>docs/design-shared-formats.md</code>). Owner-written draft string, one key in 21 locales. It is <b>not news</b> on a study nobody has edited, which is why it is a later step, and why the variant below adds the clause only when there is one.</div>
+  </div>
+</div>
+
+<div class="two" style="margin-top:1.2rem">
+  <div>
+    <div class="art">
+      <div class="bar"><span>V2 · the datum plus the drift tally</span><i>later; needs §2 B</i></div>
+      <div class="body">
+        <p class="datum" style="margin-top:0">Signals from 3 Nov 2026 · 4 tags and 1 heading changed since</p>
+        <h3 class="sig-loc" style="margin-top:0">Checkout</h3>
+        <div class="card" style="padding-bottom:.4rem">
+          <span class="chip"><span class="dot"></span>Problem · strong</span>
+          <div class="sig-name">Delivery slot costs read as a penalty</div>
+          <p class="sig-claim">Five of six participants treated the slot fee as a charge for being late rather than a price for a time.</p>
+        </div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">Commentary</span>The clause appears only when the tally is non-zero, in the house pattern of the tag sidebar (“no wall of zeros”, W04). It still offers no verb: the row defers the regenerate control, and a sentence that names a problem with no remedy is the needy shape the owner rejects. If this is ever drawn, hides are left out of the clause — they are already followed on read, so saying “2 quotes hidden since” would describe something the card already shows.</div>
+  </div>
+
+  <div>
+    <div class="art">
+      <div class="bar"><span>V3 · no snapshot and no model</span><i>today lit; proposed withheld</i></div>
+      <div class="body">
+        <div class="nav"><span>Project</span><span>Sessions</span><span>Quotes</span><span>Codebook</span><span class="dim">Signals</span></div>
+        <div style="padding:2rem 0; color:var(--bn-colour-muted); font-size:var(--bn-text-label)">Sessions lens here. Signals is dim and unclickable, as it is during a first run. No sentence under the project name: nothing is being prepared.</div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">Commentary</span>Today <code>lens_readiness</code> withholds Signals only while a build is pending, so a study with no report and no model gets a lit lens over the sentiment-only fallback — the bare cards the owner saw on 30 Oct, now permanent. The fix is one more input to <code>lens_readiness</code>: withheld when no snapshot has cards <em>and</em> no cloud model is configured. The reason is already on the popover (“No AI provider is set up yet.” with Set Up Provider…, entry M18-B08-B06), so no new string. An exported report never reaches this state: export is refused while a lens is withheld.</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2>5 · Comparison</h2>
+<table>
+  <tr><th>Question</th><th>Options</th><th>Pick</th><th>Why</th></tr>
+  <tr><td>What is drift, where written</td><td>A counter · <b>B counter + tally</b> · C ledger · D hash on read</td><td class="rec">B</td><td>Writes in the mutation’s transaction; one column more than A; the only honest datum for a later line; no second home for quote ids</td></tr>
+  <tr><td>Which events write a snapshot</td><td>A today · <b>B + framework on/off</b> · C + debounced hand edits</td><td class="rec">B</td><td>A toggle changes vocabulary, which no read filter can subtract; near-zero model cost through the narrative cache; C is what the row defers</td></tr>
+  <tr><td>Frozen, model gone</td><td><b>V0 nothing</b> · V1 date · V2 date + tally · V3 withhold when no report and no model</td><td class="rec">V0 now, V3 now, V1/V2 later</td><td>V0 is the row text and HEAD’s behaviour; V3 closes the one state the owner already rejected; V1/V2 are the deferred freshness UX, drawn so the data model keeps room for them</td></tr>
+  <tr><td>Doc status</td><td>proposed · <b>partial, trued</b></td><td class="rec">true it</td><td>Six of its parts ship; a reader of the doc today would re-propose the reader contract</td></tr>
+</table>
+
+<div class="reco">
+  <b>Recommendation.</b> Record drift as a revision counter with a per-reason tally on the snapshot row (§2 B), written at the five mutation sites and reset by every write. Add the framework on/off hook as a fourth writer (§3 B), reusing the apply-completion path and the preparing flag. Draw nothing new on the lens (V0) except the readiness change for the empty, model-less study (V3). Leave V1/V2 as the deferred freshness UX, with the fields they would read already on the wire. Then true the design doc to “partial” and move its component plans A–E into a built/not-built table.
+  <ol>
+    <li>Migration 025: <code>projects.analysis_revision</code>, <code>signal_snapshots.observed_revision</code>, <code>signal_snapshots.drift_since</code> (JSON, six keys). <code>signal_snapshots.note_drift(db, project_id, reason)</code>, called in the same transaction by hide, tag, framework-state, heading and quote routes. Build logs the tally it is replacing. Tests: each route increments; a write resets; opening the lens does not change it.</li>
+    <li>Framework-state route: after commit, <code>begin_signals_preparing</code> → <code>materialise_completed_signal_snapshot(source="framework_toggle")</code> → <code>end</code>, only when a cloud model is configured. Test: a disabled framework is absent from the next snapshot; the lens is never greyed over an existing report.</li>
+    <li><code>lens_readiness</code>: Signals withheld when no snapshot has cards and no cloud model is configured. Test in <code>test_lens_readiness.py</code>.</li>
+    <li>Serialise <code>drift_since</code> and <code>computed_at</code> on <code>/signals/snapshot</code> (classified <code>EMBED</code> as the snapshot already is); nothing in the SPA reads them yet.</li>
+  </ol>
+</div>
+
+<div class="com"><span class="lab">Open for the owner</span>
+<ul>
+  <li><b>Is a framework toggle a snapshot-writing event?</b> It spends nothing when cached, but it is an LLM-backed pass started by a switch rather than an Apply. If no, drift records <code>framework: 1</code> and the contradiction between Codebook and Signals stands until the next apply.</li>
+  <li><b>Does drift count hides?</b> They are followed on read, so a tally of them says nothing the card does not already show. The recommendation counts them (cheap, complete) and would leave them out of any later sentence.</li>
+  <li><b>V3’s reason.</b> Withholding with no words relies on the existing “No AI provider is set up yet” popover for the why. If the owner wants the lens row itself to say so, that is a new subtitle variant, not drawn here.</li>
+</ul></div>
+
+</div>
+</body>
+</html>

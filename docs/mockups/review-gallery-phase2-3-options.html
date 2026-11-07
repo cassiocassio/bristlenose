@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review Gallery phases 2 and 3: options</title>
+<!-- Options mockup. Lifecycle: PROPOSED 7 Nov 2026 (see docs/mockups/STATUS.md).
+     Builds on docs/mockups/review-gallery.html (Phase 1 IMPLEMENTED 22 Oct 2026, 78e73372);
+     its macOS chrome variables are reused so the two files read as one. Native surface: SF
+     system stack, native controls. Developer tooling, so chrome strings are English by decision
+     (the Diagnostics exception in docs/design-i18n.md). -->
+<style>
+:root{
+  --bg:#f5f5f7; --win:#ffffff; --side:#ebebed; --ink:#1d1d1f; --ink2:#6e6e73; --ink3:#a1a1a6;
+  --line:#d2d2d7; --field:#ffffff; --accent:#0a84ff; --sel:#d4e6ff; --warn:#e8a200; --red:#d70015;
+  --canvas:#f0f0f2; --ok:#1f8a3e; --chip:#eef0f3; --hatch:#c9c9ce; --rec:#0a84ff;
+  --s:#1f8a3e; --m:#b45309; --l:#b91c1c;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161618; --win:#242426; --side:#2c2c2e; --ink:#f5f5f7; --ink2:#a1a1a6; --ink3:#6e6e73;
+    --line:#3a3a3c; --field:#1c1c1e; --sel:#1d3b62; --warn:#ffb340; --red:#ff6961;
+    --canvas:#1c1c1e; --ok:#5fd17e; --chip:#2f3033; --hatch:#4a4a4e; --s:#5fd17e; --m:#fbbf24; --l:#f87171;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161618; --win:#242426; --side:#2c2c2e; --ink:#f5f5f7; --ink2:#a1a1a6; --ink3:#6e6e73;
+  --line:#3a3a3c; --field:#1c1c1e; --sel:#1d3b62; --warn:#ffb340; --red:#ff6961;
+  --canvas:#1c1c1e; --ok:#5fd17e; --chip:#2f3033; --hatch:#4a4a4e; --s:#5fd17e; --m:#fbbf24; --l:#f87171;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;padding:28px 16px 64px}
+main{max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin:0 0 6px;line-height:1.25}
+h2{font-size:17px;margin:44px 0 6px}
+h3{font-size:14px;margin:18px 0 6px}
+.lede{color:var(--ink2);max-width:860px;margin:0 0 14px}
+code{font:11.5px ui-monospace,Menlo,monospace;background:var(--chip);border-radius:4px;padding:0 4px}
+.banner{font:11.5px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;padding:7px 10px;color:var(--ink2);margin-bottom:18px}
+.banner b{color:var(--ink)}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:6px 0 20px}
+.key span::before{content:"";display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:3px}
+.key .ka::before{border:1px solid var(--line);background:var(--canvas)}
+.key .kc::before{border-left:3px solid var(--ink2);background:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 6px)}
+/* built box */
+.built{border:1px solid var(--line);border-radius:9px;padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;font-size:12.5px;background:var(--win)}
+.built h4{margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.built ul{margin:0;padding-left:16px}.built li{margin:3px 0}
+/* commentary: hatched EDGE band only */
+.com{border:7px solid transparent;border-left:3px solid var(--ink2);border-radius:7px;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,repeating-linear-gradient(135deg,var(--hatch) 0 5px,transparent 5px 10px) border-box;
+  padding:8px 12px;font-size:12.5px;margin-top:10px}
+.com .lab{display:block;font:10px ui-monospace,Menlo,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin-bottom:3px}
+.com ul{margin:4px 0 0;padding-left:16px}.com li{margin:2px 0}
+/* mac window */
+.win{background:var(--win);border:1px solid var(--line);border-radius:11px;box-shadow:0 10px 34px rgba(0,0,0,.16);overflow:hidden}
+.tb{height:38px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--side)}
+.tl i{width:11px;height:11px;border-radius:50%;display:inline-block;background:#ff5f57;margin-right:5px}
+.tl i+i{background:#febc2e}.tl i+i+i{background:#28c840}
+.tb .title{font-weight:600;margin-left:6px}.tb .sp{flex:1}
+.pop{border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:12px;background:var(--field)}
+.split{display:grid;grid-template-columns:240px 1fr;min-height:420px}
+.sb{background:var(--side);border-right:1px solid var(--line);padding:8px 8px 12px;font-size:12.5px}
+.sb .hdr{font-size:11px;font-weight:600;color:var(--ink2);padding:10px 8px 3px}
+.sb .row{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px}
+.sb .row.on{background:var(--sel)}
+.sb .row .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb .row .k{font-size:10px;color:var(--ink3)}
+.sb .row .ck{color:var(--ok);font-size:11px;width:10px}
+.det{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.dh{display:flex;align-items:flex-start;gap:12px}
+.dh .tt{flex:1}.dh h4{margin:0;font-size:15px}
+.dh .what{color:var(--ink2);margin-top:3px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{background:var(--chip);border-radius:5px;padding:1px 6px;font:11px ui-monospace,Menlo,monospace;color:var(--ink2)}
+.btn{border:1px solid var(--line);background:var(--field);border-radius:6px;padding:3px 12px;font-size:13px;color:var(--ink);white-space:nowrap;display:inline-block}
+.btn.def{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.dim{opacity:.45}
+.gb{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--canvas)}
+.gb h5{margin:0 0 6px;font-size:13px}
+.gb p{margin:0 0 8px}
+.gb .seed{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;font-size:12px;color:var(--ink2)}
+.foot{font-size:12px;color:var(--ink2);border-top:1px solid var(--line);padding-top:8px;display:flex;gap:14px}
+/* option cards */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:12px}
+.opt{border:1px solid var(--line);border-radius:9px;padding:14px;background:var(--win);display:flex;flex-direction:column;gap:10px}
+.opt.rec{border-color:var(--rec);box-shadow:inset 0 0 0 1px var(--rec)}
+.opt h3{margin:0;font-size:14px;display:flex;gap:8px;align-items:baseline}
+.opt h3 .ltr{font:600 13px ui-monospace,Menlo,monospace;color:var(--accent)}
+.opt .sib{font-size:12px;color:var(--ink2)}.opt .sib b{color:var(--ink)}
+.cons{font-size:12px;border-top:1px solid var(--line);padding-top:8px;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}
+.cons dt{color:var(--ink2)}.cons dd{margin:0}
+.cost{font:600 12px ui-monospace,Menlo,monospace}.cost.S{color:var(--s)}.cost.M{color:var(--m)}.cost.L{color:var(--l)}
+/* registry code */
+pre{margin:0;font:11.5px/1.5 ui-monospace,Menlo,monospace;background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;color:var(--ink)}
+pre .c{color:var(--ink3)} pre .n{color:var(--accent)}
+/* budget bar */
+.bud{display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin:8px 0 4px}
+.bud span{display:block;height:100%}
+.bud .m{background:#7aa7ff}.bud .a{background:#9b8cff}.bud .o{background:#c8ccd3}.bud .sp{background:var(--warn)}.bud .rv{background:var(--red)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+/* browser frame */
+.url{flex:1;max-width:520px;margin:0 auto;border:1px solid var(--line);border-radius:7px;background:var(--field);padding:3px 10px;font-size:12px;color:var(--ink2);text-align:center}
+.fault{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--chip);border-radius:8px;padding:8px 10px;font-size:12px}
+.lens{background:var(--win);border:1px solid var(--line);border-radius:8px;min-height:160px;display:flex;flex-direction:column}
+.lens .nav{display:flex;gap:14px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink2)}
+.lens .nav b{color:var(--ink)}
+.lens .body{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--ink2);padding:20px;text-align:center}
+/* tables */
+table{border-collapse:collapse;font-size:12px;width:100%}
+td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--ink2);font-weight:600}
+td.rec{font-weight:600}
+.reco{border:1px solid var(--rec);border-radius:9px;padding:12px 16px;margin-top:14px;background:var(--win)}
+.reco ol{margin:6px 0 0;padding-left:18px}.reco li{margin:4px 0}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:980px){.three{grid-template-columns:1fr}.built{grid-template-columns:1fr}.split{grid-template-columns:1fr}.sb{display:none}}
+</style>
+</head>
+<body>
+<main>
+
+<div class="banner"><b>PROPOSED 7 Nov 2026</b> · options for the owner · builds on <code>review-gallery.html</code> (Phase 1 shipped 22 Oct, <code>78e73372</code>; fixes <code>817c8713b</code>, <code>23aefe5ca</code>). Checked against HEAD <code>e5b539b0c</code>.</div>
+
+<h1>Review Gallery, phases 2 and 3: does an “In the app” entry carry a door or a recipe, and where do the web specimens live?</h1>
+<p class="lede">Two owner choices. <b>(i)</b> Phase 2: an entry the gallery cannot fake honestly points at the real app — should it <em>drive</em> the app into the state (a baton: open the window, seed a fixture, land on the surface) or hand the reviewer a recipe to follow? <b>(ii)</b> Phase 3: the web states — do they ship as real React components inside the release bundle, as a page that exists only under <code>serve --dev</code>, or not at all in a release build? Both are judged on the same four consequences: the DEBUG-only gate, what <code>check-release-binary.sh</code> can and cannot see, maintenance per entry, and how a stale entry is caught.</p>
+
+<div class="key"><span class="ka">Artefact: the gallery as it would look</span><span class="kc">Commentary: cost, gate, rot</span></div>
+
+<div class="built">
+  <div>
+    <h4>Already built — Phase 2 is half there</h4>
+    <ul>
+      <li><code>ReviewGallerySpecimen.navigation(recipe:, open:)</code> exists: every “In the app” entry carries recipe text <em>and</em> an optional door. 22 recipe entries; <b>3 have a door</b>, all <code>SettingsWindow.shared.show(pane:)</code> (M04, M05, M10).</li>
+      <li>The canvas draws “Seen in the real app, not faked here.”, the recipe, and an <b>Open It</b> button when a door exists (<code>ReviewGalleryCanvas</code>).</li>
+      <li>Fixture seams already exist for a baton: <code>DiagnosticFixture.load(name:)</code> (the Diagnostics ▸ Diagnostic fixtures menu applies one to the selected project), <code>PipelineRunner._debugSetState</code>, <code>ServeManager.debugMarkStartedByRetry</code>, <code>WhisperDownloadModel.debugApply</code>.</li>
+      <li>Two gates: <code>ReviewGalleryRegistryTests</code> builds and draws every state at a real size; <code>tests/test_review_gallery_registry.py</code> resolves every commit hash in git (skips in a shallow clone, so CI never runs that one). “Mark Reviewed” is keyed to the commit list, so a grown list un-reviews.</li>
+    </ul>
+  </div>
+  <div>
+    <h4>Already built — Phase 3 is split in two places</h4>
+    <ul>
+      <li><b>Hand-written</b> web specimens in a <code>WKWebView</code> inside the Mac gallery (<code>ErrorPatternWebPreview.swift</code>): HTML strings that <em>describe</em> <code>RouteError.tsx</code> and <code>PanelErrorBoundary.tsx</code>, not the components. A markup test checks their buttons. GA-2 (“hand-written versus the real view”) is held for this decision.</li>
+      <li>Two <b>real</b> specimen routes in the SPA, <code>/report/specimen</code> and <code>/report/picker-specimen</code>: always registered, lazy chunks of <b>7.5 KB and 2.5 KB</b>, nav link only under <code>IS_DEV</code>, a door from the Diagnostics menu (<code>openSpecimen</code>). They ship in every release bundle (present in the signed sidecar’s <code>static/assets</code>).</li>
+      <li>The <code>/report/dev/review</code> page with a fault bar (§3 of the Phase 1 mockup) is <b>not built</b>; nothing in <code>app.py</code> or <code>routes/dev.py</code> mounts it.</li>
+      <li><code>check-release-binary.sh</code> greps the Mach-O for <code>"Review Gallery"</code>, <code>BRISTLENOSE_DEBUG_</code> and two more literals. <b>Nothing scans the sidecar’s static JS</b>; a web fault injector in a release bundle would pass every gate.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>1 · Choice (i): the “In the app” entry — recipe, door, or baton</h2>
+<p class="lede">The same entry, M08 “Stopped/failed study offers Analyse”, drawn three ways. Its recipe today: <em>Select project-ikea ▸ Diagnostics ▸ Diagnostic fixtures ▸ selected project ▸ stopped (then run_failed_abandoned); check context menu, Project menu, toolbar.</em> Everything above the canvas is the shipped gallery; only the group box changes.</p>
+
+<div class="three">
+  <div>
+    <div class="win">
+      <div class="tb"><span class="tl"><i></i><i></i><i></i></span><span class="title">Review Gallery</span><span class="sp"></span><span class="pop">A · recipe</span></div>
+      <div class="det">
+        <div class="dh"><div class="tt"><h4>Stopped/failed study offers Analyse</h4><div class="what">A study whose run stopped or failed offers Analyse (resume) as well as Re-analyse….</div>
+          <div class="chips"><span class="chip">8c06f7f3</span><span class="chip">landed 2026-10-20</span></div></div><span class="btn">Mark Reviewed</span></div>
+        <div class="gb"><h5>Seen in the real app, not faked here.</h5>
+          <p>Select project-ikea ▸ Diagnostics ▸ Diagnostic fixtures ▸ selected project ▸ stopped (then run_failed_abandoned); check context menu, Project menu, toolbar.</p></div>
+        <div class="foot"><span>⌥⌘↓ next · ⌥⌘↑ previous · ⌘↩ mark reviewed</span></div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">A · Recipe only (today for 19 of 22)</span>
+      <dl class="cons" style="border:0;padding:0"><dt>Build</dt><dd><span class="cost S">S</span> · nothing</dd><dt>Per entry</dt><dd>~2 min to write; 1–3 min to follow, each time</dd><dt>Gate</dt><dd><code>#if DEBUG</code> around the whole registry; no literal reaches Release</dd><dt>Stale caught by</dt><dd>a human noticing the menu path moved; nothing mechanical</dd><dt>Rules out</dt><dd>nothing</dd></dl></div>
+  </div>
+
+  <div>
+    <div class="win" style="box-shadow:0 0 0 2px var(--rec),0 10px 34px rgba(0,0,0,.16)">
+      <div class="tb"><span class="tl"><i></i><i></i><i></i></span><span class="title">Review Gallery</span><span class="sp"></span><span class="pop">B · recipe + door + seed</span></div>
+      <div class="det">
+        <div class="dh"><div class="tt"><h4>Stopped/failed study offers Analyse</h4><div class="what">A study whose run stopped or failed offers Analyse (resume) as well as Re-analyse….</div>
+          <div class="chips"><span class="chip">8c06f7f3</span><span class="chip">landed 2026-10-20</span><span class="chip">seed · stopped</span></div></div><span class="btn">Mark Reviewed</span></div>
+        <div class="gb"><h5>Seen in the real app, not faked here.</h5>
+          <p>Check the context menu, the Project menu and the toolbar: Analyse and Re-analyse… are both offered.</p>
+          <div class="seed">Seeds the selected study with <code>stopped</code>, then <code>run_failed_abandoned</code>. <span class="btn def">Open It</span> <span class="btn">Undo Seed</span></div></div>
+        <div class="foot"><span>Seeded project-ikea · stopped</span><span>⌥⌘↓ next · ⌘↩ mark reviewed</span></div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">B · Door where the app has one, with a named seed</span>
+      <dl class="cons" style="border:0;padding:0"><dt>Build</dt><dd><span class="cost M">M</span> · one optional <code>seed: DiagnosticFixture.Name?</code> on the navigation case; <code>open</code> applies it through the existing menu path then activates the surface; Undo Seed is the existing rescan</dd><dt>Per entry</dt><dd>~5 min: recipe shrinks to what to look at; door is a closure the compiler checks</dd><dt>Gate</dt><dd>unchanged: the seams it calls are already <code>#if DEBUG</code> or <code>_debug</code>-prefixed</dd><dt>Stale caught by</dt><dd>compile (a renamed pane or scene), <code>summaryScenarioNames.contains(seed)</code> in the registry test, and the recipe reads better because it says what to see, not how to get there</dd><dt>Rules out</dt><dd>nothing; C can be added entry by entry</dd></dl></div>
+  </div>
+
+  <div>
+    <div class="win">
+      <div class="tb"><span class="tl"><i></i><i></i><i></i></span><span class="title">Review Gallery</span><span class="sp"></span><span class="pop">C · baton</span></div>
+      <div class="det">
+        <div class="dh"><div class="tt"><h4>Stopped/failed study offers Analyse</h4><div class="what">A study whose run stopped or failed offers Analyse (resume) as well as Re-analyse….</div>
+          <div class="chips"><span class="chip">8c06f7f3</span><span class="chip">fixture study</span></div></div><span class="btn">Mark Reviewed</span></div>
+        <div class="gb"><h5>Opens a fixture study in a new window, in this state.</h5>
+          <p>A temporary study “Review · stopped run” is added to the sidebar, selected, its context menu opened. Closing the window removes it.</p>
+          <div class="seed"><span class="btn def">Open It</span> <span class="btn dim">Close Fixture Window</span></div></div>
+        <div class="foot"><span>Fixture study lives under the app container’s tmp; not indexed</span></div>
+      </div>
+    </div>
+    <div class="com"><span class="lab">C · Full baton: a seeded fixture study driven into the state</span>
+      <dl class="cons" style="border:0;padding:0"><dt>Build</dt><dd><span class="cost L">L</span> · a temp <code>ProjectIndex</code> entry, a window on it, state injection, teardown; <code>ReviewGallerySidebarFixture</code> does the first third already but never touches the real index</dd><dt>Per entry</dt><dd>~20 min: a scenario per entry, plus the drive sequence</dd><dt>Gate</dt><dd>new risk: a fixture study must never reach <code>ProjectIndex</code> on disk or the serve fleet; needs its own test and a <code>check-window-surfaces.sh</code> clause</dd><dt>Stale caught by</dt><dd>compile, plus a drive that lands somewhere else, which only a human sees</dd><dt>Rules out</dt><dd>cheap entries: every entry now costs a scenario, so fewer get written</dd></dl></div>
+  </div>
+</div>
+
+<div class="com"><span class="lab">Commentary</span>
+Three doors exist and 19 recipes do not have one because 19 entries have no cheap door to call: a Finder drop, a keyboard chord in the report, a second window. B does not change that; it gives the 6–8 entries whose recipe begins “Diagnostics ▸ Diagnostic fixtures ▸ …” a one-click seed, and keeps the recipe for what the reviewer must <em>look at</em>, which is the half a door cannot do. C is the owner rule “the appliance copes” applied to a tool whose user is the developer, and it buys a fixture study in the real sidebar: the one object the sandbox, the reaper and the index all care about.</div>
+
+<h3>What B adds to the registry</h3>
+<pre><span class="c">// ReviewGalleryRegistry.swift — the navigation case grows one optional field</span>
+case navigation(recipe: String, open: (@MainActor () -> Void)?, <span class="n">seed: DiagnosticFixture.Name? = nil</span>)
+
+<span class="c">// M08, rewritten: the recipe says what to see; the seed and door do the getting there</span>
+navigation(id: "M08", title: "Stopped/failed study offers Analyse", …
+           recipe: "Check the context menu, the Project menu and the toolbar: Analyse and Re-analyse… are both offered.",
+           <span class="n">seed: .stopped,</span>
+           open: { <span class="n">DiagnosticFixture.applyToSelectedProject(.stopped)</span>; NSApp.sendAction(#selector(ContentView.showProjectMenu), to: nil, from: nil) })
+
+<span class="c">// ReviewGalleryRegistryTests — a seed that is not a scenario fails the build of the gallery, not the review</span>
+@Test func everySeedIsAScenario() {
+    for entry in ReviewGalleryRegistry.entries { for state in entry.states {
+        if case .navigation(_, _, let seed?) = state.make(ctx) {
+            #expect(DiagnosticFixture.summaryScenarioNames.contains(seed.rawValue), "\(entry.id) seeds \(seed)")
+        } } }
+}</pre>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>2 · Choice (ii): where the web specimens live, and what “bundle-size budget” means here</h2>
+<p class="lede">The budget turns out not to be bytes. Today’s two real specimen routes add 10 KB to a 3.8 MB asset folder; a review page with a fault bar would add perhaps 40–60 KB. What differs between the options is whether a <b>fault injector</b> (crash this lens, fail this request) exists in a researcher’s binary at all, and whether any gate would notice if it did.</p>
+
+<div class="bud" aria-label="Release static assets, 3.8 MB">
+  <span class="a" style="width:4.9%" title="api chunk 188 KB"></span>
+  <span class="m" style="width:4.5%" title="main chunk 170 KB"></span>
+  <span class="o" style="width:89.3%" title="everything else"></span>
+  <span class="sp" style="width:0.3%" title="specimen routes 10 KB"></span>
+  <span class="rv" style="width:1.3%" title="a review page + fault bar, estimate 50 KB"></span>
+</div>
+<div class="legend"><span><i style="background:#9b8cff"></i>api 188 KB</span><span><i style="background:#7aa7ff"></i>main 170 KB</span><span><i style="background:#c8ccd3"></i>the rest of 3.8 MB</span><span><i style="background:var(--warn)"></i>today’s two specimen routes, 10 KB</span><span><i style="background:var(--red)"></i>a review page + fault bar if it shipped, ~50 KB (estimate)</span></div>
+
+<div class="opts">
+  <div class="opt">
+    <h3><span class="ltr">A</span> Hand-written HTML in the Mac gallery (today)</h3>
+    <div class="sib">Sibling: <b><code>ErrorPatternWebPreview</code></b>, a <code>WKWebView</code> fed a string.</div>
+    <div class="gb"><div class="lens" style="min-height:120px"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b></div><div class="body"><div style="font-size:20px">⌧</div><div>Quotes couldn’t be shown.</div><span class="btn">Give feedback</span></div></div>
+      <div style="font:10.5px ui-monospace,Menlo,monospace;color:var(--ink2);margin-top:6px">RouteError.tsx · lens scope (as described in Swift, not rendered from it)</div></div>
+    <dl class="cons">
+      <dt>Release bytes</dt><dd>0 — it is Swift under <code>#if DEBUG</code></dd>
+      <dt>Gate</dt><dd><code>check-release-binary.sh</code> already covers it (“Review Gallery” literal)</dd>
+      <dt>Per entry</dt><dd>~15 min to write the HTML; a second copy of the component’s look that nobody updates with it</dd>
+      <dt>Stale caught by</dt><dd>nothing: the markup test checks buttons, not fidelity. This is GA-2.</dd>
+      <dt>Rules out</dt><dd>reviewing a change to the real component; the specimen shows the Swift author’s memory of it</dd>
+    </dl>
+  </div>
+
+  <div class="opt">
+    <h3><span class="ltr">B</span> Real components on always-registered lazy routes</h3>
+    <div class="sib">Sibling: <b><code>/report/specimen</code></b> and <b><code>/report/picker-specimen</code></b> — lazy chunk, nav link under <code>IS_DEV</code>, Diagnostics door.</div>
+    <div class="gb"><div style="font-size:12px;color:var(--ink2)">Add <code>/report/review</code>: the real <code>RouteError</code>, <code>PanelErrorBoundary</code>, chips and dialogs mounted with props. <b>Benign states only</b>: no fault bar, because a request-fault injector on a shipped route is a back door whatever the nav shows.</div></div>
+    <dl class="cons">
+      <dt>Release bytes</dt><dd>~20–30 KB lazy chunk, loaded only when visited; reachable by URL in any browser on a serve</dd>
+      <dt>Gate</dt><dd>none today for static JS; would need a <code>check-static-assets.sh</code> that greps the bundle for a marker literal (the Mach-O scan’s sibling)</dd>
+      <dt>Per entry</dt><dd>~5 min: a props fixture per state; the component is the component</dd>
+      <dt>Stale caught by</dt><dd>vitest on the route (a renamed prop fails the build); the Mac gallery can show it only through a live sidecar</dd>
+      <dt>Rules out</dt><dd>crash and failed-request states — the 7 of 26 “hands” items the Phase 1 mockup wanted the fault bar for</dd>
+    </dl>
+  </div>
+
+  <div class="opt rec">
+    <h3><span class="ltr">C</span> A dev-only page, compiled out of release and export</h3>
+    <div class="sib">Sibling: the <b><code>--dev</code> playground and <code>/api/dev/telemetry</code></b> (mounted only under <code>serve --dev</code>), and Vite’s <code>import.meta.env.DEV</code> dead-code drop.</div>
+    <div class="gb"><div class="tb" style="height:30px;border-radius:6px;border:1px solid var(--line);margin-bottom:8px"><span class="url">localhost:8484/report/dev/review#lens-crash</span></div>
+      <div class="fault"><b>Fault</b> <span class="pop">Crash ▾</span> in <span class="pop">Signals lens ▾</span> <span class="pop">every time ▾</span> <span class="btn def">Apply</span><span style="color:var(--ink2)">or</span><span class="pop">Fail ▾</span> <span class="pop">GET /sessions ▾</span> <span class="pop">500 ▾</span></div>
+      <div class="lens" style="margin-top:8px;min-height:110px"><div class="nav"><span>Project</span><span>Sessions</span><span>Quotes</span><b>Signals</b></div><div class="body"><div style="font-size:20px">⌧</div><div>Signals couldn’t be shown.</div><span class="btn">Give feedback</span></div></div></div>
+    <dl class="cons">
+      <dt>Release bytes</dt><dd>0 — the route, the fault bar and its fetch wrapper sit behind <code>if (import.meta.env.DEV)</code>, so the production and export builds never contain them; the Python side mounts nothing without <code>--dev</code></dd>
+      <dt>Gate</dt><dd>a static-asset scan for one marker literal (e.g. <code>bn-fault-bar</code>) in <code>static/assets/*.js</code>, called from <code>build-all.sh</code> beside <code>check-bundle-integrity.py</code>; a gate with no caller is not a gate</dd>
+      <dt>Per entry</dt><dd>~5 min props fixture, or ~1 min when the state is a fault (pick lens + fault, no code)</dd>
+      <dt>Stale caught by</dt><dd>vitest on the registry; the <code>/dev/review</code> list is the same JSON the Mac reads for “In the app” web entries, so one list, one rot</dd>
+      <dt>Needs</dt><dd>the full stack to review (Vite on 5173 + serve on 8484); the Mac gallery shows web states only in the External Server scheme</dd>
+      <dt>Rules out</dt><dd>reviewing web states in a plain Debug build of the app with the bundled sidecar — a door that opens a URL the sidecar does not serve must dim, not 404</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="com"><span class="lab">Commentary</span>
+The Phase 1 mockup’s §3 described C and said “compiled out of release and export builds”; nobody built it, and A grew in its place because A needed no sidecar. A is the cheapest to look at and the most expensive to trust: it is a drawing of the component with the component’s name on it, which is the class of artefact this repo’s mockup register exists to warn about. B ships a review surface in a researcher’s binary for no researcher reason; harmless at 10 KB today, and a precedent that stops being harmless the day someone adds a fault switch to it “just for dev”. C is the only option where the fault bar can exist, because it is the only one where it cannot ship.</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>3 · The gate, drawn as it would run</h2>
+<pre><span class="c"># desktop/scripts/check-static-assets.sh — sibling of check-release-binary.sh, for the sidecar's JS</span>
+<span class="c"># Called from build-all.sh step 1d (after check-bundle-integrity.py). An assertion is `cmd || die`.</span>
+ASSETS="$APP/Contents/Resources/bristlenose-sidecar/_internal/bristlenose/server/static/assets"
+hits=$(grep -l -F -e "bn-fault-bar" -e "/report/dev/review" "$ASSETS"/*.js || true)
+[ -z "$hits" ] || die "dev-only review page reached the release bundle: $hits"
+
+<span class="c"># tests/test_static_assets_dev_free.py — the same check against frontend/dist after `npm run build`,</span>
+<span class="c"># so CI fails before the Mac ever archives. Negative fixture: a build with DEV forced on must trip it.</span></pre>
+
+<div class="com"><span class="lab">Commentary</span>
+Two places, one literal, and a negative fixture, because a gate that has never failed is not known to work (gate policy, root <code>CLAUDE.md</code>). The literal is a class name the fault bar must carry; the test asserts it is present in a dev build and absent in a production one, so the gate cannot pass by the fault bar being renamed.</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>4 · Comparison</h2>
+<table>
+  <tr><th></th><th>Release gate</th><th>Per entry</th><th>Stale entry caught by</th><th>Fault states</th><th>Build</th></tr>
+  <tr><td><b>(i) A</b> recipe</td><td><code>#if DEBUG</code>, scanned</td><td>2 min write, 1–3 min each review</td><td>a human</td><td>—</td><td><span class="cost S">S</span></td></tr>
+  <tr><td class="rec"><b>(i) B</b> recipe + door + seed</td><td>unchanged</td><td>5 min; review is a click</td><td>compile + seed-name test</td><td>—</td><td><span class="cost M">M</span></td></tr>
+  <tr><td><b>(i) C</b> baton</td><td>new risk to the index and fleet</td><td>20 min</td><td>compile; wrong landing: a human</td><td>—</td><td><span class="cost L">L</span></td></tr>
+  <tr><td><b>(ii) A</b> hand-written HTML</td><td>covered</td><td>15 min, then drifts</td><td>nothing</td><td>drawn, not real</td><td><span class="cost S">S</span></td></tr>
+  <tr><td><b>(ii) B</b> shipped lazy route</td><td>none exists; ~30 KB ships</td><td>5 min</td><td>vitest</td><td>cannot ship them</td><td><span class="cost M">M</span></td></tr>
+  <tr><td class="rec"><b>(ii) C</b> dev-only page</td><td>0 bytes; new static-asset scan</td><td>5 min, or 1 min for a fault</td><td>vitest; one list for both halves</td><td>real, dev only</td><td><span class="cost M">M</span></td></tr>
+</table>
+
+<div class="reco">
+  <b>Recommendation.</b> <b>(i) B</b>: keep the recipe as the required field, make it say what to look at, and add an optional named seed beside the optional door; convert the six fixture-driven entries (M08, M09, M10, B03, the two Whisper rows) first, leave the Finder-drop and chord entries as recipes. <b>(ii) C</b>: build the dev-only review page with the fault bar under <code>import.meta.env.DEV</code> and <code>serve --dev</code>, add the static-asset scan with its negative fixture, and retire <code>ErrorPatternWebPreview</code> once the four states it draws exist there — its Mac entries become <code>.navigation</code> doors that open the dev URL in the report webview and dim when the window’s serve is not a dev serve.
+  <ol>
+    <li>Registry: <code>seed:</code> on the navigation case; <code>everySeedIsAScenario</code>; rewrite six recipes. One Swift commit.</li>
+    <li>SPA: <code>/report/dev/review</code> route and fault bar behind <code>DEV</code>; the list is <code>review-gallery.json</code> under <code>frontend/src/data/</code>, read by vitest and (later) by the Mac registry through the sidecar. Python: mount nothing new; <code>--dev</code> already serves the SPA from Vite.</li>
+    <li>Gate: <code>check-static-assets.sh</code> + <code>test_static_assets_dev_free.py</code> with the forced-DEV negative fixture; wire the script into <code>build-all.sh</code> in the same commit, and list it in <code>docs/testing/inventory.md</code>’s source.</li>
+    <li>Then GA-2 closes: delete <code>ErrorPatternWebPreview.swift</code> and its markup test; the Mac entries point at the real thing or dim.</li>
+  </ol>
+</div>
+
+<div class="com"><span class="lab">Open for the owner</span>
+<ul>
+  <li><b>Is a dev-only web page acceptable as the only home for web states?</b> It means a plain Debug build with the bundled sidecar cannot show them; the reviewer runs the External Server scheme. If the owner wants web states visible in every Debug build, (ii) A stays for those four, with its drift accepted and noted in each entry’s <code>auditNote</code>.</li>
+  <li><b>Undo Seed.</b> The mockup draws it as a button beside Open It. The existing menu has no undo (a rescan restores the real state on the next poll). Whether the gallery should promise one is a small UX call; without it the footer line “Seeded project-ikea · stopped” is the only acknowledgement.</li>
+  <li><b>The default audit verdict (GA-4)</b> is still held: an entry lands as <code>.aligned</code> unless the author says otherwise. Not drawn here; it is orthogonal to both choices and could be settled in the same sitting.</li>
+</ul></div>
+
+</main>
+</body>
+</html>

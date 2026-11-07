@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm flash — options</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined from bristlenose/theme/tokens.css,
+   tokens-typography.css and colors/palette-*.css (7 Nov 2026).
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-body-lh:1.5;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700; --bn-weight-mono-tag:460;
+  --bn-transition-fast:.15s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem; --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-arrival-colour: var(--bn-colour-highlight); --bn-arrival-duration:5s; --bn-arrival-easing:ease-out;
+  /* PROPOSED tokens (options A/B/C) — not in the tree */
+  --bn-confirm-duration: 400ms;
+  --bn-confirm-easing: ease-out;
+  --bn-confirm-peak: 1.35;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #4b5563);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-colour-highlight:   light-dark(#fef08a, #854d0e);
+  --bn-selection-bg:       light-dark(#eef4fc, #1a2838);
+  --bn-selection-border:   light-dark(#007aff, #0a84ff);
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #22c55e);
+  --bn-nav-selection-bg:   light-dark(#efefef, #2b2b2b);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+@media (prefers-color-scheme: dark) { :root { --bn-weight-mono-tag: 400; } }
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1180px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; font-family:var(--bn-font-mono); }
+h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; line-height:1.2; }
+h2 { font-size:var(--bn-text-title); font-weight:490; margin:2.6rem 0 .3rem; }
+h3 { font-size:var(--bn-text-heading); font-weight:490; margin:1.6rem 0 .4rem; }
+p { max-width:74ch; } .muted { color:var(--bn-colour-muted); } .small { font-size:var(--bn-text-label); }
+code { font-family:var(--bn-font-mono); font-size:.86em; background:var(--bn-colour-badge-bg); padding:0 .3em; border-radius:var(--bn-radius-sm); }
+pre { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); line-height:1.5; background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem .9rem; overflow:auto; margin:.4rem 0; white-space:pre; }
+pre .c { color:var(--bn-colour-muted); } pre .k { color:var(--bn-colour-accent); } pre .del { background:light-dark(#fee2e2,#450a0a); } pre .add { background:light-dark(#dcfce7,#052e16); }
+a { color:var(--bn-colour-accent); }
+.banner { border:1px solid var(--bn-colour-border); border-left:4px solid var(--bn-colour-accent); border-radius:var(--bn-radius-md); padding:.6rem .9rem; margin:0 0 1.5rem; font-size:var(--bn-text-label); background:var(--bn-colour-quote-bg); }
+.banner b { font-weight:490; }
+.controls { display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; align-items:center; margin:1rem 0 1.5rem; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; font-family:var(--bn-font-mono); }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.pbtn:disabled { opacity:.5; cursor:default; }
+.swl { display:inline-flex; align-items:center; gap:.5rem; font-size:var(--bn-text-label); cursor:pointer; }
+.sw { position:relative; width:38px; height:22px; border-radius:11px; background:var(--bn-off-track); transition:background .28s ease; flex-shrink:0; }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.28); transition:left .28s cubic-bezier(.4,0,.2,1); }
+.swl.on .sw { background:var(--bn-colour-accent); } .swl.on .sw::after { left:18px; }
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0 0 1.2rem; }
+.key span { display:inline-flex; align-items:center; gap:.45rem; }
+.key .k-art { width:1.1rem; height:.8rem; border:1px solid var(--bn-colour-border); border-top:4px solid var(--bn-colour-border-hover); border-radius:2px; }
+.key .k-com { width:1.1rem; height:.8rem; border:3px solid transparent; border-left:2px solid var(--bn-colour-accent); background:linear-gradient(var(--bn-colour-bg),var(--bn-colour-bg)) padding-box, repeating-linear-gradient(135deg, var(--bn-colour-border-hover) 0 2px, transparent 2px 4px) border-box; }
+
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-bg); margin:.8rem 0 0; }
+.chrome { display:flex; align-items:center; gap:.6rem; padding:.4rem .75rem; background:var(--bn-colour-quote-bg); border-bottom:1px solid var(--bn-colour-border); font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.chrome .dots { display:inline-flex; gap:4px; } .chrome .dots i { width:9px; height:9px; border-radius:50%; background:var(--bn-colour-border-hover); display:block; }
+.chrome .sp { flex:1; }
+.art { padding:1rem; }
+.cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; }
+.col { min-width:0; }
+.col-h { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin:0 0 .5rem; display:flex; justify-content:space-between; }
+.col-h b { color:var(--bn-colour-text); font-weight:490; }
+.com { margin:1rem 0 0; padding:.8rem 1rem; border:7px solid transparent; border-left:3px solid var(--bn-colour-accent); border-radius:2px;
+  background:linear-gradient(var(--bn-colour-bg),var(--bn-colour-bg)) padding-box, repeating-linear-gradient(135deg, var(--bn-colour-border-hover) 0 5px, transparent 5px 10px) border-box; font-size:var(--bn-text-label); }
+.com .cl { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-accent); margin:0 0 .35rem; }
+.com p { margin:.3rem 0; max-width:none; } .com ul { margin:.3rem 0 .3rem 1.1rem; padding:0; } .com li { margin:.15rem 0; }
+
+/* ── Real report pixels ─────────────────────────────────────────────────── */
+blockquote { margin:0; padding:var(--bn-space-sm) 1rem; }
+blockquote.quote-card { background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); margin:.8rem 0; padding:var(--bn-space-md) 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; position:relative; }
+blockquote.quote-card.bn-selected { background:var(--bn-selection-bg); border-left-color:var(--bn-selection-border); }
+blockquote .quote-row { display:flex; gap:.5rem; align-items:baseline; }
+blockquote .timecode { color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-label); flex-shrink:0; }
+blockquote .quote-body { flex:1; min-width:0; font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+blockquote .speaker { color:var(--bn-colour-muted); font-size:var(--bn-text-label); display:block; margin-top:.3rem; }
+.badge-row { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.45rem; align-items:center; }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); font-weight:var(--bn-weight-mono-tag); padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; position:relative; }
+.badge-proposed { border:1px dashed currentColor; animation:bn-proposed-pulse 3s ease-in-out infinite; cursor:pointer; }
+@keyframes bn-proposed-pulse { 0%{opacity:.5} 50%{opacity:.78} 100%{opacity:.5} }
+.badge-add { border:1px dashed var(--bn-colour-border); background:transparent; color:var(--bn-colour-muted); cursor:pointer; font:inherit; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); }
+.badge-add:hover { border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+@keyframes badge-fade-in { from{opacity:0; transform:scale(.8)} to{opacity:1; transform:scale(1)} }
+.badge-appearing { animation:badge-fade-in .15s ease-out; }
+/* Sidebar tag row (TagRow.tsx / sidebar-tags.css shape) */
+.sb { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.5rem .6rem; background:var(--bn-colour-bg); font-size:var(--bn-text-label); }
+.sb-h { font-size:var(--bn-text-caption); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); margin:0 0 .4rem; font-weight:490; }
+.sb-row { display:flex; justify-content:space-between; align-items:center; padding:.2rem .3rem; border-radius:var(--bn-radius-sm); }
+.sb-row:hover { background:var(--bn-colour-hover); }
+.sb-row .n { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* SHIPPED — atoms/badge.css lines 272–283 */
+@keyframes badge-accept-flash { 0% { filter: brightness(1.35); } 100% { filter: brightness(1); } }
+.badge-accept-flash { animation: badge-accept-flash 0.4s ease-out; }
+/* PROPOSED — atoms/confirm.css. From-only keyframe, no fill-mode, tokens, as atoms/arrival.css. */
+@keyframes bn-confirm { from { filter: brightness(var(--bn-confirm-peak)); } }
+.bn-confirm-flash { animation: bn-confirm var(--bn-confirm-duration) var(--bn-confirm-easing); }
+/* SHIPPED — arrival, for the sibling comparison */
+@keyframes bn-arrival { from { background-color: var(--bn-arrival-colour); } }
+:root [data-arrived] { animation: bn-arrival var(--bn-arrival-duration) var(--bn-arrival-easing); }
+
+/* Timeline strip under the demo: when the class is present vs when the animation plays */
+.tl { margin:.5rem 0 0; font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.tl .row { display:grid; grid-template-columns:7rem 1fr; gap:.5rem; align-items:center; margin:.2rem 0; }
+.tl .track { position:relative; height:10px; background:var(--bn-colour-badge-bg); border-radius:3px; overflow:hidden; }
+.tl .track i { position:absolute; top:0; bottom:0; background:var(--bn-colour-accent); opacity:.85; }
+.tl .track i.anim { background:light-dark(#d97706,#f59e0b); top:3px; bottom:3px; }
+.tl .track b { position:absolute; top:-2px; bottom:-2px; width:1px; background:var(--bn-colour-border-hover); }
+.tl .lab { display:flex; justify-content:space-between; margin-top:.15rem; }
+.render-count { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.4rem; }
+.render-count b { color:var(--bn-colour-text); font-weight:490; }
+
+.opts { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:1rem; margin-top:1rem; }
+.opt { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem 1.1rem; background:var(--bn-colour-bg); display:flex; flex-direction:column; gap:.6rem; }
+.opt h3 { margin:0; display:flex; align-items:center; gap:.6rem; }
+.opt .letter { display:inline-grid; place-items:center; width:1.7rem; height:1.7rem; border-radius:50%; background:var(--bn-colour-accent); color:#fff; font-weight:490; font-size:var(--bn-text-label); flex-shrink:0; }
+.opt .sib { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+.opt ul { margin:0 0 0 1.1rem; padding:0; font-size:var(--bn-text-label); } .opt li { margin:.2rem 0; }
+.opt .h { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); text-transform:uppercase; letter-spacing:.05em; color:var(--bn-colour-muted); margin-top:.3rem; }
+.cost { display:inline-flex; gap:.35rem; align-items:center; font-size:var(--bn-text-label); }
+.cost i { display:inline-grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:var(--bn-radius-sm); font-style:normal; font-weight:490; font-size:var(--bn-text-caption); font-family:var(--bn-font-mono); }
+.cost i.Z { background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+.cost i.S { background:light-dark(#dcfce7,#14532d); color:light-dark(#166534,#bbf7d0); }
+.cost i.M { background:light-dark(#fef3c7,#78350f); color:light-dark(#92400e,#fde68a); }
+table { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin:.8rem 0; }
+th, td { text-align:left; padding:.45rem .6rem; border-bottom:1px solid var(--bn-colour-border); vertical-align:top; }
+th { font-weight:490; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); text-transform:uppercase; letter-spacing:.04em; }
+td.ok { color:var(--bn-positive); } td.warn { color:light-dark(#b45309,#fbbf24); } td.bad { color:light-dark(#b91c1c,#f87171); }
+td code { white-space:nowrap; }
+.rec { border:1px solid var(--bn-colour-border); border-left:4px solid var(--bn-positive); border-radius:var(--bn-radius-md); padding:1rem 1.2rem; margin-top:1rem; background:var(--bn-colour-quote-bg); }
+.rec p { max-width:none; }
+.reduce-note { display:none; font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-accent); }
+body[data-reduce="1"] .reduce-note { display:inline; }
+/* Under Reduce Motion the flash stays (colour, no movement) — the shipped arrival decision. Only the badge appear motion goes. */
+@media (prefers-reduced-motion: reduce) { .art .badge-appearing { animation:none; } .sw, .sw::after { transition:none; } }
+body[data-reduce="1"] .art .badge-appearing { animation:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="banner"><b>PROPOSED 7 Nov 2026</b> — overnight options mockup for the 100days row <i>Tokenise acceptance flash as design system pattern</i> [trust]. Architecture more than UX; the consequences panels carry the argument. Register row owed in <code>STATUS.md</code> by the lead.</div>
+
+<div class="masthead">
+  <div class="eyebrow">docs/mockups · overnight options · Q8</div>
+  <h1>One confirm flash for everything that lands — class, hook, or leave it?</h1>
+  <p class="muted">Generalise <code>badge-accept-flash</code> into a reusable <code>.bn-confirm-flash</code> plus a <code>useFlash(key)</code> hook: four shapes, each as before/after code, a live demo of the flash, and the list of every call site that would move.</p>
+</div>
+
+<div class="controls">
+  <span><span class="lbl">Palette</span><button class="pbtn on" data-pal="default">Default</button><button class="pbtn" data-pal="edo">Edo</button></span>
+  <span><span class="lbl">Appearance</span><button class="pbtn on" data-scheme="auto">System</button><button class="pbtn" data-scheme="light">Light</button><button class="pbtn" data-scheme="dark">Dark</button></span>
+  <label class="swl" id="reduce-sw"><span class="sw"></span>Simulate Reduce Motion <span class="reduce-note">— on: the flash stays (colour); the badge’s appear motion goes</span></label>
+</div>
+
+<div class="key">
+  <span><i class="k-art"></i> Artefact — the pixels, as they would ship</span>
+  <span><i class="k-com"></i> Commentary — why, cost, what can go wrong</span>
+</div>
+
+<h2>The question, as found at HEAD</h2>
+<p>The flash exists, works, and is written out by hand wherever it is needed. What the inventory found (7 Nov 2026):</p>
+<table>
+  <thead><tr><th>#</th><th>Site</th><th>Mechanism today</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><code>atoms/badge.css</code> 272–283</td><td><code>@keyframes badge-accept-flash</code> 0% → 100% brightness 1.35 → 1, 0.4 s ease-out; <code>.badge-accept-flash</code></td><td>Unguarded for Reduce Motion (design-motion §5.3); literal duration</td></tr>
+    <tr><td>2</td><td><code>QuoteGroup.tsx</code> 241</td><td><code>useState&lt;Set&lt;string&gt;&gt;</code> <code>flashingTags</code>, key <code>`${domId}:${tagName}`</code></td><td>Three writers, each the same 10 lines: add-tag (601), proposal accept (658), keyboard quick-apply via registry (481). <b>JS clears at 500 ms; CSS runs 400 ms.</b></td></tr>
+    <tr><td>3</td><td><code>QuoteCard.tsx</code> 94, 834</td><td>prop <code>flashingTags: Set&lt;string&gt;</code> → <code>className="badge-accept-flash"</code></td><td>A new Set identity on every flash start and end, so every card in the group renders twice per tag add</td></tr>
+    <tr><td>4</td><td><code>TagSidebar.tsx</code> 307, 538–549</td><td>a second <code>useState&lt;Set&gt;</code> + 500 ms timer for the sidebar row</td><td>Fourth copy of the block</td></tr>
+    <tr><td>5</td><td><code>TagGroupCard.tsx</code> 45 → <code>TagRow.tsx</code> 31, 107</td><td>prop <code>flashing?: boolean</code> → <code>badge-accept-flash</code></td><td><code>TagRow.test.tsx:104</code> pins the class name</td></tr>
+    <tr><td>6</td><td><code>FocusContext.tsx</code> 95–99, 420–437</td><td><code>registerFlashTag / unregisterFlashTag / flashTag</code>: a per-quote handler registry</td><td>The cross-component channel (sidebar → card). Not the flash itself</td></tr>
+    <tr><td>7</td><td><code>quoteCardHost.tsx</code> 70, 255</td><td><code>NO_FLASH = new Set()</code> sentinel for lenses that never flash</td><td>Discussion, Signals, Sessions cards</td></tr>
+    <tr><td>8</td><td><code>atoms/badge.css</code> 302–311 <code>badge-bulk-flash</code></td><td>0.8 s box-shadow ring</td><td><b>No React consumer.</b> Only the frozen <code>theme/js/tags.js:328</code> applies it. Dead in the SPA; the CSS doesn’t say so</td></tr>
+    <tr><td>9</td><td><code>WelcomeIllustrations.swift</code> 1875</td><td>its own inline copy, <b>0.52 s</b></td><td>The Welcome cell’s tempo-scaled variant; a third duration for the same cue</td></tr>
+    <tr><td>10</td><td><code>WelcomeTimelineCSS.swift</code></td><td>generated copy of the theme</td><td>Regenerated on any theme edit (<code>gen-welcome-timeline.py</code>)</td></tr>
+  </tbody>
+</table>
+<p class="small"><b>Siblings of the pattern, already shipped and tokenised:</b> the arrival flash (<code>atoms/arrival.css</code>: <code>--bn-arrival-colour/-duration/-easing</code>, a from-only keyframe, <code>markArrived(el)</code> writing <code>data-arrived</code>, cleared on <code>animationend</code> with a <code>getAnimations()</code> guard, pinned by <code>tests/test_arrival_css.py</code>) and the lens handover dim (<code>bn-handover</code> 240 ms, with <code>HANDOVER_MS</code> in <code>useLensRead.ts</code> kept equal to the CSS by comment). Native: a real macOS menu item blinks twice (70 ms off/on) when chosen; the Welcome illustration recreates it. Those are the two families: a class from React state with a JS constant kept equal to the CSS (handover, the badge flash), or a DOM mark written outside React with the end heard from the animation (arrival).</p>
+<p class="small"><b>Behaviour a researcher can see today:</b> press the keyboard tag shortcut twice within half a second and the second press does not flash: the key is already in the Set, nothing restarts, and the first timer removes it at 500 ms. Try it in the demo.</p>
+
+<!-- ───────────────────────────── Demo ───────────────────────────── -->
+<h2>The flash, live</h2>
+<p class="small muted">Left: what ships. Right: the proposed atom and hook. The strips below each card show when the class is on the element and when the animation actually plays.</p>
+<div class="frame">
+  <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Quotes · one card, and its tag in the sidebar <span class="sp"></span></div>
+  <div class="art">
+    <div class="cols">
+      <div class="col" id="col-today">
+        <div class="col-h"><span>Today</span><b>badge-accept-flash · Set + 500 ms timer</b></div>
+        <blockquote class="quote-card">
+          <div class="quote-row"><span class="timecode">12:04</span><span class="quote-body">Description stands in for a participant’s words: the checkout step the participant could not find.</span></div>
+          <span class="speaker">P3 · Session 3</span>
+          <div class="badge-row"><span class="badge" style="background:var(--bn-emo-1-bg)" data-tag="Frustration">Frustration</span><span class="badge badge-proposed" data-tag="Trust" title="Accept">Trust</span><button class="badge-add" data-act="add">+ tag</button></div>
+        </blockquote>
+        <div class="sb"><div class="sb-h">Emotion</div><div class="sb-row"><span class="badge" style="background:var(--bn-emo-1-bg)" data-sbtag="Frustration">Frustration</span><span class="n">12</span></div><div class="sb-row"><span class="badge" style="background:var(--bn-emo-1-bg)" data-sbtag="Confusion">Confusion</span><span class="n">8</span></div></div>
+        <div style="display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.6rem">
+          <button class="pbtn" data-act="add">Add Confusion</button>
+          <button class="pbtn" data-act="accept">Accept Trust</button>
+          <button class="pbtn" data-act="twice">Add twice, 250 ms apart</button>
+          <button class="pbtn" data-act="reset">Reset</button>
+        </div>
+        <div class="tl">
+          <div class="row"><span>class on element</span><div class="track" data-tl="class"></div></div>
+          <div class="row"><span>animation plays</span><div class="track" data-tl="anim"></div></div>
+          <div class="lab"><span>0</span><span>250</span><span>500</span><span>750 ms</span></div>
+        </div>
+        <div class="render-count">group renders this gesture: <b data-renders>0</b></div>
+      </div>
+      <div class="col" id="col-b">
+        <div class="col-h"><span>B · proposed</span><b>.bn-confirm-flash · useConfirmFlash()</b></div>
+        <blockquote class="quote-card">
+          <div class="quote-row"><span class="timecode">12:04</span><span class="quote-body">Description stands in for a participant’s words: the checkout step the participant could not find.</span></div>
+          <span class="speaker">P3 · Session 3</span>
+          <div class="badge-row"><span class="badge" style="background:var(--bn-emo-1-bg)" data-tag="Frustration">Frustration</span><span class="badge badge-proposed" data-tag="Trust" title="Accept">Trust</span><button class="badge-add" data-act="add">+ tag</button></div>
+        </blockquote>
+        <div class="sb"><div class="sb-h">Emotion</div><div class="sb-row"><span class="badge" style="background:var(--bn-emo-1-bg)" data-sbtag="Frustration">Frustration</span><span class="n">12</span></div><div class="sb-row"><span class="badge" style="background:var(--bn-emo-1-bg)" data-sbtag="Confusion">Confusion</span><span class="n">8</span></div></div>
+        <div style="display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.6rem">
+          <button class="pbtn" data-act="add">Add Confusion</button>
+          <button class="pbtn" data-act="accept">Accept Trust</button>
+          <button class="pbtn" data-act="twice">Add twice, 250 ms apart</button>
+          <button class="pbtn" data-act="reset">Reset</button>
+        </div>
+        <div class="tl">
+          <div class="row"><span>class on element</span><div class="track" data-tl="class"></div></div>
+          <div class="row"><span>animation plays</span><div class="track" data-tl="anim"></div></div>
+          <div class="lab"><span>0</span><span>250</span><span>500</span><span>750 ms</span></div>
+        </div>
+        <div class="render-count">group renders this gesture: <b data-renders>0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="com"><div class="cl">Commentary</div>
+  <p><b>Same pixels, different plumbing.</b> The brightness pulse is unchanged in B: 1.35 → 1 over 400 ms. What differs is that the hook owns the timer and its length comes from one constant pinned equal to the CSS token (the <code>HANDOVER_MS</code> pattern), so the strips line up; today the class outlives the animation by 100 ms, harmless until someone lengthens the CSS past 500 ms and the flash is cut short with no test to say so.</p>
+  <p><b>“Add twice”</b> is the behavioural difference. Today the second press is swallowed (Set semantics). B restarts: the hook bumps a nonce per key and the badge takes <code>key={nonce}</code>, so React remounts the 20-byte span and the animation starts clean. This sidesteps the remove-reflow-set trap the arrival flash hit on 17 Oct (<code>animationcancel</code> of the old run landing on the new listener), because there is no listener: the hook’s timer is the clock.</p>
+  <p><b>Renders.</b> Both columns re-render the group twice per flash (state in, state out), and <code>flashingTags</code> is a new Set each time, so every card in the group renders with it. The hook does not fix that; it could (a per-key subscription, or the arrival-style DOM mark with zero renders). See the open call in the recommendation.</p>
+  <p><b>Reduce Motion:</b> kept, in both columns. A brightness fade moves nothing; this is the arrival decision applied, not a new one. Light-appearance check owed: brightness 1.35 on a 94 %-lightness pastel tint has little headroom (the shimmer needed 20 % on the web chip against 5 % native for the same reason). Measure before fixing the peak token; the token exists so the fix is one line.</p>
+</div>
+
+<!-- ───────────────────────────── Options ───────────────────────────── -->
+<h2>The options</h2>
+<div class="opts">
+
+  <div class="opt">
+    <h3><span class="letter">A</span> A CSS class only</h3>
+    <div class="sib">sibling: atoms/arrival.css (tokens + from-only keyframe)</div>
+    <div class="h">Code shape</div>
+<pre><span class="c">/* tokens.css */</span>
+<span class="add">--bn-confirm-duration: 400ms;
+--bn-confirm-easing: ease-out;
+--bn-confirm-peak: 1.35;</span>
+
+<span class="c">/* atoms/confirm.css (new, beside arrival.css) */</span>
+<span class="add">@keyframes bn-confirm { from { filter: brightness(var(--bn-confirm-peak)); } }
+.bn-confirm-flash { animation: bn-confirm var(--bn-confirm-duration) var(--bn-confirm-easing); }</span>
+
+<span class="c">/* atoms/badge.css */</span>
+<span class="del">@keyframes badge-accept-flash { … }  .badge-accept-flash { … }</span>
+<span class="c">/* badge-bulk-flash: annotated “frozen static render only” */</span>
+
+<span class="c">// QuoteCard.tsx:834, TagRow.tsx:107 — rename the string</span>
+<span class="del">"badge-accept-flash"</span> → <span class="add">"bn-confirm-flash"</span></pre>
+    <div class="h">Consequences</div>
+    <ul>
+      <li><span class="cost"><i class="S">S</i> build</span> — 2 CSS files, 2 string renames, 1 test string, regenerate <code>WelcomeTimelineCSS.swift</code>. A <code>tests/test_confirm_css.py</code> in the shape of <code>test_arrival_css.py</code> (from-only keyframe, no literal duration).</li>
+      <li>Safe rename: <code>badge-accept-flash</code> has no consumer in the frozen vanilla JS (checked: only <code>badge-bulk-flash</code> does), so no alias is needed.</li>
+      <li>Leaves the four hand-written Set/timer blocks and the 400/500 drift exactly where they are. The next acknowledgement site (star toggle, copy-to-clipboard, a Signals card) copies the block a fifth time.</li>
+      <li>Rules out nothing; B is this plus a hook.</li>
+    </ul>
+  </div>
+
+  <div class="opt">
+    <h3><span class="letter">B</span> Class plus hook</h3>
+    <div class="sib">siblings: A, and useLensRead.ts (HANDOVER_MS kept equal to the CSS) for the hook’s shape</div>
+    <div class="h">Code shape</div>
+<pre><span class="c">// hooks/useConfirmFlash.ts</span>
+<span class="add">/** Equal to --bn-confirm-duration; tests/test_confirm_css.py pins both. */
+export const CONFIRM_MS = 400;
+
+export function useConfirmFlash() {
+  const [nonces, setNonces] = useState&lt;ReadonlyMap&lt;string, number&gt;&gt;(EMPTY);
+  const timers = useRef(new Map&lt;string, number&gt;());
+  const flash = useCallback((key: string) =&gt; {
+    setNonces((p) =&gt; new Map(p).set(key, (p.get(key) ?? 0) + 1));
+    clearTimeout(timers.current.get(key));
+    timers.current.set(key, window.setTimeout(() =&gt;
+      setNonces((p) =&gt; { const n = new Map(p); n.delete(key); return n; }), CONFIRM_MS));
+  }, []);
+  useEffect(() =&gt; () =&gt; timers.current.forEach(clearTimeout), []);
+  return { flash, nonce: (key: string) =&gt; nonces.get(key) };
+}</span>
+
+<span class="c">// QuoteGroup.tsx — three writer blocks become one line each</span>
+<span class="del">const [flashingTags, setFlashingTags] = useState&lt;Set&lt;string&gt;&gt;(new Set());
+…
+setFlashingTags((prev) =&gt; new Set(prev).add(flashKey));
+setTimeout(() =&gt; { setFlashingTags((prev) =&gt; { … delete … }); }, 500);</span>
+<span class="add">const confirm = useConfirmFlash();
+…
+confirm.flash(`${id}:${tagName}`);</span>
+
+<span class="c">// QuoteCard.tsx — the badge restarts by remount</span>
+<span class="del">className={flashingTags.has(k) ? "badge-accept-flash" : undefined}</span>
+<span class="add">key={`${tag.name}:${confirmNonce(k) ?? 0}`}
+className={confirmNonce(k) ? "bn-confirm-flash" : undefined}</span></pre>
+    <div class="h">Consequences</div>
+    <ul>
+      <li><span class="cost"><i class="M">M</i> build</span> — A, plus one hook with its own test, four writer blocks collapsed, the <code>QuoteCard</code>/<code>TagRow</code> prop shape changed (<code>Set</code> → nonce lookup, or keep the Set and derive it: the smaller diff). <code>FocusContext</code>’s registry stays: it is the channel, not the flash.</li>
+      <li>Fixes the drift (one constant, pinned), the swallowed second press (nonce restart), and the leaked timers on unmount (today none are cleared).</li>
+      <li>Test surface: jsdom runs no animations, so the hook test pins the Map and the timer with fake timers; the restart is proven once in Playwright. Four <code>QuoteCard</code> tests that pass <code>flashingTags={new Set()}</code> change only if the prop shape does.</li>
+      <li>Rules out: nothing. Converting later to a DOM-mark implementation changes the hook’s body, not its callers.</li>
+    </ul>
+  </div>
+
+  <div class="opt">
+    <h3><span class="letter">C</span> Fold into Q7’s motion tokens</h3>
+    <div class="sib">sibling: Q7 option B (--bn-motion-enter / -exit / -confirm)</div>
+    <div class="h">Code shape</div>
+<pre><span class="c">/* tokens.css — one of three */</span>
+<span class="add">--bn-motion-enter: 120ms;  --bn-motion-exit: 90ms;
+--bn-motion-confirm: 400ms; --bn-motion-confirm-ease: ease-out;</span>
+<span class="c">/* atoms/motion.css */</span>
+<span class="add">.bn-enter { … }  .bn-exit { … }
+.bn-confirm-flash { animation: bn-confirm var(--bn-motion-confirm) var(--bn-motion-confirm-ease); }</span>
+<span class="c">// hook as in B, CONFIRM_MS pinned to --bn-motion-confirm</span></pre>
+    <div class="h">Consequences</div>
+    <ul>
+      <li><span class="cost"><i class="M">M</i>+ build</span> — B’s work, but it cannot land until Q7’s vocabulary is decided and built; if Q7 chooses restraint (its recommendation), C has no home and becomes B with a different token prefix.</li>
+      <li>Naming: <code>--bn-motion-confirm</code> sits beside <code>--bn-arrival-*</code> and <code>--bn-modal-*</code>, which are per-cue, not per-vocabulary. Two naming schemes for the same kind of thing.</li>
+      <li>Rules out: tuning the confirm cue independently of enter/exit without a token split later.</li>
+    </ul>
+  </div>
+
+  <div class="opt">
+    <h3><span class="letter">D</span> Leave it as it is</h3>
+    <div class="sib">sibling: none needed</div>
+    <div class="h">Code shape</div>
+<pre><span class="c">/* docs/design-motion.md §4.2 */</span>
+<span class="add">K2 Badge accept — ✓ Done. Pattern: React state Set + 500 ms timer →
+class badge-accept-flash. Copy this block for a new acknowledgement site.</span></pre>
+    <div class="h">Consequences</div>
+    <ul>
+      <li><span class="cost"><i class="Z">0</i> build</span> — a paragraph in the motion doc.</li>
+      <li>Keeps: four copies of the block; 400 vs 500 vs 520 ms; a swallowed second keypress; uncleared timers; <code>badge-bulk-flash</code> unlabelled as frozen-only.</li>
+      <li>Consistent with “beta ≈ no new features”, but this row is a refactor of a shipped cue, not a feature; the trust tag on the row is about the cue being reliable.</li>
+      <li>Rules out nothing; it is deferral.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Call-site migration list</h2>
+<table>
+  <thead><tr><th>File</th><th>Today</th><th>A</th><th>B</th><th>Tests touched</th></tr></thead>
+  <tbody>
+    <tr><td><code>theme/atoms/badge.css</code> 272–283</td><td><code>badge-accept-flash</code> keyframe + class</td><td>moved to <code>atoms/confirm.css</code>, tokenised</td><td>as A</td><td>new <code>tests/test_confirm_css.py</code> (shape of <code>test_arrival_css.py</code>); theme concatenation order in <code>theme_assets.py</code></td></tr>
+    <tr><td><code>theme/atoms/badge.css</code> 302–311</td><td><code>badge-bulk-flash</code>, SPA-dead</td><td>comment: frozen static render only</td><td>as A</td><td>—</td></tr>
+    <tr><td><code>theme/tokens.css</code></td><td>—</td><td><code>--bn-confirm-duration/-easing/-peak</code></td><td>as A</td><td>CSS test pins no literal in the atom</td></tr>
+    <tr><td><code>frontend/src/islands/QuoteGroup.tsx</code> 239–241, 481–500, 601–610, 658–666</td><td>Set state, three writer blocks, 500 ms</td><td>unchanged</td><td><code>useConfirmFlash()</code>; three <code>confirm.flash(key)</code></td><td><code>QuoteGroupBulkActions.test.tsx</code> (fake timers at 500 → <code>CONFIRM_MS</code>)</td></tr>
+    <tr><td><code>frontend/src/islands/QuoteCard.tsx</code> 94–95, 834</td><td><code>flashingTags: Set</code> → class</td><td>class string</td><td>nonce lookup + <code>key</code> on the badge (or keep the Set prop, derived)</td><td><code>QuoteCard.test.tsx</code> ×3, <code>QuoteCard.breaks.test.tsx</code> — only if the prop changes</td></tr>
+    <tr><td><code>frontend/src/components/TagSidebar.tsx</code> 307, 538–549</td><td>second Set state + timer</td><td>unchanged</td><td><code>useConfirmFlash()</code>; <code>confirm.flash(tagName)</code></td><td>—</td></tr>
+    <tr><td><code>frontend/src/components/TagGroupCard.tsx</code> 45, 138 → <code>TagRow.tsx</code> 31, 107</td><td><code>flashing</code> boolean → class</td><td>class string</td><td>as A (boolean stays; restart via <code>key</code> in TagGroupCard)</td><td><code>TagRow.test.tsx:104</code> string</td></tr>
+    <tr><td><code>frontend/src/contexts/FocusContext.tsx</code> 95–99, 420–437</td><td>flash-tag registry</td><td>unchanged</td><td>unchanged (the channel)</td><td>—</td></tr>
+    <tr><td><code>frontend/src/islands/quoteCardHost.tsx</code> 70, 255</td><td><code>NO_FLASH</code> sentinel</td><td>unchanged</td><td>unchanged, or <code>undefined</code> if the prop goes optional</td><td>—</td></tr>
+    <tr><td><code>frontend/src/hooks/useConfirmFlash.ts</code></td><td>—</td><td>—</td><td>new, with <code>CONFIRM_MS</code></td><td>new <code>useConfirmFlash.test.ts</code>; the equality pin in <code>test_confirm_css.py</code> reads the TS constant</td></tr>
+    <tr><td><code>desktop/…/WelcomeTimelineCSS.swift</code></td><td>generated</td><td>regenerate</td><td>regenerate</td><td><code>tests/test_welcome_timeline.py</code> fails if stale</td></tr>
+    <tr><td><code>desktop/…/WelcomeIllustrations.swift</code> 1875</td><td>own 0.52 s copy</td><td colspan="2">leave: it is the illustration’s tempo-scaled variant and never reads the theme. Optional: rename its local class to <code>bn-confirm-flash</code> so a grep finds it</td><td>—</td></tr>
+    <tr><td><code>docs/design-motion.md</code> §4.2, §5</td><td>K2/K3 rows name the old classes</td><td>true the rows</td><td>as A</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h2>Comparison</h2>
+<table>
+  <thead><tr><th>Question</th><th>A · class</th><th>B · class + hook</th><th>C · in Q7’s tokens</th><th>D · leave</th></tr></thead>
+  <tbody>
+    <tr><td>Files</td><td class="ok">4 + 1 generated</td><td class="warn">8 + 1 generated</td><td class="bad">B, after Q7</td><td class="ok">1 doc</td></tr>
+    <tr><td>Fixes the 400 / 500 ms drift</td><td class="bad">No</td><td class="ok">One constant, pinned</td><td class="ok">As B</td><td class="bad">No</td></tr>
+    <tr><td>Second press restarts the flash</td><td class="bad">No</td><td class="ok">Nonce remount</td><td class="ok">As B</td><td class="bad">No</td></tr>
+    <tr><td>Copies of the timer block</td><td class="bad">4</td><td class="ok">0</td><td class="ok">0</td><td class="bad">4</td></tr>
+    <tr><td>Next acknowledgement site costs</td><td class="warn">a class + a copied block</td><td class="ok">one hook call</td><td class="ok">one hook call</td><td class="bad">a copied block</td></tr>
+    <tr><td>Reduce Motion</td><td class="ok">kept (colour), documented as arrival is</td><td class="ok">as A</td><td class="ok">as A</td><td class="warn">unguarded, undocumented</td></tr>
+    <tr><td>Depends on another decision</td><td class="ok">No</td><td class="ok">No</td><td class="bad">Q7 option B</td><td class="ok">No</td></tr>
+    <tr><td>Risk</td><td class="ok">A rename with no vanilla consumer</td><td class="warn">prop-shape change ripples to four test files unless the Set is kept</td><td class="bad">naming scheme split</td><td class="warn">fifth copy, third duration</td></tr>
+  </tbody>
+</table>
+
+<div class="rec">
+  <h3 style="margin-top:0">Recommendation: B, done in two commits, with the Set kept as the prop</h3>
+  <p><b>Commit 1 is A</b>: <code>atoms/confirm.css</code> beside <code>arrival.css</code>, three tokens, the rename, the frozen-only comment on <code>badge-bulk-flash</code>, a CSS test in the arrival test’s shape, and the Swift regeneration. It is a small, safe change on its own. <b>Commit 2 is the hook</b>: <code>useConfirmFlash()</code> with <code>CONFIRM_MS</code> pinned to the token, replacing the four writer blocks; <code>QuoteCard</code> keeps receiving a Set (derived from the hook’s map) so its four test files do not move; the restart lands in <code>QuoteCard</code> as a <code>key</code> on the badge. This follows the live React-class family (handover) rather than inventing a third mechanism, and it is a refactor of a shipped cue, which the beta line allows.</p>
+  <p><b>Not C.</b> It ties a one-afternoon refactor to a decision Q7 recommends against, and splits the token naming. <b>Not D.</b> The row is tagged [trust]; a cue that skips the second press and has three durations is the kind of small unreliability that tag is about.</p>
+  <p class="small muted" style="margin-bottom:0"><b>Owner calls the mockup could not settle:</b> (1) keyed React state (the handover family; two group renders per flash, as today) or a DOM mark like <code>markArrived</code> (the arrival family; zero renders, but a <code>querySelector</code> for the badge and the animation-restart guard): the hook’s callers are the same either way; (2) should the hook live in <code>FocusContext</code>, next to the registry it feeds, or stand alone in <code>hooks/</code>; (3) whether the peak brightness needs a per-appearance value for light pastel tints: measure first.</p>
+</div>
+
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('[data-pal]').forEach(b=>b.addEventListener('click',()=>{ document.documentElement.setAttribute('data-color-theme', b.dataset.pal); document.querySelectorAll('[data-pal]').forEach(x=>x.classList.toggle('on', x===b)); }));
+  document.querySelectorAll('[data-scheme]').forEach(b=>b.addEventListener('click',()=>{ const v=b.dataset.scheme; document.documentElement.style.colorScheme = v==='auto'?'':v; document.querySelectorAll('[data-scheme]').forEach(x=>x.classList.toggle('on', x===b)); }));
+  const rsw=document.getElementById('reduce-sw');
+  rsw.addEventListener('click',()=>{ const on=!rsw.classList.contains('on'); rsw.classList.toggle('on',on); document.body.dataset.reduce=on?'1':'0'; });
+
+  const CSS_MS=400, JS_TODAY_MS=500, CONFIRM_MS=400, SPAN=750;
+  function strip(col, kind, from, to){ const t=col.querySelector(`[data-tl="${kind}"]`); const i=document.createElement('i'); if(kind==='anim') i.className='anim';
+    i.style.left=(from/SPAN*100)+'%'; i.style.width=(Math.max(0,Math.min(to,SPAN)-from)/SPAN*100)+'%'; t.appendChild(i); }
+  function marks(col){ col.querySelectorAll('.track').forEach(t=>{ t.innerHTML=''; [250,500].forEach(ms=>{ const b=document.createElement('b'); b.style.left=(ms/SPAN*100)+'%'; t.appendChild(b); }); }); col.querySelector('[data-renders]').textContent='0'; }
+  function bumpRenders(col,n){ const el=col.querySelector('[data-renders]'); el.textContent=String(Number(el.textContent)+n); }
+  function snapshot(col){ return col.innerHTML; }
+  const base={}; ['col-today','col-b'].forEach(id=>{ const c=document.getElementById(id); marks(c); base[id]=snapshot(c); });
+
+  // ── Today: Set semantics + 500 ms timer; class = presence in Set ──
+  function todayFlash(col, el, t0, log){
+    col._set=col._set||new Set(); const key=el.dataset.tag||el.dataset.sbtag;
+    if(col._set.has(key)) return; // swallowed
+    col._set.add(key); el.classList.add('badge-accept-flash'); bumpRenders(col,1);
+    strip(col,'class',t0,t0+JS_TODAY_MS); strip(col,'anim',t0,t0+CSS_MS);
+    setTimeout(()=>{ col._set.delete(key); el.classList.remove('badge-accept-flash'); bumpRenders(col,1); }, JS_TODAY_MS);
+  }
+  // ── B: nonce restart + CONFIRM_MS timer ──
+  function bFlash(col, el, t0){
+    col._timers=col._timers||new Map(); const key=el.dataset.tag||el.dataset.sbtag;
+    // remount: replace the node (what React does on a key change)
+    const fresh=el.cloneNode(true); fresh.classList.remove('bn-confirm-flash','badge-appearing'); el.replaceWith(fresh); el=fresh;
+    el.classList.add('bn-confirm-flash'); bumpRenders(col,1);
+    const end=t0+CONFIRM_MS;
+    // trim an earlier strip to the restart point, then draw the new run
+    col.querySelectorAll('.track i').forEach(i=>{ const l=parseFloat(i.style.left)/100*SPAN, w=parseFloat(i.style.width)/100*SPAN; if(l<t0 && l+w>t0) i.style.width=((t0-l)/SPAN*100)+'%'; });
+    strip(col,'class',t0,end); strip(col,'anim',t0,end);
+    clearTimeout(col._timers.get(key));
+    col._timers.set(key, setTimeout(()=>{ el.classList.remove('bn-confirm-flash'); bumpRenders(col,1); }, CONFIRM_MS));
+    return el;
+  }
+  function addBadge(col, name, tint){ const row=col.querySelector('.badge-row'); let b=row.querySelector(`[data-tag="${name}"]`);
+    if(!b){ b=document.createElement('span'); b.className='badge badge-appearing'; b.dataset.tag=name; b.style.background=tint; b.textContent=name; row.insertBefore(b,row.querySelector('.badge-add')); } return b; }
+  function sbBadge(col,name){ return col.querySelector(`[data-sbtag="${name}"]`); }
+
+  ['col-today','col-b'].forEach(id=>{
+    const col=document.getElementById(id); const isB=id==='col-b';
+    const flash=(el,t0)=> isB? bFlash(col,el,t0) : todayFlash(col,el,t0);
+    col.addEventListener('click',e=>{
+      const act=e.target.closest('[data-act]')?.dataset.act; const prop=e.target.closest('.badge-proposed');
+      if(prop||act==='accept'){ const p=col.querySelector('.badge-proposed'); if(!p) return; marks(col); p.classList.remove('badge-proposed'); p.style.background='var(--bn-trust-1-bg)'; flash(p,0); return; }
+      if(act==='add'){ marks(col); const b=addBadge(col,'Confusion','var(--bn-emo-1-bg)'); flash(b,0); flash(sbBadge(col,'Confusion'),0); return; }
+      if(act==='twice'){ marks(col); const b=addBadge(col,'Confusion','var(--bn-emo-1-bg)'); flash(b,0); setTimeout(()=>{ const b2=col.querySelector('[data-tag="Confusion"]'); flash(b2,250); },250); return; }
+      if(act==='reset'){ col.innerHTML=base[id]; col._set=null; if(col._timers){col._timers.forEach(clearTimeout); col._timers=null;} marks(col); return; }
+    });
+  });
+})();
+</script>
+</body>
+</html>

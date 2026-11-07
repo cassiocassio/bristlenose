@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The first-run Whisper download — what is left to bridge?</title>
+<!--
+  Options mockup for the 100days row "Whisper 1.5GB download — bridge with
+  sample/tour" [Beta-must] [trust]. Drawn 7 Nov 2026 against HEAD e5b539b0c.
+
+  MEDIUM-FIDELITY mock of NATIVE macOS chrome (sidebar row, toolbar status
+  pill, detail pane, Settings form, Welcome window), in the drawing style of
+  apple-first-first-run.html and ollama-setup-popovers.html. AppKit's semantic
+  colours are approximated with light-dark() pairs so the page reads in both
+  schemes. Every string inside an artefact frame is a shipped locale key, or is
+  flagged NEW in that frame's chrome bar. Participant speech: none.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --label: light-dark(#1d1d1f, #e8e8ed);
+    --secondary: light-dark(rgba(60,60,67,0.62), rgba(235,235,245,0.60));
+    --tertiary: light-dark(rgba(60,60,67,0.40), rgba(235,235,245,0.32));
+    --accent: light-dark(#0a6cff, #3d8cff);
+    --sep: light-dark(rgba(0,0,0,0.10), rgba(255,255,255,0.12));
+    --red: light-dark(#e0301a, #ff6b57);
+    --green: light-dark(#1f8f3a, #5fd07a);
+    --orange: light-dark(#c2410c, #ff9f5a);
+    --pop-bg: light-dark(#f4f4f5, #2c2c2e);
+    --pop-stroke: light-dark(rgba(0,0,0,0.12), rgba(255,255,255,0.14));
+    --side: light-dark(#ecebf0, #27262a);
+    --win: light-dark(#ffffff, #1e1e20);
+    --tbar: light-dark(linear-gradient(#fbfbfc,#ededf0), linear-gradient(#333336,#2a2a2d));
+    --pane: light-dark(#f5f5f7, #1b1b1d);
+    --card: light-dark(#ffffff, #2a2a2d);
+    --page: light-dark(#e7e7ea, #121214);
+    --page-ink: light-dark(#1d1d1f, #e7e7ea);
+    --page-muted: light-dark(#5b5b62, #a1a1aa);
+    --new: light-dark(#b4530d, #f0a060);
+    --shipped: light-dark(#2d6a2d, #86d486);
+    --com-bg: light-dark(#f8f5ec, #2a2822);
+    --com-rule: light-dark(#b9a77a, #8a7a52);
+    --com-hatch: light-dark(#e6dfc9, #3a3528);
+    --com-ink: light-dark(#4a4434, #d9d0b5);
+    --com-lab: light-dark(#8a7a52, #b9a77a);
+    --pill-bg: light-dark(rgba(0,0,0,0.055), rgba(255,255,255,0.08));
+    --pill-stroke: light-dark(rgba(0,0,0,0.16), rgba(255,255,255,0.18));
+    --sel: light-dark(rgba(0,0,0,0.08), rgba(255,255,255,0.10));
+    --track: light-dark(rgba(0,0,0,0.12), rgba(255,255,255,0.16));
+    --btn-bg: light-dark(#ffffff, #3a3a3d);
+    --btn-stroke: light-dark(rgba(0,0,0,0.2), rgba(255,255,255,0.22));
+    --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+         background: var(--page); color: var(--page-ink); padding: 28px 16px 80px; font-size: 13px; line-height: 1.45; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 21px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; font-weight: 600; margin: 36px 0 10px; }
+  h3 { font-size: 13.5px; font-weight: 600; margin: 0 0 8px; }
+  p { margin: 0 0 8px; }
+  .lede { color: var(--page-muted); max-width: 860px; }
+  code { font-family: var(--mono); font-size: 11.5px; }
+  a { color: var(--accent); }
+
+  .banner { border: 1px solid var(--new); border-radius: 8px; padding: 8px 12px; font-size: 12px; margin: 0 0 18px;
+            background: light-dark(#fff8f0, #2d2419); color: var(--page-ink); }
+  .banner b { color: var(--new); font-family: var(--mono); font-size: 11px; letter-spacing: .3px; }
+
+  .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--page-muted); margin: 8px 0 22px; }
+  .key span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+  .swatch.art { background: var(--win); border: 0.5px solid var(--btn-stroke); }
+  .swatch.com { background: var(--com-bg); border-left: 3px solid var(--com-rule); }
+
+  /* facts box */
+  .facts { background: var(--card); border: 0.5px solid var(--sep); border-radius: 10px; padding: 12px 16px; margin: 0 0 10px; }
+  .facts ul { margin: 4px 0 0; padding-left: 18px; }
+  .facts li { margin: 3px 0; }
+  .facts .ok { color: var(--shipped); font-weight: 600; font-family: var(--mono); font-size: 11px; }
+  .facts .gap { color: var(--new); font-weight: 600; font-family: var(--mono); font-size: 11px; }
+
+  /* options grid */
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 980px) { .options { grid-template-columns: 1fr; } }
+  .opt { background: var(--card); border: 0.5px solid var(--sep); border-radius: 12px; padding: 14px 16px 16px; }
+  .opt .tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+              border: 0.5px solid var(--sep); color: var(--page-muted); margin-left: 6px; vertical-align: middle; }
+  .opt .tag.rec { color: var(--shipped); border-color: var(--shipped); }
+  .opt .tag.settled { color: var(--accent); border-color: var(--accent); }
+  .opt .tag.defer { color: var(--new); border-color: var(--new); }
+  .col-label { font-family: var(--mono); font-size: 11px; color: var(--tertiary); margin: 10px 0 6px; letter-spacing: .3px; }
+
+  /* artefact frame */
+  .shot { background: var(--win); border: 0.5px solid var(--btn-stroke); border-radius: 10px; overflow: hidden;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+  .chrome { font-family: var(--mono); font-size: 10.5px; color: var(--tertiary); background: var(--pane);
+            border-bottom: 0.5px solid var(--sep); padding: 5px 10px; line-height: 1.5; }
+  .chrome b { color: var(--secondary); font-weight: 600; }
+  .chrome .new { color: var(--new); font-weight: 600; }
+  .chrome .sys { color: var(--accent); font-weight: 600; }
+
+  /* faux window */
+  .win { display: grid; grid-template-columns: 200px 1fr; grid-template-rows: 38px 1fr; min-height: 236px; position: relative; color: var(--label); }
+  .win .tb { grid-column: 1 / -1; height: 38px; background: var(--tbar); border-bottom: 0.5px solid var(--sep);
+             display: flex; align-items: center; padding: 0 10px; gap: 8px; }
+  .lights { display: flex; gap: 6px; }
+  .lights i { width: 11px; height: 11px; border-radius: 50%; background: light-dark(#d8d8dc, #5a5a5e); display: block; }
+  .tb .title { font-size: 12.5px; font-weight: 600; margin-left: 56px; }
+  .tb .status-zone { margin-left: auto; display: flex; align-items: center; min-height: 22px; gap: 8px; }
+  .side { background: var(--side); border-right: 0.5px solid var(--sep); padding: 10px 8px; }
+  .side .group { font-size: 10.5px; font-weight: 600; color: var(--tertiary); margin: 2px 6px 6px; }
+  .row { display: grid; grid-template-columns: 18px 1fr 16px; gap: 7px; align-items: start; padding: 6px 7px; border-radius: 6px; }
+  .row.sel { background: var(--sel); }
+  .row .ic { width: 16px; height: 16px; color: var(--secondary); margin-top: 1px; }
+  .row .nm { font-size: 12.5px; line-height: 1.25; }
+  .row .st { font-size: 11px; color: var(--secondary); line-height: 1.3; margin-top: 1px; font-variant-numeric: tabular-nums;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row > div { min-width: 0; }
+  .ring { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--track); margin-top: 2px; }
+  .ring.det { border-top-color: var(--accent); border-right-color: var(--accent); }
+  .ring.q { border-top-color: var(--accent); }
+  .detail { padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 198px; }
+  .cuv .sym { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--track); border-top-color: var(--accent); border-right-color: var(--accent); margin: 0 auto 10px; }
+  .cuv .hl { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .cuv .ds { font-size: 12px; color: var(--secondary); max-width: 330px; margin: 0 auto 4px; line-height: 1.4; }
+  .cuv .ds.num { font-variant-numeric: tabular-nums; }
+  .cuv .acts { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+  .btn { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 7px; border: 0.5px solid var(--btn-stroke);
+         background: var(--btn-bg); color: var(--label); display: inline-block; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+  .btn.link { border: 0; background: none; color: var(--accent); padding: 4px 2px; }
+
+  /* pill (StatusPill envelope) */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: var(--pill-bg);
+          border: 0.5px solid var(--pill-stroke); font-size: 11.5px; font-weight: 500; color: var(--label); line-height: 1; white-space: nowrap; }
+  .pill svg { display: block; color: var(--secondary); }
+  .bar { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+  .pill .bar { width: 48px; }
+  .pill .pct { color: var(--secondary); font-variant-numeric: tabular-nums; }
+
+  /* popover */
+  .pop { position: absolute; width: 280px; background: var(--pop-bg); border: 0.5px solid var(--pop-stroke); border-radius: 11px;
+         box-shadow: 0 12px 34px rgba(0,0,0,0.22); padding: 14px 16px; z-index: 2; text-align: left; color: var(--label); }
+  .pop::before { content: ""; position: absolute; top: -7px; right: 30px; width: 13px; height: 13px; background: var(--pop-bg);
+         border-left: 0.5px solid var(--pop-stroke); border-top: 0.5px solid var(--pop-stroke); transform: rotate(45deg); border-top-left-radius: 3px; }
+  .pop .ptitle { font-size: 13px; font-weight: 600; line-height: 1.3; margin: 0 0 8px; }
+  .pop .pbody { font-size: 12px; line-height: 1.42; color: var(--secondary); margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+  .pop .bar { margin: 0 0 8px; }
+  .pop .foot { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-top: 0.5px solid var(--sep); padding-top: 8px; margin-top: 4px; font-size: 11px; color: var(--secondary); }
+
+  /* settings form */
+  .settings { padding: 16px 18px; background: var(--pane); min-height: 150px; color: var(--label); }
+  .form-sec { background: var(--card); border: 0.5px solid var(--sep); border-radius: 9px; padding: 10px 12px; margin: 0 0 10px; }
+  .frow { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+  .frow + .frow { border-top: 0.5px solid var(--sep); margin-top: 8px; padding-top: 8px; }
+  .flabel { font-size: 12.5px; }
+  .fhint { font-size: 11px; color: var(--secondary); margin-top: 2px; line-height: 1.35; max-width: 330px; }
+  .popup { font-size: 12px; padding: 2px 8px; border: 0.5px solid var(--btn-stroke); border-radius: 6px; background: var(--btn-bg); white-space: nowrap; }
+
+  /* welcome window (in front) */
+  .welcome { position: absolute; right: 14px; top: 46px; width: 300px; background: var(--win); border: 0.5px solid var(--btn-stroke);
+             border-radius: 10px; box-shadow: 0 14px 40px rgba(0,0,0,0.28); overflow: hidden; z-index: 3; text-align: left; }
+  .welcome .wt { height: 28px; background: var(--tbar); border-bottom: 0.5px solid var(--sep); display: flex; align-items: center; padding: 0 8px; gap: 6px; }
+  .welcome .wt .lights i { width: 9px; height: 9px; }
+  .welcome .wt .title { font-size: 11px; font-weight: 600; margin-left: 50px; }
+  .welcome .spiral { display: grid; grid-template-columns: 1.618fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; padding: 8px; height: 150px; }
+  .welcome .cell { border-radius: 6px; background: light-dark(rgba(10,108,255,0.06), rgba(61,140,255,0.12)); padding: 6px 8px; font-size: 10px; color: var(--secondary); overflow: hidden; }
+  .welcome .cell b { display: block; color: var(--label); font-size: 10.5px; margin-bottom: 2px; }
+  .welcome .cell.big { grid-row: 1 / 3; }
+
+  /* consequences panel */
+  .cons { margin-top: 12px; border: 0.5px solid var(--sep); border-radius: 9px; padding: 10px 12px; font-size: 12px; background: var(--pane); color: var(--page-ink); }
+  .cons .cost { font-family: var(--mono); font-size: 11px; display: inline-block; padding: 1px 7px; border-radius: 4px; margin-right: 6px; }
+  .cost.S { background: light-dark(#e3f4e6, #1f3a24); color: var(--shipped); }
+  .cost.M { background: light-dark(#fff2d6, #3a2f14); color: var(--orange); }
+  .cost.L { background: light-dark(#fde2dc, #3a1f1a); color: var(--red); }
+  .cons dl { display: grid; grid-template-columns: 92px 1fr; gap: 4px 10px; margin: 6px 0 0; }
+  .cons dt { color: var(--page-muted); }
+  .cons dd { margin: 0; }
+  .cons ul { margin: 0; padding-left: 16px; }
+  .changes { font-size: 12px; margin: 8px 0 0; padding-left: 16px; }
+  .changes li { margin: 2px 0; }
+
+  /* commentary zone — hatch only in the edge band, never behind text */
+  .comment { margin-top: 10px; border: 7px solid transparent; border-left: 3px solid var(--com-rule); border-radius: 0 6px 6px 0;
+             background: linear-gradient(var(--com-bg), var(--com-bg)) padding-box,
+                         repeating-linear-gradient(135deg, var(--com-hatch) 0 5px, transparent 5px 10px) border-box;
+             padding: 8px 12px; font-size: 12px; line-height: 1.45; color: var(--com-ink); }
+  .comment .lab { font-family: var(--mono); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--com-lab); display: block; margin-bottom: 2px; }
+
+  /* timeline figure */
+  .tl { background: var(--card); border: 0.5px solid var(--sep); border-radius: 10px; padding: 14px 16px 10px; overflow-x: auto; }
+  .tl .axis { display: grid; grid-template-columns: 210px 1fr; gap: 10px; font-family: var(--mono); font-size: 10.5px; color: var(--tertiary); margin: 0 0 6px; }
+  .tl .ticks { position: relative; height: 14px; }
+  .tl .ticks span { position: absolute; transform: translateX(-50%); }
+  .tl .lane { display: grid; grid-template-columns: 210px 1fr; gap: 10px; align-items: center; margin: 0 0 9px; }
+  .tl .who { font-size: 12px; line-height: 1.3; }
+  .tl .who small { display: block; color: var(--page-muted); font-size: 11px; }
+  .tl .track { position: relative; height: 30px; background: light-dark(rgba(0,0,0,0.035), rgba(255,255,255,0.05)); border-radius: 5px; }
+  .tl .seg { position: absolute; height: 12px; border-radius: 3px; font-size: 10px; line-height: 12px; padding: 0 5px; white-space: nowrap; overflow: hidden; color: #fff; }
+  .tl .seg.top { top: 3px; } .tl .seg.bot { top: 16px; }
+  .seg.dl { background: light-dark(#6e7bd9, #5b67c7); }
+  .seg.setup { background: light-dark(#9aa0a6, #6b7076); }
+  .seg.apple { background: light-dark(#2c9f5c, #2d8a52); }
+  .seg.whisper { background: light-dark(#d4813a, #b56a2a); }
+  .seg.llm { background: light-dark(#3b82c4, #2f6ea8); }
+  .seg.wait { background: repeating-linear-gradient(135deg, var(--red) 0 3px, transparent 3px 6px); border: 1px solid var(--red); color: var(--red); background-clip: border-box; }
+  .seg.wait span { background: var(--card); padding: 0 3px; border-radius: 2px; }
+  .tl .drop { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--label); }
+  .tl .drop::after { content: "drop"; position: absolute; top: -13px; left: 3px; font-family: var(--mono); font-size: 9.5px; color: var(--label); }
+  .tl .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--page-muted); margin-top: 6px; }
+  .tl .legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--card); border-radius: 8px; overflow: hidden; }
+  .cmp th, .cmp td { text-align: left; padding: 7px 9px; border-bottom: 0.5px solid var(--sep); vertical-align: top; }
+  .cmp th { font-weight: 600; color: var(--page-muted); background: var(--pane); }
+  .cmp td.y { color: var(--shipped); } .cmp td.n { color: var(--red); } .cmp td.m { color: var(--orange); }
+
+  .rec { background: var(--card); border: 1px solid var(--shipped); border-radius: 12px; padding: 14px 18px; }
+  .rec ol { margin: 6px 0 0; padding-left: 20px; } .rec li { margin: 4px 0; }
+  .strings { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--card); border-radius: 8px; overflow: hidden; }
+  .strings th, .strings td { text-align: left; padding: 6px 9px; border-bottom: 0.5px solid var(--sep); vertical-align: top; }
+  .strings th { font-weight: 600; color: var(--page-muted); background: var(--pane); }
+  .tag-new { color: var(--new); font-weight: 600; } .tag-ship { color: var(--shipped); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="banner"><b>PROPOSED 7 Nov 2026</b> — options for the owner's morning pick, not a spec. Most of the 100days row this answers has already shipped (see "At HEAD"); the mockup designs only the remainder. Not built.</div>
+
+<h1>The first-run Whisper download — what is left to bridge?</h1>
+<p class="lede">100days row <em>"Whisper 1.5GB download — bridge with sample/tour"</em> [Beta-must] [trust], folded from the 7 May walk. The row asks for something to do while the 1.6 GB speech model arrives before a first analysis. Since it was written, three things landed that change the question, so this page first says what the wait is <em>now</em>, who still meets it, and then lays out four ways to treat what is left.</p>
+
+<div class="key"><span><i class="swatch art"></i> artefact — what ships (real pixels, shipped strings unless flagged NEW)</span><span><i class="swatch com"></i> commentary — why, cost, what it rules out</span></div>
+
+<h2>At HEAD (e5b539b0c, 7 Nov 2026): what already shipped</h2>
+<div class="facts">
+  <ul>
+    <li><span class="ok">SHIPPED 22 Oct</span> <b>Option D of the brief — start the download earlier.</b> <code>WhisperDownloadModel.checkAtLaunch</code> (<code>fc2fea73f</code>): the model downloads in the background from launch, once the AI disclosure is acknowledged, with at least 10 GB free (20 until 30 Oct), never over a Stop the researcher chose (remembered across launches). A run started meanwhile waits on that download rather than fetching a second copy. The owner reversed the earlier "never warm Whisper at launch" rule for this (18 and 22 Oct).</li>
+    <li><span class="ok">SHIPPED 20 Oct</span> <b>The silent spinner is gone.</b> The run reports the download as its own progress stage: the row reads <em>Downloading speech model</em> and the ring fills with bytes (<code>3ab03d3f</code>, <code>d7f549dd</code>); the ETA is withheld during it (<code>RunProgressSubtitle</code>: "the ring shows the download's own progress instead").</li>
+    <li><span class="ok">SHIPPED 18–22 Oct</span> <b>The toolbar pill</b> <em>Downloading Whisper</em> with Foundation's progress line, one sentence of why, Stop Download (<code>WhisperDownloadPill.swift</code>); failed state with Retry; since 2 Nov the failure names its cause (disk, network, certificate) in 21 languages (<code>7675848e0</code>). <b>Settings ▸ Transcription</b> has the Whisper row: Download Now / progress / <em>On this Mac · 1.6 GB</em>.</li>
+    <li><span class="ok">SHIPPED 18 Oct, on by default 22 Oct</span> <b>Apple first, Whisper next.</b> On macOS 26+, when the UI language is one of Apple's nine and Whisper is not on disk, the first run transcribes with Apple's on-device model and the report lands about three minutes sooner; Whisper downloads behind it. A session Apple is unsure of reads <em>Waiting for Whisper</em> and re-runs when Whisper lands (<code>design-apple-first-transcription.md</code> §8).</li>
+    <li><span class="ok">SHIPPED 30 Oct</span> The job waits out a dropped network and restarts; stale partials are swept; a fetch the disk cannot hold is refused as Disk full (<code>4ba513387</code>).</li>
+    <li><span class="ok">EXISTS</span> <b>A guided tour already exists</b>: the Welcome window (<code>WelcomeWindow.swift</code>, its own window since Model 2, opens on every launch until switched off; Help ▸ Welcome reopens it). <b>Something to read meanwhile</b> also exists: the detail pane shows the shoal until the first session is readable, then the report's Sessions lens (progressive lenses).</li>
+    <li><span class="gap">OPEN</span> The "bridge itself" (something to do during the wait) is untouched, and the by-hand check on a fresh Mac (<code>r32-scenarios.md</code>). The paired <em>Demo dataset</em> row (100days :1394) is unbuilt; the es/ja demo transcripts live in gitignored <code>trial-runs/</code>.</li>
+    <li><span class="gap">FINDING</span> Two names for one download: the row's stage says <em>Downloading speech model</em> (<code>chrome.pipeline.stage.download</code>), the pill and Settings say <em>Downloading Whisper</em> (<code>modelDownload.title</code>). §8 of the Apple-first doc decided "one name for one thing"; the stage key predates it.</li>
+  </ul>
+</div>
+
+<h2>The question, as it stands now</h2>
+<p class="lede">Given that the download starts at the disclosure and that macOS 26 Macs mostly never wait, <b>who still meets the download with their first study, and what should that minute or ten look like?</b> The old framing ("dead time, fill it") assumed a wait every researcher meets. Now it is a wait a minority meets, of a length set by their network, with honest progress already on three surfaces.</p>
+
+<h2>Who still waits — the first twenty minutes of four researchers</h2>
+<div class="tl">
+  <div class="axis"><span></span><div class="ticks"><span style="left:0%">0</span><span style="left:12.5%">2:30</span><span style="left:25%">5 min</span><span style="left:37.5%">7:30</span><span style="left:50%">10</span><span style="left:62.5%">12:30</span><span style="left:75%">15</span><span style="left:87.5%">17:30</span><span style="left:100%">20</span></div></div>
+
+  <div class="lane"><div class="who">macOS 26, English UI, 100 Mbit/s<small>the common case since 22 Oct</small></div>
+    <div class="track"><span class="drop" style="left:12%"></span>
+      <span class="seg setup top" style="left:0;width:12%">disclosure · key · drop</span>
+      <span class="seg dl bot" style="left:2.5%;width:14%">Whisper 1.6 GB, background</span>
+      <span class="seg apple top" style="left:12%;width:2%"></span>
+      <span class="seg llm top" style="left:14%;width:9%">analysis</span>
+      <span class="seg top" style="left:23.5%;color:var(--label);background:none">report ≈ 4:40</span></div></div>
+
+  <div class="lane"><div class="who">macOS 15 (floor), 100 Mbit/s<small>no Apple model below 26</small></div>
+    <div class="track"><span class="drop" style="left:12%"></span>
+      <span class="seg setup top" style="left:0;width:12%">disclosure · key · drop</span>
+      <span class="seg dl bot" style="left:2.5%;width:14%">Whisper 1.6 GB, background</span>
+      <span class="seg wait top" style="left:12%;width:4.5%"><span>waits</span></span>
+      <span class="seg whisper top" style="left:16.5%;width:7%">transcribing</span>
+      <span class="seg llm top" style="left:23.5%;width:9%">analysis</span>
+      <span class="seg top" style="left:33%;color:var(--label);background:none">report ≈ 6:40</span></div></div>
+
+  <div class="lane"><div class="who">macOS 26, Greek UI (not one of Apple's nine)<small>or Whisper only · or a pinned language</small></div>
+    <div class="track"><span class="drop" style="left:12%"></span>
+      <span class="seg setup top" style="left:0;width:12%">disclosure · key · drop</span>
+      <span class="seg dl bot" style="left:2.5%;width:14%">Whisper 1.6 GB, background</span>
+      <span class="seg wait top" style="left:12%;width:4.5%"><span>waits</span></span>
+      <span class="seg whisper top" style="left:16.5%;width:7%">transcribing</span>
+      <span class="seg llm top" style="left:23.5%;width:9%">analysis</span>
+      <span class="seg top" style="left:33%;color:var(--label);background:none">report ≈ 6:40</span></div></div>
+
+  <div class="lane"><div class="who">macOS 15, hotel Wi-Fi 20 Mbit/s<small>or the download was stopped, or &lt; 10 GB free</small></div>
+    <div class="track"><span class="drop" style="left:12%"></span>
+      <span class="seg setup top" style="left:0;width:12%">disclosure · key · drop</span>
+      <span class="seg dl bot" style="left:2.5%;width:55%">Whisper 1.6 GB, background ≈ 11 min</span>
+      <span class="seg wait top" style="left:12%;width:45.5%"><span>waits ≈ 9 min</span></span>
+      <span class="seg whisper top" style="left:57.5%;width:7%">transcribing</span>
+      <span class="seg llm top" style="left:64.5%;width:9%">analysis</span>
+      <span class="seg top" style="left:74%;color:var(--label);background:none">report ≈ 14:50</span></div></div>
+
+  <div class="legend"><span><i style="background:light-dark(#9aa0a6,#6b7076)"></i>set-up (the researcher's own pace; 2:20 drawn)</span><span><i style="background:light-dark(#6e7bd9,#5b67c7)"></i>Whisper download, from the disclosure</span><span><i style="background:light-dark(#2c9f5c,#2d8a52)"></i>Apple's model (≈ 15 s for 18 min of audio)</span><span><i style="background:light-dark(#d4813a,#b56a2a)"></i>Whisper transcribing</span><span><i style="background:light-dark(#3b82c4,#2f6ea8)"></i>LLM stages</span><span><i style="border:1px solid var(--red)"></i>the wait this row is about</span></div>
+</div>
+<div class="comment"><span class="lab">Commentary</span>
+  Durations are the Apple-first README's figures for one 18-minute English interview (download ≈ 3 min on 100 Mbit/s; "3–7 min typical"; Apple ≈ 15 s; Whisper 3.2× slower), scaled to 1.6 GB at 20 Mbit/s for the last lane. The set-up stretch is a guess (2:20): a researcher who already has a key and drops within thirty seconds of the disclosure meets more of the download; one who reads the Welcome window first meets less. <b>The wait is now the red stripe only</b>: it exists for macOS 15, for languages outside Apple's nine (or <em>Whisper only</em>), and it is long only on a slow connection or when the background download did not start. The population under macOS 15 shrinks every month; the slow-network one does not.</div>
+
+<h2>Options</h2>
+<div class="options">
+
+<!-- OPTION A -->
+<div class="opt">
+  <h3>A · Honest progress only — and make the pane say what the pill says <span class="tag rec">recommended</span></h3>
+  <p>Keep what shipped. Add nothing new in kind: the detail pane's cover (<code>RunCoverPane.analysing</code>) during the download stage carries Foundation's progress line and the shipped <em>why</em> sentence, which today live only in the pill's popover. One name for the download on every surface.</p>
+  <p class="col-label">TODAY (shipped, for comparison)</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> stage.download · modelDownload.title · RunCoverPane.analysing</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+        <span class="status-zone"><span class="pill"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v6M5.5 8.2 8 10.7l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Downloading Whisper<span class="bar"><i style="width:38%"></i></span><span class="pct">38%</span></span></span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st">Downloading speech model</div></div><span class="ring det"></span></div>
+      </div>
+      <div class="detail cuv"><div class="sym"></div><p class="hl">Downloading speech model</p></div>
+    </div>
+  </div>
+  <p class="col-label">PROPOSED</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> modelDownload.title · modelDownload.why · <span class="sys">system</span> Progress.localizedAdditionalDescription · <span class="new">CHANGED</span> stage.download → one name</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+        <span class="status-zone"><span class="pill"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v6M5.5 8.2 8 10.7l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Downloading Whisper<span class="bar"><i style="width:38%"></i></span><span class="pct">38%</span></span></span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st">Downloading Whisper</div></div><span class="ring det"></span></div>
+      </div>
+      <div class="detail cuv"><div class="sym"></div><p class="hl">Downloading Whisper</p>
+        <p class="ds num">600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</p>
+        <p class="ds">For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</p></div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li><code>RunCoverPane.analysing</code>: when <code>stage == download</code>, add the description (two <code>Text</code>s) from <code>WhisperDownloadModel.shared.progressLine</code> and <code>modelDownload.why</code>. When the run fetches for itself (the app's job is absent), compose the same line from the run's own bytes.</li>
+    <li>Rename <code>chrome.pipeline.stage.download</code> to the pill's wording in 21 locales (a value edit, <code>check-locales.py --strict</code>).</li>
+    <li>Nothing else. No new window, no new string beyond the rename.</li>
+  </ul>
+  <div class="cons"><span class="cost S">S</span> <b>Swift only, one locale value.</b>
+    <dl><dt>Layers</dt><dd><code>RunCoverPane.swift</code>, <code>RunProgressSubtitle</code> (no change: verb only), <code>locales/*/desktop.json</code> (one value ×21). CLI already prints HF's own bar.</dd>
+        <dt>Risks</dt><dd>With the analysis animation on, the shoal owns the pane until the first session is readable (<code>shoalTakesPane</code>), so the pane text is seen only with the animation off or Reduce Motion on. The row and pill are seen by all.</dd>
+        <dt>Rules out</dt><dd>Nothing. B and C can be added later on top.</dd>
+        <dt>Honesty</dt><dd>No new estimate: Foundation's line shows bytes alone until the rate window fills (shipped rule).</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Nearest sibling: the cover pane already draws "the row's own line under the row's ring, so the pane and the row cannot disagree" (its own header). This adds the pill's two lines in the same spirit, so the three surfaces say one thing. It follows the rules in <code>progress.md</code> (status lives where its subject lives; never fake a fraction; terse) and departs from nothing. Man-bites-dog: the only news in the pane is <em>how long</em>, which is exactly what the row withholds.</div>
+</div>
+
+<!-- OPTION B -->
+<div class="opt">
+  <h3>B · A sample study to explore during the wait <span class="tag defer">defer · not tied to the wait</span></h3>
+  <p>The cover pane offers a second action, <em>Open Sample Study</em>, which opens a bundled, pre-analysed, read-only study in its own window. The researcher browses a real report (Talismanic, the public About-page test data) while their own study transcribes.</p>
+  <p class="col-label">PROPOSED</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> stage.download · ContentUnavailableView actions · <span class="new">NEW</span> sidebar row kind "sample" · <span class="new">NEW</span> chrome.openSampleStudy · read-only chip</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+        <span class="status-zone"><span class="pill"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v6M5.5 8.2 8 10.7l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Downloading Whisper<span class="bar"><i style="width:38%"></i></span><span class="pct">38%</span></span></span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st">Downloading Whisper</div></div><span class="ring det"></span></div>
+        <div class="group" style="margin-top:10px">Sample</div>
+        <div class="row"><svg class="ic" viewBox="0 0 16 16"><path d="M3 4h10v8H3z M3 7h10" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Talismanic</div><div class="st">Sample · read only</div></div><span></span></div>
+      </div>
+      <div class="detail cuv"><div class="sym"></div><p class="hl">Downloading Whisper</p>
+        <p class="ds num">600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</p>
+        <div class="acts"><span class="btn">Open Sample Study</span></div></div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li>A bundled study: analysed output (database, transcripts, JSON, thumbnails; no video) in <code>Contents/Resources/sample/</code>, copied into the container on first open; served read-only through the export-mode store gate (<code>isExportMode()</code>) so no edit can be made or lost.</li>
+    <li>A new project kind in <code>ProjectIndex</code> (no folder of the researcher's; no Analyse, Re-analyse, Agent Access, Add Files; a context menu with Remove Sample).</li>
+    <li>Sidebar group <em>Sample</em>, the row's subtitle, the cover-pane button, and a Help ▸ Open Sample Study item so it is reachable after the wait too.</li>
+  </ul>
+  <div class="cons"><span class="cost L">L</span> <b>Swift + Python + bundle + locales.</b>
+    <dl><dt>Bundle</dt><dd>Talismanic's analysed output without video is in the tens of MB (thumbnails dominate; measure before committing). The sidecar is already ~hundreds of MB, so the share is small, but App Store delta updates re-ship it on every change to the sample.</dd>
+        <dt>Source</dt><dd>Talismanic is the maintainer's own public test data (About page); the quotes are real people's words already published. No third-party licence question, but the sample fixes a cohort's first impression of "what a Bristlenose report is": it must be a good study, kept current with the report's features, in English only (20 locales get an English sample under localised chrome).</dd>
+        <dt>App Store</dt><dd>Sample content is routine. A read-only project must not look like a locked feature (no padlock copy); the chip says <em>Sample</em>.</dd>
+        <dt>Risks</dt><dd>Two windows during onboarding (their study, the sample); a sample project row in a sidebar whose rows are folders the researcher owns (<code>design-desktop-project-status.md</code>) — a new row kind with its own precedence and menu; quit mid-download is unaffected (the download stops and restarts from zero next launch, shipped).</dd>
+        <dt>Rules out</dt><dd>Nothing, but it is <b>not a bridge</b>: once built it is wanted at every first launch, wait or no wait. Its hook is the Welcome window (the <em>Demo dataset</em> row), not the download.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Nearest siblings: the export-mode read-only gate (controls hidden, not disabled) and the Welcome window's role as help. There is no sibling for "a project the app owns"; the sidebar's rules all assume a folder the researcher dropped, so this is a <b>new kind</b> and goes to platform-taste review before building. The wait is the wrong reason to build it: on the common lane above there is no wait, and on the slow lane a sample does not shorten nine minutes, it fills them. The 100days <em>Demo dataset</em> row (:1394) owns this; recommend moving the ask there and unpinning it from Whisper.</div>
+</div>
+
+<!-- OPTION C -->
+<div class="opt">
+  <h3>C · The guided tour during the wait <span class="tag defer">mostly exists · one link</span></h3>
+  <p>The Welcome window is the tour, and on a first launch it is already open behind the main window. Option C is only: the cover pane during the download stage offers <em>Welcome</em> (the shipped Help item) so a researcher who closed it can read while they wait.</p>
+  <p class="col-label">PROPOSED</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> chrome.welcomeTitle (Help ▸ Welcome) · WelcomeWindow · <span class="new">NEW</span> a link-style action on the cover pane</div>
+    <div class="win">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+        <span class="status-zone"><span class="pill"><svg width="12" height="12" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v6M5.5 8.2 8 10.7l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Downloading Whisper<span class="bar"><i style="width:38%"></i></span><span class="pct">38%</span></span></span></div>
+      <div class="side"><div class="group">Projects</div>
+        <div class="row sel"><svg class="ic" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><div><div class="nm">Checkout study</div><div class="st">Downloading Whisper</div></div><span class="ring det"></span></div>
+      </div>
+      <div class="detail cuv"><div class="sym"></div><p class="hl">Downloading Whisper</p>
+        <p class="ds num">600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</p>
+        <div class="acts"><span class="btn link">Welcome</span></div></div>
+      <div class="welcome"><div class="wt"><span class="lights"><i></i><i></i><i></i></span><span class="title">Welcome</span></div>
+        <div class="spiral"><div class="cell big"><b>Study tools</b>AutoCode · Codebooks · Tag · Star &amp; hide · Video clips · Session timeline · Send to Miro · Connect an AI agent</div><div class="cell"><b>The science</b>Emergent themes · Seven sentiments · Signals</div><div class="cell"><b>Tips</b>Click any transcript timecode to play from that moment.</div></div></div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li>One action on <code>RunCoverPane.analysing</code> during the download stage, calling the same opener the Help menu uses (<code>MenuCommands.swift:2058</code>).</li>
+    <li>No new strings: the button label is <code>chrome.welcomeTitle</code>, the window's own title.</li>
+  </ul>
+  <div class="cons"><span class="cost S">S</span> <b>Swift only, no strings.</b>
+    <dl><dt>Layers</dt><dd><code>RunCoverPane.swift</code> only.</dd>
+        <dt>Risks</dt><dd>Needy: on a first launch Welcome is already open, so the link offers what is already on screen (man bites dog says cut it). It also surfaces only when the pane is not the shoal. A researcher on the slow lane has nine minutes; the Welcome is a two-minute read.</dd>
+        <dt>Rules out</dt><dd>Nothing.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Nearest sibling: the <code>needsProvider</code> cover, whose action deep-links to Settings — a cover pane may carry one way on. But the Welcome's own doc (Model 2) made it <em>help</em>, opened from Help, shown at launch; a second opener on a progress pane is a second home for the same window. Cheap, harmless, and probably unnecessary: the tour is already where it should be. If the owner wants a tour <em>during</em> the wait, the honest form is "leave Welcome open on a first launch", which is what ships.</div>
+</div>
+
+<!-- OPTION D -->
+<div class="opt">
+  <h3>D · Start the download earlier <span class="tag settled">settled · shipped 22 Oct</span></h3>
+  <p>Drawn for the record, not for a decision. The download starts at the AI disclosure, which precedes the provider key and the first drop. Two variants the owner has already ruled on are listed so they are not re-proposed.</p>
+  <p class="col-label">SHIPPED — Settings ▸ Transcription</p>
+  <div class="shot">
+    <div class="chrome"><b>shipped</b> transcriptionSettings.engineLabel · engineWhenReady · whisperLabel · modelDownload.stop · downloadNow</div>
+    <div class="settings">
+      <div class="form-sec">
+        <div class="frow"><div><div class="flabel">Transcribe with</div><div class="fhint">Apple's speech model is built into macOS and is faster. Whisper copes better with poor audio, people talking over each other and larger groups.</div></div><span class="popup">Whisper when ready ⌄</span></div>
+        <div class="frow"><div><div class="flabel">Whisper</div><div class="fhint" style="font-variant-numeric:tabular-nums"><span class="bar" style="display:inline-block;width:120px;vertical-align:middle;margin-right:8px"><i style="width:38%"></i></span>600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</div></div><span class="btn">Stop Download</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="changes">
+    <li><b>D1 — at first launch, before the disclosure.</b> Ruled out by the owner (18 Oct, "rude": nothing downloads 1.6 GB before the researcher has said yes to anything; the disclosure is the first yes).</li>
+    <li><b>D2 — a Download button in the disclosure sheet or the provider set-up.</b> Redundant: the disclosure's acknowledgement <em>is</em> the trigger, with no extra question; Settings has Download Now for a stopped one.</li>
+    <li><b>D3 — a smaller Whisper as a stopgap.</b> Measured worse than Apple's model in Apple's languages (Apple-first README §13); for the other languages it would be a second download.</li>
+  </ul>
+  <div class="cons"><span class="cost S">—</span> <b>No work.</b>
+    <dl><dt>Residual</dt><dd>The auto-start has a 10 GB floor and respects a remembered Stop. A Mac under the floor shows nothing until the first run, which then downloads inside the run (honest row) — the appliance copes; Download Now ignores the floor.</dd>
+        <dt>Rules out</dt><dd>Re-opening D1 without new evidence.</dd></dl></div>
+  <div class="comment"><span class="lab">Commentary</span>
+    The brief's option D is the one that did the most work, and it is done. The open sub-question in <code>design-apple-first-transcription.md</code> §6 ("start the download at the first welcome screen, or at the first Apple run?") was answered 22 Oct: at the disclosure. This card exists so the morning pick does not spend time on it.</div>
+</div>
+
+</div>
+
+<h2>Comparison</h2>
+<table class="cmp">
+  <tr><th></th><th>A · honest pane + one name</th><th>B · sample study</th><th>C · Welcome link</th><th>D · earlier start</th></tr>
+  <tr><td>Status at HEAD</td><td class="m">row + pill shipped; pane says the verb only</td><td class="n">not built; demo data private</td><td class="y">Welcome ships; link does not</td><td class="y">shipped 22 Oct</td></tr>
+  <tr><td>Who it helps</td><td>every lane that waits (macOS 15, non-Apple language, slow network)</td><td>a first launch with any wait ≥ 3 min; also no wait at all</td><td>a researcher who closed Welcome</td><td>everyone (already)</td></tr>
+  <tr><td>Build cost</td><td class="y">S — Swift, one locale value</td><td class="n">L — new project kind, bundle, read-only serve, menus, locales</td><td class="y">S — one action</td><td>—</td></tr>
+  <tr><td>Layers</td><td>RunCoverPane · locales</td><td>ProjectIndex · sidebar · serve · bundle · Help menu · locales</td><td>RunCoverPane</td><td>—</td></tr>
+  <tr><td>New strings ×21</td><td>0 (1 rename)</td><td>≈ 4 (Sample, read only, Open Sample Study, Remove Sample)</td><td>0</td><td>0</td></tr>
+  <tr><td>Can it mislead?</td><td class="y">no — system progress line, no invented time</td><td class="m">a sample sets the expectation of every report; English only</td><td class="y">no</td><td>—</td></tr>
+  <tr><td>Hidden by the shoal</td><td class="m">yes, while animation on</td><td class="m">yes</td><td class="m">yes</td><td>—</td></tr>
+  <tr><td>Rules out later</td><td>nothing</td><td>nothing; but owns a cohort's first impression</td><td>nothing</td><td>D1 (owner)</td></tr>
+  <tr><td>Fits a shipped sibling</td><td class="y">cover pane = row's line + pill's line</td><td class="n">new kind (an app-owned project)</td><td class="m">needsProvider's one-way-on, but a second home for Welcome</td><td class="y">StatusPill envelope</td></tr>
+</table>
+
+<h2>Recommendation</h2>
+<div class="rec">
+  <p><b>Pick A, close the row, and move the sample to the Demo dataset row.</b></p>
+  <ol>
+    <li><b>A now (S):</b> the cover pane during the download carries Foundation's progress line and the shipped <em>why</em>; the stage verb becomes the pill's name, <em>Downloading Whisper</em>, in 21 locales. Three surfaces then tell one story, and a researcher on the slow lane can read how long from any of them. Nothing invented, nothing new in kind.</li>
+    <li><b>Record the row as resolved by what shipped</b> (D on 22 Oct, honest progress on 20 Oct, Apple first on 22 Oct) plus A. The "bridge" premise — dead time every researcher meets — is no longer true; the remaining audience is macOS 15 and the non-Apple languages, and for them the honest wait with a time is the Mac answer (Software Update does not entertain you).</li>
+    <li><b>B is worth building, for a different reason:</b> a sample report shows a new researcher what they are about to get, whether or not they wait. Hook it to Welcome (its own window, its own Help item), size the bundle first, and review it as a new kind (app-owned read-only project). Do not gate it on the download stage, which on most Macs never shows.</li>
+    <li><b>C: skip.</b> Welcome is already open on the launch that matters.</li>
+    <li><b>Still owed from the Apple-first doc §8</b>, unchanged by this pick: the by-hand check on a fresh Mac (r32), the gate measured on more real files, the pop-up labels, the two-fetchers case while <em>Whisper only</em> runs during the app's download.</li>
+  </ol>
+</div>
+
+<h2>String plan</h2>
+<table class="strings">
+  <tr><th>Key</th><th>English</th><th>Status</th></tr>
+  <tr><td><code>desktop.chrome.pipeline.stage.download</code></td><td><em>Downloading Whisper</em> (was <em>Downloading speech model</em>)</td><td><span class="tag-new">CHANGED</span> value, 21 locales; the pill's <code>modelDownload.title</code> is the model wording</td></tr>
+  <tr><td><code>desktop.modelDownload.why</code></td><td>For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</td><td><span class="tag-ship">shipped</span> reused on the pane</td></tr>
+  <tr><td>progress line</td><td>600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</td><td><span class="tag-ship">system</span> <code>Progress.localizedAdditionalDescription</code>, no key</td></tr>
+  <tr><td><code>desktop.chrome.welcomeTitle</code></td><td>Welcome</td><td><span class="tag-ship">shipped</span> only if C is picked</td></tr>
+  <tr><td><code>desktop.chrome.openSampleStudy</code>, <code>chrome.sampleGroup</code>, <code>chrome.sampleReadOnly</code>, <code>menu.help.openSampleStudy</code></td><td>Open Sample Study · Sample · Sample · read only · Open Sample Study</td><td><span class="tag-new">NEW</span> only if B is picked (owner to word)</td></tr>
+</table>
+
+<h2>Open sub-questions for the owner</h2>
+<div class="facts"><ul>
+  <li><b>Which name wins</b> — <em>Downloading Whisper</em> (pill, Settings, §8 decision) or <em>Downloading speech model</em> (row)? A says the pill's; the row is the one place a non-technical researcher reads it most.</li>
+  <li><b>Under the shoal:</b> should the download stage ever show the shoal? While downloading, nothing of the study is being made; the fish imply analysis. Option: the shoal starts at transcription, the cover pane owns the download. Not drawn; a one-condition change in <code>shoalTakesPane</code>.</li>
+  <li><b>B's home and size:</b> if a sample ships, is it Talismanic (English, real quotes, public) or the es/ja demos (private, machine-feel, need native review), and does it ride the bundle or a first-open download of its own (which re-creates the wait)?</li>
+  <li><b>Close or keep the row:</b> the mockup's view is that what shipped resolves the trust concern; the owner may want the fresh-Mac by-hand check (r32) done before the row is struck.</li>
+</ul></div>
+
+<p class="lede" style="margin-top:28px">Sources read: <code>WhisperDownloadModel.swift</code>, <code>WhisperDownloadPill.swift</code>, <code>RunCoverPane.swift</code>, <code>DetailPaneKind.swift</code>, <code>RunProgressSubtitle.swift</code>, <code>WelcomeWindow.swift</code>, <code>BristlenoseFlags.swift</code>, <code>bristlenose/preflight/whisper.py</code>, <code>bristlenose/stages/s05_transcribe.py</code>, <code>docs/design-apple-first-transcription.md</code>, <code>docs/design-perceived-wait.md</code>, <code>docs/design-desktop-project-status.md</code>, <code>docs/mockups/apple-first-first-run.html</code>, <code>docs/mockups/welcome-dismiss-options.html</code>, <code>.claude/skills/is-this-bristlenosey/domains/progress.md</code>; commits <code>fc2fea73f</code>, <code>4ba513387</code>, <code>7675848e0</code>, <code>b8586eab4</code>, <code>3ab03d3f</code>.</p>
+
+</div>
+</body>
+</html>

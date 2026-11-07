@@ -1,5 +1,5 @@
 ---
-status: built 24 Oct 2026 on main, unreleased (§10 as built); §9.3 still the owner's call
+status: built 24 Oct 2026, shipped in 0.43.0 (§10 as built); §9.3 settled 7 Nov 2026
 last-trued: 2026-10-24
 trued-against: HEAD@main 002b6ee1d, macOS 27.0 (26A428), Swift 6.4
 ---
@@ -358,7 +358,13 @@ the message handler and loops twenty right-clicks over the link, both images and
 | D12 | The quote card gets a menu of its own (§9.5) | owner |
 | — | The review recommended making every bracketed timecode play, Signals and Codebooks included. **Reopened by D10** (§9.3) | owner, under discussion |
 
-### 9.3 Open: the blue timecodes that don't play
+### 9.3 Settled: the blue timecodes play (owner, 7 Nov 2026)
+
+**They play.** Signals' did from 24 Oct 2026 (`49213633c`, its badges took the transcript link);
+threshold review's since `145c65438`, its speaker code taking the transcript link in a new tab or
+window so the review stays open. Inside a dialog the menu offers no same-window Show in
+Transcript. The question as it stood:
+
 
 D10 settles the quote card (§9.4 rows follow it). Two blue, bracketed timecodes look the same and
 do not play: the **Signals expanded-quote timecode** (a plain link to the transcript, which
@@ -411,10 +417,10 @@ posts from any web view but the report's), `6e800f460` (the page declares each l
 and Open Transcript in New Window), then review fixes `699284ad8`…`002b6ee1d`. Where the build
 departs from §9:
 
-- **Threshold review's timecode opens the transcript in a new window** on a left click, in the
-  app (a new tab in a browser), because a same-window visit would unmount the review dialog. Its
-  menu leads with Open Transcript in New Window and offers no Show in Transcript (rule 9.1.1). §9.3
-  (whether it should play instead) is still open.
+- **Threshold review's timecode plays** (§9.3, 7 Nov 2026); its speaker code opens the
+  transcript in a new window in the app (a new tab in a browser), because a same-window visit would
+  unmount the review dialog. That badge's menu leads with Open Transcript in New Window, and no menu
+  inside a dialog offers a same-window Show in Transcript.
 - **The quote card's menu** is Star/Unstar · Hide · Add Tag… — Copy Quote — Show in Transcript ·
   Open Transcript in New Window, then WebKit's Back and Reload Report. Star's label follows the one
   rule Star acts by (`starActionIsUnstar` over the selection the card sits in) and counts ("Star 3

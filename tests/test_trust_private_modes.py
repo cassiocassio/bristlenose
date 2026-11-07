@@ -214,3 +214,36 @@ def test_pii_summary_tightens_a_preexisting_loose_file(tmp_path: Path) -> None:
     os.chmod(path, 0o644)
     write_pii_summary(redactions, tmp_path)
     assert _mode(path) == _OWNER_ONLY_AS_READ
+
+
+# -- the log file ---------------------------------------------------------------
+
+
+def test_the_log_file_and_its_rotations_are_owner_only(tmp_path: Path) -> None:
+    """T26 (trust map row 58): bristlenose.log took the umask default (0o644). It is debug
+    output and must not carry names, but it still names the machine, the paths and the
+    providers, so it is private like the other files here, and so is each file a rotation
+    starts."""
+    import logging
+
+    from bristlenose import logging as bn_logging
+
+    bn_logging.setup_logging(output_dir=tmp_path, verbose=False)
+    try:
+        log = tmp_path / ".bristlenose" / "bristlenose.log"
+        logging.getLogger("bristlenose.test").info("a line")
+        logging.getLogger().handlers[-1].flush()
+        assert _mode(log) == _OWNER_ONLY_AS_READ
+
+        file_handler = next(
+            h for h in logging.getLogger().handlers if isinstance(h, logging.FileHandler)
+        )
+        file_handler.doRollover()  # type: ignore[attr-defined]
+        logging.getLogger("bristlenose.test").info("a line after the rotation")
+        file_handler.flush()
+        assert _mode(log) == _OWNER_ONLY_AS_READ
+        assert _mode(log.with_name("bristlenose.log.1")) == _OWNER_ONLY_AS_READ
+    finally:
+        for h in logging.getLogger().handlers[:]:
+            logging.getLogger().removeHandler(h)
+            h.close()

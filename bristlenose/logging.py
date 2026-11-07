@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import logging
 import os
+from io import TextIOWrapper
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 # Log file name (inside .bristlenose/)
@@ -124,13 +126,28 @@ def setup_logging(
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
+    """A rotating file handler whose every open leaves the file owner-only (0o600).
+
+    The log names the machine, the paths and the providers, so it is private like the other
+    files the run writes (trust map row 58, T26). Each rotation opens a fresh file, and an
+    older loose one is tightened the next time it is opened.
+    """
+
+    def _open(self) -> TextIOWrapper:
+        stream = super()._open()
+        try:
+            os.chmod(self.baseFilename, 0o600)
+        except OSError:
+            pass  # a file we cannot chmod is still logged to
+        return stream
+
+
 def _file_handler(output_dir: Path) -> logging.Handler:
     """The rotating log file at ``<output_dir>/.bristlenose/bristlenose.log``."""
-    from logging.handlers import RotatingFileHandler
-
     log_dir = output_dir / ".bristlenose"
     log_dir.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
+    handler = _OwnerOnlyRotatingFileHandler(
         log_dir / _LOG_FILENAME,
         maxBytes=_MAX_BYTES,
         backupCount=_BACKUP_COUNT,

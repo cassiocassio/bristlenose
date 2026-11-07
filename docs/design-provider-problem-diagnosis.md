@@ -380,3 +380,20 @@ Built in `f49cf2ff9` and the review-fix commit after it. Network-blocks (step 5)
 - AutoCode refusals now reach `recordRefusal` twice (the chip's bridge post, and this line); both are idempotent.
 - The signature is read from the top exception only: any-llm's wrapper and google-genai's `APIError` give `None` (today's behaviour).
 - `ReadTimeout` and `APITimeoutError` are NETWORK on the built-in cloud providers; whether "check your connection" is right for a slow read is a wording question for step 5.
+
+## 11. Network-blocks (step 5) built, 7 Nov 2026
+
+Approved by the owner with section H of the mockup. What exists (`NetworkBlock.swift`, `ProviderProblemModel`, the refusal-line intake, the run branch in `PipelineRunner.deriveFailureState`, three locale keys in all 21 languages):
+
+- **Lit only after a refused call that may be the network's doing** (`NetworkBlockCandidate`): a call that died in connect or TLS, a name that would not resolve (not for Azure), or a reply that was not the provider's. Never Ollama, a slow read, or an unknown phase. A failed run's structured cause cannot say where it died, so a run is a candidate for every cloud provider except Azure.
+- **Then one look, three answers, one 3 s budget** (`NetworkBlockVerdict`): the path has a route; Apple's check page answers with its exact title and body; and the provider's own public endpoint, asked with no key from this Mac, does **not** answer in its JSON shape. The provider check is what separates "this network" from a laptop that slept mid-run, a slow read, or a bad endpoint, so the run source needs no phase. Azure (user-supplied host) and Ollama have no keyless probe and so never light it.
+- **Held in memory only.** Never the stored record, never a key verdict. Cleared by a network path change (the watcher is seeded with the signature the look saw, and the signature is status plus interface names, not gateways), by a call to that provider that worked (the `bristlenoseProviderCallSucceeded` cue from `noteRunSucceeded`, including one that lands during the look), or by switching provider. The ✕ hides it until it clears; a refused run brings a hidden one back without another look.
+- **An account problem outranks it**, shown or hidden: the ✕ on one problem does not reveal another, and a block is not stored behind one.
+- **A look that finds nothing is not repeated for a minute**, and refusals that arrive during a look share it.
+
+**Owed, not built**
+
+- The website's two privacy pages, the terms page and the security notes need a sentence: after a failed request the app may check whether the network works by contacting Apple's connectivity-check address, and the provider's own address, with nothing about the project. No consent-version bump (owner, 6 Nov 2026). The request also carries the app's default user-agent.
+- A serve call that works does not clear a block lit by a serve refusal (only a finished run or a network change does); a success line from the sidecar would widen the seam.
+- The captive-portal sign-in line and the ladder disclosure remain deferred.
+- Nothing here has been seen on a real hostile network; the README's states are still to be run.

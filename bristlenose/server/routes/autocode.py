@@ -333,7 +333,7 @@ async def start_autocode_job(
             # screen. Asked once: a refusal is a keystore lookup.
             from bristlenose.llm import anyllm
 
-            ready = anyllm.readiness(settings)  # type: ignore[arg-type]
+            ready = anyllm.readiness(settings)
             if not ready.ready:
                 if ready.status == "no-key":
                     raise no_key

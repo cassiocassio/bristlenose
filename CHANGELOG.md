@@ -8,7 +8,7 @@ The Mac app tells you when your network is what's blocking your AI provider, and
 
 **New**
 
-- **The title-bar pill says when this network can't reach your provider.** On a café or managed network that blocks Claude, ChatGPT or Gemini, it reads "This network can't reach Claude" instead of blaming your key. It clears when you change network, a call succeeds or you switch provider, and a key problem outranks it. After a failed call the Mac makes one check of Apple's connectivity address and one keyless request to the provider's public models address; nothing about your project is sent.
+- **The title-bar pill says when this network can't reach your provider.** On a café or managed network that blocks Claude, ChatGPT or Gemini, it reads "This network can't reach Claude" instead of blaming your key. It clears when you change network, a call succeeds or you switch provider, and a key problem outranks it.
 - **The pill also says when your key is rejected or your credit has run out,** lit by the call the provider actually refused, with a small × to dismiss it.
 - **A notification when an analysis finishes while you're away.** It names the project, how many sessions were analysed and, on a failure, the kind of reason. There is no banner while Bristlenose is frontmost.
 - **A display control for quotes.** Choose the layout, set the density on a continuous slider, break long paragraphs, and turn on focus mode, which is remembered across a relaunch. Long paragraphs now break by default. View ▸ Display collects the same controls.
@@ -19,7 +19,7 @@ The Mac app tells you when your network is what's blocking your AI provider, and
 
 - **`bristlenose serve` now defaults to port 8484,** one number kept in one place, so the address stays the same between runs. If you bookmarked the old address, update it.
 - **Opening a study is faster in the Mac app.** A spare server is started ahead of time and handed to the study you open, which cut the click-to-report time from 1.8 s to 1.2 s in testing. The first click on Sessions went from 361 ms to 88 ms, and resizing the window no longer redraws the whole report on every frame.
-- **Less is held up at start.** `serve` starts about a third faster, the CLI loads its plural rules only when it needs them, and Mac CLI users are asked for their Keychain item once rather than on every start.
+- **Less is held up at start.** `serve` starts nearly a third faster, the CLI loads its plural rules only when it needs them, and Mac CLI users are asked for their Keychain item once rather than on every start.
 - **A folder with scripts, notes or spreadsheets in it no longer reads "Partial completion".** Files Bristlenose doesn't read are left alone, and the problem popover says how many.
 - **A discussion guide saved as Word is no longer analysed as an interview.** It is named as having no transcript in it.
 - **A resumed analysis says how many quotes were left out of a session,** where only the first run did.
@@ -35,7 +35,7 @@ The Mac app tells you when your network is what's blocking your AI provider, and
 
 - **Your participants' names could appear in the log file, and `pii_summary.txt` was readable by other users on the machine.** The log carries no quote text or speaker names now, and `pii_summary.txt`, `state.json` and your key and secret files are owner-only whenever they are written, including ones that already existed.
 - **A hidden quote was still sent to the model as a codebook example.** It is now left out, along with its count.
-- **A desktop-hosted study with no scoped agent token could answer the agent endpoint with the server's own token.** It now refuses.
+- **A study opened by the Mac app could answer a connected agent with the server's own token** when it had no agent token of its own, giving the agent more access than intended. It now refuses.
 - **A Stop that arrived after every quote had been sent left the codebook unapplied.** It is applied.
 - **A catch-up kept sending after its codebook was switched off,** and a new run's AutoCode now banks what the previous run had answered before it stops.
 - **A finished AutoCode or catch-up chip carried across a reload stayed on screen** instead of making way for the newer run.

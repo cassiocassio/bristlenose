@@ -16,7 +16,8 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Paths that do not require a bearer token.
 # /api/health: version/status only, no project data — desktop needs it pre-auth.
-# /api/docs: Swagger UI (dev convenience).
+# /api/docs and /openapi.json: Swagger UI and the schema, a dev convenience; the routes exist
+# only on `serve --dev` (create_app), so on a normal serve these entries match nothing.
 _AUTH_EXEMPT_PREFIXES: tuple[str, ...] = (
     "/api/health",
     "/api/docs",

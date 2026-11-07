@@ -129,6 +129,15 @@ def setup_logging(
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+def _make_owner_only(path: Path) -> None:
+    """chmod 0o600, unless ``path`` is a symlink: its target is not ours to change."""
+    try:
+        if not path.is_symlink():
+            os.chmod(path, 0o600)
+    except OSError:
+        pass  # a file we cannot chmod is still logged to
+
+
 class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
     """A rotating file handler whose every open leaves the file owner-only (0o600).
 
@@ -139,10 +148,7 @@ class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
 
     def _open(self) -> TextIOWrapper:
         stream = super()._open()
-        try:
-            os.chmod(self.baseFilename, 0o600)
-        except OSError:
-            pass  # a file we cannot chmod is still logged to
+        _make_owner_only(Path(self.baseFilename))
         return stream
 
 
@@ -156,6 +162,9 @@ def _file_handler(output_dir: Path) -> logging.Handler:
         backupCount=_BACKUP_COUNT,
         encoding="utf-8",
     )
+    # Backups an older version rotated keep the mode they had: rename does not change it.
+    for n in range(1, _BACKUP_COUNT + 1):
+        _make_owner_only(log_dir / f"{_LOG_FILENAME}.{n}")
     handler.setLevel(_parse_log_level(os.environ.get("BRISTLENOSE_LOG_LEVEL", "INFO")))
     handler.setFormatter(
         _OneLineFormatter(

@@ -36,7 +36,7 @@ Two items only:
 - `GET /api/dev/sessions-table-html` — Jinja2 sessions table (visual React diff).
 - `POST/GET/DELETE /api/dev/telemetry` — alpha tag-rejection telemetry stub.
 - `GET/POST /api/dev/codebook-lab/*` — dynamic-codebook-builder experiment UI.
-- `/admin/` — SQLAdmin DB browser (dev-only). `/api/docs` — Swagger.
+- `/admin/` — SQLAdmin DB browser (dev-only). `/api/docs` — Swagger (the route exists only under `serve --dev`).
 
 ## Instrumentation that exists but isn't reachable from a menu
 

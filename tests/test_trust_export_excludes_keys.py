@@ -9,6 +9,7 @@ proves the check reads the artefact that does carry researcher data.
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import pytest
 
 from bristlenose.output_paths import project_output_dir
 from bristlenose.server.app import create_app
+from bristlenose.transcription_quality import RECORD_VERSION, read_records, write_record
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -33,10 +35,20 @@ def export_html(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     project = tmp_path / "input"
     shutil.copytree(_FIXTURE_DIR, project)
     run_dir = project_output_dir(project) / ".bristlenose"
-    for rel, sentinel in _KEYS.items():
-        path = run_dir / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f'{{"note": "{sentinel}"}}\n', encoding="utf-8")
+    # Each file is written the way its real reader reads it, so a route that embedded what the
+    # reader returns, and not just a raw copy, would carry the sentinel (Fable review, 7 Nov):
+    # a current-version quality record, and a call row with the sentinel in a field a reader
+    # would surface; the PII summary is plain text.
+    (run_dir).mkdir(parents=True, exist_ok=True)
+    (run_dir / "pii_summary.txt").write_text(_KEYS["pii_summary.txt"] + "\n", encoding="utf-8")
+    (run_dir / "llm-calls.jsonl").write_text(
+        json.dumps({"model": _KEYS["llm-calls.jsonl"], "outcome": "ok", "session_id": "s1"}) + "\n",
+        encoding="utf-8",
+    )
+    write_record(
+        project_output_dir(project), "s1",
+        {"version": RECORD_VERSION, "engine": _KEYS["intermediate/transcription-quality/s1.json"]},
+    )
     client = AuthTestClient(create_app(project_dir=project, dev=False, db_url="sqlite://"))
     put = client.put(
         "/api/projects/1/people",
@@ -46,6 +58,12 @@ def export_html(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     resp = client.get("/api/projects/1/export")
     assert resp.status_code == 200, resp.text
     return resp.text
+
+
+def test_the_quality_record_is_one_the_reader_accepts(tmp_path: Path) -> None:
+    """Without this the quality leg could not fail: a record of another version is skipped."""
+    write_record(tmp_path, "s1", {"version": RECORD_VERSION, "engine": "x"})
+    assert read_records(tmp_path)["s1"]["engine"] == "x"
 
 
 def test_positive_control_the_export_carries_a_planted_name(export_html: str) -> None:

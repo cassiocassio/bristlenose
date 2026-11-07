@@ -247,3 +247,44 @@ def test_the_log_file_and_its_rotations_are_owner_only(tmp_path: Path) -> None:
         for h in logging.getLogger().handlers[:]:
             logging.getLogger().removeHandler(h)
             h.close()
+
+
+def test_loose_older_rotations_are_tightened_and_a_symlink_target_is_left_alone(
+    tmp_path: Path,
+) -> None:
+    """Fable review, 7 Nov 2026: backups an older version rotated stay at 0o644 unless the
+    handler tightens them, and a chmod by path would follow a symlink planted at the log path
+    into whatever it points at."""
+    import logging
+
+    from bristlenose import logging as bn_logging
+
+    run_dir = tmp_path / ".bristlenose"
+    run_dir.mkdir()
+    for name in ("bristlenose.log.1", "bristlenose.log.2"):
+        (run_dir / name).write_text("old\n", encoding="utf-8")
+        os.chmod(run_dir / name, 0o644)
+    bn_logging.setup_logging(output_dir=tmp_path, verbose=False)
+    try:
+        assert _mode(run_dir / "bristlenose.log.1") == _OWNER_ONLY_AS_READ
+        assert _mode(run_dir / "bristlenose.log.2") == _OWNER_ONLY_AS_READ
+    finally:
+        for h in logging.getLogger().handlers[:]:
+            logging.getLogger().removeHandler(h)
+            h.close()
+
+    if os.name == "nt":
+        return  # symlinks need a privilege there
+    target = tmp_path / "someone-elses-file"
+    target.write_text("x\n", encoding="utf-8")
+    os.chmod(target, 0o644)
+    other = tmp_path / "other"
+    (other / ".bristlenose").mkdir(parents=True)
+    (other / ".bristlenose" / "bristlenose.log").symlink_to(target)
+    bn_logging.setup_logging(output_dir=other, verbose=False)
+    try:
+        assert _mode(target) == 0o644, "the symlink's target is not ours to chmod"
+    finally:
+        for h in logging.getLogger().handlers[:]:
+            logging.getLogger().removeHandler(h)
+            h.close()

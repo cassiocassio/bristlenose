@@ -45,7 +45,7 @@ trued-against: HEAD@main on 2026-09-28 (717fb6a1)
 
 The middleware checks the token only on `_AUTH_REQUIRED_PREFIXES` = `/api/`
 and `/mcp` (`bristlenose/server/middleware.py`). `_AUTH_EXEMPT_PREFIXES` is
-`/api/health`, `/api/docs`, `/openapi.json`. **Everything outside the
+`/api/health`, `/api/docs`, `/openapi.json`; the last two exist only on `serve --dev` (since 7 Nov 2026, T24), so a normal serve has `/api/health` as its only token-free API route. **Everything outside the
 required prefixes is open by omission** — a new route not under `/api/` is
 unauthenticated by default, so it needs its own guard. Today's open routes:
 
@@ -124,7 +124,7 @@ Defined as a constant `_AUTH_EXEMPT_PREFIXES` in the middleware module. Tested e
 | Path prefix | Reason |
 |-------------|--------|
 | `/api/health` | Version/status only, no project data. Desktop needs it pre-auth for version display |
-| `/api/docs` | Swagger UI (dev convenience) |
+| `/api/docs` | Swagger UI, `serve --dev` only (it loads its page from a CDN; a normal serve has no such route) |
 | `/report/` | SPA shell HTML/CSS/JS — no sensitive data, and the token is embedded here |
 | `/static/`, `/assets/` | Vite bundle files |
 

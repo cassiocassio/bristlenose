@@ -108,11 +108,10 @@ COMMENT_ONLY = {
 
 
 def test_no_unlisted_copy_of_the_port() -> None:
-    try:
-        listed = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True,
-                                text=True, check=True).stdout.splitlines()
-    except (OSError, subprocess.CalledProcessError):
-        pytest.skip("not a git checkout")
+    # The suite runs from a checkout everywhere it runs (the sdist job builds and never
+    # tests); a missing git is a broken environment, said here rather than skipped past.
+    listed = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True,
+                            text=True, check=True).stdout.splitlines()
     known = set(MIRRORS) | COMMENT_ONLY | {"bristlenose/ports.py"}
     pattern = re.compile(rf"\b{DEFAULT_SERVE_PORT}\b")
     strays = []

@@ -217,6 +217,10 @@ def test_a_kanji_filename_probes_under_a_windows_codepage(
         return real_run(child, **kwargs)  # type: ignore[call-overload,no-any-return]
 
     monkeypatch.setattr(audio.subprocess, "run", ffprobe)
+    # The probe resolves its binary first, and on Windows a PATH without ffprobe raises before the
+    # faked run is ever reached (CI, 7 Nov 2026: "ffprobe not found"): this test is about decoding,
+    # so it must not need ffprobe installed.
+    monkeypatch.setattr(audio, "binary_command", lambda binary: binary)
     (tmp_path / name).write_bytes(b"")
     duration, _ = audio.probe_media(tmp_path / name)
     assert duration == 12.5

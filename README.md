@@ -417,6 +417,50 @@ Run `scripts/bump-version.py` (`bristlenose/__init__.py` is the single source of
 
 ## Changelog
 
+**0.45.0** — _7 Nov 2026_
+
+The Mac app tells you when your network is what's blocking your AI provider, and when a run finishes while you're away. Quotes get display controls, and a run that left quotes out now says so.
+
+**New**
+
+- **The title-bar pill says when this network can't reach your provider.** On a café or managed network that blocks Claude, ChatGPT or Gemini, it reads "This network can't reach Claude" instead of blaming your key. It clears when you change network, a call succeeds or you switch provider, and a key problem outranks it. After a failed call the Mac makes one check of Apple's connectivity address and one keyless request to the provider's public models address; nothing about your project is sent.
+- **The pill also says when your key is rejected or your credit has run out,** lit by the call the provider actually refused, with a small × to dismiss it.
+- **A notification when an analysis finishes while you're away.** It names the project, how many sessions were analysed and, on a failure, the kind of reason. There is no banner while Bristlenose is frontmost.
+- **A display control for quotes.** Choose the layout, set the density on a continuous slider, break long paragraphs, and turn on focus mode, which is remembered across a relaunch. Long paragraphs now break by default. View ▸ Display collects the same controls.
+- **The Mac says when a run left quotes out.** A run that only left quotes out reads "Done with warnings", with the sessions named in the popover, where it used to read "Partial completion".
+- **The Snap and Fedora packages include any-llm** (Mistral, and providers that need no add-on). The Fedora package gets it from the next release.
+
+**Improved**
+
+- **`bristlenose serve` now defaults to port 8484,** one number kept in one place, so the address stays the same between runs. If you bookmarked the old address, update it.
+- **Opening a study is faster in the Mac app.** A spare server is started ahead of time and handed to the study you open, which cut the click-to-report time from 1.8 s to 1.2 s in testing. The first click on Sessions went from 361 ms to 88 ms, and resizing the window no longer redraws the whole report on every frame.
+- **Less is held up at start.** `serve` starts about a third faster, the CLI loads its plural rules only when it needs them, and Mac CLI users are asked for their Keychain item once rather than on every start.
+- **A folder with scripts, notes or spreadsheets in it no longer reads "Partial completion".** Files Bristlenose doesn't read are left alone, and the problem popover says how many.
+- **A discussion guide saved as Word is no longer analysed as an interview.** It is named as having no transcript in it.
+- **A resumed analysis says how many quotes were left out of a session,** where only the first run did.
+- **A local model that breaks one quote keeps the others,** as the cloud providers do, and stage 9 calls such a quote "unusable", not "incomplete".
+- **A call the provider declined is no longer counted as a normal one** in cost estimates for Claude, ChatGPT, Azure OpenAI and Gemini.
+- **A failed Whisper download says why:** a full disk, the connection dropping, or a certificate problem.
+- **A codebook threshold review's timecodes play,** and its speaker code opens the transcript in a new window, so the review stays open.
+- **Signals' evidence quotes and the Uncategorised group follow your Display settings,** including paragraph breaks, and an open card is measured again when you change them.
+- **After a run, the Mac returns you to the lens you were on,** and a study restored at launch opens on its study.
+- **The Mac keeps a study's server running while it has paid work in flight,** so closing its window no longer cuts off an AutoCode pass or catch-up.
+
+**Fixed**
+
+- **Your participants' names could appear in the log file, and `pii_summary.txt` was readable by other users on the machine.** The log carries no quote text or speaker names now, and `pii_summary.txt`, `state.json` and your key and secret files are owner-only whenever they are written, including ones that already existed.
+- **A hidden quote was still sent to the model as a codebook example.** It is now left out, along with its count.
+- **A desktop-hosted study with no scoped agent token could answer the agent endpoint with the server's own token.** It now refuses.
+- **A Stop that arrived after every quote had been sent left the codebook unapplied.** It is applied.
+- **A catch-up kept sending after its codebook was switched off,** and a new run's AutoCode now banks what the previous run had answered before it stops.
+- **A finished AutoCode or catch-up chip carried across a reload stayed on screen** instead of making way for the newer run.
+- **Opening a restored launch reloaded the report and lost the lens you were on.**
+- **A Gemini key check made offline said "unknown error."** It says the network failed.
+- **A packaged install with a damaged provider said it was "missing."** It now says damaged.
+- **The minimap's "you are here" box was off-centre and ran under the scrollbar** in the Mac app with the tag sidebar closed.
+- **Meet import listed events from every calendar you can see.** It asks only for calendars you own.
+- **A name or start time an import could not carry into a quote id is cleaned,** instead of producing a bad id.
+
 **0.44.0** — _2 Nov 2026_
 
 Whisper now arrives on macOS 15, the Signals lens waits for its first report instead of showing half-empty cards, and tags, AutoCode, imports and the Mac app's sidebar lose a long list of edge-case failures.

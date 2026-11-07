@@ -1049,7 +1049,11 @@ class TestACatchUpWhoseCodebookIsSwitchedOffMidWay:
                 gate.set()
                 _quiet(1.5)
                 assert len(model.prompts) - applied == 1, "only the batch already out was paid for"
-                assert self_job(app).status == "completed", "not left 'running' with no task behind it"
+                job = self_job(app)
+                assert job.status == "completed", "not left 'running' with no task behind it"
+                # The chip turns completed-with-a-shortfall into "some batches failed"; nothing
+                # failed, the researcher switched it off (Fable review, 7 Nov 2026).
+                assert job.catch_up_processed == job.catch_up_total == 1
                 assert sum(1 for t in texts if _tag_sources(app, t)) == 1, "the others were never sent"
 
                 # Switched back on, it codes what was left owed, and only that.

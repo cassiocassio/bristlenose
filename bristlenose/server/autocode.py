@@ -287,9 +287,10 @@ async def run_autocode_job(
             job.proposed_count = kept_proposals
             db.flush()
             db.expire(job, ["status"])
-            if job.status != "cancelled":  # a Stop since it started stands
-                job.status = "completed"
-                job.completed_at = datetime.now(timezone.utc)
+            # Nothing was left to send, so a Stop since it started had nothing to stop (N94):
+            # finished and applied, as for a Stop that lands once every batch has answered.
+            job.status = "completed"
+            job.completed_at = datetime.now(timezone.utc)
             db.commit()
             logger.info(
                 "AutoCode job %s: every quote was coded by an earlier pass, nothing sent",
@@ -999,6 +1000,12 @@ async def reapply_to_new_quotes(
     db = db_factory()
     failed = False
     try:
+        # A run's import is rewriting the quotes: read nothing and sync nothing. A pass that
+        # starts in that window used to read a half-rebuilt table and contend for the write
+        # lock, and failed the chip with "database is locked" (N92 review). Nothing is
+        # owed-and-lost: what the pass would have sent stays owed for the run's own re-apply.
+        if _IMPORTS_RUNNING:
+            return 0
         # One job per (project, framework) — the unique constraint — so no status
         # filter is needed to pick it out. We deliberately DON'T filter status here:
         # the on-enable catch-up sets the job to "running" before this runs (to win
@@ -1283,7 +1290,10 @@ async def reapply_to_new_quotes(
                 AutoCodeJob.status: "completed",
                 AutoCodeJob.error_message: "",
                 AutoCodeJob.failure_kind: "",
-                AutoCodeJob.catch_up_total: len(batch_items),
+                # The quotes this pass sent, not the quotes it was asked about: a switch-off
+                # or an import halts it with batches unsent, which stay owed, and the chip
+                # reads total > processed as "some batches failed" when nothing failed.
+                AutoCodeJob.catch_up_total: sent,
                 AutoCodeJob.catch_up_processed: processed,
             })
             # Unless it was stopped: one UPDATE that a Stop's row refuses, so a

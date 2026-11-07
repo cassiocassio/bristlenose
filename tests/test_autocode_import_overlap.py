@@ -149,13 +149,25 @@ async def test_what_the_pause_left_unsent_is_coded_once_the_import_is_done(owed:
 
 
 @pytest.mark.asyncio
-async def test_a_re_apply_that_starts_during_an_import_sends_nothing(owed: Any) -> None:
+async def test_a_re_apply_that_starts_during_an_import_sends_nothing(
+    owed: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     app, model, applied, gate, _out = owed
     gate.set()  # no call waits: the point is what is sent, not when
+    reads: list[int] = []
+    real_owed = ac.owed_quotes
+
+    def _watched(*a: Any, **k: Any) -> Any:
+        reads.append(1)  # recorded, not raised: a pass swallows its own exceptions
+        return real_owed(*a, **k)
+
     with model:
         async with ac.reapplies_paused_for_import():
+            monkeypatch.setattr(ac, "owed_quotes", _watched)  # the first read of a pass
             await ac.reapply_active_frameworks(app.state.db_factory, 1, app.state.settings)
             assert len(model.prompts) == applied
+            assert reads == [], "a re-apply started during an import read the quotes table"
+            monkeypatch.setattr(ac, "owed_quotes", real_owed)
         await ac.reapply_active_frameworks(app.state.db_factory, 1, app.state.settings)
     assert len(model.prompts) - applied > 0, "and it codes once the import is over"
 

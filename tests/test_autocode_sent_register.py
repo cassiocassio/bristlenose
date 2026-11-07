@@ -849,19 +849,28 @@ class TestApplyWaitsForAStoppedRunner:
                 callback(task)
             assert (1, "garrett") not in route._AUTOCODE_LIVE
 
-    def test_a_stop_while_nothing_is_left_to_send_stands(self, factory) -> None:
+    def test_a_stop_while_nothing_is_left_to_send_has_nothing_to_stop(self, factory) -> None:
         _session(factory, "s1")
         _stopped_first_apply(factory, stop_on="s1-0", tagged=2, left_stopped=True)
         real = ac.sent_quote_ids
 
+        stopped: list[int] = []
+
         def stop_meanwhile(*args: object) -> set[int]:
-            _set_status(factory, "cancelled")  # after the job began, before it finishes
+            # Once, after the job began and before it finishes: owed_quotes calls this too,
+            # later, and a second Stop after the job had ended would read as the job's own.
+            if not stopped:
+                stopped.append(1)
+                _set_status(factory, "cancelled")
             return real(*args)  # type: ignore[arg-type]
 
         with patch.object(ac, "sent_quote_ids", side_effect=stop_meanwhile):
             _apply(factory, _answer_all())
         job = _job(factory)
-        assert (job.status, job.completed_at) == ("cancelled", None)
+        # Every quote was already coded, so there was nothing to stop (N94, Fable review):
+        # the same rule as a Stop landing once the last batch has answered.
+        assert job.status == "completed"
+        assert job.completed_at is not None
 
 
 class TestQuoteAddedToACodedSession:

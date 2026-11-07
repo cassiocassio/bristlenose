@@ -356,3 +356,27 @@ All commands and steps are in `experiments/provider-reachability/README.md`; eac
 - `experiments/provider-reachability/run.sh baseline --with-stub` unsandboxed, `--sandboxed`, `--sandboxed-ats`: 4 s timeout; keyless GETs to Apple's captive host, the three providers' public model-list endpoints, a made-up Azure resource host, loopback Ollama; 28 stub routes; the local failure cases. About 7 s each (the hang/black-hole cases hold the 4 s timeout).
 - A separate sandboxed run for plain-HTTP behaviour: `http://api.anthropic.com/v1/models`, `http://www.apple.com/…`, `http://developer.apple.com/`, `http://support.apple.com/`.
 - No API key, no paid call, no change to Wi-Fi, DNS, proxies, the clock or the hosts file. Side effect: two sandbox containers exist under `~/Library/Containers/app.bristlenose.reachprobe` and `…reachprobe.ats` (delete the folders to clean up).
+
+## 10. Build status, 7 Nov 2026 (steps 1-4 of the v1 slice)
+
+Built in `f49cf2ff9` and the review-fix commit after it. Network-blocks (step 5) is **not** built: it needs the owner's approval of the mockup's section H and the real-network runs in § 8.
+
+**Corrections to this brief found while building**
+
+- **§ 1 and the review's finding that a partial run clears the pill are both wrong.** `noteCreditIfTheRunUsedAnLLM` runs only when the end state is `.ready`, and a run with refused sessions ends as `.completedPartial` (`EventLogReader.swift:351`), so it never reaches that call. A guard written for it was dead code (a mutation test left it green) and was reverted. A partial run still gives no pill; whether it should is open question 4.
+- **A request-id header was never a signature** (§ 3.3's "either present" is too weak), and **a body's Python type is not evidence either**: the openai SDK unwraps `{"error": "text"}` to a bare string, which an early version of the gate read as a proxy's reply. The rule now is: signed = the provider's JSON shape; unsigned (`False`) only on an HTML content type or an HTML body; otherwise unknown (`None`, today's behaviour).
+- An unsigned reply returns UNKNOWN outright. Skipping only the status rules left a proxy page that quotes "rate limit" classified by its words.
+
+**What now exists**
+
+- `failure_classifier.classify_llm_failure(..., provider_signature=)` and `extract_provider_signature`; `classify_fields` returns NETWORK for a call with no status whose transport class says it never reached the server (not for `local`); `_build_cause` fills `Cause.code` from the HTTP status.
+- `bristlenose/llm/refusal_report.py`, called from `LLMClient.analyze`'s failure path: prints `[bristlenose] llm-refusal: {json}` (codes only; one locked write; repeats of the same provider and kind muted for 10 s once said). Reported only for a call that got a status or lost its connection, never for our own validation, truncation or content-filter errors. Registered by the serve app only when desktop-hosted, so a `run` subprocess and a CLI serve print nothing.
+- Swift: `LLMRefusalLine` (parse, `disposition`), `ServeManager.handleLine` consumes it before the output buffer (an unreadable or later-schema line is dropped and logged, never shown), `noteLLMRefusal` records a credit or key refusal against the key the sidecar was spawned with, `ServeInstance.spawnedKeyFingerprints` (cleared on stop).
+
+**Not built, on purpose or deferred**
+
+- The key preflight line (the "Analyse with a dead key" path): a JSON line on a run's stderr would be read by the host's stderr patterns. It needs the host to strip it first.
+- Refusals from a parked sidecar (unreachable code under `ServeFleet`) are neither recorded nor shown.
+- AutoCode refusals now reach `recordRefusal` twice (the chip's bridge post, and this line); both are idempotent.
+- The signature is read from the top exception only: any-llm's wrapper and google-genai's `APIError` give `None` (today's behaviour).
+- `ReadTimeout` and `APITimeoutError` are NETWORK on the built-in cloud providers; whether "check your connection" is right for a slow read is a wording question for step 5.

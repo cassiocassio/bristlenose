@@ -67,6 +67,28 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.45.0 — 7 Nov 2026 · Tier 1 (minor — the title-bar pill names a blocking network and a rejected key or empty account; a notification when a run finishes while you're away; quote display controls; "Done with warnings"; a faster open)
+
+**What shipped.** 321 commits since 0.44.0 (CHANGELOG: 6 New, 14 Improved, 11 Fixed). Headline: the Mac's title-bar pill says "This network can't reach Claude" (or ChatGPT, Gemini) instead of blaming the key, and also says when a key is rejected or credit has run out; a notification when an analysis finishes while Bristlenose is not frontmost; a display control for quotes with a focus mode; a run that only left quotes out reads "Done with warnings". Security: participant names out of the log, `pii_summary.txt` owner-only, a hidden quote no longer sent as a codebook example. **Run by an unattended Claude session** on the owner's `/goal` (ask the other sessions to end, cut the release, fix until it is out); the owner was asleep. Tag `v0.45.0` on `a1c5feee9` at 05:43 GMT on a Saturday, so the weekday rule did not apply. TestFlight build **6378**.
+
+**Before and during the run.** Seven other sessions were asked to end session first; the messages that were held for a permission-mode mismatch were not resent or worked round, and the sessions went idle and committed on their own. Three stoppers, each fixed before any irreversible act:
+
+| found by | what | real product bug? | fix |
+|---|---|---|---|
+| Mac Build, macos-26 | the standby-sidecar `readyPool()` test waited 8 s and the runner took 16 s | no (test) | `e95f0bef0`: 30 s, as a hang bound |
+| preflight, logging-hygiene gate | HYG-7's regex still named `condition.rawValue` after the refusal log line moved to `line.kind` | no (allowlist) | `aa9319dbb` |
+| `build-all.sh`, Swift suite | two timing-sensitive tests: the network pill's `settle()` raced the process-global verdict store, and the reaping recheck had no bound | no (tests) | `a1c5feee9` |
+
+The 0.45.0 prose was written by hand (the `bn-release` skill declined) after the owner's "Write the prose".
+
+**Run times (measured, GMT, 7 Nov).** Preflight 157 s (first attempt failed at 179 s) · inventory 3 s · bump 1 s · push main 1 s · build the app 520 s (first attempt failed at 244 s) · build the dmg 631 s · strict CI gate 3,141 s (macOS queue) · TestFlight upload 420 s · publish the dmg 1,136 s · tag push 2 s at 05:43 · `release.yml` green and PyPI 200 about an hour later. The longest wait was the CI gate, not the builds.
+
+**Tricky things.** (1) The strict CI run is tied to a sha, so each fix after the dispatch meant a push and a new dispatch; `release.sh status` printed the strict run's success while the build was still going, which read as "released". (2) `release.sh verify` showed Copr on 0.44.0 and the website not yet deployed straight after the tag, as expected: both follow. (3) A passing full Swift run at the tagged commit (3,180 tests) came from another session, not from this run's own gate.
+
+**Owed.** Website: the privacy page, terms and `SECURITY.md` do not yet describe the network-blocks pill's two outbound requests (draft shown to the owner 7 Nov). Winget (a follower). Copr follows (`copr-cli` is not installed here). Website deploy is the maintainer's. Preflight left as warnings: copr-cli missing, dependency drift stale, one untracked smoke-fixture `llm-calls.jsonl`, and a macOS 15.7.3 guest red on the reaping test (an older macOS).
+
+---
+
 ## 0.44.0 — 2 Nov 2026 · Tier 1 (minor — Signals waits for its first report; "Started on another Mac"; shorter Signals highlights; Whisper on macOS 15; a long list of tag, AutoCode, import and sidebar fixes)
 
 **What shipped.** 303 commits since 0.43.0 (CHANGELOG: 2 New, 8 Improved, 39 Fixed, 1 Removed). Headline: Whisper arrives on macOS 15 (the MLX wheels were built for macOS 26), the Signals lens is withheld until its first report exists ("Picking up Signals…" in the sidebar), a study another Mac was still analysing is refused with an explanation instead of overwritten, and Signals highlights are shorter, at most two per card. **Run by an unattended Claude session** on the owner's "cut a release … keep going until the end", from the evening of 1 Nov to 08:20 GMT on Monday 2 Nov; the owner topped up the Claude API credit mid-run (the one thing the session could not do) and said "run the release". The weekday rule (tag after 21:00 London on a working day) was overridden by the owner's explicit instruction at 06:50; the tag went at 07:39 GMT.

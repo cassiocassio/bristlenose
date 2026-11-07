@@ -809,28 +809,19 @@ final class ServeManager: ObservableObject {
         proc.standardOutput = pipe
         proc.standardError = pipe
 
-        let handle = pipe.fileHandleForReading
         // Identity token for routing this process's stdout/termination. Stays
         // valid when the process later moves to the parked slot — handleLine
         // and handleTermination compare it against the *current* fronted vs
         // parked process to decide the role dynamically. ObjectIdentifier is
-        // Sendable (Process is not), so it's safe to carry into the detached read.
+        // Sendable (Process is not), so it's safe to carry into the reader.
         let procID = ObjectIdentifier(proc)
 
-        // Read pipe on a detached task to avoid Sendable/actor-isolation issues.
-        readTask = Task.detached { [weak self] in
-            let fileHandle = handle
-            var framer = ProcessOutputLines()
-            while true {
-                let data = fileHandle.availableData
-                if data.isEmpty {
-                    if let last = framer.finish() { await self?.handleLine(last, fromProcessID: procID) }
-                    break
-                }
-                for line in framer.append(data) {
-                    await self?.handleLine(line, fromProcessID: procID)
-                }
-            }
+        // The read itself is on its own thread (`ProcessOutputLines.lines`); this
+        // task only delivers, on the main actor, and holds no pool thread while
+        // it waits for the next line.
+        let lines = ProcessOutputLines.lines(from: pipe.fileHandleForReading)
+        readTask = Task { [weak self] in
+            for await line in lines { self?.handleLine(line, fromProcessID: procID) }
         }
 
         proc.terminationHandler = { [weak self] p in

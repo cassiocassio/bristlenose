@@ -124,4 +124,41 @@ struct PoolStarvationTimeoutTests {
             #expect(fired, "a 0.3 s timeout had not fired after 3 s")
         }
     }
+
+    /// Whether a detached task started now runs within 3 s. Measured off the
+    /// pool, after half a second for whatever else is queued to take its threads.
+    private static func aDetachedTaskRuns() -> Bool {
+        Thread.sleep(forTimeInterval: 0.5)
+        let ran = DispatchSemaphore(value: 0)
+        Task.detached { ran.signal() }
+        return ran.wait(timeout: .now() + 3) == .success
+    }
+
+    /// A sidecar's pipe reader waits in the kernel for the next line, for the
+    /// life of its process. Read on a pool thread, each live sidecar held one:
+    /// with a serve per open study, a run and a standby, a Mac with as many
+    /// sidecars as cores would have every other continuation in the app queued
+    /// behind reads that return when the process exits. The Swift suite's own
+    /// `/bin/sh` stand-ins did that on the 3-core runners, and a standby's
+    /// ready line went unread for 8 s while its reader waited for a thread
+    /// (`ServeManagerStandbyTests`, mac-build d3361503c, 6 Nov 2026). Readers
+    /// now run on a thread of their own, and more of them than the pool has
+    /// threads leave a detached task free to run.
+    @MainActor @Test func aPipeReaderHoldsNoPoolThread() async throws {
+        let cores = ProcessInfo.processInfo.activeProcessorCount
+        var sidecars: [StandbySidecar] = []
+        for _ in 0..<(cores + 4) {
+            let sidecar = StandbySidecar(
+                executableURL: URL(fileURLWithPath: "/bin/sh"),
+                arguments: ["-c", "read line"], environment: [:],
+                fingerprint: "fp", stamp: nil, leasedPaths: ["/studies/a"])
+            try sidecar.start()
+            sidecars.append(sidecar)
+        }
+        // Each reader is now waiting for a line that comes only at EOF, which
+        // `stop()` brings by closing the process's stdin.
+        defer { for sidecar in sidecars { sidecar.stop() } }
+        let ran = await Self.offThePool { Self.aDetachedTaskRuns() }
+        #expect(ran, "a detached task had not run after 3 s with \(cores + 4) pipe readers waiting on a \(cores)-core machine")
+    }
 }

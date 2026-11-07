@@ -143,17 +143,11 @@ final class StandbySidecar {
         process.standardOutput = out
         process.standardError = out
         process.standardInput = stdinPipe
-        let handle = out.fileHandleForReading
-        readTask = Task.detached { [weak self] in
-            var framer = ProcessOutputLines()
-            while true {
-                let data = handle.availableData
-                if data.isEmpty {
-                    if let last = framer.finish() { await self?.receive(last) }
-                    break
-                }
-                for line in framer.append(data) { await self?.receive(line) }
-            }
+        // The read itself is on its own thread (`ProcessOutputLines.lines`); this task only
+        // delivers, on the main actor, and holds no pool thread while it waits.
+        let lines = ProcessOutputLines.lines(from: out.fileHandleForReading)
+        readTask = Task { [weak self] in
+            for await line in lines { self?.receive(line) }
         }
         process.terminationHandler = { [weak self] p in
             // Off-main: carry only the status across, never the Process.

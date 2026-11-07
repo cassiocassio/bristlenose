@@ -2579,24 +2579,11 @@ var args = ["run", project.path, "--no-serve"]
         proc.standardInput = FileHandle.nullDevice
         let handle = pipe.fileHandleForReading
 
-        // Read off-main into a stream the runner consumes (`readOutput`), so the
-        // runner can tell when the last line has been delivered (R25).
-        let (output, lines) = AsyncStream<String>.makeStream()
-        Task.detached {
-            let fh = handle
-            // Accumulate across read boundaries so a `✓ stage name` line
-            // straddling two `availableData` chunks is delivered intact.
-            var buffer = ProcessOutputLines()
-            while true {
-                let data = fh.availableData
-                if data.isEmpty {
-                    if let last = buffer.finish() { lines.yield(last) }
-                    break
-                }
-                for line in buffer.append(data) { lines.yield(line) }
-            }
-            lines.finish()
-        }
+        // Read on a thread of its own into a stream the runner consumes
+        // (`readOutput`), so the runner can tell when the last line has been
+        // delivered (R25); a `✓ stage name` line straddling two reads arrives
+        // intact, and no pool thread waits on the pipe.
+        let output = ProcessOutputLines.lines(from: handle)
 
         proc.terminationHandler = { p in
             // BOTH fields, always. terminationStatus carries the SIGNAL NUMBER

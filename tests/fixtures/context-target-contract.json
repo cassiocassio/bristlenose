@@ -14,7 +14,7 @@
     {"build": "lensPlace", "args": ["/report/sessions/"],
      "wire": {"click": "navigate", "verb": "open", "dest": "lens", "path": "/report/sessions/", "media": null}},
     {"build": "windowPlace", "args": ["s3", 754.5],
-     "wire": {"click": "window", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-754", "media": {"key": "s3", "seconds": 754.5}}}
+     "wire": {"click": "window", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-754", "media": null}}
   ],
   "targets": [
     {"what": "a timecode link", "pathname": "/report/quotes/",

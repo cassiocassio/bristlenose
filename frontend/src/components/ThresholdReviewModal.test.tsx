@@ -277,6 +277,33 @@ describe("ThresholdReviewModal", () => {
     expect(subtitle).toHaveTextContent("1 excluded");
   });
 
+  // Owner, 7 Nov 2026: a blue timecode plays, here as everywhere; the speaker opens the
+  // transcript at that moment, in a new tab or window so the review stays open.
+  it("a row's timecode plays and its speaker opens the transcript over there", async () => {
+    mockGetProposals.mockResolvedValue({
+      proposals: [makeProposal({ id: 1, confidence: 0.5 })],
+      total: 1,
+    });
+    render(
+      <ThresholdReviewModal
+        open={true}
+        frameworkId="garrett"
+        frameworkTitle="Garrett"
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+    const row = screen.getByTestId("bn-proposal-row-1");
+    const timecode = row.querySelector(".report-timecode a")!;
+    expect(timecode.classList.contains("timecode")).toBe(true);
+    expect(timecode.getAttribute("href")).toMatch(/^#t=/);
+    expect(timecode.getAttribute("target")).toBeNull();
+    const speaker = screen.getByTestId("bn-proposal-speaker-1");
+    expect(speaker.getAttribute("href")).toMatch(/^\/report\/sessions\/.+#t-\d+$/);
+    expect(speaker.getAttribute("target")).toBe("_blank");
+  });
+
   it("per-row deny calls denyProposal API", async () => {
     vi.useFakeTimers();
     const proposals = [

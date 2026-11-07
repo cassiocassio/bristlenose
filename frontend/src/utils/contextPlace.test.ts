@@ -87,6 +87,13 @@ describe("readContextTarget", () => {
     expect(readContextTarget(host.querySelector("#t"), 1, "/report/sessions/s4", always).here).toBe(false);
   });
 
+  it("in a dialog, going there in this window would close it, so it reads as here", () => {
+    const host = el(
+      `<div aria-modal="true"><a id="t"${attr(momentPlace("play", "s3", 754, "s3"))}>x</a></div>`,
+    );
+    expect(readContextTarget(host.querySelector("#t"), 1, "/report/codebook/", always).here).toBe(true);
+  });
+
   it("drops Play where the player has no recording for the key", () => {
     const host = el(`<a id="t"${attr(momentPlace("navigate", "s3", 754, "s3"))}>x</a>`);
     const read = readContextTarget(host.querySelector("#t"), 1, "/", never);

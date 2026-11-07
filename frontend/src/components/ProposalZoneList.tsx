@@ -17,6 +17,7 @@ import { placeProps, windowPlace } from "../utils/contextPlace";
 import { isEmbedded } from "../utils/embedded";
 import { postOpenInNewWindow } from "../shims/bridge";
 import { Icon } from "./Icon";
+import { TimecodeLink } from "./TimecodeLink";
 
 type Zone = "accepted" | "tentative" | "excluded";
 
@@ -125,8 +126,20 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
           className={`report-row${removing.has(p.id) ? " removing" : ""}`}
           data-testid={`bn-proposal-row-${p.id}`}
         >
+          {/* The timecode plays, as every blue timecode does (owner, 7 Nov 2026); the speaker
+              opens the transcript at that moment, in a new tab or window so the review stays
+              open. The player is keyed by session: a speaker code is not unique across them. */}
           <td className="report-timecode">
+            <TimecodeLink
+              seconds={p.start_timecode}
+              participantId={p.session_id}
+              sessionId={p.session_id}
+              formatted={formatTimecode(p.start_timecode)}
+            />
+          </td>
+          <td className="report-speaker">
             <a
+              className="badge"
               href={reportHref(`/report/sessions/${p.session_id}#t-${Math.floor(p.start_timecode)}`)}
               target="_blank"
               rel="noreferrer"
@@ -139,12 +152,10 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                 e.preventDefault();
                 postOpenInNewWindow(place, false);
               }}
+              data-testid={`bn-proposal-speaker-${p.id}`}
             >
-              {formatTimecode(p.start_timecode)}
+              {p.speaker_code}
             </a>
-          </td>
-          <td className="report-speaker">
-            <span className="badge">{p.speaker_code}</span>
           </td>
           <td className="report-quote" title={p.quote_text}>
             {p.quote_text}

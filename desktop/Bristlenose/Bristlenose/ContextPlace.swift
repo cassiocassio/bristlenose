@@ -72,7 +72,9 @@ struct ContextTarget: Codable, Equatable {
 
     let seq: Int
     let place: ContextPlace?
-    /// The place's transcript is the page showing (Show in Transcript would go nowhere).
+    /// Going to the place in this window would serve nothing: its transcript
+    /// is the page showing, or the link is in a dialog leaving would close
+    /// (threshold review). Show in Transcript is then not offered.
     let here: Bool
     let card: ContextCard?
     let link: Link?

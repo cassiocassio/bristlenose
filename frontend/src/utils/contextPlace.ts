@@ -69,10 +69,10 @@ export function momentPlace(
   };
 }
 
-/** A moment whose click opens its transcript in a new window, so the dialog it sits in stays
- *  open (threshold review). */
+/** A speaker whose click opens the transcript at its moment in a new window, so the dialog it
+ *  sits in stays open (threshold review). A person, so no Play: the timecode beside it plays. */
 export function windowPlace(sessionId: string, seconds: number): ContextPlace | null {
-  const place = momentPlace("navigate", sessionId, seconds, sessionId);
+  const place = momentPlace("navigate", sessionId, seconds, null);
   return place && { ...place, click: "window" };
 }
 
@@ -116,7 +116,9 @@ function readPlace(el: Element | null): ContextPlace | null {
   }
 }
 
-/** The message one right-click posts. `here` is true when the place's page is the one showing. */
+/** The message one right-click posts. `here` is true when going to the place in this window
+ *  would serve nothing: its transcript is the page showing, or the link sits in a dialog that
+ *  leaving would close (threshold review), so the menu offers only the new window. */
 export interface ContextTarget {
   seq: number;
   place: ContextPlace | null;
@@ -168,7 +170,10 @@ export function readContextTarget(
   };
   const placed = target?.closest("[data-bn-place]") ?? null;
   const place = playable(readPlace(placed));
-  const here = place?.dest === "transcript" && !!place.path && place.path.split("#")[0] === pathname;
+  const here =
+    place?.dest === "transcript" &&
+    !!place.path &&
+    (place.path.split("#")[0] === pathname || !!placed?.closest('[aria-modal="true"]'));
   const cardEl = target?.closest("blockquote.quote-card") ?? null;
   // A right-click on selected text is about the text: WebKit's Look Up, Copy and Share.
   const card: ContextCard | null =

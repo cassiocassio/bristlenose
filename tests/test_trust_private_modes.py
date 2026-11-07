@@ -25,6 +25,13 @@ import pytest
 import bristlenose
 
 _OWNER_ONLY = 0o600
+# What ``stat`` reads back after ``chmod(0o600)``. Windows has no owner bits:
+# ``os.chmod`` there only sets or clears the read-only flag, and a writable
+# file reads as 0o666 whatever it was asked for (CI, 6 Nov 2026). Privacy on
+# Windows is the user profile's ACL, which these writers do not touch; what
+# the assertion still proves there is that none of them left a file read-only,
+# which the log trim and the store's rewrite would then fail on.
+_OWNER_ONLY_AS_READ = 0o666 if os.name == "nt" else _OWNER_ONLY
 
 
 def _mode(path: Path) -> int:
@@ -53,7 +60,7 @@ def test_file_credential_store_writes_owner_only(tmp_path: Path) -> None:
     store = FileCredentialStore(path=tmp_path / "cfg" / ".env")
     store.set("anthropic", "not-a-real-token-1")
     assert store.path.is_file()
-    assert _mode(store.path) == _OWNER_ONLY
+    assert _mode(store.path) == _OWNER_ONLY_AS_READ
 
 
 def test_file_credential_store_tightens_a_preexisting_loose_file(tmp_path: Path) -> None:
@@ -63,7 +70,7 @@ def test_file_credential_store_tightens_a_preexisting_loose_file(tmp_path: Path)
     store.set("anthropic", "not-a-real-token-2")
     os.chmod(store.path, 0o644)  # a file left loose by an older writer or a user
     store.set("openai", "not-a-real-token-3")
-    assert _mode(store.path) == _OWNER_ONLY
+    assert _mode(store.path) == _OWNER_ONLY_AS_READ
 
 
 # -- preflight state ----------------------------------------------------------
@@ -84,7 +91,7 @@ def test_preflight_state_written_owner_only(_state_home: Path) -> None:
     from bristlenose.preflight.api_key import write_state
 
     write_state({"version": 1, "first_run": False, "providers": {}})
-    assert _mode(_state_home) == _OWNER_ONLY
+    assert _mode(_state_home) == _OWNER_ONLY_AS_READ
 
 
 def test_preflight_state_tightens_a_preexisting_loose_file(_state_home: Path) -> None:
@@ -93,7 +100,7 @@ def test_preflight_state_tightens_a_preexisting_loose_file(_state_home: Path) ->
     write_state({"version": 1, "first_run": False, "providers": {}})
     os.chmod(_state_home, 0o644)
     write_state({"version": 1, "first_run": False, "providers": {}})
-    assert _mode(_state_home) == _OWNER_ONLY
+    assert _mode(_state_home) == _OWNER_ONLY_AS_READ
 
 
 # -- events log -------------------------------------------------------------
@@ -116,7 +123,7 @@ def test_events_log_written_owner_only(tmp_path: Path) -> None:
         process=Process(pid=1, start_time="seed", hostname="fixture-host", user="fixture-user",
                         bristlenose_version="0", python_version="3.12", os="test")))
     assert path.is_file()
-    assert _mode(path) == _OWNER_ONLY
+    assert _mode(path) == _OWNER_ONLY_AS_READ
 
 
 # -- llm-calls.jsonl --------------------------------------------------------
@@ -147,7 +154,7 @@ def test_llm_calls_log_written_owner_only(tmp_path: Path, monkeypatch) -> None:
         telemetry.reset_run_context(tokens)
     path = run_dir / telemetry.JSONL_FILENAME
     assert path.is_file()
-    assert _mode(path) == _OWNER_ONLY
+    assert _mode(path) == _OWNER_ONLY_AS_READ
 
 
 def test_llm_calls_log_stays_owner_only_after_trim(tmp_path: Path, monkeypatch) -> None:
@@ -163,7 +170,7 @@ def test_llm_calls_log_stays_owner_only_after_trim(tmp_path: Path, monkeypatch) 
         telemetry.reset_run_context(tokens)
     path = run_dir / telemetry.JSONL_FILENAME
     assert telemetry.trim_to_cap(path, cap=2) == 2
-    assert _mode(path) == _OWNER_ONLY
+    assert _mode(path) == _OWNER_ONLY_AS_READ
 
 
 # -- shoal feed -------------------------------------------------------------
@@ -178,7 +185,7 @@ def test_shoal_feed_written_owner_only(tmp_path: Path, monkeypatch) -> None:
     path = shoal_feed._feed_path(tmp_path)
     assert path.is_file()
     assert path.read_text(encoding="utf-8").strip(), "the feed should hold a word batch"
-    assert _mode(path) == _OWNER_ONLY
+    assert _mode(path) == _OWNER_ONLY_AS_READ
 
 
 # -- pii_summary.txt --------------------------------------------------------
@@ -193,7 +200,7 @@ def test_pii_summary_written_owner_only(tmp_path: Path) -> None:
         tmp_path,
     )
     assert path is not None and path.is_file()
-    assert _mode(path) == _OWNER_ONLY
+    assert _mode(path) == _OWNER_ONLY_AS_READ
 
 
 def test_pii_summary_tightens_a_preexisting_loose_file(tmp_path: Path) -> None:
@@ -206,4 +213,4 @@ def test_pii_summary_tightens_a_preexisting_loose_file(tmp_path: Path) -> None:
     assert path is not None
     os.chmod(path, 0o644)
     write_pii_summary(redactions, tmp_path)
-    assert _mode(path) == _OWNER_ONLY
+    assert _mode(path) == _OWNER_ONLY_AS_READ

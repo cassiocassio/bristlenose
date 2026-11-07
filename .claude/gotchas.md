@@ -412,6 +412,12 @@ For a brand-new file the pathspec form errors with `pathspec '<path>' did not ma
 
 ## Tests, gates and verification
 
+### A test written on a Mac assumes four POSIX habits, and Windows CI fails each one
+
+0.43.0 (24 Oct 2026) hit ten `test (3.12, windows-latest)` failures, every one test-side, and the job had already been red on pushed `main` that morning with nobody looking. The four habits: **(1)** faking the home folder with `setenv("HOME")` alone (Windows' `Path.home()` reads `USERPROFILE`, so the refusal tests ran the pipeline instead); **(2)** `Path.read_text()`/`write_text()` with no `encoding=` (cp1252 there, which cannot hold `▸`, `⌘` or an arrow); **(3)** a parametrised folder name containing `?` (Windows forbids it in a file name); **(4)** `os.kill(pid, 0)` on a dead pid (a plain `OSError`, WinError 87, not `ProcessLookupError`).
+
+What holds them shut now: the `fake_home` fixture in `tests/conftest.py` sets HOME and USERPROFILE together (use it, never a bare `setenv("HOME")`; a child process's env dict is the one place it can't reach); `test_every_text_file_read_and_write_names_its_encoding` in `tests/test_windows_portability.py` walks `tests/` as well as `bristlenose/` and `test_the_encoding_gate_can_fail` proves it. **It is an AST test and not ruff's `PLW1514` on purpose**: that rule is preview-only in ruff 0.17.2 and, even with preview on, flagged none of the 174 calls in `tests/`, because it only knows a receiver it can type as a `Path` and these are `tmp_path / "x"`. And `-p tests.winsim` (opt-in, `docs/testing/README.md`) makes habits 1, 2 and 4 fail on the Mac; a full run under it found a real bug the gate could not (`desktop/scripts/guest-walk/report.py` wrote its page in the locale codepage). It is not Windows: separators, forbidden characters, locking, line endings and POSIX-only arguments such as `preexec_fn` are untouched, so `windows-latest` on **pushed `main`** stays the authority. **Tell:** a test green on the Mac and red on exactly one runner OS, Windows; and a new gate failing with a list of files you did not write is other sessions' tests, not a bug in the gate (34 calls in 7 files had landed within the week after it was written). (24 Oct to 6 Nov 2026.)
+
 ### Ruff F401 (unused imports) — reports only, won't auto-fix
 
 F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the PostToolUse hook) won't delete imports during incremental edits. Ruff still *reports* unused imports — remove them manually when they're genuinely unused.

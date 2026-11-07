@@ -84,7 +84,15 @@ def _rows(db: Path) -> list[tuple[int, str, str]]:
         con.close()
 
 
-def _wait(pred, timeout: float = 5.0) -> bool:
+def _wait(pred, timeout: float = 30.0) -> bool:
+    """Poll ``pred`` to a bound that is a hang detector, not a performance claim.
+
+    After the run's log lands, the watcher reattaches (``ensure_schema``) and
+    re-imports on a thread: 1.6–1.9 s on a 12-core machine under a 2x-core
+    load. A 4-vCPU runner shared by ``-n auto`` workers overran the old 5 s on
+    three Ubuntu jobs at once (CI, 6 Nov 2026); a passing test never waits
+    for the bound.
+    """
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         if pred():

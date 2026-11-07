@@ -18,6 +18,7 @@ import sys
 import threading
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -40,11 +41,36 @@ def _restore_sigint() -> None:
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
 
+def _child_kwargs() -> dict[str, Any]:
+    """How the standby is started so that a stop signal reaches it, and only it.
+
+    POSIX: SIGINT restored in the child (``preexec_fn`` is POSIX-only; Windows raises on it).
+    Windows: its own process group, the one condition under which a console signal can be
+    sent to a child at all.
+    """
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"preexec_fn": _restore_sigint}
+
+
+def _stop_signal(name: str) -> int:
+    """The signal a host sends a waiting standby to stop it, by what it means.
+
+    ``SIGTERM`` is ``Process.terminate()`` on both (``TerminateProcess`` on Windows). The
+    interrupt is Ctrl-C on POSIX; on Windows ``send_signal(SIGINT)`` is unsupported and
+    ``CTRL_C_EVENT`` cannot reach a child in its own process group, so ``CTRL_BREAK_EVENT``
+    is the console interrupt a host can deliver.
+    """
+    if name == "SIGINT" and sys.platform == "win32":
+        return signal.CTRL_BREAK_EVENT
+    return int(getattr(signal, name))
+
+
 def _spawn(*extra: str) -> subprocess.Popen[str]:
     return subprocess.Popen(
         [sys.executable, "-m", "bristlenose", "serve", "--standby", "--no-open", "--port", "0", *extra],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, env=_env(), preexec_fn=_restore_sigint,
+        text=True, env=_env(), **_child_kwargs(),
     )
 
 
@@ -133,13 +159,13 @@ def test_closing_stdin_before_a_claim_ends_it_quietly(standby) -> None:
     assert p.wait(timeout=20) == 0
 
 
-@pytest.mark.parametrize("sig", [signal.SIGTERM, signal.SIGINT])
-def test_a_waiting_standby_can_always_be_stopped(standby, sig) -> None:
+@pytest.mark.parametrize("sig", ["SIGTERM", "SIGINT"])
+def test_a_waiting_standby_can_always_be_stopped(standby, sig: str) -> None:
     # install_exit_logger swallows SIGTERM when installed before uvicorn: a standby that
     # installed it early could not be stopped by Process.terminate().
     p = standby()
     _Lines(p.stdout).until(READY_LINE)
-    p.send_signal(sig)
+    p.send_signal(_stop_signal(sig))
     assert p.wait(timeout=20) != 0
 
 

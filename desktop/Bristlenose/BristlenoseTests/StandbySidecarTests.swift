@@ -337,7 +337,9 @@ private func makeSidecar(_ args: [String], leased: [String] = ["/studies/a"],
                     arguments: cooperative(writingClaimTo: out, extraBeforeReady: "echo early-noise;"))
         p.startIfWanted()
         guard let s = p.current else { return nil }
-        guard await waitUntil(8, { s.phase == .ready }) else { return nil }
+        // A hang bound, not a speed claim: the macos-26 runner took 16 s to get a `/bin/sh`
+        // stand-in to its ready line under load (7 Nov 2026), and an 8 s wait read that as "none".
+        guard await waitUntil(30, { s.phase == .ready }) else { return nil }
         return (p, s, out)
     }
 

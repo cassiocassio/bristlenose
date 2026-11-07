@@ -89,6 +89,34 @@ enum QuotesSearchPush {
     }
 }
 
+/// What the field has sent and not yet heard back, so a late echo of an earlier keystroke is not
+/// taken for the store changing the query. The report answers in order, but not at once: typing
+/// "pa" sends "p", and "p" can come back after the field holds "pa". Seeded from that echo, the
+/// field lost its letter and the next send carried the old word (N165). Pure, like `QuotesSearchPush`,
+/// so the rule is tested without a window.
+struct QuotesSearchEcho {
+    private var outstanding: [String] = []
+
+    /// A value the field has just sent across the bridge.
+    mutating func pushed(_ value: String) {
+        outstanding.append(value)
+        if outstanding.count > 32 { outstanding.removeFirst(outstanding.count - 32) }
+    }
+
+    /// True when `echo` is an earlier value of this field's own that the report is only now
+    /// answering, and the field has moved on: leave the text alone. Anything else (the echo of
+    /// what is typed now, or a change the store made itself: ⌘E, find next, All Quotes) settles
+    /// what was outstanding and reaches the field as before.
+    mutating func isStaleOwnEcho(_ echo: String, typed: String) -> Bool {
+        if echo != typed, let i = outstanding.firstIndex(of: echo) {
+            outstanding.removeFirst(i + 1)
+            return true
+        }
+        outstanding.removeAll()
+        return false
+    }
+}
+
 /// Expanding search: a magnifier button that reveals an inline search field.
 /// The field auto-expands when the store pushes a non-empty query (Cmd+E "Use
 /// Selection for Find", findNext) so the user always sees what the report is
@@ -100,6 +128,7 @@ struct QuotesSearchToolbarControl: View {
     @State private var expanded = false
     @State private var text = ""
     @State private var debounce: Task<Void, Never>?
+    @State private var echo = QuotesSearchEcho()
     @FocusState private var focused: Bool
     /// The suggestions row ↩ would choose, by id (a row's position moves as
     /// new rows arrive; its id names its subject). Nil means the first row.
@@ -147,6 +176,7 @@ struct QuotesSearchToolbarControl: View {
         // Guarded so the SPA echo of the user's own typing never clobbers it.
         .onChange(of: bridgeHandler.quotesSearchQuery) { _, newValue in
             if !newValue.isEmpty { expanded = true }
+            if echo.isStaleOwnEcho(newValue, typed: text) { return }
             seed(newValue)
         }
         // A typed code becomes a token ("p3 " → said by p3) and leaves the
@@ -284,6 +314,7 @@ struct QuotesSearchToolbarControl: View {
                 typed: value, lastKnown: bridgeHandler.quotesSearchQuery,
                 activeTab: bridgeHandler.activeTab
             ) else { return }
+            echo.pushed(value)
             bridgeHandler.setQuotesSearch(value)
         }
     }

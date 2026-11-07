@@ -129,7 +129,11 @@ struct ServeReapingBusyTests {
         fleet.sweep(shownProjects: [], grace: .zero, busyRecheck: .milliseconds(50))
         #expect(fleet.managers[Self.a] != nil, "held first")
         manager.instance.noteBackgroundBusy(false)
-        try await Task.sleep(for: .milliseconds(400))
+        // A hang bound, not a speed claim: under a loaded full suite the 50 ms recheck can take
+        // seconds to come round (7 Nov 2026), so wait for the reap instead of for a fixed 400 ms.
+        for _ in 0..<600 where fleet.managers[Self.a] != nil {
+            try await Task.sleep(for: .milliseconds(50))
+        }
         #expect(fleet.managers[Self.a] == nil, "the recheck never came back to reap it")
     }
 

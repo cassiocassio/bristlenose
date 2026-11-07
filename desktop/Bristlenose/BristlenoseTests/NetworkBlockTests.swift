@@ -246,8 +246,11 @@ struct NetworkBlockTests {
         rig.model.refresh()
         #expect(rig.model.presented?.condition == .outOfCredit)
         rig.model.noteNetworkRefusal(provider: .claude)
-        await settle()
-        #expect(rig.probe.calls == 0, "not even looked at: it would sit behind the account problem")
+        // No suspension in here: `LLMValidator.verdictStore` is process-global and swapped for
+        // this test, so an await would let another suite run against it. A look, had one been
+        // started, would show as `isLooking` at once.
+        #expect(!rig.model.isLooking, "not even looked at: it would sit behind the account problem")
+        #expect(rig.probe.calls == 0)
         #expect(rig.model.networkBlock == nil, "and nothing is stored to surface when that clears")
         #expect(rig.model.presented?.condition == .outOfCredit)
     }
@@ -363,8 +366,9 @@ struct NetworkBlockTests {
         rig.model.dismiss()
         #expect(rig.model.presented == nil)
         rig.model.noteNetworkRefusal(provider: .claude)
-        await settle()
+        #expect(!rig.model.isLooking)   // see the note in the test above: no suspension here
         #expect(rig.probe.calls == 0)
+        #expect(rig.model.networkBlock == nil)
         #expect(rig.model.presented == nil, "the cross on one problem does not reveal another")
     }
 

@@ -813,7 +813,9 @@ def create_mcp_server(
             if note is not None and isinstance(result, dict):
                 result = cast("_T", {**result, "coverage": note})
         except ToolInputError as exc:
-            logger.info("mcp_tool_input_error | tool=%s | %s", tool, exc)
+            # The class only: the message echoes the value the model sent, which can be text it
+            # copied from a transcript (T20). The model is still told in full.
+            logger.info("mcp_tool_input_error | tool=%s | %s", tool, type(exc).__name__)
             raise
         except Exception:
             # Never let str(exc) reach the model — SQL errors carry paths.

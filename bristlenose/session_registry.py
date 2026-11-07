@@ -528,8 +528,9 @@ class SessionRegistry:
                 next_n += 1
                 claimed.add(sid)
             elif sid != session.session_id:
-                logger.info("Session %r keeps %s (by date it would be %s)", named[i],
-                            sid, session.session_id)
+                # The ids only: the session's name is the recording's name (T20).
+                logger.info("A session keeps %s (by date it would be %s)", sid,
+                            session.session_id)
             fp_i = fps[i] if first_with_fp.get(fps[i] or "") == i else None
             # A content key belongs to the session that holds it; it is never
             # handed to another (a duplicate, a copy named for another session),

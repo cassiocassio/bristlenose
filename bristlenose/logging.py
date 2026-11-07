@@ -48,6 +48,9 @@ _BACKUP_COUNT = 2
 # MISTRAL_DEBUG is set; kept at WARNING so a DEBUG run log never holds a transcript.
 _NOISY_LOGGERS = (
     "httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper", "mistralai",
+    # The MCP SDK logs each failed tool's message at INFO, and the message echoes the value
+    # the model sent (T20); its unexpected-exception line is ERROR and still passes.
+    "mcp.server.mcpserver.server",
 )
 
 

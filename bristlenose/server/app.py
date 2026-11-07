@@ -240,7 +240,14 @@ def create_app(
                 backup_path_for(project_output_dir(project_dir)),
             )
 
-    app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
+    # Swagger and the schema are a developer convenience: they answer without a token and
+    # Swagger loads its page from a CDN, so a normal serve has neither (T24).
+    app = FastAPI(
+        title="Bristlenose",
+        docs_url="/api/docs" if dev else None,
+        openapi_url="/openapi.json" if dev else None,
+        redoc_url=None,
+    )
 
     # A refusal names itself on the wire: `detail` stays the English string every
     # existing reader expects, and `reason` rides alongside it so the UI can

@@ -147,7 +147,7 @@
 }
 
 .layout.embedded:not(.tags-open) > .minimap-slot {
-    padding-right: calc(var(--bn-space-md) + var(--bn-space-lg));
+    --bn-minimap-extra-pad-r: var(--bn-space-lg);
 }
 
 /* Animated slide — added before state change, removed on transitionend */
@@ -719,7 +719,8 @@
     /* Equal breathing room from center content (left) and tag sidebar/rail (right).
        The center column has no right padding — this column provides ALL the
        visual separation. Padding inserts the abstract lines symmetrically. */
-    padding: 0 var(--bn-space-md);
+    --bn-minimap-extra-pad-r: 0px;
+    padding: 0 calc(var(--bn-space-md) + var(--bn-minimap-extra-pad-r)) 0 var(--bn-space-md);
 }
 
 /* ── Drag handles ─────────────────────────────────────────────── */

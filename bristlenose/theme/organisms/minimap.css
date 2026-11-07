@@ -76,7 +76,9 @@
 .bn-minimap-viewport {
     position: absolute;
     left: 0;
-    right: 0;
+    /* Stops where the ticks' padding stops (set by sidebar.css when the tag
+       sidebar is closed), so the rect hugs the ticks and clears the scrollbar. */
+    right: var(--bn-minimap-extra-pad-r, 0px);
     background: var(--bn-minimap-viewport-bg);
     border: 1.5px solid var(--bn-minimap-viewport-border);
     border-radius: var(--bn-radius-sm);

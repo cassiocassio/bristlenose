@@ -311,7 +311,7 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 
 The flanking sidebars (tags right; TOC left since 14 Aug 2026) are styled to read as native-feeling **inspector** chrome continuous with the AppKit sidebar. Three coupled gotchas, all in `organisms/sidebar.css` + `tokens.css` (added Jul 2026, commit `a96c7c6f`):
 
-**Inspector chrome and the native seam** (6) — [full entries](gotchas.md#inspector-chrome-and-the-native-seam)
+**Inspector chrome and the native seam** (7) — [full entries](gotchas.md#inspector-chrome-and-the-native-seam)
 
 - `--bn-colour-inspector-bg` is a themeable chrome tint, not a content surface.
 - A light strip beside a panel that no CSS colour explains is the WINDOW showing through the…
@@ -319,3 +319,4 @@ The flanking sidebars (tags right; TOC left since 14 Aug 2026) are styled to rea
 - First-baseline datum is web-internal (`--bn-first-baseline` RETIRED, 25 Jul 2026).
 - `text-decoration: none` on a child does NOT remove an ancestor's underline — and `getComputedStyle`…
 - A leading LITERAL cannot fork platforms — so `line-height: 1.5` is a web-only value that ships to…
+- A rule gated on `.layout.embedded` cannot be seen in a browser, and the Mac app's bundled sidecar serves a BAKED…

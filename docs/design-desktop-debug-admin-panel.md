@@ -317,18 +317,22 @@ Note the port property is `runningPort`
 ([`ServeManager.swift:358`](../desktop/Bristlenose/Bristlenose/ServeManager.swift:358)),
 not `servedPort` (which does not exist).
 
-**No auth token needed.** `/admin` is *not* under `/api/`, so it is not behind
-`BearerTokenMiddleware` ([`middleware.py`](../bristlenose/server/middleware.py)
-guards only the `/api/` and `/mcp` prefixes). Localhost-binding plus the loopback-`Host`
-check (`LoopbackHostMiddleware`, below) is its protection —
-which is consistent with `SECURITY.md`'s framing of the token as
-defence-in-depth, not an auth boundary. Guard against "no project served yet"
-via the `.disabled(serveManager.runningPort == nil)` modifier above.
+**A single-use code, since 7 Nov 2026 (T21).** `/admin` is outside `/api/` and a
+browser cannot send a bearer header, so the helper above no longer opens a bare
+`/admin/`. `AdminPanelAction` posts to `POST /api/admin/open` with the server token, gets
+`{"path": "/admin/?t=<code>"}`, and opens that on the same port (it refuses any path that is not
+under `/admin/`). The middleware (`BearerTokenMiddleware._admin`, `server/admin_gate.py`)
+redeems the code once, within 60 s, sets a `bristlenose_admin` cookie (HttpOnly, SameSite=Strict,
+Path=/admin) and redirects to `/admin/` so the code leaves the address. The server token also
+opens `/admin` directly. Everything else gets 401. `serve --dev` is unchanged: the gate is built
+only when the panel is mounted by `_BRISTLENOSE_ADMIN_PANEL` without `--dev`. Guard against "no
+project served yet" via the `.disabled(serveManager.runningPort == nil)` modifier above.
 
 ## Security posture
 
-In the Developer-ID beta, `/admin` becomes an
-**unauthenticated-but-localhost-bound, read-only** view over transcripts + PII.
+In the Developer-ID beta, `/admin` is a **localhost-bound, read-only** view over
+transcripts + PII, opened with the server token or a single-use code (7 Nov 2026; until then it
+answered with no credential at all, which the next paragraphs argue about).
 Read-only (incl. `can_export=False`) removes the mutation *and* bulk-exfil risk.
 **Localhost binding alone did *not* remove the remote risk**, although this doc
 said it did until 28 Sep 2026. Under DNS rebinding, a web page on an attacker's
@@ -347,8 +351,9 @@ reads `Person.full_name` with a loopback `Host` and no token — zero steps wher
 `/api/` needs two. `/report/*` and `/media/*` are not a precedent: `/media/` is
 exempt because `<video>` cannot send a header and serves recordings only, and
 `/report/` serves only `assets/` plus the SPA page; neither returns DB rows.
-Whether that residual is accepted or `/admin` goes behind the auth cookie is an
-open product call (28 Sep 2026). _(Bearing on it, same day: the cookie is now
+Whether that residual was accepted or `/admin` went behind a credential was an
+open product call (28 Sep 2026); **the owner chose the credential on 7 Nov 2026 (T21)**, as a
+single-use code the Debug menu fetches, not the report's cookie. _(Bearing on it, same day: the cookie is now
 honoured only for same-origin GET/HEAD navigations — `_is_own_navigation` in
 `middleware.py` — so it would admit a researcher browsing `/admin` from the
 report's own origin and refuse both a cookie-less `curl` and a page on another

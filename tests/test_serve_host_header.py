@@ -128,10 +128,13 @@ class TestAdminPanelBehindTheGate:
         monkeypatch.delenv("_BRISTLENOSE_DEV", raising=False)
         app = create_app(project_dir=None, dev=False, db_url="sqlite://")
         client = TestClient(app, base_url="http://127.0.0.1:8150")
+        # /admin opens with the server token (T21, 7 Nov 2026), so the control and the
+        # attack both carry it: the gate under test is the Host, not the credential.
+        auth = {"authorization": f"Bearer {app.state.auth_token}"}
         # Control: the panel is really mounted and reachable on loopback.
-        assert client.get("/admin/", follow_redirects=True).status_code == 200
+        assert client.get("/admin/", headers=auth, follow_redirects=True).status_code == 200
         resp = client.get(
-            "/admin/", headers={"host": "rebind.attacker.example:8150"}
+            "/admin/", headers={**auth, "host": "rebind.attacker.example:8150"}
         )
         assert resp.status_code == 400
 

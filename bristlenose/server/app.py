@@ -505,6 +505,17 @@ def create_app(
 
         sqladmin_app = SQLAdmin(app, engine, base_url="/admin")
         register_admin_views(sqladmin_app, read_only=not dev)
+        if not dev:
+            # A bundled beta build (T21): /admin opens only with the server token or a
+            # single-use code the app fetches here, which the middleware swaps for a cookie.
+            from bristlenose.server.admin_gate import AdminGate
+
+            admin_gate = AdminGate()
+            app.state.admin_gate = admin_gate
+
+            @app.post("/api/admin/open", include_in_schema=False)
+            def _admin_open() -> dict[str, str]:
+                return {"path": f"/admin/?t={admin_gate.issue()}"}
 
     # Import project data into SQLite on startup
     if project_dir is not None:

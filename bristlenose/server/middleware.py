@@ -14,6 +14,8 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from bristlenose.server.admin_gate import ADMIN_COOKIE_NAME, AdminGate
+
 # Paths that do not require a bearer token.
 # /api/health: version/status only, no project data — desktop needs it pre-auth.
 # /api/docs and /openapi.json: Swagger UI and the schema, a dev convenience; the routes exist
@@ -133,10 +135,38 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
     between missing/wrong token, no hints about expected format.
     """
 
+    async def _admin(
+        self,
+        request: Request,
+        call_next: RequestResponseEndpoint,
+        gate: AdminGate,
+        path: str,
+    ) -> Response:
+        expected = getattr(request.app.state, "auth_token", None)
+        if expected is not None and request.headers.get("authorization", "") == f"Bearer {expected}":
+            return await call_next(request)
+        if gate.accepts_cookie(request.cookies.get(ADMIN_COOKIE_NAME)):
+            return await call_next(request)
+        code = request.query_params.get("t")
+        if request.method == "GET" and code and gate.redeem(code):
+            # Spent: swap it for the session cookie and drop it from the address.
+            response = Response(status_code=303, headers={"location": path})
+            response.set_cookie(
+                ADMIN_COOKIE_NAME, gate.session, path="/admin", httponly=True, samesite="strict",
+            )
+            return response
+        return Response(content=_UNAUTHORIZED_BODY, status_code=401, media_type="application/json")
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         path = request.url.path
+
+        # /admin on a bundled beta (T21): bearer, the admin cookie, or a single-use code that is
+        # swapped for the cookie. Absent on --dev, where the gate is never built.
+        gate = getattr(request.app.state, "admin_gate", None)
+        if gate is not None and (path == "/admin" or path.startswith("/admin/")):
+            return await self._admin(request, call_next, gate, path)
 
         # Fast path: only check paths that need auth.
         if not any(path.startswith(p) for p in _AUTH_REQUIRED_PREFIXES):

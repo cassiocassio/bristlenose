@@ -225,7 +225,10 @@ def test_a_claim_hands_its_token_to_create_app_through_the_environment(monkeypat
 
     from bristlenose.standby import await_claim
 
-    monkeypatch.delenv("_BRISTLENOSE_MCP_TOKEN", raising=False)
+    # await_claim writes the variable itself. delenv on an absent name records nothing to undo,
+    # so the token outlived this test and every later create_app wanted a scoped MCP token.
+    monkeypatch.setenv("_BRISTLENOSE_MCP_TOKEN", "placeholder")
+    monkeypatch.delenv("_BRISTLENOSE_MCP_TOKEN")
     monkeypatch.setattr(sys, "stdin", io.StringIO(_claim(Path("/a/b"))))
     assert await_claim() == Path("/a/b")
     assert os.environ["_BRISTLENOSE_MCP_TOKEN"] == TOKEN  # app.py reads this inside create_app

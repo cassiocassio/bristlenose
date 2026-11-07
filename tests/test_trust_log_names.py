@@ -66,6 +66,6 @@ def test_an_mcp_input_error_does_not_log_what_the_model_sent(tmp_path: Path) -> 
         for h in logging.getLogger().handlers[:]:
             logging.getLogger().removeHandler(h)
             h.close()
-    assert resp.json()["result"].get("isError") is True, resp.text
+    assert resp.json().get("result", {}).get("isError") is True, resp.text
     assert "mcp_tool_input_error" in log, "positive control: our own line is written"
     assert "Zephyrine" not in log, log

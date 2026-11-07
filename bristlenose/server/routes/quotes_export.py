@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -69,13 +70,20 @@ def _check_project(db: Session, project_id: int) -> Project:
     return project
 
 
+#: What a workbook's XML cannot hold (openpyxl's own set); the CSV has no use for it either.
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
 def _parse_headers(headers: str | None) -> list[str]:
     """Parse comma-separated translated headers, or return defaults."""
     if not headers:
         return list(_DEFAULT_HEADERS)
     parts = [h.strip() for h in headers.split(",") if h.strip()]
     if len(parts) == len(_DEFAULT_HEADERS):
-        return parts
+        # The headings come from the query string, so they are caller-supplied like any
+        # cell: formula-safe, and with the characters a workbook cannot hold taken out
+        # (T25, trust map row 72).
+        return [csv_safe(_CONTROL_CHARS.sub("", h)) for h in parts]
     return list(_DEFAULT_HEADERS)
 
 

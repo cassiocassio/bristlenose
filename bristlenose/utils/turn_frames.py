@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import TypedDict
 
 from bristlenose.utils.bundled_binary import binary_command
-from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
+from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised, open_private
 
 logger = logging.getLogger(__name__)
 
@@ -141,9 +141,13 @@ def extract_turn_frames(session_id: str, video: Path, frames: list[Frame], out_d
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps({"version": VERSION, "key": key, "selection": selection,
-                                   "complete": complete, "frames": taken}, ensure_ascii=True),
-                       encoding="utf-8")
+        body = json.dumps({"version": VERSION, "key": key, "selection": selection,
+                           "complete": complete, "frames": taken}, ensure_ascii=True)
+        # Owner-only: the frames are the participant's screen. A new file each time, so a record
+        # an older writer left loose is replaced by a private one.
+        fd = open_private(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(body.encode("utf-8"))
         os.replace(tmp, path)
     except OSError as exc:  # the output dir can vanish under a live serve (`run --clean`)
         logger.warning("No turn frames for %s: %s", session_id, exc)

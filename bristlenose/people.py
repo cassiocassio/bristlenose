@@ -35,7 +35,7 @@ from bristlenose.models import (
     PersonEntry,
     SpeakerRole,
 )
-from bristlenose.utils.fs import replace_retrying
+from bristlenose.utils.fs import open_private, replace_retrying
 
 if TYPE_CHECKING:
     from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
@@ -401,7 +401,11 @@ def write_people_file(people: PeopleFile, output_dir: Path) -> Path:
     # next run cannot read (decision #17).
     tmp = path.with_name(f".{PEOPLE_FILENAME}.tmp")
     try:
-        with tmp.open("w", encoding="utf-8") as fh:
+        # Owner-only, like the write-through in serve: the file holds participants' real names.
+        # A new file each time, so one an older writer left loose is replaced by a private one.
+        with os.fdopen(
+            open_private(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC), "w", encoding="utf-8"
+        ) as fh:
             fh.write(_HEADER + yaml_content)
             fh.flush()
             os.fsync(fh.fileno())

@@ -10,7 +10,10 @@ Files covered, and why each is private:
 - ``events.jsonl``: OS username and hostname in the process envelope;
 - ``llm-calls.jsonl`` (and its trimmed rewrite): a per-call fingerprint;
 - the desktop shoal feed: verbatim participant words;
-- ``pii_summary.txt``: the original personal data PII removal took out.
+- ``pii_summary.txt``: the original personal data PII removal took out;
+- the turn-frames record: JPEGs of the participant's screen, one per speaker turn;
+- ``people.yaml``: the researcher's own file of participants' real names, whichever writer
+  touched it last (the pipeline's, or serve's write-through, which already made it 0o600).
 """
 
 from __future__ import annotations
@@ -288,3 +291,51 @@ def test_loose_older_rotations_are_tightened_and_a_symlink_target_is_left_alone(
         for h in logging.getLogger().handlers[:]:
             logging.getLogger().removeHandler(h)
             h.close()
+
+
+# -- turn frames --------------------------------------------------------------
+
+
+def test_turn_frames_record_is_owner_only(tmp_path: Path) -> None:
+    """The record carries the participant's screen as base64 JPEGs, so it is a re-identification
+    key of its own kind (docs/design-screens.md): written 0o600, and a loose one is tightened."""
+    from bristlenose.utils import turn_frames as tf
+
+    video = tmp_path / "v.mp4"
+    video.write_bytes(b"x")
+    frames = tf.select_frames([(10.0, 50.0)], [])
+    out = tmp_path / "out"
+    path = tf.extract_turn_frames("s1", video, frames, out, grabber=lambda v, t: b"\xff\xd8jpeg")
+    assert path is not None and path.is_file()
+    assert _mode(path) == _OWNER_ONLY_AS_READ
+    assert not list(out.glob("*.tmp")), "the temporary file was left behind"
+    os.chmod(path, 0o644)  # left loose by an older writer
+    other = tf.select_frames([(10.0, 52.0)], [])  # a speaker edit: new selection, new write
+    path2 = tf.extract_turn_frames("s1", video, other, out, grabber=lambda v, t: b"\xff\xd8jpeg")
+    assert path2 is not None
+    assert _mode(path2) == _OWNER_ONLY_AS_READ
+
+
+# -- people.yaml ---------------------------------------------------------------
+
+
+def test_people_file_is_owner_only_and_a_loose_one_is_tightened(tmp_path: Path) -> None:
+    from datetime import datetime, timezone
+
+    from bristlenose.models import PeopleFile, PersonComputed, PersonEditable, PersonEntry
+    from bristlenose.people import write_people_file
+
+    people = PeopleFile(participants={"p1": PersonEntry(
+        computed=PersonComputed(
+            participant_id="p1", session_id="s1",
+            session_date=datetime(2026, 1, 1, tzinfo=timezone.utc), duration_seconds=60.0,
+            words_spoken=100, pct_words=50.0, pct_time_speaking=50.0, source_file="a.vtt",
+        ),
+        editable=PersonEditable(full_name="Not A Real Name"),
+    )})
+    path = write_people_file(people, tmp_path)
+    assert _mode(path) == _OWNER_ONLY_AS_READ
+    os.chmod(path, 0o644)  # left loose by an older writer
+    write_people_file(people, tmp_path)
+    assert _mode(path) == _OWNER_ONLY_AS_READ
+    assert "Not A Real Name" in path.read_text(encoding="utf-8")

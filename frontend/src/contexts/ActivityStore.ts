@@ -78,6 +78,10 @@ export function activityStorageKey(projectId: string): string | null {
 /** The chips this load brought back from the last one; only they can stand for an export the
  *  server has since replaced (a chip started now names the export its own start returned). */
 let carriedIds = new Set<string>();
+/** The carried chips that had already ended when the page loaded: only those can be superseded
+ *  by a run the server is still working on (N87). A carried chip that was running and ended on
+ *  this page may have ended after a read began, so it stays. */
+let carriedFinishedAtLoad = new Set<string>();
 
 /**
  * Which serve the page came from. Every serve says project 1, and the CLI's serves share one port
@@ -244,6 +248,7 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
     storageKey = key;
     const back = carried(storageKey).filter(([id]) => !jobs.has(id));
     carriedIds = new Set(back.map(([id]) => id));
+    carriedFinishedAtLoad = new Set(back.filter(([, e]) => e.outcome).map(([id]) => id));
     if (back.length > 0) {
       jobs = new Map([...back, ...jobs]);
       snapshot = jobs;
@@ -321,11 +326,13 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
 
 /** A finished chip this window carried across the reload cannot stand for a run the server is
  *  still working on: that run began after it ended, so the newer run's chip replaces it (N87). Only
- *  carried chips: one finished on this page may have ended after the server read began (the same
- *  reason `hasJob` skips a finished chip). */
+ *  chips that had already ended when the page loaded: one that ended on this page may have ended
+ *  after the server read began (the same reason `hasJob` skips a finished chip). */
 function supersedeCarried(type: ActivityJobEntry["type"], frameworkId: string): void {
   for (const [id, j] of jobs) {
-    if (carriedIds.has(id) && j.outcome && j.type === type && j.frameworkId === frameworkId) removeJob(id);
+    if (carriedFinishedAtLoad.has(id) && j.outcome && j.type === type && j.frameworkId === frameworkId) {
+      removeJob(id);
+    }
   }
 }
 
@@ -409,6 +416,7 @@ export function resetActivityStore({ keepSession = false }: { keepSession?: bool
   rehydratedProjectId = null;
   storageKey = null;
   carriedIds = new Set();
+  carriedFinishedAtLoad = new Set();
   retried = false;
   persistWarned = false;
   if (!keepSession) {

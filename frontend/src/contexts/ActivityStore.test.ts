@@ -490,6 +490,23 @@ describe("a window's chips across a reload", () => {
     expect(getJobs().get("autocode:garrett:7")?.outcome?.status).toBe("completed");
   });
 
+  it("a carried chip that was still running at load and finished on this page stays", async () => {
+    // Fable review, 7 Nov 2026: it is in the carried set, but it ended after the page loaded, so
+    // a read that began before it ended and still names a running job cannot supersede it.
+    sessionStorage.setItem(key(), JSON.stringify([
+      ["autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" }],
+    ]));
+    let answer!: (v: unknown) => void;
+    autocode.mockReturnValue(new Promise((r) => (answer = r)) as never);
+    const pending = rehydrateActivityJobs("1");
+    settleJob("autocode:garrett:1", done); // its own poll saw the end while the read is out
+    answer({ jobs: [{ framework_id: "garrett", title: "Garrett", status: "running", completed_at: null }] });
+    await pending;
+    // The chip that stood for the run stays with how it ended. A second, restored chip for the
+    // stale read's "running" may also appear; it polls once and settles (a known corner).
+    expect(getJobs().get("autocode:garrett:1")?.outcome?.status).toBe("completed");
+  });
+
   it("a carried finished chip for another kind of work on the codebook stays", async () => {
     await rehydrateActivityJobs("1");
     addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });

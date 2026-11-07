@@ -81,11 +81,11 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 The 0.45.0 prose was written by hand (the `bn-release` skill declined) after the owner's "Write the prose".
 
-**Run times (measured, GMT, 7 Nov).** Preflight 157 s (first attempt failed at 179 s) · inventory 3 s · bump 1 s · push main 1 s · build the app 520 s (first attempt failed at 244 s) · build the dmg 631 s · strict CI gate 3,141 s (macOS queue) · TestFlight upload 420 s · publish the dmg 1,136 s · tag push 2 s at 05:43 · `release.yml` green and PyPI 200 about an hour later. The longest wait was the CI gate, not the builds.
+**Run times (measured, GMT, 7 Nov).** Preflight 157 s (first attempt failed at 179 s) · inventory 3 s · bump 1 s · push main 1 s · build the app 520 s (first attempt failed at 244 s) · build the dmg 631 s · strict CI gate 3,141 s (macOS queue) · TestFlight upload 420 s · publish the dmg 1,136 s · tag push 2 s at 05:43 · PyPI 200 later that morning. The longest wait was the CI gate, not the builds.
 
-**Tricky things.** (1) The strict CI run is tied to a sha, so each fix after the dispatch meant a push and a new dispatch; `release.sh status` printed the strict run's success while the build was still going, which read as "released". (2) `release.sh verify` showed Copr on 0.44.0 and the website not yet deployed straight after the tag, as expected: both follow. (3) A passing full Swift run at the tagged commit (3,180 tests) came from another session, not from this run's own gate.
+**Tricky things.** The strict CI run is tied to a sha, so each fix after the dispatch meant a push and a new dispatch; `release.sh status` printed the strict run's success while the build was still going, which read as "released".
 
-**Owed.** Website: the privacy page, terms and `SECURITY.md` do not yet describe the network-blocks pill's two outbound requests (draft shown to the owner 7 Nov). Winget (a follower). Copr follows (`copr-cli` is not installed here). Website deploy is the maintainer's. Preflight left as warnings: copr-cli missing, dependency drift stale, one untracked smoke-fixture `llm-calls.jsonl`, and a macOS 15.7.3 guest red on the reaping test (an older macOS).
+**Owed.** `Mac Build` is red on the tagged commit (macos-15 leg: `StandbySidecarTests/aClaimReachesTheProcessAndItsLinesReachTheSink` timed out at 25 s, `ServeManagerRestartTests/noAgentScopePutGoesToAServeBeingTornDown` lost its precondition); same class as the 15.7.3 guest, macOS 26 is green. Website privacy page and `SECURITY.md` now name the network-blocks pill's two requests; the website deploy is the maintainer's. Winget (a follower). Copr follows (`copr-cli` is not installed here). Website deploy is the maintainer's. Preflight left as warnings: copr-cli missing, dependency drift stale, one untracked smoke-fixture `llm-calls.jsonl`, and a macOS 15.7.3 guest red on the reaping test (an older macOS).
 
 ---
 

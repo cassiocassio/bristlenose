@@ -48,7 +48,10 @@ def test_a_busy_port_prints_no_report_line_and_opens_no_browser(
         result = CliRunner().invoke(cli.app, ["serve", str(project), "--port", str(busy)])
         elapsed = time.monotonic() - started
     assert result.exit_code != 0, result.output
-    assert elapsed < 8, "a refused bind ends the run at once, it does not wait out the 10 s bound"
+    # No wall-clock race against a loaded runner: serve no longer has a 10 s bound to wait out
+    # (5992478a8), a refused bind ends the server task and with it the run. A minute is only a
+    # tripwire for a hang (Windows on 1-2 Nov and macOS 3.12 on 6 Nov both exceeded 8 s here).
+    assert elapsed < 60, "a refused bind did not end the run"
     assert "Report:" not in result.output, "no link to a server that never came up"
     assert opened == [], "and no browser opened on the other study's server"
 

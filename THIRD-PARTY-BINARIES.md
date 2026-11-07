@@ -105,13 +105,13 @@ procurement; under-listing would be a compliance risk.
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
 | `blis` | 1.3.4 | BSD License | <https://github.com/explosion/cython-blis> |
-| `budoux` | 0.10.2 | Apache-2.0 | — |
+| `budoux` | 0.10.3 | Apache-2.0 | — |
 | `catalogue` | 2.0.10 | MIT License | <https://github.com/explosion/catalogue> |
 | `certifi` | 2026.10.23 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
 | `chardet` | 7.7.0 | 0BSD | <https://github.com/chardet/chardet> |
 | `charset-normalizer` | 3.5.2 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
-| `click` | 8.5.0 | BSD-3-Clause | <https://github.com/pallets/click/> |
+| `click` | 8.5.1 | BSD-3-Clause | <https://github.com/pallets/click/> |
 | `cloudpathlib` | 0.26.0 | MIT License | <https://github.com/drivendataorg/cloudpathlib> |
 | `confection` | 1.3.4 | MIT License | <https://github.com/explosion/confection> |
 | `cryptography` | 50.0.2 | Apache-2.0 OR BSD-3-Clause | <https://github.com/pyca/cryptography> |
@@ -138,7 +138,7 @@ procurement; under-listing would be a compliance risk.
 | `inflect` | 7.6.0 | MIT | <https://github.com/jaraco/inflect> |
 | `jaraco.functools` | 4.6.0 | MIT | <https://github.com/jaraco/jaraco.functools> |
 | `Jinja2` | 3.1.6 | BSD License | <https://github.com/pallets/jinja/> |
-| `jiter` | 0.18.0 | MIT | <https://github.com/pydantic/jiter/> |
+| `jiter` | 0.19.0 | MIT | <https://github.com/pydantic/jiter/> |
 | `jsonschema` | 4.26.0 | MIT | <https://github.com/python-jsonschema/jsonschema> |
 | `jsonschema-specifications` | 2025.9.1 | MIT | <https://github.com/python-jsonschema/jsonschema-specifications> |
 | `kaldi_native_fbank` | 1.23.0 | Apache-2.0 | <https://github.com/csukuangfj/kaldi-native-fbank> |
@@ -164,7 +164,7 @@ procurement; under-listing would be a compliance risk.
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.2 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
-| `phonenumbers` | 9.0.42 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
+| `phonenumbers` | 9.0.43 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
 | `preshed` | 3.0.13 | MIT License | <https://github.com/explosion/preshed> |
 | `protobuf` | 7.36.2 | 3-Clause BSD License | <https://developers.google.com/protocol-buffers/> |
 | `pyasn1` | 0.6.5 | BSD-2-Clause | <https://github.com/pyasn1/pyasn1> |
@@ -186,7 +186,7 @@ procurement; under-listing would be a compliance risk.
 | `python-multipart` | 0.0.33 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
 | `PyYAML` | 6.0.3 | MIT License | <https://pyyaml.org/> |
 | `referencing` | 0.37.0 | MIT | <https://github.com/python-jsonschema/referencing> |
-| `regex` | 2026.9.29 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
+| `regex` | 2026.11.7 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
 | `requests` | 2.34.2 | Apache Software License | <https://github.com/psf/requests> |
 | `requests-file` | 3.0.1 | Apache Software License | <https://codeberg.org/dashea/requests-file> |
 | `rich` | 15.0.0 | MIT License | <https://github.com/Textualize/rich> |

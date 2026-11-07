@@ -129,7 +129,7 @@ into any of them stops the match.
 ## HYG-7 — a refusal condition and a provider name, not a credential
 
 `ServeManager.swift` (`noteLLMRefusal`, the sidecar's `llm-refusal` stdout line
-reaching the pill) logs the refused condition (`condition.rawValue`) and the
+reaching the pill) logs the refused condition (`line.kind`, the wire string of the same enum) and the
 provider (`provider.rawValue`) at `privacy: .public` when this sidecar was never
 given that provider's key, so the refusal cannot be tied to one. The
 interpolations are the same two enum cases as HYG-6; the message says "key"
@@ -138,4 +138,4 @@ holds digests, not keys, and is not interpolated here either.
 
 The pattern pins the full call through its closing parenthesis.
 
-<!-- ci-allowlist: HYG-7 --> log\.notice\("llm-refusal \\\(condition\.rawValue, privacy: \.public\) on \\\(provider\.rawValue, privacy: \.public\): this sidecar was not given that provider's key: not recorded"\)[[:space:]]*$
+<!-- ci-allowlist: HYG-7 --> log\.notice\("llm-refusal \\\(line\.kind, privacy: \.public\) on \\\(provider\.rawValue, privacy: \.public\): this sidecar was not given that provider's key: not recorded"\)[[:space:]]*$

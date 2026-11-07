@@ -39,7 +39,7 @@ def test_setup_logging_still_replaces_its_own_handlers(
     setup_logging(output_dir=tmp_path)
     ours = [
         h for h in logging.getLogger().handlers
-        if type(h) in (logging.StreamHandler, RotatingFileHandler)
+        if type(h) is logging.StreamHandler or isinstance(h, RotatingFileHandler)
     ]
     assert len(ours) == 2, ours
     assert caplog.handler in logging.getLogger().handlers

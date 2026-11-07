@@ -574,7 +574,9 @@ def no_run_log_handlers_left_behind(request):
         yield
     root.setLevel(level_before)
     for handler in root.handlers[:]:
-        if handler not in before and type(handler) in (logging.StreamHandler, RotatingFileHandler):
+        if handler not in before and (
+            type(handler) is logging.StreamHandler or isinstance(handler, RotatingFileHandler)
+        ):
             root.removeHandler(handler)
             handler.close()
 

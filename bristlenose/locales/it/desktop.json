@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · chiave rifiutata",
       "body": "Aggiungi una nuova chiave in Impostazioni."
     },
+    "networkBlocks": {
+      "pill": "Rete · {{provider}} non raggiungibile",
+      "title": "Questa rete non riesce a raggiungere {{provider}}.",
+      "body": "Prova con un'altra rete."
+    },
     "openSettings": "Apri Impostazioni…",
     "hide": "Nascondi l’avviso di {{provider}}",
     "hideTooltip": "Nascondi",

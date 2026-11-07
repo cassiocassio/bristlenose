@@ -76,6 +76,7 @@ struct PipelineRunnerQueueTests {
         /// What refused runs told the provider-problem pill: the condition, the
         /// run's provider, and the fingerprint of the key it was started with.
         var refusals: [(condition: ProviderProblemCondition, provider: LLMProvider?, fingerprint: String?)] = []
+        var networkNoted: [LLMProvider] = []
         /// The fingerprint of the key a run would be started with now.
         var fingerprintNow: String? = "fp-a"
         let root: URL
@@ -134,6 +135,7 @@ struct PipelineRunnerQueueTests {
                 activeProvider: { [weak self] in self?.providerNow },
                 noteRunSucceeded: { [weak self] in self?.noted.append($0) },
                 recordRefusal: { [weak self] c, p, f in self?.refusals.append((c, p, f)) },
+                noteNetworkRefusal: { [weak self] in self?.networkNoted.append($0) },
                 runKeyFingerprint: { [weak self] _ in self?.fingerprintNow },
                 sidecarLookup: lookup,
                 outputDrainLimit: drainLimit,
@@ -683,6 +685,32 @@ struct PipelineRunnerQueueTests {
         await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
 
         #expect(rig.refusals.isEmpty)
+    }
+
+    @Test func aRunThatCouldNotReachItsProviderAsksTheNetworkPillNotTheAccountOne() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "network")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.networkNoted == [rig.providerNow].compactMap { $0 }, "the run's own provider, asked about once")
+        #expect(rig.refusals.isEmpty, "it is not a refusal by the account")
+    }
+
+    @Test func aRunThatFailedOnNetworkForAnAzureEndpointDoesNotAskTheNetworkPill() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        rig.providerNow = .azure
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "network")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.networkNoted.isEmpty, "a mistyped endpoint fails the same way")
     }
 
     /// Reads of the end state, counted across the threads they run on.

@@ -1020,6 +1020,11 @@
       "pill": "{{provider}} · key rejected",
       "body": "Add a new key in Settings."
     },
+    "networkBlocks": {
+      "pill": "Network · can’t reach {{provider}}",
+      "title": "This network can’t reach {{provider}}.",
+      "body": "Try a different network."
+    },
     "openSettings": "Open Settings…",
     "hide": "Hide {{provider}} notice",
     "hideTooltip": "Hide",

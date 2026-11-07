@@ -992,6 +992,11 @@
       "pill": "{{provider}} · キーが拒否されました",
       "body": "設定で新しいキーを追加してください。"
     },
+    "networkBlocks": {
+      "pill": "ネットワーク · {{provider}}に接続できません",
+      "title": "このネットワークでは{{provider}}に接続できません。",
+      "body": "別のネットワークをお試しください。"
+    },
     "openSettings": "設定を開く…",
     "hide": "{{provider}} の通知を非表示",
     "hideTooltip": "非表示",

@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · avain hylätty",
       "body": "Lisää uusi avain Asetuksissa."
     },
+    "networkBlocks": {
+      "pill": "Verkko · {{provider}} ei tavoitettavissa",
+      "title": "Tämä verkko ei tavoita palvelua {{provider}}.",
+      "body": "Kokeile toista verkkoa."
+    },
     "openSettings": "Avaa Asetukset…",
     "hide": "Piilota palvelun {{provider}} ilmoitus",
     "hideTooltip": "Piilota",

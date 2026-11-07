@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · nyckel avvisad",
       "body": "Lägg till en ny nyckel i Inställningar."
     },
+    "networkBlocks": {
+      "pill": "Nätverk · når inte {{provider}}",
+      "title": "Det här nätverket kan inte nå {{provider}}.",
+      "body": "Prova ett annat nätverk."
+    },
     "openSettings": "Öppna Inställningar…",
     "hide": "Dölj meddelandet från {{provider}}",
     "hideTooltip": "Dölj",

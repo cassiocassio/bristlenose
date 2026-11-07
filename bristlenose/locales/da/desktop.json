@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · nøgle afvist",
       "body": "Tilføj en ny nøgle i Indstillinger."
     },
+    "networkBlocks": {
+      "pill": "Netværk · kan ikke nå {{provider}}",
+      "title": "Dette netværk kan ikke nå {{provider}}.",
+      "body": "Prøv et andet netværk."
+    },
     "openSettings": "Åbn Indstillinger…",
     "hide": "Skjul meddelelsen fra {{provider}}",
     "hideTooltip": "Skjul",

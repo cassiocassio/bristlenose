@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · chave rejeitada",
       "body": "Adicione uma nova chave em Definições."
     },
+    "networkBlocks": {
+      "pill": "Rede · não chega a {{provider}}",
+      "title": "Esta rede não consegue aceder a {{provider}}.",
+      "body": "Tente outra rede."
+    },
     "openSettings": "Abrir Definições…",
     "hide": "Ocultar aviso de {{provider}}",
     "hideTooltip": "Ocultar",

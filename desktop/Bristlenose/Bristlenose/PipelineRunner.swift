@@ -625,6 +625,7 @@ final class PipelineRunner: ObservableObject {
     /// was started with (nil when unknown). Always `explicit`: a run is
     /// something the researcher asked for. A test passes a recorder.
     private let recordRefusal: @MainActor (ProviderProblemCondition, LLMProvider?, String?) -> Void
+    private let noteNetworkRefusal: @MainActor (LLMProvider) -> Void
     /// The fingerprint of the key a run is about to be started with.
     private let runKeyFingerprint: @MainActor (LLMProvider) -> String?
     private let sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)?
@@ -754,6 +755,9 @@ final class PipelineRunner: ObservableObject {
         recordRefusal: @escaping @MainActor (ProviderProblemCondition, LLMProvider?, String?) -> Void = {
             ProviderProblemModel.recordRefusal($0, provider: $1, explicit: true, keyFingerprint: $2)
         },
+        noteNetworkRefusal: @escaping @MainActor (LLMProvider) -> Void = {
+            ProviderProblemModel.shared.noteNetworkRefusal(provider: $0, explicit: true)
+        },
         runKeyFingerprint: @escaping @MainActor (LLMProvider) -> String? = {
             ProviderProblemModel.liveKeyFingerprint($0)
         },
@@ -789,6 +793,7 @@ final class PipelineRunner: ObservableObject {
         self.activeProvider = activeProvider
         self.noteRunSucceeded = noteRunSucceeded
         self.recordRefusal = recordRefusal
+        self.noteNetworkRefusal = noteNetworkRefusal
         self.runKeyFingerprint = runKeyFingerprint
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
@@ -3117,6 +3122,20 @@ var args = ["run", project.path, "--no-serve"]
             Self.logger.info(
                 "run failed on auth but the cause is not this attempt's own structured one — pill not raised project=\(projectID.uuidString, privacy: .public) structured=\(derived != nil, privacy: .public) ownedAndTimed=\(ownedAndTimed, privacy: .public)"
             )
+        }
+        // A run that could not reach its provider, from the run's own structured cause (a
+        // stderr guess could name a download that is not the provider's): ask whether the
+        // internet works from here, and say "this network can't reach <provider>" only if
+        // it does. Never for a provider that was not recorded at spawn.
+        if category == .network {
+            if derived != nil, ownedAndTimed, let runProvider,
+               NetworkBlockCandidate.isRunCandidate(provider: runProvider) {
+                noteNetworkRefusal(runProvider)
+            } else {
+                Self.logger.info(
+                    "run failed on network but is not a candidate for the network pill project=\(projectID.uuidString, privacy: .public) structured=\(derived != nil, privacy: .public) ownedAndTimed=\(ownedAndTimed, privacy: .public) provider=\(runProvider?.rawValue ?? "none", privacy: .public)"
+                )
+            }
         }
         return .failed(summary, category: category)
     }

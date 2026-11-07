@@ -49,6 +49,26 @@ final class ProviderProblemModel: ObservableObject {
 
     @Published private(set) var presented: Presented?
 
+    /// "This network can't reach the provider": in memory only (see `NetworkBlock.swift`).
+    struct NetworkBlock: Equatable {
+        let provider: LLMProvider
+        let firstSeen: Date
+        var dismissed: Bool
+    }
+    @Published private(set) var networkBlock: NetworkBlock?
+    private let probe: any NetworkProbing
+    private let makeWatcher: () -> any NetworkPathWatching
+    private var watcher: (any NetworkPathWatching)?
+    /// A look is in flight: a refusal that arrives meanwhile joins it rather than asking
+    /// Apple again.
+    private var looking: Task<Void, Never>?
+    /// When a look last found nothing, and which providers' calls worked while one ran.
+    private var lastNegativeLook: Date?
+    private var callsSucceededDuringLook: Set<String> = []
+    static let negativeLookCooldown: TimeInterval = 60
+    /// Whether a look is in flight (tests wait on it).
+    var isLooking: Bool { looking != nil }
+
     #if DEBUG
     /// Diagnostics ▸ Provider problem pill forces a state here, so every look can
     /// be seen without running a provider dry. Wins over the real state.
@@ -86,13 +106,17 @@ final class ProviderProblemModel: ObservableObject {
         now: @escaping () -> Date = Date.init,
         activeProvider: @escaping () -> LLMProvider? = ProviderProblemModel.liveActiveProvider,
         keyFor: @escaping (LLMProvider) -> String? = ProviderProblemModel.liveKey,
-        observing center: NotificationCenter = .default
+        observing center: NotificationCenter = .default,
+        probe: any NetworkProbing = LiveNetworkProbe(),
+        makeWatcher: @escaping () -> any NetworkPathWatching = { LivePathWatcher() }
     ) {
         self.defaults = defaults
         self.now = now
         self.activeProvider = activeProvider
         self.keyFor = keyFor
         self.center = center
+        self.probe = probe
+        self.makeWatcher = makeWatcher
         refresh()
         // Provider switch, key change and consent all ride prefsChanged.
         observers.append(center.addObserver(
@@ -103,6 +127,13 @@ final class ProviderProblemModel: ObservableObject {
         observers.append(center.addObserver(
             forName: .bristlenoseProviderProblemChanged, object: nil, queue: .main
         ) { [weak self] _ in Task { @MainActor in self?.refresh() } })
+        // A call worked: a network block on that provider was about a moment that has passed.
+        observers.append(center.addObserver(
+            forName: .bristlenoseProviderCallSucceeded, object: nil, queue: .main
+        ) { [weak self] note in
+            let raw = note.object as? String
+            Task { @MainActor in self?.providerCallSucceeded(raw) }
+        })
         // Back to the app: a top-up or a new key happens in the browser or in
         // Settings, and the stage may have moved on while it was away.
         observers.append(center.addObserver(
@@ -141,6 +172,12 @@ final class ProviderProblemModel: ObservableObject {
     /// clock. Called at launch, on activation and when a refusal is recorded; no
     /// timer calls it, so the stage never changes while someone is looking.
     func refresh() {
+        refreshAccountProblem()
+        if presented == nil { presentNetworkBlockIfAny() }
+    }
+
+    /// The account problem (a rejected key, no credit) from the stored record.
+    private func refreshAccountProblem() {
         guard let record = Self.load(from: defaults) else {
             presented = nil
             return
@@ -195,8 +232,17 @@ final class ProviderProblemModel: ObservableObject {
         presented = Presented(provider: provider, condition: record.condition, stage: stage)
     }
 
-    /// The ✕. Hides it until the next refusal that counts (`applying`).
+    /// The ✕. Hides an account problem until the next refusal that counts (`applying`).
+    /// A network block, once hidden, stays hidden until it clears (a network change, a call
+    /// that worked, a provider switch): it is about a place, and a repeat from the same
+    /// place has nothing new to say.
     func dismiss() {
+        if presented?.condition == .networkBlocks, var block = networkBlock {
+            block.dismissed = true
+            networkBlock = block
+            refresh()
+            return
+        }
         guard var record = Self.load(from: defaults) else {
             Self.log.notice("dismiss with no record to hide: refreshing so the pill and the store agree")
             refresh()
@@ -224,6 +270,119 @@ final class ProviderProblemModel: ObservableObject {
                 .announcement: presentation.title(provider: provider.displayName, i18n: i18n),
                 .priority: priority.rawValue,
             ])
+    }
+
+    // MARK: - A network block (in memory)
+
+    /// A call to `provider` was refused in a way that may be this network's doing (see
+    /// `NetworkBlockCandidate`). Asks once whether the internet works from here; if it
+    /// does, the provider could not be reached and the pill says so. Only for the active
+    /// cloud provider, and never when an account problem is already on show.
+    func noteNetworkRefusal(provider: LLMProvider, explicit: Bool = false) {
+        guard provider.needsAPIKey, activeProvider() == provider else {
+            Self.log.notice("network refusal for \(provider.rawValue, privacy: .public) not looked at: not the active cloud provider")
+            return
+        }
+        // An account problem is the truer thing to say, and a block stored behind it would
+        // surface, stale, the day that clears. A record the researcher hid still outranks it:
+        // the ✕ on one problem must not reveal another.
+        if let shown = presented, shown.condition != .networkBlocks {
+            Self.log.notice("network refusal on \(provider.rawValue, privacy: .public) not looked at: \(shown.condition.rawValue, privacy: .public) is on show")
+            return
+        }
+        if let record = Self.load(from: defaults), record.provider == provider.rawValue {
+            Self.log.notice("network refusal on \(provider.rawValue, privacy: .public) not looked at: \(record.condition.rawValue, privacy: .public) is on record (hidden)")
+            return
+        }
+        if let block = networkBlock, block.provider == provider {
+            // Something the researcher asked for (a run) failed here again: bring a hidden
+            // notice back, with no second look. An incidental repeat has nothing new to say.
+            if block.dismissed, explicit {
+                var shown = block
+                shown.dismissed = false
+                networkBlock = shown
+                Self.log.notice("network refusal on \(provider.rawValue, privacy: .public): a refused run brings the hidden block back")
+                refresh()
+            } else {
+                Self.log.notice("network refusal on \(provider.rawValue, privacy: .public): a block is already held (\(block.dismissed ? "hidden" : "shown", privacy: .public)), not looked at again")
+            }
+            return
+        }
+        if looking != nil {
+            Self.log.notice("network refusal joins the look already under way")
+            return
+        }
+        // A look that found nothing is not repeated for a minute: a signal refresh or an
+        // AutoCode pass on a dead network makes a refusal per call, and each is not a
+        // reason to ask Apple again.
+        if let at = lastNegativeLook, now().timeIntervalSince(at) < Self.negativeLookCooldown {
+            Self.log.notice("network refusal on \(provider.rawValue, privacy: .public) not looked at: the last look found nothing less than a minute ago")
+            return
+        }
+        callsSucceededDuringLook = []
+        looking = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.looking = nil }
+            let seen = await self.probe.look(provider: provider)
+            guard NetworkBlockVerdict.blocks(path: seen.path, control: seen.control, provider: seen.provider) else {
+                self.lastNegativeLook = self.now()
+                Self.log.notice("network refusal on \(provider.rawValue, privacy: .public): not this network's doing (path satisfied=\(seen.path?.satisfied.description ?? "unknown", privacy: .public) control=\(String(describing: seen.control), privacy: .public) provider=\(String(describing: seen.provider), privacy: .public))")
+                return
+            }
+            guard self.activeProvider() == provider else {
+                Self.log.notice("network block on \(provider.rawValue, privacy: .public) dropped: the provider changed during the look")
+                return
+            }
+            if self.callsSucceededDuringLook.contains(provider.rawValue) {
+                Self.log.notice("network block on \(provider.rawValue, privacy: .public) dropped: a call to it worked during the look")
+                return
+            }
+            self.networkBlock = NetworkBlock(provider: provider, firstSeen: self.now(), dismissed: false)
+            self.watcher?.stop()
+            let watcher = self.makeWatcher()
+            self.watcher = watcher
+            watcher.start(baseline: seen.path?.signature) { [weak self] in
+                Task { @MainActor in self?.clearNetworkBlock(because: "the network changed") }
+            }
+            Self.log.notice("network blocks \(provider.rawValue, privacy: .public): the internet answers, the provider does not")
+            self.refresh()
+            if self.presented?.condition == .networkBlocks { self.announce(.networkBlocks, provider: provider) }
+        }
+    }
+
+    /// Light the pill from the in-memory block, unless it was hidden or belongs to a
+    /// provider that is no longer the active one (switch provider and it goes).
+    private func presentNetworkBlockIfAny() {
+        guard let block = networkBlock else { return }
+        guard activeProvider() == block.provider else {
+            clearNetworkBlock(because: "the provider changed")
+            return
+        }
+        guard !block.dismissed else { return }
+        if let record = Self.load(from: defaults), record.provider == block.provider.rawValue { return }
+        let age = now().timeIntervalSince(block.firstSeen)
+        let stage: ProviderProblemStage = age < ProviderProblemRules.loudFor ? .loud
+            : age < ProviderProblemRules.settledFor ? .settled : .collapsed
+        presented = Presented(provider: block.provider, condition: .networkBlocks, stage: stage)
+    }
+
+    func clearNetworkBlock(because why: String) {
+        guard networkBlock != nil else { return }
+        Self.log.notice("network block cleared: \(why, privacy: .public)")
+        networkBlock = nil
+        watcher?.stop()
+        watcher = nil
+        refresh()
+    }
+
+    private func providerCallSucceeded(_ raw: String?) {
+        guard let raw else {
+            Self.log.notice("provider-call-succeeded cue with no provider: ignored")
+            return
+        }
+        if looking != nil { callsSucceededDuringLook.insert(raw) }
+        guard networkBlock?.provider.rawValue == raw else { return }
+        clearNetworkBlock(because: "a call to \(raw) worked")
     }
 
     // MARK: - Recording (called where a refusal is seen)
@@ -272,7 +431,11 @@ final class ProviderProblemModel: ObservableObject {
             log.notice("\(what, privacy: .public) refusal for \(provider.rawValue, privacy: .public) not recorded: the key was replaced after the call was made")
             return false
         }
-        LLMValidator.recordVerdict(provider: provider, key: key, status: condition.verdict.status)
+        guard let verdict = condition.verdict else {
+            log.notice("\(what, privacy: .public) is not an account refusal: not recorded here")
+            return false
+        }
+        LLMValidator.recordVerdict(provider: provider, key: key, status: verdict.status)
         let existing = load(from: defaults)
         let fingerprint = LLMValidator.keyFingerprint(key)
         let news = ProviderProblemRules.isNews(
@@ -309,6 +472,7 @@ final class ProviderProblemModel: ObservableObject {
         center: NotificationCenter = .default
     ) {
         guard provider.needsAPIKey else { return }
+        center.post(name: .bristlenoseProviderCallSucceeded, object: provider.rawValue)
         guard let key = keyFor(provider) else {
             // A run that worked proves any refusal on record stale, and clearing the
             // record needs no key. The verdict cannot be touched without one.
@@ -378,6 +542,7 @@ extension ProviderProblemCondition {
         switch self {
         case .keyRejected: return "Key rejected (error)"
         case .outOfCredit: return "Out of credit (warning)"
+        case .networkBlocks: return "Network blocks it (warning)"
         }
     }
 }

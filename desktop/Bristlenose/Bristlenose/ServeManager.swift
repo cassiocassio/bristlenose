@@ -1732,19 +1732,29 @@ final class ServeManager: ObservableObject {
     /// nothing to say it is still the key in force, so the refusal is dropped. Every drop is
     /// logged.
     func noteLLMRefusal(_ line: LLMRefusalLine) {
-        guard let condition = line.condition else {
-            log.notice("llm-refusal kind=\(line.kind, privacy: .public) not acted on")
-            return
-        }
         guard let provider = line.llmProvider else {
-            log.notice("llm-refusal \(condition.rawValue, privacy: .public) for a provider this build cannot read (\(line.provider, privacy: .public)): not recorded")
+            log.notice("llm-refusal \(line.kind, privacy: .public) for a provider this build cannot read (\(line.provider, privacy: .public)): not recorded")
             return
         }
         guard let fingerprint = instance.spawnedKeyFingerprints[provider.rawValue] else {
-            log.notice("llm-refusal \(condition.rawValue, privacy: .public) on \(provider.rawValue, privacy: .public): this sidecar was not given that provider's key: not recorded")
+            log.notice("llm-refusal \(line.kind, privacy: .public) on \(provider.rawValue, privacy: .public): this sidecar was not given that provider's key: not recorded")
             return
         }
-        llmRefusalRecorder(condition, provider, fingerprint)
+        if let condition = line.condition {
+            llmRefusalRecorder(condition, provider, fingerprint)
+        } else if line.isNetworkBlockCandidate {
+            // Not the account's doing, and perhaps this network's: ask once whether the
+            // internet works before saying so.
+            networkRefusalRecorder(provider)
+        } else {
+            log.notice("llm-refusal kind=\(line.kind, privacy: .public) not acted on")
+        }
+    }
+
+    /// Where a refusal that may be the network's goes. The default asks the pill's model
+    /// to look; a test substitutes its own so nothing touches the network.
+    var networkRefusalRecorder: (LLMProvider) -> Void = {
+        ProviderProblemModel.shared.noteNetworkRefusal(provider: $0)
     }
 
     func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {

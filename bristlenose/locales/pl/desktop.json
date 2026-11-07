@@ -1061,6 +1061,11 @@
       "pill": "{{provider}} · klucz odrzucony",
       "body": "Dodaj nowy klucz w Ustawieniach."
     },
+    "networkBlocks": {
+      "pill": "Sieć · brak połączenia z {{provider}}",
+      "title": "Ta sieć nie może połączyć się z {{provider}}.",
+      "body": "Spróbuj użyć innej sieci."
+    },
     "openSettings": "Otwórz Ustawienia…",
     "hide": "Ukryj powiadomienie {{provider}}",
     "hideTooltip": "Ukryj",

@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · Schlüssel abgelehnt",
       "body": "Fügen Sie in den Einstellungen einen neuen Schlüssel hinzu."
     },
+    "networkBlocks": {
+      "pill": "Netzwerk · {{provider}} nicht erreichbar",
+      "title": "Dieses Netzwerk kann {{provider}} nicht erreichen.",
+      "body": "Versuchen Sie es mit einem anderen Netzwerk."
+    },
     "openSettings": "Einstellungen öffnen…",
     "hide": "Hinweis zu {{provider}} ausblenden",
     "hideTooltip": "Ausblenden",

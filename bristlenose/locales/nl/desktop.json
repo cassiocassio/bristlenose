@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · sleutel geweigerd",
       "body": "Voeg een nieuwe sleutel toe in Instellingen."
     },
+    "networkBlocks": {
+      "pill": "Netwerk · {{provider}} onbereikbaar",
+      "title": "Dit netwerk kan {{provider}} niet bereiken.",
+      "body": "Probeer een ander netwerk."
+    },
     "openSettings": "Open Instellingen…",
     "hide": "Verberg de melding van {{provider}}",
     "hideTooltip": "Verberg",

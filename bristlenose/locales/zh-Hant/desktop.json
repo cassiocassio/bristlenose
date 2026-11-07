@@ -992,6 +992,11 @@
       "pill": "{{provider}} · 金鑰遭拒",
       "body": "請在「設定」中加入新的金鑰。"
     },
+    "networkBlocks": {
+      "pill": "網路 · 無法連線至 {{provider}}",
+      "title": "此網路無法連線至 {{provider}}。",
+      "body": "請嘗試其他網路。"
+    },
     "openSettings": "開啟「設定」⋯",
     "hide": "隱藏 {{provider}} 通知",
     "hideTooltip": "隱藏",

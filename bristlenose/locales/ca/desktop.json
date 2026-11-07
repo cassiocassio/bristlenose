@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · clau rebutjada",
       "body": "Afegeix una clau nova a Configuració."
     },
+    "networkBlocks": {
+      "pill": "Xarxa · no pot arribar a {{provider}}",
+      "title": "Aquesta xarxa no pot arribar a {{provider}}.",
+      "body": "Prova amb una altra xarxa."
+    },
     "openSettings": "Obre Configuració…",
     "hide": "Oculta l’avís de {{provider}}",
     "hideTooltip": "Oculta",

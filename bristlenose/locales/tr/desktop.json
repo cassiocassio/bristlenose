@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · anahtar reddedildi",
       "body": "Ayarlar'da yeni bir anahtar ekleyin."
     },
+    "networkBlocks": {
+      "pill": "Ağ · {{provider}} erişilemiyor",
+      "title": "Bu ağ {{provider}} hizmetine ulaşamıyor.",
+      "body": "Farklı bir ağ deneyin."
+    },
     "openSettings": "Ayarlar'ı Aç…",
     "hide": "{{provider}} bildirimini gizle",
     "hideTooltip": "Gizle",

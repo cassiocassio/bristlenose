@@ -310,6 +310,9 @@ extension Notification.Name {
     /// and re-reads. Distinct from `bristlenosePrefsChanged` so the pill can
     /// refresh WITHOUT triggering a serve restart.
     static let bristlenoseProviderProblemChanged = Notification.Name("bristlenoseProviderProblemChanged")
+    /// A call to a provider worked (`object` is the provider's raw value). A network block
+    /// on that provider was about a moment that has passed: it clears.
+    static let bristlenoseProviderCallSucceeded = Notification.Name("bristlenoseProviderCallSucceeded")
     /// Posted when feedback is requested but the SPA isn't mounted (the status
     /// page): the status-page bridge (`project-action: open-feedback`) and Help ▸
     /// Send Feedback's bridge-probe fallback both post this. ContentView owns the

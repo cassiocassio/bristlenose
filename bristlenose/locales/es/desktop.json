@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · clave rechazada",
       "body": "Añade una clave nueva en Ajustes."
     },
+    "networkBlocks": {
+      "pill": "Red · no llega a {{provider}}",
+      "title": "Esta red no puede conectar con {{provider}}.",
+      "body": "Prueba con otra red."
+    },
     "openSettings": "Abrir Ajustes…",
     "hide": "Ocultar el aviso de {{provider}}",
     "hideTooltip": "Ocultar",

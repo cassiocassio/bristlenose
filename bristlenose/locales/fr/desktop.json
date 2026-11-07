@@ -1015,6 +1015,11 @@
       "pill": "{{provider}} · clé refusée",
       "body": "Ajoutez une nouvelle clé dans Réglages."
     },
+    "networkBlocks": {
+      "pill": "Réseau · {{provider}} inaccessible",
+      "title": "Ce réseau ne peut pas joindre {{provider}}.",
+      "body": "Essayez un autre réseau."
+    },
     "openSettings": "Ouvrir les Réglages…",
     "hide": "Masquer l’avis {{provider}}",
     "hideTooltip": "Masquer",

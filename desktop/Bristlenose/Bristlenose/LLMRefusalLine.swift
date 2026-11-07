@@ -69,4 +69,12 @@ struct LLMRefusalLine: Equatable, Decodable, Sendable {
     }
 
     var llmProvider: LLMProvider? { LLMProvider(rawValue: provider) }
+
+    /// Worth asking "does the internet work?" about: the call may have been stopped by the
+    /// network and not the provider. The rules are `NetworkBlockCandidate`'s.
+    var isNetworkBlockCandidate: Bool {
+        guard let llmProvider else { return false }
+        return NetworkBlockCandidate.isCandidate(
+            provider: llmProvider, kind: kind, phase: phase, providerSignature: providerSignature)
+    }
 }

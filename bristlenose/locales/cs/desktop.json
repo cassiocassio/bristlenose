@@ -1060,6 +1060,11 @@
       "pill": "{{provider}} · klíč odmítnut",
       "body": "Přidejte nový klíč v Nastavení."
     },
+    "networkBlocks": {
+      "pill": "Síť · nelze se spojit s {{provider}}",
+      "title": "Tato síť se nemůže spojit s {{provider}}.",
+      "body": "Zkuste jinou síť."
+    },
     "openSettings": "Otevřít Nastavení…",
     "hide": "Skrýt oznámení {{provider}}",
     "hideTooltip": "Skrýt",

@@ -4,28 +4,34 @@ import Foundation
 // `ProviderProblemModel` holds the state and `ProviderProblemPill` draws it; the
 // argument for every rule here is `docs/mockups/provider-problem-surface.html`.
 
-/// What the pill can tell the researcher. Both are an *observed* refusal from
-/// the provider: it answered, and said no. Network failures are a different
-/// question (can we tell offline from blocked from an outage?) and are not here.
+/// What the pill can tell the researcher. `keyRejected` and `outOfCredit` are an
+/// *observed* refusal from the provider: it answered, and said no. They are about the
+/// account, are kept between launches and are held to the key's verdict.
+/// `networkBlocks` is a different kind of fact, about where the person is: the internet
+/// works and the provider could not be reached from here. It is never persisted, never a
+/// verdict, and clears when the network changes (`NetworkBlock.swift`, mockup section H).
 enum ProviderProblemCondition: String, Codable, Equatable, CaseIterable {
     case keyRejected
     case outOfCredit
+    case networkBlocks
 
     /// The glyph and tint come from the existing five-kind vocabulary; the words
     /// say which condition. No glyph of its own.
     var kind: MessageKind {
         switch self {
         case .keyRejected: return .error
-        case .outOfCredit: return .warning
+        case .outOfCredit, .networkBlocks: return .warning
         }
     }
 
     /// The cached verdict that stands for this condition. The pill is held to
-    /// it: when the verdict for the key no longer says this, the pill goes.
-    var verdict: LLMValidator.CachedVerdict {
+    /// it: when the verdict for the key no longer says this, the pill goes. Nil for
+    /// `networkBlocks`: a block says nothing about the key, so it has no verdict.
+    var verdict: LLMValidator.CachedVerdict? {
         switch self {
         case .keyRejected: return .invalid
         case .outOfCredit: return .outOfCredit
+        case .networkBlocks: return nil
         }
     }
 
@@ -163,7 +169,10 @@ enum ProviderProblemRules {
         if verdict == .ok, record.condition == .outOfCredit, !settingsCheckSeesCredit {
             return true
         }
-        return verdict == record.condition.verdict
+        // A record of a network block is never stored (it is held in memory and clears when
+        // the network changes); if one ever appears on disk it is not true of anything.
+        guard let expected = record.condition.verdict else { return false }
+        return verdict == expected
     }
 }
 
@@ -186,6 +195,7 @@ struct ProviderProblemPresentation: Equatable {
         switch condition {
         case .outOfCredit: return "desktop.outOfCredit.pill"
         case .keyRejected: return "desktop.providerProblem.keyRejected.pill"
+        case .networkBlocks: return "desktop.providerProblem.networkBlocks.pill"
         }
     }
 
@@ -193,6 +203,7 @@ struct ProviderProblemPresentation: Equatable {
         switch condition {
         case .outOfCredit: return "desktop.outOfCredit.title"
         case .keyRejected: return "desktop.pipeline.failure.auth"
+        case .networkBlocks: return "desktop.providerProblem.networkBlocks.title"
         }
     }
 
@@ -201,6 +212,7 @@ struct ProviderProblemPresentation: Equatable {
         switch condition {
         case .outOfCredit: return "desktop.outOfCredit.body"
         case .keyRejected: return "desktop.providerProblem.keyRejected.body"
+        case .networkBlocks: return "desktop.providerProblem.networkBlocks.body"
         }
     }
 
@@ -224,7 +236,7 @@ struct ProviderProblemPresentation: Equatable {
     var usesPrintfProviderFormat: Bool {
         switch condition {
         case .outOfCredit: return true
-        case .keyRejected: return false
+        case .keyRejected, .networkBlocks: return false
         }
     }
 
@@ -243,6 +255,7 @@ struct ProviderProblemPresentation: Equatable {
         switch condition {
         case .outOfCredit: return [.switchProvider, .addFunds]
         case .keyRejected: return [.openSettings]
+        case .networkBlocks: return [.switchProvider]
         }
     }
 }

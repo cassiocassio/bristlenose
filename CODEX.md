@@ -1,42 +1,23 @@
 # CODEX.md
 
-Working agreement for Codex ↔ Cassio collaboration on this repo.
+Codex starts at [`AGENTS.md`](AGENTS.md), which points at [`CLAUDE.md`](CLAUDE.md)
+for the conventions both harnesses share. There is no separate Codex rulebook:
+a rule that lives only here is a rule Claude never sees.
 
-## Purpose
+Branching is trunk by default: work on `main` in the shared checkout, and use a
+worktree only when two environments must be live at once (`AGENTS.md` §
+"Isolation is an exception with a complete lifecycle"). Do not add a
+per-feature worktree rule here.
 
-This file captures how we like to work together so each new session starts with the same expectations.
-Treat this as a living document: short, practical, and updated as we learn.
+Working style both harnesses follow:
 
-## Branching and Worktrees
+- Small, reviewable commits with clear intent; stage only the paths you own.
+- Working code plus tests over speculative refactors. Behaviour changes update
+  tests in the same commit.
+- Python changes: `ruff check .` and the relevant tests. Frontend changes: lint,
+  typecheck and Vitest.
+- Say risks and trade-offs plainly. Recommend one default when there is a choice.
+- Ask before anything destructive or broad.
 
-- Use feature branches in dedicated worktrees (`/Users/cassio/Code/bristlenose_branch <name>`).
-- Keep `/Users/cassio/Code/bristlenose` on `main`.
-- Keep branch setup/teardown aligned with `.claude/skills/new-feature` and `.claude/skills/close-branch`.
-- Update `docs/BRANCHES.md` when starting/closing branches.
-
-## Delivery Style
-
-- Prefer small, reviewable commits with clear intent.
-- Prioritize working code plus tests over large speculative refactors.
-- Call out risks and tradeoffs directly; avoid vague reassurance.
-- Keep momentum: implement, verify, summarize, suggest next step.
-
-## Quality Bar
-
-- For Python changes: run lint + relevant tests.
-- For frontend changes: run lint, typecheck, and Vitest.
-- CI should gate both backend and frontend regressions.
-- If behavior changes, add or update tests in the same branch.
-
-## Communication Preferences
-
-- Be concise and explicit.
-- Surface blockers quickly.
-- Ask before destructive or broad-impact actions.
-- When choices exist, recommend one default and explain why.
-
-## Evolving This File
-
-- Add concrete conventions, not philosophy.
-- Keep entries short and actionable.
-- If a rule stops helping, revise or delete it.
+Handoff rules (ownership, records, pickup) are in `CLAUDE.md` § Session-end
+housekeeping.

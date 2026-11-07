@@ -372,7 +372,7 @@ two privacy pages, terms.
 |---|---|---|
 | pip / pipx / uv | `[any-llm]` extra | The user adds it. Docs recommend pipx or uv, so Bristlenose's any-llm never shares an environment with the user's own |
 | Homebrew | carried | Owner, 23 Oct. Mac CLI users are the likeliest audience; the formula's `post_install` already pip-installs us |
-| Snap, Fedora Copr | carried (4 Nov 2026) | Revisited on request, once 1.44.0 lifted the `anthropic<1` cap. Eight pure-Python wheels, 2.7 MB, resolved for cp314/x86_64 (Copr) and cp312 (snap). The file-only key store was already true of every provider in the snap. Mistral, OpenRouter and DeepSeek only: neither can add another inner provider's SDK, and says so |
+| Snap, Fedora Copr | carried (4 Nov 2026) | Revisited on request and accepted: the confinement point already held for every provider in the snap, and Copr's CVE cost is eight small wheels (`design-fedora-packaging.md` §7 item 6). Separately, 1.44.0 is the first release since 1.27.0 that lifted the `anthropic<1` cap, which is why the pin moved. Eight pure-Python wheels, 2.7 MB, resolved for cp314/x86_64 (Copr) and cp312 (snap). The file-only key store was already true of every provider in the snap. The Mistral SDK, plus providers that need no add-on (OpenRouter, DeepSeek and about 17 others on the openai SDK) work; neither package can add another inner provider's SDK, and says so |
 | Mac app bundle | not carried | v2 |
 
 Default inner set (owner, 23 Oct, revised the same day): **Mistral and

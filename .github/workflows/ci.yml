@@ -101,9 +101,12 @@ jobs:
           python-version-file: .tool-versions
           cache: pip
       - name: Install dependencies
+        # voice and any-llm ship in the Snap and the Fedora RPM, so they are
+        # ours to watch for CVEs (docs/design-fedora-packaging.md section 7).
+        # `serve` is an empty extra: this line used to audit neither.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,serve]"
+          pip install -e ".[dev,serve,voice,any-llm]"
       - name: Audit dependencies for known vulnerabilities
         continue-on-error: true
         run: |

@@ -23,7 +23,7 @@ Bristlenose uses [Weblate](https://hosted.weblate.org/projects/bristlenose/) for
 
 ## Windows port
 
-Bristlenose ships on macOS and Linux today. A Windows CLI port (distributed via [Scoop](https://scoop.sh/)) is parked but costed — it's a ~1.5–2 week piece of work for a contributor familiar with Python on Windows, and the maintainer would happily review and merge it. See [docs/design-windows-port.md](docs/design-windows-port.md) for the sketch (components, decisions, step-by-step). Open an issue first to coordinate.
+Bristlenose runs on Windows from the command line. A one-line PowerShell installer (`irm https://bristlenose.app/install.ps1 | iex`, since 0.36.0) installs uv, FFmpeg and Bristlenose for the user, and CI has a Windows leg. A winget package is submitted and followed as a release channel. Still open, and welcome from a contributor who knows Python on Windows: a Windows credential store (keys fall back to a config file today), a click-through installer, and testing on client machines. See [docs/design-windows-port.md](docs/design-windows-port.md) and [docs/design-winget.md](docs/design-winget.md); open an issue first to coordinate.
 
 A Windows-native GUI app is a separate, much larger project and is not on the roadmap.
 
@@ -36,7 +36,7 @@ A Windows-native GUI app is a separate, much larger project and is not on the ro
 
 ## Using an AI coding agent
 
-Bristlenose's canonical context for coding agents lives in `CLAUDE.md` at the repo root, plus nested `CLAUDE.md` files under `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `frontend/`, and `desktop/`. Claude Code auto-loads these. If you use a different agent (Cursor, Windsurf, Copilot, Codex, Zed, etc.), point it at these files — they're the source of truth for conventions, architecture, and the design-system token rules, regardless of which tool you use.
+Bristlenose's canonical context for coding agents lives in `CLAUDE.md` at the repo root, plus nested `CLAUDE.md` files under `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `frontend/`, and `desktop/`. Claude Code auto-loads these. Codex and other agents start at `AGENTS.md`, which points at the same files; the two share one set of rules. If you use something else (Cursor, Windsurf, Copilot, Zed, etc.), point it at `AGENTS.md` — the files it names are the source of truth for conventions, architecture, and the design-system token rules, whichever tool you use.
 
 ## How it all fits together
 
@@ -56,14 +56,14 @@ the layout below.
 
 ```
 bristlenose/          # main package
-  cli.py              # Typer CLI (run, transcribe, analyze, render, serve, status, doctor)
+  cli.py              # Typer CLI (run, transcribe, analyze, serve, status, use, configure, doctor, codebooks, pipeline, help)
   config.py           # Pydantic settings (env vars, .env)
-  doctor.py           # Doctor check logic (7 checks, run_all, run_preflight)
+  doctor.py           # Doctor check logic (run_all, run_preflight)
   doctor_fixes.py     # Install-method-aware fix instructions
   models.py           # Pydantic data models (quotes, themes, enums)
-  pipeline.py         # orchestrator (full run, transcribe-only, analyze-only, render-only)
+  pipeline.py         # orchestrator (full run, transcribe-only, analyze-only)
   stages/             # 12-stage pipeline (ingest → render)
-    render/           # HTML report renderer package (Jinja2 templates + CSS from theme/, embeds JS)
+    s12_render/       # static HTML renderer: deprecated sealed byproduct (Jinja2 templates + CSS from theme/, embeds JS)
   llm/
     prompts.py        # LLM prompt templates
     structured.py     # Pydantic schemas for LLM structured output
@@ -77,17 +77,17 @@ bristlenose/          # main package
     molecules/
     organisms/
     templates/        # Jinja2 HTML templates + CSS page layouts
-      *.html          # 13 component templates (quote card, toolbar, etc.)
+      *.html          # component templates (quote card, toolbar, etc.)
       *.css           # page-level CSS (report, transcript, print)
-    js/               # 20 JS modules (frozen in serve mode — active for static render)
+    js/               # vanilla JS modules (frozen; data-integrity fixes only) — list in MODULES.md
     index.css         # documents concatenation order
   utils/
     hardware.py       # GPU/CPU detection
 frontend/             # React + TypeScript SPA — see "Frontend" section below
   src/
-    components/       # 31 reusable React components
-    islands/          # 14 island components (self-contained features)
-    pages/            # 8 page wrappers (thin route → island glue)
+    components/       # reusable React components
+    islands/          # island components (self-contained features)
+    pages/            # page wrappers (thin route → island glue)
     layouts/          # AppLayout (NavBar + Outlet)
     hooks/            # useScrollToAnchor, useAppNavigate, useProjectId, useDropdown
     shims/            # Backward-compat window.* navigation shims
@@ -96,7 +96,7 @@ frontend/             # React + TypeScript SPA — see "Frontend" section below
   package.json        # dependencies (React, React Router, Vitest)
 desktop/              # SwiftUI macOS shell (PyInstaller sidecar)
 snap/
-  snapcraft.yaml      # Snap recipe (classic confinement, core24 base)
+  snapcraft.yaml      # Snap recipe (strict confinement, core24 base)
 tests/
 pyproject.toml        # package metadata, deps, tool config (hatchling build)
 ```
@@ -140,13 +140,13 @@ theme/
     report_header.html        #    Jinja2: header with logo and meta
     footer.html               #    Jinja2: report footer
     sentiment_chart.html      #    Jinja2: sentiment histogram
-    ...                       #    (13 templates total)
+    ...                       #    (and others)
   index.css                   # human-readable index (not used by code)
 ```
 
 ### How it works
 
-**CSS:** `render/theme_assets.py` defines a `_THEME_FILES` list that specifies the exact concatenation order. The function `_load_default_css()` reads each file, wraps it with a section comment, and joins them into one string. This is cached once per process, then written to `bristlenose-theme.css` in the output directory on every run (always overwritten -- user state like favourites and tags lives in localStorage, not CSS).
+**CSS:** `stages/s12_render/theme_assets.py` defines a `_THEME_FILES` list that specifies the exact concatenation order. The function `_load_default_css()` reads each file, wraps it with a section comment, and joins them into one string. This is cached once per process, then written to `bristlenose-theme.css` in the output directory on every run (always overwritten -- user state like favourites and tags lives in localStorage, not CSS).
 
 **HTML templates:** Report components are Jinja2 templates in `theme/templates/`. Each template receives a context dict from the render submodules and renders a self-contained HTML fragment (quote card, toolbar, sentiment chart, etc.). `render/theme_assets.py` loads the Jinja2 environment once, then calls `template.render(context)` for each component. The Jinja2 templates live alongside the CSS templates in the same directory -- `.html` files are Jinja2, `.css` files are page-level stylesheets.
 
@@ -231,7 +231,7 @@ The interactive serve-mode experience is a React + TypeScript SPA in `frontend/`
 cd frontend
 npm install           # install dependencies
 npm run dev           # Vite dev server (proxies API to FastAPI on :8484)
-npm test              # Vitest (635 tests)
+npm test              # Vitest (3,000+ tests)
 npm run build         # tsc type-check + Vite production build → dist/
 ```
 
@@ -254,17 +254,16 @@ Day-to-day development just means committing and pushing to `main`. CI runs auto
 ### Quick release
 
 ```bash
-# 1. Bump the version in bristlenose/__init__.py
-# 2. Add a changelog entry in CHANGELOG.md and README.md
+./scripts/bump-version.py minor       # or patch, or X.Y.Z: updates __init__.py, the man page and the pbxproj; does not commit or tag
+# Add the entry to CHANGELOG.md and README.md
 #    Format: **X.Y.Z** — _D Mon YYYY_  (e.g. **0.8.1** — _7 Feb 2026_)
-# 3. Commit, tag, and push:
-git add bristlenose/__init__.py README.md
+# and update the version lines in CLAUDE.md "Current status", then commit:
 git commit -m "vX.Y.Z"
-git tag vX.Y.Z
+git tag vX.Y.Z                        # after the commit, so it points at it
 git push origin main
-git push origin vX.Y.Z   # two pushes, never one --tags
+git push origin vX.Y.Z                # two pushes, never one --tags
 ```
 
-GitHub Actions handles the rest: CI → then the publish job waits for the maintainer's approval on the run page → PyPI publish → GitHub Release → Homebrew tap update. The snap workflow also triggers: edge on push to main, stable on tags.
+A feature bumps the minor, a fix the patch. The tag push is what publishes (there is no approval step), and it waits for after 9pm London on a working day. GitHub Actions then runs CI with the strict macOS suite → build → PyPI publish → GitHub Release, Homebrew tap update and the Fedora Copr build. The Snap is published by hand (`workflow_dispatch`: `--ref main` for edge). The maintainer's `scripts/release.sh` runs the whole chain, including the Mac uploads.
 
 For the full release pipeline details, cross-repo topology, secrets, Homebrew tap automation, and Snap Store setup, see [`docs/release.md`](docs/release.md).

@@ -132,8 +132,9 @@ def installed_version() -> str | None:
 def enable_unified_exceptions() -> None:
     """Ask any-llm for its typed errors in this process only.
 
-    any-llm 1.27 converts provider errors into its own types only when this
-    variable is set; otherwise it re-raises each SDK's own exception. Set in
+    any-llm converts provider errors into its own types only when this
+    variable is set (read in 1.27, and still so in 1.44); otherwise it re-raises
+    each SDK's own exception. Set in
     Bristlenose's process, never the user's shell. (From 1.29 the same switch is
     a ``create`` argument; the variable still works.)
     """
@@ -359,7 +360,7 @@ def destination(inner: str) -> str:
     """Where transcripts go, as a researcher reads it.
 
     The host the request will reach, from :func:`api_base`; a class with no
-    default host and no override (Mistral, in 1.27) is named by its product
+    default host and no override (Mistral, in 1.27 and 1.44) is named by its product
     name. Never a table we keep.
     """
     base, var = api_base(inner)
@@ -381,11 +382,16 @@ def insecure_base(inner: str) -> bool:
     return parsed.scheme == "http" and (parsed.hostname or "") not in local
 
 
+#: Inner providers the Snap and the Fedora package carry working.
+PACKAGED_INNERS = ("mistral", "openrouter", "deepseek")
+
+
 def packaged() -> bool:
     """True in the Snap or the Fedora package.
 
-    They carry any-llm with Mistral and OpenRouter (DeepSeek rides on the openai
-    SDK), but their Python is read-only (the snap) or has no pip (the RPM's
+    They carry any-llm with the Mistral SDK, and the providers that need no SDK
+    of their own (OpenRouter, DeepSeek and others) work on the openai SDK they
+    already ship. Their Python is read-only (the snap) or has no pip (the RPM's
     venv), so the pip command ``inject_hint`` would print for any other inner
     provider's SDK can't work there.
     """
@@ -496,10 +502,19 @@ def explain(ready: Readiness) -> list[str]:
         return [line, "Providers: https://mozilla-ai.github.io/any-llm/providers/"]
     if ready.status == "sdk-missing":
         if packaged():
+            if inner in PACKAGED_INNERS:
+                # The build self-tests keep this state out of a shipped package;
+                # if it happens anyway, the package is damaged, not the user.
+                return [
+                    f"{name} should be part of this package but won't load.",
+                    "This package looks damaged. Reinstall it, and report it if "
+                    "that doesn't help.",
+                ]
             return [
                 f"{name} needs an add-on this package doesn't include.",
-                "This package carries Mistral, OpenRouter and DeepSeek. For "
-                f"{name}, install Bristlenose with pipx, uv or pip instead.",
+                "This package carries the Mistral SDK and the providers that need "
+                f"no add-on. For {name}, install Bristlenose with pipx, uv or pip "
+                "instead.",
             ]
         return [
             f"{name} needs an add-on this install doesn't have.",

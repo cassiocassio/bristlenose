@@ -233,14 +233,7 @@ def _classify_network_error(exc: BaseException) -> ValidationResult | None:
     provider errors so a researcher behind a TLS-terminating proxy gets an
     actionable IT message rather than ``"Provider says: ..."``.
     """
-    # Imported lazily — these are stdlib + a Bristlenose dep, but doing it
-    # here keeps the validator helpers self-contained.
     import ssl
-
-    try:
-        import httpx
-    except ImportError:
-        httpx = None  # type: ignore[assignment]
 
     if isinstance(exc, ssl.SSLError):
         return ValidationResult(
@@ -251,13 +244,17 @@ def _classify_network_error(exc: BaseException) -> ValidationResult | None:
                 "contact IT. Underlying: " + str(exc)
             ),
         )
-    if httpx is not None and isinstance(exc, httpx.ProxyError):
+    # By name, not isinstance: the SDKs raise these from httpx or from httpx2
+    # (google-genai 3.0's default, pydantic's fork), unrelated classes of one
+    # name, as ``anyllm.is_network_error`` and ``refusal_report`` already read them.
+    name = type(exc).__name__
+    if name == "ProxyError":
         return ValidationResult(
             ok=False,
             error_class="network",
             raw_message="HTTPS proxy refused the connection: " + str(exc),
         )
-    if httpx is not None and isinstance(exc, httpx.ConnectError):
+    if name == "ConnectError":
         return ValidationResult(
             ok=False,
             error_class="network",

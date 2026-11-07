@@ -514,6 +514,19 @@ class TestValidateGoogle:
         assert not result.ok
         assert result.error_class == "invalid_key"
 
+    def test_connection_refused_through_httpx2_maps_to_network(self, monkeypatch):
+        # google-genai 3.0.0 sends through httpx2, pydantic's fork of httpx: a
+        # refused connection arrives as a class of the same name that is not
+        # httpx's. Matched by name, as the run's classifiers do; matched by
+        # isinstance, an offline Gemini key check read as an unknown error.
+        class ConnectError(Exception):
+            pass
+
+        self._patched_client(monkeypatch, ConnectError("[Errno 61] Connection refused"))
+        result = _validate_google("g-key", "gemini-2.5-pro")
+        assert not result.ok
+        assert result.error_class == "network"
+
     def test_api_key_invalid_detail_maps_to_invalid_key(self, monkeypatch):
         # Some failures surface as INVALID_ARGUMENT (400) but carry an
         # API_KEY_INVALID reason in details — still invalid_key.

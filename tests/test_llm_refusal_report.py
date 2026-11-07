@@ -70,6 +70,31 @@ def test_the_same_refusal_is_said_once_in_the_window(lines):
     assert len(lines) == 2
 
 
+def test_our_own_errors_say_nothing(lines):
+    # A reply that did not validate, a truncation: no status, not transport. Judged by their
+    # text they could mark a good key bad on a participant's words.
+    report_refusal("anthropic", ValueError("api key not valid, said the participant"))
+    assert lines == []
+
+
+def test_a_failed_write_does_not_mute_the_next_try():
+    calls = []
+
+    def flaky(line):
+        calls.append(line)
+        if len(calls) == 1:
+            raise BrokenPipeError
+
+    set_refusal_sink(flaky)
+    try:
+        exc = _ReplyError(401, {"type": "error", "error": {"type": "authentication_error"}})
+        report_refusal("anthropic", exc)
+        report_refusal("anthropic", exc)
+    finally:
+        set_refusal_sink(None)
+    assert len(calls) == 2
+
+
 def test_a_dropped_connection_is_network_with_no_status(lines):
     report_refusal("openai", httpx.ConnectError("boom"))
     p = _parse(lines[0])
@@ -121,7 +146,6 @@ def test_analyze_reports_from_its_one_failure_path(lines, monkeypatch):
     with pytest.raises(_ReplyError):
         asyncio.run(client.analyze("s", "u", M))
     assert _parse(lines[0])["kind"] == "invalid_key"
-    assert refusal_report._sink is not None
 
 
 class TestServeRegistersTheSink:

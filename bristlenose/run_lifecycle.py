@@ -868,9 +868,11 @@ def _build_cause(
         # structured fact the host can use to tell a reply from a dropped call (no caller
         # passed one, so ``code`` was always empty). Only at an LLM call site, where a
         # status attribute is the SDK's own.
-        from bristlenose.llm.failure_classifier import _extract_status
-
-        http_status = _extract_status(exc)
+        resp_status = getattr(getattr(exc, "response", None), "status_code", None)
+        for candidate in (getattr(exc, "status_code", None), resp_status):
+            if isinstance(candidate, int):
+                http_status = candidate
+                break
     return Cause(
         category=category,
         stage=stage,

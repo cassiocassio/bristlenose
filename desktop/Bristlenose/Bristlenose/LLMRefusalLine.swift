@@ -19,6 +19,11 @@ struct LLMRefusalLine: Equatable, Decodable, Sendable {
     /// The writer caps a line well under this; a longer one is not ours.
     static let maxBytes = 2048
 
+    /// The writer's schema version. Only 1 is understood: a line from a later schema is
+    /// consumed and logged, never acted on as if it were this one.
+    static let understoodVersion = 1
+
+    let v: Int?
     let kind: String
     let provider: String
     let httpStatus: Int?
@@ -26,16 +31,34 @@ struct LLMRefusalLine: Equatable, Decodable, Sendable {
     let providerSignature: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case kind, provider, phase
+        case v, kind, provider, phase
         case httpStatus = "http_status"
         case providerSignature = "provider_signature"
     }
 
+    /// What a line is. A line that begins with the prefix is ours even when it cannot be
+    /// read, and must never reach the output the boot pane and the exit-error read: so
+    /// `malformed` is consumed and logged by the caller, not passed on.
+    enum Disposition: Equatable {
+        case notOurs
+        case refusal(LLMRefusalLine)
+        case malformed
+    }
+
+    static func disposition(of line: String) -> Disposition {
+        guard line.hasPrefix(prefix) else { return .notOurs }
+        guard line.utf8.count <= maxBytes,
+              let data = String(line.dropFirst(prefix.count)).data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(Self.self, from: data),
+              decoded.v == nil || decoded.v == understoodVersion
+        else { return .malformed }
+        return .refusal(decoded)
+    }
+
+    /// The parsed refusal, or nil for a line that is not one (or is unreadable).
     static func fromLine(_ line: String) -> Self? {
-        guard line.hasPrefix(prefix), line.utf8.count <= maxBytes,
-              let data = String(line.dropFirst(prefix.count)).data(using: .utf8)
-        else { return nil }
-        return try? JSONDecoder().decode(Self.self, from: data)
+        if case .refusal(let r) = disposition(of: line) { return r }
+        return nil
     }
 
     /// What the pill can act on today: no credit, or a rejected key, from the

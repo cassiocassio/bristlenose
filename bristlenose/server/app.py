@@ -314,9 +314,21 @@ def create_app(
         # Tell the host when a call this sidecar makes on its own is refused (a signal
         # refresh, the re-apply after a run): nothing else carries it there. Registered
         # only here, so a run subprocess and a CLI serve print nothing.
+        import sys
+        import threading
+
         from bristlenose.llm.refusal_report import set_refusal_sink
 
-        set_refusal_sink(lambda line: print(line, flush=True))
+        _refusal_lock = threading.Lock()
+
+        def _say_refusal(line: str) -> None:
+            # One write under a lock: print() writes the text and the newline apart, and
+            # concurrent batches could fuse two lines into one the host cannot read.
+            with _refusal_lock:
+                sys.stdout.write(line + "\n")
+                sys.stdout.flush()
+
+        set_refusal_sink(_say_refusal)
 
     # Cache-Control: no-store on /api/projects/* — defence-in-depth for the
     # desktop multi-project switch. WKWebView is torn down on project change

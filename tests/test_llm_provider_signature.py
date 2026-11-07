@@ -45,11 +45,11 @@ class TestGate:
         assert classify_llm_failure(
             "anthropic", status=502, provider_signature=sig) is LLMFailureKind.SERVER_ERROR
 
-    def test_an_unsigned_reply_still_reads_the_providers_own_words(self):
-        # A rule that reads the provider's code or message is not a status guess.
+    def test_an_unsigned_reply_is_unknown_even_if_its_text_quotes_the_provider(self):
+        # A proxy page that says "credit balance is too low" is still the proxy's.
         assert classify_llm_failure(
             "anthropic", status=400, message="Your credit balance is too low",
-            provider_signature=False) is LLMFailureKind.OUT_OF_CREDIT
+            provider_signature=False) is LLMFailureKind.UNKNOWN
 
     def test_a_bare_message_only_401_is_unchanged(self):
         # test_llm_failure_classifier pins Azure this way: no body, so no signature.
@@ -105,9 +105,54 @@ class TestBuildCauseCarriesTheStatus:
         exc = _ReplyError(429, {"error": {"type": "rate_limit_error"}})
         assert _build_cause(exc, stage="topic_segmentation", provider="anthropic").code == "429"
 
-    def test_no_status_no_code(self):
+    def test_a_non_http_exception_with_an_int_code_attribute_is_not_a_status(self):
         from bristlenose.run_lifecycle import _build_cause
 
-        cause = _build_cause(httpx.ConnectError("x"), stage="s", provider="anthropic")
-        assert cause.code is None
-        assert cause.category.value == "network"
+        class _OsError(Exception):
+            code = 2
+
+        assert _build_cause(_OsError("x"), stage="s", provider="anthropic").code is None
+
+
+class TestRealSdkExceptions:
+    """Exceptions built by the SDKs themselves, not by a fake with the attributes we expect."""
+
+    def _err(self, mod, status, **kw):
+        import anthropic
+        import openai
+
+        client = anthropic.AsyncAnthropic(api_key="x") if mod == "anthropic" \
+            else openai.AsyncOpenAI(api_key="x")
+        req = httpx.Request("POST", "https://example.invalid/v1")
+        return client._make_status_error_from_response(httpx.Response(status, request=req, **kw))
+
+    @pytest.mark.parametrize("mod", ["anthropic", "openai"])
+    @pytest.mark.parametrize("status", [401, 403, 502])
+    def test_an_html_block_page_is_unknown_and_unsigned(self, mod, status):
+        exc = self._err(mod, status, headers={"content-type": "text/html"},
+                        text="<html><body>Blocked by proxy</body></html>")
+        assert classify_fields(mod, exc) is LLMFailureKind.UNKNOWN
+        assert extract_provider_signature(exc, status) is False
+
+    def test_openais_own_401_is_still_a_rejected_key(self):
+        exc = self._err("openai", 401, json={"error": {
+            "message": "Incorrect API key provided", "type": "invalid_request_error",
+            "code": "invalid_api_key"}})
+        assert classify_fields("openai", exc) is LLMFailureKind.INVALID_KEY
+        assert extract_provider_signature(exc, 401) is True
+
+    @pytest.mark.parametrize("provider,status,kind", [
+        ("openai", 401, LLMFailureKind.INVALID_KEY),
+        ("local", 500, LLMFailureKind.SERVER_ERROR),
+    ])
+    def test_a_reply_whose_error_is_a_bare_string_is_not_called_someone_elses(
+            self, provider, status, kind):
+        # The openai SDK unwraps {"error": "text"} to the str "text"; that is the server's reply.
+        exc = self._err("openai", status, json={"error": "Invalid token"})
+        assert classify_fields(provider, exc) is kind
+
+    def test_a_json_proxy_body_without_the_providers_shape_is_not_a_signature(self):
+        exc = self._err("anthropic", 403, json={"message": "Forbidden"})
+        assert extract_provider_signature(exc, 403) is not True
+        exc = self._err("openai", 403, json={"code": 403})
+        assert extract_provider_signature(exc, 403) is not True

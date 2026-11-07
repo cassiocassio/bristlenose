@@ -99,20 +99,30 @@ def build_payload(provider: str, exc: BaseException) -> dict[str, object]:
 
 
 def report_refusal(provider: str, exc: BaseException) -> None:
-    """Print the refusal line if a sink is registered. Never raises."""
+    """Print the refusal line if a sink is registered. Never raises.
+
+    Said only when the provider or the transport answered: an HTTP status, or a call that
+    never got one (a dropped connection). Our own errors (a reply that did not validate,
+    a truncation, a content filter) carry neither, and classifying them by their text could
+    mark a good key bad on a participant's words. any-llm hides its status inside a wrapper
+    the classifier unwraps, so it is judged by its kind instead.
+    """
     if _sink is None:
         return
     try:
         payload = build_payload(provider, exc)
-        key = (provider, str(payload["kind"]))
+        kind = str(payload["kind"])
+        if payload["http_status"] is None and kind != "network" and provider != "anyllm":
+            return
+        key = (provider, kind)
         now = time.monotonic()
         if now - _last.get(key, -1e9) < _REPEAT_WINDOW_S:
             return
-        _last[key] = now
         line = LINE_PREFIX + json.dumps(payload, separators=(",", ":"))
         if len(line.encode()) > _MAX_LINE_BYTES:
             payload.pop("error_class", None)
             line = LINE_PREFIX + json.dumps(payload, separators=(",", ":"))
         _sink(line)
+        _last[key] = now  # only once it was said: a failed write must not mute the next try
     except Exception:
-        logger.debug("llm refusal report failed", exc_info=True)
+        logger.warning("llm refusal report failed", exc_info=True)

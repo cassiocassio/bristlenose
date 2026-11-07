@@ -19,16 +19,35 @@ import Testing
 
     @Test func anUnknownKindOrPhaseDegradesInsteadOfDroppingTheLine() throws {
         let r = try #require(LLMRefusalLine.fromLine(line(
-            #"{"v":9,"kind":"something_new","provider":"anthropic","phase":"warp","future_field":1}"#)))
+            #"{"v":1,"kind":"something_new","provider":"anthropic","phase":"warp","future_field":1}"#)))
         #expect(r.condition == nil, "not acted on, but still read")
     }
 
-    @Test func aLineThatIsNotOursIsNotRead() {
-        #expect(LLMRefusalLine.fromLine("[bristlenose] auth-token: abc") == nil)
-        #expect(LLMRefusalLine.fromLine(line("not json")) == nil)
-        #expect(LLMRefusalLine.fromLine(line(#"{"kind":"invalid_key"}"#)) == nil, "no provider")
+    @Test func aLineThatIsNotOursIsNotOurs() {
+        #expect(LLMRefusalLine.disposition(of: "[bristlenose] auth-token: abc") == .notOurs)
+        #expect(LLMRefusalLine.disposition(of: "Report: http://127.0.0.1:1/report/") == .notOurs)
+    }
+
+    @Test func aPrefixedLineThatCannotBeReadIsConsumedNotPassedOn() {
+        // Ours and unreadable is `malformed`, which the host drops and logs; it must never
+        // fall through to the output buffer.
+        #expect(LLMRefusalLine.disposition(of: line("not json")) == .malformed)
+        #expect(LLMRefusalLine.disposition(of: line(#"{"kind":"invalid_key"}"#)) == .malformed, "no provider")
+        #expect(LLMRefusalLine.disposition(of: line(#"{"kind":"invalid_key","provider":"anthropic","http_status":"401"}"#)) == .malformed, "a status that is a string")
         let long = line(#"{"kind":"invalid_key","provider":"anthropic","pad":""# + String(repeating: "x", count: 3000) + #""}"#)
-        #expect(LLMRefusalLine.fromLine(long) == nil, "longer than the writer ever sends")
+        #expect(LLMRefusalLine.disposition(of: long) == .malformed, "longer than the writer ever sends")
+        #expect(LLMRefusalLine.fromLine(line("not json")) == nil)
+    }
+
+    @Test func aLaterSchemaVersionIsNotActedOnAsIfItWereThisOne() {
+        #expect(LLMRefusalLine.disposition(of: line(#"{"v":2,"kind":"invalid_key","provider":"anthropic"}"#)) == .malformed)
+        #expect(LLMRefusalLine.fromLine(line(#"{"v":1,"kind":"invalid_key","provider":"anthropic"}"#)) != nil)
+    }
+
+    @Test func aRefusalLineIsNeverDisplayableOutput() {
+        let l = line(#"{"v":1,"kind":"invalid_key","provider":"anthropic"}"#)
+        #expect(ServeManager.displayableLine(l) == nil)
+        #expect(ServeManager.displayableLine("Report: http://127.0.0.1:1/report/") != nil)
     }
 
     @Test func aRateLimitAndAnOutageAreNotForThePill() throws {
@@ -81,6 +100,7 @@ import Testing
             "BRISTLENOSE_LLM_MODEL": "x",
         ])
         #expect(f.keys.sorted() == ["anthropic"])
+        #expect(f["anthropic"] == LLMValidator.keyFingerprint("a"))
         #expect(f["anthropic"] != "a", "a hash, never the key")
     }
 }

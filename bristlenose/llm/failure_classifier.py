@@ -83,11 +83,6 @@ class _Rule:
         if self.message is not None:
             object.__setattr__(self, "_msg_re", re.compile(self.message, re.IGNORECASE))
 
-    @property
-    def status_only(self) -> bool:
-        """True for a rule that reads the HTTP status and nothing the provider said."""
-        return self._code_re is None and self._msg_re is None
-
     def matches(
         self, provider: str | None, status: int | None, code: str | None, message: str | None
     ) -> bool:
@@ -219,10 +214,9 @@ def classify_llm_failure(
     (its JSON error shape), ``False`` (positive evidence it was something else, such
     as an HTML block page from a proxy), or ``None`` (not known: today's behaviour,
     and the answer for any-llm, for an exception with no body, and for a log written
-    before the field existed). When it is ``False`` a rule that reads only the HTTP
-    status is skipped, so a proxy's 403 is not "your key was rejected" and its 502 is
-    not "Claude is unavailable". A rule that reads the provider's own code or message
-    still applies.
+    before the field existed). When it is ``False`` the answer is ``UNKNOWN``: a proxy's
+    403 is not "your key was rejected", its 502 is not "Claude is unavailable", and a page
+    that quotes "rate limit" is not a rate limit.
 
     ``provider`` is the internal slug (``anthropic`` / ``openai`` / ``azure`` /
     ``google``); ``None`` runs the rules provider-agnostically (best-effort,
@@ -232,9 +226,11 @@ def classify_llm_failure(
     ``details[].reason``). Returns :attr:`LLMFailureKind.UNKNOWN` if nothing
     matches.
     """
+    if provider_signature is False:
+        # Positive evidence the reply was someone else's (a proxy's page): its status
+        # and its words are the proxy's, so nothing here says anything about the provider.
+        return LLMFailureKind.UNKNOWN
     for rule in _RULES:
-        if provider_signature is False and rule.status_only:
-            continue
         if rule.matches(provider, status, error_code, message):
             return rule.kind
     return LLMFailureKind.UNKNOWN
@@ -271,7 +267,7 @@ def classify_fields(provider: str | None, exc: BaseException) -> LLMFailureKind:
         message=message,
         provider_signature=extract_provider_signature(exc, status),
     )
-    if kind is LLMFailureKind.UNKNOWN and status is None:
+    if kind is LLMFailureKind.UNKNOWN and status is None and provider != _LOCAL:
         # No reply at all: the call never reached the provider's server. Decided by the
         # transport class down the exception chain, never by the words (an SDK's text
         # for a dropped connection varies); a reply with a status is not this.
@@ -285,11 +281,14 @@ def classify_fields(provider: str | None, exc: BaseException) -> LLMFailureKind:
 def extract_provider_signature(exc: BaseException, status: int | None = None) -> bool | None:
     """Whether the reply behind ``exc`` was the provider's own.
 
-    ``True`` when the body is the provider's JSON error shape (a mapping with an
-    ``error`` object, or the Anthropic ``{"type": "error"}`` envelope). ``False`` only
-    on positive evidence of another sender: the reply is HTML, or its body is text that
-    is not JSON. ``None`` otherwise. A ``request-id`` header alone is deliberately not
-    a signature: proxies and gateways add and forward it.
+    ``True`` when the body is the provider's JSON error shape: the Anthropic
+    ``{"type": "error"}`` envelope, a mapping with an ``error`` object, or the inner error
+    object the OpenAI SDK hands over (a string ``type`` and a string ``message``). ``False``
+    only on positive evidence of another sender: an HTML content type, or a body that is
+    HTML. ``None`` otherwise, which keeps today's behaviour. A ``request-id`` header alone
+    is deliberately not a signature (proxies and gateways add and forward it), and a body's
+    Python type is not evidence either: the OpenAI SDK unwraps ``{"error": "text"}`` to a
+    bare string, and that is the provider's reply.
     """
     if status is None:
         return None
@@ -298,8 +297,8 @@ def extract_provider_signature(exc: BaseException, status: int | None = None) ->
         err = body.get("error")
         if isinstance(err, dict) or body.get("type") == "error":
             return True
-        if any(k in body for k in ("code", "message", "type")):
-            return True  # an SDK that hands over the inner error object
+        if isinstance(body.get("type"), str) and isinstance(body.get("message"), str):
+            return True
     resp = getattr(exc, "response", None)
     headers = getattr(resp, "headers", None)
     ctype = ""
@@ -309,10 +308,8 @@ def extract_provider_signature(exc: BaseException, status: int | None = None) ->
         ctype = ""
     if "html" in ctype:
         return False
-    if isinstance(body, str) and body.strip():
-        s = body.lstrip()
-        if s[:1] in "<" or not s.startswith(("{", "[")):
-            return False
+    if isinstance(body, str) and body.lstrip()[:1] == "<":
+        return False
     return None
 
 

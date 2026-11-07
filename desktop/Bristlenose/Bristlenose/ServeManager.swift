@@ -723,6 +723,7 @@ final class ServeManager: ObservableObject {
         // external server was not spawned by us, so it stays false.
         instance.spawnedReadsScreens = false
         instance.spawnedEnvFingerprint = nil
+        instance.spawnedKeyFingerprints = [:]
         // The old sidecar's handshake names an instance that is going away;
         // remove it now so the proxy reports honestly during the boot gap.
         // The new one is written when this serve reaches .running and its
@@ -1711,6 +1712,9 @@ final class ServeManager: ObservableObject {
     /// `redactKeys` matches provider keys only — not the bearer.
     static func displayableLine(_ clean: String) -> String? {
         if clean.hasPrefix(authTokenLinePrefix) { return nil }
+        // Never output: a parked sidecar's refusal line is buffered by this path, and a warm
+        // re-point would then hand it to the exit-error and stderr readers.
+        if clean.hasPrefix(LLMRefusalLine.prefix) { return nil }
         return BristlenoseShared.redactKeys(in: clean)
     }
 
@@ -1738,7 +1742,7 @@ final class ServeManager: ObservableObject {
     /// logged.
     func noteLLMRefusal(_ line: LLMRefusalLine) {
         guard let condition = line.condition else {
-            log.info("llm-refusal kind=\(line.kind, privacy: .public) not acted on")
+            log.notice("llm-refusal kind=\(line.kind, privacy: .public) not acted on")
             return
         }
         guard let provider = line.llmProvider else {
@@ -1780,9 +1784,16 @@ final class ServeManager: ObservableObject {
 
         // An LLM call this sidecar made was refused. Taken before anything can publish the
         // line: it is not output for the boot pane or an exit error.
-        if let refusal = LLMRefusalLine.fromLine(clean) {
+        switch LLMRefusalLine.disposition(of: clean) {
+        case .refusal(let refusal):
             noteLLMRefusal(refusal)
             return
+        case .malformed:
+            // Ours and unreadable: consumed, and said, so a schema drift is not a dead pill.
+            log.error("llm-refusal line could not be read (\(clean.utf8.count, privacy: .public) bytes): dropped")
+            return
+        case .notOurs:
+            break
         }
 
         if let refusal = StudyStartupRefusal.fromLine(clean) {

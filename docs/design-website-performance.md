@@ -77,7 +77,7 @@ it under "Network dependency tree" as 320 ms of LCP exposure on mobile.
 ## Finding 2: 17 MB of PNG screenshots (both form factors)
 
 **Measured.** The eighteen feature screenshots under `/assets/shots/` are
-2,578 × 1,910 and similar, RGBA PNG, 17.3 MB in total. PSI's "Improve image
+2,578 × 1,910 and similar, RGBA PNG, 17.8 MB in total (17,341 KiB). PSI's "Improve image
 delivery" puts the page's savings at 7,647 KiB on desktop and the images make
 up 8.2 MB of the 10.8 MB total page weight. The `loading="lazy"` on each `<img>`
 and the `data-src` deferral in the carousels already keep most of them out of
@@ -236,7 +236,7 @@ In the order they pay back:
    `substackcdn.com` preconnect. One commit. Expect desktop TBT to fall to under
    100 ms and the score to the mid-90s.
 2. Convert `assets/shots/*.png` to WebP at the current pixel size and repoint
-   `src`/`data-src`. About 15.6 MB off the full-page weight. Look at
+   `src`/`data-src`. About 16 MB off the full-page weight. Look at
    `signals.png` (alpha) and one dense shot at 2× before committing all
    eighteen.
 3. Contrast, `<main>`, heading order, touch-target padding, favicon: a single

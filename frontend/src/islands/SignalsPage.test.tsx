@@ -248,6 +248,10 @@ beforeEach(() => {
   // Reset window globals
   (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = undefined;
   (window as unknown as Record<string, unknown>).BRISTLENOSE_API_BASE = "/api/projects/1";
+  // jsdom has no scrollIntoView, and the page scrolls to a focused card a frame after the
+  // focus lands: under load that frame fires before the test ends and was an uncaught
+  // TypeError (gotchas.md § Testing). `recordScrolls()` replaces this when a test asserts on it.
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => {
@@ -787,9 +791,14 @@ describe("SignalsPage", () => {
     });
     expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
 
+    // The working is store state the cards subscribe to from an effect, which under load is
+    // still pending when the cards are first on the page: a click before it lands shows on the
+    // next flush, not synchronously, so each step waits for what it expects.
     fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
     // One card was clicked; both show their working.
-    expect(screen.getAllByTestId("bn-signal-working")).toHaveLength(2);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-working")).toHaveLength(2);
+    });
 
     // Leave the lens and come back: it is still open on every card.
     first.unmount();
@@ -797,12 +806,14 @@ describe("SignalsPage", () => {
     render(<SignalsPage projectId="1" />);
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+      expect(screen.getAllByTestId("bn-signal-working")).toHaveLength(2);
     });
-    expect(screen.getAllByTestId("bn-signal-working")).toHaveLength(2);
 
     // Closing it on the second card closes it on both.
     fireEvent.click(screen.getAllByTestId("bn-signal-hero")[1]);
-    expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
+    await waitFor(() => {
+      expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
+    });
   });
 
   it("puts the intensity circles first in the quote's body, small, so the words flow around them", async () => {

@@ -14,7 +14,7 @@
 
 import { useLenses } from "../contexts/ConditionStore";
 import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWorkingStore";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Metric, MetricLabel, PersonBadge, SectionHeading, TimecodeLink } from "../components";
 import { IntensityDots } from "../components/IntensityDots";
@@ -1490,16 +1490,21 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     syncInspectorFor(key);
   }, [syncInspectorFor]);
 
-  // Listen for sidebar signal-focus events
+  // Listen for sidebar signal-focus events. An event, not a dependency: a listener re-subscribed
+  // from an effect is swapped when passive effects flush, a beat after the commit that made the
+  // new signals, and a focus dispatched in that beat reached the previous render's closure, which
+  // knew no signals and changed no location (CI, 6 Nov 2026). The event always reads the current
+  // render's `activateSignal` and `syncInspectorFor`.
+  const onSignalFocus = useEffectEvent((e: Event) => {
+    const key = (e as CustomEvent<{ key: string }>).detail.key;
+    activateSignal(key);
+    syncInspectorFor(key);
+  });
   useEffect(() => {
-    const handler = (e: Event) => {
-      const key = (e as CustomEvent<{ key: string }>).detail.key;
-      activateSignal(key);
-      syncInspectorFor(key);
-    };
+    const handler = (e: Event) => onSignalFocus(e);
     window.addEventListener("bn:signal-focus", handler);
     return () => window.removeEventListener("bn:signal-focus", handler);
-  }, [activateSignal, syncInspectorFor]);
+  }, []);
 
   void activeDimension; // used indirectly by DimensionToggle components in sources
 

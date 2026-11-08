@@ -3,6 +3,8 @@ title: Connect Bristlenose to Miro
 description: Push your analysed quotes straight onto a Miro board — a one-time setup walkthrough, including the manual token "key dance".
 ---
 
+> **Archived 8 Nov 2026.** This how-to promised a one-click Connect button that never shipped (Miro's sign-in needs a client secret; see `docs/research/miro-integration-2026-11.md`). The developer-token steps are still how keen beta testers connect; researchers will use the in-Miro app (`docs/design-miro-in-board-app.md`). The live help is the website's `docs-src/`.
+
 <p class="kicker">Export · Integrations</p>
 
 # Connect Bristlenose to Miro

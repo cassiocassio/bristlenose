@@ -148,9 +148,8 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `miro-flow.html` | 23 Jun 2026 | PROPOSED 23 Jun 2026 · IMPLEMENTED — **design of record** for the Miro flow; cited by `design-miro-bridge.md` and `design-board-integrations.md` |
-| `miro-native-flow.html` | 28 Jun 2026 | PROPOSED 28 Jun 2026 · IMPLEMENTED — the macOS-native half; `MiroConnectionStore.swift` ships |
-| `miro-setup-help.html` | 23 Jun 2026 | PROPOSED 23 Jun 2026 · IMPLEMENTED — the setup help page; cited by `design-miro-bridge.md` |
+_The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`, `miro-setup-help.html`) moved to `docs/archive/mockups/` on 8 Nov 2026: the one-click Miro sign-in was archived and the end-user route is now the in-Miro app (`docs/design-miro-in-board-app.md`). Their rows were PROPOSED → IMPLEMENTED (23 and 28 Jun 2026); the developer-token sheet they drew still ships for beta testers._
+
 
 ## move
 

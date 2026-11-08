@@ -148,7 +148,7 @@ gestured at.
 - **The Miro how-to is consolidated.** `bristlenose-website-v2/content/send-to-miro.md` is the
   code-true source of truth (paste-token reality, Preview + link-clips options, two named frames
   Sections/Themes, real error strings, the honest "spoken names travel" privacy note). The
-  public-repo `docs/how-to/miro-setup.md` is **superseded — retire at cutover** (no back-port; no
+  public-repo `docs/how-to/miro-setup.md` (moved to `docs/archive/how-to-miro-setup.md`, 8 Nov 2026) is **superseded — retire at cutover** (no back-port; no
   live users to justify maintaining a throwaway interim copy).
 
 ### Architecture — one source → one renderer → two outputs

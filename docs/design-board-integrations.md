@@ -338,7 +338,7 @@ Surface this as a decision point, not a silent default.
 
 ## Proposed UX flow changes
 
-The Miro flow (`design-miro-bridge.md` *Cross-app flow*, `docs/mockups/miro-flow.html`)
+The Miro flow (`design-miro-bridge.md` *Cross-app flow*, `docs/archive/mockups/miro-flow.html`)
 is the template. Multi-board needs **one** structural change and several label
 changes; the make-or-break (cross the app boundary as few times as possible; never
 set up twice) is unchanged.
@@ -371,7 +371,7 @@ set up twice) is unchanged.
 5. **Done state: `Open in {board}`** — one obvious button, board-named, from the
    `board_url` the renderer returns.
 6. **Native macOS entry** reuses the parallel-surfaces pattern
-   (`docs/mockups/miro-native-flow.html`): a native "Send to a whiteboard…" row in
+   (`docs/archive/mockups/miro-native-flow.html`): a native "Send to a whiteboard…" row in
    the Quotes menu + export popover that opens the existing React panel via the
    bridge. The board picker lives in the web panel; native just triggers it.
 

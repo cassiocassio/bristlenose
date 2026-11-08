@@ -18,7 +18,7 @@ The design rule that falls out of this:
 
 > **The how-to section does not duplicate the manual.** Where the manual already covers something well (install, the CLI command table, keyboard shortcuts, the privacy model), the how-to guide either doesn't exist or is a short deep-dive that **cross-links back** to the manual. The how-to section's job is the *task* walkthroughs that are missing today — overwhelmingly the **provider-key setup** and **export/share** families.
 
-**Boundary (important).** The marketing site (`bristlenose.app`) is a **separate private deploy repo**. This public repo's job is to hold the **source-of-truth content** as Markdown — exactly as `docs/manual.md` is the source for `manual.html`. So the concrete output of this proposal is: a set of `docs/how-to/<slug>.md` files in *this* repo, which the deploy repo renders to `bristlenose.app/docs/how-to/<slug>.html`. The worked precedent is already in flight: `docs/mockups/miro-setup-help.html` → `docs/how-to/miro-setup.md` → `bristlenose.app/docs/how-to/miro-setup.html`.
+**Boundary (important).** The marketing site (`bristlenose.app`) is a **separate private deploy repo**. This public repo's job is to hold the **source-of-truth content** as Markdown — exactly as `docs/manual.md` is the source for `manual.html`. So the concrete output of this proposal is: a set of `docs/how-to/<slug>.md` files in *this* repo, which the deploy repo renders to `bristlenose.app/docs/how-to/<slug>.html`. The worked precedent is already in flight: `docs/archive/mockups/miro-setup-help.html` → `docs/how-to/miro-setup.md` → `bristlenose.app/docs/how-to/miro-setup.html`.
 
 **Write against the glossary.** `docs/glossary.md` is the authoritative terminology + tone guide. Provider names in user-facing text use **product** names — "Claude", "ChatGPT", "Azure OpenAI", "Gemini", "Ollama" / "Local" — never the company names. Every new how-to inherits this.
 
@@ -26,7 +26,7 @@ The design rule that falls out of this:
 
 ## 2. The format template (codified, not invented)
 
-`docs/mockups/miro-setup-help.html` is already a complete, well-structured how-to. Rather than invent a format, the section should **standardise on its skeleton**:
+`docs/archive/mockups/miro-setup-help.html` is already a complete, well-structured how-to. Rather than invent a format, the section should **standardise on its skeleton**:
 
 ```
 Kicker (category)        e.g. "Export · Integrations"

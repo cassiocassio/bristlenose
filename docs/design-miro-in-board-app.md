@@ -124,3 +124,14 @@ choose, drop or paste it.
   checked-in file.
 - By hand, once deployed: a real board, a file with split quotes and a clip
   link, a paste, Stop part-way.
+
+## Related
+
+- `docs/research/miro-integration-2026-11.md`: everything learned on 8 Nov 2026,
+  measured and researched, with sources. Read it before re-opening any Miro
+  sign-in question.
+- `docs/design-miro-bridge.md`: the REST Send to Miro (developer token), kept for
+  keen beta testers.
+- `docs/archive/design-miro-oauth-one-click.md`: the archived one-click sign-in
+  plan and its mockups.
+- `miro-app/README.md`: build, test, the layout contract, deploy.

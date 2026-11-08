@@ -5,7 +5,7 @@ import SwiftUI
 /// (`MiroExportPanel.tsx`) presents. Presentation only: every call goes through
 /// `MiroAPI` to the same Python REST endpoints (the agnostic board IR, layout,
 /// validation, and egress boundary stay server-side). See docs/design-miro-bridge.md
-/// "macOS native entry" + docs/mockups/miro-native-flow.html.
+/// "macOS native entry" + docs/archive/mockups/miro-native-flow.html.
 ///
 /// One constant size across steps (HIG: sheets aren't resized per step). The
 /// board is built as a job on the server (both boards, since 18 Oct 2026): the

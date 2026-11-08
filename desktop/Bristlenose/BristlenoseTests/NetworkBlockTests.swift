@@ -133,11 +133,16 @@ struct NetworkBlockTests {
         init(_ result: (path: PathSnapshot?, control: ControlResult, provider: ProviderReach)) {
             suite = UserDefaults(suiteName: name)!
             probe = FakeProbe(result)
+            // `weak`, not `unowned`: the model starts tasks that can outlive the test, and one that
+            // read the freed rig aborted the whole test host ("swift_abortRetainUnowned"), taking
+            // every test in flight down with it (seen 8 Nov 2026 in two full-suite runs).
+            let fallbackNow = Date(timeIntervalSince1970: 1_800_000_000)
+            let fallbackWatcher = watcher
             model = ProviderProblemModel(
-                defaults: suite, now: { [unowned self] in self.now },
-                activeProvider: { [unowned self] in self.active },
+                defaults: suite, now: { [weak self] in self?.now ?? fallbackNow },
+                activeProvider: { [weak self] in self.flatMap { $0.active } },
                 keyFor: { _ in "sk-test-key-1234567890" },
-                observing: center, probe: probe, makeWatcher: { [unowned self] in self.watcher })
+                observing: center, probe: probe, makeWatcher: { [weak self] in self?.watcher ?? fallbackWatcher })
         }
         func done() { suite.removePersistentDomain(forName: name) }
     }

@@ -248,10 +248,13 @@ struct ProviderProblemModelTests {
             self.keys = keys
         }
         func model() -> ProviderProblemModel {
-            ProviderProblemModel(
-                defaults: defaults, now: { [unowned self] in self.clock },
-                activeProvider: { [unowned self] in self.active },
-                keyFor: { [unowned self] in self.keys[$0] },
+            // `weak`, not `unowned`: a task the model starts can outlive the test, and one that read
+            // the freed rig aborted the whole test host (see NetworkBlockTests, 8 Nov 2026).
+            let fallbackClock = clock
+            return ProviderProblemModel(
+                defaults: defaults, now: { [weak self] in self?.clock ?? fallbackClock },
+                activeProvider: { [weak self] in self.flatMap { $0.active } },
+                keyFor: { [weak self] in self?.keys[$0] },
                 observing: center)
         }
     }

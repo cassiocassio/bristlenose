@@ -148,6 +148,8 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `miro-board-file-route.html` | 8 Nov 2026 | PROPOSED 8 Nov 2026 — option B: a board-file route for the in-Miro app inside the Send to Miro dialog (not connected, connected, after download), real dialog CSS, seven proposed keys for owner approval |
+
 _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`, `miro-setup-help.html`) moved to `docs/archive/mockups/` on 8 Nov 2026: the one-click Miro sign-in was archived and the end-user route is now the in-Miro app (`docs/design-miro-in-board-app.md`). Their rows were PROPOSED → IMPLEMENTED (23 and 28 Jun 2026); the developer-token sheet they drew still ships for beta testers._
 
 

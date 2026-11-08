@@ -1,6 +1,6 @@
 # The in-Miro app: Bristlenose boards drawn inside Miro, no sign-in
 
-Status: built and deployed to bristlenose.app/miro, 8 Nov 2026 (awaiting a first run on a real board). Owner decision the same day, recorded in the
+Status: built, deployed to bristlenose.app/miro and run on a real Miro board, 8 Nov 2026 ("Board built: 10 quotes" from the published sample). Owner decision the same day, recorded in the
 maintainer's board-platforms register.
 
 ## Why

@@ -34,7 +34,7 @@ const CASES = {
         await page.keyboard.press(key);
         await page.waitForTimeout(40);
         steps.push(await frame(page));
-        await page.waitForTimeout(250); // let the width transition settle
+        await page.waitForTimeout(250); // a settle between toggles (no width transition runs: design-perf-ledger.md)
       }
     }
     return steps;
@@ -57,16 +57,26 @@ const CASES = {
 
 await requireServer();
 
-// The ledger's two moments (moments.mjs). They open their own pages, so they run instead of the cases above:
-//   node interaction-profile.mjs --cases=lens-content,search [--browser=webkit] [--reps=N] [--revisits=N] [--cache=warm]
+// The ledger's moments (moments.mjs). They open their own pages, so they run instead of the cases above:
+//   node interaction-profile.mjs --cases=lens-content,search,direct [--browser=webkit] [--reps=N] [--revisits=N] [--cache=warm]
 if (a.cases) {
   const M = await import('./moments.mjs');
   const want = String(a.cases).split(',');
-  const kinds = { 'lens-content': 'lens-content', search: 'search' };
+  const kinds = { 'lens-content': 'lens-content', search: 'search', direct: 'direct' };
+  let failed = false;
   for (const w of want) {
     if (!kinds[w]) { console.error(`unknown case ${w}`); process.exit(2); }
     const t = Date.now();
-    if (w === 'lens-content') {
+    if (w === 'direct') {
+      const r = await M.direct(a, browserName);
+      console.log(M.directTable(r, `${browserName} ${BASE} reps=${r.reps} (${((Date.now() - t) / 1000).toFixed(0)}s)`));
+      const bad = r.rows.filter((x) => x.error);
+      if (bad.length) {
+        console.log(`  ERROR: ${bad.length} steps never showed their state:`, [...new Set(bad.map((x) => `${x.action}: ${x.error}`))].join('; '));
+        failed = true;
+      }
+      saveResult('direct', browserName, r, { tag: a.tag ?? null, reps: r.reps });
+    } else if (w === 'lens-content') {
       const rows = await M.lensContent(a, browserName);
       console.log(M.lensTable(rows, `${browserName} ${BASE} reps=${a.reps ?? 5} revisits=${a.revisits ?? 6} cache=${a.cache ?? 'cold'} (${((Date.now() - t) / 1000).toFixed(0)}s)`));
       const bad = rows.filter((r) => r.error || r.preNonZero);
@@ -78,7 +88,7 @@ if (a.cases) {
       saveResult('search', browserName, r, { tag: a.tag ?? null, reps: a.reps ?? 8 });
     }
   }
-  process.exit(0);
+  process.exit(failed ? 1 : 0);
 }
 
 const ctx = await openPage(browserName, `${BASE}/report/quotes/`);

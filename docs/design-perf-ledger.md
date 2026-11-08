@@ -100,6 +100,9 @@ Delaying the Vision import does not remove it (1.5 s: 1,223 vs 1,191 ms; 4 s: 1,
 | Everyday CLI commands | `--help` 270 ms, `--version` 240, `status` 270, `use` 260 (all after the `inflect` fix); `codebooks` 1.1 s (the first plural loads `inflect`, 0.82 s, so it is a real need) and `pipeline` 1.3 s (any-llm readiness for a configured any-llm model, 0.72 s): rare commands, not daily; `doctor` 1.7 s does real checks |
 | Pre-bind the last-opened study at launch | the app deliberately has no last-used fallback (it would spawn a sidecar on a study the researcher had not chosen), and `create_app` is welded to the study (database, watchers, the Screens, scene-strip and Signals jobs, which can make a paid call): a quiet bind would be a refactor of the server's core. The generic standby takes the part that does not depend on the study |
 | Warm a web content process while the sidecar boots (a hidden, blank, throwaway `WKWebView` created at serve start) | the 195 ms between the port answering and the report's navigation starting. **Measured breakdown (6 launches, instrumented): 7 ms SwiftUI hop, 22 ms building the view, 35 ms the `load()` call, then 130–141 ms waiting for WebKit to have a content process before the navigation can start.** Prototype A/B, 6 launches per arm cold and warm, interleaved, standby on in both, load 5–33: the process wait fell 130 → 113 ms (cold) and 127 → 114 ms (warm); click → report ready 1,765 → 1,700 ms cold (one 2,289 ms outlier in the off arm) and 1,708 → 1,702 ms warm. **Below the stop number (100 ms), and inside the noise; dropped.** WebKit evidently did not hand the warm process to the report's view: the report uses its own per-study `nonPersistent` data store (keyed by study and port, so the token and cookie partition cannot drift). The only way to get that process early is to create the real view before the port is known, which changes the auth-token mount invariant for at most 0.13 s |
+| `XCTOSSignpostMetric` assertions for the Mac moments | it would need a new UI-test target (`BristlenoseTests` is a unit bundle) and a fragile cross-app drag from Finder, and it would be a millisecond assertion on a macOS runner, which this ledger's rule forbids; `log stream --signpost` reads the same intervals |
+| A click-to-visible spec in `e2e/` | it would be a fourth timing mechanism on the smoke fixture and a shared runner; `experiments/perf` already has the method, both engines, the prod bundle and realistic fixtures |
+| An `export-panel` moment (Export Report to the save panel) | the acknowledgement ("Exporting…") is a synchronous state write, and the wait is the server's export, measured: 120–140 ms on real studies |
 | Preload lens chunks on idle (all lenses) | chunks cost 8–40 ms; only Sessions suffered, from the Suspense throttle, and that is fixed on its own |
 
 ## Opening a study: the numbers and where the time goes
@@ -141,6 +144,8 @@ Ranked by how often a researcher meets the moment per day times how much they fe
 
 ## Who touches what
 
+_The 4–6 Nov 2026 performance sessions; none was listed as running on 7 Nov, when the click-to-visible work edited `desktop/` and `experiments/perf/`._
+
 | Area | Owner |
 |---|---|
 | `desktop/Bristlenose/**`, `desktop/scripts/perf/**`, `docs/design-client-performance.md` | the resize session (`cb4d4a`) |
@@ -161,7 +166,48 @@ One name per moment, used by every layer so a click, its request and its paint r
 
 **The bridge is dead against an external dev server** (`BRISTLENOSE_DEV_EXTERNAL_PORT=8484`): the app has no token for it, so the page's `/api/health` fetch fails and `ready` never posts. Signposts only complete against a copy running its own bundled sidecar.
 
-Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `open-transcript`, `first-card-painted`. Names are lowercase kebab-case; start and end share a name.
+Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `open-transcript`, `first-card-painted`, `drop-ack`. Names are lowercase kebab-case; start and end share a name.
+
+## Click-to-visible: the budget, and where each interaction stands (7 Nov 2026)
+
+The budget the 100days row _Click-to-visible latency budget_ asked for, from prior art: **0.1 s** for direct manipulation (star, hide, tag, a toggle, a lens revisit), **1 s** before something must visibly acknowledge the act or show progress, and **10 s** as the limit of attention, past which there must be determinate progress and a way out (Card, Moran & Newell 1983; Nielsen 1993). A step ends in the same place on every layer: the page's second `requestAnimationFrame` after the new state is on the DOM, and on the Mac the acknowledgement's state written.
+
+| Interaction | Tier | Mechanism | State |
+|---|---|---|---|
+| Star / unstar a quote | 0.1 s | `experiments/perf/moments.mjs` `direct` | measured, below |
+| Tag sidebar, contents sidebar (`]`, `[`) | 0.1 s | `direct` | measured, below |
+| Hide a quote | 0.1 s | none | not covered: a hide moves the first card, so the next rep would time a different card |
+| Add a tag | 0.1 s | none | not covered: it needs the TagInput flow |
+| Lens switch | 0.1 s revisit, 0.2 s first visit (reviewed target 1 below) | `lens-content`; the Mac's `lens-switch` signpost ends at `route-change` | measured ("Lens switch and search"); the page-side end at content paint is still the next entry |
+| Pick a study in the sidebar | 1 s | `project-select` signpost | measured ("Opening a study") |
+| Finder drop to its acknowledgement | 1 s | `drop-ack` signpost | instrumented; baseline owed by the owner (below) |
+| Export Report to the save panel | 1 s | none | declined (table above) |
+| Stop | 0.1 s acknowledgement | none | declined: synchronous (row 8 below) |
+
+**No gate.** One evening of headless numbers, and shared runners cannot hold milliseconds (the Instruments rule below). A number here becomes a ratchet only after it has held across several sessions, by the gate policy.
+
+**Measured 7 Nov 2026** (`direct`, prod bundle on its own port, 10 reps a run; 242 quotes is a FOSSDA copy, 1,500 the synthetic stress fixture). Milliseconds to paint, p50 / p90; the 242 rows are two runs, which agreed within a few ms:
+
+| Action | 242, Chromium | 242, WebKit | 1,500, Chromium | 1,500, WebKit |
+|---|---|---|---|---|
+| star | 28 / 31 | 47 / 48 | 158 / 170 | 171 / 188 |
+| unstar | 28 / 35 | 39 / 55 | 149 / 161 | 155 / 174 |
+| tag sidebar open | 15 / 20 | 97 / 99 | 42 / 51 | 403 / 429 |
+| tag sidebar close | 20 / 22 | 97 / 104 | 42 / 49 | 406 / 421 |
+| contents sidebar open | 36–39 / 40–44 | 122–123 / 127–130 | 177 / 181 | 514 / 581 |
+| contents sidebar close | 37–39 / 40 | 115–118 / 122–123 | 170 / 187 | 505 / 560 |
+
+What it says. At real size Chromium is inside 0.1 s everywhere. Headless WebKit puts both sidebar toggles at the bar and the contents sidebar over it on every step (20 of 20); Playwright's WebKit is not the app's `WKWebView` and its frames are display-paced (`experiments/perf/README.md`, Limits), so take it as direction, and confirm in the app before acting. At 1,500 quotes star and unstar miss the bar on every step in both engines, and the harness's `to state` column (the DOM write alone: 146–153 ms of the 149–171) says it is React's commit, not paint. That is the scale case for `React.memo` on `QuoteCard`, already the scoreboard's next lever.
+
+**Found while measuring: the sidebar's push animation does not run.** `withAnimation` (`SidebarLayout.tsx`) adds `animating` to `.layout` and the width transition is declared only on `.layout.animating` (`theme/organisms/sidebar.css`), but the re-render that opens the panel writes `className` and drops `animating` in the same commit, about 10 ms in Chromium and 70 ms in WebKit, with a real key press on both. No `transitionend` fires and the fallback removes a class that is already gone at about 200 ms. So the sidebar snaps open. The `direct` steps end at the class write by definition; if the slide is made to run, the felt time grows by its 75 ms and these numbers will not show it, so add a `transitionend` end then. Recorded, not fixed here (it is the 100days _Microinteractions_ row's "slides for opens/closes"); confirm by eye before fixing.
+
+**`drop-ack`, the owner's baseline.** A Finder drag cannot be driven headless. In a Debug app run from Xcode, with
+
+```sh
+/usr/bin/log stream --signpost --predicate 'subsystem == "app.bristlenose" AND category == "perf"' --style compact | grep drop-ack
+```
+
+drop a folder of about ten recordings on the empty sidebar three times, then three files on an idle study three times, and record the medians here. The interval begins at the drop doors (`handleDrop`, `handleDropOnFolder`, and the three study-row and pane doors that call `handleDropOnProject`) and ends after `SidebarFinderDrop.resolve` returns and the handler has written the acknowledgement, with outcome `selection-changed` or `selection-same`. `selection-same` also covers a drop of loose files (a save panel opens first), a re-drop on the selected row and a refused drop, so take the baseline from accepted folder and file drops only. A wrapper folder holding studies walks each one again in its own task, so it ends early as `wrapper-rewalk` and is not an acknowledgement time. File ▸ Add Files… shares the handler but begins nothing. As with `lens-switch`, a second drop while the first is still walking supersedes it, and the first drop's end then closes the second's interval: discard a reading taken that way.
 
 ## Done
 
@@ -272,7 +318,7 @@ Median of five, a synthetic 1,500-quote study (large) beside copies of two real 
 
 ## Reviewed targets: the moments a researcher feels most
 
-Three independent Fable reviewers (evidence, measurability, parsimony) checked each of ten perceived-performance candidates against the code at HEAD. **They refuted most of the experiments that were proposed**, often because the thing was already shipped, and corrected the numbers behind the rest. Ranked by how often the moment happens times how much it is felt. All good-enough numbers below are the reviewers' and are **not yet measured**; the first step is always the baseline.
+Three independent Fable reviewers (evidence, measurability, parsimony) checked each of ten perceived-performance candidates against the code at HEAD. **They refuted most of the experiments that were proposed**, often because the thing was already shipped, and corrected the numbers behind the rest. Ranked by how often the moment happens times how much it is felt. The good-enough numbers below are the reviewers'. Rows 1, 2, 4 and 10 have since been measured (the sections above); row 3 in part (`serve-ready`; the `launch-to-ready` chain is still owed); rows 5–9 have not.
 
 | # | Moment | Frequency | First measurement | Good enough | Smallest experiment (only after the baseline) |
 |---|---|---|---|---|---|
@@ -333,7 +379,8 @@ Gate on **counts and sizes, not milliseconds**: shared CI runners cannot hold 2%
 
 ## Not yet done
 
-- Baselines for the ten reviewed moments above; none is measured yet.
+- Baselines for reviewed moments 5–9 (timecode, scroll, sidebar toggle LoAF, Analyse / Stop, hover thumbnails); 1, 2, 4 and 10 are measured, 3 in part. The sidebar toggle's click-to-visible is measured ("Click-to-visible"); its blocking-LoAF count is not.
+- The `drop-ack` baseline (owner, "Click-to-visible").
 - Baselines for the critic's eight gaps, in order of how often they happen: transcript correction, inline edit echo, idle CPU and energy, playback follow.
 - A launch-to-ready number (the full chain from double-click); `serve-ready` and `project-select` are measured above, and `first-card-painted` now begins on a route into `/report/quotes`.
 - Measured experiments on our own overhead around LLM calls (batching, concurrency, resume cache hits); none run yet.

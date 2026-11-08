@@ -1572,7 +1572,7 @@ struct ContentView: View {
                 guard response == .OK, !panel.urls.isEmpty else { return }
                 // Reuse the drop path — extension filtering, copy, and the
                 // incremental-run wire (Phase 1) all live in handleDropOnProject.
-                handleDropOnProject(id: id, urls: panel.urls)
+                handleDropOnProject(id: id, urls: panel.urls, fromPanel: true)
             }
         }
     }
@@ -2295,6 +2295,7 @@ struct ContentView: View {
     /// project; per-row drops route to `handleDropOnProject`.
     private func handleDrop(urls: [URL]) {
         let accepted = Self.filterAcceptedURLs(urls)
+        if !accepted.isEmpty { PerfSignpost.begin(.dropAck, scope: bridgeHandler.perfScope) }
         processDroppedURLs(accepted)
     }
 
@@ -2311,6 +2312,7 @@ struct ContentView: View {
     private func handleDropOnFolder(id folderID: UUID, urls: [URL]) {
         let accepted = Self.filterAcceptedURLs(urls)
         guard !accepted.isEmpty else { return }
+        PerfSignpost.begin(.dropAck, scope: bridgeHandler.perfScope)
         projectIndex.setFolderCollapsed(id: folderID, collapsed: false)
         processDroppedURLs(accepted, intoFolder: folderID)
     }
@@ -2326,8 +2328,21 @@ struct ContentView: View {
                     folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
                 )
             }.value
+            let selectionBefore = selection
             processDroppedURLs(urls, intoFolder: folderID, payload: payload)
+            endDropAck(selectionBefore: selectionBefore)
         }
+    }
+
+    /// Ends `drop-ack` once the drop's acknowledgement is written: the row selected and, for files,
+    /// "Adding N interviews…" set. AppKit draws it from the republish that follows on the main
+    /// thread, which is not timed separately. `selection-same` also covers a drop of loose files
+    /// (a save panel opens first and nothing is selected yet), a re-drop on the selected row, and a
+    /// drop the handler refuses. A wrapper folder of studies has already ended as `wrapper-rewalk`.
+    /// No-op when no drop began.
+    private func endDropAck(selectionBefore: Set<SidebarSelection>) {
+        PerfSignpost.end(.dropAck, scope: bridgeHandler.perfScope,
+                         outcome: selection == selectionBefore ? "selection-same" : "selection-changed")
     }
 
     private func processDroppedURLs(_ urls: [URL], intoFolder folderID: UUID?,
@@ -2351,6 +2366,9 @@ struct ContentView: View {
                 // known folders select, moved folders relocate, copies remint,
                 // and imported projects scan rather than start. Loose siblings
                 // are intentionally ignored once a wrapper contains a project.
+                // Each one is walked again in its own task, after this returns,
+                // so `drop-ack` stops here at the first walk and says so.
+                PerfSignpost.end(.dropAck, scope: bridgeHandler.perfScope, outcome: "wrapper-rewalk")
                 for project in projects {
                     processDroppedURLs([project], intoFolder: folderID)
                 }
@@ -2669,7 +2687,9 @@ struct ContentView: View {
     ///   read "+N unanalysed" once that run ends (decision #100, 22 Oct 2026)
     /// - anything else: copy the files, then run (incrementally if already
     ///   analysed; `PipelineRunner` queues it behind another run)
-    private func handleDropOnProject(id: UUID, urls: [URL]) {
+    /// `fromPanel`: File ▸ Add Files… reuses this path, and is not a drop, so it begins no `drop-ack`.
+    private func handleDropOnProject(id: UUID, urls: [URL], fromPanel: Bool = false) {
+        if !fromPanel { PerfSignpost.begin(.dropAck, scope: bridgeHandler.perfScope) }
         Task {
             let payload = await Task.detached(priority: .userInitiated) {
                 SidebarFinderDrop.resolve(
@@ -2677,7 +2697,9 @@ struct ContentView: View {
                     folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
                 )
             }.value
+            let selectionBefore = selection
             handleDropOnProject(id: id, urls: urls, payload: payload)
+            endDropAck(selectionBefore: selectionBefore)
         }
     }
 

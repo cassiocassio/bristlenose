@@ -1,5 +1,6 @@
-// Two perceived-wait moments from the perf ledger (docs/design-perf-ledger.md, "Reviewed targets" rows 1 and 2).
-// Run through interaction-profile.mjs:  node interaction-profile.mjs --cases=lens-content,search [--browser=webkit]
+// Three perceived-wait moments from the perf ledger (docs/design-perf-ledger.md, "Reviewed targets" rows 1 and 2, and
+// the 0.1 s tier of "Click-to-visible: the budget"). Run through interaction-profile.mjs:
+//   node interaction-profile.mjs --cases=lens-content,search,direct [--browser=webkit]
 //
 //   lens-content  click a lens tab; the step ENDS at a double rAF after that lens's own content selector
 //                 appears. No sleep inside the timed region. Pass 1 on a fresh page is first visit (lazy chunk +
@@ -8,6 +9,8 @@
 //   search        type a 6-letter word into the toolbar field (the BROWSER field, SearchBox.tsx; the Mac app's
 //                 field is native and is not measured here). Field echo per character, and last keystroke to
 //                 results settled MINUS the 150 ms debounce, at three typing speeds.
+//   direct        star / unstar a card and toggle both sidebars; each step ENDS at a double rAF after the new
+//                 state is on the DOM. Against the 0.1 s direct-manipulation budget.
 //
 // Serve with the PROD bundle and your own port (see serve-fixture.py), never `--dev`: unbundled Vite modules make
 // the chunk cost a dev artefact.
@@ -292,6 +295,100 @@ export function searchTable(r, label) {
       (c ? `${c.ScriptMs.toFixed(0)} ${c.LayoutMs.toFixed(0)} ${c.RecalcStyleMs.toFixed(0)} ${c.TaskMs.toFixed(0)}` : 'n/a (no CDP)'));
     if (m.resultsPerCharSlowOnly) lines.push(`        per-character results (slow, chars 2..6): p50 ${f1(m.resultsPerCharSlowOnly.p50)} p90 ${f1(m.resultsPerCharSlowOnly.p90)} max ${f1(m.resultsPerCharSlowOnly.max)} (n=${m.resultsPerCharSlowOnly.n})`);
     lines.push(`        echo by character position p50: ${m.echoByPos.map((s) => f1(s.p50).trim()).join(' ')}`);
+  }
+  return lines.join('\n');
+}
+
+// ───────────────────────────── moment 3: direct manipulation (the 0.1 s tier) ─────────────────────────────
+
+// Each action flips one state; the step ends at the second rAF after the DOM shows the new state (the same end as
+// STEP). Star and unstar the first quote card (a click on `.star-btn`); open and close the tag sidebar (`]`) and the
+// contents sidebar (`[`), the keys the report binds on Quotes. A sidebar step ends when `.layout` carries the new
+// open class; the width transition is not timed (measured 7 Nov 2026: React's className write drops the `animating`
+// class withAnimation adds about 10 ms earlier, so the transition never runs; docs/design-perf-ledger.md).
+// Hide and tag are not timed here: a hide leaves the card (the next rep has a different first card) and a tag needs
+// the TagInput flow; both are recorded as not covered in docs/design-perf-ledger.md.
+const DIRECT = [
+  { name: 'star', state: 'starred', want: true, click: '.quote-card .star-btn' },
+  { name: 'unstar', state: 'starred', want: false, click: '.quote-card .star-btn' },
+  { name: 'tags-open', state: 'tags', want: true, key: ']' },
+  { name: 'tags-close', state: 'tags', want: false, key: ']' },
+  { name: 'toc-open', state: 'toc', want: true, key: '[' },
+  { name: 'toc-close', state: 'toc', want: false, key: '[' },
+];
+
+// Runs in the page. The event is dispatched in-page, as STEP clicks in-page, so no Playwright wait sits inside the
+// timed region. A key is a synthetic keydown on document, which is where useKeyboardShortcuts listens.
+const FLIP = async ({ state, want, click, key }) => {
+  const layout = () => document.querySelector('.layout');
+  const read = {
+    starred: () => document.querySelector('.quote-card')?.classList.contains('starred') ?? null,
+    tags: () => layout()?.classList.contains('tags-open') ?? null,
+    toc: () => { const l = layout(); return l ? l.classList.contains('toc-open') || l.classList.contains('toc-overlay') : null; },
+  }[state];
+  const before = read();
+  if (before == null) return { error: `no element for ${state}` };
+  if (before === want) return { error: `${state} already ${want} before the step` };
+  const target = click ? document.querySelector(click) : document;
+  if (!target) return { error: `no click target ${click}` };
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    let tState = null;
+    const hit = () => {
+      tState = performance.now();
+      mo.disconnect();
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve({ toState: tState - t0, toPaint: performance.now() - t0 })));
+    };
+    const mo = new MutationObserver(() => { if (tState == null && read() === want) hit(); });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+    if (click) target.click();
+    else document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    if (tState == null && read() === want) hit(); // the state was written in the same task
+    setTimeout(() => { if (tState == null) { mo.disconnect(); resolve({ error: `${state} never became ${want}` }); } }, 15000);
+  });
+};
+
+export async function direct(a, browserName) {
+  const reps = +(a.reps ?? 10), settle = +(a.settle ?? 400);
+  const browser = await pw[browserName].launch();
+  const context = await browser.newContext({ viewport: VIEWPORT });
+  const page = await context.newPage();
+  await page.addInitScript(INIT);
+  const resp = await page.goto(`${BASE}/report/quotes/`, { waitUntil: 'domcontentloaded' });
+  if (!resp || !resp.ok()) throw new Error(`HTTP ${resp && resp.status()}`);
+  await page.waitForSelector('.quote-card', { timeout: 20000 });
+  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.waitForTimeout(1500);
+  const quotes = await page.evaluate(() => document.querySelectorAll('.quote-card').length);
+  // A sidebar that starts open would make the "open" step fail its precondition: close it first, outside timing.
+  for (const [k, cls] of [[']', 'tags-open'], ['[', 'toc-open']]) {
+    if (await page.evaluate((c) => document.querySelector('.layout')?.classList.contains(c), cls)) {
+      await page.keyboard.press(k); await page.waitForTimeout(settle);
+    }
+  }
+  // A first card that starts starred (a real study's copy) would fail the "star" step: run the pair the other way.
+  const startsStarred = await page.evaluate(() => document.querySelector('.quote-card')?.classList.contains('starred'));
+  const order = startsStarred ? [DIRECT[1], DIRECT[0], ...DIRECT.slice(2)] : DIRECT;
+  const rows = [];
+  for (let rep = 0; rep < reps; rep++) {
+    for (const D of order) {
+      const s = await page.evaluate(FLIP, { state: D.state, want: D.want, click: D.click ?? null, key: D.key ?? null });
+      rows.push({ rep, action: D.name, ...s });
+      await page.waitForTimeout(settle); // outside the timed region: the write and the next frame
+    }
+  }
+  await browser.close();
+  return { quotes, startsStarred, reps, rows };
+}
+
+export function directTable(r, label, budget = 100) {
+  const lines = [`direct ${label}  quotes=${r.quotes}${r.startsStarred ? ' (first card started starred: unstar ran first)' : ''}`,
+    `action      | to state p50 | to paint: n  p50  p90  max | over ${budget} ms`];
+  for (const D of DIRECT) {
+    const ok = r.rows.filter((x) => x.action === D.name && x.toPaint != null);
+    const t = summ(ok.map((x) => x.toPaint));
+    const over = ok.filter((x) => x.toPaint > budget).length;
+    lines.push(`${D.name.padEnd(11)} | ${f1(pct(ok.map((x) => x.toState), 0.5))}       | ${String(t.n).padStart(2)} ${f1(t.p50)} ${f1(t.p90)} ${f1(t.max)} | ${String(over).padStart(4)}`);
   }
   return lines.join('\n');
 }

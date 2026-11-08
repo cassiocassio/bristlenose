@@ -57,6 +57,7 @@ struct PerfSignpostTests {
     @Test func theMomentNamesAreTheSharedOnes() {
         #expect(Set(PerfMoment.allCases.map(\.rawValue)) == [
             "launch-to-ready", "lens-switch", "project-select", "serve-ready", "open-transcript", "first-card-painted",
+            "drop-ack",
         ])
         for m in PerfMoment.allCases { #expect("\(m.signpostName)" == m.rawValue) }
     }

@@ -20,6 +20,10 @@ enum PerfMoment: String, CaseIterable {
     case openTranscript = "open-transcript"
     /// The Quotes lens reached, to the page reporting its first quote card painted (`perf-mark`).
     case firstCardPainted = "first-card-painted"
+    /// Finder content let go on the sidebar or an empty study's pane, to the drop's acknowledgement
+    /// being written (the row selected, "Adding N interviews…"). Most of it is the folder walk
+    /// (`SidebarFinderDrop.resolve`), the only work that runs before the acknowledgement.
+    case dropAck = "drop-ack"
 
     /// `OSSignposter` wants a literal.
     var signpostName: StaticString {
@@ -30,6 +34,7 @@ enum PerfMoment: String, CaseIterable {
         case .serveReady: "serve-ready"
         case .openTranscript: "open-transcript"
         case .firstCardPainted: "first-card-painted"
+        case .dropAck: "drop-ack"
         }
     }
 }

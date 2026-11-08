@@ -462,11 +462,17 @@ async def identify_speaker_roles_llm(
             prompt_template=_tmpl,
         )
 
+        # One speaker is one research subject doing a solo think-aloud: a
+        # participant, whatever the model says (owner rule, 8 Nov 2026). The
+        # model's "researcher" here coded a lone voice m1, and quotes come only
+        # from participants, so the session gave nothing. Its name is kept.
+        solo = len(unique_speakers) == 1
+
         # Apply LLM assignments and collect extracted info
         infos: list[SpeakerInfo] = []
         role_map: dict[str, SpeakerRole] = {}
         for assignment in result.assignments:
-            role = SpeakerRole(assignment.role)
+            role = SpeakerRole.PARTICIPANT if solo else SpeakerRole(assignment.role)
             role_map[assignment.speaker_label] = role
             infos.append(SpeakerInfo(
                 speaker_label=assignment.speaker_label,

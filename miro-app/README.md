@@ -19,6 +19,7 @@ user only while the board is open. Design and decisions:
 - `src/app.ts`, `src/app.html`, `src/app.css` — the panel
 - `src/index.ts`, `src/index.html` — the app URL Miro loads unseen; opens the panel
 - `hosting/.htaccess` — lifts the website's no-framing headers for this folder only
+- `icons/outline.svg`, `icons/colored.svg` — the toolbar (one colour) and app-panel icons Miro's app settings take: square SVG under 5,000 bytes. The fish is traced from the Mac app icon's colour layer (`desktop/.../AppIcon.appiconset/layers/foreground-default.png`) into one path
 - The board file is read by `figjam-plugin/src/board.ts` and `clipboard.ts`, imported as they are
 
 ## The layout contract

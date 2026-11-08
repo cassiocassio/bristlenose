@@ -1353,10 +1353,10 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <h2>Send to Miro board</h2>
 <p class="bn-modal-subtitle">Push your quotes onto a new Miro board as sticky notes, grouped by section and theme. Connect once — we never touch your existing boards.</p>
 <p class="bn-export-hint" style="margin-top:14px">Paste a Miro access token to connect. <a href="#">How do I get a token? ↗</a></p>
-<p class="bn-export-hint">For the beta, connecting needs a Miro developer token.<sup class="new">new</sup></p>
+<p class="bn-export-hint">Beta: connecting needs a Miro developer token.<sup class="new">new</sup></p>
 <input type="password" placeholder="Miro access token" aria-label="Miro access token" style="width:100%;box-sizing:border-box;padding:8px 10px">
 <div class="bf-route">
-  <p class="bn-export-hint"><strong>No token?</strong> Download a board file and open it with the Bristlenose app in Miro. Nothing to connect.<sup class="new">new</sup></p>
+  <p class="bn-export-hint"><strong>No token?</strong> Download a board file and open it in Miro’s Bristlenose app.<sup class="new">new</sup></p>
   <button class="bn-linkish">Download board file</button>
 </div>
 <div class="bn-modal-actions"><button class="bn-btn bn-btn-secondary">Cancel</button><button class="bn-btn bn-btn-primary" disabled>Connect</button></div>
@@ -1383,8 +1383,8 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <p class="bn-modal-subtitle">Downloading a board file with 112 quotes.</p>
 <p class="bn-export-hint">Then, in Miro:<sup class="new">new</sup></p>
 <ol class="bn-export-hint">
-<li>Add the Bristlenose app to your team, once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></li>
-<li>Open a board and click Bristlenose among the toolbar's apps.<sup class="new">new</sup></li>
+<li>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></li>
+<li>Open Bristlenose from a board’s toolbar.<sup class="new">new</sup></li>
 <li>Choose the file you just saved.</li>
 </ol>
 <div class="bn-modal-actions"><button class="bn-btn bn-btn-secondary">Done</button></div>
@@ -1397,13 +1397,13 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <p><strong>Proposed words (owner to approve; each becomes a key in all 21 locales):</strong></p>
 <table>
 <tr><th>Key</th><th>English</th><th>Where</th></tr>
-<tr><td><code>miro.tokenInterim</code></td><td>For the beta, connecting needs a Miro developer token.</td><td>1</td></tr>
-<tr><td><code>miro.boardFileRoute</code></td><td><strong>No token?</strong> Download a board file and open it with the Bristlenose app in Miro. Nothing to connect.</td><td>1</td></tr>
+<tr><td><code>miro.tokenInterim</code></td><td>Beta: connecting needs a Miro developer token.</td><td>1</td></tr>
+<tr><td><code>miro.boardFileRoute</code></td><td><strong>No token?</strong> Download a board file and open it in Miro’s Bristlenose app.</td><td>1</td></tr>
 <tr><td><code>miro.boardFileDownload</code></td><td>Download board file (same words as <code>figjam.download</code>)</td><td>1</td></tr>
 <tr><td><code>miro.boardFileInstead</code></td><td>Download a board file instead</td><td>2</td></tr>
 <tr><td><code>miro.boardFileNextSteps</code></td><td>Then, in Miro:</td><td>3</td></tr>
-<tr><td><code>miro.boardFileStep1</code> + link</td><td>Add the Bristlenose app to your team, once: <em>Add Bristlenose to Miro ↗</em> (the app's Installation URL)</td><td>3</td></tr>
-<tr><td><code>miro.boardFileStep2</code></td><td>Open a board and click Bristlenose among the toolbar's apps.</td><td>3</td></tr>
+<tr><td><code>miro.boardFileStep1</code> + link</td><td>Once: <em>Add Bristlenose to Miro ↗</em> (the app's Installation URL)</td><td>3</td></tr>
+<tr><td><code>miro.boardFileStep2</code></td><td>Open Bristlenose from a board’s toolbar.</td><td>3</td></tr>
 </table>
 <p><strong>The Mac.</strong> On the desktop app Send to Miro is the native <code>MiroSheet</code>; the same two additions go there as a link-style button under the token field and above Create Board, and the done state uses the sheet's existing completion row. Not drawn here; same words.</p>
 <p><strong>Open for the owner.</strong> (a) In frame 1, should the board file lead and the token follow, since the file is the route researchers will keep? Drawn quiet, as asked. (b) The install link in step 1 points at Miro's install page for our client ID; a company admin who restricts apps sees a request flow there. (c) Removing <code>featureFlags.figjamExport</code> is not needed: this route lives in the Miro dialog, which already ships.</p>

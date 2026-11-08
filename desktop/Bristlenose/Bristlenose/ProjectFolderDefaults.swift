@@ -214,7 +214,7 @@ enum ProjectFolderDefaults {
 
     /// Refuses the volume root and the volume *list*. Both are directories; both
     /// are places no researcher meant to keep studies.
-    private static func isSaneRoot(_ url: URL) -> Bool {
+    static func isSaneRoot(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.path
         return !path.isEmpty && path != "/" && path != "/Volumes"
     }

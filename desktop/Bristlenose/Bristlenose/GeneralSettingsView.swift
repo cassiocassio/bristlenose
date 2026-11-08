@@ -236,6 +236,10 @@ struct GeneralSettingsView: View {
         panel.canCreateDirectories = true
         panel.prompt = i18n.t("settings.general.choosePrompt")
         panel.message = i18n.t("settings.general.chooseMessage")
+        // Never `/` or `/Volumes` (R44). The panel holds its delegate weakly, so the handler below
+        // keeps it alive for as long as the panel is open.
+        let delegate = SaneFolderPanelDelegate()
+        panel.delegate = delegate
         if case .resolved(let current) = configured {
             panel.directoryURL = current
         } else {
@@ -250,6 +254,7 @@ struct GeneralSettingsView: View {
         panel.adoptHostAppearance(host)
 
         let handler: (NSApplication.ModalResponse) -> Void = { response in
+            withExtendedLifetime(delegate) {}
             guard response == .OK, let url = panel.url else { return }
             ProjectFolderDefaults.setConfigured(url)
             refresh()

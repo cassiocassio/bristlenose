@@ -225,6 +225,12 @@ final class ServeFleet: ObservableObject {
     /// coincidental.
     var agentAccessByID: ((UUID) -> Bool)?
 
+    /// The sidebar row's own name for a study, so the handshake says what the researcher sees.
+    /// Folder basenames collide (two clients' `interviews`); the sidebar already tells them apart
+    /// (`interviews`, `interviews 2`), and the agent was offered the same name twice with only
+    /// opaque keys to tell them apart (N195, owner call 7 Nov 2026). Nil falls back to the folder.
+    var nameByID: ((UUID) -> String?)?
+
     func isRunning(_ project: UUID) -> Bool {
         managers[project]?.runningPort != nil
     }
@@ -422,7 +428,7 @@ final class ServeFleet: ObservableObject {
             guard let path = manager.currentProjectPath else { continue }
             candidates[id] = HandshakeExposure.Candidate(
                 path: path,
-                name: URL(fileURLWithPath: path).lastPathComponent,
+                name: nameByID?(id) ?? URL(fileURLWithPath: path).lastPathComponent,
                 state: manager.state,
                 instanceID: manager.mcpInstanceID,
                 token: manager.mcpToken,
@@ -479,13 +485,19 @@ final class ServeFleet: ObservableObject {
 
         let entries = HandshakeExposure.entries(
             candidates: offered, shown: shown, agentAccess: access)
+        var wrote = true
         if entries.isEmpty {
             MCPHandshake.remove(directory: handshakeDirectory)
         } else {
-            MCPHandshake.write(entries: entries, directory: handshakeDirectory)
+            wrote = MCPHandshake.write(entries: entries, directory: handshakeDirectory)
         }
 
-        let paths = Set(entries.map(\.path))
+        // The antenna follows what a proxy can read (N194, owner call 7 Nov 2026). A write that
+        // failed leaves no file (it fails closed), so the extension and the plugin are told
+        // Bristlenose isn't open: showing the study as shared then claimed something they could
+        // not see. The gate below is unchanged, so hand-connected agents still read it, and the
+        // next sync (the 20 s poll) retries the write.
+        let paths = wrote ? Set(entries.map(\.path)) : []
         if paths != handshakeProjectPaths { handshakeProjectPaths = paths }
 
         // The gate. This is what makes closing a window safe NOW rather than

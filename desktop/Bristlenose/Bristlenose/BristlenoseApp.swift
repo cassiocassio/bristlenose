@@ -265,6 +265,10 @@ struct BristlenoseApp: App {
                     serveFleet.agentAccessByID = { [weak projectIndex] id in
                         projectIndex?.projects.first { $0.id == id }?.agentAccess ?? false
                     }
+                    // The agent sees the sidebar's own label for a study, not its folder name (N195).
+                    serveFleet.nameByID = { [weak projectIndex] id in
+                        projectIndex?.projects.first { $0.id == id }?.name
+                    }
                     // A sidecar bakes provider, model, key, anonymise and
                     // consent into its environment at spawn. One notification,
                     // N sidecars — the action is a fan-out, not a restart.

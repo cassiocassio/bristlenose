@@ -1,0 +1,344 @@
+{
+ "shapes": {
+  "rectangle": {
+   "shape": "rectangle",
+   "width": 1251.466,
+   "height": 1274.605,
+   "title": {
+    "content": "Fixture study \u2014 research board (8 quotes)",
+    "x": 364.0,
+    "y": 46.0,
+    "width": 600,
+    "font_size": 22
+   },
+   "frames": [
+    {
+     "title": "Sections",
+     "x": 64.0,
+     "y": 120.0,
+     "width": 692.0,
+     "height": 576.906
+    },
+    {
+     "title": "Themes",
+     "x": 828.0,
+     "y": 120.0,
+     "width": 359.466,
+     "height": 1090.605
+    }
+   ],
+   "stickies": [
+    {
+     "kind": "header",
+     "x": 92.0,
+     "y": 148.0,
+     "width": 300.0,
+     "height": 195.429,
+     "colour": "light_pink",
+     "set": null,
+     "content": "<strong>Checkout</strong><br>3 quotes"
+    },
+    {
+     "kind": "quote",
+     "x": 92.0,
+     "y": 367.429,
+     "width": 114.039,
+     "height": 74.289,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cI couldn&#x27;t find the pay button.\u201d<br><i>\u2014 P1 \u00b7 00:42 \u00b7 <a href=\"https://clips.example/study/s1-p1-42.mp4\">\u25b6 clip</a></i>"
+    },
+    {
+     "kind": "quote",
+     "x": 92.0,
+     "y": 465.717,
+     "width": 141.213,
+     "height": 91.99,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cShe said &quot;no&quot; \u2014 then C:\\Users\\jane &lt;/script&gt; and left\u201d<br><i>\u2014 P2 \u00b7 1:02:05</i>"
+    },
+    {
+     "kind": "quote",
+     "x": 92.0,
+     "y": 581.707,
+     "width": 133.858,
+     "height": 87.199,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cLine\u2028separator, and an emoji \ud83d\udc69\ud83c\udffd\u200d\ud83d\udcbb\ud83c\udf89 mid-quote\u201d<br><i>\u2014 P3 \u00b7 00:09</i>"
+    },
+    {
+     "kind": "header",
+     "x": 428.0,
+     "y": 148.0,
+     "width": 300.0,
+     "height": 195.429,
+     "colour": "light_pink",
+     "set": null,
+     "content": "<strong>Delivery &amp; returns</strong><br>2 quotes"
+    },
+    {
+     "kind": "quote",
+     "x": 428.0,
+     "y": 367.429,
+     "width": 123.762,
+     "height": 80.622,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201c\u0643\u0627\u0646\u062a \u0627\u0644\u0635\u0641\u062d\u0629 \u0645\u0631\u0628\u0643\u0629 \u062c\u062f\u064b\u0627 \u0648\u0644\u0645 \u0623\u062c\u062f \u0632\u0631 \u0627\u0644\u062f\u0641\u0639\u201d<br><i>\u2014 P4 \u00b7 03:12</i>"
+    },
+    {
+     "kind": "quote",
+     "x": 428.0,
+     "y": 472.051,
+     "width": 138.109,
+     "height": 89.968,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201c\u99c5\u306e\u5238\u58f2\u6a5f\u3067\u5f80\u5fa9\u3092\u9078\u3093\u3060\u3064\u3082\u308a\u304c\u7247\u9053\u306b\u306a\u3063\u3066\u3044\u3066\ud842\udfb7\u201d<br><i>\u2014 P5 \u00b7 1:02:03</i>"
+    },
+    {
+     "kind": "header",
+     "x": 856.0,
+     "y": 148.0,
+     "width": 300.0,
+     "height": 195.429,
+     "colour": "light_pink",
+     "set": null,
+     "content": "<strong>Trust</strong><br>3 quotes"
+    },
+    {
+     "kind": "quote",
+     "x": 856.0,
+     "y": 367.429,
+     "width": 103.407,
+     "height": 67.362,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cIs this site even safe?\u201d<br><i>\u2014 P1 \u00b7 10:00</i>"
+    },
+    {
+     "kind": "quote",
+     "x": 856.0,
+     "y": 458.791,
+     "width": 185.448,
+     "height": 120.806,
+     "colour": "light_yellow",
+     "set": 1,
+     "content": "\u201cI put my card details in and then it just sat there, spinning, for what felt like a minute. I didn&#x27;t know if I&#x27;d paid\u2026"
+    },
+    {
+     "kind": "quote",
+     "x": 861.0,
+     "y": 553.456,
+     "width": 261.159,
+     "height": 170.126,
+     "colour": "light_yellow",
+     "set": 1,
+     "content": "\u2026I didn&#x27;t want to press the button again in case it charged me twice, so I went and checked my banking app. Nothing there either. In the end I closed the tab and rang them, and the person on the phone said it happens a lot.\u201d<br><i>\u2014 P2 \u00b7 14:05 \u00b7 <a href=\"https://clips.example/study/s2-p2-845.mp4\">\u25b6 clip</a></i>"
+    },
+    {
+     "kind": "quote",
+     "x": 856.0,
+     "y": 747.582,
+     "width": 236.172,
+     "height": 153.849,
+     "colour": "light_yellow",
+     "set": 2,
+     "content": "\u201cWe always do the big shop on a Sunday, the three of us, and the list lives on the fridge until somebody takes a photo of it. So when the app asked me to build a list I thought, great, finally\u2026"
+    },
+    {
+     "kind": "quote",
+     "x": 861.0,
+     "y": 869.508,
+     "width": 236.172,
+     "height": 153.849,
+     "colour": "light_yellow",
+     "set": 2,
+     "content": "\u2026But it wanted me to search for every single item, one at a time, and it kept suggesting brands we never buy. By the time I had twelve things in there my son had lost interest and wandered off\u2026"
+    },
+    {
+     "kind": "quote",
+     "x": 866.0,
+     "y": 991.433,
+     "width": 293.466,
+     "height": 191.172,
+     "colour": "light_yellow",
+     "set": 2,
+     "content": "\u2026Then it said two of them were out of stock at our store and offered substitutes that were twice the price. I just wanted it to remember what we bought last week. That&#x27;s all. Last week&#x27;s list, with a tick box next to each thing, and I&#x27;d have been done in two minutes instead of twenty.\u201d<br><i>\u2014 P6 \u00b7 21:50</i>"
+    }
+   ]
+  },
+  "square": {
+   "shape": "square",
+   "width": 1248.0,
+   "height": 1678.037,
+   "title": {
+    "content": "Fixture study \u2014 research board (8 quotes)",
+    "x": 364.0,
+    "y": 46.0,
+    "width": 600,
+    "font_size": 22
+   },
+   "frames": [
+    {
+     "title": "Sections",
+     "x": 64.0,
+     "y": 120.0,
+     "width": 692.0,
+     "height": 807.879
+    },
+    {
+     "title": "Themes",
+     "x": 828.0,
+     "y": 120.0,
+     "width": 356.0,
+     "height": 1494.037
+    }
+   ],
+   "stickies": [
+    {
+     "kind": "header",
+     "x": 92.0,
+     "y": 148.0,
+     "width": 300.0,
+     "height": 343.719,
+     "colour": "light_pink",
+     "set": null,
+     "content": "<strong>Checkout</strong><br>3 quotes"
+    },
+    {
+     "kind": "quote",
+     "x": 92.0,
+     "y": 515.719,
+     "width": 85.99,
+     "height": 98.521,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cI couldn&#x27;t find the pay button.\u201d<br><i>\u2014 P1 \u00b7 00:42 \u00b7 <a href=\"https://clips.example/study/s1-p1-42.mp4\">\u25b6 clip</a></i>"
+    },
+    {
+     "kind": "quote",
+     "x": 92.0,
+     "y": 638.24,
+     "width": 106.479,
+     "height": 121.997,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cShe said &quot;no&quot; \u2014 then C:\\Users\\jane &lt;/script&gt; and left\u201d<br><i>\u2014 P2 \u00b7 1:02:05</i>"
+    },
+    {
+     "kind": "quote",
+     "x": 92.0,
+     "y": 784.236,
+     "width": 100.934,
+     "height": 115.643,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cLine\u2028separator, and an emoji \ud83d\udc69\ud83c\udffd\u200d\ud83d\udcbb\ud83c\udf89 mid-quote\u201d<br><i>\u2014 P3 \u00b7 00:09</i>"
+    },
+    {
+     "kind": "header",
+     "x": 428.0,
+     "y": 148.0,
+     "width": 300.0,
+     "height": 343.719,
+     "colour": "light_pink",
+     "set": null,
+     "content": "<strong>Delivery &amp; returns</strong><br>2 quotes"
+    },
+    {
+     "kind": "quote",
+     "x": 428.0,
+     "y": 515.719,
+     "width": 93.321,
+     "height": 106.921,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201c\u0643\u0627\u0646\u062a \u0627\u0644\u0635\u0641\u062d\u0629 \u0645\u0631\u0628\u0643\u0629 \u062c\u062f\u064b\u0627 \u0648\u0644\u0645 \u0623\u062c\u062f \u0632\u0631 \u0627\u0644\u062f\u0641\u0639\u201d<br><i>\u2014 P4 \u00b7 03:12</i>"
+    },
+    {
+     "kind": "quote",
+     "x": 428.0,
+     "y": 646.639,
+     "width": 104.139,
+     "height": 119.315,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201c\u99c5\u306e\u5238\u58f2\u6a5f\u3067\u5f80\u5fa9\u3092\u9078\u3093\u3060\u3064\u3082\u308a\u304c\u7247\u9053\u306b\u306a\u3063\u3066\u3044\u3066\ud842\udfb7\u201d<br><i>\u2014 P5 \u00b7 1:02:03</i>"
+    },
+    {
+     "kind": "header",
+     "x": 856.0,
+     "y": 148.0,
+     "width": 300.0,
+     "height": 343.719,
+     "colour": "light_pink",
+     "set": null,
+     "content": "<strong>Trust</strong><br>3 quotes"
+    },
+    {
+     "kind": "quote",
+     "x": 856.0,
+     "y": 515.719,
+     "width": 77.973,
+     "height": 89.335,
+     "colour": "light_yellow",
+     "set": null,
+     "content": "\u201cIs this site even safe?\u201d<br><i>\u2014 P1 \u00b7 10:00</i>"
+    },
+    {
+     "kind": "quote",
+     "x": 856.0,
+     "y": 629.054,
+     "width": 139.835,
+     "height": 160.213,
+     "colour": "light_yellow",
+     "set": 1,
+     "content": "\u201cI put my card details in and then it just sat there, spinning, for what felt like a minute. I didn&#x27;t know if I&#x27;d paid\u2026"
+    },
+    {
+     "kind": "quote",
+     "x": 861.0,
+     "y": 756.229,
+     "width": 196.923,
+     "height": 225.621,
+     "colour": "light_yellow",
+     "set": 1,
+     "content": "\u2026I didn&#x27;t want to press the button again in case it charged me twice, so I went and checked my banking app. Nothing there either. In the end I closed the tab and rang them, and the person on the phone said it happens a lot.\u201d<br><i>\u2014 P2 \u00b7 14:05 \u00b7 <a href=\"https://clips.example/study/s2-p2-845.mp4\">\u25b6 clip</a></i>"
+    },
+    {
+     "kind": "quote",
+     "x": 856.0,
+     "y": 1005.85,
+     "width": 178.082,
+     "height": 204.034,
+     "colour": "light_yellow",
+     "set": 2,
+     "content": "\u201cWe always do the big shop on a Sunday, the three of us, and the list lives on the fridge until somebody takes a photo of it. So when the app asked me to build a list I thought, great, finally\u2026"
+    },
+    {
+     "kind": "quote",
+     "x": 861.0,
+     "y": 1169.178,
+     "width": 178.082,
+     "height": 204.034,
+     "colour": "light_yellow",
+     "set": 2,
+     "content": "\u2026But it wanted me to search for every single item, one at a time, and it kept suggesting brands we never buy. By the time I had twelve things in there my son had lost interest and wandered off\u2026"
+    },
+    {
+     "kind": "quote",
+     "x": 866.0,
+     "y": 1332.506,
+     "width": 221.284,
+     "height": 253.531,
+     "colour": "light_yellow",
+     "set": 2,
+     "content": "\u2026Then it said two of them were out of stock at our store and offered substitutes that were twice the price. I just wanted it to remember what we bought last week. That&#x27;s all. Last week&#x27;s list, with a tick box next to each thing, and I&#x27;d have been done in two minutes instead of twenty.\u201d<br><i>\u2014 P6 \u00b7 21:50</i>"
+    }
+   ]
+  }
+ }
+}

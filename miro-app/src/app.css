@@ -1,0 +1,17 @@
+:root { color-scheme: light; }
+body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #050038; background: #fff; }
+h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+p { margin: 0 0 12px; color: #4d4d6b; }
+.drop { display: block; border: 1px dashed #c3c2cf; border-radius: 8px; padding: 22px 12px; text-align: center; cursor: pointer; }
+.drop.over { border-color: #4262ff; background: #eef1ff; }
+.drop:focus-within { outline: 2px solid #4262ff; outline-offset: 2px; }
+input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choose { color: #4262ff; font-weight: 600; }
+.status { min-height: 3em; margin-top: 12px; }
+.status.problem { color: #c8102e; }
+.bar { height: 4px; border-radius: 2px; background: #ebebef; overflow: hidden; visibility: hidden; }
+.bar.on { visibility: visible; }
+.bar > span { display: block; height: 100%; width: 0; background: #4262ff; transition: width .2s; }
+.stop { margin-top: 10px; padding: 6px 12px; border-radius: 6px; font: inherit; cursor: pointer; color: #050038; background: #fff; border: 1px solid #c3c2cf; }
+.stop:disabled { color: #9a99ad; cursor: default; }
+.small { font-size: 12px; color: #6b6a85; margin-top: 16px; }

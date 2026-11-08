@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 9575
+        "tests": 10138
       },
       {
         "basis": "test files",
-        "files": 214,
+        "files": 223,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -30,12 +30,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 231,
+        "files": 246,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 2764
+        "tests": 2985
       },
       {
         "basis": "spec files",
@@ -364,6 +364,21 @@
                 "colour": "hard",
                 "is_gate": false,
                 "name": "Plugin tests (Vitest)",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "miro-app",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": false,
+                "name": "App tests (Vitest)",
                 "piped": false,
                 "runs_tests": true
               }

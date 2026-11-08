@@ -430,6 +430,41 @@ jobs:
         working-directory: figjam-plugin
         run: npm run build
 
+  # The in-Miro app (miro-app/) is its own npm project too: static files for
+  # bristlenose.app/miro, not in the wheel or the app. It reads the FigJam
+  # plugin's board reader from figjam-plugin/src, and its tests read
+  # tests/fixtures/miro-inboard-layout-v1.json, which pytest writes from
+  # board_layout, so this is the app's half of the layout contract.
+  miro-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version-file: '.tool-versions'
+          cache: "npm"
+          cache-dependency-path: miro-app/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: miro-app
+        run: npm ci
+
+      - name: App typecheck
+        working-directory: miro-app
+        run: npm run typecheck
+
+      - name: App tests (Vitest)
+        working-directory: miro-app
+        run: npm test
+
+      - name: Build app
+        working-directory: miro-app
+        run: npm run build
+
   frontend-lint-type-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -1,0 +1,14 @@
+# The in-Miro app (bristlenose/miro-app): Miro shows these pages in a frame inside a user's
+# board, so this folder lifts the site-wide "no framing" headers set in the root .htaccess —
+# here only, and only for Miro. Every header the root sets with `always` is replaced with
+# `always` too: a second CSP would be enforced alongside the first, and frame-ancestors 'none'
+# would still win.
+Header always unset X-Frame-Options
+#
+# script-src is any HTTPS source for now: miro.js is a loader that asks the Miro page for the real
+# SDK's address and injects a script from it, and Miro does not document that host (8 Nov 2026).
+# Tighten to the host the browser console shows on a real board. frame-ancestors is the line that
+# matters most: only Miro may frame these pages.
+Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:; frame-ancestors https://miro.com https://*.miro.com; base-uri 'self'; form-action 'none'; object-src 'none'"
+# Insurance if Miro's page ever requires embedder isolation: our files may be loaded by it.
+Header always set Cross-Origin-Resource-Policy "cross-origin"

@@ -34,6 +34,9 @@ PLAIN = _FIXTURES / "figjam-board-v1.json"
 ADDITIVE = _FIXTURES / "figjam-board-v1-additive.json"
 
 
+FIXTURE_TITLE = "Fixture study — research board (8 quotes)"
+
+
 def _card(text: str, pid: str, session: str, start: float, link: str | None = None) -> QuoteCard:
     return QuoteCard(text=text, participant_id=pid, session_id=session,
                      start_timecode=start, link_url=link)
@@ -58,9 +61,10 @@ _TRIO = (
 )
 
 
-def _board() -> dict[str, Any]:
-    """Every case the plugin has to get right, in one small board."""
-    columns = [
+def _columns() -> list[Column]:
+    """Every case the plugin has to get right, in one small board. The in-Miro app's
+    layout contract (`test_miro_inboard_layout_contract.py`) lays out these same columns."""
+    return [
         Column("Checkout", "section", [
             _card("I couldn't find the pay button.", "p1", "s1", 42.0,
                   "https://clips.example/study/s1-p1-42.mp4"),
@@ -77,8 +81,11 @@ def _board() -> dict[str, Any]:
             _card(_TRIO, "p6", "s5", 1310.0),
         ]),
     ]
+
+
+def _board() -> dict[str, Any]:
     return build_manifest(
-        columns, "Fixture study — research board (8 quotes)",
+        _columns(), FIXTURE_TITLE,
         strings=BoardStrings(), clip_label="clip", palette=FIGJAM_TOKEN_HEX,
         locale="en", generator="Bristlenose (fixture)", requested=7,
     )

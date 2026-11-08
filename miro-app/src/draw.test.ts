@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import boardFixture from "../../tests/fixtures/figjam-board-v1.json";
 import { parseBoard } from "../../figjam-plugin/src/board";
-import { type BoardApi, draw, isTransient, RETRY_DELAYS_MS, Stopped } from "./draw";
+import { type BoardApi, draw, isTransient, NOT_CONNECTED, RETRY_DELAYS_MS, Stopped } from "./draw";
 import { planBoard } from "./layout";
 
 const BOARD_FILE = JSON.stringify(boardFixture);
@@ -124,6 +124,17 @@ describe("drawing a board", () => {
       draw(board, plan, { built: 0 }, { progress: () => {}, sleep: (ms) => (waits.push(ms), Promise.resolve()), stopRequested: () => true }),
     ).rejects.toBeInstanceOf(Stopped);
     expect(waits).toEqual([]);
+  });
+
+  it("says Miro isn't answering instead of waiting forever when the SDK never connects", async () => {
+    const plan = planBoard(parseBoard(BOARD_FILE));
+    const { board, calls } = fakeBoard();
+    board.viewport.get = () => new Promise(() => {}); // what Miro's loader does when it can't connect
+    await expect(
+      draw(board, plan, { built: 0 }, { progress: () => {}, sleep: noSleep, firstAnswerMs: 20 }),
+    ).rejects.toThrow(NOT_CONNECTED);
+    expect(calls.filter((c) => c.kind === "sticky")).toHaveLength(0);
+    expect(isTransient(new Error(NOT_CONNECTED))).toBe(false); // said at once, not retried
   });
 
   it("tells transient refusals from the rest", () => {

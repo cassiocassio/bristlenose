@@ -5,7 +5,7 @@
 
 import { MAX_FILE_BYTES, REFUSAL_TEXT, Refusal, type RefusalKind, parseBoard } from "../../figjam-plugin/src/board";
 import { boardTextFromClipboard } from "../../figjam-plugin/src/clipboard";
-import { type BoardApi, Stopped, draw } from "./draw";
+import { type BoardApi, NOT_CONNECTED, Stopped, draw } from "./draw";
 import { type BoardPlan, planBoard } from "./layout";
 import { failure, summary } from "./summary";
 
@@ -67,7 +67,8 @@ async function build(text: string): Promise<void> {
       show(`Stopped after ${tally.built} of ${plan.expectedQuotes} quotes. What was drawn stays on the board.`);
     } else {
       console.error(e); // the panel says how far it got and Miro's reason; the console keeps the rest
-      show(failure(plan, tally.built, e instanceof Error ? e.message : String(e)), true);
+      const reason = e instanceof Error ? e.message : String(e);
+      show(reason === NOT_CONNECTED ? NOT_CONNECTED : failure(plan, tally.built, reason), true);
     }
   } finally {
     building = false;

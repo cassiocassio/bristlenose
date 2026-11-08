@@ -38,6 +38,25 @@ export interface DrawOptions {
   progress: (done: number, total: number) => void;
   stopRequested?: () => boolean;
   sleep?: (ms: number) => Promise<void>;
+  firstAnswerMs?: number;
+}
+
+/** How long the first call may take before the panel says Miro isn't answering. Miro's loader
+ * turns a failed connection into a promise that never settles (seen 8 Nov 2026 with the page open
+ * outside Miro: the panel sat at "Finding space on the board…" for good), so without this a
+ * researcher would watch that line forever. */
+export const FIRST_ANSWER_MS = 15000;
+
+export const NOT_CONNECTED = "Miro didn't answer, so the app couldn't reach this board. Close the panel and open it again.";
+
+function withLimit<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(NOT_CONNECTED)), ms);
+    p.then(
+      (v) => (clearTimeout(timer), resolve(v)),
+      (e) => (clearTimeout(timer), reject(e)),
+    );
+  });
 }
 
 /** A refusal worth waiting out: a rate limit or a timeout. Anything else (the SDK not connected,
@@ -66,7 +85,7 @@ export async function draw(board: BoardApi, plan: BoardPlan, tally: { built: num
   const call = <T>(fn: () => Promise<T>) => attempt(fn, sleep, stop);
 
   // Somewhere free near what the researcher is looking at. Miro answers with a centre.
-  const view = await call(() => board.viewport.get());
+  const view = await withLimit(board.viewport.get(), opts.firstAnswerMs ?? FIRST_ANSWER_MS);
   const space = await call(() =>
     board.findEmptySpace({
       x: view.x + view.width / 2,

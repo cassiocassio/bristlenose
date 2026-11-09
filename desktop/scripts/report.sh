@@ -173,6 +173,10 @@ bn_step_fail() { local tag="$1"; shift; _bn_emit step "id=$tag" "status=fail" "$
 bn_trap_fail() {
     [ -n "${_BN_CUR_TAG:-}" ] && bn_step_fail "$_BN_CUR_TAG" detail="step aborted — see error above"
     [ "${_BN_DONE:-0}" = "0" ] && bn_done fail
+    # Always succeed. The last line above is a false test when bn_done already ran, which made this
+    # function return 1, and under `set -e` that replaced the script's own exit status (an `exit 2`
+    # after `bn_done fail` exited 1). The trap reports; it must never change the code.
+    return 0
 }
 
 # bn_check <parent-tag> <result> <label> <evidence>

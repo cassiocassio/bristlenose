@@ -125,6 +125,19 @@ choose, drop or paste it.
 - By hand, once deployed: a real board, a file with split quotes and a clip
   link, a paste, Stop part-way.
 
+## The token route's future (owner, 9 Nov 2026)
+
+Both routes stay for now, side by side as the two tabs of Send to Miro
+(`docs/mockups/miro-board-file-route.html`), each with its own help page
+(`send-to-miro` for the token, `miro-app` for this app). Once the owner has
+tested the board-data route, the developer-token route will be retired:
+archived, or hidden behind a flag. It is **not deleted**. The parked one-click
+relay (`docs/research/miro-integration-2026-11.md` § The relay) would reuse
+almost all of it: the REST client, the board push, the connected-state UI and
+its tests. So whichever way it goes, the code, its help page and its design doc
+(`docs/design-miro-bridge.md`) stay readable and reusable. A flag keeps it
+runnable; archiving keeps it in the tree with a pointer from here.
+
 ## Related
 
 - `docs/research/miro-integration-2026-11.md`: everything learned on 8 Nov 2026,

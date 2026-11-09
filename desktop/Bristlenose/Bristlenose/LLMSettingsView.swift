@@ -727,6 +727,7 @@ struct LLMSettingsView: View {
     /// What an Azure validation depends on besides the key.
     private struct AzureCheck: Equatable {
         var endpoint: String
+        var deployment: String
         var apiVersion: String
     }
 
@@ -739,7 +740,7 @@ struct LLMSettingsView: View {
     }
 
     private var azureCheck: AzureCheck {
-        AzureCheck(endpoint: azureEndpoint, apiVersion: azureAPIVersion)
+        AzureCheck(endpoint: azureEndpoint, deployment: azureDeployment, apiVersion: azureAPIVersion)
     }
 
     /// Restart the serve only if an env-var pref actually changed.
@@ -1063,7 +1064,7 @@ struct LLMSettingsView: View {
         let azureCfg: LLMValidator.AzureConfig? =
             (provider == .azure)
             ? LLMValidator.AzureConfig(
-                endpoint: azureEndpoint, apiVersion: azureAPIVersion)
+                endpoint: azureEndpoint, apiVersion: azureAPIVersion, deployment: azureDeployment)
             : nil
         let ollamaURLValue: String? = (provider == .ollama) ? ollamaURL : nil
         validationTasks[provider] = Task { @MainActor in

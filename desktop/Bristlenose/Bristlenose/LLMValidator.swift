@@ -19,6 +19,10 @@ enum LLMValidator {
     struct AzureConfig {
         var endpoint: String
         var apiVersion: String
+        /// The deployment the run will call. The check posts to it, as Python's doctor does
+        /// (`_validate_azure_key`), because the data-plane "list deployments" call it replaces was
+        /// retired in 2023 (N162).
+        var deployment: String
     }
 
     /// Validate a credential and return the resulting status plus a short
@@ -55,6 +59,12 @@ enum LLMValidator {
                 // endpoint is missing. Orange .unavailable is more honest
                 // than grey .notSetUp — they've done work, they're not done.
                 return (.unavailable, .keyed(Self.V + "azureEndpointMissing"))
+            }
+            if (azureConfig?.deployment ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                // The check posts to the deployment, so with none named there is nothing to ask. The
+                // configuration is incomplete, which is what `.notSetUp` already says, with no sentence
+                // of its own to add (and so no new copy in 21 locales).
+                return (.notSetUp, nil)
             }
             // Reject schemeless input early with a friendly message rather
             // than letting URLSession fail with "unsupported URL scheme."
@@ -129,7 +139,7 @@ enum LLMValidator {
         return URLSession(configuration: config)
     }()
 
-    private static func buildRequest(
+    static func buildRequest(
         provider: LLMProvider,
         key: String,
         azureConfig: AzureConfig?
@@ -168,15 +178,29 @@ enum LLMValidator {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let apiVersion = cfg.apiVersion.isEmpty ? "2024-10-21" : cfg.apiVersion
+            let deployment = cfg.deployment.trimmingCharacters(in: .whitespacesAndNewlines)
             guard
+                !deployment.isEmpty,
+                let escaped = deployment.addingPercentEncoding(
+                    withAllowedCharacters: CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))),
                 let url = URL(
                     string:
-                        "\(trimmedEndpoint)/openai/deployments?api-version=\(apiVersion)"
+                        "\(trimmedEndpoint)/openai/deployments/\(escaped)/chat/completions?api-version=\(apiVersion)"
                 )
             else { throw URLError(.badURL) }
+            // One paid call, one token. A 401 is the key and a 404 is the deployment or endpoint.
+            // A 400 (a reasoning deployment refusing `max_tokens`, or a wrong API version) falls to
+            // `.unavailable`, orange and still choosable: not a verdict on the key, and not shown as
+            // green over a request that may fail (N162; the 400 reading is unproven live).
             var req = URLRequest(url: url)
-            req.httpMethod = "GET"
+            req.httpMethod = "POST"
             req.setValue(key, forHTTPHeaderField: "api-key")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let body: [String: Any] = [
+                "max_tokens": 1,
+                "messages": [["role": "user", "content": "."]],
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
             return req
 
         case .gemini:

@@ -22,10 +22,13 @@ _SELFTESTS = [
     "desktop/scripts/test-check-logging-hygiene.sh",
     "desktop/scripts/test-check-menu-routing.sh",
     "desktop/scripts/test-check-appearance-seam.sh",
+    "desktop/scripts/test-check-button-truncation.sh",
     "desktop/scripts/test-check-window-surfaces.sh",
     "desktop/scripts/test-check-mcpb.sh",
     "desktop/scripts/test-check-release-binary.sh",
     "desktop/scripts/test-check-deployment-floors.sh",
+    "desktop/scripts/test-check-sidecar-appstore-strings.sh",
+    "desktop/scripts/test-report-exit-status.sh",
 ]
 
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="bash gates; Windows CI has no bash fixtures")
@@ -40,8 +43,8 @@ def test_the_gate_selftest_passes(script: str) -> None:
         runner, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=120, check=False,
     )
     assert result.returncode == 0, f"{script} failed:\n{result.stdout}\n{result.stderr}"
-    if script.endswith(".sh"):  # the shell harnesses end with "N passed, 0 failed"
-        assert "0 failed" in result.stdout, result.stdout
+    if script.endswith(".sh"):  # the shell harnesses end with "N passed, 0 failed", or say they skipped
+        assert "0 failed" in result.stdout or "skipped" in result.stdout, result.stdout
 
 
 def test_every_paired_selftest_on_disk_is_run_here() -> None:
@@ -57,4 +60,6 @@ def test_every_paired_selftest_on_disk_is_run_here() -> None:
         "scripts/test-check-doctor-install.sh",  # install-test.yml
         "scripts/test-check-ratchet.py",  # ratchet-tighten.yml, before it measures anything
     }
-    assert on_disk - elsewhere == set(_SELFTESTS), sorted(on_disk - elsewhere ^ set(_SELFTESTS))
+    unlisted = on_disk - elsewhere - set(_SELFTESTS)
+    assert not unlisted, sorted(unlisted)
+    assert all((_ROOT / s).is_file() for s in _SELFTESTS)

@@ -64,7 +64,13 @@ if "$PY" "$SCRIPT_DIR/check-sidecar-appstore-strings.py" "$TARGET"; then
     bn_done ok
 else
     rc=$?
-    bn_step_fail 1 detail="App-Store-noncompliant literal present — see errors above"
+    # 1 = a literal was found; 2 = the scan could not run (bad path, no sidecar executable, no PYZ).
+    # Saying "literal present" for a typo'd path sent people hunting for a leak that was never checked.
+    if [ "$rc" -eq 1 ]; then
+        bn_step_fail 1 detail="App-Store-noncompliant literal present — see errors above"
+    else
+        bn_step_fail 1 detail="the scan could not run (exit $rc) — see error above; nothing was checked"
+    fi
     bn_done fail
     exit "$rc"
 fi

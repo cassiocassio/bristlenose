@@ -56,6 +56,26 @@ def open_private(path: Path, flags: int) -> int:
     return os.open(path, flags, 0o600)
 
 
+def write_owner_only_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+    """Write ``text`` to ``path`` so that only its owner can read it, replacing what was there.
+
+    Through a temporary file beside the target and an atomic replace, so a file an older run left
+    at the umask default is replaced by a private one (opening an existing file with a mode does
+    not change its mode) and a crash mid-write leaves the old file whole. Text mode, so line
+    endings are the platform's, as ``Path.write_text`` has them.
+    """
+    tmp = path.with_name(f".{path.name}.tmp")
+    try:
+        with os.fdopen(
+            open_private(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC), "w", encoding=encoding
+        ) as fh:
+            fh.write(text)
+        replace_retrying(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 class CloudFetchTimeoutError(RuntimeError):
     """A dataless file did not materialise within `MATERIALISE_TIMEOUT_SECONDS`.
 

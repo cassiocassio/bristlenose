@@ -21,7 +21,7 @@ from bristlenose.models import (
     format_timecode,
 )
 from bristlenose.stages.s06_merge_transcript import _language_header
-from bristlenose.utils.fs import open_private
+from bristlenose.utils.fs import open_private, write_owner_only_text
 from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
@@ -674,7 +674,7 @@ def write_cooked_transcripts(
             lines.append(format_cooked_segment_txt(tc, code, seg.line_text))
             lines.append("")
 
-        path.write_text("\n".join(lines), encoding="utf-8")
+        write_owner_only_text(path, "\n".join(lines))
         paths.append(path)
         logger.info("Wrote cooked transcript: %s", path)
 
@@ -732,7 +732,7 @@ def write_cooked_transcripts_md(
             lines.append(format_cooked_segment_md(tc, code, seg.line_text))
             lines.append("")
 
-        path.write_text("\n".join(lines), encoding="utf-8")
+        write_owner_only_text(path, "\n".join(lines))
         paths.append(path)
         logger.info("Wrote cooked transcript (md): %s", path)
 

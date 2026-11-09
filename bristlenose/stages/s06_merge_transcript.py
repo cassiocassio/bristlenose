@@ -12,6 +12,7 @@ from bristlenose.models import (
     TranscriptSegment,
     format_timecode,
 )
+from bristlenose.utils.fs import write_owner_only_text
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +249,7 @@ def write_raw_transcripts(
             )
             lines.append("")
 
-        path.write_text("\n".join(lines), encoding="utf-8")
+        write_owner_only_text(path, "\n".join(lines))
         paths.append(path)
         logger.info("Wrote raw transcript: %s", path)
 
@@ -306,7 +307,7 @@ def write_raw_transcripts_md(
             )
             lines.append("")
 
-        path.write_text("\n".join(lines), encoding="utf-8")
+        write_owner_only_text(path, "\n".join(lines))
         paths.append(path)
         logger.info("Wrote raw transcript (md): %s", path)
 

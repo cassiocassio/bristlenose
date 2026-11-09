@@ -13,7 +13,8 @@ Files covered, and why each is private:
 - ``pii_summary.txt``: the original personal data PII removal took out;
 - the turn-frames record: JPEGs of the participant's screen, one per speaker turn;
 - ``people.yaml``: the researcher's own file of participants' real names, whichever writer
-  touched it last (the pipeline's, or serve's write-through, which already made it 0o600).
+  touched it last (the pipeline's, or serve's write-through, which already made it 0o600);
+- the transcripts, raw and cooked, ``.txt`` and ``.md``: every word a participant said (T32).
 """
 
 from __future__ import annotations
@@ -339,3 +340,44 @@ def test_people_file_is_owner_only_and_a_loose_one_is_tightened(tmp_path: Path) 
     write_people_file(people, tmp_path)
     assert _mode(path) == _OWNER_ONLY_AS_READ
     assert "Not A Real Name" in path.read_text(encoding="utf-8")
+
+
+# -- transcripts (T32) ---------------------------------------------------------
+
+
+def _transcript_writers():
+    from bristlenose.stages.s06_merge_transcript import (
+        write_raw_transcripts,
+        write_raw_transcripts_md,
+    )
+    from bristlenose.stages.s07_pii_removal import (
+        write_cooked_transcripts,
+        write_cooked_transcripts_md,
+    )
+    from tests.test_transcript_writing import _make_cooked_transcript, _make_transcript
+
+    raw, cooked = _make_transcript(), _make_cooked_transcript()
+    return [
+        ("raw txt", write_raw_transcripts, raw),
+        ("raw md", write_raw_transcripts_md, raw),
+        ("cooked txt", write_cooked_transcripts, cooked),
+        ("cooked md", write_cooked_transcripts_md, cooked),
+    ]
+
+
+@pytest.mark.parametrize("index", range(4))
+def test_transcripts_are_written_owner_only_and_a_loose_copy_is_tightened(tmp_path: Path, index: int) -> None:
+    """The transcripts hold every word a participant said, so they are the participant data the
+    pipeline writes most of; written 0o600 (T32, owner call 9 Nov 2026), and a copy an older run
+    left at the umask default is replaced by a private one."""
+    label, write, transcript = _transcript_writers()[index]
+    paths = write([transcript], tmp_path)
+    assert paths, label
+    for path in paths:
+        assert _mode(path) == _OWNER_ONLY_AS_READ, f"{label}: {path.name}"
+        assert path.read_text(encoding="utf-8").strip(), label
+        os.chmod(path, 0o644)  # left loose by an older run
+    paths = write([transcript], tmp_path)
+    for path in paths:
+        assert _mode(path) == _OWNER_ONLY_AS_READ, f"{label} (rewritten): {path.name}"
+    assert not [p for p in tmp_path.iterdir() if p.name.endswith(".tmp")], "a temporary file was left behind"

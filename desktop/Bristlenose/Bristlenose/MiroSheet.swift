@@ -7,6 +7,12 @@ import SwiftUI
 /// validation, and egress boundary stay server-side). See docs/design-miro-bridge.md
 /// "macOS native entry" + docs/archive/mockups/miro-native-flow.html.
 ///
+/// Two routes for the quotes board, as a segmented control (owner, 9 Nov 2026;
+/// docs/mockups/miro-board-file-route.html): **Miro app**, always the one it opens on, copies or
+/// saves the board file the Bristlenose app inside Miro draws (miro-app/, no sign-in, no token);
+/// **Developer access token** is the REST push below, unchanged. The screens board has only the
+/// token route: a board file carries no screengrabs.
+///
 /// One constant size across steps (HIG: sheets aren't resized per step). The
 /// board is built as a job on the server (both boards, since 18 Oct 2026): the
 /// creating step says what is being counted, shows a bar once there is an honest
@@ -17,8 +23,18 @@ import SwiftUI
 @MainActor
 final class MiroSheetModel: ObservableObject {
     enum Step { case loading, connect, configure, creating, done }
+    enum Route: Hashable { case app, token }
 
     @Published var step: Step = .loading
+    /// The quotes board's route. Always opens on the Miro app, even for someone connected with a
+    /// token: it is the better route (owner, 9 Nov 2026). The screens board is token-only.
+    @Published var route: Route
+    /// The Miro app route: what was last copied or saved, kept with the choices it was made under,
+    /// so "Copied" and the saved line hold only while those choices still do.
+    @Published private(set) var copiedFor: String?
+    @Published private(set) var savedFor: (choices: String, quotes: Int)?
+    @Published private(set) var fileBusy = false
+    @Published var fileError: String?
     @Published var token = ""
     @Published var boardName: String
     /// Flat by default on every board (owner, 19 Oct 2026); sentiment is offered.
@@ -47,6 +63,15 @@ final class MiroSheetModel: ObservableObject {
 
     private let api: MiroAPI
     private let i18n: I18n
+    private let projectName: String
+    /// The board file and its quote count (the FigJam export's route). Injected so a test needs
+    /// no server.
+    var fetchBoard: (FigJamAPI.Options) async throws -> (data: Data, quotes: Int)
+    /// Where a saved board file goes: the stock save panel, which also grants the sandbox write.
+    var chooseDestination: (String) async -> URL?
+    /// Puts the board on the pasteboard; false if it could not. Injected so a test can read it.
+    var writePasteboard: (_ html: String, _ json: String) -> Bool = MiroSheetModel.generalPasteboard
+    private var fileTask: Task<Void, Never>?
     /// Readable so a test can wait for a build to end (`MiroSheetStatusTests`).
     private(set) var exportTask: Task<Void, Never>?
     /// Opened on the Screens lens: the board is the screens, a frame per screengrab
@@ -62,6 +87,11 @@ final class MiroSheetModel: ObservableObject {
         self.i18n = i18n
         self.screens = screens
         self.clipLinksOffered = clipLinksOffered
+        self.projectName = projectName
+        self.route = screens ? .token : .app
+        let fileAPI = FigJamAPI(port: port, token: token)
+        self.fetchBoard = { try await fileAPI.fetchBoard($0) }
+        self.chooseDestination = FigJamSheetModel.savePanel
         // Prefilled with what the board would be called anyway, editable (owner, 17 Oct 2026).
         self.boardName = screens
             ? "\(projectName) · \(i18n.t("common.screens.title"))" : projectName
@@ -173,6 +203,7 @@ final class MiroSheetModel: ObservableObject {
         step = conn.connected ? .configure : .connect
         // A board still being built when the sheet was closed is picked up again, not lost.
         if conn.connected, await api.boardIsBuilding(screens: screens) {
+            route = .token  // its progress belongs to the token route
             follow { api, onProgress in try await api.resumeBoard(screens: self.screens, onProgress: onProgress) }
         }
     }
@@ -301,6 +332,134 @@ final class MiroSheetModel: ObservableObject {
             NSWorkspace.shared.open(url)
         }
     }
+
+    // MARK: Miro app route
+
+    /// The Bristlenose app's install page on Miro (its Installation URL): pick a team, Add &
+    /// allow. A company admin approves the app by the client ID in it. Same as the web panel's.
+    static let miroAppInstallURL = URL(string:
+        "https://miro.com/app-install/?response_type=code&client_id=3458764676772092122&redirect_uri=%2Fapp-install%2Fconfirm%2F")!
+
+    /// Each route's help page, opened by the sheet's HelpLink.
+    static func helpURL(_ route: Route) -> URL {
+        URL(string: route == .app ? "https://bristlenose.app/docs/miro-app.html"
+                                  : "https://bristlenose.app/docs/send-to-miro.html")!
+    }
+
+    func openHelp() { NSWorkspace.shared.open(Self.helpURL(route)) }
+
+    /// The choices a board file is made under: a change makes a different board.
+    var fileChoices: String { "\(splitLongQuotes)|\(stickyShape)|\(i18n.locale)" }
+    var copied: Bool { copiedFor == fileChoices }
+    func savedText() -> String? {
+        guard let saved = savedFor, saved.choices == fileChoices else { return nil }
+        return i18n.plural("common.figjam.saved", count: saved.quotes)
+    }
+
+    /// The board file the in-Miro app reads: named after the project (an empty name), with the two
+    /// choices it honours, and no clip links (parked).
+    func fileOptions() -> FigJamAPI.Options {
+        FigJamAPI.Options(boardName: "", locale: i18n.locale, splitLongQuotes: splitLongQuotes,
+                          square: stickyShape == "square", clipsBase: "")
+    }
+
+    /// A sentence with a slot or two ("Once: {{link}}", "Either {{download}} or {{copy}}"),
+    /// split on its placeholders so each language can put the controls where its grammar wants
+    /// them. Even indices are text, odd ones slot names.
+    static func slots(_ template: String) -> [String] {
+        var parts: [String] = []
+        var rest = Substring(template)
+        while let open = rest.range(of: "{{"), let close = rest.range(of: "}}", range: open.upperBound..<rest.endIndex) {
+            parts.append(String(rest[..<open.lowerBound]))
+            parts.append(String(rest[open.upperBound..<close.lowerBound]))
+            rest = rest[close.upperBound...]
+        }
+        parts.append(String(rest))
+        return parts
+    }
+
+    /// The install link's words without the web's ↗: a native link needs no glyph to say it opens
+    /// the browser (the `desktop.miro.*` overrides drop the same glyph elsewhere in this sheet).
+    func addAppLinkText() -> String {
+        t("appAddLink").replacingOccurrences(of: "↗", with: "").trimmingCharacters(in: .whitespaces)
+    }
+
+    func copyBoard() {
+        runFile { model, board in
+            guard let json = String(data: board.data, encoding: .utf8),
+                  model.writePasteboard(Self.pasteboardHTML(json: json, title: model.projectName), json)
+            else {
+                model.fileError = model.t("copyFailed")
+                return
+            }
+            model.copiedFor = model.fileChoices
+        }
+    }
+
+    func saveBoard() {
+        runFile { model, board in
+            guard let url = await model.chooseDestination(model.suggestedFilename()) else { return }
+            do {
+                try board.data.write(to: url, options: .atomic)
+                model.savedFor = (model.fileChoices, board.quotes)
+            } catch {
+                model.fileError = model.i18n.t("common.figjam.error")
+            }
+        }
+    }
+
+    /// The name the save panel offers.
+    func suggestedFilename() -> String {
+        let safe = projectName.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        return "\(safe.isEmpty ? "Bristlenose" : safe)-miro-board.json"
+    }
+
+    func cancelFile() { fileTask?.cancel() }
+
+    /// The Mac's word for the download, as the FigJam sheet says it: a save panel follows.
+    func saveBoardFileTitle() -> String { i18n.t("desktop.figjam.saveBoardFile") }
+
+    /// Fetch the board under the current choices, then hand it on; a refusal is said in words.
+    private func runFile(_ then: @escaping @MainActor (MiroSheetModel, (data: Data, quotes: Int)) async -> Void) {
+        fileError = nil
+        copiedFor = nil
+        savedFor = nil
+        fileBusy = true
+        let options = fileOptions()
+        fileTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.fileBusy = false }
+            do {
+                let board = try await self.fetchBoard(options)
+                if Task.isCancelled { return }
+                await then(self, board)
+            } catch let e as FigJamAPI.APIError {
+                if Task.isCancelled { return }
+                self.fileError = self.i18n.t(e.localeKey ?? "common.figjam.error")
+            } catch {
+                if Task.isCancelled { return }
+                self.fileError = self.i18n.t("common.figjam.error")
+            }
+        }
+    }
+
+    /// The HTML flavour the Miro panel and the FigJam plugin read
+    /// (`figjam-plugin/src/clipboard.ts`): the board JSON, base64 of its UTF-8 bytes, in a
+    /// `data-bristlenose-board` attribute, with the title as the visible text. The same as the web
+    /// panel's `boardClipboard.ts`; the plain flavour carries the bare JSON, which both read too.
+    static func pasteboardHTML(json: String, title: String) -> String {
+        let b64 = Data(json.utf8).base64EncodedString()
+        let escaped = title.replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+        return "<meta charset=\"utf-8\"><div data-bristlenose-board=\"\(b64)\">\(escaped)</div>"
+    }
+
+    static func generalPasteboard(html: String, json: String) -> Bool {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        return pb.setString(html, forType: .html) && pb.setString(json, forType: .string)
+    }
 }
 
 // MARK: - Sheet
@@ -344,17 +503,142 @@ struct MiroSheet: View {
     var body: some View {
         Group {
             switch model.step {
-            case .loading: loading
-            case .connect: connect
-            case .configure: configure
+            // A board being built, or just built, has the sheet to itself: no route to switch to.
             case .creating: creating
             case .done: done
+            default:
+                VStack(alignment: .leading, spacing: 12) {
+                    header
+                    if model.route == .app {
+                        appRoute
+                    } else {
+                        switch model.step {
+                        case .loading: loading
+                        case .connect: connect
+                        default: configure
+                        }
+                    }
+                }
             }
         }
         .padding(20)
         .frame(width: sheetWidth)
         .frame(minHeight: sheetMinHeight)
         .task { if loadsOnAppear { await model.load() } }
+        .onDisappear { model.cancelFile() }
+    }
+
+    /// The title, then (quotes board only) the system segmented control that switches route.
+    private var header: some View {
+        VStack(spacing: 12) {
+            Text(model.t(model.screens ? "title" : "quotesTitle")).font(.headline)
+                .frame(maxWidth: .infinity, alignment: .center)
+            if !model.screens {
+                Picker(model.t("quotesTitle"), selection: $model.route) {
+                    Text(model.t("tabApp")).tag(MiroSheetModel.Route.app)
+                    Text(model.t("tabToken")).tag(MiroSheetModel.Route.token)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+    }
+
+    // MARK: Miro app route
+
+    /// The choices first, then the rule, then how to get the board into Miro (owner, 9 Nov 2026):
+    /// once add the app, either save or copy the board, then open it from Tools in a board.
+    private var appRoute: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle(isOn: $model.splitLongQuotes) {
+                Text(model.t("splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(model.t("stickyShape")).foregroundStyle(.secondary)
+                Picker(model.t("stickyShape"), selection: $model.stickyShape) {
+                    Text(model.t("stickyShapeRectangle")).tag("rectangle")
+                    Text(model.t("stickyShapeSquare")).tag("square")
+                }
+                .pickerStyle(.radioGroup)
+                .horizontalRadioGroupLayout()
+                .labelsHidden()
+            }
+            Divider()
+            slotted(model.t("appStep1")) { _ in
+                AnyView(Link(model.addAppLinkText(), destination: MiroSheetModel.miroAppInstallURL))
+            }
+            slotted(model.t("appEitherOr")) { slot in
+                slot == "copy" ? AnyView(copyButton) : AnyView(saveButton)
+            }
+            Text(model.t("appStep3")).fixedSize(horizontal: false, vertical: true)
+            if let saved = model.savedText() {
+                Text(saved).font(.subheadline).foregroundStyle(.secondary)
+            }
+            if let error = model.fileError {
+                Text(error).font(.callout).foregroundStyle(.red)
+            }
+            Spacer(minLength: 16)
+            HStack {
+                HelpLink { model.openHelp() }
+                Spacer()
+                Button(model.t("done")) { dismiss() }.keyboardShortcut(.cancelAction)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Copy is the default button: fewer steps than a file (owner, 9 Nov 2026). It says "Copied"
+    /// in its own place, both titles stacked so the button keeps the wider one's width.
+    private var copyButton: some View {
+        Button { model.copyBoard() } label: {
+            ZStack {
+                Text(model.t("copyBoard")).opacity(model.copied ? 0 : 1)
+                Text(model.t("copied")).opacity(model.copied ? 1 : 0)
+            }
+        }
+        .keyboardShortcut(.defaultAction)
+        .disabled(model.fileBusy)
+        .accessibilityLabel(model.t(model.copied ? "copied" : "copyBoard"))
+    }
+
+    private var saveButton: some View {
+        Button(model.saveBoardFileTitle()) { model.saveBoard() }
+            .disabled(model.fileBusy)
+    }
+
+    /// A line whose placeholders are controls, in the order the language puts them. On one line
+    /// when it fits; stacked when a language's words and buttons would not (no control is ever
+    /// squeezed or cut).
+    private func slotted(_ template: String, _ control: @escaping (String) -> AnyView) -> some View {
+        let parts = MiroSheetModel.slots(template)
+        let pieces = ForEach(Array(parts.enumerated()), id: \.offset) { i, part in
+            if i % 2 == 1 {
+                control(part)
+            } else if !part.trimmingCharacters(in: .whitespaces).isEmpty {
+                Text(part.trimmingCharacters(in: .whitespaces)).fixedSize()
+            }
+        }
+        // Stacked, each control keeps the words before it on its line ("Either [Save]" / "or
+        // [Copy]"); words after the last control get a line of their own.
+        let rows = stride(from: 1, to: parts.count, by: 2).map { (words: parts[$0 - 1], slot: parts[$0]) }
+        let tail = parts.last ?? ""
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) { pieces }.fixedSize()
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        let words = row.words.trimmingCharacters(in: .whitespaces)
+                        if !words.isEmpty { Text(words) }
+                        control(row.slot)
+                    }
+                }
+                if !tail.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Text(tail.trimmingCharacters(in: .whitespaces))
+                }
+            }
+        }
     }
 
     // MARK: states
@@ -371,8 +655,6 @@ struct MiroSheet: View {
 
     private var connect: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(model.t("title")).font(.headline)
-                .frame(maxWidth: .infinity, alignment: .center)
             Text(model.t("connectIntro")).font(.callout).foregroundStyle(.secondary)
             SecureField(model.t("tokenPlaceholder"), text: $model.token)
                 .textFieldStyle(.roundedBorder)
@@ -397,8 +679,6 @@ struct MiroSheet: View {
 
     private var configure: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(model.t("title")).font(.headline)
-                .frame(maxWidth: .infinity, alignment: .center)
             // Right-aligned colon labels + left-aligned controls (Pages Export-
             // dialog form). `.gridColumnAlignment(.trailing)` on the first cell
             // right-aligns the whole label column. Status + account lead so the

@@ -10,12 +10,13 @@ import Testing
 /// in the result bundle (`xcrun xcresulttool export attachments`) rather than on a researcher's Mac.
 @MainActor
 @Suite struct MiroSheetRenderTests {
-    private func render(locale: String) throws -> (png: Data, height: CGFloat) {
+    private func render(locale: String, route: MiroSheetModel.Route = .token) throws -> (png: Data, height: CGFloat) {
         let i18n = I18n()
         i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
         i18n.setLocale(locale)
         let model = MiroSheetModel(port: 0, token: nil, projectName: "Talismanic", i18n: i18n)
         model.step = .configure
+        model.route = route
         let host = NSHostingView(rootView: MiroSheet(model: model))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 400),
                               styleMask: [.borderless], backing: .buffered, defer: false)
@@ -29,6 +30,16 @@ import Testing
         let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: rep)
         return (try #require(rep.representation(using: .png, properties: [:])), size.height)
+    }
+
+    /// The Miro app route (owner, 9 Nov 2026): its lines wrap at the sheet's width in a long
+    /// locale, and it keeps the sheet's one size.
+    @Test func theMiroAppRouteKeepsItsWidthAndWraps() throws {
+        for locale in ["en", "de", "ru", "fi"] {
+            let (png, height) = try render(locale: locale, route: .app)
+            Attachment.record(png, named: "miro-sheet-app-\(locale).png")
+            #expect(height >= 400)
+        }
     }
 
     @Test func theConfigureStepKeepsItsWidthAndWrapsLongLabels() throws {

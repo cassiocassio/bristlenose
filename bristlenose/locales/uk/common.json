@@ -472,7 +472,7 @@
     "tabToken": "Токен доступу розробника",
     "appStep1": "Один раз: {{link}}",
     "appAddLink": "Додати Bristlenose до Miro ↗",
-    "appEitherOr": "Або {{download}}, або {{copy}}",
+    "appEitherOr": "{{download}} або {{copy}}",
     "copyBoard": "Скопіювати дані дошки",
     "copied": "Скопійовано",
     "appStep3": "На дошці відкрийте застосунок Bristlenose для Miro в розділі «Інструменти» й виберіть файл дошки або просто вставте дані.",

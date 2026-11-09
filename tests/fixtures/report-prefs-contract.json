@@ -18,7 +18,9 @@
     "bn-display-layout",
     "bn-display-density",
     "bn-display-breaks",
-    "bn-focus-mode"
+    "bn-focus-mode",
+    "bn-transcript-timeline",
+    "bn-signal-working-open"
   ],
   "key_prefixes": [
     "bristlenose-quote-grouping-"

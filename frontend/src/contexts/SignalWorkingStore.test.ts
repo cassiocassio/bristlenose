@@ -7,6 +7,7 @@ import {
   toggleSignalWorking,
   useSignalWorkingOpen,
 } from "./SignalWorkingStore";
+import contractJson from "../../../tests/fixtures/report-prefs-contract.json";
 
 afterEach(() => resetSignalWorkingStore());
 
@@ -41,6 +42,25 @@ describe("SignalWorkingStore", () => {
   it("remembers the choice in localStorage as a convenience", () => {
     setSignalWorkingOpen(true);
     expect(localStorage.getItem("bn-signal-working-open")).toBe("1");
+  });
+
+  it("hands a change to the Mac app as a report preference", () => {
+    // R89 extension, decision #182 (9 Nov 2026): one answer for every card, a reading mode, so the
+    // Mac app keeps it past a relaunch. A bare localStorage write would be forgotten on quit.
+    const w = window as unknown as Record<string, unknown>;
+    const postMessage = vi.fn();
+    w.webkit = { messageHandlers: { navigation: { postMessage } } };
+    try {
+      setSignalWorkingOpen(true);
+      expect(postMessage).toHaveBeenCalledWith({ type: "report-pref", key: "bn-signal-working-open", value: "1" });
+      setSignalWorkingOpen(false);
+      expect(postMessage).toHaveBeenLastCalledWith({ type: "report-pref", key: "bn-signal-working-open", value: "0" });
+      for (const [msg] of postMessage.mock.calls) {
+        expect((msg.value as string).length).toBeLessThanOrEqual(contractJson.max_value_length);
+      }
+    } finally {
+      delete w.webkit;
+    }
   });
 
   it("still carries the state when storage throws", () => {

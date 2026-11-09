@@ -6,12 +6,16 @@
  * per-card `useState`, so each card forgot. The chart is a reading mode, not a per-card choice
  * (owner, 30 Oct 2026).
  *
- * Module-level, like TranscriptTimelineStore. A per-viewer convenience in localStorage: the Mac
- * app's web views forget it on quit, and that is fine; it survives navigating between lenses and
- * a reload in a browser. The quotes' own "Show all" disclosure stays per card.
+ * Module-level, like TranscriptTimelineStore. A per-viewer reading mode in localStorage, and since
+ * decision #182 (9 Nov 2026) one of the R89 report preferences (`utils/nativePrefs.ts`), so the
+ * Mac app keeps it past a relaunch; it survives navigating between lenses and a reload in a
+ * browser. It is the panel-level answer, not a card's state: the quotes' own "Show all" disclosure
+ * stays per card, and is not remembered.
  */
 
 import { useSyncExternalStore } from "react";
+
+import { storePref } from "../utils/nativePrefs";
 
 const LS_KEY = "bn-signal-working-open";
 
@@ -29,11 +33,8 @@ const listeners = new Set<() => void>();
 export function setSignalWorkingOpen(next: boolean): void {
   if (next === open) return;
   open = next;
-  try {
-    localStorage.setItem(LS_KEY, open ? "1" : "0");
-  } catch {
-    // Storage unavailable: module state still carries it within this page.
-  }
+  // Storage unavailable: `storePref` swallows it, and module state still carries it within this page.
+  storePref(LS_KEY, open ? "1" : "0");
   listeners.forEach((l) => l());
 }
 

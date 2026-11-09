@@ -75,10 +75,11 @@ final class BridgeHandler: ObservableObject {
     /// published: `isPreparingSignals` carries what a view needs.
     private(set) var lensAvailabilityPosts = 0
 
-    /// Where the reader is within the current lens — a heading id, or nil for
-    /// the top. Posted by `useAnchorReporter` on scroll-settle; persisted per
-    /// project by `ContentView` so reopening lands there. Interpretation is
-    /// per-lens — see `LensAnchor`.
+    /// Where the reader is within the current lens — an element id, or a place
+    /// for Sessions (`s1#t-66`), or nil for the top. Posted by
+    /// `useAnchorReporter` on scroll-settle; persisted per project by
+    /// `ContentView` so reopening lands there. Interpretation is per-lens — see
+    /// `LensAnchor`.
     @Published var currentAnchor: String?
 
     /// Which lens `currentAnchor` is for. Matched against `activeTab` before the
@@ -341,6 +342,9 @@ final class BridgeHandler: ObservableObject {
         "bn-discussion-guide-open", "bn-discussion-nav-width",
         "bn-display-layout", "bn-display-density", "bn-display-breaks",
         "bn-focus-mode",
+        // Reading modes (decision #182, 9 Nov 2026): the transcript timeline,
+        // and the Signals working panel, one answer for every card.
+        "bn-transcript-timeline", "bn-signal-working-open",
     ]
     /// Keys taken by prefix. Serve always names the project "1", so the quote
     /// grouping is in practice one key.
@@ -823,8 +827,19 @@ final class BridgeHandler: ObservableObject {
     /// Named clear for the run-completion transition (`ContentView.
     /// scheduleReportReloadOnCompletion`) — see `SessionsRouteMemory` for why
     /// clearing beats validating.
+    ///
+    /// Since decision #182 (9 Nov 2026) it also forgets the position the SPA
+    /// last reported, **for every lens**, not only Sessions: a run can renumber
+    /// sessions, re-cluster quotes and rewrite cards, so the element a live
+    /// report last stood on is yesterday's. The name is kept because the call
+    /// site is in `ContentView`; the saved copy is cleared beside it, in
+    /// `ProjectIndex.recordPipelineRun`. Known hole, pre-existing for Sessions:
+    /// a CLI run that finishes while the app is closed never passes through
+    /// `.running`, so nothing clears.
     func clearSessionsRouteMemory() {
         sessionsRouteMemory.clear()
+        currentAnchor = nil
+        currentAnchorLens = nil
     }
 
     /// One pending lens intent — a lens the user activated while the rail was
@@ -901,7 +916,7 @@ final class BridgeHandler: ObservableObject {
             switchToTab(target)
         case .restore(let sessionID):
             PerfSignpost.begin(.lensSwitch, scope: perfScope)
-            navigateToSession(sessionID)
+            openSession(sessionID)
         case .queue(let target):
             pendingLensIntent = target
         case .ignore:
@@ -909,8 +924,45 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
-    /// Navigate the SPA to a session's transcript via the
-    /// `window.navigateToSession` shim (`navigation.ts:62`).
+    /// Restore a remembered place on the Sessions lens — the `.session` arm of
+    /// `LensAnchor.action`, reached from `ContentView.restoreAnchor` straight
+    /// after `activateLens`. The place is a bare session (`s3`) or a session
+    /// and a paragraph (`s1#t-66`, decision #182), and it is opaque here.
+    ///
+    /// Both forms go one way, through `goToPlace` to the transcript's own
+    /// address (`sessionsRestorePlace`), so `TranscriptPage`'s hash arrival
+    /// lands a paragraph (nearest when the exact one is gone, and the shipped
+    /// arrival flash). One way matters for ordering, not only tidiness:
+    /// `activateLens` sends `switchToTab` from a `Task`, and so does
+    /// `goToPlace`, so the restore lands after it. The direct
+    /// `callAsyncJavaScript` that `openSession` uses is sent at once, ahead of
+    /// that `Task`, and the `switchToTab` that followed it took the reader to
+    /// the grid.
+    ///
+    /// Callers that do not follow an `activateLens` (the Sessions popover,
+    /// `activateLens`'s own `.restore`) use `openSession` instead. The name
+    /// stays because `ContentView` calls it.
+    func navigateToSession(_ place: String) {
+        guard let webView else {
+            Self.log.fault("navigateToSession dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
+            return
+        }
+        goToPlace(Self.sessionsRestorePlace(place))
+        webView.window?.makeFirstResponder(webView)
+    }
+
+    /// Where `navigateToSession` sends a remembered Sessions place: the
+    /// transcript's own address, for a bare session and a session with a
+    /// paragraph alike. Pure, so the one-path decision is pinned by a test.
+    static func sessionsRestorePlace(_ place: String) -> WindowPlace {
+        WindowPlace(path: "/report/sessions/\(place)", anchor: nil, play: nil)
+    }
+
+    /// Open a session's transcript via the `window.navigateToSession` shim
+    /// (`navigation.ts:62`) — the Sessions popover's commit and
+    /// `activateLens`'s route-memory `.restore`, neither of which follows a
+    /// `switchToTab`. (Until decision #182 this was `navigateToSession`, which
+    /// is now the restore entry point.)
     ///
     /// Deliberately the **completion-handler overload** with an explicit nil —
     /// honest fire-and-forget. Do NOT write `try await … in: nil, in: .page`
@@ -918,9 +970,9 @@ final class BridgeHandler: ObservableObject {
     /// whose Void result makes the `await`/`try` no-ops and the `catch` dead
     /// (the documented BridgeHandler wrinkle — six inert warnings elsewhere in
     /// this file; don't add a seventh).
-    func navigateToSession(_ sessionID: String) {
+    func openSession(_ sessionID: String) {
         guard let webView else {
-            Self.log.fault("navigateToSession dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
+            Self.log.fault("openSession dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
             return
         }
         webView.callAsyncJavaScript(
@@ -933,10 +985,23 @@ final class BridgeHandler: ObservableObject {
         webView.window?.makeFirstResponder(webView)
     }
 
-    /// The session the window's route memory last saw, if any — read by
-    /// `ContentView` when persisting the Sessions lens's remembered position,
-    /// which is a route rather than a scroll offset (see `LensAnchor`).
-    var restoreSessionID: String? { sessionsRouteMemory.restoreSessionID }
+    /// The Sessions lens's place to remember — read by `ContentView` when
+    /// persisting its position, which is a route rather than a scroll offset
+    /// (see `LensAnchor`). Despite the name it is a *place* since decision #182
+    /// (9 Nov 2026): the paragraph the SPA reported (`s1#t-66`) when it is in
+    /// the transcript the route memory is on, else the session alone (`s1`),
+    /// else nil on the grid. The prefix check keeps a paragraph reported for
+    /// one transcript from standing for the next in the beat before the SPA
+    /// reports again. (The rename to a place-shaped name is a one-line
+    /// `ContentView` edit, deferred.)
+    var restoreSessionID: String? {
+        let session = sessionsRouteMemory.restoreSessionID
+        if let session, currentAnchorLens == Tab.sessions.rawValue,
+           let place = currentAnchor, place.hasPrefix(session + "#") {
+            return place
+        }
+        return session
+    }
 
     /// Scroll the report to an element id, via the `window.scrollToAnchor` shim
     /// (`navigation.ts`). Used to put a reopened project back where it was
@@ -950,7 +1015,7 @@ final class BridgeHandler: ObservableObject {
     /// is the honest failure and the reason an id is stored rather than an
     /// offset.
     ///
-    /// Same completion-handler-with-nil spelling as `navigateToSession`, for
+    /// Same completion-handler-with-nil spelling as `openSession`, for
     /// the reason documented there.
     func scrollToAnchor(_ anchorID: String) {
         guard let webView else { return }

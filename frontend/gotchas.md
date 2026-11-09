@@ -306,6 +306,8 @@ resolve `url(#id)` for `clip-path` or `filter`, so a clip or filter probe draws 
 a renderer that ignores it. Serve the probe from a real http origin. Record:
 `experiments/screens-lens/leader-styles.md` §7, "As built".
 
+- **A DOM selector that something else watches dies silently when the component it names is replaced — pin each selector against the component that renders it.** `useAnchorReporter` finds "where the reader is" with one selector per lens and posts it to the Mac app, which restores it on the next open. Codebook's selector was `[id^='codebook-fw-']`, the v1 lens's framework header; `baa1aa0ea` (31 Aug 2026) replaced v1 with the v2 lens, which never rendered that id, and for ten weeks Codebook reported nothing and reopened at the top. Nothing failed: the reporter's own test built `<h3 id="codebook-fw-nielsen">` by hand, so it pinned the selector against a fixture of itself. Found in review, 9 Nov 2026 (decision #182). **Fix:** `ANCHOR_SELECTORS` is exported, and each lens's component test renders the real thing and asserts the selector matches it (`QuoteCard.test.tsx`, `CodebookV2Page.test.tsx`, `SignalsPage.test.tsx`, `TranscriptPage.test.tsx`). **Tell:** a hook test that creates the very elements its selector looks for. Same family as any `querySelector` contract between files: the hook and the markup each pass alone.
+
 ## Sidebar and playground
 
 ### Sidebar & playground

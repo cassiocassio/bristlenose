@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dedupeSignals, isFromSentimentLens } from "./signalDedup";
+import { dedupeSignals, isFromSentimentLens, signalDomId } from "./signalDedup";
 import type { UnifiedSignal, UnifiedQuote } from "./types";
 
 function q(pid: string, at: number): UnifiedQuote {
@@ -146,5 +146,50 @@ describe("the rule is pure", () => {
 
     const twice = dedupeSignals(input);
     expect(twice[0].alternates).toHaveLength(1);
+  });
+});
+
+describe("signalDomId", () => {
+  // The card's element id, which the Mac app stores to bring a reopened study back to the card
+  // (decision #182). It has to survive a rename and tell two cards apart.
+  it("is a plain id: no whitespace, nothing a selector would trip on", () => {
+    const id = signalDomId(sig("Mental model", 1, [], { codebookName: "Norman's Design (2013)" }));
+    expect(id).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(id).toBe("signal-section-section-1-Norman_27_s_Design__28_2013_29_-Mental_model");
+  });
+
+  it("is unchanged by renaming the location", () => {
+    const before = sig("frustration", 1, [], { location: "Beds" });
+    const after = sig("frustration", 1, [], { location: "Beds and mattresses" });
+    expect(signalDomId(after)).toBe(signalDomId(before));
+  });
+
+  it("differs between two cards on one place", () => {
+    expect(signalDomId(sig("frustration", 1, []))).not.toBe(signalDomId(sig("delight", 1, [])));
+    // The same group name read through two codebooks is two cards.
+    expect(signalDomId(sig("Errors", 1, [], { codebookName: "Nielsen" })))
+      .not.toBe(signalDomId(sig("Errors", 1, [], { codebookName: "Norman" })));
+    // A section and a theme with the same words are two places.
+    expect(signalDomId(sig("Errors", 1, [], { sourceType: "theme", anchor: "theme-1" })))
+      .not.toBe(signalDomId(sig("Errors", 1, [])));
+  });
+
+  it("keeps two group names in another script apart", () => {
+    // A bare `_` per character made every equal-length CJK or Greek name the same id.
+    const a = signalDomId(sig("挫败感", 1, [], { codebookName: "体验" }));
+    const b = signalDomId(sig("满意度", 1, [], { codebookName: "体验" }));
+    expect(a).not.toBe(b);
+    expect(a).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(signalDomId(sig("Λάθη", 1, []))).not.toBe(signalDomId(sig("Ροής", 1, [])));
+  });
+
+  it("escapes a character outside the BMP as one code point", () => {
+    // 𠀀 (U+20000) is two UTF-16 units; iterating units would escape two lone surrogates.
+    expect(signalDomId(sig("𠀀", 1, [], { codebookName: "" }))).toBe("signal-section-section-1--_20000_");
+  });
+
+  it("falls back to the location when a card has no anchor", () => {
+    const id = signalDomId(sig("delight", 1, [], { anchor: "", location: "Checkout flow", codebookName: "" }));
+    expect(id).toBe("signal-section-checkout_flow--delight");
   });
 });

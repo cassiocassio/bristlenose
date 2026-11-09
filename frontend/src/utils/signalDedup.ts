@@ -230,3 +230,27 @@ export function groupSignalsByLocation(signals: UnifiedSignal[]): SignalPlace[] 
     .map(([location, cards]) => ({ location, cards }))
     .sort((a, b) => b.cards[0].compositeSignal - a.cards[0].compositeSignal);
 }
+
+/**
+ * A card's element id, so the Mac app can bring a reopened study back to the card the reader
+ * was on (decision #182, 9 Nov 2026; `hooks/useAnchorReporter.ts` reports it, the shell scrolls
+ * to it).
+ *
+ * Built from the card's identity, not its position or its words: the group anchor
+ * (`section-<id>` / `theme-<id>`, rename-proof, `server/heading_names.py`), the codebook and the
+ * column (the sentiment or the group). The location name stands in only when a card has no
+ * anchor. A rename of the location therefore keeps the id, and two cards on one place — two
+ * codebooks' readings of one group name, say — never share one. Whitespace becomes `_`, and any
+ * other character outside `[A-Za-z0-9_-]` is escaped as `_<hex code point>_`, so the id is safe in
+ * a selector and in `getElementById` alike and two group names in another script (Chinese, Greek)
+ * stay two ids: a bare `_` would collapse every name of the same length into one. Code points, not
+ * UTF-16 units, so a character outside the BMP is one escape, not two halves.
+ *
+ * The id does change when a codebook or tag group is renamed (the column is its name); the
+ * restore then finds nothing and lands at the top, accepted for v1.
+ */
+export function signalDomId(s: UnifiedSignal): string {
+  const place = s.anchor || s.location.toLowerCase();
+  const raw = `signal-${s.sourceType}-${place}-${s.codebookName}-${s.columnLabel}`.replace(/\s+/g, "_");
+  return Array.from(raw, (c) => (/^[A-Za-z0-9_-]$/.test(c) ? c : `_${c.codePointAt(0)!.toString(16)}_`)).join("");
+}

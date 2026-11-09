@@ -121,8 +121,9 @@ export function postRouteChange(url: string): void {
 }
 
 /**
- * Where the reader is within a lens — a heading id, or null for the top of the
- * page. The shell persists it per project so reopening lands there.
+ * Where the reader is within a lens — an element id (a place, `s1#t-66`, on
+ * Sessions), or null for the top of the page. The shell persists it per
+ * project so reopening lands there.
  *
  * Carries the lens it belongs to, because this message and `route-change` are
  * independent: without it, "scrolled to the top of Quotes" and "left Quotes"

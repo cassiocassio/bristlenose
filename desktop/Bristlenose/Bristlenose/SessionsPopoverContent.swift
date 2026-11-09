@@ -185,7 +185,7 @@ struct SessionsSwitcherButton: View {
                     isPresented = false
                 },
                 onCommit: { session in
-                    bridgeHandler.navigateToSession(session.sessionID)
+                    bridgeHandler.openSession(session.sessionID)
                 },
                 onDismiss: { isPresented = false },
                 onRetry: { refresh() }

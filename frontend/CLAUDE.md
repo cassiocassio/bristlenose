@@ -116,7 +116,7 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - Word-level timing data — Whisper captures per-word timestamps (`Word` model: `text`, `start_time`…
 - Speaker role: the moderator's stored role is `"researcher"`, never `"moderator"`.
 
-**Testing and verification** (28) — [full entries](gotchas.md#testing-and-verification)
+**Testing and verification** (29) — [full entries](gotchas.md#testing-and-verification)
 
 - To read a module-level store from the page under `serve --dev`, `import()` of its Vite URL gives a SECOND…
 - A test that waits a fixed time for a measured layout goes flaky when the subtree under it gets heavier.
@@ -146,6 +146,7 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - Mutating a fix: a mutation that does NOT redden is a result, not a bad test
 - A prop renamed on destructure is not a mismatch
 - A contrast figure for a blurred edge is a claim about the renderer, not about the formula
+- A DOM selector that something else watches dies silently when the component it names is replaced — pin each…
 
 **Sidebar and playground** (9) — [full entries](gotchas.md#sidebar-and-playground)
 

@@ -28,7 +28,7 @@ import Foundation
 enum LensActivation: Equatable {
     /// Navigate to the lens root (`switchToTab`).
     case root(Tab)
-    /// Navigate to the remembered sessions transcript (`navigateToSession`).
+    /// Navigate to the remembered sessions transcript (`BridgeHandler.openSession`).
     case restore(sessionID: String)
     /// Hold as the one pending intent, replayed on `ready`.
     case queue(Tab)

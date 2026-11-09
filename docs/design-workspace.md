@@ -1,8 +1,15 @@
 ---
 status: partial
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+last-trued: 2026-11-09
+trued-against: HEAD@main (5fc6f4ec7) on 2026-11-09, §P3b scope (decision #182); header re-read
 ---
+
+> **9 Nov 2026 — P3b's anchors were revised by decision #182, option B:** each
+> lens now returns to the element the reader was on (quote, code row, Signals
+> card, transcript paragraph), and a finished run forgets the position. See the
+> _2026-11-09_ changelog entry and §"P3b". The status below is otherwise
+> unchanged by that work: Phase B and Tier-2 are still unstarted.
+>
 
 > **Built — the implementation plan is complete and the family question is
 > closed.** (`status: partial` rather than `current` because Phase B and Tier-2,
@@ -70,6 +77,7 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 
 ## Changelog
 
+- _2026-11-09_ — **Decision #182, option B: each lens comes back to the element you were on, not to its top or its group.** Supersedes the 16 Aug anchor table (§P3b, kept and marked). As built: **Quotes** → the quote card (`q-p1-10`, `quote.dom_id`, which survives edit, star, tag, hide and regrouping), the group heading only when the reader is above a group's first card; **Codebook** → the code row (`code-<tag id>`, own and framework rows), within the codebook the lens opens on — `CodebookV2Store`'s own-tags-first rule stands, so a row in another codebook falls back to the top, and on side-by-side group columns the walk takes the last row in the DOM at that height (accepted for v1); **Signals** → the card (`signalDomId`: source type, group anchor or location slug, codebook, column), which **reverses the 16 Aug "top"** — the card's place is shown first through an in-page, cancelable `bn:reveal-anchor` event that `useScrollToAnchor` dispatches for any target it finds (native only calls `window.scrollToAnchor`); the Signals page claims the ids of its own cards and lands them the way its list does (`scrollToCard`, so a first card brings its place title), with nothing selected, no inspector sync and no working opened (the card id carries the codebook and the group's name, so it changes when either is renamed, and the restore then falls to the top: accepted for v1); **Sessions** → the paragraph, stored as the SPA's own address form `s1#t-66` and applied — a bare `s3` as well — through `goToPlace` (`BridgeHandler.navigateToSession`, so it lands after `activateLens`'s `switchToTab`; the popover and the route-memory restore use `openSession`), so `TranscriptPage`'s hash arrival lands it (nearest paragraph when the exact one is gone, and the shipped arrival flash; `t-<seconds>` is not unique when a paragraph was split, and the first match is the same place); **Project, Screens** → top (the right lens is enough); **Discussion stays at the top** — no element carries an id, the same question is a different element in its two layouts, and it arrives by query (`?item=&turn=`), so a restore there is its own feature. **Codebook had restored to the top since 31 Aug**, not to its framework section: the 16 Aug selector `[id^='codebook-fw-']` named the v1 lens's id, `baa1aa0ea` deleted v1, and nothing failed — so each lens's selector is now pinned against the component that renders it. **A finished run forgets the position for every lens** (`ProjectIndex.recordPipelineRun` clears `lastAnchor` and keeps `lastLens`; `BridgeHandler.clearSessionsRouteMemory` now also clears the reported position in memory) — a run can renumber sessions and rewrite what an id names. Known hole, pre-existing for Sessions: a CLI run that finishes while the app is closed never passes `.running`, so nothing clears. **B2:** `bn-transcript-timeline` and `bn-signal-working-open` join the R89 report preferences (reading modes, kept past a relaunch); `bn-inspector-source` stays out, because it names a codebook id and the R89 store is app-wide.
 - _2026-10-13_ — trued up: loose end 1 annotated with the 12 Oct correction; the two new serve restart triggers (binary freshness, path change) recorded. Anchors: `4ecf1437`, `9c0b2778`, `eb8509e1`.
 - _2026-08-21b_ — **The header drifted a fifth time, and the family call is recorded as closed.** The 21 Aug pass named the pattern precisely — *"a doc trued four times in section scope, whose header drifted further each pass"* — and then the header drifted again, for a reason worth stating: that pass was trued against `ae05b1c0`, which **predates Stage 3b landing on the 20th**. So the banner said "Stage 3b is next and unblocked" while the changelog two lines below said it was built, and §"Effectively decided vs genuinely open" still argued *presumed A, decide late* with a paragraph on what would reopen the call and another on the spike that would settle it — all three answered days earlier, in this file. **Truing against a commit is not the same as truing against the doc's own changelog**, and this is the second time the gap between those two has produced the identical failure. The banner now says so and asks the next reader to true the header first. Substantively: Family A is recorded as **decided by construction** (`ServeFleet`, one sidecar per project), with both measured axes (32 windows → one sidecar, 144.7 MB; three studies → ~416 MB) discharging the two caveats the 16 Aug estimate carried, and constraint 7 recorded as answered by `HandshakeExposure` — exposure derived from the window roster, never stored, and deliberately decoupled from the 90-second reaping grace so that closing a window stops an agent reading immediately rather than eventually. New §"What is still open": two loose ends Stage 3b left on top of Stage 3a (a redundant serve-teardown guard of mine, and the unreachable `switchProject`/parking machinery), M1/M2 retired rather than outstanding, and Phase B as the only genuinely unstarted item.
 - _2026-08-21_ — **Trued against `ae05b1c0`: the header was arguing a question its own changelog had closed two days earlier.** Five summaries were stale in the same direction — every one of them said less was built than is. (1) The banner's last paragraph called the master/child-versus-peer choice "live rather than settled" and told the reader to build nothing further on the child; peer had shipped on 19 Aug (`348b5122`) and the entry recording it sat forty lines below. (2) "Owed before it ships … chiefly whether SwiftUI's per-value window dedup defeats ⌥⌘N" — it did, was found by using the app on 20 Aug, and was fixed the same day. (3) §"Window-scoping the menu commands" opened "Stage 1 is built, Stages 2–3 are not" while the §Stages list four lines down marked 2 and 3a ✅ on 16 Aug. (4) The three blockers were all cleared and none was annotated, though constraint 6 beside them had been. (5) Stage 3b carried no ✅ and still read "blocked on the family choice". §"What a child window is" (170 lines) now carries a superseded banner rather than an edit — it is the argument peer was chosen against, and deleting it would lose why. **The pattern worth naming: a doc trued four times in section scope, whose header drifted further each pass.** That is the failure this doc's own 18 Aug banner describes happening to `design-cloud-import.md`, recurring here while the sentence describing it was on screen.
@@ -1050,6 +1058,15 @@ reload raises that flag again and would yank the researcher back from wherever
 they had since navigated; and the *capture* must not run before the restore, or
 the SPA's initial landing on the dashboard overwrites the memory with `project`
 and the restore then dutifully honours it.
+
+> **Superseded 9 Nov 2026 by decision #182, option B** (the _2026-11-09_
+> changelog entry): each lens now returns to the element the reader was on —
+> Quotes the quote card, Codebook the code row, **Signals the card** (no longer
+> the top), Sessions the paragraph (`s1#t-66`), Project, Screens and Discussion
+> the top — and a finished run forgets the position. The "Anchors as decided"
+> paragraph below is the 16 Aug ruling, kept as history; its Codebook entry
+> stopped matching anything on 31 Aug, when the v2 lens replaced v1. The table
+> in force is `LensAnchor.swift` with `useAnchorReporter.ts`.
 
 **P3b — the anchor. ✅ Shipped 16 Aug 2026.** The half that needed the bridge
 work, and it got a new message in each direction: `anchor-change` inbound

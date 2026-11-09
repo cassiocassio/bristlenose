@@ -9,6 +9,7 @@ import {
   setTimelineOn,
   toggleTimeline,
 } from "./TranscriptTimelineStore";
+import contractJson from "../../../tests/fixtures/report-prefs-contract.json";
 
 beforeEach(() => resetTranscriptTimelineStore());
 
@@ -48,6 +49,30 @@ describe("TranscriptTimelineStore", () => {
     applyTimelineMenuAction("setSessionTimelineLanes", { lanes: 4 });
     expect(getTranscriptTimeline().lanes).toBe(5);
     expect(applyTimelineMenuAction("focusMode")).toBe(false);
+  });
+
+  it("hands a change to the Mac app as a report preference that fits its value limit", () => {
+    // R89 extension, decision #182 (9 Nov 2026): the timeline is a reading mode, so the Mac app
+    // keeps it past a relaunch. A bare localStorage write would be forgotten on quit.
+    const w = window as unknown as Record<string, unknown>;
+    const postMessage = vi.fn();
+    w.webkit = { messageHandlers: { navigation: { postMessage } } };
+    try {
+      setTimelineLanes(5);
+      expect(postMessage).toHaveBeenCalledWith({
+        type: "report-pref",
+        key: "bn-transcript-timeline",
+        value: JSON.stringify({ on: true, lanes: 5 }),
+      });
+      const value = postMessage.mock.calls[0][0].value as string;
+      expect(value.length).toBeLessThanOrEqual(contractJson.max_value_length);
+      // Availability is not the viewer's choice and posts nothing.
+      postMessage.mockClear();
+      setTimelineAvailable(true);
+      expect(postMessage).not.toHaveBeenCalled();
+    } finally {
+      delete w.webkit;
+    }
   });
 
   it("falls back to the chain when storage holds nonsense", async () => {

@@ -35,6 +35,7 @@ import {
   dedupeSignals,
   groupSignalsByLocation,
   isFromSentimentLens,
+  signalDomId,
 } from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
 import { markArrived } from "../utils/arrival";
@@ -585,6 +586,8 @@ function SignalCard({
     // card is not itself a control, so no key handler and no role.
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
+      // Where a reopened study comes back to (decision #182; `useAnchorReporter`).
+      id={signalDomId(signal)}
       className={`signal-card${expanded ? " expanded" : ""}${isFocused ? " bn-selected" : ""}`}
       aria-current={isFocused ? "true" : undefined}
       style={{
@@ -1504,6 +1507,25 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     const handler = (e: Event) => onSignalFocus(e);
     window.addEventListener("bn:signal-focus", handler);
     return () => window.removeEventListener("bn:signal-focus", handler);
+  }, []);
+
+  // A reopened study coming back to a card (decision #182): `scrollToAnchor` found the card and
+  // offers it to the page, whether or not its place is showing. Show its place and land it the way
+  // the list does (`scrollToCard`, so the first card brings its place title with it), and nothing
+  // else: no selection, no inspector, no working. Only an id of a card this page draws is claimed;
+  // `preventDefault` tells the shim the page has landed it, so it does not scroll a second time.
+  const onRevealAnchor = useEffectEvent((e: Event) => {
+    const id = (e as CustomEvent<{ id: string }>).detail?.id;
+    const signal = id ? signals.find((s) => signalDomId(s) === id) : undefined;
+    if (!signal) return;
+    e.preventDefault();
+    setActiveLocation(signal.location);
+    setPendingFocusKey(signal.key);
+  });
+  useEffect(() => {
+    const handler = (e: Event) => onRevealAnchor(e);
+    window.addEventListener("bn:reveal-anchor", handler);
+    return () => window.removeEventListener("bn:reveal-anchor", handler);
   }, []);
 
   void activeDimension; // used indirectly by DimensionToggle components in sources

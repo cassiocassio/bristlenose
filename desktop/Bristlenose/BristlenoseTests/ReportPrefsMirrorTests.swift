@@ -127,6 +127,21 @@ struct ReportPrefsMirrorTests {
         #expect(try runSeed(script) == ["bn-tags-open": "true"])
     }
 
+    /// The transcript timeline's value is the one JSON pref on the list
+    /// (decision #182, 9 Nov 2026): it must fit the length limit and come back
+    /// through the seed as the same text.
+    @Test func theTimelineReadingModeIsSavedAndSeeded() throws {
+        let (defaults, suite) = try isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let value = #"{"on":true,"lanes":5}"#
+        BridgeHandler.storeReportPref(key: "bn-transcript-timeline", value: value, defaults: defaults)
+        BridgeHandler.storeReportPref(key: "bn-signal-working-open", value: "1", defaults: defaults)
+        #expect(BridgeHandler.savedReportPrefs(defaults: defaults)
+                == ["bn-transcript-timeline": value, "bn-signal-working-open": "1"])
+        let script = BridgeHandler.reportPrefsSeedScript(defaults: defaults)
+        #expect(try runSeed(script) == ["bn-transcript-timeline": value, "bn-signal-working-open": "1"])
+    }
+
     @Test func theQuoteGroupingIsTakenByPrefix() throws {
         let (defaults, suite) = try isolatedDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }

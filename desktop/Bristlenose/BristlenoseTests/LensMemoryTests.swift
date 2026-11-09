@@ -108,6 +108,37 @@ struct LensMemoryPersistenceTests {
         #expect(reloaded.projects.first?.lastLens == "quotes")
     }
 
+    @Test("the position within the lens is written and read back")
+    func anchorPersists() {
+        let (index, dir) = Self.makeTempIndex()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let project = index.addProject(name: "IKEA Study", path: "/tmp/ikea")
+        index.setLastLens(id: project.id, lens: "sessions")
+        index.setLastAnchor(id: project.id, anchor: "s1#t-66")
+
+        let reloaded = ProjectIndex(fileURL: dir.appendingPathComponent("projects.json"))
+        #expect(reloaded.projects.first?.lastAnchor == "s1#t-66")
+    }
+
+    @Test("a finished run forgets the position, and keeps the lens")
+    func runCompletionClearsTheAnchor() {
+        // Decision #182 (9 Nov 2026): a run can renumber sessions and rewrite
+        // the elements an anchor names, so a remembered `s3#t-66` could restore
+        // successfully to someone else's transcript. Every lens, not only Sessions.
+        let (index, dir) = Self.makeTempIndex()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let project = index.addProject(name: "IKEA Study", path: "/tmp/ikea")
+        index.setLastLens(id: project.id, lens: "quotes")
+        index.setLastAnchor(id: project.id, anchor: "q-p1-10")
+        index.recordPipelineRun(id: project.id)
+
+        let reloaded = ProjectIndex(fileURL: dir.appendingPathComponent("projects.json"))
+        #expect(reloaded.projects.first?.lastAnchor == nil)
+        #expect(reloaded.projects.first?.lastLens == "quotes")
+    }
+
     @Test("a projects.json written before lens memory still loads")
     func absentKeyIsNotAnError() throws {
         let (index, dir) = Self.makeTempIndex()

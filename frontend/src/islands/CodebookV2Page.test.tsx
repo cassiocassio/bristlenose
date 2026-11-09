@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { anySidebarOpen, resetSidebarStore } from "../contexts/SidebarStore";
 import { resetCodebookFocus } from "../contexts/CodebookFocusStore";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
+import { ANCHOR_SELECTORS } from "../hooks/useAnchorReporter";
 import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import type { CodebookGroupResponse } from "../utils/types";
 
@@ -175,6 +176,27 @@ describe("nothing re-implements a tag row", () => {
     expect(container.querySelector(".codebook-group")).toBeInTheDocument();
     expect(container.querySelectorAll(".tag-row")).toHaveLength(3);
     expect(container.querySelector(".tag-bar-area")).toBeInTheDocument();
+  });
+});
+
+describe("the reopened-study anchor (decision #182)", () => {
+  // The Mac app comes back to the code row the reader was on by an id the
+  // reporter finds with a selector. The v1 selector (`codebook-fw-`) matched
+  // nothing the v2 lens rendered, from 31 Aug to 9 Nov 2026, and nothing
+  // failed: so pin the selector against both kinds of row this page draws.
+  it("a framework's rows match the Codebook anchor selector, by the code's id", () => {
+    const { container } = renderPage(book());
+    const ids = [...container.querySelectorAll(ANCHOR_SELECTORS.codebook)].map((el) => el.id);
+    expect(ids).toEqual(["code-0", "code-1", "code-2"]);
+  });
+
+  it("the researcher's own rows match it too", () => {
+    const own: CodebookGroupResponse = { ...group(2, "Your tags"), framework_id: null, is_default: true };
+    const { container } = renderPage(
+      book({ id: "", floor: true, title: "Your tags", provenance: "" }), [own],
+    );
+    const ids = [...container.querySelectorAll(ANCHOR_SELECTORS.codebook)].map((el) => el.id);
+    expect(ids).toEqual(["code-0", "code-1"]);
   });
 });
 

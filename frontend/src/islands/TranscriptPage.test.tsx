@@ -5,6 +5,7 @@ import { TranscriptPage } from "./TranscriptPage";
 import { _resetExportCache } from "../utils/exportData";
 import type { TranscriptPageResponse } from "../utils/types";
 import { TRANSCRIPT_WRITTEN_EVENT } from "../utils/transcriptWritten";
+import { ANCHOR_SELECTORS } from "../hooks/useAnchorReporter";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -303,6 +304,20 @@ describe("TranscriptPage", () => {
     expect(marker?.getAttribute("contenteditable")).toBe("false");
     expect(marker?.textContent).toBe("Inaudible");
     expect(screen.getByTestId("segment-t-26").querySelector(".segment-inaudible")).toBeNull();
+  });
+
+  it("draws paragraphs the Sessions anchor selector matches, by their time", async () => {
+    // Decision #182: the Mac app comes back to the paragraph the reader was on
+    // (`s1#t-10`). A selector dies silently when the DOM it watches changes, so
+    // pin it against the real page.
+    mockedGetTranscript.mockResolvedValue(mockData);
+    const { container } = render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("segment-t-10")).toBeTruthy();
+    });
+    const ids = [...container.querySelectorAll(ANCHOR_SELECTORS.sessions)].map((el) => el.id);
+    expect(ids).toContain("t-10");
+    expect(ids.length).toBe(mockData.segments.length);
   });
 
   it("moderator segments get segment-moderator class", async () => {

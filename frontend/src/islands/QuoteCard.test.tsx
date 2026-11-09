@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { QuoteCard } from "./QuoteCard";
+import { ANCHOR_SELECTORS } from "../hooks/useAnchorReporter";
 import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import type { QuoteResponse, ModeratorQuestionResponse, TranscriptSegmentResponse } from "../utils/types";
 
@@ -731,5 +732,16 @@ describe("QuoteCard — sentiment badge dedup", () => {
     expect(screen.queryByTestId("bn-quote-q-p1-26-badge-ai")).not.toBeInTheDocument();
     // Codebook tag visible as user badge
     expect(screen.getByTestId("bn-quote-q-p1-26-badge-confusion")).toBeInTheDocument();
+  });
+});
+
+describe("QuoteCard — the reopened-study anchor (decision #182)", () => {
+  // The Mac app comes back to the quote the reader was on by an id the reporter
+  // finds with a selector. A selector dies silently when the DOM it watches
+  // changes (Codebook's did, for ten weeks), so pin it against the real card.
+  it("renders an element the Quotes anchor selector matches, by the quote's id", () => {
+    const { container } = renderCard();
+    const card = container.querySelector(ANCHOR_SELECTORS.quotes);
+    expect(card?.id).toBe("q-p1-26");
   });
 });

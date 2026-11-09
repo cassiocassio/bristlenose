@@ -40,6 +40,10 @@ export const MIRRORED_PREF_KEYS: readonly string[] = [
   "bn-display-density",
   "bn-display-breaks",
   "bn-focus-mode",
+  // Reading modes, not per-item state (decision #182, 9 Nov 2026): the transcript's timeline
+  // on/off and detail, and the Signals working panel, which is one answer for every card.
+  "bn-transcript-timeline",
+  "bn-signal-working-open",
 ];
 
 /** Keys mirrored by prefix. Serve always names the project "1", so in

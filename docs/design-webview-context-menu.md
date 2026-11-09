@@ -227,7 +227,7 @@ apply paths:
 
 | Case | Apply after `ready` (where `seed.lens` is applied, `ContentView.swift:1089-1103`) |
 |---|---|
-| `.anchor(lens, id)` (Quotes `theme-…`, `section-…`, `session-quotes-…`, `q-…`; Codebook `codebook-fw-…`) | `activateLens` + `scrollToAnchor`, as `restoreAnchor` does for `lastAnchor` |
+| `.anchor(lens, id)` (Quotes `theme-…`, `section-…`, `session-quotes-…`, `q-…`; Codebook `code-<tag id>`; until 9 Nov 2026 this said `codebook-fw-…`, an id the v2 lens never rendered — decision #182) | `activateLens` + `scrollToAnchor`, as `restoreAnchor` does for `lastAnchor` |
 | `.session(id, seconds?)` | Navigate to `/report/sessions/{id}#t-{seconds}` through the router, so `TranscriptPage`'s tolerant `#t-N` resolver (`TranscriptPage.tsx:552-561`) finds the nearest segment. `navigateToSession(sid, anchorId)` goes through `scrollToAnchor`, which has no tolerance. |
 
 Three constraints:

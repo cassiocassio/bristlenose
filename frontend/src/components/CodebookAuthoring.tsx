@@ -243,6 +243,8 @@ export function TagRow({
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
+      // Where a reopened study comes back to (decision #182; `useAnchorReporter`).
+      id={`code-${tag.id}`}
       className={classes}
       draggable={!isEditing}
       onClick={handleRowClick}
@@ -621,7 +623,7 @@ export function CodebookGroupColumn({
             ? te(`sentiment.${tag.name}`, { defaultValue: tag.name })
             : tag.name;
           return isFramework ? (
-            <div key={tag.id} className="tag-row">
+            <div key={tag.id} id={`code-${tag.id}`} className="tag-row">
               <div className="tag-name-area">
                 <Badge
                   text={tagDisplayName}

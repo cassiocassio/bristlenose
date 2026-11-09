@@ -86,9 +86,11 @@ struct Project: Identifiable, Hashable, Codable {
     /// onto" for why a wrong restore costs a click and a wrong reset can cost a
     /// search.
     var lastLens: String?
-    /// Where in that lens — a heading id on Quotes/Codebook, a session id on
-    /// Sessions, nil elsewhere. Meaningless without `lastLens`, which is why
-    /// `LensAnchor` interprets the pair rather than this alone.
+    /// Where in that lens — the element the reader was on (a quote card, a code
+    /// row, a Signals card), a place on Sessions (`s1#t-66`, or a bare `s1`), nil
+    /// elsewhere (decision #182, 9 Nov 2026). Meaningless without `lastLens`,
+    /// which is why `LensAnchor` interprets the pair rather than this alone.
+    /// Cleared when a run finishes (`recordPipelineRun`).
     var lastAnchor: String?
     /// The study id the project folder's marker carries
     /// (`bristlenose-output/.bristlenose/study.json`, `StudyMarker`). How the
@@ -779,9 +781,21 @@ final class ProjectIndex: ObservableObject {
         ensureLease(for: id)
     }
 
-    /// Stamp the moment a pipeline run finished, whatever its outcome.
+    /// Stamp the moment a pipeline run finished, whatever its outcome, and
+    /// forget where in the lens the project was left (`lastAnchor`; the lens
+    /// itself is kept).
     ///
-    /// **This field is write-only AND no longer read by anything (21 Aug 2026).**
+    /// The anchor goes because a run can renumber sessions, re-cluster quotes
+    /// and rewrite cards, so the element it names is yesterday's — and a
+    /// renumbered `s3` would restore *successfully* to someone else's
+    /// transcript (decision #182, 9 Nov 2026; the in-memory copy is cleared by
+    /// `BridgeHandler.clearSessionsRouteMemory`). Here because this is called for
+    /// every project whose run finished, selected or not, with any outcome: a
+    /// failed run can still have re-ingested sessions. The restore cannot undo
+    /// it — `lensRestoredFor` gates the restore to the first ready per project,
+    /// and a completion reload replays only the lens.
+    ///
+    /// **The timestamp is write-only AND no longer read by anything (21 Aug 2026).**
     /// It used to gate the F14 drift suppression in `handleWatcherUpdate`, which
     /// is why an earlier version of this comment said "do not delete it as
     /// unused". That gate now measures the baseline directly from the analysis
@@ -804,6 +818,7 @@ final class ProjectIndex: ObservableObject {
     func recordPipelineRun(id: UUID, at date: Date = Date()) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].lastPipelineRunAt = date
+        projects[index].lastAnchor = nil
         save()
     }
 

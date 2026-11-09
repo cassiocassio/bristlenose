@@ -1,12 +1,14 @@
 import { resetSignalWorkingStore } from "../contexts/SignalWorkingStore";
 import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SignalsPage } from "./SignalsPage";
 import type { CodebookSignalsListResponse, SentimentSignalsData } from "../utils/types";
 import { resetSignalStore, useSignalStore } from "../contexts/SignalStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { navigateTo } from "../shims/navigation";
+import { ANCHOR_SELECTORS } from "../hooks/useAnchorReporter";
+import { useInspectorStore } from "../contexts/InspectorStore";
 import { _resetDisplayPrefs, setDisplayPref } from "../contexts/DisplayPrefsStore";
 
 // The location link goes to the Quotes lens's own address (utils/quotesLink.ts), through the
@@ -430,6 +432,89 @@ describe("SignalsPage", () => {
       expect(screen.getByLabelText("Checkout")).toHaveAttribute("hidden");
       expect(screen.getByLabelText("Onboarding")).not.toHaveAttribute("hidden");
     });
+  });
+
+  it("draws each card with an id the Signals anchor selector matches, one per card", async () => {
+    // Decision #182: the Mac app comes back to the card by this id. A selector
+    // dies silently when the DOM it watches changes, so pin it here.
+    mockFetchCodebookSignals(mockCbData);
+    const { container } = render(<SignalsPage projectId="1" />);
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2));
+    const ids = [...container.querySelectorAll(ANCHOR_SELECTORS.signals)].map((el) => el.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it("shows the place a reopened study's card is on, and selects nothing", async () => {
+    // `scrollToAnchor` found the remembered card in a hidden place and asks the
+    // page to show it (`bn:reveal-anchor`). The page shows the place and claims
+    // the landing; no selection, no inspector sync (decision #182).
+    mockFetchCodebookSignals(mockCbData);
+    const { container } = render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Checkout")).not.toHaveAttribute("hidden");
+    });
+    const signalStore = renderHook(() => useSignalStore());
+    const inspector = renderHook(() => useInspectorStore());
+    const sourceBefore = inspector.result.current.activeSource;
+    const card = container.querySelector<HTMLElement>(
+      `section[aria-label="Onboarding"] ${ANCHOR_SELECTORS.signals}`,
+    );
+    expect(card).not.toBeNull();
+
+    let claimed = false;
+    act(() => {
+      const reveal = new CustomEvent("bn:reveal-anchor", { detail: { id: card!.id }, cancelable: true });
+      claimed = !window.dispatchEvent(reveal);
+    });
+
+    expect(claimed).toBe(true);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Onboarding")).not.toHaveAttribute("hidden");
+      expect(screen.getByLabelText("Checkout")).toHaveAttribute("hidden");
+    });
+    expect(signalStore.result.current.focusedKey).toBeNull();
+    expect(inspector.result.current.activeSource).toBe(sourceBefore);
+    expect(container.querySelector(".signal-card.bn-selected")).toBeNull();
+  });
+
+  it("lands a reopened study's first card on the place showing with its title, and claims it", async () => {
+    // The visible case: the shim offers it too, and the page lands it as its list does
+    // (`scrollToCard`), so the place title comes with the first card.
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) { scrolled.push(this); };
+    mockFetchCodebookSignals(mockCbData);
+    const { container } = render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Checkout")).not.toHaveAttribute("hidden");
+    });
+    const card = container.querySelector<HTMLElement>(
+      `section[aria-label="Checkout"] ${ANCHOR_SELECTORS.signals}`,
+    );
+    scrolled.length = 0;
+    let claimed = false;
+    act(() => {
+      claimed = !window.dispatchEvent(
+        new CustomEvent("bn:reveal-anchor", { detail: { id: card!.id }, cancelable: true }),
+      );
+    });
+    expect(claimed).toBe(true);
+    await waitFor(() => expect(scrolled.length).toBeGreaterThan(0));
+    expect(scrolled[scrolled.length - 1].classList.contains("signals-center")).toBe(true);
+    expect(container.querySelector(".signal-card.bn-selected")).toBeNull();
+  });
+
+  it("leaves a reveal it does not know unclaimed", async () => {
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2));
+    let claimed = true;
+    act(() => {
+      claimed = !window.dispatchEvent(
+        new CustomEvent("bn:reveal-anchor", { detail: { id: "q-p1-10" }, cancelable: true }),
+      );
+    });
+    expect(claimed).toBe(false);
   });
 
   it("shows source breakdown banner for pending tags", async () => {

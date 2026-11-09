@@ -4,14 +4,16 @@
  *
  * Module-level, like SidebarStore and InspectorStore, so the transcript page, its split control
  * and AppLayout's native-menu handler (View ▸ Show Session Timeline, Timeline Detail ▸) share one
- * answer. `on` and `lanes` are a per-viewer convenience in localStorage: the Mac app's web views
- * forget it on quit, and that is fine (owner, 17 Oct 2026). `available` is not stored: the
- * transcript page sets it while it shows a session that has a timeline, so the Mac menu greys its
- * rows everywhere else.
+ * answer. `on` and `lanes` are a per-viewer reading mode in localStorage, and since decision #182
+ * (9 Nov 2026) one of the R89 report preferences (`utils/nativePrefs.ts`), so the Mac app keeps it
+ * past a relaunch; until then its web views forgot it on quit (owner, 17 Oct 2026). `available` is
+ * not stored: the transcript page sets it while it shows a session that has a timeline, so the Mac
+ * menu greys its rows everywhere else.
  */
 
 import { useSyncExternalStore } from "react";
 import type { TapestryLanes } from "../components/SessionTapestry";
+import { storePref } from "../utils/nativePrefs";
 
 /** Compact: sections and speakers. Standard: + sentiment. Full: + themes. The timeline's own type
  *  (type-only, so the lazy timeline stays off this store's chunk). */
@@ -60,13 +62,8 @@ function set(next: Partial<TranscriptTimelineState>): void {
   const persist = merged.on !== state.on || merged.lanes !== state.lanes;
   if (persist) willChange.forEach((fn) => fn());
   state = merged;
-  if (persist) {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ on: state.on, lanes: state.lanes }));
-    } catch {
-      // Storage unavailable: module state still carries it within this page.
-    }
-  }
+  // Storage unavailable: `storePref` swallows it, and module state still carries it within this page.
+  if (persist) storePref(LS_KEY, JSON.stringify({ on: state.on, lanes: state.lanes }));
   listeners.forEach((l) => l());
 }
 

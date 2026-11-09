@@ -28,6 +28,7 @@ _SELFTESTS = [
     "desktop/scripts/test-check-release-binary.sh",
     "desktop/scripts/test-check-deployment-floors.sh",
     "desktop/scripts/test-check-sidecar-appstore-strings.sh",
+    "desktop/scripts/test-check-dmg-shippable.sh",
     "desktop/scripts/test-report-exit-status.sh",
 ]
 

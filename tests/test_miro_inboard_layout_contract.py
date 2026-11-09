@@ -91,19 +91,48 @@ if os.environ.get("BRISTLENOSE_REGENERATE_BOARD_FIXTURE") == "1":
     WIDE_TS.write_text(_wide_ts(), encoding="utf-8")
 
 
+#: Blocks wide in every Unicode version Python has shipped (CJK ideographs, Hangul syllables, kana,
+#: fullwidth forms): a table that loses any of them is broken on every Python, whatever its version.
+_ALWAYS_WIDE = [(0x4E00, 0x9FFF), (0xAC00, 0xD7A3), (0x3041, 0x3096), (0x30A1, 0x30FA), (0xFF01, 0xFF60)]
+
+
+def _unicode_version(text: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in text.split("."))
+
+
 def test_the_apps_wide_character_table_is_pythons() -> None:
-    """Checked only on a Python with the same Unicode version the table was made from: CI runs
-    3.10 to 3.13, whose `unicodedata` differ, and the table is pinned to one of them."""
+    """On the Python whose Unicode version the table was made from, the table is that Python's,
+    byte for byte. CI also runs 3.10 to 3.14, whose `unicodedata` differ, and this used to skip
+    there, which read as a pass in every summary line (gaps.md G2; the skip ratchet). So on any
+    other version it asserts what still holds, measured 9 Nov 2026 on 3.10, 3.12 and 3.14: on
+    every code point this Python assigns, an older Unicode is wide on a subset of the newer one's
+    (Unicode 16 widened 188 symbols, and none was ever narrowed); and the always-wide blocks are
+    wide in the table and here."""
+    import re
+    import sys
     import unicodedata
 
-    import pytest
-
     text = WIDE_TS.read_text(encoding="utf-8")
-    if f"(Unicode {unicodedata.unidata_version})" not in text:
-        pytest.skip(f"table made from another Unicode version than {unicodedata.unidata_version}")
-    assert text == _wide_ts(), (
-        "miro-app/src/eastAsianWide.ts is not this Python's East Asian Width table; regenerate."
+    m = re.search(r"\(Unicode ([\d.]+)\)", text)
+    assert m, "eastAsianWide.ts has no Unicode version line; regenerate."
+    table_version, here_version = _unicode_version(m.group(1)), _unicode_version(unicodedata.unidata_version)
+    if table_version == here_version:
+        assert text == _wide_ts(), (
+            "miro-app/src/eastAsianWide.ts is not this Python's East Asian Width table; regenerate."
+        )
+        return
+    table = {cp for a, b in re.findall(r"\[0x([0-9A-F]+), 0x([0-9A-F]+)\]", text)
+             for cp in range(int(a, 16), int(b, 16) + 1)}
+    here = {cp for a, b in _wide_ranges() for cp in range(a, b + 1)}
+    assigned = {cp for cp in range(sys.maxunicode + 1) if unicodedata.category(chr(cp)) != "Cn"}
+    older, newer = (table, here) if table_version < here_version else (here, table)
+    assert (older & assigned) <= (newer & assigned), (
+        "eastAsianWide.ts and this Python disagree on an assigned code point beyond one Unicode "
+        "version widening the other's; regenerate it on the .tool-versions Python."
     )
+    always = {cp for a, b in _ALWAYS_WIDE for cp in range(a, b + 1)}
+    assert always <= table, "eastAsianWide.ts has lost part of an always-wide block; regenerate."
+    assert always <= here
 
 
 def test_the_layout_is_what_send_to_miro_sends() -> None:

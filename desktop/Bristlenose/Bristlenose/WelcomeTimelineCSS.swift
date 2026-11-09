@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–444 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–461 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -187,6 +187,16 @@ enum WelcomeTimelineCSS {
     --bn-modal-enter-fade: 100ms;           /* solid early; the drop carries on */
     --bn-modal-enter-ease: cubic-bezier(0, 0, 0.58, 1);
     --bn-modal-exit: 240ms;                 /* rise, fade and backdrop together, linear */
+    /* Native-looking controls in a dialog: the segmented control's track and raised segment, and
+       the round help button, in the system's own greys (the Mac sheet draws the real ones). Not
+       palette colours: they are the platform's, the same in every palette. Dark below. */
+    --bn-control-track: #e8e8ed;
+    --bn-control-raised-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+    --bn-help-button-bg: #e8e8ea;
+    --bn-help-button-bg-hover: #dcdcdf;
+    --bn-help-button-bg-active: #cfcfd3;
+    --bn-help-button-ink: #1d1d1f;
+    --bn-help-button-size: 26px;
     --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
     --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
 
@@ -357,6 +367,13 @@ enum WelcomeTimelineCSS {
 @supports (color: light-dark(#000, #fff)) {
     :root {
         color-scheme: light dark;
+
+        /* Native-looking dialog controls (see the light values above) */
+        --bn-control-track:          light-dark(#e8e8ed, #2c2c30);
+        --bn-help-button-bg:         light-dark(#e8e8ea, #3a3a3c);
+        --bn-help-button-bg-hover:   light-dark(#dcdcdf, #48484a);
+        --bn-help-button-bg-active:  light-dark(#cfcfd3, #545456);
+        --bn-help-button-ink:        light-dark(#1d1d1f, #f5f5f7);
 
         /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);

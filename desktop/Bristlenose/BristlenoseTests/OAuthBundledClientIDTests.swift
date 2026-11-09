@@ -3,7 +3,8 @@ import Testing
 @testable import Bristlenose
 
 /// A Developer-ID `.dmg` reaches testers who have never hand-set a client ID, so
-/// the build itself must carry one for Teams and for Meet. Until 18 Oct 2026 the
+/// the build itself must carry one for Teams, for Meet and (since Zoom approved the
+/// beta share, 9 Nov 2026) for Zoom. Until 18 Oct 2026 the
 /// IDs lived only in the dev Mac's sandboxed defaults: every sign-in worked
 /// there and could not start anywhere else.
 ///
@@ -47,7 +48,23 @@ struct OAuthBundledClientIDTests {
         #expect(!id.contains("__"), "GoogleOAuthClientID is still a placeholder")
     }
 
-    @Test("With nothing hand-set, both platforms resolve from the bundle")
+    @Test("Zoom's production public client ID is baked in (beta share approved 9 Nov 2026)")
+    func zoomClientID() throws {
+        let id = try #require(Self.bundled(ZoomOAuthConfig.clientIDDefaultsKey))
+        // The production public client, not the development one or the confidential one
+        // (`_K7QaGWRe265MNrSecZDQ`), which would fail at the token exchange without a secret.
+        #expect(id == "5p8ZT9wKRrmm7pHrwsvzWw")
+    }
+
+    @Test("Zoom's redirect is the HTTPS one in Zoom's allow list, on our associated domain")
+    func zoomRedirect() throws {
+        let redirect = try #require(Self.bundled(ZoomOAuthConfig.redirectDefaultsKey))
+        #expect(redirect == "https://bristlenose.app/auth/zoom")
+        let config = ZoomOAuthConfig(publicClientID: "x", redirectURI: redirect)
+        #expect(config.callbackHost == "bristlenose.app" && config.callbackPath == "/auth/zoom")
+    }
+
+    @Test("With nothing hand-set, all three platforms resolve from the bundle")
     func resolvesWithNoDefaults() {
         let defaults = Self.emptyDefaults("oauth-bundled-empty")
         let microsoft = MicrosoftOAuthConfig.resolve(defaults: defaults, bundle: .main)
@@ -56,6 +73,9 @@ struct OAuthBundledClientIDTests {
         #expect(microsoft?.tenant == "common")
         let google = GoogleOAuthConfig.resolve(defaults: defaults, bundle: .main)
         #expect(google?.clientID == Self.bundled(GoogleOAuthConfig.defaultsKey))
+        let zoom = ZoomOAuthConfig.resolve(defaults: defaults, bundle: .main)
+        #expect(zoom?.publicClientID == "5p8ZT9wKRrmm7pHrwsvzWw")
+        #expect(zoom?.redirectURI == "https://bristlenose.app/auth/zoom")
     }
 
     @Test("A hand-set value still overrides the bundle, for development")

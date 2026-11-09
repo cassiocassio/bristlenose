@@ -121,17 +121,18 @@ else
     fi
 
     # Cloud-import sign-in. A tester has no hand-set client ID, so an app built
-    # without the baked ones offers Teams and Meet and cannot start either
+    # without the baked ones offers Teams, Meet and Zoom and cannot start their
     # sign-in — which on the maintainer's Mac, where the defaults hold the IDs,
     # looks exactly like working (Bristlenose-OAuth-Info.plist).
     MISSING_IDS=""
-    for key in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID; do
+    for key in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID \
+               ZoomOAuthPublicClientID ZoomOAuthRedirectURI; do
         val="$(/usr/libexec/PlistBuddy -c "Print :$key" \
                  "$INNER_APP/Contents/Info.plist" 2>/dev/null || echo '')"
         case "$val" in ''|*__*) MISSING_IDS="$MISSING_IDS $key" ;; esac
     done
     if [ -z "$MISSING_IDS" ]; then
-        pass "cloud sign-in IDs" "Teams + Meet client IDs baked"
+        pass "cloud sign-in IDs" "Teams + Meet + Zoom client IDs baked"
     else
         fail "cloud sign-in IDs" "missing or placeholder:$MISSING_IDS"
     fi

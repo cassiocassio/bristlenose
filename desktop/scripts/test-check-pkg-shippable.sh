@@ -85,6 +85,8 @@ build_app() {
   <key>MicrosoftOAuthClientID</key><string>00000000-0000-0000-0000-000000000000</string>
   <key>MicrosoftOAuthRedirectURI</key><string>msauth.app.bristlenose://auth</string>
   <key>GoogleOAuthClientID</key><string>0-test.apps.googleusercontent.com</string>
+  <key>ZoomOAuthPublicClientID</key><string>test-zoom-public-client-id</string>
+  <key>ZoomOAuthRedirectURI</key><string>https://bristlenose.invalid/auth/zoom</string>
 </dict></plist>
 PLIST
     for m in Contents/Resources Contents/Resources/bristlenose-sidecar; do
@@ -221,6 +223,12 @@ sign_app "$A" "$ENTS"
 # Glyph AND detail: the detail alone also matches a die turned into an ok that
 # keeps its text, which is how this case survived its own mutation.
 reject_case "cloud sign-in ID absent" "✗.*missing or placeholder: GoogleOAuthClientID" "$D"
+for zkey in ZoomOAuthPublicClientID ZoomOAuthRedirectURI; do
+    D=$WORK/c7-$zkey; mkdir -p "$D"; A=$(build_app "$D")
+    /usr/libexec/PlistBuddy -c "Delete :$zkey" "$A/Contents/Info.plist" >/dev/null 2>&1
+    sign_app "$A" "$ENTS"
+    reject_case "Zoom sign-in key absent: $zkey" "✗.*missing or placeholder: $zkey" "$D"
+done
 
 # --- 8. host may print — printing is post-v1 ---------------------------------
 # File ▸ Print is not in the menus for v1 (owner, 23 Oct 2026), so an artefact
@@ -252,7 +260,7 @@ expect_row_passes "version + build agree with tree → row passes" "✓.*version
 expect_row_passes "bundle identifier right → row passes" "✓.*bundle identifier"
 expect_row_passes "nested executables sandboxed → row passes" "✓.*nested app-sandbox"
 expect_row_passes "hardened runtime on → row passes" "✓.*hardened runtime"
-expect_row_passes "cloud sign-in IDs present → row passes" "✓.*Teams + Meet client IDs baked"
+expect_row_passes "cloud sign-in IDs present → row passes" "✓.*Teams + Meet + Zoom client IDs baked"
 expect_row_passes "no print entitlement → row passes" "✓.*host print.*absent"
 
 # --- 9. usage: not a pkg ------------------------------------------------------

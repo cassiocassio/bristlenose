@@ -6,7 +6,7 @@
   },
   "gates_without_proof": {
     "basis": "scripts/check-gate-proofs.py --json, length of `unproven`",
-    "ceiling": 2,
+    "ceiling": 1,
     "measured": {
       "by": "local",
       "on": "2026-11-09"

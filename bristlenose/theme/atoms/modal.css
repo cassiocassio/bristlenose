@@ -334,7 +334,7 @@
     display: inline-flex;
     padding: 2px;
     border-radius: var(--bn-radius-md);
-    background: light-dark(#e8e8ed, #2c2c30);
+    background: var(--bn-control-track);
     margin: 0 0 var(--bn-space-md);
 }
 
@@ -351,7 +351,7 @@
 
 .bn-seg button[aria-selected="true"] {
     background: var(--bn-colour-bg);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--bn-control-raised-shadow);
     font-weight: var(--bn-weight-emphasis);
 }
 
@@ -361,7 +361,7 @@
 }
 
 /* The report's own rule (templates/report.css `hr`), with a dialog-sized margin. */
-.bn-modal hr {
+.bn-board-modal hr {
     border: none;
     border-top: 1px solid var(--bn-colour-keyline);
     margin: var(--bn-space-md) 0 0;
@@ -411,25 +411,25 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: var(--bn-help-button-size);
+    height: var(--bn-help-button-size);
     border-radius: 50%;
-    background: light-dark(#e8e8ea, #3a3a3c);
-    color: light-dark(#1d1d1f, #f5f5f7);
-    font-size: 15px;
-    font-weight: 500;
+    background: var(--bn-help-button-bg);
+    color: var(--bn-help-button-ink);
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
     line-height: 1;
     text-decoration: none;
-    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 0 0 0.5px var(--bn-modal-hairline);
     align-self: center;
 }
 
 .bn-help-btn:hover {
-    background: light-dark(#dcdcdf, #48484a);
+    background: var(--bn-help-button-bg-hover);
 }
 
 .bn-help-btn:active {
-    background: light-dark(#cfcfd3, #545456);
+    background: var(--bn-help-button-bg-active);
 }
 
 .bn-help-btn:focus-visible {

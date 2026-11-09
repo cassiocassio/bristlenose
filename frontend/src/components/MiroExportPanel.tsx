@@ -236,6 +236,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [downloadedFor, setDownloadedFor] = useState<{ choices: string; quotes: number } | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  // Which opening a copy or download belongs to: closing moves it on, so a slow one that answers
+  // after the panel was shut and opened again says nothing into the new opening.
+  const opening = useRef(0);
 
   /**
    * Read a build until it ends. Both boards are jobs: the quotes board because Miro refuses a new
@@ -324,6 +327,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     setCopiedFor(null);
     setDownloadedFor(null);
     setFileError(null);
+    setFileBusy(false);
     // Which build this opening may pick up: closing the panel before the reads come back moves
     // `build.current` on, and nothing then starts polling behind a shut panel.
     const mine = build.current;
@@ -367,7 +371,10 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   // Closing the panel stops waiting on a build (the build itself goes on, and its chip-less
   // result is on the next status read); a reopened panel starts fresh.
   useEffect(() => {
-    if (!open) build.current += 1;
+    if (!open) {
+      build.current += 1;
+      opening.current += 1;
+    }
   }, [open]);
   // Unmounting stops the wait too — a panel that is gone must not go on reading the build.
   useEffect(() => () => {
@@ -438,6 +445,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     setDownloadedFor(null);
     setFileBusy(true);
     const madeUnder = choices;
+    const mine = opening.current;
+    const live = () => mine === opening.current;
     let fetchFailed = false;
     copyBoardToClipboard(() =>
       // The whole board file at runtime; typed as the summary its other caller reads.
@@ -447,14 +456,18 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       }),
     )
       .then(() => {
+        if (!live()) return;
         setCopiedFor(madeUnder);
         announce(t("miro.copied"));
       })
       .catch((e: unknown) => {
+        if (!live()) return;
         if (fetchFailed) boardFileFailed(e);
         else setFileError(t("miro.copyFailed"));
       })
-      .finally(() => setFileBusy(false));
+      .finally(() => {
+        if (live()) setFileBusy(false);
+      });
   };
 
   // The FigJam panel's download: build it once to read its count and catch a refusal in words,
@@ -464,9 +477,12 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     setCopiedFor(null);
     setFileBusy(true);
     const madeUnder = choices;
+    const mine = opening.current;
+    const live = () => mine === opening.current;
     const req = fileRequest();
     try {
       const summary = await getFigJamBoard(req);
+      if (!live()) return; // closed while it was made: no download nobody is waiting for
       const a = document.createElement("a");
       a.href = figjamBoardDownloadUrl(req);
       a.download = "";
@@ -476,9 +492,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       setDownloadedFor({ choices: madeUnder, quotes: summary.totals.quotes });
       announce(t("figjam.downloading", { count: summary.totals.quotes }));
     } catch (e) {
-      boardFileFailed(e);
+      if (live()) boardFileFailed(e);
     } finally {
-      setFileBusy(false);
+      if (live()) setFileBusy(false);
     }
   };
 

@@ -3,7 +3,8 @@
  * Mac's segmented control (the Miro sheet's `Picker(.segmented)`).
  *
  * Tablist semantics, as the ARIA authoring practices give them: one tab in the tab order (the
- * selected one), ← → move and select, Home / End go to the ends. The look is `.bn-seg` in
+ * selected one), ← → move and select, Home / End go to the ends. Only the selected tab's panel is
+ * rendered, so only that tab names it in `aria-controls`. The look is `.bn-seg` in
  * `atoms/modal.css`.
  *
  * @module SegmentedTabs
@@ -64,7 +65,8 @@ export function SegmentedTabs<K extends string>({
             role="tab"
             id={`${idPrefix}-tab-${tab.key}`}
             aria-selected={on}
-            aria-controls={`${idPrefix}-panel-${tab.key}`}
+            // Only the selected tab's panel is in the page; naming an absent one is invalid ARIA.
+            aria-controls={on ? `${idPrefix}-panel-${tab.key}` : undefined}
             tabIndex={on ? 0 : -1}
             onClick={() => onSelect(tab.key)}
             onKeyDown={onKeyDown}

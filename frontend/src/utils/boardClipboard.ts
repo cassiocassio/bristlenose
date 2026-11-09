@@ -2,9 +2,12 @@
  * Put a board file on the clipboard, for the Bristlenose apps in Miro and FigJam to paste.
  *
  * Two flavours, as `figjam-plugin/src/clipboard.ts` reads them: the HTML flavour carries the
- * board JSON, base64 of its UTF-8 bytes, in a `data-bristlenose-board` attribute; the plain
- * flavour carries the board's title, so a ⌘V that lands on the canvas instead of the panel makes
- * a readable line, not raw JSON.
+ * board JSON, base64 of its UTF-8 bytes, in a `data-bristlenose-board` attribute, with the
+ * board's title as its visible text, so a ⌘V that lands on the canvas instead of the panel makes a
+ * readable line; the plain flavour carries the bare JSON. Both panels read the attribute first and
+ * fall back to the plain text, so the board still arrives if a browser's clipboard sanitiser
+ * strips the attribute (Fable review, 9 Nov 2026: that had not been measured, and a title-only
+ * plain flavour would have left the panel refusing a board the dialog said was copied).
  *
  * Safari: the board is fetched, and a clipboard write after an `await` has lost the click that
  * allowed it. So `clipboard.write()` is called inside the click, with a `ClipboardItem` whose
@@ -54,11 +57,20 @@ export function copyBoardToClipboard(fetchBoard: () => Promise<BoardFile>): Prom
   const board = fetchBoard();
   const clip = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
   if (typeof ClipboardItem !== "undefined" && clip?.write) {
-    const item = new ClipboardItem({
-      "text/html": board.then((b) => new Blob([boardClipboardHtml(b)], { type: "text/html" })),
-      "text/plain": board.then((b) => new Blob([titleOf(b)], { type: "text/plain" })),
-    });
-    const written = clip.write([item]);
+    let written: Promise<void>;
+    try {
+      const html = board.then((b) => new Blob([boardClipboardHtml(b)], { type: "text/html" }));
+      const plain = board.then((b) => new Blob([JSON.stringify(b)], { type: "text/plain" }));
+      // Observed here as well as by the browser: if the board fails and nothing reads a flavour
+      // (a write that threw, or never ran), its rejection must not surface as unhandled.
+      html.catch(() => undefined);
+      plain.catch(() => undefined);
+      const item = new ClipboardItem({ "text/html": html, "text/plain": plain });
+      written = clip.write([item]);
+    } catch (e) {
+      // A browser that throws here rather than rejecting: the caller's chain still settles.
+      written = Promise.reject(e);
+    }
     // A failed fetch rejects both; report the fetch's error, which carries the server's reason.
     // The write's own rejection is then read nowhere, so it is observed here, not left unhandled.
     written.catch(() => undefined);

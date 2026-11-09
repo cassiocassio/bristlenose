@@ -136,9 +136,48 @@ describe("Send to Miro — the Miro app tab", () => {
     resolveBoard(BOARD);
     const html = await blobText(await items[0]["text/html"]);
     expect(boardInHtml(html)).toEqual(BOARD);
-    expect(await blobText(await items[0]["text/plain"])).toBe(BOARD.title);
+    // The plain flavour carries the board too, in case a sanitiser strips the attribute.
+    expect(JSON.parse(await blobText(await items[0]["text/plain"]))).toEqual(BOARD);
     await waitFor(() => expect(copySays()).toBe(i18n.t("miro.copied")));
     expect(writeText).not.toHaveBeenCalled();
+  });
+
+  /** A browser with ClipboardItem, whose write resolves or rejects as `write` says. */
+  function withClipboardItem(write: ReturnType<typeof vi.fn>): void {
+    vi.stubGlobal("ClipboardItem", class {
+      constructor(public data: Record<string, Promise<Blob>>) {}
+    });
+    Object.defineProperty(navigator, "clipboard", { value: { write, writeText }, configurable: true });
+  }
+
+  it("in a browser with ClipboardItem, a refused board is said in words, not as a copy failure", async () => {
+    // The write rejects too, as a browser's does when the item's content fails.
+    withClipboardItem(vi.fn().mockRejectedValue(new DOMException("aborted", "AbortError")));
+    getFigJamBoard.mockRejectedValue(Object.assign(new Error("GET 422"), { reason: "no_quotes_selected" }));
+    render(<MiroExportPanel open onClose={() => {}} />);
+    fireEvent.click(copyButton());
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.errNoQuotesSelected")));
+  });
+
+  it("in a browser with ClipboardItem, a refused write says the copy failed", async () => {
+    withClipboardItem(vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")));
+    render(<MiroExportPanel open onClose={() => {}} />);
+    fireEvent.click(copyButton());
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.copyFailed")));
+    expect(copySays()).toBe(i18n.t("miro.copyBoard"));
+  });
+
+  it("a copy still running when the panel closes says nothing into the next opening", async () => {
+    let resolveBoard: (b: unknown) => void = () => {};
+    getFigJamBoard.mockReturnValue(new Promise((r) => { resolveBoard = r; }));
+    const { rerender } = render(<MiroExportPanel open onClose={() => {}} />);
+    fireEvent.click(copyButton());
+    rerender(<MiroExportPanel open={false} onClose={() => {}} />);
+    rerender(<MiroExportPanel open onClose={() => {}} />);
+    expect(copyButton()).not.toBeDisabled();
+    resolveBoard(BOARD);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(copySays()).toBe(i18n.t("miro.copyBoard"));
   });
 
   it("says why when the board can't be made, in the reader's words", async () => {
@@ -157,6 +196,7 @@ describe("Send to Miro — the Miro app tab", () => {
   });
 
   it("downloads the board file and says how many quotes it holds", async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     render(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(screen.getByTestId("bn-miro-download-board"));
     await waitFor(() =>
@@ -164,6 +204,8 @@ describe("Send to Miro — the Miro app tab", () => {
         i18n.t("figjam.downloading", { count: 112 })));
     expect(figjamBoardDownloadUrl).toHaveBeenCalledWith(
       expect.objectContaining({ sticky_shape: "rectangle", split_long_quotes: true, board_name: "" }));
+    expect(click).toHaveBeenCalledTimes(1); // the browser was handed the file, not only told about it
+    click.mockRestore();
   });
 
   it("offers the install page and each tab's own help", async () => {

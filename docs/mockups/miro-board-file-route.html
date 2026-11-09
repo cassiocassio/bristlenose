@@ -1369,7 +1369,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <div class="row">
 <figure class="frame"><figcaption class="chrome">1 · Miro app tab — the default (not connected with a token)</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
-<h2>Send to Miro board</h2>
+<h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="true" class="on">Miro app</button><button role="tab" aria-selected="false">Developer access token</button></div><sup class="new">new</sup>
 <div class="steps">
 <p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
@@ -1385,7 +1385,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
 </div></div></figure><figure class="frame"><figcaption class="chrome">2 · Miro app tab — after Download board file</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
-<h2>Send to Miro board</h2>
+<h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="true" class="on">Miro app</button><button role="tab" aria-selected="false">Developer access token</button></div><sup class="new">new</sup>
 <div class="steps">
 <p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
@@ -1401,7 +1401,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
 </div></div></figure><figure class="frame"><figcaption class="chrome">3 · Miro app tab — after Copy</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
-<h2>Send to Miro board</h2>
+<h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="true" class="on">Miro app</button><button role="tab" aria-selected="false">Developer access token</button></div><sup class="new">new</sup>
 <div class="steps">
 <p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
@@ -1417,14 +1417,14 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
 </div></div></figure><figure class="frame"><figcaption class="chrome">4 · Developer access token tab — not connected</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
-<h2>Send to Miro board</h2>
+<h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="false">Miro app</button><button role="tab" aria-selected="true" class="on">Developer access token</button></div><sup class="new">new</sup>
 <p class="bn-export-hint" style="margin-top:14px">Paste a developer access token to connect. <a href="#">How do I get a token? ↗</a><sup class="new">new</sup></p>
 <input type="password" placeholder="Developer access token" aria-label="Developer access token" style="width:100%;box-sizing:border-box;padding:8px 10px"><sup class="new">new</sup>
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Cancel</button><button class="bn-btn bn-btn-primary" disabled>Connect</button></div>
 </div></div></figure><figure class="frame"><figcaption class="chrome">5 · Developer access token tab — connected (the default once connected)</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
-<h2>Send to Miro board</h2>
+<h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="false">Miro app</button><button role="tab" aria-selected="true" class="on">Developer access token</button></div><sup class="new">new</sup>
 <p class="bn-modal-subtitle" style="margin-top:14px">Connected ✓ · <button class="bn-linkish">Disconnect</button></p>
 <label class="bn-export-hint">Board name</label>
@@ -1447,6 +1447,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <p><strong>Proposed words (each becomes a key in all 21 locales):</strong></p>
 <table>
 <tr><th>Key</th><th>English</th><th>Frame</th></tr>
+<tr><td><code>miro.quotesTitle</code> (new key)</td><td>Send quotes to Miro board stickies. The Mac sheet and the web dialog both draw it. Today's <code>miro.title</code>, <em>Send to Miro board</em>, stays for the Screens board, which shares this dialog and sends screengrabs, not quotes</td><td>all</td></tr>
 <tr><td><code>miro.tabApp</code></td><td>Miro app</td><td>all</td></tr>
 <tr><td><code>miro.tabToken</code></td><td>Developer access token</td><td>all</td></tr>
 <tr><td><code>miro.appStep1</code> + link</td><td>Once: <em>Add Bristlenose to Miro ↗</em> (the app's Installation URL)</td><td>1–3</td></tr>

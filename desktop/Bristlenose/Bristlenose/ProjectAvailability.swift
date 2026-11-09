@@ -133,7 +133,7 @@ extension Project {
     ///    included: no cloud-specific state, by decision)
     var availability: ProjectAvailability {
         guard !path.isEmpty else { return .ready }
-        if FileManager.default.fileExists(atPath: path) { return .ready }
+        if BoundedFileCheck.exists(atPath: path) { return .ready }
 
         if let location {
             switch location.type {
@@ -157,7 +157,7 @@ extension Project {
                 // lives on a sibling volume whose name is a prefix.
                 let wasOnThisVolume = lastSeenPath
                     .hasPrefix("/Volumes/\(volumeName)/")
-                if wasOnThisVolume || !FileManager.default.fileExists(
+                if wasOnThisVolume || !BoundedFileCheck.exists(
                     atPath: "/Volumes/\(volumeName)"
                 ) {
                     return .cantFind(reason: .unmountedVolume(
@@ -166,7 +166,7 @@ extension Project {
                 }
             case .network:
                 let volumePath = "/Volumes/\(location.volumeName ?? "")"
-                if !FileManager.default.fileExists(atPath: volumePath) {
+                if !BoundedFileCheck.exists(atPath: volumePath) {
                     return .cantFind(reason: .networkUnreachable(
                         host: location.volumeName ?? location.displayHint
                     ))

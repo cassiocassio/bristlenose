@@ -630,7 +630,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
         self.disabledLenses = disabledLenses
-        if selection != lastSelection {
+        let selectionChanged = selection != lastSelection
+        if selectionChanged {
             revealSelection = !selection.isEmpty && selection != selectionFromOutline
             selectionFromOutline = nil
         }
@@ -660,8 +661,58 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             return
         }
 
+        #if DEBUG
+        // R57, behind a default-off switch so it can be tried by eye and reverted cleanly (the
+        // toolbar-hacks rule): `defaults write app.bristlenose BristlenoseAnimateSidebarRowHeight -bool YES`.
+        // Debug builds only; a Release build never reads it. See `refreshInPlaceAnimatingHeights`.
+        if Self.animatesRowHeights {
+            let displayed = (0..<outlineView.numberOfRows).map {
+                (outlineView.item(atRow: $0) as? OutlineNode)?.kind
+            }
+            let next = OutlineTree.rowKinds(roots, isExpanded: isFolderExpanded)
+            let oneShot = projectIndex?.pendingIconReveal != nil || projectIndex?.pendingRename != nil
+            if OutlineTree.canRefreshInPlace(displayed: displayed, next: next,
+                                             selectionChanged: selectionChanged, oneShotPending: oneShot) {
+                refreshInPlaceAnimatingHeights()
+                return
+            }
+        }
+        #endif
+
         reloadAndRestore()
     }
+
+    #if DEBUG
+    /// The R57 switch (Debug only, default off).
+    static var animatesRowHeights: Bool {
+        UserDefaults.standard.bool(forKey: "BristlenoseAnimateSidebarRowHeight")
+    }
+
+    /// Redraw every row from the model in place and let a changed row height slide instead of jump.
+    /// Used only when `OutlineTree.canRefreshInPlace` says nothing but the model changed, so the
+    /// expansion, the selection and the one-shot gestures that `reloadAndRestore` handles are
+    /// untouched. Reduce Motion gets no animation.
+    private func refreshInPlaceAnimatingHeights() {
+        let count = outlineView.numberOfRows
+        let old = (0..<count).map { outlineView.rect(ofRow: $0).height }
+        let new = (0..<count).map { row -> CGFloat in
+            guard let item = outlineView.item(atRow: row) else { return old[row] }
+            return self.outlineView(outlineView, heightOfRowByItem: item)
+        }
+        let changed = OutlineTree.rowsWhoseHeightChanged(old: old, new: new)
+        outlineView.reloadData(forRowIndexes: IndexSet(integersIn: 0..<count),
+                               columnIndexes: IndexSet(integer: 0))
+        if !changed.isEmpty {
+            let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = reduceMotion ? 0 : 0.2
+                context.allowsImplicitAnimation = !reduceMotion
+                outlineView.noteHeightOfRows(withIndexesChanged: changed)
+            }
+        }
+        applyFlash()
+    }
+    #endif
 
     /// The window's live resize started or ended. On the end, pay the one reload
     /// `update()` held back, unless a rename or a drop slide has the table (each

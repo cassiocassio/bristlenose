@@ -147,6 +147,30 @@ extension OutlineTree {
         }
     }
 
+    /// R57 (owner, 9 Nov 2026: animate the row height): may this update be taken in place, redrawing
+    /// the rows without `reloadData`, so a height change can animate instead of jumping?
+    ///
+    /// Only when nothing but the model behind the rows changed: the same rows in the same order
+    /// (a node's identity is its `kind`, so the displayed items stand for the new ones), the same
+    /// selection, and no one-shot gesture (an icon reveal, a rename, a scroll to the selection) that
+    /// the full reload is what starts. Anything else keeps the full reload.
+    static func canRefreshInPlace(displayed: [OutlineNode.Kind?],
+                                  next: [OutlineNode.Kind],
+                                  selectionChanged: Bool,
+                                  oneShotPending: Bool) -> Bool {
+        !next.isEmpty && !selectionChanged && !oneShotPending
+            && displayed == next.map(Optional.some)
+    }
+
+    /// The rows whose height differs between two passes (R57). A sub-point difference is rounding,
+    /// not a change. If the counts differ the rows are not the same rows, so every row is named.
+    static func rowsWhoseHeightChanged(old: [CGFloat], new: [CGFloat]) -> IndexSet {
+        guard old.count == new.count else { return IndexSet(integersIn: 0..<max(old.count, new.count)) }
+        var rows = IndexSet()
+        for (i, pair) in zip(old, new).enumerated() where abs(pair.0 - pair.1) > 0.5 { rows.insert(i) }
+        return rows
+    }
+
     /// The rows to redraw while the name field in `editing`'s row is open
     /// (R56): every row but that one, since a reload of the edited row tears
     /// its field editor down. Nil when the rows themselves differ (a study

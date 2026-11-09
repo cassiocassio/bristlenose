@@ -24,6 +24,7 @@ _SELFTESTS = [
     "desktop/scripts/test-check-appearance-seam.sh",
     "desktop/scripts/test-check-window-surfaces.sh",
     "desktop/scripts/test-check-mcpb.sh",
+    "desktop/scripts/test-check-release-binary.sh",
 ]
 
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="bash gates; Windows CI has no bash fixtures")

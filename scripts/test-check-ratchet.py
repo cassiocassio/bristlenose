@@ -81,6 +81,9 @@ def env(**kv):
                 os.environ[k] = v
 
 
+LAST_RAW = ""  # the ceilings file as written by the last run(), before it is parsed
+
+
 def run(argv, ceilings, metrics, incoming=None, **envkv):
     """Drive main() against a temp ceilings file and stub metrics.
 
@@ -109,7 +112,9 @@ def run(argv, ceilings, metrics, incoming=None, **envkv):
                 code = cr.main()
         finally:
             cr.CEILINGS, cr.METRICS, sys.argv = old_c, old_m, old_argv
-        return code, buf.getvalue(), json.loads(path.read_text())
+        global LAST_RAW
+        LAST_RAW = path.read_text(encoding="utf-8")
+        return code, buf.getvalue(), json.loads(LAST_RAW)
 
 
 # One CI-owned metric and one ordinary one, both stubbed so nothing shells out.
@@ -147,6 +152,19 @@ check("provenance records who measured it",
       lambda: after["mypy_errors"]["measured"]["by"] == "ci", str(after["mypy_errors"].get("measured")))
 check("an untouched entry keeps its shape",
       lambda: after["pytest_slow_marked"]["ceiling"] == 5)
+
+print("\nthe written file keeps non-ASCII text literal (an em dash is not rewritten as \\u2014)")
+DASHED = {
+    "mypy_errors": {"ceiling": 239, "basis": "stale", "why": "why \u2014 with a dash", "note": NOTE + " \u2014 and a dash",
+                    "authority": "ci"},
+    "pytest_slow_marked": {"ceiling": 7, "basis": "stale", "why": "stale"},
+}
+run(["--tighten"], DASHED, metrics(148, 5), CI="1")
+check("--tighten writes an em dash as the character", lambda: "\u2014" in LAST_RAW, LAST_RAW[:300])
+check("--tighten does not escape it", lambda: "\\u2014" not in LAST_RAW, LAST_RAW[:300])
+incoming = {"mypy_errors": {"ceiling": 100, "measured": {"by": "ci", "on": "2026-11-09", "run": "r"}}}
+run(["--adopt"], DASHED, metrics(148, 5), incoming=incoming, CI="1")
+check("--adopt writes an em dash as the character", lambda: "\u2014" in LAST_RAW and "\\u2014" not in LAST_RAW, LAST_RAW[:300])
 
 print("\n--tighten refuses to raise, and refuses a local number for a CI metric")
 _, out, after = run(["--tighten"], BASE, metrics(300, 99))

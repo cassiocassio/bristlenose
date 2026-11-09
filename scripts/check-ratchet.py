@@ -223,7 +223,7 @@ def adopt(ceilings: dict, src: Path) -> int:
     if not src.exists():
         print(f"no such file: {src}", file=sys.stderr)
         return 1
-    incoming = json.loads(src.read_text())
+    incoming = json.loads(src.read_text(encoding="utf-8"))
     out, moved, refused = dict(ceilings), [], []
     for k in METRICS:
         inc = incoming.get(k) or {}
@@ -250,13 +250,13 @@ def adopt(ceilings: dict, src: Path) -> int:
         for r in refused:
             print(f"  {r}", file=sys.stderr)
         return 1
-    CEILINGS.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+    CEILINGS.write_text(json.dumps(out, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     print("\n".join(f"adopted {m}" for m in moved) or "nothing to adopt")
     return 0
 
 
 def main() -> int:
-    ceilings = json.loads(CEILINGS.read_text()) if CEILINGS.exists() else {}
+    ceilings = json.loads(CEILINGS.read_text(encoding="utf-8")) if CEILINGS.exists() else {}
     measured = {k: v["measure"]() for k, v in METRICS.items()}
 
     if "--json" in sys.argv:
@@ -291,7 +291,7 @@ def main() -> int:
                 entry["measured"] = _provenance()
                 out[k] = entry
                 moved.append(f"{k}: {was} -> {now}")
-        CEILINGS.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+        CEILINGS.write_text(json.dumps(out, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
         print("\n".join(f"tightened {m}" for m in moved) or "nothing to tighten")
         return 0
 

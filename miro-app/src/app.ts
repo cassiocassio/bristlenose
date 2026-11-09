@@ -24,6 +24,8 @@ const status = $<HTMLDivElement>("status");
 const bar = $<HTMLDivElement>("bar");
 const fill = $<HTMLSpanElement>("fill");
 const stop = $<HTMLButtonElement>("stop");
+const pasteZone = $<HTMLDivElement>("paste");
+const pasteHint = $<HTMLSpanElement>("paste-hint");
 
 let building = false;
 let stopRequested = false;
@@ -113,6 +115,21 @@ drop.addEventListener("drop", (e) => {
   drop.classList.remove("over");
   const file = e.dataTransfer?.files?.[0];
   if (file) send(file);
+});
+
+// A paste reaches this panel only while the panel has the keyboard; otherwise Miro takes it and
+// pastes onto the board itself (seen 9 Nov 2026: the board got a doc with the board's title, and
+// the panel heard nothing). So the panel has a paste area that holds the focus, takes it when the
+// panel opens, and says when a paste will land here.
+const PASTE_KEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘V" : "Ctrl+V";
+const pasteIdle = `Click here, then press ${PASTE_KEY} to paste`;
+const pasteReady = `Ready: press ${PASTE_KEY} to paste`;
+pasteHint.textContent = pasteIdle;
+pasteZone.addEventListener("focus", () => (pasteHint.textContent = pasteReady));
+pasteZone.addEventListener("blur", () => (pasteHint.textContent = pasteIdle));
+window.addEventListener("load", () => {
+  window.focus();
+  pasteZone.focus();
 });
 
 // A board pasted with ⌘V in this panel builds, the same as choosing the file.

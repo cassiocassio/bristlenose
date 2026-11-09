@@ -10,10 +10,13 @@
 </head>
 <body>
   <h1>Build a research board</h1>
-  <p>Choose the board file you downloaded from Bristlenose. The app draws it into this board and sends it nowhere else.</p>
+  <p>Paste the board data you copied in Bristlenose, or choose the board file you downloaded. The app draws it into this board and sends it nowhere else.</p>
+  <div class="paste" id="paste" tabindex="0" role="button" aria-describedby="paste-hint">
+    <span id="paste-hint">Click here, then paste</span>
+  </div>
   <label class="drop" id="drop">
     <input type="file" id="file" accept=".json,application/json">
-    <span class="choose">Choose a board file</span>, drop it here, or paste it
+    <span class="choose">Choose a board file</span>, or drop it here
   </label>
   <div class="status" id="status" role="status" aria-live="polite"></div>
   <div class="bar" id="bar"><span id="fill"></span></div>

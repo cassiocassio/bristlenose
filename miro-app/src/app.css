@@ -2,6 +2,8 @@
 body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #050038; background: #fff; }
 h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
 p { margin: 0 0 12px; color: #4d4d6b; }
+.paste { border: 1px solid #c3c2cf; border-radius: 8px; padding: 18px 12px; text-align: center; cursor: text; margin-bottom: 10px; color: #4d4d6b; }
+.paste:focus { outline: none; border-color: #4262ff; background: #eef1ff; color: #050038; font-weight: 600; }
 .drop { display: block; border: 1px dashed #c3c2cf; border-radius: 8px; padding: 22px 12px; text-align: center; cursor: pointer; }
 .drop.over { border-color: #4262ff; background: #eef1ff; }
 .drop:focus-within { outline: 2px solid #4262ff; outline-offset: 2px; }

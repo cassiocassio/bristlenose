@@ -18,8 +18,13 @@ struct RunCoverPane: View {
     @ObservedObject var liveData: PipelineLiveData
     let onAnalyse: () -> Void
     let onRetryStartup: () -> Void
+    /// Opens with the forensic record showing. Only the Review Gallery sets
+    /// it, so the expanded state can be reviewed without a click; a click
+    /// still toggles it either way.
+    var startsExpanded = false
     @EnvironmentObject private var i18n: I18n
-    @State private var detailsExpanded = false
+    @State private var detailsToggled: Bool?
+    private var detailsExpanded: Bool { detailsToggled ?? startsExpanded }
 
     var body: some View {
         switch cover {
@@ -140,7 +145,7 @@ struct RunCoverPane: View {
                     Button(i18n.t(detailsExpanded
                                   ? "desktop.boot.hideDetails"
                                   : "desktop.boot.showDetails")) {
-                        detailsExpanded.toggle()
+                        detailsToggled = !detailsExpanded
                     }
                 }
                 .fixedSize(horizontal: true, vertical: false)

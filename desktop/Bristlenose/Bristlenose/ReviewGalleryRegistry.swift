@@ -213,10 +213,10 @@ enum ReviewGalleryRegistry {
             id: "ux-analysis-failure-remedies",
             title: "Error pattern · analysis didn’t finish",
             what: "The real native failed-analysis cover pane across the existing remedy branches. The web comparison is the current failed-run status treatment, not a claim of identical chrome.",
-            commits: ["4e8cc854a"],
+            commits: ["4e8cc854a", "bee4c4c58"],
             files: ["RunCoverPane.swift", "DetailPaneKind.swift", "status_page.py"],
             section: .panesAndSheets,
-            landed: "2026-10-29",
+            landed: "2026-11-09",
             states: [
                 ReviewGalleryState(name: "Set up provider") { ctx in
                     errorPatternRunFailure(.auth, ctx)
@@ -224,12 +224,20 @@ enum ReviewGalleryRegistry {
                 ReviewGalleryState(name: "Retry could help") { ctx in
                     errorPatternRunFailure(.quota, ctx)
                 },
+                // The language whose labels showed the cut row most plainly:
+                // "Erneut versuchen" beside "Details anzeigen", each whole.
+                ReviewGalleryState(name: "Retry could help · German", locale: "de") { ctx in
+                    errorPatternRunFailure(.quota, ctx)
+                },
+                ReviewGalleryState(name: "Retry could help · details open") { ctx in
+                    errorPatternRunFailure(.quota, ctx, detailsOpen: true)
+                },
                 ReviewGalleryState(name: "No retry — model output limit") { ctx in
                     errorPatternRunFailure(.outputTruncated, ctx)
                 },
             ],
             audit: .diverges,
-            auditNote: "The native pane still uses a fixed horizontal action row and an inline details dump. This is the first repair target after review."
+            auditNote: "The action row read “Retry” beside “Show Det…” until bee4c4c58: the actions slot split a plain HStack equally. Each button now keeps its label’s width (docs/design-control-labels.md); check it in German and at the narrow width. Still to judge: the inline details dump, and “Show details” is sentence case where every other button here is Title Case."
         ),
         ReviewGalleryEntry(
             id: "ux-lens-failure",
@@ -600,7 +608,7 @@ enum ReviewGalleryRegistry {
     }
 
     private static func errorPatternRunFailure(
-        _ category: PipelineFailureCategory, _ ctx: ReviewGalleryContext
+        _ category: PipelineFailureCategory, _ ctx: ReviewGalleryContext, detailsOpen: Bool = false
     ) -> ReviewGallerySpecimen {
         let project = Project(id: UUID(), name: "Checkout research", path: "/private/tmp/review-study")
         let cover = DetailPaneKind.RunCover.failed(
@@ -609,7 +617,8 @@ enum ReviewGalleryRegistry {
         )
         let native = RunCoverPane(cover: cover, project: project, liveData: PipelineLiveData(),
                                   onAnalyse: { ctx.log("Native Analyse pressed") },
-                                  onRetryStartup: { ctx.log("Native startup retry pressed") })
+                                  onRetryStartup: { ctx.log("Native startup retry pressed") },
+                                  startsExpanded: detailsOpen)
             .frame(width: ctx.specimenWidth, height: 300)
         return .views([
             ("Native · RunCoverPane · \(category.rawValue)", AnyView(native)),

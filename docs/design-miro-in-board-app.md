@@ -139,6 +139,14 @@ its tests. So whichever way it goes, the code, its help page and its design doc
 (`docs/design-miro-bridge.md`) stay readable and reusable. A flag keeps it
 runnable; archiving keeps it in the tree with a pointer from here.
 
+**The dialog's layout follows the route (owner, 9 Nov 2026).** The Miro app tab is a
+Mac form (labels on their colons, `either:` / `or:` stacked) whose last line is the
+`then:` instruction, because the act that finishes the job happens in Miro: so it ends
+in Done, with the help button bottom left. A one-click route through a sign-in relay,
+if it is ever built, would be a single act completed in the dialog, and its tab would
+end as Pixelmator Pro's exports do: Cancel and a primary Send bottom right, the
+question answered by the button rather than by a line to read.
+
 ## Related
 
 - `docs/research/miro-integration-2026-11.md`: everything learned on 8 Nov 2026,

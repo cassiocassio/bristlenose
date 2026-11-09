@@ -6,10 +6,13 @@ PackageLocale: en-US
 Publisher: Bristlenose
 PublisherUrl: https://bristlenose.app
 PublisherSupportUrl: https://github.com/cassiocassio/bristlenose/issues
+# Template: PrivacyUrl is the data-flow page, true on every platform; the formal policy
+# Template: at /privacy.html is written for the Mac app. winget-pkgs policy 1.5.1 asks for one.
+PrivacyUrl: https://bristlenose.app/docs/privacy.html
 PackageName: Bristlenose
 PackageUrl: https://bristlenose.app
 License: AGPL-3.0-only
-LicenseUrl: https://github.com/cassiocassio/bristlenose/blob/main/LICENSE
+LicenseUrl: https://github.com/cassiocassio/bristlenose/blob/v${VERSION}/LICENSE
 ShortDescription: Turns a folder of interview recordings into a browsable research report.
 Moniker: bristlenose
 Tags:

@@ -87,7 +87,7 @@ def _filled_manifests(out: Path, overrides: dict[str, dict[str, str]] | None = N
     file name to values that replace the defaults in that file only."""
     defaults = {
         "VERSION": "1.2.3",
-        "MANIFEST_VERSION": "1.12.0",
+        "MANIFEST_VERSION": "1.28.0",
         "INSTALLER_URL": "https://github.com/cassiocassio/bristlenose/releases/download/v1.2.3/bristlenose-1.2.3-setup-x64.exe",
         "INSTALLER_SHA256": "A" * 64,
         "RELEASE_DATE": "2026-10-08",
@@ -142,6 +142,16 @@ def test_the_manifest_product_code_is_the_installers_app_id() -> None:
         encoding="utf-8"
     )
     assert f"ProductCode: '{app_id.group(1)}_is1'" in installer
+
+
+def test_the_manifest_does_not_repeat_package_version_as_display_version() -> None:
+    """winget-pkgs moderation bounces a DisplayVersion equal to PackageVersion
+    (microsoft/winget-pkgs#449372, 4 Nov 2026). Inno's AppVersion is our version,
+    so the field is only ever a duplicate."""
+    installer = (WIN / "winget" / "Bristlenose.Bristlenose.installer.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert "DisplayVersion" not in installer.split("AppsAndFeaturesEntries:", 1)[1]
 
 
 def test_the_manifest_templates_use_only_what_the_build_fills() -> None:

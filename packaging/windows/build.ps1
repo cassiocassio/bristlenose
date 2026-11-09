@@ -19,8 +19,9 @@ param(
     [switch]$Manifest,
     # Where the installer will be downloaded from; a local URL for testing.
     [string]$InstallerUrl = "",
-    # 1.12.0 is what winget-pkgs' tooling (Komac) emits as of Oct 2026.
-    [string]$ManifestVersion = "1.12.0",
+    # winget-pkgs recommends 1.28.0 and its moderation automation flags older
+    # schemas as deprecated (from 30 Oct 2026); 1.12.0 was Komac's in Oct 2026.
+    [string]$ManifestVersion = "1.28.0",
     # Check the manifest against winget's vendored JSON schemas instead of
     # `winget validate`: for CI, whose runner cannot install winget.
     [switch]$ValidateWithSchema

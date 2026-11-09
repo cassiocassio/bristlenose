@@ -16,10 +16,11 @@ ExpectedReturnCodes:
 - InstallerReturnCode: 7
   ReturnResponse: packageInUse
 ReleaseDate: ${RELEASE_DATE}
+# Template: no DisplayVersion. Inno's AppVersion equals PackageVersion, and winget-pkgs
+# Template: moderation bounces the duplicate (microsoft/winget-pkgs#449372, 4 Nov 2026).
 AppsAndFeaturesEntries:
 - DisplayName: Bristlenose
   Publisher: Bristlenose
-  DisplayVersion: ${VERSION}
   ProductCode: '{6C1F8E2A-5B3D-4E7A-9C41-B2E5D8A7F3C9}_is1'
 Installers:
 - Architecture: x64

@@ -127,7 +127,7 @@ over from the first release after the certificate arrives.
   `-Manifest` fills the templates. Installs against `constraints.txt` (written by
   `lock.py`), refuses a wheel that is not this checkout's version, stamps the commit.
 - `packaging/windows/smoke.ps1` — the 1.5 smoke tests, Python and FFmpeg off PATH.
-- `packaging/windows/winget/` — the three manifest templates (schema 1.12.0).
+- `packaging/windows/winget/` — the three manifest templates (schema 1.28.0 since 9 Nov 2026; 1.12.0 before).
 - `packaging/windows/bristlenose.iss` — the installer.
 - Product changes, each with a test that fails on any OS by recreating the Windows
   condition (`tests/test_windows_portability.py`):

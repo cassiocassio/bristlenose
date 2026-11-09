@@ -272,7 +272,7 @@ Each of these cost a cycle at least once.
 - **GitHub's Windows runner can't install winget.** `Add-AppxPackage` fails with "does
   not have an appropriate application package for x64". CI therefore checks the
   manifest against winget's JSON schemas, vendored at
-  `packaging/windows/winget/schemas/1.12.0/`, using `validate_manifest.py`. That covers
+  `packaging/windows/winget/schemas/1.28.0/` (1.12.0 until 9 Nov 2026), using `validate_manifest.py`. That covers
   the structure, not the download or the hash. `winget validate` and
   `winget install --manifest` need a real Windows machine: the benbecula VirtualBox
   VMs (§ Client Windows in VMs; `packaging/windows/vbox-test.sh` itself runs no winget

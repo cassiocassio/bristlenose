@@ -363,21 +363,6 @@ final class MiroSheetModel: ObservableObject {
                           square: stickyShape == "square", clipsBase: "")
     }
 
-    /// A sentence with a slot or two ("Once: {{link}}", "Either {{download}} or {{copy}}"),
-    /// split on its placeholders so each language can put the controls where its grammar wants
-    /// them. Even indices are text, odd ones slot names.
-    static func slots(_ template: String) -> [String] {
-        var parts: [String] = []
-        var rest = Substring(template)
-        while let open = rest.range(of: "{{"), let close = rest.range(of: "}}", range: open.upperBound..<rest.endIndex) {
-            parts.append(String(rest[..<open.lowerBound]))
-            parts.append(String(rest[open.upperBound..<close.lowerBound]))
-            rest = rest[close.upperBound...]
-        }
-        parts.append(String(rest))
-        return parts
-    }
-
     /// The install link's words without the web's ↗: a native link needs no glyph to say it opens
     /// the browser (the `desktop.miro.*` overrides drop the same glyph elsewhere in this sheet).
     func addAppLinkText() -> String {
@@ -548,33 +533,53 @@ struct MiroSheet: View {
 
     // MARK: Miro app route
 
-    /// The choices first, then the rule, then how to get the board into Miro (owner, 9 Nov 2026):
-    /// once add the app, either save or copy the board, then open it from Tools in a board.
+    /// The Mac form, as the token tab's configure step and Pixelmator's Settings lay it out (owner,
+    /// 9 Nov 2026): each label ends in a colon and right-aligns on one axis, each control
+    /// left-aligns beside it. The choices first, a divider, then the steps, Either and or stacked.
     private var appRoute: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle(isOn: $model.splitLongQuotes) {
-                Text(model.t("splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(model.t("stickyShape")).foregroundStyle(.secondary)
-                Picker(model.t("stickyShape"), selection: $model.stickyShape) {
-                    Text(model.t("stickyShapeRectangle")).tag("rectangle")
-                    Text(model.t("stickyShapeSquare")).tag("square")
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 12) {
+                GridRow(alignment: .firstTextBaseline) {
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                        .gridColumnAlignment(.trailing)
+                    Toggle(isOn: $model.splitLongQuotes) {
+                        Text(model.t("splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                .pickerStyle(.radioGroup)
-                .horizontalRadioGroupLayout()
-                .labelsHidden()
-            }
-            Divider()
-            slotted(model.t("appStep1")) { _ in
-                AnyView(Link(model.addAppLinkText(), destination: MiroSheetModel.miroAppInstallURL))
-            }
-            slotted(model.t("appEitherOr")) { slot in
-                slot == "copy" ? AnyView(copyButton) : AnyView(saveButton)
-            }
-            Text(model.t("appStep3")).fixedSize(horizontal: false, vertical: true)
-            if let saved = model.savedText() {
-                Text(saved).font(.subheadline).foregroundStyle(.secondary)
+                GridRow(alignment: .firstTextBaseline) {
+                    formLabel("stickyShapeLabel")
+                    Picker(model.t("stickyShape"), selection: $model.stickyShape) {
+                        Text(model.t("stickyShapeRectangle")).tag("rectangle")
+                        Text(model.t("stickyShapeSquare")).tag("square")
+                    }
+                    .pickerStyle(.radioGroup)
+                    .horizontalRadioGroupLayout()
+                    .labelsHidden()
+                }
+                Divider().gridCellColumns(2)
+                GridRow(alignment: .firstTextBaseline) {
+                    formLabel("appOnce")
+                    Link(model.addAppLinkText(), destination: MiroSheetModel.miroAppInstallURL)
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    formLabel("appEither")
+                    VStack(alignment: .leading, spacing: 4) {
+                        saveButton
+                        if let saved = model.savedText() {
+                            Text(saved).font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    formLabel("appOr")
+                    copyButton
+                }
+                // Top, not first baseline: a wrapping line in a baseline-aligned grid row gets
+                // extra space above it. One font on both sides, so the tops are the baselines.
+                GridRow(alignment: .top) {
+                    formLabel("appThen")
+                    Text(model.t("appStep3")).fixedSize(horizontal: false, vertical: true)
+                }
             }
             if let error = model.fileError {
                 Text(error).font(.callout).foregroundStyle(.red)
@@ -589,6 +594,16 @@ struct MiroSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// A form label: the colon is in the words, the label sits on the trailing edge of its column,
+    /// in the body's own weight and colour, as Nova's and Apple's own settings set it (owner, 9 Nov
+    /// 2026): the alignment does the work, not a grey or a bold.
+    private func formLabel(_ key: String) -> some View {
+        Text(model.t(key))
+    }
+
+    /// Either and or stack two buttons; both take the wider one's width, so they read as a pair.
+    private let pairWidth: CGFloat = 190
+
     /// Copy is the default button: fewer steps than a file (owner, 9 Nov 2026). It says "Copied"
     /// in its own place, both titles stacked so the button keeps the wider one's width.
     private var copyButton: some View {
@@ -597,6 +612,7 @@ struct MiroSheet: View {
                 Text(model.t("copyBoard")).opacity(model.copied ? 0 : 1)
                 Text(model.t("copied")).opacity(model.copied ? 1 : 0)
             }
+            .frame(minWidth: pairWidth)
         }
         .keyboardShortcut(.defaultAction)
         .disabled(model.fileBusy)
@@ -604,41 +620,10 @@ struct MiroSheet: View {
     }
 
     private var saveButton: some View {
-        Button(model.saveBoardFileTitle()) { model.saveBoard() }
-            .disabled(model.fileBusy)
-    }
-
-    /// A line whose placeholders are controls, in the order the language puts them. On one line
-    /// when it fits; stacked when a language's words and buttons would not (no control is ever
-    /// squeezed or cut).
-    private func slotted(_ template: String, _ control: @escaping (String) -> AnyView) -> some View {
-        let parts = MiroSheetModel.slots(template)
-        let pieces = ForEach(Array(parts.enumerated()), id: \.offset) { i, part in
-            if i % 2 == 1 {
-                control(part)
-            } else if !part.trimmingCharacters(in: .whitespaces).isEmpty {
-                Text(part.trimmingCharacters(in: .whitespaces)).fixedSize()
-            }
+        Button { model.saveBoard() } label: {
+            Text(model.saveBoardFileTitle()).frame(minWidth: pairWidth)
         }
-        // Stacked, each control keeps the words before it on its line ("Either [Save]" / "or
-        // [Copy]"); words after the last control get a line of their own.
-        let rows = stride(from: 1, to: parts.count, by: 2).map { (words: parts[$0 - 1], slot: parts[$0]) }
-        let tail = parts.last ?? ""
-        return ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) { pieces }.fixedSize()
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        let words = row.words.trimmingCharacters(in: .whitespaces)
-                        if !words.isEmpty { Text(words) }
-                        control(row.slot)
-                    }
-                }
-                if !tail.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Text(tail.trimmingCharacters(in: .whitespaces))
-                }
-            }
-        }
+        .disabled(model.fileBusy)
     }
 
     // MARK: states
@@ -688,7 +673,6 @@ struct MiroSheet: View {
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 12) {
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.dt("miroStatusLabel"))
-                        .foregroundStyle(.secondary)
                         .gridColumnAlignment(.trailing)
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle").foregroundStyle(.green)
@@ -707,19 +691,17 @@ struct MiroSheet: View {
                 }
                 if let account = model.accountText() {
                     GridRow(alignment: .firstTextBaseline) {
-                        Text(model.dt("accountLabel")).foregroundStyle(.secondary)
+                        Text(model.dt("accountLabel"))
                         Text(account)
                     }
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.dt("boardNameLabel"))
-                        .foregroundStyle(.secondary)
                     TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
                         .textFieldStyle(.roundedBorder)
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.dt("stickyColoursLabel"))
-                        .foregroundStyle(.secondary)
                     Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
                 }
                 GridRow(alignment: .firstTextBaseline) {
@@ -731,7 +713,7 @@ struct MiroSheet: View {
                     }
                 }
                 GridRow(alignment: .firstTextBaseline) {
-                    Text(model.t("stickyShape")).foregroundStyle(.secondary)
+                    Text(model.t("stickyShapeLabel"))
                     Picker(model.t("stickyShape"), selection: $model.stickyShape) {
                         Text(model.t("stickyShapeRectangle")).tag("rectangle")
                         Text(model.t("stickyShapeSquare")).tag("square")

@@ -20,7 +20,6 @@
  */
 
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "./Dialog";
 import { SegmentedTabs } from "./SegmentedTabs";
@@ -87,17 +86,6 @@ const HELP_URL: Record<Route, string> = {
 const BOARD_FILE_ERROR_KEYS: Record<string, string> = {
   no_quotes_selected: "miro.errNoQuotesSelected",
 };
-
-/**
- * A sentence with controls in it ("Either {{download}} or {{copy}}"): split the raw template on
- * its placeholders and put each control in its slot, so a language can reorder them. The same
- * approach as `renderNotice` below, for the same reason (no `<Trans>`, and a value can't mis-split).
- */
-function withSlots(template: string, slots: Record<string, ReactNode>): ReactNode[] {
-  return template.split(/\{\{(\w+)\}\}/).map((part, i) =>
-    i % 2 === 1 ? <span key={i}>{slots[part] ?? null}</span> : part,
-  );
-}
 
 /**
  * "Connected, but couldn't save the token to <store>" in each store's own word: the Mac's
@@ -656,77 +644,87 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
 
               {tab === "app" && (
                 <div role="tabpanel" id="bn-miro-panel-app" aria-labelledby="bn-miro-tab-app">
-                  {/* The choices first, so they are made before anything leaves Bristlenose. */}
-                  <label className="bn-export-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={splitLong}
-                      onChange={(e) => setSplitLong(e.target.checked)}
-                      data-testid="bn-miro-app-split-long"
-                    />
-                    <span>{t("miro.splitLongQuotes")}</span>
-                  </label>
-                  <fieldset className="bn-export-radios" data-testid="bn-miro-app-shape">
-                    <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
-                    {(["rectangle", "square"] as const).map((s) => (
-                      <label key={s} className="bn-export-checkbox">
-                        <input
-                          type="radio"
-                          name="bn-miro-app-shape"
-                          value={s}
-                          checked={shape === s}
-                          onChange={() => setShape(s)}
-                        />
-                        <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
-                      </label>
-                    ))}
-                  </fieldset>
-                  <hr />
-                  <div className="bn-board-steps">
-                    <p>
-                      {withSlots(t("miro.appStep1"), {
-                        link: (
-                          <a href={MIRO_APP_INSTALL_URL} target="_blank" rel="noopener noreferrer">
-                            {t("miro.appAddLink")}
-                          </a>
-                        ),
-                      })}
-                    </p>
-                    <p className="bn-board-either">
-                      {withSlots(t("miro.appEitherOr"), {
-                        download: (
-                          <button
-                            type="button"
-                            className="bn-btn bn-btn-secondary"
-                            onClick={() => void handleDownloadBoard()}
-                            disabled={fileBusy}
-                            data-testid="bn-miro-download-board"
-                          >
-                            {t("figjam.download")}
-                          </button>
-                        ),
-                        copy: (
-                          <button
-                            type="button"
-                            className="bn-btn bn-btn-primary bn-keep-width"
-                            onClick={handleCopyBoard}
-                            disabled={fileBusy}
-                            data-testid="bn-miro-copy-board"
-                          >
-                            {/* Both labels, one showing: the button keeps the wider one's width. */}
-                            <span aria-hidden={copied}>{t("miro.copyBoard")}</span>
-                            <span aria-hidden={!copied}>{t("miro.copied")}</span>
-                          </button>
-                        ),
-                      })}
-                    </p>
-                    <p>{t("miro.appStep3")}</p>
+                  {/* The Mac form (owner, 9 Nov 2026; Pixelmator's Settings, Apple's own panes): each
+                      label ends in a colon and right-aligns on one axis, each control left-aligns
+                      beside it. The choices first, so they are made before anything leaves
+                      Bristlenose; a rule; then the steps, Either and or stacked. */}
+                  <div className="bn-board-form">
+                    <span />
+                    <label className="bn-export-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={splitLong}
+                        onChange={(e) => setSplitLong(e.target.checked)}
+                        data-testid="bn-miro-app-split-long"
+                      />
+                      <span>{t("miro.splitLongQuotes")}</span>
+                    </label>
+                    <span className="bn-board-form-label" id="bn-miro-app-shape-label">
+                      {t("miro.stickyShapeLabel")}
+                    </span>
+                    <div
+                      className="bn-board-form-radios"
+                      role="radiogroup"
+                      aria-labelledby="bn-miro-app-shape-label"
+                      data-testid="bn-miro-app-shape"
+                    >
+                      {(["rectangle", "square"] as const).map((s) => (
+                        <label key={s} className="bn-export-checkbox">
+                          <input
+                            type="radio"
+                            name="bn-miro-app-shape"
+                            value={s}
+                            checked={shape === s}
+                            onChange={() => setShape(s)}
+                          />
+                          <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <hr />
+                    <span className="bn-board-form-label">{t("miro.appOnce")}</span>
+                    <span>
+                      <a href={MIRO_APP_INSTALL_URL} target="_blank" rel="noopener noreferrer">
+                        {t("miro.appAddLink")}
+                      </a>
+                    </span>
+                    <span className="bn-board-form-label">{t("miro.appEither")}</span>
+                    <span>
+                      <button
+                        type="button"
+                        className="bn-btn bn-btn-secondary bn-board-form-button"
+                        onClick={() => void handleDownloadBoard()}
+                        disabled={fileBusy}
+                        data-testid="bn-miro-download-board"
+                      >
+                        {t("figjam.download")}
+                      </button>
+                    </span>
+                    {downloaded !== null && (
+                      <>
+                        <span />
+                        <span className="bn-export-hint" data-testid="bn-miro-downloaded">
+                          {t("figjam.downloading", { count: downloaded })}
+                        </span>
+                      </>
+                    )}
+                    <span className="bn-board-form-label">{t("miro.appOr")}</span>
+                    <span>
+                      <button
+                        type="button"
+                        className="bn-btn bn-btn-primary bn-board-form-button bn-keep-width"
+                        onClick={handleCopyBoard}
+                        disabled={fileBusy}
+                        data-testid="bn-miro-copy-board"
+                      >
+                        {/* Both labels, one showing: the button keeps the wider one's width. */}
+                        <span aria-hidden={copied}>{t("miro.copyBoard")}</span>
+                        <span aria-hidden={!copied}>{t("miro.copied")}</span>
+                      </button>
+                    </span>
+                    <span className="bn-board-form-label">{t("miro.appThen")}</span>
+                    <span>{t("miro.appStep3")}</span>
                   </div>
-                  {downloaded !== null && (
-                    <p className="bn-export-hint" data-testid="bn-miro-downloaded">
-                      {t("figjam.downloading", { count: downloaded })}
-                    </p>
-                  )}
                   {fileError && (
                     <p className="bn-export-error" role="alert">
                       {fileError}

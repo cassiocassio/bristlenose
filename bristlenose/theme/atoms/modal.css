@@ -367,23 +367,43 @@
     margin: var(--bn-space-md) 0 0;
 }
 
-/* Instructions as plain lines: a dialog is not a numbered list (owner, 9 Nov 2026). */
-.bn-board-steps {
+/* The Mac form (owner, 9 Nov 2026; Pixelmator's Settings, Apple's own panes, our Mac sheet's
+   token tab): each label ends in a colon and right-aligns on one axis, each control left-aligns in
+   the column beside it, and a rule spans both columns between groups. The eye reads the controls;
+   the labels support them. */
+.bn-board-form {
     display: grid;
-    gap: var(--bn-space-sm);
-    margin: var(--bn-space-md) 0 0;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--bn-space-sm);
+    row-gap: var(--bn-space-sm);
+    align-items: baseline;
     font-size: var(--bn-text-label);
 }
 
-.bn-board-steps p {
+.bn-board-form-label {
+    text-align: right;
+    color: var(--bn-colour-muted);
+}
+
+.bn-board-form > .bn-export-checkbox,
+.bn-board-form-radios .bn-export-checkbox {
     margin: 0;
 }
 
-.bn-board-steps .bn-board-either {
+.bn-board-form-radios {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--bn-space-sm);
-    align-items: center;
+    column-gap: var(--bn-space-lg);
+}
+
+.bn-board-form > hr {
+    grid-column: 1 / -1;
+    margin: var(--bn-space-xs) 0;
+}
+
+/* Either and or: two buttons stacked, one width. */
+.bn-board-form-button {
+    min-width: 12em;
 }
 
 /* A button that changes its words in place (Copy board data → Copied) keeps its width: both

@@ -108,13 +108,6 @@ struct MiroSheetAppRouteTests {
         #expect(MiroSheetModel.helpURL(.token).absoluteString == "https://bristlenose.app/docs/send-to-miro.html")
     }
 
-    @Test("a line's placeholders split out in the language's own order")
-    func slots() {
-        #expect(MiroSheetModel.slots("Either {{download}} or {{copy}}") == ["Either ", "download", " or ", "copy", ""])
-        #expect(MiroSheetModel.slots("{{download}} または {{copy}}") == ["", "download", " または ", "copy", ""])
-        #expect(MiroSheetModel.slots("Once: {{link}}") == ["Once: ", "link", ""])
-    }
-
     @Test("the install link drops the web's arrow")
     func linkText() {
         let i18n = I18n()

@@ -96,6 +96,15 @@ describe("Send to Miro — the Miro app tab", () => {
     expect(split.compareDocumentPosition(copyButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("lays the steps out as a Mac form: each label beside its own control", () => {
+    render(<MiroExportPanel open onClose={() => {}} />);
+    const beside = (label: string) => screen.getByText(i18n.t(label)).nextElementSibling;
+    expect(beside("miro.appEither")?.contains(screen.getByTestId("bn-miro-download-board"))).toBe(true);
+    expect(beside("miro.appOr")?.contains(copyButton())).toBe(true);
+    expect(beside("miro.appThen")?.textContent).toBe(i18n.t("miro.appStep3"));
+    expect(beside("miro.appOnce")?.textContent).toBe(i18n.t("miro.appAddLink"));
+  });
+
   it("copies the board with the chosen settings, then says Copied in the button's place", async () => {
     expect(i18n.t("miro.copied")).not.toBe("miro.copied");
     render(<MiroExportPanel open onClose={() => {}} />);

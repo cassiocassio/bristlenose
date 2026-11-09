@@ -129,7 +129,8 @@ choose, drop or paste it.
 
 Both routes stay for now, side by side as the two tabs of Send to Miro
 (`docs/mockups/miro-board-file-route.html`), each with its own help page
-(`send-to-miro` for the token, `miro-app` for this app). Once the owner has
+(`send-to-miro` for the token, `miro-app` for this app). The dialog always opens on the Miro app tab, even for someone already
+connected with a token: it is the better route. Once the owner has
 tested the board-data route, the developer-token route will be retired:
 archived, or hidden behind a flag. It is **not deleted**. The parked one-click
 relay (`docs/research/miro-integration-2026-11.md` § The relay) would reuse

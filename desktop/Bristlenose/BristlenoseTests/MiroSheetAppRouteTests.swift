@@ -108,10 +108,70 @@ struct MiroSheetAppRouteTests {
         #expect(MiroSheetModel.helpURL(.token).absoluteString == "https://bristlenose.app/docs/send-to-miro.html")
     }
 
-    @Test("the install link drops the web's arrow")
-    func linkText() {
+    @Test("the install link drops the web's arrow, in every language")
+    func linkText() throws {
         let i18n = I18n()
+        let dir = try #require(I18n.findLocalesDirectory())
+        i18n.configure(localesDirectory: dir)
         let m = MiroSheetModel(port: 0, token: nil, projectName: "p", i18n: i18n)
-        #expect(!m.addAppLinkText().contains("↗"))
+        let locales = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+            .filter { FileManager.default.fileExists(atPath: dir.appendingPathComponent("\($0)/common.json").path) }
+        #expect(locales.count >= 21)
+        for locale in locales {
+            i18n.setLocale(locale)
+            let raw = m.t("appAddLink")
+            #expect(raw.contains("↗"), "\(locale): the shared key carries the arrow")
+            let text = m.addAppLinkText()
+            #expect(!text.contains("↗") && !text.isEmpty && text != raw, "\(locale)")
+        }
+    }
+
+    @Test("a choice changed while the board is fetched leaves no Copied for the new choices")
+    func choiceChangedMidCopy() async {
+        let m = model()
+        m.writePasteboard = { _, _ in true }
+        m.fetchBoard = { _ in
+            try await Task.sleep(nanoseconds: 50_000_000)
+            return (Data(Self.board.utf8), 112)
+        }
+        m.copyBoard()
+        m.stickyShape = "square"  // changed while the rectangle board is on its way
+        await settle(m)
+        #expect(!m.copied)
+        m.stickyShape = "rectangle"
+        #expect(m.copied)  // the board on the clipboard is the rectangle one
+    }
+
+    @Test("closing the sheet mid-fetch leaves no error and the buttons free")
+    func cancelledFetch() async {
+        let m = model()
+        var wrote = false
+        m.writePasteboard = { _, _ in wrote = true; return true }
+        m.fetchBoard = { _ in
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            return (Data(Self.board.utf8), 112)
+        }
+        m.copyBoard()
+        m.cancelFile()
+        await settle(m)
+        #expect(!m.fileBusy && m.fileError == nil && !wrote)
+    }
+
+    @Test("a cancelled save panel keeps an earlier Copied")
+    func cancelKeepsCopied() async {
+        let m = model()
+        m.writePasteboard = { _, _ in true }
+        m.copyBoard()
+        await settle(m)
+        m.chooseDestination = { _ in nil }
+        m.saveBoard()
+        await settle(m)
+        #expect(m.copied)
+    }
+
+    @Test("the HTML flavour escapes the title")
+    func titleEscaped() {
+        let html = MiroSheetModel.pasteboardHTML(json: "{}", title: #"A "B" <C> & D"#)
+        #expect(html.hasSuffix(#">A &quot;B&quot; &lt;C&gt; &amp; D</div>"#))
     }
 }

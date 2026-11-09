@@ -347,6 +347,8 @@ final class MiroSheetModel: ObservableObject {
     }
 
     func openHelp() { NSWorkspace.shared.open(Self.helpURL(route)) }
+    /// The help button's tooltip on the Miro app route: the same word as the web's `?` label.
+    func appHelpTooltip() -> String { i18n.t("common.nav.help") }
 
     /// The choices a board file is made under: a change makes a different board.
     var fileChoices: String { "\(splitLongQuotes)|\(stickyShape)|\(i18n.locale)" }
@@ -370,27 +372,37 @@ final class MiroSheetModel: ObservableObject {
     }
 
     func copyBoard() {
-        runFile { model, board in
+        runFile { model, board, madeUnder in
             guard let json = String(data: board.data, encoding: .utf8),
                   model.writePasteboard(Self.pasteboardHTML(json: json, title: model.projectName), json)
             else {
                 model.fileError = model.t("copyFailed")
                 return
             }
-            model.copiedFor = model.fileChoices
+            model.savedFor = nil
+            model.copiedFor = madeUnder
+            model.announce(model.t("copied"))
         }
     }
 
     func saveBoard() {
-        runFile { model, board in
+        runFile { model, board, madeUnder in
+            // A cancelled save panel changes nothing: an earlier "Copied" still holds.
             guard let url = await model.chooseDestination(model.suggestedFilename()) else { return }
             do {
                 try board.data.write(to: url, options: .atomic)
-                model.savedFor = (model.fileChoices, board.quotes)
+                model.copiedFor = nil
+                model.savedFor = (madeUnder, board.quotes)
             } catch {
                 model.fileError = model.i18n.t("common.figjam.error")
             }
         }
+    }
+
+    /// VoiceOver hears a button's title change only if it is told (the web panel's `announce`).
+    private func announce(_ text: String) {
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+                             userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 
     /// The name the save panel offers.
@@ -405,19 +417,22 @@ final class MiroSheetModel: ObservableObject {
     func saveBoardFileTitle() -> String { i18n.t("desktop.figjam.saveBoardFile") }
 
     /// Fetch the board under the current choices, then hand it on; a refusal is said in words.
-    private func runFile(_ then: @escaping @MainActor (MiroSheetModel, (data: Data, quotes: Int)) async -> Void) {
+    /// `then` gets the choices as they were at the click: a choice changed while the board was
+    /// fetched, or while the save panel was open, makes a different board, and "Copied" or the
+    /// saved line must not claim it (Fable review, 9 Nov 2026).
+    private func runFile(_ then: @escaping @MainActor (MiroSheetModel, (data: Data, quotes: Int), String) async -> Void) {
+        guard !fileBusy else { return }
         fileError = nil
-        copiedFor = nil
-        savedFor = nil
         fileBusy = true
         let options = fileOptions()
+        let madeUnder = fileChoices
         fileTask = Task { [weak self] in
             guard let self else { return }
             defer { self.fileBusy = false }
             do {
                 let board = try await self.fetchBoard(options)
                 if Task.isCancelled { return }
-                await then(self, board)
+                await then(self, board, madeUnder)
             } catch let e as FigJamAPI.APIError {
                 if Task.isCancelled { return }
                 self.fileError = self.i18n.t(e.localeKey ?? "common.figjam.error")
@@ -556,7 +571,7 @@ struct MiroSheet: View {
                     .horizontalRadioGroupLayout()
                     .labelsHidden()
                 }
-                Divider().gridCellColumns(2)
+                Divider()  // outside a GridRow, a view spans every column
                 GridRow(alignment: .firstTextBaseline) {
                     formLabel("appOnce")
                     Link(model.addAppLinkText(), destination: MiroSheetModel.miroAppInstallURL)
@@ -587,6 +602,7 @@ struct MiroSheet: View {
             Spacer(minLength: 16)
             HStack {
                 HelpLink { model.openHelp() }
+                    .help(model.appHelpTooltip())
                 Spacer()
                 Button(model.t("done")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
@@ -601,18 +617,22 @@ struct MiroSheet: View {
         Text(model.t(key))
     }
 
-    /// Either and or stack two buttons; both take the wider one's width, so they read as a pair.
-    private let pairWidth: CGFloat = 190
+    /// Either and or stack two buttons of one width, so they read as a pair: each button's label
+    /// holds all three titles (Save, Copy, Copied) stacked, only its own showing, so both come to
+    /// the widest of the three in every language, and Copy keeps that width when it says Copied.
+    private func pairLabel(_ shown: String) -> some View {
+        ZStack {
+            ForEach([model.saveBoardFileTitle(), model.t("copyBoard"), model.t("copied")], id: \.self) { title in
+                Text(title).opacity(title == shown ? 1 : 0).accessibilityHidden(title != shown)
+            }
+        }
+    }
 
     /// Copy is the default button: fewer steps than a file (owner, 9 Nov 2026). It says "Copied"
     /// in its own place, both titles stacked so the button keeps the wider one's width.
     private var copyButton: some View {
         Button { model.copyBoard() } label: {
-            ZStack {
-                Text(model.t("copyBoard")).opacity(model.copied ? 0 : 1)
-                Text(model.t("copied")).opacity(model.copied ? 1 : 0)
-            }
-            .frame(minWidth: pairWidth)
+            pairLabel(model.t(model.copied ? "copied" : "copyBoard"))
         }
         .keyboardShortcut(.defaultAction)
         .disabled(model.fileBusy)
@@ -621,7 +641,7 @@ struct MiroSheet: View {
 
     private var saveButton: some View {
         Button { model.saveBoard() } label: {
-            Text(model.saveBoardFileTitle()).frame(minWidth: pairWidth)
+            pairLabel(model.saveBoardFileTitle())
         }
         .disabled(model.fileBusy)
     }

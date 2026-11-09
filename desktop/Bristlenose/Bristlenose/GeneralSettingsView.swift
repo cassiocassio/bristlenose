@@ -149,7 +149,11 @@ struct GeneralSettingsView: View {
         } label: {
             menuLabel
         }
-        .frame(width: 240)
+        // A floor and a ceiling, not a width. Our own words fit whole: "Last
+        // location used" is 37 characters in Russian, and was cut at the old
+        // fixed 240 pt. A folder name is the researcher's data, so past 360 pt
+        // it middle-truncates (menuLabel) rather than stretching the row.
+        .frame(minWidth: 240, maxWidth: 360, alignment: .trailing)
     }
 
     @ViewBuilder

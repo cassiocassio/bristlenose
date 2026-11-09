@@ -497,14 +497,17 @@ struct CloudImportWindow: View {
     // MARK: - Footer
 
     private var footer: some View {
+        // The checkbox and every branch of the primary button (Stop, Retry N,
+        // Done, Import N) keep their own width, so when a longer language runs
+        // out of room the arithmetic line gives way, never a control's label.
         HStack(spacing: 12) {
             arithmeticLine
-            includeWaitingToggle
+            includeWaitingToggle.fixedSize(horizontal: true, vertical: false)
             Spacer(minLength: 12)
             if store.phase == .loaded, store.blanketRefusal == nil, !(store.listing?.rows.isEmpty ?? true) {
                 Text(i18n.t("desktop.cloudImport.destinationLabel")).font(.caption).foregroundStyle(.secondary)
                 destinationPicker
-                primaryButton
+                primaryButton.fixedSize(horizontal: true, vertical: false)
             }
         }
         .padding(.horizontal, 14)

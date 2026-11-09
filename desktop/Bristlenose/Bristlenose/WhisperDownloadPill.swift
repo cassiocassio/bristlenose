@@ -31,14 +31,14 @@ struct WhisperDownloadPill: View {
                         .foregroundStyle(.red)
                     Text(i18n.t("desktop.modelDownload.failedTitle"))
                         .font(.system(.caption).weight(.medium))
-                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)  // a pill's label never truncates
                 } else {
                     Image(systemName: "arrow.down.circle")
                         .imageScale(.small)
                         .foregroundStyle(.secondary)
                     Text(i18n.t("desktop.modelDownload.title"))
                         .font(.system(.caption).weight(.medium))
-                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)  // a pill's label never truncates
                     // One width whether or not the total is known, so the
                     // toolbar does not jump when it arrives.
                     Group {
@@ -119,6 +119,8 @@ struct WhisperDownloadDetail: View {
                     Spacer(minLength: 8)
                     Button(i18n.t("desktop.modelDownload.stop")) { model.stop() }
                         .controlSize(.small)
+                        // "Arrêter le téléchargement": the note wraps, the label doesn't.
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
         }

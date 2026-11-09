@@ -96,6 +96,7 @@ struct ProjectFilesPopover: View {
                 Button(i18n.t("desktop.menu.project.analyse"), action: onAnalyse)
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .fixedSize(horizontal: true, vertical: false)  // the title wraps; the button's label never truncates
             }
         }
     }

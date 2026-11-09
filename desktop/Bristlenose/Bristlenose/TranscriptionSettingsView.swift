@@ -178,6 +178,7 @@ private struct WhisperStatusRow: View {
                             .foregroundStyle(.secondary)
                     }
                     Button(i18n.t("desktop.modelDownload.stop")) { download.stop() }
+                        .fixedSize(horizontal: true, vertical: false)  // the line beside it wraps; the label never truncates
                 case .onDisk:
                     Text(i18n.t("desktop.transcriptionSettings.whisperOnDisk", [
                         "size": ByteCountFormatter.string(
@@ -188,10 +189,12 @@ private struct WhisperStatusRow: View {
                     Text(i18n.t(WhisperFailureCause.lineKey(for: download.failureCause)))
                         .foregroundStyle(.secondary)
                     Button(i18n.t("common.buttons.retry")) { download.downloadNow() }
+                        .fixedSize(horizontal: true, vertical: false)  // the line beside it wraps; the label never truncates
                 case .missing, .partial:
                     Text(i18n.t("desktop.transcriptionSettings.whisperMissing"))
                         .foregroundStyle(.secondary)
                     Button(i18n.t("desktop.transcriptionSettings.downloadNow")) { download.downloadNow() }
+                        .fixedSize(horizontal: true, vertical: false)  // the line beside it wraps; the label never truncates
                 case .unknown:
                     // Asking the sidecar takes a moment; say so, not a blank.
                     ProgressView().controlSize(.small)

@@ -128,6 +128,9 @@ struct RunCoverPane: View {
             } description: {
                 Text(sentence.resolved(i18n)).lineLimit(3)
             } actions: {
+                // Our own row in the stock actions slot: the slot splits a plain
+                // HStack's width equally and a Button ellipsizes ("Show Det…",
+                // 9 Nov 2026). Each button keeps its label's width instead.
                 HStack(spacing: 12) {
                     switch DetailPaneKind.FailureRemedy.of(category) {
                     case .setUpProvider: setUpProviderButton
@@ -140,6 +143,7 @@ struct RunCoverPane: View {
                         detailsExpanded.toggle()
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
                 if detailsExpanded {
                     ScrollView {
                         Text(forensicRecord(rawCause: rawCause, category: category, summary: summary))

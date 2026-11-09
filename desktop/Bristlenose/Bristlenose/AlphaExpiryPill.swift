@@ -30,7 +30,7 @@ struct AlphaExpiryPill: View {
                     .foregroundStyle(days <= 2 ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
                 Text(pillText(days))
                     .font(.system(.caption).weight(.medium))
-                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)  // a pill's label never truncates
             } detail: {
                 popover(days)
             }

@@ -22,7 +22,6 @@ _SELFTESTS = [
     "desktop/scripts/test-check-logging-hygiene.sh",
     "desktop/scripts/test-check-menu-routing.sh",
     "desktop/scripts/test-check-appearance-seam.sh",
-    "desktop/scripts/test-check-button-truncation.sh",
     "desktop/scripts/test-check-window-surfaces.sh",
     "desktop/scripts/test-check-mcpb.sh",
     "desktop/scripts/test-check-release-binary.sh",

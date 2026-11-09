@@ -143,6 +143,9 @@ struct BootView: View {
                 Text(message.resolved(i18n))
                     .lineLimit(3)
             } actions: {
+                // Our own row in the stock actions slot: the slot splits a plain
+                // HStack's width equally and a Button ellipsizes ("Show Det…",
+                // 9 Nov 2026). Each button keeps its label's width instead.
                 HStack(spacing: 12) {
                     let set = Self.failureButtons(
                         startedByRetry: serveManagerForPane?.startedByRetry ?? false
@@ -152,6 +155,7 @@ struct BootView: View {
                             .keyboardShortcut(set.defaultButton == which ? .defaultAction : nil)
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
                 if detailsExpanded {
                     ScrollView {
                         Text((serveManagerForPane?.outputLines ?? []).suffix(40).joined(separator: "\n"))

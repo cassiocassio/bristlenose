@@ -97,12 +97,14 @@ struct ProjectDiagnosticPopover: View {
 
     private var header: some View {
         HStack(spacing: 8) {
+            // The buttons keep their labels whole; the headline wraps instead.
             Text(headlineStatus).font(.headline)
             Spacer()
             if startupRefusal == nil, state.needsFolderAccess, let onLocate {
                 Button(i18n.t("desktop.chrome.locate")) { onLocate() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .fixedSize(horizontal: true, vertical: false)
             } else if startupRefusal == nil, state.needsProvider {
                 Button(i18n.t("desktop.pipeline.diagnostic.action.setUpProvider")) {
                     closePopover?()
@@ -110,6 +112,7 @@ struct ProjectDiagnosticPopover: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .fixedSize(horizontal: true, vertical: false)
             } else if startupRefusal == nil, FileManager.default.fileExists(
                 atPath: PipelineRunner.logFileURL(for: project).path
             ) {
@@ -118,6 +121,7 @@ struct ProjectDiagnosticPopover: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .fixedSize(horizontal: true, vertical: false)
                 .help(i18n.t("desktop.pipeline.diagnostic.action.showLogTooltip"))
             }
             Button {
@@ -131,6 +135,7 @@ struct ProjectDiagnosticPopover: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .fixedSize(horizontal: true, vertical: false)
             .help(i18n.t("desktop.pipeline.diagnostic.action.copy"))
         }
     }

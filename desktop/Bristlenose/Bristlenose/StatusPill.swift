@@ -20,7 +20,7 @@ import SwiftUI
 struct StatusPill<Label: View, Detail: View>: View {
     /// Two-way so the caller can also drive presentation (e.g. auto-present).
     @Binding var isPresented: Bool
-    /// VoiceOver label for the pill button (the visible text may be truncated).
+    /// VoiceOver label for the pill button. The visible text never truncates (owner rule, 9 Nov 2026): each pill sizes its label with `.fixedSize(horizontal: true, vertical: false)`.
     let accessibilityLabel: String
     /// Pill contents: icon + text (+ optional accessory), laid out in an HStack.
     @ViewBuilder var label: () -> Label

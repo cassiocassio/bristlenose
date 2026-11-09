@@ -4750,26 +4750,43 @@ struct SpotlightConfirmSheet: View {
                     breadcrumbSegments(for: candidate).joined(separator: ", ")
                 ))
 
-            HStack {
-                Button(i18n.t("common.buttons.cancel"), role: .cancel) {
-                    onChoose(.cancel)
+            // One row when the labels fit, a stack when a longer language does
+            // not (Catalan needs ~450 pt of the 380): a button never truncates.
+            // The stacked form reads the default first, as a stacked NSAlert
+            // does. Pattern: ProviderProblemPill.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    cancelButton
+                    Spacer()
+                    chooseDifferentButton
+                    useThisFolderButton
                 }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button(i18n.t("desktop.chrome.spotlight.chooseDifferent")) {
-                    onChoose(.chooseDifferent)
+                VStack(alignment: .trailing, spacing: 8) {
+                    useThisFolderButton
+                    chooseDifferentButton
+                    cancelButton
                 }
-
-                Button(i18n.t("desktop.chrome.spotlight.useThisFolder")) {
-                    onChoose(.useThisFolder)
-                }
-                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
         .frame(width: 420)
+    }
+
+    private var cancelButton: some View {
+        Button(i18n.t("common.buttons.cancel"), role: .cancel) { onChoose(.cancel) }
+            .keyboardShortcut(.cancelAction)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var chooseDifferentButton: some View {
+        Button(i18n.t("desktop.chrome.spotlight.chooseDifferent")) { onChoose(.chooseDifferent) }
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var useThisFolderButton: some View {
+        Button(i18n.t("desktop.chrome.spotlight.useThisFolder")) { onChoose(.useThisFolder) }
+            .keyboardShortcut(.defaultAction)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     /// Finder-style breadcrumb: `~ › Research › 2026 › Project Ikea`.

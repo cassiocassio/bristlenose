@@ -904,6 +904,7 @@ struct MCPAgentsSettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!MCPExtensionInstaller.canPackage)
+                .fixedSize(horizontal: true, vertical: false)  // a button's label never truncates; the caption wraps
             } else {
                 // No handler registered for .mcpb — Claude Desktop isn't
                 // installed. A live button would produce the system's
@@ -1005,6 +1006,7 @@ struct MCPAgentsSettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(chatGPTAvailability != .ready)
+                .fixedSize(horizontal: true, vertical: false)  // a button's label never truncates; the caption wraps
             case .noChatGPT:
                 Link(i18n.t("desktop.mcpAgents.downloadChatGPT"),
                      destination: URL(string: "https://chatgpt.com/download")!)
@@ -1174,6 +1176,7 @@ struct MCPAgentsSettingsView: View {
                         Button(i18n.t("desktop.mcpAgents.openFilesFolders")) {
                             Self.openFilesAndFolders()
                         }
+                        .fixedSize(horizontal: true, vertical: false)  // the note wraps; the label never truncates
                     }
                 } else {
                     Text(i18n.t("desktop.mcpAgents.claudeDesktopPromptNote"))
@@ -1326,6 +1329,7 @@ struct MCPAgentsSettingsView: View {
             }
         }
         .disabled(!live)
+        .fixedSize(horizontal: true, vertical: false)  // the footnote beside it wraps; the label never truncates
     }
 
     private func copy() {

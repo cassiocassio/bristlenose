@@ -55,7 +55,7 @@ struct OllamaDownloadPill: View {
             icon
             Text(statusText)
                 .font(.system(.caption).weight(.medium))
-                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)  // a pill's label never truncates
             progressAccessory
         }
         .padding(.horizontal, 10)
@@ -185,6 +185,7 @@ struct OllamaDownloadPill: View {
                     model.cancel()
                 }
                 .controlSize(.small)
+                .fixedSize(horizontal: true, vertical: false)  // the status wraps; the button's label never truncates
             }
         }
         .padding(16)

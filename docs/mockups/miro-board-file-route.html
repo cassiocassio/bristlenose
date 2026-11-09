@@ -1459,7 +1459,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <p>Reused as they are: <code>figjam.download</code> (Download board file), <code>figjam.downloading_*</code>, every existing <code>miro.*</code> line on the token tab. The download is the FigJam export's own request.</p>
 <p><strong>What is new code.</strong> Copy: Bristlenose can be pasted from (the Miro app and the FigJam plugin both read a pasted board, in two flavours) but nothing in Bristlenose puts a board on the clipboard yet. Safari refuses a clipboard write that follows a network fetch outside the click, so the copy is written as a <code>ClipboardItem</code> whose content is the pending fetch (the frontend's known fix).</p>
 <p><strong>Not tabbed:</strong> the Screens board's Send to Miro. The board file cannot carry screenshots, so that dialog stays token-only.</p>
-<p><strong>Settled 9 Nov.</strong> Default tab: always Miro app. Step 3's wording: Miro's left-toolbar <em>+</em> is "Tools, Media and Integrations" and opens a panel whose first tab is <em>Tools</em>; Bristlenose is listed there once added, so step 3 says "from Tools".</p>
+<p><strong>Settled 9 Nov.</strong> Default tab: always Miro app. After Download: the FigJam export's own status line, <em>Downloading a board file with 112 quotes.</em> (<code>figjam.downloading_*</code>), kept; after Copy: <em>Copied</em> on the button, no line. Step 3's wording: Miro's left-toolbar <em>+</em> is "Tools, Media and Integrations" and opens a panel whose first tab is <em>Tools</em>; Bristlenose is listed there once added, so step 3 says "from Tools".</p>
 </section>
 </body>
 </html>

@@ -72,6 +72,30 @@ community is divided, surface the issue + named voices (with URLs) +
 where Apple stands + where William leans + handoff to the user, rather
 than fabricating a single verdict. See gruber prompt §"Two postures".
 
+# Hard rule: a control's label never truncates (web and macOS)
+
+Owner rule, 9 Nov 2026; the spec is `docs/design-control-labels.md` — read it.
+A label cut by an ellipsis or by its container ("Show Det…") is a **blocking
+finding**, never a nit, in **any of the 21 locales**: German, French, Polish,
+Russian and Catalan run longer than the English you are reading, so "it fits"
+proves nothing. For every button, tab, pop-up, pill, checkbox and clickable
+chip in scope, name what sizes it. If the answer is a width somebody wrote (on
+the control, its row or its column) rather than its own label, that is the
+finding. The doc's four defaults are the bar:
+
+1. No width on a control or its row — a floor (`minWidth` / `min-width`) at most.
+2. Fixed widths only on popovers and sheets; inside them text wraps and
+   buttons keep their width (`.fixedSize(horizontal: true, vertical: false)`).
+3. A row that may not fit stacks (`ViewThatFits`, `flex-wrap`), never
+   hyphenates.
+4. Only the researcher's own words may truncate (tag, file, speaker names);
+   on the web that element is marked `data-truncates="user-content"`.
+
+The fix is the layout, never a shorter translation. Backstop for the web:
+`e2e/tests/button-labels.spec.ts` — it sees only what it opens, so a new
+dialog, popover or menu is yours to check by reading, and should be added to
+the walk. The Mac has no mechanical check: you are it.
+
 # Design system consistency checks
 
 Flag violations of these rules:
@@ -363,3 +387,6 @@ Before finalising, answer these four questions internally. If any answer is
 4. **Am I flagging taste or rules?** Only flag design system violations as
    consistency issues. Subjective preferences belong in usability findings
    with clear rationale, not in the consistency section.
+5. **Can any control's label in scope be cut — in German?** For each control,
+   name what sizes it. If the answer is a width somebody wrote rather than
+   "its own label", that is a blocking finding (`docs/design-control-labels.md`).

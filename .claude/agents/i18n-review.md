@@ -132,6 +132,17 @@ If the audit scope includes `desktop/`:
 - No trailing commas (invalid JSON).
 - Keys should be sorted consistently across files (same order as English).
 
+## 6-bis. A longer translation must never truncate a control (owner hard rule, 9 Nov 2026)
+
+For every button, tab, pop-up, pill or clickable chip whose key changed or is
+new, find its longest value across the 21 locales (de, fr, pl, ru, ca usually)
+and check the control can hold it: nothing may write a width on the control or
+its row, and nothing may ellipsize or clip our own words
+(`docs/design-control-labels.md`). A label that would be cut is **Major** at
+least. The fix is the layout, never a shortened translation: abbreviating a
+locale value to fit is the same defect. Web backstop:
+`e2e/tests/button-labels.spec.ts`; the Mac has none but review.
+
 ## 6a. CJK punctuation — SETTLED, do not re-derive
 
 Measured 20 Aug 2026 against the shipping systems, after a sweep that got the

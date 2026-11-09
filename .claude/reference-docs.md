@@ -9,6 +9,7 @@ Moved verbatim from the root `CLAUDE.md` on 5 Nov 2026 to cut what every session
 - `docs/design-react-migration.md` — active migration plan
 - `docs/design-react-component-library.md` — 16 primitives
 - `docs/design-minimap.md`, `docs/design-inspector-panel.md`, `docs/design-finding-weight.md`
+- `docs/design-control-labels.md` — a control's label never truncates (web + Mac): the four layout defaults and the per-platform patterns
 
 **Pipeline / backend:**
 - `docs/design-cloud-files.md` — **read before anything iCloud- or File-Provider-shaped.** The one statement of what can and cannot be known about cloud-backed files and what Bristlenose shows: a bounded read, an ordinary retryable failure, the existing can't-find pane; no wait label, no cloud glyph, no provider advice. Re-proposed five times before 22 Oct 2026; not reopened by a new framing

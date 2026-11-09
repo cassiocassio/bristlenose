@@ -255,6 +255,22 @@ Cross-referenced against the local HIG corpus (see above) and the
 [macOS Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/).
 Flag violations of these rules:
 
+## Button labels never truncate (owner hard rule, 9 Nov 2026)
+
+A Mac push button sizes to its title; a truncated one ("Show Det…") is the
+tell of a web-shaped layout and a **blocking finding** in any locale (German
+and French run longer than the English you read). Spec and patterns:
+`docs/design-control-labels.md`. Flag any width written on a control or its
+row (`.frame(width:)`), a bare `.fixedSize()` (it must be horizontal-only), a
+plain `HStack` of two or more buttons in `ContentUnavailableView`'s
+`actions:` slot without `.fixedSize(horizontal: true, vertical: false)` (the
+slot splits it equally), `.lineLimit(1)` / `.truncationMode` on a control's own
+label, and an `NSButton` with a width constraint or a truncating
+`lineBreakMode`. A single button in that slot is fine. A row that may not fit
+stacks with `ViewThatFits`, as a stacked `NSAlert` does. Only user data (a
+folder or project name) may truncate. There is no Swift lint for this: the
+review is the check.
+
 ## Toolbar
 
 Per the Mario Guzman toolbar guidelines, the unified title bar has three zones:

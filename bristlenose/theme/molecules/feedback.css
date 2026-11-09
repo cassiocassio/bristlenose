@@ -14,8 +14,15 @@
 /* Sentiment picker — 5 emoji faces in a row */
 .feedback-sentiments {
     display: flex;
+    /* Wraps rather than spilling past the card: the five labels need ~460px in
+       Danish, German, Polish and Russian, and the card offers ~356. English
+       stays one row. Letting each label wrap under its face instead was
+       measured and fails: the German labels are single words ("Frustrierend",
+       "Ausgezeichnet"), so the row still overflowed. A control is never cut
+       (owner rule, 9 Nov 2026). */
+    flex-wrap: wrap;
     justify-content: center;
-    gap: var(--bn-space-lg);
+    gap: var(--bn-space-sm) var(--bn-space-lg);
     margin-bottom: var(--bn-space-lg);
 }
 

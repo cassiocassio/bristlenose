@@ -653,7 +653,11 @@
 
 .tag-sidebar-actions {
     display: flex;
-    gap: 0.5rem;
+    /* Wraps at the narrow end of the drag (200px): Russian "Select all / Clear /
+       Used" needs ~230px, and the sidebar's overflow-x: hidden would cut the
+       last button off. A control never truncates (owner rule, 9 Nov 2026). */
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
     padding: var(--bn-space-xs) 0 0.5rem 0.85rem;
     border-bottom: 1px solid var(--bn-colour-border);
     flex-shrink: 0;

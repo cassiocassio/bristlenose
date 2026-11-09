@@ -36,7 +36,12 @@
 /* ── Sidebar nav ── */
 
 .modal-nav-sidebar {
-    width: 11rem;
+    /* A floor, not a width: the column grows to its longest label
+       ("Конфиденциальность", "LLM-palveluntarjoaja") instead of scrolling
+       sideways and clipping it (overflow-y: auto makes overflow-x auto too).
+       The content pane beside it has min-width: 0 and gives way. A control's
+       label is never cut (owner rule, 9 Nov 2026). */
+    min-width: 11rem;
     flex-shrink: 0;
     border-right: 1px solid var(--bn-colour-border);
     overflow-y: auto;

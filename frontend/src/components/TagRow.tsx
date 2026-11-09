@@ -129,6 +129,10 @@ export function TagRow({
           onClick={handleBadgeClick}
           onKeyDown={handleBadgeKeyDown}
           aria-label={assignActive ? t("tags.assignToSelected", { name }) : undefined}
+          // A tag name is the researcher's own words, so it may ellipsize in a
+          // narrow sidebar; our own labels may not. The e2e walk honours this
+          // marker and nothing else (e2e/tests/button-labels.spec.ts).
+          data-truncates="user-content"
         >
           {name}
         </span>

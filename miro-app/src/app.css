@@ -1,6 +1,9 @@
 :root { color-scheme: light; }
 body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #050038; background: #fff; }
-h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+h1 { font-size: 16px; font-weight: 600; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+h1 .mark { flex: none; }
+.small a { color: #4262ff; text-decoration: none; }
+.small a:hover { text-decoration: underline; }
 p { margin: 0 0 12px; color: #4d4d6b; }
 .paste { border: 1px solid #c3c2cf; border-radius: 8px; padding: 18px 12px; text-align: center; cursor: text; margin-bottom: 10px; color: #4d4d6b; }
 .paste:focus { outline: none; border-color: #4262ff; background: #eef1ff; color: #050038; font-weight: 600; }

@@ -1341,6 +1341,10 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 /* templates/report.css `hr`, with a dialog-sized margin in place of the page's --bn-space-xl */
 .bn-modal hr { border: none; border-top: 1px solid var(--bn-colour-keyline); margin: var(--bn-space-md) 0 0; }
 .inline-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* The Copy button holds its width when it says Copied: both labels share one grid cell and the
+   resting one is hidden, so the width is the wider label's in every language (a fixed width would
+   not survive German). */
+.keepw { display: inline-grid; } .keepw > span { grid-area: 1 / 1; } .keepw > [hidden-label] { visibility: hidden; }
 /* PROPOSED for the web dialog: the round help button, drawn as macOS draws its native one (the Mac
    sheet's SwiftUI HelpLink, as in Pixelmator and Pages): a filled grey disc, no border, a dark "?".
    Leading end of the action row, where macOS puts a dialog's Help button. */
@@ -1378,7 +1382,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <hr>
 <div class="steps">
 <p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
-<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary">Copy board data</button><sup class="new">new</sup></p>
+<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary keepw"><span>Copy board data</span><span aria-hidden="true" hidden-label>Copied</span></button><sup class="new">new</sup></p>
 <p>In a board, open the Bristlenose Miro app from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
 </div>
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
@@ -1393,7 +1397,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <hr>
 <div class="steps">
 <p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
-<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary">Copy board data</button><sup class="new">new</sup></p>
+<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary keepw"><span>Copy board data</span><span aria-hidden="true" hidden-label>Copied</span></button><sup class="new">new</sup></p>
 <p>In a board, open the Bristlenose Miro app from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
 </div>
 <p class="bn-export-hint status">Downloading a board file with 112 quotes.</p>
@@ -1409,7 +1413,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <hr>
 <div class="steps">
 <p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
-<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary">Copied</button><sup class="new">new</sup></p>
+<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary keepw"><span aria-hidden="true" hidden-label>Copy board data</span><span>Copied</span></button><sup class="new">new</sup></p>
 <p>In a board, open the Bristlenose Miro app from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
 </div>
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
@@ -1459,7 +1463,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <p>Reused as they are: <code>figjam.download</code> (Download board file), <code>figjam.downloading_*</code>, every existing <code>miro.*</code> line on the token tab. The download is the FigJam export's own request.</p>
 <p><strong>What is new code.</strong> Copy: Bristlenose can be pasted from (the Miro app and the FigJam plugin both read a pasted board, in two flavours) but nothing in Bristlenose puts a board on the clipboard yet. Safari refuses a clipboard write that follows a network fetch outside the click, so the copy is written as a <code>ClipboardItem</code> whose content is the pending fetch (the frontend's known fix).</p>
 <p><strong>Not tabbed:</strong> the Screens board's Send to Miro. The board file cannot carry screenshots, so that dialog stays token-only.</p>
-<p><strong>Settled 9 Nov.</strong> Default tab: always Miro app. After Download: the FigJam export's own status line, <em>Downloading a board file with 112 quotes.</em> (<code>figjam.downloading_*</code>), kept; after Copy: <em>Copied</em> on the button, no line. Step 3's wording: Miro's left-toolbar <em>+</em> is "Tools, Media and Integrations" and opens a panel whose first tab is <em>Tools</em>; Bristlenose is listed there once added, so step 3 says "from Tools".</p>
+<p><strong>Settled 9 Nov.</strong> Default tab: always Miro app. After Download: the FigJam export's own status line, <em>Downloading a board file with 112 quotes.</em> (<code>figjam.downloading_*</code>), kept; after Copy: <em>Copied</em> on the button, no line. The button keeps its width when it changes, so the row doesn't shift: both labels sit in one grid cell and the one not showing is hidden, which sizes it to the wider label in every language. Step 3's wording: Miro's left-toolbar <em>+</em> is "Tools, Media and Integrations" and opens a panel whose first tab is <em>Tools</em>; Bristlenose is listed there once added, so step 3 says "from Tools".</p>
 </section>
 </body>
 </html>

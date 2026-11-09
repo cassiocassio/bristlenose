@@ -189,6 +189,15 @@ def test_the_installer_refuses_while_bristlenose_runs() -> None:
         assert "BristlenoseRunning()" in body, hook
 
 
+def test_a_silent_uninstall_refuses_without_a_dialog() -> None:
+    """winget runs the uninstaller with /SILENT and no /SUPPRESSMSGBOXES; the
+    "Bristlenose is running" box then waited for a click (Windows 11 VM, 9 Nov 2026)."""
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    body = iss.split("function InitializeUninstall", 1)[1].split("\nend;", 1)[0]
+    assert "if not UninstallSilent() then" in body
+    assert body.index("if not UninstallSilent() then") < body.index("MsgBox(")
+
+
 def test_uninstall_never_deletes_the_install_folder_wholesale() -> None:
     """winget passes --location through as /DIR=, so {app} can be a folder of
     the user's; "filesandordirs {app}" would delete everything in it."""

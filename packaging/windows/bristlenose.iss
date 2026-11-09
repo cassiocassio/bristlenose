@@ -171,7 +171,11 @@ begin
   Result := True;
   if BristlenoseRunning() then
   begin
-    SuppressibleMsgBox(RunningMessage, mbError, MB_OK, IDOK);
+    // winget uninstalls with /SILENT and no /SUPPRESSMSGBOXES, so a
+    // SuppressibleMsgBox still shows and waits for a click nobody makes
+    // (seen in a Windows 11 VM, 9 Nov 2026). Silent: refuse with no dialog.
+    if not UninstallSilent() then
+      SuppressibleMsgBox(RunningMessage, mbError, MB_OK, IDOK);
     Result := False;
   end;
 end;

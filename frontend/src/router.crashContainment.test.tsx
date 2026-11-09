@@ -616,7 +616,7 @@ describe("a crash inside an open modal", () => {
   }
 
   const cases: { name: string; key: string; testId: string; open: () => unknown; flag?: boolean }[] = [
-    { name: "Send to Miro", key: "miro.title", testId: "bn-miro-overlay", open: () => exportMenu(/Send to Miro/) },
+    { name: "Send to Miro", key: "miro.quotesTitle", testId: "bn-miro-overlay", open: () => exportMenu(/Send to Miro/) },
     { name: "Export Report", key: "export.heading", testId: "bn-export-overlay", open: () => exportMenu(/Export Report/) },
     {
       name: "Feedback",
@@ -663,7 +663,7 @@ describe("a crash inside an open modal", () => {
   it("that throws from the start leaves the report standing at load, and shows the fallback when opened", async () => {
     // Every modal is mounted closed, so a throw that does not depend on being
     // open happens when the report loads, before anyone asks for the modal.
-    boom.tKey = "miro.title";
+    boom.tKey = "miro.quotesTitle";
     const { container } = renderAt("/report/signals/");
     expectReportStands(container);
     expect(screen.getByRole("link", { name: "Quotes" })).toBeInTheDocument();
@@ -679,7 +679,7 @@ describe("a crash inside an open modal", () => {
   // heading is content, so it goes with a crash. The mark then names the dialog
   // and takes the focus the heading would have had.
   for (const c of [
-    { name: "Send to Miro", key: "miro.title", testId: "bn-miro-overlay", menu: /Send to Miro/, flag: false },
+    { name: "Send to Miro", key: "miro.quotesTitle", testId: "bn-miro-overlay", menu: /Send to Miro/, flag: false },
     { name: "Send to FigJam", key: "figjam.title", testId: "bn-figjam-overlay", menu: /Send to FigJam/, flag: true },
   ]) {
     it(`${c.name}: a crashed dialog is named by the mark, which takes the focus`, async () => {

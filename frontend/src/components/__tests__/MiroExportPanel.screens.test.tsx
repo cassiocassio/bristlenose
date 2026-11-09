@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
+import { renderOnTokenTab } from "./miroTestUtils";
 import i18n from "../../i18n";
 
 const startMiroBoard = vi.fn();
@@ -143,7 +144,7 @@ describe("MiroExportPanel — the board name", () => {
   });
 
   it("arrives filled with the name the board would get anyway", async () => {
-    const { unmount } = render(<MiroExportPanel open onClose={() => {}} />);
+    const { unmount } = renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText(i18n.t("miro.boardNameLabel"))).toHaveValue("Kitchen study"));
     unmount();
     render(<MiroExportPanel open screens onClose={() => {}} />);
@@ -153,7 +154,7 @@ describe("MiroExportPanel — the board name", () => {
   });
 
   it("keeps a name the researcher typed", async () => {
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     const field = await screen.findByLabelText(i18n.t("miro.boardNameLabel"));
     await waitFor(() => expect(field).toHaveValue("Kitchen study"));
     fireEvent.change(field, { target: { value: "Workshop" } });

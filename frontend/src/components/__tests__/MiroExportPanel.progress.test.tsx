@@ -4,8 +4,9 @@
  * reaches the server. A board still building when the panel was closed is picked up on reopening.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
+import { renderOnTokenTab } from "./miroTestUtils";
 import i18n from "../../i18n";
 import { loadLocaleResources } from "../../i18n/localeLoader";
 import type { MiroBoardBuild } from "../../utils/types";
@@ -39,7 +40,7 @@ const status = (s: string, b: MiroBoardBuild | null = null) => ({
 
 /** Open the panel, then start a build whose status reads `running` with `b`, for ever. */
 async function building(b: MiroBoardBuild): Promise<void> {
-  render(<MiroExportPanel open onClose={() => {}} />);
+  renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
   fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
   getMiroBoardStatus.mockResolvedValue(status("running", b));
   await waitFor(() => expect(startMiroBoard).toHaveBeenCalled());
@@ -106,7 +107,7 @@ describe("MiroExportPanel — a board's progress", () => {
   });
 
   it("a finished board says how many quotes it placed and links to it", async () => {
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     getMiroBoardStatus.mockResolvedValue(status("completed"));
     await screen.findByText(i18n.t("miro.boardReady", { count: 40 }));
@@ -117,14 +118,14 @@ describe("MiroExportPanel — a board's progress", () => {
   it("a board still building when the panel reopens is shown, not lost", async () => {
     getMiroBoardStatus.mockResolvedValue(status("running", build({
       phase: "quotes", count_done: 20, count_total: 120, fraction: 0.2 })));
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     await screen.findByText(i18n.t("miro.progressQuotes", { done: 20, total: 120 }));
     expect(startMiroBoard).not.toHaveBeenCalled();
   });
 
   it("a second Create while the last board is still stopping says so", async () => {
     startMiroBoard.mockRejectedValueOnce(new Error("POST /miro/board 409"));
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.stillStopping")));
   });
@@ -132,20 +133,20 @@ describe("MiroExportPanel — a board's progress", () => {
   it("starting a board while not connected says so, not the server's English (R94)", async () => {
     startMiroBoard.mockRejectedValueOnce(Object.assign(new Error("POST /miro/board 400: Not connected to Miro"),
       { reason: "not_connected", detail: "Not connected to Miro" }));
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.errNotConnected")));
   });
 
   it("a build the server no longer knows is an error, not a quiet stop", async () => {
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     getMiroBoardStatus.mockResolvedValue(status("idle"));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.exportError")));
   });
 
   it("a board that completes without a link is an error, not ready (R79)", async () => {
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     getMiroBoardStatus.mockResolvedValue({ ...status("completed"), board_url: null });
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.exportError")));
@@ -169,7 +170,7 @@ describe("MiroExportPanel — a board's progress", () => {
     getMiroStatus.mockReset().mockImplementation(() => new Promise((r) => { connected = r; }));
     getMiroBoardStatus.mockResolvedValue(status("running", build({
       phase: "quotes", count_done: 1, count_total: 9, fraction: 0.1 })));
-    const { rerender } = render(<MiroExportPanel open onClose={() => {}} />);
+    const { rerender } = renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     await waitFor(() => expect(getMiroStatus).toHaveBeenCalledTimes(1));
     rerender(<MiroExportPanel open={false} onClose={() => {}} />);
     connected({ connected: true });
@@ -178,7 +179,7 @@ describe("MiroExportPanel — a board's progress", () => {
   });
 
   it("a language change does not take a finished board's link away", async () => {
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     getMiroBoardStatus.mockResolvedValue(status("completed"));
     await screen.findByText(i18n.t("miro.openInMiro"));
@@ -198,24 +199,24 @@ describe("MiroExportPanel — a status check that fails (R78)", () => {
 
   it("a server error says the request failed, beside the paste field", async () => {
     getMiroStatus.mockRejectedValue(Object.assign(new Error("GET /miro/status 500"), { status: 500 }));
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.requestFailed", { status: 500 })));
-    expect(screen.getByLabelText(i18n.t("miro.tokenPlaceholder"))).toBeTruthy();
+    expect(screen.getByLabelText(i18n.t("miro.tokenPlaceholder"), { selector: "input" })).toBeTruthy();
   });
 
   it("a request that never reached the server says the server could not be reached", async () => {
     getMiroStatus.mockRejectedValue(new TypeError("Failed to fetch"));
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.serverUnreachable")));
-    expect(screen.getByLabelText(i18n.t("miro.tokenPlaceholder"))).toBeTruthy();
+    expect(screen.getByLabelText(i18n.t("miro.tokenPlaceholder"), { selector: "input" })).toBeTruthy();
   });
 
   it("a connected status whose running-board read fails keeps the form, with no error", async () => {
     getMiroStatus.mockResolvedValue({ connected: true });
     getMiroBoardStatus.mockRejectedValue(new TypeError("Failed to fetch"));
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     await screen.findByText(i18n.t("miro.createBoard"));
     await waitFor(() => expect(getMiroBoardStatus).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 20));

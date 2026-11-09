@@ -8,8 +8,9 @@
  * sheet owns the warning, so `persisted: false` would be a false alarm.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
+import { renderOnTokenTab } from "./miroTestUtils";
 import i18n from "../../i18n";
 import { announce } from "../../utils/announce";
 import type { MiroStatusResponse } from "../../utils/types";
@@ -45,8 +46,8 @@ const WARNINGS = [
 /** Paste a token and wait for the configure view. */
 async function connectWith(reply: MiroStatusResponse): Promise<void> {
   postMiroConnect.mockResolvedValue(reply);
-  render(<MiroExportPanel open onClose={() => {}} />);
-  const field = await screen.findByLabelText(i18n.t("miro.tokenPlaceholder"));
+  renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
+  const field = await screen.findByLabelText(i18n.t("miro.tokenPlaceholder"), { selector: "input" });
   fireEvent.change(field, { target: { value: "tok-abc" } });
   fireEvent.click(screen.getByText(i18n.t("miro.connect")));
   await screen.findByText(i18n.t("miro.createBoard"));

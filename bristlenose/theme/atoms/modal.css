@@ -325,3 +325,114 @@
 .bn-linkish:hover { text-decoration: none; }
 .bn-linkish:disabled { color: var(--bn-colour-muted); cursor: default; text-decoration: none; }
 .bn-linkish:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+
+/* ── Two-route dialogs (Send to Miro: Miro app | Developer access token) ──────────────────────
+   A segmented control: one choice of a few, shown as joined buttons. The Mac sheet draws the
+   system's segmented control; this is its web twin, the same shape, in the dialog's tokens.
+   Tablist semantics live in components/SegmentedTabs.tsx. */
+.bn-seg {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--bn-radius-md);
+    background: light-dark(#e8e8ed, #2c2c30);
+    margin: 0 0 var(--bn-space-md);
+}
+
+.bn-seg button {
+    font: inherit;
+    font-size: var(--bn-text-label);
+    border: 0;
+    background: transparent;
+    color: var(--bn-colour-text);
+    padding: 4px 14px;
+    border-radius: calc(var(--bn-radius-md) - 2px);
+    cursor: pointer;
+}
+
+.bn-seg button[aria-selected="true"] {
+    background: var(--bn-colour-bg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.bn-seg button:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
+/* The report's own rule (templates/report.css `hr`), with a dialog-sized margin. */
+.bn-modal hr {
+    border: none;
+    border-top: 1px solid var(--bn-colour-keyline);
+    margin: var(--bn-space-md) 0 0;
+}
+
+/* Instructions as plain lines: a dialog is not a numbered list (owner, 9 Nov 2026). */
+.bn-board-steps {
+    display: grid;
+    gap: var(--bn-space-sm);
+    margin: var(--bn-space-md) 0 0;
+    font-size: var(--bn-text-label);
+}
+
+.bn-board-steps p {
+    margin: 0;
+}
+
+.bn-board-steps .bn-board-either {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-sm);
+    align-items: center;
+}
+
+/* A button that changes its words in place (Copy board data → Copied) keeps its width: both
+   labels share one grid cell and the resting one is hidden, so the box is the wider label's in
+   every language, where a fixed width would not survive German. */
+.bn-keep-width {
+    display: inline-grid;
+}
+
+.bn-keep-width > span {
+    grid-area: 1 / 1;
+}
+
+.bn-keep-width > [aria-hidden="true"] {
+    visibility: hidden;
+}
+
+/* The round help button, at the leading end of the action row, drawn as macOS draws its own
+   (the Mac sheet's SwiftUI HelpLink): a filled grey disc and a dark "?". */
+.bn-modal-actions .bn-help-btn {
+    margin-right: auto;
+}
+
+.bn-help-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: light-dark(#e8e8ea, #3a3a3c);
+    color: light-dark(#1d1d1f, #f5f5f7);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.12);
+    align-self: center;
+}
+
+.bn-help-btn:hover {
+    background: light-dark(#dcdcdf, #48484a);
+}
+
+.bn-help-btn:active {
+    background: light-dark(#cfcfd3, #545456);
+}
+
+.bn-help-btn:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}

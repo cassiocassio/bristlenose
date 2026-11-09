@@ -10,8 +10,9 @@
  * because the server's default is `"en"` by design.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
+import { renderOnTokenTab } from "./miroTestUtils";
 import i18n from "../../i18n";
 
 const startMiroBoard = vi.fn().mockResolvedValue({ status: "started" });
@@ -36,7 +37,7 @@ vi.mock("../../shims/bridge", () => ({ postStoreMiroToken: vi.fn() }));
 
 async function exportOnce(language: string): Promise<Record<string, unknown>> {
   await i18n.changeLanguage(language);
-  render(<MiroExportPanel open onClose={() => {}} />);
+  renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
   const button = await screen.findByText(i18n.t("miro.createBoard"));
   fireEvent.click(button);
   await waitFor(() => expect(startMiroBoard).toHaveBeenCalled());
@@ -89,7 +90,7 @@ describe("MiroExportPanel — a partial board keeps its address", () => {
         vars: { url: "https://miro.com/app/board/x9/" },
       }));
     await i18n.changeLanguage("es");
-    render(<MiroExportPanel open onClose={() => {}} />);
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
     const sentence = i18n.t("miro.errBoardIncomplete");
     // Match on the element's OWN text, not textContent: every ancestor of the

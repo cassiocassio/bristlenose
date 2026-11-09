@@ -1,7 +1,16 @@
 /**
- * MiroExportPanel — experimental "Send to Miro board" modal.
+ * MiroExportPanel — "Send to Miro" for the quotes board, and the screens board's "Send to Miro
+ * board".
  *
- * States: loading → connect (OAuth or paste-token) → configure → exporting →
+ * The quotes board has two routes, as tabs (owner, 9 Nov 2026;
+ * docs/mockups/miro-board-file-route.html). **Miro app**, always the tab it opens on: copy or
+ * download the board file, which the Bristlenose app inside Miro draws (miro-app/,
+ * docs/design-miro-in-board-app.md) — no sign-in, no token. **Developer access token**: the push
+ * through Miro's REST API with the researcher's own token, kept for keen beta testers and, later,
+ * for a relay (parked). The screens board has only the token route: a board file carries no
+ * screengrabs.
+ *
+ * Token route states: loading → connect (paste-token) → configure → exporting →
  * done. (Preview was removed — the SVG ≠ the real board and it added a needless
  * decision point; the agnostic board IR + SVG renderer stay for dev/iteration.)
  *
@@ -11,8 +20,10 @@
  */
 
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "./Dialog";
+import { SegmentedTabs } from "./SegmentedTabs";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
@@ -23,6 +34,8 @@ import {
   apiGet,
   cancelMiroBoard,
   cancelScreensMiro,
+  figjamBoardDownloadUrl,
+  getFigJamBoard,
   getMiroBoardStatus,
   getMiroStatus,
   getScreensMiroStatus,
@@ -31,6 +44,9 @@ import {
   startMiroBoard,
   startScreensMiro,
 } from "../utils/api";
+import type { ApiError, FigJamBoardRequest } from "../utils/api";
+import { copyBoardToClipboard } from "../utils/boardClipboard";
+import type { BoardFile } from "../utils/boardClipboard";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
 import type {
   MiroBoardBuild,
@@ -53,6 +69,35 @@ interface MiroExportPanelProps {
 const BOARD_POLL_MS = 1500;
 
 type View = "loading" | "connect" | "configure" | "exporting" | "done";
+
+type Route = "app" | "token";
+
+/** The Bristlenose app's install page on Miro (its Installation URL): pick a team, Add & allow.
+ *  Shared by link on purpose; a company admin approves the app by the client ID in it. */
+const MIRO_APP_INSTALL_URL =
+  "https://miro.com/app-install/?response_type=code&client_id=3458764676772092122&redirect_uri=%2Fapp-install%2Fconfirm%2F";
+
+/** Each route's help page, opened by the round "?" (the Mac sheet's HelpLink does the same). */
+const HELP_URL: Record<Route, string> = {
+  app: "https://bristlenose.app/docs/miro-app.html",
+  token: "https://bristlenose.app/docs/send-to-miro.html",
+};
+
+/** A board file refused by the server, in the reader's words (the FigJam panel's table). */
+const BOARD_FILE_ERROR_KEYS: Record<string, string> = {
+  no_quotes_selected: "miro.errNoQuotesSelected",
+};
+
+/**
+ * A sentence with controls in it ("Either {{download}} or {{copy}}"): split the raw template on
+ * its placeholders and put each control in its slot, so a language can reorder them. The same
+ * approach as `renderNotice` below, for the same reason (no `<Trans>`, and a value can't mis-split).
+ */
+function withSlots(template: string, slots: Record<string, ReactNode>): ReactNode[] {
+  return template.split(/\{\{(\w+)\}\}/).map((part, i) =>
+    i % 2 === 1 ? <span key={i}>{slots[part] ?? null}</span> : part,
+  );
+}
 
 /**
  * "Connected, but couldn't save the token to <store>" in each store's own word: the Mac's
@@ -180,6 +225,17 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [account, setAccount] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // The quotes board's route. Always opens on the Miro app, even for someone connected with a
+  // token: it is the better route (owner, 9 Nov 2026). The screens board has only the token route.
+  const [route, setRoute] = useState<Route>("app");
+  const tab: Route = screens ? "token" : route;
+  // The Miro app route: "Copied" in the button's place, the download's line, or why neither worked.
+  // Each is kept with the choices it was made under, and holds only while they still hold: a
+  // changed choice makes a different board.
+  const [copiedFor, setCopiedFor] = useState<string | null>(null);
+  const [downloadedFor, setDownloadedFor] = useState<{ choices: string; quotes: number } | null>(null);
+  const [fileBusy, setFileBusy] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   /**
    * Read a build until it ends. Both boards are jobs: the quotes board because Miro refuses a new
@@ -264,6 +320,10 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     setSkipped(0);
     setBuildState(null);
     setView("loading");
+    setRoute("app");
+    setCopiedFor(null);
+    setDownloadedFor(null);
+    setFileError(null);
     // Which build this opening may pick up: closing the panel before the reads come back moves
     // `build.current` on, and nothing then starts polling behind a shut panel.
     const mine = build.current;
@@ -280,6 +340,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         // A board still being built when the panel was closed is picked up again, not lost.
         return (screens ? getScreensMiroStatus : getMiroBoardStatus)().then((b) => {
           if (mine !== build.current || b.status !== "running") return;
+          setRoute("token"); // its progress is on the token tab
           setView("exporting");
           resume();
         });
@@ -343,6 +404,97 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       sticky_shape: shape,
     }),
     [boardName, colourBy, linkClips, clipsBase, splitLong, shape, i18n.language],
+  );
+
+  // The Miro app route's board file: the FigJam export's own request, with the two choices the
+  // in-Miro app honours. The board is named after the project (an empty name), and has no clip
+  // links (parked: `featureFlags.boardClipLinks`).
+  const fileRequest = useCallback(
+    (): FigJamBoardRequest => ({
+      board_name: "",
+      locale: resolveBrowserLang(i18n.language) ?? "en",
+      split_long_quotes: splitLong,
+      sticky_shape: shape,
+      clips_base: "",
+    }),
+    [splitLong, shape, i18n.language],
+  );
+
+  const choices = `${splitLong}|${shape}|${i18n.language}`;
+  const copied = copiedFor === choices;
+  const downloaded = downloadedFor?.choices === choices ? downloadedFor.quotes : null;
+
+  const boardFileFailed = useCallback(
+    (e: unknown) => {
+      const reason = (e as ApiError | null)?.reason ?? "";
+      setFileError(t(BOARD_FILE_ERROR_KEYS[reason] ?? "figjam.error"));
+    },
+    [t],
+  );
+
+  // Called synchronously in the click, or Safari refuses the clipboard write (boardClipboard.ts).
+  const handleCopyBoard = () => {
+    setFileError(null);
+    setDownloadedFor(null);
+    setFileBusy(true);
+    const madeUnder = choices;
+    let fetchFailed = false;
+    copyBoardToClipboard(() =>
+      // The whole board file at runtime; typed as the summary its other caller reads.
+      (getFigJamBoard(fileRequest()) as unknown as Promise<BoardFile>).catch((e: unknown) => {
+        fetchFailed = true;
+        throw e;
+      }),
+    )
+      .then(() => {
+        setCopiedFor(madeUnder);
+        announce(t("miro.copied"));
+      })
+      .catch((e: unknown) => {
+        if (fetchFailed) boardFileFailed(e);
+        else setFileError(t("miro.copyFailed"));
+      })
+      .finally(() => setFileBusy(false));
+  };
+
+  // The FigJam panel's download: build it once to read its count and catch a refusal in words,
+  // then hand the browser (or the Mac's save panel) the file's address.
+  const handleDownloadBoard = async () => {
+    setFileError(null);
+    setCopiedFor(null);
+    setFileBusy(true);
+    const madeUnder = choices;
+    const req = fileRequest();
+    try {
+      const summary = await getFigJamBoard(req);
+      const a = document.createElement("a");
+      a.href = figjamBoardDownloadUrl(req);
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setDownloadedFor({ choices: madeUnder, quotes: summary.totals.quotes });
+      announce(t("figjam.downloading", { count: summary.totals.quotes }));
+    } catch (e) {
+      boardFileFailed(e);
+    } finally {
+      setFileBusy(false);
+    }
+  };
+
+  /** The round "?" at the leading end of an action row: this route's help page. */
+  const helpButton = (
+    <a
+      className="bn-help-btn"
+      href={HELP_URL[tab]}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={t("nav.help")}
+      title={t("nav.help")}
+      data-testid="bn-miro-help"
+    >
+      ?
+    </a>
   );
 
   const handlePasteConnect = useCallback(async () => {
@@ -470,9 +622,115 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
           {() => (
             <>
               <h2 id="bn-miro-title" ref={headingRef} tabIndex={-1}>
-                {t("miro.title")}
+                {t(screens ? "miro.title" : "miro.quotesTitle")}
               </h2>
 
+              {!screens && (
+                <SegmentedTabs
+                  tabs={[
+                    { key: "app", label: t("miro.tabApp") },
+                    { key: "token", label: t("miro.tabToken") },
+                  ]}
+                  selected={route}
+                  onSelect={setRoute}
+                  labelledBy="bn-miro-title"
+                  idPrefix="bn-miro"
+                />
+              )}
+
+              {tab === "app" && (
+                <div role="tabpanel" id="bn-miro-panel-app" aria-labelledby="bn-miro-tab-app">
+                  {/* The choices first, so they are made before anything leaves Bristlenose. */}
+                  <label className="bn-export-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={splitLong}
+                      onChange={(e) => setSplitLong(e.target.checked)}
+                      data-testid="bn-miro-app-split-long"
+                    />
+                    <span>{t("miro.splitLongQuotes")}</span>
+                  </label>
+                  <fieldset className="bn-export-radios" data-testid="bn-miro-app-shape">
+                    <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
+                    {(["rectangle", "square"] as const).map((s) => (
+                      <label key={s} className="bn-export-checkbox">
+                        <input
+                          type="radio"
+                          name="bn-miro-app-shape"
+                          value={s}
+                          checked={shape === s}
+                          onChange={() => setShape(s)}
+                        />
+                        <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                  <hr />
+                  <div className="bn-board-steps">
+                    <p>
+                      {withSlots(t("miro.appStep1"), {
+                        link: (
+                          <a href={MIRO_APP_INSTALL_URL} target="_blank" rel="noopener noreferrer">
+                            {t("miro.appAddLink")}
+                          </a>
+                        ),
+                      })}
+                    </p>
+                    <p className="bn-board-either">
+                      {withSlots(t("miro.appEitherOr"), {
+                        download: (
+                          <button
+                            type="button"
+                            className="bn-btn bn-btn-secondary"
+                            onClick={() => void handleDownloadBoard()}
+                            disabled={fileBusy}
+                            data-testid="bn-miro-download-board"
+                          >
+                            {t("figjam.download")}
+                          </button>
+                        ),
+                        copy: (
+                          <button
+                            type="button"
+                            className="bn-btn bn-btn-primary bn-keep-width"
+                            onClick={handleCopyBoard}
+                            disabled={fileBusy}
+                            data-testid="bn-miro-copy-board"
+                          >
+                            {/* Both labels, one showing: the button keeps the wider one's width. */}
+                            <span aria-hidden={copied}>{t("miro.copyBoard")}</span>
+                            <span aria-hidden={!copied}>{t("miro.copied")}</span>
+                          </button>
+                        ),
+                      })}
+                    </p>
+                    <p>{t("miro.appStep3")}</p>
+                  </div>
+                  {downloaded !== null && (
+                    <p className="bn-export-hint" data-testid="bn-miro-downloaded">
+                      {t("figjam.downloading", { count: downloaded })}
+                    </p>
+                  )}
+                  {fileError && (
+                    <p className="bn-export-error" role="alert">
+                      {fileError}
+                    </p>
+                  )}
+                  <div className="bn-modal-actions">
+                    {helpButton}
+                    <button className="bn-btn bn-btn-secondary" onClick={onClose}>
+                      {t("miro.done")}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {tab === "token" && (
+              <div
+                role={screens ? undefined : "tabpanel"}
+                id={screens ? undefined : "bn-miro-panel-token"}
+                aria-labelledby={screens ? undefined : "bn-miro-tab-token"}
+              >
               {view === "loading" && (
                 <p className="bn-modal-subtitle">{t("miro.checkingConnection")}</p>
               )}
@@ -504,6 +762,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                     </p>
                   )}
                   <div className="bn-modal-actions">
+                    {!screens && helpButton}
                     <button className="bn-btn bn-btn-secondary" onClick={onClose}>
                       {t("miro.cancel")}
                     </button>
@@ -617,6 +876,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                     </p>
                   )}
                   <div className="bn-modal-actions">
+                    {!screens && helpButton}
                     <button className="bn-btn bn-btn-primary" onClick={handleExport} disabled={busy}>
                       {t("miro.createBoard")}
                     </button>
@@ -694,6 +954,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                     )}
                   </div>
                 </>
+              )}
+              </div>
               )}
             </>
           )}

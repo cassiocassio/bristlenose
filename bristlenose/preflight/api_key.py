@@ -354,6 +354,39 @@ def _openai_error_code(exc: BaseException) -> str | None:
     return code if isinstance(code, str) else None
 
 
+def _create_without_reasoning(client: Any, model: str, params: dict[str, Any]) -> Any:
+    """The key check's request, asking a reasoning model not to reason (N34, 9 Nov 2026).
+
+    The check sends the run's request with the prompt ``.``. A GPT-5-class model reasons by default,
+    so with ``max_completion_tokens`` at 64,000 the check could bill up to that many tokens (about
+    $0.64 at $10 per million) where the setup line promises "~$0.0001". So it asks for
+    ``reasoning_effort`` ``"none"``, then ``"minimal"`` when the model refuses the first (the two
+    words OpenAI's models split on), then with nothing when it refuses both: the same
+    refusal-and-resend as the any-llm route (``llm.client._refuses_reasoning_off``). Models in
+    ``_OPENAI_LEGACY_PARAMS`` do not reason and refuse the field, so they are never sent it. Only
+    this check does it: the run's own requests are untouched, since changing them would change
+    quote extraction and wants a measurement first.
+
+    Any other error, including a rejected key, is raised on the first call it appears.
+    """
+    from bristlenose.llm.client import _OPENAI_LEGACY_PARAMS, _refuses_reasoning_off
+
+    efforts: tuple[str | None, ...] = (None,) if model in _OPENAI_LEGACY_PARAMS else ("none", "minimal", None)
+    for i, effort in enumerate(efforts):
+        sent = dict(params) if effort is None else {**params, "reasoning_effort": effort}
+        try:
+            return client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+                **sent,
+            )
+        except Exception as exc:
+            if i < len(efforts) - 1 and _refuses_reasoning_off(exc):
+                continue
+            raise
+    raise AssertionError("unreachable")  # pragma: no cover
+
+
 def _validate_openai(
     api_key: str, model: str, *, params: dict[str, Any] | None = None
 ) -> ValidationResult:
@@ -375,11 +408,7 @@ def _validate_openai(
         default_headers={"User-Agent": f"bristlenose/{__version__}"},
     )
     try:
-        client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
-            **params,
-        )
+        _create_without_reasoning(client, model, params)
     except openai.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
     except openai.RateLimitError as exc:

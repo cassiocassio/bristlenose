@@ -1094,9 +1094,19 @@ class TestPreflightSendsThePipelinesRequest:
         settings = _real_settings(**kw)
         pipeline = _pipeline_kwargs(settings)
         sent = _preflight_kwargs(monkeypatch, tmp_path, settings)
-        assert {k: v for k, v in sent.items() if k not in _PROMPT_KEYS} == {
+        # `reasoning_effort` is the one deliberate difference (N34, 9 Nov 2026): the check asks a
+        # GPT-5-class model not to reason, so a "." cannot bill 64,000 reasoning tokens; the run does
+        # not. It is asserted on its own below, and nothing else may differ.
+        assert {k: v for k, v in sent.items() if k not in _PROMPT_KEYS | {"reasoning_effort"}} == {
             k: v for k, v in pipeline.items() if k not in _PROMPT_KEYS
         }
+
+    def test_only_the_check_asks_a_modern_chatgpt_model_not_to_reason(self, monkeypatch, tmp_path):
+        modern = _real_settings(llm_provider="openai", openai_api_key="sk", llm_model="gpt-5.6-terra")
+        legacy = _real_settings(llm_provider="openai", openai_api_key="sk", llm_model="gpt-4o")
+        assert _preflight_kwargs(monkeypatch, tmp_path, modern)["reasoning_effort"] == "none"
+        assert "reasoning_effort" not in _preflight_kwargs(monkeypatch, tmp_path, legacy)
+        assert "reasoning_effort" not in _pipeline_kwargs(modern), "the run's request is not changed"
 
     def test_ollama_same_parameters_but_a_one_token_cap(self, monkeypatch, tmp_path):
         # Ollama refuses no cap, so the run's proves nothing there, and a small

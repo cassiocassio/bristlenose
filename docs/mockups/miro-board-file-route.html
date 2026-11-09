@@ -1339,7 +1339,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 .steps { margin: 16px 0 0; display: grid; gap: 12px; font-size: var(--bn-text-body, 14px); }
 .steps p { margin: 0; }
 /* templates/report.css `hr`, with a dialog-sized margin in place of the page's --bn-space-xl */
-.bn-modal hr { border: none; border-top: 1px solid var(--bn-colour-keyline); margin: var(--bn-space-lg) 0 var(--bn-space-sm); }
+.bn-modal hr { border: none; border-top: 1px solid var(--bn-colour-keyline); margin: var(--bn-space-md) 0 0; }
 .inline-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 /* PROPOSED for the web dialog: the round help button, drawn as macOS draws its native one (the Mac
    sheet's SwiftUI HelpLink, as in Pixelmator and Pages): a filled grey disc, no border, a dark "?".
@@ -1371,49 +1371,47 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
 <h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="true" class="on">Miro app</button><button role="tab" aria-selected="false">Developer access token</button></div><sup class="new">new</sup>
-<div class="steps">
-<p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
-<p class="inline-actions">Either <button class="bn-btn bn-btn-primary">Download board file</button> or <button class="bn-btn bn-btn-secondary">Copy board data</button><sup class="new">new</sup></p>
-<p>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
-</div>
-<hr>
-<label class="bn-export-checkbox"><input type="checkbox" checked><span>Break long quotes into multiple sticky notes</span></label>
+<label class="bn-export-checkbox" style="margin-top:14px"><input type="checkbox" checked><span>Break long quotes into multiple sticky notes</span></label>
 <fieldset class="bn-export-radios"><legend class="bn-export-hint">Sticky shape</legend>
 <label class="bn-export-checkbox"><input type="radio" name="s0" checked><span>Rectangle</span></label>
 <label class="bn-export-checkbox"><input type="radio" name="s0"><span>Square</span></label></fieldset>
-<p class="bn-export-hint status">&nbsp;</p>
+<hr>
+<div class="steps">
+<p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
+<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary">Copy board data</button><sup class="new">new</sup></p>
+<p>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
+</div>
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
 </div></div></figure><figure class="frame"><figcaption class="chrome">2 · Miro app tab — after Download board file</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
 <h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="true" class="on">Miro app</button><button role="tab" aria-selected="false">Developer access token</button></div><sup class="new">new</sup>
-<div class="steps">
-<p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
-<p class="inline-actions">Either <button class="bn-btn bn-btn-primary">Download board file</button> or <button class="bn-btn bn-btn-secondary">Copy board data</button><sup class="new">new</sup></p>
-<p>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
-</div>
-<hr>
-<label class="bn-export-checkbox"><input type="checkbox" checked><span>Break long quotes into multiple sticky notes</span></label>
+<label class="bn-export-checkbox" style="margin-top:14px"><input type="checkbox" checked><span>Break long quotes into multiple sticky notes</span></label>
 <fieldset class="bn-export-radios"><legend class="bn-export-hint">Sticky shape</legend>
 <label class="bn-export-checkbox"><input type="radio" name="s582" checked><span>Rectangle</span></label>
 <label class="bn-export-checkbox"><input type="radio" name="s582"><span>Square</span></label></fieldset>
+<hr>
+<div class="steps">
+<p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
+<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary">Copy board data</button><sup class="new">new</sup></p>
+<p>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
+</div>
 <p class="bn-export-hint status">Downloading a board file with 112 quotes.</p>
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
-</div></div></figure><figure class="frame"><figcaption class="chrome">3 · Miro app tab — after Copy</figcaption>
+</div></div></figure><figure class="frame"><figcaption class="chrome">3 · Miro app tab — after Copy board data</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
 <h2>Send quotes to Miro board stickies<sup class="new">new</sup></h2>
 <div class="seg" role="tablist" aria-label="How to send"><button role="tab" aria-selected="true" class="on">Miro app</button><button role="tab" aria-selected="false">Developer access token</button></div><sup class="new">new</sup>
-<div class="steps">
-<p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
-<p class="inline-actions">Either <button class="bn-btn bn-btn-primary">Download board file</button> or <button class="bn-btn bn-btn-secondary">Copy board data</button><sup class="new">new</sup></p>
-<p>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
-</div>
-<hr>
-<label class="bn-export-checkbox"><input type="checkbox" checked><span>Break long quotes into multiple sticky notes</span></label>
+<label class="bn-export-checkbox" style="margin-top:14px"><input type="checkbox" checked><span>Break long quotes into multiple sticky notes</span></label>
 <fieldset class="bn-export-radios"><legend class="bn-export-hint">Sticky shape</legend>
 <label class="bn-export-checkbox"><input type="radio" name="s898" checked><span>Rectangle</span></label>
 <label class="bn-export-checkbox"><input type="radio" name="s898"><span>Square</span></label></fieldset>
-<p class="bn-export-hint status">Board data copied. Paste it in the Bristlenose panel.<sup class="new">new</sup></p>
+<hr>
+<div class="steps">
+<p>Once: <a href="#">Add Bristlenose to Miro ↗</a><sup class="new">new</sup></p>
+<p class="inline-actions">Either <button class="bn-btn bn-btn-secondary">Download board file</button> or <button class="bn-btn bn-btn-primary">Copied</button><sup class="new">new</sup></p>
+<p>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.<sup class="new">new</sup></p>
+</div>
 <div class="bn-modal-actions with-help"><button class="help-btn" aria-label="Help" title="Help">?</button><sup class="new">new</sup><span class="spacer"></span><button class="bn-btn bn-btn-secondary">Done</button></div>
 </div></div></figure><figure class="frame"><figcaption class="chrome">4 · Developer access token tab — not connected</figcaption>
 <div class="stage"><div class="bn-modal bn-board-modal" role="dialog">
@@ -1440,7 +1438,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 </div></div></figure>
 </div>
 <section class="commentary"><div class="label">Commentary · not the product</div>
-<p><strong>The shape (owner, 8 Nov 2026).</strong> Send to Miro stays the one Miro entry point and splits into two tabs. <strong>Miro app</strong> (Miro's own word for it: an app you add to a team) is the default and needs no setup: three plain lines that are also the explanation (no step numbers: a dialog isn't a numbered list), Download as the primary button and Copy board data as the option, offered as <em>Either … or …</em>, then the two settings the board file honours. <strong>Developer access token</strong> is today's dialog, unchanged, under a name that tells most people it is not for them. Once someone is connected with a token, that tab opens first, so their route stays one click.</p>
+<p><strong>The shape (owner, 8 Nov 2026).</strong> Send to Miro stays the one Miro entry point and splits into two tabs. <strong>Miro app</strong> (Miro's own word for it: an app you add to a team) is the default and needs no setup: three plain lines that are also the explanation (no step numbers: a dialog isn't a numbered list), Copy board data as the primary button (fewer clicks: no file to find) and Download board file as the option, offered as <em>Either … or …</em>. The settings come first, above the rule, so they are chosen before anything leaves Bristlenose; the instructions and buttons follow, then the two settings the board file honours. <strong>Developer access token</strong> is today's dialog, unchanged, under a name that tells most people it is not for them. Once someone is connected with a token, that tab opens first, so their route stays one click.</p>
 <p><strong>Why tabs.</strong> The routes are not one form: the board file honours sticky shape and long-quote splitting, but not colour by sentiment, clip links or a board name (the file is always single-colour), while the token route takes all of them. Each tab shows only what applies. A route per app also leaves room for Miro and FigJam to diverge, and for the parked one-click relay to replace the second tab one day without moving anything researchers have learned.</p>
 <p><strong>One new element.</strong> The two-segment control does not exist in the web report yet (the only tab list is the Inspector panel's); it would be built once as a shared component, with tablist semantics and arrow keys. On the Mac sheet it is the standard segmented control. Everything else is the dialog's existing classes; the rule between the instructions and the settings is the report's own <code>hr</code> (keyline colour), with a smaller margin.</p>
 <p><strong>The help button</strong> (owner, 9 Nov 2026). On the Mac it is not new: the Miro sheet already has the native one, SwiftUI's <code>HelpLink</code>, bottom-left in both token views (the Pages Export-dialog pattern), opening the token page. The Miro app tab gets the same <code>HelpLink</code>, opening <em>Add quote stickies to a Miro board</em> (<code>bristlenose.app/docs/miro-app.html</code>, written 9 Nov and held on a website branch until this tab ships); the token tab keeps <code>send-to-miro.html</code>. The web dialog has no help button yet, so it is new there, and it is drawn here to look like the native one (a filled grey disc and a dark <em>?</em>), not as a Bristlenose-styled button. Its label reuses <code>common.help</code>. The two links go to different places: <em>Add Bristlenose to Miro ↗</em> is Miro's own install page (pick a team, <em>Add &amp; allow</em>); the <em>?</em> is our help, the steps with Miro's screenshots.</p>
@@ -1454,7 +1452,7 @@ sup.new { font: 600 9px/1 var(--bn-font-mono); color: #b0006b; margin-left: 4px;
 <tr><td><code>miro.appEitherOr</code></td><td>Either &lt;download/&gt; or &lt;copy/&gt; (one key with two button slots, so a language can reorder them)</td><td>1–3</td></tr>
 <tr><td><code>miro.copyBoard</code></td><td>Copy board data</td><td>1–3</td></tr>
 <tr><td><code>miro.appStep3</code></td><td>In a board, open Bristlenose from Tools, and choose the board file or simply paste the data.</td><td>1–3</td></tr>
-<tr><td><code>miro.boardCopied</code></td><td>Board data copied. Paste it in the Bristlenose panel.</td><td>3</td></tr>
+<tr><td><code>miro.copied</code></td><td>Copied (the Copy board data button's own words once it has copied; it says so in place rather than adding a line, and turns back if a setting changes, since the data then differs). <code>settings.configReference.copied</code> and <code>desktop.connectAgent.copied</code> already say the same; a shared <code>common.copied</code> could replace all three</td><td>3</td></tr>
 <tr><td><code>miro.orPasteToken</code> (reworded)</td><td>Paste a developer access token to connect.</td><td>4</td></tr>
 <tr><td><code>miro.tokenPlaceholder</code> (reworded)</td><td>Developer access token</td><td>4</td></tr>
 </table>

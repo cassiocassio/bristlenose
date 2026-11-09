@@ -93,7 +93,7 @@ tree() {
     {
         echo '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>'
         echo "<key>CFBundleShortVersionString</key><string>$v</string>"
-        for k in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID; do
+        for k in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID ZoomOAuthPublicClientID ZoomOAuthRedirectURI; do
             [ "$k" = "$omit" ] && continue
             echo "<key>$k</key><string>real-value-$k</string>"
         done
@@ -143,7 +143,7 @@ run "an image with no app at its root is refused" 1 "no .app found" "$DMG" "$EMP
 SKEW=$(tree skew 9.9.9); manifest "$DMG" "$GOOD"
 run "a filename and an app that disagree on the version are refused" 1 "filename says 1.2.3" "$DMG" "$SKEW"
 
-for key in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID; do
+for key in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID ZoomOAuthPublicClientID ZoomOAuthRedirectURI; do
     T=$(tree "no-$key" 1.2.3 "$key"); manifest "$DMG" "$T"
     run "a missing $key is refused" 1 "missing or placeholder" "$DMG" "$T"
 done

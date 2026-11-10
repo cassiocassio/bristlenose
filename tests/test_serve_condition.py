@@ -377,6 +377,6 @@ def test_a_folder_already_gone_on_a_retry_is_done(monkeypatch, tmp_path: Path) -
 
 def test_it_really_removes_a_tree(tmp_path: Path) -> None:
     (tmp_path / "t" / ".bristlenose").mkdir(parents=True)
-    (tmp_path / "t" / ".bristlenose" / "f").write_text("x")
+    (tmp_path / "t" / ".bristlenose" / "f").write_text("x", encoding="utf-8")
     _rmtree_while_serve_writes(tmp_path / "t")
     assert not (tmp_path / "t").exists()

@@ -157,9 +157,9 @@ Every state transition in the UI falls into one of these **semantic categories**
 
 | # | Element | States | Axis | Duration | Status |
 |---|---------|--------|------|----------|--------|
-| R1 | **LHS TOC sidebar (push)** | closed / open | X | 75ms | ✓ Done — grid column transition |
+| R1 | **LHS TOC sidebar (push)** | closed / open | X | 75ms | ✓ Done — grid column transition (did not run from `c328da830` to 10 Nov 2026: the marker was a class React overwrote; now `data-animating`, `design-perf-ledger.md`) |
 | R2 | **LHS TOC sidebar (overlay)** | closed / open / closing | X | 75ms | ✓ Done — clip-path reveal + icon cross-fade |
-| R3 | **RHS tag sidebar** | closed / open | X | 75ms | ✓ Done — grid column transition |
+| R3 | **RHS tag sidebar** | closed / open | X | 75ms | ✓ Done — grid column transition (same fix as R1) |
 | R4 | **Modal overlay + card** | hidden / visible | Z (scale + opacity) | 200ms | Partial — overlay fades, card is instant |
 | R5 | **Dropdown menus** (tag filter, view switcher, hidden-quotes, counter) | closed / open | Y (drops down) | 150ms | **No — instant** |
 | R6 | **Tag suggest dropdown** | closed / open | Y (drops down) | 120ms | **No — instant** |

@@ -282,6 +282,20 @@ class TestConfigureSetsCurrent:
         assert "Gemini is now your provider for analysis" in result.output
         assert "BRISTLENOSE_LLM_PROVIDER=google" in configure_env.read_text(encoding="utf-8")
 
+    def test_a_key_on_the_command_line_is_warned_about(self, configure_env: Path) -> None:
+        """`--key` puts the secret in shell history; the prompt does not."""
+        from bristlenose.cli import app
+
+        warning = "A key on the command line is insecure. Omit --key to be prompted"
+        with_key = CliRunner().invoke(app, ["configure", "gemini", "--key", "g-key"])
+        assert with_key.exit_code == 0
+        assert warning in with_key.output
+        assert "g-key" not in with_key.output
+
+        prompted = CliRunner().invoke(app, ["configure", "gemini"], input="g-key\n")
+        assert prompted.exit_code == 0
+        assert warning not in prompted.output
+
     def test_configure_names_the_item_keychain_access_shows(
         self, configure_env: Path
     ) -> None:

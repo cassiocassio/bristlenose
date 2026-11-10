@@ -3303,6 +3303,17 @@ def configure(
         console.print("Run it with:  [bold]bristlenose run <folder>[/bold]")
         return
 
+    # A key typed on the command line lands in shell history (and `ps`); the
+    # prompt below is hidden input. Said once, before any provider branch, so
+    # the any-llm route is covered too (docs/design-keychain.md "Accepted
+    # exposures").
+    if key is not None:
+        _say(
+            MessageKind.WARNING,
+            "A key on the command line is insecure. Omit --key to be prompted "
+            "with hidden input.",
+        )
+
     # any-llm: the key belongs to the inner provider the model names, so the
     # model comes first (docs/design-any-llm.md §5.2).
     if canonical == "anyllm":

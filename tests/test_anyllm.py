@@ -742,6 +742,9 @@ def test_configure_checks_stores_and_switches(
     assert store.get(anyllm.credential_key("mistral")) == "sk-secret-123"
     assert read_user_config_var("BRISTLENOSE_LLM_PROVIDER") == "anyllm"
     assert "sk-secret-123" not in ok.output
+    # The any-llm route branches before the generic key handling; the warning
+    # about --key must still fire on it.
+    assert "A key on the command line is insecure" in ok.output
 
     store.delete(anyllm.credential_key("mistral"))
     verdict["result"] = preflight.ValidationResult(ok=False, error_class="invalid_key")

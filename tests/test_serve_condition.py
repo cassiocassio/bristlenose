@@ -12,7 +12,9 @@ and the live event watcher (docs/design-project-condition.md §4 and appendix):
 
 from __future__ import annotations
 
+import errno
 import functools
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -81,6 +83,27 @@ def _app(project_dir: Path, tmp_path: Path):
     with patch("bristlenose.server.app._STATIC_DIR", static):
         return create_app(project_dir=project_dir, dev=False,
                           db_url=f"sqlite:///{tmp_path / 'serve.db'}")
+
+
+def _rmtree_while_serve_writes(path: Path, attempts: int = 20, delay: float = 0.05) -> None:
+    """``shutil.rmtree`` for a folder a live serve is writing into.
+
+    The restore test removes the output folder while serve's watcher (polling every 50 ms) may be
+    writing into ``.bristlenose/``, so the removal can find a directory it has just emptied filled
+    again and fail with ENOTEMPTY (seen once on the 3.10 ubuntu cell of a Dependabot PR, 9 Nov 2026;
+    0 in 40 local runs). That is the writer the test sets up on purpose, not a defect, so the removal
+    is retried briefly; any other error, or a writer that never stops, still fails it.
+    """
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except FileNotFoundError:
+            return  # a retry found it already gone
+        except OSError as exc:
+            if exc.errno != errno.ENOTEMPTY or attempt == attempts - 1:
+                raise
+            time.sleep(delay)
 
 
 def _wait(pred, timeout: float = 3.0) -> bool:
@@ -271,8 +294,6 @@ def test_run_seen_before_its_pid_file_recovers(tmp_path: Path, fast_watcher) -> 
 def test_restore_without_a_new_run_is_noticed(tmp_path: Path, fast_watcher) -> None:
     """A failed --clean run is restored onto the old tree: the file changes but
     no new run id appears. The report must come back (review finding)."""
-    import shutil
-
     out = tmp_path / "bristlenose-output"
     _started(out, "A")
     _completed(out, "A")
@@ -287,9 +308,75 @@ def test_restore_without_a_new_run_is_noticed(tmp_path: Path, fast_watcher) -> N
                      ["condition"]["report"] is None)
         # restore: old tree back, the failed run's history appended to it
         failed_log = events_path(out).read_text(encoding="utf-8")
-        shutil.rmtree(out)
+        _rmtree_while_serve_writes(out)
         (stash / "bristlenose-output").rename(out)
         with events_path(out).open("a", encoding="utf-8") as fh:
             fh.write(failed_log)
         assert _wait(lambda: (client.get("/api/projects/1/condition").json()
                               ["condition"]["report"] or {}).get("run_id") == "A")
+
+
+# -- the removal helper itself (deterministic: the real race is CI-only) -------------------------
+
+
+def _enotempty() -> OSError:
+    return OSError(errno.ENOTEMPTY, "Directory not empty", ".bristlenose")
+
+
+def test_a_directory_refilled_during_removal_is_removed_on_a_retry(monkeypatch, tmp_path: Path) -> None:
+    calls = []
+
+    def fake(path):
+        calls.append(path)
+        if len(calls) < 3:
+            raise _enotempty()
+
+    monkeypatch.setattr(shutil, "rmtree", fake)
+    _rmtree_while_serve_writes(tmp_path / "x", delay=0)
+    assert len(calls) == 3
+
+
+def test_a_writer_that_never_stops_still_fails_the_removal(monkeypatch, tmp_path: Path) -> None:
+    calls = []
+
+    def fake(path):
+        calls.append(path)
+        raise _enotempty()
+
+    monkeypatch.setattr(shutil, "rmtree", fake)
+    with pytest.raises(OSError) as raised:
+        _rmtree_while_serve_writes(tmp_path / "x", attempts=4, delay=0)
+    assert raised.value.errno == errno.ENOTEMPTY
+    assert len(calls) == 4
+
+
+def test_any_other_error_is_not_retried(monkeypatch, tmp_path: Path) -> None:
+    calls = []
+
+    def fake(path):
+        calls.append(path)
+        raise PermissionError(errno.EACCES, "Permission denied")
+
+    monkeypatch.setattr(shutil, "rmtree", fake)
+    with pytest.raises(PermissionError):
+        _rmtree_while_serve_writes(tmp_path / "x", delay=0)
+    assert len(calls) == 1
+
+
+def test_a_folder_already_gone_on_a_retry_is_done(monkeypatch, tmp_path: Path) -> None:
+    calls = []
+
+    def fake(path):
+        calls.append(path)
+        raise _enotempty() if len(calls) == 1 else FileNotFoundError(str(path))
+
+    monkeypatch.setattr(shutil, "rmtree", fake)
+    _rmtree_while_serve_writes(tmp_path / "x", delay=0)
+    assert len(calls) == 2
+
+
+def test_it_really_removes_a_tree(tmp_path: Path) -> None:
+    (tmp_path / "t" / ".bristlenose").mkdir(parents=True)
+    (tmp_path / "t" / ".bristlenose" / "f").write_text("x")
+    _rmtree_while_serve_writes(tmp_path / "t")
+    assert not (tmp_path / "t").exists()

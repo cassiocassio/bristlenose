@@ -1103,3 +1103,97 @@ def test_pii_stage_reports_how_far_through_the_transcripts_it_is(
 
 # These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
 pytestmark = pytest.mark.usefixtures("no_discussion_stage")
+
+
+def _every_session_failed(ts, stage: str) -> StageOutcome:
+    return StageOutcome(attempted=len(ts), succeeded=0, failed=[
+        StageFailure(
+            session_id=t.session_id,
+            cause=Cause(category=CauseCategoryEnum.API_SERVER,
+                        message=f"{stage} call failed", stage=stage),
+        )
+        for t in ts
+    ])
+
+
+@pytest.mark.parametrize("failing", ["topics", "quotes", "themes"])
+def test_pipeline_run_abandons_when_every_llm_call_at_a_stage_fails(
+    tmp_path: Path, failing: str,
+) -> None:
+    """``run`` stops when s08, s09 or s10+s11 fails for every session, rather
+    than rendering a plausible report with nothing behind it.
+
+    Each stage has its own ``succeeded == 0`` check in ``run()``; only the
+    transcription one and ``run_analysis_only``'s s08 one had a test.
+    """
+    from bristlenose.models import SessionTopicMap
+
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+    settings.pii_enabled = False
+    pipeline = Pipeline(settings)
+
+    async def _no_split(segments, _client, errors=None):
+        return segments
+
+    async def _fake_speakers(_segments, _client, **_kw):
+        return []
+
+    async def _fake_topics(ts, _client, **_kw):
+        if failing == "topics":
+            return [], _every_session_failed(ts, "s08_topic_segmentation")
+        maps = [
+            SessionTopicMap(session_id=t.session_id, participant_id=t.participant_id,
+                            boundaries=[])
+            for t in ts
+        ]
+        return maps, StageOutcome(attempted=len(ts), succeeded=len(ts))
+
+    async def _fake_quotes(ts, _maps, _client, **_kw):
+        if failing == "quotes":
+            return [], _every_session_failed(ts, "s09_quote_extraction")
+        return [], StageOutcome(attempted=len(ts), succeeded=len(ts))
+
+    def _fake_grouping(stage: str):
+        async def _fake(_quotes, _client):
+            if failing == "themes":
+                return [], StageOutcome(attempted=1, succeeded=0, failed=[StageFailure(
+                    session_id=None,
+                    cause=Cause(category=CauseCategoryEnum.API_SERVER,
+                                message=f"{stage} call failed", stage=stage),
+                )])
+            return [], StageOutcome(attempted=1, succeeded=1)
+        return _fake
+
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+              new=_async_passthrough),
+        patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions",
+              new=iter_transcribe_from(fake_transcribe)),
+        patch("bristlenose.stages.s05b_identify_speakers.split_single_speaker_llm",
+              new=_no_split),
+        patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm",
+              new=_fake_speakers),
+        patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
+              return_value=transcripts),
+        patch("bristlenose.stages.s08_topic_segmentation.segment_topics",
+              new=_fake_topics),
+        patch("bristlenose.stages.s09_quote_extraction.extract_quotes",
+              new=_fake_quotes),
+        patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen",
+              new=_fake_grouping("s10_quote_clustering")),
+        patch("bristlenose.stages.s11_thematic_grouping.group_by_theme",
+              new=_fake_grouping("s11_thematic_grouping")),
+        patch.object(Pipeline, "_readable_chain", return_value=None),
+    ):
+        with pytest.raises(PipelineAbandonedError) as exc_info:
+            asyncio.run(pipeline.run(input_dir, output_dir))
+
+    stage_outcome = getattr(exc_info.value.summary, failing)
+    assert stage_outcome is not None and stage_outcome.succeeded == 0, (
+        f"abandoned, but not at the {failing} stage"
+    )
+    assert not list(output_dir.rglob("bristlenose-*-report.html")), (
+        "abandon path rendered a report — the silent-skip bug is back"
+    )

@@ -29,6 +29,7 @@ from bristlenose.server.models import (
     QuoteState,
     ScreenCluster,
     SessionSpeaker,
+    SourceFile,
     ThemeGroup,
     ThemeQuote,
     TranscriptSegment,
@@ -190,3 +191,26 @@ def test_anonymised_export_still_names_the_moderator(
     app, pid = seeded
     data = _export(app, pid, anonymise=True)
     assert "Mo Derator" in json.dumps(data["endpoints"]["/people"])
+
+
+def test_anonymised_export_names_no_participant_in_a_recording_path(
+    seeded: tuple[FastAPI, int],
+) -> None:
+    """A recording named after the participant leaves no trace in an anonymised export.
+
+    The filename is neutralised to ``s1.mov``; ``source_files[].path`` carries the
+    same name and must be neutralised with it.
+    """
+    app, pid = seeded
+    db = app.state.db_factory()
+    sess = db.query(SessionModel).filter_by(project_id=pid, session_id="s1").one()
+    db.add(SourceFile(session_id=sess.id, file_type="video",
+                      path=str(Path(app.state.project_dir) / "zelda-quixotic.mov")))
+    db.commit()
+    db.close()
+    data = _export(app, pid, anonymise=True)
+    assert data["endpoints"]["/sessions"]["sessions"][0]["source_files"], (
+        "the seed must reach /sessions, or this asserts nothing"
+    )
+    leaks = _walk_leaks(data["endpoints"], "endpoints", ("zelda", "quixotic"))
+    assert not leaks, f"recording name in an anonymised export at {leaks}"

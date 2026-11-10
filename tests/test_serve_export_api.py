@@ -312,6 +312,25 @@ class TestExportJsBootstrap:
         # occurrence is escaped to <\/script>.  Sanity: the doc still ends cleanly.
         assert html.rstrip().endswith("</html>")
 
+    def test_inline_module_holds_no_script_close(self) -> None:
+        """Nothing in the inlined SPA can end its own ``<script>`` element.
+
+        A parser closes the element on ``</script`` in any case. The builder
+        escapes only the exact ``</script>``, and today's bundle has none, so
+        without this the escape could go unnoticed until a bundle needs it.
+        """
+        from bristlenose.server.routes.export import _build_export_html
+
+        payload = {
+            "version": 2, "exported_at": "x", "locale": None,
+            "health": {}, "logos": {}, "endpoints": {},
+        }
+        html = _build_export_html(payload, "/* css */")
+        opener = '<script type="module">\n'
+        body = html[html.index(opener) + len(opener) : html.rindex("\n</script>")]
+        assert len(body) > 1_000, "the module body is empty: this would assert nothing"
+        assert "</script" not in body.lower()
+
     def test_no_raw_asset_references(self, client: TestClient) -> None:
         """Exported HTML should not reference /assets/ paths directly."""
         html = client.get("/api/projects/1/export").text

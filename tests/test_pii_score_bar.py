@@ -118,3 +118,30 @@ def test_a_phone_with_no_context_word_is_redacted_end_to_end() -> None:
     settings = BristlenoseSettings(project_name="t", pii_enabled=True)
     clean, _ = remove_pii([transcript], settings)
     assert number not in clean[0].segments[0].text
+
+
+def test_a_phone_scored_exactly_at_the_floor_is_redacted() -> None:
+    """A bare PhoneRecognizer match scores 0.40, the floor itself, and must go.
+
+    Fast twin of the slow end-to-end test: a stub analyser returns the score
+    Presidio gives a number read out with no context word, and the real
+    anonymiser does the replacing.
+    """
+    from presidio_analyzer import AnalyzerEngine, RecognizerResult
+    from presidio_anonymizer import AnonymizerEngine
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.stages.s07_pii_removal import _redact_text
+
+    said = "my number is 07700 900123"
+    start = said.index("07700")
+    analyzer = AnalyzerEngine.__new__(AnalyzerEngine)
+    analyzer.analyze = lambda **_kw: [  # type: ignore[method-assign]
+        RecognizerResult("PHONE_NUMBER", start, len(said), 0.40)
+    ]
+    clean, redactions = _redact_text(
+        said, 0.0, analyzer, AnonymizerEngine(), BristlenoseSettings(pii_enabled=True)
+    )
+    assert "07700" not in clean
+    assert clean == "my number is [PHONE]"
+    assert [r.entity_type for r in redactions] == ["PHONE_NUMBER"]

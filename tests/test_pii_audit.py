@@ -97,6 +97,34 @@ class TestPiiConfig:
 
         assert "UK_NHS" in _DEFAULT_ENTITIES
 
+    def test_an_email_address_read_out_is_redacted(self) -> None:
+        """An email address in a transcript is detected and replaced.
+
+        The stub analyser keeps Presidio's contract: it reports only the entity
+        types it was asked for, so a type left off the request is never found.
+        """
+        from presidio_analyzer import AnalyzerEngine, RecognizerResult
+        from presidio_anonymizer import AnonymizerEngine
+
+        from bristlenose.stages.s07_pii_removal import _redact_text
+
+        said = "write to jane.doe@example.com"
+        start = said.index("jane")
+
+        def analyze(**kw: object) -> list[RecognizerResult]:
+            asked = kw["entities"]
+            assert isinstance(asked, list)
+            if "EMAIL_ADDRESS" not in asked:
+                return []
+            return [RecognizerResult("EMAIL_ADDRESS", start, len(said), 1.0)]
+
+        analyzer = AnalyzerEngine.__new__(AnalyzerEngine)
+        analyzer.analyze = analyze  # type: ignore[method-assign,assignment]
+        clean, _ = _redact_text(
+            said, 0.0, analyzer, AnonymizerEngine(), BristlenoseSettings(pii_enabled=True)
+        )
+        assert clean == "write to [EMAIL]"
+
     def test_repr_no_original_text(self) -> None:
         """PiiRedaction.__repr__ must not contain the original PII text."""
         from bristlenose.stages.s07_pii_removal import PiiRedaction
@@ -440,3 +468,36 @@ class TestPresidioDetection:
                 f"Expected Presidio to miss {text!r} but it caught it. "
                 f"Update YAML should_catch to true. {notes}"
             )
+
+
+class TestRedactedTextReachesTheTranscript:
+    """The cleaned text is what the cooked transcript carries, not the original."""
+
+    def test_segment_text_is_the_redacted_text(self) -> None:
+        """A transcript that went through redaction must not still hold the name."""
+        from datetime import datetime
+
+        from bristlenose.models import FullTranscript, TranscriptSegment
+        from bristlenose.stages.s07_pii_removal import remove_pii
+
+        seg = TranscriptSegment(
+            start_time=0.0, end_time=5.0, text="Call Jane Doe on 07700 900123",
+        )
+        transcript = FullTranscript(
+            session_id="s1",
+            participant_id="p1",
+            source_file="test.mp4",
+            session_date=datetime(2025, 1, 1),
+            duration_seconds=60.0,
+            segments=[seg],
+        )
+        settings = BristlenoseSettings(pii_enabled=True)
+
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init, \
+                patch("bristlenose.stages.s07_pii_removal._redact_text") as mock_redact:
+            mock_init.return_value = (MagicMock(), MagicMock())
+            mock_redact.return_value = ("Call [NAME] on [PHONE]", [])
+            clean_transcripts, _ = remove_pii([transcript], settings)
+
+        assert clean_transcripts[0].segments[0].text == "Call [NAME] on [PHONE]"
+        assert "Jane" not in clean_transcripts[0].segments[0].text

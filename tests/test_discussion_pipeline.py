@@ -224,3 +224,54 @@ def test_a_crashed_stage_leaves_a_failed_record_not_none(tmp_path, monkeypatch):
     path = _run(tmp_path, FakeClient(), manifest=manifest)
     assert json.loads(path.read_text(encoding="utf-8"))["status"] == "failed"
     assert manifest.stages[STAGE_DISCUSSION].status != StageStatus.COMPLETE  # retried next run
+
+
+# ── N128: a lens that failed is not a plain "Done" ───────────────────────────
+
+
+def test_a_stage_that_raises_is_remembered_for_the_end_line(tmp_path, monkeypatch):
+    write_guide(tmp_path)
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+    assert pipeline._discussion_failed is False
+
+    async def boom(*_a, **_k):
+        raise RuntimeError("model fell over")
+
+    monkeypatch.setattr("bristlenose.discussion.stage.run_discussion", boom)
+    transcripts, quotes = two_sessions()
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output", FakeClient(),
+        create_manifest("p", "0"), None))
+    assert pipeline._discussion_failed is True
+
+    # A later stage that works clears it: the flag is about this attempt only.
+    monkeypatch.undo()
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output2", FakeClient(),
+        create_manifest("p", "0"), None))
+    assert pipeline._discussion_failed is False
+
+
+def test_the_end_line_names_a_missing_lens():
+    from bristlenose.pipeline import _with_lens_warning
+
+    assert _with_lens_warning("", False) == ""
+    assert _with_lens_warning("no quotes from s2", False) == "no quotes from s2"
+    assert _with_lens_warning("", True) == "the discussion lens wasn't built"
+    assert _with_lens_warning("no quotes from s2", True) == (
+        "no quotes from s2 · the discussion lens wasn't built"
+    )
+
+
+def test_the_run_end_line_asks_the_pipeline_not_the_helper():
+    """The two entry points close their warning through `_end_warning`; a run that
+    ended in error leaves it alone."""
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+    pipeline._discussion_failed = True
+    assert pipeline._end_warning("", "") == "the discussion lens wasn't built"
+    assert pipeline._end_warning("", "no quotes from s2") == (
+        "no quotes from s2 · the discussion lens wasn't built"
+    )
+    assert pipeline._end_warning("credits low", "") == ""
+    pipeline._discussion_failed = False
+    assert pipeline._end_warning("", "") == ""

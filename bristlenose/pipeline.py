@@ -1660,6 +1660,17 @@ def _summary_warning(
     return no_quotes or _short_reason(errors, provider)[0] or left_out
 
 
+#: What the end line says when the discussion lens could not be built (N128).
+_LENS_NOT_BUILT = "the discussion lens wasn't built"
+
+
+def _with_lens_warning(warning: str, lens_failed: bool) -> str:
+    """Add the lens failure to what follows "Done with warnings —"."""
+    if not lens_failed:
+        return warning
+    return f"{warning} · {_LENS_NOT_BUILT}" if warning else _LENS_NOT_BUILT
+
+
 def _compute_analysis(
     screen_clusters: list[ScreenCluster],
     theme_groups: list[ThemeGroup],
@@ -1711,6 +1722,16 @@ def _with_cloud_budget(fn: Callable[..., Any]) -> Callable[..., Any]:
 
 class Pipeline:
     """Orchestrates the full Bristlenose processing pipeline."""
+
+    #: Set when the Discussion stage raised: the run is still a success, but its
+    #: end line says the lens is missing instead of a plain "Done" (N128).
+    _discussion_failed: bool = False
+
+    def _end_warning(self, error: str, warning: str) -> str:
+        """What follows "Done with warnings —", once the run's own error and its
+        quote shortfall are known. A run that ended in error says nothing here:
+        its own line already does."""
+        return warning if error else _with_lens_warning(warning, self._discussion_failed)
 
     def __init__(
         self,
@@ -2053,6 +2074,7 @@ class Pipeline:
         Returns the seconds a fresh run took, for the timing actuals, or None
         when it did not run (off, cached, or failed before finishing).
         """
+        self._discussion_failed = False
         if not self.settings.discussion_lens:
             return None
         import time
@@ -2117,6 +2139,7 @@ class Pipeline:
             path.write_text(DiscussionRecord(
                 status="failed", quotes_sha=input_hashes["quotes"], guide_sha=input_hashes["guide"],
             ).model_dump_json(indent=2), encoding="utf-8")
+            self._discussion_failed = True
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
             # The stage ran, whatever it produced: told it is over, the estimate
             # drops it from the time left and the ring keeps its share, rather
@@ -4158,6 +4181,7 @@ class Pipeline:
                 _fresh_quote_outcome, _quote_drops, _quote_errors or _seg_errors,
                 self.settings.llm_provider,
             )
+        _p_warning = self._end_warning(_p_error, _p_warning)
 
         # Delete the decorative shoal feed on success (desktop-only, best-effort).
         # A failed/abandoned run leaves it in .bristlenose/ for the next run's
@@ -4934,6 +4958,7 @@ class Pipeline:
                 _quote_outcome_a, _quote_drops_a, _quote_errors_a or _seg_errors_a,
                 self.settings.llm_provider,
             )
+        _p_warning_a = self._end_warning(_p_error_a, _p_warning_a)
 
         return PipelineResult(
             project_name=self.settings.project_name,

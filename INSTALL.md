@@ -335,7 +335,7 @@ Local models run on your own processor. They are slower than the cloud providers
 
 ### Mistral, OpenRouter, DeepSeek and others (any-llm)
 
-On the command line, `bristlenose configure any-llm` reaches providers Bristlenose doesn't build in, through Mozilla AI's [any-llm](https://github.com/mozilla-ai/any-llm). Homebrew, the Snap and the Fedora package include it; with pipx, add it with `pipx install --force "bristlenose[any-llm]"` (Python 3.11 or newer). The Snap and Fedora packages include the Mistral SDK, and providers that need no add-on (OpenRouter, DeepSeek and others) work too; any other provider's add-on needs pipx or uv. Models, keys and caveats: [README, Option F](README.md#option-f-other-providers-through-any-llm).
+On the command line, `bristlenose configure any-llm` reaches providers Bristlenose doesn't build in, through Mozilla AI's [any-llm](https://github.com/mozilla-ai/any-llm). It needs Python 3.11 or newer. Homebrew, the Snap and Fedora packages include it; with pipx or uv, add it: `pipx install --force "bristlenose[any-llm]"`. The Snap and Fedora packages cover Mistral, OpenRouter, DeepSeek and other providers that need no add-on; a provider with an add-on of its own needs pipx or uv. Models, keys and caveats: [README, Option F](README.md#option-f-other-providers-through-any-llm).
 
 ---
 

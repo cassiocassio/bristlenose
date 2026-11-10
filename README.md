@@ -190,32 +190,32 @@ bristlenose run interviews --llm local
 
 ### Option F: Other providers, through any-llm
 
-On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew, the Snap and the Fedora package include it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
+On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew, the Snap and Fedora packages include it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
 
 ```bash
 pipx install --force "bristlenose[any-llm]"    # or: uv tool install --force "bristlenose[any-llm]"
 bristlenose configure any-llm
 ```
 
-If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages include the Mistral SDK, and providers that need no add-on (OpenRouter, DeepSeek and others) work too; any other provider's add-on needs pipx or uv.
+If it isn't installed, `configure any-llm` prints the command for your install. The Snap and Fedora packages cover Mistral, OpenRouter, DeepSeek and other providers that need no add-on; a provider with an add-on of its own needs pipx or uv.
 
-`configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already set in your shell (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`…; a `.env` file isn't read for these). It checks the key, stores it like the others, and makes it your provider. A key set in your shell takes precedence over the stored one. Switch between models you've set up with `bristlenose use deepseek:deepseek-v4-pro`, and back with `bristlenose use claude`.
+`configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already set in your shell (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`…; a `.env` file isn't read for these). It checks the key with the same request a run sends, stores it like the others, and makes any-llm your provider. A key set in your shell takes precedence over the stored one. Switch between models you've set up with `bristlenose use deepseek:deepseek-v4-pro`, and back with `bristlenose use claude`.
 
 | I want to use | How |
 |---|---|
 | Claude, ChatGPT, Gemini, Azure OpenAI | Options A–D: `bristlenose configure claude` (or `chatgpt`, `gemini`, `azure`) |
 | A local model with Ollama | Option E: `bristlenose configure local` |
-| Mistral | Model `mistral:mistral-large-latest`; key from [console.mistral.ai](https://console.mistral.ai). Mistral's free plan allows no API requests: add credit first (a €10 prepay was enough) |
+| Mistral | Model `mistral:mistral-large-latest`; key from [console.mistral.ai](https://console.mistral.ai). Mistral's free plan allows no API requests: add credit first (a €10 top-up was enough) |
 | DeepSeek | Model `deepseek:deepseek-v4-pro` or the cheaper `deepseek:deepseek-flash`; key from [platform.deepseek.com](https://platform.deepseek.com), after a top-up ($2 minimum) |
-| Hundreds of models with one key (Grok, Qwen, DeepSeek, Mistral, Claude…) | Model `openrouter:` plus the id from [openrouter.ai/models](https://openrouter.ai/models), vendor included: `openrouter:x-ai/grok-4.3`. Key and credit from [openrouter.ai](https://openrouter.ai/settings/keys). Pick a model whose page lists structured outputs |
+| Hundreds of models with one key (Grok, Llama, Qwen, DeepSeek, Mistral, Claude…) | Model `openrouter:` plus the id from [openrouter.ai/models](https://openrouter.ai/models), vendor included: `openrouter:x-ai/grok-4.3`. Key and credit from [openrouter.ai](https://openrouter.ai/settings/keys). Pick a model whose page lists structured outputs |
 | Another provider any-llm supports ([list](https://mozilla-ai.github.io/any-llm/providers/)) | Model `<provider>:<model>`. The first `configure` names the add-on that provider needs and prints the command for your install |
 | Claude or Gemini through your company's AWS, Google Cloud or Azure AI account | Not supported |
 
-Choose a provider's larger models. On the same three interviews, Mistral Large covered nearly the same ground as Claude Sonnet, while Mistral Small found about a quarter of it and dropped fields Bristlenose needs; DeepSeek V4 Pro came closer than Flash, which also over-extracts.
+Choose a provider's larger models: Bristlenose asks for long, structured replies, and smaller models more often leave out fields it needs. On the same three interviews, Mistral Large covered nearly the same ground as Claude Sonnet, while Mistral Small found about a quarter of it; DeepSeek V4 Pro came closer than Flash, which also over-extracts.
 
 The transcript text goes to the provider you named, under your account and its terms; through OpenRouter, to OpenRouter, which passes it to the model's host. Before you send participant data, check the data policy of the provider and model, whether a free tier may use your inputs for training, and where the provider is based (DeepSeek is in China). Bristlenose doesn't estimate costs for these providers; their own consoles show what you've spent. Measured quality, speed and quirks per model: [docs/design-any-llm-models.md](docs/design-any-llm-models.md).
 
-any-llm isn't in the Mac app yet.
+any-llm isn't in the Mac app, which uses its built-in providers.
 
 Use whichever provider you already have an API key for. The provider you configure becomes your current one and stays current until you switch (`bristlenose use <provider>`) — with a single configured provider, a bare `bristlenose run` just uses it. A typical 8-participant study costs roughly $1--3 with a cloud provider -- costs vary, check your provider's pricing page.
 

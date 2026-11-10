@@ -39,6 +39,9 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ "$(uname)" != Darwin ] || ! command -v pkgbuild >/dev/null 2>&1; then
+    echo "check-pkg-shippable: skipped — needs macOS (codesign, pkgbuild)"; exit 0
+fi
 GATE="$SCRIPT_DIR/check-pkg-shippable.sh"
 [ -x "$GATE" ] || { echo "gate not executable: $GATE" >&2; exit 2; }
 # Synthetic fixtures must never reach Apple: the gate runs altool --validate-app

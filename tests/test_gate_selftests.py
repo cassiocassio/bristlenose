@@ -28,6 +28,7 @@ _SELFTESTS = [
     "desktop/scripts/test-check-deployment-floors.sh",
     "desktop/scripts/test-check-sidecar-appstore-strings.sh",
     "desktop/scripts/test-check-dmg-shippable.sh",
+    "desktop/scripts/test-check-pkg-shippable.sh",
     "desktop/scripts/test-report-exit-status.sh",
 ]
 
@@ -57,11 +58,13 @@ def test_every_paired_selftest_on_disk_is_run_here() -> None:
         for d in ("scripts", "desktop/scripts")
         for p in [*(_ROOT / d).glob("test-check-*.sh"), *(_ROOT / d).glob("test-check-*.py")]
     }
-    # Selftests that need a Mac, a signing identity or a built artefact are run by their own caller.
+    # Selftests run by a workflow instead, because they need what this suite does not have.
+    # Outside this glob, and run by nothing automatically: desktop/scripts/test-ensure-sidecar.sh
+    # and scripts/test-pre-push.sh (by hand, per their READMEs).
     elsewhere = {
-        "desktop/scripts/test-check-pkg-shippable.sh",  # build-all.sh
-        "scripts/test-check-doctor-install.sh",  # install-test.yml
-        "scripts/test-check-ratchet.py",  # ratchet-tighten.yml, before it measures anything
+        "scripts/test-check-doctor-install.sh",  # install-test.yml (needs a real pip install)
+        # ratchet-tighten.yml, which runs only on manual dispatch: nothing runs this automatically.
+        "scripts/test-check-ratchet.py",
     }
     unlisted = on_disk - elsewhere - set(_SELFTESTS)
     assert not unlisted, sorted(unlisted)

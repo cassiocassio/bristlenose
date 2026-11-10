@@ -275,3 +275,17 @@ def test_the_run_end_line_asks_the_pipeline_not_the_helper():
     assert pipeline._end_warning("credits low", "") == ""
     pipeline._discussion_failed = False
     assert pipeline._end_warning("", "") == ""
+
+
+def test_an_unreadable_people_file_is_on_the_end_line_too():
+    """N82: the run carries on without the names in a people.yaml it could not
+    read, so it must not end as a plain Done."""
+    pipeline = Pipeline(load_settings(discussion_lens=False))
+    assert pipeline._end_warning("", "") == ""
+    pipeline._people_unreadable = True
+    assert pipeline._end_warning("", "") == "people.yaml couldn't be read"
+    pipeline._discussion_failed = True
+    assert pipeline._end_warning("", "no quotes from s2") == (
+        "no quotes from s2 · people.yaml couldn't be read · the discussion lens wasn't built"
+    )
+    assert pipeline._end_warning("credits low", "") == ""

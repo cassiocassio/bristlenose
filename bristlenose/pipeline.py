@@ -1663,6 +1663,10 @@ def _summary_warning(
 #: What the end line says when the discussion lens could not be built (N128).
 _LENS_NOT_BUILT = "the discussion lens wasn't built"
 
+#: And when ``people.yaml`` would not read (N82); the full sentence, with the
+#: line to fix, is the warning step printed when it was found.
+_PEOPLE_UNREADABLE = "people.yaml couldn't be read"
+
 
 def _with_lens_warning(warning: str, lens_failed: bool) -> str:
     """Add the lens failure to what follows "Done with warnings —"."""
@@ -1726,12 +1730,19 @@ class Pipeline:
     #: Set when the Discussion stage raised: the run is still a success, but its
     #: end line says the lens is missing instead of a plain "Done" (N128).
     _discussion_failed: bool = False
+    #: Set when ``people.yaml`` would not read: the run carried on without its
+    #: names, so a plain "Done" would hide it (N82).
+    _people_unreadable: bool = False
 
     def _end_warning(self, error: str, warning: str) -> str:
         """What follows "Done with warnings —", once the run's own error and its
         quote shortfall are known. A run that ended in error says nothing here:
         its own line already does."""
-        return warning if error else _with_lens_warning(warning, self._discussion_failed)
+        if error:
+            return warning
+        if self._people_unreadable:
+            warning = f"{warning} · {_PEOPLE_UNREADABLE}" if warning else _PEOPLE_UNREADABLE
+        return _with_lens_warning(warning, self._discussion_failed)
 
     def __init__(
         self,
@@ -4069,6 +4080,7 @@ class Pipeline:
 
             existing_people, people_unreadable = read_people_file(output_dir)
             if people_unreadable is not None:
+                self._people_unreadable = True
                 _print_warn(rich_escape(people_unreadable.message()))
             computed_stats = compute_participant_stats(sessions, transcripts)
             people = merge_people(existing_people, computed_stats)
@@ -4552,6 +4564,7 @@ class Pipeline:
 
         existing_people, people_unreadable = read_people_file(output_dir)
         if people_unreadable is not None:
+            self._people_unreadable = True
             _print_warn(rich_escape(people_unreadable.message()))
         computed_stats = compute_participant_stats(sessions, transcripts)
         people = merge_people(existing_people, computed_stats)
@@ -4918,6 +4931,7 @@ class Pipeline:
 
             people, people_unreadable = read_people_file(output_dir)
             if people_unreadable is not None:
+                self._people_unreadable = True
                 _print_warn(rich_escape(people_unreadable.message()))
             display_names = build_display_name_map(people) if people else {}
 
@@ -5602,6 +5616,7 @@ class Pipeline:
 
         people, people_unreadable = read_people_file(output_dir)
         if people_unreadable is not None:
+            self._people_unreadable = True
             _print_warn(rich_escape(people_unreadable.message()))
         display_names = build_display_name_map(people) if people else {}
 

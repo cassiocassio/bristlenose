@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 participant renomm\u00e9",
       "renamedSpeakers_other": "{{count}} participants renomm\u00e9s",
       "namedThemes_one": "1 th\u00e8me nomm\u00e9",
-      "namedThemes_other": "{{count}} th\u00e8mes nomm\u00e9s"
+      "namedThemes_other": "{{count}} th\u00e8mes nomm\u00e9s",
+      "hiddenQuotes_one": "1 verbatim masqué",
+      "hiddenQuotes_other": "{{count}} verbatim masqués",
+      "transcriptEdits_one": "1 ligne de transcription modifiée",
+      "transcriptEdits_other": "{{count}} lignes de transcription modifiées",
+      "speakerPicks_one": "1 participant choisi",
+      "speakerPicks_other": "{{count}} participants choisis",
+      "removedBadges_one": "1 badge supprimé",
+      "removedBadges_other": "{{count}} badges supprimés"
     },
     "addFilesPrompt": "Ajouter",
     "addFilesMessage": "Ajouter des entretiens \u00e0 \u00ab\u00a0%@\u00a0\u00bb",

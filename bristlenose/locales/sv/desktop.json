@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 omd\u00f6pt talare",
       "renamedSpeakers_other": "{{count}} omd\u00f6pta talare",
       "namedThemes_one": "1 namngivet tema",
-      "namedThemes_other": "{{count}} namngivna teman"
+      "namedThemes_other": "{{count}} namngivna teman",
+      "hiddenQuotes_one": "1 dolt citat",
+      "hiddenQuotes_other": "{{count}} dolda citat",
+      "transcriptEdits_one": "1 redigerad transkriptionsrad",
+      "transcriptEdits_other": "{{count}} redigerade transkriptionsrader",
+      "speakerPicks_one": "1 vald talare",
+      "speakerPicks_other": "{{count}} valda talare",
+      "removedBadges_one": "1 borttaget märke",
+      "removedBadges_other": "{{count}} borttagna märken"
     },
     "addFilesPrompt": "L\u00e4gg till",
     "addFilesMessage": "L\u00e4gg till sessioner i \u201d%@\u201d",

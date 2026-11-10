@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 uudelleennimetty puhuja",
       "renamedSpeakers_other": "{{count}} uudelleennimetty\u00e4 puhujaa",
       "namedThemes_one": "1 nimetty teema",
-      "namedThemes_other": "{{count}} nimetty\u00e4 teemaa"
+      "namedThemes_other": "{{count}} nimetty\u00e4 teemaa",
+      "hiddenQuotes_one": "1 piilotettu sitaatti",
+      "hiddenQuotes_other": "{{count}} piilotettua sitaattia",
+      "transcriptEdits_one": "1 muokattu litterointirivi",
+      "transcriptEdits_other": "{{count}} muokattua litterointiriviä",
+      "speakerPicks_one": "1 valittu puhuja",
+      "speakerPicks_other": "{{count}} valittua puhujaa",
+      "removedBadges_one": "1 poistettu merkki",
+      "removedBadges_other": "{{count}} poistettua merkkiä"
     },
     "addFilesPrompt": "Lis\u00e4\u00e4",
     "addFilesMessage": "Lis\u00e4\u00e4 istuntoja kohteeseen \u201d%@\u201d",

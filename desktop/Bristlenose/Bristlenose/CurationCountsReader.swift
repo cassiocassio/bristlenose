@@ -15,25 +15,31 @@ private let log = Logger(subsystem: "app.bristlenose", category: "curation-count
 ///
 /// **The analysis itself is deliberately not counted here.** It is rebuilt, not
 /// lost, and it is the thing the researcher just asked for; the sheet's opening
-/// line states the re-run in its own words. These five are *their* work.
+/// line states the re-run in its own words. These nine are *their* work (the
+/// last four counted since 10 Nov 2026, N131: a study with only a hidden quote
+/// or a fixed transcript line used to count zero and skip the sheet).
 struct CurationCounts: Equatable {
     var editedQuotes = 0
     var tags = 0
     var starredQuotes = 0
     var renamedSpeakers = 0
     var namedThemes = 0
+    var hiddenQuotes = 0
+    var transcriptEdits = 0
+    var speakerPicks = 0
+    var removedBadges = 0
 
     static let none = CurationCounts()
 
     /// True when there is nothing of the researcher's to lose — the sheet stays
     /// silent and the re-analysis just runs.
     var isEmpty: Bool {
-        editedQuotes == 0 && tags == 0 && starredQuotes == 0
-            && renamedSpeakers == 0 && namedThemes == 0
+        total == 0
     }
 
     var total: Int {
         editedQuotes + tags + starredQuotes + renamedSpeakers + namedThemes
+            + hiddenQuotes + transcriptEdits + speakerPicks + removedBadges
     }
 }
 
@@ -171,13 +177,33 @@ enum CurationCountsReader {
             let renamedSpeakers = count(db, tables, of: "persons", joining: [],
                 "SELECT COUNT(*) FROM persons WHERE full_name IS NOT NULL AND full_name != ''"),
             let namedThemes = count(db, tables, of: "heading_edits", joining: [],
-                "SELECT COUNT(*) FROM heading_edits WHERE project_id = \(pid)")
+                "SELECT COUNT(*) FROM heading_edits WHERE project_id = \(pid)"),
+            let hiddenQuotes = count(db, tables, of: "quote_states", joining: ["quotes"], """
+                SELECT COUNT(*) FROM quote_states s JOIN quotes q ON q.id = s.quote_id
+                WHERE s.is_hidden = 1 AND q.project_id = \(pid)
+                """),
+            let transcriptEdits = count(db, tables, of: "transcript_layout_edits", joining: ["sessions"], """
+                SELECT COUNT(*) FROM transcript_layout_edits e JOIN sessions x ON x.id = e.session_id
+                WHERE x.project_id = \(pid)
+                """),
+            // A voice the researcher chose a person for (evidence 'pick'); the
+            // pipeline's own matches carry other evidence.
+            let speakerPicks = count(db, tables, of: "session_speakers", joining: ["sessions"], """
+                SELECT COUNT(*) FROM session_speakers ss JOIN sessions x ON x.id = ss.session_id
+                WHERE ss.evidence = 'pick' AND x.project_id = \(pid)
+                """),
+            let removedBadges = count(db, tables, of: "deleted_badges", joining: ["quotes"], """
+                SELECT COUNT(*) FROM deleted_badges d JOIN quotes q ON q.id = d.quote_id
+                WHERE q.project_id = \(pid)
+                """)
         else {
             return nil
         }
         return CurationCounts(
             editedQuotes: editedQuotes, tags: tags, starredQuotes: starredQuotes,
-            renamedSpeakers: renamedSpeakers, namedThemes: namedThemes)
+            renamedSpeakers: renamedSpeakers, namedThemes: namedThemes,
+            hiddenQuotes: hiddenQuotes, transcriptEdits: transcriptEdits,
+            speakerPicks: speakerPicks, removedBadges: removedBadges)
     }
 
     /// What the WAL index vouched for at one moment.

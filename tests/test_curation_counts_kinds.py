@@ -134,3 +134,21 @@ def test_the_queries_read_the_real_schema(tmp_path: Path) -> None:
     counts = curation_counts.read(tmp_path)
 
     assert counts is not None and counts.total == 0
+
+
+def test_every_line_the_mac_sheet_can_draw_has_its_locale_keys() -> None:
+    """`ReAnalyseConfirmSheet` builds each line from `reAnalyseLoss.<kind>`; a kind
+    counted by `CurationCountsReader` with no key would draw a raw key name."""
+    import json
+
+    en = json.loads(
+        (Path(__file__).parent.parent / "bristlenose" / "locales" / "en" / "desktop.json")
+        .read_text(encoding="utf-8")
+    )["chrome"]["reAnalyseLoss"]
+    for kind in ("editedQuotes", "tags", "starred", "renamedSpeakers", "namedThemes",
+                 "hiddenQuotes", "transcriptEdits", "speakerPicks", "removedBadges"):
+        assert f"{kind}_one" in en and f"{kind}_other" in en, kind
+    sheet = (Path(__file__).parent.parent / "desktop" / "Bristlenose" / "Bristlenose"
+             / "ReAnalyseConfirmSheet.swift").read_text(encoding="utf-8")
+    for kind in ("hiddenQuotes", "transcriptEdits", "speakerPicks", "removedBadges"):
+        assert f'add("{kind}"' in sheet, f"the sheet never draws {kind}"

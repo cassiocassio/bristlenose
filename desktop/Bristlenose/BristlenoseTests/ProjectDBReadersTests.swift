@@ -199,6 +199,52 @@ struct ProjectDBReadersTests {
         #expect(counts.namedThemes == 1)
     }
 
+    /// N131 (10 Nov 2026): a study with only a hidden quote, a fixed transcript
+    /// line, a chosen speaker or a removed badge used to count zero, so the sheet
+    /// stayed silent and Re-analyse ran unasked.
+    @Test func theFourNewKindsAreCountedForProjectOneOnly() throws {
+        let root = try Self.makeProject { db in
+            Self.exec(db, """
+            CREATE TABLE transcript_layout_edits (id INTEGER PRIMARY KEY, session_id INTEGER, kind TEXT);
+            CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER, evidence TEXT);
+            CREATE TABLE deleted_badges (id INTEGER PRIMARY KEY, quote_id INTEGER);
+            INSERT INTO sessions VALUES (1, 1, 's1', 600);
+            INSERT INTO sessions VALUES (2, 2, 's9', 600);
+            INSERT INTO quotes VALUES (1, 1);
+            INSERT INTO quotes VALUES (2, 1);
+            INSERT INTO quotes VALUES (9, 2);
+            INSERT INTO quote_states VALUES (1, 1, 1, 0);
+            INSERT INTO quote_states VALUES (2, 2, 1, 0);
+            INSERT INTO quote_states VALUES (3, 9, 1, 0);
+            INSERT INTO transcript_layout_edits VALUES (1, 1, 'split');
+            INSERT INTO transcript_layout_edits VALUES (2, 1, 'join');
+            INSERT INTO transcript_layout_edits VALUES (3, 2, 'split');
+            INSERT INTO session_speakers VALUES (1, 1, 'pick');
+            INSERT INTO session_speakers VALUES (2, 1, 'platform-name');
+            INSERT INTO session_speakers VALUES (3, 1, NULL);
+            INSERT INTO session_speakers VALUES (4, 2, 'pick');
+            INSERT INTO deleted_badges VALUES (1, 1);
+            INSERT INTO deleted_badges VALUES (2, 9);
+            """)
+        }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let counts = try #require(CurationCountsReader.read(projectRoot: root))
+        #expect(counts.hiddenQuotes == 2, "another project's hidden quote counted")
+        #expect(counts.transcriptEdits == 2, "another project's edit counted")
+        #expect(counts.speakerPicks == 1, "only a researcher's pick is a choice")
+        #expect(counts.removedBadges == 1, "another project's badge counted")
+        #expect(!counts.isEmpty, "a study with only these must still ask")
+        #expect(counts.total == 6)
+    }
+
+    @Test func aStudyWithOnlyHiddenQuotesIsNotEmpty() {
+        #expect(CurationCounts(hiddenQuotes: 1).isEmpty == false)
+        #expect(CurationCounts(transcriptEdits: 1).isEmpty == false)
+        #expect(CurationCounts(speakerPicks: 1).isEmpty == false)
+        #expect(CurationCounts(removedBadges: 1).isEmpty == false)
+        #expect(CurationCounts().isEmpty)
+    }
+
     // MARK: - Unreadable is not zero (decision #1, 21 Oct 2026)
     //
     // A zero lets Re-analyse run `--clean` without asking, so a read that

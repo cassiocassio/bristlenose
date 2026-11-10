@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 umbenannte sprechende Person",
       "renamedSpeakers_other": "{{count}} umbenannte sprechende Personen",
       "namedThemes_one": "1 benanntes Thema",
-      "namedThemes_other": "{{count}} benannte Themen"
+      "namedThemes_other": "{{count}} benannte Themen",
+      "hiddenQuotes_one": "1 ausgeblendetes Zitat",
+      "hiddenQuotes_other": "{{count}} ausgeblendete Zitate",
+      "transcriptEdits_one": "1 bearbeitete Transkriptzeile",
+      "transcriptEdits_other": "{{count}} bearbeitete Transkriptzeilen",
+      "speakerPicks_one": "1 gewählte sprechende Person",
+      "speakerPicks_other": "{{count}} gewählte sprechende Personen",
+      "removedBadges_one": "1 entferntes Badge",
+      "removedBadges_other": "{{count}} entfernte Badges"
     },
     "addFilesPrompt": "Hinzuf\u00fcgen",
     "addFilesMessage": "Interviews zu \u201e%@\u201c hinzuf\u00fcgen",

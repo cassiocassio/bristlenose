@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 participant reanomenat",
       "renamedSpeakers_other": "{{count}} participants reanomenats",
       "namedThemes_one": "1 tema amb nom",
-      "namedThemes_other": "{{count}} temes amb nom"
+      "namedThemes_other": "{{count}} temes amb nom",
+      "hiddenQuotes_one": "1 cita amagada",
+      "hiddenQuotes_other": "{{count}} cites amagades",
+      "transcriptEdits_one": "1 línia de transcripció editada",
+      "transcriptEdits_other": "{{count}} línies de transcripció editades",
+      "speakerPicks_one": "1 participant triat",
+      "speakerPicks_other": "{{count}} participants triats",
+      "removedBadges_one": "1 insígnia eliminada",
+      "removedBadges_other": "{{count}} insígnies eliminades"
     },
     "addFilesPrompt": "Afegeix",
     "addFilesMessage": "Afegeix sessions a “%@”",

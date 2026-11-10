@@ -280,7 +280,15 @@
       "renamedSpeakers_one": "1 renamed speaker",
       "renamedSpeakers_other": "{{count}} renamed speakers",
       "namedThemes_one": "1 named theme",
-      "namedThemes_other": "{{count}} named themes"
+      "namedThemes_other": "{{count}} named themes",
+      "hiddenQuotes_one": "1 hidden quote",
+      "hiddenQuotes_other": "{{count}} hidden quotes",
+      "transcriptEdits_one": "1 edited transcript line",
+      "transcriptEdits_other": "{{count}} edited transcript lines",
+      "speakerPicks_one": "1 speaker choice",
+      "speakerPicks_other": "{{count}} speaker choices",
+      "removedBadges_one": "1 removed badge",
+      "removedBadges_other": "{{count}} removed badges"
     },
     "addFilesPrompt": "Add",
     "addFilesMessage": "Add sessions to “%@”",

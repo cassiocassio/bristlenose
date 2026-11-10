@@ -262,7 +262,11 @@
       "tags_other": "\u30bf\u30b0 {{count}} \u4ef6",
       "starred_other": "\u30b9\u30bf\u30fc\u4ed8\u304d\u306e\u767a\u8a00 {{count}} \u4ef6",
       "renamedSpeakers_other": "\u540d\u524d\u3092\u5909\u66f4\u3057\u305f\u8a71\u8005 {{count}} \u4eba",
-      "namedThemes_other": "\u540d\u524d\u3092\u4ed8\u3051\u305f\u30c6\u30fc\u30de {{count}} \u4ef6"
+      "namedThemes_other": "\u540d\u524d\u3092\u4ed8\u3051\u305f\u30c6\u30fc\u30de {{count}} \u4ef6",
+      "hiddenQuotes_other": "非表示にした発言 {{count}} 件",
+      "transcriptEdits_other": "編集したトランスクリプトの行 {{count}} 件",
+      "speakerPicks_other": "選択した話者 {{count}} 人",
+      "removedBadges_other": "削除したバッジ {{count}} 個"
     },
     "addFilesPrompt": "\u8ffd\u52a0",
     "addFilesMessage": "\u300c%@\u300d\u306b\u30bb\u30c3\u30b7\u30e7\u30f3\u3092\u8ffd\u52a0",

@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 participante renombrado",
       "renamedSpeakers_other": "{{count}} participantes renombrados",
       "namedThemes_one": "1 tema con nombre",
-      "namedThemes_other": "{{count}} temas con nombre"
+      "namedThemes_other": "{{count}} temas con nombre",
+      "hiddenQuotes_one": "1 cita oculta",
+      "hiddenQuotes_other": "{{count}} citas ocultas",
+      "transcriptEdits_one": "1 línea de transcripción editada",
+      "transcriptEdits_other": "{{count}} líneas de transcripción editadas",
+      "speakerPicks_one": "1 participante elegido",
+      "speakerPicks_other": "{{count}} participantes elegidos",
+      "removedBadges_one": "1 insignia eliminada",
+      "removedBadges_other": "{{count}} insignias eliminadas"
     },
     "addFilesPrompt": "A\u00f1adir",
     "addFilesMessage": "A\u00f1adir sesiones a \u201c%@\u201d",

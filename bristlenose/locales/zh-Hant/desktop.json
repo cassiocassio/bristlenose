@@ -262,7 +262,11 @@
       "tags_other": "\u6a19\u7c64 {{count}} \u500b",
       "starred_other": "\u52a0\u661f\u865f\u7684\u5f15\u8ff0 {{count}} \u5247",
       "renamedSpeakers_other": "\u5df2\u6539\u540d\u7684\u767c\u8a00\u8005 {{count}} \u4f4d",
-      "namedThemes_other": "\u5df2\u547d\u540d\u7684\u4e3b\u984c {{count}} \u500b"
+      "namedThemes_other": "\u5df2\u547d\u540d\u7684\u4e3b\u984c {{count}} \u500b",
+      "hiddenQuotes_other": "已隱藏的引述 {{count}} 則",
+      "transcriptEdits_other": "已編輯的逐字稿 {{count}} 行",
+      "speakerPicks_other": "已選擇的發言者 {{count}} 位",
+      "removedBadges_other": "已移除的徽章 {{count}} 個"
     },
     "addFilesPrompt": "\u52a0\u5165",
     "addFilesMessage": "\u5c07\u5de5\u4f5c\u968e\u6bb5\u52a0\u5165\u300c%@\u300d",

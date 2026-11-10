@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 omd\u00f8bt taler",
       "renamedSpeakers_other": "{{count}} omd\u00f8bte talere",
       "namedThemes_one": "1 navngivet tema",
-      "namedThemes_other": "{{count}} navngivne temaer"
+      "namedThemes_other": "{{count}} navngivne temaer",
+      "hiddenQuotes_one": "1 skjult citat",
+      "hiddenQuotes_other": "{{count}} skjulte citater",
+      "transcriptEdits_one": "1 redigeret transskriptionslinje",
+      "transcriptEdits_other": "{{count}} redigerede transskriptionslinjer",
+      "speakerPicks_one": "1 valgt taler",
+      "speakerPicks_other": "{{count}} valgte talere",
+      "removedBadges_one": "1 fjernet badge",
+      "removedBadges_other": "{{count}} fjernede badges"
     },
     "addFilesPrompt": "Tilf\u00f8j",
     "addFilesMessage": "Tilf\u00f8j sessioner til \u201c%@\u201d",

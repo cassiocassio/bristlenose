@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 yeniden adland\u0131r\u0131lm\u0131\u015f konu\u015fmac\u0131",
       "renamedSpeakers_other": "{{count}} yeniden adland\u0131r\u0131lm\u0131\u015f konu\u015fmac\u0131",
       "namedThemes_one": "1 adland\u0131r\u0131lm\u0131\u015f tema",
-      "namedThemes_other": "{{count}} adland\u0131r\u0131lm\u0131\u015f tema"
+      "namedThemes_other": "{{count}} adland\u0131r\u0131lm\u0131\u015f tema",
+      "hiddenQuotes_one": "1 gizlenmiş alıntı",
+      "hiddenQuotes_other": "{{count}} gizlenmiş alıntı",
+      "transcriptEdits_one": "1 düzenlenmiş deşifre satırı",
+      "transcriptEdits_other": "{{count}} düzenlenmiş deşifre satırı",
+      "speakerPicks_one": "1 seçilmiş konuşmacı",
+      "speakerPicks_other": "{{count}} seçilmiş konuşmacı",
+      "removedBadges_one": "1 kaldırılmış rozet",
+      "removedBadges_other": "{{count}} kaldırılmış rozet"
     },
     "addFilesPrompt": "Ekle",
     "addFilesMessage": "\u201c%@\u201d projesine oturum ekleyin",

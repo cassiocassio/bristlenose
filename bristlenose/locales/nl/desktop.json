@@ -279,7 +279,15 @@
       "renamedSpeakers_one": "1 hernoemde spreker",
       "renamedSpeakers_other": "{{count}} hernoemde sprekers",
       "namedThemes_one": "1 benoemd thema",
-      "namedThemes_other": "{{count}} benoemde thema's"
+      "namedThemes_other": "{{count}} benoemde thema's",
+      "hiddenQuotes_one": "1 verborgen citaat",
+      "hiddenQuotes_other": "{{count}} verborgen citaten",
+      "transcriptEdits_one": "1 bewerkte transcriptregel",
+      "transcriptEdits_other": "{{count}} bewerkte transcriptregels",
+      "speakerPicks_one": "1 gekozen spreker",
+      "speakerPicks_other": "{{count}} gekozen sprekers",
+      "removedBadges_one": "1 verwijderde badge",
+      "removedBadges_other": "{{count}} verwijderde badges"
     },
     "addFilesPrompt": "Voeg toe",
     "addFilesMessage": "Voeg sessies toe aan \u201c%@\u201d",

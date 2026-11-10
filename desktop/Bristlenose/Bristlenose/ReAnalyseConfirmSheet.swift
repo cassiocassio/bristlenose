@@ -90,6 +90,10 @@ struct ReAnalyseConfirmSheet: View {
         add("starred", counts.starredQuotes)
         add("renamedSpeakers", counts.renamedSpeakers)
         add("namedThemes", counts.namedThemes)
+        add("hiddenQuotes", counts.hiddenQuotes)
+        add("transcriptEdits", counts.transcriptEdits)
+        add("speakerPicks", counts.speakerPicks)
+        add("removedBadges", counts.removedBadges)
         return lines
     }
 

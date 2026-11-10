@@ -1278,8 +1278,14 @@ def _session_speaker_labels(output_dir: Path, sid: str) -> set[str]:
             for s in data.get(key, [])
             if s.get("speaker_label")
         }
-    except (OSError, ValueError, AttributeError):
+    except FileNotFoundError:
         pass
+    except (OSError, ValueError, AttributeError) as exc:
+        # Unreadable, not absent: the session's labels stay in its words.
+        logger.warning(
+            "speaker_info_unreadable | file=speaker-info/%s.json | error=%s: %s",
+            sid, type(exc).__name__, exc,
+        )
     try:
         from bristlenose.session_registry import NO_PARTICIPANT_LABEL, SessionRegistry
 

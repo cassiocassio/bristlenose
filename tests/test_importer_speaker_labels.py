@@ -11,7 +11,10 @@ for the session is taken; anything else in brackets is the transcript's own.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+import pytest
 
 from bristlenose.server.importer import _session_speaker_labels, _without_speaker_label
 
@@ -31,6 +34,22 @@ def test_a_split_recordings_labels_and_a_platform_transcripts_names(tmp_path: Pa
     assert _session_speaker_labels(tmp_path, "s1") == {"Speaker A", "Speaker B"}
     assert _session_speaker_labels(tmp_path, "s2") == {"Rachel Okafor", "Yuki Tanaka"}
     assert _session_speaker_labels(tmp_path, "s9") == set()
+
+
+def test_a_torn_speaker_info_file_is_logged_by_name(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Unreadable is not absent: the labels stay in the words, and the log says why."""
+    d = tmp_path / ".bristlenose" / "intermediate" / "speaker-info"
+    d.mkdir(parents=True)
+    (d / "s1.json").write_text('{"speaker_infos": [{"speaker_label": "Spea', encoding="utf-8")
+    with caplog.at_level(logging.WARNING, logger="bristlenose.server.importer"):
+        assert _session_speaker_labels(tmp_path, "s1") == set()  # no recovery
+        assert _session_speaker_labels(tmp_path, "s9") == set()  # absent: nothing said
+    lines = [r.getMessage() for r in caplog.records if "speaker-info" in r.getMessage()]
+    assert len(lines) == 1, lines
+    assert "speaker-info/s1.json" in lines[0]
+    assert "JSONDecodeError" in lines[0]
 
 
 def test_only_the_sessions_own_label_is_taken() -> None:

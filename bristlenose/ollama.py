@@ -612,6 +612,11 @@ def validate_local_endpoint(url: str, model: str) -> tuple[bool | None, str]:
             return (False, f"Model '{model}' not found. Run: ollama pull {model}")
 
     except urllib.error.URLError:
+        # Inside the Mac app the sidecar cannot see where Ollama is installed
+        # (the App Sandbox, a minimal PATH), so "not installed" would be a claim
+        # it cannot make: all it knows is that nothing answered (N200).
+        if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+            return (None, "Ollama isn't running")
         # Check if Ollama is installed to give a more specific message
         if is_ollama_installed():
             return (None, "Ollama is installed but not running")

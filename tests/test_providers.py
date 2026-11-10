@@ -417,6 +417,29 @@ class TestOllamaHelpers:
         assert valid is False
         assert "not found" in err
 
+    def test_inside_the_mac_app_an_unreachable_ollama_is_not_called_uninstalled(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """N200: the bundled sidecar cannot see where Ollama is installed, so it
+        says what it knows (nothing answered), never "not installed"."""
+        import urllib.error
+
+        from bristlenose.ollama import validate_local_endpoint
+
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=urllib.error.URLError("Connection refused"),
+            ),
+            patch("bristlenose.ollama.is_ollama_installed", return_value=False) as probe,
+        ):
+            valid, err = validate_local_endpoint("http://localhost:11434/v1", "llama3.2:3b")
+
+        assert valid is None
+        assert err == "Ollama isn't running"
+        probe.assert_not_called()
+
     def test_validate_local_endpoint_not_reachable_installed(self) -> None:
         import urllib.error
 

@@ -214,6 +214,8 @@ async def extract_quotes(
     stop = asyncio.Event()
     consecutive_failures = 0
     outcome = StageOutcome(attempted=len(transcripts))
+    # Sentiment strings outside the enum, kept as None: said once, after the run.
+    unrecognised_sentiments: list[str] = []
 
     async def _process(
         transcript: PiiCleanTranscript,
@@ -245,7 +247,7 @@ async def extract_quotes(
                 with telemetry.session(transcript.participant_id):
                     quotes = await _extract_with_split(
                         transcript, topic_map, llm_client, min_quote_words,
-                        dropped=dropped,
+                        dropped=dropped, unrecognised_sentiments=unrecognised_sentiments,
                     )
                 consecutive_failures = 0
                 outcome.succeeded += 1
@@ -316,6 +318,14 @@ async def extract_quotes(
                 on_progress(_completed, len(transcripts))
 
     results = await asyncio.gather(*(_process_counted(t) for t in transcripts))
+    if unrecognised_sentiments:
+        # One line per run, not per quote: a model that drifts off the enum
+        # does it for every quote, and Signals counts none of them.
+        logger.warning(
+            "quote_sentiment_unrecognised | quotes=%d | examples=%s",
+            len(unrecognised_sentiments),
+            ", ".join(repr(v) for v in list(dict.fromkeys(unrecognised_sentiments))[:2]),
+        )
     # Flatten per-participant quote lists into a single list
     all_quotes: list[ExtractedQuote] = []
     for quotes in results:
@@ -329,6 +339,7 @@ async def _extract_one_pass(
     llm_client: LLMClient,
     min_quote_words: int,
     dropped: dict[str, int] | None = None,
+    unrecognised_sentiments: list[str] | None = None,
 ) -> list[ExtractedQuote]:
     """Extract quotes from a single transcript (or one chunk of one).
 
@@ -434,6 +445,8 @@ async def _extract_one_pass(
                 sentiment = Sentiment(item.sentiment)
             except ValueError:
                 sentiment = None
+                if unrecognised_sentiments is not None:
+                    unrecognised_sentiments.append(item.sentiment)
         intensity = max(1, min(3, item.intensity))
 
         # Parse deprecated fields for backward compatibility
@@ -513,6 +526,7 @@ async def _extract_with_split(
     depth: int = 0,
     *,
     dropped: dict[str, int] | None = None,
+    unrecognised_sentiments: list[str] | None = None,
 ) -> list[ExtractedQuote]:
     """Extract quotes, splitting the session on truncation or an overlong call.
 
@@ -527,6 +541,7 @@ async def _extract_with_split(
         quotes = await asyncio.wait_for(
             _extract_one_pass(
                 transcript, topic_map, llm_client, min_quote_words, dropped,
+                unrecognised_sentiments,
             ),
             timeout=_PASS_DEADLINE_S,
         )
@@ -575,7 +590,7 @@ async def _extract_with_split(
         results.extend(
             await _extract_with_split(
                 chunk, topic_map, llm_client, min_quote_words, depth + 1,
-                dropped=dropped,
+                dropped=dropped, unrecognised_sentiments=unrecognised_sentiments,
             )
         )
     # Dedup runs at every recursion level; each re-resolves segment_index

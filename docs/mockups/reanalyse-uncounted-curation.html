@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Re-analyse sheet — uncounted curation (N131, N130) · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme. The sheet itself is native SwiftUI (system font, system greys); the tokens only dress the page around it.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 5rem; }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+h1 { font-size:clamp(1.4rem,3.5vw,1.9rem); margin:.3rem 0 .5rem; font-weight:490; }
+h2 { font-size:var(--bn-text-heading); font-weight:490; margin:2.5rem 0 .25rem; }
+p { color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.key { display:flex; gap:1rem; flex-wrap:wrap; font-size:var(--bn-text-caption); margin:1rem 0 0; }
+.key span { padding:.2rem .6rem; border-radius:var(--bn-radius-pill); border:1px solid var(--bn-colour-border); }
+.key .k-art { background:var(--bn-colour-quote-bg); }
+.key .k-com { background:repeating-linear-gradient(135deg,transparent 0 6px,var(--bn-colour-badge-bg) 6px 8px); }
+.row { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.25rem; margin:1rem 0; align-items:start; }
+.cell .chrome { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); margin:0 0 .35rem; }
+.stage { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1.25rem; display:flex; justify-content:center; min-height:120px; }
+/* the native sheet: system font, system greys, 420pt wide at 0.7 scale */
+.sheet { width:100%; max-width:318px; background:light-dark(#f6f6f6,#2a2a2c); color:light-dark(#1d1d1f,#f5f5f7); border-radius:10px; box-shadow:0 8px 28px var(--bn-colour-shadow),0 0 0 .5px light-dark(rgba(0,0,0,.2),rgba(255,255,255,.12)); padding:16px; font-family:-apple-system,"SF Pro Text",system-ui,sans-serif; font-size:11px; line-height:1.35; }
+.sheet .ico { font-size:20px; color:light-dark(#86868b,#98989d); }
+.sheet .hd { font-size:13px; font-weight:600; margin:8px 0 6px; }
+.sheet .cal { color:light-dark(#6e6e73,#98989d); margin-bottom:8px; }
+.sheet .loss .h { font-weight:500; margin-bottom:2px; }
+.sheet .loss .l { color:light-dark(#6e6e73,#98989d); padding-left:9px; }
+.sheet .btns { display:flex; justify-content:flex-end; gap:6px; margin-top:12px; }
+.sheet .b { padding:2px 11px; border-radius:5px; background:light-dark(#fff,#3a3a3c); box-shadow:0 0 0 .5px light-dark(rgba(0,0,0,.25),rgba(255,255,255,.15)); }
+.sheet .b.def { background:#007aff; color:#fff; box-shadow:none; }
+.none { align-self:center; text-align:center; color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+.cli { font-family:var(--bn-font-mono); font-size:11.5px; background:light-dark(#1c1c1e,#0b0b0c); color:#e5e5ea; border-radius:var(--bn-radius-md); padding:.7rem .85rem; white-space:pre-wrap; margin:.5rem 0 0; }
+/* commentary zone: deliberately not-the-product */
+.commentary { border-left:3px solid var(--bn-colour-accent); background:repeating-linear-gradient(135deg,transparent 0 10px,var(--bn-colour-badge-bg) 10px 12px); padding:.7rem .9rem; margin:.9rem 0 0; font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.commentary .lbl { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.1em; text-transform:uppercase; color:var(--bn-colour-muted); display:block; margin-bottom:.25rem; }
+table { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin:.6rem 0; }
+th,td { text-align:left; padding:.35rem .6rem; border-bottom:1px solid var(--bn-colour-border); vertical-align:top; }
+th { color:var(--bn-colour-muted); font-weight:490; }
+code { font-family:var(--bn-font-mono); font-size:.9em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
+.new { color:var(--bn-colour-accent); font-weight:490; }
+/* the sheet is the artefact: no commentary colour inside it */
+.sheet .new { color:inherit; font-weight:inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">Mockup · Re-analyse sheet · N131, N130</div>
+<h1>What Re-analyse says it will discard</h1>
+<p>Re-analyse (and <code>run --clean</code>) asks before discarding a researcher's work, but it counts only five kinds. Four more kinds are discarded without a word. Three typical studies, each shown as it reads today and as proposed.</p>
+<div class="key"><span class="k-art">The artefact: the sheet as a researcher sees it</span><span class="k-com">The commentary: what to look at, never in the product</span></div>
+
+<h2>1 · The researcher who only hid and corrected</h2>
+<p>Hid 6 off-topic quotes, fixed a transcript line, removed one sentiment badge. No stars or tags yet.</p>
+<div class="row">
+<div class="cell"><div class="chrome">today</div><div class="stage"><div class="none">No sheet.<br>Re-analyse starts at once.</div></div></div>
+<div class="cell"><div class="chrome">proposal A · one combined line</div><div class="stage"><div class="sheet"><div class="ico">↻</div><div class="hd">Re-analyse “Acme onboarding”?</div><div class="cal">Bristlenose will transcribe and analyse all 8 interviews again from scratch.</div><div class="loss"><div class="h">Your work on this study will be discarded:</div><div class="l"><span class="new">8 other changes you made</span></div></div><div class="btns"><span class="b">Cancel</span><span class="b def">Re-analyse</span></div></div></div></div>
+<div class="cell"><div class="chrome">proposal B · one line per kind</div><div class="stage"><div class="sheet"><div class="ico">↻</div><div class="hd">Re-analyse “Acme onboarding”?</div><div class="cal">Bristlenose will transcribe and analyse all 8 interviews again from scratch.</div><div class="loss"><div class="h">Your work on this study will be discarded:</div><div class="l"><span class="new">6 hidden quotes</span></div><div class="l"><span class="new">1 edited transcript line</span></div><div class="l"><span class="new">1 removed badge</span></div></div><div class="btns"><span class="b">Cancel</span><span class="b def">Re-analyse</span></div></div></div></div>
+</div>
+<div class="commentary"><span class="lbl">Commentary</span>Today this study counts zero, so the sheet stays silent and the work is discarded unasked. This is the case the whole row is about.</div>
+
+<h2>2 · The researcher with a mixed pile</h2>
+<p>12 starred quotes, 9 tags, 3 hidden quotes, 2 transcript edits, 1 removed badge.</p>
+<div class="row">
+<div class="cell"><div class="chrome">today</div><div class="stage"><div class="sheet"><div class="ico">↻</div><div class="hd">Re-analyse “Acme onboarding”?</div><div class="cal">Bristlenose will transcribe and analyse all 8 interviews again from scratch.</div><div class="loss"><div class="h">Your work on this study will be discarded:</div><div class="l">12 starred quotes</div><div class="l">9 tags</div></div><div class="btns"><span class="b">Cancel</span><span class="b def">Re-analyse</span></div></div></div></div>
+<div class="cell"><div class="chrome">proposal A</div><div class="stage"><div class="sheet"><div class="ico">↻</div><div class="hd">Re-analyse “Acme onboarding”?</div><div class="cal">Bristlenose will transcribe and analyse all 8 interviews again from scratch.</div><div class="loss"><div class="h">Your work on this study will be discarded:</div><div class="l">12 starred quotes</div><div class="l">9 tags</div><div class="l"><span class="new">6 other changes you made</span></div></div><div class="btns"><span class="b">Cancel</span><span class="b def">Re-analyse</span></div></div></div></div>
+<div class="cell"><div class="chrome">proposal B</div><div class="stage"><div class="sheet"><div class="ico">↻</div><div class="hd">Re-analyse “Acme onboarding”?</div><div class="cal">Bristlenose will transcribe and analyse all 8 interviews again from scratch.</div><div class="loss"><div class="h">Your work on this study will be discarded:</div><div class="l">12 starred quotes</div><div class="l">9 tags</div><div class="l"><span class="new">3 hidden quotes</span></div><div class="l"><span class="new">2 edited transcript lines</span></div><div class="l"><span class="new">1 removed badge</span></div></div><div class="btns"><span class="b">Cancel</span><span class="b def">Re-analyse</span></div></div></div></div>
+</div>
+<div class="commentary"><span class="lbl">Commentary</span>Today's sheet is true as far as it goes, but reads as the whole loss. B is exact and five lines long; A keeps the sheet short and names the rest once.</div>
+
+<h2>3 · Names the researcher never typed (N130)</h2>
+<p>Zoom recordings: the pipeline filled in 4 participant names from the call. The researcher has done nothing.</p>
+<div class="row">
+<div class="cell"><div class="chrome">today</div><div class="stage"><div class="sheet"><div class="ico">↻</div><div class="hd">Re-analyse “Acme onboarding”?</div><div class="cal">Bristlenose will transcribe and analyse all 8 interviews again from scratch.</div><div class="loss"><div class="h">Your work on this study will be discarded:</div><div class="l">4 renamed speakers</div></div><div class="btns"><span class="b">Cancel</span><span class="b def">Re-analyse</span></div></div></div></div>
+<div class="cell"><div class="chrome">wanted</div><div class="stage"><div class="none">No sheet:<br>nothing here is theirs.</div></div></div>
+</div>
+<div class="commentary"><span class="lbl">Commentary</span>Today a script's <code>run --clean</code> refuses here and says "Add --yes" over work nobody did. The database records how a person was minted (<code>origin</code>) but not who last typed the name, so I cannot tell a researcher's rename of a pipeline-filled participant from the pipeline's own name. <strong>I recommended counting only <code>origin = pick</code>, and that is wrong:</strong> participants are minted <code>origin = participant</code>, and the researcher renaming one is the commonest rename of all, so it would stop being counted. An exact answer needs the typed-by record, a schema change.</div>
+
+<h2>The same lines in the terminal</h2>
+<div class="cli">$ bristlenose run interviews/ --clean
+Re-analyse “Acme onboarding”?
+Bristlenose will transcribe and analyse all 8 interviews again from scratch.
+Your work on this study will be discarded:
+  12 starred quotes
+  9 tags
+  6 other changes you made          ← proposal A, mixed pile
+Discard it and re-analyse? [y/N]</div>
+<div class="cli">$ bristlenose run interviews/ --clean < /dev/null
+ERROR  --clean would discard your work on this study: 12 starred quotes, 9 tags, 6 other changes you made. Add --yes to re-analyse anyway.</div>
+
+<h2>String plan</h2>
+<table>
+<tr><th>Key (Mac) / line (CLI)</th><th>Proposal A</th><th>Proposal B</th><th>Status</th></tr>
+<tr><td><code>reAnalyseLoss.other_one/_other</code></td><td class="new">1 other change you made / {count} other changes you made</td><td>—</td><td>New: owner-written, 21 locales</td></tr>
+<tr><td><code>reAnalyseLoss.hidden_*</code></td><td>—</td><td class="new">1 hidden quote / {count} hidden quotes</td><td>New ×2 plurals ×21</td></tr>
+<tr><td><code>reAnalyseLoss.transcriptEdits_*</code></td><td>—</td><td class="new">1 edited transcript line / {count} edited transcript lines</td><td>New</td></tr>
+<tr><td><code>reAnalyseLoss.speakerPicks_*</code></td><td>—</td><td class="new">1 speaker choice / {count} speaker choices</td><td>New</td></tr>
+<tr><td><code>reAnalyseLoss.removedBadges_*</code></td><td>—</td><td class="new">1 removed badge / {count} removed badges</td><td>New</td></tr>
+<tr><td>CLI terminal lines</td><td colspan="2">English by design: the same strings, no locale keys</td><td>Follows the Mac</td></tr>
+</table>
+<div class="commentary"><span class="lbl">Open questions for you</span>(1) A or B. (2) Does "speaker choices" belong at all: a pick is the researcher saying who a voice is, which is their work, but it is the least legible of the four. (3) N130: leave the over-count, or fund the typed-by record post-beta.</div>
+</div>
+</body>
+</html>

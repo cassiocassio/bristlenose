@@ -9,6 +9,7 @@ trued-against: HEAD@main on 2026-10-04 (128264a8)
 
 ## Changelog
 
+- _2026-11-10_ — **recorded the accepted secret exposures** (§"Secret-leak defences ▸ Accepted exposures"): the key in shell history with `--key VALUE`, the `security` child's argv on macOS, two pasted bearer tokens, inherited environments, no Python redactor, and where the key lives per channel. Found by a Fable review of T35 and checked against the code; William's proportionate plan chose to record and document, not build.
 - _2026-10-21_ — **a key first set up with `bristlenose configure` could not be
   removed in the app** (R37). `SharedKeychainItem.remove` deleted the login
   copy, which the ACL refuses for another tool's item (`-25244`, the 5 Sep
@@ -669,6 +670,19 @@ Why both layers? Source-time catches the easy mistake before it ships. Runtime c
 
 - **Python-side logging.** The Python operational log (`.bristlenose/bristlenose.log`) is governed by `design-logging.md`'s PII policy. Not redacted at runtime — assumption is that Python-side code already avoids logging keys.
 - **Shell process inspection (`ps -E`).** Same-UID attackers can read env vars. See §"Threat-model rationale" above.
+
+#### Accepted exposures on argv, in history and in the environment (10 Nov 2026)
+
+A review of every place a secret can be read by something it should not be, across the Mac app, the macOS CLI, the Linux CLI (pip, Snap, RPM) and the Windows CLI, checked against the code. Nothing here is a hole that hurts a researcher on their own machine; each is recorded as accepted, with the reason, so it is not found again as news. The measure of proportion is the person at risk: someone learning, on a laptop of their own, whose real protection is a key the provider has capped (see the setup docs), not any of the below.
+
+- **`bristlenose configure <provider> --key VALUE` puts the key in shell history.** This is the one that lasts: history is plain text, backed up, and often synced in dotfiles repositories. `configure` without `--key` prompts with the input hidden, so a typed key never reaches the command line or history. A key supplied on the command line is the user's choice, as with any CLI; the proportionate answer is one line printed when `--key VALUE` is used, and the documentation saying to leave it off.
+- **On macOS the key is on the `security` child's argv for tens of milliseconds, even when prompted.** `credentials_macos.py` stores it with `security add-generic-password -w <value>`, so another local user running `ps` at that instant could read it. Accepted: it needs another account on the Mac and a window of tens of milliseconds, the Linux store already passes the secret on stdin, and the cure (`security -i`, the command piped on stdin) writes to the Keychain item the Mac app shares, with an ACL outcome nobody has checked (the app already works around that ACL, see "One keyspace, two keychains"). Revisit if the CLI is ever used on shared machines, and check the ACL on a real Mac first.
+- **Two bearer tokens appear in commands the user is asked to paste.** The Settings ▸ MCP Agents pane shows a `claude mcp add --header "Authorization: Bearer ..."` line, and `bristlenose serve` prints `Authorization: Bearer ...` for CLI users. The first is the scoped, read-only MCP token; the second is the server token, which changes every time serve starts. Neither is a provider key that costs money.
+- **Child processes inherit provider keys and tokens in their environment.** ffmpeg, the Whisper workers, the speech helper and the Keychain tools all see them, and `_BRISTLENOSE_AUTH_TOKEN` is written back to `os.environ` so a uvicorn reload can recover it. Only the same user or root can read another process's environment; same reasoning as "Threat-model rationale". A scrubbed environment for non-Bristlenose children would touch every place that spawns a process, for exposure nobody has observed.
+- **The Python side has no key redactor, and settings keys are plain strings.** Nothing logs `sys.argv` or the whole environment today (checked), and the resolve ledger logs only a key's length and last four characters. A redactor would protect against nothing that exists.
+- **Where the key ends up differs by channel.** The Mac app and the macOS CLI use the Keychain; the Linux CLI uses Secret Service when `secret-tool` is installed. A Snap cannot reach Secret Service (no `password-manager-service` plug, no libsecret staged), and Windows has only the file store; both keep the key in the 0600 config `.env` (on Windows 0600 only toggles read-only and the protection is the profile's ACL). `configure` prints which store it used.
+
+Not built, on purpose: `--key -` (read from stdin), which adds an input mode for people who already have the prompt, environment variables and a keystore.
 
 ---
 

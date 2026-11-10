@@ -477,7 +477,16 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
                 _drop_tree(failed, exports_to=backup)
             if failed.exists():
                 failed = failed.with_name(f"{failed.name}-{os.getpid()}")
-                shutil.rmtree(failed, ignore_errors=True)
+                # A leftover under this name (a reused process id) is cleared
+                # the same way, its exports into the report coming back, never
+                # deleted with it (N118). One that is kept takes a numbered name.
+                if failed.exists():
+                    _drop_tree(failed, exports_to=backup)
+                taken = failed
+                n = 1
+                while failed.exists():
+                    n += 1
+                    failed = taken.with_name(f"{taken.name}-{n}")
             output_dir.rename(failed)
             moved_failed = True
 

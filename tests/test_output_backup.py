@@ -493,6 +493,38 @@ class TestTheFreshEyesFindings:
         assert len(carried) == 1 and (carried[0] / "c.mp4").read_text(encoding="utf-8") == "clip"
         assert output_backup.leftovers_for(out) == []
 
+    def test_a_tree_left_under_this_process_id_keeps_its_exports(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """N118: a put-back finding a kept `-failed` tree gives this run's tree
+        a `-<pid>` name. When a leftover already holds that name (a reused
+        process id), it was deleted outright, its exported clips with it."""
+        out = tmp_path / "bristlenose-output"
+        _make_report(out, marker="report", events="r1\n")
+        backup = output_backup.stash(out)
+        kept = _make_report(output_backup.failed_path_for(out), marker="kept", events="k\n")
+        (kept / "clips").mkdir()
+        (kept / "clips" / "kept.mp4").write_text("kept", encoding="utf-8")
+        stale = _make_report(
+            kept.with_name(f"{kept.name}-{os.getpid()}"), marker="stale", events="s\n"
+        )
+        (stale / "clips").mkdir()
+        (stale / "clips" / "stale.mp4").write_text("stale clip", encoding="utf-8")
+        _make_report(out, marker="attempt", events="a1\n")  # produced nothing
+
+        real = output_backup.carry_exports
+        # The first tree's export "will not move", so it stays and forces the
+        # `-<pid>` name; every other tree carries normally.
+        monkeypatch.setattr(
+            output_backup, "carry_exports", lambda tree, to: tree != kept and real(tree, to)
+        )
+        assert output_backup.settle(backup, out).report_is_back
+        monkeypatch.undo()
+
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+        carried = list(out.rglob("stale.mp4"))
+        assert len(carried) == 1, "the reused-pid tree's clip was deleted, not carried"
+
     @pytest.mark.skipif(not _CAN_CHMOD, reason="needs a folder this user cannot write")
     def test_a_tree_whose_export_will_not_move_is_kept_by_a_put_back(
         self, tmp_path: Path

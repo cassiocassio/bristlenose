@@ -131,6 +131,22 @@ def _pii_model_in_user_cache() -> str:
     )
 
 
+def _fix_ffmpeg_will_not_run(method: str) -> str:
+    return (
+        "FFmpeg is installed but fails to start, often after an update to the\n"
+        "libraries it needs. Reinstall it:\n\n"
+        "  brew reinstall ffmpeg\n"
+        "  sudo apt install --reinstall ffmpeg"
+    )
+
+
+def _fix_ffprobe_missing(method: str) -> str:
+    return (
+        "bristlenose reads video files with ffprobe, which normally installs\n"
+        "with FFmpeg. Install the full FFmpeg package, or put ffprobe beside ffmpeg."
+    )
+
+
 def _fix_ffmpeg_missing(method: str) -> str:
     if method == "rpm":
         return (
@@ -655,6 +671,8 @@ def _fix_anyllm_not_ready(_method: str) -> str:
 
 _FIX_TABLE: dict[str, Callable[[str], str]] = {
     "ffmpeg_missing": _fix_ffmpeg_missing,
+    "ffmpeg_will_not_run": _fix_ffmpeg_will_not_run,
+    "ffprobe_missing": _fix_ffprobe_missing,
     "backend_import_fail": _fix_backend_import_fail,
     "mlx_cannot_start": _fix_mlx_cannot_start,
     "api_key_missing_anthropic": _fix_api_key_missing_anthropic,

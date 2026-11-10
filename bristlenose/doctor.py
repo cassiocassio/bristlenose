@@ -87,7 +87,10 @@ def check_ffmpeg() -> CheckResult:
             fix_key="ffmpeg_missing",
         )
 
-    # Try to get version
+    # Try to get version. A binary that is there but will not run (a broken
+    # library after an update, a bad architecture) is a failure, not an OK
+    # row with its path; only a slow first run (Gatekeeper, a virus scan) is
+    # forgiven, because the next call is fast (N198).
     version = ""
     try:
         result = subprocess.run(
@@ -96,17 +99,57 @@ def check_ffmpeg() -> CheckResult:
             text=True, encoding="utf-8", errors="replace",
             timeout=5,
         )
-        if result.returncode == 0:
-            first_line = result.stdout.split("\n")[0]
-            # "ffmpeg version 6.1.1 Copyright ..." → "6.1.1"
-            parts = first_line.split()
-            if len(parts) >= 3:
-                version = parts[2]
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        pass
+    except subprocess.TimeoutExpired:
+        result = None
+    except OSError as exc:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="FFmpeg",
+            detail=f"found, but it will not run ({_first_line(str(exc)) or 'could not start'})",
+            fix_key="ffmpeg_will_not_run",
+        )
+    if result is not None:
+        if result.returncode != 0:
+            reason = _first_line(result.stderr or "") or f"exit code {result.returncode}"
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="FFmpeg",
+                detail=f"found, but it will not run ({reason})",
+                fix_key="ffmpeg_will_not_run",
+            )
+        first_line = result.stdout.split("\n")[0]
+        # "ffmpeg version 6.1.1 Copyright ..." → "6.1.1"
+        parts = first_line.split()
+        if len(parts) >= 3:
+            version = parts[2]
 
     detail = f"{version} ({path})" if version else path
     return CheckResult(status=CheckStatus.OK, label="FFmpeg", detail=detail)
+
+
+def _first_line(text: str) -> str:
+    """The first non-empty line of *text*, stripped."""
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
+
+
+def check_ffprobe() -> CheckResult:
+    """Check whether ffprobe is reachable.
+
+    A warning, never a failure: only video needs it (the audio-stream probe),
+    and ingest tolerates its absence, so an audio-only study runs without it.
+    """
+    path = bundled_binary_path("ffprobe")
+    if path is None:
+        return CheckResult(
+            status=CheckStatus.WARN,
+            label="FFprobe",
+            detail="not found (video files need it)",
+            fix_key="ffprobe_missing",
+        )
+    return CheckResult(status=CheckStatus.OK, label="FFprobe", detail=path)
 
 
 def check_backend() -> CheckResult:
@@ -1231,11 +1274,11 @@ def check_brew_tap_trust() -> CheckResult:
 # Which checks each command needs
 _COMMAND_CHECKS: dict[str, list[str]] = {
     "run": [
-        "ffmpeg", "backend", "whisper_model", "api_key", "network", "pii", "disk_space",
-        "serve_deps",
+        "ffmpeg", "ffprobe", "backend", "whisper_model", "api_key", "network", "pii",
+        "disk_space", "serve_deps",
     ],
     "run_skip_tx": ["api_key", "network", "pii", "disk_space", "serve_deps"],
-    "transcribe-only": ["ffmpeg", "backend", "whisper_model", "disk_space"],
+    "transcribe-only": ["ffmpeg", "ffprobe", "backend", "whisper_model", "disk_space"],
     # NOT "pii": check_pii probes presidio + a loadable spaCy model, and
     # `analyze` starts at stage 8 and touches neither. Adding it (12 Sep 2026)
     # newly refused a legitimate `analyze <out>/transcripts-cooked` on any
@@ -1894,6 +1937,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
     """
     return DoctorReport(results=[
         check_ffmpeg(),
+        check_ffprobe(),
         check_backend(),
         check_whisper_model(settings),
         check_api_key(settings),
@@ -1955,6 +1999,7 @@ def run_preflight(
 
     _check_fns: dict[str, object] = {
         "ffmpeg": lambda: check_ffmpeg(),
+        "ffprobe": lambda: check_ffprobe(),
         "backend": lambda: check_backend(),
         "whisper_model": lambda: check_whisper_model(settings),
         "api_key": lambda: check_api_key(settings),

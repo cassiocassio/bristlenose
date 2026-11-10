@@ -147,6 +147,40 @@ class TestDoctorReport:
         assert report.notes[0].label == "PII"
 
 
+@pytest.mark.usefixtures("which_is_shutil_which")
+class TestCheckFfprobe:
+    """N198: ffprobe is only for video, so its absence warns and never fails."""
+
+    def test_missing_is_a_warning_not_a_failure(self) -> None:
+        from bristlenose.doctor import check_ffprobe
+
+        with patch("bristlenose.doctor.shutil.which", return_value=None):
+            result = check_ffprobe()
+        assert result.status == CheckStatus.WARN
+        assert result.detail == "not found (video files need it)"
+        assert result.fix_key == "ffprobe_missing"
+
+    def test_found_is_ok(self) -> None:
+        from bristlenose.doctor import check_ffprobe
+
+        with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffprobe"):
+            result = check_ffprobe()
+        assert result.status == CheckStatus.OK
+
+    def test_a_missing_ffprobe_does_not_stop_a_run(self) -> None:
+        from bristlenose.doctor import check_ffprobe
+
+        with patch("bristlenose.doctor.shutil.which", return_value=None):
+            report = DoctorReport(results=[check_ffprobe()])
+        assert not report.has_failures
+
+    def test_both_fixes_have_text(self) -> None:
+        from bristlenose.doctor_fixes import get_fix
+
+        assert "Reinstall it" in get_fix("ffmpeg_will_not_run", "brew")
+        assert "ffprobe" in get_fix("ffprobe_missing", "pip")
+
+
 # ---------------------------------------------------------------------------
 # check_ffmpeg — platform grid
 # ---------------------------------------------------------------------------
@@ -172,9 +206,49 @@ class TestCheckFfmpeg:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "ffmpeg_missing"
 
-    def test_ffmpeg_found_but_version_fails(self) -> None:
+    def test_ffmpeg_that_cannot_start_fails(self) -> None:
+        """N198: found on PATH but cannot be started (a bad architecture, a
+        missing library): a failure naming the cause, never an OK row."""
         with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffmpeg"):
-            with patch("bristlenose.doctor.subprocess.run", side_effect=OSError):
+            with patch(
+                "bristlenose.doctor.subprocess.run", side_effect=OSError("Exec format error")
+            ):
+                result = check_ffmpeg()
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "ffmpeg_will_not_run"
+        assert "found, but it will not run (Exec format error)" in result.detail
+
+    def test_ffmpeg_that_exits_non_zero_fails_with_its_own_error(self) -> None:
+        with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffmpeg"):
+            with patch("bristlenose.doctor.subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=127,
+                    stdout="",
+                    stderr="\ndyld: Library not loaded: libx264.dylib\n  Referenced from ffmpeg\n",
+                )
+                result = check_ffmpeg()
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "ffmpeg_will_not_run"
+        assert "(dyld: Library not loaded: libx264.dylib)" in result.detail
+
+    def test_ffmpeg_that_exits_non_zero_silently_says_the_exit_code(self) -> None:
+        with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffmpeg"):
+            with patch("bristlenose.doctor.subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="")
+                result = check_ffmpeg()
+        assert result.status == CheckStatus.FAIL
+        assert "(exit code 1)" in result.detail
+
+    def test_a_slow_first_run_is_not_a_failure(self) -> None:
+        """A 5 s timeout is a Gatekeeper or virus-scan first run, not a broken
+        binary: it stays OK."""
+        import subprocess
+
+        with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffmpeg"):
+            with patch(
+                "bristlenose.doctor.subprocess.run",
+                side_effect=subprocess.TimeoutExpired("ffmpeg", 5),
+            ):
                 result = check_ffmpeg()
         assert result.status == CheckStatus.OK
         assert "/usr/bin/ffmpeg" in result.detail
@@ -1410,16 +1484,17 @@ class TestRunAll:
             patch("bristlenose.doctor.check_brew_tap_trust") as m9,
             patch("bristlenose.doctor.check_voice") as m10,
             patch("bristlenose.doctor.check_anyllm") as m11,
+            patch("bristlenose.doctor.check_ffprobe") as m12,
             # The any-llm row shows only where it is installed or chosen.
             patch("bristlenose.doctor._anyllm_present", return_value=True),
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        # Twelve checks; Windows leaves out the Homebrew one, which has no
+        # Thirteen checks; Windows leaves out the Homebrew one, which has no
         # meaning there.
-        assert len(report.results) == (11 if sys.platform == "win32" else 12)
+        assert len(report.results) == (12 if sys.platform == "win32" else 13)
         assert not report.has_failures
 
 
@@ -1440,12 +1515,13 @@ class TestRunPreflight:
             patch("bristlenose.doctor.check_pii") as m6,
             patch("bristlenose.doctor.check_disk_space") as m7,
             patch("bristlenose.doctor.check_serve_deps") as m8,
+            patch("bristlenose.doctor.check_ffprobe") as m9,
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7, m8):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_preflight(settings, "run")
 
-        assert len(report.results) == 8
+        assert len(report.results) == 9
 
     def test_transcribe_only_skips_api_and_network(self) -> None:
         settings = _settings()
@@ -1454,12 +1530,13 @@ class TestRunPreflight:
             patch("bristlenose.doctor.check_backend") as m2,
             patch("bristlenose.doctor.check_whisper_model") as m3,
             patch("bristlenose.doctor.check_disk_space") as m4,
+            patch("bristlenose.doctor.check_ffprobe") as m5,
         ):
-            for m in (m1, m2, m3, m4):
+            for m in (m1, m2, m3, m4, m5):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_preflight(settings, "transcribe-only")
 
-        assert len(report.results) == 4
+        assert len(report.results) == 5
 
     def test_analyze_checks_api_network_disk(self) -> None:
         """Deliberately NOT `pii`. check_pii probes presidio and a loadable

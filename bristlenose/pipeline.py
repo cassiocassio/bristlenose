@@ -4428,15 +4428,18 @@ class Pipeline:
                 f.duration_seconds or 0 for s in sessions for f in _transcribed_files(s)
             )
             audio_str = _format_duration(total_audio) if total_audio else ""
+            # The sessions that transcribed, not every session: a failed, refused
+            # or silent one is counted in the summary's failures, not here.
+            _n_transcribed = len(_succeeded_sids_t)
             if _cached_segments and not _remaining:
                 # As run() says it: nothing was transcribed this time.
                 _print_cached_step(
-                    f"Transcribed {count_noun(len(sessions), 'session')}"
+                    f"Transcribed {count_noun(_n_transcribed, 'session')}"
                     f" ({count_noun(total_segments, 'segment')})",
                 )
             else:
                 msg = (
-                    f"Transcribed {count_noun(len(sessions), 'session')}"
+                    f"Transcribed {count_noun(_n_transcribed, 'session')}"
                     f" ({count_noun(total_segments, 'segment')}"
                 )
                 if _cached_segments and _n_new:

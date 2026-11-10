@@ -15,7 +15,7 @@
     "ci.yml::gates": {
       "disposition": "ratchet",
       "ratchet": "mypy_errors",
-      "why": "Job-level `continue-on-error: ${{ matrix.soft == true }}`, and mypy is the only cell that sets it. Same disposition it had as a step before the 3 Sep split into a fail-fast:false matrix \u2014 238 errors is a project, not a commit, so the count is held instead. If a second cell is ever marked soft, this single key stops describing it and the entry must be split."
+      "why": "Job-level `continue-on-error: ${{ matrix.soft == true }}`, and mypy is the only cell that sets it. Same disposition it had as a step before the 3 Sep split into a fail-fast:false matrix \u2014 238 errors (3 Sep 2026) was a project, not a commit, so the count is held instead, by the hard ratchet cell, whose ceiling is now 0. If a second cell is ever marked soft, this single key stops describing it and the entry must be split."
     },
     "ci.yml::supply-chain::Audit dependencies for known vulnerabilities": {
       "disposition": "expires",

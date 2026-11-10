@@ -506,7 +506,8 @@ fallback: its own sandbox hides the data container.
 **The sandboxed proxy works end to end.** *Measured*, 29 Sep 2026: the
 `GROUP_VARIANT` build of `experiments/mcp-native-proxy/main.swift` is sandboxed,
 with `network.client`, the group `Z56GZVA2QB.app.bristlenose` and an embedded
-Info.plist, and has no private symbol (checked by `build.sh`). The handshake was
+Info.plist, and had no private symbol (checked that day by the experiment's
+`build.sh`, a one-off measurement that nothing runs). The handshake was
 seeded into the group through its own `--seed` mode, standing in for the host.
 Under a fresh Terminal it then answered `tools/list` (5, marked `readOnlyHint`),
 `list_projects` and `search_quotes` with real data from a live `bristlenose

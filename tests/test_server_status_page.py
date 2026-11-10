@@ -1268,8 +1268,6 @@ class TestSmokeFixtureMountsSPA:
     failure surfaces in CI as ``DOM nodes — Quotes`` timing out, which is
     far away from the actual cause. This test catches the regression at the
     pytest layer where it's cheap to diagnose.
-
-    See ``e2e/tests/spa-mounts.spec.ts`` for the parallel Playwright check.
     """
 
     def test_report_quotes_renders_react_root(self, tmp_path: Path) -> None:

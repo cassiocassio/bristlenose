@@ -17,7 +17,7 @@ artefact: **an intention with no owner and no expiry.**
 - `design-ci.md` — *"informational initially — promote to blocking once stable"*.
   The promotion never came. The Swift tests went unrun for three months and
   v0.29.0 shipped on nine channels with the suite red.
-- `mypy` — soft since it was added. Now 238 errors.
+- `mypy` — soft when it was added, with 238 errors on 3 Sep 2026. The ratchet ceiling is now 0, so a new error fails CI.
 - `test_no_fake_success_acceptance.py` — written, cited as built, never run.
 - `design-release-system-audit.md` — five findings marked unverified, untriaged.
 - `README.md` — "16 ingest formats" against its own named source's 27.
@@ -96,6 +96,8 @@ same fix.
 ### G3. `mypy` is soft, and has accumulated 238 errors — ⚙️ **ceiling set 3 Sep 2026**
 
 **Evidence:** `mypy bristlenose/ --ignore-missing-imports` → `Found 238 errors in 43 files (checked 156 source files)`.
+
+**Now:** the ratchet ceiling for `mypy_errors` is 0 (`docs/testing/ratchet.json`), so a new mypy error fails CI. The 238 above is the figure on 3 Sep 2026.
 
 This is the ratchet case in its purest form. It cannot be promoted to blocking
 cheaply — 238 errors is a project, not a commit. But nothing stops it growing,

@@ -96,3 +96,43 @@ def test_a_failed_session_is_not_counted_as_transcribed(tmp_path: Path) -> None:
     out = buf.getvalue()
     assert "Transcribed 1 session " in out, out
     assert "Transcribed 2 sessions" not in out, out
+
+
+def test_an_unreadable_people_file_is_on_the_transcribe_end_line_too(tmp_path: Path) -> None:
+    """N82 covers ``transcribe`` as well: it reads people.yaml, warns mid-run and
+    carries on without the names, so its end line must not be a plain Done."""
+    settings = MagicMock()
+    settings.project_name = "count"
+    settings.write_intermediate = False
+    settings.color_scheme = "default"
+    settings.whisper_language = None
+    pipeline = Pipeline(settings)
+
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    sessions = _sessions(input_dir, 1)
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    (out_dir / "people.yaml").write_text("participants: [\n", encoding="utf-8")
+
+    async def _fake_gather(_self, _sessions, **_kw):
+        return {"s1": _interview()}, StageOutcome(attempted=1, succeeded=1, failed=[])
+
+    async def _passthrough(sess, _tmp, **_kw):
+        return sess
+
+    buf = io.StringIO()
+    console = Console(file=buf, width=120, force_terminal=False, color_system=None)
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch(
+            "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+            new=_passthrough,
+        ),
+        patch.object(Pipeline, "_gather_all_segments", new=_fake_gather),
+        patch("bristlenose.pipeline.console", console),
+    ):
+        result = asyncio.run(pipeline.run_transcription_only(input_dir, out_dir))
+
+    assert "people.yaml couldn't be read" in buf.getvalue()
+    assert result.pipeline_warning == "people.yaml couldn't be read"

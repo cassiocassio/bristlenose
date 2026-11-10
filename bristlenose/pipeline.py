@@ -4588,6 +4588,9 @@ class Pipeline:
             people=people,
             elapsed_seconds=elapsed,
             summary=self._summary,
+            # No quote shortfall or run error on this path; what is left is
+            # people.yaml not reading (N82), which was warned above.
+            pipeline_warning=self._end_warning("", ""),
         )
 
     async def run_analysis_only(

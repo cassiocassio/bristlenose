@@ -130,6 +130,13 @@ final class RunQueueJournal {
     private var lastWritten: PersistedRunQueue?
     var now: () -> Date = { Date() }
 
+    /// The studies a restore has kept but not yet started. While it waits (folder
+    /// reads, the AI disclosure, a run Quit stopped), they are in neither the
+    /// running run nor the queue, so a write made then, by an Analyse on another
+    /// study, would leave them out of the saved queue and a crash would lose them
+    /// (N45). They are written after the live queue, which is where they join it.
+    var pendingRestore: [PersistedQueueEntry] = []
+
     /// Record when `id` was asked for. `fresh` false keeps an earlier stamp:
     /// a second Analyse on a study already waiting is the same request.
     func stamp(_ id: UUID, studyID: String?, fresh: Bool, as given: Stamp? = nil) {
@@ -166,6 +173,9 @@ final class RunQueueJournal {
         for waiting in queued {
             entries.append(entry(waiting.id, clean: waiting.clean, inFlight: false))
         }
+        // A study already running or queued is not written twice.
+        let present = Set(entries.map(\.projectID))
+        entries.append(contentsOf: pendingRestore.filter { !present.contains($0.projectID) })
         let snapshot = PersistedRunQueue(entries: entries)
         guard snapshot != lastWritten else { return }
         store.save(snapshot)

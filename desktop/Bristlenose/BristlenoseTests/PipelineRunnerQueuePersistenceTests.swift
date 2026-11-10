@@ -214,6 +214,40 @@ struct PipelineRunnerQueuePersistenceTests {
         }
     }
 
+    /// N45: while the restore waits (reading folders, the AI disclosure, a run
+    /// Quit stopped), an Analyse on another study wrote the queue as it stood
+    /// then: that study alone. The studies still to be restored were in neither
+    /// list, so they left the saved queue, and a crash in that window lost them.
+    @Test func anAnalyseDuringARestoreDoesNotWriteTheWaitingStudiesOutOfTheSavedQueue() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let x = Self.study(rig, "X"), y = Self.study(rig, "Y"), z = Self.study(rig, "Z")
+        let store = InMemoryRunQueueStore(PersistedRunQueue(entries: [
+            .init(projectID: x.id, clean: false, enqueuedAt: Self.now, studyID: nil, inFlight: false),
+            .init(projectID: y.id, clean: false, enqueuedAt: Self.now, studyID: nil, inFlight: false),
+        ]))
+        rig.runner.queueJournal.now = { Self.now }
+        var release = false
+        let restoring = Task { @MainActor in
+            await rig.runner.restoreQueue(
+                from: store, index: rig.index,
+                evidence: { _ in
+                    while !release { try? await Task.sleep(for: .milliseconds(10)) }
+                    return .init(studyIDOnDisk: nil, inputs: .present)
+                }
+            )
+        }
+        // The restore is now holding at its first folder read.
+        await until { rig.runner.queueJournal.restoreStarted }
+        rig.runner.start(project: z)
+
+        #expect(Self.ids(store).contains(x.id) && Self.ids(store).contains(y.id),
+                "the studies still waiting to be restored left the saved queue")
+
+        release = true
+        await restoring.value
+        #expect(Set(Self.ids(store)) == [x.id, y.id, z.id])
+    }
+
     @Test func aQueueThatHasAllLapsedIsClearedSoItIsNotReadAgain() async {
         let rig = Rig(); defer { rig.cleanUp() }
         let a = Self.study(rig, "A")

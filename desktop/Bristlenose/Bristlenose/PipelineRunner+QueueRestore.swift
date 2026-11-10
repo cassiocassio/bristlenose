@@ -28,6 +28,11 @@ extension PipelineRunner {
         let saved = store.load()
         guard queueJournal.attach(store) else { return }
         guard let saved, !saved.entries.isEmpty else { return }
+        // Until each study is started or dropped, it stays in what is written:
+        // an Analyse on another study during the reads and waits below would
+        // otherwise save a queue without them, and a crash would lose them (N45).
+        queueJournal.pendingRestore = saved.entries
+        defer { queueJournal.pendingRestore = [] }
         let now = queueJournal.now()
         var kept: [PersistedQueueEntry] = []
         for entry in saved.entries {
@@ -47,6 +52,7 @@ extension PipelineRunner {
             case .restore:
                 kept.append(entry)
             case .drop(let reason):
+                queueJournal.pendingRestore.removeAll { $0.projectID == entry.projectID }
                 log.notice(
                     "run queue: not restored project=\(entry.projectID.uuidString, privacy: .public) reason=\(reason.rawValue, privacy: .public)"
                 )
@@ -76,6 +82,7 @@ extension PipelineRunner {
             try? await Task.sleep(for: .milliseconds(100))
         }
         for entry in kept {
+            queueJournal.pendingRestore.removeAll { $0.projectID == entry.projectID }
             guard let project = index.projects.first(where: { $0.id == entry.projectID }) else {
                 log.notice("run queue: not restored project=\(entry.projectID.uuidString, privacy: .public) reason=notInSidebar")
                 continue

@@ -363,6 +363,7 @@ def _write_through_people_yaml(
     the DB write already succeeded, so the UI update is not lost.
     """
     import logging
+    import os
     import tempfile
     from pathlib import Path
 
@@ -422,6 +423,11 @@ def _write_through_people_yaml(
         try:
             with open(fd, "w", encoding="utf-8") as f:
                 f.write(header + yaml_content)
+                # Flushed to disk before the rename, as the pipeline's writer
+                # does (decision #17): a crash after the rename must not leave
+                # an empty people.yaml the next run cannot read (N84).
+                f.flush()
+                os.fsync(f.fileno())
             Path(tmp_path).replace(people_path)
         except Exception:
             Path(tmp_path).unlink(missing_ok=True)

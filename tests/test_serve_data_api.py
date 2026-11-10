@@ -212,6 +212,38 @@ class TestPeoplePutWriteThrough:
         m1_ed = raw_yaml["participants"]["m1"]["editable"]
         assert m1_ed["full_name"] == ""
 
+    def test_write_through_flushes_to_disk_before_the_rename(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """N84: the temp file is fsynced before it replaces people.yaml, so a
+        crash right after the rename cannot leave an empty file."""
+        import os
+
+        import yaml
+
+        from bristlenose.server.routes import data as data_routes
+
+        path = tmp_path / "people.yaml"
+        path.write_text(
+            yaml.dump({"participants": {"p1": {"editable": {"full_name": "A", "short_name": "A"}}}}),
+            encoding="utf-8",
+        )
+        events: list[str] = []
+        real_fsync, real_replace = os.fsync, Path.replace
+        monkeypatch.setattr(os, "fsync", lambda fd: (events.append("fsync"), real_fsync(fd))[1])
+        monkeypatch.setattr(
+            Path, "replace", lambda self, target: (events.append("replace"), real_replace(self, target))[1]
+        )
+
+        data_routes._write_through_people_yaml(
+            str(tmp_path), {"p1": data_routes.PersonData(full_name="B", short_name="B", role="")}
+        )
+
+        assert events == ["fsync", "replace"]
+        assert yaml.safe_load(path.read_text(encoding="utf-8"))["participants"]["p1"]["editable"][
+            "full_name"
+        ] == "B"
+
     def test_no_people_yaml_does_not_error(self, client: TestClient) -> None:
         """PUT /people without a people.yaml file should not raise."""
         resp = client.put(

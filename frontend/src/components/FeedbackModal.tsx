@@ -278,6 +278,10 @@ export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: Feedba
                 // expects. UTF-16 units never undercount code points, so this
                 // cannot let more than 2000 through.
                 maxLength={2000}
+                // Still while a send is out (N35): a send that lands clears the
+                // form as it stood when Send was pressed, so words typed in the
+                // meantime would go with it. Send is already disabled then.
+                readOnly={sending}
                 value={message}
                 onChange={(e) => {
                   setMessage(e.target.value);

@@ -446,31 +446,29 @@ describe("FeedbackModal", () => {
     expect(send.disabled).toBe(false);
   });
 
-  // N35: the text area stays editable while a send is out, and a send that lands
-  // clears the form as it was when Send was pressed, taking what was typed after.
-  // The words are in neither the form nor the stored draft afterwards. Strict
-  // xfail until the owner picks the fix (read-only while sending, or keep the
-  // newer text); see docs/private/reliability/re-prove-1-scenarios.md.
-  it.fails("words typed while a send is out are not lost when it succeeds", async () => {
+  // N35 (owner ruling 10 Nov 2026, option 2): the text area is read-only while a
+  // send is out. A send that lands clears the form as it stood when Send was
+  // pressed, so words typed meanwhile used to vanish. (fireEvent.change ignores
+  // readOnly in jsdom, so the attribute itself is what is asserted: a real
+  // keystroke cannot edit a read-only field.)
+  it("the text area is read-only while a send is out, and editable again after a failure", async () => {
     const answer = heldFetch();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
     render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
     fireEvent.click(screen.getByRole("button", { name: /Good/ }));
-    fireEvent.change(screen.getByLabelText("Help us improve"), { target: { value: "Sent text." } });
+    const area = screen.getByLabelText("Help us improve") as HTMLTextAreaElement;
+    expect(area.readOnly).toBe(false);
+    fireEvent.change(area, { target: { value: "Sent text." } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    fireEvent.change(screen.getByLabelText("Help us improve"), {
-      target: { value: "Sent text. And one more thing I typed after." },
-    });
-    answer(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    await new Promise((r) => setTimeout(r, 0));
+    expect(area.readOnly).toBe(true);
 
-    const shown = (screen.getByLabelText("Help us improve") as HTMLTextAreaElement).value;
-    const stored = JSON.parse(localStorage.getItem("bristlenose-feedback-draft") || "{}").message ?? "";
-    expect(shown + stored).toContain("one more thing I typed after");
+    answer(new Error("network"));
+    await new Promise((r) => setTimeout(r, 0));
+    expect((screen.getByLabelText("Help us improve") as HTMLTextAreaElement).readOnly).toBe(false);
   });
 
   it("closes on Escape and the close button, never on a click on the backdrop", () => {

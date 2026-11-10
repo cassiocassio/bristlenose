@@ -90,9 +90,9 @@ macOS with Homebrew installed and its prefix writable, offers to run
 \fBbrew install ffmpeg\fR (default: \fBn\fR; an explicit \fBy\fR is required
 before any system mutation).
 .IP \(bu 4
-\fBAPI-key validation\fR \(em for Anthropic / OpenAI providers, runs a paid
-single-token \fI/messages\fR call (\(ti$0.0001) to verify the key works and
-has billing balance, before any transcription begins. Result cached for
+\fBAPI-key validation\fR \(em for a cloud provider, runs a paid single-token
+call (\(ti$0.0001) to verify the key works and has billing balance, before any
+transcription begins. Result cached for
 24 hours per provider in the state file (see \fBFILES\fR). Set
 \fBBRISTLENOSE_SKIP_PREFLIGHT=1\fR to skip.
 .IP \(bu 4

@@ -66,7 +66,7 @@ import type {
 import { TAPESTRY_GUTTER, fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
 import { screenInk } from "../utils/sceneInk";
 import { TapestryPreview } from "../components/TapestryPreview";
-import { mergeTapestry } from "../utils/tapestryMerge";
+import { mergeTapestry, withoutStripState } from "../utils/tapestryMerge";
 import { diagnosticsEnabled } from "../utils/diagnostics";
 import { momentPlace, placeProps, sessionPlace } from "../utils/contextPlace";
 import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
@@ -284,9 +284,15 @@ export function SessionsTable({
           // The export has no server to finish the job, so it never polls its own embedded answer.
           if (json.strips_pending && !isExportMode() && attempt < STRIP_POLL_LIMIT) {
             stripPoll = setTimeout(() => fetchTapestry(attempt + 1), stripPollDelay(attempt));
+          } else {
+            // Not polling again: a "working" mark from this answer would never clear.
+            setTapestry(withoutStripState);
           }
         })
-        .catch((err) => console.warn("SessionsTable: /tapestry failed; no timelines", err));
+        .catch((err) => {
+          console.warn("SessionsTable: /tapestry failed; no timelines", err);
+          if (!cancelled) setTapestry(withoutStripState);
+        });
     };
     fetchTapestry(0);
 

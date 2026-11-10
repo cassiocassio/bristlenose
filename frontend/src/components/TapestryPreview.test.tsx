@@ -77,3 +77,23 @@ describe("TapestryPreview", () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe("TapestryPreview working state", () => {
+  const props = { width: 700, isTeam, onToggle: () => {} };
+
+  it("sweeps over the track while serve is drawing this session's strip", () => {
+    render(<TapestryPreview session={{ ...session, strip_state: "working" }} {...props} />);
+    const el = document.querySelector<HTMLElement>('[data-testid="tapestry-preview-working"]')!;
+    expect(el).toHaveClass("is-working");
+    expect(el.style.left).toBe("82px");
+    expect(el.style.width).toBe("604px"); // 700 − gutter 82 − right 14
+  });
+
+  it("shows nothing for a queued session or one with no pending work", () => {
+    for (const strip_state of ["queued", null, undefined] as const) {
+      const { unmount } = render(<TapestryPreview session={{ ...session, strip_state }} {...props} />);
+      expect(document.querySelector('[data-testid="tapestry-preview-working"]')).toBeNull();
+      unmount();
+    }
+  });
+});

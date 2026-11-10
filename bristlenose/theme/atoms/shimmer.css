@@ -66,3 +66,32 @@
     66.67% { background-position: 0% 50%; }
     100%   { background-position: 0% 50%; }
 }
+
+/* Block shimmer — `.is-working` on a box (docs/design-motion.md §4.7.2). The text clip does
+   not apply to a box, so the sweep is a translucent ink tint laid over whatever fill the element
+   already has: a ghost shape and a plain box share one rule. Same timing and the same two gates
+   as the text shimmer. Contrast is --bn-skeleton-peak; a small shape (a few px of area) sets
+   --bn-skeleton-peak: var(--bn-skeleton-peak-small). Give neighbours an independent
+   --bn-skeleton-phase (a negative delay) so they read as individual organisms, not a strobe. */
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .is-working {
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            transparent 0%,
+            transparent calc(50% - var(--bn-shimmer-band) / 6),
+            var(--bn-skeleton-peak) 50%,
+            transparent calc(50% + var(--bn-shimmer-band) / 6),
+            transparent 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        animation: bn-block-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+        animation-delay: var(--bn-skeleton-phase, 0ms);
+    }
+}
+
+@keyframes bn-block-shimmer {
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}

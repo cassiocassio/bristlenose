@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -113,6 +114,10 @@ class TapestrySession(BaseModel):
     #: Identifies the hover thumbnail's frames when they are ready and current; null otherwise.
     #: A new key means new frames (the turns moved), so the grid caches by it.
     frames_key: str | None = None
+    #: While serve's background job is running and still owes this session its strip or frames:
+    #: "working" for the one session the job is on (it goes in session order, one at a time),
+    #: "queued" for those behind it. Null otherwise, and always for a session with no video.
+    strip_state: Literal["working", "queued"] | None = None
 
 
 class TapestryResponse(BaseModel):
@@ -256,6 +261,7 @@ def get_tapestry(
         # since gone would otherwise ask for one on every poll, and the pass could never answer.
         with_video = set(video_sessions(db)) if job is not None else set()
         result = []
+        owed_ids: list[str] = []
         for sess in sessions:
             colours = _scene_colours(out_dir, sess.session_id)
             spans = session_turns(sess, slots)
@@ -264,12 +270,15 @@ def get_tapestry(
             frames_key, owed = (frames_state(out_dir, sess.session_id, participant_turns(spans))
                                 if out_dir is not None else (None, False))
             frames_owed = frames_owed or (owed and sess.session_id in with_video)
+            strip = _scene_strip(out_dir, sess.session_id)
+            if sess.session_id in with_video and (strip is None or owed):
+                owed_ids.append(sess.session_id)
             sq = sorted(by_session.get(sess.session_id, []), key=lambda q: q.start_timecode)
             result.append(TapestrySession(
                 session_id=sess.session_id,
                 duration_seconds=sess.duration_seconds,
                 turns=turns,
-                strip=_scene_strip(out_dir, sess.session_id),
+                strip=strip,
                 frames_key=frames_key,
                 sections=section_visits([(q.start_timecode, section_of.get(q.id)) for q in sq]),
                 quotes=[TapestryQuote(
@@ -284,6 +293,9 @@ def get_tapestry(
         if frames_owed and job is not None and not strips_pending:
             job.start()
             strips_pending = bool(job.running)
+        if strips_pending:
+            for k, ts in enumerate(r for r in result if r.session_id in owed_ids):
+                ts.strip_state = "working" if k == 0 else "queued"
         return TapestryResponse(sessions=result, strips_pending=strips_pending)
     finally:
         db.close()

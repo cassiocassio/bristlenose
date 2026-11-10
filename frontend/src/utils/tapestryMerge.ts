@@ -13,8 +13,8 @@
 
 import type { TapestrySession } from "./types";
 
-type Layers = Pick<TapestrySession, "turns" | "sections" | "quotes" | "strip" | "frames_key">;
-const LAYERS: (keyof Layers)[] = ["turns", "sections", "quotes", "strip", "frames_key"];
+type Layers = Pick<TapestrySession, "turns" | "sections" | "quotes" | "strip" | "frames_key" | "strip_state">;
+const LAYERS: (keyof Layers)[] = ["turns", "sections", "quotes", "strip", "frames_key", "strip_state"];
 
 // A held layer is compared on every poll and never changes, so its serialisation is
 // kept: a strip carries a data-URL image, and idle polls should cost next to nothing.
@@ -29,6 +29,20 @@ function text(v: unknown): string {
   return s;
 }
 const same = (a: unknown, b: unknown) => a === b || text(a) === text(b);
+
+/**
+ * The same sessions with the "working" and "queued" marks cleared. Called when the strip poll
+ * gives up (its limit, or a failed request): the last answer's mark would otherwise sweep until
+ * the reader reloads. A session with no mark keeps its object.
+ */
+export function withoutStripState(
+  prev: Record<string, TapestrySession> | null,
+): Record<string, TapestrySession> | null {
+  if (!prev || !Object.values(prev).some((ts) => ts.strip_state)) return prev;
+  return Object.fromEntries(
+    Object.entries(prev).map(([sid, ts]) => [sid, ts.strip_state ? { ...ts, strip_state: null } : ts]),
+  );
+}
 
 export function mergeTapestry(
   prev: Record<string, TapestrySession> | null,

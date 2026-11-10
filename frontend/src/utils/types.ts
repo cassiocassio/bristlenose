@@ -790,6 +790,9 @@ export interface TapestrySession {
   /** Names the hover thumbnail's frames when they are ready and current; null otherwise. A new
    *  key means new frames (the turns moved). Fetch them from `/sessions/{id}/turn-frames`. */
   frames_key?: string | null;
+  /** While serve's background job still owes this session its strip or frames: "working" for the
+   *  session the job is on, "queued" for those behind it. Null/absent otherwise. */
+  strip_state?: "working" | "queued" | null;
 }
 
 /** One frame of the participant's screen, for the tapestry's hover thumbnail

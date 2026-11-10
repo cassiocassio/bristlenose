@@ -320,3 +320,49 @@ class TestWiring:
         data = client.get("/api/projects/1/tapestry").json()
         assert data["strips_pending"] is False
         assert data["sessions"][0]["strip"] == {"fps": 4, "n": 2, "t0": 0.0, "png": "data:image/png;base64,AA==", "edges": [1.0]}
+
+    def test_a_session_owed_its_strip_is_working_only_while_the_job_runs(self, project):
+        app = _app(project)
+        _give_s1_a_video(app, project)
+        ex = _Extractor(hold=True)
+        app.state.scene_strips = _job(app, project, ex)
+        client = AuthTestClient(app)
+        assert client.get("/api/projects/1/tapestry").json()["sessions"][0]["strip_state"] is None
+        app.state.scene_strips.start()
+        assert ex.started.wait(5)
+        assert client.get("/api/projects/1/tapestry").json()["sessions"][0]["strip_state"] == "working"
+        ex.release.set()
+        assert ex.done.wait(5)
+        for _ in range(50):
+            if not app.state.scene_strips.running:
+                break
+            threading.Event().wait(0.02)
+        assert client.get("/api/projects/1/tapestry").json()["sessions"][0]["strip_state"] is None
+
+    def test_an_export_taken_while_the_job_runs_carries_no_working_mark(self, project):
+        """The exported file never polls, so a "working" mark in it would sweep for ever."""
+        import json
+
+        server = Path(sj.__file__).parent
+        if not ((server / "static" / "index.html").is_file()
+                and (server / "static-export" / "app.js").is_file()):
+            pytest.skip("frontend build not found")
+        app = _app(project)
+        _give_s1_a_video(app, project)
+        ex = _Extractor(hold=True)
+        app.state.scene_strips = _job(app, project, ex)
+        client = AuthTestClient(app)
+        app.state.scene_strips.start()
+        assert ex.started.wait(5)
+        # The live answer does say working, so the export test is not vacuous.
+        live = client.get("/api/projects/1/tapestry").json()
+        assert live["sessions"][0]["strip_state"] == "working"
+        html = client.get("/api/projects/1/export").text
+        marker = "window.BRISTLENOSE_EXPORT="
+        start = html.index(marker) + len(marker)
+        data = json.loads(html[start:html.index(";\n</script>", start)])
+        embedded = data["endpoints"]["/tapestry"]
+        assert embedded["strips_pending"] is False
+        assert all(s["strip_state"] is None for s in embedded["sessions"])
+        ex.release.set()
+        assert ex.done.wait(5)

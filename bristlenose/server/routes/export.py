@@ -521,6 +521,12 @@ def export_report(
         db.close()
     # The handler closes the session it is given.
     tapestry = _get_tapestry_handler(project_id, request, db=request.app.state.db_factory())
+    # An export taken while serve is still drawing the scene strips would otherwise embed a
+    # "working" mark. The file has no server to finish the job and never polls, so the sweep
+    # would run for ever (design-motion.md §4.7.2: nothing shimmers forever).
+    tapestry.strips_pending = False
+    for ts in tapestry.sessions:
+        ts.strip_state = None
 
     disc_db = request.app.state.db_factory()
     try:

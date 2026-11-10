@@ -330,6 +330,16 @@
     --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
     --bn-shimmer-easing: ease-in-out;
 
+    /* Block shimmer and ghost (docs/design-motion.md §4.7.2). Contrast follows area: slabs
+       (thumbnail, card) take a third of the text value; small shapes (sparkline bars, the
+       4.5px strip) take 8%, because a third-contrast sweep cannot be seen on so few pixels.
+       The peak is a translucent ink tint laid OVER the element's own fill. */
+    --bn-skeleton-base: var(--bn-colour-badge-bg);
+    --bn-skeleton-contrast: 2.7%;
+    --bn-skeleton-contrast-small: 8%;
+    --bn-skeleton-peak: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast), transparent);
+    --bn-skeleton-peak-small: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast-small), transparent);
+
     /* Legacy aliases — used by inline styles in generated HTML.
        Theme authors: override the --bn-* versions above;
        these aliases follow automatically. */

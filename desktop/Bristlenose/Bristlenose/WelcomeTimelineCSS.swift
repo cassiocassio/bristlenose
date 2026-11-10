@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–461 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–471 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -340,6 +340,16 @@ enum WelcomeTimelineCSS {
     --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
     --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
     --bn-shimmer-easing: ease-in-out;
+
+    /* Block shimmer and ghost (docs/design-motion.md §4.7.2). Contrast follows area: slabs
+       (thumbnail, card) take a third of the text value; small shapes (sparkline bars, the
+       4.5px strip) take 8%, because a third-contrast sweep cannot be seen on so few pixels.
+       The peak is a translucent ink tint laid OVER the element's own fill. */
+    --bn-skeleton-base: var(--bn-colour-badge-bg);
+    --bn-skeleton-contrast: 2.7%;
+    --bn-skeleton-contrast-small: 8%;
+    --bn-skeleton-peak: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast), transparent);
+    --bn-skeleton-peak-small: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast-small), transparent);
 
     /* Legacy aliases — used by inline styles in generated HTML.
        Theme authors: override the --bn-* versions above;
@@ -2008,7 +2018,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–429 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–439 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -2046,6 +2056,16 @@ body.hide-ai-tags .badge-ai { display: none; }
     transition: opacity var(--bn-transition-fast);
 }
 .bn-tapestry-preview-svg { display: block; overflow: visible; }
+/* Working on it now: a sweep over the strip's track while serve draws the scene strip and hover
+   frames (design-motion §4.7.2). The strip is a small shape, so the stronger peak. */
+.bn-tapestry-preview { position: relative; }
+.bn-tp-pv-working {
+    position: absolute;
+    top: 2px;
+    border-radius: 1.5px;
+    pointer-events: none;
+    --bn-skeleton-peak: var(--bn-skeleton-peak-small);
+}
 .bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill var(--bn-transition-fast); }
 .bn-tapestry-preview:hover .bn-tp-pv-track { fill: var(--bn-tp-preview-track-hover); }
 .bn-tp-pv-clips { opacity: var(--bn-tp-preview-opacity); }

@@ -65,6 +65,16 @@ Draw it instead: rasterise each candidate into a `<canvas>` at its **true** rend
 
 **And separate your variables.** If a proposal changes two things (asset *and* colour), show three panes — current, one variable moved, both moved — or the reviewer cannot tell which change did the work.
 
+### 7. A state vocabulary, a Sessions-grid frame, a generator (from `docs/mockups/loading-states.html`, 9 Nov 2026)
+
+- **Show one surface at several moments, not several surfaces in one state.** A state system is a state *machine*: draw the same grid mid-run, then after the run, then with one job working. Add a specimen table (rows = shapes, columns = states) first, so the vocabulary is on one page before it is applied.
+- **Put a sticky control bar in the chrome**: palette (default/edo), scheme (auto/light/dark) and, for anything that moves, **motion on/off** (sets `data-analysis-animation="off"` on `<html>`, the shipped gate). The static fallback must be reviewable beside the animated one. A system `prefers-reduced-motion` freezes the page whatever the toggle says: print a hidden-until-needed note saying so, or the reviewer thinks the shimmer is broken.
+- **Generate the page; commit the generator beside it** (`docs/mockups/<name>.gen.py`, precedent `detail-pane-states.gen.py`). It reads the theme files and the row markup from the tree and heads each block with its path and line range. **CI runs `ruff check .` over `docs/` on a py310 target**: no backslash inside an f-string expression (precompute the string), no `dict(...)` calls, no `%` formatting. Run `.venv/bin/ruff check` on the generator before saying done.
+- **A Sessions-grid frame needs a chosen width, and it decides the layout.** The grid is container-query driven (`organisms/sessions-grid.css`: 1285, 968, 900, 750, 700, 560, 480 px). Set the width on `.bn-session-table` itself, name it in the frame bar, and don't be surprised that below 1285 px duration and filename share a column (that is the shipped middle rung, not a bug). Anything drawn inside a row (a tapestry strip's SVG) must take the same width.
+- **Ground "how long is this on screen" in the code before drawing a placeholder.** The loading-states page found that thumbnails are only extracted at render and the strip job defers while a run is in progress, so a shimmer would have run for minutes. Add an evidence table, and say plainly what is unmeasured.
+- **Placeholders carry no words by default**; any sentence is new copy and goes to the decisions list, not into the frame.
+- **Driving it in the Browser pane:** the pane is about 800 px wide and `resize_window` clamps a larger request (1200 became 1024). `navigate` to a `file://` URL opens a *new tab id*; on a tall page use `find` then `scroll_to` with the ref, not scroll ticks; reset with `resize_window preset: desktop` when done. A `javascript_tool` probe of `getBoundingClientRect()` and `getComputedStyle().gridTemplateColumns` explains an unexpected layout faster than another screenshot.
+
 ## Self-contained + viewable
 
 Full standalone HTML doc (DOCTYPE/html/head/body) so it opens as `file://` and in `serve --dev`. No external font/CSS CDNs (inline everything). After writing, the file shows in the Browser pane; tell the user the path.

@@ -271,6 +271,7 @@ Every state transition in the UI falls into one of these **semantic categories**
 | L5 | **Activity chip spinner** | idle / spinning | Rotation | linear infinite | ⊘ Removed 18 Jul — replaced by the L7 thinking shimmer on the chip label |
 | L6 | **Word-level highlight** (karaoke) | inactive / active | Background highlight | Instant (perf) | ✓ Done |
 | L7 | **Thinking shimmer** (analysing) | idle / thinking | Single-hue brightness sweep on text | 2.7s (1.8s sweep + 0.9s gap) | ● Built 18 Jul — web activity chip (`atoms/shimmer.css`, verified) + native sidebar status line (`SidebarShimmerText.swift` hosted in `ProjectSidebarOutline`, pending Xcode build-verify) |
+| L8 | **Working block shimmer** (tapestry strip) | idle / working | Translucent ink sweep over the box | the L7 timing | ● Built 9 Nov 2026, awaiting the owner's look (`atoms/shimmer.css` `.is-working`) |
 
 ---
 
@@ -302,11 +303,40 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 
 **Multiple simultaneous shimmers** (rare — chip stack collapses 2+ jobs to one summary; the common concurrent case is two projects analysing): same *character*, **independent phase** — each instance a small random start-offset so they read as individual organisms, not one synchronized strobe. Phase-2, not needed for the single-shimmer common case.
 
+
+### 4.7.2 Loading states: done, working, will exist (mockup 9 Nov 2026 in `docs/mockups/loading-states.html`; partly built: the tapestry strip's working sweep and the skeleton tokens, awaiting the owner's look in the real app; the ghosts and every other surface are not built)
+
+The text shimmer above covers text that exists. This section covers everything else that is not there yet. Three states, one vocabulary across the report:
+
+| State | Visual | Motion |
+|---|---|---|
+| **Done** | the real thing | none |
+| **Working on it now** | the *same element as the ghost*, started: dotted outline gone, fill firmer, a sweep over it | the shimmer timing tokens, on at most a few elements |
+| **Will exist, not started** | a **ghost**: 1px dotted outline at low contrast plus a faint fill, in the shape and place the content will take | none, ever |
+
+**Rules**
+- **Working is the ghost, started.** Same box, same position, so nothing is swapped in and arrival never reflows. A box that has no ghost of its own (a Themes slot) takes a plain skeleton fill, which is the same thing without the outline.
+- **Text that exists keeps the text shimmer (§4.7.1).** Block shimmer is for boxes with nothing in them yet.
+- **Block shimmer reuses the text timing** (`--bn-shimmer-sweep/gap/period/easing/band/angle`, the same two gates: `prefers-reduced-motion: no-preference` and `data-analysis-animation != "off"`). It cannot reuse the text clip, so the sweep is a translucent ink tint laid over whatever fill the element has.
+- **Contrast follows area, in two tiers.** Slabs (thumbnail, card): **2.7%**, because a big area turns the same swing into a flash (the text shimmer's own contrast is 5%, the chip's 20%; 2.7 was tuned by eye, not derived from either). Small shapes (sparkline bars, the 4.5px strip): **8%**, because a third-contrast sweep is invisible on so few pixels. Tuned by eye against the mockup on 9 Nov.
+- **A ghost only for something we know will arrive** (probe-confirmed video; never audio-only or a cloud file not downloaded).
+- **Every placeholder has an exit.** Stop removes them all; failure resolves to the shipped fallback, never to removal; nothing shimmers forever.
+- **A ghost is not clickable, not focusable and hidden from assistive tech;** the waiting row carries `aria-busy`.
+- **No words by default.** The shape says "coming".
+- **Independent phase** per instance, as in the multiple-shimmers rule above; staggered across the bars of one chart so they read as a wave.
+- **A readable row is not a placeholder.** It shows its real content or today's fallback (the play box).
+
+**Tokens.** Shipped in `tokens.css` (and mirrored in `WelcomeTimelineCSS.swift`): `--bn-skeleton-base`, `--bn-skeleton-contrast` (2.7%), `--bn-skeleton-contrast-small` (8%) and the derived `--bn-skeleton-peak` / `--bn-skeleton-peak-small`. Mockup only, not yet in the theme: `--bn-ghost-line`, `--bn-ghost-outline`, `--bn-ghost-fill`. `--bn-skeleton-base` has no consumer yet, because the "fill firmer" rule for a working ghost was not ported with the sweep.
+
+**As built so far (9 Nov 2026, uncommitted, not yet judged live):** the sweep is `.is-working` and `@keyframes bn-block-shimmer` in `atoms/shimmer.css` (the mockup calls them `.bn-skeleton` and `bn-skeleton-sweep`; the shipped names are canonical). It is used on the tapestry's closed strip (`TapestryPreview.tsx`, `organisms/session-tapestry.css`). The server decides which strip is working: `strip_state` in `routes/tapestry.py` is `working` for the first owed video session and `queued` for the rest, only while the strip job runs. **Queued sessions show nothing**, an exception to the "will exist, not started" row, because the strip track is treated as real content and never gets a ghost.
+
+**Still open** (parked in `docs/design-loading-states-brief.md`): a plain progress line, the ghost line in Edo dark, the per-area failure and stopped rule, and strip decode time per hour of video.
+
 ---
 
 ## 5. Existing Animation Inventory
 
-### 5.1 Keyframe animations (22 total)
+### 5.1 Keyframe animations (30 in the theme at 10 Nov 2026; the table below lists the 22 inventoried earlier and has not been re-inventoried; `bn-block-shimmer` is the newest)
 
 **Sidebar (8) — `organisms/sidebar.css`:**
 
@@ -336,7 +366,7 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 | Animation | File | Category | Duration |
 |---|---|---|---|
 | `bn-glow-pulse` | `atoms/timecode.css` | Continuous | 2s infinite |
-| `autocode-spin` | `atoms/autocode-toast.css` | Continuous | 0.8s |
+| `autocode-spin` | `atoms/autocode-toast.css` | Continuous | 0.8s | _(dead CSS: the file is imported by nothing; see `design-notification-surfaces.md`)_
 | `chip-slide-in` | `atoms/activity-chip.css` | Appear | 0.2s |
 | `bn-thinking-shimmer` | `atoms/shimmer.css` | Continuous | 2.7s infinite (18 Jul — replaced `chip-spin`) |
 | `bracket-fade-in` | `molecules/editable-text.css` | Reveal | 0.15s |

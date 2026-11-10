@@ -35,6 +35,16 @@
     transition: opacity var(--bn-transition-fast);
 }
 .bn-tapestry-preview-svg { display: block; overflow: visible; }
+/* Working on it now: a sweep over the strip's track while serve draws the scene strip and hover
+   frames (design-motion §4.7.2). The strip is a small shape, so the stronger peak. */
+.bn-tapestry-preview { position: relative; }
+.bn-tp-pv-working {
+    position: absolute;
+    top: 2px;
+    border-radius: 1.5px;
+    pointer-events: none;
+    --bn-skeleton-peak: var(--bn-skeleton-peak-small);
+}
 .bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill var(--bn-transition-fast); }
 .bn-tapestry-preview:hover .bn-tp-pv-track { fill: var(--bn-tp-preview-track-hover); }
 .bn-tp-pv-clips { opacity: var(--bn-tp-preview-opacity); }

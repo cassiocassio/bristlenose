@@ -1,13 +1,19 @@
 ---
-status: Phases 0–5 built 12–13 Oct 2026 (unreleased); whole-feature review fixed 13 Oct (§5.7)
-last-trued: 2026-10-15
-trued-against: HEAD@main on 2026-10-15 for the Quotes grouping control and content sidebar; the rest as of 03e55462 on 2026-10-14, evening
+status: Phases 0–5 built 12–13 Oct 2026 (Phase 4 shipped in 0.38.0); whole-feature review fixed 13 Oct (§5.7). The 9 Nov 2026 amendments are partly built: the tapestry strip's working sweep and the opening-scale taper are; the waiting-row ghost is not
+last-trued: 2026-11-10
+trued-against: HEAD@main plus the uncommitted working tree on 2026-11-10 for §2's ghost amendment, §4.6 and §4.6.1; the rest as of 2026-10-15
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
 ---
 
 ## Changelog
 
+- _2026-11-10_ — trued up (scoped to the 9 Nov amendments): §2 and the Phase 1 note
+  now say the waiting-row ghost is **decided, not built** (they said "now shows"); the
+  tapestry strip's working sweep and `strip_state` are recorded as built; scene-colour
+  cost corrected from 1.5 s to about 4 s per hour (measured 4 Nov, decoded off the event
+  loop); §4.6's reference-implementation line, the §4.6.1 "four hours" and "3.7×" figures
+  (inputs named, re-measured), the fixed-0.25 claim and the gate-tests line corrected.
 - _2026-10-15_ — trued up (scoped to the Quotes grouping control): §2 Quotes and the
   Phase 2 as-built note record the 15 Oct move — the shipped split control, Sections &
   themes first, "Sessions" as the label, at the top of the content sidebar while it is
@@ -155,14 +161,17 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 | Waiting | exists; processing not begun | no `data-session`; `aria-disabled="true"` |
 
 - One shimmering row at a time — the row heading towards readable. Rows already
-  readable stay normal while their quotes are extracted.
+  readable stay normal while their quotes are extracted. (This and the Phase 1 gate
+  test count the text shimmer only; the tapestry's block shimmer `.is-working` is a
+  second, separate class, `design-motion.md` §4.7.2.)
 - **No shimmer** for a session that arrives with a platform transcript: it becomes
   readable almost at once.
 - The shimmer is the AI-working cue on the row's own text, `atoms/shimmer.css`
-  unchanged. Never a skeleton (that is a latency cue for page geometry, a different
-  signal).
+  unchanged. ~~Never a skeleton~~ _(amended 9 Nov 2026: the text shimmer stays for text
+  that exists; empty boxes follow the ghost-then-working vocabulary in
+  `design-motion.md` §4.7.2. A skeleton is no longer ruled out.)_
 - **Every true fact known at ingest is shown:** number, start, duration, filename,
-  in the shipped formats. **Facts not yet known stay empty.** The sparkline's "—"
+  in the shipped formats. **Facts not yet known stay empty** _(the 9 Nov brief proposes a ghost for the session-row cells instead: `design-loading-states-brief.md`; not built)_. The sparkline's "—"
   means *no quotes with a sentiment*, so it appears only once a session's quotes are
   back.
 - **Thumbnails:** a very subtle placeholder (the empty `.bn-video-thumb` box) only
@@ -170,6 +179,12 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
   on a 1.25 GB file; all ten FOSSDA frames in about 1.5 s after ingest). _Not built:
   thumbnails still come at render, and a waiting row shows no placeholder (Phase 1
   note); §7 item 3 is the open frame question._
+  _(Amended 9 Nov 2026, **decided, not built**: a **waiting** row will show a static
+  ghost in the thumbnail slot, and the thumbnail will be extracted in the readable
+  chain, so a readable row never needs one and keeps today's play box until the frame
+  lands. Today thumbnails still come at render and a waiting row shows nothing. Built
+  so far is only the tapestry strip's working sweep (the fifth-layer bullet below). See
+  `design-motion.md` §4.7.2.)_
 
 **Progress text**
 - Only in the window subtitle and the project's status line, from the shipped
@@ -201,7 +216,7 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 
 **Session tapestry**
 - The disclosure appears once a row is readable, and the tapestry arrives in
-  layers: **turns** with the transcript; **scene colours** about 1.5 s per hour of
+  layers: **turns** with the transcript; **scene colours** about 4 s per hour of
   video later; **sentiment marks** with that session's quotes; **section flags and
   theme spans** at the barrier. These are real turns, not a skeleton. (Under
   redaction there is no per-session chain, so scene colours arrive at the barrier.)
@@ -213,7 +228,10 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
   for the whole run** — the job will not start while the project's latest run is in
   progress, so under progressive a readable row has no strip until the barrier. The
   route says `strips_pending` and the grid polls it (§7 item 6 on whether to allow
-  the job alongside Whisper). Record: `experiments/session-tapestry/README.md`
+  the job alongside Whisper). Since 9 Nov 2026 it also says, per session,
+  `strip_state`: `working` for the first owed video session and `queued` for the
+  rest, only while the job runs. The closed strip shows a block shimmer sweep for
+  `working` and nothing for `queued` (`TapestryPreview.tsx`); it never gets a ghost. Record: `experiments/session-tapestry/README.md`
   § Scene stripes.
 - **Transcription diagnostics** (diagnostics preference only, 13 Oct 2026,
   `10430d7f`): each recording's transcription-quality record is written as Whisper
@@ -411,7 +429,7 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 > - **Steps 4, 5, 7, 8 partly deferred.** Thumbnails and scene colours stay at
 >   render; PII is not per session (so redacted runs are not progressive yet);
 >   `ingest-facts.json` records `has_video` by extension, not by the probed stream,
->   and the waiting row shows no thumbnail placeholder. Timing: the chain's wall
+>   and the waiting row shows no thumbnail placeholder _(decided 9 Nov 2026, not built: a waiting row will show a ghost)_. Timing: the chain's wall
 >   time is moved from transcription to speakers in the CLI lines and the Welford
 >   actuals. _(Both changed later: Phase 4 computes scene colours per session in the
 >   chain, and Phase 3 charges transcription only the time the chain held it up,
@@ -451,11 +469,12 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 3. **Participant codes are a sequential fold** (`assign_speaker_codes` threads
    `next_participant_number`). Session N's codes wait for N−1. Whisper already runs
    in session order, so this costs nothing on recorded projects.
-4. **Thumbnails per session**, grabbed right after ingest for probe-confirmed video,
+4. **Thumbnails per session** _(timing superseded by the 9 Nov §2 amendment: in the readable chain, not built)_, grabbed right after ingest for probe-confirmed video,
    at the 60 s fallback frame (§7: whether to swap in the transcript-chosen frame at
    readable). Today `extract_thumbnails` runs at render.
 5. **Scene colours per session** after its turns exist (`utils/scene_colour.py`,
-   ~1.5 s per hour of video). Today computed just before render. _(Built in Phase 4.)_
+   ~4 s per hour of video, measured 4 Nov 2026; decoded off the event loop in
+   `readable_chain.py`). Today computed just before render. _(Built in Phase 4.)_
 6. **Manifest, per session.** Today `write_manifest` runs at stage boundaries,
    `session_segments.json` is written once after all sessions (`pipeline.py`; made incremental by Phase 1), and
    merge and PII have no per-session records. Write the manifest after each session;
@@ -495,7 +514,7 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
     pointer and hover, through the grid's existing `[data-session]` rules.
 14. The processing row: `.bn-thinking-shimmer` on its filename span; base colour =
     the row's resting colour; contrast set for this surface (the web chip ships 20%).
-15. Speakers, sentiment and thumbnail render nothing until known.
+15. Speakers, sentiment and thumbnail render nothing until known. _(Proposed to change 9 Nov 2026 to ghosts; not built, see §2.)_
 16. Row treatment **A or B** (§7). If A: one rule, muted text on a row without
     `data-session`.
 17. The web nav's lens tabs follow `lenses` from the condition endpoint.
@@ -782,7 +801,7 @@ already anticipates. Independent of the UX; can land before or after phase 2.
    just before render, after clustering (`pipeline.py`, "Scene colour per speaker
    turn"), so under progressive the colour layer arrives at the barrier with the
    sections. §2's order needs it in the readable chain: it is keyed by video and
-   turn boundaries, about 1.5 s per hour of video, and both are known once a
+   turn boundaries, about 4 s per hour of video, and both are known once a
    session is readable.
 
 > **As built, 12 Oct 2026.**
@@ -813,7 +832,7 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 > - **Accepted:** a zoom saved before the change (sessionStorage, this tab) reopens at a
 >   different scale once, since both ends of the slider moved; double-click resets it.
 >   With two sessions more than about 7× apart the shorter is left out, which is the
->   rule as written (§4.6 step 1) even when it is not a test file. Option-click selects
+>   rule as written (§4.6 step 1) even when it is not a test file. _(Since 9 Nov 2026 a shorter session under 20 minutes is lifted instead of left out: §4.6.1.)_ Option-click selects
 >   by row state, the §2 rule, rather than by having a timeline (the same set today).
 
 #### 4.6 The opening scale
@@ -821,7 +840,7 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 Before Phase 4: `fitScale(longest, width) = clamp(longest / (width − 96), 1, 4)` s/px, from
 the longest *loaded* session, so an open timeline shrinks when a longer one arrives
 (FOSSDA at 1280 px: s1's timeline goes from 1000 to 691 px when s2 arrives). The
-new rule, fixed at ingest so it never moves:
+new rule, fixed at ingest so it never moves (**step 0, §4.6.1, runs before these**):
 
 1. **Leave out outliers either way:** sessions shorter than a quarter of the median
    or longer than 4× it. A minority must not set the scale for the rest; a majority
@@ -830,21 +849,24 @@ new rule, fixed at ingest so it never moves:
    white space on its right, and a single 5-minute first try fills the width.
 3. **Cap:** the longest that remain opens at no more than 4× the width; if the
    spread is wider, the cap wins and only the shortest show white space.
-4. The shipped **4 s/px ceiling** wins over everything (bites only below a ~220 px
-   table). The 1 s/px floor goes.
+4. The shipped **4 s/px ceiling** wins over everything. It binds when the shortest kept
+   session is longer than 4 × usable seconds (about an hour at a 1000 px table, 34
+   minutes at 600 px) or the longest kept is more than 16 × usable seconds, the cap
+   arm of step 3 (corrected 9 Nov 2026: this used to say "only below a ~220 px
+   table", which is wrong for hour-long projects). The 1 s/px floor goes.
 5. The slider's far end: `min(0.25, fit / 4)`, so there is always room to zoom in.
 
-The mockup's `fitShortest` is the reference implementation. Checked at a 1280 px
+The mockup's `fitShortest` is the reference implementation of steps 1–5; it has no step 0 (`tapestryScale.ts` is the source of truth, and `docs/mockups/tapestry-zoom-taper.html` draws step 0). Checked at a 1280 px
 window (906 px usable):
 
 | Project | Scale | Shortest | Longest |
 |---|---|---|---|
 | One 5-minute first try | 0.33 s/px | 1.00× | 1.00× |
-| One 5-min test + three 60-min | 3.97 s/px | 0.08× (left out) | 1.00× |
-| Mostly 5-min, one 40-min | 0.33 s/px | 1.00× | 8.00× (left out) |
+| One 5-min test + three 60-min | 3.97 s/px | 0.08× (lifted, §4.6.1) | 1.00× |
+| Mostly 5-min, one 40-min | 2.65 s/px | 0.13× (lifted) | 1.00× |
 | Homogeneous 20–60 min | 1.32 s/px | 1.00× | 3.00× |
 | FOSSDA | 1.65 s/px | 0.87× (cap wins) | 4.00× |
-| Rockclimbing | 0.08 s/px | 1.00× | 3.31× |
+| Rockclimbing | 0.28 s/px | 0.30× | 1.00× |
 
 Across windows (500 px to 1920 px) for projects of one length: wide and laptop
 windows fill with no white space from 5 to 60 minutes; at 1920 every length opens
@@ -857,7 +879,86 @@ ingest today (no media). Read it from the last cue's end time at ingest, which i
 so the scale is fixed from the first second; otherwise the scale moves once when those
 durations arrive (§7).
 
-Gate tests: the table above, as `tapestryScale` cases.
+Gate tests: the table above, as `tapestryScale` cases (`SessionTapestry.test.tsx`); the §4.6.1 weight, lift, quarter-median, workshop and continuity-sweep cases are in `frontend/src/utils/tapestryScale.test.ts`. Two rows were
+re-measured with §4.6.1 (9 Nov 2026): "Mostly 5-min, one 40-min" was 0.33 s/px with the 40-minute
+session 8.00× (left out), and Rockclimbing was 0.085 s/px with 3.31×; both now fit their longest.
+
+##### 4.6.1 Short sessions fade out of the scale (decided and built 9 Nov 2026)
+
+**The problem.** Step 1's median counts *sessions*. When short calls outnumber long ones, the
+median is a short call, the interviews are the "outliers", and each opens many screens wide:
+five 5-minute calls and four 30-minute interviews opened the interviews at six widths. The
+researcher's reading is the opposite: short calls are mostly tests, trials and abandoned
+starts, and the 30–60 minute sessions are the research. A project that is *all* short (twenty
+5-minute micro-interviews) is short by design, and everything in it should be visible.
+
+**The rule (step 0).** Before step 1, each known duration `d` is lifted towards the longest
+session `L` by how little it counts: `d′ = d + (1 − w)(L − d)`, with the weight `w` a straight
+line from 0 at 8 minutes or less to 1 at 20 minutes or more. `fitScale` then runs unchanged on
+the `d′` values; the real durations are what draw. Constants `SHORT_BAND_START = 8 min` and
+`SHORT_BAND_END = 20 min` in `tapestryScale.ts`.
+
+- **All short → fit the longest whole.** Everything is lifted to `L`, so the shortest "kept"
+  session *is* the longest. No second mechanism for "short projects show everything".
+- **Long project → nothing changes for the real sessions.** At or above 20 minutes `w = 1`.
+  The end sits under the shortest session called a real interview (the owner's cohorts run
+  from 24 minutes up), so ordinary 24–35 and 25–60 minute projects are untouched by
+  construction, and a workshop that is an outlier by the median stays one.
+- **A taper, not a threshold.** The owner's reasoning, a progressive-tax argument: a rule that
+  is "X below 5 minutes, Y above" does something odd at 4:59 and 5:01. A weight that changes
+  continuously means a call a minute longer or shorter moves the scale a little and never
+  flips it. Today's rule already has such a step (one session going from 14 to 15 minutes
+  beside four 60-minute sessions moved the opening scale 4.0× (3.97 → 0.99 s/px), the "shorter than a quarter of the median"
+  edge); the taper has none there. A test sweeps one session across the band and asserts the
+  step between neighbouring lengths stays small.
+- **Why 8 to 20.** The low end is where calls read as tests. The high end must stay under
+  24 minutes: a first try at 8–33 changed ordinary cohorts (a 25-minute interview was partly
+  discounted and opened at 74% of the table). A wider band is smoother, a narrower one
+  touches fewer real sessions; 8–20 touches none of the ones the owner calls typical.
+- **Known limits (code review, 9 Nov 2026).** (a) *A workshop captures the short calls.* They
+  are lifted to the longest session, outliers included. Three 5-minute tests, three 30-minute
+  interviews and a 3-hour workshop open at 4 s/px with the interviews at 0.5 of the table;
+  without the tests (three interviews plus the workshop) the interviews fit. The lift target
+  wants to be "the longest session that is not an outlier", but the obvious ways to say that
+  add a step (membership of a set) or fall back awkwardly when every session is short. Not
+  built, and **accepted by the owner (9 Nov 2026)**: the interviews at half the table are short
+  next to a workshop that cannot be shown whole, and the 5-minute tests still read as tiny.
+  Revisit only if real cohorts look wrong. (b) *The no-jump guarantee holds
+  only where step 1's quarter-of-the-median edge lies inside the band*, a median under about 80
+  minutes. With hour-and-a-half sessions the old edge is a cliff again (Still open (1), below). (c) The
+  band is in absolute minutes, so a project of 10-minute usability tasks is "all short" and
+  fits its longest session whole; that is the intent, but it is a researcher-facing judgement.
+- **Only durations decide who is short**, never the window width, so resizing cannot flip the
+  rule; the opening scale changes only when the set of recordings changes.
+
+| Project | Before | After |
+|---|---|---|
+| 43–70 min; 25–60 min; 24–35 min | unchanged | unchanged |
+| 1, 2, 3 and 14 min | the 14 opens 14 widths wide | the 14 fits, the small calls are slivers |
+| 20 × 5 min | fits | fits |
+| 5 × 5 + 4 × 30 min | the 30s are 6 widths | the 30s fit; the 5s open at 17% |
+| 18 × 5 + two 30s | 6 widths | the 30s fit |
+| four 60-min sessions + check-ins of 9, 10, 11 and 12 min | 0.99 s/px, hours 4 widths | 2.9 s/px, hours about 1.4 widths |
+| 3 × 30 min + a 3-hour workshop | workshop 6 widths | unchanged (it is an outlier) |
+| 8 × 10 min + a 3-hour workshop | workshop 18 widths | 4 s/px ceiling, 3 widths |
+
+Considered and set aside: a **time-weighted median** (no constant, but three 30-minute
+interviews plus one workshop put the median on the workshop and squash the interviews); a
+**hard floor** (a cliff at the floor: whether four 9–12 minute check-ins decide the scale
+flips on a one-minute change); a **minimum span** (the table shows at least F minutes; the
+lift gets the same result with one mechanism); a **blend of two scales** (a scale that fits
+neither candidate, harder to explain).
+
+**Still open (owner's list, 9 Nov 2026).** (1) Whether step 1's own edges, median / 4 and
+4 × median, should also taper: they are still hard steps. (2) Whether the 4 s/px ceiling is the
+right coarsest scale: at 4 s/px an hour is 900 px, and clips draw as slivers above 2.5 s/px
+(`CLIP_THRESHOLD`), so hour-long projects open as slivers. (3) The slider's far end, `min(0.25, fit / 4)`:
+0.25 s/px whenever the opening scale is 1 or more, which makes a 3-hour session 43,200 px wide. (4) The closed strip fills the row
+whatever the length, so it does not preview the open width. There is deliberately no zoom-out
+below the opening scale: typical 25–60 minute work is no fun to read squished, and editing
+software does not open showing the whole thing either. Mockups:
+`docs/mockups/tapestry-zoom-scale.html` (today's rule across mixes of lengths) and
+`docs/mockups/tapestry-zoom-taper.html` (today beside the taper, with sweeps).
 
 ### Phase 5 — Counts
 

@@ -1,4 +1,4 @@
-import { mergeTapestry } from "./tapestryMerge";
+import { mergeTapestry, withoutStripState } from "./tapestryMerge";
 import type { TapestrySession } from "./types";
 
 const session = (sid: string, quote = "I can't find the basket"): TapestrySession => ({
@@ -51,5 +51,25 @@ describe("mergeTapestry", () => {
     const got = mergeTapestry(prev, { s1: session("s1", "edited"), s3: session("s3") });
     expect(got.s1.quotes).not.toBe(prev.s1.quotes);
     expect(Object.keys(got)).toEqual(["s1", "s3"]);
+  });
+});
+
+describe("withoutStripState", () => {
+  it("clears working and queued, and keeps the sessions that had no mark", () => {
+    const prev = {
+      s1: { ...session("s1"), strip_state: "working" as const },
+      s2: { ...session("s2"), strip_state: "queued" as const },
+      s3: session("s3"),
+    };
+    const got = withoutStripState(prev)!;
+    expect(got.s1.strip_state).toBeNull();
+    expect(got.s2.strip_state).toBeNull();
+    expect(got.s3).toBe(prev.s3);
+  });
+
+  it("returns the same record when nothing was marked, so an idle call re-renders nothing", () => {
+    const prev = { s1: session("s1") };
+    expect(withoutStripState(prev)).toBe(prev);
+    expect(withoutStripState(null)).toBeNull();
   });
 });

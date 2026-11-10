@@ -80,6 +80,16 @@ export function TapestryPreview({ session, width, isTeam, onToggle }: Props) {
           </g>
         </g>
       </svg>
+      {/* Working on it now (docs/design-motion.md §4.7.2): serve is drawing this session's scene
+          strip and hover frames. A sweep over the track, never a ghost: the strip itself is real.
+          Queued sessions show nothing. Inert, and out of assistive technology with the strip. */}
+      {session.strip_state === "working" && (
+        <div
+          className="bn-tp-pv-working is-working"
+          data-testid="tapestry-preview-working"
+          style={{ left: TAPESTRY_GUTTER, width: usable, height: PREVIEW_H }}
+        />
+      )}
     </div>
   );
 }

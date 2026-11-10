@@ -284,6 +284,124 @@ _SPENT_MARKER = ".bristlenose-backup-spent"
 #: session cannot be read from disk (`settle`'s *produced*), only finished.
 _REPLACED_MARKER = ".bristlenose-backup-replaced"
 
+#: Written into the report just before `stash` sets it aside, so it moves with
+#: the tree: which Mac and which process set the report aside. Between the
+#: stash and the run's first event nothing else in the folder names an owner,
+#: and a run killed there left a backup every later start refused as
+#: unverifiable, for good (9 Nov 2026). Removed when the report is put back.
+_OWNER_MARKER = ".bristlenose-backup-owner"
+
+#: A set-aside with no owner note (a build before 10 Nov 2026) is taken as
+#: stranded once its folder has been quiet this long. A run that sets a report
+#: aside writes its own marker and first event within seconds.
+_QUIET_S = 600.0
+
+
+class SetAside(enum.Enum):
+    """Who holds a report set aside, read when nothing else names an owner.
+
+    Only meaningful when the output folder holds no run marker and no event:
+    the window between `stash` and the run's `run_started`, or a run killed
+    in it.
+    """
+
+    NONE = "none"  # no backup
+    LOCAL_LIVE = "local-live"  # this Mac, a live process: a run still starting
+    LOCAL_DEAD = "local-dead"  # this Mac, that process is gone: stranded here
+    FOREIGN = "foreign"  # another Mac set it aside
+    QUIET = "quiet"  # no note (an older build), and untouched for `_QUIET_S`
+    UNPROVEN = "unproven"  # no note, recent; or an unreadable note
+
+
+def _write_owner_note(tree: Path) -> Path | None:
+    from bristlenose.run_lifecycle import _ps_start_time
+    from bristlenose.utils.machine_identity import machine_id
+
+    payload = {
+        "machine_id": machine_id(),
+        "pid": os.getpid(),
+        "start_time": _ps_start_time(os.getpid()),
+    }
+    note = tree / _OWNER_MARKER
+    try:
+        fd = open_private(note, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+        try:
+            os.write(fd, json.dumps(payload).encode("utf-8"))
+        finally:
+            os.close(fd)
+    except OSError as exc:
+        # Costs only the instant recovery of a run killed before its first
+        # event: the quiet rule still recovers it.
+        logger.warning("output_backup: could not note who set %s aside (%s)", tree, exc)
+        return None
+    return note
+
+
+def _newest_change(*paths: Path) -> float | None:
+    times: list[float] = []
+    for path in paths:
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        times.append(max(st.st_mtime, st.st_ctime))
+    return max(times) if times else None
+
+
+def set_aside_owner(output_dir: Path) -> SetAside:
+    """Who set the report beside *output_dir* aside, as far as this Mac can tell."""
+    backup = backup_path_for(output_dir)
+    if not backup.is_dir():
+        return SetAside.NONE
+    note = backup / _OWNER_MARKER
+    if note.is_symlink():
+        return SetAside.UNPROVEN
+    try:
+        raw = note.read_bytes()
+    except FileNotFoundError:
+        # The rename sets the backup's ctime; the run writes into the new tree.
+        newest = _newest_change(
+            backup, output_dir, output_dir / ".bristlenose",
+            output_dir / ".bristlenose" / "bristlenose.log",
+        )
+        if newest is not None and time.time() - newest >= _QUIET_S:
+            return SetAside.QUIET
+        return SetAside.UNPROVEN
+    except OSError:
+        return SetAside.UNPROVEN
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, ValueError):
+        return SetAside.UNPROVEN
+    if not isinstance(data, dict):
+        return SetAside.UNPROVEN
+    from bristlenose.utils.machine_identity import machine_id
+
+    owner, local = data.get("machine_id"), machine_id()
+    if not isinstance(owner, str) or not owner or not local:
+        return SetAside.UNPROVEN
+    if owner != local:
+        return SetAside.FOREIGN
+    from bristlenose.run_lifecycle import _is_alive_owned
+
+    return SetAside.LOCAL_LIVE if _is_alive_owned(data) else SetAside.LOCAL_DEAD
+
+
+def _no_run_named(output_dir: Path) -> bool:
+    """The output folder holds no run marker and no event: nothing names an owner."""
+    from bristlenose.events import events_path
+    from bristlenose.run_lifecycle import pid_file_path
+
+    marker = pid_file_path(output_dir)
+    if marker.exists() or marker.is_symlink():
+        return False
+    try:
+        return not events_path(output_dir).read_bytes().strip()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+
 
 def _discarding_path(backup: Path) -> Path:
     """Where a spent backup goes to be deleted: never a path `reclaim_stale` reads.
@@ -399,9 +517,16 @@ def _stash(output_dir: Path, *, previous_backup_is_spent: bool) -> Path | None:
     if scratch.exists():
         shutil.rmtree(scratch, ignore_errors=True)
 
+    # Before the rename, so the note and the report move as one.
+    note = _write_owner_note(output_dir)
     try:
         output_dir.rename(backup)
-    except OSError as exc:
+    except BaseException as exc:
+        if note is not None:
+            with contextlib.suppress(OSError):
+                note.unlink()
+        if not isinstance(exc, OSError):
+            raise
         logger.warning(
             "output_backup: could not stash %s (%s); leaving it in place", output_dir, exc
         )
@@ -491,6 +616,9 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
             moved_failed = True
 
         backup.rename(output_dir)
+        # The report is back, so nothing is set aside: its owner note goes.
+        with contextlib.suppress(OSError):
+            (output_dir / _OWNER_MARKER).unlink()
     except OSError as exc:
         logger.error(
             "output_backup: restore of %s FAILED (%s). The report is at %s%s",
@@ -819,7 +947,11 @@ def _reclaim_stale(output_dir: Path) -> RestoreOutcome:
         _drop_tree(backup, exports_to=output_dir)
         return RestoreOutcome.NOTHING_TO_DO
 
-    if project_is_locked(output_dir):
+    if project_is_locked(output_dir) or (
+        set_aside_owner(output_dir) is SetAside.LOCAL_LIVE and _no_run_named(output_dir)
+    ):
+        # The second: a run on this Mac that set the report aside and has not
+        # yet written its marker. Putting the report back would land under it.
         logger.warning(
             "output_backup: a live run owns %s — leaving the backup at %s alone",
             output_dir,
@@ -866,19 +998,22 @@ def reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
     reclaimed would put the old report back under a run that is about to
     write into it.
 
-    So it reclaims in one shape only: the output folder's latest run is
+    So it reclaims in two shapes. The output folder's latest run is
     **stranded** — it started, wrote no terminus, and its PID file names no
     live process, and a matching run marker proves it started on this machine.
-    A foreign or unknown owner (including old markers) is left untouched.
-    That is the only shape we can safely treat as a SIGKILL here.
+    Or no run has written a marker or an event since the report was set aside,
+    and the backup's owner note names this Mac and a process that is gone, or
+    (a backup from a build without the note) nothing has touched it for
+    `_QUIET_S`. A foreign or unknown owner (including old markers) is left
+    untouched.
 
-    An **absent** output folder is not that shape, though it looks like a
-    crash: it is also a run's first instant, between its rename and its first
-    write, and on 12 Oct 2026 the app started a run and a server within the
-    same second (``tests/test_lifecycle_scenarios.py``,
-    ``server-restarted-mid-reanalyse``). A folder holding a log and no
-    `run_started` is the rest of the start-up window. A failed run's in-process
-    restore already had its chance. All three are left for the next `run`.
+    The second shape is the start-up window itself: an **absent** output
+    folder, or one holding a log and no `run_started`. On 12 Oct 2026 the app
+    started a run and a server within the same second
+    (``tests/test_lifecycle_scenarios.py``, ``server-restarted-mid-reanalyse``),
+    which is why only a dead owner, never a quiet second, opens it. Before the
+    note, a run killed in that window left a backup every later start refused,
+    for good (9 Nov 2026).
     """
     with _settling(output_dir):
         return _reclaim_after_crash(output_dir)
@@ -892,6 +1027,17 @@ def _reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
     from bristlenose.run_condition import RunStateEnum, read_condition
 
     latest = read_condition(output_dir).latest if output_dir.exists() else None
+    if latest is None and _no_run_named(output_dir):
+        # Set aside, and no run has written a word since: a run still starting,
+        # or one killed before its first event. Only the owner note or a long
+        # quiet tells them apart (`set_aside_owner`).
+        if set_aside_owner(output_dir) in (SetAside.LOCAL_DEAD, SetAside.QUIET):
+            logger.warning("output_backup: %s was set aside by a run that never "
+                           "started — putting it back", backup)
+            return _reclaim_stale(output_dir)
+        logger.info("output_backup: %s is set aside by a run still starting, or by "
+                    "one this Mac cannot name — leaving it", output_dir)
+        return RestoreOutcome.NOTHING_TO_DO
     if latest is None or latest.state is not RunStateEnum.STRANDED:
         logger.info(
             "output_backup: %s has a backup but no crashed run — leaving it for the "

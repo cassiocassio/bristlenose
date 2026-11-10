@@ -17,7 +17,7 @@ from bristlenose.events import (
     events_path,
 )
 from bristlenose.run_lifecycle import pid_file_path
-from bristlenose.utils.output_backup import backup_path_for
+from bristlenose.utils.output_backup import _OWNER_MARKER, backup_path_for
 from bristlenose.utils.study_startup import StartupRefusal, startup_refusal
 
 
@@ -164,6 +164,100 @@ def test_reanalysis_startup_gap_is_not_a_clean_start(tmp_path, new_output_exists
     before = tree(tmp_path)
     assert startup_refusal(out) is StartupRefusal.UNVERIFIED_UNFINISHED
     assert tree(tmp_path) == before
+
+
+
+def _set_aside(out: Path, *, owner: str | None, alive: bool = False) -> None:
+    """A report set aside and nothing written since: a run starting, or killed."""
+    import os
+
+    from bristlenose.run_lifecycle import _ps_start_time
+
+    backup = backup_path_for(out)
+    backup.mkdir(parents=True)
+    (backup / "old-report.html").write_text("saved", encoding="utf-8")
+    if owner is not None:
+        (backup / _OWNER_MARKER).write_text(json.dumps({
+            "machine_id": owner, "pid": os.getpid(),
+            "start_time": _ps_start_time(os.getpid()) if alive else "dead",
+        }), encoding="utf-8")
+
+
+@pytest.fixture
+def this_mac(monkeypatch):
+    monkeypatch.setattr("bristlenose.utils.machine_identity.machine_id", lambda: "local")
+
+
+@pytest.mark.parametrize("alive", [True, False])
+def test_a_set_aside_this_mac_owns_is_the_ordinary_flow(tmp_path, this_mac, alive):
+    """Still starting, or killed before its first event: never "unverified"."""
+    out = tmp_path / "output"
+    _set_aside(out, owner="local", alive=alive)
+    assert startup_refusal(out) is None
+
+
+def test_a_set_aside_by_another_mac_says_so(tmp_path, this_mac):
+    out = tmp_path / "output"
+    _set_aside(out, owner="other-mac", alive=True)
+    before = tree(tmp_path)
+    assert startup_refusal(out) is StartupRefusal.FOREIGN_UNFINISHED
+    assert tree(tmp_path) == before
+
+
+def test_a_quiet_set_aside_from_an_older_build_is_the_ordinary_flow(tmp_path, monkeypatch):
+    out = tmp_path / "output"
+    _set_aside(out, owner=None)
+    monkeypatch.setattr("bristlenose.utils.output_backup._QUIET_S", 0.0)
+    assert startup_refusal(out) is None
+
+
+def test_an_unreadable_owner_note_refuses(tmp_path, this_mac):
+    out = tmp_path / "output"
+    _set_aside(out, owner=None)
+    (backup_path_for(out) / _OWNER_MARKER).write_text("{broken", encoding="utf-8")
+    assert startup_refusal(out) is StartupRefusal.UNVERIFIED_UNFINISHED
+
+
+@pytest.mark.parametrize("owner,alive,restored", [
+    ("local", False, True),  # killed before its first event: put back at once
+    ("local", True, False),  # a run still starting: never under it
+    ("other-mac", False, False),  # another Mac's, whatever its pid says here
+])
+def test_the_servers_reclaim_reads_the_owner_note(tmp_path, this_mac, owner, alive, restored):
+    from bristlenose.utils import output_backup
+
+    out = tmp_path / "output"
+    _set_aside(out, owner=owner, alive=alive)
+    outcome = output_backup.reclaim_after_crash(out)
+    assert (outcome is output_backup.RestoreOutcome.RESTORED) is restored
+    assert backup_path_for(out).exists() is not restored
+    if restored:
+        assert (out / "old-report.html").read_text(encoding="utf-8") == "saved"
+        assert not (out / _OWNER_MARKER).exists(), "the note outlived the set-aside"
+
+
+def test_the_next_run_leaves_a_run_still_starting_alone(tmp_path, this_mac):
+    from bristlenose.utils import output_backup
+
+    out = tmp_path / "output"
+    _set_aside(out, owner="local", alive=True)
+    assert output_backup.reclaim_stale(out) is output_backup.RestoreOutcome.NOTHING_TO_DO
+    assert backup_path_for(out).exists()
+
+
+def test_the_stash_writes_the_note_and_the_restore_removes_it(tmp_path, this_mac):
+    from bristlenose.utils import output_backup
+
+    out = tmp_path / "output"
+    out.mkdir()
+    (out / "report.html").write_text("r", encoding="utf-8")
+    backup = output_backup.stash(out)
+    assert backup is not None
+    note = json.loads((backup / _OWNER_MARKER).read_text(encoding="utf-8"))
+    assert note["machine_id"] == "local"
+    assert output_backup.set_aside_owner(out) is output_backup.SetAside.LOCAL_LIVE
+    assert output_backup.restore(backup, out).report_is_back
+    assert sorted(p.name for p in out.iterdir()) == ["report.html"]
 
 
 def test_terminated_run_with_no_marker_uses_ordinary_flow(tmp_path):

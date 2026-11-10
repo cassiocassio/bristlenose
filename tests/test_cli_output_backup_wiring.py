@@ -338,6 +338,79 @@ class TestCrashRecovery:
                           for p in input_dir.rglob("*") if p.is_file()}
 
 
+class TestTheWindowBeforeTheRunStarts:
+    """Between the stash and the run's first event nothing names an owner.
+
+    A Stop or a Quit landing there, while the pipeline was imported and built,
+    ended the run before its `try` with the report set aside, and every later
+    start refused the study as unverifiable (9 Nov 2026).
+    """
+
+    def test_an_interrupt_before_the_pipeline_is_built_puts_the_report_back(
+        self, cli_to_pipeline, tmp_path: Path, monkeypatch
+    ) -> None:
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "good")
+
+        def _stopped(*a, **k):
+            assert output_backup.backup_path_for(out_dir).exists(), "not yet set aside"
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr("bristlenose.cli._build_estimator", _stopped)
+
+        cli_to_pipeline.invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
+
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good"
+        assert not output_backup.backup_path_for(out_dir).exists()
+
+    def test_the_apps_sigterm_is_handled_from_the_stash_on(
+        self, cli_to_pipeline, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Unhandled, SIGTERM ends the process with no `finally` at all."""
+        import signal
+
+        from bristlenose.run_lifecycle import _signal_handler
+
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "good")
+        seen: dict[str, object] = {}
+
+        def _look(*a, **k):
+            seen["handler"] = signal.getsignal(signal.SIGTERM)
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr("bristlenose.cli._build_estimator", _look)
+
+        cli_to_pipeline.invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
+
+        assert seen["handler"] is _signal_handler
+
+    def test_a_run_killed_in_the_window_does_not_lock_the_study(
+        self, cli_to_pipeline, tmp_path: Path, monkeypatch
+    ) -> None:
+        """A SIGKILL there leaves the backup, its owner note naming a dead process."""
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "good")
+        assert output_backup.stash(out_dir) is not None
+        note = output_backup.backup_path_for(out_dir) / output_backup._OWNER_MARKER
+        owner = json.loads(note.read_text(encoding="utf-8"))
+        note.write_text(json.dumps({**owner, "start_time": "fixture-dead"}), encoding="utf-8")
+
+        async def _record(_self, _in, out, *a, **k):
+            _seed_report(Path(out), "new")
+            return _Result()
+
+        monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _record)
+
+        _run(cli_to_pipeline, input_dir)
+
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "new"
+        assert not output_backup.backup_path_for(out_dir).exists()
+
+
 @pytest.fixture
 def windows_rename(monkeypatch):
     """``Path.rename`` as Windows does it: refused while a file inside is open.

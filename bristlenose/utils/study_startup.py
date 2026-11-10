@@ -14,7 +14,7 @@ from bristlenose.events import _parse_event_line, events_path
 from bristlenose.run_condition import RunStateEnum, read_condition, reduce_lines
 from bristlenose.run_lifecycle import _read_pid_file, pid_file_path
 from bristlenose.utils.machine_identity import has_unsafe_display_character, machine_id
-from bristlenose.utils.output_backup import backup_path_for
+from bristlenose.utils.output_backup import SetAside, set_aside_owner
 
 # Native must distinguish a refusal even when pipe output has not drained.
 STUDY_STARTUP_REFUSAL_EXIT_CODE = 75
@@ -64,12 +64,16 @@ def startup_refusal(output_dir: Path) -> StartupRefusal | None:
             # Empty/new folders are normal. Nonempty but uninterpretable
             # history or an orphan marker is not evidence of a clean study.
             nonempty_history = bool(raw_history.strip())
-            try:
-                backup_path_for(output_dir).stat()
-                backup_present = True
-            except FileNotFoundError:
-                backup_present = False
-            return unknown if marker_present or nonempty_history or backup_present else None
+            if marker_present or nonempty_history:
+                return unknown
+            # A report set aside and no run named since: the owner note says
+            # whose (`set_aside_owner`). This Mac's, live or dead, is the
+            # ordinary flow: a run still starting, or one the reclaim after
+            # this puts back. Refusing it locked a study for good (9 Nov 2026).
+            set_aside = set_aside_owner(output_dir)
+            if set_aside is SetAside.FOREIGN:
+                return StartupRefusal.FOREIGN_UNFINISHED
+            return unknown if set_aside is SetAside.UNPROVEN else None
         if marker_present and (marker is None or marker.get("run_id") != latest.run_id):
             return unknown
         if latest.state not in {RunStateEnum.IN_PROGRESS, RunStateEnum.STRANDED}:

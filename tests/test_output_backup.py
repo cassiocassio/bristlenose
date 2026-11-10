@@ -408,6 +408,8 @@ class TestSettle:
         _make_report(out, marker="report", events="r1\n")
         output_backup.stash(out)
         _make_report(output_backup.failed_path_for(out), marker="attempt", events="a1\n")
+        # Killed: the process the owner note names is gone.
+        (output_backup.backup_path_for(out) / output_backup._OWNER_MARKER).unlink()
 
         assert output_backup.reclaim_stale(out) is RestoreOutcome.RESTORED
 

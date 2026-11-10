@@ -1717,72 +1717,84 @@ def run(
     # (docs/sidecar-transcription-crash.md). The backup is discarded once the run
     # succeeds, and restored if it doesn't. See utils/output_backup.py.
     output_stash: Path | None = None
+    run_produced_a_report = False
     if output_exists and clean:
-        # The log file is open inside output_dir, and Windows will not rename a
-        # folder with an open file in it — the stash failed there every time.
-        from bristlenose.logging import release_log_file
+        # From the stash on, a Stop or a Quit must reach the `finally` below,
+        # which puts the report back. Unhandled, the app's SIGTERM ended the
+        # process there with the report set aside, and the next start refused
+        # the study (9 Nov 2026). `run_lifecycle` installs the same handlers
+        # later; installing is idempotent.
+        from bristlenose.run_lifecycle import _install_signal_handlers
 
-        release_log_file()
-        # A Re-analyse resets the analysis, not the study: the id the output
-        # folder carries crosses into the new output (design-project-identity.md §8).
-        from bristlenose import study_marker
-        from bristlenose.session_registry import starts_by_content, write_carried_starts
+        _install_signal_handlers()
+    # The try opens before the stash, not after the pipeline is built: an
+    # interrupt between the two once left the report set aside with no run
+    # to name its owner (9 Nov 2026).
+    try:
+        if output_exists and clean:
+            # The log file is open inside output_dir, and Windows will not rename a
+            # folder with an open file in it — the stash failed there every time.
+            from bristlenose.logging import release_log_file
 
-        study_id = study_marker.read(output_dir)
-        study_copied_from = study_marker.copied_from(output_dir)
-        carried_starts = starts_by_content(output_dir)
-        output_stash = output_backup.stash(
-            output_dir, previous_backup_is_spent=_reclaim.report_is_back
-        )
-        setup_logging(output_dir=output_dir, verbose=verbose)
-        if output_stash is not None:
-            # Outside the run's try/finally, so it must not raise: a failure
-            # here would end the run before it starts with the report set
-            # aside. A lost carry costs a re-minted id or a worse start.
-            try:
-                if study_id is not None:
-                    study_marker.write(
-                        output_dir, study_id, minted_by="run", copied_from=study_copied_from
+            release_log_file()
+            # A Re-analyse resets the analysis, not the study: the id the output
+            # folder carries crosses into the new output (design-project-identity.md §8).
+            from bristlenose import study_marker
+            from bristlenose.session_registry import starts_by_content, write_carried_starts
+
+            study_id = study_marker.read(output_dir)
+            study_copied_from = study_marker.copied_from(output_dir)
+            carried_starts = starts_by_content(output_dir)
+            output_stash = output_backup.stash(
+                output_dir, previous_backup_is_spent=_reclaim.report_is_back
+            )
+            setup_logging(output_dir=output_dir, verbose=verbose)
+            if output_stash is not None:
+                # Must not raise: a failure here would end the run before it
+                # starts, for a carry whose loss costs only a re-minted id or a
+                # worse start.
+                try:
+                    if study_id is not None:
+                        study_marker.write(
+                            output_dir, study_id, minted_by="run", copied_from=study_copied_from
+                        )
+                    write_carried_starts(output_dir, carried_starts)
+                except OSError as exc:
+                    import logging
+
+                    logging.getLogger("bristlenose").warning(
+                        "could not carry the study id or start times into the new output: %s", exc
                     )
-                write_carried_starts(output_dir, carried_starts)
-            except OSError as exc:
-                import logging
-
-                logging.getLogger("bristlenose").warning(
-                    "could not carry the study id or start times into the new output: %s", exc
+            if output_stash is not None:
+                console.print(f"\n[dim]Cleaned {_text(output_dir)}[/dim]")
+            else:
+                # `stash` returns None when the move failed (cross-device,
+                # permissions) and deliberately does NOT fall back to deleting. The
+                # run then writes over the previous output, so saying "Cleaned"
+                # would be the opposite of what happened.
+                console.print(
+                    f"\n[dim]Could not set {_text(output_dir)} aside — "
+                    f"this run will write over it[/dim]"
                 )
         if output_stash is not None:
-            console.print(f"\n[dim]Cleaned {_text(output_dir)}[/dim]")
-        else:
-            # `stash` returns None when the move failed (cross-device,
-            # permissions) and deliberately does NOT fall back to deleting. The
-            # run then writes over the previous output, so saying "Cleaned"
-            # would be the opposite of what happened.
-            console.print(
-                f"\n[dim]Could not set {_text(output_dir)} aside — "
-                f"this run will write over it[/dim]"
-            )
-    if output_stash is not None:
-        from bristlenose.run_lifecycle import set_backstop_settle
+            from bristlenose.run_lifecycle import set_backstop_settle
 
-        _set_aside = output_stash
-        # A hosted Stop whose unwind sticks is ended by a backstop that would
-        # otherwise exit with the report still set aside (#29).
-        set_backstop_settle(lambda: output_backup.settle(_set_aside, output_dir))
+            _set_aside = output_stash
+            # A hosted Stop whose unwind sticks is ended by a backstop that would
+            # otherwise exit with the report still set aside (#29).
+            set_backstop_settle(lambda: output_backup.settle(_set_aside, output_dir))
 
-    from bristlenose.pipeline import Pipeline
+        from bristlenose.pipeline import Pipeline
 
-    estimator, on_event = _build_estimator(settings)
-    pipeline = Pipeline(
-        settings, verbose=verbose, on_event=on_event,
-        estimator=estimator,
-    )
-    # The stash is settled in `finally`, not in the handlers: the failure paths
-    # below each raise `typer.Exit`, and every one of them — plus KeyboardInterrupt,
-    # which is the single most likely way a run ends early — has to reach the same
-    # decision. One place to get right rather than four.
-    run_produced_a_report = False
-    try:
+        estimator, on_event = _build_estimator(settings)
+        pipeline = Pipeline(
+            settings, verbose=verbose, on_event=on_event,
+            estimator=estimator,
+        )
+        # The stash is settled in `finally`, not in the handlers: the failure paths
+        # below each raise `typer.Exit`, and every one of them — plus KeyboardInterrupt,
+        # which is the single most likely way a run ends early — has to reach the same
+        # decision. One place to get right rather than four.
         with run_lifecycle(output_dir, KindEnum.RUN, _startup_checked=True) as _run_handle:
             pipeline.set_progress_sink(_run_handle.progress)
             # `--clean` reads every file even when the stash above failed and

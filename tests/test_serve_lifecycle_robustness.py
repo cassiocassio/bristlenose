@@ -94,6 +94,8 @@ class TestTheStashCycle:
         out = proj / "bristlenose-output"
         backup = output_backup.stash(out)
         assert backup is not None and not out.exists()
+        # Ownerless: a moments-old stash from a build without the owner note.
+        (backup / output_backup._OWNER_MARKER).unlink()
 
         from bristlenose.utils.study_startup import StudyStartupRefusedError
 

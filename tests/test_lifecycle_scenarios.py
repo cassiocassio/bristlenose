@@ -179,12 +179,21 @@ def _refused_open_preserves(proj: Path, tmp: Path) -> None:
     assert after == before
 
 
+def _opens_leaving_the_backup(proj: Path, tmp: Path) -> None:
+    """A run this Mac is still starting: the server opens, and never under it."""
+    with _client(_app(proj, tmp)):
+        pass
+    assert output_backup.backup_path_for(proj / "bristlenose-output").exists(), (
+        "the server reclaimed a backup during a run's start-up"
+    )
+
+
 def server_restarted_mid_reanalyse(proj: Path, tmp: Path) -> None:
-    """An unowned startup gap refuses; opening again after completion works."""
+    """A run this Mac is still starting opens; opening again after completion works."""
     out = proj / "bristlenose-output"
     stash = output_backup.stash(out)
     assert stash is not None
-    _refused_open_preserves(proj, tmp)
+    _opens_leaving_the_backup(proj, tmp)
     _rebuild_from(stash, out)
     _started(out, "RERUN")
     _completed(out, "RERUN")
@@ -197,7 +206,7 @@ def server_restarted_mid_reanalyse_then_the_run_fails(proj: Path, tmp: Path) -> 
     out = proj / "bristlenose-output"
     stash = output_backup.stash(out)
     assert stash is not None
-    _refused_open_preserves(proj, tmp)
+    _opens_leaving_the_backup(proj, tmp)
     _started(out, "BAD")
     _failed(out, "BAD")
     assert output_backup.restore(stash, out).report_is_back
@@ -206,9 +215,11 @@ def server_restarted_mid_reanalyse_then_the_run_fails(proj: Path, tmp: Path) -> 
 
 
 def crash_leaves_a_stash_and_the_next_run_reclaims_it(proj: Path, tmp: Path) -> None:
-    """A stash with no new marker/history cannot prove a local crash."""
+    """A moments-old stash from a build without the owner note, and no new
+    marker or history, cannot prove a local crash."""
     out = proj / "bristlenose-output"
     assert output_backup.stash(out) is not None
+    (output_backup.backup_path_for(out) / output_backup._OWNER_MARKER).unlink()
     _refused_open_preserves(proj, tmp)
     assert output_backup.backup_path_for(out).exists()
 
@@ -243,10 +254,25 @@ def server_starting_inside_a_runs_start_up_is_left_alone(proj: Path, tmp: Path) 
     assert output_backup.stash(out) is not None
     (out / ".bristlenose").mkdir(parents=True)
     (out / ".bristlenose" / "bristlenose.log").write_text("run starting\n", encoding="utf-8")
-    _refused_open_preserves(proj, tmp)
-    assert output_backup.backup_path_for(out).exists(), (
-        "the server reclaimed a backup during a run's start-up"
-    )
+    _opens_leaving_the_backup(proj, tmp)
+
+
+def run_killed_before_its_first_event_is_put_back(proj: Path, tmp: Path) -> None:
+    """A Stop's SIGKILL, or a crash, between the stash and ``run_started``: the
+    owner note names this Mac and a process that is gone, so the server puts the
+    report back at once. Refused as unverifiable for good before 10 Nov 2026."""
+    import json
+
+    out = proj / "bristlenose-output"
+    assert output_backup.stash(out) is not None
+    note = output_backup.backup_path_for(out) / output_backup._OWNER_MARKER
+    owner = json.loads(note.read_text(encoding="utf-8"))
+    note.write_text(json.dumps({**owner, "start_time": "dead-process-start"}), encoding="utf-8")
+    (out / ".bristlenose").mkdir(parents=True)
+    (out / ".bristlenose" / "bristlenose.log").write_text("run starting\n", encoding="utf-8")
+    with _client(_app(proj, tmp)) as client:
+        assert_healthy(proj, client)
+    assert not output_backup.backup_path_for(out).exists(), "the backup was not reclaimed"
 
 
 def server_starting_under_a_live_run_is_left_alone(proj: Path, tmp: Path) -> None:
@@ -362,6 +388,8 @@ SCENARIOS = [
     ),
     pytest.param(server_starting_inside_a_runs_start_up_is_left_alone,
                  id="server-in-run-start-up-leaves-backup"),
+    pytest.param(run_killed_before_its_first_event_is_put_back,
+                 id="killed-before-first-event-put-back", marks=_MOVES_AN_OPEN_DATABASE),
     pytest.param(server_starting_under_a_live_run_is_left_alone,
                  id="server-under-live-run-leaves-backup"),
     pytest.param(

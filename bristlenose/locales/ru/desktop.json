@@ -323,11 +323,11 @@
       "transcriptEdits_many": "{{count}} отредактированных строк транскрипта",
       "transcriptEdits_other": "{{count}} отредактированных строк транскрипта",
       "speakerPicks_one": "{{count}} выбранный говорящий",
-      "speakerPicks_few": "{{count}} выбранные говорящие",
+      "speakerPicks_few": "{{count}} выбранных говорящих",
       "speakerPicks_many": "{{count}} выбранных говорящих",
       "speakerPicks_other": "{{count}} выбранных говорящих",
       "removedBadges_one": "{{count}} удалённый значок",
-      "removedBadges_few": "{{count}} удалённые значки",
+      "removedBadges_few": "{{count}} удалённых значка",
       "removedBadges_many": "{{count}} удалённых значков",
       "removedBadges_other": "{{count}} удалённых значков"
     },

@@ -325,10 +325,10 @@
       "speakerPicks_few": "{{count}} volby mluvčího",
       "speakerPicks_many": "{{count}} volby mluvčího",
       "speakerPicks_other": "{{count}} voleb mluvčího",
-      "removedBadges_one": "1 odstraněný štítek",
-      "removedBadges_few": "{{count}} odstraněné štítky",
-      "removedBadges_many": "{{count}} odstraněného štítku",
-      "removedBadges_other": "{{count}} odstraněných štítků"
+      "removedBadges_one": "1 odstraněný odznak",
+      "removedBadges_few": "{{count}} odstraněné odznaky",
+      "removedBadges_many": "{{count}} odstraněného odznaku",
+      "removedBadges_other": "{{count}} odstraněných odznaků"
     },
     "addFilesPrompt": "P\u0159idat",
     "addFilesMessage": "P\u0159idat sezen\u00ed do \u201e%@\u201c",

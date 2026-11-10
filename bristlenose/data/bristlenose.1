@@ -250,7 +250,10 @@ LLM provider: \fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR)
 \fBlocal\fR (or \fBollama\fR), \fBany-llm\fR. If not given, the provider you last set with
 \fBconfigure\fR or \fBuse\fR is used; with a single configured provider, that
 one. With several keys and no choice recorded, bristlenose asks you to pick
-once (\fBbristlenose use\fR) rather than guessing.
+once (\fBbristlenose use\fR) rather than guessing. With no key configured at
+all, bristlenose prints setup guidance \(em where to get a key for each cloud
+provider, \fBbristlenose configure local\fR for local models, and
+\fBbristlenose configure any-llm\fR for other providers \(em and exits.
 \fBazure\fR uses Azure OpenAI Service for
 enterprise environments. \fBlocal\fR runs the analysis through Ollama on your
 own hardware \(em no API key and no outbound call, but slower and it wants a
@@ -472,11 +475,7 @@ The key is the provider's own (\fBMISTRAL_API_KEY\fR, \fBOPENROUTER_API_KEY\fR,
 \&...), or the one \fBbristlenose configure any-llm\fR stored. Bristlenose
 doesn't estimate costs for these providers.
 .SS Local LLM settings (Ollama)
-When no API key is configured and you run bristlenose, it prints setup
-guidance \(em where to get a key for each cloud provider,
-\fBbristlenose configure local\fR for local models, and
-\fBbristlenose configure any-llm\fR for other providers \(em and exits. If you
-choose Local and Ollama isn't installed, bristlenose offers to install it
+If you choose Local and Ollama isn't installed, bristlenose offers to install it
 automatically (Homebrew on macOS, snap on Linux, curl script fallback). If
 Ollama is installed but not running, bristlenose will start it for you.
 .TP

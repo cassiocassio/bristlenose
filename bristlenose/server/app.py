@@ -528,12 +528,12 @@ def create_app(
         assert attached_at_connect is not None  # read above, for this same project_dir
         already_imported = completed_run_ids(events_path(project_output_dir(project_dir)))
         startup_trace.mark("startup-import-begin")
-        _import_on_startup(session_factory, project_dir)
+        imported = _import_on_startup(session_factory, project_dir)
         startup_trace.mark("startup-import-end")
         _reconcile_orphaned_autocode_jobs(session_factory)
         _install_event_watcher(
             app, session_factory, project_dir, engine=engine, already_imported=already_imported,
-            attached_at_connect=attached_at_connect,
+            attached_at_connect=attached_at_connect, startup_import_failed=not imported,
         )
 
     # Serve the React islands bundle (built by Vite).
@@ -1304,8 +1304,8 @@ def _ensure_index_symlink(output_dir: Path) -> None:
 def _import_on_startup(
     session_factory: Callable[[], Session],
     project_dir: Path,
-) -> None:
-    """Import project data into SQLite during app startup.
+) -> bool:
+    """Import project data into SQLite during app startup; False if it raised.
 
     Not during a first analysis: the whole-project import reads whatever
     transcripts are on disk, which under redaction can be the unredacted ones
@@ -1326,12 +1326,14 @@ def _import_on_startup(
             # endpoint is how the SPA and the Mac follow the run.
             logger.info("A first analysis is in progress: sessions import as it delivers them")
             import_readable_sessions(db, project_dir, set())
-            return
+            return True
         import_project(db, project_dir)
     except Exception:
         logger.exception("Failed to import project from %s", project_dir)
+        return False
     finally:
         db.close()
+    return True
 
 
 def _reconcile_orphaned_autocode_jobs(session_factory: Callable[[], Session]) -> None:
@@ -1619,6 +1621,7 @@ def _install_event_watcher(
     already_imported: set[str] | None = None,
     *,
     attached_at_connect: tuple[tuple[int, int] | None, ...],
+    startup_import_failed: bool = False,
 ) -> None:
     """Tail ``pipeline-events.jsonl`` and re-import on ``run_completed``.
 
@@ -1639,6 +1642,10 @@ def _install_event_watcher(
     holds aside, and a read here named the restored one, so nothing was seen to
     have moved (register row 53). Required: a caller that did not read it where the
     pool connected would bring the race back.
+
+    ``startup_import_failed``: the startup import raised, so the database does
+    not hold the condition's report. Treated as the watcher treats a failed
+    re-import: ``last_run`` is not seeded and the overlay names the run.
     """
     from contextlib import asynccontextmanager
 
@@ -1746,7 +1753,9 @@ def _install_event_watcher(
     # could find it (the page reads the condition now).
     app.state.last_run = {}
     report = app.state.condition.report
-    if report is not None:
+    if report is not None and startup_import_failed:
+        app.state.import_overlay["failed_run_id"] = report.run_id
+    elif report is not None:
         app.state.last_run[1] = {
             "run_id": report.run_id,
             "outcome": "completed",

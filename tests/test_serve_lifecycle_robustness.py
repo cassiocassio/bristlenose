@@ -175,10 +175,10 @@ class TestTheStashCycle:
         _admitted_local_attempt(out)
         real_import = app_mod._import_on_startup
 
-        def restore_during_import(*args, **kwargs) -> None:
+        def restore_during_import(*args, **kwargs) -> bool:
             _failed(out, "LOCAL")
             assert output_backup.restore(backup, out).report_is_back
-            real_import(*args, **kwargs)
+            return real_import(*args, **kwargs)
 
         monkeypatch.setattr(app_mod, "_import_on_startup", restore_during_import)
         with _polling_client(_app(proj, tmp_path)) as client:
@@ -256,10 +256,11 @@ class TestTheStashCycle:
         _admitted_local_attempt(out)
         real_import = app_mod._import_on_startup
 
-        def import_then_restore(*args, **kwargs) -> None:
-            real_import(*args, **kwargs)
+        def import_then_restore(*args, **kwargs) -> bool:
+            imported = real_import(*args, **kwargs)
             _failed(out, "LOCAL")
             assert output_backup.restore(backup, out).report_is_back
+            return imported
 
         monkeypatch.setattr(app_mod, "_import_on_startup", import_then_restore)
         with _polling_client(_app(proj, tmp_path)) as client:

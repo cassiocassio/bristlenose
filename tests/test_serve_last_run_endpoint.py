@@ -162,6 +162,35 @@ class TestStartupSeed:
         app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
         assert app.state.last_run == {}
 
+    def test_no_seed_when_startup_import_raises(self, tmp_path: Path) -> None:
+        """A run the startup import failed to load is not the data version.
+
+        The database still holds the previous import (or nothing), so seeding
+        ``last_run`` with the newest run would name it completed over stale
+        rows. Treated as the watcher treats a failed re-import.
+        """
+        import shutil
+        from unittest.mock import patch
+
+        project_dir = tmp_path / "project"
+        shutil.copytree(_FIXTURE_DIR, project_dir)
+        events_file = events_path(project_dir / "bristlenose-output")
+        db_url = f"sqlite:///{tmp_path / 'serve.db'}"
+        rid_a, rid_b = new_run_id(), new_run_id()
+        append_event(events_file, _completed(rid_a))
+        AuthTestClient(create_app(project_dir=project_dir, dev=True, db_url=db_url))
+
+        # Run B completes while no serve is up; the next start's import raises.
+        append_event(events_file, _completed(rid_b))
+        with patch(
+            "bristlenose.server.importer.import_project", side_effect=RuntimeError("disk full"),
+        ):
+            app = create_app(project_dir=project_dir, dev=True, db_url=db_url)
+        client = AuthTestClient(app)
+        assert client.get("/api/projects/1/last-run").json() is None
+        cond = client.get("/api/projects/1/condition").json()
+        assert cond["import_failed_run_id"] == rid_b
+
 
 # ---------------------------------------------------------------------------
 # Race regression: importer completes BEFORE last_run becomes observable

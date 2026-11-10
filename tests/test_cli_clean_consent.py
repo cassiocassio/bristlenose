@@ -34,7 +34,7 @@ class _Result:
 
 _SCHEMA = """
 CREATE TABLE quotes (id INTEGER PRIMARY KEY, project_id INTEGER);
-CREATE TABLE quote_states (quote_id INTEGER, is_starred INTEGER);
+CREATE TABLE quote_states (quote_id INTEGER, is_starred INTEGER, is_hidden INTEGER DEFAULT 0);
 CREATE TABLE quote_tags (quote_id INTEGER, source TEXT);
 CREATE TABLE quote_edits (quote_id INTEGER);
 CREATE TABLE persons (full_name TEXT);
@@ -53,7 +53,7 @@ def _seed_report(out_dir: Path, *, stars: int = 0, human_tags: int = 0,
     conn.executescript(_SCHEMA)
     conn.executemany("INSERT INTO quotes (id, project_id) VALUES (?, 1)",
                      [(i,) for i in range(1, 51)])
-    conn.executemany("INSERT INTO quote_states VALUES (?, 1)", [(i,) for i in range(1, stars + 1)])
+    conn.executemany("INSERT INTO quote_states (quote_id, is_starred) VALUES (?, 1)", [(i,) for i in range(1, stars + 1)])
     conn.executemany("INSERT INTO quote_tags VALUES (?, 'human')",
                      [(i,) for i in range(1, human_tags + 1)])
     conn.executemany("INSERT INTO quote_tags VALUES (?, 'autocode')",

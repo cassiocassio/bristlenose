@@ -37,13 +37,22 @@ class CurationCounts:
     starred_quotes: int = 0
     renamed_speakers: int = 0
     named_themes: int = 0
+    #: Quotes the researcher hid, transcript paragraphs they split, joined or
+    #: re-attributed, voices they chose a person for, sentiment badges they
+    #: removed: discarded by a Re-analyse like the five above (N131).
+    hidden_quotes: int = 0
+    transcript_edits: int = 0
+    speaker_picks: int = 0
+    removed_badges: int = 0
     #: Interviews in the report, for "all 10 interviews again"; None if unread.
     sessions: int | None = None
 
     @property
     def total(self) -> int:
         return (self.edited_quotes + self.tags + self.starred_quotes
-                + self.renamed_speakers + self.named_themes)
+                + self.renamed_speakers + self.named_themes
+                + self.hidden_quotes + self.transcript_edits
+                + self.speaker_picks + self.removed_badges)
 
     def lines(self) -> list[str]:
         """The non-zero losses, in the Mac sheet's order."""
@@ -53,6 +62,10 @@ class CurationCounts:
             (self.starred_quotes, "starred quote"),
             (self.renamed_speakers, "renamed speaker"),
             (self.named_themes, "named theme"),
+            (self.hidden_quotes, "hidden quote"),
+            (self.transcript_edits, "edited transcript line"),
+            (self.speaker_picks, "speaker choice"),
+            (self.removed_badges, "removed badge"),
         )
         return [count_noun(n, noun) for n, noun in pairs if n]
 
@@ -120,6 +133,24 @@ def _counts(conn: sqlite3.Connection) -> CurationCounts:
         )),
         named_themes=count("heading_edits", (
             f"SELECT COUNT(*) FROM heading_edits WHERE project_id = {pid}"
+        )),
+        hidden_quotes=count("quote_states", (
+            "SELECT COUNT(*) FROM quote_states s JOIN quotes q ON q.id = s.quote_id "
+            f"WHERE s.is_hidden = 1 AND q.project_id = {pid}"
+        )),
+        transcript_edits=count("transcript_layout_edits", (
+            "SELECT COUNT(*) FROM transcript_layout_edits e JOIN sessions x ON x.id = e.session_id "
+            f"WHERE x.project_id = {pid}"
+        )),
+        # A voice the researcher chose a person for (evidence 'pick'): the
+        # pipeline's own matches carry other evidence.
+        speaker_picks=count("session_speakers", (
+            "SELECT COUNT(*) FROM session_speakers ss JOIN sessions x ON x.id = ss.session_id "
+            f"WHERE ss.evidence = 'pick' AND x.project_id = {pid}"
+        )),
+        removed_badges=count("deleted_badges", (
+            "SELECT COUNT(*) FROM deleted_badges d JOIN quotes q ON q.id = d.quote_id "
+            f"WHERE q.project_id = {pid}"
         )),
         sessions=count("sessions", f"SELECT COUNT(*) FROM sessions WHERE project_id = {pid}"),
     )

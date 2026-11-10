@@ -473,15 +473,16 @@ describe("tapestry scale", () => {
     expect(fit).toBeCloseTo(0.33, 2);
     expect(at(300)).toBeCloseTo(1, 5);
   });
-  it("leaves out a short test among long sessions", () => {
+  it("a short test among long sessions does not set the scale", () => {
     const { fit, at } = opens([300, 3600, 3600, 3600]);
     expect(fit).toBeCloseTo(3.97, 2);
     expect(at(3600)).toBeCloseTo(1, 5);
   });
-  it("leaves out one long session among short ones", () => {
+  it("fits the one long session of a project of short calls (the short ones are lifted)", () => {
     const { fit, at } = opens([300, 300, 300, 2400]);
-    expect(fit).toBeCloseTo(0.33, 2);
-    expect(at(2400)).toBeCloseTo(8, 5);
+    expect(fit).toBeCloseTo(2.649, 2);
+    expect(at(2400)).toBeCloseTo(1, 5);
+    expect(at(300)).toBeCloseTo(0.125, 3);
   });
   it("fits the shortest of a homogeneous project", () => {
     const { fit, at } = opens([1200, 2400, 3600]);
@@ -494,10 +495,11 @@ describe("tapestry scale", () => {
     expect(at(1297)).toBeCloseTo(0.87, 2);
     expect(at(5981)).toBeCloseTo(4, 5);
   });
-  it("has no lower clamp (Rockclimbing)", () => {
+  it("has no lower clamp, and fits the longest of an all-short project (Rockclimbing)", () => {
+    // Every session is under the band, so all count as the longest: it fits whole.
     const { fit, at } = opens([77, 225, 229, 199, 232, 224, 242, 255]);
-    expect(fit).toBeCloseTo(0.085, 3);
-    expect(at(255)).toBeCloseTo(3.31, 2);
+    expect(fit).toBeCloseTo(0.2815, 3);
+    expect(at(255)).toBeCloseTo(1, 5);
   });
   it("is held at 4 s/px on a narrow table", () => {
     expect(fitScale([3600], 300)).toBe(4);

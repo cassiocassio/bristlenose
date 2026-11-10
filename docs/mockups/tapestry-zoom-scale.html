@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline zoom scale</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#fff, #1c1c1e);
+  --text: light-dark(#1d1d1f, #f2f2f7);
+  --muted: light-dark(#6e6e73, #98989d);
+  --border: light-dark(#d9d9de, #3a3a3c);
+  --accent: light-dark(#0a6cff, #4d9dff);
+  --panel: light-dark(#f6f6f8, #26262a);
+  --clip: light-dark(#7a8fd1, #6b80c4);
+  --clip-out: light-dark(#d1894a, #d99a5f);
+  --off: light-dark(#e3e3e8, #323236);
+  --font: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); padding: 24px 16px 80px; }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 2px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+/* Two zones: commentary (hatched edge) vs the diagram */
+.comment { border: 7px solid transparent; border-left: 3px solid var(--accent);
+  background: linear-gradient(var(--bg), var(--bg)) padding-box,
+    repeating-linear-gradient(135deg, var(--border) 0 5px, transparent 5px 10px) border-box;
+  padding: 10px 14px; margin: 0 0 20px; }
+.comment .lbl { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.comment p { margin: 4px 0; }
+.comment ol, .comment ul { margin: 4px 0 4px 20px; padding: 0; }
+.key { display: flex; gap: 18px; color: var(--muted); font-size: 12.5px; margin-bottom: 14px; flex-wrap: wrap; }
+.key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.global { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 8px 0 10px; margin-bottom: 18px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.global label { font-weight: 600; }
+.global input[type=range] { width: 260px; }
+
+.scn { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px 16px; margin: 0 0 22px; background: var(--bg); }
+.scn header { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.scn .why { color: var(--muted); margin: 0 0 10px; max-width: 70ch; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 6px 18px; margin: 0 0 10px; }
+.stat { background: var(--panel); border-radius: 6px; padding: 6px 9px; }
+.stat b { display: block; font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.stat span { font: 500 13px var(--mono); }
+
+.zoomrow { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; flex-wrap: wrap; }
+.zoomrow input[type=range] { width: 240px; }
+.zoomrow .val { font: 500 12.5px var(--mono); }
+.zoomrow button { font: 500 12px var(--font); padding: 3px 9px; border: 1px solid var(--border); background: var(--panel);
+  color: var(--text); border-radius: 6px; cursor: pointer; }
+
+.grid { border-top: 1px solid var(--border); }
+.row { display: grid; grid-template-columns: var(--gut) 1fr var(--rt); align-items: center; border-bottom: 1px solid var(--border); padding: 3px 0; }
+.row .nm { font: 12px var(--mono); color: var(--muted); padding-left: 6px; display: flex; gap: 6px; align-items: baseline; }
+.row .nm em { font-style: normal; color: var(--text); }
+.view { position: relative; overflow: hidden; height: 18px; }
+.bar { position: absolute; top: 3px; height: 12px; border-radius: 3px; background: var(--clip); }
+.bar.out { background: var(--clip-out); }
+.bar.unk { background: transparent; border: 1px dashed var(--muted); }
+.over { position: absolute; right: 0; top: 0; height: 18px; width: 38px; display: flex; align-items: center; justify-content: flex-end;
+  font: 600 11px var(--mono); padding-right: 3px; color: var(--text);
+  background: linear-gradient(90deg, transparent, var(--bg) 70%); }
+.edge { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--accent); opacity: .7; }
+.axis { display: grid; grid-template-columns: var(--gut) 1fr var(--rt); font: 11px var(--mono); color: var(--muted); margin-top: 3px; }
+.axis .ticks { position: relative; height: 14px; overflow: hidden; }
+.axis .ticks span { position: absolute; top: 0; transform: translateX(-50%); }
+.axis .ticks span.first { transform: none; }
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+table.sum { border-collapse: collapse; width: 100%; font-size: 12.5px; margin: 10px 0 0; }
+table.sum th, table.sum td { border-bottom: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; }
+table.sum th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+table.sum td.n { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.bad { color: light-dark(#b3261e, #ff8a80); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Timeline zoom scale</h1>
+<p class="sub">What the Sessions grid does today, run against different mixes of interview lengths. Written 9 Nov 2026.</p>
+
+<div class="comment">
+  <div class="lbl">Commentary</div>
+  <p>This page is a diagram of the scale logic, not the product UI. Bars are drawn flat, without the real clip colours or the closed strip. The three functions below are copied from <code>frontend/src/utils/tapestryScale.ts</code> (<code>fitScale</code>, <code>zoomScale</code>, the 82&nbsp;px gutter and 14&nbsp;px right margin). Nothing here is a proposal yet.</p>
+  <p><b>The opening view.</b> Every open timeline in the grid shares one scale, in seconds per pixel, chosen from the durations of all sessions in the project:</p>
+  <ol>
+    <li><b>Throw out outliers.</b> Drop sessions shorter than ¼ of the median or longer than 4× the median. They are still drawn, at the same scale.</li>
+    <li><b>Fit the shortest of the rest</b> to the usable width (grid width − 96&nbsp;px), so no kept session opens with white space on its right.</li>
+    <li><b>Cap the longest of the rest</b> at four usable widths. If fitting the shortest would make the longest wider than that, the scale loosens until the longest is exactly four widths and the shortest is left with white space.</li>
+    <li><b>Hard ceiling of 4 s/px</b>, which beats everything. It binds whenever the shortest kept session is longer than 4 × usable seconds: about 60 minutes at a 1000&nbsp;px table, 34 minutes at 600&nbsp;px, 114 minutes at 1800&nbsp;px. The code comment that says it "bites only below a ~220&nbsp;px table" is wrong for projects of hour-long sessions.</li>
+  </ol>
+  <p>So the opening scale is <code>min(4, max(shortest / usable, longest / (4 × usable)))</code>. The slider's far-left stop is that same scale. There is nothing to the left of it, so you can never zoom out to see a session that opens wider than the table.</p>
+  <p><b>The slider.</b> 0–100, log-spaced. 0 is the opening scale (“1×”). 100 is <code>min(0.25, fit / 4)</code> s/px, which is 0.25 s/px (4 px per second) unless the opening scale is already finer than 1 s/px, in which case it is four times finer than the opening scale. The last column of each summary shows the width of the longest session at that stop.</p>
+</div>
+
+<div class="global">
+  <label for="gw">Grid width</label>
+  <input type="range" id="gw" min="600" max="1800" step="20" value="1000">
+  <span class="mono" id="gwv"></span>
+  <span class="mono" style="color:var(--muted)">usable = width − 82 − 14</span>
+</div>
+
+<div class="key">
+  <span><i style="background:var(--clip)"></i>kept: sets the scale</span>
+  <span><i style="background:var(--clip-out)"></i>left out as an outlier, still drawn</span>
+  <span><i style="border:1px dashed var(--muted)"></i>duration unknown (0)</span>
+  <span><span class="mono">→ 3.6×</span> runs off the right edge, reached by scrolling sideways</span>
+</div>
+
+<div id="scenes"></div>
+
+<div class="comment">
+  <div class="lbl">Commentary — what the runs show</div>
+  <div id="takeaways"></div>
+</div>
+</div>
+
+<script>
+// ── Copied from frontend/src/utils/tapestryScale.ts ────────────────────────────────────────
+const TAPESTRY_GUTTER = 82, TAPESTRY_RIGHT = 14;
+function fitScale(durations, width) {
+  const usable = Math.max(1, width - TAPESTRY_GUTTER - TAPESTRY_RIGHT);
+  const sorted = durations.filter((d) => d > 0).sort((a, b) => a - b);
+  if (sorted.length === 0) return { fit: 1, kept: [], median: 0 };
+  const mid = sorted.length / 2;
+  const median = sorted.length % 2 ? sorted[Math.floor(mid)] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const kept = sorted.filter((d) => d >= median / 4 && d <= median * 4);
+  const shortest = kept[0], longest = kept[kept.length - 1];
+  return { fit: Math.min(4, Math.max(shortest / usable, longest / (4 * usable))), kept, median };
+}
+function zoomScale(fit, value) {
+  const far = Math.min(0.25, fit / 4);
+  return Math.exp(Math.log(fit) + (Math.log(far) - Math.log(fit)) * (value / 100));
+}
+// ───────────────────────────────────────────────────────────────────────────────────────────
+
+const M = (n) => n * 60;
+const SCENES = [
+  { id: "a", title: "A. Mostly half-hour interviews",
+    why: "Ten sessions, 24–35 minutes. The ordinary case, and it still opens with the longest session about one and a half widths wide.",
+    d: [24, 26, 27, 29, 30, 31, 32, 33, 34, 35].map(M) },
+  { id: "b", title: "B. A mix of hour-long and ten-minute sessions",
+    why: "Four one-hour interviews and four ten-minute check-ins. Ratio 6 to 1, inside the 4× outlier window, so nothing is thrown out.",
+    d: [58, 60, 61, 62, 9, 10, 11, 12].map(M) },
+  { id: "c", title: "C. One-hour interviews and three-hour workshops",
+    why: "Five interviews around an hour and three workshops. Ratio 3.6 to 1.",
+    d: [50, 55, 58, 60, 62, 175, 180, 185].map(M) },
+  { id: "d", title: "D. Workshops are the majority",
+    why: "Three interviews and five workshops. The median lands on the workshops, so the interviews are the shortest kept.",
+    d: [45, 55, 60, 170, 175, 180, 185, 190].map(M) },
+  { id: "e", title: "E. Edge: one three-hour workshop among half-hour interviews",
+    why: "The workshop is more than 4× the median, so it is left out and drawn at the interviews' scale, six widths wide.",
+    d: [28, 29, 30, 30, 31, 32, 33, 34].map(M).concat([M(180)]) },
+  { id: "f", title: "F. Edge: a two-minute stub among half-hour interviews",
+    why: "A recording that stopped early. Too short to affect the scale, so it is left out and draws as a sliver.",
+    d: [29, 30, 31, 32, 33].map(M).concat([M(2)]) },
+  { id: "g", title: "G. Edge: most sessions short, a few long (the majority sets the scale)",
+    why: "Five five-minute sessions and four one-hour sessions. The median is five minutes, so the hour-long sessions are the outliers.",
+    d: [4, 5, 5, 5, 6].map(M).concat([60, 61, 62, 64].map(M)) },
+  { id: "h", title: "H. Edge: a long and a short pair (no outliers, big ratio)",
+    why: "Two 10-minute and two 40-minute sessions. Ratio exactly 4 to 1: nothing is thrown out, and the cap bites at the limit.",
+    d: [10, 10, 40, 40].map(M) },
+  { id: "i", title: "I. Edge: one session, and a platform transcript with no duration yet",
+    why: "A single known session sets its own scale. The dashed row has no duration (0), the case of a platform transcript before its import.",
+    d: [M(47), 0] },
+  { id: "j", title: "J. Edge: a day-long recording at a narrow window",
+    why: "A single eight-hour screen recording plus two 30-minute interviews. The 8-hour recording is an outlier at the scale of the interviews. The 4 s/px ceiling binds here only when the interviews are longer than about an hour at the current width.",
+    d: [M(30), M(33), M(480)] },
+];
+
+const fmt = (s) => {
+  if (s <= 0) return "unknown";
+  const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+  return h ? `${h}h${m ? " " + m + "m" : ""}` : `${m}m`;
+};
+const fmtN = (n, p = 2) => n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(p);
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+const state = { gw: 1000, zoom: {} };
+const root = document.getElementById("scenes");
+
+function stopsFor(sc, gw) {
+  const { fit, kept, median } = fitScale(sc.d, gw);
+  const usable = Math.max(1, gw - TAPESTRY_GUTTER - TAPESTRY_RIGHT);
+  const longestAll = Math.max(...sc.d);
+  const far = Math.min(0.25, fit / 4);
+  const keptShort = kept[0], keptLong = kept[kept.length - 1];
+  // slider value where the longest *kept* session first fits; null if it already does
+  const fitLongW = keptLong / fit / usable;
+  const zoomFitLongest = null;
+  return { fit, kept, median, usable, longestAll, far, keptShort, keptLong, fitLongW };
+}
+
+function build() {
+  root.innerHTML = "";
+  SCENES.forEach((sc) => {
+    const el = document.createElement("section");
+    el.className = "scn";
+    el.id = "sc-" + sc.id;
+    el.innerHTML = `
+      <header><h2>${esc(sc.title)}</h2></header>
+      <p class="why">${esc(sc.why)}</p>
+      <div class="stats"></div>
+      <div class="zoomrow">
+        <span class="mono">zoom</span>
+        <button data-a="out" aria-label="Zoom out">−</button>
+        <input type="range" min="0" max="100" value="0" aria-label="Zoom">
+        <button data-a="in" aria-label="Zoom in">+</button>
+        <button data-a="reset">reset</button>
+        <span class="val"></span>
+      </div>
+      <div class="grid"></div>
+      <div class="axis"><span></span><div class="ticks"></div><span></span></div>
+      <div class="legend"></div>
+      <table class="sum"><thead><tr><th>Slider stop</th><th>Seconds per pixel</th><th>Longer than the table</th><th>Longest session width</th><th>30-min session width</th></tr></thead><tbody></tbody></table>`;
+    root.appendChild(el);
+    const slider = el.querySelector("input");
+    slider.addEventListener("input", () => { state.zoom[sc.id] = Number(slider.value); draw(sc, el); });
+    el.querySelector('[data-a="out"]').addEventListener("click", () => { state.zoom[sc.id] = Math.max(0, (state.zoom[sc.id] || 0) - 20); draw(sc, el); });
+    el.querySelector('[data-a="in"]').addEventListener("click", () => { state.zoom[sc.id] = Math.min(100, (state.zoom[sc.id] || 0) + 20); draw(sc, el); });
+    el.querySelector('[data-a="reset"]').addEventListener("click", () => { state.zoom[sc.id] = 0; draw(sc, el); });
+    draw(sc, el);
+  });
+}
+
+function draw(sc, el) {
+  const gw = state.gw;
+  const z = state.zoom[sc.id] || 0;
+  const S = stopsFor(sc, gw);
+  const sPerPx = zoomScale(S.fit, z);
+  const usable = S.usable;
+  const wideX = (z === 0 ? 1 : S.fit / sPerPx);
+
+  el.querySelector("input").value = z;
+  el.querySelector(".val").textContent = `${z}  ·  ${fmtN(sPerPx)} s/px  ·  ${z === 0 ? "1×" : wideX.toFixed(1) + "×"}`;
+
+  const keptSet = new Set(S.kept);
+  const sortedKept = S.kept.slice();
+  // mark outliers: durations not within [median/4, 4×median]
+  const isKept = (d) => d > 0 && d >= S.median / 4 && d <= S.median * 4;
+
+  // stats
+  const shortestFrac = S.keptShort / S.fit / usable;
+  const longestW = S.keptLong / S.fit / usable;
+  el.querySelector(".stats").innerHTML = `
+    <div class="stat"><b>Median</b><span>${fmt(S.median)}</span></div>
+    <div class="stat"><b>Kept (sets scale)</b><span>${fmt(S.keptShort)} – ${fmt(S.keptLong)}</span></div>
+    <div class="stat"><b>Opening scale</b><span>${fmtN(S.fit)} s/px${S.fit >= 4 ? " (ceiling)" : ""}</span></div>
+    <div class="stat"><b>Shortest kept opens at</b><span>${(shortestFrac * 100).toFixed(0)}% of the table</span></div>
+    <div class="stat"><b>Longest kept opens at</b><span class="${longestW > 1.001 ? "bad" : ""}">${longestW.toFixed(2)} widths${longestW > 1.001 ? " (scrolls)" : ""}</span></div>
+    <div class="stat"><b>Slider range</b><span>${fmtN(S.fit)} → ${fmtN(S.far)} s/px  (${(S.fit / S.far).toFixed(1)}×)</span></div>`;
+
+  // grid
+  const gridEl = el.querySelector(".grid");
+  gridEl.style.setProperty("--gut", TAPESTRY_GUTTER + "px");
+  gridEl.style.setProperty("--rt", TAPESTRY_RIGHT + "px");
+  const order = sc.d.map((d, i) => ({ d, i }));
+  gridEl.innerHTML = order.map(({ d, i }, idx) => {
+    const unk = d <= 0;
+    const kept = isKept(d);
+    const w = unk ? 40 : d / sPerPx;
+    const over = !unk && w > usable + 0.5;
+    const label = `s${idx + 1}`;
+    return `<div class="row" style="--gut:${TAPESTRY_GUTTER}px;--rt:${TAPESTRY_RIGHT}px">
+      <div class="nm"><em>${label}</em><span>${fmt(d)}</span></div>
+      <div class="view" style="width:${usable}px"><div class="bar ${unk ? "unk" : kept ? "" : "out"}" style="left:0;width:${Math.min(w, usable)}px"></div>${over ? `<div class="over">→ ${(w / usable).toFixed(1)}×</div>` : ""}</div>
+      <div></div></div>`;
+  }).join("");
+  // grid rows need the 1fr column sized to usable: set the grid container width
+  gridEl.style.width = gw + "px";
+  gridEl.style.maxWidth = "100%";
+  gridEl.style.overflowX = "auto";
+
+  // axis
+  const ticks = el.querySelector(".ticks");
+  ticks.style.width = usable + "px";
+  const visibleSec = usable * sPerPx;
+  const steps = [30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400];
+  const want = visibleSec / 6;
+  const step = steps.find((s) => s >= want) || steps[steps.length - 1];
+  let html = "";
+  for (let t = 0; t <= visibleSec; t += step) {
+    const x = t / sPerPx;
+    html += `<span class="${t === 0 ? "first" : ""}" style="left:${x}px">${t === 0 ? "0" : fmt(t)}</span>`;
+  }
+  ticks.innerHTML = html;
+  el.querySelector(".axis").style.setProperty("--gut", TAPESTRY_GUTTER + "px");
+  el.querySelector(".axis").style.setProperty("--rt", TAPESTRY_RIGHT + "px");
+  el.querySelector(".axis").style.width = gw + "px";
+  el.querySelector(".axis").style.maxWidth = "100%";
+
+  el.querySelector(".legend").innerHTML =
+    `<span>Visible window: <b class="mono">${fmt(visibleSec)}</b> at this zoom (${usable}px usable)</span>`;
+
+  // summary table at the three notable stops
+  const stops = [0, 50, 100];
+  el.querySelector("tbody").innerHTML = stops.map((v) => {
+    const sp = zoomScale(S.fit, v);
+    const lw = S.longestAll / sp, tw = 1800 / sp;
+    const lx = lw / usable;
+    return `<tr><td class="n">${v === 0 ? "0 (left, 1×)" : v === 100 ? "100 (right)" : "50"}</td>
+      <td class="n">${fmtN(sp)}</td>
+      <td class="n">${lx > 1.001 ? lx.toFixed(1) + "× the table" : "fits"}</td>
+      <td class="n">${Math.round(lw).toLocaleString()} px (${fmt(S.longestAll)})</td>
+      <td class="n">${Math.round(tw).toLocaleString()} px</td></tr>`;
+  }).join("");
+}
+
+document.getElementById("gw").addEventListener("input", (e) => {
+  state.gw = Number(e.target.value);
+  document.getElementById("gwv").textContent = state.gw + " px (" + (state.gw - 96) + " usable)";
+  SCENES.forEach((sc) => draw(sc, document.getElementById("sc-" + sc.id)));
+  takeaways();
+});
+document.getElementById("gwv").textContent = state.gw + " px (" + (state.gw - 96) + " usable)";
+
+function takeaways() {
+  const gw = state.gw;
+  const rows = SCENES.map((sc) => {
+    const S = stopsFor(sc, gw);
+    const lw = S.keptLong / S.fit / S.usable;
+    const sf = S.keptShort / S.fit / S.usable;
+    const out = sc.d.filter((d) => d > 0 && !(d >= S.median / 4 && d <= S.median * 4)).length;
+    const farLong = S.longestAll / S.far / S.usable;
+    return `<tr><td>${esc(sc.title.split(". ")[0])}</td><td class="n">${fmtN(S.fit)}</td>
+      <td class="n">${(sf * 100).toFixed(0)}%</td>
+      <td class="n ${lw > 1.001 ? "bad" : ""}">${lw.toFixed(2)}</td>
+      <td class="n">${out}</td>
+      <td class="n">${fmtN(S.far)}</td>
+      <td class="n">${farLong.toFixed(0)}×</td></tr>`;
+  }).join("");
+  document.getElementById("takeaways").innerHTML = `
+    <table class="sum"><thead><tr><th>Scene</th><th>Opening s/px</th><th>Shortest kept</th><th>Longest kept (widths)</th><th>Outliers</th><th>Slider max s/px</th><th>Longest overall at max zoom</th></tr></thead><tbody>${rows}</tbody></table>
+    <ul>
+      <li><b>Nearly every project opens with something scrolling.</b> Fitting the <i>shortest</i> to the table means any session even slightly longer is wider than the table. Even scene A, with sessions of 24 to 35 minutes, opens with the longest at about 1.5 widths. Only a project of identical lengths (scene I) opens with everything whole. The red figures are the longest kept session. Because the slider's left stop is that scale, there is no zoom-out, so you can't see those sessions whole. This is what you saw with the 4-minute session beside the 1-minute one.</li>
+      <li><b>Rule 2 and rule 3 trade off.</b> Rule 2 (fit the shortest) is the one that makes longer sessions scroll. Rule 3 (cap at four widths) limits how far, and in B, D and H it is the cap that sets the scale, with the shortest left short of the right edge.</li>
+      <li><b>Outliers drawn at the shared scale can be enormous.</b> E's workshop is six widths at the opening zoom, and G's hour-long sessions are many more, because five short sessions outvote four long ones. The last column shows the same sessions at the slider's right end.</li>
+      <li><b>The slider's right end is a fixed 0.25 s/px</b> for any project whose opening scale is coarser than 1 s/px. That is four pixels per second whatever the project's shape, so a 3-hour session at full zoom is 43,200 px wide. Scenes G and H open finer than 1 s/px, so their right end is a quarter of their own opening scale.</li>
+    </ul>`;
+}
+
+build();
+takeaways();
+</script>
+</body>
+</html>

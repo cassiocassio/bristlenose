@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline zoom taper</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#fff, #1c1c1e);
+  --text: light-dark(#1d1d1f, #f2f2f7);
+  --muted: light-dark(#6e6e73, #98989d);
+  --border: light-dark(#d9d9de, #3a3a3c);
+  --accent: light-dark(#0a6cff, #4d9dff);
+  --panel: light-dark(#f6f6f8, #26262a);
+  --clip: light-dark(#7a8fd1, #6b80c4);
+  --soft: light-dark(#d1894a, #d99a5f);
+  --grey: light-dark(#8e8e93, #98989d);
+  --font: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); padding: 24px 16px 80px; }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 2px; }
+h3 { font-size: 13px; margin: 0 0 6px; font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.sub { color: var(--muted); margin: 0 0 18px; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+.comment { border: 7px solid transparent; border-left: 3px solid var(--accent);
+  background: linear-gradient(var(--bg), var(--bg)) padding-box,
+    repeating-linear-gradient(135deg, var(--border) 0 5px, transparent 5px 10px) border-box;
+  padding: 10px 14px; margin: 0 0 20px; }
+.comment .lbl { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.comment p { margin: 4px 0; }
+.comment ol, .comment ul { margin: 4px 0 4px 20px; padding: 0; }
+.global { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 8px 0 10px; margin-bottom: 18px; display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.global .ctl { display: flex; gap: 8px; align-items: center; }
+.global label { font-weight: 600; }
+.global input[type=range] { width: 170px; }
+.key { display: flex; gap: 18px; color: var(--muted); font-size: 12.5px; margin-bottom: 14px; flex-wrap: wrap; }
+.key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.scn { border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px 14px; margin: 0 0 18px; }
+.scn .why { color: var(--muted); margin: 2px 0 10px; max-width: 75ch; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 960px) { .pair { grid-template-columns: 1fr; } }
+.stats { font: 500 12px var(--mono); color: var(--muted); margin: 0 0 6px; }
+.stats b { color: var(--text); font-weight: 600; }
+.stats .bad { color: light-dark(#b3261e, #ff8a80); }
+.row { display: grid; grid-template-columns: 62px 1fr; align-items: center; border-bottom: 1px solid var(--border); padding: 2px 0; }
+.row:first-of-type { border-top: 1px solid var(--border); }
+.row .nm { font: 11.5px var(--mono); color: var(--muted); }
+.view { position: relative; overflow: hidden; height: 16px; }
+.bar { position: absolute; top: 3px; height: 10px; border-radius: 3px; background: var(--clip); }
+.bar.soft { background: var(--soft); }
+.bar.unk { background: transparent; border: 1px dashed var(--muted); }
+.over { position: absolute; right: 0; top: 0; height: 16px; width: 40px; display: flex; align-items: center; justify-content: flex-end;
+  font: 600 10.5px var(--mono); padding-right: 3px; background: linear-gradient(90deg, transparent, var(--bg) 70%); }
+.edge { position: absolute; right: 0; top: 0; bottom: 0; border-left: 1px dashed var(--accent); opacity: .55; }
+
+table.sum { border-collapse: collapse; width: 100%; font-size: 12.5px; margin: 8px 0 0; }
+table.sum th, table.sum td { border-bottom: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; }
+table.sum th { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+table.sum td.n { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.bad { color: light-dark(#b3261e, #ff8a80); }
+
+.sweeps { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
+@media (max-width: 960px) { .sweeps { grid-template-columns: 1fr; } }
+.sw { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.sw svg { width: 100%; height: auto; display: block; }
+.sw .cap { color: var(--muted); font-size: 12.5px; margin: 2px 0 4px; }
+svg text { font: 10px var(--mono); fill: var(--muted); }
+svg .ax { stroke: var(--border); stroke-width: 1; fill: none; }
+svg .band { fill: var(--accent); opacity: .09; }
+svg .l-today { stroke: var(--grey); stroke-width: 2; fill: none; }
+svg .l-taper { stroke: var(--accent); stroke-width: 2; fill: none; }
+.lgd { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin: 2px 0 0; }
+.lgd i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: 3px; margin-right: 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Timeline zoom taper</h1>
+<p class="sub">The Sessions grid's opening scale today, against a version where short sessions fade out of the scale gradually. 9 Nov 2026. Built 9 Nov 2026 as step 0 of the opening scale (docs/design-progressive-lenses.md §4.6.1); the band is 8–20 minutes.</p>
+
+<div class="comment">
+  <div class="lbl">Commentary</div>
+  <p>This page is a diagram of the scale logic, not the product UI. <b>Today</b> is <code>fitScale</code> from <code>frontend/src/utils/tapestryScale.ts</code>, copied verbatim. <b>Taper</b> runs the same function after one extra step.</p>
+  <p><b>The taper.</b> The band opens at 8 to 20 minutes, the values built on 9 Nov 2026. Each duration <i>d</i> is lifted towards the longest session <i>L</i> by a weight <i>w</i> that is 1 at or below the band's low end and 0 at or above its high end, falling in a straight line between: <code>d′ = d + w·(L − d)</code>. <code>fitScale</code> runs on the <i>d′</i> values, and the real durations are what get drawn. A lifted session can't be the "shortest" that sets the scale, and the change is continuous, so there is no minute at which behaviour flips.</p>
+  <p>If every session is short they are all lifted to <i>L</i>, so the scale fits the longest whole. That is the "short project shows everything" rule without a separate mechanism.</p>
+  <p><b>What to look at.</b> The scenes show the opening view side by side. The sweeps below them slide one session's length and plot the opening scale. A step in a line is a cliff. Today's has one that is not from the taper at all: the "shorter than a quarter of the median" rule.</p>
+  <p>Bars are drawn at half the table's real width. The scale logic uses the real usable width, so the 4 s/px ceiling still bites where it would in the product.</p>
+</div>
+
+<div class="global">
+  <div class="ctl"><label for="gw">Grid width</label><input type="range" id="gw" min="600" max="1800" step="20" value="1000"><span class="mono" id="gwv"></span></div>
+  <div class="ctl"><label for="lo">Band starts (weight 1)</label><input type="range" id="lo" min="2" max="30" step="1" value="8"><span class="mono" id="lov"></span></div>
+  <div class="ctl"><label for="hi">Band ends (weight 0)</label><input type="range" id="hi" min="4" max="45" step="1" value="20"><span class="mono" id="hiv"></span></div>
+</div>
+
+<div class="key">
+  <span><i style="background:var(--clip)"></i>counts as itself</span>
+  <span><i style="background:var(--soft)"></i>today: outside the median window. taper: lifted (short)</span>
+  <span><i style="border:1px dashed var(--muted)"></i>duration unknown</span>
+  <span><span class="mono">→ 3.6×</span> wider than the table, reached by scrolling</span>
+</div>
+
+<h2 style="margin:0 0 8px">Sweeps: one session's length against the opening scale</h2>
+<div class="sweeps" id="sweeps"></div>
+
+<h2 style="margin:0 0 8px">Scenes: the opening view, today beside taper</h2>
+<div id="scenes"></div>
+
+<div class="comment">
+  <div class="lbl">Commentary — summary</div>
+  <div id="summary"></div>
+</div>
+</div>
+
+<script>
+// ── Copied from frontend/src/utils/tapestryScale.ts (fitScale) ─────────────────────────────
+const GUT = 82, RT = 14;
+function fitScale(durations, width) {
+  const usable = Math.max(1, width - GUT - RT);
+  const sorted = durations.filter((d) => d > 0).sort((a, b) => a - b);
+  if (sorted.length === 0) return 1;
+  const mid = sorted.length / 2;
+  const median = sorted.length % 2 ? sorted[Math.floor(mid)] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const kept = sorted.filter((d) => d >= median / 4 && d <= median * 4);
+  return Math.min(4, Math.max(kept[0] / usable, kept[kept.length - 1] / (4 * usable)));
+}
+// ── The proposed step ──────────────────────────────────────────────────────────────────────
+function weight(d, lo, hi) { return d <= lo ? 1 : d >= hi ? 0 : (hi - d) / (hi - lo); }
+function lift(ds, lo, hi) {
+  const L = Math.max(...ds);
+  return ds.map((d) => (d > 0 ? d + weight(d, lo, hi) * (L - d) : d));
+}
+// ───────────────────────────────────────────────────────────────────────────────────────────
+
+const M = (n) => n * 60;
+const rep = (n, m) => Array(n).fill(m);
+const SCENES = [
+  { t: "Typical: 43–70 minutes", why: "Shortest 43, longest an hour and ten that overran. The usual case.", d: [43, 48, 52, 55, 60, 70] },
+  { t: "Typical: 25–60 minutes", why: "A broader but ordinary cohort.", d: [25, 30, 38, 45, 52, 60] },
+  { t: "A handful of little test calls", why: "1, 2, 3 and 14 minutes: a 14× spread of nothing in particular.", d: [1, 2, 3, 14] },
+  { t: "Twenty 5-minute micro-interviews", why: "Short by design. Everything should be visible.", d: rep(20, 5) },
+  { t: "Five 5-minute calls and four 30-minute interviews", why: "More short calls than long, but the long ones are the research.", d: rep(5, 5).concat(rep(4, 30)) },
+  { t: "Eighteen 5-minute calls and two 30-minute interviews", why: "Volume of short calls does not make them the norm.", d: rep(18, 5).concat([30, 33]) },
+  { t: "Hour-long interviews and short check-ins", why: "Four hours and four check-ins of 9–12 minutes. The check-ins sit inside the band.", d: [58, 60, 61, 62, 9, 10, 11, 12] },
+  { t: "Interviews plus a workshop", why: "Three half-hour interviews and a three-hour workshop. The workshop is an outlier and stays one.", d: [30, 30, 30, 180] },
+  { t: "Check-ins plus a workshop", why: "Eight 10-minute check-ins and a three-hour workshop. The check-ins are lifted, so the workshop sets the scale (capped at 4 s/px).", d: rep(8, 10).concat([180]) },
+  { t: "A two-minute stub among half-hour sessions", why: "A recording that stopped early.", d: [29, 30, 31, 32, 33, 2] },
+  { t: "Interviews and workshops", why: "Five interviews around an hour and three workshops of about three hours.", d: [50, 55, 58, 60, 62, 175, 180, 185] },
+  { t: "One session, one with no duration yet", why: "A platform transcript before its import has duration 0.", d: [47, 0] },
+];
+const fmt = (s) => { if (s <= 0) return "unknown"; const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? `${h}h${m ? " " + m + "m" : ""}` : `${m}m`; };
+const fmtN = (n) => n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2);
+const VIS = 440;
+const st = { gw: 1000, lo: 8, hi: 20 };
+
+function side(sc, kind) {
+  const usable = Math.max(1, st.gw - GUT - RT);
+  const ds = sc.d.map(M);
+  const eff = kind === "taper" ? lift(ds, M(st.lo), M(st.hi)) : ds;
+  const fit = fitScale(eff, st.gw);
+  const pos = ds.filter((d) => d > 0);
+  const med = (() => { const s = eff.filter((d) => d > 0).sort((a, b) => a - b); const m = s.length / 2; return s.length % 2 ? s[Math.floor(m)] : (s[m - 1] + s[m]) / 2; })();
+  const longest = Math.max(...pos), shortest = Math.min(...pos);
+  const lw = longest / fit / usable, sf = shortest / fit / usable;
+  let rows = "";
+  ds.forEach((d, i) => {
+    const unk = d <= 0;
+    const w = unk ? 0.04 * usable : d / fit;
+    const soft = kind === "taper" ? weight(d, M(st.lo), M(st.hi)) > 0 && d > 0 : (d > 0 && !(eff[i] >= med / 4 && eff[i] <= med * 4));
+    const over = !unk && w > usable + 0.5;
+    const px = Math.min(w, usable) * VIS / usable;
+    rows += `<div class="row"><div class="nm">${fmt(d)}</div><div class="view" style="width:${VIS}px">
+      <div class="bar ${unk ? "unk" : soft ? "soft" : ""}" style="left:0;width:${Math.max(px, 2)}px"></div>
+      ${over ? `<div class="over">→ ${(w / usable).toFixed(1)}×</div>` : ""}<div class="edge"></div></div></div>`;
+  });
+  const stats = `<div class="stats"><b>${kind === "taper" ? "Taper" : "Today"}</b> · ${fmtN(fit)} s/px${fit >= 4 ? " (ceiling)" : ""} · longest <span class="${lw > 4.01 ? "bad" : ""}"><b>${lw.toFixed(1)}</b> widths</span> · shortest ${(sf * 100).toFixed(0)}%</div>`;
+  return { html: stats + rows, fit, lw, sf };
+}
+
+function drawScenes() {
+  const root = document.getElementById("scenes");
+  let rowsSum = "";
+  root.innerHTML = SCENES.map((sc) => {
+    const a = side(sc, "today"), b = side(sc, "taper");
+    rowsSum += `<tr><td>${sc.t}</td><td class="n">${fmtN(a.fit)}</td><td class="n ${a.lw > 4.01 ? "bad" : ""}">${a.lw.toFixed(1)}</td><td class="n">${fmtN(b.fit)}</td><td class="n ${b.lw > 4.01 ? "bad" : ""}">${b.lw.toFixed(1)}</td></tr>`;
+    return `<section class="scn"><h2>${sc.t}</h2><p class="why">${sc.why}</p><div class="pair"><div>${a.html}</div><div>${b.html}</div></div></section>`;
+  }).join("");
+  document.getElementById("summary").innerHTML = `
+    <table class="sum"><thead><tr><th>Scene</th><th>Today s/px</th><th>Today: longest widths</th><th>Taper s/px</th><th>Taper: longest widths</th></tr></thead><tbody>${rowsSum}</tbody></table>
+    <ul>
+      <li>Red marks a longest session wider than four tables, which is only possible when it was left out of the scale (an outlier). Today it happens whenever the short calls outnumber the long ones. The taper removes it in those cases.</li>
+      <li>The normal cohorts (the first two scenes) are identical on both sides. The taper only acts when sessions fall inside or below the band.</li>
+      <li>The workshop scene (three interviews plus a workshop) is unchanged on purpose: the interviews are above the band, so nothing is lifted.</li>
+    </ul>`;
+}
+
+const SWEEPS = [
+  { t: "One check-in beside four hour-long sessions", base: [58, 60, 61, 62], max: 60 },
+  { t: "One call beside five half-hour interviews", base: [28, 30, 31, 33, 35], max: 60 },
+  { t: "One call beside three interviews and a workshop", base: [30, 30, 30, 180], max: 60 },
+  { t: "One session beside twenty 5-minute calls", base: rep(20, 5), max: 60 },
+];
+function drawSweeps() {
+  const W = 520, H = 230, L = 40, B = 24, T = 10, R = 10;
+  const yMin = Math.log(0.05), yMax = Math.log(4.2);
+  const X = (m, mx) => L + (m - 1) / (mx - 1) * (W - L - R);
+  const Y = (s) => T + (1 - (Math.log(s) - yMin) / (yMax - yMin)) * (H - T - B);
+  document.getElementById("sweeps").innerHTML = SWEEPS.map((sw) => {
+    let a = [], b = [];
+    for (let m = 1; m <= sw.max; m += 0.5) {
+      const ds = sw.base.concat([m]).map(M);
+      a.push([m, fitScale(ds, st.gw)]);
+      b.push([m, fitScale(lift(ds, M(st.lo), M(st.hi)), st.gw)]);
+    }
+    const path = (pts) => pts.map(([m, s], i) => `${i ? "L" : "M"}${X(m, sw.max).toFixed(1)},${Y(s).toFixed(1)}`).join("");
+    const ticks = [0.1, 0.25, 0.5, 1, 2, 4].map((v) => `<line class="ax" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" opacity=".5"/><text x="${L - 5}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`).join("");
+    const xt = [1, 10, 20, 30, 40, 50, 60].filter((v) => v <= sw.max).map((v) => `<text x="${X(v, sw.max)}" y="${H - 8}" text-anchor="middle">${v}m</text>`).join("");
+    const bx = X(Math.max(1, st.lo), sw.max), bw = X(Math.min(sw.max, st.hi), sw.max) - bx;
+    return `<div class="sw"><h3>${sw.t}</h3><p class="cap">x: the moving session's length. y: opening scale in s/px (log).</p>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${sw.t}">
+      ${ticks}${xt}
+      <rect class="band" x="${bx}" y="${T}" width="${bw}" height="${H - T - B}"/>
+      <path class="l-today" d="${path(a)}"/><path class="l-taper" d="${path(b)}"/></svg>
+      <div class="lgd"><span><i style="border-color:var(--grey)"></i>today</span><span><i style="border-color:var(--accent)"></i>taper</span><span>shaded: the band</span></div></div>`;
+  }).join("");
+}
+
+function sync() {
+  document.getElementById("gwv").textContent = st.gw + " px";
+  document.getElementById("lov").textContent = st.lo + " min";
+  document.getElementById("hiv").textContent = st.hi + " min";
+  drawSweeps(); drawScenes();
+}
+document.getElementById("gw").addEventListener("input", (e) => { st.gw = +e.target.value; sync(); });
+document.getElementById("lo").addEventListener("input", (e) => { st.lo = +e.target.value; if (st.hi <= st.lo) { st.hi = st.lo + 1; document.getElementById("hi").value = st.hi; } sync(); });
+document.getElementById("hi").addEventListener("input", (e) => { st.hi = +e.target.value; if (st.lo >= st.hi) { st.lo = st.hi - 1; document.getElementById("lo").value = st.lo; } sync(); });
+sync();
+</script>
+</body>
+</html>

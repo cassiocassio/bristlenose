@@ -1,3 +1,17 @@
+---
+status: current
+last-trued: 2026-11-10
+trued-against: HEAD@main on 2026-11-10 (863b7767f)
+---
+
+> **Truing status:** Mixed, trued 10 Nov 2026. The Problem, the oral-history observations and Options A–E are kept verbatim as the decision record. "How it works today", "Files involved" and the Status were rewritten to match the code after `863b7767f`. Three claims that reality reversed (word count as "the strongest signal", the enum rename, FOSSDA named as the test) are kept and marked in place. See the changelog.
+
+## Changelog
+
+- _2026-11-10_ — trued up: both passes rewritten to the counts-in-code, reading-in-prompt design; line references replaced with symbols; "strongest signal" and the enum-rename recommendation marked superseded; Status (10 Nov 2026) added; the test plan marked as never recorded as run.
+  Anchors: "speaker roles: count in code, read in the prompt, fall back on better counts"; "a session with one speaker is coded p1, never m1, whatever the role model says"; "speaker detection: LLM splitting, generalised heuristic, format-agnostic prompt".
+- _2026-04-16_ — initial draft.
+
 # Speaker role detection: oral history and non-UXR formats
 
 ## Problem
@@ -11,22 +25,31 @@ Two failures:
 
 ## How it works today
 
-### Heuristic pass (`s05b_identify_speakers.py:119-125`)
+_Rewritten 10 Nov 2026. The pre-November description (a `_RESEARCHER_PHRASES` list, "highest score wins", a UXR-only prompt) is in git history and in the archived prompt `bristlenose/llm/prompts-archive/prompts_2026-11-10_speaker-identification-v0.1.1-before-counts.md`._
 
-Scores each speaker by:
-- Question ratio (what proportion of their segments end with `?`)
-- Hits against `_RESEARCHER_PHRASES` (lines 43-69) — phrases like "can you try", "what would you do", "walk me through", "let's move on to", "think aloud"
+One set of per-speaker counts feeds two readers. `_count_speakers` measures, over the **whole session** (not the first five minutes): turns, words, real questions, host-style and guest-style opening-script phrases, and whether a speaker introduced a colleague.
 
-The speaker with the highest score is assigned `SpeakerRole.RESEARCHER`.
+### Heuristic pass (`identify_speaker_roles_heuristic`)
 
-### LLM pass (`s05b_identify_speakers.py:166-249`)
+Decides alone only when the LLM pass fails or is skipped. The score is `question share × 1.5 + host phrases per turn × 4 − guest phrases per turn × 3 + word-share nudge × 0.5`; the top scorer is the researcher.
 
-Sends the first 5 minutes of transcript to the LLM using `llm/prompts/speaker-identification.md`. The prompt frames roles entirely around UX research:
-- RESEARCHER: "conducts the research session", "facilitates discussion", "guides the participant through tasks or screens"
-- PARTICIPANT: "the person being studied"
-- OBSERVER: "watches but doesn't participate"
+- **Direction of address decides.** `_HOST_PHRASES` are what the person running a session says to the person hosted ("thanks for joining", "no right or wrong", "I'll record", "walk me through"); `_GUEST_PHRASES` are the reverse ("thanks for having me", "do you want me to share my screen"). Phrase hits are a rate per turn and capped at 2 per segment, so a long talker cannot win on volume.
+- **A job title is not a role.** The phrase lists hold no occupation words. "Researcher" is a title the interviewee may hold ("I'm a researcher for an MP"); the product manager running the session may never use the word.
+- **Not questions:** tag questions (", right?", "you know?") do not count, and neither does reported or quoted speech ("I always say, tell me about…"): a participant describing their own method is not facilitating.
+- **Who spoke first is not a signal.** It depends on who joined the call first. Before 10 Nov the first speaker took any near-tie (a score gap under 1.0); now only an exact tie falls to the earlier speaker.
+- **Word count is weak evidence** (see the note under "What oral history interviewers actually do"): a 0.5-weight nudge, two-speaker sessions only.
+- **More than one researcher:** in a session of three or more, a second researcher is recognised when the host introduces a colleague and that speaker only asks, or when they carry the host script and ask. A 1:1 always keeps its participant.
+- **Observer:** at most two turns and under 20 words (unchanged from before, so a participant who says very little in a short session reads as an observer).
+
+### LLM pass (`identify_speaker_roles_llm`)
+
+Sends the first five minutes to the model with `llm/prompts/speaker-identification.md` (version 0.2.0) **and the same counts for the whole session** as `{speaker_facts}`: a model eyeballing a sample cannot count turns, and "two turns, fourteen words, no questions" is what marks an observer.
+
+The prompt defines the researcher as whoever runs *this* conversation, whatever their job, and ranks the evidence: who frames the session; direction of thanks; who asks and who answers; word share is weak; who spoke first is not evidence. It carries the same job-title caution. The speaker list and the counts are wrapped as untrusted (speaker labels on platform transcripts are real names from files); `tests/test_prompt_boundary.py` pins both. The role enum stays RESEARCHER/PARTICIPANT/OBSERVER; the prompt's "researcher" means interviewer or moderator.
 
 ### Why both fail on oral history
+
+> **Status 10 Nov 2026 (kept as the April diagnosis).** The LLM half was fixed on 16 Apr 2026 by the format-agnostic prompt (v0.1.1, "speaker detection: LLM splitting, generalised heuristic, format-agnostic prompt"); the heuristic half was patched then and reworked on 10 Nov 2026 (see How it works today). Whether the FOSSDA corpus now comes out right has never been re-run and recorded (see Test plan).
 
 **Heuristic pass:** Oral history interviewers don't use UXR phrases. They don't say "can you try clicking" or "walk me through the interface." They ask substantive historical questions ("tell me about your time at Pixar", "how did you get involved with Debian"). Question ratio alone isn't discriminating enough — the interviewee also asks rhetorical questions.
 
@@ -52,6 +75,10 @@ Unlike UXR moderators, oral history interviewers:
 - Don't give instructions, assign tasks, or reference screens/interfaces
 
 The **word count asymmetry** is actually the strongest signal: in oral history, the interviewer speaks far less than the interviewee. In UXR, it's more balanced.
+
+> **Superseded 10 Nov 2026.** Word share is now weak evidence. In task phases a participant often says little while a moderator explains at length, and a talkative host who never asks a question inverts the signal (measured on invented hard cases, `863b7767f`). The prompt says "Don't decide on word count alone" and the heuristic weight fell from 2.0 to 0.5, two-speaker sessions only. The oral-history observation above still holds for that format.
+
+> **Unsourced estimate.** The "10-20% vs 40-50%" figures above were never measured in this doc; the only measured moderator share nearby is 25%, in `docs/design-voice-diarization.md`.
 
 ## Options
 
@@ -110,25 +137,44 @@ Add a `--format` flag or config option: `uxr` (default), `oral-history`, `focus-
 
 **Companion work:** The single-speaker diarization problem (raw audio with no speaker labels) is addressed separately by an LLM splitting pre-pass — see [design-speaker-splitting.md](design-speaker-splitting.md).
 
-**Not implemented:** Options A (superseded by B+C), D (configurable format), E (two-stage detection). The role enum stays as RESEARCHER/PARTICIPANT (internal, not user-facing — renaming is high churn for no user value).
+**Not implemented:** D (configurable format), E (two-stage detection). Option A was first called superseded by B+C, but the phrase list kept growing and is now split by direction (see Status 10 Nov 2026). The role enum stays as RESEARCHER/PARTICIPANT (internal, not user-facing — renaming is high churn for no user value).
+
+## Status (10 Nov 2026)
+
+**Counts in code, reading in the prompt, the heuristic as fallback.** Commit `863b7767f` ("speaker roles: count in code, read in the prompt, fall back on better counts"):
+- the first-speaker tiebreak is gone;
+- opening-script phrases are split into host and guest lists and scored per turn;
+- tag questions and reported speech are ignored; a second moderator is possible in sessions of three or more;
+- `speaker_facts()` sends the same counts to the model, prompt 0.2.0, the speaker list and counts wrapped as untrusted.
+
+Tests: `tests/test_speaker_heuristic_counts.py` (20), mutation-checked. Measured with a scratch harness (private, git-excluded) on 82 real speakers from the trial projects: the heuristic agrees with the model's reading on 78 (the previous heuristic 77); the prompt with counts agrees on 80, and the two it differs on are a junk placeholder transcript where it declined to claim evidence; all five real observers were right with counts. On 35 invented, labelled speakers the heuristic got 35 right (the previous one 24); those cases were tuned on, so that figure is not independent evidence, and the real sessions are easy (the moderator spoke first in all of them). **Not measured:** the shipped prompt on a paid run, and FOSSDA. **Known weakness (old and new):** on the heuristic fallback a facilitator who only gives statements while the participant asks clarifying questions can invert; only the model path fixes it.
+
+Also related: "a session with one speaker is coded p1, never m1, whatever the role model says" (8 Nov 2026) removed a different m1 failure, for solo think-aloud sessions.
 
 ## Recommendation
+
+> **Status 10 Nov 2026:** B was built and C was built, then C was demoted (word count is a weak nudge). The enum rename below was declined: see "Not implemented" above.
 
 **B + C together.** Generalise the prompt (B) so the LLM understands interview roles beyond UXR, and add word count ratio (C) as a strong heuristic signal. The combination is robust across formats without requiring the user to configure anything.
 
 The role enum change (RESEARCHER → INTERVIEWER) is worth doing — "researcher" is UXR jargon that doesn't make sense for oral history or journalism. "Interviewer" is universal.
 
-Naming the interviewee (the "m1" problem) is likely also fixed by a better prompt — if the LLM correctly identifies the interviewee role, it can also extract their name from the conversation context ("I'm Bruce Perens, and I was at Pixar...").
+Naming the interviewee (the "m1" problem) is likely also fixed by a better prompt (the prompt does extract `person_name`; whether the FOSSDA names now come out was never re-checked) — if the LLM correctly identifies the interviewee role, it can also extract their name from the conversation context ("I'm Bruce Perens, and I was at Pixar...").
 
 ## Files involved
 
-- `bristlenose/stages/s05b_identify_speakers.py` — heuristic phrases (43-69), scoring (119-125), LLM call (166-249)
-- `bristlenose/llm/prompts/speaker-identification.md` — UXR-only framing
-- `bristlenose/models.py` — `SpeakerRole` enum, `full_text()` role tagging (line 207)
-- `bristlenose/stages/s09_quote_extraction.py` — reads `[RESEARCHER]` tags to skip interviewer speech
-- `bristlenose/llm/prompts/quote-extraction.md` — Rule 1 (line 15), the suppression gate
+By symbol, not line number (every line reference in the April version had gone stale):
+
+- `bristlenose/stages/s05b_identify_speakers.py` — `_HOST_PHRASES` / `_GUEST_PHRASES`, `_count_speakers`, `speaker_facts`, `identify_speaker_roles_heuristic`, `identify_speaker_roles_llm`
+- `bristlenose/llm/prompts/speaker-identification.md` — version 0.2.0 (`{transcript_sample}`, `{speaker_list}`, `{speaker_facts}`)
+- `bristlenose/models.py` — `SpeakerRole` enum; `FullTranscript.full_text()` emits the role tag
+- `bristlenose/stages/s09_quote_extraction.py` — reads the transcript through `full_text()`, so the role tag reaches the prompt; also filters segments by role
+- `bristlenose/llm/prompts/quote-extraction.md` — Rule 1, the suppression gate
+- `tests/test_speaker_heuristic_counts.py`, `tests/test_prompt_boundary.py` — the pins
 
 ## Test plan
+
+> **Not recorded as run (10 Nov 2026).** Nothing in the repo records a FOSSDA, IKEA or rock-climbing re-run against these criteria. The nearest evidence is the measurement under Status (10 Nov 2026), which used the trial projects' real sessions (no FOSSDA).
 
 1. Re-run FOSSDA corpus after fix — all 10 sessions should identify "Zach" as interviewer
 2. Re-run IKEA and rock climbing corpora — verify no regression (UXR moderators still detected)

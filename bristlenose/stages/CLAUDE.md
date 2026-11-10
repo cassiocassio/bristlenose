@@ -74,7 +74,7 @@ interviews/bristlenose-output/          # default output location
 
 ## Stage 5b: Speaker identification
 
-`identify_speakers.py` runs a three-pass speaker assignment: splitting, heuristic, then LLM refinement.
+`s05b_identify_speakers.py` runs a three-pass speaker assignment: splitting, heuristic, then LLM refinement.
 
 **Speaker identification and codes** (4) — [full entries](gotchas.md#speaker-identification-and-codes)
 
@@ -86,7 +86,7 @@ interviews/bristlenose-output/          # default output location
 - **Heuristic pass** (`identify_speaker_roles_heuristic`, rewritten 10 Nov 2026): counts only, no model. Scores host-style opening-script phrases per turn (`_HOST_PHRASES`: "thanks for joining", "no right or wrong", "walk me through") minus guest-style ones (`_GUEST_PHRASES`: "thanks for having me", "do you want me to share my screen"), plus question share (tag questions like ", right?" don't count; "I always say, tell me about..." doesn't count) and a weak word-share nudge in 2-speaker sessions. **Who spoke first is not a signal** (an exact score tie only falls to the earlier speaker). No occupation words in the phrase list: "researcher" is a job title the interviewee may hold. A second moderator needs a host-introduced colleague or the script plus questions, and never in a 1:1. The old "at most 2 turns and under 20 words = observer" rule is unchanged, so a participant who says very little in a short session is called an observer. It decides alone only when the LLM pass fails or is skipped
 - **LLM pass** (`identify_speaker_roles_llm`): sends first ~5 minutes to the LLM (prompt `speaker-identification` v0.2.0) **plus the same counts over the whole session as `{speaker_facts}`** (`speaker_facts()`), so the model sees turn, word and question counts it cannot eyeball. The prompt defines "researcher" as whoever runs this conversation, whatever their job. The speaker list and the counts are wrapped as untrusted (speaker labels on platform transcripts are real names). Measured on 82 real speakers: matches the earlier prompt on 80, all five real observers right. Also extracts `person_name` and `job_title`. Design doc: `docs/design-speaker-role-detection.md`
 - **Return type**: `identify_speaker_roles_llm()` returns `list[SpeakerInfo]` — a dataclass with `speaker_label`, `role`, `person_name`, `job_title`. Still mutates segments in place for role assignment (existing behaviour). Returns empty list on exception
-- **`SpeakerInfo` import**: defined in `identify_speakers.py`. Other modules import it under `TYPE_CHECKING` to avoid circular imports (e.g. `people.py` uses `if TYPE_CHECKING: from bristlenose.stages.s05b_identify_speakers import SpeakerInfo`)
+- **`SpeakerInfo` import**: defined in `s05b_identify_speakers.py`. Other modules import it under `TYPE_CHECKING` to avoid circular imports (e.g. `people.py` uses `if TYPE_CHECKING: from bristlenose.stages.s05b_identify_speakers import SpeakerInfo`)
 - **Structured output**: `SpeakerRoleItem` in `llm/structured.py` has `person_name` and `job_title` fields (both default `""` for backward compatibility with existing LLM responses)
 
 ## LLM concurrency in stages

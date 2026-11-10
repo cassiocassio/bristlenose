@@ -418,11 +418,11 @@ describe("rail drag-to-open (Tags)", () => {
   });
 });
 
-// ── Animation class ──────────────────────────────────────────────────────
+// ── Animation marker ─────────────────────────────────────────────────────
 
-describe("animation class", () => {
-  it("removes .animating on drag start", () => {
-    layoutEl.classList.add("animating");
+describe("animation marker", () => {
+  it("clears data-animating on drag start", () => {
+    layoutEl.setAttribute("data-animating", "");
     const ref = makeRef(layoutEl);
     const { result } = renderHook(() =>
       useDragResize({ side: "toc", source: "sidebar", layoutRef: ref, currentWidth: 280 }),
@@ -433,7 +433,7 @@ describe("animation class", () => {
         new PointerEvent("pointerdown", { clientX: 300 }) as unknown as React.PointerEvent,
       );
     });
-    expect(layoutEl.classList.contains("animating")).toBe(false);
+    expect(layoutEl.hasAttribute("data-animating")).toBe(false);
   });
 });
 

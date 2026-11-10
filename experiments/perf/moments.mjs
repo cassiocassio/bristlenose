@@ -304,8 +304,8 @@ export function searchTable(r, label) {
 // Each action flips one state; the step ends at the second rAF after the DOM shows the new state (the same end as
 // STEP). Star and unstar the first quote card (a click on `.star-btn`); open and close the tag sidebar (`]`) and the
 // contents sidebar (`[`), the keys the report binds on Quotes. A sidebar step ends when `.layout` carries the new
-// open class; the width transition is not timed (measured 7 Nov 2026: React's className write drops the `animating`
-// class withAnimation adds about 10 ms earlier, so the transition never runs; docs/design-perf-ledger.md).
+// open class; `toSettled` is when its 75 ms width slide ended (`transitionend` on `.layout`), after the step, or null
+// if no slide ran (reduced motion, overlay mode; before 10 Nov 2026 it never ran: docs/design-perf-ledger.md).
 // Hide and tag are not timed here: a hide leaves the card (the next rep has a different first card) and a tag needs
 // the TagInput flow; both are recorded as not covered in docs/design-perf-ledger.md.
 const DIRECT = [
@@ -333,11 +333,22 @@ const FLIP = async ({ state, want, click, key }) => {
   if (!target) return { error: `no click target ${click}` };
   return new Promise((resolve) => {
     const t0 = performance.now();
-    let tState = null;
+    let tState = null, tSettled = null;
+    const L = key ? layout() : null;
+    const onEnd = (e) => { if (e.target === L && tSettled == null) tSettled = performance.now(); };
+    L?.addEventListener('transitionend', onEnd);
     const hit = () => {
       tState = performance.now();
       mo.disconnect();
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve({ toState: tState - t0, toPaint: performance.now() - t0 })));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const out = { toState: tState - t0, toPaint: performance.now() - t0 };
+        if (!L) return resolve(out);
+        // Outside the timed region: wait up to 500 ms for the slide to end.
+        const wait = () => (tSettled != null || performance.now() - t0 > 500)
+          ? (L.removeEventListener('transitionend', onEnd), resolve({ ...out, toSettled: tSettled == null ? null : tSettled - t0 }))
+          : setTimeout(wait, 10);
+        wait();
+      }));
     };
     const mo = new MutationObserver(() => { if (tState == null && read() === want) hit(); });
     mo.observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
@@ -351,7 +362,8 @@ const FLIP = async ({ state, want, click, key }) => {
 export async function direct(a, browserName) {
   const reps = +(a.reps ?? 10), settle = +(a.settle ?? 400);
   const browser = await pw[browserName].launch();
-  const context = await browser.newContext({ viewport: VIEWPORT });
+  // --reduced-motion turns the sidebar slide off (theme/organisms/sidebar.css), to A/B what the slide costs.
+  const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: a['reduced-motion'] ? 'reduce' : 'no-preference' });
   const page = await context.newPage();
   await page.addInitScript(INIT);
   const resp = await page.goto(`${BASE}/report/quotes/`, { waitUntil: 'domcontentloaded' });
@@ -378,17 +390,18 @@ export async function direct(a, browserName) {
     }
   }
   await browser.close();
-  return { quotes, startsStarred, reps, rows };
+  return { quotes, startsStarred, reps, reducedMotion: !!a['reduced-motion'], rows };
 }
 
 export function directTable(r, label, budget = 100) {
-  const lines = [`direct ${label}  quotes=${r.quotes}${r.startsStarred ? ' (first card started starred: unstar ran first)' : ''}`,
-    `action      | to state p50 | to paint: n  p50  p90  max | over ${budget} ms`];
+  const lines = [`direct ${label}  quotes=${r.quotes}${r.reducedMotion ? ' reduced-motion' : ''}${r.startsStarred ? ' (first card started starred: unstar ran first)' : ''}`,
+    `action      | to state p50 | to paint: n  p50  p90  max | over ${budget} ms | slide settled p50 (n)`];
   for (const D of DIRECT) {
     const ok = r.rows.filter((x) => x.action === D.name && x.toPaint != null);
     const t = summ(ok.map((x) => x.toPaint));
     const over = ok.filter((x) => x.toPaint > budget).length;
-    lines.push(`${D.name.padEnd(11)} | ${f1(pct(ok.map((x) => x.toState), 0.5))}       | ${String(t.n).padStart(2)} ${f1(t.p50)} ${f1(t.p90)} ${f1(t.max)} | ${String(over).padStart(4)}`);
+    const st = ok.map((x) => x.toSettled).filter((x) => x != null);
+    lines.push(`${D.name.padEnd(11)} | ${f1(pct(ok.map((x) => x.toState), 0.5))}       | ${String(t.n).padStart(2)} ${f1(t.p50)} ${f1(t.p90)} ${f1(t.max)} | ${String(over).padStart(4)}        | ${D.key ? `${f1(pct(st, 0.5))} (${st.length})` : '     -'}`);
   }
   return lines.join('\n');
 }

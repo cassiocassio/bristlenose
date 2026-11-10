@@ -100,7 +100,7 @@ export function useDragResize({
       document.body.classList.add("dragging");
 
       if (source === "sidebar") {
-        layout.classList.remove("animating");
+        layout.removeAttribute("data-animating");
       }
 
       const computeWidth = (clientX: number): number => {
@@ -166,10 +166,10 @@ export function useDragResize({
         // Sidebar edge drag commit.
         if (lastWidth < SNAP_CLOSE_THRESHOLD) {
           // Snap-close with animation.
-          layout.classList.add("animating");
+          layout.setAttribute("data-animating", "");
           closeFn();
           const removeAnimating = () => {
-            layout.classList.remove("animating");
+            layout.removeAttribute("data-animating");
             layout.removeEventListener("transitionend", onTransitionEnd);
             clearTimeout(fallback);
           };

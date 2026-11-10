@@ -281,7 +281,7 @@ function applyOverrides(s: PlaygroundState): void {
   if (s.animationScale !== null && s.animationScale !== 1.0) {
     const sc = s.animationScale;
     // Override sidebar grid transition
-    rules.push(`.layout.animating { transition-duration: ${Math.round(75 * sc)}ms !important; }`);
+    rules.push(`.layout[data-animating] { transition-duration: ${Math.round(75 * sc)}ms !important; }`);
     // Override overlay panel animation durations
     rules.push(`.layout.toc-overlay .toc-sidebar { animation-duration: ${Math.round(75 * sc)}ms !important; }`);
     rules.push(`.layout.toc-closing .toc-sidebar { animation-duration: ${Math.round(75 * sc)}ms !important; }`);

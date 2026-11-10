@@ -73,8 +73,13 @@ function TagIcon() {
 // ── Animation helper ──────────────────────────────────────────────────────
 
 /**
- * Add `.animating` before state change, remove after transition completes.
+ * Set `data-animating` before the state change, clear it after the transition.
  * Fallback timeout (200ms) covers 75ms grid transition + rAF scheduling.
+ *
+ * An attribute, not a class: the state change re-renders `.layout`, and React
+ * rewrites `className` wholesale, so a class added here was gone before the
+ * grid columns changed and the slide never ran (measured 7 Nov 2026; frontend
+ * gotcha "Mark … with `data-*` attributes, never React-owned classes").
  */
 function withAnimation(
   layoutEl: HTMLElement | null,
@@ -84,10 +89,10 @@ function withAnimation(
     action();
     return;
   }
-  layoutEl.classList.add("animating");
+  layoutEl.setAttribute("data-animating", "");
 
   const cleanup = () => {
-    layoutEl.classList.remove("animating");
+    layoutEl.removeAttribute("data-animating");
     layoutEl.removeEventListener("transitionend", onEnd);
     clearTimeout(fallback);
   };
@@ -97,8 +102,10 @@ function withAnimation(
   layoutEl.addEventListener("transitionend", onEnd);
   const fallback = setTimeout(cleanup, 200);
 
-  // Run state change after animating class is applied (next frame)
+  // Run state change after the attribute is applied (next frame). Set it again
+  // here: an earlier toggle's transitionend can land in this frame and clear it.
   requestAnimationFrame(() => {
+    layoutEl.setAttribute("data-animating", "");
     action();
   });
 }

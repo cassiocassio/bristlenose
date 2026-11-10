@@ -34,7 +34,7 @@ const CASES = {
         await page.keyboard.press(key);
         await page.waitForTimeout(40);
         steps.push(await frame(page));
-        await page.waitForTimeout(250); // a settle between toggles (no width transition runs: design-perf-ledger.md)
+        await page.waitForTimeout(250); // let the 75 ms width slide settle
       }
     }
     return steps;

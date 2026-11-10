@@ -300,6 +300,34 @@ describe("button interactions", () => {
     // withAnimation wraps openTocPush in rAF — the mock is called via rAF.
   });
 
+  // The slide is declared on `.layout[data-animating]`. The toggle re-renders
+  // `.layout` with a new className; a marker React owns would be gone before
+  // the columns change, and the sidebar would snap (measured 7 Nov 2026).
+  it("keeps the slide marker through the re-render the toggle causes, then clears it", () => {
+    vi.useFakeTimers();
+    try {
+      const { container, rerender } = render(
+        <SidebarLayout active={true}>
+          <div>Content</div>
+        </SidebarLayout>,
+      );
+      fireEvent.click(screen.getByLabelText("Toggle table of contents"));
+      mockState = { ...mockState, tocMode: "push" };
+      rerender(
+        <SidebarLayout active={true}>
+          <div>Content</div>
+        </SidebarLayout>,
+      );
+      const layout = container.querySelector(".layout")!;
+      expect(layout.classList.contains("toc-open")).toBe(true);
+      expect(layout.matches(".layout[data-animating]")).toBe(true);
+      vi.advanceTimersByTime(200); // the fallback, as jsdom fires no transitionend
+      expect(layout.hasAttribute("data-animating")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("close button exists when TOC sidebar is in push mode", () => {
     mockState = { ...mockState, tocMode: "push" };
     render(

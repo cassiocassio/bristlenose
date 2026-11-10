@@ -150,13 +150,15 @@
     --bn-minimap-extra-pad-r: var(--bn-space-lg);
 }
 
-/* Animated slide — added before state change, removed on transitionend */
-.layout.animating {
+/* Animated slide — set before state change, cleared on transitionend. An
+   attribute, not a class: React rewrites .layout's className on the re-render
+   the state change causes, which dropped a class before the columns moved. */
+.layout[data-animating] {
     transition: grid-template-columns 75ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .layout.animating { transition: none; }
+    .layout[data-animating] { transition: none; }
 
     /* Overlay: instant open/close, no motion */
     .layout.toc-overlay .toc-sidebar,
@@ -172,7 +174,7 @@
 }
 
 /* Overlay mode uses its own animation, not grid transition */
-.layout.toc-overlay.animating {
+.layout.toc-overlay[data-animating] {
     transition: none;
 }
 

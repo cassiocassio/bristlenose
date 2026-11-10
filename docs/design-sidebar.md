@@ -128,7 +128,7 @@ Sidebar widths use CSS custom properties (`--toc-width`, `--tags-width`) with `v
 
 ### Animation
 
-Adding `.animating` to `.layout` enables `transition: grid-template-columns 0.25s ease`. This class is added before state changes and removed after transition completes (via `transitionend`). Slightly snappier than `--bn-transition-slow` (0.3s) — the layout slide feels better at 0.25s.
+A `data-animating` attribute on `.layout` enables `transition: grid-template-columns 75ms ease` (`organisms/sidebar.css`). `withAnimation` sets it before the state change and clears it on `transitionend`, with a 200 ms fallback. It is an attribute because the state change re-renders `.layout` and React rewrites `className`: until 10 Nov 2026 the marker was an `animating` class, which that write dropped before the columns moved, so the slide never ran (`docs/design-perf-ledger.md`).
 
 ---
 
@@ -575,7 +575,7 @@ following the Quotes grouping. Components added since:
 
 4. **Scroll spy walks bottom-to-top** — this handles the case where multiple sections are above the threshold. The lowest one that's still above the viewport top is the most relevant.
 
-5. **Animation class timing** — `.animating` must be added before changing open/close state and removed after `transitionend`. If removed too early, the grid snaps. If never removed, subsequent mouse events on sidebar content feel sluggish (the grid is still in transition mode).
+5. **Animation marker timing** — `data-animating` must be set before changing open/close state and cleared after `transitionend`, and it must not be a class React renders (see Animation). If removed too early, the grid snaps. If never removed, subsequent mouse events on sidebar content feel sluggish (the grid is still in transition mode).
 
 6. **Drag handles use `position: absolute`** — they overlay the sidebar edge. The sidebar needs `position: relative` (already has `position: sticky` which establishes a containing block).
 

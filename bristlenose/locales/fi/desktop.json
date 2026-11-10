@@ -484,7 +484,7 @@
     },
     "startingSidecar": "Käynnistetään Bristlenosea…",
     "loadingReport": "Ladataan raporttia…",
-    "failedTitle": "Bristlenosea ei voitu käynnistää",
+    "failedTitle": "Käynnistys epäonnistui",
     "retry": "Yritä uudelleen",
     "showDetails": "Näytä tiedot",
     "hideDetails": "Kätke tiedot"

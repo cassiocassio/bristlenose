@@ -190,8 +190,8 @@ enum ReviewGalleryRegistry {
                     errorPatternBoot(row, ctx)
                 }
             },
-            audit: .diverges,
-            auditNote: "Direction agreed: “Failed to start”. Omit technical body copy when it gives no user action. Offer Retry only when the cause says another attempt could work."
+            audit: .aligned,
+            auditNote: "Decided 10 Nov 2026: headline “Failed to start”; no body when the cause is only technical (an exit code, an OS error, the engine’s path or output), so only the 90-second timeout keeps a sentence; Retry only where another attempt could work (a timeout or a stopped engine), never for a missing engine or a refused launch, which go straight to Show Details and Send Feedback…."
         ),
         ReviewGalleryEntry(
             id: "ux-report-crash",
@@ -206,8 +206,8 @@ enum ReviewGalleryRegistry {
                     errorPatternWeb(.reportCrash, ctx)
                 },
             ],
-            audit: .needsDecision,
-            auditNote: "Review wording, retry evidence, and when the existing problem-report door is earned."
+            audit: .aligned,
+            auditNote: "Decided 10 Nov 2026: the headline alone (the restating body sentence is gone); no Retry, since a render bug crashes again the same way; Send feedback is earned, because this is a defect on our side and the report arrives filled in. The button says Send, never Give (docs/glossary.md)."
         ),
         ReviewGalleryEntry(
             id: "ux-analysis-failure-remedies",
@@ -265,7 +265,7 @@ enum ReviewGalleryRegistry {
         ),
         ReviewGalleryEntry(
             id: "M14",
-            title: "Couldn’t start Bristlenose",
+            title: "Failed to start",
             what: "The start-timeout failure reads \"Bristlenose didn't finish starting within 90 seconds.\", and after a Retry that fails too the primary button becomes \"Send Feedback…\".",
             commits: ["f7048124", "4d8053c9"],
             files: ["BootView.swift", "ServeManager.swift", "ServeStartPolicy.swift"],

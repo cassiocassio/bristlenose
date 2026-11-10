@@ -484,7 +484,7 @@
     },
     "startingSidecar": "Démarrage de Bristlenose…",
     "loadingReport": "Chargement du rapport…",
-    "failedTitle": "Impossible de démarrer Bristlenose",
+    "failedTitle": "Échec du démarrage",
     "retry": "Réessayer",
     "showDetails": "Afficher les détails",
     "hideDetails": "Masquer les détails"

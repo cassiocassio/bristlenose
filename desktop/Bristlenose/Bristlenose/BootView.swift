@@ -140,15 +140,18 @@ struct BootView: View {
             ContentUnavailableView {
                 Label(statusText, systemImage: "exclamationmark.triangle")
             } description: {
-                Text(message.resolved(i18n))
-                    .lineLimit(3)
+                if Self.showsBody(message) {
+                    Text(message.resolved(i18n))
+                        .lineLimit(3)
+                }
             } actions: {
                 // Our own row in the stock actions slot: the slot splits a plain
                 // HStack's width equally and a Button ellipsizes ("Show Det…",
                 // 9 Nov 2026). Each button keeps its label's width instead.
                 HStack(spacing: 12) {
                     let set = Self.failureButtons(
-                        startedByRetry: serveManagerForPane?.startedByRetry ?? false
+                        startedByRetry: serveManagerForPane?.startedByRetry ?? false,
+                        retryable: Self.isRetryable(message)
                     )
                     ForEach(set.buttons, id: \.self) { which in
                         failureButton(which, retry: retry, sendFeedback: sendFeedback)
@@ -213,10 +216,43 @@ extension BootView {
     /// neither is the fix. Owner decisions, 22 and 24 Oct 2026: they don't
     /// want to hit Retry ten times, and a failure that survives a retry is
     /// worth telling us about.
-    static func failureButtons(startedByRetry: Bool) -> FailureButtonSet {
-        startedByRetry
+    ///
+    /// Retry is offered only when the cause says another attempt could work
+    /// (owner, 10 Nov 2026). A cause that will fail the same way again goes
+    /// straight to the after-retry set.
+    static func failureButtons(startedByRetry: Bool, retryable: Bool = true) -> FailureButtonSet {
+        startedByRetry || !retryable
             ? FailureButtonSet(buttons: [.showDetails, .sendFeedback], defaultButton: nil)
             : FailureButtonSet(buttons: [.retry, .showDetails], defaultButton: .retry)
+    }
+
+    /// Causes another attempt cannot fix: the engine is not where the app put
+    /// it, or macOS refused to launch it. Each try finds the same thing.
+    private static let unretryableKeys: Set<String> = [
+        "desktop.boot.failure.sidecarMissing",
+        "desktop.boot.failure.launchFailed",
+    ]
+
+    /// Causes whose sentence is only technical (an exit code, an OS error, an
+    /// engine path, the engine's last lines) and gives the researcher nothing
+    /// to do. The headline says it failed; Show Details holds the record.
+    private static let silentBodyKeys: Set<String> = [
+        "desktop.boot.failure.sidecarMissing",
+        "desktop.boot.failure.launchFailed",
+        "desktop.boot.failure.exitedWithCode",
+        "desktop.boot.failure.exitedBeforeReady",
+    ]
+
+    static func isRetryable(_ message: FailureMessage) -> Bool {
+        guard let key = message.key else { return true }
+        return !unretryableKeys.contains(key)
+    }
+
+    /// Whether the pane draws the cause's sentence under the headline (owner,
+    /// 10 Nov 2026: omit technical body copy that gives no user action).
+    static func showsBody(_ message: FailureMessage) -> Bool {
+        guard let key = message.key else { return true }
+        return !silentBodyKeys.contains(key)
     }
 
     /// What a problem report from this pane starts with: the pane's title,

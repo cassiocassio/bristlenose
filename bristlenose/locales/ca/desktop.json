@@ -484,7 +484,7 @@
     },
     "startingSidecar": "S'està iniciant el Bristlenose…",
     "loadingReport": "S'està carregant l'informe…",
-    "failedTitle": "No s'ha pogut iniciar el Bristlenose",
+    "failedTitle": "No s'ha pogut iniciar",
     "retry": "Torna-ho a provar",
     "showDetails": "Mostra els detalls",
     "hideDetails": "Oculta els detalls"

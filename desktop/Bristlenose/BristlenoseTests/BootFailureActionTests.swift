@@ -20,4 +20,29 @@ struct BootFailureActionTests {
         #expect(set.buttons == [.showDetails, .sendFeedback])
         #expect(set.defaultButton == nil)
     }
+
+    @Test func aCauseRetryCannotFixSkipsStraightToDetailsAndFeedback() {
+        for key in ["desktop.boot.failure.sidecarMissing", "desktop.boot.failure.launchFailed"] {
+            let message = FailureMessage(key: key, english: "x")
+            #expect(!BootView.isRetryable(message))
+            let set = BootView.failureButtons(startedByRetry: false, retryable: false)
+            #expect(set.buttons == [.showDetails, .sendFeedback])
+            #expect(set.defaultButton == nil)
+        }
+    }
+
+    @Test func anEngineThatStoppedOrTimedOutCanBeRetried() {
+        for key in ["desktop.boot.failure.startTimeout", "desktop.boot.failure.exitedBeforeReady",
+                    "desktop.boot.failure.exitedWithCode"] {
+            #expect(BootView.isRetryable(FailureMessage(key: key, english: "x")))
+        }
+    }
+
+    @Test func onlyAPlainLanguageCauseDrawsABody() {
+        #expect(BootView.showsBody(FailureMessage(key: "desktop.boot.failure.startTimeout", english: "x")))
+        for key in ["desktop.boot.failure.sidecarMissing", "desktop.boot.failure.launchFailed",
+                    "desktop.boot.failure.exitedWithCode", "desktop.boot.failure.exitedBeforeReady"] {
+            #expect(!BootView.showsBody(FailureMessage(key: key, english: "x")))
+        }
+    }
 }

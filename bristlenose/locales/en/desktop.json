@@ -485,7 +485,7 @@
     },
     "startingSidecar": "Starting Bristlenose…",
     "loadingReport": "Loading report…",
-    "failedTitle": "Couldn’t start Bristlenose",
+    "failedTitle": "Failed to start",
     "retry": "Retry",
     "showDetails": "Show Details",
     "hideDetails": "Hide Details"

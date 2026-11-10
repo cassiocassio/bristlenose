@@ -243,7 +243,7 @@
   },
   "footer": {
     "builtWith": "Bristlenose で作成",
-    "giveFeedback": "フィードバックを送る",
+    "sendFeedback": "フィードバックを送信",
     "version": "{{version}}",
     "reportBug": "バグを報告",
     "feedback": "フィードバック",

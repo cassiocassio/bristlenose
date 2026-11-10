@@ -529,7 +529,7 @@
     },
     "startingSidecar": "Spouštění Bristlenose…",
     "loadingReport": "Načítání zprávy…",
-    "failedTitle": "Bristlenose se nepodařilo spustit",
+    "failedTitle": "Spuštění se nezdařilo",
     "retry": "Zkusit znovu",
     "showDetails": "Zobrazit podrobnosti",
     "hideDetails": "Skrýt podrobnosti"

@@ -461,7 +461,7 @@
     },
     "startingSidecar": "正在啟動 Bristlenose⋯",
     "loadingReport": "正在載入報告⋯",
-    "failedTitle": "無法啟動 Bristlenose",
+    "failedTitle": "無法啟動",
     "retry": "重試",
     "showDetails": "顯示詳細資訊",
     "hideDetails": "隱藏詳細資訊"

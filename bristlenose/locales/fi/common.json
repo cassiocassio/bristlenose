@@ -248,7 +248,7 @@
   },
   "footer": {
     "builtWith": "Tehty Bristlenosella",
-    "giveFeedback": "Anna palautetta",
+    "sendFeedback": "Lähetä palautetta",
     "version": "{{version}}",
     "reportBug": "Ilmoita virheestä",
     "feedback": "Palaute",

@@ -233,7 +233,7 @@
   },
   "footer": {
     "builtWith": "以 Bristlenose 製作",
-    "giveFeedback": "提供意見回饋",
+    "sendFeedback": "傳送意見回饋",
     "version": "{{version}}",
     "reportBug": "回報錯誤",
     "feedback": "意見回饋",

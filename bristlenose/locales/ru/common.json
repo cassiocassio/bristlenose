@@ -278,7 +278,7 @@
   },
   "footer": {
     "builtWith": "Создано с помощью Bristlenose",
-    "giveFeedback": "Оставить отзыв",
+    "sendFeedback": "Отправить отзыв",
     "version": "{{version}}",
     "reportBug": "Сообщить об ошибке",
     "feedback": "Отзыв",

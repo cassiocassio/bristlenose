@@ -98,16 +98,10 @@ function ReportCrashNotice({ error, pathname }: { error: unknown; pathname: stri
   const label =
     embedded && i18n.exists("desktop:menu.help.sendFeedback")
       ? t("desktop:menu.help.sendFeedback")
-      : t("footer.giveFeedback");
+      : t("footer.sendFeedback");
   return (
     <div className="bn-empty-state bn-route-error" role="alert">
       <p>{t("labels.reportError")}</p>
-      <p>
-        {t(
-          "desktop:statusPage.reportError",
-          "Bristlenose hit an unexpected problem while opening this report.",
-        )}
-      </p>
       {(embedded || health?.feedback.enabled === true) && (
         <button
           type="button"
@@ -162,7 +156,7 @@ function LensCrashNotice({ error, pathname }: { error: unknown; pathname: string
   const label =
     embedded && i18n.exists("desktop:menu.help.sendFeedback")
       ? t("desktop:menu.help.sendFeedback")
-      : t("footer.giveFeedback");
+      : t("footer.sendFeedback");
 
   return (
     <div className="bn-empty-state bn-route-error bn-lens-crash" role="alert">

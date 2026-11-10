@@ -248,7 +248,7 @@
   },
   "footer": {
     "builtWith": "Bygget med Bristlenose",
-    "giveFeedback": "Giv feedback",
+    "sendFeedback": "Send feedback",
     "version": "{{version}}",
     "reportBug": "Rapportér en fejl",
     "feedback": "Feedback",

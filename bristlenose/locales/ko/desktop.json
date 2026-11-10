@@ -461,7 +461,7 @@
     },
     "startingSidecar": "Bristlenose 시작 중…",
     "loadingReport": "보고서 불러오는 중…",
-    "failedTitle": "Bristlenose를 시작할 수 없습니다",
+    "failedTitle": "시작할 수 없습니다",
     "retry": "다시 시도",
     "showDetails": "세부 정보 보기",
     "hideDetails": "세부 정보 숨기기"

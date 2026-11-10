@@ -30,7 +30,7 @@ import Testing
 
         #expect(!message.contains("NHS diabetes"))
         #expect(!message.contains("sqlite3"))
-        #expect(message.hasPrefix("Couldn’t start Bristlenose\n"))
+        #expect(message.hasPrefix("Failed to start\n"))
         #expect(message.contains("(code 1)") || message.contains("code 1."))
         #expect(!message.hasSuffix("\n"))
     }
@@ -39,7 +39,7 @@ import Testing
         let failure = FailureMessage.keyed(
             "desktop.boot.failure.exitedBeforeReady", vars: ["status": "1", "details": Self.output])
         #expect(BootView.problemReportMessage(for: failure, i18n: try i18n()) == """
-            Couldn’t start Bristlenose
+            Failed to start
             Bristlenose stopped before it finished starting (code 1).
             """)
     }
@@ -73,6 +73,6 @@ import Testing
     @Test func aPassthroughComesThroughWhole() throws {
         let message = BootView.problemReportMessage(
             for: .passthrough("exit 1"), i18n: try i18n())
-        #expect(message == "Couldn’t start Bristlenose\nexit 1")
+        #expect(message == "Failed to start\nexit 1")
     }
 }

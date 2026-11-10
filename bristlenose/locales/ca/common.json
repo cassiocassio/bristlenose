@@ -248,7 +248,7 @@
   },
   "footer": {
     "builtWith": "Fet amb el Bristlenose",
-    "giveFeedback": "Envia comentaris",
+    "sendFeedback": "Envia comentaris",
     "version": "{{version}}",
     "reportBug": "Informa d'un error",
     "feedback": "Comentaris",

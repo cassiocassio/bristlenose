@@ -352,12 +352,12 @@ describe("a crash in the whole report", () => {
   // failed, and tells the shell once — route, error, first frames — so the Mac sidebar row and
   // its popover have something to show. A lens crash tells the shell nothing.
 
-  it("says the report couldn't be shown, explains the unknown failure, and hides the error", () => {
+  it("says the report couldn't be shown and hides the error", () => {
     boom.layout = true;
     renderAt("/report/quotes/");
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("This report couldn’t be shown.");
-    expect(alert).toHaveTextContent("Bristlenose hit an unexpected problem while opening this report.");
+    expect(alert).not.toHaveTextContent("Bristlenose hit an unexpected problem");
     expect(alert).not.toHaveTextContent(/^Error$/);
     expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
     expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
@@ -755,17 +755,17 @@ describe("a whole-report crash", () => {
     });
   }
 
-  it("in a browser, offers one secondary Give feedback without a speculative Retry", async () => {
+  it("in a browser, offers one secondary Send feedback without a speculative Retry", async () => {
     boom.layout = true;
     serveHealth(true);
     renderAt("/report/quotes/");
-    await screen.findByRole("button", { name: "Give feedback" });
+    await screen.findByRole("button", { name: "Send feedback" });
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(sentence);
-    expect(alert).toHaveTextContent("Bristlenose hit an unexpected problem while opening this report.");
+    expect(alert).not.toHaveTextContent("Bristlenose hit an unexpected problem");
     const buttons = within(alert).getAllByRole("button");
     expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveTextContent("Give feedback");
+    expect(buttons[0]).toHaveTextContent("Send feedback");
     expect(buttons[0]).toHaveClass("bn-btn-secondary");
     expect(buttons[0]).not.toHaveClass("bn-btn-primary");
     expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
@@ -798,7 +798,7 @@ describe("a whole-report crash", () => {
       return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
     });
     renderAt("/report/quotes/");
-    fireEvent.click(await screen.findByRole("button", { name: "Give feedback" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Send feedback" }));
     const dialog = await screen.findByTestId("bn-feedback-modal");
     expect(within(dialog).getByRole("heading")).toHaveTextContent("Bristlenose had a problem");
     expect(within(dialog).getByText("Tell us what happened")).toBeInTheDocument();
@@ -842,7 +842,7 @@ describe("a whole-report crash", () => {
     renderAt("/report/quotes/");
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Give feedback" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send feedback" })).toBeNull();
   });
 
   it("in a browser, offers no action while feedback availability is unknown", async () => {
@@ -851,7 +851,7 @@ describe("a whole-report crash", () => {
     renderAt("/report/quotes/");
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Give feedback" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send feedback" })).toBeNull();
   });
 
   it("a layout crash does not create a retry mark", async () => {

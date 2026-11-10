@@ -484,7 +484,7 @@
     },
     "startingSidecar": "Avvio di Bristlenose…",
     "loadingReport": "Caricamento del report…",
-    "failedTitle": "Non è stato possibile avviare Bristlenose",
+    "failedTitle": "Avvio non riuscito",
     "retry": "Riprova",
     "showDetails": "Mostra i dettagli",
     "hideDetails": "Nascondi i dettagli"

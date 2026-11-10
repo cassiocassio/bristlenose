@@ -274,7 +274,7 @@
   },
   "footer": {
     "builtWith": "Vytvořeno pomocí Bristlenose",
-    "giveFeedback": "Poskytnout zpětnou vazbu",
+    "sendFeedback": "Odeslat zpětnou vazbu",
     "version": "{{version}}",
     "reportBug": "Nahlásit chybu",
     "feedback": "Zpětná vazba",

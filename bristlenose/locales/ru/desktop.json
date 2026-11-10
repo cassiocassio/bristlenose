@@ -530,7 +530,7 @@
     },
     "startingSidecar": "Запуск Bristlenose…",
     "loadingReport": "Загрузка отчёта…",
-    "failedTitle": "Не удалось запустить Bristlenose",
+    "failedTitle": "Не удалось запустить",
     "retry": "Повторить",
     "showDetails": "Показать подробности",
     "hideDetails": "Скрыть подробности"

@@ -484,7 +484,7 @@
     },
     "startingSidecar": "Bristlenose starten…",
     "loadingReport": "Rapport laden…",
-    "failedTitle": "Kon Bristlenose niet starten",
+    "failedTitle": "Starten mislukt",
     "retry": "Probeer opnieuw",
     "showDetails": "Toon details",
     "hideDetails": "Verberg details"

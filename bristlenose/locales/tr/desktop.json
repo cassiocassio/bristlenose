@@ -484,7 +484,7 @@
     },
     "startingSidecar": "Bristlenose başlatılıyor…",
     "loadingReport": "Rapor yükleniyor…",
-    "failedTitle": "Bristlenose başlatılamadı",
+    "failedTitle": "Başlatılamadı",
     "retry": "Yeniden Dene",
     "showDetails": "Ayrıntıları göster",
     "hideDetails": "Ayrıntıları gizle"

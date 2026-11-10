@@ -431,7 +431,7 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
             "`feedback` and `version`, while `builtWith` is the wording they "
             "replaced and nothing reads it. `reportIssue` left this set on 24 Oct "
             "2026: it labels the link to the GitHub new-issue page after a failed "
-            "feedback send (R80). `giveFeedback` left it the same day: it labels "
+            "feedback send (R80). `sendFeedback` (was `giveFeedback`) left it the same day: it labels "
             "the browser's whole-report crash pane once its Retry has crashed too "
             "(`RouteError.tsx`).",
         leaves="""

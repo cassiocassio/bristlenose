@@ -233,7 +233,7 @@
   },
   "footer": {
     "builtWith": "Bristlenose로 제작됨",
-    "giveFeedback": "피드백 보내기",
+    "sendFeedback": "피드백 보내기",
     "version": "{{version}}",
     "reportBug": "버그 신고",
     "feedback": "피드백",

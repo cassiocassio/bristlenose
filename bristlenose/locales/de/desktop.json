@@ -484,7 +484,7 @@
     },
     "startingSidecar": "Bristlenose wird gestartet…",
     "loadingReport": "Bericht wird geladen…",
-    "failedTitle": "Bristlenose konnte nicht gestartet werden",
+    "failedTitle": "Start fehlgeschlagen",
     "retry": "Erneut versuchen",
     "showDetails": "Details anzeigen",
     "hideDetails": "Details ausblenden"

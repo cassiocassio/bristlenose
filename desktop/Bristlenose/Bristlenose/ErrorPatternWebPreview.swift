@@ -79,11 +79,9 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
         let body: String
         switch state {
         case .reportCrash:
-            body = notice("This report couldn’t be shown.",
-                          context: "Bristlenose hit an unexpected problem while opening this report.",
-                          button: "Give feedback", secondary: true)
+            body = notice("This report couldn’t be shown.", button: "Send feedback", secondary: true)
         case .reportCrashAfterRetry:
-            body = notice("This report couldn’t be shown.", button: "Give feedback", secondary: true)
+            body = notice("This report couldn’t be shown.", button: "Send feedback", secondary: true)
         case .analysisFailed(let category):
             body = """
             <div class="report"><header>Checkout research</header><main>
@@ -96,7 +94,7 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
             <div class="report"><header>Checkout research</header><nav>Project &nbsp; Sessions &nbsp; Quotes</nav>
               <main>\(notice("Quotes couldn’t be shown.",
                                context: "Bristlenose hit an unexpected problem opening Quotes.",
-                               button: "Give feedback", secondary: true, glyph: true))</main></div>
+                               button: "Send feedback", secondary: true, glyph: true))</main></div>
             """
         case .part:
             body = """

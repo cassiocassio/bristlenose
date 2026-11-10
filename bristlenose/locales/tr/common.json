@@ -248,7 +248,7 @@
   },
   "footer": {
     "builtWith": "Bristlenose ile oluşturuldu",
-    "giveFeedback": "Geri bildirim gönder",
+    "sendFeedback": "Geri bildirim gönder",
     "version": "{{version}}",
     "reportBug": "Hata bildir",
     "feedback": "Geri bildirim",

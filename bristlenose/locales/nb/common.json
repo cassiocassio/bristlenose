@@ -248,7 +248,7 @@
   },
   "footer": {
     "builtWith": "Laget med Bristlenose",
-    "giveFeedback": "Gi tilbakemelding",
+    "sendFeedback": "Send tilbakemelding",
     "version": "{{version}}",
     "reportBug": "Rapporter en feil",
     "feedback": "Tilbakemelding",

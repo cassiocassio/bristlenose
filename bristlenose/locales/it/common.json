@@ -248,7 +248,7 @@
   },
   "footer": {
     "builtWith": "Realizzato con Bristlenose",
-    "giveFeedback": "Lascia un feedback",
+    "sendFeedback": "Invia un feedback",
     "version": "{{version}}",
     "reportBug": "Segnala un bug",
     "feedback": "Feedback",

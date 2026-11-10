@@ -487,8 +487,8 @@
     "loadingReport": "Loading report…",
     "failedTitle": "Couldn’t start Bristlenose",
     "retry": "Retry",
-    "showDetails": "Show details",
-    "hideDetails": "Hide details"
+    "showDetails": "Show Details",
+    "hideDetails": "Hide Details"
   },
   "welcome": {
     "examples": {

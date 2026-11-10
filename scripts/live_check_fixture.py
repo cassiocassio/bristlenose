@@ -136,7 +136,8 @@ STAGES: list[Stage] = [
         model=SpeakerRoleAssignment,
         fields={
             "transcript_sample": wrap_untrusted("transcript", TRANSCRIPT),
-            "speaker_list": ", ".join(SPEAKERS),
+            "speaker_list": wrap_untrusted("speaker_list", ", ".join(SPEAKERS)),
+            "speaker_facts": wrap_untrusted("speaker_facts", "\n".join(f"- {s}: 3 turns" for s in SPEAKERS)),
         },
         substantive=lambda r: len(r.assignments) >= 1,
     ),

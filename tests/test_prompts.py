@@ -21,7 +21,7 @@ PROMPT_NAMES = [
 ]
 
 EXPECTED_VARIABLES: dict[str, set[str]] = {
-    "speaker-identification": {"transcript_sample", "speaker_list"},
+    "speaker-identification": {"transcript_sample", "speaker_list", "speaker_facts"},
     "topic-segmentation": {"transcript_text"},
     "quote-extraction": {"topic_boundaries", "transcript_text"},
     "quote-clustering": {"quotes_json"},
@@ -69,6 +69,7 @@ class TestPromptLoading:
         dummy = {
             "transcript_sample": "hello",
             "speaker_list": "A, B",
+            "speaker_facts": "- A: 1 turns",
             "transcript_text": "text",
             "topic_boundaries": "bounds",
             "quotes_json": "[]",

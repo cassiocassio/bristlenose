@@ -157,6 +157,8 @@ CALL_SITES: list[tuple[str, str]] = [
     ("bristlenose/stages/s10_quote_clustering.py", "quotes_json"),
     ("bristlenose/stages/s11_thematic_grouping.py", "quotes_json"),
     ("bristlenose/stages/s05b_identify_speakers.py", "transcript_sample"),
+    ("bristlenose/stages/s05b_identify_speakers.py", "speaker_list"),
+    ("bristlenose/stages/s05b_identify_speakers.py", "speaker_facts"),
     ("bristlenose/server/elaboration.py", "signals_text"),
     ("bristlenose/server/autocode.py", "formatted_quotes"),
     ("bristlenose/server/codebook_builder.py", "example_block"),

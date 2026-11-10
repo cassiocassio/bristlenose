@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -106,61 +107,142 @@ def speaker_info_from_dict(d: dict[str, Any]) -> SpeakerInfo:
         job_title=d.get("job_title", ""),
     )
 
-# Keywords suggesting a researcher/interviewer role
-_RESEARCHER_PHRASES = [
-    # Task-oriented prompts
-    "can you tell me",
-    "could you tell me",
-    "what do you think",
-    "how do you feel",
-    "walk me through",
-    "describe for me",
-    "let me show you",
-    "i'm going to show",
-    "we're going to look at",
-    "i'd like you to",
-    "can you try",
-    "could you try",
-    "what would you do",
-    "what would you expect",
-    "how would you rate",
-    "on a scale of",
+# Opening-script and facilitation phrases: what the person RUNNING a session says to
+# the person being hosted. Matched as regexes on lower-cased text with reported speech
+# removed. Deliberately no occupation words: "researcher" is a job title the
+# interviewee may hold ("I'm a researcher for an MP"), not a sign of who is hosting.
+_HOST_PHRASES = [
+    # Welcome and framing
+    r"thanks? (so much )?for (joining|coming|making (the )?time|taking (the )?time"
+    r"|doing this|agreeing|seeing|meeting|being here)",
+    r"good (morning|afternoon|evening),? (everyone|all)",
+    r"no right or wrong", r"no wrong answers", r"there'?s no (normal|right|wrong)",
+    r"(we'?re|i'?ll( be)?|i'?m going to be) record", r"recording (now|started)",
+    r"i'?d like to (record|ask you)",
+    r"i'?ll (just )?(listen|stay out|be taking notes|take notes)", r"don'?t worry about me",
+    r"(we|i) (want|would like) to (hear (from|about|how)|ask you|talk (to|with) you)",
+    r"we'?re (talking|speaking) to",
+    r"i'?m (talking|speaking) to (a|several|some|people|customers|users|everyone)",
+    r"i'?m (here|going) to (ask|show) you", r"i'?m going to (show|share)",
+    r"i'?m (from|with) the [a-z' ]{3,30}(team|department)",
+    r"this (session|interview) (is|will|should)", r"the (aim|goal|purpose) of (this|today)",
+    r"before we (start|begin|get started)", r"any questions (before|for me)",
+    # Task and open-ended prompts
+    r"take your time", r"feel free to", r"i'?d love (you )?to", r"i'?d like you to",
+    r"what i'?m after",
+    r"(can|could) you (tell|walk|show|describe|talk|try)",
+    r"(walk|take|talk) me through",
+    # "Tell me about it" is the idiom for "I agree", not a prompt.
+    r"tell me (about (?!(it|that|this)\b)|more about)",
+    r"what do you think", r"how do you feel", r"how did (that|it) (feel|go)",
+    r"what was (it|that|your) (like|reaction)", r"how did you get involved",
+    r"how did that come about", r"what would you (do|expect)", r"how would you rate",
+    r"on a scale of", r"what happened (next|then)", r"can you say more",
     # Conversation management
-    "let's move on to",
-    "next i'd like",
-    "next we're going to",
-    "thank you for",
-    "thanks for joining",
-    "thanks for coming",
-    "is there anything else",
-    "any other thoughts",
-    "any questions",
-    # Open-ended prompting
-    "tell me about",
-    "can you describe",
-    "what was it like",
-    "how did you get involved",
-    "what happened next",
-    "can you say more",
-    "i'd like to ask about",
-    "let's talk about",
-    "what was your reaction",
-    "how did that come about",
+    r"let'?s (move on|talk about|look at)", r"next,? (i'?d|we'?re|let'?s)",
+    r"is there anything else", r"any other thoughts", r"we'?re going to look at",
 ]
+# What the person being hosted says to the host.
+_GUEST_PHRASES = [
+    r"thanks? (so much )?for having me", r"happy to help", r"(glad|happy) to (be here|take part|do this)",
+    r"hope (this|i'?m) (is )?helpful", r"is that (what you(?:'re| are) (after|looking for)|helpful|normal|ok(ay)?)\b",
+    r"do you want me to", r"should i (show|share|open|click|go)", r"shall i", r"do you want (me|to see)",
+    r"can you hear me", r"is the recording on", r"can you see (my|the) screen", r"sorry,? (mine|i)", r"does that make sense",
+]
+_HOST_RE = [re.compile(p) for p in _HOST_PHRASES]
+_GUEST_RE = [re.compile(p) for p in _GUEST_PHRASES]
+# A question that only checks the listener is still there ("...right?", "you know?") is not
+# the speaker steering the session.
+_TAG_QUESTION_RE = re.compile(
+    r"[,\u2014-]\s*(right|yeah|yes|ok|okay|no|eh|see|you know|y'?know|isn'?t it|innit)\?\s*$"
+    r"|\b(you know|y'?know|isn'?t it|innit|does that make sense|is that normal)\?\s*$",
+    re.IGNORECASE,
+)
+# Someone describing what they themselves say or ask ("I always say, tell me about...")
+# is reporting speech, not facilitating.
+_REPORTED_SPEECH_RE = re.compile(
+    r"\bi (always |usually |then |just |sometimes )?(say|ask|tell (them|him|her|people))\b"
+    r"|\bthey (say|ask|tell)\b",
+    re.IGNORECASE,
+)
+_QUOTED_RE = re.compile(r"[\"\u201c\u201d][^\"\u201c\u201d]{3,}[\"\u201c\u201d]")
+# The host introducing a colleague allows a second moderator.
+_COLLEAGUE_RE = re.compile(
+    r"my (colleague|co-?moderator|co-?researcher|note-?taker)|joined by my", re.IGNORECASE
+)
+#: A phrase hit is capped per segment so a long speech cannot win on volume alone.
+_PHRASE_HITS_PER_SEGMENT_CAP = 2
+
+
+def _count_speakers(segments: list[TranscriptSegment]) -> dict[str, _SpeakerStats]:
+    """Per-speaker counts over a whole session, keyed by label, in order of first appearance."""
+    speakers: dict[str, _SpeakerStats] = {}
+    for seg in segments:
+        label = seg.speaker_label or "Unknown"
+        stats = speakers.setdefault(label, _SpeakerStats(label=label))
+        text = seg.text
+        stats.segment_count += 1
+        stats.total_duration += seg.end_time - seg.start_time
+        stats.total_words += len(text.split())
+
+        stripped = text.strip()
+        if stripped.endswith("?") and not _TAG_QUESTION_RE.search(stripped):
+            stats.question_count += 1
+
+        if _COLLEAGUE_RE.search(text):
+            stats.introduces_colleague = True
+
+        # Reported or quoted speech is not the speaker facilitating.
+        reported = _REPORTED_SPEECH_RE.search(text)
+        before_report = text[: reported.start()] if reported else text
+        lowered = _QUOTED_RE.sub(" ", before_report.lower())
+        host = sum(1 for r in _HOST_RE if r.search(lowered))
+        guest = sum(1 for r in _GUEST_RE if r.search(lowered))
+        stats.host_phrase_hits += min(host, _PHRASE_HITS_PER_SEGMENT_CAP)
+        stats.guest_phrase_hits += min(guest, _PHRASE_HITS_PER_SEGMENT_CAP)
+    return speakers
+
+
+def speaker_facts(segments: list[TranscriptSegment]) -> str:
+    """The per-speaker counts as plain lines for the speaker-identification prompt.
+
+    Measured over the whole session, not just the sample the model reads: turns, share of
+    words, real questions, host-style and guest-style opening-script phrases, who spoke
+    first. They are facts for the model to weigh, never verdicts.
+    """
+    speakers = _count_speakers(segments)
+    total_words = sum(s.total_words for s in speakers.values()) or 1
+    first = (segments[0].speaker_label or "Unknown") if segments else ""
+    lines = []
+    for label, s in speakers.items():
+        share = round(100 * s.total_words / total_words)
+        lines.append(
+            f"- {label}: {s.segment_count} turns, {s.total_words} words ({share}% of words), "
+            f"{s.question_count} questions, {s.host_phrase_hits} host-style opening-script "
+            f"phrases, {s.guest_phrase_hits} guest-style"
+            + (", spoke first" if label == first else "")
+        )
+    return "\n".join(lines)
 
 
 def identify_speaker_roles_heuristic(
     segments: list[TranscriptSegment],
 ) -> list[TranscriptSegment]:
-    """Assign speaker roles using heuristic analysis.
+    """Assign speaker roles from counts alone, with no model.
 
-    Uses conversational patterns to distinguish researcher from participant:
-    - The speaker who asks more questions is likely the researcher
-    - The speaker who uses prompting/facilitation language is likely the researcher
-    - The speaker who talks first (introduction) is often the researcher
-    - The speaker with less total speaking time is often the researcher
+    This decides on its own only when the LLM pass fails or is skipped; otherwise the
+    same counts go to the model as facts (see :func:`speaker_facts`). Signals, by weight:
 
-    This is a fast first pass; the LLM refines these labels in the pipeline.
+    - Host-style opening-script phrases ("thanks for joining", "no right or wrong",
+      "walk me through"), as a rate per turn, minus guest-style phrases ("thanks for
+      having me"). Reported speech ("I always say, tell me about...") does not count.
+    - The share of turns that are real questions (tag questions like "right?" excluded).
+    - A weak word-share nudge in two-speaker sessions (the host tends to say less).
+
+    Who spoke first is not a signal (it depends on who joined the call first); only an
+    exact tie in score goes to the earlier speaker, as a last resort. In a session of
+    three or more, a second researcher is recognised when the host introduces a colleague
+    and that speaker only asks, or when they carry the host-style script and ask.
 
     Args:
         segments: Transcript segments with speaker_label set (e.g. "Speaker A").
@@ -168,26 +250,7 @@ def identify_speaker_roles_heuristic(
     Returns:
         Same segments with speaker_role updated.
     """
-    # Collect unique speakers
-    speakers: dict[str, _SpeakerStats] = {}
-    for seg in segments:
-        label = seg.speaker_label or "Unknown"
-        if label not in speakers:
-            speakers[label] = _SpeakerStats(label=label)
-        stats = speakers[label]
-        stats.segment_count += 1
-        stats.total_duration += seg.end_time - seg.start_time
-        stats.total_words += len(seg.text.split())
-
-        # Count questions
-        if seg.text.strip().endswith("?"):
-            stats.question_count += 1
-
-        # Check for researcher phrases
-        text_lower = seg.text.lower()
-        for phrase in _RESEARCHER_PHRASES:
-            if phrase in text_lower:
-                stats.researcher_phrase_hits += 1
+    speakers = _count_speakers(segments)
 
     if len(speakers) < 2:
         # Single speaker — assume participant
@@ -195,58 +258,53 @@ def identify_speaker_roles_heuristic(
             seg.speaker_role = SpeakerRole.PARTICIPANT
         return segments
 
-    # Score each speaker: higher = more likely researcher
-    total_words_all = sum(s.total_words for s in speakers.values())
+    total_words_all = sum(s.total_words for s in speakers.values()) or 1
     for stats in speakers.values():
-        if stats.segment_count > 0:
-            stats.question_ratio = stats.question_count / stats.segment_count
-        # Word count asymmetry: in a 1:1 interview the researcher typically
-        # speaks less than the participant.  0 = most words, 1 = fewest.
-        # Only applied for 2-speaker sessions — with 3+ speakers, low word
-        # count could be a secondary interviewer or observer, and asymmetry
-        # would inflate both equally.  Phrase hits and question ratio are
-        # better discriminators for multi-speaker sessions.
-        if total_words_all > 0 and len(speakers) == 2:
-            word_share = stats.total_words / total_words_all
-            # Invert: lower share → higher score.  Clamp to [0, 1].
-            stats.word_asymmetry = max(0.0, min(1.0, 1.0 - word_share))
-        else:
-            stats.word_asymmetry = 0.0
+        turns = stats.segment_count
+        stats.question_ratio = stats.question_count / turns
+        # Weak: in a 1:1 the interviewer often says less. Two-speaker sessions only; with
+        # three or more, a low word count may be a second interviewer or an observer.
+        if len(speakers) == 2:
+            stats.word_asymmetry = 1.0 - stats.total_words / total_words_all
         stats.researcher_score = (
-            stats.question_ratio * 3.0
-            + stats.researcher_phrase_hits * 2.0
-            + stats.word_asymmetry * 2.0
+            stats.question_ratio * 1.5
+            + stats.host_phrase_hits / turns * 4.0
+            - stats.guest_phrase_hits / turns * 3.0
+            + stats.word_asymmetry * 0.5
         )
 
-    # The speaker with highest researcher score is the researcher
-    sorted_speakers = sorted(
-        speakers.values(),
-        key=lambda s: s.researcher_score,
-        reverse=True,
-    )
-
-    researcher_label = sorted_speakers[0].label
-    # If the top scorer barely differs from #2, check who spoke first
-    if (
-        len(sorted_speakers) > 1
-        and sorted_speakers[0].researcher_score - sorted_speakers[1].researcher_score < 1.0
-    ):
-        # Tiebreaker: first speaker is often the researcher
-        first_speaker = segments[0].speaker_label if segments else None
-        if first_speaker:
-            researcher_label = first_speaker
+    # sorted() is stable: an exact tie goes to the earlier speaker, the last resort.
+    ranked = sorted(speakers.values(), key=lambda s: s.researcher_score, reverse=True)
+    top = ranked[0]
+    researchers = {top.label}
+    for stats in ranked[1:]:
+        if stats.segment_count <= 2 and stats.total_words < 20:
+            continue  # observer, below
+        asks_only = stats.question_count >= 3 and stats.question_ratio >= 0.6
+        if (
+            top.introduces_colleague
+            and len(speakers) >= 3  # a 1:1 always keeps its participant
+            and stats.guest_phrase_hits == 0
+            and asks_only
+        ):
+            researchers.add(stats.label)  # introduced by the host, and only asks
+        elif (
+            stats.host_phrase_hits >= 3
+            and stats.question_count >= 2  # a moderator asks; a grumbling guest does not
+            and stats.researcher_score >= max(0.5, 0.6 * top.researcher_score)
+        ):
+            researchers.add(stats.label)  # carries the host script itself
 
     logger.info(
-        "Identified researcher: %s (score=%.1f), %d total speakers",
-        researcher_label,
-        speakers[researcher_label].researcher_score,
+        "Identified researcher(s): %s (score=%.1f), %d total speakers",
+        sorted(researchers),
+        top.researcher_score,
         len(speakers),
     )
 
-    # Assign roles
     for seg in segments:
         label = seg.speaker_label or "Unknown"
-        if label == researcher_label:
+        if label in researchers:
             seg.speaker_role = SpeakerRole.RESEARCHER
         elif speakers[label].segment_count <= 2 and speakers[label].total_words < 20:
             # Very minimal participation — likely observer
@@ -456,7 +514,8 @@ async def identify_speaker_roles_llm(
             system_prompt=_tmpl.system,
             user_prompt=_tmpl.user.format(
                 transcript_sample=wrap_untrusted("transcript", sample_text),
-                speaker_list=", ".join(unique_speakers),
+                speaker_list=wrap_untrusted("speaker_list", ", ".join(unique_speakers)),
+                speaker_facts=wrap_untrusted("speaker_facts", speaker_facts(segments)),
             ),
             response_model=SpeakerRoleAssignment,
             prompt_template=_tmpl,
@@ -600,7 +659,9 @@ class _SpeakerStats:
         self.total_duration = 0.0
         self.total_words = 0
         self.question_count = 0
-        self.researcher_phrase_hits = 0
+        self.host_phrase_hits = 0
+        self.guest_phrase_hits = 0
+        self.introduces_colleague = False
         self.question_ratio = 0.0
         self.word_asymmetry = 0.0
         self.researcher_score = 0.0

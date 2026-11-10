@@ -147,7 +147,9 @@ Add a `--format` flag or config option: `uxr` (default), `oral-history`, `focus-
 - tag questions and reported speech are ignored; a second moderator is possible in sessions of three or more;
 - `speaker_facts()` sends the same counts to the model, prompt 0.2.0, the speaker list and counts wrapped as untrusted.
 
-Tests: `tests/test_speaker_heuristic_counts.py` (20), mutation-checked. Measured with a scratch harness (private, git-excluded) on 82 real speakers from the trial projects: the heuristic agrees with the model's reading on 78 (the previous heuristic 77); the prompt with counts agrees on 80, and the two it differs on are a junk placeholder transcript where it declined to claim evidence; all five real observers were right with counts. On 35 invented, labelled speakers the heuristic got 35 right (the previous one 24); those cases were tuned on, so that figure is not independent evidence, and the real sessions are easy (the moderator spoke first in all of them). **Not measured:** the shipped prompt on a paid run, and FOSSDA. **Known weakness (old and new):** on the heuristic fallback a facilitator who only gives statements while the participant asks clarifying questions can invert; only the model path fixes it.
+Tests: `tests/test_speaker_heuristic_counts.py` (20), mutation-checked. Measured with a scratch harness (private, git-excluded) on 82 real speakers from the trial projects: the heuristic agrees with the model's reading on 78 (the previous heuristic 77); the prompt with counts agrees on 80, and the two it differs on are a junk placeholder transcript where it declined to claim evidence; all five real observers were right with counts. On 35 invented, labelled speakers the heuristic got 35 right (the previous one 24); those cases were tuned on, so that figure is not independent evidence, and the real sessions are easy (the moderator spoke first in all of them). **Not measured:** the shipped prompt end to end on a fresh run (see "FOSSDA names" below for the nearest check). **Known weakness (old and new):** on the heuristic fallback a facilitator who only gives statements while the participant asks clarifying questions can invert; only the model path fixes it.
+
+**FOSSDA names (checked 10 Nov 2026, the 10 stored April sessions, shipped prompt, about 10p).** The "m1" failure in the Problem section is gone: all ten sessions have the interviewer as researcher and the interviewee as a named participant (`p1`, `p2`… in `people.yaml`), and re-running the shipped prompt with counts on the stored speaker-split text gave the same roles and the same names as the April run. **Names are present but half are misspelt:** five exact (Goodkin, Mazzoni, Tiwari, Meeker twice), five phonetic (Perrins for Perens, Alma for Allman, Ullman for Allman, Kranz for Krantz, Rougary for Ruggeri). The model reads the spelling Whisper gave the introduction, so the prompt cannot fix this; the researcher corrects the name. **A different failure shows in the same data:** in s5, s9 and s10 the April speaker split put most of the interviewee's words under the interviewer's label (s5: label A holds 94% of the words), so the counts say the opposite of the truth and the heuristic on its own flips those three. The model, given the same counts, did not follow them, which is the intended behaviour (facts, not verdicts). The cause is the text-only split, before the voice pass of 4 Oct (`design-speaker-splitting.md`); whether a fresh run now splits those three correctly was not run.
 
 Also related: "a session with one speaker is coded p1, never m1, whatever the role model says" (8 Nov 2026) removed a different m1 failure, for solo think-aloud sessions.
 
@@ -159,7 +161,7 @@ Also related: "a session with one speaker is coded p1, never m1, whatever the ro
 
 The role enum change (RESEARCHER → INTERVIEWER) is worth doing — "researcher" is UXR jargon that doesn't make sense for oral history or journalism. "Interviewer" is universal.
 
-Naming the interviewee (the "m1" problem) is likely also fixed by a better prompt (the prompt does extract `person_name`; whether the FOSSDA names now come out was never re-checked) — if the LLM correctly identifies the interviewee role, it can also extract their name from the conversation context ("I'm Bruce Perens, and I was at Pixar...").
+Naming the interviewee (the "m1" problem) is likely also fixed by a better prompt (the prompt does extract `person_name`; checked 10 Nov 2026, see "FOSSDA names" under Status) — if the LLM correctly identifies the interviewee role, it can also extract their name from the conversation context ("I'm Bruce Perens, and I was at Pixar...").
 
 ## Files involved
 
@@ -174,7 +176,7 @@ By symbol, not line number (every line reference in the April version had gone s
 
 ## Test plan
 
-> **Not recorded as run (10 Nov 2026).** Nothing in the repo records a FOSSDA, IKEA or rock-climbing re-run against these criteria. The nearest evidence is the measurement under Status (10 Nov 2026), which used the trial projects' real sessions (no FOSSDA).
+> **Partly checked (10 Nov 2026).** Item 3 (names) was checked on the stored April sessions: see "FOSSDA names" under Status (10 Nov 2026). Nothing records a fresh FOSSDA re-run through the whole pipeline, items 1, 4 and 5, or an IKEA or rock-climbing regression run; the real-session measurement under Status used the trial projects, not FOSSDA.
 
 1. Re-run FOSSDA corpus after fix — all 10 sessions should identify "Zach" as interviewer
 2. Re-run IKEA and rock climbing corpora — verify no regression (UXR moderators still detected)

@@ -79,11 +79,16 @@ def _run_proxy(tmp_path: Path, port: int, entry_instance: str | None) -> None:
         entry["instance_id"] = entry_instance
     handshake = tmp_path / "mcp-handshake.json"
     handshake.write_text(json.dumps({"schema": 2, "projects": [entry]}), encoding="utf-8")
-    env = {
-        "PATH": os.environ.get("PATH", ""),
+    # A small allowlist, not the whole environment, so nothing from the real home leaks in. On
+    # Windows Node needs SYSTEMROOT (and WINDIR) to start its networking at all: a bare
+    # PATH/HOME environment made the proxy hang there with no answer, positive control included.
+    keep = {"PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "COMSPEC", "PATHEXT"}
+    env = {k: v for k, v in os.environ.items() if k.upper() in keep}
+    env.update({
         "HOME": str(tmp_path),
+        "USERPROFILE": str(tmp_path),  # Node's os.homedir() on Windows
         "BRISTLENOSE_DEV_MCP_HANDSHAKE": str(handshake),
-    }
+    })
     frames = [
         {"jsonrpc": "2.0", "id": 0, "method": "initialize",
          "params": {"protocolVersion": "2025-06-18", "capabilities": {},

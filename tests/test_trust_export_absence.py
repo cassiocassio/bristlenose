@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from bristlenose.server.app import create_app
+from bristlenose.server.routes import export as export_mod
 from bristlenose.server.routes.export import EMBED_PATH_TEMPLATES, SERVER_ONLY_PATH_TEMPLATES
 from tests.conftest import AuthTestClient
 
@@ -26,6 +27,14 @@ _SERVER_ONLY_WORDS = ("turn-frames", "screens", "transcription-quality", "subtit
 @pytest.fixture
 def exported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[dict, str, Path]:
     monkeypatch.delenv("BRISTLENOSE_MCP_ANONYMISE", raising=False)
+    # CI builds no frontend and the export route needs a bundle to inline, so a stub one stands in
+    # (the pattern of test_export_anonymise_buckets.py). Never a skipif: that would take this
+    # privacy gate out of CI.
+    bundle = tmp_path / "static-export"
+    bundle.mkdir()
+    (bundle / "app.js").write_text("// stub", encoding="utf-8")
+    (bundle / "app.css").write_text("/* stub */", encoding="utf-8")
+    monkeypatch.setattr(export_mod, "_EXPORT_STATIC_DIR", bundle)
     project = tmp_path / "Client Acme interviews"
     shutil.copytree(_FIXTURE_DIR, project, ignore=shutil.ignore_patterns("bristlenose.log*"))
     client = AuthTestClient(create_app(project_dir=project, dev=False, db_url="sqlite://"))

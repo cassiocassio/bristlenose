@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Done with warnings on the Mac row · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme. The sheet itself is native SwiftUI (system font, system greys); the tokens only dress the page around it.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 5rem; }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+h1 { font-size:clamp(1.4rem,3.5vw,1.9rem); margin:.3rem 0 .5rem; font-weight:490; }
+h2 { font-size:var(--bn-text-heading); font-weight:490; margin:2.5rem 0 .25rem; }
+p { color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.key { display:flex; gap:1rem; flex-wrap:wrap; font-size:var(--bn-text-caption); margin:1rem 0 0; }
+.key span { padding:.2rem .6rem; border-radius:var(--bn-radius-pill); border:1px solid var(--bn-colour-border); }
+.key .k-art { background:var(--bn-colour-quote-bg); }
+.key .k-com { background:repeating-linear-gradient(135deg,transparent 0 6px,var(--bn-colour-badge-bg) 6px 8px); }
+.row { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.25rem; margin:1rem 0; align-items:start; }
+.cell .chrome { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); margin:0 0 .35rem; }
+.stage { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1.25rem; display:flex; justify-content:center; min-height:120px; }
+/* the native sheet: system font, system greys, 420pt wide at 0.7 scale */
+.sheet { width:100%; max-width:318px; background:light-dark(#f6f6f6,#2a2a2c); color:light-dark(#1d1d1f,#f5f5f7); border-radius:10px; box-shadow:0 8px 28px var(--bn-colour-shadow),0 0 0 .5px light-dark(rgba(0,0,0,.2),rgba(255,255,255,.12)); padding:16px; font-family:-apple-system,"SF Pro Text",system-ui,sans-serif; font-size:11px; line-height:1.35; }
+.sheet .ico { font-size:20px; color:light-dark(#86868b,#98989d); }
+.sheet .hd { font-size:13px; font-weight:600; margin:8px 0 6px; }
+.sheet .cal { color:light-dark(#6e6e73,#98989d); margin-bottom:8px; }
+.sheet .loss .h { font-weight:500; margin-bottom:2px; }
+.sheet .loss .l { color:light-dark(#6e6e73,#98989d); padding-left:9px; }
+.sheet .btns { display:flex; justify-content:flex-end; gap:6px; margin-top:12px; }
+.sheet .b { padding:2px 11px; border-radius:5px; background:light-dark(#fff,#3a3a3c); box-shadow:0 0 0 .5px light-dark(rgba(0,0,0,.25),rgba(255,255,255,.15)); }
+.sheet .b.def { background:#007aff; color:#fff; box-shadow:none; }
+.none { align-self:center; text-align:center; color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+.cli { font-family:var(--bn-font-mono); font-size:11.5px; background:light-dark(#1c1c1e,#0b0b0c); color:#e5e5ea; border-radius:var(--bn-radius-md); padding:.7rem .85rem; white-space:pre-wrap; margin:.5rem 0 0; }
+/* commentary zone: deliberately not-the-product */
+.commentary { border-left:3px solid var(--bn-colour-accent); background:repeating-linear-gradient(135deg,transparent 0 10px,var(--bn-colour-badge-bg) 10px 12px); padding:.7rem .9rem; margin:.9rem 0 0; font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.commentary .lbl { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.1em; text-transform:uppercase; color:var(--bn-colour-muted); display:block; margin-bottom:.25rem; }
+table { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin:.6rem 0; }
+th,td { text-align:left; padding:.35rem .6rem; border-bottom:1px solid var(--bn-colour-border); vertical-align:top; }
+th { color:var(--bn-colour-muted); font-weight:490; }
+code { font-family:var(--bn-font-mono); font-size:.9em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
+.new { color:var(--bn-colour-accent); font-weight:490; }
+/* the sheet is the artefact: no commentary colour inside it */
+.sheet .new { color:inherit; font-weight:inherit; }
+
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;margin:1rem 0;align-items:start}
+.sbrow{background:light-dark(#f6f6f6,#2a2a2c);border-radius:8px;padding:8px 10px;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;font-size:12px;box-shadow:0 0 0 .5px light-dark(rgba(0,0,0,.15),rgba(255,255,255,.1))}
+.sbrow .n{font-weight:500}.sbrow .s{color:light-dark(#6e6e73,#98989d);display:flex;gap:5px;align-items:center}
+.warnglyph{color:light-dark(#b25e00,#ffb340)}
+.pop{background:light-dark(#fff,#2c2c2e);border-radius:10px;padding:12px 14px;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;font-size:12px;box-shadow:0 8px 28px var(--bn-colour-shadow),0 0 0 .5px light-dark(rgba(0,0,0,.2),rgba(255,255,255,.12));max-width:340px}
+.pop .h{font-weight:600;font-size:13px;margin-bottom:2px}.pop .t{color:light-dark(#6e6e73,#98989d);margin-bottom:8px}
+.pop .cause{margin:6px 0}.pop .cause .k{font-weight:500}.pop .cause .d{color:light-dark(#6e6e73,#98989d)}
+.pop .foot{display:flex;gap:6px;margin-top:10px}.pop .foot span{border:1px solid var(--bn-colour-border);border-radius:5px;padding:1px 9px}
+.tag{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:0 6px;border-radius:999px;margin-left:6px}
+.tag.new{background:var(--bn-colour-accent);color:#fff}.tag.old{background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">Mockup · Mac row and popover · N128, N82</div>
+<h1>"Done with warnings" on the Mac</h1>
+<p>What the sidebar row and the failure popover would say when a run finished but something the researcher would expect is missing. Words tagged <span class="tag new">new words</span> are proposed and need your approval; <span class="tag old">existing</span> words are shipped locale strings. The row and popover are drawn from the real structure (the partial-completion row and ProjectDiagnosticPopover), not pixel-exact.</p>
+<div class="key"><span class="k-art">The artefact: what the researcher sees</span><span class="k-com">The commentary: never in the product</span></div>
+
+<h2>A · The Discussion lens could not be built</h2>
+<div class="row">
+<div class="cell"><div class="chrome">sidebar row</div><div class="stage"><div class="sbrow"><div class="n">Acme onboarding</div><div class="s"><span class="warnglyph">⚠</span>Partial completion</div></div></div></div>
+<div class="cell"><div class="chrome">popover (click the glyph)</div><div class="stage"><div class="pop"><div class="h">Partial completion</div><div class="t">Analysis finished with failures for Acme onboarding</div><div class="cause"><span class="k">The Discussion lens couldn’t be built.</span> <span class="d">Analyse again to retry.</span></div><div class="foot"><span>Show Log</span><span>Copy error details</span></div></div></div></div>
+</div>
+<div class="commentary"><span class="lbl">Commentary</span>The row reuses the existing words, so no new row string. Only the cause lines are new. Today the run reads as a normal finish and the Discussion lens is empty with no reason.</div>
+
+<h2>B · people.yaml could not be read</h2>
+<div class="row">
+<div class="cell"><div class="chrome">sidebar row</div><div class="stage"><div class="sbrow"><div class="n">Acme onboarding</div><div class="s"><span class="warnglyph">⚠</span>Partial completion</div></div></div></div>
+<div class="cell"><div class="chrome">popover</div><div class="stage"><div class="pop"><div class="h">Partial completion</div><div class="t">Analysis finished with failures for Acme onboarding</div><div class="cause"><span class="k">people.yaml couldn’t be read (line 14), so names you added aren’t in this report.</span> <span class="d">Fix that line, then analyse again.</span></div><div class="foot"><span>Show Log</span><span>Copy error details</span></div></div></div></div>
+</div>
+<div class="commentary"><span class="lbl">Commentary</span>The researcher hand-edited the names file and broke it. Today the report shows p1, p2 where their names were, and nothing says why. The terminal already says this in one line.</div>
+
+<h2>C · Both, and a quote left out</h2>
+<div class="row">
+<div class="cell"><div class="chrome">popover</div><div class="stage"><div class="pop"><div class="h">Partial completion</div><div class="t">Analysis finished with failures for Acme onboarding</div><div class="cause"><span class="k">The Discussion lens couldn’t be built.</span> <span class="d">Analyse again to retry.</span></div><div class="cause"><span class="k">people.yaml couldn’t be read (line 14), so names you added aren’t in this report.</span> <span class="d">Fix that line, then analyse again.</span></div><div class="cause"><span class="k">3 quotes left out</span> <span class="d">s2: 1 · s3: 2</span></div><div class="foot"><span>Show Log</span><span>Copy error details</span></div></div></div></div>
+</div>
+
+<h2>String plan</h2>
+<table>
+<tr><th>Where</th><th>Words</th><th>Status</th></tr>
+<tr><td>Row subtitle</td><td>Partial completion</td><td><span class="tag old">existing</span> desktop.pipeline.diagnostic.header.completed_partial</td></tr>
+<tr><td>Popover tooltip</td><td>Analysis finished with failures for {{project}}</td><td><span class="tag old">existing</span></td></tr>
+<tr><td>Popover, lens cause</td><td>The Discussion lens couldn’t be built. / Analyse again to retry.</td><td><span class="tag new">new words</span> two keys, 21 locales</td></tr>
+<tr><td>Popover, people file cause</td><td>people.yaml couldn’t be read (line {{line}}), so names you added aren’t in this report. / Fix that line, then analyse again.</td><td><span class="tag new">new words</span> two keys (a variant without a line number), 21 locales</td></tr>
+<tr><td>Popover, quotes</td><td>3 quotes left out</td><td><span class="tag old">existing</span></td></tr>
+</table>
+<h2>What does not warn</h2>
+<table>
+<tr><th>Situation</th><th>Warns?</th><th>Why</th></tr>
+<tr><td>No screens in the study</td><td>No</td><td>Screens is read by the server on demand, not by the run. A study without screen recordings has nothing missing. This change does not touch it.</td></tr>
+<tr><td>A solo think-aloud, diary or monologue with no moderator in any session</td><td>No</td><td>The Discussion stage already calls this "skipped, nothing wrong". It stays silent: nothing was expected.</td></tr>
+<tr><td>A study with no discussion guide</td><td>No</td><td>The lens is built without a guide, which is a normal case.</td></tr>
+<tr><td>The stage crashed (a bug or bad data)</td><td>Yes</td><td>The lens was expected and is missing. <strong>This is the only case the terminal's end line covers today.</strong></td></tr>
+<tr><td>The model failed to read some sessions</td><td>Yes</td><td>The lens is partly or wholly missing because calls failed.</td></tr>
+<tr><td>A guide file is present but cannot be read (an encrypted Word file)</td><td>Yes</td><td>The researcher expected their questions to be used.</td></tr>
+<tr><td>Moderators exist but the lens cannot tell which speaker is the moderator</td><td><strong>Your call</strong></td><td>Something is missing, but nothing broke, and it may be exactly what the researcher expected. Today the terminal prints a warning line for it.</td></tr>
+<tr><td>people.yaml cannot be read</td><td>Yes</td><td>A broken file the researcher made, and their names are missing from the report.</td></tr>
+</table>
+<div class="commentary"><span class="lbl">Open questions for you</span>(1) Approve the row (reusing "Partial completion") and the four new cause lines, or reword. (2) The "cannot tell who the moderator is" case: warn, say quietly, or stay silent. (3) Today's end line covers only the crash; I would extend it to the "model failed" and "guide unreadable" cases so the terminal and the Mac agree.</div>
+</div>
+</body>
+</html>

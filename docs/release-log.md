@@ -67,6 +67,20 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.46.0 — 11 Nov 2026 · Tier 1 (minor — a board drawn inside Miro with no sign-in; reopening the Mac app returns each lens to the element you were on; calmer dark mode; speaker identification reads who is hosting)
+
+**What shipped.** 150-odd commits since 0.45.0 (CHANGELOG: 2 New, 14 Improved, 6 Fixed). Headline: the in-Miro board route, a relaunch returning to the quote, code row, paragraph or signal card, the dark-mode surface ladder, and a Mac sidebar lens highlight that now follows the report on every click. **Run by an unattended Claude session** on the owner's `/goal`; the owner was at work. Tag `v0.46.0` on `10f2a7568`, pushed about 11:56 GMT on a **Wednesday**, earlier than the 9pm weekday rule, after the owner answered the question "I allow it; you push now". TestFlight build **6528**.
+
+**Before and during the run.** Two things were fixed before the run: an e2e check that measured a button label while a sidebar was still sliding open (`689ed21b7`), and a screens-export naming change from another session, committed at the owner's request (`cf12f3dc5`). The tag push was first refused by the permission classifier; it went out only after the owner chose it in chat.
+
+**Run times (measured, GMT, 11 Nov).** Preflight 169 s · inventory 3 s · bump 0 s · push main 2 s · build the app 537 s · build the dmg 688 s · strict CI gate 1,738 s · TestFlight upload 491 s · publish the dmg 319 s · tag push 2 s. PyPI 200 after the release workflow's second attempt.
+
+**Tricky things.** The tag run's `frontend-lint-type-test` failed once on `SignalsPage.test.tsx` "names each metric in full…": it reads the expanded card straight after `fireEvent.click` without waiting. Same suite had passed on the strict run and the push CI; `gh run rerun --failed` passed. The edge Snap build failed on a connection reset downloading `snapd`, and was re-dispatched.
+
+**Owed.** The test needs a `waitFor`. Website changelog not yet on 0.46.0 (`verify` shows ✗; a deploy is the maintainer's). Winget follows. Snap edge re-dispatched, result not read. 7 of 9 channels at write time.
+
+---
+
 ## 0.45.0 — 7 Nov 2026 · Tier 1 (minor — the title-bar pill names a blocking network and a rejected key or empty account; a notification when a run finishes while you're away; quote display controls; "Done with warnings"; a faster open)
 
 **What shipped.** 321 commits since 0.44.0 (CHANGELOG: 6 New, 13 Improved, 12 Fixed). Headline: the Mac's title-bar pill says "This network can't reach Claude" (or ChatGPT, Gemini) instead of blaming the key, and also says when a key is rejected or credit has run out; a notification when an analysis finishes while Bristlenose is not frontmost; a display control for quotes with a focus mode; a run that only left quotes out reads "Done with warnings". Security: participant names out of the log, `pii_summary.txt` owner-only, a hidden quote no longer sent as a codebook example. **Run by an unattended Claude session** on the owner's `/goal` (ask the other sessions to end, cut the release, fix until it is out); the owner was asleep. Tag `v0.45.0` on `a1c5feee9` at 05:43 GMT on a Saturday, so the weekday rule did not apply. TestFlight build **6378**.

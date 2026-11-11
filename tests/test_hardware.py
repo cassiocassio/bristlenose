@@ -358,9 +358,16 @@ class TestProbeMlxStarts:
         assert "@mlx-probe ok" in done.stdout
 
     def test_the_probe_flag_dies_with_mlx_rather_than_answering(self, tmp_path: Path) -> None:
-        """Where MLX cannot start the child dies: no ok line, and a non-zero exit."""
+        """Where MLX cannot start the child dies: no ok line, and a non-zero exit.
+
+        The stub dies by SIGKILL, not `os.abort()`: SIGABRT makes macOS raise a "Python quit
+        unexpectedly" Problem Report dialog on every run of the suite. SIGKILL is the same
+        shape for the parent (killed by a signal, no output) and files no crash report.
+        """
         done = self._probe_with_stub_mlx(
-            tmp_path, "import os\n\ndef arange(n):\n    return n\n\ndef eval(*args):\n    os.abort()\n"
+            tmp_path,
+            "import os, signal\n\ndef arange(n):\n    return n\n\n"
+            "def eval(*args):\n    os.kill(os.getpid(), signal.SIGKILL)\n",
         )
         assert done.returncode != 0
         assert "@mlx-probe ok" not in done.stdout

@@ -203,3 +203,26 @@ jobs:
           echo "This job only runs when publishing was explicitly requested, so a"
           echo "silent skip would report success having published nothing."
           exit 1
+
+  explain-failure:
+    # A red run with "unable to contact snap store" reads as our bug, and the
+    # reflex is to retry. This job asks status.snapcraft.io (its RSS feed, since
+    # the page itself is JavaScript) and says so on the run page. It explains and
+    # never retries. 11 Nov 2026: two edge builds died in an incident that had
+    # been open for hours. Exit 3 = store incident, 4 = status unreadable.
+    if: failure()
+    needs: [build, publish-edge, publish-stable]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Ask the Snap Store's status feed
+        run: |
+          rc=0
+          python3 scripts/snap-store-status.py --markdown >> "$GITHUB_STEP_SUMMARY" || rc=$?
+          case "$rc" in
+            3) echo "::error title=Snap Store incident::The store is reporting an outage. Do not retry; see the run summary and https://status.snapcraft.io" ;;
+            4) echo "::warning title=Snap Store status unreadable::Check https://status.snapcraft.io by hand before retrying." ;;
+            *) echo "::notice::The store reports no incident, so this failure is probably ours." ;;
+          esac

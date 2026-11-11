@@ -408,7 +408,16 @@ probe_dmg() {
 probe_snap() {
     local body edge
     body=$(curl -s --max-time 20 -H 'Snap-Device-Series: 16' "$SNAP_INFO" 2>/dev/null || true)
-    [ -z "$body" ] && { printf 'unreachable|store API unreachable'; return; }
+    if [ -z "$body" ]; then
+        # Say WHY (status.snapcraft.io RSS), so an outage is not read as our bug.
+        local why
+        why=$("$(dirname "${BASH_SOURCE[0]}")/snap-store-status.py" 2>&1 | head -1) || true
+        case "$why" in
+            "Snap Store incident"*) printf 'unreachable|store API unreachable: Snap Store incident open (status.snapcraft.io), do not retry' ;;
+            *) printf 'unreachable|store API unreachable' ;;
+        esac
+        return
+    fi
     edge=$(printf '%s' "$body" | python3 -c "
 import json,sys
 try: d=json.load(sys.stdin)

@@ -85,4 +85,27 @@ struct SidebarLensCapsuleTests {
         #expect(rig.capsules == [.quotes], "capsule is on \(rig.capsules)")
         #expect(rig.projectIsSelected, "the project selection was dropped")
     }
+
+    /// R57's in-place refresh (the Debug row-height switch) redraws rows without a reload, and
+    /// `applySelection` is part of the reload. A lens click changes only `activeTab`, so with the
+    /// switch on the capsule stayed on the old lens (traced 11 Nov 2026, the click after the
+    /// route landed ran `update()` and nothing re-applied the capsule).
+    @Test func theCapsuleMovesWhenRowsAreRefreshedInPlace() {
+        let key = "BristlenoseAnimateSidebarRowHeight"
+        let before = UserDefaults.standard.object(forKey: key)
+        UserDefaults.standard.set(true, forKey: key)
+        defer {
+            if let before { UserDefaults.standard.set(before, forKey: key) }
+            else { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        let rig = Rig(); defer { rig.cleanup() }
+        // A new project's icon reveal is a one-shot that forces the full reload; clear it so the
+        // update is the in-place kind.
+        rig.index.pendingIconReveal = nil
+        rig.index.pendingRename = nil
+        rig.publish(activeTab: .project)
+        rig.publish(activeTab: .quotes)
+        #expect(rig.capsules == [.quotes], "capsule is on \(rig.capsules)")
+        #expect(rig.projectIsSelected, "the project selection was dropped")
+    }
 }

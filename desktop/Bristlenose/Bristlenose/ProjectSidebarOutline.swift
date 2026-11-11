@@ -716,6 +716,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 outlineView.noteHeightOfRows(withIndexesChanged: changed)
             }
         }
+        // This path skips `reloadAndRestore`, and `applySelection` with it. A lens click changes
+        // only `activeTab`, so nothing else would move the capsule (traced 11 Nov 2026).
+        reassertLensCapsule(because: "an in-place refresh")
         applyFlash()
     }
     #endif

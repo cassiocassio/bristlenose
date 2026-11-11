@@ -176,22 +176,39 @@
 <div class="key"><span><i class="art"></i>Artefact — product pixels only</span><span><i class="com"></i>Commentary — not the product</span></div>
 
 <div class="case">
-  <p class="cap">1 · the Discussion lens could not be built</p>
-  <div class="pair">
-    <div class="sb"><div class="r sel">
+  <p class="cap">1a · the Discussion lens, no moderator could be identified in any session</p>
+  <div class="pair"><div class="sb"><div class="r sel">
       <div class="ico"><span class="g s-building-2 k-mute"></span></div>
       <div class="stack">
         <div class="tl"><span class="nm">Acme onboarding</span><span class="cnt">8</span></div>
         <div class="st"><span class="g s-exclamationmark-triangle-fill k-warn"></span><span class="stx">Partial completion</span></div>
-      </div></div></div>
-    <div class="popover">
+      </div></div></div><div class="popover">
       <div class="head"><div class="verb">Partial completion</div>
         <div class="btn">Show Log</div><div class="btn icon"><span class="g s-doc-on-doc"></span></div></div>
       <div class="scroll"><div class="grid"><span class="gg"><span class="g s-exclamationmark-triangle-fill k-warn"></span></span>
             <span class="file">Discussion lens</span>
-            <span class="why">Not built.</span></div></div>
-    </div>
-  </div>
+            <span class="why">Couldn’t tell who the moderator is in any session.</span></div></div>
+    </div></div>
+</div>
+<div class="case">
+  <p class="cap">1b · the Discussion lens, the model couldn’t read the sessions (the cause the other rows already use)</p>
+  <div class="pair"><div class="popover">
+      <div class="head"><div class="verb">Partial completion</div>
+        <div class="btn">Show Log</div><div class="btn icon"><span class="g s-doc-on-doc"></span></div></div>
+      <div class="scroll"><div class="grid"><span class="gg"><span class="g s-exclamationmark-triangle-fill k-warn"></span></span>
+            <span class="file">Discussion lens</span>
+            <span class="why">Rate limited.</span></div></div>
+    </div></div>
+</div>
+<div class="case">
+  <p class="cap">1c · the Discussion lens, the stage failed and no cause was captured</p>
+  <div class="pair"><div class="popover">
+      <div class="head"><div class="verb">Partial completion</div>
+        <div class="btn">Show Log</div><div class="btn icon"><span class="g s-doc-on-doc"></span></div></div>
+      <div class="scroll"><div class="grid"><span class="gg"><span class="g s-exclamationmark-triangle-fill k-warn"></span></span>
+            <span class="file">Discussion lens</span>
+            <span class="why">Detailed cause not captured.</span></div></div>
+    </div></div>
 </div>
 
 <div class="case">
@@ -231,9 +248,10 @@
     <li><b>Reused, not invented.</b> The popover is <code>ProjectDiagnosticPopover</code> as shipped: status verb, Show Log, Copy, then the Grid of glyph / name / message (<code>docs/design-pipeline-diagnostic-popover.md</code>, "Popover header + actions"). The two names in the middle column are a stage name and a filename, which that doc says are domain terms and are not translated.</li>
     <li><b>No retry, no action line.</b> The guide says there is <b>no bottom action row anywhere</b>: Retry and Re-analyse live in the sidebar menu and the toolbar. The "Action" line was only ever a proposal (3 Sep 2026), never shipped. Following your rule, nothing here invites another try: a crashed stage has no reason to succeed the second time, and the names file needs fixing, not retrying.</li>
     <li><b>Row text.</b> "Partial completion" is the existing fallback when "N of M sessions analysed" cannot be said. Here all sessions were analysed, so the honest row line is open: keep the existing words, or say nothing new.</li>
+    <li><b>Every row now says why.</b> 1a is the case you asked about: the lens works from a moderator&rsquo;s questions, so when it cannot tell which speaker is the moderator it has no questions to place quotes under. 1b reuses the short cause labels other failure rows already show. 1c reuses the existing &ldquo;Detailed cause not captured.&rdquo;. A study with no moderator at all is not here: it is skipped, nothing wrong.</li>
     <li><b>Case 3 is the point.</b> A study with no screens, or a solo monologue, or no guide, gets no glyph and no popover. Those are not failures.</li>
   </ul>
-  <p><b>String plan.</b> Existing: "Partial completion". New, in 21 locales: <code>Not built.</code> and <code>Couldn’t be read (line {{line}}), so names you added aren’t shown.</code> with a variant for when no line number is known. Three keys, down from my first version's six.</p>
+  <p><b>String plan.</b> Existing: "Partial completion". New, in 21 locales: <code>Couldn’t tell who the moderator is in any session.</code> (the lens reason; 1b and 1c reuse existing words) and <code>Couldn’t be read (line {{line}}), so names you added aren’t shown.</code> with a variant for when no line number is known. Three keys in all.</p>
   <p><b>Open:</b> (1) the row line; (2) the wording of the two messages; (3) is the lens failure worth a row at all when the Discussion lens already shows its own empty state?</p>
 </div>
 

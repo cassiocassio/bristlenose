@@ -103,7 +103,10 @@ pkgutil --expand-full "$PKG" "$WORK/x" >/dev/null 2>&1 \
     || { die "expand payload" "pkgutil --expand-full failed"; echo; exit 1; }
 
 # Exactly one .app, or we are not looking at what we think we are.
-mapfile -t APPS < <(find "$WORK/x" -maxdepth 6 -name '*.app' -type d)
+# `mapfile` is bash 4; macOS's /bin/bash is 3.2, and that is the bash a CI runner finds.
+APPS=()
+while IFS= read -r app_path; do APPS+=("$app_path"); done \
+    < <(find "$WORK/x" -maxdepth 6 -name '*.app' -type d)
 if [ "${#APPS[@]}" -ne 1 ]; then
     die "payload shape" "expected exactly one .app, found ${#APPS[@]}"
     echo; exit 1

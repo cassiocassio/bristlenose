@@ -152,7 +152,10 @@ covered_paths_raw=$("$PYTHON" -c "$covered_paths_script" "$SPEC_FILE" "$REPO_ROO
 }
 
 # Sort + dedupe covered paths.
-mapfile -t covered_paths < <(echo "$covered_paths_raw" | sort -u | grep -v '^$' || true)
+# `mapfile` is bash 4; macOS's /bin/bash is 3.2.
+covered_paths=()
+while IFS= read -r covered_path; do covered_paths+=("$covered_path"); done \
+    < <(echo "$covered_paths_raw" | sort -u | grep -v '^$' || true)
 
 # --- Walk bristlenose/ for runtime-data files. -----------------------------
 # Per-file coverage: each runtime file must be matched by some datas entry,

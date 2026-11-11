@@ -318,6 +318,9 @@ struct ProjectDiagnosticPopover: View {
             if !summary.leftOutBySession.isEmpty {
                 leftOutGrid(summary.leftOutBySession)
             }
+            if let warnings = summary.warnings, !warnings.isEmpty {
+                WarningRows(warnings: warnings, i18n: i18n)
+            }
             if let leftAlone = summary.ingest?.leftAlone, leftAlone > 0 {
                 leftAloneFooter(count: leftAlone)
             }
@@ -730,7 +733,8 @@ struct ProjectDiagnosticPopover: View {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         lines.append("Bristlenose \(appVersion) (\(build)) on \(os)")
         lines.append("Project: \(projectName)")
-        let onlyLeftOut = !abandoned && summary.totalFailureCount == 0 && summary.leftOutCount > 0
+        let onlyLeftOut = !abandoned && summary.totalFailureCount == 0
+            && (summary.leftOutCount > 0 || summary.warningCount > 0)
         lines.append("Outcome: \(abandoned ? "Run failed" : onlyLeftOut ? "Done with warnings" : "Partial completion")")
         // Raw snake_case enum value is the triager-greppable form; do NOT humanise. A run
         // that only left quotes out failed at nothing, so it names no category.
@@ -784,6 +788,15 @@ struct ProjectDiagnosticPopover: View {
             lines.append("Quotes left out (not failures; the session is in the report):")
             for row in summary.leftOutBySession {
                 lines.append("  \(MessageKind.warning.glyph) \(row.sessionID)  \(row.count)")
+            }
+            lines.append("")
+        }
+        if let warnings = summary.warnings, !warnings.isEmpty {
+            // English, like the rest of the paste: the wire names, so a triager can grep them.
+            lines.append("Warnings (not failures; the report was written):")
+            for w in warnings {
+                let line = w.line.map { "  line \($0)" } ?? ""
+                lines.append("  \(MessageKind.warning.glyph) \(w.kind)  \(w.reason)\(line)")
             }
             lines.append("")
         }
@@ -846,6 +859,71 @@ struct LeftOutRows: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+        }
+    }
+}
+
+/// The rows for what a finished run is missing that the researcher would expect: the shipped
+/// warning glyph, what is missing (a lens, a file: domain names, not translated, as the stage
+/// and file names beside them are) and why, in plain words. Every row says why: a bare "not
+/// built" fails the pattern in `docs/design-pipeline-diagnostic-popover.md`. Its own view so a
+/// test can render it.
+struct WarningRows: View {
+    let warnings: [RunWarning]
+    let i18n: I18n
+
+    var body: some View {
+        Grid(alignment: .topLeading, horizontalSpacing: 6, verticalSpacing: 4) {
+            ForEach(Array(warnings.enumerated()), id: \.0) { _, w in
+                GridRow {
+                    Image(systemName: MessageKind.warning.symbolName)
+                        .foregroundStyle(MessageKind.warning.tint)
+                        .font(.footnote)
+                    Text(Self.name(of: w))
+                        .font(.system(.footnote, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Text(Self.message(for: w, i18n: i18n))
+                        .font(.footnote)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    /// What is missing, as a domain name: the lens's name as the terminal says it, or the
+    /// file's own name.
+    static func name(of w: RunWarning) -> String {
+        switch w.kind {
+        case RunWarning.peopleFile: return "people.yaml"
+        default: return "Discussion lens"
+        }
+    }
+
+    /// Why, in the researcher's words. A reason this build does not know reads as the shipped
+    /// "Detailed cause not captured." rather than a raw wire value.
+    static func message(for w: RunWarning, i18n: I18n) -> String {
+        let unknown = i18n.t("desktop.pipeline.diagnostic.noStructuredCause")
+        switch w.kind {
+        case RunWarning.peopleFile:
+            guard w.reason == "unreadable" else { return unknown }
+            if let line = w.line {
+                return i18n.t("desktop.pipeline.diagnostic.warningPeopleUnreadable",
+                              ["line": String(line)])
+            }
+            return i18n.t("desktop.pipeline.diagnostic.warningPeopleUnreadableNoLine")
+        default:
+            if w.reason == "no_clear_moderator" {
+                return i18n.t("desktop.pipeline.diagnostic.warningNoClearModerator")
+            }
+            // A failure category: the short label the failure rows already use
+            // ("Rate limited"), from `desktop.pipeline.category.<camelCase>`.
+            let parts = w.reason.split(separator: "_").map(String.init)
+            guard let first = parts.first, w.reason != "unknown" else { return unknown }
+            let leaf = first + parts.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+            let key = "desktop.pipeline.category.\(leaf)"
+            let label = i18n.t(key)
+            return label == key ? unknown : label
         }
     }
 }

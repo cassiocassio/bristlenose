@@ -868,6 +868,59 @@
           "s2": 1
         }
       }
+    },
+    "run_completed_lens_warning": {
+      "_doc": "A run that finished with every session in the report, but something the researcher would expect is missing: the Discussion lens could not tell which speaker is the moderator, and people.yaml could not be read (it stopped at line 14). No failures anywhere: the desktop derives .completedPartial from warnings, as it does from quotes_left_out, and the popover names each with its reason. The reasons are a closed vocabulary, never free text.",
+      "schema_version": 1,
+      "ts": "2026-05-07T17:00:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ00000000000000LENSWARN",
+      "kind": "run",
+      "started_at": "2026-05-07T16:45:00Z",
+      "ended_at": "2026-05-07T17:00:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 9500,
+      "output_tokens": 3100,
+      "cost_usd_estimate": 0.14,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 412000,
+          "failed": []
+        },
+        "topics": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 41000,
+          "failed": []
+        },
+        "quotes": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 82000,
+          "failed": []
+        },
+        "themes": {
+          "attempted": 1,
+          "succeeded": 1,
+          "duration_ms": 14000,
+          "failed": []
+        },
+        "warnings": [
+          {
+            "kind": "discussion_lens",
+            "reason": "no_clear_moderator"
+          },
+          {
+            "kind": "people_file",
+            "reason": "unreadable",
+            "line": 14
+          }
+        ]
+      }
     }
   }
 }

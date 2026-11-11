@@ -546,6 +546,31 @@ struct EventLogReaderTests {
         #expect(got.leftOutCount == 1)
     }
 
+    @Test func deriveStateRunCompletedWithOnlyWarningsMapsToCompletedPartial() {
+        // No failure and nothing left out, but the Discussion lens could not tell the moderator and
+        // people.yaml stopped at line 14: the run still reads as partial (owner, 11 Nov 2026).
+        let summary = """
+        {"transcripts":null,"topics":null,"quotes":{"attempted":2,"succeeded":2,"duration_ms":100,"failed":[]},"themes":null,"warnings":[{"kind":"discussion_lens","reason":"no_clear_moderator"},{"kind":"people_file","reason":"unreadable","line":14}]}
+        """
+        let completed = """
+        {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_completed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"completed","cause":null,"summary":\(summary)}
+        """
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [runStartedLine(), completed])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .completedPartial(let got) = result else {
+            Issue.record("expected .completedPartial, got \(String(describing: result))")
+            return
+        }
+        #expect(got.totalFailureCount == 0)
+        #expect(got.warningCount == 2)
+    }
+
     @Test func deriveStateRunCompletedWithNilSummaryStaysReady() {
         // Pre-v5 logs and v5 logs from clean transcribe-then-analyze runs
         // carry no `summary` (or null). Must keep mapping to `.ready` so the

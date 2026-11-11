@@ -316,3 +316,71 @@ def test_an_unmoderated_study_is_not_a_failure(tmp_path):
         transcripts, quotes, tmp_path, tmp_path / "bristlenose-output", FakeClient(),
         create_manifest("p", "0"), None))
     assert pipeline._discussion_failed is False
+
+
+# ── what the Mac is told (N128): the run summary's warnings ──────────────────
+
+
+def _record(status, *states):
+    from bristlenose.discussion.models import DiscussionRecord, RecordSession
+
+    return DiscussionRecord(
+        status=status,
+        sessions=[RecordSession(id=f"s{i}", number=i, state=st) for i, st in enumerate(states, 1)],
+    )
+
+
+def test_the_reason_a_lens_is_missing_is_a_closed_vocabulary():
+    from bristlenose.events import StageOutcome
+    from bristlenose.pipeline import _discussion_warning
+
+    empty = StageOutcome(attempted=0, succeeded=0, failed=[])
+    # An unmoderated study, a built lens and a partial one say nothing.
+    assert _discussion_warning(_record("failed", "no_moderator", "no_moderator"), empty) is None
+    assert _discussion_warning(_record("complete", "ok", "ok"), empty) is None
+    assert _discussion_warning(_record("partial", "ok", "failed"), empty) is None
+    # Moderators exist but none could be told from the rest.
+    w = _discussion_warning(_record("failed", "moderator_unreliable", "no_moderator"), empty)
+    assert (w.kind, w.reason, w.line) == ("discussion_lens", "no_clear_moderator", None)
+
+
+def test_a_lens_the_model_could_not_read_reaches_the_summary_with_its_cause(tmp_path):
+    from bristlenose.discussion.models import SessionLabelsOut
+
+    write_guide(tmp_path)
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+    pipeline._summary.warnings = None
+    transcripts, quotes = two_sessions()
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output",
+        FakeClient(fail_kinds=(SessionLabelsOut,)), create_manifest("p", "0"), None))
+    warnings = pipeline._summary.warnings
+    assert warnings is not None and len(warnings) == 1
+    assert warnings[0].kind == "discussion_lens"
+    assert warnings[0].reason  # a CauseCategoryEnum value, never free text
+
+
+def test_a_stage_that_raised_reaches_the_summary_as_unknown(tmp_path, monkeypatch):
+    write_guide(tmp_path)
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+
+    async def boom(*_a, **_k):
+        raise RuntimeError("model fell over")
+
+    monkeypatch.setattr("bristlenose.discussion.stage.run_discussion", boom)
+    transcripts, quotes = two_sessions()
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output", FakeClient(),
+        create_manifest("p", "0"), None))
+    assert [(w.kind, w.reason) for w in pipeline._summary.warnings] == [("discussion_lens", "unknown")]
+
+
+def test_an_unmoderated_study_puts_nothing_in_the_summary(tmp_path):
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+    transcripts, quotes = two_sessions()
+    for t in transcripts:
+        t.segments = [seg for seg in t.segments if seg.speaker_code.startswith("p")]
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output", FakeClient(),
+        create_manifest("p", "0"), None))
+    assert not pipeline._summary.warnings

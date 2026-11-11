@@ -835,6 +835,7 @@ def test_contract_fixture_present_and_versioned():
     "run_completed_partial_truncated",
     "run_completed_clean",
     "run_completed_quotes_left_out",
+    "run_completed_lens_warning",
 ])
 def test_contract_scenarios_round_trip(scenario_name: str):
     """Each fixture scenario decodes into the right event model and re-encodes
@@ -1031,6 +1032,7 @@ SESSIONS_ANALYSED_BY_SCENARIO = {
         "run_completed_partial_refusals": None,
         "run_completed_deferred_overflow": (3, 15),
         "run_completed_quotes_left_out": (3, 3),
+        "run_completed_lens_warning": (3, 3),
 }
 
 
@@ -1114,3 +1116,20 @@ def test_the_left_out_count_survives_the_wire_and_is_absent_when_empty():
     # nothing in any failed list: a left-out quote is not a failure
     assert all(not b.failed for b in (parsed.summary.transcripts, parsed.summary.quotes,
                                       parsed.summary.topics, parsed.summary.themes) if b)
+
+
+def test_run_warnings_survive_the_shared_fixture() -> None:
+    """The Mac reads ``warnings`` to say "Partial completion" and to name each cause:
+    a lens that was not built and a names file that could not be read (N128, N82)."""
+    contract = json.loads(
+        (Path(__file__).parent / "fixtures" / "pipeline-summary-contract.json")
+        .read_text(encoding="utf-8")
+    )
+    parsed = RunCompletedEvent.model_validate(contract["scenarios"]["run_completed_lens_warning"])
+    assert parsed.summary is not None and parsed.summary.warnings is not None
+    assert [(w.kind, w.reason, w.line) for w in parsed.summary.warnings] == [
+        ("discussion_lens", "no_clear_moderator", None),
+        ("people_file", "unreadable", 14),
+    ]
+    clean = RunCompletedEvent.model_validate(contract["scenarios"]["run_completed_clean"])
+    assert clean.summary is not None and clean.summary.warnings is None

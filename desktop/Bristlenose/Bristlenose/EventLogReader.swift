@@ -346,8 +346,11 @@ enum EventLogReader {
         // failure → `.completedPartial` (a report was written but degraded).
         // Zero failures (or no summary at all) keeps the existing `.ready`.
         // A quote the model got wrong and the stage went on without is not a failure but
-        // is said the same way (owner, 3 Nov 2026): the CLI calls it "Done with warnings".
-        if let summary = event.summary, summary.totalFailureCount > 0 || summary.leftOutCount > 0 {
+        // is said the same way (owner, 3 Nov 2026): the CLI calls it "Done with warnings". So is
+        // something the researcher would expect that is missing: a lens not built, a names file
+        // that could not be read (`warnings`, owner, 11 Nov 2026).
+        if let summary = event.summary,
+           summary.totalFailureCount > 0 || summary.leftOutCount > 0 || summary.warningCount > 0 {
             return .completedPartial(summary: summary)
         }
         // For .ready we want a Date — parse `ended_at` if available.

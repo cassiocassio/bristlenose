@@ -364,7 +364,9 @@ enum ProjectSubtitle {
     /// both read this, so they cannot disagree.
     static func completedPartialAnalysed(_ summary: PipelineSummary) -> SessionsAnalysed? {
         guard let analysed = summary.sessionsAnalysed else { return nil }
-        if summary.totalFailureCount == 0, summary.leftOutCount > 0 { return analysed }
+        if summary.totalFailureCount == 0, summary.leftOutCount > 0 || summary.warningCount > 0 {
+            return analysed
+        }
         return analysed.done < analysed.total ? analysed : nil
     }
 

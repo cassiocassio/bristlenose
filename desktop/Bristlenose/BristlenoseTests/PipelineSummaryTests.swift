@@ -61,6 +61,7 @@ struct PipelineSummaryTests {
             "run_completed_clean": SessionsAnalysed(done: 3, total: 3),
             "run_completed_deferred_overflow": SessionsAnalysed(done: 3, total: 15),
             "run_completed_quotes_left_out": SessionsAnalysed(done: 3, total: 3),
+            "run_completed_lens_warning": SessionsAnalysed(done: 3, total: 3),
         ]
         var got: [String: SessionsAnalysed] = [:]
         for (name, scenario) in try loadScenarios() {
@@ -206,6 +207,36 @@ struct PipelineSummaryTests {
         #expect(text.contains("Quotes left out"))
         #expect(text.contains("s2  1"))
         // Nothing failed, so it is not "Partial completion" and names no failure category.
+        #expect(text.contains("Outcome: Done with warnings"))
+        #expect(!text.contains("Dominant category"))
+    }
+
+    // MARK: - Warnings: what a finished run is missing that the researcher would expect (N128, N82)
+
+    @Test func fixtureLensWarningIsCountedAndIsNotAFailure() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_lens_warning"))
+        #expect(summary.warningCount == 2)
+        #expect(summary.warnings?.map(\.kind) == [RunWarning.discussionLens, RunWarning.peopleFile])
+        #expect(summary.warnings?.last?.line == 14)
+        // Nothing failed, so it names no failure category, and every session is in the report.
+        #expect(summary.totalFailureCount == 0)
+        #expect(ProjectSubtitle.completedPartialAnalysed(summary) == SessionsAnalysed(done: 3, total: 3))
+    }
+
+    @Test func aCleanRunHasNoWarnings() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_clean"))
+        #expect(summary.warnings == nil)
+        #expect(summary.warningCount == 0)
+    }
+
+    @Test func theCopiedDiagnosticNamesTheWarnings() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_lens_warning"))
+        let text = ProjectDiagnosticPopover.formatDiagnosticPlaintext(
+            summary: summary, projectName: "P", projectPath: "/x", abandoned: false
+        )
+        #expect(text.contains("Warnings (not failures"))
+        #expect(text.contains("discussion_lens  no_clear_moderator"))
+        #expect(text.contains("people_file  unreadable  line 14"))
         #expect(text.contains("Outcome: Done with warnings"))
         #expect(!text.contains("Dominant category"))
     }

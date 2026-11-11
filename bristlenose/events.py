@@ -21,6 +21,7 @@ import time
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -365,6 +366,28 @@ class StageOutcome(BaseModel):
     left_alone: int = 0
 
 
+class RunWarning(BaseModel):
+    """Something the researcher would expect is missing from a finished run, and why.
+
+    Not a failure of a session (nothing in any ``failed`` list), and not a refusal:
+    the run completed and the report exists. The Mac reads it to say "Partial
+    completion" and to name the cause in the popover, as the terminal says
+    "Done with warnings" (owner, 11 Nov 2026, docs/mockups/done-with-warnings-mac-row.html).
+
+    ``kind`` names what is missing; ``reason`` says why, in a closed vocabulary the Mac
+    maps to words: for ``discussion_lens``, ``no_clear_moderator`` (the lens could not tell
+    which speaker asked the questions), a ``CauseCategoryEnum`` value (the model could not
+    read the sessions) or ``unknown`` (the stage failed and no cause was captured); for
+    ``people_file``, ``unreadable``. An
+    expected absence (an unmoderated study, no guide) is never a warning. Ids and counts
+    only, like the failure entries beside it: no free text, no names.
+    """
+
+    kind: Literal["discussion_lens", "people_file"]
+    reason: str
+    line: int | None = None  # people_file: the line the parser stopped at, when it knows
+
+
 class PipelineSummary(BaseModel):
     """Per-pipeline-stage outcome rollup attached to terminus events.
 
@@ -400,6 +423,9 @@ class PipelineSummary(BaseModel):
     # Mac reads it to say "Done with warnings" as the CLI does (owner, 3 Nov 2026).
     # Ids and counts only, like the failure entries beside it.
     quotes_left_out: dict[str, int] | None = None
+    # What a finished run is missing that the researcher would expect, and why: a lens
+    # that was not built, a names file that could not be read. None when nothing is.
+    warnings: list[RunWarning] | None = None
 
 
 def sessions_analysed(summary: PipelineSummary | None) -> tuple[int, int] | None:

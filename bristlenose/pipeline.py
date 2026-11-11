@@ -26,6 +26,7 @@ from bristlenose.events import (
     PipelineAbandonedError,
     PipelineSummary,
     ReflowScopeEnum,
+    RunWarning,
     StageFailure,
     StageOutcome,
 )
@@ -1660,6 +1661,26 @@ def _summary_warning(
     return no_quotes or _short_reason(errors, provider)[0] or left_out
 
 
+def _discussion_warning(record: DiscussionRecord, outcome: StageOutcome) -> RunWarning | None:
+    """Why the Discussion lens is missing when the researcher would expect it, or None.
+
+    None for a lens that was built (even partly) and for an unmoderated study, where no
+    session has a moderator and nothing is wrong. Otherwise the reason is the model's
+    dominant failure category when it could not read the sessions, or
+    ``no_clear_moderator`` when moderators exist but none could be told from the rest.
+    """
+    if record.status != "failed" or not record.sessions:
+        return None
+    states = [s.state for s in record.sessions]
+    if all(st == "no_moderator" for st in states):
+        return None
+    if any(st == "failed" for st in states):
+        cause = _dominant_cause(
+            outcome.failed, default_category=CauseCategoryEnum.UNKNOWN, message="")
+        return RunWarning(kind="discussion_lens", reason=cause.category.value)
+    return RunWarning(kind="discussion_lens", reason="no_clear_moderator")
+
+
 #: What the end line says when the discussion lens could not be built (N128).
 _LENS_NOT_BUILT = "the discussion lens wasn't built"
 
@@ -1733,6 +1754,15 @@ class Pipeline:
     #: Set when ``people.yaml`` would not read: the run carried on without its
     #: names, so a plain "Done" would hide it (N82).
     _people_unreadable: bool = False
+
+    def _note_warning(self, warning: RunWarning) -> None:
+        """Record something the researcher would expect is missing: the terminal's end line
+        says "Done with warnings", and the Mac reads it from the run summary."""
+        if warning.kind == "discussion_lens":
+            self._discussion_failed = True
+        elif warning.kind == "people_file":
+            self._people_unreadable = True
+        self._summary.warnings = [*(self._summary.warnings or []), warning]
 
     def _end_warning(self, error: str, warning: str) -> str:
         """What follows "Done with warnings —", once the run's own error and its
@@ -2150,7 +2180,7 @@ class Pipeline:
             path.write_text(DiscussionRecord(
                 status="failed", quotes_sha=input_hashes["quotes"], guide_sha=input_hashes["guide"],
             ).model_dump_json(indent=2), encoding="utf-8")
-            self._discussion_failed = True
+            self._note_warning(RunWarning(kind="discussion_lens", reason="unknown"))
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
             # The stage ran, whatever it produced: told it is over, the estimate
             # drops it from the time left and the ring keeps its share, rather
@@ -2158,12 +2188,14 @@ class Pipeline:
             # sitting below where it already was.
             self._emit_remaining(_T_STAGE_DISCUSSION, time.perf_counter() - t0)
             return None
-        # A lens that was not built because the model could not read any session
-        # is a failure the researcher would not expect, unlike an unmoderated
-        # study (every session `no_moderator`: skipped, nothing wrong). The
-        # end line says so, as it does when the stage raised (N128).
-        if record.status == "failed" and any(s.state == "failed" for s in record.sessions):
-            self._discussion_failed = True
+        # A lens that was not built when the researcher would expect it is a warning:
+        # the model could not read the sessions, or no moderator could be told from the
+        # rest. An unmoderated study (every session `no_moderator`) is skipped, nothing
+        # wrong, and says nothing. The terminal's end line and the Mac's row both read
+        # this (N128, owner 11 Nov 2026).
+        lens_warning = _discussion_warning(record, outcome)
+        if lens_warning is not None:
+            self._note_warning(lens_warning)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
         elapsed = time.perf_counter() - t0
@@ -4086,7 +4118,9 @@ class Pipeline:
 
             existing_people, people_unreadable = read_people_file(output_dir)
             if people_unreadable is not None:
-                self._people_unreadable = True
+                self._note_warning(
+                    RunWarning(kind="people_file", reason="unreadable", line=people_unreadable.line)
+                )
                 _print_warn(rich_escape(people_unreadable.message()))
             computed_stats = compute_participant_stats(sessions, transcripts)
             people = merge_people(existing_people, computed_stats)
@@ -4570,7 +4604,9 @@ class Pipeline:
 
         existing_people, people_unreadable = read_people_file(output_dir)
         if people_unreadable is not None:
-            self._people_unreadable = True
+            self._note_warning(
+                RunWarning(kind="people_file", reason="unreadable", line=people_unreadable.line)
+            )
             _print_warn(rich_escape(people_unreadable.message()))
         computed_stats = compute_participant_stats(sessions, transcripts)
         people = merge_people(existing_people, computed_stats)
@@ -4940,7 +4976,9 @@ class Pipeline:
 
             people, people_unreadable = read_people_file(output_dir)
             if people_unreadable is not None:
-                self._people_unreadable = True
+                self._note_warning(
+                    RunWarning(kind="people_file", reason="unreadable", line=people_unreadable.line)
+                )
                 _print_warn(rich_escape(people_unreadable.message()))
             display_names = build_display_name_map(people) if people else {}
 
@@ -5625,7 +5663,9 @@ class Pipeline:
 
         people, people_unreadable = read_people_file(output_dir)
         if people_unreadable is not None:
-            self._people_unreadable = True
+            self._note_warning(
+                RunWarning(kind="people_file", reason="unreadable", line=people_unreadable.line)
+            )
             _print_warn(rich_escape(people_unreadable.message()))
         display_names = build_display_name_map(people) if people else {}
 

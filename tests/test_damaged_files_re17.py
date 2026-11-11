@@ -126,6 +126,21 @@ class TestPeopleFile:
                 for e in result.people.participants.values()
             )
 
+    def test_the_unreadable_file_reaches_the_run_summary_and_the_end_line(
+        self, tmp_path: Path,
+    ) -> None:
+        """N82: the Mac reads `warnings` to say "Partial completion" and to name the file
+        and its line; the terminal's end line says "Done with warnings"."""
+        _drive(tmp_path, "run", 2, {})
+        _people(tmp_path).write_text(_TYPO, encoding="utf-8")
+
+        result = _drive(tmp_path, "run", 2, {})
+
+        assert result is not None and result.summary is not None
+        warnings = result.summary.warnings or []
+        assert [(w.kind, w.reason, w.line) for w in warnings] == [("people_file", "unreadable", 4)]
+        assert "people.yaml couldn't be read" in result.pipeline_warning
+
     def test_render_only_leaves_it_and_says_so(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
     ) -> None:

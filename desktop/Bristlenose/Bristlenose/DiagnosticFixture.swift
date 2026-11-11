@@ -97,7 +97,7 @@ enum DiagnosticFixture {
         let summary = scenario.summary
         // Nothing failed AND nothing was left out: a clean run. A run that only left quotes
         // out has no failure but reads as done with warnings (owner, 3 Nov 2026).
-        if summary.totalFailureCount == 0 && summary.leftOutCount == 0 {
+        if summary.totalFailureCount == 0 && summary.leftOutCount == 0 && summary.warningCount == 0 {
             logger.info("clean scenario; no override")
             return .clean
         }
@@ -174,6 +174,22 @@ enum DiagnosticFixture {
                 quotes: StageOutcome(attempted: 3, succeeded: 3, durationMs: 82_000, failed: []),
                 themes: StageOutcome(attempted: 1, succeeded: 1, durationMs: 14_000, failed: []),
                 quotesLeftOut: ["s2": 1, "s3": 3])
+        ),
+
+        // A run with no failure at all that is missing something the researcher would expect: the
+        // Discussion lens could not tell the moderator, and people.yaml stopped at line 14. Reads as
+        // done with warnings, and the popover names each with its reason (owner, 11 Nov 2026).
+        "run_completed_lens_warning": FixtureScenario(
+            event: .runCompleted,
+            summary: PipelineSummary(
+                transcripts: StageOutcome(attempted: 3, succeeded: 3, durationMs: 412_000, failed: []),
+                topics: StageOutcome(attempted: 3, succeeded: 3, durationMs: 41_000, failed: []),
+                quotes: StageOutcome(attempted: 3, succeeded: 3, durationMs: 82_000, failed: []),
+                themes: StageOutcome(attempted: 1, succeeded: 1, durationMs: 14_000, failed: []),
+                warnings: [
+                    RunWarning(kind: RunWarning.discussionLens, reason: "no_clear_moderator", line: nil),
+                    RunWarning(kind: RunWarning.peopleFile, reason: "unreadable", line: 14),
+                ])
         ),
 
         "run_failed_abandoned": FixtureScenario(

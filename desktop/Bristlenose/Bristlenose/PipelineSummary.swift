@@ -28,11 +28,21 @@ struct PipelineSummary: Codable, Equatable {
     /// counted by `leftOutCount`, which also makes the run read as `.completedPartial`
     /// (owner, 3 Nov 2026: "Done with warnings", as the CLI says).
     var quotesLeftOut: [String: Int]?
+    /// What a finished run is missing that the researcher would expect, and why (Python
+    /// `PipelineSummary.warnings`): a lens that was not built, a names file that could not be
+    /// read. Optional, so an older sidecar and every clean run decode unchanged. **Not a
+    /// failure**: nothing is in a `failed` list; like `quotesLeftOut` it makes the run read as
+    /// `.completedPartial` (owner, 11 Nov 2026, docs/mockups/done-with-warnings-mac-row.html).
+    var warnings: [RunWarning]?
 
     enum CodingKeys: String, CodingKey {
         case ingest, transcripts, topics, quotes, themes
         case quotesLeftOut = "quotes_left_out"
+        case warnings
     }
+
+    /// How many things the run is missing that the researcher would expect.
+    var warningCount: Int { warnings?.count ?? 0 }
 
     /// Quotes left out across every session of this run.
     var leftOutCount: Int {
@@ -260,6 +270,20 @@ struct Cause: Codable, Equatable {
 
 /// Swift mirror of `bristlenose/events.py::CauseCategoryEnum`. Raw values are
 /// snake_case — keep aligned with the Python enum so JSON round-trips.
+/// Something a finished run is missing that the researcher would expect (Python
+/// `RunWarning`). `kind` and `reason` stay strings, not enums: an older app reading a newer
+/// sidecar's value must still decode the whole summary, and an unknown reason reads as
+/// "Detailed cause not captured", the shipped wording for a cause nobody recorded.
+struct RunWarning: Codable, Equatable {
+    var kind: String
+    var reason: String
+    /// `people_file`: the line the parser stopped at, when it knows.
+    var line: Int?
+
+    static let discussionLens = "discussion_lens"
+    static let peopleFile = "people_file"
+}
+
 enum CauseCategory: String, Codable, Equatable, CaseIterable {
     case userSignal = "user_signal"
     case auth

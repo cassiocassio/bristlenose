@@ -658,6 +658,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // cells read the rest live, so that one reload shows everything.
         guard !liveResizing else {
             reloadOwedAfterResize = true
+            // The held reload is not the lens capsule's to wait for: it is composed from
+            // `activeTab`, which this call just stored, and nothing else re-applies it.
+            reassertLensCapsule()
             return
         }
 
@@ -971,6 +974,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     ///     double-click too, so arming waits out `doubleClickInterval` and
     ///     `outlineViewDoubleClicked` cancels it.
     @objc private func outlineViewClicked(_ sender: Any?) {
+        // A click ends with the table's own handling, after the route a lens click
+        // started may already have moved `activeTab`. Re-assert once that is over.
+        DispatchQueue.main.async { [weak self] in self?.reassertLensCapsule() }
         let changedSelection = selectionChangedByCurrentClick
         selectionChangedByCurrentClick = false
         renameArmTimer?.invalidate()
@@ -1173,17 +1179,32 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// genuinely selected (so the table draws its capsule) without it ever joining
     /// the `SidebarSelection` set — serve/persist read `node.selection`, which is nil
     /// for lenses. Lens rows live one level under the (always-expanded) Lenses group.
+    ///
+    /// Read from the table's own rows, not from `roots`: `update()` stores a new tree
+    /// before it reloads, and when it holds the reload back the table is still showing
+    /// the old nodes, which a lookup by the new ones cannot find.
     private func activeLensRow() -> Int? {
         guard let activeTab else { return nil }
-        for group in roots {
-            for child in group.children {
-                if case .lens(let tab) = child.kind, tab == activeTab {
-                    let row = outlineView.row(forItem: child)
-                    return row >= 0 ? row : nil
-                }
+        for row in 0..<outlineView.numberOfRows {
+            if case .lens(let tab)? = (outlineView.item(atRow: row) as? OutlineNode)?.kind, tab == activeTab {
+                return row
             }
         }
         return nil
+    }
+
+    /// Put the capsule on the lens the report is showing, leaving the project selection
+    /// as the table has it and touching nothing else. Idempotent, so it can run after
+    /// any event that might have left the capsule behind: a held reload, or the end of a
+    /// click (the table finishes its own click handling after `activeTab` may have moved).
+    /// Not while a name is being edited or a drop is sliding, which reload on their own.
+    private func reassertLensCapsule() {
+        guard lensesEnabled, editingNodeID == nil, !reloadSuppressed else { return }
+        let wanted = composedSelection(projectRows: selectableRows(in: outlineView.selectedRowIndexes))
+        guard wanted != outlineView.selectedRowIndexes else { return }
+        isApplyingProgrammatic = true
+        defer { isApplyingProgrammatic = false }
+        outlineView.selectRowIndexes(wanted, byExtendingSelection: false)
     }
 
     private func allSelectableNodes() -> [OutlineNode] {

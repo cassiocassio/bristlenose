@@ -2,6 +2,42 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.46.0** — _11 Nov 2026_
+
+Reopening the Mac app takes you back to the quote, code row or paragraph you were on, and a Bristlenose board can now be drawn inside Miro with no sign-in. Dark mode is calmer, and speaker identification reads who is hosting the session.
+
+**New**
+
+- **A board can be drawn inside Miro, with no sign-in and no server.** Send to Miro has a new route: copy or save the board file, and the Bristlenose app in Miro draws it from that. On the Mac it is a choice between the two beside the existing route.
+- **Reopening the Mac app takes you back to where you were,** not just to the lens: the quote on Quotes, the code row on Codebooks, the paragraph in a transcript, or the card on Signals. Project, Screens and Discussion reopen at the top. A finished run clears the remembered place.
+
+**Improved**
+
+- **Dark mode is calmer.** The page is the darkest surface, quotes sit just above it, and the side panels sit above them, in plain grey with no colour cast. The Mac sidebar and toolbar keep the system material.
+- **The Sessions timeline opens at a readable zoom** when a project holds a few very short calls, instead of letting them set the scale.
+- **A strip that is still being drawn shows a working sweep,** and an HTML export taken while it is drawing no longer carries a mark that could never stop.
+- **The report's side panels slide open and closed** instead of snapping.
+- **Speaker identification reads who is hosting the session,** not who spoke first or asked the most questions, and it spots observers who barely speak. A session with one speaker is always p1, never m1.
+- **Re-analyse tells you what it would discard.** The sheet, and `run --clean`, now count hidden quotes, transcript edits, speaker choices and removed badges.
+- **A run that could not read `people.yaml`, or whose Discussion lens failed, ends "Done with warnings"** instead of a plain Done.
+- **No button label is cut, in any language,** on the Mac or in the web report. The Show and Hide details buttons use title case.
+- **`bristlenose doctor` fails for an ffmpeg that will not run** and warns for a missing ffprobe. `configure` warns when a key is given on the command line.
+- **Inside the Mac app an Ollama that does not answer reads "isn't running",** not "not installed". The default-folder chooser no longer offers the volume root or the volume list.
+- **Agents see a study under the name in your sidebar,** and the antenna follows what the handshake file says.
+- **Feedback controls say "send",** and the text area is read-only while a send is out.
+- **On Windows, a silent uninstall while Bristlenose is running refuses** instead of waiting on a dialog nobody can click.
+- **The man page, README and INSTALL use one set of words** for keys and `--llm`: no company names, and every cloud provider covered.
+- **Transcripts, the turn-frames record and `people.yaml` are readable by you only.** `/admin` on the Developer-ID beta opens only with the server token or a single-use code.
+
+**Fixed**
+
+- **A letter typed in the Quotes search box could vanish** when the report answered an earlier keystroke late.
+- **The ChatGPT key check could bill about 64,000 tokens for a single full stop.** It now asks the model not to reason, and the Azure key check posts one token to the deployment, as `doctor` does.
+- **A re-analyse stopped before its first event no longer locks the study,** and an Analyse while the queue is being restored no longer drops the waiting studies from the saved queue.
+- **A report whose data could not be loaded at startup no longer opens as a finished run.** `bristlenose transcribe` counts only the recordings it transcribed.
+- **A share that stopped answering no longer holds up the Mac sidebar.**
+- **Clicking a lens in the Mac sidebar moves its highlight with the report.** It used to take a second click when the highlight lagged behind.
+
 **0.45.0** — _7 Nov 2026_
 
 The Mac app tells you when your network is what's blocking your AI provider, and when a run finishes while you're away. Quotes get display controls, and a run that left quotes out now says so.

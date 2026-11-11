@@ -1,7 +1,7 @@
 """The exported screens folder's manifest, and its share of removing an interview.
 
 `bristlenose-output/screens/` holds the stills Export Screens wrote (`server/routes/screens_export.py`),
-named by participant code (`p3-07.jpg`), so the pipeline's per-session prune — which matches file
+named by participant code (`p3-07-checkout.jpg`), so the pipeline's per-session prune — which matches file
 names that are session ids — cannot see them. The manifest says which session each file came from,
 so when an interview is removed from the project its exported screengrabs go with it (owner, 17 Oct
 2026: rare — a participant who withdraws usually does so before the session — but a cleanup that

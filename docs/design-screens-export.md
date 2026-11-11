@@ -67,7 +67,7 @@ The sibling is **clip export** (`routes/clips_export.py`, settled 10 Jul 2026): 
 zip; files copied from a manifest, never a glob; each export replaces the previous one; Show in
 Finder after.
 
-- **Names:** `p3-07.jpg` — participant code, then visit order within that session, zero-padded.
+- **Names:** `p3-07-verfugbarkeit-prufen.jpg` — participant code, visit order within that session (zero-padded), then the screen's name as a slug (`slugify`, 40 characters at most: lowercase `a-z 0-9 -`, so no character Windows or macOS forbids). A title with no Latin letters leaves the number alone (`p3-07.jpg`).
   Finder's name sort is then time order per participant. No screen names in file names: they are
   page titles and addresses, long and often unhelpful as names.
 - **Where:** CLI and browser, `bristlenose-output/screens/`. Mac app, the same folder, then the

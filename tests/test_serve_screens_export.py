@@ -82,14 +82,14 @@ def test_each_still_is_written_full_size_and_replaces_the_last_export(
         started = client.post(_BASE).json()
         assert {k: started[k] for k in ("status", "total")} == {"status": "started", "total": 1}
         body = _finish(client)
-    assert body["status"] == "completed" and body["files"] == ["p1-01.jpg"]
-    jpg = folder / "p1-01.jpg"
+    assert body["status"] == "completed" and body["files"] == ["p1-01-checkout.jpg"]
+    jpg = folder / "p1-01-checkout.jpg"
     assert jpg.read_bytes()[:3] == b"\xff\xd8\xff"
     # The page's crop at the recording's own size (320 px wide), not scaled as the lens asks.
     assert abs(_width(jpg) - (x1 - x0) * 320) <= 2
     assert not (folder / "p1-07.jpg").exists()  # named by the last manifest: removed
     assert (folder / "notes.txt").exists()  # not named: left alone
-    assert json.loads((folder / ".screens_manifest.json").read_text(encoding="utf-8"))["files"] == ["p1-01.jpg"]
+    assert json.loads((folder / ".screens_manifest.json").read_text(encoding="utf-8"))["files"] == ["p1-01-checkout.jpg"]
 
 
 def test_nothing_is_exported_while_screens_are_off(project: Path,  # noqa: F811

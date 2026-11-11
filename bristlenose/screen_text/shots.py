@@ -15,6 +15,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from bristlenose.server.grounding import parse_quote_dom_id
+from bristlenose.utils.text import slugify
 
 _CODE = re.compile(r"^([^\d]*)(\d*)(.*)$")
 _UNSAFE = re.compile(r"[^A-Za-z0-9_-]")
@@ -85,7 +86,11 @@ def shot_list(
         # Codes and session ids come from a project folder, which may have come from anyone:
         # a file name is built only from characters that cannot leave the folder.
         stem = _UNSAFE.sub("_", stem)
-        s["filename"] = f"{stem}-{s['seq']:0{width[s['session_id']]}d}.jpg"
+        # The screen's name follows the number in a web-server-friendly form
+        # (`p1-02-verfugbarkeit-prufen.jpg`); the number still sorts and identifies.
+        label = slugify(str(s["title"]), max_length=40)
+        tail = f"-{label}" if label else ""
+        s["filename"] = f"{stem}-{s['seq']:0{width[s['session_id']]}d}{tail}.jpg"
     # Cleaning can make two names one (`s 1` and `s/1`): number the later ones apart.
     seen: set[str] = set()
     for s in shots:

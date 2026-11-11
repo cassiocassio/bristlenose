@@ -16,3 +16,7 @@ bristlenose.log
 # that touches the fixture (bristlenose/study_marker.py)
 study.json
 bristlenose-study.txt
+
+# The LLM call log: written into the fixture by a test run, and a re-identification key
+# class file, so it is never committed (the root .gitignore says logs stay ignored here)
+llm-calls.jsonl

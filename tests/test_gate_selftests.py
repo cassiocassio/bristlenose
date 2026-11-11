@@ -54,7 +54,7 @@ def test_the_gate_selftest_passes(script: str) -> None:
 def test_every_paired_selftest_on_disk_is_run_here() -> None:
     """A new ``test-check-*.sh`` that nobody lists would be exactly the uncalled gate this prevents."""
     on_disk = {
-        str(p.relative_to(_ROOT))
+        p.relative_to(_ROOT).as_posix()  # not str(): on Windows that is backslashes and matches nothing
         for d in ("scripts", "desktop/scripts")
         for p in [*(_ROOT / d).glob("test-check-*.sh"), *(_ROOT / d).glob("test-check-*.py")]
     }

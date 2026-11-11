@@ -252,6 +252,9 @@ for (const locale of ['en', 'ru', 'ca', 'pl']) {
     await expect.poll(async () => page.locator('.tag-sidebar-actions').evaluate(
       (el) => Math.round(el.closest('aside, [class*="sidebar"]')!.getBoundingClientRect().width),
     )).toBeLessThanOrEqual(210);
+    // The sidebar slides open since 10 Nov 2026 (`.layout[data-animating]`): measure it at rest, not
+    // mid-slide, where the same label is 3px wider than the sidebar that is still closing on it.
+    await expect(page.locator('.layout[data-animating]')).toHaveCount(0);
     const cuts = await truncatedControls(page);
     expect(cuts, describeCuts(cuts)).toEqual([]);
   });

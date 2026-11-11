@@ -312,9 +312,10 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 
 The flanking sidebars (tags right; TOC left since 14 Aug 2026) are styled to read as native-feeling **inspector** chrome continuous with the AppKit sidebar. Three coupled gotchas, all in `organisms/sidebar.css` + `tokens.css` (added Jul 2026, commit `a96c7c6f`):
 
-**Inspector chrome and the native seam** (7) — [full entries](gotchas.md#inspector-chrome-and-the-native-seam)
+**Inspector chrome and the native seam** (8) — [full entries](gotchas.md#inspector-chrome-and-the-native-seam)
 
 - `--bn-colour-inspector-bg` is a themeable chrome tint, not a content surface.
+- The dark ladder is paper darkest, then quote cards, then inspector chrome, then the native sidebar — and the embedded paper was never a token until 11 Nov 2026.
 - A light strip beside a panel that no CSS colour explains is the WINDOW showing through the…
 - Sticky teleport. `position: sticky; top: 0; height: 100vh` on a grid column whose *flow origin* is…
 - First-baseline datum is web-internal (`--bn-first-baseline` RETIRED, 25 Jul 2026).

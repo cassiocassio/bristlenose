@@ -99,18 +99,18 @@
     :root,
     [data-color-theme="default"] {
         /* Colour palette */
-        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-bg:               light-dark(#ffffff, #1c1c1c);   /* Dark: the paper, the darkest surface of the ladder (10 L*). Everything else steps away from it: quote cards, then inspector chrome, then the native sidebar */
         --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
         --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
         --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
         --bn-colour-accent:           light-dark(#007aff, #0a84ff);
         --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
-        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #212121);   /* Inspector chrome — dark: one step up from the quote cards (12.7 L* against 11.8), neutral grey with no hue */
 
         /* Semantic surfaces */
-        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
-        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
-        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1f1f1f);   /* Dark: lifted off the paper (1.5 L*) but below the inspector chrome */
+        --bn-colour-paper:            light-dark(#f6f7f8, #1c1c1c);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #252525);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
         --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
         --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
         --bn-colour-badge-text:       light-dark(#374151, #d1d5db);

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surface Colour Lab</title>
+<style>
+/* ════ Lab chrome (not the product) ════ */
+:root {
+    /* The lab's own chrome is a fixed mid grey with quiet type in both schemes, so it
+       never competes with the surface being judged. Tune these four to taste. */
+    color-scheme: dark;
+    --lab-bg: #6a6a6a;
+    --lab-ink: #bdbdbd;
+    --lab-muted: #a0a0a0;
+    --lab-rule: #7c7c7c;
+    --lab-hatch: #757575;
+    --lab-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --lab-sans: -apple-system, "Inter", system-ui, "Segoe UI", sans-serif;
+
+    /* Shipped sentiment tokens, verbatim from bristlenose/theme/tokens.css (376-390) */
+    --bn-sentiment-frustration:     light-dark(#ea580c, #fb923c);
+    --bn-sentiment-frustration-bg:  light-dark(#fff7ed, #2d1d0e);
+    --bn-sentiment-confusion:       light-dark(#dc2626, #f87171);
+    --bn-sentiment-confusion-bg:    light-dark(#fef2f2, #2d1515);
+    --bn-sentiment-doubt:           light-dark(#7c3aed, #a78bfa);
+    --bn-sentiment-doubt-bg:        light-dark(#f5f3ff, #1e1533);
+    --bn-sentiment-surprise:        light-dark(#d97706, #fbbf24);
+    --bn-sentiment-surprise-bg:     light-dark(#fffbeb, #2d2305);
+    --bn-sentiment-satisfaction:    light-dark(#16a34a, #4ade80);
+    --bn-sentiment-satisfaction-bg: light-dark(#f0fdf4, #0f2918);
+    --bn-sentiment-delight:         light-dark(#059669, #34d399);
+    --bn-sentiment-delight-bg:      light-dark(#ecfdf5, #0d261c);
+    --bn-sentiment-confidence:      light-dark(#2563eb, #60a5fa);
+    --bn-sentiment-confidence-bg:   light-dark(#eff6ff, #111d2e);
+    /* Shipped text/accent tokens, palette-default.css (102-115) */
+    --bn-colour-text:   light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted:  light-dark(#6b7280, #9ca3af);
+    --bn-colour-accent: light-dark(#007aff, #0a84ff);
+    --bn-colour-badge-bg: light-dark(#f3f4f6, #252525);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--lab-bg); color: var(--lab-ink); font: 13px/1.45 var(--lab-sans); }
+.wrap { padding: 16px; max-width: 1500px; margin: 0 auto; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+.sub { color: var(--lab-muted); margin: 0 0 12px; }
+.key { display: flex; gap: 14px; align-items: center; margin: 0 0 12px; font-size: 12px; color: var(--lab-muted); }
+.key i { display: inline-block; width: 22px; height: 12px; vertical-align: middle; margin-right: 5px; }
+.key .k-art { background: #888; }
+.key .k-com { background: repeating-linear-gradient(135deg, var(--lab-hatch) 0 4px, transparent 4px 8px); border-left: 3px solid var(--lab-muted); }
+.bar { position: sticky; top: 0; z-index: 5; background: var(--lab-bg); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; border-bottom: 1px solid var(--lab-rule); }
+.bar label { display: inline-flex; gap: 6px; align-items: center; }
+select, button, input[type=text] { font: inherit; color: var(--lab-ink); background: transparent; border: 1px solid var(--lab-rule); border-radius: 6px; padding: 3px 8px; }
+button { cursor: pointer; }
+button:hover { border-color: var(--lab-muted); }
+.grid { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 18px; margin-top: 12px; align-items: start; }
+@media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+table.ctl { border-collapse: collapse; width: 100%; }
+table.ctl th { text-align: left; font-weight: 600; color: var(--lab-muted); font-size: 11px; padding: 2px 6px 6px; }
+table.ctl td { padding: 4px 6px; border-top: 1px solid var(--lab-rule); vertical-align: middle; }
+.cell { display: grid; grid-template-columns: 30px 74px 1fr 42px; gap: 6px; align-items: center; }
+.cell input[type=color] { width: 30px; height: 24px; padding: 0; border: 1px solid var(--lab-rule); border-radius: 4px; background: none; }
+.cell input[type=text] { width: 74px; font-family: var(--lab-mono); font-size: 12px; padding: 2px 5px; }
+.cell input[type=range] { width: 100%; }
+.cell .l { font-family: var(--lab-mono); font-size: 11px; color: var(--lab-muted); text-align: right; }
+.steps { font-family: var(--lab-mono); font-size: 11.5px; margin-top: 8px; }
+.steps div { display: flex; justify-content: space-between; border-top: 1px dotted var(--lab-rule); padding: 2px 0; }
+.steps b { font-weight: 600; }
+.com { border: 7px solid transparent; border-left: 3px solid var(--lab-muted); background: linear-gradient(var(--lab-bg), var(--lab-bg)) padding-box, repeating-linear-gradient(135deg, var(--lab-hatch) 0 5px, transparent 5px 10px) border-box; padding: 8px 12px; margin-top: 12px; font-size: 12px; }
+.com h3 { margin: 0 0 4px; font: 600 11px var(--lab-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--lab-muted); }
+.com ul { margin: 4px 0 0 16px; padding: 0; }
+textarea { width: 100%; height: 150px; font: 11.5px/1.4 var(--lab-mono); color: var(--lab-ink); background: transparent; border: 1px solid var(--lab-rule); border-radius: 6px; padding: 6px; }
+.sampler { border: 1px dashed var(--lab-muted); border-radius: 8px; padding: 10px; margin-top: 12px; }
+.sampler canvas { max-width: 100%; display: block; cursor: crosshair; image-rendering: pixelated; border: 1px solid var(--lab-rule); }
+.sampler .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.sw { width: 28px; height: 28px; border: 1px solid var(--lab-rule); border-radius: 4px; }
+#loupe { width: 168px; height: 168px; border: 1px solid var(--lab-rule); image-rendering: pixelated; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chips span { font: 11px var(--lab-mono); border: 1px solid var(--lab-rule); border-radius: 4px; padding: 1px 6px; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+.chips i { width: 10px; height: 10px; border: 1px solid var(--lab-rule); display: inline-block; }
+
+/* ════ Artefact zone: the window replica. Layout px measured from the 2000px-wide screenshots. ════ */
+.stage { overflow: auto; border-radius: 8px; background: var(--lab-bg); padding: 14px 0; }
+.stage .label { font: 11px var(--lab-mono); color: var(--lab-muted); margin: 0 0 6px; }
+.fit { transform-origin: top left; }
+.win {
+    --ink: light-dark(#1a1a1a, #e5e7eb);
+    --dim: light-dark(#6b7280, #9ca3af);
+    --hair: color-mix(in srgb, var(--ink) 10%, transparent);
+    --sel: color-mix(in srgb, var(--ink) 10%, transparent);
+    width: 1850px; height: 1220px; display: grid; grid-template-columns: 352px 331px 793px 374px; grid-template-rows: 70px 1fr;
+    font: 17px/1.3 var(--lab-sans); color: var(--ink); background: var(--c-paper); border-radius: 22px; overflow: hidden; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.win.is-light { color-scheme: light; }
+.win.is-dark { color-scheme: dark; }
+.w-side { grid-column: 1; grid-row: 1 / 3; background: var(--c-sidebar); padding: 0 12px; }
+.w-tool { grid-column: 2 / 5; grid-row: 1; background: var(--c-toolbar); border-bottom: 1px solid var(--hair); display: flex; align-items: center; padding: 0 18px; gap: 14px; }
+.w-nav  { grid-column: 2; grid-row: 2; background: var(--c-nav); border-right: 1px solid var(--hair); padding: 56px 18px 0; }
+.w-paper{ grid-column: 3; grid-row: 2; background: var(--c-paper); padding: 40px 44px 0; overflow: hidden; }
+.w-pane { grid-column: 4; grid-row: 2; background: var(--c-pane); border-left: 1px solid var(--hair); padding: 56px 18px 0; }
+.dots { display: flex; gap: 12px; padding: 26px 0 0 24px; height: 70px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; display: block; margin-top: 8px; }
+.dots i:nth-child(1) { background: #ff5f57; } .dots i:nth-child(2) { background: #febc2e; } .dots i:nth-child(3) { background: #28c840; }
+.w-side .nav { margin-top: 28px; }
+.w-side .it { display: flex; gap: 12px; align-items: center; height: 43px; padding: 0 12px; border-radius: 10px; }
+.w-side .it.on { background: var(--sel); }
+.w-side .g { width: 18px; height: 18px; border-radius: 5px; background: var(--bn-colour-accent); opacity: .85; flex: none; }
+.w-side h6 { margin: 38px 0 6px 12px; font-size: 14px; font-weight: 500; color: var(--dim); }
+.w-side .pj .sub2 { font-size: 13px; color: var(--dim); }
+.w-side .pj { height: 52px; align-items: center; }
+.w-tool .t1 { font-weight: 700; font-size: 17px; }
+.w-tool .t2 { font-size: 14px; color: var(--dim); }
+.w-tool .pill { height: 40px; min-width: 52px; border-radius: 20px; background: var(--sel); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--hair); border-radius: 7px; overflow: hidden; font-size: 16px; text-align: center; }
+.seg div { padding: 7px 0; color: var(--dim); } .seg div.on { background: color-mix(in srgb, var(--bn-colour-accent) 16%, transparent); color: var(--ink); }
+.srow { display: grid; grid-template-columns: 34px 30px 1fr 84px; gap: 10px; align-items: center; margin-top: 10px; padding: 8px 10px; border-radius: 8px; font-size: 16px; }
+.srow.on { background: var(--sel); }
+.srow b { font: 500 14px var(--lab-mono); color: var(--bn-colour-accent); font-weight: 500; }
+.srow .th { height: 46px; border-radius: 4px; background: linear-gradient(120deg, #3a4a5c, #8d7a62); }
+.w-paper h2 { font-size: 34px; margin: 0 0 56px; padding-bottom: 14px; border-bottom: 1px solid var(--hair); font-weight: 700; }
+.w-paper h4 { font-size: 24px; margin: 0 0 14px; font-weight: 500; }
+.qc { background: var(--c-card); border-radius: 8px; padding: 20px 26px 16px 24px; margin-bottom: 26px; display: grid; grid-template-columns: 86px 1fr; gap: 8px; }
+.qc .tc { font: 16px var(--lab-mono); color: var(--bn-colour-accent); padding-top: 2px; }
+.qc p { margin: 0 0 8px; font-size: 20px; line-height: 1.4; }
+.badge { font: 400 14px var(--lab-mono); background: var(--bn-colour-badge-bg); border-radius: 4px; padding: 1px 6px; margin-left: 4px; }
+.tag { display: inline-block; font: 460 15px var(--lab-mono); padding: 3px 10px; border-radius: 4px; margin-top: 6px; }
+.w-pane h5 { margin: 0; font-size: 18px; font-weight: 600; }
+.w-pane .meta { font-size: 14px; color: var(--dim); margin: 2px 0 6px; }
+.w-pane .lnk { color: var(--bn-colour-accent); font-size: 16px; display: flex; gap: 14px; }
+.w-pane h5.sec { font-weight: 500; margin: 26px 0 20px; }
+.trow { display: grid; grid-template-columns: 24px 1fr 56px; gap: 14px; align-items: center; height: 34px; padding: 0 6px; font: 16px var(--lab-mono); }
+.trow .cb { width: 17px; height: 17px; border: 1.5px solid var(--dim); border-radius: 4px; }
+.trow .tg { padding: 1px 10px; border-radius: 4px; justify-self: start; }
+.trow .n { text-align: right; font: 17px var(--lab-sans); display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.trow .n s { display: inline-block; height: 9px; border-radius: 5px; background: #4a9aa3; text-decoration: none; }
+.tinted { background: color-mix(in srgb, var(--bn-colour-accent) 7%, transparent); padding: 6px 0; margin: 14px -18px 0; padding-left: 12px; padding-right: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Surface Colour Lab</h1>
+    <p class="sub">Six surfaces, light and dark, live on a replica of the three-column window. Drop a screenshot to sample real pixels.</p>
+    <div class="key"><span><i class="k-art"></i>Artefact: the window replica (what the pixels do)</span><span><i class="k-com"></i>Commentary: notes on what is measured and what is assumed</span></div>
+
+    <div class="bar">
+        <label>Preset <select id="preset"></select></label>
+        <label>Show <select id="show"><option value="dark">Dark</option><option value="light">Light</option><option value="both">Both, stacked</option></select></label>
+        <label>Scale <input type="range" id="scale" min="30" max="100" value="42"> <span id="scaleV" style="font-family:var(--lab-mono)">42%</span></label>
+        <button id="nl">Neutralise dark</button>
+        <button id="nlL">Neutralise light</button>
+        <label>Dark tint <input type="range" id="tintD" min="0" max="150" value="100"></label>
+        <label>Light tint <input type="range" id="tintL" min="0" max="150" value="100"></label>
+        <button id="reset">Reset all</button>
+    </div>
+
+    <div class="grid">
+        <div>
+            <table class="ctl" id="ctl"></table>
+            <div class="steps" id="steps"></div>
+
+            <div class="sampler">
+                <b>Sample a screenshot</b> &mdash; choose or drop a PNG / JPG / WebP, then click it to read a pixel.
+                <div class="row"><input type="file" id="file" accept="image/*"></div>
+                <canvas id="cv" width="10" height="10"></canvas>
+                <div class="row">
+                    <div class="sw" id="swatch"></div>
+                    <span id="readout" style="font-family:var(--lab-mono)">no sample yet</span>
+                    <canvas id="loupe" width="21" height="21"></canvas>
+                </div>
+                <div class="row">
+                    <label>Assign to <select id="asSurf"></select></label>
+                    <label><select id="asMode"><option>dark</option><option>light</option></select></label>
+                    <button id="assign">Assign</button>
+                </div>
+                <div class="chips" id="samples"></div>
+            </div>
+
+            <h3 style="margin:14px 0 4px;font-size:12px">Export</h3>
+            <textarea id="out" readonly></textarea>
+            <div style="margin-top:6px"><button id="copy">Copy</button></div>
+        </div>
+
+        <div>
+            <div id="stages"></div>
+            <div class="com">
+                <h3>Commentary</h3>
+                <ul>
+                    <li>Window geometry is read from the 2000&nbsp;px screenshots, not from the app, so only the colours are pixel-true. The "Measured now" preset is those samples.</li>
+                    <li>The shipped dark tokens are <code>--bn-colour-bg: #111111</code> and <code>--bn-colour-quote-bg: #1a1a1a</code> (palette-default.css). The screenshot's dark paper reads <code>#30312c</code> and its side panes <code>#1c1c1e</code>, which are not tokens. Why is not yet checked; a native layer or the window material may sit under or over the web view.</li>
+                    <li>Sentiment chips use the real <code>light-dark()</code> tokens, so they follow each frame's scheme, but they are not re-tuned when a surface moves.</li>
+                    <li>Sidebar and toolbar are native SwiftUI in the app, and a material can tint them with the wallpaper. Here they are flat fills.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+"use strict";
+/* ── colour maths: sRGB <-> CIELAB (D65) ── */
+const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+const gam = v => { v = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; return Math.max(0, Math.min(255, Math.round(v * 255))); };
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = c => "#" + c.map(v => v.toString(16).padStart(2, "0")).join("");
+function rgb2lab(c) {
+    const [r, g, b] = c.map(lin);
+    let x = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047;
+    let y = 0.2126729 * r + 0.7151522 * g + 0.0721750 * b;
+    let z = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.08883;
+    const f = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
+    const fx = f(x), fy = f(y), fz = f(z);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function lab2rgb(L, a, b) {
+    const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200;
+    const fi = t => t * t * t > 216 / 24389 ? t * t * t : (116 * t - 16) / (24389 / 27);
+    const x = fi(fx) * 0.95047, y = L > 8 ? fy * fy * fy : L / (24389 / 27), z = fi(fz) * 1.08883;
+    return [gam(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), gam(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), gam(0.0556434 * x - 0.2040259 * y + 1.0572252 * z)];
+}
+const Ls = h => rgb2lab(hex2rgb(h))[0];
+const validHex = h => /^#[0-9a-f]{6}$/i.test(h);
+
+/* ── state ── */
+const SURF = [["sidebar", "Sidebar"], ["toolbar", "Toolbar"], ["nav", "Left content nav"], ["paper", "Main paper"], ["pane", "Right pane"], ["card", "Quote cards"]];
+const PRESETS = {
+    "Measured now (screenshots)": {
+        light: { sidebar: "#ecedea", toolbar: "#ffffff", nav: "#f9f9f9", paper: "#ffffff", pane: "#f9f9f9", card: "#f9fafb" },
+        dark:  { sidebar: "#2e2d24", toolbar: "#383733", nav: "#1c1c1e", paper: "#30312c", pane: "#1c1c1e", card: "#1a1a1a" }
+    },
+    "Claude Code dark ladder (sampled)": {
+        dark: { sidebar: "#212121", toolbar: "#181818", nav: "#212121", paper: "#181818", pane: "#181818", card: "#252525" }
+    },
+    "Codex dark ladder (sampled)": {
+        dark: { sidebar: "#222222", toolbar: "#333333", nav: "#222222", paper: "#181818", pane: "#222222", card: "#363636" }
+    },
+    "Martin: dark as tuned in the 10 Nov screenshot": {
+        dark: { sidebar: "#2f2f30", toolbar: "#252526", nav: "#212122", paper: "#1c1c1e", pane: "#212122", card: "#232323" }
+    },
+    "Claude: Martin's, sidebar -4 L*, cards near paper": {
+        dark: { sidebar: "#272727", toolbar: "#252525", nav: "#212121", paper: "#1c1c1c", pane: "#212121", card: "#1f1f1f" }
+    },
+    "Dark draft: light, mid, dark (sidebar, nav, paper)": {
+        dark: { sidebar: "#2c2c2c", toolbar: "#181818", nav: "#242424", paper: "#181818", pane: "#242424", card: "#1e1e1e" }
+    },
+    "Light draft: dark, mid, light (sidebar, nav, paper)": {
+        light: { sidebar: "#ececec", toolbar: "#ffffff", nav: "#f5f5f5", paper: "#ffffff", pane: "#f5f5f5", card: "#f7f7f7" }
+    }
+};
+const BASE = JSON.parse(JSON.stringify(PRESETS["Measured now (screenshots)"]));
+let S = JSON.parse(JSON.stringify(BASE));      // current values
+let ORIG = JSON.parse(JSON.stringify(BASE));   // values before tint scaling
+let tint = { light: 100, dark: 100 };
+try { const j = JSON.parse(localStorage.getItem("bn-colour-lab") || "null"); if (j && j.S) { S = j.S; ORIG = j.ORIG || j.S; tint = j.tint || tint; } } catch (e) {}
+const save = () => { try { localStorage.setItem("bn-colour-lab", JSON.stringify({ S, ORIG, tint })); } catch (e) {} };
+
+const $ = id => document.getElementById(id);
+
+// ── tint: scale the a and b channels about neutral, from the un-tinted originals ──
+function applyTint(mode) {
+    for (const [k] of SURF) {
+        const [L, a, b] = rgb2lab(hex2rgb(ORIG[mode][k]));
+        const f = tint[mode] / 100;
+        S[mode][k] = rgb2hex(lab2rgb(L, a * f, b * f));
+    }
+}
+function neutralise(mode) {
+    for (const [k] of SURF) {
+        const L = rgb2lab(hex2rgb(S[mode][k]))[0];
+        ORIG[mode][k] = rgb2hex(lab2rgb(L, 0, 0));
+    }
+    tint[mode] = 100; $(mode === "dark" ? "tintD" : "tintL").value = 100;
+    applyTint(mode);
+}
+
+/* ── controls ── */
+function buildControls() {
+    const t = $("ctl");
+    t.innerHTML = "<tr><th>Surface</th><th>Light</th><th>Dark</th></tr>";
+    for (const [k, name] of SURF) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + name + "</td>";
+        for (const mode of ["light", "dark"]) {
+            const td = document.createElement("td");
+            td.innerHTML = '<div class="cell"><input type="color" data-k="' + k + '" data-m="' + mode + '"><input type="text" data-k="' + k + '" data-m="' + mode + '" spellcheck="false"><input type="range" min="0" max="100" step="0.5" data-k="' + k + '" data-m="' + mode + '"><span class="l"></span></div>';
+            tr.appendChild(td);
+        }
+        t.appendChild(tr);
+    }
+    t.addEventListener("input", e => {
+        const el = e.target, k = el.dataset.k, m = el.dataset.m; if (!k) return;
+        let h = S[m][k];
+        if (el.type === "color") h = el.value;
+        else if (el.type === "text") { if (!validHex(el.value)) return; h = el.value.toLowerCase(); }
+        else { const [, a, b] = rgb2lab(hex2rgb(h)); h = rgb2hex(lab2rgb(parseFloat(el.value), a, b)); }
+        S[m][k] = h; ORIG[m][k] = h; tint[m] = 100; $(m === "dark" ? "tintD" : "tintL").value = 100;
+        render(el);
+    });
+}
+function syncControls(skip) {
+    document.querySelectorAll("#ctl [data-k]").forEach(el => {
+        if (el === skip) return;
+        const h = S[el.dataset.m][el.dataset.k];
+        if (el.type === "color") el.value = h; else if (el.type === "text") el.value = h; else el.value = Ls(h);
+    });
+    document.querySelectorAll("#ctl .cell").forEach(c => {
+        const i = c.querySelector("input[type=color]"); c.querySelector(".l").textContent = Ls(S[i.dataset.m][i.dataset.k]).toFixed(1);
+    });
+}
+
+/* ── steps readout ── */
+const PAIRS = [["sidebar", "nav", "sidebar → left nav"], ["nav", "paper", "left nav → paper"], ["paper", "pane", "paper → right pane"], ["toolbar", "paper", "toolbar → paper"], ["card", "paper", "card → paper"]];
+function renderSteps() {
+    let h = '<div><b>Step in L* (second minus first)</b><span>light · dark</span></div>';
+    for (const [a, b, n] of PAIRS) {
+        const d = m => (Ls(S[m][b]) - Ls(S[m][a]));
+        const f = v => (v > 0 ? "+" : "") + v.toFixed(1);
+        h += "<div><span>" + n + "</span><span>" + f(d("light")) + " · " + f(d("dark")) + "</span></div>";
+    }
+    $("steps").innerHTML = h;
+}
+
+/* ── window replica ── */
+const TAGS = [["frustration", 16], ["confusion", 13], ["doubt", 5], ["surprise", 5], ["satisfaction", 7], ["delight", 7], ["confidence", 4]];
+function winHTML(mode) {
+    const sb = ["Project", "Sessions", "Quotes", "Codebooks", "Signals", "Discussion", "Screens"].map(n => '<div class="it' + (n === "Signals" ? " on" : "") + '"><i class="g"></i>' + n + "</div>").join("");
+    const pj = [["Zoom", "Partial completion"], ["reanalyse", ""], ["first-analysis", ""], ["talismanic-fresh", ""], ["Demo for Google", "+1 unanalysed"]].map(([n, s]) => '<div class="it pj' + (n === "talismanic-fresh" ? " on" : "") + '"><i class="g"></i><div>' + n + (s ? '<div class="sub2">' + s + "</div>" : "") + "</div></div>").join("");
+    const tag = (n, c) => '<span class="tag" style="color:var(--bn-sentiment-' + n + ');background:var(--bn-sentiment-' + n + '-bg)">' + n + "</span>";
+    const trows = TAGS.map(([n, c]) => '<div class="trow"><i class="cb"></i><span class="tg" style="color:var(--bn-sentiment-' + n + ');background:var(--bn-sentiment-' + n + '-bg)">' + n + '</span><span class="n"><s style="width:' + (c * 2.2) + 'px"></s>' + c + "</span></div>").join("");
+    return '<div class="win is-' + mode + '" data-mode="' + mode + '">' +
+        '<div class="w-side"><div class="dots"><i></i><i></i><i></i></div><div class="nav">' + sb + "</div><h6>Projects</h6>" + pj + "</div>" +
+        '<div class="w-tool"><span class="pill"></span><span class="pill" style="width:100px"></span><div><div class="t1">talismanic-fresh</div><div class="t2">72 Quotes</div></div><span style="flex:1"></span><span class="pill" style="width:200px"></span><span class="pill"></span></div>' +
+        '<div class="w-nav"><div class="seg"><div>Sections &amp; themes</div><div class="on">Sessions</div></div>' +
+        '<div class="srow on"><b>#1</b><span>p1</span><span>Sat 9 May<br>18m</span><div class="th"></div></div><div class="srow"><b>#2</b><span>p2</span><span>Mon 17 Aug<br>35m</span><div class="th" style="background:linear-gradient(120deg,#51657d,#b9a38a)"></div></div></div>' +
+        '<div class="w-paper"><h2>Sessions</h2><h4>Session 1</h4>' +
+        '<div class="qc"><span class="tc">[01:32]</span><div><p>“I’ve got one of those old-style crock pots that you use for fermentation.” <span class="badge">p1</span></p></div></div>' +
+        '<div class="qc"><span class="tc">[01:42]</span><div><p>“We put the water in and it creates a seal... it’s a practical thing, but it’s designed to... be emotive, I guess.” <span class="badge">p1</span></p>' + tag("satisfaction") + "</div></div>" +
+        '<div class="qc"><span class="tc">[01:59]</span><div><p>“A lot of household stuff... is quite utilitarian, which is very good. And this... looks like it’s something from the past, but yet it’s quite... modern.” <span class="badge">p1</span></p>' + tag("delight") + "</div></div></div>" +
+        '<div class="w-pane"><h5>Tags</h5><div class="meta">7 tags across 2 frameworks</div><div class="lnk"><span>Select all</span><span>Clear</span><span>Used</span></div><h5 class="sec">Sentiment</h5><div class="tinted">' + trows + '</div></div></div>';
+}
+function paintWin(win) {
+    const m = win.dataset.mode;
+    for (const [k] of SURF) win.style.setProperty("--c-" + k, S[m][k]);
+}
+function buildStages() {
+    const mode = $("show").value, modes = mode === "both" ? ["light", "dark"] : [mode];
+    $("stages").innerHTML = modes.map(m => '<div class="stage"><div class="label">' + m + '</div><div class="fit-box"><div class="fit">' + winHTML(m) + "</div></div></div>").join("");
+    applyScale();
+    document.querySelectorAll(".win").forEach(paintWin);
+}
+function applyScale() {
+    const s = $("scale").value / 100; $("scaleV").textContent = $("scale").value + "%";
+    document.querySelectorAll(".fit").forEach(f => { f.style.transform = "scale(" + s + ")"; f.parentElement.style.width = 1850 * s + "px"; f.parentElement.style.height = 1220 * s + "px"; });
+    document.querySelectorAll(".stage + .stage").forEach(e => e.style.marginTop = "12px");
+}
+
+/* ── export ── */
+function renderOut() {
+    const rows = SURF.map(([k]) => "--lab-" + k + ":".padEnd(1) + " light-dark(" + S.light[k] + ", " + S.dark[k] + ");   /* L* " + Ls(S.light[k]).toFixed(1) + " / " + Ls(S.dark[k]).toFixed(1) + " */");
+    $("out").value = rows.join("\n");
+}
+
+function render(skip) { syncControls(skip); renderSteps(); document.querySelectorAll(".win").forEach(paintWin); renderOut(); save(); }
+
+/* ── presets & bar ── */
+function loadPreset(name) {
+    const p = PRESETS[name];
+    for (const m of ["light", "dark"]) if (p[m]) { S[m] = { ...S[m], ...p[m] }; ORIG[m] = { ...ORIG[m], ...p[m] }; tint[m] = 100; }
+    $("tintD").value = tint.dark; $("tintL").value = tint.light;
+    render();
+}
+$("preset").innerHTML = Object.keys(PRESETS).map(n => "<option>" + n + "</option>").join("");
+$("preset").addEventListener("change", () => loadPreset($("preset").value));
+$("show").addEventListener("change", () => { buildStages(); render(); });
+$("scale").addEventListener("input", applyScale);
+$("nl").addEventListener("click", () => { neutralise("dark"); render(); });
+$("nlL").addEventListener("click", () => { neutralise("light"); render(); });
+$("tintD").addEventListener("input", e => { tint.dark = +e.target.value; applyTint("dark"); render(); });
+$("tintL").addEventListener("input", e => { tint.light = +e.target.value; applyTint("light"); render(); });
+$("reset").addEventListener("click", () => { S = JSON.parse(JSON.stringify(BASE)); ORIG = JSON.parse(JSON.stringify(BASE)); tint = { light: 100, dark: 100 }; $("tintD").value = 100; $("tintL").value = 100; render(); });
+$("copy").addEventListener("click", () => { $("out").select(); try { navigator.clipboard.writeText($("out").value); } catch (e) { document.execCommand("copy"); } });
+$("asSurf").innerHTML = SURF.map(([k, n]) => '<option value="' + k + '">' + n + "</option>").join("");
+
+/* ── screenshot sampler ── */
+const cv = $("cv"), cx = cv.getContext("2d", { willReadFrequently: true }), lp = $("loupe").getContext("2d");
+let cur = null; const samples = [];
+function loadImage(f) {
+    if (!f) return; const img = new Image();
+    img.onload = () => { cv.width = img.naturalWidth; cv.height = img.naturalHeight; cx.drawImage(img, 0, 0); URL.revokeObjectURL(img.src); };
+    img.src = URL.createObjectURL(f);
+}
+$("file").addEventListener("change", e => loadImage(e.target.files[0]));
+document.body.addEventListener("dragover", e => e.preventDefault());
+document.body.addEventListener("drop", e => { e.preventDefault(); loadImage(e.dataTransfer.files[0]); });
+function pick(e) {
+    const r = cv.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) * cv.width / r.width), y = Math.floor((e.clientY - r.top) * cv.height / r.height);
+    if (x < 0 || y < 0 || x >= cv.width || y >= cv.height) return null;
+    const d = cx.getImageData(x, y, 1, 1).data; return { x, y, hex: rgb2hex([d[0], d[1], d[2]]) };
+}
+cv.addEventListener("mousemove", e => {
+    const p = pick(e); if (!p) return;
+    const w = 21, im = cx.getImageData(Math.max(0, p.x - 10), Math.max(0, p.y - 10), w, w); lp.putImageData(im, 0, 0);
+});
+cv.addEventListener("click", e => {
+    const p = pick(e); if (!p) return; cur = p;
+    $("swatch").style.background = p.hex; $("readout").textContent = p.hex + "  L* " + Ls(p.hex).toFixed(1) + "  @ " + p.x + "," + p.y;
+    samples.unshift(p); if (samples.length > 14) samples.pop();
+    $("samples").innerHTML = samples.map((s, i) => '<span data-i="' + i + '"><i style="background:' + s.hex + '"></i>' + s.hex + " " + Ls(s.hex).toFixed(0) + "</span>").join("");
+});
+$("samples").addEventListener("click", e => { const s = e.target.closest("span"); if (!s) return; cur = samples[+s.dataset.i]; $("swatch").style.background = cur.hex; $("readout").textContent = cur.hex + "  L* " + Ls(cur.hex).toFixed(1); });
+$("assign").addEventListener("click", () => {
+    if (!cur) return; const k = $("asSurf").value, m = $("asMode").value;
+    S[m][k] = cur.hex; ORIG[m][k] = cur.hex; render();
+});
+
+buildControls(); buildStages(); applyTint("light"); applyTint("dark"); $("tintD").value = tint.dark; $("tintL").value = tint.light; render();
+</script>
+</body>
+</html>

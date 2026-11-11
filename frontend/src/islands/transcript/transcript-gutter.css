@@ -15,8 +15,8 @@
    scope re-points the badge grey rather than overriding badges one by one: tags and speaker
    badges both read it. Menus and popovers mount outside .center and keep the page colour. */
 .center:has(.transcript-body) {
-    --bn-transcript-paper: var(--bn-colour-paper, light-dark(#f6f7f8, #111111));
-    --bn-transcript-sheet: var(--bn-colour-sheet, light-dark(#ffffff, #1c1c1e));
+    --bn-transcript-paper: var(--bn-colour-paper, light-dark(#f6f7f8, #1c1c1c));
+    --bn-transcript-sheet: var(--bn-colour-sheet, light-dark(#ffffff, #252525));
     --bn-colour-badge-bg: var(--bn-colour-badge-bg-paper, light-dark(#ebedf0, #252525));
     --bn-transcript-gutter: 2rem;
     /* A mark at rest is an "invisible", like ¶ with Show Invisibles on. */

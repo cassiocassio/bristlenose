@@ -51,6 +51,12 @@ body {
    keeps its distance via `.center` padding (sidebar.css § "Desktop embedded"). */
 html[data-embedded="true"] body {
     background: transparent;
+    /* Dark only: the paper is a real surface, not the window material. The material
+       reads as the sidebar's tint (a wallpaper-dependent olive, about as light as the
+       sidebar itself), which made the content paper the same weight as the native
+       sidebar and lighter than every panel on it. Light mode keeps the translucent
+       body. `light-dark()` is supported by every WKWebView the floor allows. */
+    background: light-dark(transparent, var(--bn-colour-paper));
     padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
     padding-left: 0;
     padding-right: 0;

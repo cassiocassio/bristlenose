@@ -89,7 +89,7 @@ def test_css_has_color_scheme_property(tmp_path: Path) -> None:
 def test_css_has_light_dark_tokens(tmp_path: Path) -> None:
     _render_minimal(tmp_path)
     css = (tmp_path / "assets" / "bristlenose-theme.css").read_text(encoding="utf-8")
-    assert "light-dark(#ffffff, #111111)" in css  # --bn-colour-bg
+    assert "light-dark(#ffffff, #1c1c1c)" in css  # --bn-colour-bg
     assert "light-dark(#1a1a1a, #e5e7eb)" in css  # --bn-colour-text
 
 

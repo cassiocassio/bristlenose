@@ -339,14 +339,22 @@ class TestWiring:
             threading.Event().wait(0.02)
         assert client.get("/api/projects/1/tapestry").json()["sessions"][0]["strip_state"] is None
 
-    def test_an_export_taken_while_the_job_runs_carries_no_working_mark(self, project):
+    def test_an_export_taken_while_the_job_runs_carries_no_working_mark(
+        self, project, tmp_path, monkeypatch
+    ):
         """The exported file never polls, so a "working" mark in it would sweep for ever."""
         import json
 
-        server = Path(sj.__file__).parent
-        if not ((server / "static" / "index.html").is_file()
-                and (server / "static-export" / "app.js").is_file()):
-            pytest.skip("frontend build not found")
+        from bristlenose.server.routes import export as export_mod
+
+        # CI builds no frontend and the export route needs a bundle to inline, so a stub
+        # one stands in (the pattern of test_export_anonymise_buckets.py). Never a skip:
+        # that would take this check out of CI.
+        bundle = tmp_path / "static-export"
+        bundle.mkdir()
+        (bundle / "app.js").write_text("// stub", encoding="utf-8")
+        (bundle / "app.css").write_text("/* stub */", encoding="utf-8")
+        monkeypatch.setattr(export_mod, "_EXPORT_STATIC_DIR", bundle)
         app = _app(project)
         _give_s1_a_video(app, project)
         ex = _Extractor(hold=True)

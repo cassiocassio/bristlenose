@@ -2158,6 +2158,12 @@ class Pipeline:
             # sitting below where it already was.
             self._emit_remaining(_T_STAGE_DISCUSSION, time.perf_counter() - t0)
             return None
+        # A lens that was not built because the model could not read any session
+        # is a failure the researcher would not expect, unlike an unmoderated
+        # study (every session `no_moderator`: skipped, nothing wrong). The
+        # end line says so, as it does when the stage raised (N128).
+        if record.status == "failed" and any(s.state == "failed" for s in record.sessions):
+            self._discussion_failed = True
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
         elapsed = time.perf_counter() - t0

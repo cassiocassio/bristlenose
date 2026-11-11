@@ -289,3 +289,30 @@ def test_an_unreadable_people_file_is_on_the_end_line_too():
         "no quotes from s2 · people.yaml couldn't be read · the discussion lens wasn't built"
     )
     assert pipeline._end_warning("credits low", "") == ""
+
+
+def test_a_lens_the_model_could_not_read_any_session_for_is_a_failure_too(tmp_path):
+    """N128: every session's classify call failed, so the lens was not built. The
+    stage did not raise, but the lens is missing for a reason that broke, so the
+    run must not end as a plain Done."""
+    from bristlenose.discussion.models import SessionLabelsOut
+
+    write_guide(tmp_path)
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+    transcripts, quotes = two_sessions()
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output",
+        FakeClient(fail_kinds=(SessionLabelsOut,)), create_manifest("p", "0"), None))
+    assert pipeline._discussion_failed is True
+
+
+def test_an_unmoderated_study_is_not_a_failure(tmp_path):
+    """A solo think-aloud has no moderator in any session: skipped, nothing wrong."""
+    pipeline = Pipeline(load_settings(discussion_lens=True))
+    transcripts, quotes = two_sessions()
+    for t in transcripts:  # no moderator turns anywhere
+        t.segments = [seg for seg in t.segments if seg.speaker_code.startswith("p")]
+    asyncio.run(pipeline._run_discussion(
+        transcripts, quotes, tmp_path, tmp_path / "bristlenose-output", FakeClient(),
+        create_manifest("p", "0"), None))
+    assert pipeline._discussion_failed is False

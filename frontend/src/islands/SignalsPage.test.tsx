@@ -1144,7 +1144,8 @@ describe("SignalsPage", () => {
     });
     fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
 
-    const working = screen.getAllByTestId("bn-signal-working")[0];
+    // The working opens on a store-driven render, so wait for it rather than read it at once.
+    const working = (await screen.findAllByTestId("bn-signal-working"))[0];
     const long = [...working.querySelectorAll(".metric-label-long")].map((n) => n.textContent);
     const short = [...working.querySelectorAll(".metric-label-short")].map((n) => n.textContent);
     expect(long).toEqual([

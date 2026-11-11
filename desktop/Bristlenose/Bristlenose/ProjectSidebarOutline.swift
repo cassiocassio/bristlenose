@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import os
 
 /// The native AppKit `NSOutlineView` source-list sidebar (spec
 /// `design-desktop-sidebar-appkit.md`). Hosted in SwiftUI via
@@ -338,6 +339,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// apply selection programmatically, so `selectRowIndexes` doesn't echo back.
     private var isApplyingProgrammatic = false
 
+    private static let log = Logger(subsystem: "app.bristlenose", category: "sidebar")
+
     /// The open row popover — diagnostic (failure glyph / menu) or icon-picker
     /// (menu). One at a time; held so opening another closes the prior. Anchored to
     /// the *outline view* (not the per-cell view), so a progress-tick `reloadData` —
@@ -660,7 +663,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             reloadOwedAfterResize = true
             // The held reload is not the lens capsule's to wait for: it is composed from
             // `activeTab`, which this call just stored, and nothing else re-applies it.
-            reassertLensCapsule()
+            reassertLensCapsule(because: "a held reload")
             return
         }
 
@@ -976,7 +979,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     @objc private func outlineViewClicked(_ sender: Any?) {
         // A click ends with the table's own handling, after the route a lens click
         // started may already have moved `activeTab`. Re-assert once that is over.
-        DispatchQueue.main.async { [weak self] in self?.reassertLensCapsule() }
+        DispatchQueue.main.async { [weak self] in self?.reassertLensCapsule(because: "a click") }
         let changedSelection = selectionChangedByCurrentClick
         selectionChangedByCurrentClick = false
         renameArmTimer?.invalidate()
@@ -1198,10 +1201,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// any event that might have left the capsule behind: a held reload, or the end of a
     /// click (the table finishes its own click handling after `activeTab` may have moved).
     /// Not while a name is being edited or a drop is sliding, which reload on their own.
-    private func reassertLensCapsule() {
+    private func reassertLensCapsule(because reason: String) {
         guard lensesEnabled, editingNodeID == nil, !reloadSuppressed else { return }
         let wanted = composedSelection(projectRows: selectableRows(in: outlineView.selectedRowIndexes))
         guard wanted != outlineView.selectedRowIndexes else { return }
+        // Logged only when it moves the capsule, so a line here means the lens highlight was
+        // behind the report and this put it right (traced 11 Nov 2026, the second-click bug).
+        Self.log.notice("lens capsule re-asserted after \(reason, privacy: .public): lens \(String(describing: self.activeTab), privacy: .public)")
         isApplyingProgrammatic = true
         defer { isApplyingProgrammatic = false }
         outlineView.selectRowIndexes(wanted, byExtendingSelection: false)

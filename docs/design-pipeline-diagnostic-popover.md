@@ -82,6 +82,7 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 
 ## Changelog
 
+- _2026-11-11_ — **The standing pattern for a status line and its popover: state, nature, cause.** Settled with the owner on the "Done with warnings" rows (`docs/mockups/done-with-warnings-mac-row.html`): the row says the state, the popover header the nature of the failure, and the body rows the cause in plain words, never a bare "Not built". No bottom action row; no retry offered unless a retry could plausibly succeed; an expected absence (no screens, a monologue, no guide) is not a warning. New section "The standing pattern", below.
 - _2026-11-06_ — **Stray files stop being refusals; the popover gains a quiet footer.** A study folder's scripts and logs (`unsupported_format`) were counted as refusals and turned a run with two good interviews into "Partial completion". Files in a format we never offered are now *left alone*: `StageOutcome.left_alone` (an optional count on the wire, `leftAlone: Int?` in Swift, absent from an older sidecar), never a row. Where the popover is already open for a real failure it ends with a footer, "Other files left alone: N · Supported formats" (`desktop.pipeline.diagnostic.leftAlone`, `.supportedFormats`; a label form so there is one key per locale, not CLDR plural forms). The link goes to `bristlenose.app/docs/supported-files.html`. A clean run has no popover and so no footer: that is the owner's call (6 Nov), not an omission. New reason `no_transcript` ("No transcript in this document.") for a `.docx` that holds no timed or speaker-turn text. The copied plaintext diagnostic gains one English line, `Left alone (formats Bristlenose does not read): N`. Mockup: `docs/mockups/ingest-unreadable-files-states.html`. `unsupported_format` stays in the enum and the locales: `analyze` still uses it for an untimed `.txt`.
 - _2026-10-13_ — trued up: the shared-surface banner names the forked-database state; the flowchart gains the data-state route. Anchors: `SubtitleDelta.databaseForked`, `ProjectFilesPopover.databaseForked`, `eb8509e1`.
 - _2026-09-28_ — **`.unreachable(.unreadable)` offers Locate… in Show Log's place.** The folder exists but the sandbox denies every read — a lost folder permission — and the log lives in that folder, so Show Log failed with a Finder permission alert. Locate… is the only remedy (a fresh security-scoped bookmark), and it was offered only to `.cantFind`, because availability asks whether the path *exists* and the sandbox answers that without a grant. Same verb added to both sidebars' context menus and the menu bar; when the folder is still at its path, Locate… opens the panel on it rather than trying Spotlight, whose URL carries no grant. A Locate re-scans the project so the row clears without a relaunch, and a failed bookmark is now logged (`project-index`) rather than stored as nil in silence. Gate: `PipelineState.needsFolderAccess`; pinned by `FolderAccessStateTests.swift`. (`a54c4dec`)
@@ -955,6 +956,38 @@ itinerary and the terminal `bucketsBody` become literally one view; per-phase
 log depth before internal scroll. The lone genuinely-new display-kind, the
 **success poster**, also belongs to this pass — present as an option, not a
 default.
+
+## The standing pattern: state, nature, cause (owner, 11 Nov 2026)
+
+The expectation for every status line and popover that reports something that went wrong, shipped or new.
+It was settled on the "Done with warnings" rows (`docs/mockups/done-with-warnings-mac-row.html`) and
+matches what the popover already does for a failed or partial run. Explain **progressively**, in this order,
+each level adding detail to the one before:
+
+1. **State: the sidebar row, the status line.** What the researcher has now, in a few words ("Partial
+   completion", "6 of 8 sessions analysed"). It carries the kind's glyph and nothing else.
+2. **Nature: the popover header.** What kind of thing happened, as one status verb ("Partial completion",
+   "Run failed"). No project name (it is already in the window), no timestamp.
+3. **Cause: the body rows, in the existing glyph / name / message grid.** What went wrong and why, in plain
+   words, for each thing that did. **Every row says why.** "Not built." alone fails this; "Couldn't tell who
+   the moderator is in any session." passes. A cause the code does not know says so with the existing
+   "Detailed cause not captured."; a cause it knows reuses the short labels other rows already use.
+
+Rules that come with it:
+
+- **No bottom action row.** The popover's header carries Show Log and Copy; everything else stays where it
+  lives (Retry and Re-analyse in the sidebar menu and toolbar, settings in Settings).
+- **Offer a retry only where a retry could plausibly succeed.** A rate limit or a provider hiccup is worth
+  trying again. A crashed stage, or a file the researcher must fix first, is not: say what is wrong, and do
+  not invite another go. (A condition the researcher fixes, such as a broken names file, is named, and the
+  fix is theirs.)
+- **An expected absence is not a warning.** A study with no screen recordings, a solo monologue with no
+  moderator, or no discussion guide has nothing missing that the researcher expected. No glyph, no popover.
+- **Reuse before inventing.** The shipped grid, the five `MessageKind`s, the existing strings. A new
+  message is a new locale key in all 21 locales and must pass the flowchart above.
+- **Worked example:** `done-with-warnings-mac-row.html`. Row "Partial completion" (state); popover header
+  "Partial completion" (nature); rows "Discussion lens: Couldn't tell who the moderator is in any session." and
+  "people.yaml: Couldn't be read (line 14), so names you added aren't shown." (cause).
 
 ## Implementation references
 

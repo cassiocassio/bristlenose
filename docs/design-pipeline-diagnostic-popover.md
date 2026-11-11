@@ -985,7 +985,7 @@ Rules that come with it:
   moderator, or no discussion guide has nothing missing that the researcher expected. No glyph, no popover.
 - **Reuse before inventing.** The shipped grid, the five `MessageKind`s, the existing strings. A new
   message is a new locale key in all 21 locales and must pass the flowchart above.
-- **Worked example:** `done-with-warnings-mac-row.html`. Row "Partial completion" (state); popover header
+- **Worked example:** `done-with-warnings-mac-row.html`. Row "8 of 8 sessions analysed" with the warning glyph (state); popover header
   "Partial completion" (nature); rows "Discussion lens: Couldn't tell who the moderator is in any session." and
   "people.yaml: Couldn't be read (line 14), so names you added aren't shown." (cause).
 

@@ -181,7 +181,7 @@
       <div class="ico"><span class="g s-building-2 k-mute"></span></div>
       <div class="stack">
         <div class="tl"><span class="nm">Acme onboarding</span><span class="cnt">8</span></div>
-        <div class="st"><span class="g s-exclamationmark-triangle-fill k-warn"></span><span class="stx">Partial completion</span></div>
+        <div class="st"><span class="g s-exclamationmark-triangle-fill k-warn"></span><span class="stx">8 of 8 sessions analysed</span></div>
       </div></div></div><div class="popover">
       <div class="head"><div class="verb">Partial completion</div>
         <div class="btn">Show Log</div><div class="btn icon"><span class="g s-doc-on-doc"></span></div></div>
@@ -218,7 +218,7 @@
       <div class="ico"><span class="g s-building-2 k-mute"></span></div>
       <div class="stack">
         <div class="tl"><span class="nm">Acme onboarding</span><span class="cnt">8</span></div>
-        <div class="st"><span class="g s-exclamationmark-triangle-fill k-warn"></span><span class="stx">Partial completion</span></div>
+        <div class="st"><span class="g s-exclamationmark-triangle-fill k-warn"></span><span class="stx">8 of 8 sessions analysed</span></div>
       </div></div></div>
     <div class="popover">
       <div class="head"><div class="verb">Partial completion</div>
@@ -247,7 +247,7 @@
   <ul>
     <li><b>Reused, not invented.</b> The popover is <code>ProjectDiagnosticPopover</code> as shipped: status verb, Show Log, Copy, then the Grid of glyph / name / message (<code>docs/design-pipeline-diagnostic-popover.md</code>, "Popover header + actions"). The two names in the middle column are a stage name and a filename, which that doc says are domain terms and are not translated.</li>
     <li><b>No retry, no action line.</b> The guide says there is <b>no bottom action row anywhere</b>: Retry and Re-analyse live in the sidebar menu and the toolbar. The "Action" line was only ever a proposal (3 Sep 2026), never shipped. Following your rule, nothing here invites another try: a crashed stage has no reason to succeed the second time, and the names file needs fixing, not retrying.</li>
-    <li><b>Row text.</b> "Partial completion" is the existing fallback when "N of M sessions analysed" cannot be said. Here all sessions were analysed, so the honest row line is open: keep the existing words, or say nothing new.</li>
+    <li><b>Row text.</b> The row already reads “8 of 8 sessions analysed” beside the warning glyph for a run that finished with something left out (the quotes-left-out rule); a run with a missing lens or names file says the same. The popover header stays “Partial completion”. No new row string.</li>
     <li><b>Every row now says why.</b> 1a is the case you asked about: the lens works from a moderator&rsquo;s questions, so when it cannot tell which speaker is the moderator it has no questions to place quotes under. 1b reuses the short cause labels other failure rows already show. 1c reuses the existing &ldquo;Detailed cause not captured.&rdquo;. A study with no moderator at all is not here: it is skipped, nothing wrong.</li>
     <li><b>Case 3 is the point.</b> A study with no screens, or a solo monologue, or no guide, gets no glyph and no popover. Those are not failures.</li>
   </ul>

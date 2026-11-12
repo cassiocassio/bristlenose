@@ -384,3 +384,45 @@ def test_an_unmoderated_study_puts_nothing_in_the_summary(tmp_path):
         transcripts, quotes, tmp_path, tmp_path / "bristlenose-output", FakeClient(),
         create_manifest("p", "0"), None))
     assert not pipeline._summary.warnings
+
+
+def test_a_cached_lens_with_no_clear_moderator_still_warns(tmp_path, monkeypatch):
+    """The record of a lens with no clear moderator is cached (nothing to retry), and it
+    is as missing on the next run as on the first: the end line and the Mac row must not
+    go back to a plain Done because the answer was read from disk."""
+    from bristlenose.events import StageOutcome
+
+    async def unclear(*_a, **_k):
+        return _record("failed", "moderator_unreliable", "moderator_unreliable"), StageOutcome(
+            attempted=2, succeeded=0, failed=[])
+
+    monkeypatch.setattr("bristlenose.discussion.stage.run_discussion", unclear)
+    transcripts, quotes = two_sessions()
+    out = tmp_path / "bristlenose-output"
+    first = create_manifest("p", "0")
+    fresh = Pipeline(load_settings(discussion_lens=True))
+    asyncio.run(fresh._run_discussion(transcripts, quotes, tmp_path, out, FakeClient(), first, None))
+    assert [w.reason for w in fresh._summary.warnings] == ["no_clear_moderator"]
+
+    again, client = Pipeline(load_settings(discussion_lens=True)), FakeClient()
+    asyncio.run(again._run_discussion(
+        transcripts, quotes, tmp_path, out, client, create_manifest("p", "0"), first))
+    assert client.calls == []  # served from the cache
+    assert [(w.kind, w.reason) for w in again._summary.warnings or []] == [
+        ("discussion_lens", "no_clear_moderator")]
+    assert again._end_warning("", "") == "the discussion lens wasn't built"
+
+
+def test_a_cached_unmoderated_study_stays_silent(tmp_path):
+    transcripts, quotes = two_sessions()
+    for t in transcripts:
+        t.segments = [seg for seg in t.segments if seg.speaker_code.startswith("p")]
+    out = tmp_path / "bristlenose-output"
+    first = create_manifest("p", "0")
+    asyncio.run(Pipeline(load_settings(discussion_lens=True))._run_discussion(
+        transcripts, quotes, tmp_path, out, FakeClient(), first, None))
+    again, client = Pipeline(load_settings(discussion_lens=True)), FakeClient()
+    asyncio.run(again._run_discussion(
+        transcripts, quotes, tmp_path, out, client, create_manifest("p", "0"), first))
+    assert client.calls == []
+    assert not again._summary.warnings and again._end_warning("", "") == ""

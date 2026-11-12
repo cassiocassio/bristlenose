@@ -2155,6 +2155,12 @@ class Pipeline:
                     prev_manifest.stages[STAGE_DISCUSSION].model_copy(deep=True))
                 write_manifest(manifest, output_dir)
             cached = DiscussionRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            # A lens with no clear moderator is cached (nothing to retry) and is as
+            # missing on this run as on the one that found it: say so again, or a
+            # re-run ends on a plain Done and the Mac row forgets the warning.
+            cached_warning = _discussion_warning(cached, StageOutcome(attempted=0, succeeded=0))
+            if cached_warning is not None:
+                self._note_warning(cached_warning)
             line, kind = _discussion_line(cached, retry=False)
             _print_stage(line, kind, suffix="(cached)")
             return None

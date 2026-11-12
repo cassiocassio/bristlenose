@@ -49,8 +49,10 @@ struct CurationCounts: Equatable {
 /// note for why that flag is load-bearing under App Sandbox.
 ///
 /// **`nil` means the database could not be read, and is never a zero.** A zero
-/// lets Re-analyse run `--clean` without asking, so a read that failed must not
-/// come back as one (decision #1, 21 Oct 2026). Until then it did, two ways: a
+/// draws the Re-analyse sheet with no list (it still asks, N130), while `nil`
+/// draws the sentence that the count could not be taken, so a read that failed
+/// must not come back as a zero (decision #1, 21 Oct 2026). Until then it
+/// made Re-analyse run `--clean` without asking, two ways: a
 /// file that would not open returned `.none`, and a file that opened but could
 /// not be read (not a database, a torn page, an I/O error materialising an
 /// evicted file) had each count's failure swallowed into 0. `ContentView`
@@ -70,8 +72,9 @@ struct CurationCounts: Equatable {
 /// Scoped to `SourceFilesReader.reportProjectID`, the one row the report shows:
 /// a database that has forked into two rows (12 Oct 2026) must not have the
 /// second row's curation counted as something the researcher would lose from
-/// a report that never showed it. `persons` is instance-scoped by design and
-/// stays unfiltered.
+/// a report that never showed it. `persons` is instance-scoped by design, so the
+/// renamed-speakers count reaches it through the project's own sessions
+/// (`session_speakers`), not by counting every person.
 ///
 /// **Call it off the main actor.** It opens a file: on an iCloud-evicted or
 /// sleeping-volume database that is a materialisation or a spin-up, and the

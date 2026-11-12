@@ -268,8 +268,6 @@ struct Cause: Codable, Equatable {
     }
 }
 
-/// Swift mirror of `bristlenose/events.py::CauseCategoryEnum`. Raw values are
-/// snake_case — keep aligned with the Python enum so JSON round-trips.
 /// Something a finished run is missing that the researcher would expect (Python
 /// `RunWarning`). `kind` and `reason` stay strings, not enums: an older app reading a newer
 /// sidecar's value must still decode the whole summary, and an unknown reason reads as
@@ -284,6 +282,8 @@ struct RunWarning: Codable, Equatable {
     static let peopleFile = "people_file"
 }
 
+/// Swift mirror of `bristlenose/events.py::CauseCategoryEnum`. Raw values are
+/// snake_case — keep aligned with the Python enum so JSON round-trips.
 enum CauseCategory: String, Codable, Equatable, CaseIterable {
     case userSignal = "user_signal"
     case auth

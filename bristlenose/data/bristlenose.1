@@ -164,7 +164,9 @@ via \fBbristlenose doctor\fR instead, since it also needs endpoint and
 deployment). Where no keyring is available \(em a headless server, for
 instance \(em the key is persisted to a permission-protected config file
 instead, so the command always leaves you configured. Use \fB\-k\fR to provide
-the key non-interactively.
+the key non-interactively. A key given with \fB\-\-key\fR is saved in your shell
+history. Omit \fB\-\-key\fR and Bristlenose asks for it, with what you type
+hidden. Where your provider lets you set a spend limit on a key, set one.
 \fBconfigure any-llm\fR asks for a model written \fIprovider\fR:\fImodel\fR
 (\fBmistral:mistral-large-latest\fR), then for that provider's key unless its
 own variable is set (\fBMISTRAL_API_KEY\fR; a \fI.env\fR file isn't read for
@@ -384,7 +386,8 @@ Show per-session detail with completion status.
 .SS Options for \fBconfigure\fR
 .TP
 .BR \-k ", " \-\-key " " \fIKEY\fR
-API key to store. If not provided, prompts interactively.
+API key to store. If not provided, prompts with what you type hidden. A key given
+on the command line is saved in your shell history.
 .SS Options for \fBpipeline\fR
 .TP
 .BR \-\-json

@@ -219,6 +219,8 @@ any-llm isn't in the Mac app, which uses its built-in providers.
 
 Use whichever provider you already have an API key for. The provider you configure becomes your current one and stays current until you switch (`bristlenose use <provider>`) — with a single configured provider, a bare `bristlenose run` just uses it. A typical 8-participant study costs roughly $1--3 with a cloud provider -- costs vary, check your provider's pricing page.
 
+**Keys.** A key given with `--key` is saved in your shell history. Omit `--key` and Bristlenose asks for it, with what you type hidden. Where your provider lets you set a spend limit on a key, set one.
+
 > **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
 
 ### Making your key permanent

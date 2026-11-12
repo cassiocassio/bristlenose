@@ -33,9 +33,9 @@
       "copyScreensHint": "Cole no Miro ou no FigJam"
     },
     "edit": {
-      "undoRemove": "Anular Remoção de “%@”",
-      "undoDeleteFolder": "Anular Eliminação da Pasta “%@”",
-      "undoDeleteFolders": "Anular Eliminação das Pastas",
+      "undoRemove": "Desfazer Remoção de “%@”",
+      "undoDeleteFolder": "Desfazer Eliminação da Pasta “%@”",
+      "undoDeleteFolders": "Desfazer Eliminação das Pastas",
       "undo": "Desfazer",
       "redo": "Refazer",
       "find": "Procurar…",

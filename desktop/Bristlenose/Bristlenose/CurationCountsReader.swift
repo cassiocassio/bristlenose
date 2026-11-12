@@ -31,8 +31,8 @@ struct CurationCounts: Equatable {
 
     static let none = CurationCounts()
 
-    /// True when there is nothing of the researcher's to lose — the sheet stays
-    /// silent and the re-analysis just runs.
+    /// True when there is nothing of the researcher's to lose — the sheet then
+    /// draws no list (it still asks; see `ReAnalyseDecision`).
     var isEmpty: Bool {
         total == 0
     }
@@ -158,9 +158,14 @@ enum CurationCountsReader {
         // The quote tables carry no `project_id`; they scope through `quotes`.
         // `source` distinguishes a researcher's tag from one AutoCode proposed
         // and nobody confirmed. Only the human ones are a loss.
-        // A speaker is "renamed" once a person carries a name the pipeline
-        // could not have produced — speaker codes are p1/m1/o1, so any non-empty
-        // full name is the researcher's doing.
+        // A speaker is "renamed" once a person has said yes to a name: a slot in
+        // state 'confirmed' (typed, picked or accepted). A name the pipeline
+        // filled in from a Zoom or Teams label, or heard in the audio, is only
+        // ever 'proposed' and a re-run reads it again, so it is not the
+        // researcher's to lose (N130, decision #314). Either name field counts:
+        // the report's rename box sends `short_name` alone for a participant.
+        // Scoped through the slot's session, like every other kind. The Python
+        // query (`RENAMED_SPEAKERS_SQL`) is this one, word for word; a test holds both.
         guard
             let editedQuotes = count(db, tables, of: "quote_edits", joining: ["quotes"], """
                 SELECT COUNT(*) FROM quote_edits e JOIN quotes q ON q.id = e.quote_id
@@ -174,8 +179,12 @@ enum CurationCountsReader {
                 SELECT COUNT(*) FROM quote_states s JOIN quotes q ON q.id = s.quote_id
                 WHERE s.is_starred = 1 AND q.project_id = \(pid)
                 """),
-            let renamedSpeakers = count(db, tables, of: "persons", joining: [],
-                "SELECT COUNT(*) FROM persons WHERE full_name IS NOT NULL AND full_name != ''"),
+            let renamedSpeakers = count(db, tables, of: "session_speakers", joining: ["persons", "sessions"], """
+                SELECT COUNT(*) FROM persons p
+                WHERE (COALESCE(p.full_name, '') != '' OR COALESCE(p.short_name, '') != '')
+                AND EXISTS (SELECT 1 FROM session_speakers ss JOIN sessions x ON x.id = ss.session_id
+                WHERE ss.person_id = p.id AND ss.state = 'confirmed' AND x.project_id = \(pid))
+                """),
             let namedThemes = count(db, tables, of: "heading_edits", joining: [],
                 "SELECT COUNT(*) FROM heading_edits WHERE project_id = \(pid)"),
             let hiddenQuotes = count(db, tables, of: "quote_states", joining: ["quotes"], """

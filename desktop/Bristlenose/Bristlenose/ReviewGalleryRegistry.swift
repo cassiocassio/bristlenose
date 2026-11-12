@@ -287,6 +287,9 @@ enum ReviewGalleryRegistry {
                 ReviewGalleryState(name: "Unreadable") { ctx in
                     reAnalyse(counts: nil, label: "counts = nil", ctx)
                 },
+                ReviewGalleryState(name: "Nothing counted") { ctx in
+                    reAnalyse(counts: CurationCounts.none, label: "counts = 0 (title and rebuild line, no list)", ctx)
+                },
                 ReviewGalleryState(name: "Counted") { ctx in
                     reAnalyse(counts: CurationCounts(editedQuotes: 12, tags: 34, starredQuotes: 7,
                                                      renamedSpeakers: 3, namedThemes: 2),

@@ -9,12 +9,17 @@ import SwiftUI
 /// not vague" before it was built, and matched to it here.
 ///
 /// **A terse modal measures.** "This cannot be undone" tells a researcher
-/// nothing they can weigh; five counted lines let them decide in one read. When
-/// every count is zero there is nothing to weigh and no sheet appears at all —
-/// the caller checks `CurationCounts.isEmpty` and simply starts the run. That is
-/// the difference between a confirmation and a speed bump. **A count that could
-/// not be taken is not a zero**: the sheet appears, with one sentence in place
-/// of the list (`ReAnalyseDecision`, decision #1, 21 Oct 2026).
+/// nothing they can weigh; counted lines let them decide in one read. **When
+/// every count is zero the sheet still appears, without the list** (N130,
+/// decision #314, 12 Nov 2026): a re-analysis spends transcription and model
+/// time, so the researcher is asked once, and the title and the rebuild line
+/// say what will happen. It does not say "Your work … will be discarded:" over
+/// nothing, because nothing of theirs is lost. Until then a zero started the run
+/// unasked (decision #1, 21 Oct 2026, "a speed bump"); the owner reversed that
+/// for the case where no work was done, mockup C of
+/// `docs/mockups/reanalyse-nothing-to-lose.html`. **A count that could not be
+/// taken is not a zero**: the sheet appears, with one sentence in place of the
+/// list (`ReAnalyseDecision`).
 ///
 /// **Stars are counted, and the drawing didn't have them.** `--clean` destroys
 /// them along with everything else, so a list that omitted them would be silent
@@ -46,23 +51,21 @@ struct PendingReAnalyse: Identifiable {
     let counts: CurationCounts?
 }
 
-/// Whether **Re-analyse…** asks first, given what `CurationCountsReader.read`
-/// returned. Pure, so the one branch that decides whether `--clean` runs
-/// unasked is tested without a view.
+/// What **Re-analyse…** shows, given what `CurationCountsReader.read`
+/// returned. Pure, so the branch is tested without a view. It always asks:
+/// `--clean` never runs unasked.
 ///
 /// **Unreadable confirms** (decision #1, 21 Oct 2026). A count that could not
 /// be taken is not a zero: until then a database the app could not read ran
-/// the destructive rebuild with no confirmation at all. A real zero still
-/// proceeds — nothing of the researcher's to lose, so a modal would be a speed
-/// bump.
+/// the destructive rebuild with no confirmation at all. **A real zero confirms
+/// too, with no list** (N130, decision #314): see the sheet's note.
 enum ReAnalyseDecision: Equatable {
     case confirm(CurationCounts)
     case confirmUnreadable
-    case proceed
 
     static func decide(_ counts: CurationCounts?) -> ReAnalyseDecision {
         guard let counts else { return .confirmUnreadable }
-        return counts.isEmpty ? .proceed : .confirm(counts)
+        return .confirm(counts)
     }
 }
 
@@ -75,6 +78,23 @@ struct ReAnalyseConfirmSheet: View {
     let onConfirm: () -> Void
 
     @EnvironmentObject var i18n: I18n
+
+    /// Whether "…all N interviews again from scratch" is drawn. Not for a count
+    /// the folder watcher has not published yet (`sessionCount` is 0 until its
+    /// first scan, and for a study that was analysed on the command line and
+    /// never opened here): "all 0 interviews" is wrong, and now that a zero
+    /// curation count asks too, this is the line that would be on show alone
+    /// (found by review, 12 Nov 2026).
+    static func drawsRebuildLine(sessionCount: Int) -> Bool {
+        sessionCount > 0
+    }
+
+    /// Whether the header and the counted lines are drawn. Not when nothing is
+    /// counted: "Your work … will be discarded:" over an empty list reads as a
+    /// bug, or as a threat (N130, decision #314). Pure, so a test can hold it.
+    static func drawsLossList(_ counts: CurationCounts) -> Bool {
+        !counts.isEmpty
+    }
 
     /// One line per kind, zero-count kinds omitted — a "0 tags" line is noise
     /// in a list whose whole job is to be read at a glance.
@@ -106,10 +126,12 @@ struct ReAnalyseConfirmSheet: View {
             Text(i18n.t("desktop.chrome.reAnalyseConfirmTitle", ["project": projectName]))
                 .font(.headline)
 
-            Text(i18n.plural("desktop.chrome.reAnalyseRebuild", count: sessionCount))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if Self.drawsRebuildLine(sessionCount: sessionCount) {
+                Text(i18n.plural("desktop.chrome.reAnalyseRebuild", count: sessionCount))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if counts == nil {
                 // The header promises a list, and an empty one under it would
@@ -119,7 +141,9 @@ struct ReAnalyseConfirmSheet: View {
                     .font(.callout.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
-            } else {
+            } else if let counts, Self.drawsLossList(counts) {
+                // Only when there is something in it: a header promising a list
+                // over nothing reads as a bug, or as a threat.
                 VStack(alignment: .leading, spacing: 3) {
                     Text(i18n.t("desktop.chrome.reAnalyseLossHeader"))
                         .font(.callout.weight(.medium))

@@ -37,7 +37,8 @@ struct ProjectDBReadersTests {
         // The columns the readers touch, nothing else. Shapes follow
         // `bristlenose/server/models.py`: `source_files` and the quote tables
         // scope to a project through `sessions` / `quotes`; `heading_edits`
-        // carries `project_id` directly; `persons` is instance-scoped.
+        // carries `project_id` directly; `persons` is instance-scoped, so the rename
+        // count reaches a project through `session_speakers` and `sessions`.
         exec(db, """
         CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT, input_dir TEXT, output_dir TEXT);
         CREATE TABLE sessions (id INTEGER PRIMARY KEY, project_id INTEGER, session_id TEXT, duration_seconds REAL);
@@ -46,7 +47,7 @@ struct ProjectDBReadersTests {
         CREATE TABLE quote_edits (id INTEGER PRIMARY KEY, quote_id INTEGER, edited_text TEXT);
         CREATE TABLE quote_tags (id INTEGER PRIMARY KEY, quote_id INTEGER, tag_definition_id INTEGER, source TEXT);
         CREATE TABLE quote_states (id INTEGER PRIMARY KEY, quote_id INTEGER, is_hidden INTEGER, is_starred INTEGER);
-        CREATE TABLE persons (id INTEGER PRIMARY KEY, full_name TEXT);
+        CREATE TABLE persons (id INTEGER PRIMARY KEY, full_name TEXT, short_name TEXT);
         CREATE TABLE heading_edits (id INTEGER PRIMARY KEY, project_id INTEGER, heading_key TEXT, edited_text TEXT);
         """)
         rows(db)
@@ -188,7 +189,8 @@ struct ProjectDBReadersTests {
 
     /// The re-analyse sheet weighs what the researcher would lose from the
     /// report they see — project 1's curation. `persons` is instance-scoped by
-    /// design, so it is not in this fixture's second row.
+    /// design, so the rename count scopes through the slot's session (see
+    /// `aNameAResearcherConfirmedIsCountedOnceForProjectOneOnly`).
     @Test func curationCountsAreProjectOnesOnly() throws {
         let root = try Self.forkedProject()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -206,7 +208,7 @@ struct ProjectDBReadersTests {
         let root = try Self.makeProject { db in
             Self.exec(db, """
             CREATE TABLE transcript_layout_edits (id INTEGER PRIMARY KEY, session_id INTEGER, kind TEXT);
-            CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER, evidence TEXT);
+            CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER, evidence TEXT, person_id INTEGER, state TEXT);
             CREATE TABLE deleted_badges (id INTEGER PRIMARY KEY, quote_id INTEGER);
             INSERT INTO sessions VALUES (1, 1, 's1', 600);
             INSERT INTO sessions VALUES (2, 2, 's9', 600);
@@ -219,10 +221,10 @@ struct ProjectDBReadersTests {
             INSERT INTO transcript_layout_edits VALUES (1, 1, 'split');
             INSERT INTO transcript_layout_edits VALUES (2, 1, 'join');
             INSERT INTO transcript_layout_edits VALUES (3, 2, 'split');
-            INSERT INTO session_speakers VALUES (1, 1, 'pick');
-            INSERT INTO session_speakers VALUES (2, 1, 'platform-name');
-            INSERT INTO session_speakers VALUES (3, 1, NULL);
-            INSERT INTO session_speakers VALUES (4, 2, 'pick');
+            INSERT INTO session_speakers (id, session_id, evidence) VALUES (1, 1, 'pick');
+            INSERT INTO session_speakers (id, session_id, evidence) VALUES (2, 1, 'platform-name');
+            INSERT INTO session_speakers (id, session_id, evidence) VALUES (3, 1, NULL);
+            INSERT INTO session_speakers (id, session_id, evidence) VALUES (4, 2, 'pick');
             INSERT INTO deleted_badges VALUES (1, 1);
             INSERT INTO deleted_badges VALUES (2, 9);
             """)
@@ -235,6 +237,73 @@ struct ProjectDBReadersTests {
         #expect(counts.removedBadges == 1, "another project's badge counted")
         #expect(!counts.isEmpty, "a study with only these must still ask")
         #expect(counts.total == 6)
+    }
+
+    /// N130 (decision #314, 12 Nov 2026): a name the pipeline filled in from a
+    /// Zoom or Teams label is only ever a proposal, and a re-run reads it again,
+    /// so it is not the researcher's to lose. Only a name a person confirmed
+    /// (typed, picked or accepted) counts.
+    @Test func aNameThePipelineFilledInIsNotCounted() throws {
+        let root = try Self.makeProject { db in
+            Self.exec(db, """
+            CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER, evidence TEXT, person_id INTEGER, state TEXT);
+            INSERT INTO sessions VALUES (1, 1, 's1', 600);
+            INSERT INTO persons (id, full_name) VALUES (1, 'Priya Nair');
+            INSERT INTO persons (id, full_name) VALUES (2, 'Tom Ellis');
+            INSERT INTO session_speakers VALUES (1, 1, 'platform-name', 1, 'proposed');
+            INSERT INTO session_speakers VALUES (2, 1, 'heard', 2, 'proposed');
+            """)
+        }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let counts = try #require(CurationCountsReader.read(projectRoot: root))
+        #expect(counts.renamedSpeakers == 0, "a proposed name was counted as the researcher's work")
+        #expect(counts.isEmpty)
+    }
+
+    @Test func aNameAResearcherConfirmedIsCountedOnceForProjectOneOnly() throws {
+        let root = try Self.makeProject { db in
+            Self.exec(db, """
+            CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER, evidence TEXT, person_id INTEGER, state TEXT);
+            INSERT INTO sessions VALUES (1, 1, 's1', 600);
+            INSERT INTO sessions VALUES (2, 1, 's2', 600);
+            INSERT INTO sessions VALUES (3, 2, 's9', 600);
+            INSERT INTO persons (id, full_name) VALUES (1, 'Priya Nair');
+            INSERT INTO persons (id, full_name) VALUES (2, 'Maya Cole');
+            INSERT INTO persons (id, full_name) VALUES (3, 'Tom Ellis');
+            INSERT INTO persons (id, full_name) VALUES (4, 'Elsewhere');
+            INSERT INTO persons (id, full_name) VALUES (5, '');
+            INSERT INTO session_speakers VALUES (1, 1, 'participant', 1, 'confirmed');
+            INSERT INTO session_speakers VALUES (2, 1, 'pick', 2, 'confirmed');
+            INSERT INTO session_speakers VALUES (3, 2, 'pick', 2, 'confirmed');
+            INSERT INTO session_speakers VALUES (4, 1, 'platform-name', 3, 'proposed');
+            INSERT INTO session_speakers VALUES (5, 3, 'participant', 4, 'confirmed');
+            INSERT INTO session_speakers VALUES (6, 1, 'participant', 5, 'confirmed');
+            """)
+        }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let counts = try #require(CurationCountsReader.read(projectRoot: root))
+        // Priya (typed) and Maya (one person across two sessions) count; Tom is a
+        // proposal, 'Elsewhere' is confirmed only in another project's session,
+        // and an empty name is nobody's rename.
+        #expect(counts.renamedSpeakers == 2)
+    }
+
+    /// Review finding, 12 Nov 2026: the report's rename box sends `short_name`
+    /// alone for a participant, so a typed "Priya" leaves `full_name` empty.
+    @Test func aNameTypedIntoTheShortNameBoxAloneIsCounted() throws {
+        let root = try Self.makeProject { db in
+            Self.exec(db, """
+            CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER, evidence TEXT, person_id INTEGER, state TEXT);
+            INSERT INTO sessions VALUES (1, 1, 's1', 600);
+            INSERT INTO persons (id, full_name, short_name) VALUES (1, '', 'Priya');
+            INSERT INTO persons (id, full_name, short_name) VALUES (2, NULL, 'Tom');
+            INSERT INTO session_speakers VALUES (1, 1, 'participant', 1, 'confirmed');
+            INSERT INTO session_speakers VALUES (2, 1, 'heard', 2, 'proposed');
+            """)
+        }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let counts = try #require(CurationCountsReader.read(projectRoot: root))
+        #expect(counts.renamedSpeakers == 1, "a typed short name, with no full name, was not counted")
     }
 
     @Test func aStudyWithOnlyHiddenQuotesIsNotEmpty() {
@@ -477,7 +546,7 @@ struct ProjectDBReadersTests {
         #expect(after.starredQuotes == 1)
     }
 
-    /// A served study with nothing curated still runs straight away: its WAL
+    /// A served study with nothing curated still reads as a real zero: its WAL
     /// is fully checkpointed but not empty, which is every served database
     /// after its first write.
     @Test func curationCountsAreZeroWithAnIdleCheckpointedWAL() throws {

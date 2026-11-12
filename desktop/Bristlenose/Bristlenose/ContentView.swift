@@ -375,7 +375,7 @@ struct ContentView: View {
     @State private var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
     /// The project awaiting a Re-analyse confirmation, with the measurements
     /// the sheet reads out. Nil when nothing is pending — and *never* set for a
-    /// project with no curation, which runs straight away (see `askToReAnalyse`).
+    /// project with no curation: that one is asked too, without the list.
     @State private var reAnalyseConfirm: PendingReAnalyse?
 
     /// Spotlight one-shot confirm sheet — populated when the Locate flow
@@ -1893,8 +1893,9 @@ struct ContentView: View {
             // database included — and discards it once the new run succeeds
             // (since 30 Aug 2026; an `rmtree` before that), so this discards the
             // analysis and every edit made on top of it. `askToReAnalyse`
-            // confirms when there is curation to lose or when it could not be
-            // counted, and runs unasked only on a real zero (`ReAnalyseDecision`).
+            // always confirms: with the counted list, with none when there is
+            // no curation to lose, or with a sentence when it could not be
+            // counted (`ReAnalyseDecision`).
             if let project = selectedProject { askToReAnalyse(project) }
         case .removeFromSidebar:
             removeSelectedProjectsFromSidebar()
@@ -1989,8 +1990,8 @@ struct ContentView: View {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
     }
 
-    /// Ask before rebuilding — unless there is nothing of the researcher's to
-    /// lose, in which case just do what they asked.
+    /// Ask before rebuilding. The sheet lists what the researcher would lose,
+    /// and draws no list when that is nothing.
     ///
     /// The counts come off the project database at the moment of asking rather
     /// than from anything cached: a sheet that measures has to measure now. The
@@ -2006,12 +2007,6 @@ struct ContentView: View {
             let counts = await Task.detached { CurationCountsReader.read(projectRoot: root) }.value
             let shown: CurationCounts?
             switch ReAnalyseDecision.decide(counts) {
-            case .proceed:
-                // Nothing curated: the analysis is derived output the researcher
-                // just asked to have rebuilt, so there is nothing to weigh and a
-                // modal would be a speed bump.
-                pipelineRunner.start(project: project, clean: true)
-                return
             case .confirm(let measured):
                 shown = measured
             case .confirmUnreadable:

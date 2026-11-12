@@ -29,6 +29,23 @@ from bristlenose.utils.text import count_noun
 #: The one project row the report reads.
 _PROJECT_ID = 1
 
+#: A name is the researcher's work only once a person has said yes to it (a slot
+#: in state 'confirmed': typed, picked or accepted). A name the pipeline filled
+#: in from a Zoom or Teams label, or heard in the audio, is only ever 'proposed',
+#: and a re-run reads it again, so it is not something the researcher would lose
+#: (N130, decision #314). **Either name field counts**: the report's rename box
+#: sends `short_name` alone for a participant, so a typed "Priya" leaves
+#: `full_name` empty (found by review, 12 Nov 2026). Scoped to the report's
+#: project through the slot's session, like every other kind. The Mac's query is
+#: this one, word for word (`CurationCountsReader.swift`, held by
+#: `tests/test_curation_counts_kinds.py::test_the_two_queries_are_the_same`).
+RENAMED_SPEAKERS_SQL = (
+    "SELECT COUNT(*) FROM persons p "
+    "WHERE (COALESCE(p.full_name, '') != '' OR COALESCE(p.short_name, '') != '') "
+    "AND EXISTS (SELECT 1 FROM session_speakers ss JOIN sessions x ON x.id = ss.session_id "
+    "WHERE ss.person_id = p.id AND ss.state = 'confirmed' AND x.project_id = {pid})"
+)
+
 
 @dataclass(frozen=True)
 class CurationCounts:
@@ -126,11 +143,8 @@ def _counts(conn: sqlite3.Connection) -> CurationCounts:
             "SELECT COUNT(*) FROM quote_states s JOIN quotes q ON q.id = s.quote_id "
             f"WHERE s.is_starred = 1 AND q.project_id = {pid}"
         )),
-        # Speaker codes are p1/m1/o1, so any non-empty full name is the
-        # researcher's doing. Instance-scoped by design, as on the Mac.
-        renamed_speakers=count("persons", (
-            "SELECT COUNT(*) FROM persons WHERE full_name IS NOT NULL AND full_name != ''"
-        )),
+        renamed_speakers=count(
+            "session_speakers", RENAMED_SPEAKERS_SQL.format(pid=pid)),
         named_themes=count("heading_edits", (
             f"SELECT COUNT(*) FROM heading_edits WHERE project_id = {pid}"
         )),

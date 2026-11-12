@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Re-analyse with nothing to lose · Bristlenose mockups</title>
+<style>
+/* Page chrome uses the real Bristlenose web tokens (inlined from
+   bristlenose/theme/tokens.css + colors/palette-*.css). The ARTEFACT does not:
+   ReAnalyseConfirmSheet is native SwiftUI, and its pixels are transcribed from
+   docs/mockups/reanalyse-sheet-pixels.html (itself transcribed from the Swift). */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg: light-dark(#ffffff,#111111);
+  --bn-colour-text: light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted: light-dark(#6b7280,#9ca3af);
+  --bn-colour-border: light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent: light-dark(#007aff,#0a84ff);
+  --bn-colour-quote-bg: light-dark(#f9fafb,#1a1a1a);
+  --bn-colour-badge-bg: light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text: light-dark(#374151,#d1d5db);
+  --bn-colour-border-hover: light-dark(#d1d5db,#3a3a3a);
+  --bn-off-track: light-dark(#c7ccd1,#3a3f45);
+  --sys-orange: light-dark(#c93400,#ff9f0a);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg: light-dark(#fdfbf7,#1a1816);
+  --bn-colour-text: light-dark(#1b2230,#e8e3d6);
+  --bn-colour-muted: light-dark(#4a698a,#7ba8a0);
+  --bn-colour-border: light-dark(#d4c9a8,#2d2820);
+  --bn-colour-accent: light-dark(#0f5c9e,#4d9fe0);
+  --bn-colour-quote-bg: light-dark(#f0e9d8,#211e18);
+  --bn-colour-badge-bg: light-dark(#e8dfc9,#2d2820);
+  --bn-colour-badge-text: light-dark(#2d3654,#c4b898);
+  --bn-colour-border-hover: light-dark(#b8ad91,#4a4030);
+  --bn-off-track: light-dark(#c9bd9c,#4a4030);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1060px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { color:var(--bn-colour-muted); max-width:74ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem 1rem; margin-bottom:var(--bn-space-xl); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .sw-a { display:inline-block; width:26px; height:13px; border:1px solid var(--bn-colour-border-hover); border-radius:2px; background:var(--bn-colour-bg); vertical-align:-2px; margin-right:.4rem; }
+.key .sw-c { display:inline-block; width:26px; height:13px; border-radius:2px; vertical-align:-2px; margin-right:.4rem;
+  background:repeating-linear-gradient(135deg,var(--bn-colour-border) 0 3px,transparent 3px 6px); border:1px solid var(--bn-colour-border); }
+.sec-head { margin:2.6rem 0 .9rem; }
+.sec-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.sec-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0; max-width:74ch; }
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-quote-bg); margin-bottom:.9rem; }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; background:var(--bn-colour-badge-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-bar .tl { width:10px; height:10px; border-radius:50%; background:var(--bn-off-track); }
+.frame-bar .cap { margin-left:.5rem; font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); color:var(--bn-colour-muted); }
+.frame-body { padding:1.9rem 1.4rem; display:flex; justify-content:center; gap:2.4rem; flex-wrap:wrap; align-items:flex-start; }
+/* Commentary: hatching only in the edge band, never behind text. */
+.comm { margin:0 0 2.4rem; padding:1rem 1.2rem; background:var(--bn-colour-bg);
+  border:7px solid transparent; border-left:3px solid var(--bn-colour-accent);
+  background:linear-gradient(var(--bn-colour-bg),var(--bn-colour-bg)) padding-box,
+    repeating-linear-gradient(135deg,var(--bn-colour-border) 0 5px,transparent 5px 10px) border-box; }
+.comm .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-accent); font-weight:490; }
+.comm h3 { font-size:var(--bn-text-label); font-weight:490; margin:.9rem 0 .3rem; }
+.comm p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:78ch; margin:.35rem 0; }
+.comm code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); color:var(--bn-colour-badge-text); }
+.comm .warn { color:var(--sys-orange); font-weight:490; }
+table.m { border-collapse:collapse; font-size:var(--bn-text-badge); margin:.6rem 0 .2rem; width:100%; max-width:78ch; }
+table.m th, table.m td { text-align:left; padding:.25rem .8rem .25rem 0; border-bottom:1px solid var(--bn-colour-border); vertical-align:top; }
+table.m th { color:var(--bn-colour-text); font-weight:490; }
+table.m td { color:var(--bn-colour-muted); }
+
+/* ══════════ ARTEFACT — native macOS, no --bn-* tokens below ══════════ */
+.mac { font-family:-apple-system, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing:antialiased; color-scheme:light; }
+.win { width:520px; border-radius:10px; overflow:hidden; background:#f6f6f6;
+  box-shadow:0 22px 60px rgba(0,0,0,.30), 0 0 0 .5px rgba(0,0,0,.16); position:relative; }
+.win-tb { height:38px; display:flex; align-items:center; gap:8px; padding:0 13px; background:#e9e9e9;
+  border-bottom:.5px solid rgba(0,0,0,.13); }
+.win-tb i { width:12px; height:12px; border-radius:50%; display:block; }
+.win-tb .r { background:#ff5f57; } .win-tb .y { background:#febc2e; } .win-tb .g { background:#28c840; }
+.win-tb .t { margin-left:6px; font-size:13px; font-weight:590; color:rgba(0,0,0,.75); }
+.win-body { height:330px; background:#fff; }
+.win-dim { position:absolute; inset:38px 0 0 0; background:rgba(0,0,0,.20); }
+.win .msheet { position:absolute; top:14px; left:50%; transform:translateX(-50%); }
+.msheet { width:420px; padding:22px; display:flex; flex-direction:column; align-items:flex-start; gap:14px;
+  border-radius:10px; background:#ececec;
+  box-shadow:0 16px 44px rgba(0,0,0,.32), 0 0 0 .5px rgba(0,0,0,.18); color:rgba(0,0,0,.85); }
+.msheet .icn { width:26px; height:26px; color:rgba(0,0,0,.5); }
+.msheet .icn svg { width:100%; height:100%; display:block; }
+.msheet .ttl { font-size:13px; line-height:16px; font-weight:600; margin:0; }
+.msheet .sub { font-size:12px; line-height:15px; font-weight:400; margin:0; color:rgba(0,0,0,.5); }
+.msheet .loss { display:flex; flex-direction:column; gap:3px; padding:2px 0; margin:0; }
+.msheet .loss .hd { font-size:12px; line-height:15px; font-weight:500; }
+.msheet .loss .ln { font-size:12px; line-height:15px; font-weight:400; padding-left:12px; color:rgba(0,0,0,.5); }
+.msheet .btns { align-self:stretch; display:flex; justify-content:flex-end; gap:10px; padding-top:4px; }
+.mbtn { font:inherit; font-size:13px; line-height:1; height:22px; min-width:66px; padding:0 13px;
+  border-radius:6px; border:.5px solid rgba(0,0,0,.20); background:#fff; color:rgba(0,0,0,.85);
+  box-shadow:0 .5px 1px rgba(0,0,0,.10); cursor:default; }
+.mbtn.def { background:#007aff; border-color:transparent; color:#fff; box-shadow:0 .5px 1.5px rgba(0,0,0,.22); }
+.stage-note { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.06em; text-align:center; padding-top:.7rem; }
+.col { display:flex; flex-direction:column; align-items:center; }
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Mockup · desktop · destructive confirmation · N130</div>
+  <h1>Re-analyse with nothing to lose</h1>
+  <p>A study whose speaker names the pipeline filled in from the call, and in which the researcher
+     did nothing by hand. Decision #314 counts only names a researcher confirmed, so this study
+     counts zero. What does the researcher see when they choose <b>Re-analyse…</b>?</p>
+  <p>Every word in every frame is a shipped string from <code>bristlenose/locales/en/desktop.json</code>.
+     No new copy is proposed on this page.</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Page palette</span>
+  <button class="pbtn on" onclick="setPal('default', this)">Default</button>
+  <button class="pbtn" onclick="setPal('edo', this)">Edo</button>
+</div>
+
+<div class="key">
+  <span><span class="sw-a"></span><b>Artefact</b> — native macOS pixels. Nothing here that is not in the product.</span>
+  <span><span class="sw-c"></span><b>Commentary</b> — hatched edge. Why, and what to check.</span>
+  <span><b>Note</b> — the palette switch themes this page, never the sheet.</span>
+</div>
+
+<!-- ══════════ A · what ships ══════════ -->
+<div class="sec-head">
+  <h2>A · What ships today: no sheet</h2>
+  <p class="sub">Four Zoom participants named by the platform, nothing curated. Choosing Re-analyse… starts the run.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Project ▸ Re-analyse… · every count zero → the run starts, nothing is asked</span></div>
+  <div class="frame-body">
+    <div class="mac">
+      <div class="win">
+        <div class="win-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">Zoom study</span></div>
+        <div class="win-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm"><span class="tag">Commentary</span>
+  <p>This is the shipped behaviour and the 10 Nov owner answer ("yes, nothing"). The Swift states it:
+     "When every count is zero there is nothing to weigh and no sheet appears at all … That is the
+     difference between a confirmation and a speed bump" (<code>ReAnalyseConfirmSheet.swift</code>,
+     <code>ReAnalyseDecision.decide</code>). The run that follows reads the same Zoom labels, so the
+     same four names come back (proposed, dotted and grey in the Sessions grid).</p>
+  <p class="warn">Unverified: a name the model heard in the audio, not read from a platform label, can
+     come out differently on a new run. It is still the pipeline's and still not counted.</p>
+</div>
+
+<!-- ══════════ B · the failure ══════════ -->
+<div class="sec-head">
+  <h2>B · What the sheet would say if it appeared with an empty list</h2>
+  <p class="sub">Not a proposal. It is why "the list is empty" cannot mean "show the sheet with an empty list".</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">hypothetical · sheet shown, nothing counted</span></div>
+  <div class="frame-body">
+    <div class="mac">
+      <div class="win">
+        <div class="win-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">Zoom study</span></div>
+        <div class="win-body"></div>
+        <div class="win-dim"></div>
+        <div class="msheet">
+          <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+          <p class="ttl">Re-analyse “Zoom study”?</p>
+          <p class="sub">Bristlenose will transcribe and analyse all 4 interviews again from scratch.</p>
+          <div class="loss">
+            <span class="hd">Your work on this study will be discarded:</span>
+          </div>
+          <div class="btns">
+            <button class="mbtn">Cancel</button>
+            <button class="mbtn def">Re-analyse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm"><span class="tag">Commentary</span>
+  <p>A header promising a list, with nothing under it, reads as a bug or as a threat. The Swift
+     already guards the opposite case for the same reason ("The header promises a list, and an empty
+     one under it would read as 'nothing to lose'"). Dropping the header and showing the rest is the
+     next frame.</p>
+</div>
+
+<!-- ══════════ C · alternative ══════════ -->
+<div class="sec-head">
+  <h2>C · The alternative: a plain confirmation, no loss block</h2>
+  <p class="sub">The same sheet with the loss block omitted. Both strings are shipped; no new key.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">option · Re-analyse… always asks; the list appears only when there is something in it</span></div>
+  <div class="frame-body">
+    <div class="mac">
+      <div class="win">
+        <div class="win-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">Zoom study</span></div>
+        <div class="win-body"></div>
+        <div class="win-dim"></div>
+        <div class="msheet">
+          <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+          <p class="ttl">Re-analyse “Zoom study”?</p>
+          <p class="sub">Bristlenose will transcribe and analyse all 4 interviews again from scratch.</p>
+          <div class="btns">
+            <button class="mbtn">Cancel</button>
+            <button class="mbtn def">Re-analyse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm"><span class="tag">Commentary</span>
+  <p>This is what the owner's question draws when "the list is empty" and a sheet is kept. It tells the
+     truth (the study is rebuilt from scratch) and claims no loss. The cost is the speed bump the Swift
+     comment warns against: every Zoom or Teams study, every Re-analyse, one extra click for a
+     researcher with nothing to lose. What it buys is a pause before an action that spends transcription
+     and model time. That cost in minutes and money is not measured here.</p>
+  <p>Not drawn: a version that says the names "will be filled in again". That is a new sentence, so it
+     would need approval and 21 locales.</p>
+</div>
+
+<!-- ══════════ D · one real name ══════════ -->
+<div class="sec-head">
+  <h2>D · Same study, the researcher corrected one name</h2>
+  <p class="sub">"Pri" typed as "Priya Nair". One slot is confirmed; the other three are still the pipeline's.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Project ▸ Re-analyse… · decision #314: only the confirmed name counts</span></div>
+  <div class="frame-body">
+    <div class="mac">
+      <div class="win">
+        <div class="win-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">Zoom study</span></div>
+        <div class="win-body"></div>
+        <div class="win-dim"></div>
+        <div class="msheet">
+          <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+          <p class="ttl">Re-analyse “Zoom study”?</p>
+          <p class="sub">Bristlenose will transcribe and analyse all 4 interviews again from scratch.</p>
+          <div class="loss">
+            <span class="hd">Your work on this study will be discarded:</span>
+            <span class="ln">1 renamed speaker</span>
+          </div>
+          <div class="btns">
+            <button class="mbtn">Cancel</button>
+            <button class="mbtn def">Re-analyse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm"><span class="tag">Commentary</span>
+  <p>Today this study would read "4 renamed speakers". With #314 it reads "1 renamed speaker", which is
+     the one thing the researcher did and the one thing the new run will not bring back.</p>
+
+  <h3>Strings used (all shipped)</h3>
+  <table class="m">
+    <tr><th>Key</th><th>Frames</th></tr>
+    <tr><td><code>reAnalyseConfirmTitle</code>, <code>reAnalyseRebuild_other</code></td><td>B, C, D</td></tr>
+    <tr><td><code>reAnalyseLossHeader</code></td><td>B, D</td></tr>
+    <tr><td><code>reAnalyseLoss.renamedSpeakers_one</code></td><td>D</td></tr>
+    <tr><td><code>common.buttons.cancel</code>, <code>reAnalyseConfirm</code></td><td>B, C, D</td></tr>
+  </table>
+
+  <h3>For the owner</h3>
+  <p><b>A or C?</b> A is shipped and approved. C means changing <code>ReAnalyseDecision.decide</code> so a
+     zero count shows the sheet without its list: a small Swift change and two or three tests, no
+     locale work. Nothing here changes the #314 count rule, which D shows working.</p>
+</div>
+
+</div>
+<script>
+function setPal(p, btn){
+  document.documentElement.setAttribute('data-color-theme', p);
+  document.querySelectorAll('.pbtn').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

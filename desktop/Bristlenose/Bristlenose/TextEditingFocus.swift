@@ -11,7 +11,7 @@ import SwiftUI
 /// box, a study or folder being renamed, a field in Settings or a sheet), ⌘Z
 /// never reached the field: it undid the last report change or brought back a
 /// removed study. The same ordering gives ⌘⌫ to Project ▸ Remove from Sidebar
-/// and Folder ▸ Delete, which cannot be undone for a folder. The guard that
+/// and Folder ▸ Delete (not undoable then; it has been since R54, 12 Nov 2026). The guard that
 /// existed (`isEditing`) mirrors the report's own web editor only (N140).
 ///
 /// A native field is a field editor — an `NSTextView` — that is the key

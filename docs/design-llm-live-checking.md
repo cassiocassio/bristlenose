@@ -303,6 +303,8 @@ needs `max_completion_tokens` and a newer `azure_api_version`. The Swift
 default and picker still list model names in a field that wants a deployment
 name; the parity test excludes Azure for that reason.
 
+_12 Nov 2026, observed on a real Foundry resource:_ the run's default 64000-token output cap is also refused by a `gpt-4.1-mini` deployment (400 `invalid_value`, "max_tokens is too large … supports at most 32768 completion tokens"), because the ceiling table below is keyed on model names and a deployment name is opaque. The Python client now retries once at the ceiling Azure names (`9dc0a4578`, `f932b75e2`); the Mac's one-token check never meets the cap and stays green, so green still does not mean the run's request works. See `design-azure-connection.md`.
+
 **Ollama was on `json_object`** until 24 Oct 2026. An assertion caught that
 `_analyze_local` shares the OpenAI shape; it was left alone because Ollama's
 schema support is its own implementation. RE#R105 then tested it: llama3.2:3b
@@ -318,7 +320,7 @@ corpus.
 **`_MODEL_MAX_OUTPUT_TOKENS` knows only gpt-4o.** `max_completion_tokens` on
 GPT-5-class models *includes* reasoning tokens; our 64000 was sized for output
 alone. Under the 128K cap, so not refused, but a long transcript's reasoning
-could surface as truncation.
+could surface as truncation. _(For Azure the "not refused" claim is false for lower-ceiling models: see the 12 Nov note above.)_
 
 **`drop_nulls` rests on an unguarded assumption** — that no response model has
 a required-nullable field. True today; a ten-line test would keep it true.

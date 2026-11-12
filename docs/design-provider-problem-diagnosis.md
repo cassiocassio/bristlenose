@@ -1,6 +1,6 @@
 # Provider-problem diagnosis: technical brief
 
-Status: proposal and measurement record, 2 Nov 2026. Nothing here is built. It backs the
+Status: proposal and measurement record, 2 Nov 2026; steps 1-5 of the v1 slice are built (§10, §11), the sections before them are the original proposal. _Trued 12 Nov 2026 (`--topic azure`): the Azure rows (a billed one-token POST since N162, the real-resource signature now measured) and the stale "nothing is built" and "step 5 is not built" claims._ It backs the
 title-bar pill in `docs/mockups/provider-problem-surface.html` (sections E and F) and the
 DEBUG prototype `ProviderProblemPrototype.swift`.
 
@@ -57,7 +57,7 @@ Channels by which the Mac host can learn of a refusal today: **(A)** the run ter
 | 21 | Transcript edits | `routes/transcript.py`, `routes/data.py` | sidecar | **no LLM call itself**; `note_quotes_counting` may schedule an AutoCode catch-up (row 11) | via row 11 | via row 11 |
 | 22 | Tag suggestion | none found | n/a | no LLM tag suggestion in `bristlenose/` | n/a | n/a |
 | 23 | `doctor` key checks | `doctor.py:447` `check_api_key`; Claude `/v1/models` `:1978-2020`, ChatGPT `:2022`, Azure POST `:2055`, Gemini `:2141` | CLI | ad hoc `(ok, err)` tuples, not `LLMFailureKind`; 429/5xx counts as "valid" | only if the Swift Health window runs the CLI (*unverified*); not wired to the pill | credit state is invisible on `/models` by design |
-| 24 | **Swift key validator** | `LLMValidator.swift:36` `validate`, `:132` `buildRequest`, `:206` `classify` | Swift host | own status classifier; Claude is a billed `POST /v1/messages` `max_tokens=1`, the rest are free GETs | direct (`recordVerdict` `:533`, `LLMSettingsView.swift:1073`) | no |
+| 24 | **Swift key validator** | `LLMValidator.swift:36` `validate`, `:132` `buildRequest`, `:206` `classify` | Swift host | own status classifier; Claude is a billed `POST /v1/messages` `max_tokens=1`, **Azure is a billed one-token POST to the chosen deployment since N162 (9 Nov)**, the rest are free GETs | direct (`recordVerdict` `:533`, `LLMSettingsView.swift:1073`) | no |
 | 25 | Ollama pull / probe | `LLMValidator.swift:359`, `:607` | Swift host | URLError mapped | direct | no |
 
 **The silent ones, ranked by the owner's worry (a few cents, nobody told):**
@@ -141,7 +141,7 @@ Measured 2 Nov 2026, GET with no credential [M-unsb and M-sb agree]:
 | Claude | `api.anthropic.com/v1/models` | 401 `application/json`, 183-222 ms | `{"type":"error","error":{"type":"authentication_error","message":"x-api-key header is required"},"request_id":"req_…"}`; headers `request-id`, `cf-ray`, `server: cloudflare` |
 | ChatGPT | `api.openai.com/v1/models` | 401 `application/json`, 245-265 ms | `{"error":{"message":"Missing bearer authentication in header","type":"invalid_request_error","param":null,"code":null}}`; headers `x-request-id`, `cf-ray`, `server: cloudflare` |
 | Gemini | `generativelanguage.googleapis.com/v1beta/models` | **403** `application/json; charset=UTF-8`, 85 ms | `{"error":{"code":403,"message":"Method doesn't allow unregistered callers (callers without established identity)…`, status `PERMISSION_DENIED`; **no `request-id`**, `server: scaffolding on HTTPServer2` |
-| Azure OpenAI | `<resource>.openai.azure.com/openai/deployments` | host is user-supplied; a made-up resource name gave **`-1003 cannotFindHost`** in 34 ms (Azure resource hosts resolve only if the resource exists) | real-resource signature **unmeasured**; the stub assumes `apim-request-id` [E] |
+| Azure OpenAI | `<resource>.openai.azure.com/openai/deployments/<name>/chat/completions` (a one-token POST since N162; the list call this row named was retired) | host is user-supplied; a made-up resource name gave **`-1003 cannotFindHost`** in 34 ms (Azure resource hosts resolve only if the resource exists) | real-resource signature **measured 12 Nov 2026** against a Foundry resource: `apim-request-id` is on every answer including 404 and 401, `x-ms-region` too, `x-request-id` only on successes; a missing deployment is 404 `DeploymentNotFound`, a bad key 401 with code "401" (the keyless signature is still unmeasured) [M]; see `design-azure-connection.md` |
 | Ollama | `http://127.0.0.1:11434/api/tags` | 200 JSON `{"models":[…]}`, 54-167 ms (running on this Mac); with nothing listening: `-1004 cannotConnectToHost` (the `refused-port` case) | local; "reachable" means loopback, the network ladder does not apply |
 
 Reading:
@@ -225,7 +225,7 @@ See § 3.3. Gaps to fill with the owner's hands: Azure with a real resource (key
 
 (Run by feeding the stub bodies, parsed as `bristlenose/llm/failure_classifier.py` does, to `classify_llm_failure`; the Swift `LLMValidator.classify` reads the same way for 401/403/402/429 by code reading, `:248-285`.)
 
-## 5. Proposed design: the diagnosis service in the Swift host
+## 5. Proposed design: the diagnosis service in the Swift host (steps 1-5 built: §10, §11)
 
 Design only. Names are suggestions.
 
@@ -359,7 +359,7 @@ All commands and steps are in `experiments/provider-reachability/README.md`; eac
 
 ## 10. Build status, 7 Nov 2026 (steps 1-4 of the v1 slice)
 
-Built in `f49cf2ff9` and the review-fix commit after it. Network-blocks (step 5) is **not** built: it needs the owner's approval of the mockup's section H and the real-network runs in § 8.
+Built in `f49cf2ff9` and the review-fix commit after it. Network-blocks (step 5) was **not** built when this section was written (it was built later on 7 Nov: see §11): it needs the owner's approval of the mockup's section H and the real-network runs in § 8.
 
 **Corrections to this brief found while building**
 

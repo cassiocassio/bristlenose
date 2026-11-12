@@ -7,6 +7,8 @@ trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 
 ## Changelog
 
+- _2026-11-12_ — **Trued for Azure (`--topic azure`).** The validation flow and the cost ladder said Azure pings `GET /openai/deployments` and is a free auth-only ping; since N162 (`2e3f3b494`, 9 Nov) it is a billed one-token POST to the chosen deployment. Added §"Azure: the check is not a real run" (the green light versus the 64000-token run request; the free `/openai/v1/models` check; the long portal Endpoint; the key-only verdict cache). Known and not yet edited: §Provider status model does not list key+endpoint with a blank deployment (`.notSetUp`, no message), the Azure revalidation trigger now includes the deployment, and §Credit / 402 and §Activation bodies still describe fixed bugs under their old headings.
+
 - _2026-10-20_ — **⌘Q saves a pasted API key.** A key pasted and quit before Return, Tab or a window close was lost. Quit now commits it through `APIKeyDrafts` without a serve restart, and waits for a Keychain dialog. §Validation invariants gains the paragraph. Anchors: `APIKeyQuitSave.swift`, `BristlenoseApp.swift` (`applicationShouldTerminate`), `LLMSettingsView.swift` (`commitsAllowed`), `APIKeyQuitSaveTests`.
 
 - _2026-10-20_ — **Settings ▸ LLM Provider commits at a gesture's end.** The key field used to save on every focus loss (rewriting the key, billing a validation and reloading the report on a mere Tab), kept showing a key whose save had failed, and lost a paste on ⌘W or a row change; the slider and the Azure fields posted the prefs change per step and per keystroke, and an API-version edit never posted at all. §Validation invariants now describes `APIKeyDrafts` and `CommitGate`. Anchors: `APIKeyDrafts.swift`, `CommitGate.swift`, `LLMSettingsView.swift` (`commitAPIKeys`, `commitPending`), `APIKeyDraftsTests`, `CommitGateTests`.
@@ -231,7 +233,7 @@ is an observed negative, so it stays sticky rather than being cache-masked.
 not via the sidecar — so Settings works before any project is loaded.
 URLSession.ephemeral, 5s timeout, per-provider auth-check endpoints
 (Anthropic POST `/v1/messages` `max_tokens=1`, OpenAI GET `/v1/models`,
-Azure GET `/openai/deployments`, Gemini GET `/v1beta/models`,
+Azure POST one token to the deployment (`/openai/deployments/<name>/chat/completions`; the data-plane list call was retired, N162), Gemini GET `/v1beta/models`,
 Ollama GET `/api/tags`).
 
 **Verdict cache.** Per-provider entries in `UserDefaults` keyed by truncated
@@ -277,6 +279,21 @@ withdrawn** (toasts are an attention-theft pattern — see project memory);
 the replacement design is inline status that's eagerly truthful on open
 plus a refocus-recheck, captured in §"Provider status lifecycle (planned)"
 below. `NWPathMonitor` survives as the reachability gate in that design.
+
+### Azure: the check is not a real run (added 12 Nov 2026)
+
+The Azure check asks for **one token**; a real run sends the pipeline's own request (`max_tokens`
+64000 by default). A deployment whose model has a lower output ceiling (a `gpt-4.1-mini` one: 32768)
+answered the run with 400 while Settings showed **Online**. The Python client now retries once at the
+ceiling Azure names (`9dc0a4578`, `f932b75e2`); the Mac app has that once its bundled sidecar is rebuilt.
+The green light still honestly means "key valid, endpoint and deployment reachable", not "a run will
+work". Other facts observed on a real Foundry resource that this pane does not use or show:
+`GET /openai/v1/models` is a **free** key-and-endpoint check (200 good key, 401 bad), a key cannot
+list deployments, and the portal's "Endpoint" is a long `…/openai/v1/responses` URL that the check
+turns into a 404 (shown as **"Invalid key"** beside "The key is fine", the label problem). The
+verdict cache is keyed on the key alone, so a deployment change can fall back to an old verdict
+(open question). All of it, with the proposal that follows from it, is in
+[`design-azure-connection.md`](design-azure-connection.md).
 
 ## Validation invariants
 
@@ -402,7 +419,7 @@ user-facing concept. They exist to explain *which technique runs when*.
 They check auth (401) *before* billing (402) — so a 200 on rung 2 is
 structurally incapable of reporting credit. Note the asymmetry in the shipped
 rung-2 pings: Claude uses `POST /v1/messages max_tokens=1` (brushes billing →
-*would* catch a 402), while ChatGPT/Gemini/Azure use `GET …/models` (pure auth
+*would* catch a 402) and so does **Azure** since N162 (a billed one-token POST to the chosen deployment, not a free ping), while ChatGPT/Gemini use `GET …/models` (pure auth
 → a 200 says nothing about credit). So a green light honestly means **"set up ·
 key valid · reachable,"** not **"will produce work."** Copy must not over-claim.
 

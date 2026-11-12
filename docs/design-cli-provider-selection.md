@@ -4,7 +4,7 @@
 derive-only proposal; revised at implementation to the **current-provider**
 model after review (the .app already works this way: the provider stays
 whatever you last set, and nothing asks mid-run). This doc describes what
-shipped and why. _Trued 4 Sep 2026: the §4 transcripts show the real Keychain
+shipped and why. _Trued 12 Nov 2026 (`--topic azure`): Azure is the exception to "configure validates" and to "endpoint validated by preflight" (see the §3 map and §1 principle 3 notes); `docs/design-azure-connection.md` has the proposal for a `configure azure` that asks for all three values. Trued 4 Sep 2026: the §4 transcripts show the real Keychain
 item names, the read-back failure branch is recorded, and §6 gains the
 two-keychain sharing. Trued 4 Oct 2026: §7 records how the suite is kept off
 this machine's stored provider, and Storage notes that the `.env` list is fixed
@@ -26,7 +26,7 @@ explicitly); see §6 for the toes this deliberately does not tread on.
    diagnoses; it does not silently try Claude. (The old behaviour dated from
    February, when Claude was the only provider built.)
 3. **Configuring a provider is choosing it.** `bristlenose configure gemini`
-   validates + stores the key **and makes Gemini current, loudly** — the
+   validates + stores the key **and makes Gemini current, loudly** (_Azure is the exception to "validates": `configure azure` validates nothing and prints how to hand-edit `.env`; trued 12 Nov 2026_) — the
    printed line names the switch and the way back. Nobody pastes a Gemini key
    expecting to keep running Claude; when they do want that, `use` is one
    command. (The June draft's "adding a key must never change the provider"
@@ -82,8 +82,9 @@ all) means the CLI preference can never leak into a desktop-hosted run.
 ## 3. Implementation map
 
 - **`config.py`** — `configured_cloud_providers(settings)` (string-typed,
-  non-empty keys only; Azure counts on key presence, endpoint validated by
-  preflight); `ProviderResolution` (status `hosted | explicit | derived |
+  non-empty keys only; Azure counts on key presence alone: neither the endpoint nor
+  the deployment is checked here, and the preflight returns silently until both are
+  set, so a missing one first surfaces when `LLMClient` is built or in `doctor`; `ProviderResolution` (status `hosted | explicit | derived |
   none | ambiguous`); `_derive_provider(...)` runs inside `load_settings`
   *after* `_populate_keys_from_keychain` (derivation needs the full key
   picture) and *before* `_fill_provider_default_model` (so a derived provider
@@ -120,7 +121,7 @@ $ bristlenose interviews
 No LLM provider configured.
 
 Set one up once — bristlenose configure <provider> validates your
-key and stores it securely (Keychain):
+key and stores it securely (Keychain; not for Azure, which validates nothing at `configure` and needs an endpoint and deployment as well):
 
   Claude    https://console.anthropic.com/settings/keys
   ChatGPT   https://platform.openai.com/api-keys

@@ -5,7 +5,7 @@ previous-trued: 2026-04-21
 trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
-> **Trued 4 Sep 2026 (--topic keychain).** The README-proposal block named an env var that is not read (`BRISTLENOSE_AZURE_API_KEY` → `BRISTLENOSE_AZURE_API_KEY`), a prompt sequence `configure azure` does not have, and a provider switch that predates `bristlenose use` (shipped 31 Jul 2026 — the "future verb" section below now says so). `configure` reads the key back before claiming it. Two anchors repointed. The parked-idea analyses are untouched.
+> **Trued 4 Sep 2026 (--topic keychain).** The README-proposal block named an env var that is not read (`BRISTLENOSE_AZURE_KEY` → `BRISTLENOSE_AZURE_API_KEY`, the name the code actually reads), a prompt sequence `configure azure` does not have, and a provider switch that predates `bristlenose use` (shipped 31 Jul 2026 — the "future verb" section below now says so). `configure` reads the key back before claiming it. Two anchors repointed. The parked-idea analyses are untouched.
 
 > **Truing status:** Partial — individual item analyses remain useful; status line and the "Provider Registry Abstraction" section are stale; command name throughout was the aspirational `config set-key` (now corrected to shipped `configure`). See banner at Provider Registry Abstraction section for the aspirational-not-shipped call-out. Cost tables are Feb-2026 snapshots; `llm_max_tokens` default doubled Apr 2026. Preserved: all open-item analyses (still correct, still open).
 
@@ -198,6 +198,8 @@ The spinner now shows file-level progress: "Transcribing audio... (2/5 files)" d
 ### 6. `--llm` provider naming and multi-provider roadmap
 
 The flag value is `anthropic` (company name) but the help text says "Claude". Users might try `--llm claude`. More importantly, we need to support more providers for enterprise users.
+
+> **Superseded as of 2026-11-12 (`--topic azure`) — what shipped instead.** `--llm` takes `claude|chatgpt|azure|gemini|local|any-llm` (`cli.py`), not `anthropic`/`openai`. Azure is configured with `BRISTLENOSE_AZURE_{API_KEY,ENDPOINT,DEPLOYMENT}` plus the SDK-native `AZURE_OPENAI_*` / `AZURE_API_KEY` aliases (`config.py`); the `BRISTLENOSE_AZURE_OPENAI_*` names and the `copilot`/`github` aliases below were never read or shipped, and Azure is dispatched directly in `LLMClient._analyze_azure`, not through a provider class. The original roadmap is kept as the baseline. For what Azure needs today (endpoint shapes, a deployment name a key cannot discover, `configure azure` validating nothing) see [`design-azure-connection.md`](design-azure-connection.md).
 
 **Current state:**
 - `--llm anthropic` (Claude)

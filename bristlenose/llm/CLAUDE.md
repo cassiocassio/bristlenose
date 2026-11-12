@@ -116,11 +116,12 @@ If the default is too low for a workload (very long transcripts with many quotes
 - Azure cost estimation returns None — deployment names are user-defined strings, not model names, so…
 - A deprecation page carrying no retirement date is not evidence the model is obtainable.
 
-**Claude, ChatGPT and Azure requests** (4) — [full entries](gotchas.md#claude-chatgpt-and-azure-requests)
+**Claude, ChatGPT and Azure requests** (5) — [full entries](gotchas.md#claude-chatgpt-and-azure-requests)
 
 - Anthropic SDK timeout heuristic — the SDK (v0.77+) rejects non-streaming requests when…
 - Azure OpenAI uses `AsyncAzureOpenAI` — same OpenAI SDK, different client class. Key differences…
 - gpt-4o / gpt-4o-mini cap output at 16384 — the 64000 default is Claude-tuned.
+- An Azure deployment's output ceiling is learned from Azure's refusal, never looked up (deployment names are arbitrary).
 - Sampling parameters on Claude are per-MODEL, and rejected with a 400 — not ignored.
 
 **Gemini** (6) — [full entries](gotchas.md#gemini)

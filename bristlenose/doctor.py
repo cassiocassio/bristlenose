@@ -2156,60 +2156,93 @@ def _validate_azure_key(
         return (False, _UNSENDABLE_KEY)
     params = _params_for("azure", deployment, params)
 
+    from bristlenose.llm.client import (
+        azure_output_ceiling,
+        learned_azure_ceiling,
+        remember_azure_ceiling,
+    )
+
     url = (
         f"{endpoint.rstrip('/')}/openai/deployments/{deployment}"
         f"/chat/completions?api-version={api_version}"
     )
-    try:
-        req = urllib.request.Request(
-            url,
-            method="POST",
-            headers={
-                "api-key": key,
-                "Content-Type": "application/json",
-            },
-            data=json.dumps({
-                "messages": [{"role": "user", "content": _VALIDATION_PROMPT}],
-                **params,
-            }).encode(),
-        )
-        with urllib.request.urlopen(req, timeout=10, context=https_context()):
-            pass
-        return (True, "")
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            return (False, "401 Unauthorized")
-        if exc.code == 403:
-            return (False, "403 Forbidden")
-        if exc.code == 404:
-            return (False, f"Deployment '{deployment}' not found")
-        if exc.code == 400:
-            # The run's own request, refused: an output cap above the model's
-            # ceiling, a parameter the deployment's model does not take. The run
-            # would fail on it, so it is not a good key. Said in the provider's
-            # words, as the preflight says it.
-            return (False, _without_key(_azure_refusal(exc), key))
-        if exc.code in (429, 500, 503):
+    # A ceiling the run (or an earlier check) already learned for this deployment.
+    learned = learned_azure_ceiling(endpoint, deployment)
+    if learned and isinstance(params.get("max_tokens"), int) and learned < params["max_tokens"]:
+        params = {**params, "max_tokens": learned}
+    # At most two attempts: the second only after Azure refused the output cap and named
+    # the ceiling (a gpt-4.1-mini deployment answered 400 to the 64000 default, 12 Nov 2026).
+    for attempt in (1, 2):
+        try:
+            req = urllib.request.Request(
+                url,
+                method="POST",
+                headers={
+                    "api-key": key,
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps({
+                    "messages": [{"role": "user", "content": _VALIDATION_PROMPT}],
+                    **params,
+                }).encode(),
+            )
+            with urllib.request.urlopen(req, timeout=10, context=https_context()):
+                pass
             return (True, "")
-        return (None, f"HTTP {exc.code}")
-    except urllib.error.URLError as exc:
-        return (None, _without_key(str(exc.reason), key))
-    except Exception as exc:
-        return (None, _without_key(str(exc), key))
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401:
+                return (False, "401 Unauthorized")
+            if exc.code == 403:
+                return (False, "403 Forbidden")
+            if exc.code == 404:
+                return (False, f"Deployment '{deployment}' not found")
+            if exc.code == 400:
+                # The run's own request, refused: an output cap above the model's
+                # ceiling, a parameter the deployment's model does not take. The run
+                # would fail on it, so it is not a good key. Said in the provider's
+                # words, as the preflight says it, unless the refusal names a lower
+                # output ceiling: then retry once at it, as the run does.
+                refusal, message = _azure_refusal_parts(exc)
+                requested = params.get("max_tokens")
+                ceiling = (
+                    azure_output_ceiling(message, requested if isinstance(requested, int) else 0)
+                    if attempt == 1 else None
+                )
+                if ceiling is not None:
+                    remember_azure_ceiling(endpoint, deployment, ceiling)
+                    params = {**params, "max_tokens": ceiling}
+                    continue
+                return (False, _without_key(refusal, key))
+            if exc.code in (429, 500, 503):
+                return (True, "")
+            return (None, f"HTTP {exc.code}")
+        except urllib.error.URLError as exc:
+            return (None, _without_key(str(exc.reason), key))
+        except Exception as exc:
+            return (None, _without_key(str(exc), key))
+    return (None, "")  # unreachable: the second attempt always returns
 
 
 _AZURE_REFUSED = "HTTP 400"
 
 
-def _azure_refusal(exc: Any) -> str:
-    """``"HTTP 400: <message>"`` from an Azure error body, or ``"HTTP 400"``."""
+def _azure_refusal_parts(exc: Any) -> tuple[str, str | None]:
+    """(``"HTTP 400: <message>"`` or ``"HTTP 400"``, the bare message or None), read once
+    from an Azure error body."""
     try:
         body = json.loads(exc.read().decode("utf-8", "replace"))
         message = body["error"]["message"]
     except Exception:
         logger.debug("Azure 400 with no readable error message", exc_info=True)
-        return _AZURE_REFUSED
-    return f"{_AZURE_REFUSED}: {message}" if isinstance(message, str) else _AZURE_REFUSED
+        return (_AZURE_REFUSED, None)
+    if not isinstance(message, str):
+        return (_AZURE_REFUSED, None)
+    return (f"{_AZURE_REFUSED}: {message}", message)
+
+
+def _azure_refusal(exc: Any) -> str:
+    """``"HTTP 400: <message>"`` from an Azure error body, or ``"HTTP 400"``."""
+    return _azure_refusal_parts(exc)[0]
 
 
 def _validate_google_key(key: str) -> tuple[bool | None, str]:

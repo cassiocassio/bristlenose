@@ -469,7 +469,14 @@ def _validate_azure(
         api_version=api_version,
         default_headers={"User-Agent": f"bristlenose/{__version__}"},
     )
-    try:
+    from bristlenose.llm.client import (
+        azure_error_message,
+        azure_output_ceiling,
+        learned_azure_ceiling,
+        remember_azure_ceiling,
+    )
+
+    def _send(sent: dict[str, Any]) -> None:
         # The legacy shape, as ``LLMClient._analyze_azure`` sends it: a
         # deployment name is the customer's own word and cannot say whether a
         # GPT-5-class model sits behind it. One builder (``request_params``),
@@ -477,8 +484,29 @@ def _validate_azure(
         client.chat.completions.create(
             model=deployment,
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
-            **params,
+            **sent,
         )
+
+    # A ceiling the run (or an earlier check) already learned for this deployment.
+    learned = learned_azure_ceiling(endpoint, deployment)
+    if learned and isinstance(params.get("max_tokens"), int) and learned < params["max_tokens"]:
+        params = {**params, "max_tokens": learned}
+    try:
+        try:
+            _send(params)
+        except openai.BadRequestError as refused:
+            # The run's own request refused for an output cap above the model's
+            # ceiling (a gpt-4.1-mini deployment answered 400 to the 64000 default,
+            # 12 Nov 2026). Azure names the ceiling: retry ONCE at it, as the run does,
+            # and remember it. Any other 400 is raised and said in Azure's words below.
+            requested = params.get("max_tokens")
+            ceiling = azure_output_ceiling(
+                azure_error_message(refused), requested if isinstance(requested, int) else 0
+            )
+            if ceiling is None:
+                raise
+            remember_azure_ceiling(endpoint, deployment, ceiling)
+            _send({**params, "max_tokens": ceiling})
     except openai.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
     except openai.NotFoundError as exc:

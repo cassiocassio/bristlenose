@@ -6,6 +6,7 @@ import asyncio
 import copy
 import json
 import logging
+import re
 import time
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
@@ -129,6 +130,67 @@ def _clamp_max_tokens(model: str, requested: int) -> int:
     """Clamp requested output tokens to the model's known ceiling (if any)."""
     cap = _MODEL_MAX_OUTPUT_TOKENS.get(model)
     return min(requested, cap) if cap else requested
+
+
+# An Azure request model is the customer's own DEPLOYMENT name ("prod-eastus"), so
+# the table above cannot know its ceiling: a gpt-4.1-mini deployment was sent the
+# 64000 default and Azure answered 400 (observed live 12 Nov 2026, both hosts):
+#   code `invalid_value`: "max_tokens is too large: 64000. This model supports at
+#   most 32768 completion tokens, whereas you provided 64000."
+# The refusal names the ceiling, so it is read from there instead of kept in a table
+# that would need a row per model and per deployment name. Only the wording seen
+# live is matched; anything else is not a ceiling and is raised as before.
+_AZURE_CEILING_RE = re.compile(
+    r"max_tokens is too large: \d+\. This model supports at most (\d+) completion tokens"
+)
+
+# (endpoint, deployment) -> the ceiling Azure named, for the life of the process, so the
+# run does not re-learn what the preflight (a different client) already learned.
+_azure_ceilings: dict[tuple[str, str], int] = {}
+
+
+def azure_error_message(exc: BaseException) -> str:
+    """An SDK error's own message: the response body's `error.message`, else `str(exc)`."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict) and isinstance(error.get("message"), str):
+            return cast(str, error["message"])
+    return str(exc)
+
+
+def azure_output_ceiling(message: str | None, requested: int) -> int | None:
+    """The completion-token ceiling Azure names in a "max_tokens is too large" refusal.
+
+    None for any other message, and for a ceiling that is not below what was asked for
+    (retrying at the same value would only repeat the refusal).
+    """
+    if not message or requested <= 0:
+        return None
+    match = _AZURE_CEILING_RE.search(message)
+    if match is None:
+        return None
+    ceiling = int(match.group(1))
+    return ceiling if 0 < ceiling < requested else None
+
+
+def _azure_ceiling_key(endpoint: str, deployment: str) -> tuple[str, str]:
+    return (endpoint.strip().rstrip("/").lower(), deployment)
+
+
+def remember_azure_ceiling(endpoint: str, deployment: str, ceiling: int) -> None:
+    """Keep a ceiling Azure named, for this process."""
+    _azure_ceilings[_azure_ceiling_key(endpoint, deployment)] = ceiling
+
+
+def learned_azure_ceiling(endpoint: str, deployment: str) -> int | None:
+    """The ceiling already learned for this deployment in this process, if any."""
+    return _azure_ceilings.get(_azure_ceiling_key(endpoint, deployment))
+
+
+def forget_azure_ceilings() -> None:
+    """Drop every learned ceiling (tests)."""
+    _azure_ceilings.clear()
 
 
 def _validate_repairing(
@@ -1193,6 +1255,8 @@ class LLMClient:
         t0: float,
     ) -> T:
         """Call Azure OpenAI API with JSON mode for structured output."""
+        import openai
+
         client = self._ensure_azure_client()
 
         # Add JSON schema instruction to the system prompt
@@ -1218,39 +1282,63 @@ class LLMClient:
             params = request_params(
                 "azure", request_model, max_tokens, self.settings.llm_temperature
             )
-            response = await client.chat.completions.create(
-                model=request_model,
-                max_tokens=params["max_tokens"],
-                temperature=params["temperature"],
-                # Structured Outputs, not JSON mode. JSON mode guarantees only
-                # that the text parses; the schema matches ~80% of the time, and
-                # the other 20% surfaced here as a ValidationError that failed
-                # the run — there is no repair step below, model_validate is the
-                # first and only check, and that is DELIBERATE: the Anthropic and
-                # Gemini paths gained `_validate_repairing` on 5 Sep 2026 because
-                # neither API enforces the shape it is given, whereas strict
-                # Structured Outputs does. Repairing here would hide a break in a
-                # guarantee we are relying on. strict=True constrains decoding, so
-                # the shape is guaranteed. See openai_strict_schema for the rewrites
-                # Pydantic's schema needs before strict mode will accept it.
-                #
-                # _analyze_local sends Ollama a json_schema too, but the plain
-                # schema and not strict: Ollama is a different implementation
-                # with its own schema support, and takes Pydantic's schema as
-                # it is (measured against real local models, RE#R105, 24 Oct 2026).
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": response_model.__name__,
-                        "schema": openai_strict_schema(response_model),
-                        "strict": True,
+            endpoint = self.settings.azure_endpoint
+            learned = learned_azure_ceiling(endpoint, request_model)
+            cap = min(params["max_tokens"], learned) if learned else params["max_tokens"]
+
+            async def send(output_cap: int) -> Any:
+                return await client.chat.completions.create(
+                    model=request_model,
+                    max_tokens=output_cap,
+                    temperature=params["temperature"],
+                    # Structured Outputs, not JSON mode. JSON mode guarantees only
+                    # that the text parses; the schema matches ~80% of the time, and
+                    # the other 20% surfaced here as a ValidationError that failed
+                    # the run — there is no repair step below, model_validate is the
+                    # first and only check, and that is DELIBERATE: the Anthropic and
+                    # Gemini paths gained `_validate_repairing` on 5 Sep 2026 because
+                    # neither API enforces the shape it is given, whereas strict
+                    # Structured Outputs does. Repairing here would hide a break in a
+                    # guarantee we are relying on. strict=True constrains decoding, so
+                    # the shape is guaranteed. See openai_strict_schema for the rewrites
+                    # Pydantic's schema needs before strict mode will accept it.
+                    #
+                    # _analyze_local sends Ollama a json_schema too, but the plain
+                    # schema and not strict: Ollama is a different implementation
+                    # with its own schema support, and takes Pydantic's schema as
+                    # it is (measured against real local models, RE#R105, 24 Oct 2026).
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": response_model.__name__,
+                            "schema": openai_strict_schema(response_model),
+                            "strict": True,
+                        },
                     },
-                },
-                messages=[
-                    {"role": "system", "content": system_prompt + schema_instruction},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
+                    messages=[
+                        {"role": "system", "content": system_prompt + schema_instruction},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                )
+
+            # An Azure deployment's output ceiling is not in `_MODEL_MAX_OUTPUT_TOKENS`
+            # (its name is the customer's own word), so the 64000 default can be refused:
+            # Azure answers 400 and names the ceiling. Read it, retry ONCE at it, and
+            # remember it so the rest of the run (and the preflight's client) start there.
+            try:
+                response = await send(cap)
+            except openai.BadRequestError as exc:
+                ceiling = azure_output_ceiling(azure_error_message(exc), cap)
+                if ceiling is None:
+                    raise
+                remember_azure_ceiling(endpoint, request_model, ceiling)
+                logger.info(
+                    "azure_output_cap_learned | deployment=%s | requested=%d | ceiling=%d",
+                    request_model, cap, ceiling,
+                )
+                cap = ceiling
+                response = await send(cap)
+            max_tokens = cap
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -1297,7 +1385,10 @@ class LLMClient:
                 provider=self.provider,
                 model=request_model,
                 requested_max_tokens=max_tokens,
-                model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
+                model_cap=(
+                    _MODEL_MAX_OUTPUT_TOKENS.get(request_model)
+                    or learned_azure_ceiling(self.settings.azure_endpoint, request_model)
+                ),
             )
 
         declined = _declined(response.choices[0], "Azure OpenAI")

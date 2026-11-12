@@ -507,7 +507,7 @@
       "quotesLeftOut_many": "Pominięto {{count}} cytatów",
       "quotesLeftOut_other": "Pominięto {{count}} cytatu",
       "noStructuredCause": "Nie zarejestrowano szczegółowej przyczyny.",
-      "warningNoClearModerator": "Nie udało się ustalić, kto jest moderatorem, w żadnej sesji.",
+      "warningNoClearModerator": "W żadnej sesji nie udało się ustalić, kto jest moderatorem.",
       "warningPeopleUnreadable": "Nie udało się odczytać (wiersz {{line}}), więc dodane imiona nie są wyświetlane.",
       "warningPeopleUnreadableNoLine": "Nie udało się odczytać, więc dodane imiona nie są wyświetlane.",
       "reportError": "Bristlenose napotkał nieoczekiwany problem podczas otwierania tego raportu.",

@@ -507,7 +507,7 @@
       "quotesLeftOut_many": "Пропущено {{count}} цитат",
       "quotesLeftOut_other": "Пропущено {{count}} цитаты",
       "noStructuredCause": "Подробная причина не зафиксирована.",
-      "warningNoClearModerator": "Не удалось определить, кто модератор, ни в одной сессии.",
+      "warningNoClearModerator": "Ни в одной сессии не удалось определить, кто модератор.",
       "warningPeopleUnreadable": "Не удалось прочитать (строка {{line}}), поэтому добавленные вами имена не показываются.",
       "warningPeopleUnreadableNoLine": "Не удалось прочитать, поэтому добавленные вами имена не показываются.",
       "reportError": "При открытии этого отчёта Bristlenose столкнулся с непредвиденной проблемой.",

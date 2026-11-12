@@ -429,7 +429,7 @@
       "partialSessions_other": "已分析 {{total}} 場中的 {{done}} 場",
       "quotesLeftOut_other": "已略過 {{count}} 則引述",
       "noStructuredCause": "未擷取到詳細原因。",
-      "warningNoClearModerator": "在任何一場中都無法判斷誰是主持人。",
+      "warningNoClearModerator": "在任何場次中都無法判斷誰是主持人。",
       "warningPeopleUnreadable": "無法讀取（第 {{line}} 行），因此你新增的姓名不會顯示。",
       "warningPeopleUnreadableNoLine": "無法讀取，因此你新增的姓名不會顯示。",
       "reportError": "Bristlenose 開啟這份報告時發生未預期的問題。",

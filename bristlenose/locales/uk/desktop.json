@@ -507,7 +507,7 @@
       "quotesLeftOut_many": "Пропущено {{count}} цитат",
       "quotesLeftOut_other": "Пропущено {{count}} цитати",
       "noStructuredCause": "Докладну причину не зафіксовано.",
-      "warningNoClearModerator": "Не вдалося визначити, хто модератор, в жодній сесії.",
+      "warningNoClearModerator": "У жодній сесії не вдалося визначити, хто модератор.",
       "warningPeopleUnreadable": "Не вдалося прочитати (рядок {{line}}), тому додані вами імена не показано.",
       "warningPeopleUnreadableNoLine": "Не вдалося прочитати, тому додані вами імена не показано.",
       "reportError": "Bristlenose зіткнувся з неочікуваною проблемою під час відкриття цього звіту.",

@@ -455,7 +455,7 @@
       "quotesLeftOut_one": "{{count}} citazione omessa",
       "quotesLeftOut_other": "{{count}} citazioni omesse",
       "noStructuredCause": "Causa dettagliata non rilevata.",
-      "warningNoClearModerator": "Impossibile capire chi è il moderatore in nessuna sessione.",
+      "warningNoClearModerator": "In nessuna sessione è stato possibile capire chi è il moderatore.",
       "warningPeopleUnreadable": "Impossibile da leggere (riga {{line}}), quindi i nomi che hai aggiunto non vengono mostrati.",
       "warningPeopleUnreadableNoLine": "Impossibile da leggere, quindi i nomi che hai aggiunto non vengono mostrati.",
       "reportError": "Bristlenose ha riscontrato un problema imprevisto nell'aprire questo report.",

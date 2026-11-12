@@ -455,7 +455,7 @@
       "quotesLeftOut_one": "{{count}} citat udeladt",
       "quotesLeftOut_other": "{{count}} citater udeladt",
       "noStructuredCause": "Detaljeret årsag ikke registreret.",
-      "warningNoClearModerator": "Kunne ikke afgøre, hvem der er moderator, i nogen session.",
+      "warningNoClearModerator": "Kunne ikke i nogen session afgøre, hvem der er moderator.",
       "warningPeopleUnreadable": "Kunne ikke læses (linje {{line}}), så navne, du har tilføjet, vises ikke.",
       "warningPeopleUnreadableNoLine": "Kunne ikke læses, så navne, du har tilføjet, vises ikke.",
       "reportError": "Bristlenose stødte på et uventet problem under åbning af denne rapport.",

@@ -455,7 +455,7 @@
       "quotesLeftOut_one": "{{count}} sitaatti jätetty pois",
       "quotesLeftOut_other": "{{count}} sitaattia jätetty pois",
       "noStructuredCause": "Yksityiskohtaista syytä ei tallennettu.",
-      "warningNoClearModerator": "Ei voitu selvittää, kuka on moderaattori, missään istunnossa.",
+      "warningNoClearModerator": "Missään istunnossa ei voitu selvittää, kuka on moderaattori.",
       "warningPeopleUnreadable": "Ei voitu lukea (rivi {{line}}), joten lisäämiäsi nimiä ei näytetä.",
       "warningPeopleUnreadableNoLine": "Ei voitu lukea, joten lisäämiäsi nimiä ei näytetä.",
       "reportError": "Bristlenose kohtasi odottamattoman ongelman avatessaan tätä raporttia.",

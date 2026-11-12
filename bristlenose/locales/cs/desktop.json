@@ -506,7 +506,7 @@
       "quotesLeftOut_many": "{{count}} citátu vynecháno",
       "quotesLeftOut_other": "{{count}} citátů vynecháno",
       "noStructuredCause": "Podrobná příčina nebyla zaznamenána.",
-      "warningNoClearModerator": "Nepodařilo se zjistit, kdo je moderátor, v žádném sezení.",
+      "warningNoClearModerator": "V žádném sezení se nepodařilo zjistit, kdo je moderátor.",
       "warningPeopleUnreadable": "Nelze přečíst (řádek {{line}}), proto se jména, která jste přidali, nezobrazují.",
       "warningPeopleUnreadableNoLine": "Nelze přečíst, proto se jména, která jste přidali, nezobrazují.",
       "reportError": "Bristlenose narazil na neočekávaný problém při otevírání tohoto reportu.",

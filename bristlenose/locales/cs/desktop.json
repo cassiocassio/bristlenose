@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Vrátit zpět odebrání „%@“",
+      "undoDeleteFolder": "Vrátit zpět smazání složky „%@“",
+      "undoDeleteFolders": "Vrátit zpět smazání složek",
       "undo": "Zp\u011bt",
       "redo": "Znovu",
       "find": "Hledat…",

@@ -746,6 +746,12 @@ private struct UndoRedoMenuContent: View {
         if let name = removalStore.pendingName {
             return String(format: i18n.t("desktop.menu.edit.undoRemove"), name)
         }
+        if let name = removalStore.pendingFolderName {
+            return String(format: i18n.t("desktop.menu.edit.undoDeleteFolder"), name)
+        }
+        if removalStore.pendingFolderCount > 1 {
+            return i18n.t("desktop.menu.edit.undoDeleteFolders")
+        }
         return bridgeHandler.undoLabel ?? i18n.t("desktop.menu.edit.undo")
     }
 
@@ -1379,7 +1385,7 @@ private struct ProjectMenuContent: View {
             Button(i18n.t("desktop.menu.folder.delete"), systemImage: "trash", role: .destructive) {
                 // ⌘⌫ with a text field focused (a folder being renamed, the
                 // search box) is the field's: delete to the start of the line.
-                // Deleting the folder cannot be undone (N140).
+                // The delete itself is undoable (R54), so it asks nothing.
                 if TextEditingFocus.deleteToStartOfLine(invokedBy: NSApp.currentEvent) { return }
                 windowCommands?.perform(.deleteFolder)
             }

@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Desfazer Remoção de “%@”",
+      "undoDeleteFolder": "Desfazer Exclusão da Pasta “%@”",
+      "undoDeleteFolders": "Desfazer Exclusão das Pastas",
       "undo": "Desfazer",
       "redo": "Refazer",
       "find": "Buscar…",

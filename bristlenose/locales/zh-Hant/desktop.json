@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "還原移除「%@」",
+      "undoDeleteFolder": "還原刪除檔案夾「%@」",
+      "undoDeleteFolders": "還原刪除檔案夾",
       "undo": "\u9084\u539f",
       "redo": "重做",
       "find": "尋找⋯",

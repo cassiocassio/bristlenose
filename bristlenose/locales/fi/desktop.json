@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Kumoa poisto ”%@”",
+      "undoDeleteFolder": "Kumoa kansion ”%@” poisto",
+      "undoDeleteFolders": "Kumoa kansioiden poisto",
       "undo": "Kumoa",
       "redo": "Tee uudelleen",
       "find": "Etsi…",

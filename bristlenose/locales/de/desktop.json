@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "\u201e%@\u201c wiederherstellen",
+      "undoDeleteFolder": "Löschen des Ordners „%@“ widerrufen",
+      "undoDeleteFolders": "Löschen der Ordner widerrufen",
       "undo": "Widerrufen",
       "redo": "Wiederholen",
       "find": "Suchen…",

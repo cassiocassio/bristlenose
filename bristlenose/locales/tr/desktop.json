@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "“%@” Kaldırmayı Geri Al",
+      "undoDeleteFolder": "“%@” Klasörünü Silmeyi Geri Al",
+      "undoDeleteFolders": "Klasörleri Silmeyi Geri Al",
       "undo": "Geri Al",
       "redo": "Yinele",
       "find": "Bul…",

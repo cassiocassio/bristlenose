@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Ångra ta bort ”%@”",
+      "undoDeleteFolder": "Ångra radering av mappen ”%@”",
+      "undoDeleteFolders": "Ångra radering av mappar",
       "undo": "\u00c5ngra",
       "redo": "Gör om",
       "find": "Sök…",

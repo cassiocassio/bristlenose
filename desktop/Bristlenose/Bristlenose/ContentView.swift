@@ -1902,16 +1902,22 @@ struct ContentView: View {
     }
 
     /// Delete every selected folder. Projects inside them are unaffected —
-    /// `removeFolder` re-parents rather than cascading.
+    /// `removeFolder` re-parents rather than cascading — and the delete is one undo
+    /// (R54), so it asks nothing.
     private func deleteSelectedFolders() {
         let folderIds = selection.compactMap { sel -> UUID? in
             if case .folder(let id) = sel { return id }
             return nil
         }
-        for id in folderIds {
-            selection.remove(.folder(id))
-            projectIndex.removeFolder(id: id)
-        }
+        deleteFolders(folderIds)
+    }
+
+    /// The one path every folder delete takes: the selection forgets the folders, and
+    /// `UndoableRemovalStore` records the delete so Edit ▸ Undo brings them back.
+    private func deleteFolders(_ ids: [UUID]) {
+        let prior = selection
+        for id in ids { selection.remove(.folder(id)) }
+        removalStore.deleteFolders(ids, priorSelection: prior)
     }
 
     /// Diagnostics ▸ Diagnostic fixtures — inject a synthesised state into this
@@ -1950,23 +1956,17 @@ struct ContentView: View {
         projectIndex.pendingRename = folder.id  // AppKit sidebar path (shipping)
     }
 
-    /// Folder-context-menu delete. Project removals go through
-    /// `removeFromSidebarContextMenu(targetingProject:)` which routes via
-    /// `UndoableRemovalStore`. Folders don't get undo today (separate scope).
+    /// Folder-context-menu delete. Both kinds of removal route via
+    /// `UndoableRemovalStore`: projects through
+    /// `removeFromSidebarContextMenu(targetingProject:)`, folders through
+    /// `deleteFolders(_:)`.
     private func deleteFromContextMenu(targetingFolder id: UUID) {
         if selection.contains(.folder(id)) {
-            let folderIds = selection.compactMap { sel -> UUID? in
-                if case .folder(let fid) = sel { return fid }
-                return nil
-            }
-            for fid in folderIds {
-                selection.remove(.folder(fid))
-                projectIndex.removeFolder(id: fid)
-            }
+            deleteSelectedFolders()
         } else {
             // Right-clicked row is not in the current selection — leave
             // selection alone (Finder behaviour) and act only on the target.
-            projectIndex.removeFolder(id: id)
+            removalStore.deleteFolders([id], priorSelection: selection)
         }
     }
 
@@ -3611,8 +3611,7 @@ struct ContentView: View {
                     projectIndex.renameFolder(id: folder.id, newName: newName)
                 },
                 onDelete: {
-                    selection.remove(.folder(folder.id))
-                    projectIndex.removeFolder(id: folder.id)
+                    deleteFolders([folder.id])
                 }
             )
             // Single `.dropDestination(for: SidebarDrop.self)` handles both

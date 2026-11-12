@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Angre fjerning av «%@»",
+      "undoDeleteFolder": "Angre sletting av mappen «%@»",
+      "undoDeleteFolders": "Angre sletting av mapper",
       "undo": "Angre",
       "redo": "Gjør om",
       "find": "Finn…",

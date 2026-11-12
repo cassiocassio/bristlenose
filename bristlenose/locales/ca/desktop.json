@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Desfés l'eliminació de “%@”",
+      "undoDeleteFolder": "Desfés l'eliminació de la carpeta “%@”",
+      "undoDeleteFolders": "Desfés l'eliminació de les carpetes",
       "undo": "Desf\u00e9s",
       "redo": "Refés",
       "find": "Cerca…",

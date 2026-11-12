@@ -59,6 +59,10 @@ final class UndoableRemovalStore: ObservableObject {
     struct Pending: Identifiable, Equatable {
         let id = UUID()
         let entries: [Entry]
+        /// Folders deleted in the same transaction (R54). A batch holds studies or
+        /// folders, never both: Delete Folder keeps its studies, so there is
+        /// nothing of theirs to undo.
+        var folders: [ProjectIndex.RemovedFolder] = []
         /// Sidebar selection at the moment of removal, so undo can restore it
         /// (acceptance criterion 1: "exact same row + folder + selection state").
         let priorSelection: Set<SidebarSelection>
@@ -69,6 +73,11 @@ final class UndoableRemovalStore: ObservableObject {
         /// Display name for the toast / Edit menu label when count == 1.
         /// Returns nil for batches > 1 (callers use `count` instead).
         var soleName: String? { count == 1 ? entries.first?.project.name : nil }
+
+        /// The folder's name for the Edit menu when exactly one folder was deleted.
+        var soleFolderName: String? {
+            entries.isEmpty && folders.count == 1 ? folders.first?.folder.name : nil
+        }
 
         static func == (lhs: Pending, rhs: Pending) -> Bool { lhs.id == rhs.id }
     }
@@ -102,6 +111,12 @@ final class UndoableRemovalStore: ObservableObject {
     /// Number of pending entries (0 when nothing is pending).
     var pendingCount: Int { pending?.count ?? 0 }
 
+    /// The deleted folder's name when the pending undo is one folder's delete.
+    var pendingFolderName: String? { pending?.soleFolderName }
+
+    /// How many folders the pending undo brings back (0 for a study removal).
+    var pendingFolderCount: Int { pending?.folders.count ?? 0 }
+
     /// Snapshot one or more projects, remove them from the index, and start
     /// the undo window. The whole batch is a single undoable transaction.
     /// If another batch is already pending, it commits silently first — the
@@ -133,6 +148,19 @@ final class UndoableRemovalStore: ObservableObject {
         removeFromSidebar([project], priorSelection: priorSelection)
     }
 
+    /// Delete folders, keeping their studies at the sidebar root, and start the undo
+    /// window (R54). One transaction, like a study batch: Edit ▸ Undo brings every
+    /// folder back with its studies, in place. Folder ids that no longer exist are
+    /// skipped; nothing becomes pending if none was removed.
+    func deleteFolders(_ ids: [UUID], priorSelection: Set<SidebarSelection> = []) {
+        guard let index = projectIndex, !ids.isEmpty else { return }
+        commitIfPending()
+        let removed = ids.compactMap { index.removeFolder(id: $0) }
+        guard !removed.isEmpty else { return }
+        pending = Pending(entries: [], folders: removed,
+                          priorSelection: priorSelection, removedAt: Date())
+    }
+
     /// Restore the pending batch. No-op if nothing is pending.
     /// Re-applies the captured selection via the registered `onUndo` callback.
     func undoLastRemoval() {
@@ -141,6 +169,11 @@ final class UndoableRemovalStore: ObservableObject {
             index.restoreProject(entry.project,
                                  folderId: entry.folderId,
                                  position: entry.position)
+        }
+        // Last deleted, first back: each folder remembers where it stood in the
+        // root as it was when it went, which is the root the later ones left.
+        for removed in batch.folders.reversed() {
+            index.restoreFolder(removed)
         }
         pending = nil
         // Only rows that exist. A restore that stood down because the folder was

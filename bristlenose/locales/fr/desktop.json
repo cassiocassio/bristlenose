@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Annuler Retirer \u00ab\u00a0%@\u00a0\u00bb",
+      "undoDeleteFolder": "Annuler Supprimer le dossier « %@ »",
+      "undoDeleteFolders": "Annuler Supprimer les dossiers",
       "undo": "Annuler",
       "redo": "Rétablir",
       "find": "Rechercher…",

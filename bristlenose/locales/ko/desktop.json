@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "\u201c%@\u201d \uc81c\uac70 \uc2e4\ud589 \ucde8\uc18c",
+      "undoDeleteFolder": "“%@” 폴더 삭제 실행 취소",
+      "undoDeleteFolders": "폴더 삭제 실행 취소",
       "undo": "\uc2e4\ud589 \ucde8\uc18c",
       "redo": "실행 복귀",
       "find": "찾기…",

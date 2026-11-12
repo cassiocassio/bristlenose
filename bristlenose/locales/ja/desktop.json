@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "\u300c%@\u300d\u306e\u53d6\u308a\u9664\u304d\u3092\u53d6\u308a\u6d88\u3059",
+      "undoDeleteFolder": "「%@」フォルダの削除を取り消す",
+      "undoDeleteFolders": "フォルダの削除を取り消す",
       "undo": "\u53d6\u308a\u6d88\u3059",
       "redo": "やり直す",
       "find": "検索…",

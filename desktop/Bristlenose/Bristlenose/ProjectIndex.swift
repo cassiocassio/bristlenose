@@ -958,12 +958,26 @@ final class ProjectIndex: ObservableObject {
         return folder
     }
 
+    /// What `removeFolder` took out, enough for `restoreFolder` to put it back: the
+    /// folder itself, its studies in their in-folder order, and where it stood among
+    /// the root rows.
+    struct RemovedFolder: Equatable {
+        let folder: Folder
+        let memberIds: [UUID]
+        let rootIndex: Int
+    }
+
     /// Remove a folder. Projects inside move to root level (folderId = nil), at the
     /// folder's own place and in their in-folder order, and the root is renumbered
     /// contiguously, as `apply(_:)` does for a drop (R54). They used to keep their
     /// in-folder positions, which collided with the root's, so they scattered among
     /// the root rows (the root sort has no tiebreak).
-    func removeFolder(id: UUID) {
+    ///
+    /// Returns what it removed, for `UndoableRemovalStore`'s undo; nil when there is
+    /// no such folder.
+    @discardableResult
+    func removeFolder(id: UUID) -> RemovedFolder? {
+        guard let folder = folders.first(where: { $0.id == id }) else { return nil }
         // Snapshot before re-parenting: once `folderId` is nil the members already
         // sit at root with colliding positions.
         let rootBefore = sidebarItems.map(\.id)
@@ -976,6 +990,33 @@ final class ProjectIndex: ObservableObject {
         }
         folders.removeAll { $0.id == id }
         renumber(rootAfter)
+        save()
+        return RemovedFolder(folder: folder, memberIds: members,
+                             rootIndex: rootBefore.firstIndex(of: id) ?? rootBefore.count)
+    }
+
+    /// Put a removed folder back where it stood, with the studies it held, in their
+    /// old order (undo of Delete Folder). A study that is gone, or that the researcher
+    /// has since put into another folder, stays where it is; only studies now at the
+    /// root come back in. The folder's name is made unique again if a new folder took
+    /// it meanwhile. No-op if a folder with this id already exists (a second undo).
+    func restoreFolder(_ removed: RemovedFolder) {
+        guard !folders.contains(where: { $0.id == removed.folder.id }) else { return }
+        let returning = removed.memberIds.filter { id in
+            projects.contains { $0.id == id && $0.folderId == nil }
+        }
+        var order = sidebarItems.map(\.id).filter { !returning.contains($0) }
+        order.insert(removed.folder.id, at: min(removed.rootIndex, order.count))
+        var folder = removed.folder
+        folder.name = uniqueFolderName(folder.name, excluding: nil)
+        folders.append(folder)
+        for (position, id) in returning.enumerated() {
+            if let i = projects.firstIndex(where: { $0.id == id }) {
+                projects[i].folderId = folder.id
+                projects[i].position = position
+            }
+        }
+        renumber(order)
         save()
     }
 

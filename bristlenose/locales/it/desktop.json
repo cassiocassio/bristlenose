@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Annulla la rimozione di “%@”",
+      "undoDeleteFolder": "Annulla l'eliminazione della cartella “%@”",
+      "undoDeleteFolders": "Annulla l'eliminazione delle cartelle",
       "undo": "Annulla",
       "redo": "Ripristina",
       "find": "Trova…",

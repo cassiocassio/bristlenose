@@ -220,7 +220,8 @@ frequency.
    than *safety* — but fluency in the core loop is what makes the tool feel
    Mac-native rather than web-form-like.
 4. **Sidebar chrome (group 1) — lowest stakes, already specced.** Rename, move
-   and icon are trivially redoable by hand; folder delete is the only sharp edge.
+   and icon are trivially redoable by hand; folder delete was the only sharp edge, and
+   has been undoable since 12 Nov 2026 (R54: instant, Edit ▸ Undo Delete Folder).
    It's first in `design-undo-debt.md` because it's *legible* and Swift-only, not
    because it's where the loss is. Worth being honest about that: doing group 1
    first optimises for a demonstrable ⌘Z, not for the user's worst day.

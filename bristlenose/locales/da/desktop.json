@@ -34,6 +34,8 @@
     },
     "edit": {
       "undoRemove": "Fortryd fjernelse af “%@”",
+      "undoDeleteFolder": "Fortryd sletning af mappen “%@”",
+      "undoDeleteFolders": "Fortryd sletning af mapper",
       "undo": "Fortryd",
       "redo": "Gentag",
       "find": "Find…",

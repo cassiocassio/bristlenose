@@ -32,6 +32,7 @@ from pydantic import BaseModel
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm.client import (
     LLMClient,
+    TruncatedResponseError,
     azure_error_message,
     azure_output_ceiling,
     forget_azure_ceilings,
@@ -58,10 +59,20 @@ def _forget_ceilings():
 
 
 def _refusal(message: str = REAL, code: str = "invalid_value") -> openai.BadRequestError:
-    """A real SDK exception carrying Azure's structured 400 body."""
-    body = {"error": {"code": code, "message": message}}
+    """The exception the openai SDK really raises for Azure's 400.
+
+    Built through the SDK's own constructor path (`_make_status_error_from_response`), not by
+    hand: the SDK unwraps the `error` envelope, so `exc.body` is the inner dict
+    `{code, message, param, type}`. A hand-built `{"error": {...}}` body is a shape production
+    never sees (the first version of these tests used it and so proved less than it claimed).
+    """
+    body = {"error": {"code": code, "message": message, "param": "max_tokens",
+                      "type": "invalid_request_error"}}
     response = httpx.Response(400, request=httpx.Request("POST", ENDPOINT), json=body)
-    return openai.BadRequestError(message=message, response=response, body=body)
+    client = openai.AzureOpenAI(api_key="k", azure_endpoint=ENDPOINT, api_version="2024-10-21")
+    exc = client._make_status_error_from_response(response)
+    assert isinstance(exc, openai.BadRequestError)
+    return exc
 
 
 def _http_400(message: str = REAL, code: str = "invalid_value") -> urllib.error.HTTPError:
@@ -102,8 +113,21 @@ class TestReadingTheCeiling:
     def test_a_non_positive_request_is_never_a_retry(self) -> None:
         assert azure_output_ceiling(REAL, 0) is None
 
-    def test_the_message_is_read_from_the_structured_body(self) -> None:
-        assert azure_error_message(_refusal()) == REAL
+    def test_the_message_is_read_from_the_body_the_sdk_really_builds(self) -> None:
+        exc = _refusal()
+        assert exc.body == {"code": "invalid_value", "message": REAL, "param": "max_tokens",
+                            "type": "invalid_request_error"}
+        assert azure_error_message(exc) == REAL
+
+    @pytest.mark.parametrize("body", [
+        {"code": "invalid_value", "message": REAL},                       # the unwrapped shape
+        {"error": {"code": "invalid_value", "message": REAL}},            # the wrapped shape
+    ])
+    def test_the_body_wins_over_the_exception_text(self, body) -> None:
+        # str(exc) carries nothing useful here, so only a body read can return the message.
+        response = httpx.Response(400, request=httpx.Request("POST", ENDPOINT), json=body)
+        exc = openai.BadRequestError(message="Error code: 400", response=response, body=body)
+        assert azure_error_message(exc) == REAL
 
     def test_without_a_body_it_falls_back_to_the_exception_text(self) -> None:
         assert azure_error_message(RuntimeError("boom")) == "boom"
@@ -173,14 +197,32 @@ class TestTheRun:
         asyncio.run(_client(create).analyze("sys", "usr", _Answer, max_tokens=4000))
         assert _caps(create) == [4000]
 
-    def test_the_ceiling_is_read_from_the_structured_body_not_only_the_exception_text(self) -> None:
-        # The SDK's own text for a 400 may not carry Azure's sentence; the body does.
-        body = {"error": {"code": "invalid_value", "message": REAL}}
+    @pytest.mark.parametrize("body", [
+        {"code": "invalid_value", "message": REAL},
+        {"error": {"code": "invalid_value", "message": REAL}},
+    ])
+    def test_the_ceiling_is_read_from_the_body_not_only_the_exception_text(self, body) -> None:
         response = httpx.Response(400, request=httpx.Request("POST", ENDPOINT), json=body)
         refusal = openai.BadRequestError(message="Error code: 400", response=response, body=body)
         create = AsyncMock(side_effect=[refusal, _reply()])
         asyncio.run(_client(create).analyze("sys", "usr", _Answer))
         assert _caps(create) == [64000, 32768]
+
+    def test_a_truncation_after_the_retry_reports_the_ceiling_not_the_default(self) -> None:
+        truncated = _reply()
+        truncated.choices[0].finish_reason = "length"
+        create = AsyncMock(side_effect=[_refusal(), truncated])
+        with pytest.raises(TruncatedResponseError) as info:
+            asyncio.run(_client(create).analyze("sys", "usr", _Answer))
+        assert info.value.requested_max_tokens == 32768
+        assert info.value.model_cap == 32768
+
+    def test_a_retried_success_is_recorded_once(self) -> None:
+        create = AsyncMock(side_effect=[_refusal(), _reply()])
+        with patch.object(LLMClient, "_record_call") as record:
+            asyncio.run(_client(create).analyze("sys", "usr", _Answer))
+        assert record.call_count == 1
+        assert record.call_args.kwargs["outcome"] == "ok"
 
     def test_another_400_is_not_retried(self) -> None:
         refusal = _refusal("Invalid 'temperature': decimal above maximum value.", "decimal_above_max_value")
@@ -245,7 +287,25 @@ class TestThePreflight:
             "Invalid 'temperature': decimal above maximum value.", "decimal_above_max_value")])
         result = _validate_azure("k", ENDPOINT, DEPLOYMENT, "2024-10-21", params=self._params())
         assert not result.ok
-        assert len(create.call_args_list) == 2
+        assert [c.kwargs["max_tokens"] for c in create.call_args_list] == [64000, 32768]
+        # The reported refusal is the RETRY's, not the first attempt's.
+        assert "temperature" in (result.raw_message or "")
+        assert "too large" not in (result.raw_message or "")
+
+
+class TestPreflightThenRun:
+    def test_what_the_preflight_learned_is_where_the_run_starts(self, monkeypatch) -> None:
+        # The join the commit claims ("the run does not re-learn what the preflight learned"):
+        # two clients, one process. Seeding the dict by hand would only test the read side.
+        preflight = MagicMock()
+        preflight.chat.completions.create.side_effect = [_refusal(), MagicMock()]
+        monkeypatch.setattr(openai, "AzureOpenAI", lambda **kw: preflight)
+        params = request_params("azure", DEPLOYMENT, 64000, 0.1)
+        assert _validate_azure("k", ENDPOINT, DEPLOYMENT, "2024-10-21", params=params).ok
+
+        create = AsyncMock(side_effect=[_reply()])
+        asyncio.run(_client(create).analyze("sys", "usr", _Answer))
+        assert _caps(create) == [32768]
 
 
 # ---------------------------------------------------------------------------

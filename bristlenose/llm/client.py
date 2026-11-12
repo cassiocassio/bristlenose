@@ -144,18 +144,26 @@ _AZURE_CEILING_RE = re.compile(
     r"max_tokens is too large: \d+\. This model supports at most (\d+) completion tokens"
 )
 
-# (endpoint, deployment) -> the ceiling Azure named, for the life of the process, so the
-# run does not re-learn what the preflight (a different client) already learned.
+# (endpoint, deployment) -> the ceiling Azure named. Process-local and never expires: the run
+# does not re-learn what the preflight (a different client in the SAME process) learned, but
+# `bristlenose doctor` is its own process, so what it learns does not reach a run.
 _azure_ceilings: dict[tuple[str, str], int] = {}
 
 
 def azure_error_message(exc: BaseException) -> str:
-    """An SDK error's own message: the response body's `error.message`, else `str(exc)`."""
+    """An SDK error's own message.
+
+    The openai SDK unwraps the response's `error` envelope, so `exc.body` is normally the
+    inner dict `{code, message, param, type}` (checked against openai 3.26); the wrapped
+    form `{"error": {...}}` is read too. Otherwise `str(exc)`, which embeds the whole body.
+    """
     body = getattr(exc, "body", None)
     if isinstance(body, dict):
         error = body.get("error")
-        if isinstance(error, dict) and isinstance(error.get("message"), str):
-            return cast(str, error["message"])
+        inner = error if isinstance(error, dict) else body
+        message = inner.get("message")
+        if isinstance(message, str):
+            return message
     return str(exc)
 
 
@@ -1285,6 +1293,11 @@ class LLMClient:
             endpoint = self.settings.azure_endpoint
             learned = learned_azure_ceiling(endpoint, request_model)
             cap = min(params["max_tokens"], learned) if learned else params["max_tokens"]
+            if cap < params["max_tokens"]:
+                logger.debug(
+                    "azure_output_cap_applied | deployment=%s | cap=%d (learned from Azure)",
+                    request_model, cap,
+                )
 
             async def send(output_cap: int) -> Any:
                 return await client.chat.completions.create(

@@ -484,10 +484,17 @@ struct PipelineRunnerQueuePersistenceTests {
         await rig.runner.noteFreshRunProgress(for: a.id)
         try Self.reportIsSetAside(b)
         try Self.outputHoldsASession(b)
+        // A's run ends when asked to, so B's run really starts (a fake run that
+        // ignores the signal leaves B waiting, and the check below would pass
+        // without ever reaching B's flag).
+        rig.onSignal = { launch, sig in if sig == SIGINT { launch.exit(.exited(code: 130)) } }
         rig.runner.cancel(project: a)
+        await until { rig.launches.count == 2 }
+        #expect(rig.launches.count == 2, "B's run started")
         await until { store.saved?.entries.first?.projectID == b.id && store.saved?.entries.first?.inFlight == true }
         await rig.runner.noteFreshRunProgress(for: b.id)
 
+        #expect(store.saved?.entries.first?.projectID == b.id)
         #expect(store.saved?.entries.first?.clean == true)
     }
 
@@ -498,9 +505,13 @@ struct PipelineRunnerQueuePersistenceTests {
         rig.runner.start(project: a, clean: true)
         rig.runner.start(project: b, clean: true)
         try await Self.freshRunComesToHoldASession(a, rig)
+        rig.onSignal = { launch, sig in if sig == SIGINT { launch.exit(.exited(code: 130)) } }
         rig.runner.cancel(project: a)
+        await until { rig.launches.count == 2 }
+        #expect(rig.launches.count == 2, "B's run started")
         await until { store.saved?.entries.first?.projectID == b.id && store.saved?.entries.first?.inFlight == true }
 
+        #expect(store.saved?.entries.first?.projectID == b.id)
         #expect(store.saved?.entries.first?.clean == true,
                 "B's Re-analyse has produced nothing yet; A's answer is not B's")
     }

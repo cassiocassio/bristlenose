@@ -94,7 +94,8 @@ Nov 14:32"; a deliberate "save a version"; "Version history…"; "Restore this v
 - **Format over time.** A snapshot taken at one schema version must still load after later database
   migrations, so the format is versioned and migrated.
 - **Privacy and retention.** Versions hold real names and edited quote text. "Delete the study" must delete
-  its versions, `SECURITY.md`'s "removing the folder removes every byte" must stay true or be restated, and a
+  its versions, `SECURITY.md`'s deletion procedure (the `rm -rf` lines that name every folder holding a copy,
+  the set-aside report included) must name the versions too, and a
   retention rule says how many are kept and for how long.
 - **No drift.** The promise only holds if nothing escapes. A structural test should fail when a table of
   researcher work is added without being classified "in the version" or "derived", the way
@@ -111,7 +112,7 @@ Nov 14:32"; a deliberate "save a version"; "Version history…"; "Restore this v
 
 On a failed Re-analyse that produced at least one session, **hold the set-aside copy until the researcher
 chooses** "Restore previous version" or continues with what was processed:
-- Not a modal. A button in the existing failed-run popover (beside Show Log, Copy error details, Retry);
+- Not a modal. A button in the existing failed-run popover (beside Show Log and the Copy details icon; the popover has no Retry, which lives in the sidebar menu and the toolbar);
   continuing is simply pressing Analyse.
 - The waiting state must survive a quit or crash, so the question is asked at the next launch.
 - The held copy is discarded when the new analysis is whole or when the researcher continues (the second is

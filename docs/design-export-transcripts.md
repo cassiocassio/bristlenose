@@ -33,8 +33,9 @@ convenience, worth doing only if it is done well**, not a headline feature. That
 
 ## Why
 
-Today a researcher who wants a transcript reaches for **Quotes ▸ Show Transcripts in Finder**, which opens
-`transcripts-raw/`: files named `s1.txt`, in the pipeline's format, without the corrections they made in the
+Today a researcher who wants a transcript reaches for **Project ▸ Reveal Transcripts in Finder** (also a row
+in the toolbar export popover on the Sessions lens), which opens `transcripts-raw/`, or `transcripts-cooked/`
+when PII redaction ran (`TranscriptsRevealTarget`): files named `s1.txt`, in the pipeline's format, without the corrections they made in the
 report (speaker renames, splits, joins, re-attributed paragraphs), and with a README telling them not to edit
 them. That is a poor deliverable. What they want is the transcript **as they see it**, in a format their next
 tool reads (a subtitle player, a word processor, a QDA tool, a colleague's inbox).
@@ -44,7 +45,7 @@ tool reads (a subtitle player, a word processor, a QDA tool, a colleague's inbox
 Most of the pieces are there. The gap is one loader and a few serialisers.
 
 **The data, with the researcher's edits applied.** `bristlenose/server/routes/transcript.py`
-`get_transcript` (lines ~203–443) builds the transcript page: segments in reading order from
+`get_transcript` (lines ~204–476) builds the transcript page: segments in reading order from
 `transcript_layout.ordered(db, session_pk)` (the order that already has splits, joins and re-attributions
 applied), speakers from `speaker_slots.session_slots` (name or code per slot), session metadata, and the
 quote annotations. It is one long route function, not a reusable loader. **The first piece of work is to
@@ -78,7 +79,7 @@ clips carry the original audio. A transcript export follows the same rule and sa
 **folder** and reveals it (the owner's rule: a folder, not a zip). HTML report: a download via an anchor
 (`ExportDialog.tsx`, no fetch, cookie auth), with a save panel on the Mac whose accessory view carries the
 Anonymise checkbox. The Mac surfaces: the toolbar export popover (rows for quotes, clips, Miro, FigJam) and
-File ▸ Export Report… / Export Screens…, routed through `bridgeHandler.menuAction`.
+File ▸ Export Report… / Export Screens, routed through `bridgeHandler.menuAction`.
 
 **An earlier design.** The superseded `docs/design-export-sharing.md` ("Transcript export details") already
 specifies the `.txt` shape (a header, `[mm:ss] Speaker: text`), human filenames (`{code} {name}.txt`, with
@@ -111,7 +112,7 @@ tree. **New** = 11 Nov 2026 (owner direction or this investigation). Nothing in 
 | An Export popover row plus a File ▸ Export Transcripts… twin | New | This investigation; the pairing every other export has. |
 | Reachable from the Sessions grid and from an open transcript | New | Owner, 11 Nov. |
 | A remembered format choice | New | This investigation; the burn-in subtitles preference (29 Sep 2026) is the pattern. |
-| Retitle "Show Transcripts in Finder" once this exists | New | This investigation. |
+| Retitle "Reveal Transcripts in Finder" once this exists | New | This investigation. |
 | README in `transcripts-raw/` mentions `analyze` | New | Found 11 Nov when checking the README was true. |
 | One shared loader extracted from the transcript page route | New | This investigation. The one risky edit. |
 | Classify the new route in `routes/export.py` | Existing | A repository rule, enforced by `test_serve_export_coverage.py`. |
@@ -170,7 +171,7 @@ render_txt(t) / render_md(t) / render_vtt(t) / render_srt(t) / render_docx(t) ->
   one). Today's per-lens routing of Export applies.
 - A **format choice** that is remembered, the way the burn-in subtitles preference is (`subtitlePrefs.ts`),
   and the existing **Anonymise checkbox** on the save panel's accessory view.
-- **Quotes ▸ Show Transcripts in Finder** stays, but should be retitled to say what it opens (the raw files),
+- **Project ▸ Reveal Transcripts in Finder** stays, but should be retitled to say what it opens (the raw files),
   once this exists. The README in that folder tells the truth for `run` and the Mac app (the merge stage
   rewrites the folder), but `bristlenose analyze` reads those files as they are; decide whether the README says
   so.
@@ -213,7 +214,7 @@ that every listed format has a writer, since a name with no runner is a gate tha
    everywhere? SRT has no voice tag, so it takes the prefix regardless.
 4. DOCX: how much styling (title page, a table of timecodes), or plain paragraphs? A researcher's next step is
    usually pasting into their own document.
-5. Keep **Show Transcripts in Finder**, retitle it, or fold it into this export?
+5. Keep **Reveal Transcripts in Finder**, retitle it, or fold it into this export?
 6. Does the README in `transcripts-raw/` mention `analyze`?
 7. Does the Sessions grid selection model already give "the selected sessions" to an export, or only a single
    session?

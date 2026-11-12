@@ -34,8 +34,8 @@
     },
     "edit": {
       "undoRemove": "Cofnij usunięcie „%@”",
-      "undoDeleteFolder": "Cofnij usunięcie folderu „%@”",
-      "undoDeleteFolders": "Cofnij usunięcie folderów",
+      "undoDeleteFolder": "Cofnij skasowanie folderu „%@”",
+      "undoDeleteFolders": "Cofnij skasowanie folderów",
       "undo": "Cofnij",
       "redo": "Ponów",
       "find": "Znajdź…",

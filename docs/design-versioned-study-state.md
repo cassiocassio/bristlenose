@@ -35,7 +35,9 @@ Re-analyse put the old report back, so resuming as a plain run would end "ready"
 the fresh run has produced a session the old report is already gone, and a relaunch after a quit or crash
 would have set the finished interviews aside and paid for them again. Now the queue keeps the run in flight
 as a plain Analyse from the moment its fresh analysis holds a session, so a relaunch resumes from cache.
-Before that moment it stays a Re-analyse, as before. The runner asks while the run is live
+Before that moment it stays a Re-analyse, as before. A session counts only after the runner has seen
+this run's own set-aside with none: a set-aside copy left by an earlier run, beside the report about to be
+replaced, reads the same for the first seconds of the run. The runner asks while the run is live
 (`FreshRunProbe`, `PipelineRunner.noteFreshRunProgress`); the probe copies Python's
 `holds_an_analysed_session` and the set-aside folder's name, held together by
 `tests/fixtures/fresh-run-probe-contract.json`. Written from the code and tests, not from a real quit

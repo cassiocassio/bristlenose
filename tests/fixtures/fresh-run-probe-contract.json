@@ -1,5 +1,5 @@
 {
-  "_about": "Shared by tests/test_output_backup_contract.py (Python, holds_an_analysed_session, backup_path_for) and FreshRunProbeTests.swift (the Mac's FreshRunProbe). The Mac decides a restored Re-analyse resumes plain once the fresh run holds a session; it re-implements that rule and the set-aside folder's name, so both languages are held to this file. Manifests were written by the real writer.",
+  "_about": "Shared by tests/test_fresh_run_probe_contract.py (Python, holds_an_analysed_session, backup_path_for) and FreshRunProbeTests.swift (the Mac's FreshRunProbe). The Mac decides a restored Re-analyse resumes plain once the fresh run holds a session; it re-implements that rule and the set-aside folder's name, so both languages are held to this file. Manifests were written by the real writer.",
   "setAsideDirName": ".bristlenose-output-previous",
   "outputDirName": "bristlenose-output",
   "cases": [
@@ -220,6 +220,51 @@
         }
       ],
       "holds": true
+    },
+    {
+      "name": "a session that failed, with quotes on disk",
+      "manifest": {
+        "schema_version": 1,
+        "project_name": "fixture",
+        "pipeline_version": "0.0.0",
+        "created_at": "2026-11-12T02:54:50.854481+00:00",
+        "updated_at": "2026-11-12T02:54:50.854509+00:00",
+        "stages": {
+          "quote_extraction": {
+            "status": "running",
+            "started_at": "2026-11-12T02:54:50.854492+00:00",
+            "completed_at": null,
+            "error": null,
+            "sessions": {
+              "s1": {
+                "status": "failed",
+                "session_id": "s1",
+                "completed_at": null,
+                "provider": null,
+                "model": null,
+                "content_hash": null,
+                "input_hash": null,
+                "quotes_left_out": null,
+                "input_tokens": null,
+                "output_tokens": null,
+                "cost_usd_estimate": null,
+                "price_table_version": null
+              }
+            },
+            "content_hash": null,
+            "input_hashes": null
+          }
+        },
+        "total_cost_usd": 0.0
+      },
+      "quotes": [
+        {
+          "session_id": "s1",
+          "text": "x",
+          "start_timecode": 1.0
+        }
+      ],
+      "holds": false
     }
   ]
 }

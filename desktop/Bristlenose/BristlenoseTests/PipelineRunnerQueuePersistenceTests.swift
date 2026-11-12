@@ -385,20 +385,37 @@ struct PipelineRunnerQueuePersistenceTests {
 
     // MARK: - A Re-analyse that has produced a session resumes plain (12 Nov 2026)
 
-    /// Lay down what a Re-analyse in flight leaves once it holds a session: the old
-    /// report set aside, and an output with one analysed session.
-    private static func freshRunHoldsASession(_ project: Project) throws {
+    /// What a Re-analyse leaves a few seconds in: the old report set aside, and a new
+    /// output with nothing analysed yet.
+    private static func reportIsSetAside(_ project: Project) throws {
         let study = URL(fileURLWithPath: project.path)
-        let dot = study.appendingPathComponent("bristlenose-output/.bristlenose")
         try FileManager.default.createDirectory(
-            at: dot.appendingPathComponent("intermediate"), withIntermediateDirectories: true)
+            at: study.appendingPathComponent("bristlenose-output/.bristlenose/intermediate"),
+            withIntermediateDirectories: true)
         try FileManager.default.createDirectory(
             at: study.appendingPathComponent(".bristlenose-output-previous"),
             withIntermediateDirectories: true)
+    }
+
+    /// The output holds one analysed session.
+    private static func outputHoldsASession(_ project: Project) throws {
+        let dot = URL(fileURLWithPath: project.path)
+            .appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(
+            at: dot.appendingPathComponent("intermediate"), withIntermediateDirectories: true)
         try Data(#"{"stages": {"quote_extraction": {"sessions": {"s1": {"status": "complete"}}}}}"#.utf8)
             .write(to: dot.appendingPathComponent("pipeline-manifest.json"))
         try Data(#"[{"session_id": "s1", "text": "x"}]"#.utf8)
             .write(to: dot.appendingPathComponent("intermediate/extracted_quotes.json"))
+    }
+
+    /// A Re-analyse in flight whose new analysis has come to hold a session, as the
+    /// runner sees it: set aside with nothing first, a session after.
+    private static func freshRunComesToHoldASession(_ project: Project, _ rig: Rig) async throws {
+        try reportIsSetAside(project)
+        await rig.runner.noteFreshRunProgress(for: project.id)
+        try outputHoldsASession(project)
+        await rig.runner.noteFreshRunProgress(for: project.id)
     }
 
     @Test func aReanalyseIsKeptAsAReanalyseUntilItHoldsASession() async throws {
@@ -419,8 +436,7 @@ struct PipelineRunnerQueuePersistenceTests {
         rig.runner.start(project: b, clean: true)
         #expect(store.saved?.entries.first?.clean == true)
 
-        try Self.freshRunHoldsASession(a)
-        await rig.runner.noteFreshRunProgress(for: a.id)
+        try await Self.freshRunComesToHoldASession(a, rig)
 
         let entries = try #require(store.saved?.entries)
         #expect(entries[0].projectID == a.id && entries[0].inFlight && !entries[0].clean,
@@ -429,14 +445,59 @@ struct PipelineRunnerQueuePersistenceTests {
                 "a study still waiting for its Re-analyse keeps it")
     }
 
+    /// A set-aside copy an earlier run left (a crash nothing settled, an export that
+    /// would not move), beside the report this Re-analyse is about to replace: the
+    /// folder reads "set aside, holds a session" until the run settles it, seconds in.
+    /// Kept as plain there, a Quit before the new analysis produced anything would
+    /// resume plain on the report put back, and end "ready" on it (R18).
+    @Test func aSetAsideCopyLeftByAnEarlierRunDoesNotMakeAReanalysePlain() async throws {
+        let store = InMemoryRunQueueStore()
+        let rig = await Self.rig(store: store); defer { rig.cleanUp() }
+        let a = Self.study(rig, "A")
+        try Self.reportIsSetAside(a)
+        try Self.outputHoldsASession(a)
+        rig.runner.start(project: a, clean: true)
+        await rig.runner.noteFreshRunProgress(for: a.id)
+        await rig.runner.noteFreshRunProgress(for: a.id)
+
+        #expect(store.saved?.entries.first?.inFlight == true)
+        #expect(store.saved?.entries.first?.clean == true,
+                "the session on disk is the old report's, not this run's")
+
+        // The run settles the leftover and sets the report aside itself; from there
+        // the rule is the ordinary one.
+        try FileManager.default.removeItem(
+            at: URL(fileURLWithPath: a.path).appendingPathComponent("bristlenose-output"))
+        try await Self.freshRunComesToHoldASession(a, rig)
+        #expect(store.saved?.entries.first?.clean == false)
+    }
+
+    /// What one Re-analyse saw is not carried into the next: B's run finds a leftover
+    /// set-aside copy and a report, after A's run saw its own fresh start.
+    @Test func aFreshStartSeenForOneRunIsNotTheNextRuns() async throws {
+        let store = InMemoryRunQueueStore()
+        let rig = await Self.rig(store: store); defer { rig.cleanUp() }
+        let a = Self.study(rig, "A"), b = Self.study(rig, "B")
+        rig.runner.start(project: a, clean: true)
+        rig.runner.start(project: b, clean: true)
+        try Self.reportIsSetAside(a)
+        await rig.runner.noteFreshRunProgress(for: a.id)
+        try Self.reportIsSetAside(b)
+        try Self.outputHoldsASession(b)
+        rig.runner.cancel(project: a)
+        await until { store.saved?.entries.first?.projectID == b.id && store.saved?.entries.first?.inFlight == true }
+        await rig.runner.noteFreshRunProgress(for: b.id)
+
+        #expect(store.saved?.entries.first?.clean == true)
+    }
+
     @Test func theNextRunStartsAsksAgain() async throws {
         let store = InMemoryRunQueueStore()
         let rig = await Self.rig(store: store); defer { rig.cleanUp() }
         let a = Self.study(rig, "A"), b = Self.study(rig, "B")
         rig.runner.start(project: a, clean: true)
         rig.runner.start(project: b, clean: true)
-        try Self.freshRunHoldsASession(a)
-        await rig.runner.noteFreshRunProgress(for: a.id)
+        try await Self.freshRunComesToHoldASession(a, rig)
         rig.runner.cancel(project: a)
         await until { store.saved?.entries.first?.projectID == b.id && store.saved?.entries.first?.inFlight == true }
 

@@ -526,6 +526,12 @@ final class PipelineRunner: ObservableObject {
     /// a relaunch resumes it from cache instead of starting the Re-analyse over and
     /// paying for the finished interviews again (owner, 12 Nov 2026).
     private var currentCleanHoldsSession = false { didSet { journalQueue() } }
+    /// Whether this Re-analyse's own set-aside has been seen: the old report beside
+    /// an output with no session yet. A set-aside copy left by an earlier run, beside
+    /// the report this run is about to replace, reads as "holds a session" from the
+    /// first second; believed, a Quit before the new analysis produced anything would
+    /// resume plain and end "ready" on the old report (R18).
+    private var currentCleanSawFreshStart = false
 
     /// When each waiting study was asked for, and the queue as the next launch
     /// will find it (`restoreQueue(from:)`).
@@ -1333,16 +1339,21 @@ final class PipelineRunner: ObservableObject {
 
     /// While a Re-analyse is live, notice the moment its new analysis holds a session
     /// and write that into the queue (`FreshRunProbe`). Read off-main; once true, never
-    /// asked again for this run.
+    /// asked again for this run. A session counts only after this run's set-aside was
+    /// seen with none (`currentCleanSawFreshStart`).
     func noteFreshRunProgress(for projectID: UUID) async {
         guard currentClean, !currentCleanHoldsSession, currentlyRunning == projectID,
               let folder = currentProject?.path, !folder.isEmpty else { return }
         let gen = generation
-        let holds = await Task.detached {
-            FreshRunProbe.freshRunHoldsSession(studyFolder: URL(fileURLWithPath: folder))
+        let reading = await Task.detached {
+            FreshRunProbe.reading(studyFolder: URL(fileURLWithPath: folder))
         }.value
-        guard holds, gen == generation, currentClean, currentlyRunning == projectID else { return }
-        currentCleanHoldsSession = true
+        guard gen == generation, currentClean, currentlyRunning == projectID else { return }
+        switch reading {
+        case .notSetAside: break
+        case .freshStart: currentCleanSawFreshStart = true
+        case .holdsSession: if currentCleanSawFreshStart { currentCleanHoldsSession = true }
+        }
     }
 
     /// Read the newest `run_progress` event off-main and fold it into the
@@ -2419,6 +2430,7 @@ final class PipelineRunner: ObservableObject {
         currentlyRunning = project.id
         currentClean = clean
         if currentCleanHoldsSession { currentCleanHoldsSession = false }
+        currentCleanSawFreshStart = false
         currentProject = project
         currentParser = StdoutProgressParser()
         cancellationRequested = false

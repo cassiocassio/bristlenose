@@ -126,15 +126,16 @@ class TestPeopleFile:
                 for e in result.people.participants.values()
             )
 
+    @pytest.mark.parametrize("mode", ["run", "analyze"])
     def test_the_unreadable_file_reaches_the_run_summary_and_the_end_line(
-        self, tmp_path: Path,
+        self, tmp_path: Path, mode: str,
     ) -> None:
         """N82: the Mac reads `warnings` to say "Partial completion" and to name the file
         and its line; the terminal's end line says "Done with warnings"."""
         _drive(tmp_path, "run", 2, {})
         _people(tmp_path).write_text(_TYPO, encoding="utf-8")
 
-        result = _drive(tmp_path, "run", 2, {})
+        result = _drive(tmp_path, mode, 2, {})
 
         assert result is not None and result.summary is not None
         warnings = result.summary.warnings or []

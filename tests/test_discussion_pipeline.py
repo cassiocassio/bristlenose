@@ -357,7 +357,10 @@ def test_a_lens_the_model_could_not_read_reaches_the_summary_with_its_cause(tmp_
     warnings = pipeline._summary.warnings
     assert warnings is not None and len(warnings) == 1
     assert warnings[0].kind == "discussion_lens"
-    assert warnings[0].reason  # a CauseCategoryEnum value, never free text
+    from bristlenose.events import CauseCategoryEnum
+
+    # a CauseCategoryEnum value, never free text: the Mac maps it to a short label
+    assert warnings[0].reason in {c.value for c in CauseCategoryEnum}
 
 
 def test_a_stage_that_raised_reaches_the_summary_as_unknown(tmp_path, monkeypatch):

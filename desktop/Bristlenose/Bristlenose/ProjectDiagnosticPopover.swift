@@ -879,7 +879,7 @@ struct WarningRows: View {
                     Image(systemName: MessageKind.warning.symbolName)
                         .foregroundStyle(MessageKind.warning.tint)
                         .font(.footnote)
-                    Text(Self.name(of: w))
+                    Text(Self.name(of: w, i18n: i18n))
                         .font(.system(.footnote, design: .monospaced))
                         .foregroundStyle(.secondary)
                     Text(Self.message(for: w, i18n: i18n))
@@ -891,12 +891,12 @@ struct WarningRows: View {
         }
     }
 
-    /// What is missing, as a domain name: the lens's name as the terminal says it, or the
-    /// file's own name.
-    static func name(of w: RunWarning) -> String {
+    /// What is missing, as a name the researcher knows: the Discussion tab as the sidebar names
+    /// it (localised; nobody calls it a "lens"), or the file's own name.
+    static func name(of w: RunWarning, i18n: I18n) -> String {
         switch w.kind {
         case RunWarning.peopleFile: return "people.yaml"
-        default: return "Discussion lens"
+        default: return i18n.t("common.nav.discussion")
         }
     }
 

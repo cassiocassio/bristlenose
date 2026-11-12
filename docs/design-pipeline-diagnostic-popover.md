@@ -989,7 +989,7 @@ Rules that come with it:
 - **Reuse before inventing.** The shipped grid, the five `MessageKind`s, the existing strings. A new
   message is a new locale key in all 21 locales and must pass the flowchart above.
 - **Worked example:** `done-with-warnings-mac-row.html`. Row "8 of 8 sessions analysed" with the warning glyph (state); popover header
-  the same words, as built (nature); rows "Discussion lens: Couldn't tell who the moderator is in any session." and
+  the same words, as built (nature); rows "Discussion: Couldn't tell who the moderator is in any session." and
   "people.yaml: Couldn't be read (line 14), so names you added aren't shown." (cause).
 
 ## Implementation references

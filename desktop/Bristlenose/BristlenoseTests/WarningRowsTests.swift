@@ -21,7 +21,7 @@ import Testing
     @Test func theLensSaysWhyInPlainEnglish() throws {
         let en = try i18n("en")
         let w = RunWarning(kind: RunWarning.discussionLens, reason: "no_clear_moderator", line: nil)
-        #expect(WarningRows.name(of: w) == "Discussion lens")
+        #expect(WarningRows.name(of: w, i18n: en) == "Discussion")
         #expect(WarningRows.message(for: w, i18n: en) == "Couldn\u{2019}t tell who the moderator is in any session.")
     }
 
@@ -48,7 +48,7 @@ import Testing
     @Test func theNamesFileSaysWhichLineAndWhatItCosts() throws {
         let en = try i18n("en")
         let w = RunWarning(kind: RunWarning.peopleFile, reason: "unreadable", line: 14)
-        #expect(WarningRows.name(of: w) == "people.yaml")
+        #expect(WarningRows.name(of: w, i18n: en) == "people.yaml")
         #expect(WarningRows.message(for: w, i18n: en)
                 == "Couldn\u{2019}t be read (line 14), so names you added aren\u{2019}t shown.")
         let noLine = RunWarning(kind: RunWarning.peopleFile, reason: "unreadable", line: nil)

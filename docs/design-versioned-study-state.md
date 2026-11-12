@@ -29,12 +29,15 @@ complaint is owed. The previous report's exports (clips, screens) are already ca
 (`output_backup.carry_exports`). This closes the "Re-analyse that stops halfway" question and the
 N117/N116 reliability rows by design.
 
-**One thing to check before v1, not yet verified:** the Mac saves the in-flight run's `--clean` flag in its
-run queue and restores it on the next launch (`PipelineRunner+QueueRestore.swift`, the `start(... clean:
-entry.clean ...)` call). Read from the code and not run, so a relaunch after a quit or crash in the middle of
-a Re-analyse may restart the whole Re-analyse, discarding the finished interviews and paying for them again,
-instead of resuming from cache. If true, the cheapest fix is to resume as a plain Analyse once the fresh run
-has produced a session.
+**One thing to rule on before v1 (checked by reading the code on 12 Nov 2026, not run):** the Mac saves
+the in-flight run's `--clean` flag in its run queue and restores it on the next launch
+(`PipelineRunner+QueueRestore.swift`, `start(... clean: entry.clean ...)`). This is deliberate: R18 kept
+it so that a stopped Re-analyse, which put the old report back, does not resume as a plain run and end
+"ready" on the old report (`PersistedQueueEntry.clean`). But once the fresh run has produced a session the
+old report is already gone, so a relaunch after a quit or crash in the middle of a Re-analyse starts the
+whole Re-analyse again, setting aside the finished interviews and paying for them a second time, instead
+of resuming from cache. The cheapest fix is to resume as a plain Analyse once the fresh run holds a
+session; that reverses R18's rule only for that case, so it is the owner's call.
 
 ## The shape of it
 
@@ -139,4 +142,4 @@ study to a colleague without the recordings.
    undoable)?
 5. Retention: how many, how long, and who can delete them.
 6. The quote-identity tolerance, which decides how well curation re-attaches.
-7. Does the Mac's restored run queue repeat `--clean` (see the check above)?
+7. Should the Mac's restored run queue drop `--clean` once the fresh run holds a session (see above)?

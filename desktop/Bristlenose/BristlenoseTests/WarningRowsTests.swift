@@ -63,11 +63,15 @@ import Testing
             (RunWarning(kind: RunWarning.peopleFile, reason: "unreadable", line: 9), "warningPeople"),
             (RunWarning(kind: RunWarning.peopleFile, reason: "unreadable", line: nil), "warningPeople"),
         ]
+        let en = try i18n("en")
         for locale in ["ca", "cs", "da", "de", "es", "fi", "fr", "it", "ja", "ko", "nb", "nl",
                        "pl", "pt-BR", "pt-PT", "ru", "sv", "tr", "uk", "zh-Hant"] {
             let i = try i18n(locale)
             for (w, prefix) in lines {
                 let m = WarningRows.message(for: w, i18n: i)
+                // `I18n.t` falls back to English for a key the locale lacks, so the raw-key
+                // check below cannot see a missed locale; the English sentence can.
+                #expect(m != WarningRows.message(for: w, i18n: en), "\(locale): English shown: \(m)")
                 #expect(!m.contains(prefix), "\(locale): raw key shown: \(m)")
                 #expect(!m.contains("{{"), "\(locale): placeholder left in: \(m)")
                 #expect(!m.isEmpty)

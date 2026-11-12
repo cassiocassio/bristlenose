@@ -967,7 +967,10 @@ each level adding detail to the one before:
 1. **State: the sidebar row, the status line.** What the researcher has now, in a few words ("Partial
    completion", "6 of 8 sessions analysed"). It carries the kind's glyph and nothing else.
 2. **Nature: the popover header.** What kind of thing happened, as one status verb ("Partial completion",
-   "Run failed"). No project name (it is already in the window), no timestamp.
+   "Run failed"). No project name (it is already in the window), no timestamp. As built, a finished run
+   whose sessions can be counted repeats the row's words here ("6 of 8 sessions analysed":
+   `ProjectDiagnosticPopover.headlineStatus` reads the row's text so the two cannot disagree), and
+   "Partial completion" is the header only when the count cannot be said.
 3. **Cause: the body rows, in the existing glyph / name / message grid.** What went wrong and why, in plain
    words, for each thing that did. **Every row says why.** "Not built." alone fails this; "Couldn't tell who
    the moderator is in any session." passes. A cause the code does not know says so with the existing
@@ -986,7 +989,7 @@ Rules that come with it:
 - **Reuse before inventing.** The shipped grid, the five `MessageKind`s, the existing strings. A new
   message is a new locale key in all 21 locales and must pass the flowchart above.
 - **Worked example:** `done-with-warnings-mac-row.html`. Row "8 of 8 sessions analysed" with the warning glyph (state); popover header
-  "Partial completion" (nature); rows "Discussion lens: Couldn't tell who the moderator is in any session." and
+  the same words, as built (nature); rows "Discussion lens: Couldn't tell who the moderator is in any session." and
   "people.yaml: Couldn't be read (line 14), so names you added aren't shown." (cause).
 
 ## Implementation references

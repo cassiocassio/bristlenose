@@ -29,15 +29,17 @@ complaint is owed. The previous report's exports (clips, screens) are already ca
 (`output_backup.carry_exports`). This closes the "Re-analyse that stops halfway" question and the
 N117/N116 reliability rows by design.
 
-**One thing to rule on before v1 (checked by reading the code on 12 Nov 2026, not run):** the Mac saves
-the in-flight run's `--clean` flag in its run queue and restores it on the next launch
-(`PipelineRunner+QueueRestore.swift`, `start(... clean: entry.clean ...)`). This is deliberate: R18 kept
-it so that a stopped Re-analyse, which put the old report back, does not resume as a plain run and end
-"ready" on the old report (`PersistedQueueEntry.clean`). But once the fresh run has produced a session the
-old report is already gone, so a relaunch after a quit or crash in the middle of a Re-analyse starts the
-whole Re-analyse again, setting aside the finished interviews and paying for them a second time, instead
-of resuming from cache. The cheapest fix is to resume as a plain Analyse once the fresh run holds a
-session; that reverses R18's rule only for that case, so it is the owner's call.
+**Settled and built (owner, 12 Nov 2026):** the Mac saves the in-flight run's `--clean` flag in its run queue
+and restores it on the next launch (`PipelineRunner+QueueRestore.swift`). That was deliberate (R18): a stopped
+Re-analyse put the old report back, so resuming as a plain run would end "ready" on the old report. But once
+the fresh run has produced a session the old report is already gone, and a relaunch after a quit or crash
+would have set the finished interviews aside and paid for them again. Now the queue keeps the run in flight
+as a plain Analyse from the moment its fresh analysis holds a session, so a relaunch resumes from cache.
+Before that moment it stays a Re-analyse, as before. The runner asks while the run is live
+(`FreshRunProbe`, `PipelineRunner.noteFreshRunProgress`); the probe copies Python's
+`holds_an_analysed_session` and the set-aside folder's name, held together by
+`tests/fixtures/fresh-run-probe-contract.json`. Written from the code and tests, not from a real quit
+mid-Re-analyse on the Mac.
 
 ## The shape of it
 
@@ -142,4 +144,4 @@ study to a colleague without the recordings.
    undoable)?
 5. Retention: how many, how long, and who can delete them.
 6. The quote-identity tolerance, which decides how well curation re-attaches.
-7. Should the Mac's restored run queue drop `--clean` once the fresh run holds a session (see above)?
+7. ~~Should the Mac's restored run queue drop `--clean` once the fresh run holds a session?~~ Yes, built (see above); a real quit mid-Re-analyse on the Mac is still worth one hands-on pass.

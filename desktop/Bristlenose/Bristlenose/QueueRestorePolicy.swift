@@ -6,7 +6,10 @@ struct PersistedQueueEntry: Codable, Equatable, Sendable {
     let projectID: UUID
     /// Whether the request was a Re-analyse (`--clean`). A restored entry keeps
     /// it: a stopped Re-analyse put the old report back, so resuming without
-    /// it would end "ready" on the old report (R18).
+    /// it would end "ready" on the old report (R18). The one exception is
+    /// written when the entry is, not here: a run whose fresh analysis already
+    /// holds a session is kept with `clean: false` (`FreshRunProbe`), because
+    /// the old report is gone and a Re-analyse would pay for it again.
     let clean: Bool
     /// When the researcher asked. The restore window runs from here, never from
     /// a relaunch, so a queue cannot live for ever by being reopened.

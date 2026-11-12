@@ -521,6 +521,11 @@ final class PipelineRunner: ObservableObject {
     private var currentlyRunning: UUID?
     /// Whether the run in the slot was asked for with `--clean`.
     private var currentClean = false
+    /// Whether that Re-analyse has produced a session, so the old report is gone for
+    /// good (`FreshRunProbe`). From then on the queue keeps the run as a plain Analyse:
+    /// a relaunch resumes it from cache instead of starting the Re-analyse over and
+    /// paying for the finished interviews again (owner, 12 Nov 2026).
+    private var currentCleanHoldsSession = false { didSet { journalQueue() } }
 
     /// When each waiting study was asked for, and the queue as the next launch
     /// will find it (`restoreQueue(from:)`).
@@ -1321,8 +1326,23 @@ final class PipelineRunner: ObservableObject {
                 try? await Task.sleep(for: .seconds(1))
                 guard let self, self.generation == gen else { return }
                 await self.applyEventProgress(from: eventsURL, for: projectID)
+                await self.noteFreshRunProgress(for: projectID)
             }
         }
+    }
+
+    /// While a Re-analyse is live, notice the moment its new analysis holds a session
+    /// and write that into the queue (`FreshRunProbe`). Read off-main; once true, never
+    /// asked again for this run.
+    func noteFreshRunProgress(for projectID: UUID) async {
+        guard currentClean, !currentCleanHoldsSession, currentlyRunning == projectID,
+              let folder = currentProject?.path, !folder.isEmpty else { return }
+        let gen = generation
+        let holds = await Task.detached {
+            FreshRunProbe.freshRunHoldsSession(studyFolder: URL(fileURLWithPath: folder))
+        }.value
+        guard holds, gen == generation, currentClean, currentlyRunning == projectID else { return }
+        currentCleanHoldsSession = true
     }
 
     /// Read the newest `run_progress` event off-main and fold it into the
@@ -2398,6 +2418,7 @@ final class PipelineRunner: ObservableObject {
         let gen = generation
         currentlyRunning = project.id
         currentClean = clean
+        if currentCleanHoldsSession { currentCleanHoldsSession = false }
         currentProject = project
         currentParser = StdoutProgressParser()
         cancellationRequested = false
@@ -3231,7 +3252,9 @@ var args = ["run", project.path, "--no-serve"]
     func journalQueue() {
         let live = currentRun != nil && !cancellationRequested
         queueJournal.write(
-            inFlight: live ? currentlyRunning.map { (id: $0, clean: currentClean) } : nil,
+            inFlight: live
+                ? currentlyRunning.map { (id: $0, clean: currentClean && !currentCleanHoldsSession) }
+                : nil,
             queued: queue.entries
         )
     }

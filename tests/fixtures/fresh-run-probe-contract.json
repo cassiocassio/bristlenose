@@ -1,0 +1,225 @@
+{
+  "_about": "Shared by tests/test_output_backup_contract.py (Python, holds_an_analysed_session, backup_path_for) and FreshRunProbeTests.swift (the Mac's FreshRunProbe). The Mac decides a restored Re-analyse resumes plain once the fresh run holds a session; it re-implements that rule and the set-aside folder's name, so both languages are held to this file. Manifests were written by the real writer.",
+  "setAsideDirName": ".bristlenose-output-previous",
+  "outputDirName": "bristlenose-output",
+  "cases": [
+    {
+      "name": "no manifest",
+      "manifest": null,
+      "quotes": null,
+      "holds": false
+    },
+    {
+      "name": "quote extraction running, no session done",
+      "manifest": {
+        "schema_version": 1,
+        "project_name": "fixture",
+        "pipeline_version": "0.0.0",
+        "created_at": "2026-11-12T02:54:50.852338+00:00",
+        "updated_at": "2026-11-12T02:54:50.852533+00:00",
+        "stages": {
+          "quote_extraction": {
+            "status": "running",
+            "started_at": "2026-11-12T02:54:50.852525+00:00",
+            "completed_at": null,
+            "error": null,
+            "sessions": null,
+            "content_hash": null,
+            "input_hashes": null
+          }
+        },
+        "total_cost_usd": 0.0
+      },
+      "quotes": [],
+      "holds": false
+    },
+    {
+      "name": "a session done and its quotes on disk",
+      "manifest": {
+        "schema_version": 1,
+        "project_name": "fixture",
+        "pipeline_version": "0.0.0",
+        "created_at": "2026-11-12T02:54:50.854481+00:00",
+        "updated_at": "2026-11-12T02:54:50.854509+00:00",
+        "stages": {
+          "quote_extraction": {
+            "status": "running",
+            "started_at": "2026-11-12T02:54:50.854492+00:00",
+            "completed_at": null,
+            "error": null,
+            "sessions": {
+              "s1": {
+                "status": "complete",
+                "session_id": "s1",
+                "completed_at": "2026-11-12T02:54:50.854504+00:00",
+                "provider": null,
+                "model": null,
+                "content_hash": null,
+                "input_hash": null,
+                "quotes_left_out": null,
+                "input_tokens": null,
+                "output_tokens": null,
+                "cost_usd_estimate": null,
+                "price_table_version": null
+              }
+            },
+            "content_hash": null,
+            "input_hashes": null
+          }
+        },
+        "total_cost_usd": 0.0
+      },
+      "quotes": [
+        {
+          "session_id": "s1",
+          "text": "x",
+          "start_timecode": 1.0
+        }
+      ],
+      "holds": true
+    },
+    {
+      "name": "a session done, quotes only for another",
+      "manifest": {
+        "schema_version": 1,
+        "project_name": "fixture",
+        "pipeline_version": "0.0.0",
+        "created_at": "2026-11-12T02:54:50.855297+00:00",
+        "updated_at": "2026-11-12T02:54:50.855313+00:00",
+        "stages": {
+          "quote_extraction": {
+            "status": "running",
+            "started_at": "2026-11-12T02:54:50.855304+00:00",
+            "completed_at": null,
+            "error": null,
+            "sessions": {
+              "s1": {
+                "status": "complete",
+                "session_id": "s1",
+                "completed_at": "2026-11-12T02:54:50.855309+00:00",
+                "provider": null,
+                "model": null,
+                "content_hash": null,
+                "input_hash": null,
+                "quotes_left_out": null,
+                "input_tokens": null,
+                "output_tokens": null,
+                "cost_usd_estimate": null,
+                "price_table_version": null
+              }
+            },
+            "content_hash": null,
+            "input_hashes": null
+          }
+        },
+        "total_cost_usd": 0.0
+      },
+      "quotes": [
+        {
+          "session_id": "s2",
+          "text": "x",
+          "start_timecode": 1.0
+        }
+      ],
+      "holds": false
+    },
+    {
+      "name": "a session done, no quotes file",
+      "manifest": {
+        "schema_version": 1,
+        "project_name": "fixture",
+        "pipeline_version": "0.0.0",
+        "created_at": "2026-11-12T02:54:50.856004+00:00",
+        "updated_at": "2026-11-12T02:54:50.856019+00:00",
+        "stages": {
+          "quote_extraction": {
+            "status": "running",
+            "started_at": "2026-11-12T02:54:50.856011+00:00",
+            "completed_at": null,
+            "error": null,
+            "sessions": {
+              "s1": {
+                "status": "complete",
+                "session_id": "s1",
+                "completed_at": "2026-11-12T02:54:50.856016+00:00",
+                "provider": null,
+                "model": null,
+                "content_hash": null,
+                "input_hash": null,
+                "quotes_left_out": null,
+                "input_tokens": null,
+                "output_tokens": null,
+                "cost_usd_estimate": null,
+                "price_table_version": null
+              }
+            },
+            "content_hash": null,
+            "input_hashes": null
+          }
+        },
+        "total_cost_usd": 0.0
+      },
+      "quotes": null,
+      "holds": false
+    },
+    {
+      "name": "two done, quotes for one of them",
+      "manifest": {
+        "schema_version": 1,
+        "project_name": "fixture",
+        "pipeline_version": "0.0.0",
+        "created_at": "2026-11-12T02:54:50.856517+00:00",
+        "updated_at": "2026-11-12T02:54:50.856532+00:00",
+        "stages": {
+          "quote_extraction": {
+            "status": "running",
+            "started_at": "2026-11-12T02:54:50.856522+00:00",
+            "completed_at": null,
+            "error": null,
+            "sessions": {
+              "s1": {
+                "status": "complete",
+                "session_id": "s1",
+                "completed_at": "2026-11-12T02:54:50.856526+00:00",
+                "provider": null,
+                "model": null,
+                "content_hash": null,
+                "input_hash": null,
+                "quotes_left_out": null,
+                "input_tokens": null,
+                "output_tokens": null,
+                "cost_usd_estimate": null,
+                "price_table_version": null
+              },
+              "s2": {
+                "status": "complete",
+                "session_id": "s2",
+                "completed_at": "2026-11-12T02:54:50.856530+00:00",
+                "provider": null,
+                "model": null,
+                "content_hash": null,
+                "input_hash": null,
+                "quotes_left_out": null,
+                "input_tokens": null,
+                "output_tokens": null,
+                "cost_usd_estimate": null,
+                "price_table_version": null
+              }
+            },
+            "content_hash": null,
+            "input_hashes": null
+          }
+        },
+        "total_cost_usd": 0.0
+      },
+      "quotes": [
+        {
+          "session_id": "s2",
+          "text": "x",
+          "start_timecode": 1.0
+        }
+      ],
+      "holds": true
+    }
+  ]
+}

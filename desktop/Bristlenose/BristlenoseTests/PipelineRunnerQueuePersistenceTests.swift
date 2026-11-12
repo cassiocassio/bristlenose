@@ -382,4 +382,65 @@ struct PipelineRunnerQueuePersistenceTests {
         defaults.set(Data("not json".utf8), forKey: DefaultsRunQueueStore.key)
         #expect(store.load() == nil)
     }
+
+    // MARK: - A Re-analyse that has produced a session resumes plain (12 Nov 2026)
+
+    /// Lay down what a Re-analyse in flight leaves once it holds a session: the old
+    /// report set aside, and an output with one analysed session.
+    private static func freshRunHoldsASession(_ project: Project) throws {
+        let study = URL(fileURLWithPath: project.path)
+        let dot = study.appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(
+            at: dot.appendingPathComponent("intermediate"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: study.appendingPathComponent(".bristlenose-output-previous"),
+            withIntermediateDirectories: true)
+        try Data(#"{"stages": {"quote_extraction": {"sessions": {"s1": {"status": "complete"}}}}}"#.utf8)
+            .write(to: dot.appendingPathComponent("pipeline-manifest.json"))
+        try Data(#"[{"session_id": "s1", "text": "x"}]"#.utf8)
+            .write(to: dot.appendingPathComponent("intermediate/extracted_quotes.json"))
+    }
+
+    @Test func aReanalyseIsKeptAsAReanalyseUntilItHoldsASession() async throws {
+        let store = InMemoryRunQueueStore()
+        let rig = await Self.rig(store: store); defer { rig.cleanUp() }
+        let a = Self.study(rig, "A")
+        rig.runner.start(project: a, clean: true)
+        await rig.runner.noteFreshRunProgress(for: a.id)
+
+        #expect(store.saved?.entries.first?.clean == true, "no set-aside copy, no session: still a Re-analyse")
+    }
+
+    @Test func onceTheFreshRunHoldsASessionTheQueueKeepsItAsAPlainAnalyse() async throws {
+        let store = InMemoryRunQueueStore()
+        let rig = await Self.rig(store: store); defer { rig.cleanUp() }
+        let a = Self.study(rig, "A"), b = Self.study(rig, "B")
+        rig.runner.start(project: a, clean: true)
+        rig.runner.start(project: b, clean: true)
+        #expect(store.saved?.entries.first?.clean == true)
+
+        try Self.freshRunHoldsASession(a)
+        await rig.runner.noteFreshRunProgress(for: a.id)
+
+        let entries = try #require(store.saved?.entries)
+        #expect(entries[0].projectID == a.id && entries[0].inFlight && !entries[0].clean,
+                "the run in flight resumes from cache")
+        #expect(entries[1].projectID == b.id && entries[1].clean,
+                "a study still waiting for its Re-analyse keeps it")
+    }
+
+    @Test func theNextRunStartsAsksAgain() async throws {
+        let store = InMemoryRunQueueStore()
+        let rig = await Self.rig(store: store); defer { rig.cleanUp() }
+        let a = Self.study(rig, "A"), b = Self.study(rig, "B")
+        rig.runner.start(project: a, clean: true)
+        rig.runner.start(project: b, clean: true)
+        try Self.freshRunHoldsASession(a)
+        await rig.runner.noteFreshRunProgress(for: a.id)
+        rig.runner.cancel(project: a)
+        await until { store.saved?.entries.first?.projectID == b.id && store.saved?.entries.first?.inFlight == true }
+
+        #expect(store.saved?.entries.first?.clean == true,
+                "B's Re-analyse has produced nothing yet; A's answer is not B's")
+    }
 }

@@ -1,10 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Comment obtenir un jeton ?",
-    "boardNameLabel": "Nom du tableau :",
-    "stickyColoursLabel": "Couleur des pense-b\u00eates :",
-    "miroStatusLabel": "\u00c9tat Miro :",
-    "accountLabel": "Compte :",
+    "boardNameLabel": "Nom du tableau :",
+    "stickyColoursLabel": "Couleur des pense-b\u00eates\u202f:",
+    "miroStatusLabel": "\u00c9tat Miro\u202f:",
+    "accountLabel": "Compte :",
     "boardDestination": "Cr\u00e9e un nouveau tableau dans {{team}}.",
     "connected": "Connect\u00e9",
     "openInMiro": "Ouvrir dans Miro\u2026",
@@ -1318,7 +1318,7 @@
     }
   },
   "figjam": {
-    "stickyShapeLabel": "Forme des notes :",
+    "stickyShapeLabel": "Forme des notes :",
     "saveBoardFile": "Enregistrer le fichier de tableau…"
   },
   "modelDownload": {

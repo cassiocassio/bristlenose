@@ -3,7 +3,7 @@ status: built, on by default since 22 Oct 2026 (§8)
 date: 18 Oct 2026
 revised: 12 Nov 2026 (Settings pane, §4 amendment, §8); first revised 18 Oct 2026, after five reviews (§7)
 last-trued: 2026-11-13
-trued-against: working tree on main, 13 Nov 2026 (the 12 Nov Settings work was uncommitted when this was written)
+trued-against: working tree on main, 13 Nov 2026 (the 12 Nov Settings work was committed on 13 Nov 2026)
 ---
 
 # Apple first, Whisper next: the first recordings on a new Mac
@@ -327,7 +327,7 @@ no longer names a language or a cause (below).
   *Model* (owner). `overlayPreferences` exports only `mlx`, so a stored `faster-whisper`
   (which the Mac sidecar cannot run) can no longer make every run fail. A stored raw value
   this build does not know selects the default instead of a blank pop-up. Status probes
-  run one at a time. Uncommitted when this was written.
+  run one at a time. Committed 13 Nov 2026; seen by the owner in dark mode on macOS 26 ("qa ok").
 - **§3 E was already there**: the Diagnostics panel always rendered the engine. What it
   lacked was Apple's fields; it now shows *Apple speech model*, the locale as *assumed* and
   the gate's verdict, and drops Whisper's rows.

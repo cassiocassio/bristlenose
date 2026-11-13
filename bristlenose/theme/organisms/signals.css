@@ -233,12 +233,19 @@
 
 /* The metric names come in two lengths ("Concentration ratio", "Conc."). The long one is the
    default; the short one takes over when the card is narrow. The hidden one is display:none,
-   so a screen reader reads only the one on screen. */
+   so a screen reader reads only the one on screen.
+
+   Owner's rule (13 Nov 2026): long labels from a 654px CARD up to the card's 832px cap (52rem),
+   short below it. 654px is the card width at which a headline of about 90 characters, with the
+   long labels beside it, still sets in four lines; narrower, the long labels squeeze it further.
+   A container query measures the card's CONTENT box, so the figure is the card's width less its
+   own padding and border (2 x 3rem + 2px): 556px, or 34.75rem. Change the card's inset and this
+   number moves with it. */
 .metric-label-short {
     display: none;
 }
 
-@container (max-width: 20rem) {
+@container (max-width: 34.75rem) {
     .metric-label-long {
         display: none;
     }
@@ -968,21 +975,46 @@ button.signal-card-toggle {
    This was a viewport query (500px). A card is narrow whenever the window is shared with both
    side panels, which is a wide window, so the right column kept its 210 to 266px and left the
    headline 85px (six lines of one or two words at a 420px card). The card is the container, so
-   the top stacks when the card's content is under 32rem. */
-@container (max-width: 32rem) {
+   the top stacks when the card's content is under 27.5rem: a 540px card, less its 98px of
+   padding and border (13 Nov 2026). */
+@container (max-width: 27.5rem) {
+    /* Stacked, the order is the finding's name, then the chip and its working, then the headline
+       and evidence. The chip is first in the DOM so the float can catch the headline, which is
+       why unfloated it would draw above the name. `display: contents` on the identity block
+       hands its children to this flex column so `order` can interleave the chip between them.
+       Visual order only: a screen reader already reads the chip first, and still does. The
+       spacing is the children's own margins, so no gap. */
     .signal-card-top {
+        display: flex;
         flex-direction: column;
-        gap: var(--bn-space-sm);
+    }
+
+    .signal-card-identity {
+        display: contents;
+    }
+
+    .signal-card-identity > * {
+        order: 2;
+    }
+
+    .signal-card-identity > .signal-card-location {
+        order: 0;
     }
 
     .signal-card-metrics {
         align-self: flex-start;
     }
 
+    /* The float's `margin-left` (the gutter to the wrapping text) is meaningless once the hero is
+       a full-width block, and left in place it indents the chip and the metrics a gutter's width
+       in from the headline's left edge. Zero it, and give the bottom edge the room the headline
+       needs, since it now sits directly under the metrics. */
     .signal-card-right {
+        order: 1;
         float: none;
         align-items: flex-start;
         align-self: stretch;
+        margin: 0 0 var(--bn-space-md);
     }
 }
 

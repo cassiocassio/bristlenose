@@ -352,7 +352,7 @@
         "discussion": "Matching quotes to questions"
       },
       "waitingForWhisper": "Waiting for Whisper",
-      "waitingForWhisperHint": "Apple's speech model wasn't sure of what it heard, so Whisper will transcribe it once it's on this Mac."
+      "waitingForWhisperHint": "Apple’s speech model wasn’t sure of what it heard, so Whisper will transcribe it once it’s on this Mac."
     },
     "folderNamePlaceholder": "Folder name",
     "projectNamePlaceholder": "Project name",

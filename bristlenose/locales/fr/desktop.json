@@ -351,7 +351,7 @@
         "discussion": "Rattachement des citations aux questions"
       },
       "waitingForWhisper": "En attente de Whisper",
-      "waitingForWhisperHint": "Le modèle vocal d'Apple n'était pas sûr de ce qu'il a entendu : Whisper le transcrira une fois installé sur ce Mac."
+      "waitingForWhisperHint": "Le modèle vocal d’Apple n’était pas sûr de ce qu’il a entendu : Whisper le transcrira une fois installé sur ce Mac."
     },
     "folderNamePlaceholder": "Nom du dossier",
     "projectNamePlaceholder": "Nom du projet",

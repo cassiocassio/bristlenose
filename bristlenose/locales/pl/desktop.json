@@ -1019,7 +1019,7 @@
     "engineApple": "Model mowy Apple",
     "engineHint": "Model mowy Apple jest wbudowany w macOS i działa szybciej. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami, większymi grupami i językami, których model Apple nie obsługuje.",
     "whisperLabel": "Whisper",
-    "whisperChecking": "Szukanie modelu Whisper…",
+    "whisperChecking": "Szukanie Whispera…",
     "backendDetectedAppleSilicon": "Wykryto układ scalony Apple",
     "whisperOnDisk": "Na tym Macu · {{size}}",
     "whisperMissing": "Nie ma go na tym Macu",

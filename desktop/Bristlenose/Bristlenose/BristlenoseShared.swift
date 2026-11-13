@@ -101,8 +101,8 @@ enum BristlenoseShared {
     /// when the choice allows Apple, the sidecar is the bundled one (the helper
     /// is signed sandbox + inherit, so it can only run under the app's own
     /// sandboxed sidecar — a dev sidecar would launch it into exit 133), and the
-    /// Mac runs macOS 26 or later. Withholding the path is the whole of
-    /// *Whisper only*: Python's engine decision needs no other wire.
+    /// Mac runs macOS 26 or later. (No Settings choice withholds it any more:
+    /// *Whisper only* was removed on 12 Nov 2026.)
     static func appleSpeechEnvironment(
         for mode: SidecarMode,
         defaults: UserDefaults = .standard,
@@ -122,7 +122,7 @@ enum BristlenoseShared {
         // Without it Python never takes Apple's path: a UI language the app
         // fell back to is not evidence of what anyone in the recording speaks.
         if uiLanguageMatched { env["BRISTLENOSE_SPEECH_UI_MATCHED"] = "1" }
-        if choice != .whisperOnly, osAtLeast26, case .bundled(let sidecar) = mode {
+        if osAtLeast26, case .bundled(let sidecar) = mode {
             // .../Contents/Resources/bristlenose-sidecar/bristlenose-sidecar
             //   → .../Contents/Helpers/bristlenose-speech
             let helper = sidecar.deletingLastPathComponent()  // bristlenose-sidecar/
@@ -347,7 +347,12 @@ enum BristlenoseShared {
         if defaults.object(forKey: "llmConcurrency") != nil {
             env["BRISTLENOSE_LLM_CONCURRENCY"] = String(Int(defaults.double(forKey: "llmConcurrency")))
         }
-        if let backend = defaults.string(forKey: "whisperBackend"), backend != "auto" {
+        // Only `mlx` goes out. The Mac sidecar carries MLX alone
+        // (`desktop/bristlenose-sidecar.spec` excludes faster_whisper and
+        // ctranslate2), so a stored `faster-whisper` from an older build or
+        // from the macOS 15-25 pane could only make every run fail, with no
+        // control left to undo it. `auto` already resolves to MLX on this Mac.
+        if let backend = defaults.string(forKey: "whisperBackend"), backend == "mlx" {
             env["BRISTLENOSE_WHISPER_BACKEND"] = backend
         }
         if let model = defaults.string(forKey: "whisperModel") {

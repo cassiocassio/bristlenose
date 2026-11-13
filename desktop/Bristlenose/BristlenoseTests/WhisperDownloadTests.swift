@@ -158,11 +158,17 @@ import Testing
             == "/Applications/Bristlenose.app/Contents/Helpers/bristlenose-speech")
     }
 
-    @Test func whisperOnlyWithholdsTheHelper() {
+    /// *Whisper only* was removed. A researcher who had chosen it must not be
+    /// left without Apple's model as a stand-in: the stored value now reads as
+    /// the default.
+    @Test func aStoredWhisperOnlyReadsAsTheDefault() {
+        let suite = UserDefaults(suiteName: "WhisperDownloadTests.legacy.\(UUID().uuidString)")!
+        suite.set("whisperOnly", forKey: TranscriptionEngineChoice.key)
+        #expect(TranscriptionEngineChoice.current(suite) == .whisperWhenReady)
         let env = BristlenoseShared.appleSpeechEnvironment(
-            for: bundled, defaults: defaults(.whisperOnly), enabled: true, osAtLeast26: true, region: "GB")
-        #expect(env["BRISTLENOSE_APPLE_SPEECH"] == "never")
-        #expect(env["BRISTLENOSE_SPEECH_HELPER"] == nil)
+            for: bundled, defaults: suite, enabled: true, osAtLeast26: true, region: "GB")
+        #expect(env["BRISTLENOSE_APPLE_SPEECH"] == "until-whisper")
+        #expect(env["BRISTLENOSE_SPEECH_HELPER"] != nil)
     }
 
     @Test func appleMapsToPrefer() {

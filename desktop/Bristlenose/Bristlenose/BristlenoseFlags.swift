@@ -120,13 +120,18 @@ enum BristlenoseFlags {
     }
 }
 
-/// Settings ▸ Transcription ▸ Transcribe with (plan §4.5). Stored as the raw
-/// value; each maps to Python's `apple_speech` setting.
+/// Settings ▸ Transcription ▸ Transcription engine (plan §4.5). Stored as the
+/// raw value; each maps to Python's `apple_speech` setting.
+///
+/// There was a third, *Whisper only* (never Apple's model). It was removed on
+/// 12 Nov 2026: with it, a Whisper that failed to download meant no
+/// transcription at all when Apple's model was a viable stand-in. A stored
+/// `whisperOnly` from an older build reads as the default (`current`), and the
+/// pane's selection binding does the same, so nothing renders blank.
 enum TranscriptionEngineChoice: String, CaseIterable {
-    /// Apple's model until Whisper is on disk, then Whisper. The default.
+    /// Apple's model until Whisper is on disk, then Whisper. The default. The
+    /// pop-up calls it just "Whisper".
     case whisperWhenReady
-    /// Never Apple's model.
-    case whisperOnly
     /// Apple's model in its languages, Whisper for the rest.
     case apple
 
@@ -140,7 +145,6 @@ enum TranscriptionEngineChoice: String, CaseIterable {
     var pythonMode: String {
         switch self {
         case .whisperWhenReady: return "until-whisper"
-        case .whisperOnly: return "never"
         case .apple: return "prefer"
         }
     }

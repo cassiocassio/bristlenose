@@ -289,6 +289,20 @@ struct ServeManagerEnvTests {
         }
     }
 
+    /// The Mac sidecar carries MLX only, so only `mlx` is exported: a stored
+    /// `faster-whisper` (an older build, or the macOS 15-25 pane) would make every
+    /// run fail with no control left to undo it.
+    @Test func overlayPreferences_exports_only_mlx_as_the_whisper_backend() {
+        withIsolatedDefaults { defaults in
+            for (stored, exported) in [("auto", nil), ("faster-whisper", nil), ("mlx", "mlx")] as [(String, String?)] {
+                var env: [String: String] = [:]
+                defaults.set(stored, forKey: "whisperBackend")
+                BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+                #expect(env["BRISTLENOSE_WHISPER_BACKEND"] == exported, "stored \(stored)")
+            }
+        }
+    }
+
     /// Screen text (the Screens lens) follows Read shared screens, which is on by
     /// default — and is ALWAYS stated: off is an explicit "0", because that is
     /// what tells the server to delete what it read (unset means the CLI default

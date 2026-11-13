@@ -1,6 +1,6 @@
 # Loading-state vocabulary — design brief
 
-_**Status 10 Nov 2026: partly built, not approved.** The tapestry strip's working sweep and the skeleton tokens were implemented on 9 Nov as the first trial; the owner has not yet judged them in the real app, the ghosts and every other surface are not built, and there is no backlog yet. The "don't touch the theme or frontend" line below applied to the mockup stage and was lifted for that one trial. The reversal of "never a skeleton" is written into `design-progressive-lenses.md` §2 (decided, not built)._
+_**Status 13 Nov 2026: partly built; the owner has seen the tapestry strip's working sweep live and passed it ("nice", QA ok).** The ghosts, the other surfaces and the backlog are still to do. _Original 10 Nov status: partly built, not approved._ The tapestry strip's working sweep and the skeleton tokens were implemented on 9 Nov as the first trial; the owner has since seen the sweep live and passed it, the ghosts and every other surface are not built, and there is no backlog yet. The "don't touch the theme or frontend" line below applied to the mockup stage and was lifted for that one trial. The reversal of "never a skeleton" is written into `design-progressive-lenses.md` §2 (decided, not built)._
 
 _Brief for the mockup work, 9 Nov 2026. Not a design doc yet: it becomes one after the owner approves the mockup._
 

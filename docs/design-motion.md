@@ -271,7 +271,7 @@ Every state transition in the UI falls into one of these **semantic categories**
 | L5 | **Activity chip spinner** | idle / spinning | Rotation | linear infinite | ⊘ Removed 18 Jul — replaced by the L7 thinking shimmer on the chip label |
 | L6 | **Word-level highlight** (karaoke) | inactive / active | Background highlight | Instant (perf) | ✓ Done |
 | L7 | **Thinking shimmer** (analysing) | idle / thinking | Single-hue brightness sweep on text | 2.7s (1.8s sweep + 0.9s gap) | ● Built 18 Jul — web activity chip (`atoms/shimmer.css`, verified) + native sidebar status line (`SidebarShimmerText.swift` hosted in `ProjectSidebarOutline`, pending Xcode build-verify) |
-| L8 | **Working block shimmer** (tapestry strip) | idle / working | Translucent ink sweep over the box | the L7 timing | ● Built 9 Nov 2026, awaiting the owner's look (`atoms/shimmer.css` `.is-working`) |
+| L8 | **Working block shimmer** (tapestry strip) | idle / working | Translucent ink sweep over the box | the L7 timing | ● Built 9 Nov 2026, owner saw it live 13 Nov and passed it (`atoms/shimmer.css` `.is-working`) |
 
 ---
 
@@ -304,7 +304,7 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 **Multiple simultaneous shimmers** (rare — chip stack collapses 2+ jobs to one summary; the common concurrent case is two projects analysing): same *character*, **independent phase** — each instance a small random start-offset so they read as individual organisms, not one synchronized strobe. Phase-2, not needed for the single-shimmer common case.
 
 
-### 4.7.2 Loading states: done, working, will exist (mockup 9 Nov 2026 in `docs/mockups/loading-states.html`; partly built: the tapestry strip's working sweep and the skeleton tokens, awaiting the owner's look in the real app; the ghosts and every other surface are not built)
+### 4.7.2 Loading states: done, working, will exist (mockup 9 Nov 2026 in `docs/mockups/loading-states.html`; partly built: the tapestry strip's working sweep and the skeleton tokens, the owner saw it live on 13 Nov 2026 and passed it; the ghosts and every other surface are not built)
 
 The text shimmer above covers text that exists. This section covers everything else that is not there yet. Three states, one vocabulary across the report:
 
@@ -321,14 +321,14 @@ The text shimmer above covers text that exists. This section covers everything e
 - **Contrast follows area, in two tiers.** Slabs (thumbnail, card): **2.7%**, because a big area turns the same swing into a flash (the text shimmer's own contrast is 5%, the chip's 20%; 2.7 was tuned by eye, not derived from either). Small shapes (sparkline bars, the 4.5px strip): **8%**, because a third-contrast sweep is invisible on so few pixels. Tuned by eye against the mockup on 9 Nov.
 - **A ghost only for something we know will arrive** (probe-confirmed video; never audio-only or a cloud file not downloaded).
 - **Every placeholder has an exit.** Stop removes them all; failure resolves to the shipped fallback, never to removal; nothing shimmers forever.
-- **A ghost is not clickable, not focusable and hidden from assistive tech;** the waiting row carries `aria-busy`.
+- **A ghost is not clickable, not focusable and hidden from assistive tech;** a **placeholder** row (one whose content is itself a ghost) carries `aria-busy`. A readable row with a working strip does not: its content is complete, and `aria-busy` would tell VoiceOver it is not. Not built, because no ghost row is built yet.
 - **No words by default.** The shape says "coming".
 - **Independent phase** per instance, as in the multiple-shimmers rule above; staggered across the bars of one chart so they read as a wave.
 - **A readable row is not a placeholder.** It shows its real content or today's fallback (the play box).
 
 **Tokens.** Shipped in `tokens.css` (and mirrored in `WelcomeTimelineCSS.swift`): `--bn-skeleton-base`, `--bn-skeleton-contrast` (2.7%), `--bn-skeleton-contrast-small` (8%) and the derived `--bn-skeleton-peak` / `--bn-skeleton-peak-small`. Mockup only, not yet in the theme: `--bn-ghost-line`, `--bn-ghost-outline`, `--bn-ghost-fill`. `--bn-skeleton-base` has no consumer yet, because the "fill firmer" rule for a working ghost was not ported with the sweep.
 
-**As built so far (9 Nov 2026, uncommitted, not yet judged live):** the sweep is `.is-working` and `@keyframes bn-block-shimmer` in `atoms/shimmer.css` (the mockup calls them `.bn-skeleton` and `bn-skeleton-sweep`; the shipped names are canonical). It is used on the tapestry's closed strip (`TapestryPreview.tsx`, `organisms/session-tapestry.css`). The server decides which strip is working: `strip_state` in `routes/tapestry.py` is `working` for the first owed video session and `queued` for the rest, only while the strip job runs. **Queued sessions show nothing**, an exception to the "will exist, not started" row, because the strip track is treated as real content and never gets a ghost.
+**As built so far (9 Nov 2026, committed `293f0f7cd`; the owner saw the sweep live on project-ikea on 13 Nov, briefly, as the files are short, and passed it):** the sweep is `.is-working` and `@keyframes bn-block-shimmer` in `atoms/shimmer.css` (the mockup calls them `.bn-skeleton` and `bn-skeleton-sweep`; the shipped names are canonical). It is used on the tapestry's closed strip (`TapestryPreview.tsx`, `organisms/session-tapestry.css`). The server decides which strip is working: `strip_state` in `routes/tapestry.py` is `working` for the first owed video session and `queued` for the rest, only while the strip job runs. **Queued sessions show nothing**, an exception to the "will exist, not started" row, because the strip track is treated as real content and never gets a ghost. Three consequences, recorded so nobody "fixes" them: (1) with Reduce Motion or the analysis-animation preference off, working looks the same as done, because the static half of the state (the firmer `--bn-skeleton-base` fill) was not ported; (2) the open timeline does not carry the cue, since the closed strip is hidden while a row is open; (3) the mark clears when the strip poll stops, whether at its limit or after a failed request, and a failed poll is the reader's ⌘R, with no retry loop. The HTML export embeds no working mark (`routes/export.py` clears it), since the file never polls. Known and filed: the server infers which session is working from files on disk, so a failed extraction can keep the mark on the wrong session (`docs/private/100days.md`).
 
 **Still open** (parked in `docs/design-loading-states-brief.md`): a plain progress line, the ghost line in Edo dark, the per-area failure and stopped rule, and strip decode time per hour of video.
 

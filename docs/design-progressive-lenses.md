@@ -1,6 +1,6 @@
 ---
 status: Phases 0–5 built 12–13 Oct 2026 (Phase 4 shipped in 0.38.0); whole-feature review fixed 13 Oct (§5.7). The 9 Nov 2026 amendments are partly built: the tapestry strip's working sweep and the opening-scale taper are; the waiting-row ghost is not
-last-trued: 2026-11-10
+last-trued: 2026-11-13
 trued-against: HEAD@main plus the uncommitted working tree on 2026-11-10 for §2's ghost amendment, §4.6 and §4.6.1; the rest as of 2026-10-15
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
@@ -1136,7 +1136,7 @@ transcript stayed on what it first read.
 
 ## 7. Open
 
-_Index (14 Oct 2026): still open — 3, 4, 5, 6, 7, 8, 10, 13, 14. Built provisionally,
+_Index (14 Oct 2026; item 5's `aria-busy` and the §4.6.1 "Still open" list are tracked in `design-motion.md` §4.7.2 and §4.6.1, not renumbered here): still open — 3, 4, 5, 6, 7, 8, 10, 13, 14. Built provisionally,
 awaiting a call — 1, 9, 12, 15, 16. Decided — 2 (counts), 18. Built — 11, 17, 19._
 
 1. **Row treatment A or B.** A: rows that cannot open take `--bn-colour-muted` (AA in
@@ -1157,7 +1157,7 @@ awaiting a call — 1, 9, 12, 15, 16. Decided — 2 (counts), 18. Built — 11, 
 4. **Playback before readable.** The media exists from the first second, and the
    shipped thumbnail and filename both open the player.
 5. **With motion off,** the processing row looks like a waiting row (the spec's
-   static state). `aria-busy` on it would be new.
+   static state). `aria-busy` on it would be new (and `design-motion.md` §4.7.2 now limits it to placeholder rows, not built).
 6. **Scene strips during a run.** Shipped behaviour defers the strip job until the
    project's latest run ends (`SceneStripJob.start` and the between-sessions check in
    `server/scene_strips.py`), which under progressive means a readable row waits the

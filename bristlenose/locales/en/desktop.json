@@ -967,14 +967,14 @@
     "readScreensHint": "Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project\u2019s folder. Never sent to the AI.",
     "engineLabel": "Transcription engine",
     "engineWhenReady": "Whisper",
-    "engineApple": "Apple's speech model",
-    "engineHint": "Apple's speech model is built into macOS and is faster. Whisper copes better with poor audio, people talking over each other, larger groups, and languages Apple's model lacks.",
+    "engineApple": "Apple’s speech model",
+    "engineHint": "Apple’s speech model is built into macOS and is faster. Whisper copes better with poor audio, people talking over each other, larger groups, and languages Apple’s model lacks.",
     "whisperLabel": "Whisper",
     "whisperChecking": "Checking for Whisper…",
     "backendDetectedAppleSilicon": "Apple silicon detected",
     "whisperOnDisk": "On this Mac · {{size}}",
     "whisperMissing": "Not on this Mac",
-    "whisperFailed": "The download didn't finish.",
+    "whisperFailed": "The download didn’t finish.",
     "downloadNow": "Download Now"
   },
   "ollamaSetup": {
@@ -1329,13 +1329,13 @@
   },
   "modelDownload": {
     "title": "Downloading Whisper",
-    "failedTitle": "Whisper didn't download",
+    "failedTitle": "Whisper didn’t download",
     "why": "For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
     "stop": "Stop Download",
     "stopNote": "Starts again from the beginning next time.",
-    "causeDisk": "This Mac doesn't have enough free space for it.",
-    "causeNetwork": "The connection dropped and didn't come back.",
-    "causeCertificate": "This network's security certificate wasn't trusted."
+    "causeDisk": "This Mac doesn’t have enough free space for it.",
+    "causeNetwork": "The connection dropped and didn’t come back.",
+    "causeCertificate": "This network’s security certificate wasn’t trusted."
   },
   "studyStartup": {
     "foreignTitle": "Started on another Mac",

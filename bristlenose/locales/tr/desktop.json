@@ -1328,7 +1328,7 @@
     "why": "Sonraki kayıtlarınız için. Whisper, kötü sesle, aynı anda konuşan kişilerle ve daha büyük gruplarla daha iyi başa çıkar.",
     "stop": "İndirmeyi Durdur",
     "stopNote": "Bir sonraki sefer baştan başlar.",
-    "causeDisk": "Bu Mac'te yeterli boş alan yok.",
+    "causeDisk": "Bu Mac’te yeterli boş alan yok.",
     "causeNetwork": "Bağlantı koptu ve geri gelmedi.",
     "causeCertificate": "Bu ağın güvenlik sertifikasına güvenilmedi."
   },

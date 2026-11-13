@@ -72,11 +72,12 @@ code{font:11px/1.4 ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
 .g i{background:#34c759}.r i{background:#ff3b30}.o i{background:#ff9500}.s i{background:#8e8e93}
 
 /* mac window frames: the shipped Settings window (macOS 26 grouped form) */
-.frames{display:grid;gap:30px 24px;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));align-items:start;margin-top:12px}
+.frames{display:grid;gap:34px 24px;grid-template-columns:repeat(auto-fill,minmax(800px,1fr));align-items:start;margin-top:12px}
 .fr .cap{font:11px/1.35 ui-monospace,Menlo,monospace;color:var(--faint);margin:0 0 6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 :root{--grp:#f4f4f6;--fill:#fff;--sel:#dedee2;--tert:#a1a1a6}
 @media (prefers-color-scheme:dark){:root{--grp:#2a2a2d;--fill:#1c1c1e;--sel:#3a3a3e;--tert:#78787d}}
-.mw{background:var(--page);border:.5px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;font-size:13px}
+.wwrap{position:relative;width:660px}
+.mw{width:660px;background:var(--page);border:.5px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;font-size:13px}
 .mt{display:flex;align-items:center;gap:9px;padding:10px 14px 0;position:relative;height:30px}
 .lights{display:flex;gap:7px}.lights i{width:12px;height:12px;border-radius:50%;display:block}
 .lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2),.lights i:nth-child(3){background:#d8d8dc}
@@ -86,7 +87,7 @@ code{font:11px/1.4 ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;border-radius:8px;color:var(--dim);font-size:10.5px;min-width:60px}
 .tab b{font-size:15px;font-weight:400;line-height:1.1}
 .tab.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
-.mb{display:grid;grid-template-columns:34% 1fr;min-height:300px}
+.mb{display:grid;grid-template-columns:260px 400px;min-height:300px}
 .pl{border-right:.5px solid var(--hairline);padding:12px 9px;display:flex;flex-direction:column;gap:2px}
 .pr{display:grid;grid-template-columns:20px 28px 1fr;gap:7px;align-items:center;padding:7px 7px;border-radius:9px}
 .pr.sel{background:var(--sel)}
@@ -96,40 +97,46 @@ code{font:11px/1.4 ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
 .rad.on::after{content:"✓";position:absolute;inset:0;color:#fff;font-size:10px;line-height:13px;text-align:center;font-weight:700}
 .pm{width:26px;height:26px;border-radius:7px;background:var(--grouphdr);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--ink)}
 .pn{font-size:13px;line-height:1.2}
-.ps{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--dim);margin-top:1px}
+.ps{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);margin-top:1px}
 .ps .dot{width:8px;height:8px}
-.pane{padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.pane{padding:14px 20px 16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .sec{font-size:13px;font-weight:700;margin:0 0 6px 2px}
 .card{background:var(--grp);border-radius:12px;overflow:hidden}
-.row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:.5px solid color-mix(in srgb,var(--ink) 9%,transparent)}
+.row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:.5px solid color-mix(in srgb,var(--ink) 9%,transparent)}
 .row:last-child{border-bottom:0}
 .row .grow{margin-left:auto}
-.links{gap:18px;color:var(--accent);font-size:12.5px}
+.row.stack{flex-direction:column;align-items:stretch;gap:6px}
+.row.stack .fld{margin-left:0;max-width:none;width:auto}
+.links{gap:20px;color:var(--accent);font-size:10px}
 .sw{width:36px;height:21px;border-radius:11px;background:#d1d1d6;position:relative;flex:none}
 .sw::after{content:"";position:absolute;left:2px;top:2px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
 .sw.on{background:var(--accent)}.sw.on::after{left:17px}
 .sw.dis{opacity:.45}
-.stat{display:block;padding:10px 12px 11px}
+.stat{display:block;padding:10px 10px 11px}
 .dotline{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:14px}
 .dot{width:12px;height:12px;border-radius:50%;flex:none}
 .dot.green{background:#34c759}.dot.red{background:#ff3b30}.dot.orange{background:#ff9500}.dot.grey{background:#c7c7cc}
 .dot.spin{background:transparent;border:2px solid #8e8e93;border-top-color:transparent;animation:sp 1s linear infinite}
 @media (prefers-reduced-motion:reduce){.dot.spin{animation:none}}
 @keyframes sp{to{transform:rotate(360deg)}}
-.msg{font-size:10.5px;color:var(--dim);margin-top:5px;line-height:1.4}
-.lv{font-size:10.5px;color:var(--tert);margin-top:5px}
-.disc{display:flex;align-items:center;gap:5px;margin-top:7px;font-size:11px;color:var(--dim)}
-.disc .tri{font-size:9px;width:10px;color:var(--faint)}
-.disc .chev{display:inline-flex;width:9px;height:9px;color:var(--faint)}
-.disc .chev svg{width:9px;height:9px}
-.copyic{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:26px;height:20px;border:.5px solid var(--line);
-  border-radius:5px;background:var(--page);color:var(--dim)}
-.copyic svg{width:12px;height:12px}
-.detbox{margin-top:6px}
-.detbox code{display:block;background:color-mix(in srgb,var(--ink) 5%,transparent);font-size:9.5px;padding:7px 10px;border-radius:8px;
-  white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;flex:1;min-width:0}
-.detbox.a{display:flex;gap:6px;align-items:flex-start}
-.detbox.a code{border-radius:6px}
+.msg{font-size:10px;line-height:13px;color:var(--dim);margin-top:5px}
+.lv{font-size:10px;line-height:13px;color:var(--dim);margin-top:5px}
+.sbtn{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;height:19px;padding:0 9px;font-size:11px;
+  border:.5px solid var(--line);border-radius:5px;background:var(--page);color:var(--ink);box-shadow:0 .5px 1px rgba(0,0,0,.10)}
+.sbtn.on{background:color-mix(in srgb,var(--accent) 16%,var(--page));border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.sbtn.ic{width:26px;padding:0;margin-left:0}.sbtn.ic svg{width:12px;height:12px;color:var(--dim)}
+.popover{position:absolute;z-index:5;width:360px;max-height:320px;display:flex;flex-direction:column;gap:10px;padding:16px;
+  background:var(--page);border:.5px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.popover::before{content:"";position:absolute;top:-6px;left:var(--ax,50%);width:12px;height:12px;background:var(--page);
+  border-left:.5px solid var(--line);border-top:.5px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+.ph{display:flex;align-items:center;gap:8px;flex:none}
+.phl{font-size:13px;line-height:16px;font-weight:700;margin-right:auto}
+.pb{min-height:0;overflow:hidden;flex:0 1 auto}
+.popover.scrolls .pb{overflow-y:scroll;scrollbar-width:thin}
+.pb code{display:block;background:none;border-radius:0;padding:0;font:10px/13px ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
+  white-space:pre-wrap;overflow-wrap:anywhere}
+.fr.pop{padding-bottom:0}
+.spec .k{white-space:nowrap}
 .keyf{flex:1;border-radius:8px;border:.5px solid var(--line);background:var(--fill);padding:5px 9px;font-size:13px;letter-spacing:.1em}
 .ico{color:var(--accent);font-size:14px}.ico.g{color:var(--tert)}
 .fld{margin-left:auto;min-width:0;max-width:62%;border:.5px solid var(--line);border-radius:6px;padding:3px 8px;
@@ -158,10 +165,10 @@ code{font:11px/1.4 ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
 <h1>Connecting an Azure deployment</h1>
 <p class="sub">What we learned on a real Foundry resource, who holds what when they try to connect, the
 checks Bristlenose would run, and what the Mac Settings pane and the CLI would say in each state.
-Built to <b>invent as little as possible</b>: the pane keeps its three fields, its status row and its
+Built to <b>invent as little as possible</b>: the pane keeps its fields, its status row and its
 message slot. Each failure has two layers that differ in <b>kind</b>: our interpretation (a sentence of
-about 20 words, in the researcher’s language) and, behind a collapsed disclosure, Azure’s own raw answer,
-verbatim, for whoever runs the resource.</p>
+about 20 words, in the researcher’s language) and, behind a <b>Details</b> button that opens the app’s
+existing popover, Azure’s own raw answer, verbatim, for whoever runs the resource.</p>
 <p class="meta">PROPOSED 12 Nov 2026 · nothing built · needs owner approval before any UI change ·
 design doc: <code>docs/design-azure-connection.md</code> · relates to
 <code>docs/design-cli-just-works.md</code> and <code>LLMSettingsView.swift</code></p>
@@ -207,20 +214,20 @@ unverified, is in the design doc §2.
 </div>
 <div class="com"><div class="lab">Commentary</div>Why step 1 matters: when step 2 returns 404 we <b>already know the key and endpoint are right</b>, so the message can say so. Today one 404 covers the endpoint, the deployment and the API version, so the shipped sentence has to hedge.</div>
 
-<h2>5 · Mac · Settings ▸ LLM Provider ▸ Azure OpenAI</h2>
-<p class="sub">Same window as shipped. The red light comes first and is enough for many people; the sentence under
-it is <b>our interpretation</b>; behind a collapsed <b>Show Details</b> is <b>Azure’s raw answer</b>: the
-request line, the HTTP status, the response body exactly as Azure sent it, and the identifying headers. It is
-the standard output of the failure, not a longer version of the sentence, and it is what a helpdesk wants.
-Two disclosure styles are drawn for decision D11: <b>B</b> (a muted label with a trailing chevron, the style
-Claude Code’s desktop app uses; a new component) and <b>A</b> (the shipped <code>DisclosureGroup</code> with a
-leading triangle, already used in a grouped Form in MCP Agents settings). The shipped boot labels and the pane’s
-icon-only copy button are reused either way.</p>
+<h2>5 · Mac · Settings ▸ LLM Provider ▸ Azure</h2>
+<p class="sub">Drawn at the real size: the window is <b>660pt</b> wide (a 260pt provider list, a hairline, a 400pt detail pane),
+the cards are about 359pt, and the type is the shipped styles (table below). The red light comes first and is enough
+for many people; the sentence under it is <b>our interpretation</b>. For whoever runs the resource, a small <b>Details</b>
+button on the status line opens the app’s <b>existing diagnostic popover</b> (360pt wide, 320pt ceiling, scrolling inside,
+the header never scrolling) holding <b>Azure’s raw answer</b>: the request line, the HTTP status, the response body exactly as
+Azure sent it, and the identifying headers. The copy button lives in the popover’s header. The Settings pane gains
+nothing in height beyond the sentence, so a long record can never push the window (which never scrolls) off a small screen.</p>
+<h3>5a · Getting connected</h3>
 <div class="frames">
-<div class="fr" id="f-today-paste"><div class="cap">Mac · Azure OpenAI · TODAY, the portal’s Endpoint pasted (the field scrolls; it ends …/openai/v1/responses) <span class="tag now">shipped</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="fr" id="f-today-paste"><div class="cap">Mac · TODAY, the portal’s Endpoint pasted (the field scrolls; it ends …/openai/v1/responses) <span class="tag now">shipped</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
 <div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel dis"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot grey"></span>Not set up</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel dis"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot grey"></span>Not set up</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
 <div class="pane">
  <div><div class="sec">Status</div><div class="card">
   <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
@@ -229,17 +236,17 @@ icon-only copy button are reused either way.</p>
  </div></div>
  <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
  <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
  <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.services.ai.azure.com/openai/v1/responses</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld empty">&nbsp;</span></div>
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.services.ai.azure.com/openai/v1/responses</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld empty">&nbsp;</span></div>
   <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
  </div></div>
-</div></div></div></div>
-<div class="fr" id="f-reduce"><div class="cap">Mac · Azure OpenAI · PROPOSED, the same paste, tidied <span class="tag new">new behaviour</span><span class="tag new">new help line</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+</div></div></div></div></div>
+<div class="fr" id="f-reduce"><div class="cap">Mac · PROPOSED, the same paste, tidied to the host; the help line appears while the deployment name is empty <span class="tag new">new behaviour</span><span class="tag new">new help line</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
 <div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel dis"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot grey"></span>Not set up</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel dis"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot grey"></span>Not set up</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
 <div class="pane">
  <div><div class="sec">Status</div><div class="card">
   <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
@@ -248,17 +255,36 @@ icon-only copy button are reused either way.</p>
  </div></div>
  <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
  <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
  <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.services.ai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld empty">&nbsp;</span></div>
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.services.ai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld empty">&nbsp;</span></div>
   <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div><div class="help">Find the endpoint, key and deployment name under Models ▸ Deployments in Microsoft Foundry, or ask whoever manages the resource.</div></div>
-</div></div></div></div>
-<div class="fr" id="f-lift"><div class="cap">Mac · Azure OpenAI · PROPOSED, a full classic URL pasted: empty fields fill <span class="tag new">new behaviour</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+ </div><div class="help">Find the endpoint, key and deployment name under Models ▸ Deployments in Microsoft Foundry.</div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-nokey"><div class="cap">Mac · no key yet (a researcher who is only given an endpoint and a name): nothing can be said until a key is pasted <span class="tag now">shipped state</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
 <div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel dis"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot grey"></span>Not set up</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot grey"></span><span>Not set up</span></div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">&nbsp;</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-lift"><div class="cap">Mac · PROPOSED, a full classic URL pasted: empty fields fill from it <span class="tag new">new behaviour</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
 <div class="pane">
  <div><div class="sec">Status</div><div class="card">
   <div class="row"><span>Use this provider</span><span class="grow sw"></span></div>
@@ -267,17 +293,17 @@ icon-only copy button are reused either way.</p>
  </div></div>
  <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
  <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
  <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
   <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
  </div></div>
-</div></div></div></div>
-<div class="fr" id="f-checking"><div class="cap">Mac · Azure OpenAI · PROPOSED, while steps 1 and 2 run <span class="tag now">shipped state</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+</div></div></div></div></div>
+<div class="fr" id="f-checking"><div class="cap">Mac · while steps 1 and 2 run <span class="tag now">shipped state</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
 <div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot spin"></span>Checking…</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot spin"></span>Checking…</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
 <div class="pane">
  <div><div class="sec">Status</div><div class="card">
   <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
@@ -286,17 +312,17 @@ icon-only copy button are reused either way.</p>
  </div></div>
  <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
  <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
  <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
   <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
  </div></div>
-</div></div></div></div>
-<div class="fr" id="f-online"><div class="cap">Mac · Azure OpenAI · connected <span class="tag now">shipped</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+</div></div></div></div></div>
+<div class="fr" id="f-online"><div class="cap">Mac · connected (“Last verified” only here: it is drawn only when the status is Online) <span class="tag now">shipped</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
 <div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
 <div class="pane">
  <div><div class="sec">Status</div><div class="card">
   <div class="row"><span>Use this provider</span><span class="grow sw"></span></div>
@@ -305,146 +331,348 @@ icon-only copy button are reused either way.</p>
  </div></div>
  <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
  <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
  <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
   <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
  </div></div>
-</div></div></div></div>
-<div class="fr" id="f-rejected"><div class="cap">Mac · Azure OpenAI · key not accepted <span class="tag new">new sentence</span><span class="tag new">raw record</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
-<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot red"></span>Invalid key</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
-<div class="pane">
- <div><div class="sec">Status</div><div class="card">
-  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
-  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
-  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Invalid key</span></div><div class="msg">Azure OpenAI didn’t accept this key (401). Check it and the endpoint in Keys and Endpoint, or ask whoever gave them to you.</div><div class="disc"><span>Show Details</span><span class="chev"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 1.5 6.8 5 3.2 8.5"/></svg></span><span class="copyic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="lv">Last verified in 0 seconds</div></div>
- </div></div>
- <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
- <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
- <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mini</span></div>
-  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div></div>
-</div></div></div></div>
-<div class="fr" id="f-nodeploy"><div class="cap">Mac · Azure OpenAI · no such deployment · disclosure option B, open <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">raw record</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
-<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
-<div class="pane">
- <div><div class="sec">Status</div><div class="card">
-  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
-  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
-  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span></div><div class="msg">No deployment named “research-mni” on this resource. Key and endpoint are fine; check the name with whoever manages it.</div><div class="disc"><span>Hide Details</span><span class="chev"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.2 5 6.8 8.5 3.2"/></svg></span><span class="copyic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="detbox"><code>POST https://contoso.openai.azure.com/openai/deployments/research-mni/chat/completions?api-version=2024-10-21
-HTTP 404
-apim-request-id: 3d1fae88-0000-4000-8000-000000000000
-x-ms-region: East US
-date: Thu, 12 Nov 2026 14:32:07 GMT
-{&quot;error&quot;:{&quot;code&quot;:&quot;DeploymentNotFound&quot;,&quot;message&quot;:&quot;The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again.&quot;}}
-Bristlenose: 0.46.0</code></div><div class="lv">Last verified in 0 seconds</div></div>
- </div></div>
- <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
- <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
- <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mni</span></div>
-  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div></div>
-</div></div></div></div>
-<div class="fr" id="f-nodeploy-alt"><div class="cap">Mac · the same · disclosure option A (the shipped DisclosureGroup), open <span class="tag now">shipped idiom</span><span class="tag new">raw record</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
-<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
-<div class="pane">
- <div><div class="sec">Status</div><div class="card">
-  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
-  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
-  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span></div><div class="msg">No deployment named “research-mni” on this resource. Key and endpoint are fine; check the name with whoever manages it.</div><div class="disc"><span class="tri">▾</span><span>Hide Details</span></div><div class="detbox a"><code>POST https://contoso.openai.azure.com/openai/deployments/research-mni/chat/completions?api-version=2024-10-21
-HTTP 404
-apim-request-id: 3d1fae88-0000-4000-8000-000000000000
-x-ms-region: East US
-date: Thu, 12 Nov 2026 14:32:07 GMT
-{&quot;error&quot;:{&quot;code&quot;:&quot;DeploymentNotFound&quot;,&quot;message&quot;:&quot;The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again.&quot;}}
-Bristlenose: 0.46.0</code><span class="copyic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="lv">Last verified in 0 seconds</div></div>
- </div></div>
- <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
- <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
- <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mni</span></div>
-  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div></div>
-</div></div></div></div>
-<div class="fr" id="f-structured"><div class="cap">Mac · Azure OpenAI · the model can’t do structured outputs <span class="tag new">new sentence</span><span class="tag new">raw record</span><span class="tag unv">error code unverified</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
-<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
-<div class="pane">
- <div><div class="sec">Status</div><div class="card">
-  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
-  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
-  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span></div><div class="msg">This deployment’s model can’t do structured outputs, which Bristlenose needs. Ask for a chat model that can.</div><div class="disc"><span>Show Details</span><span class="chev"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 1.5 6.8 5 3.2 8.5"/></svg></span><span class="copyic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="lv">Last verified in 0 seconds</div></div>
- </div></div>
- <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
- <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
- <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-legacy</span></div>
-  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div></div>
-</div></div></div></div>
-<div class="fr" id="f-keysoff"><div class="cap">Mac · Azure OpenAI · key-based authentication is off (S4: held until U3) <span class="tag new">new sentence</span><span class="tag new">raw record</span><span class="tag unv">wording unverified; held until U3</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
-<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
-<div class="pane">
- <div><div class="sec">Status</div><div class="card">
-  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
-  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
-  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span></div><div class="msg">Key-based authentication is turned off for this resource, so Bristlenose can’t use it. Ask whoever manages it.</div><div class="disc"><span>Show Details</span><span class="chev"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 1.5 6.8 5 3.2 8.5"/></svg></span><span class="copyic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="lv">Last verified in 0 seconds</div></div>
- </div></div>
- <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
- <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
- <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mini</span></div>
-  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div></div>
-</div></div></div></div>
-<div class="fr" id="f-nohost"><div class="cap">Mac · Azure OpenAI · the host can’t be found <span class="tag new">new sentence</span><span class="tag new">raw record</span></div>
-<div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
-<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
-<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure OpenAI</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
-<div class="pane">
- <div><div class="sec">Status</div><div class="card">
-  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
-  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
-  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span></div><div class="msg">Couldn’t find that endpoint. Check the address, or ask whoever gave it to you.</div><div class="disc"><span>Show Details</span><span class="chev"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 1.5 6.8 5 3.2 8.5"/></svg></span><span class="copyic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="lv">Last verified in 0 seconds</div></div>
- </div></div>
- <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
- <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
-  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 12px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
- <div><div class="sec">Azure Settings</div><div class="card">
-  <div class="row"><span>Endpoint URL</span><span class="fld">https://contoso-test.openai.azure.com</span></div>
-  <div class="row"><span>Deployment name</span><span class="fld">research-mini</span></div>
-  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
- </div></div>
-</div></div></div></div>
+</div></div></div></div></div>
 </div>
+<h3>5b · Failures, Details closed (what the pane shows)</h3>
+<div class="frames">
+<div class="fr" id="f-rejected"><div class="cap">Mac · failure · key not accepted (401) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn">Details</span></div><div class="msg">Azure didn’t accept this key (401). Check it and the endpoint in Keys and Endpoint.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-nodeploy"><div class="cap">Mac · failure · no such deployment (404 DeploymentNotFound, observed) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn">Details</span></div><div class="msg">No deployment named “research-mni” on this resource. Key and endpoint are fine; check the name.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mni</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-structured"><div class="cap">Mac · failure · the model can’t do structured outputs (S3: held until U11) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span><span class="tag unv">error code unverified</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn">Details</span></div><div class="msg">This deployment’s model can’t do structured outputs, which Bristlenose needs. Use a chat model that can.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-legacy</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-keysoff"><div class="cap">Mac · failure · key-based authentication is off (S4: held until U3) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span><span class="tag unv">wording unverified; held</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn">Details</span></div><div class="msg">Key-based authentication is turned off for this resource, so Bristlenose can’t use it.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-nohost"><div class="cap">Mac · failure · the host can’t be found (no HTTP answer at all) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn">Details</span></div><div class="msg">Couldn’t find that endpoint. Check the address.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso-test.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-unavail"><div class="cap">Mac · unavailable · Azure answered 5xx or 429 (orange: a failed observation; the shipped sentence) <span class="tag now">shipped sentence</span><span class="tag new">Details</span><span class="tag unv">body unobserved</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot orange"></span>Unavailable</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot orange"></span><span>Unavailable</span><span class="sbtn">Details</span></div><div class="msg">Azure returned HTTP 503.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+<div class="fr" id="f-worst"><div class="cap">Mac · failure · the longest sentence: a 66-character deployment name wraps to four lines (the height budget case) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn">Details</span></div><div class="msg">No deployment named “research-interviews-structured-outputs-gpt-4-1-mini-eu-west-2026” on this resource. Key and endpoint are fine; check the name.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-interviews-structured-outputs-gpt-4-1-mini-eu-west-2026</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div></div></div>
+</div>
+<h3>5c · Details open (the popover, anchored under the button)</h3>
+<p class="sub">The popover is drawn overlapping the pane, as an <code>NSPopover</code> does, and may extend past the window’s right edge
+(it is its own window; macOS keeps it on the screen, not inside Settings).</p>
+<div class="frames">
+<div class="fr pop" id="f-pop-nodeploy"><div class="cap">Mac · Details open · no such deployment: the popover sizes itself to its text <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn on anchor">Details</span></div><div class="msg">No deployment named “research-mni” on this resource. Key and endpoint are fine; check the name.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mni</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>POST https://contoso.openai.azure.com/openai/deployments/research-mni/chat/completions?api-version=2024-10-21
+HTTP 404
+apim-request-id: 3d1fae88-0000-4000-8000-000000000000
+x-ms-region: East US
+date: Thu, 12 Nov 2026 14:32:07 GMT
+{&quot;error&quot;:{&quot;code&quot;:&quot;DeploymentNotFound&quot;,&quot;message&quot;:&quot;The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again.&quot;}}
+Bristlenose: 0.46.0</code></div></div></div></div>
+<div class="fr pop" id="f-pop-rejected"><div class="cap">Mac · Details open · key not accepted <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn on anchor">Details</span></div><div class="msg">Azure didn’t accept this key (401). Check it and the endpoint in Keys and Endpoint.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>GET https://contoso.openai.azure.com/openai/v1/models
+HTTP 401
+apim-request-id: 5e0b3f27-0000-4000-8000-000000000000
+x-ms-region: East US
+date: Thu, 12 Nov 2026 14:32:07 GMT
+{&quot;error&quot;:{&quot;code&quot;:&quot;401&quot;,&quot;message&quot;:&quot;Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.&quot;}}
+Bristlenose: 0.46.0</code></div></div></div></div>
+<div class="fr pop" id="f-pop-nohost"><div class="cap">Mac · Details open · host not found: no HTTP answer, so the record is the system’s own error <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn on anchor">Details</span></div><div class="msg">Couldn’t find that endpoint. Check the address.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso-test.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>GET https://contoso-test.openai.azure.com/openai/v1/models
+No response: A server with the specified hostname could not be found. (NSURLErrorDomain error -1003)
+Bristlenose: 0.46.0 · 12 Nov 2026 14:32 UTC</code></div></div></div></div>
+<div class="fr pop" id="f-pop-structured"><div class="cap">Mac · Details open · structured outputs (body unobserved) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span><span class="tag unv">unverified</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn on anchor">Details</span></div><div class="msg">This deployment’s model can’t do structured outputs, which Bristlenose needs. Use a chat model that can.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-legacy</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>POST https://contoso.openai.azure.com/openai/deployments/research-legacy/chat/completions?api-version=2024-10-21
+HTTP 400
+apim-request-id: 9a41d7c0-0000-4000-8000-000000000000
+x-ms-region: East US
+date: Thu, 12 Nov 2026 14:32:07 GMT
+[response body not yet observed: U11]
+Bristlenose: 0.46.0</code></div></div></div></div>
+<div class="fr pop" id="f-pop-keysoff"><div class="cap">Mac · Details open · key-based authentication off (body unobserved) <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span><span class="tag unv">unverified</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn on anchor">Details</span></div><div class="msg">Key-based authentication is turned off for this resource, so Bristlenose can’t use it.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>GET https://contoso.openai.azure.com/openai/v1/models
+HTTP 403
+apim-request-id: 2c77b814-0000-4000-8000-000000000000
+x-ms-region: East US
+date: Thu, 12 Nov 2026 14:32:07 GMT
+[response body not yet observed: U3]
+Bristlenose: 0.46.0</code></div></div></div></div>
+<div class="fr pop" id="f-pop-unavail"><div class="cap">Mac · Details open · 503 (body unobserved) <span class="tag now">shipped sentence</span><span class="tag unv">unverified</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot orange"></span>Unavailable</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot orange"></span><span>Unavailable</span><span class="sbtn on anchor">Details</span></div><div class="msg">Azure returned HTTP 503.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-mini</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>POST https://contoso.openai.azure.com/openai/deployments/research-mini/chat/completions?api-version=2024-10-21
+HTTP 503
+apim-request-id: 7b90c2e1-0000-4000-8000-000000000000
+x-ms-region: East US
+date: Thu, 12 Nov 2026 14:32:07 GMT
+[response body not yet observed]
+Bristlenose: 0.46.0</code></div></div></div></div>
+<div class="fr pop" id="f-pop-worst"><div class="cap">Mac · Details open · the worst case: a 2 KB gateway body reaches the 320pt ceiling and scrolls inside; the header never scrolls <span class="tag new">new sentence</span><span class="tag new">new label</span><span class="tag new">Details</span></div>
+<div class="wwrap"><div class="mw"><div class="mt"><span class="lights"><i></i><i></i><i></i></span><span class="wt">LLM Provider</span></div>
+<div class="tabs"><div class="tab"><b>⚙</b>General</div><div class="tab"><b>✐</b>Appearance</div><div class="tab on"><b>◈</b>LLM Provider</div><div class="tab"><b>≋</b>Transcription</div><div class="tab"><b>◉</b>Accounts</div><div class="tab"><b>⌁</b>MCP Agents</div></div>
+<div class="mb"><div class="pl"><div class="pr"><span class="rad"></span><span class="pm">A\</span><div><div class="pn">Claude</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad on"></span><span class="pm">◎</span><div><div class="pn">ChatGPT</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr"><span class="rad"></span><span class="pm">✦</span><div><div class="pn">Gemini</div><div class="ps"><span class="dot green"></span>Online</div></div></div><div class="pr sel"><span class="rad"></span><span class="pm">A</span><div><div class="pn">Azure</div><div class="ps"><span class="dot red"></span>Not connected</div></div></div><div class="pr"><span class="rad"></span><span class="pm">☻</span><div><div class="pn">Ollama</div><div class="ps"><span class="dot green"></span>Local</div></div></div></div>
+<div class="pane">
+ <div><div class="sec">Status</div><div class="card">
+  <div class="row"><span>Use this provider</span><span class="grow sw dis"></span></div>
+  <div class="row links"><span>azure.microsoft.com</span><span>Pricing</span><span>Portal</span></div>
+  <div class="stat"><div class="dotline"><span class="dot red"></span><span>Not connected</span><span class="sbtn on anchor">Details</span></div><div class="msg">No deployment named “research-interviews-structured-outputs-gpt-4-1-mini-eu-west-2026” on this resource. Key and endpoint are fine; check the name.</div></div>
+ </div></div>
+ <div><div class="sec">API Key</div><div class="card"><div class="row"><span class="keyf">••••••••••••••••</span><span class="ico"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:12px"><path d="M1 7s3.2-5.5 9-5.5S19 7 19 7s-3.2 5.5-9 5.5S1 7 1 7z"/><circle cx="10" cy="7" r="2.4"/></svg></span><span class="ico g">⊗</span></div></div></div>
+ <div><div class="sec">Model</div><div class="card"><div class="row"><span>Model</span><span class="val">gpt-4o <span class="ico">⇅</span></span></div></div>
+  <div class="card" style="margin-top:8px"><div class="stat" style="padding:9px 10px 8px"><div style="display:flex"><span>Concurrency</span><span class="grow" style="color:var(--dim)">3</span></div><div class="slider"></div><div class="mut">Parallel LLM calls</div></div></div></div>
+ <div><div class="sec">Azure Settings</div><div class="card">
+  <div class="row stack"><span>Endpoint URL</span><span class="fld">https://contoso.openai.azure.com</span></div>
+  <div class="row stack"><span>Deployment name</span><span class="fld">research-interviews-structured-outputs-gpt-4-1-mini-eu-west-2026</span></div>
+  <div class="row"><span>API version</span><span class="fld">2024-10-21</span></div>
+ </div></div>
+</div></div></div><div class="popover scrolls"><div class="ph"><span class="phl">Details</span><span class="sbtn ic" title="Copy details"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 3.5v-.4A1.6 1.6 0 0 0 8.9 1.5H3.6A1.6 1.6 0 0 0 2 3.1v5.3a1.6 1.6 0 0 0 1.6 1.6h.4"/></svg></span></div><div class="pb"><code>POST https://contoso.openai.azure.com/openai/deployments/research-interviews-structured-outputs-gpt-4-1-mini-eu-west-2026/chat/completions?api-version=2024-10-21
+HTTP 404
+apim-request-id: 3d1fae88-0000-4000-8000-000000000000
+x-ms-region: East US
+date: Thu, 12 Nov 2026 14:32:07 GMT
+{&quot;error&quot;:{&quot;code&quot;:&quot;DeploymentNotFound&quot;,&quot;message&quot;:&quot;The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again.&quot;}}
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+&lt;p&gt;The gateway could not reach the upstream service for this request. Ask whoever manages the network to check the route, the firewall and the private endpoint for this resource.&lt;/p&gt;
+Bristlenose: 0.46.0</code></div></div></div></div>
+</div>
+<h3>Specs these frames are drawn to</h3>
+<div class="t2 "><table><tr><th>What</th><th>Value</th><th>Where it comes from</th></tr><tr><td class=k>Window content width</td><td>660pt = 260 provider list + 1 hairline + 399 detail</td><td><code>LLMSettingsView.swift:83-87</code>; the owner’s 13 Nov screenshot, 2× pixels ÷ 2</td></tr><tr><td class=k>Detail pane padding · card width · card inner padding</td><td>≈20pt each side · ≈359pt · ≈10pt</td><td>Measured from that screenshot (grouped Form); not set in code</td></tr><tr><td class=k>Row text: status label, “Use this provider”, field labels, provider name</td><td>Body, Regular 13pt / 16pt line</td><td>HIG macOS text styles table; no font modifier in code</td></tr><tr><td class=k>The sentence, “Last verified”, the links row, the sidebar status line</td><td>Caption 1, Regular 10pt / 13pt line (<code>.font(.caption)</code>)</td><td><code>LLMSettingsView.swift:306, 855</code>; HIG macOS text styles</td></tr><tr><td class=k>Section headers (Status, API Key …)</td><td>≈13pt bold</td><td>Read from the screenshot; unverified in code</td></tr><tr><td class=k>Details button, popover copy button</td><td>Push button, <code>.bordered</code>, <code>.controlSize(.small)</code>: 11pt label, ≈19pt tall</td><td><code>ProjectDiagnosticPopover.swift</code> header; shipped “Show Details” is a plain button (<code>RunCoverPane</code>, <code>BootView</code>)</td></tr><tr><td class=k>Popover size</td><td>360pt wide, 16pt inset → 328pt of text; height follows content up to a 320pt ceiling, then scrolls; header does not scroll</td><td><code>ProjectDiagnosticPopover.swift:47-53, 76-80</code>; <code>docs/design-pipeline-popover-sizing.md</code></td></tr><tr><td class=k>Popover headline</td><td>Headline, 13pt bold. <b>Drawn as “Details”: the one wording still to choose</b> (the sidebar popover’s headline names the state)</td><td>Owner call</td></tr><tr><td class=k>Record text</td><td>Monospaced Caption 1, 10pt / 13pt (<code>.system(.caption, design: .monospaced)</code>), selectable</td><td>The pane’s own command chip, <code>LLMSettingsView.swift:304</code></td></tr><tr><td class=k>Window height</td><td>≈792pt for Azure connected (measured); the smallest default screen shows ≈800–820pt</td><td>Screenshot; design doc §13. CSS heights here run short, so read real ones from Diagnostics ▸ Azure Settings</td></tr></table></div>
 <div class="com"><div class="lab">Commentary</div><ul>
-<li>The label <b>“Not connected”</b> (new, one key) replaces “Invalid key” when the key is not the problem (frames 7–11); both reviewers who looked at it called “Invalid key” over “Key and endpoint are fine” a blocker (D4). Only a not-set-up row dims; an invalid row stays at full opacity with a true red dot, and “Use this provider” is disabled, as the code does.</li>
-<li>The status colour is the one shipped signal: red blocks choosing the provider, orange does not and is masked by a cached green when only a network was missing.</li>
-<li>The raw record is <b>English and unedited by design</b>, like the log: it is Azure’s own words, which an administrator’s documentation uses; the sentence above it is localised. Collapsed by default; the copy icon works without opening it. Real wording is shown for the missing deployment (observed); the 401, structured-outputs and key-off bodies are marked unverified. “Last verified in 0 seconds” is as shipped (it reads as the future; a separate small fix).</li>
-<li>The help line under Azure Settings is the only <b>new</b> static text on the pane, and appears only while the deployment name is empty.</li>
-<li>Request ids and times in the frames are illustrative; the shape of the headers is observed (<code>apim-request-id</code>, <code>x-ms-region</code>).</li></ul></div>
+<li>The label <b>“Not connected”</b> (new, one key) replaces “Invalid key” on every Azure failure, the 401 and 403 included: Azure’s own 401 reads “invalid subscription key or wrong API endpoint”, so the key is never certain (D4). Only a not-set-up row dims; an invalid row stays at full opacity with a true red dot, and “Use this provider” is disabled, as the code does.</li>
+<li>The status colour is the one shipped signal: red blocks choosing the provider; orange (frame “unavailable”) does not, and is masked by a cached green when only a network was missing.</li>
+<li>The <b>Details</b> button appears only when there is a record to show, only on Azure failures. It is one fixed noun (the shipped “Show Details” / “Hide Details” pair is a toggle; this opens a popover, so there is no state to name). One new string, 21 locales.</li>
+<li>The record is <b>English and unedited by design</b>, like the log: Azure’s own words, which an administrator’s documentation uses; the sentence above it is localised. Never remembered open. Real wording is shown for the missing deployment (observed); the 401, structured-outputs, key-off, 503 and network records are marked unverified where we have not seen Azure’s body.</li>
+<li>The worst case (2 KB gateway body) is the popover’s own existing case (<code>CAUSE_MESSAGE_MAX</code> is 4096 bytes; “nothing is clamped, the text is the payload; it scrolls”), not a new one. Keyboard scrolling into a popover’s scroll view is the existing popover’s behaviour; Copy details gives the whole text either way.</li>
+<li>The “Last verified” line is drawn only when the status is Online (as shipped it read “0 seconds” beside a red dot).</li>
+<li>Not drawn: forced dark appearance (the page follows the system appearance); the sidebar-row popover and the toolbar problem pill, which show the same record for a failed <i>run</i>.</li>
+<li>Request ids and times are illustrative; the header shape is observed (<code>apim-request-id</code>, <code>x-ms-region</code>).</li></ul></div>
 
 <h2>6 · CLI · <code>bristlenose configure azure</code></h2>
 <p class="sub">Today it validates nothing and tells the researcher to hand-edit <code>.env</code>. Proposed: it
@@ -469,24 +697,24 @@ Storing anyway...
   BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name</pre></div></div>
 <div class="fr"><div class="cap">PROPOSED · connected, the portal’s long Endpoint pasted <span class="tag new">new</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre>$ bristlenose configure azure
 
-<span class="nw">Enter your Azure OpenAI endpoint: https://contoso.services.ai.azure.com/openai/v1/responses</span>
+<span class="nw">Enter your Azure endpoint: https://contoso.services.ai.azure.com/openai/v1/responses</span>
 <span class="in nw">ℹ Using https://contoso.services.ai.azure.com</span>
-<span class="nw">Enter your Azure OpenAI deployment name: research-mini</span>
-Enter your Azure OpenAI API key: ········
+<span class="nw">Enter your Azure deployment name: research-mini</span>
+Enter your Azure API key: ········
 <span class="ok nw">✓ Key accepted by contoso.services.ai.azure.com</span>
 <span class="ok nw">✓ Deployment “research-mini” answered (gpt-4.1-mini-2025-04-14)</span>
 <span class="ok">✓ Stored in Keychain as &quot;Bristlenose Azure API Key&quot;</span>
 <span class="ok nw">✓ Saved endpoint and deployment name to ~/.config/bristlenose/.env</span></pre></div></div>
 <div class="fr"><div class="cap">PROPOSED · the deployment name isn’t known yet <span class="tag new">new</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre>$ bristlenose configure azure
 
-Enter your Azure OpenAI endpoint: https://contoso.openai.azure.com
-<span class="nw">Enter your Azure OpenAI deployment name (Enter if you don’t know it):</span>
-Enter your Azure OpenAI API key: ········
+Enter your Azure endpoint: https://contoso.openai.azure.com
+<span class="nw">Enter your Azure deployment name (Enter if you don’t know it):</span>
+Enter your Azure API key: ········
 <span class="ok nw">✓ Key accepted by contoso.openai.azure.com</span>
 <span class="in nw">ℹ Deployment not checked. Find the name under Models ▸ Deployments in Microsoft Foundry.</span>
 <span class="ok">✓ Stored in Keychain as &quot;Bristlenose Azure API Key&quot;</span></pre></div></div>
 <div class="fr"><div class="cap">PROPOSED · no such deployment (sentence, then Azure’s raw record) <span class="tag new">new</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre><span class="ok nw">✓ Key accepted by contoso.openai.azure.com</span>
-<span class="er nw">✗ No deployment named “research-mni” on this resource. Key and endpoint are fine; check the name with whoever manages it.</span>
+<span class="er nw">✗ No deployment named “research-mni” on this resource. Key and endpoint are fine; check the name.</span>
 <span class="dm nw">  POST https://contoso.openai.azure.com/openai/deployments/research-mni/chat/completions?api-version=2024-10-21</span>
 <span class="dm nw">  HTTP 404</span>
 <span class="dm nw">  apim-request-id: 3d1fae88-0000-4000-8000-000000000000</span>
@@ -494,7 +722,7 @@ Enter your Azure OpenAI API key: ········
 <span class="dm nw">  date: Thu, 12 Nov 2026 14:32:07 GMT</span>
 <span class="dm nw">  {&quot;error&quot;:{&quot;code&quot;:&quot;DeploymentNotFound&quot;,&quot;message&quot;:&quot;The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again.&quot;}}</span>
 <span class="dm nw">  Bristlenose: 0.46.0</span></pre></div></div>
-<div class="fr"><div class="cap">PROPOSED · key not accepted <span class="tag new">new</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre><span class="er nw">✗ Azure OpenAI didn’t accept this key (401). Check it and the endpoint in Keys and Endpoint, or ask whoever gave them to you.</span>
+<div class="fr"><div class="cap">PROPOSED · key not accepted <span class="tag new">new</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre><span class="er nw">✗ Azure didn’t accept this key (401). Check it and the endpoint in Keys and Endpoint.</span>
 <span class="dm nw">  GET https://contoso.openai.azure.com/openai/v1/models</span>
 <span class="dm nw">  HTTP 401</span>
 <span class="dm nw">  apim-request-id: 5e0b3f27-0000-4000-8000-000000000000</span>
@@ -502,7 +730,7 @@ Enter your Azure OpenAI API key: ········
 <span class="dm nw">  date: Thu, 12 Nov 2026 14:32:07 GMT</span>
 <span class="dm nw">  {&quot;error&quot;:{&quot;code&quot;:&quot;401&quot;,&quot;message&quot;:&quot;Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.&quot;}}</span>
 <span class="dm nw">  Bristlenose: 0.46.0</span></pre></div></div>
-<div class="fr"><div class="cap">PROPOSED · key-based authentication off (wording unverified) <span class="tag new">new</span><span class="tag unv">unverified</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre><span class="er un">✗ Key-based authentication is turned off for this resource, so Bristlenose can’t use it. Ask whoever manages it.</span>
+<div class="fr"><div class="cap">PROPOSED · key-based authentication off (wording unverified) <span class="tag new">new</span><span class="tag unv">unverified</span></div><div class="term"><div class="tb"><i></i><i></i><i></i></div><pre><span class="er un">✗ Key-based authentication is turned off for this resource, so Bristlenose can’t use it.</span>
 <span class="dm un">  GET https://contoso.openai.azure.com/openai/v1/models</span>
 <span class="dm un">  HTTP 403</span>
 <span class="dm un">  apim-request-id: 2c77b814-0000-4000-8000-000000000000</span>
@@ -522,16 +750,22 @@ Enter your Azure OpenAI API key: ········
 <div class="com"><div class="lab">Commentary</div>The record carries the request line (host, path, <code>api-version</code>, the deployment name as typed), the HTTP status, the response body verbatim, an allowlist of response headers (<code>apim-request-id</code>, <code>x-request-id</code> when present, <code>x-ms-region</code>), and our UTC time and version. It never carries request headers, the key, or any part of it, and it passes through the log redactor.</div>
 
 <h2>8 · Words: say it the way Microsoft does</h2>
-<div class="t2 "><table><tr><th>Say</th><th>Not</th><th>Seen in</th></tr><tr><td class=k><b>Endpoint</b> · <b>Keys and Endpoint</b> · <b>Key 1</b></td><td>“Target URI”, “API base”, a bare “URL”</td><td>Azure portal ▸ Resource Management; the deployment’s Details page</td></tr><tr><td class=k><b>Deployment name</b> · <b>Models ▸ Deployments</b></td><td>“model name” for the deployment name</td><td>Foundry portal</td></tr><tr><td class=k><b>Azure OpenAI</b> (the label stays) · <b>Foundry</b></td><td>“Azure AI Studio”, “AI Services”</td><td>The create menu, and the breadcrumb “Microsoft Foundry | Azure OpenAI”</td></tr><tr><td class=k><b>Deployment type</b>: Global Standard, Data Zone Standard, Standard</td><td>“tier”, “plan”</td><td>The Deploy dialog</td></tr><tr><td class=k><b>Quota</b> · <b>Insufficient quota</b> · <b>Request quota</b></td><td>“limit”, “credit”</td><td>The Deploy dialog; Manage ▸ Quota</td></tr><tr><td class=k><b>Microsoft Entra ID</b></td><td>“Azure AD”, “SSO”</td><td>Microsoft’s current name</td></tr></table></div>
+<div class="t2 "><table><tr><th>Say</th><th>Not</th><th>Seen in</th></tr><tr><td class=k><b>Endpoint</b> · <b>Keys and Endpoint</b> · <b>Key 1</b></td><td>“Target URI”, “API base”, a bare “URL”</td><td>Azure portal ▸ Resource Management; the deployment’s Details page</td></tr><tr><td class=k><b>Deployment name</b> · <b>Models ▸ Deployments</b></td><td>“model name” for the deployment name</td><td>Foundry portal</td></tr><tr><td class=k><b>Azure</b> (our provider label) · <b>Microsoft Foundry</b> in help text</td><td>“Azure OpenAI” as our label (reads as OpenAI-only), “Azure Foundry” (not a Microsoft name), “Azure AI Studio”, “AI Services”</td><td>IT says Azure and the key lives on an Azure resource; Microsoft’s portal breadcrumb reads “Microsoft Foundry | Azure OpenAI”</td></tr><tr><td class=k><b>Deployment type</b>: Global Standard, Data Zone Standard, Standard</td><td>“tier”, “plan”</td><td>The Deploy dialog</td></tr><tr><td class=k><b>Quota</b> · <b>Insufficient quota</b> · <b>Request quota</b></td><td>“limit”, “credit”</td><td>The Deploy dialog; Manage ▸ Quota</td></tr><tr><td class=k><b>Microsoft Entra ID</b></td><td>“Azure AD”, “SSO”</td><td>Microsoft’s current name</td></tr></table></div>
 <h3>Proposed new strings (English; 21 locales once approved)</h3>
-<div class="t2 "><table><tr><th>#</th><th>Where</th><th>Sentence</th><th>Words</th></tr><tr><td class=k>1</td><td>Key or endpoint not accepted (Azure only; 401 only)</td><td>{{provider}} didn’t accept this key ({{status}}). Check it and the endpoint in Keys and Endpoint, or ask whoever gave them to you.</td><td>21</td></tr><tr><td class=k>2</td><td>No such deployment</td><td>No deployment named “{{name}}” on this resource. Key and endpoint are fine; check the name with whoever manages it.</td><td>19</td></tr><tr><td class=k>3</td><td>Model can’t do structured outputs <span class="tag unv">held until U11</span></td><td>This deployment’s model can’t do structured outputs, which Bristlenose needs. Ask for a chat model that can.</td><td>17</td></tr><tr><td class=k>4</td><td>Key-based authentication off <span class="tag unv">held until U3</span></td><td>Key-based authentication is turned off for this resource, so Bristlenose can’t use it. Ask whoever manages it.</td><td>17</td></tr><tr><td class=k>5</td><td>Help line under Azure Settings (only while the deployment name is empty)</td><td>Find the endpoint, key and deployment name under Models ▸ Deployments in Microsoft Foundry, or ask whoever manages the resource.</td><td>20</td></tr><tr><td class=k>6</td><td>Host cannot be found</td><td>Couldn’t find that endpoint. Check the address, or ask whoever gave it to you.</td><td>14</td></tr><tr><td class=k>L1</td><td>The Azure status label when the key is not the problem</td><td>Not connected</td><td>2</td></tr></table></div>
-<div class="com"><div class="lab">Commentary</div><b>Length rule (owner, 12 Nov):</b> the sentence is <b>our interpretation</b>, about 20 words and two lines in the pane (the shipped key-rejected sentence, rendered for Gemini, is 23 words, and is the benchmark). The raw record behind the disclosure is a different kind of text: Azure’s own answer, never shortened or rephrased. The sentences use Microsoft’s own terms (<i>structured outputs</i>, <i>key-based authentication</i>, <i>Models ▸ Deployments</i>, <i>Microsoft Foundry</i>) and say “ask whoever gave it to you / manages it” so a person who never sees the portal still has a next step. The shipped <code>keyRejected</code> sentence says “generate a new key in your provider dashboard”, which a researcher who is not allowed to make keys cannot do; string 1 replaces it for Azure only.</div>
+<div class="t2 "><table><tr><th>#</th><th>Where</th><th>Sentence</th><th>Words</th></tr><tr><td class=k>1</td><td>Key or endpoint not accepted (Azure only; 401 only)</td><td>{{provider}} didn’t accept this key ({{status}}). Check it and the endpoint in Keys and Endpoint.</td><td>15</td></tr><tr><td class=k>2</td><td>No such deployment</td><td>No deployment named “{{name}}” on this resource. Key and endpoint are fine; check the name.</td><td>15</td></tr><tr><td class=k>3</td><td>Model can’t do structured outputs <span class="tag unv">held until U11</span></td><td>This deployment’s model can’t do structured outputs, which Bristlenose needs. Use a chat model that can.</td><td>16</td></tr><tr><td class=k>4</td><td>Key-based authentication off <span class="tag unv">held until U3</span></td><td>Key-based authentication is turned off for this resource, so Bristlenose can’t use it.</td><td>13</td></tr><tr><td class=k>5</td><td>Help line under Azure Settings (only while the deployment name is empty)</td><td>Find the endpoint, key and deployment name under Models ▸ Deployments in Microsoft Foundry.</td><td>14</td></tr><tr><td class=k>6</td><td>Host cannot be found</td><td>Couldn’t find that endpoint. Check the address.</td><td>7</td></tr><tr><td class=k>L1</td><td>The Azure status label on any failure</td><td>Not connected</td><td>2</td></tr></table></div>
+<div class="com"><div class="lab">Commentary</div><b>Length rule (owner, 12 Nov):</b> the sentence is <b>our interpretation</b>, about 20 words and two lines in the pane (the shipped key-rejected sentence, rendered for Gemini, is 23 words, and is the benchmark). The raw record behind the disclosure is a different kind of text: Azure’s own answer, never shortened or rephrased. The sentences use Microsoft’s own terms (<i>structured outputs</i>, <i>key-based authentication</i>, <i>Models ▸ Deployments</i>, <i>Microsoft Foundry</i>) and stop at what is wrong and what to check: a researcher who was given these values knows to ask whoever gave them (owner, 13 Nov). The shipped <code>keyRejected</code> sentence says “generate a new key in your provider dashboard”, which a researcher who is not allowed to make keys cannot do; string 1 replaces it for Azure only.</div>
 
 <h2>9 · What to ask your IT department (draft, for the website docs)</h2>
 <div class="com" style="border-left-color:var(--accent)"><div class="lab" style="color:var(--accent)">Draft copy · not for the app</div>
-Ask for four things: the <b>endpoint</b> of the Azure OpenAI (Microsoft Foundry) resource; the <b>name of a deployment</b> of a chat model that supports structured outputs; a <b>key</b> for the resource (say so if your organisation turns key-based authentication off); and enough <b>quota</b> for several interviews at once. Where your data is processed is set by the deployment type (Global Standard, Data Zone Standard or Standard); that is your administrator’s setting, and Bristlenose cannot see it.</div>
+Ask for four things: the <b>endpoint</b> of the Azure resource (in Microsoft Foundry); the <b>name of a deployment</b> of a chat model that supports structured outputs; a <b>key</b> for the resource (say so if your organisation turns key-based authentication off); and enough <b>quota</b> for several interviews at once. Where your data is processed is set by the deployment type (Global Standard, Data Zone Standard or Standard); that is your administrator’s setting, and Bristlenose cannot see it.</div>
 
 <h2>10 · Decisions for the owner</h2>
-<div class="t2 "><table><tr><th>#</th><th>Decision</th><th>Recommendation</th></tr><tr><td class=k>D1</td><td>The free key-and-endpoint check first (<code>GET /openai/v1/models</code>)?</td><td>Yes: observed to split 401 from 404 at no cost.</td></tr><tr><td class=k>D2</td><td>A tolerant Endpoint field that reduces to the host and lifts the deployment name and API version, shown in the fields?</td><td>Yes, always visible and editable, never silent.</td></tr><tr><td class=k>D3</td><td>The new strings in Microsoft’s words: S1, S2, S5, S6 and the label L1 (S3 and S4 are held, D15)?</td><td>Approve wording, then 21 locales.</td></tr><tr><td class=k>D4</td><td>The Azure status label when the key is not the problem: <b>“Not connected”</b> instead of “Invalid key” (also for the shipped “not found” and “must start with https://” sentences), chosen from the failure’s key so <code>ProviderStatus</code> gains no case? One new string, 21 locales.</td><td><b>Yes</b>: frames 7–11 show it.</td></tr><tr><td class=k>D5</td><td><code>configure azure</code> asks for endpoint and deployment and saves them in the user config <code>.env</code>?</td><td>Yes.</td></tr><tr><td class=k>D6</td><td>Key-off organisations: recognise and say so; no sign-in in v1?</td><td>Yes.</td></tr><tr><td class=k>D7</td><td>Persist nothing and re-probe in every run’s preflight?</td><td><b>Not answerable as written</b>: the preflight is cached 24 hours and serve-mode assistants skip it. Decide with D13.</td></tr><tr><td class=k>D8</td><td>Leave the Model row as it is; check first what it drives?</td><td>Yes.</td></tr><tr><td class=k>D9</td><td>Show the real model name on success?</td><td>Not in the pane for v1; in <code>doctor</code> and the CLI.</td></tr><tr><td class=k>D10</td><td>Keep the label “Azure OpenAI” rather than “Foundry”?</td><td>Keep: it is in Microsoft’s own create menu and breadcrumb.</td></tr><tr><td class=k>D11</td><td>The Mac pane’s collapsed raw record: <b>A</b>, the shipped <code>DisclosureGroup</code> (leading triangle), or <b>B</b>, the Claude Code style trailing chevron (a new component)?</td><td><b>A</b> for Settings (the Mac’s own, no new component), unless you prefer B’s look: your call. Frame 7 draws B, frame 8 draws A.</td></tr><tr><td class=k>D12</td><td>The CLI: print Azure’s raw record as a dim block after the failure sentence, by default? (Alternative: only with <code>-v</code>.)</td><td>By default: a terminal cannot collapse, and the output is what gets pasted into a ticket.</td></tr><tr><td class=k>D13</td><td>Where the connection result lives: the preflight cache and the serve-mode assistants.</td><td>Build the client from the finder in one place; make the cache key include route and parameters.</td></tr><tr><td class=k>D14</td><td>Security requirements: https only; no redirects; reject userinfo; validate the API-version field and refuse key-shaped input in the Endpoint, Deployment and API-version fields; confirm before a key goes to a non-Azure host.</td><td>Yes, as requirements.</td></tr><tr><td class=k>D15</td><td>The held strings: S3 (until U11) and S4 (until U3) do not ship until the real error bodies have been read.</td><td>Yes.</td></tr></table></div>
+<div class="t2 "><table><tr><th>#</th><th>Decision</th><th>Recommendation</th></tr><tr><td class=k>D1</td><td>The free key-and-endpoint check first (<code>GET /openai/v1/models</code>)?</td><td>Yes: observed to split 401 from 404 at no cost.</td></tr><tr><td class=k>D2</td><td>A tolerant Endpoint field that reduces to the host and lifts the deployment name and API version, shown in the fields?</td><td>Yes, always visible and editable, never silent.</td></tr><tr><td class=k>D3</td><td>The new strings in Microsoft’s words: S1, S2, S5, S6 and the label L1 (S3 and S4 are held, D15)?</td><td>Approve wording, then 21 locales.</td></tr><tr><td class=k>D4</td><td>The Azure status label on <b>any</b> failure, the 401 and 403 included: <b>“Not connected”</b> instead of “Invalid key” (also for the shipped “not found” and “must start with https://” sentences), chosen from the failure’s key so <code>ProviderStatus</code> gains no case? One new string, 21 locales.</td><td><b>Yes</b>: the frames in 5b and 5c show it.</td></tr><tr><td class=k>D5</td><td><code>configure azure</code> asks for endpoint and deployment and saves them in the user config <code>.env</code>?</td><td>Yes.</td></tr><tr><td class=k>D6</td><td>Key-off organisations: recognise and say so; no sign-in in v1?</td><td>Yes.</td></tr><tr><td class=k>D7</td><td>Persist nothing and re-probe in every run’s preflight?</td><td><b>Not answerable as written</b>: the preflight is cached 24 hours and serve-mode assistants skip it. Decide with D13.</td></tr><tr><td class=k>D8</td><td>Leave the Model row as it is; check first what it drives?</td><td>Yes.</td></tr><tr><td class=k>D9</td><td>Show the real model name on success?</td><td>Not in the pane for v1; in <code>doctor</code> and the CLI.</td></tr><tr><td class=k>D10</td><td>The provider label: <b>“Azure”</b> instead of “Azure OpenAI”? <b>Decided 13 Nov (owner): yes.</b> A Foundry deployment can be any model, IT and the key both say Azure, and “Azure OpenAI” reads as OpenAI-only. v1 is proven for OpenAI-model deployments; testing other Foundry models is a 100-days item. The code rename is owed (Swift, 21 locales, Python, README, man page, website docs, <code>CLAUDE.md</code>).</td><td>Yes.</td></tr><tr><td class=k>D11</td><td>Where the raw record lives on the Mac. <b>Superseded (13 Nov, owner):</b> not a disclosure inside the pane but a <b>Details</b> button on the status line that opens the app’s existing diagnostic popover, copy button in its header. Sidesteps the window-height budget (the Settings window never scrolls).</td><td><b>Yes.</b> Frames in 5b and 5c. Open: the popover’s headline wording.</td></tr><tr><td class=k>D12</td><td>The CLI: print Azure’s raw record as a dim block after the failure sentence, by default? (Alternative: only with <code>-v</code>.)</td><td>By default: a terminal cannot collapse, and the output is what gets pasted into a ticket.</td></tr><tr><td class=k>D13</td><td>Where the connection result lives: the preflight cache and the serve-mode assistants.</td><td>Build the client from the finder in one place; make the cache key include route and parameters.</td></tr><tr><td class=k>D14</td><td>Security requirements: https only; no redirects; reject userinfo; validate the API-version field and refuse key-shaped input in the Endpoint, Deployment and API-version fields; confirm before a key goes to a non-Azure host.</td><td>Yes, as requirements.</td></tr><tr><td class=k>D15</td><td>The held strings: S3 (until U11) and S4 (until U3) do not ship until the real error bodies have been read.</td><td>Yes.</td></tr></table></div>
 
-</div></body></html>
+</div>
+<script>
+function placePopovers(){document.querySelectorAll('.wwrap').forEach(function(w){var p=w.querySelector('.popover'),b=w.querySelector('.sbtn.anchor');
+ if(!p||!b)return;var wr=w.getBoundingClientRect(),br=b.getBoundingClientRect(),cx=br.left-wr.left+br.width/2,left=cx-180;
+ p.style.left=left+'px';p.style.top=(br.bottom-wr.top+9)+'px';p.style.setProperty('--ax',(cx-left)+'px');});}
+window.addEventListener('load',placePopovers);window.addEventListener('resize',placePopovers);placePopovers();
+</script></body></html>

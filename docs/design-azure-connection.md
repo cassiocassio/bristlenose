@@ -21,7 +21,7 @@ trued-against: HEAD@main on 12 Nov 2026
 
 ## 1. The problem
 
-The provider is called "Azure OpenAI" in Settings and the CLI, and it takes three things: an
+The provider is called "Azure OpenAI" in Settings and the CLI today (D10 renames it "Azure"), and it takes three things: an
 endpoint, a deployment name and a key. Microsoft has since folded Azure OpenAI into **Foundry**.
 The portal's create menu now offers "Foundry (Recommended)" and "Azure OpenAI" side by side,
 resources answer on more than one host, and a researcher in a larger organisation never sees
@@ -139,8 +139,8 @@ The Mac keeps its existing vocabulary (C5); nothing is added to `ProviderStatus`
 | Endpoint not https | invalid | `azureEndpointScheme` | existing |
 | Running steps 1–2 | checking | — | existing |
 | Connected | online | "Last verified …" (as today) | existing |
-| Key or endpoint rejected (**401**; Azure's own message covers both, O8) | invalid | **S1** below: where they come from, and who to ask | **new** (replaces `keyRejected` for Azure only, C6) |
-| **403** (firewall, private endpoint, key access off) | invalid | the shipped `httpStatus` sentence ("Azure OpenAI returned HTTP 403.") plus the raw record; **never the key-rejected sentence**, because the key may be fine. S4 only once U3 gives the code that identifies key-based authentication being off | open (U3) |
+| Key or endpoint rejected (**401**; Azure's own message covers both, O8) | invalid | **S1** below: what was refused and what to check | **new** (replaces `keyRejected` for Azure only, C6) |
+| **403** (firewall, private endpoint, key access off) | invalid | the shipped `httpStatus` sentence ("Azure OpenAI returned HTTP 403." today; "Azure returned HTTP 403." after the rename, D10) plus the raw record; **never the key-rejected sentence**, because the key may be fine. S4 only once U3 gives the code that identifies key-based authentication being off | open (U3) |
 | Endpoint not found | invalid | `azureNotFound` | existing |
 | No such deployment (404 `DeploymentNotFound`, after step 1 passed) | invalid | **S2** below: "Key and endpoint are fine" is only said when step 1 really passed | **new** |
 | Model cannot do structured outputs | invalid | **S3** below | **new** |
@@ -149,7 +149,7 @@ The Mac keeps its existing vocabulary (C5); nothing is added to `ProviderStatus`
 | Host cannot be found (DNS) | invalid | **S6** below | **new** |
 | Rate limited, 5xx | unavailable | `rateLimited` / `httpStatus` | existing |
 
-**The label.** Today's `.invalid` label is "Invalid key" (`llmSettings.status.invalid`), chosen from the status alone (`LLMProvider.swift:109-114` is the precedent: it shows "Local" instead of "Online" for Ollama). Over "Key and endpoint are fine" it contradicts the sentence, and a screenshot sent to IT then prompts a key regeneration for a key that is fine. Proposal (D4): Azure shows **"Not connected"** (one new key) whenever the failure is not a key rejection: no such deployment, structured outputs, key-based authentication off, host not found, and the shipped `azureNotFound` and `azureEndpointScheme`. The label is chosen from the failure's key, so **`ProviderStatus` gains no case**.
+**The label.** Today's `.invalid` label is "Invalid key" (`llmSettings.status.invalid`), chosen from the status alone (`LLMProvider.swift:109-114` is the precedent: it shows "Local" instead of "Online" for Ollama). Over "Key and endpoint are fine" it contradicts the sentence, and a screenshot sent to IT then prompts a key regeneration for a key that is fine. Proposal (D4): Azure shows **"Not connected"** (one new key) on **every** Azure failure, the 401 and 403 included (amended 13 Nov, Mac review): Azure's own 401 reads "invalid subscription key or wrong API endpoint", so the key is never certain, and S1 itself says "check it and the endpoint". That covers no such deployment, structured outputs, key-based authentication off, host not found, the shipped `azureNotFound` and `azureEndpointScheme`, and the 401 and 403. One rule, no per-code choice. The spoken VoiceOver label must come from the same function as the drawn one (`ValidationAnnouncement.swift:33` builds it from the status alone today). The label is chosen from the failure's key, so **`ProviderStatus` gains no case**.
 
 ### 6.1 Two layers: our reading, and Azure's raw answer (owner, 12 Nov)
 
@@ -161,7 +161,7 @@ versions of one text:
 1. **Our interpretation** (the sentence): what we think happened, in about 20 words and two lines,
    in the researcher's language. It is ours, so it can be wrong; it is the summary a researcher
    reads, and for many the red light is enough.
-2. **The raw record** (the disclosure): what Azure actually said, **verbatim, unedited and in
+2. **The raw record** (behind a Details button): what Azure actually said, **verbatim, unedited and in
    English**: the request line, the HTTP status, the response body (Azure's JSON error, code and
    message), and the identifying response headers. It is the standard output of the failure, the
    thing a researcher does not want to deal with and a helpdesk does. We do not rephrase it, and we
@@ -208,20 +208,29 @@ against U3):
 
 **On the Mac the raw record is a reveal, not part of the message** (owner, 12 Nov: "for many the red
 light is enough; the human explanation helps first; the raw stuff is there but not in your face").
-In order: the red light, the sentence, then a collapsed **Show Details** row that opens a box of
-monospace, with a tiny icon-only copy button. Collapsed by default, so the common case looks as it
-does today plus one quiet row. It appears **only on Azure failures**.
+In order: the red light, the sentence, and on the status line a small **Details** button (owner,
+13 Nov: only the extended, CLI-level detail goes behind it). It opens **the app's existing diagnostic
+popover** (`ProjectDiagnosticPopover`: 360pt wide, 16pt inset, height following its content up to a
+320pt ceiling and then scrolling inside, the header never scrolling) holding the raw record in
+monospaced Caption 1, with the **copy button in the popover's header** (`.bordered`, `.controlSize(.small)`,
+`doc.on.doc`, tooltip `desktop.pipeline.diagnostic.action.copy`). The button appears **only on Azure
+failures**, only when there is a record, and is a plain push button like the shipped "Show Details"
+(`RunCoverPane`, `BootView`): it opens something, so it has no state to name. One fixed noun, **"Details"**
+(one new string, 21 locales); the popover headline is drawn as "Details" and is the one wording still to choose.
 
-Reuse, as the Mac review found it: the labels are shipped (`desktop.boot.showDetails` /
-`hideDetails`) and so is the copy button (`LLMSettingsView`'s `CopyButton`, icon `doc.on.doc`, tooltip
-`desktop.pipeline.diagnostic.action.copy`, "Copy details"). **The disclosure itself is a choice (D11):**
-- **A. The shipped Mac idiom.** A stock `DisclosureGroup` (leading triangle; keyboard and VoiceOver
-  for free), as already used in a grouped Form card in `MCPAgentsSettingsView` ("Connect by hand"),
-  with the boot labels. No new component. The detail box copies `RunCoverPane`'s monospace treatment
-  and puts the copy button beside the box.
-- **B. The Claude Code desktop style** the owner showed: a muted label with a **trailing** chevron
-  opening a rounded box. This is **a new component** (no shipped Swift view draws it), and it must
-  still be keyboard- and VoiceOver-reachable. The mockup draws B in frame 7 and A in frame 8.
+**Why a popover and not a disclosure in the pane (D11, superseded).** The Settings window never
+scrolls and nothing limits it to the screen (`SettingsWindow.refitToContent`), so anything that grows
+the pane is a height budget against the smallest Mac we support (§13: the M1 Air at default scaling).
+An inline box has to be capped, scrolled or both; the popover already solves exactly that (the 320pt
+ceiling, "nothing is clamped, the text is the payload; it scrolls", `docs/design-pipeline-popover-sizing.md`),
+so the edge case of a long record (a proxy's HTML page can be 2 KB) cannot break the 90% case, which is a
+red light and one sentence. The two disclosure options the mockup first drew (A, the shipped `DisclosureGroup`;
+B, a Claude Code style trailing chevron) were both rejected by the HIG and accessibility reviews on
+13 Nov or made unnecessary by this; neither is drawn now.
+
+**Open:** a failed *run* already shows its cause in the sidebar status-line popover; a failed
+Settings *check* is a different event, so the Details button reaches the same popover content from the pane.
+Whether the Settings verdict's raw record reaches `ProviderProblemModel` for the toolbar pill is not checked.
 
 **The CLI is a separate decision (D12).** A terminal has no disclosure to collapse into, and what
 is on screen is what gets pasted into a ticket. Proposed: the sentence first, then the raw record
@@ -229,11 +238,10 @@ as a dim block, by default. The alternative is to print them only with `-v`.
 
 ## 7. Mac and CLI behaviour
 
-**Mac, Settings ▸ LLM Provider ▸ Azure OpenAI.** No new control. The Endpoint URL field becomes
+**Mac, Settings ▸ LLM Provider ▸ Azure** (today "Azure OpenAI", D10). One new control: the Details button. The Endpoint URL field becomes
 tolerant (§4) and shows what it kept, in the same fields. The status dot, its label and the
-message under it carry the states (§6); the administrator's raw record sits behind the collapsed
-**Show Details** row (§6.1). The help line (S5) shows only while the deployment name is empty. The label stays "Azure OpenAI", which is the name in Microsoft's own
-create menu and breadcrumb (D10). One **new line of help** under the three fields, in
+message under it carry the states (§6); the administrator's raw record sits behind the
+**Details** button and its popover (§6.1). The help line (S5) shows only while the deployment name is empty. The label becomes **"Azure"** (D10): it is what IT says and where the key lives, and it promises no model. One **new line of help** under the Azure fields (Endpoint URL and Deployment name stack their label above a full-width field, as shipped; API version stays label-left), in
 Microsoft's words (§9).
 
 **CLI.**
@@ -266,7 +274,7 @@ Observed in the portals on 12 Nov 2026. Use these; do not coin ours.
 |---|---|
 | **Endpoint**; **Keys and Endpoint** (Azure portal ▸ Resource Management); **Key 1** | "Target URI" (a third-party word), "API base", "URL" on its own |
 | **Deployment name**; **Models ▸ Deployments** (Foundry portal) | "model name" for the deployment name: Microsoft keeps them apart and so must we |
-| **Foundry**; **Azure OpenAI** (the label stays) | "Azure AI Studio", "AI Services" |
+| **Azure** (our provider label, D10); **Microsoft Foundry** in help text and portal pointers | "Azure OpenAI" as our label (it reads as OpenAI-only); "Azure Foundry" (not a Microsoft name); "Azure AI Studio", "AI Services" |
 | **Deployment type**: Global Standard, Data Zone Standard, Standard | "tier", "plan" |
 | **Quota**, **Insufficient quota**, **Request quota** | "limit", "credit" (Azure has no credit pool here) |
 | **Microsoft Entra ID** | "Azure AD", "SSO" |
@@ -275,18 +283,18 @@ Observed in the portals on 12 Nov 2026. Use these; do not coin ours.
 
 **Proposed new strings** (English, for the owner to approve; each is 21 locales; placeholders in braces as `keyRejected` uses them; word counts are as rendered):
 
-- **S1** · Key (or endpoint) not accepted (Azure only; 401 only) · 21 words: "{{provider}} didn’t accept this key ({{status}}). Check it and the endpoint in Keys and Endpoint, or ask whoever gave them to you."
-- **S2** · No such deployment · 19 words: "No deployment named “{{name}}” on this resource. Key and endpoint are fine; check the name with whoever manages it."
-- **S3** · Model can’t do structured outputs (**held until U11**: our own schema may be the cause) · 17 words: "This deployment’s model can’t do structured outputs, which Bristlenose needs. Ask for a chat model that can."
-- **S4** · Key-based authentication off (**held until U3**) · 17 words: "Key-based authentication is turned off for this resource, so Bristlenose can’t use it. Ask whoever manages it."
-- **S5** · Help line under the three fields (shown only while the deployment name is empty) · 20 words: "Find the endpoint, key and deployment name under Models ▸ Deployments in Microsoft Foundry, or ask whoever manages the resource."
-- **S6** · Host cannot be found · 14 words: "Couldn’t find that endpoint. Check the address, or ask whoever gave it to you."
-- **L1** · the Azure status label when the key is not the problem · "Not connected" (replaces "Invalid key" there; D4).
+- **S1** · Key (or endpoint) not accepted (Azure only; 401 only) · 15 words: "{{provider}} didn’t accept this key ({{status}}). Check it and the endpoint in Keys and Endpoint."
+- **S2** · No such deployment · 15 words: "No deployment named “{{name}}” on this resource. Key and endpoint are fine; check the name."
+- **S3** · Model can’t do structured outputs (**held until U11**: our own schema may be the cause) · 16 words: "This deployment’s model can’t do structured outputs, which Bristlenose needs. Use a chat model that can."
+- **S4** · Key-based authentication off (**held until U3**) · 13 words: "Key-based authentication is turned off for this resource, so Bristlenose can’t use it."
+- **S5** · Help line under the Azure fields (shown only while the deployment name is empty) · 14 words: "Find the endpoint, key and deployment name under Models ▸ Deployments in Microsoft Foundry."
+- **S6** · Host cannot be found · 7 words: "Couldn’t find that endpoint. Check the address."
+- **L1** · the Azure status label on any failure · "Not connected" (replaces "Invalid key" for Azure; D4).
 
-Each says "ask whoever gave it to you / manages it" so a person who never sees the portal still has a next step, and uses Microsoft's own terms (*structured outputs*, *key-based authentication*, *Models ▸ Deployments*, *Microsoft Foundry*). Translator notes are needed on "whoever manages it" (gendered in Russian, Ukrainian, Polish, French). **S2 interpolates a typed name into a markdown-rendered `Text`; the name must be escaped.** A persona-A reader who *is* the manager gets S5 and the raw record rather than S2's "ask whoever manages it".
+Each names what is wrong and what to check, in Microsoft's own terms (*structured outputs*, *key-based authentication*, *Models ▸ Deployments*, *Microsoft Foundry*), and stops there: a researcher who was given these values knows to ask whoever gave them (owner, 13 Nov: no "ask whoever…" touches). They are shorter than the ~20-word benchmark, which is a ceiling, not a target. **S2 interpolates a typed name into a markdown-rendered `Text`; the name must be escaped.**
 
 **What to ask your IT department** (draft for the website docs, not for the app; it states only what we have observed):
-> Ask for four things: the **endpoint** of the Azure OpenAI (Microsoft Foundry) resource; the **name of a
+> Ask for four things: the **endpoint** of the Azure resource (in Microsoft Foundry); the **name of a
 > deployment** of a chat model that supports structured outputs; a **key** for the resource (say so if
 > your organisation turns key-based authentication off); and enough **quota** for several interviews at
 > once. Where your data is processed is set by the deployment type (Global Standard, Data Zone Standard
@@ -299,14 +307,14 @@ Each says "ask whoever gave it to you / manages it" so a person who never sees t
 | D1 | The free key-and-endpoint check first (`GET /openai/v1/models`)? | Yes. Observed to split 401 from 404 at no cost. |
 | D2 | A tolerant Endpoint field that reduces to the host and lifts the deployment name and API version, shown in the fields? | Yes, always visible and editable, never silent. |
 | D3 | The new strings in §9 in Microsoft's words: S1, S2, S5, S6 and the label L1 (S3 and S4 are held, D15)? | Approve wording; then 21 locales. |
-| D4 | The Azure status label when the key is not the problem (§6, L1): **"Not connected"** instead of "Invalid key" (also for the shipped `azureNotFound` and `azureEndpointScheme`), chosen from the failure's key, so `ProviderStatus` gains no case? One new string, 21 locales. | **Yes.** Mockup frames 7-11 show it. |
+| D4 | The Azure status label on any failure (§6, L1): **"Not connected"** instead of "Invalid key" (the 401 and 403 included, and the shipped `azureNotFound` and `azureEndpointScheme`), chosen from the failure's key, so `ProviderStatus` gains no case? One new string, 21 locales. | **Yes.** Mockup frames 6-11 show it. Amended 13 Nov (was: only when the key is not the problem). |
 | D5 | `configure azure` asks for the endpoint and deployment and saves them in the user config `.env`? | Yes. |
 | D6 | Key-off organisations: recognise and say so, no sign-in in v1? | Yes. |
 | D7 | Persist nothing and re-probe in every run's preflight? | **Not yet answerable as written (R1, R2).** The preflight result is cached 24 hours, and serve-mode assistants skip it. Either Azure bypasses the cache and the profile is derived where each client is built, or the profile is persisted and fingerprinted. Decide with D13. |
 | D8 | Leave the Model row as it is; check first what it drives (U6)? | Yes. |
 | D9 | Show the real model name on success (O5)? | Not in the Mac pane for v1; in `doctor` and the CLI only. |
-| D10 | Keep the label "Azure OpenAI" rather than "Foundry"? | Keep. |
-| D11 | The Mac pane's collapsed details (§6.1): **A**, the shipped `DisclosureGroup` (leading triangle), or **B**, the Claude Code style trailing chevron (a new component)? | **A** for Settings (the Mac's own, no new component), unless you prefer B's look; your call. Frame 7 draws B, frame 8 draws A. |
+| D10 | The provider label: **"Azure"** instead of "Azure OpenAI"? | **Decided 13 Nov (owner): yes.** A Foundry deployment can be any model, IT and the key both say Azure, and "Azure OpenAI" reads as OpenAI-only. v1 is proven for OpenAI-model deployments on the chat route; a deployment whose model Bristlenose cannot use fails the check with a reason rather than mid-run. Testing other Foundry models is a 100-days item. **Code rename owed** (not done): `LLMProvider.swift:22`, the 21 locales (one occurrence each), 13 Python files, README, the man page, the website docs and the provider-naming rule in `CLAUDE.md`. |
+| D11 | **Superseded 13 Nov (owner).** Was: the pane's collapsed details as **A**, the shipped `DisclosureGroup`, or **B**, a trailing chevron. Now: a **Details** button opening the existing diagnostic popover, copy button in its header (§6.1). | **Yes.** Frames 5b and 5c in the mockup. Open: the popover's headline wording. |
 | D12 | The CLI: print the same raw record as a dim block after the failure sentence, by default? (Alternative: only with `-v`.) | By default: a terminal cannot collapse, and the output is what gets pasted into a ticket. |
 | D13 | Where the connection result lives (R1, R2): the 24-hour preflight cache and the serve-mode assistants (autocode, chat lens, elaboration, codebook builder), none of which run the preflight. | Build the client from the finder in one place so every caller gets the right route and parameters; make the cache key include them. |
 | D14 | Security requirements from the security review (§12): https only; no redirects ever; rebuild the URL from scheme, host and port; reject userinfo; **validate the API-version field (`YYYY-MM-DD` or `-preview`) as well as the Endpoint and Deployment fields**, and refuse key-shaped input in all three; confirm before a key goes to a host outside Microsoft's Azure domains. | Yes, as requirements, not options. |
@@ -321,7 +329,7 @@ Each says "ask whoever gave it to you / manages it" so a person who never sees t
 - **The real resource:** `azure-probe.sh` (a private scratch script, not in the repo; U1 and U8 are settled, O13 and O14); the newest model for U2 once its quota is
   approved; the key-off probe for U3.
 - **One cheap real pipeline run** per deployment family (an older-style and a newer-style one).
-- **Human check on the Mac:** the eleven pane states in the mockup (the shipped Settings window; collapsed and expanded raw record; disclosure styles A and B), in light and dark.
+- **Human check on the Mac:** the pane states in the mockup (the shipped Settings window at 660pt; the failures with Details closed, and the popover open, including the 2 KB worst case), in light and dark.
 
 ## Related
 
@@ -389,7 +397,7 @@ here. Raw outputs stay out of the repo.
 - **R11. Done** (`9dc0a4578`, `f932b75e2`): the ceiling is parsed from Azure's own message (`invalid_value`, "supports at most N completion tokens") and the request retried once at N, in the run, the preflight and `doctor`; the learned value is process-local (a separate `doctor` process does not reach a run) and never expires (the limits are in `bristlenose/llm/gotchas.md`). The Mac check sends `max_tokens: 1` (`LLMValidator.swift`) and never meets the cap, so it is not part of this; it would be only if §5 step 2 makes it send the real cap.
 
 **UX and text (Mac and UX reviews; open as marked).**
-- The **status label** (D4) and the **disclosure style** (D11) are decisions above.
+- The **status label** (D4) and where the raw record lives (D11, now a popover) are decisions above.
 - Mockup fidelity (fixed in this version): only a not-set-up row dims (an invalid row is full opacity
   with a true red dot); the "Use this provider" toggle is disabled for an invalid provider; the
   endpoint is a single-line field; caption-sized text; the copy button sits beside the text.
@@ -400,15 +408,46 @@ here. Raw outputs stay out of the repo.
   key that passed; save what passed and re-ask only for the deployment name.
 - A deployment name or `api-version` lifted from a pasted URL fills its field **only when it is
   empty**, never over what the researcher typed.
-- "Last verified in 0 seconds" under a red dot reads as success; "Last checked" when not online.
+- "Last verified in 0 seconds" under a red dot reads as success: **hide the line unless the status is Online** (no new string; drawn so in the mockup since 13 Nov).
 - The IT paragraph no longer states a token figure, "current" models, or residency advice (S1-S6,
   §9). Naming: first mention "Microsoft Foundry"; the CLI prompts say "endpoint" while the pane says
   "Endpoint URL".
 - **i18n.** Add glossary rows for the Microsoft terms (Azure, Foundry, Microsoft Entra ID, Endpoint,
   Deployment, Keys and Endpoint, Models ▸ Deployments) and align the shipped `azureNotFound`'s word
   for "deployment" in every locale; measure Microsoft's own per-locale labels (including `zh-Hant-HK`);
-  translator notes on "whoever manages it"; tag the English details with `languageIdentifier = "en"`
+  tag the English details with `languageIdentifier = "en"`
   for VoiceOver; the `boot.*` keys are shared with the boot screen, so a reword there changes Settings.
 - **Surfaces if this ships:** README (the `configure azure` section, and its claim that it
   "validates the key"), the man page (lines ~162, 259, 640), `cli.py` help text and the hint at ~1277,
   the website's `docs-src/cli.md`, and `desktop.json` in 21 locales.
+
+## 13. Second review (13 Nov 2026): Mac-native (HIG) and accessibility
+
+Two read-only reviews of the mockup and §6, §9, §10, against the shipped pane (the owner's screenshot
+of the rebuilt app shows Endpoint URL and Deployment name already stacked, API version label-left).
+Applied to the mockup and this doc on 13 Nov unless marked open.
+
+**Applied.**
+- **D11 = A, one fixed label "Details"** (both reviews). **Superseded the same day by the popover (owner); the inline box, its cap and its stand-in are dropped.**
+- **D4 amended:** "Not connected" on every Azure failure, 401 and 403 included. The 403 row would
+  otherwise have kept "Invalid key" beside "the key may be fine".
+- **"Last verified" only when Online;** its grey is the secondary tone (the tertiary tone fails contrast, 2.34:1 light).
+- **Raw record** at the caption size (10pt monospaced, a system text style, never `.system(size:)`),
+  one selectable `Text`, English-tagged for VoiceOver, **in the popover** (360pt wide, 320pt ceiling, scrolls
+  inside): the pane never holds it, so it cannot move the window. (Superseded the first answer, full height with a window refit.)
+- **Stacked Endpoint and Deployment rows** drawn in every frame, as shipped.
+- **Spoken label = drawn label** (requirement, §6).
+
+**Open: for the build, not the mockup.**
+- The copy button posts a VoiceOver announcement; the announcement for S2 reads the plain sentence, never the markdown-escaped one.
+- (Superseded: no inline disclosure to animate; the popover is the system's.)
+- Move **Azure Settings directly under API Key** (Tab order otherwise runs Key, Model, Endpoint); the doc's "three fields" is four in the pane (Endpoint URL, Key, Deployment name, API version).
+- Trim whitespace and newlines from a pasted key on commit; the paste-to-host rewrite registers with the window's `undoManager` so Cmd-Z returns the pasted URL; a URL pasted into the key field gets a sentence (mirror of D14).
+- Cancel an in-flight check when a newer commit lands (`validationTasks` exists).
+- Group the dot, label and sentence into one VoiceOver element; hide the dot.
+- A Help link to the website's IT paragraph is optional (`HelpLink`, macOS 14+).
+- **Screen floor (owner, 13 Nov): the M1 MacBook Air at default scaling**, 1440×900 points, roughly 800-820pt visible below the menu bar and above the Dock. It is the earliest Apple silicon, which is the app's own floor (arm64 only). Large-text scaling on a small screen is not a target. The Settings window grows to fit and never scrolls, and `refitToContent()` has no screen clamp (read 13 Nov), so the pane's height is a budget: the owner's screenshot measures the Azure window at 792pt, a failure adds an estimated 50pt (the sentence; the Details button sits on the status line and adds none), and the open record is a popover, which adds none. Measure the collapsed failures with Diagnostics ▸ Azure Settings (below) rather than trust the estimates.
+- (Moot with the popover: the HIG review would have capped an inline box at 140pt, the accessibility review would not.)
+- The HIG corpus has no disclosure-control page; the disclosure verdicts are Mac convention and inference, not HIG quotes.
+- **Diagnostics ▸ Azure Settings** (built 13 Nov, uncommitted; `AzureSettingsFixture.swift`): four fixtures (key not accepted, no such deployment, host not found, the longest sentence) that open the real pane in a failure state with fake data, so the window height can be read on a real screen. It overlays at read time and never writes the real verdict. Known limits: it draws the shipped label "Invalid key", hides "Last verified" as the design does, and has no Details button (not built), so its height is the sentence's alone; the window refits exactly while a fixture is active so heights do not depend on the order picked; with a stored Azure key, choosing a fixture still triggers the normal check, and a VoiceOver announcement can read the real verdict. The sentences are draft copy that compiles into every build but is reachable only where `exposesDebugTools` is true.
+- **Provider name (owner, 13 Nov): "Azure"** (D10), not "Azure OpenAI". Verified for OpenAI-model deployments only; the other Foundry models are untested (100-days item).

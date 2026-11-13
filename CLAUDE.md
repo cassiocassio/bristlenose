@@ -172,6 +172,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 **Release, CI and packaging** — [full entries](.claude/gotchas.md#release-ci-and-packaging)
 
 - **Tags and PyPI**: push `main` and the tag separately (never `--tags`); a run that never fired needs tag redelivery, a failed one needs the tag moved to the fix; one commit gets two `ci.yml` runs and the gate is the `workflow_dispatch` one; test-only fixes reuse the tag unless the version reached PyPI.
+- **Snap**: a failed build that says "unable to contact snap store" may be a Snapcraft incident; run `scripts/snap-store-status.py` before re-dispatching, never retry blind.
 - **The sidecar**: built from `.venv-sidecar`, not `.venv`; non-`.py` files ship only via the spec's `datas`; a present file isn't an intact one (`check-bundle-integrity.py`); ask the resolver about wheels, `abi3` covers later CPythons; a dependency's minor bump can start telemetry (prove opt-outs on disk).
 - **Homebrew**: tap repo `homebrew-bristlenose`; its bot bumps only the url and sha, so a new extra in `post_install` is a tap commit, held on `after-pypi/<v>` until PyPI has it; the formula pip-installs in `post_install`, so anything needing auto-link installs in `def install`; under 6.0 tap trust bare `brew upgrade` skips us (print the fully-qualified name, pass `HOMEBREW_NO_ASK=1`).
 - **Website**: bristlenose.app has two privacy pages plus terms, and a change to what leaves the machine edits all three. Audit export CSS selectors on whole tokens and QA them on a fresh project.

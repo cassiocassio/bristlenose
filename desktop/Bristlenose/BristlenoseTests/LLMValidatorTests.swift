@@ -5,7 +5,9 @@ import Testing
 
 /// Unit tests for `LLMValidator`'s pure functions and verdict cache.
 @MainActor
-@Suite("LLMValidator")
+// `.serialized`: every cache test swaps the one global `verdictStore`, and two running at once
+// read each other's store (the Azure cache tests below made it show).
+@Suite("LLMValidator", .serialized)
 struct LLMValidatorTests {
 
     // MARK: - classify(provider:status:)
@@ -298,6 +300,51 @@ struct LLMValidatorTests {
             // Looking up a different key under the same provider returns nil.
             let cached = LLMValidator.cachedVerdict(provider: .claude, key: "key-B")
             #expect(cached == nil)
+        }
+    }
+
+    // R9 (design-azure-connection §12): a cached green belongs to the endpoint it was earned
+    // against, so a mistyped host after one good check is a miss, not a masked green.
+    private func azure(
+        _ endpoint: String = "https://acme.openai.azure.com",
+        deployment: String = "prod", apiVersion: String = "2024-10-21"
+    ) -> LLMValidator.AzureConfig {
+        .init(endpoint: endpoint, apiVersion: apiVersion, deployment: deployment)
+    }
+
+    @Test("Azure: a good check is trusted for the same key, endpoint, deployment and version")
+    func azureSameConfigHits() {
+        withIsolatedStore {
+            LLMValidator.recordVerdict(provider: .azure, key: "k", status: .online, azureConfig: azure())
+            #expect(LLMValidator.cachedVerdict(provider: .azure, key: "k", azureConfig: azure()) == .ok)
+            // Cosmetic differences (a trailing slash, padding) are the same endpoint.
+            #expect(LLMValidator.cachedVerdict(
+                provider: .azure, key: "k",
+                azureConfig: azure(" https://acme.openai.azure.com/ ", deployment: " prod ")) == .ok)
+        }
+    }
+
+    @Test("Azure: a mistyped host, another deployment or another API version is a miss")
+    func azureChangedConfigMisses() {
+        withIsolatedStore {
+            LLMValidator.recordVerdict(provider: .azure, key: "k", status: .online, azureConfig: azure())
+            #expect(LLMValidator.cachedVerdict(
+                provider: .azure, key: "k", azureConfig: azure("https://acmee.openai.azure.com")) == nil)
+            #expect(LLMValidator.cachedVerdict(
+                provider: .azure, key: "k", azureConfig: azure(deployment: "other")) == nil)
+            #expect(LLMValidator.cachedVerdict(
+                provider: .azure, key: "k", azureConfig: azure(apiVersion: "2025-01-01-preview")) == nil)
+            #expect(!LLMValidator.cacheIsFresh(
+                provider: .azure, key: "k", ttl: 60, azureConfig: azure("https://acmee.openai.azure.com")))
+        }
+    }
+
+    @Test("Other providers' cache keys are unchanged: an Azure config is ignored")
+    func otherProvidersIgnoreAzureConfig() {
+        withIsolatedStore {
+            LLMValidator.recordVerdict(provider: .claude, key: "k", status: .online)
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: "k") == .ok)
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: "k", azureConfig: azure()) == .ok)
         }
     }
 

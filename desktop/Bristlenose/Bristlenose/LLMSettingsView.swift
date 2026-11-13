@@ -1117,7 +1117,8 @@ struct LLMSettingsView: View {
             // (pure + unit-tested): a transient .unavailable defers to the
             // cache (offline survival); a definitive observation — including a
             // fresh .outOfCredit — wins and is shown through any cached green.
-            let cached = LLMValidator.cachedVerdict(provider: provider, key: key)
+            let cached = LLMValidator.cachedVerdict(
+                provider: provider, key: key, azureConfig: azureCfg)
             let resolved = LLMValidator.resolveStatus(observed: status, cached: cached)
             statuses[provider] = resolved
             if resolved != status {
@@ -1134,7 +1135,8 @@ struct LLMSettingsView: View {
             } else {
                 // Definitive observation — record it and show its own error.
                 statusErrors[provider] = error
-                LLMValidator.recordVerdict(provider: provider, key: key, status: status)
+                LLMValidator.recordVerdict(
+                    provider: provider, key: key, status: status, azureConfig: azureCfg)
                 Self.logger.info(
                     "validate \(provider.rawValue, privacy: .public) → \(String(describing: status), privacy: .public)"
                 )

@@ -41,7 +41,8 @@ enum LLMValidator {
         provider: LLMProvider,
         key: String,
         azureConfig: AzureConfig? = nil,
-        ollamaURL: String? = nil
+        ollamaURL: String? = nil,
+        session: URLSession? = nil
     ) async -> (ProviderStatus, FailureMessage?) {
         // Ollama is keyless — URL presence + reachability is the contract.
         if provider == .ollama {
@@ -92,7 +93,7 @@ enum LLMValidator {
         }
 
         do {
-            let (data, response) = try await urlSession.data(for: request)
+            let (data, response) = try await (session ?? urlSession).data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 return (.unavailable, .keyed(Self.V + "noResponse", vars: ["provider": provider.displayName]))
             }
@@ -131,13 +132,18 @@ enum LLMValidator {
 
     // MARK: - Internals
 
-    private static let urlSession: URLSession = {
+    private static let urlSession: URLSession = makeSession()
+
+    /// The session every check uses. `protocolClasses` is the seam a test uses to answer in
+    /// place of the network; production passes nothing.
+    static func makeSession(protocolClasses: [AnyClass]? = nil) -> URLSession {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 5
         config.timeoutIntervalForResource = 5
         config.waitsForConnectivity = false
+        if let protocolClasses { config.protocolClasses = protocolClasses }
         return URLSession(configuration: config)
-    }()
+    }
 
     static func buildRequest(
         provider: LLMProvider,
@@ -489,18 +495,22 @@ enum LLMValidator {
     /// Last definitive verdict for `key` under `provider`, or `nil` if
     /// the cache is empty or the stored hash doesn't match this key
     /// (i.e. the user pasted a different key since the last check).
-    static func cachedVerdict(provider: LLMProvider, key: String) -> CachedVerdict? {
-        cachedEntry(provider: provider, key: key)?.verdict
+    static func cachedVerdict(
+        provider: LLMProvider, key: String, azureConfig: AzureConfig? = nil
+    ) -> CachedVerdict? {
+        cachedEntry(provider: provider, key: key, azureConfig: azureConfig)?.verdict
     }
 
     /// Full cache entry including timestamp — used by the TTL gate in
     /// `revalidateAll` and the "Last verified" UI surfacing.
-    static func cachedEntry(provider: LLMProvider, key: String) -> CacheEntry? {
+    static func cachedEntry(
+        provider: LLMProvider, key: String, azureConfig: AzureConfig? = nil
+    ) -> CacheEntry? {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         let defaults = verdictStore
         guard let cachedHash = defaults.string(forKey: hashKey(provider)),
-              cachedHash == hash(trimmed),
+              cachedHash == identity(provider, trimmed, azureConfig),
               let raw = defaults.string(forKey: verdictKey(provider)),
               let verdict = CachedVerdict(rawValue: raw)
         else { return nil }
@@ -523,9 +533,10 @@ enum LLMValidator {
     /// background revalidation when the user is opening Settings rapidly
     /// (e.g. tweaking concurrency in another tab).
     static func cacheIsFresh(
-        provider: LLMProvider, key: String, ttl: TimeInterval
+        provider: LLMProvider, key: String, ttl: TimeInterval, azureConfig: AzureConfig? = nil
     ) -> Bool {
-        guard let entry = cachedEntry(provider: provider, key: key) else { return false }
+        guard let entry = cachedEntry(provider: provider, key: key, azureConfig: azureConfig)
+        else { return false }
         return Date().timeIntervalSince(entry.lastCheckedAt) < ttl
     }
 
@@ -554,7 +565,9 @@ enum LLMValidator {
     /// overwrite a previous `.online` verdict. `.online`, `.invalid`, and
     /// `.outOfCredit` are the three *definitive observations* that persist;
     /// `.outOfCredit` is sticky so a later transient failure can't re-green it.
-    static func recordVerdict(provider: LLMProvider, key: String, status: ProviderStatus) {
+    static func recordVerdict(
+        provider: LLMProvider, key: String, status: ProviderStatus, azureConfig: AzureConfig? = nil
+    ) {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let verdict: CachedVerdict?
@@ -566,7 +579,7 @@ enum LLMValidator {
         }
         guard let verdict else { return }
         let defaults = verdictStore
-        defaults.set(hash(trimmed), forKey: hashKey(provider))
+        defaults.set(identity(provider, trimmed, azureConfig), forKey: hashKey(provider))
         defaults.set(verdict.rawValue, forKey: verdictKey(provider))
         defaults.set(ISO8601DateFormatter().string(from: Date()), forKey: timestampKey(provider))
     }
@@ -577,6 +590,32 @@ enum LLMValidator {
         defaults.removeObject(forKey: hashKey(provider))
         defaults.removeObject(forKey: verdictKey(provider))
         defaults.removeObject(forKey: timestampKey(provider))
+    }
+
+    /// What a cached verdict is about. For every provider but Azure that is the key. For Azure it
+    /// is the key and the endpoint, deployment and API version the check was made against, so a
+    /// mistyped host after one good check is a cache miss, not a masked green (design R9). With no
+    /// config passed, the saved one is read, because callers outside Settings (the run's refusal
+    /// record, the consent sheet) know only the provider and the key.
+    private static func identity(
+        _ provider: LLMProvider, _ trimmedKey: String, _ config: AzureConfig?
+    ) -> String {
+        guard provider == .azure else { return hash(trimmedKey) }
+        let cfg = config ?? savedAzureConfig()
+        let endpoint = cfg.endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let version = cfg.apiVersion.isEmpty ? "2024-10-21" : cfg.apiVersion
+        let deployment = cfg.deployment.trimmingCharacters(in: .whitespacesAndNewlines)
+        return hash([trimmedKey, endpoint, deployment, version].joined(separator: "\u{1F}"))
+    }
+
+    /// The Azure settings Settings has saved (the same `@AppStorage` keys).
+    private static func savedAzureConfig() -> AzureConfig {
+        let d = UserDefaults.standard
+        return AzureConfig(
+            endpoint: d.string(forKey: "azureEndpoint") ?? "",
+            apiVersion: d.string(forKey: "azureAPIVersion") ?? "",
+            deployment: d.string(forKey: "azureDeployment") ?? "")
     }
 
     private static func hashKey(_ provider: LLMProvider) -> String {

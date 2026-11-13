@@ -41,7 +41,7 @@ def test_a_still_carries_only_its_own_participants_visible_quotes() -> None:
 def test_numbers_widen_past_99_and_a_shared_code_keeps_files_apart() -> None:
     many = [_screen(f"/{i}", _tab("s1", "p1", i, [[i, i + 1]])) for i in range(120)]
     names = [s["filename"] for s in shot_list(many, {})]
-    assert names[0] == "p1-001-0.jpg" and names[-1] == "p1-120-119.jpg"
+    assert names[0] == "p1-001.jpg" and names[-1] == "p1-120.jpg"
     shared = [_screen("/a", _tab("s1", "p1", 1, [[0, 2]]), _tab("s9", "p1", 1, [[0, 2]]))]
     assert sorted(s["filename"] for s in shot_list(shared, {})) == ["p1-s1-01-a.jpg", "p1-s9-01-a.jpg"]
 
@@ -53,9 +53,10 @@ def test_the_screen_name_follows_the_number_in_a_filename_safe_form() -> None:
     assert name_of("Verfügbarkeit prüfen") == "p1-01-verfugbarkeit-prufen.jpg"
     assert name_of("Rinnig dish drying mat beige 51x42 cm") == "p1-01-rinnig-dish-drying-mat-beige-51x42-cm.jpg"
     # Characters either OS forbids, reserved device names, and a title with no Latin letters.
-    assert name_of("Basket: <items> | a/b\\c? *") == "p1-01-basket-items-ab-c.jpg".replace("ab-c", "abc")
+    assert name_of("Basket: <items> | a/b\\c? *") == "p1-01-basket-items-abc.jpg"
     assert name_of("CON") == "p1-01-con.jpg"
     assert name_of("日本語") == "p1-01.jpg"
+    assert name_of("Корзина (2)") == "p1-01.jpg"  # a bare digit would read as a collision suffix
     assert len(name_of("x" * 200)) <= len("p1-01-") + 40 + len(".jpg")
 
 

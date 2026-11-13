@@ -1319,7 +1319,7 @@ def prune_stale_session_files(output_dir: Path, keep: Iterable[str]) -> list[Pat
             "Removed %d file(s) of sessions no longer in the project: %s",
             len(removed), ", ".join(gone),
         )
-    # The exported screengrabs are named by participant code (p3-07.jpg), which the match above
+    # The exported screengrabs are named by participant code (p3-07-checkout.jpg), which the match above
     # cannot see; their manifest says which session each came from.
     from bristlenose.screen_text.export_folder import prune_removed_sessions
 

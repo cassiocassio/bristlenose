@@ -89,7 +89,9 @@ def shot_list(
         # The screen's name follows the number in a web-server-friendly form
         # (`p1-02-verfugbarkeit-prufen.jpg`); the number still sorts and identifies.
         label = slugify(str(s["title"]), max_length=40)
-        tail = f"-{label}" if label else ""
+        # Only a name with a letter in it: `Корзина (2)` slugs to `2`, which would read as the
+        # collision suffix or a second number.
+        tail = f"-{label}" if re.search("[a-z]", label) else ""
         s["filename"] = f"{stem}-{s['seq']:0{width[s['session_id']]}d}{tail}.jpg"
     # Cleaning can make two names one (`s 1` and `s/1`): number the later ones apart.
     seen: set[str] = set()

@@ -1,11 +1,15 @@
 ---
-status: plan
-updated: 17 Oct 2026
+status: current
+updated: 13 Nov 2026
+last-trued: 13 Nov 2026
+trued-against: HEAD@main on 13 Nov 2026
 ---
 
 # Screens export: a folder, a clipboard, a Miro board
 
-**Status: the plan, 17 Oct 2026, for the weekend of 17–18 Oct.** Three ways to take the Screens
+**Status: shipped.** Written as the plan on 17 Oct 2026 for the weekend of 17–18 Oct; all three
+outputs (folder, clipboard, Miro board) are built, and §8 and §8a are the dated record of how.
+File names changed on 11 Nov 2026 (§4). Three ways to take the Screens
 lens's stills out of Bristlenose and into the research materials. The privacy line they rest on was
 corrected the same day (`design-screens.md` §4, "17 Oct 2026"); this doc does not re-argue it.
 
@@ -52,9 +56,10 @@ meaning here needs a decision first.
 ## 3. One shared step: the shot list
 
 All three outputs start from the same list, built server-side from `derive_screens` and the
-project's quotes: per still, `{session_id, code, seq, screen_key, screen_name, t, crop,
-quotes[]}` in the order above. One function, tested once, so the three cannot disagree about
-which stills exist or what order they are in.
+project's quotes: per still, `{session_id, code, seq, screen_key, screen_name, title, t, crop,
+first_visit, pins[], loose[], filename}` in the order above (`shot_list`). One function, tested
+once, so the folder and the clipboard cannot disagree about which stills exist or what order they
+are in; the Miro board builds its own list with `journey()` (§6).
 
 **Rendering a still at full size.** The lens asks for a scaled still (`GET …/screens/still`,
 `w` default 1200, capped at 1600, cached as JPEG under `screen-text/stills/`). The export wants the
@@ -67,9 +72,15 @@ The sibling is **clip export** (`routes/clips_export.py`, settled 10 Jul 2026): 
 zip; files copied from a manifest, never a glob; each export replaces the previous one; Show in
 Finder after.
 
-- **Names:** `p3-07-verfugbarkeit-prufen.jpg` — participant code, visit order within that session (zero-padded), then the screen's name as a slug (`slugify`, 40 characters at most: lowercase `a-z 0-9 -`, so no character Windows or macOS forbids). A title with no Latin letters leaves the number alone (`p3-07.jpg`).
-  Finder's name sort is then time order per participant. No screen names in file names: they are
-  page titles and addresses, long and often unhelpful as names.
+- **Names:** `p3-07-verfugbarkeit-prufen.jpg` — participant code, visit order within that session (zero-padded), then the screen's name as a slug (`slugify`, 40 characters at most: lowercase `a-z 0-9 -`, so no character Windows or macOS forbids). A name with no ASCII letter left after `slugify` strips accents (a title in Cyrillic or Japanese, or one that is only digits) leaves the number alone (`p3-07.jpg`); `ß`, `æ` and `ø` are dropped, not transliterated (`Straße` becomes `strae`).
+  Finder's name sort is still time order per participant, because the number leads. The slug is cut
+  at 40 characters, which can fall mid-word; a name that cleaning made identical to an earlier one
+  takes `-2`, `-3` after the slug. An address-keyed screen with no heading uses its path as the
+  title, so its slug runs the segments together (`/checkout/step-2` becomes `checkoutstep-2`).
+  The names were bare numbers until 11 Nov 2026 (owner: a name appended "in a webserver-friendly
+  format"); the earlier reason, that titles and addresses are long and often unhelpful, is why the
+  slug is short and only follows the number. The Miro board names its uploaded images
+  differently (`screen-NN-<code>.jpg`, from `journey()`), and those never reach the folder.
 - **Where:** CLI and browser, `bristlenose-output/screens/`. Mac app, the same folder, then the
   native folder picker and copy, as clips do.
 - **Anonymise:** nothing to strip — codes only, and ffmpeg's JPEG output carries no location
@@ -125,7 +136,7 @@ first build (a frame per participant per screen, a row per participant) was repl
   screen goes where it fell on average in its participants' own visit order; ties to the screen
   with more said about it.
 - **Every quote stacked beneath the still, a new row for each participant**, in time order within
-  a participant, four rectangle stickies to a row (together the still's width). Each quote appears
+  a participant, as many stickies to a row as fit, sized by their text (§8a). Each quote appears
   once, under the participant who said it; the attribution line already names them.
 - **Not placed round the still as the lens places them.** That placement rests on a participant
   reading the page's own words aloud, and "this bit over here" with a wave of the mouse never
@@ -137,8 +148,8 @@ first build (a frame per participant per screen, a row per participant) was repl
   A9).
 - **Frame titles are the lens's screen title**, and truncate at the frame's width as Miro draws
   them; Miro users zoom in to read them (owner: "let Miro do what it does"). No title text box.
-- **Rectangle stickies on every board** (owner: "nearly always better"; `board_layout.STICKY_SHAPE`):
-  a quote wraps in longer, fewer lines.
+- **Rectangle stickies by default** (owner: "nearly always better"); since 17 Oct the export dialog
+  also offers Square (`screens_board.STICKY_SHAPES`): a rectangle wraps a quote in longer, fewer lines.
 
 **Measured against Miro, 17 Oct 2026** (probe boards, then the real thing from a copy of
 *IKEA with uxfriends*: 9 frames, 14–56 s):
@@ -209,7 +220,7 @@ Smallest first; each step ends usable and green.
 
 ## 8a. Where it stands — 17 Oct 2026, evening (for the next session)
 
-All on `main`, not pushed. The weekend's arc, newest last:
+All on `main` (since pushed). The weekend's arc, newest last:
 
 - **Exports:** folder (`3db394fa`), Copy Screens + Export Screens on the lens (`ab7696ce`), Miro
   screens board (`2fb81386` → reworked `8926b870`, cascade `73015733`), review fixes
@@ -245,8 +256,9 @@ analysis, recommended, or on-machine at export) — asked, not answered.
    240-wide squares; FigJam's board document carries the full text. Remove the cut now stickies
    are 300-wide rectangles and Miro shrinks the type? Owner's call (raised by the FigJam session,
    17 Oct 2026).
-6. **Withdrawn participants:** the pipeline's per-session prune does not touch
-   `bristlenose-output/screens/` (files are named by participant code), so a withdrawn
-   participant's stills stay until the next export rewrites the folder. Clear them on withdrawal?
+6. ~~**Withdrawn participants:** the pipeline's per-session prune does not touch
+   `bristlenose-output/screens/`.~~ **Done 17 Oct 2026** ("removing an interview also removes its exported
+   screengrabs"): the folder's manifest says which session each file came from
+   (`export_folder.prune_removed_sessions`, called from `pipeline.py`).
 7. **By hand:** Copy Screens from the sandboxed Mac app, pasted into Miro and FigJam (the probe
    that settled §5 ran unsandboxed).

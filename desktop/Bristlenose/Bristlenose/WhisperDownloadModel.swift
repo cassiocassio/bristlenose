@@ -203,6 +203,13 @@ final class WhisperDownloadModel: ObservableObject {
     /// may have stopped it on a metered connection).
     private static let stoppedKey = "whisperDownloadStoppedByUser"
     private var process: Process?
+    /// Bumped by every download start, so a status probe that began before one
+    /// cannot overwrite what the download then did (a stale `.missing` over a
+    /// `.failed`, say).
+    private var downloadEpoch = 0
+    /// The probe in flight, if any, and whether someone asked again while it ran.
+    private var probeTask: Task<Bool, Never>?
+    private var probeAskedAgain = false
     private var rate = DownloadRate()
     private var stopRequested = false
     private var stderrTail: [String] = []
@@ -349,6 +356,7 @@ final class WhisperDownloadModel: ObservableObject {
 
     private func start() {
         guard process == nil else { return }
+        downloadEpoch += 1
         guard let (binary, mode) = Self.sidecar() else {
             Self.logger.error("whisper download: no sidecar to run (bundle or dev path missing)")
             phase = .failed
@@ -415,8 +423,34 @@ final class WhisperDownloadModel: ObservableObject {
     /// sidecar's own words), never left as a blank. Moving to `.onDisk` from
     /// anything else announces Whisper ready, which re-runs waiting projects —
     /// at launch as much as after a download.
+    ///
+    /// One probe at a time. A call that arrives while one is running does not
+    /// start a second, unordered one (the one that finished last used to win,
+    /// so a stale "on disk" could hide the row after the Model changed). It
+    /// marks the running probe stale; that probe asks again, with the
+    /// preferences as they are by then, and every waiting caller gets the last
+    /// answer. The launch check reads `phase` straight after this, so a caller
+    /// that is overtaken must wait for the newest answer, not return early.
     @discardableResult
     func refresh() async -> Bool {
+        if let running = probeTask {
+            probeAskedAgain = true
+            return await running.value
+        }
+        let task = Task { @MainActor in
+            var answered = false
+            repeat {
+                probeAskedAgain = false
+                answered = await probeOnce()
+            } while probeAskedAgain
+            probeTask = nil
+            return answered
+        }
+        probeTask = task
+        return await task.value
+    }
+
+    private func probeOnce() async -> Bool {
         guard process == nil else { return phase == .onDisk }
         guard let (binary, mode) = Self.sidecar() else {
             Self.logger.error("whisper status: no sidecar to ask")
@@ -424,8 +458,11 @@ final class WhisperDownloadModel: ObservableObject {
             return false
         }
         failureCause = nil  // a failed probe is not the last download's failure
+        let epoch = downloadEpoch
         let answer = await Self.askStatus(binary: binary, mode: mode)
-        guard process == nil else { return false }  // a download started meanwhile
+        // A download started meanwhile, and may even have ended: its outcome
+        // stands.
+        guard process == nil, epoch == downloadEpoch else { return false }
         guard let line = answer.line,
               case .status(let state, _, let bytes)? = WhisperDownloadLine.parse(line) else {
             Self.logger.error(

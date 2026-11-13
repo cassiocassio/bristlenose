@@ -77,8 +77,11 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 **Tricky things.** The tag run's `frontend-lint-type-test` failed once on `SignalsPage.test.tsx` "names each metric in full…": it reads the expanded card straight after `fireEvent.click` without waiting. Same suite had passed on the strict run and the push CI; `gh run rerun --failed` passed. The edge Snap build failed on a connection reset downloading `snapd`, and was re-dispatched.
 
-**Owed.** The test needs a `waitFor`. Website changelog not yet on 0.46.0 (`verify` shows ✗; a deploy is the maintainer's). Winget follows. Snap edge re-dispatched, result not read. 7 of 9 channels at write time.
+**Tricky things, continued.** The second edge Snap build failed too, with "unable to contact snap store": a Snapcraft incident (Charmhub registry and Serial Vault, open from 11:55 GMT on 11 Nov). Nothing of ours. `scripts/snap-store-status.py` now reads the store's status feed (`snapcraft.site24x7statusiq.com/rss`) so `snap.yml` and `verify-channels.sh` say "store incident, do not retry" rather than retrying blind. The store recovered at 23:21 GMT; edge was dispatched once and published `0.46.0+git.871b18d`.
 
+**Done since.** The Signals test now waits (`f4c279676`). Website deployed from a clean worktree; the 0.46.0 changelog is live. Snap edge published. `verify 0.46.0`: 9 of 9 channels.
+
+**Owed.** Winget follows (a reviewer's clock; no PR for 0.46.0 yet). Snap stable (`snap.yml --ref v0.46.0`) not dispatched. The website repo's `main` is one commit ahead of origin (`80a28e9`, already deployed; not pushed).
 ---
 
 ## 0.45.0 — 7 Nov 2026 · Tier 1 (minor — the title-bar pill names a blocking network and a rejected key or empty account; a notification when a run finishes while you're away; quote display controls; "Done with warnings"; a faster open)

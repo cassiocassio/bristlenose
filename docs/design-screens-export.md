@@ -77,6 +77,9 @@ Finder after.
   at 40 characters, which can fall mid-word; a name that cleaning made identical to an earlier one
   takes `-2`, `-3` after the slug. An address-keyed screen with no heading uses its path as the
   title, so its slug runs the segments together (`/checkout/step-2` becomes `checkoutstep-2`).
+  An address-keyed screen otherwise takes the page heading on that still, so a heading that holds a
+  participant's own text lands in the file name too: the owner ruled on 13 Nov 2026 to keep it (the
+  still shows the same text), and a name is not redacted.
   The names were bare numbers until 11 Nov 2026 (owner: a name appended "in a webserver-friendly
   format"); the earlier reason, that titles and addresses are long and often unhelpful, is why the
   slug is short and only follows the number. The Miro board names its uploaded images

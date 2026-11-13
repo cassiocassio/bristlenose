@@ -122,6 +122,110 @@ struct HandleLineRedactorTests {
     }
 }
 
+/// Azure key shapes (12 Nov 2026, `docs/design-azure-connection.md` §12): the
+/// 84-character key as a whole token, and the 32-hex key only after a key-ish
+/// word. The negatives are the point: a GUID request id, a dashless GUID, a
+/// SHA-1, a SHA-256 and an MD5 must survive. All keys here are generated fakes.
+@Suite("BristlenoseShared.redactKeys, Azure shapes")
+@MainActor
+struct AzureRedactorTests {
+
+    static let fake84 = String((String(repeating: "aB3xY9kQ", count: 11)).prefix(84))
+    static let fakeHex32 = String(repeating: "deadbeef", count: 4)
+    static let guidRequestId = "3d1fae88-0000-4000-8000-000000000000"
+    static let dashlessGuid = "3d1fae8800004000800000000000abcd"  // 32 hex, no key word
+    static let sha1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"  // 40 hex
+    static let sha256 = String(repeating: "ab12cd34", count: 8)  // 64 hex
+    static let masked = "***REDACTED***"
+
+    // MARK: - Positive controls
+
+    @Test func fixtures_have_the_lengths_they_claim() {
+        #expect(Self.fake84.count == 84)
+        #expect(Self.fakeHex32.count == 32)
+        #expect(Self.sha1.count == 40)
+        #expect(Self.sha256.count == 64)
+    }
+
+    @Test func masks_84_char_key_standing_alone() {
+        #expect(BristlenoseShared.redactKeys(in: Self.fake84) == Self.masked)
+    }
+
+    @Test func masks_84_char_key_in_a_header_line() {
+        let out = BristlenoseShared.redactKeys(in: "api-key: \(Self.fake84)")
+        #expect(out == "api-key: \(Self.masked)")
+    }
+
+    @Test func masks_84_char_key_in_a_url_query() {
+        let out = BristlenoseShared.redactKeys(
+            in: "GET https://x.openai.azure.com/openai/deployments/d?api-version=2024-10-21&key=\(Self.fake84) 401")
+        #expect(!out.contains(Self.fake84))
+        #expect(out.hasSuffix("&key=\(Self.masked) 401"))
+    }
+
+    @Test func masks_hex32_in_a_header_line() {
+        #expect(BristlenoseShared.redactKeys(in: "api-key: \(Self.fakeHex32)")
+                == "api-key: \(Self.masked)")
+        #expect(BristlenoseShared.redactKeys(in: "Ocp-Apim-Subscription-Key: \(Self.fakeHex32)")
+                == "Ocp-Apim-Subscription-Key: \(Self.masked)")
+    }
+
+    @Test func masks_hex32_after_authorization_bearer() {
+        let out = BristlenoseShared.redactKeys(in: "Authorization: Bearer \(Self.fakeHex32)")
+        #expect(out == "Authorization: Bearer \(Self.masked)")
+    }
+
+    @Test func masks_hex32_in_a_url_query() {
+        let out = BristlenoseShared.redactKeys(in: "https://h/openai?api-version=2024-10-21&api_key=\(Self.fakeHex32)&x=1")
+        #expect(out == "https://h/openai?api-version=2024-10-21&api_key=\(Self.masked)&x=1")
+    }
+
+    @Test func masks_hex32_in_an_env_line_and_in_json() {
+        #expect(BristlenoseShared.redactKeys(in: "AZURE_OPENAI_API_KEY=\(Self.fakeHex32)")
+                == "AZURE_OPENAI_API_KEY=\(Self.masked)")
+        #expect(BristlenoseShared.redactKeys(in: #"{"key": "\#(Self.fakeHex32)"}"#)
+                == #"{"key": "\#(Self.masked)"}"#)
+    }
+
+    // MARK: - Negative controls
+
+    @Test func keeps_guid_request_id() {
+        for line in ["apim-request-id: \(Self.guidRequestId)",
+                     "x-request-id=\(Self.guidRequestId)",
+                     "token=\(Self.guidRequestId)",
+                     "key: \(Self.guidRequestId)"] {
+            #expect(BristlenoseShared.redactKeys(in: line) == line)
+        }
+    }
+
+    @Test func keeps_uuid4_hex_and_md5_without_a_key_word() {
+        for line in ["request \(Self.dashlessGuid) done",
+                     Self.dashlessGuid,
+                     "md5 of the file is \(Self.fakeHex32) in prose",
+                     "etag: \(Self.fakeHex32)"] {
+            #expect(BristlenoseShared.redactKeys(in: line) == line)
+        }
+    }
+
+    @Test func keeps_git_sha1_and_sha256_even_after_a_key_word() {
+        for line in ["commit \(Self.sha1)", "key=\(Self.sha1)", "api-key: \(Self.sha256)",
+                     "sha256: \(Self.sha256)", "HEAD is \(Self.sha1) on main"] {
+            #expect(BristlenoseShared.redactKeys(in: line) == line)
+        }
+    }
+
+    @Test func keeps_other_lengths_and_non_tokens_around_84() {
+        let eightyThree = String(Self.fake84.dropLast())
+        let eightyFive = Self.fake84 + "Z"
+        let letters84 = String(repeating: "a", count: 84)
+        let digits84 = String(repeating: "7", count: 84)
+        for line in [eightyThree, eightyFive, letters84, digits84,
+                     "/Users/x/\(Self.fake84)/file", "host.\(Self.fake84).example"] {
+            #expect(BristlenoseShared.redactKeys(in: line) == line)
+        }
+    }
+}
+
 /// Tests for ServeManager.displayableLine — what of a sidecar stdout line is
 /// kept in `outputLines` (shown selectable in the boot-failure pane, tail
 /// quoted in exit errors). The bearer-token line is consumed, never kept:

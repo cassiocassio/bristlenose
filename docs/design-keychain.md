@@ -650,7 +650,7 @@ Shipped alongside the desktop credential path in Track C (Apr 2026). Two layers,
 
 ### Layer 1: Runtime log redactor (Swift side)
 
-Every line of sidecar stdout passes through a regex-based redactor before forwarding to unified logging. Recognises the shape of known provider API keys and replaces with `<REDACTED>`.
+Every line of sidecar stdout passes through a regex-based redactor before forwarding to unified logging. Recognises the shape of known provider API keys and replaces with `<REDACTED>`. Azure's two shapes are covered context-sensitively (13 Nov 2026): an 84-character whole token, and a 32-hex string only after a key-ish word (`api-key:`, `key=`, `Authorization: Bearer`), because a bare 32-hex is also a dashless GUID or an MD5. `check-logging-hygiene.sh` has the matching `key-literal` rule for key-shaped strings in Swift source.
 
 - Anchors: `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift` (`keyRedactionRegex` + `redactKeys`) (redactor implementation), `desktop/Bristlenose/BristlenoseTests/HandleLineRedactorTests.swift` (tests)
 - Commits: "runtime log redactor for api key shapes" (8a41f60), "tests for env injection, redactor" (5dc971f)

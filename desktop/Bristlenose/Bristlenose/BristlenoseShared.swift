@@ -586,9 +586,11 @@ enum BristlenoseShared {
     /// - Per-line only. If Python wraps a key across two log lines (e.g. in a
     ///   boxed stack trace) the redactor won't catch the split halves. Inherent
     ///   to line-based processing.
-    /// - Azure deliberately NOT covered: 32-char hex false-positives on UUIDs
-    ///   and SHA hashes are worse than the residual risk. Pre-beta audit
-    ///   tracked in `docs/private/100days.md` §6 Risk → Should.
+    /// - Azure is covered by two context-sensitive shapes (see
+    ///   `azureKeyRedactionRegex` and `azureHexKeyRedactionRegex`), not by a
+    ///   bare 32-hex rule. A bare 32-hex still cannot be told from a dashless
+    ///   GUID, an MD5 or a SHA-1 prefix, so it is masked only after a
+    ///   key-ish word.
     /// - Does not catch provider-format changes after this code was written.
     /// - Does not catch misformatted keys the regex doesn't match by shape.
     ///
@@ -604,12 +606,57 @@ enum BristlenoseShared {
         options: []
     )
 
+    /// Azure OpenAI / Foundry, shape 1: the 84-character key (observed 12 Nov
+    /// 2026, `docs/design-azure-connection.md` §12). A whole token of exactly 84
+    /// characters from `[A-Za-z0-9_-]`, holding at least one letter and one
+    /// digit. Whole-token anchors do the false-positive work: a dashed GUID
+    /// (36), a SHA-1 (40), a SHA-256 (64) and a SHA-512 (128) are different
+    /// lengths, and a longer run is not 84. The left side also refuses `/` and
+    /// `.` so a path segment or a host label is not taken for a key. Still
+    /// cannot tell: an 84-character mixed alphanumeric token that is not a key
+    /// (a long base64url file stem standing alone), which is over-redacted.
+    static let azureKeyRedactionRegex = try! NSRegularExpression(
+        pattern: "(?<![A-Za-z0-9_./-])(?=[A-Za-z0-9_-]*[0-9])(?=[A-Za-z0-9_-]*[A-Za-z])"
+            + "[A-Za-z0-9_-]{84}(?![A-Za-z0-9_/-])",
+        options: []
+    )
+
+    /// Azure OpenAI, shape 2: the classic 32-hex key. A bare 32-hex string is
+    /// also a dashless GUID, an MD5 and the front of a SHA-1, so it is masked
+    /// ONLY directly after a key-ish word and a `:`/`=` separator
+    /// (`api-key: …`, `?key=…`, `"subscription-key":"…"`, `AZURE_OPENAI_API_KEY=…`,
+    /// `Authorization: Bearer …`, `bearer …`), and only when the hex run is
+    /// exactly 32 long (a 40-character SHA after `key=` is left alone). A
+    /// dashed GUID such as `apim-request-id: 3d1fae88-0000-4000-8000-…` has no
+    /// key word before it and no 32-hex run in it. Replaced with the prefix
+    /// kept, so the line still says which field held it. Still cannot tell: a
+    /// 32-hex hash that follows a key-ish word (`cache key: <md5>`), which is
+    /// over-redacted; and a 32-hex key with no word beside it, which is missed.
+    static let azureHexKeyRedactionRegex = try! NSRegularExpression(
+        pattern: "(?i)("
+            + "(?<![a-z0-9_-])(?:[a-z0-9_-]*(?:key|secret|token|password)|authorization|azure_[a-z0-9_]*)"
+            + "[\"']?[ \\t]*[:=][ \\t]*[\"']?(?:bearer[ \\t]+)?"
+            + "|(?<![a-z0-9_-])bearer[ \\t]+[\"']?"
+            + ")[0-9a-f]{32}(?![0-9a-z])",
+        options: []
+    )
+
     /// Apply the key-shape redactor to a string. Exposed for testing.
     static func redactKeys(in line: String) -> String {
-        keyRedactionRegex.stringByReplacingMatches(
+        let masked = keyRedactionRegex.stringByReplacingMatches(
             in: line,
             range: NSRange(line.startIndex..., in: line),
             withTemplate: "***REDACTED***"
+        )
+        let azure84 = azureKeyRedactionRegex.stringByReplacingMatches(
+            in: masked,
+            range: NSRange(masked.startIndex..., in: masked),
+            withTemplate: "***REDACTED***"
+        )
+        return azureHexKeyRedactionRegex.stringByReplacingMatches(
+            in: azure84,
+            range: NSRange(azure84.startIndex..., in: azure84),
+            withTemplate: "$1***REDACTED***"
         )
     }
 }

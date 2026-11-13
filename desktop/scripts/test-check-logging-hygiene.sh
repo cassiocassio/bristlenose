@@ -77,6 +77,42 @@ expect "an unrelated allowlist entry does not excuse the line" 1 'violation[cred
 expect "a *Tests.swift file is not scanned" 0 "" \
     "$(fixture tests 'logger.info("injected \(apiKey)")' SampleTests.swift)"
 
+K84=$(printf 'aB3xY9kQ%.0s' 1 2 3 4 5 6 7 8 9 10 11 | cut -c1-84)
+H32=$(printf 'deadbeef%.0s' 1 2 3 4)
+GUID='3d1fae88-0000-4000-8000-000000000000'
+SHA1='da39a3ee5e6b4b0d3255bfef95601890afd80709'
+SHA256=$(printf 'ab12cd34%.0s' 1 2 3 4 5 6 7 8)
+
+expect "an 84-character key literal is a violation" 1 'violation[key-literal]' \
+    "$(fixture lit84 "let k = \"$K84\"")"
+
+expect "a 32-hex literal after a key word is a violation" 1 'violation[key-literal]' \
+    "$(fixture lit32 "let h = [\"api-key\": \"x\"]; let s = \"api-key: $H32\"")"
+
+expect "a Bearer 32-hex literal is a violation" 1 'violation[key-literal]' \
+    "$(fixture litbearer "let h = \"Authorization: Bearer $H32\"")"
+
+expect "an old-shape literal (Google) is a violation" 1 'violation[key-literal]' \
+    "$(fixture litgoogle "let k = \"AIza$(printf 'D%.0s' $(seq 35))\"")"
+
+expect "a GUID request id is clean" 0 "" \
+    "$(fixture guid "let h = \"apim-request-id: $GUID\"")"
+
+expect "a bare 32-hex (dashless GUID or MD5) is clean" 0 "" \
+    "$(fixture bare32 "let h = \"$H32\"")"
+
+expect "a git SHA-1 and a SHA-256 after a key word are clean" 0 "" \
+    "$(fixture sha "let a = \"key: $SHA1\"; let b = \"key=$SHA256\"")"
+
+expect "an 84-character run of one letter is clean" 0 "" \
+    "$(fixture letters84 "let k = \"$(printf 'a%.0s' $(seq 84))\"")"
+
+expect "a key-shaped literal in a *Tests.swift file is not scanned" 0 "" \
+    "$(fixture litTests "let k = \"$K84\"" SampleTests.swift)"
+
+expect "an allowlisted key-shaped literal passes" 0 "" \
+    "$(fixture litallow "let k = \"$K84\"" Sample.swift '<!-- ci-allowlist: HYG-1 --> aB3xY9kQ')"
+
 mkdir -p "$TMP/noroot"
 expect "a root with no Swift sources is a usage error, not a pass" 2 "" "$TMP/noroot"
 

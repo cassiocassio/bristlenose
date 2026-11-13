@@ -87,6 +87,22 @@ PRIVACY_MARKER_RE='privacy:[[:space:]]*\.(private|sensitive)'
 # --- Pattern 2: print() calls dumping env dict. ----------------------------
 ENV_DUMP_RE='print[[:space:]]*\(.*env\b'
 
+# --- Pattern 3: a key-shaped literal in source. ----------------------------
+# The same shapes the runtime redactor masks (BristlenoseShared.redactKeys),
+# found in Swift source rather than in a log line. Tests are excluded, so a
+# fake key lives there. Azure shapes (design-azure-connection.md section 12):
+#   - 84 characters of [A-Za-z0-9_-] as a whole token (a dashed GUID is 36, a
+#     SHA-1 40, a SHA-256 64, so none can match). ERE has no lookaround, so a
+#     letter-and-digit requirement lives in the filter below, not here.
+#   - exactly 32 hex only right after a key-ish word and a ":" or "=" (a bare
+#     32-hex is also a dashless GUID or an MD5).
+KEY_LIT_RE_PREFIX='(sk-ant-(api|sid)[0-9]{2}-[A-Za-z0-9_-]{90,}|sk-(proj|None)-[A-Za-z0-9_-]{48,}|AIza[A-Za-z0-9_-]{35})'
+KEY_LIT_RE_84='(^|[^A-Za-z0-9_./-])[A-Za-z0-9_-]{84}($|[^A-Za-z0-9_/-])'
+_KW='([kK][eE][yY]|[sS][eE][cC][rR][eE][tT]|[tT][oO][kK][eE][nN]|[pP][aA][sS][sS][wW][oO][rR][dD]|[aA][uU][tT][hH][oO][rR][iI][zZ][aA][tT][iI][oO][nN])'
+_BR='[bB][eE][aA][rR][eE][rR][[:space:]]+'
+_Q='["'"'"']?'
+KEY_LIT_RE_HEX32="${_KW}${_Q}[[:space:]]*[:=][[:space:]]*${_Q}(${_BR})?[0-9a-fA-F]{32}(\$|[^0-9A-Za-z])|${_BR}${_Q}[0-9a-fA-F]{32}(\$|[^0-9A-Za-z])"
+
 violations=0
 report_violation() {
     violations=$((violations + 1))
@@ -118,6 +134,22 @@ scan_file() {
         fi
         report_violation "violation[env-dump]: $hit"
     done < <(grep -nE "$ENV_DUMP_RE" "$file" 2>/dev/null || true)
+
+    # Pattern 3: key-shaped literals.
+    while IFS= read -r hit; do
+        [ -z "$hit" ] && continue
+        if is_allowlisted "$hit"; then
+            continue
+        fi
+        report_violation "violation[key-literal]: $hit"
+    done < <({ grep -nE "$KEY_LIT_RE_PREFIX|$KEY_LIT_RE_HEX32" "$file" 2>/dev/null || true
+               # 84-char whole token that holds at least one letter and one digit.
+               grep -noE "$KEY_LIT_RE_84" "$file" 2>/dev/null | while IFS=: read -r n tok; do
+                   core=$(printf '%s' "$tok" | grep -oE '[A-Za-z0-9_-]{84}')
+                   if printf '%s' "$core" | grep -q '[0-9]' && printf '%s' "$core" | grep -q '[A-Za-z]'; then
+                       printf '%s:%s\n' "$n" "$(sed -n "${n}p" "$file")"
+                   fi
+               done; })
 }
 
 while IFS= read -r swift_file; do

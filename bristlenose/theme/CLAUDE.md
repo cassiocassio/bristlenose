@@ -236,7 +236,7 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 - CSS specificity vs source order in concatenated theme — `render/theme_assets.py` concatenates CSS…
 - Count specificity, don't assert it in a comment — and never let a `@media print` override outlive…
 
-**Layout and rendering mechanics** (10) — [full entries](gotchas.md#layout-and-rendering-mechanics)
+**Layout and rendering mechanics** (11) — [full entries](gotchas.md#layout-and-rendering-mechanics)
 
 - Complex data tables are custom by nature — do not build a generic responsive-table system (decided…
 - The Sessions grid is a deliberate exception — do NOT fold its thresholds into this scale.
@@ -248,6 +248,7 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 - Standalone mockups that reuse `.tag-sidebar` render blank until you neutralise its reveal rule.
 - `auto-fit` grid collapse is DEFEATED by a full-span (`grid-column: 1 / -1`) sibling → ragged right…
 - Symmetric inline padding on a component inside a *wrapping* chain reads as a stray character, not…
+- A container query's width is the container's CONTENT box, so a card width in px needs its padding and border subtracted before it becomes a threshold.
 
 **Type, colour and tokens** (10) — [full entries](gotchas.md#type-colour-and-tokens)
 

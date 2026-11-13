@@ -357,6 +357,7 @@ final class WhisperDownloadModel: ObservableObject {
     private func start() {
         guard process == nil else { return }
         downloadEpoch += 1
+        probeAskedAgain = false  // a re-ask that predates this download is moot: its outcome stands
         guard let (binary, mode) = Self.sidecar() else {
             Self.logger.error("whisper download: no sidecar to run (bundle or dev path missing)")
             phase = .failed
@@ -463,6 +464,10 @@ final class WhisperDownloadModel: ObservableObject {
         // A download started meanwhile, and may even have ended: its outcome
         // stands.
         guard process == nil, epoch == downloadEpoch else { return false }
+        // Someone asked again while this ran, so this answer is already stale:
+        // do not apply it, or announce Whisper ready for a model that is no
+        // longer the one chosen. The loop in `refresh()` probes again.
+        guard !probeAskedAgain else { return false }
         guard let line = answer.line,
               case .status(let state, _, let bytes)? = WhisperDownloadLine.parse(line) else {
             Self.logger.error(
@@ -509,7 +514,16 @@ final class WhisperDownloadModel: ObservableObject {
                                                         stderr: error.localizedDescription))
                     return
                 }
-                let deadline = DispatchWorkItem { if proc.isRunning { proc.terminate() } }
+                // SIGTERM at 60 s, then SIGKILL at +5 s as `stop()` does: a probe
+                // that never returned would now hold every later `refresh()`.
+                let deadline = DispatchWorkItem {
+                    guard proc.isRunning else { return }
+                    proc.terminate()
+                    let pid = proc.processIdentifier
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
+                        if proc.isRunning { kill(pid, SIGKILL) }
+                    }
+                }
                 DispatchQueue.global().asyncAfter(deadline: .now() + 60, execute: deadline)
                 let data = out.fileHandleForReading.readDataToEndOfFile()
                 let errData = err.fileHandleForReading.readDataToEndOfFile()

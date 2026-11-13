@@ -39,8 +39,9 @@ struct TranscriptionSettingsView: View {
                 // model a run uses, which is still this preference and so must
                 // stay reachable. They concern Whisper, so they sit indented in
                 // the engine card rather than as peers in cards of their own.
-                // They never dim: Apple's choice still falls back to Whisper,
-                // which uses the model.
+                // They do not dim for the engine choice: Apple's choice still
+                // falls back to Whisper, which uses the model. (They are locked
+                // while a download runs.)
                 EngineSection {
                     if showDiagnostics {
                         detectedBackendRow
@@ -91,8 +92,8 @@ struct TranscriptionSettingsView: View {
     }
 
     /// Whether Whisper is on disk depends on the backend and model (each resolves
-    /// to its own repo), so the status row asks again when either changes.
-    /// `refresh()` already stands down while a download is running.
+    /// to its own repo), so the status row asks again when either changes. Both
+    /// pickers are locked while a download runs, so this never overlaps one.
     private func refreshWhisperStatus() {
         Task { _ = await whisperDownload.refresh() }
     }

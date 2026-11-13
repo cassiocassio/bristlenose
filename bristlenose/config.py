@@ -198,8 +198,9 @@ class BristlenoseSettings(BaseSettings):
     # bundled helper, so the CLI never takes the path either way.
     experimental_apple_speech: bool = True
     #: "until-whisper" (Apple until Whisper is on disk), "prefer" (Apple in its
-    #: nine languages, Whisper for the rest) or "never" (Whisper only). Settings
-    #: ▸ Transcription ▸ Transcribe with, via BRISTLENOSE_APPLE_SPEECH.
+    #: nine languages, Whisper for the rest) or "never" (Whisper only: the
+    #: environment and the CLI only; Settings ▸ Transcription ▸ Transcription
+    #: engine sends the first two), via BRISTLENOSE_APPLE_SPEECH.
     apple_speech: str = "until-whisper"
 
     # PII

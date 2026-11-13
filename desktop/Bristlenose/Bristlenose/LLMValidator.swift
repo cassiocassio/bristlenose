@@ -134,6 +134,20 @@ enum LLMValidator {
 
     private static let urlSession: URLSession = makeSession()
 
+    /// Refuses every redirect, so the `api-key` header (and a POST body) can never follow one to
+    /// another host. Completing with `nil` hands the 3xx itself back to the caller, which reads
+    /// it as an HTTP status, not as a success (design-azure-connection §12, "Redirects").
+    final class RefuseRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+        func urlSession(
+            _ session: URLSession, task: URLSessionTask,
+            willPerformHTTPRedirection response: HTTPURLResponse,
+            newRequest request: URLRequest,
+            completionHandler: @escaping (URLRequest?) -> Void
+        ) {
+            completionHandler(nil)
+        }
+    }
+
     /// The session every check uses. `protocolClasses` is the seam a test uses to answer in
     /// place of the network; production passes nothing.
     static func makeSession(protocolClasses: [AnyClass]? = nil) -> URLSession {
@@ -142,7 +156,7 @@ enum LLMValidator {
         config.timeoutIntervalForResource = 5
         config.waitsForConnectivity = false
         if let protocolClasses { config.protocolClasses = protocolClasses }
-        return URLSession(configuration: config)
+        return URLSession(configuration: config, delegate: RefuseRedirects(), delegateQueue: nil)
     }
 
     static func buildRequest(

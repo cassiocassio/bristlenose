@@ -42,6 +42,10 @@ struct AzureKeyCheckHardeningTests {
                 url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!
             if let location, let next = URL(string: location), (300..<400).contains(status) {
                 client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: next), redirectResponse: response)
+                // A refused redirect leaves the 3xx as the answer, as a real server's would be.
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client?.urlProtocol(self, didLoad: Data())
+                client?.urlProtocolDidFinishLoading(self)
             } else {
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 client?.urlProtocol(self, didLoad: Data())

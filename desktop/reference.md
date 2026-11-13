@@ -196,7 +196,7 @@ AIConsentView.swift           First-run AI data disclosure (Apple 5.1.2(i)) + au
 SettingsView.swift            TabView wrapper (3 icon tabs)
 AppearanceSettingsView.swift  Appearance (auto/light/dark) + Typography (SF Pro/Inter) + Language (12 locales + Weblate link) pickers + random-project-icons toggle
 LLMSettingsView.swift         Mail Accounts pattern — provider list + detail pane
-TranscriptionSettingsView.swift  Whisper backend + model pickers
+TranscriptionSettingsView.swift  Transcription engine, Whisper status, detected backend (read-only) + model picker
 ToastView.swift               ToastStore (@Published message) + ToastOverlay (bottom fade, 3s auto-dismiss); one store per window, owned by ContentView (R90)
 IconPickerPopover.swift       SF Symbol icon picker for project rows
 ```

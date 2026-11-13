@@ -430,7 +430,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - SwiftUI List inter-row gap steals drops from per-row `.dropDestination` modifiers
 - AppKit `NSOutlineView` mode rows: fire click side-effects from…
 
-**SwiftUI and AppKit mechanics** (22) — [full entries](gotchas.md#swiftui-and-appkit-mechanics)
+**SwiftUI and AppKit mechanics** (23) — [full entries](gotchas.md#swiftui-and-appkit-mechanics)
 
 - A row of buttons in a `ContentUnavailableView` actions slot is split equally and ellipsized — `.fixedSize(horizontal: true, vertical: false)` on the row; see `docs/design-control-labels.md`…
 - `@ObservedObject` in a `Commands` struct is unreliable AND expensive
@@ -454,6 +454,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - Undo/Redo editing guard (web editor only — a native field is `TextEditingFocus`, see…
 - SwiftUI `CommandsBuilder` caps at 10 elements per `body`
 - macOS SwiftUI `.tint()` — five traps around palette-aware theming
+- A grouped Form's keyline cannot be hidden (`.listRowSeparator(.hidden)` is a no-op there): put a control's status in the control's own row, under the stock labelled Picker
 
 **Sandbox, files and cloud** (15) — [full entries](gotchas.md#sandbox-files-and-cloud)
 

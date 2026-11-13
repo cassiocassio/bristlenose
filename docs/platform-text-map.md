@@ -74,7 +74,7 @@ All 22 sections, measured 21 Aug 2026. **635 keys.** _(A snapshot: 22 Oct 2026 r
 | `boot.*` | 7 | Launch / sidecar boot states |
 | `runBanner.*` | 7 | The run-finished banner (`docs/design-run-banner.md`): the two lead phrases ("Analysis finished", "Analysis finished with failures"), the session-count plural, and the one-button screen before the system's permission request. Its other words are shipped keys read in place (`chrome.failedTitle`, `pipeline.category.*`, `pipeline.diagnostic.partialSessions`). The Settings row's three strings are `settings.general.notify*` in `settings.json` |
 | `settingsTabs.*` | 6 | Native Settings window tab labels (General, Appearance, LLM Provider, Transcription, Accounts, MCP Agents) |
-| `transcriptionSettings.*` | 5 | Whisper model picker |
+| `transcriptionSettings.*` | 18 | Transcription engine, Whisper status and download row, model picker, Read shared screens |
 | `outOfCredit.*` | 5 | Billing-exhaustion pill and popover |
 | `sessionsPopover.*` | 5 | Native session-switcher popover: "All Sessions" row, count subtitle (plural forms; cs/pl/ru/uk carry `_few`/`_many`), empty and failure states. Row title reuses `common.autocode.sessionLabel`; the unnamed-speaker placeholder reuses `common.sessions.speakerPlaceholder.*`; Retry reuses `common.buttons.retry` |
 | `availability.*` | 4 | Unmounted-volume / missing-project subtitles |

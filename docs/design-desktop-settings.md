@@ -96,7 +96,7 @@ Right detail pane shows the selected provider's settings: API key (`SecureField`
 
 ## Tab 3: Transcription (waveform)
 
-Whisper backend picker (Auto/MLX/faster-whisper) + model picker (large-v3-turbo through tiny). `@AppStorage` for both.
+With the Apple speech helper (macOS 26 or later, flag on): a *Transcription engine* pop-up (*Whisper* / *Apple's speech model*) with the Whisper status in its row, and, behind Diagnostics, a read-only *Apple silicon detected / MLX* line and the model picker (large-v3-turbo through tiny). Otherwise, and below macOS 26: a Backend picker (Auto/MLX; faster-whisper was dropped on 12 Nov 2026, the Mac sidecar has MLX only) + the model picker, with the Whisper status in its own card. `@AppStorage` for the backend and model. Design and states: `docs/design-apple-first-transcription.md` ยง4, `docs/mockups/transcription-settings-states.html`.
 
 **Read shared screens** (toggle, on by default; `ScreenTextPreference`, key `readSharedScreens`,
 since 14 Oct 2026). Reads the text on screens shared in recordings with Apple Vision, on this Mac,
@@ -192,7 +192,7 @@ API keys are injected via `BristlenoseShared.overlayAPIKeys()` (C3, Apr 2026) โ€
 | Active provider | `activeProvider` | `BRISTLENOSE_LLM_PROVIDER` |
 | Model | `llmModel` | `BRISTLENOSE_LLM_MODEL` |
 | Concurrency | `llmConcurrency` | `BRISTLENOSE_LLM_CONCURRENCY` |
-| Whisper backend | `whisperBackend` | `BRISTLENOSE_WHISPER_BACKEND` |
+| Whisper backend | `whisperBackend` | `BRISTLENOSE_WHISPER_BACKEND` (only `mlx` is exported; `auto` and a stored `faster-whisper` send nothing) |
 | Whisper model | `whisperModel` | `BRISTLENOSE_WHISPER_MODEL` |
 | Language | `language` | `BRISTLENOSE_LANG` (via `childEnvironment`, not `overlayPreferences`) |
 | Read shared screens | `readSharedScreens` (default on) | `BRISTLENOSE_SCREEN_TEXT` = `1`/`0`, always set; `0` deletes the project's screen text at serve start |

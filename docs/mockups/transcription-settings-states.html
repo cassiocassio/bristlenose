@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en" data-scheme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcription settings states</title>
+<style>
+/* Quick mode: the pane is native SwiftUI (Form, .grouped), so the artefact frames
+   are drawn with hand-rolled macOS-ish tokens, not --bn-* web tokens. Page chrome
+   and commentary are deliberately NOT the product. */
+:root { color-scheme: light dark; }
+:root[data-scheme="light"] { color-scheme: light; }
+:root[data-scheme="dark"] { color-scheme: dark; }
+:root {
+  --page: light-dark(#fafaf9, #151515);
+  --ink: light-dark(#1d1d1f, #f2f2f4);
+  --ink-2: light-dark(#5f5f66, #a0a0a8);
+  --rule: light-dark(#c9c9cf, #3a3a40);
+  --hatch: light-dark(#e2e2e6, #2a2a30);
+  --win: light-dark(#ffffff, #1f1f21);
+  --card: light-dark(#f6f6f6, #2c2c2e);
+  --sep: light-dark(#e4e4e6, #3e3e41);
+  --muted: light-dark(#76767c, #98989f);
+  --accent: light-dark(#1f6bff, #4d94ff);
+  --accent-bg: light-dark(#d6e2fb, #2c3f63);
+  --track: light-dark(#dcdce0, #48484c);
+  --warn: light-dark(#a15c00, #e0a23b);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+.wrap { max-width: 1480px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 36px 0 4px; }
+p.lede { color: var(--ink-2); margin: 0 0 12px; max-width: 78ch; }
+.bar { position: sticky; top: 0; z-index: 5; background: var(--page); padding: 8px 0;
+  display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--rule); margin-bottom: 8px; font-size: 13px; }
+.bar button { font: inherit; padding: 2px 10px; border: 1px solid var(--rule); background: transparent;
+  color: var(--ink); border-radius: 6px; cursor: pointer; }
+.bar button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+.key { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin: 8px 0 4px; }
+.key i { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px; border-radius: 3px; }
+.key .k-art { background: var(--card); border: 1px solid var(--rule); }
+.key .k-com { border: 3px solid transparent; border-left: 3px solid var(--rule);
+  background: linear-gradient(var(--page), var(--page)) padding-box,
+  repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px) border-box; }
+.key .k-new { border-bottom: 2px dotted var(--warn); width: 22px; height: 12px; border-radius: 0; }
+
+/* commentary */
+.com { font-size: 13px; color: var(--ink); max-width: 660px; margin-top: 8px;
+  border: 7px solid transparent; border-left: 3px solid var(--rule);
+  background: linear-gradient(var(--page), var(--page)) padding-box,
+  repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box;
+  padding: 2px 6px; }
+.com b.lab { font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); display: block; margin-bottom: 3px; }
+.com p { margin: 0 0 6px; }
+.com p:last-child { margin: 0; }
+
+/* table */
+table.spec { border-collapse: collapse; font-size: 13px; width: 100%; max-width: 900px; margin-top: 8px; }
+table.spec th, table.spec td { border: 1px solid var(--rule); padding: 5px 9px; text-align: left; vertical-align: top; }
+table.spec th { background: var(--hatch); font-weight: 600; }
+td.y { color: var(--ink); } td.n { color: var(--ink-2); }
+
+/* frames */
+.os { display: flex; flex-wrap: wrap; gap: 28px 36px; align-items: flex-start; margin-top: 12px; }
+.frame { width: 660px; max-width: 100%; }
+.fbar { font: 12px/1.3 ui-monospace, Menlo, monospace; color: var(--ink-2); padding: 0 2px 6px;
+  display: flex; justify-content: space-between; gap: 12px; }
+.fbar b { color: var(--ink); font-weight: 600; }
+
+/* the artefact: a macOS Settings pane */
+.win { color: var(--ink); background: var(--win); border: 1px solid var(--rule); border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; width: 660px; max-width: 100%;
+  font: 13px/1.38 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+.tb { height: 38px; display: flex; align-items: center; justify-content: center; position: relative;
+  border-bottom: 1px solid var(--sep); font-weight: 600; }
+.tb .lights { position: absolute; left: 14px; display: flex; gap: 8px; }
+.tb .lights span { width: 12px; height: 12px; border-radius: 50%; background: var(--track); }
+.tb .lights span:first-child { background: #ee6a5e; }
+.pane { padding: 18px 20px 20px; display: grid; gap: 12px; position: relative; }
+.menu { position: absolute; right: 26px; top: 40px; z-index: 2; min-width: 230px; padding: 4px; border-radius: 10px;
+  background: var(--win); border: 1px solid var(--sep); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.menu div { padding: 3px 10px 3px 26px; border-radius: 6px; position: relative; }
+.menu div.on { background: var(--accent); color: #fff; }
+.menu div.on::before { content: "\2713"; position: absolute; left: 8px; }
+.card { background: var(--card); border-radius: 12px; }
+.row { padding: 9px 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.row + .row { border-top: 1px solid var(--sep); }
+.row .l { min-width: 0; }
+.row .l .h { color: var(--muted); }
+.row .r { flex: none; display: flex; align-items: center; gap: 10px; color: var(--muted); text-align: right; }
+.row.join { border-top: none; padding-top: 2px; }
+.row.plain .l { color: var(--muted); flex: 1; display: flex; align-items: center; gap: 8px; }
+.prog.wide { align-items: flex-start; width: 100%; }
+.prog.wide .bar2 { width: 100%; }
+.row.dep { padding-left: 34px; }
+.val { color: var(--accent); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.chev { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-bg); display: inline-flex; align-items: center; justify-content: center; }
+.chev svg { width: 9px; height: 12px; stroke: var(--accent); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.btn { font: inherit; padding: 1px 10px; border-radius: 6px; border: 1px solid var(--sep); background: var(--win); color: var(--ink); white-space: nowrap; }
+.prog { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.prog .bar2 { width: 160px; height: 5px; border-radius: 3px; background: var(--track); overflow: hidden; }
+.prog .bar2 i { display: block; height: 100%; width: 37%; background: var(--accent); }
+.prog small { font-size: 11px; font-variant-numeric: tabular-nums; }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--track); border-top-color: var(--muted); }
+.sw { width: 40px; height: 24px; border-radius: 12px; background: var(--accent); position: relative; flex: none; margin-top: 2px; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 18px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+
+/* a string that is not in the locale files yet */
+.new { border-bottom: 2px dotted var(--warn); }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+.decisions { max-width: 86ch; }
+.decisions li { margin: 0 0 8px; }
+.decisions .tag { font: 600 10px/1 ui-monospace, Menlo, monospace; text-transform: uppercase; letter-spacing: .06em;
+  border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; margin-right: 6px; color: var(--ink-2); }
+code { font: 12px ui-monospace, Menlo, monospace; background: var(--hatch); padding: 0 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Settings ▸ Transcription: where we have got to</h1>
+<p class="lede">Every state of the pane across the two layouts the code actually produces: macOS 15 to 25 (the pane as it shipped) and macOS 26 or later (the new engine choice). Drawn from <code>TranscriptionSettingsView.swift</code> and <code>docs/design-apple-first-transcription.md</code> §4.5, 12 Nov 2026. A discussion page; the Swift was brought into line with it on 12 Nov 2026.</p>
+
+<div class="bar">
+  <span>Scheme</span>
+  <button data-s="auto" aria-pressed="true">Auto</button>
+  <button data-s="light" aria-pressed="false">Light</button>
+  <button data-s="dark" aria-pressed="false">Dark</button>
+</div>
+
+<div class="key">
+  <span><i class="k-art"></i>The pane as drawn: what would ship</span>
+  <span><i class="k-com"></i>Commentary: not the product</span>
+  <span><i class="k-new"></i>New or changed string in this change</span>
+</div>
+
+<h2>Which rows appear, and when</h2>
+<table class="spec">
+  <tr><th>Row</th><th>macOS 15 to 25 (as shipped)</th><th>macOS 26+</th></tr>
+  <tr><td>Transcription engine (pop-up)</td><td class="n">not shown</td><td class="y">shown</td></tr>
+  <tr><td>Whisper status</td><td class="y">own card, always, even when on disk</td><td class="y">only when there is news: not on this Mac, downloading, failed, checking. Silent when on disk</td></tr>
+  <tr><td>Backend</td><td class="y">own card, a pop-up (as shipped)</td><td class="y">a read-only line, “Apple silicon detected · MLX”; no choice; Diagnostics only</td></tr>
+  <tr><td>Model</td><td class="y">own card, always</td><td class="y">indented under the pop-up; Diagnostics only</td></tr>
+  <tr><td>Read shared screens</td><td class="y">shown</td><td class="y">shown</td></tr>
+</table>
+<div class="com"><b class="lab">Commentary</b>
+<p>Every frame below is drawn with Diagnostics on, the superset. Without it, Backend and Model are hidden and the engine card ends at the pop-up or the status row.</p>
+<p>macOS 26+ also needs the speech helper in the bundle and the <code>BristlenoseAppleSpeech</code> flag on (the default). Either missing and a macOS 26 Mac gets the macOS 15–25 pane.</p></div>
+
+<h2>macOS 26 or later</h2>
+<p class="lede">Redrawn after the owner’s 12 Nov proposal: the first option is just “Whisper”, and the Whisper row speaks only when it has news, so the common case shows nothing under the pop-up.</p>
+<div class="os" id="m26"></div>
+
+<h2>macOS 15 to 25</h2>
+<p class="lede">No Apple model on these systems, so there is nothing to choose and the pane is as it shipped. Whisper’s download states are the same as above; two are drawn.</p>
+<div class="os" id="m15"></div>
+
+<h2>Decisions and open questions</h2>
+<ol class="decisions">
+  <li><span class="tag">settled</span><b>Row label: “Transcription engine”</b> (was “Transcribe with”). A noun, as System Settings labels are; “Speech engine” was rejected because it also means text-to-speech. Landed in <code>en</code> and the 20 other locales on 12 Nov. The ru, uk and ko labels take the stem of the pane’s own tab name.</li>
+  <li><span class="tag">settled</span><b>“Apple’s speech model” stays.</b> Formally <code>SpeechTranscriber</code> via <code>SpeechAnalyzer</code> (macOS 26). Its straight apostrophe, and the wider set of straight ones in <code>en</code>, is a typography sweep for another day.</li>
+  <li><span class="tag">built</span><b>The first option is “Whisper”, and the status speaks only when it has news.</b> A condition in a menu item (“once downloaded”) read like a model. Silent when Whisper is on disk. Otherwise: <i>Not on this Mac</i> with Download Now, the progress with Stop Download, <i>The download didn’t finish.</i> with Retry, and <i>Checking for Whisper…</i> (new words, with an ellipsis, as every other in-progress line has). Under the Whisper choice the row does not repeat the word; under Apple’s choice it keeps it. There is no keyline between the pop-up and the status because they share one row: <code>.listRowSeparator(.hidden)</code> was probed and does nothing in a grouped Form on macOS, so the labelled Picker and the status sit in one VStack.</li>
+  <li><span class="tag">settled</span><b>“Whisper only” is gone</b> (owner, 12 Nov). It meant no transcription at all if Whisper failed, when Apple’s model was a viable stand-in for most researchers. A stored <code>whisperOnly</code> from an older build reads as the default, so nothing renders blank, and nothing withholds the Apple helper any more. A test pins the stored value.</li>
+  <li><span class="tag">built</span><b>The detected line and Model are indented in the engine card and never dim.</b> Apple’s option uses Whisper outside its nine languages and for any session its confidence gate defers, so the stored model still applies. The Model picker (and the macOS 15–25 Backend picker) is locked while a download runs, so the progress bar cannot describe a model you have just changed.</li>
+  <li><span class="tag">built</span><b>Backend is a read-only line on macOS 26+: “Apple silicon detected”, with MLX as the consequence.</b> Detected at run time (<code>hw.optional.arm64</code>), not hard-coded. The choice goes because the Mac sidecar carries MLX only (<code>desktop/bristlenose-sidecar.spec</code>). To keep the line true, <code>overlayPreferences</code> now exports only <code>mlx</code> as the backend (a stored <code>faster-whisper</code> is ignored; a test pins it), and the macOS 15–25 picker offers Auto and MLX only. The CLI keeps <code>--whisper-backend</code> and the environment variable as an escape hatch for a machine where MLX imports but cannot run.</li>
+  <li><span class="tag">settled</span><b>The model row stays “Model”</b> (owner, 12 Nov), not “Whisper model”. Known cost, raised in review: with Apple’s choice and Whisper on disk the indented rows hang under a pop-up that says “Apple’s speech model”, so “Model” can read as Apple’s. Accepted.</li>
+  <li><span class="tag">settled</span><b>Below macOS 26 the pane is as shipped, less faster-whisper (decision 6).</b> Design doc §8 records it; the §4 wireframe’s one-item dimmed pop-up is superseded. Whisper’s status stays in its own card there and is shown even when on disk.</li>
+  <li><span class="tag">settled</span><b>Diagnostics is reachable on every build:</b> Settings ▸ Appearance, off by default.</li>
+  <li><span class="tag">built</span><b>The pane re-fits</b> when the status row appears or goes and when the engine choice changes (the hint wraps to the selected item); checking has its own height value, apart from not-on-this-Mac.</li>
+  <li><span class="tag">built</span><b>Status probes no longer race.</b> One runs at a time; a request that arrives during one makes it ask again with the preferences as they are by then, and every waiting caller gets the last answer.</li>
+  <li><span class="tag">open</span><b>“Read shared screens” sits on a Transcription tab</b> although it is a screens feature. Its hint says “Never sent to the AI”; the design doc says the sentence also says it is not put in an export, which the shipped string lacks. The firm claim needs checking.</li>
+  <li><span class="tag">owed</span><b>Native review</b> of the new locale strings in cs, fi, pl, tr and uk (seeded from each locale’s own vocabulary and Apple’s).</li>
+</ol>
+<div class="com"><b class="lab">Commentary</b>
+<p>Words in the frames are the shipped locale strings, except the dotted ones (“Whisper” as the first option, “Checking for Whisper”, “Transcription engine”, the curly “Apple’s”). “Download Now”, “Stop Download”, “Retry” and “Not on this Mac” are shipped keys; the progress line (“600 MB of 1.6 GB · About 2 minutes”) is the system’s own progress text, per the design doc.</p></div>
+
+</div>
+
+<script>
+(function () {
+  var CHEV = '<span class="chev"><svg viewBox="0 0 9 12"><path d="M1.5 4.5 4.5 1.5 7.5 4.5M1.5 7.5 4.5 10.5 7.5 7.5"/></svg></span>';
+  var APPLE = '<span class="new">Apple’s</span>';
+  var HINT = APPLE + ' speech model is built into macOS and is faster. Whisper copes better with poor audio, people talking over each other, larger groups, and languages ' + APPLE + ' model lacks.';
+  var N = function (t) { return '<span class="new">' + t + '</span>'; };
+
+  function pop(label, hint, value, cls) {
+    return '<div class="row ' + (cls || '') + '"><div class="l">' + label +
+      (hint ? '<div class="h">' + hint + '</div>' : '') +
+      '</div><div class="r"><span class="val">' + value + CHEV + '</span></div></div>';
+  }
+  function status(kind) {
+    var right = {
+      disk: 'On this Mac · 1.61 GB',
+      missing: 'Not on this Mac <span class="btn">Download Now</span>',
+      down: '<span class="prog"><span class="bar2"><i></i></span><small>600 MB of 1.6 GB · About 2 minutes</small></span><span class="btn">Stop Download</span>',
+      fail: 'The download didn’t finish. <span class="btn">Retry</span>',
+      check: '<span class="spin"></span> <span class="new">Checking for Whisper</span>'
+    }[kind];
+    return '<div class="row join"><div class="l">Whisper</div><div class="r">' + right + '</div></div>';
+  }
+  // Whisper is the chosen engine, so the row does not repeat its name: the state
+  // sits on the left, the button on the right (owner, 12 Nov).
+  function statusPlain(kind) {
+    var l = {
+      missing: 'Not on this Mac',
+      down: '<span class="prog wide"><span class="bar2"><i></i></span><small>600 MB of 1.6 GB · About 2 minutes</small></span>',
+      fail: 'The download didn’t finish.',
+      check: '<span class="spin"></span> <span class="new">Checking for Whisper</span>'
+    }[kind];
+    var r = { missing: '<span class="btn">Download Now</span>', down: '<span class="btn">Stop Download</span>', fail: '<span class="btn">Retry</span>', check: '' }[kind];
+    return '<div class="row join plain"><div class="l">' + l + '</div><div class="r">' + r + '</div></div>';
+  }
+  function backend(cls) { return pop('Backend', 'Auto detects the best engine for your Mac.', 'Auto', cls); }
+  // Read-only: what was detected and what it runs. No choice, no setting (owner, 12 Nov).
+  function detected() {
+    return '<div class="row dep"><div class="l">' + N('Apple silicon detected') + '</div><div class="r">' + N('MLX') + '</div></div>';
+  }
+  function model(cls) { return pop('Model', '', 'large-v3-turbo (recommended)', cls); }
+  function screens() {
+    return '<div class="card"><div class="row"><div class="l">Read shared screens<div class="h">Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project’s folder. Never sent to the AI.</div></div><div class="r"><span class="sw"></span></div></div></div>';
+  }
+  function engine(value, kind, named) {
+    // On disk is the expected state, so the row says nothing (owner, 12 Nov).
+    var rows = pop(N('Transcription engine'), HINT, value) + (kind === 'disk' ? '' : (named ? status(kind) : statusPlain(kind))) + detected() + model('dep');
+    return '<div class="card">' + rows + '</div>';
+  }
+  function win(inner) {
+    return '<div class="win"><div class="tb"><span class="lights"><span></span><span></span><span></span></span>Transcription</div><div class="pane">' + inner + '</div></div>';
+  }
+  function frame(n, title, tag, inner, note) {
+    return '<div class="frame"><div class="fbar"><span><b>' + n + '</b> ' + title + '</span><span>' + tag + '</span></div>' + win(inner) +
+      '<div class="com"><b class="lab">Commentary</b>' + note + '</div></div>';
+  }
+
+  var WH = N('Whisper');
+  var AP = APPLE + ' speech model';
+  var m26 = [
+    frame(1, 'Whisper chosen, on disk', 'macOS 26+', engine(WH, 'disk') + screens(),
+      '<p>The common case, so the Whisper row says nothing. The detected backend (read-only) and Model hang under the pop-up (Diagnostics on). Without Diagnostics the card is the pop-up alone.</p>'),
+    frame(2, 'Apple’s speech model chosen', 'macOS 26+', engine(AP, 'disk') + screens(),
+      '<p>Same card, value changed. Nothing dims: Apple’s option still falls back to Whisper outside its nine languages, which uses both pickers.</p>'),
+    frame(3, 'Whisper not on this Mac', 'macOS 26+', engine(WH, 'missing') + screens(),
+      '<p>Seen after a deliberate Stop, under 10 GB free, before the AI disclosure is acknowledged, or while a run is live. A first-time researcher normally gets frame 4, because the download starts when the disclosure is acknowledged. Apple’s model transcribes meanwhile (decision 3).</p>'),
+    frame('3b', 'Apple’s speech model chosen, Whisper not on this Mac', 'macOS 26+', engine(AP, 'missing', true) + screens(),
+      '<p>Here the row keeps the word. Under Apple’s choice Whisper is still the fallback and still needs downloading, and “Not on this Mac” alone would read as Apple’s model, which is built in. So: no label when the pop-up says Whisper, the label when it says Apple’s speech model.</p>'),
+    frame(4, 'Whisper downloading', 'macOS 26+', engine(WH, 'down') + screens(),
+      '<p>Same <code>WhisperDownloadModel</code> as the toolbar pill. The row is taller, so the pane re-fits when the phase changes. No resume: Stop Download starts again from the beginning.</p>'),
+    frame(5, 'Download failed', 'macOS 26+', engine(WH, 'fail') + screens(),
+      '<p>The line varies with the cause (<code>WhisperFailureCause</code>); the generic shipped one is drawn. Retry restarts the download.</p>'),
+    frame(6, 'Checking whether Whisper is on disk', 'macOS 26+', engine(WH, 'check') + screens(),
+      '<p>Asking the sidecar takes a moment. The words are new copy (decision 3); under Apple’s choice the named row’s spinner carries them as its accessibility label.</p>'),
+    frame(7, 'The pop-up open', 'macOS 26+',
+      '<div class="menu"><div class="on">' + WH + '</div><div>' + AP + '</div></div>' + engine(WH, 'disk') + screens(),
+      '<p>Two items. “Whisper only” is gone (decision 4, owner 12 Nov). Native pop-ups list items only, so what Whisper means while it is downloading has to live in the hint or the status row.</p>')
+  ];
+  var m15 = [
+    frame('L1', 'Whisper on disk', 'macOS 15–25',
+      '<div class="card">' + backend('') + '</div><div class="card">' + model('') + '</div><div class="card">' + status('disk') + '</div>' + screens(),
+      '<p>Four cards: Backend, Model, Whisper status, Read shared screens. The engine choice does not exist here, so “Whisper” is only a status line. Backend is not behind Diagnostics on this layout (decision 6).</p>'),
+    frame('L2', 'Whisper not downloaded', 'macOS 15–25',
+      '<div class="card">' + backend('') + '</div><div class="card">' + model('') + '</div><div class="card">' + status('missing') + '</div>' + screens(),
+      '<p>Whisper downloads in the background from launch, so this row is where the researcher finds Download Now, Stop Download and Retry. Those states match frames 4 and 5, apart from the label, which this pane keeps.</p>')
+  ];
+  document.getElementById('m26').innerHTML = m26.join('');
+  document.getElementById('m15').innerHTML = m15.join('');
+
+  var btns = document.querySelectorAll('.bar button');
+  Array.prototype.forEach.call(btns, function (b) {
+    b.addEventListener('click', function () {
+      document.documentElement.setAttribute('data-scheme', b.getAttribute('data-s'));
+      Array.prototype.forEach.call(btns, function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

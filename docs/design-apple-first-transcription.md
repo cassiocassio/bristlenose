@@ -3,7 +3,7 @@ status: built, on by default since 22 Oct 2026 (§8)
 date: 18 Oct 2026
 revised: 12 Nov 2026 (Settings pane, §4 amendment, §8); first revised 18 Oct 2026, after five reviews (§7)
 last-trued: 2026-11-13
-trued-against: working tree on main, 13 Nov 2026 (the 12 Nov Settings work was committed on 13 Nov 2026)
+trued-against: main at b9effa628, 13 Nov 2026 (the Settings work of 12 Nov, committed 13 Nov, and its third review pass)
 ---
 
 # Apple first, Whisper next: the first recordings on a new Mac
@@ -20,8 +20,11 @@ departs from §1–§4, and what is still owed.** Evidence:
 > (G superseded, J now default-on) and the Tests paragraph (the helper's gate); the §4 key table;
 > §5; §6 (answered questions marked in place); §7 and §8 (a dated 12 Nov entry, the Debug-only
 > bullet, the still-owed list). **Kept as the record:** the 18 Oct wireframe, row G's body and the
-> pre-12-Nov wording, each marked superseded beside it. **Not verified:** the Notes for Review
-> paragraph and the macOS 26 walk of the 12 Nov pane.
+> pre-12-Nov wording, each marked superseded beside it. **Re-checked later on 13 Nov** after the
+> third review pass (§3 D, §7; no re-audit: the delta was four commits of this subject). **Not
+> verified:** the Notes for Review paragraph; the macOS 26 walk of the 12 Nov pane is partly done
+> (dark mode, five states) and still owed for the failed and checking states, light mode and
+> long locales.
 
 ## 1. The slice
 
@@ -95,7 +98,7 @@ locale as **assumed**, never as `detected`, so subtitles and clips don't inherit
 | A | **Speech helper** `bristlenose-speech`: WAV + locale in, JSON out (segments, words with time ranges and confidences, asset version) | new `desktop/speech-helper/` | Most of it is `experiments/apple-speech/transcribe.swift`. **Built like `desktop/mcp-helper/`** (embedded Info.plist, no privacy manifest of its own (§8), minos = the app's 15.0 floor, `Contents/Helpers`), **signed like ffmpeg** (`sign-ffmpeg.sh`: sandbox + inherit, because the sidecar launches it; mcp-helper is sandboxed *without* inherit because a foreign app launches it). Its own gate script, not a copy of `check-mcp-helper.sh`, which asserts the opposite. `if #available(macOS 26, *)`; reports *unavailable* below. Holds its own five locale reservations and releases each after use, by the stored `Locale` object |
 | B | **Engine decision + backend** | `s05_transcribe.py` | A **separate** decision function fed settings, env and the helper's availability. `_resolve_backend` stays as it is: the preflight (`whisper.py:148`) and `doctor` share it, and a third value would pick the wrong repo table. `_init_apple_backend` returns `TranscriptSegment`s with words, `source = "apple-speech"`, **re-segmented** on word gaps over ~0.7 s and sentence ends (Apple's results are long, and stage 5b labels per segment). Keeps the signal gate; skips the style prompt, echo filter and inaudible marker (Whisper-specific). Applies the gate (§2) |
 | C | **No fetch from Python on the Apple path** | `pipeline.py` `_needs_whisper` block | With the helper set, Python never fetches: the app owns the one download. A deferred session waits on that job by its outcome, never by calling `ensure_hf_model` itself (two fetchers of one repo each write their own partial under hf_xet) |
-| D | **The download job** | Swift `WhisperDownloadModel` (app-level `@StateObject`, sibling of `OllamaDownloadModel`), single-flight across windows; Python **`bristlenose doctor --fetch`** (already a sidecar passthrough) | `doctor --fetch` gains one structured progress line per tick from `ensure_hf_model(tqdm_class=)` (the seam `_native_download_progress` already uses), parsed like `ServeManager.handleLine`. Bytes from the wire, total from the server, not `_DOWNLOAD_MB` (which drifts) or blob growth (which hf_xet chunking distorts). Restart on relaunch when `cache_state == "partial"` (the appliance copes). **One probe of "is Whisper on disk"** (and, since 12 Nov 2026, one *running* at a time: a request that arrives during a probe makes it ask again with the preferences as they are by then, and a probe that began before a download cannot overwrite its outcome, `downloadEpoch`): Swift asks Python (the job's answer, or `doctor`), never computes the Hugging Face cache path itself; and reconcile the two Python probes that already disagree (`doctor` uses `scan_cache_dir`, which reads a config-only partial as cached; the preflight's `cache_state` checks the heavy blob). Starts at launch once the AI disclosure is acknowledged, with at least 10 GB free (owner, 18 and 22 Oct 2026; lowered from 20 GB on 30 Oct 2026 after the download measured 1,539 MB at its peak; built 22 Oct, `WhisperDownloadModel.checkAtLaunch`), and also at the first Apple run |
+| D | **The download job** | Swift `WhisperDownloadModel` (app-level `@StateObject`, sibling of `OllamaDownloadModel`), single-flight across windows; Python **`bristlenose doctor --fetch`** (already a sidecar passthrough) | `doctor --fetch` gains one structured progress line per tick from `ensure_hf_model(tqdm_class=)` (the seam `_native_download_progress` already uses), parsed like `ServeManager.handleLine`. Bytes from the wire, total from the server, not `_DOWNLOAD_MB` (which drifts) or blob growth (which hf_xet chunking distorts). Restart on relaunch when `cache_state == "partial"` (the appliance copes). **One probe of "is Whisper on disk"** (and, since 12 Nov 2026, one *running* at a time: a request that arrives during a probe makes it ask again with the preferences as they are by then, a probe that began before a download cannot overwrite its outcome, `downloadEpoch`; a probe overtaken by a newer ask is not applied or announced; one still running after 60 s is killed, SIGTERM then SIGKILL at +5 s): Swift asks Python (the job's answer, or `doctor`), never computes the Hugging Face cache path itself; and reconcile the two Python probes that already disagree (`doctor` uses `scan_cache_dir`, which reads a config-only partial as cached; the preflight's `cache_state` checks the heavy blob). Starts at launch once the AI disclosure is acknowledged, with at least 10 GB free (owner, 18 and 22 Oct 2026; lowered from 20 GB on 30 Oct 2026 after the download measured 1,539 MB at its peak; built 22 Oct, `WhisperDownloadModel.checkAtLaunch`), and also at the first Apple run |
 | E | **Record the engine** | transcription-quality record (`recognition.backend`, locale `assumed`, asset version), segment `source` | The Diagnostics row types `backend` but renders nothing (`TranscriptionDiagnostics.tsx:32`); render it there |
 | F | **No re-transcription** | stage-5 fingerprints unchanged | The engine must not join the fingerprint, or a re-analyse silently re-transcribes and orphans stars, tags and edits (README § 7). Known paths that will re-transcribe anyway: `--clean`, a copy without `-p`, a folder moved before its first post-upgrade run. Warn on those when the engine would change |
 | G | **Settings ▸ Transcription** | `TranscriptionSettingsView` | **Superseded in part, see the §4 amendment and §8 (12 Nov 2026).** As planned 18 Oct: redesigned (§4): one behaviour choice and a Whisper status row; MLX vs faster-whisper moves behind the Diagnostics preference; the interim model picker leaves the pane (update `tests/test_interim_model_pickers.py`; `BRISTLENOSE_WHISPER_MODEL` stays as an env override). *Whisper when ready* and *Whisper only* both write `whisperBackend = auto`; *Whisper only* also withholds the helper path from `childEnvironment` (or sets `BRISTLENOSE_APPLE_SPEECH=0`), which is all the engine decision needs. The status row changes height between its states, so the pane calls `SettingsWindow.refitToContent()` on a height signature of the state |
@@ -242,9 +245,13 @@ mockup (correctness, silent failures, Mac taste, test placement, i18n, fidelity)
 compose-check and a parsimony pass. Taken: the *Whisper only* item removed; the status in
 the pop-up's row, silent when on disk; the MLX-only backend export; the read-only
 *Apple silicon detected* line; probe coalescing; the pickers locked during a download;
-the stock labelled Picker. Open: whether the refit fires while another Settings pane is in
-front, a failed status probe shown as a failed download, and the macOS 26 walk. (The
-findings themselves are in the maintainer's private notes.)
+the stock labelled Picker. A third pass on 13 Nov, over the committed code and the locale
+seeds, found no high-severity issue (taken: an overtaken probe is not applied, a hung one is
+killed, the sidebar hint's apostrophe, three locale cells). Open: whether the refit fires
+while another Settings pane is in front, a failed status probe shown as a failed download,
+Ukrainian's apostrophe (U+02BC, an owner ruling), and the rest of the macOS 26 walk (the
+failed and checking states, light mode, long locales). (The findings themselves are in the
+maintainer's private notes.)
 
 ## 8. As built (18 Oct 2026; updated 22 Oct, 2 Nov, 12 Nov)
 

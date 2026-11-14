@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
 from bristlenose.server.codebook import CODEBOOK_TEMPLATES, get_template
+from bristlenose.server.codebook_install import link_framework_once
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
@@ -755,81 +756,8 @@ def import_template(
                     detail="Template already imported",
                 )
 
-        # Groups for this framework that exist but are not linked HERE.
-        #
-        # This used to be the "restore path" — uninstall preserved everything and
-        # re-import brought it back. D20 option A ended that, so after an
-        # uninstall there is nothing of ours left to find.
-        #
-        # The branch still matters, for a different reason: `CodebookGroup` is
-        # **instance-scoped**. If another project still has this framework, its
-        # groups survive our uninstall (guarded in `remove_framework`), and
-        # reinstalling here must RELINK them rather than create a second set —
-        # which would give the instance two Nielsens and split every count.
-        unlinked_groups = (
-            db.query(CodebookGroup)
-            .filter(CodebookGroup.framework_id == body.template_id)
-            .all()
-        )
-        orphaned = [g for g in unlinked_groups if g.id not in group_ids]
-
-        if orphaned:
-            # ── Relink path — the rows belong to another project ─────
-            # They may predate a wording revision of the YAML; bring them up
-            # to it before linking, so this project never sees stale names.
-            from bristlenose.server.codebook_sync import sync_framework_rows
-
-            sync_framework_rows(db, tmpl)
-            max_order = (
-                db.query(func.max(ProjectCodebookGroup.sort_order))
-                .filter_by(project_id=project_id)
-                .scalar()
-            ) or 0
-
-            for i, g in enumerate(orphaned):
-                db.add(ProjectCodebookGroup(
-                    project_id=project_id,
-                    codebook_group_id=g.id,
-                    sort_order=max_order + 1 + i,
-                ))
-
-            # The accepted-proposal reset that used to live here is GONE, and
-            # removing it fixes a latent cross-project bug rather than merely
-            # tidying up. It filtered on `tag_definition_id` alone — and those
-            # are instance-scoped — so re-importing here rewrote ANOTHER
-            # project's accepted proposals back to pending. Since D20 option A
-            # our own proposals are deleted at uninstall, there is nothing of
-            # ours to reset, and the only rows it could still reach belong to
-            # someone else. Same shape as A1, one table over.
-
-            db.commit()
-            return get_codebook(project_id, request)
-
-        # ── Fresh import path (unchanged) ───────────────────────────
-        max_order = (
-            db.query(func.max(ProjectCodebookGroup.sort_order))
-            .filter_by(project_id=project_id)
-            .scalar()
-        ) or 0
-
-        for i, tg in enumerate(tmpl.groups):
-            group = CodebookGroup(
-                name=tg.name,
-                subtitle=tg.subtitle,
-                colour_set=tg.colour_set,
-                sort_order=max_order + 1 + i,
-                framework_id=tmpl.id,
-            )
-            db.add(group)
-            db.flush()
-            for tt in tg.tags:
-                db.add(TagDefinition(name=tt.name, codebook_group_id=group.id))
-            db.add(ProjectCodebookGroup(
-                project_id=project_id,
-                codebook_group_id=group.id,
-                sort_order=max_order + 1 + i,
-            ))
-        db.commit()
+        if not link_framework_once(db, project_id, tmpl):
+            raise HTTPException(status_code=409, detail="Template already imported")
 
         # Return updated codebook
         return get_codebook(project_id, request)

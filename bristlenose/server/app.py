@@ -1472,6 +1472,11 @@ def _make_run_completed_handler(
         job = getattr(app.state, "scene_strips", None)
         if job is not None:
             job.start()
+        # A completed run in this serve arms the house default: when screen reading next ends,
+        # a study with screens gets the UXR codebook (autocode_house_default).
+        from bristlenose.server.autocode_house_default import arm as arm_house_default
+
+        arm_house_default(app)
         st_job = getattr(app.state, "screen_text", None)
         if st_job is not None:
             st_job.start()
@@ -1806,6 +1811,7 @@ def _install_event_watcher(
     # what was read for this project before anything else can read it; unset deletes nothing.
     from bristlenose import screen_text as _screen_text
     from bristlenose.screen_text.index import delete_at_rest, purge_stale
+    from bristlenose.server.autocode_house_default import schedule as _house_default_schedule
     from bristlenose.server.screen_text_job import ScreenTextJob
 
     if _screen_text.explicitly_off():
@@ -1818,11 +1824,13 @@ def _install_event_watcher(
         session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
         enabled=lambda: _screen_text.wanted(bool(getattr(app.state, "dev", False))),
         busy=lambda: app.state.scene_strips.running,
+        on_idle=lambda: _house_default_schedule(app),
     )
 
     @asynccontextmanager
     async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         startup_trace.mark("lifespan-begin")
+        app.state.event_loop = asyncio.get_running_loop()  # the screen-text thread hops here
         app.state.scene_strips.start()
         app.state.screen_text.start()
         # A key saved since quotes were owed codes them (the Mac restarts the serve on a key save).

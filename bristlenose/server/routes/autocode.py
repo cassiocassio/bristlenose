@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -221,13 +222,92 @@ def _has_api_key(settings: object) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def current_settings() -> Any:
+    """The settings a start would use; one name for the house default to call."""
+    return load_settings()
+
+
+def require_provider_ready(settings: Any) -> None:
+    """Refuse (``RefusalError``) unless the chosen provider can run AutoCode: one chosen,
+    a cloud one, and a key (or a ready any-llm). The start route and the house default share
+    it, so the default never installs a codebook it cannot then run."""
+    # A server can't prompt: if 2+ providers have keys and none was ever
+    # chosen (no --llm/env/current-provider), refuse rather than letting
+    # the field default silently pick a vendor. Recomputed statelessly —
+    # the module-global from load_settings() may belong to another context.
+    from bristlenose.config import provider_resolution_for
+
+    resolution = provider_resolution_for(settings)
+    if resolution.status == "ambiguous":
+        raise RefusalError(
+            409,
+            RefusalReason.PROVIDER_AMBIGUOUS,
+            "Multiple AI providers are configured and none is "
+            "selected. Pick one: bristlenose use <provider> (or set "
+            "BRISTLENOSE_LLM_PROVIDER), then retry.",
+        )
+
+    if settings.llm_provider == "local":
+        raise RefusalError(
+            503,
+            RefusalReason.PROVIDER_LOCAL,
+            "AutoCode requires a cloud LLM provider. "
+            "Local models (Ollama) cannot fit the full codebook "
+            "taxonomy in their context window.",
+        )
+
+    no_key = RefusalError(
+        503,
+        RefusalReason.NO_API_KEY,
+        "No API key configured for the current LLM provider "
+        f"({settings.llm_provider}). Set the appropriate key "
+        "in your .env file.",
+    )
+    if settings.llm_provider == "anyllm":
+        # Through any-llm "not ready" is not always a missing key: a model not chosen,
+        # one that is malformed, or the add-on not installed. "Add an API key" sent the
+        # researcher to the wrong place (review finding 13); the existing "choose a
+        # provider" wording is the nearest true one, and nothing new is added to the
+        # screen. Asked once: a refusal is a keystore lookup.
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(settings)
+        if not ready.ready:
+            if ready.status == "no-key":
+                raise no_key
+            lines = anyllm.explain(ready)
+            raise RefusalError(
+                503,
+                RefusalReason.PROVIDER_AMBIGUOUS,
+                lines[0] if lines else f"any-llm is not ready ({ready.status}).",
+            )
+    elif not _has_api_key(settings):
+        raise no_key
+
+
 @router.post("/projects/{project_id}/autocode/{framework_id}")
 async def start_autocode_job(
     project_id: int,
     framework_id: str,
     request: Request,
 ) -> AutoCodeJobOut:
+    """Start an AutoCode job for the given project and framework (see ``start_autocode``)."""
+    return await start_autocode(request.app, project_id, framework_id)
+
+
+async def start_autocode(
+    app: Any,
+    project_id: int,
+    framework_id: str,
+    *,
+    after_apply: Callable[[], None] | None = None,
+) -> AutoCodeJobOut:
     """Start an AutoCode job for the given project and framework.
+
+    One path for the route and for the house default (``autocode_house_default``).
+    ``after_apply``, when given, runs once the job's batches are done and it is
+    ``completed``, before the Signals snapshot: the house default uses it to apply the
+    default cutoff, since no researcher is there to open the review.
 
     Guards:
     - 404 if project not found
@@ -238,7 +318,7 @@ async def start_autocode_job(
     - 503 if no API key configured
     """
 
-    db = _get_db(request)
+    db = app.state.db_factory()
     try:
         _check_project(db, project_id)
 
@@ -292,59 +372,7 @@ async def start_autocode_job(
 
         # Load settings and check provider
         settings = load_settings()
-
-        # A server can't prompt: if 2+ providers have keys and none was ever
-        # chosen (no --llm/env/current-provider), refuse rather than letting
-        # the field default silently pick a vendor. Recomputed statelessly —
-        # the module-global from load_settings() may belong to another context.
-        from bristlenose.config import provider_resolution_for
-
-        resolution = provider_resolution_for(settings)
-        if resolution.status == "ambiguous":
-            raise RefusalError(
-                409,
-                RefusalReason.PROVIDER_AMBIGUOUS,
-                "Multiple AI providers are configured and none is "
-                "selected. Pick one: bristlenose use <provider> (or set "
-                "BRISTLENOSE_LLM_PROVIDER), then retry.",
-            )
-
-        if settings.llm_provider == "local":
-            raise RefusalError(
-                503,
-                RefusalReason.PROVIDER_LOCAL,
-                "AutoCode requires a cloud LLM provider. "
-                "Local models (Ollama) cannot fit the full codebook "
-                "taxonomy in their context window.",
-            )
-
-        no_key = RefusalError(
-            503,
-            RefusalReason.NO_API_KEY,
-            "No API key configured for the current LLM provider "
-            f"({settings.llm_provider}). Set the appropriate key "
-            "in your .env file.",
-        )
-        if settings.llm_provider == "anyllm":
-            # Through any-llm "not ready" is not always a missing key: a model not chosen,
-            # one that is malformed, or the add-on not installed. "Add an API key" sent the
-            # researcher to the wrong place (review finding 13); the existing "choose a
-            # provider" wording is the nearest true one, and nothing new is added to the
-            # screen. Asked once: a refusal is a keystore lookup.
-            from bristlenose.llm import anyllm
-
-            ready = anyllm.readiness(settings)
-            if not ready.ready:
-                if ready.status == "no-key":
-                    raise no_key
-                lines = anyllm.explain(ready)
-                raise RefusalError(
-                    503,
-                    RefusalReason.PROVIDER_AMBIGUOUS,
-                    lines[0] if lines else f"any-llm is not ready ({ready.status}).",
-                )
-        elif not _has_api_key(settings):
-            raise no_key
+        require_provider_ready(settings)
 
         # A cancelled/failed job that was never applied (the only survivors of
         # the guards above) is run again, keeping its proposals and register rows: the
@@ -369,9 +397,8 @@ async def start_autocode_job(
         # Spawn background task — fire and forget, but hold a strong reference
         # so a suspended task isn't GC'd mid-run (which would strand the job
         # "running"). Discard on completion.
-        db_factory = request.app.state.db_factory
-        project_dir = request.app.state.project_dir
-        app = request.app
+        db_factory = app.state.db_factory
+        project_dir = app.state.project_dir
 
         async def _run_and_snapshot() -> None:
             # The first report is withheld from the lens from the moment this
@@ -411,6 +438,11 @@ async def start_autocode_job(
                 ).first()
                 if completed is None:
                     return
+                if after_apply is not None:
+                    try:
+                        after_apply()
+                    except Exception:
+                        logger.exception("After-apply step for AutoCode %s failed", framework_id)
                 from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
 
                 await materialise_completed_signal_snapshot(
@@ -755,6 +787,37 @@ def deny_proposal(
 # ---------------------------------------------------------------------------
 
 
+def _accept_pending(db: Session, project_id: int, query: Any) -> int:
+    """Accept the pending proposals ``query`` selects that still count: make each one's
+    QuoteTag (source "autocode") and mark it accepted. Uncommitted; returns how many."""
+    counted = _counted_quote_ids(db, project_id)
+    proposals = [p for p in query.all() if p.quote_id in counted]
+    accepted = 0
+    now = datetime.now(timezone.utc)
+
+    for proposal in proposals:
+        # Create QuoteTag if not already present
+        existing_qt = (
+            db.query(QuoteTag)
+            .filter_by(
+                quote_id=proposal.quote_id,
+                tag_definition_id=proposal.tag_definition_id,
+            )
+            .first()
+        )
+        if not existing_qt:
+            db.add(QuoteTag(
+                quote_id=proposal.quote_id,
+                tag_definition_id=proposal.tag_definition_id,
+                source="autocode",
+            ))
+
+        proposal.status = "accepted"
+        proposal.reviewed_at = now
+        accepted += 1
+    return accepted
+
+
 @router.post("/projects/{project_id}/autocode/{framework_id}/accept-all")
 def accept_all_proposals(
     project_id: int,
@@ -798,32 +861,7 @@ def accept_all_proposals(
             ]
             query = query.filter(ProposedTag.tag_definition_id.in_(tag_ids))
 
-        counted = _counted_quote_ids(db, project_id)
-        proposals = [p for p in query.all() if p.quote_id in counted]
-        accepted = 0
-        now = datetime.now(timezone.utc)
-
-        for proposal in proposals:
-            # Create QuoteTag if not already present
-            existing_qt = (
-                db.query(QuoteTag)
-                .filter_by(
-                    quote_id=proposal.quote_id,
-                    tag_definition_id=proposal.tag_definition_id,
-                )
-                .first()
-            )
-            if not existing_qt:
-                db.add(QuoteTag(
-                    quote_id=proposal.quote_id,
-                    tag_definition_id=proposal.tag_definition_id,
-                    source="autocode",
-                ))
-
-            proposal.status = "accepted"
-            proposal.reviewed_at = now
-            accepted += 1
-
+        accepted = _accept_pending(db, project_id, query)
         db.commit()
         return {"accepted": accepted}
 
@@ -895,5 +933,33 @@ def deny_all_proposals(
         db.commit()
         return {"denied": denied}
 
+    finally:
+        db.close()
+
+
+def accept_at_default_cutoff(db_factory: Callable[[], Session], project_id: int,
+                             framework_id: str, cutoff: float) -> int:
+    """Apply a finished first job at ``cutoff`` as Accept all would: pending proposals at or
+    above it are accepted and the cutoff is stored for later re-applies (the catch-up reuses
+    it). The band below stays pending for the review; nothing is denied, since a denial
+    cannot be undone in the UI. Returns how many were accepted."""
+    db = db_factory()
+    try:
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project_id, framework_id=framework_id).first()
+        if job is None:
+            return 0
+        job.applied_upper_threshold = cutoff
+        # No lower line either: unset, the later re-applies deny below the dialog's default, and
+        # a denial cannot be undone. 0 leaves everything under the cutoff pending, for the review.
+        job.applied_lower_threshold = 0.0
+        query = db.query(ProposedTag).filter(
+            ProposedTag.job_id == job.id,
+            ProposedTag.status == "pending",
+            ProposedTag.confidence >= cutoff,
+        )
+        accepted = _accept_pending(db, project_id, query)
+        db.commit()
+        return accepted
     finally:
         db.close()

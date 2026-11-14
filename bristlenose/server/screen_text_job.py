@@ -68,6 +68,7 @@ class ScreenTextJob:
         engine: ScreenTextEngine | None = None,
         busy: Callable[[], bool] = lambda: False,
         clock: Callable[[], float] = time.monotonic,
+        on_idle: Callable[[], None] | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._output_dir = output_dir
@@ -76,6 +77,10 @@ class ScreenTextJob:
         #: Another media job to let finish first (the scene strips): both decode every recording.
         self._busy = busy
         self._clock = clock
+        #: Called from the pass thread when the last pass has read to the end and the job has
+        #: let go (not when a run stopped it, and not on a machine with no engine). The house
+        #: default for AutoCode asks here whether the study has screens.
+        self._on_idle = on_idle
         self.engine: ScreenTextEngine = engine or VisionEngine()
         self._lock = threading.Lock()
         self._flag = threading.Lock()
@@ -127,6 +132,7 @@ class ScreenTextJob:
         self._lock.release()
 
     def _run(self) -> None:
+        completed = False
         try:
             if self.unavailable():  # off this machine: nothing to read, and nothing left running
                 with self._flag:
@@ -134,15 +140,23 @@ class ScreenTextJob:
                 return
             while True:
                 self._rerun = False
-                self._pass()
+                completed = self._pass()
                 with self._flag:
                     if not self._rerun:
                         self._finish()
-                        return
+                        break
         except Exception:  # noqa: BLE001 — a side job; must never take the server with it
             logger.warning("Screen text skipped", exc_info=True)
             with self._flag:
                 self._finish()
+            return
+        if completed and self._on_idle is not None:
+            # After the lock is let go and outside the flag, so a callback that raises can
+            # neither release it twice nor hold it.
+            try:
+                self._on_idle()
+            except Exception:  # noqa: BLE001 — a side effect of reading; never the reading's failure
+                logger.warning("Screen text idle callback failed", exc_info=True)
 
     def run_in_progress(self) -> bool:
         """Whether a pipeline run is in progress (the job defers to it). Not free: a route asks
@@ -170,7 +184,8 @@ class ScreenTextJob:
             return "not_read"
         return None
 
-    def _pass(self) -> None:
+    def _pass(self) -> bool:
+        """Read what is unread. True when it ran to the end, False when a run stopped it."""
         self.rate = None
         self._read_seconds = self._read_wall = 0.0
         while self._busy() and not self._run_in_progress():
@@ -186,7 +201,7 @@ class ScreenTextJob:
         for session_id, video in videos.items():
             if self._run_in_progress():
                 self._rerun = False  # the run's completion starts a fresh pass
-                return
+                return False
             self.current = session_id
             path = out / f"{session_id}.json"
             try:
@@ -221,6 +236,7 @@ class ScreenTextJob:
                 self.failed[session_id] = "read_failed"
                 self._failed_keys[session_id] = key
                 logger.warning("No screen text for %s", session_id, exc_info=True)
+        return True
 
     def _measured(self, seconds: float, wall: float) -> None:
         if seconds <= 0 or wall <= 0:

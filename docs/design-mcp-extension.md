@@ -7,7 +7,7 @@ trued-against: HEAD@main on 2026-10-11 (after 7a519706)
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
 
-> **Trued 14 Nov 2026 ("Unknown developer").** Claude Desktop's Plugins page labels this extension "Unknown developer" whatever manifest fields we tried, presumably because it is a privately distributed local extension (inferred; undocumented): the directory no longer accepts MCPB and chat ignores a plugin's local servers, so no verified route exists. Researched and closed in `docs/research/claude-unknown-developer-2026-11.md`; do not try to fix it in the manifest.
+> **Noted 14 Nov 2026, one finding, not a truing ("Unknown developer").** Claude Desktop's Plugins page labels this extension "Unknown developer" whatever manifest fields we tried, presumably because it is a privately distributed local extension (inferred; undocumented): the directory no longer accepts MCPB and chat ignores a plugin's local servers, so no verified route exists. Researched and closed in `docs/research/claude-unknown-developer-2026-11.md`; do not try to fix it in the manifest.
 
 > **Trued 4 Oct 2026 (--doc, §3.1 only).** The two handshake copies are now byte-identical by construction: `writeBoth` builds the payload once, so both carry one `updated_at` (before, each copy built its own and two writes straddling a second disagreed). §3.1 says so, and its `payload` anchor is a symbol rather than a stale line number. Nothing else changed.
 
@@ -40,9 +40,9 @@ over a real study through the installed extension.
 | Node proxy inside the `.mcpb` | Shipped — **564 lines**, zero deps (308 at 2 Aug; schema-2 + staleness detection since) | `desktop/mcpb/server/index.js`, `manifest.json` |
 | Settings ▸ MCP Agents (4th pane, antenna) | Shipped | `desktop/Bristlenose/Bristlenose/MCPAgentsSettingsView.swift` |
 | `Turn On / Turn Off Agent Access` verb swap | Shipped | `AgentAccessPolicy.swift`, `ProjectSidebarOutline.swift:1736` |
-| Exposure badge (no badge / pale / solid) | Shipped | `ProjectSidebarOutline.swift:1327` `agentBadgeView` |
+| Exposure badge (no badge / pale / solid) | Shipped | `ProjectSidebarOutline.swift` `agentBadgeView` |
 | Scope model | **Not Option B.** Option A + explicit per-project allowlist | §3.3 SUPERSEDED |
-| Anonymise | **Global on desktop**, not per-project | §3.3 SUPERSEDED, `MCPAgentsSettingsView.swift:38` |
+| Anonymise | **Global on desktop**, not per-project | §3.3 SUPERSEDED, `MCPAgentsSettingsView.swift` (the Anonymise property) |
 | Settings agent-access project list | **Uncut and shipped 21 Aug 2026** — cut 1 Aug (`76d9e92a`), rebuilt as the projects register | §5a-bis, `AgentProjectRegister.swift`, `2741a61c` / `5f5c8eda` / `028d539b` |
 | `bristlenose mcp-proxy` CLI subcommand | **Not shipped** | §7 Q3 |
 | Directory submission | Not done — local install only | §7 Q4, as recommended |
@@ -51,8 +51,7 @@ over a real study through the installed extension.
 | Handshake in the team app group | **Shipped in 0.32.0** — written beside the container copy; both copies fail closed (the data copy since 11 Oct 2026) | `MCPHandshake.writeBoth`, §3.1 |
 | Per-host proxy versions (D8) | **Built on main 29 Sep 2026** — `proxy_versions` on `/api/agent-activity` | native-proxy §6.9 *Wire contract* |
 
-**Still owed** (TODO.md, before the next TestFlight): the `.mcpb` has no
-512×512 `icon.png`, so Claude Desktop shows a generic tile.
+**Still owed** (TODO.md): the Node fallback `.mcpb` has no `icon.png`. The native package has carried the app icon since 29 Sep 2026 (`NativeExtensionPackage.swift`) and it shows in Claude's install dialog (observed 14 Nov 2026); whether the Plugins-page tile renders it for a `local.mcpb.*` install is unrecorded. The paragraph below was written before the native package had an icon.
 ~~and the pane's Claude Desktop hint should pre-announce the one-time macOS
 "access data from other apps" prompt (§5c)~~ — **that shipped 3 Aug 2026**
 (`7d815529`), quoting macOS's own dialog wording and Allow-button label per
@@ -81,6 +80,7 @@ did not account for.
 
 ## Changelog
 
+- _2026-11-14_ — the Claude tab says Install/Update/Reinstall Plugin… (`desktop.mcpAgents.claude*`, separate from `chatgpt*`; words per `bristlenose/locales/vendor-terms.json`); both manifests name Martin Storey as author, which changed the extension id (`desktop/gotchas.md`, Platform APIs); "Unknown developer" researched and closed. Shipped on `main`, not yet in a release.
 - _2026-10-11_ — trued up: the native helper, ChatGPT plugin and group handshake are shipped (0.32.0), not "unreleased"; both handshake copies now fail closed (the data copy since `7a519706`); §5a-bis's failed-share item names the caller that drops the signal. Anchors: CHANGELOG 0.32.0; commit "mcp handshake: the data copy now fails closed too".
 - _29 Sep 2026 (evening)_ — **trued after the native helper was built.** Status
   table gains four rows; the macOS 27 work list marks items 3–13 done or
@@ -997,7 +997,7 @@ Three implementation details that are not incidental:
   out", which is most of the way back to hand-pasting. The Mac idiom for one
   app handing a plug-in to another is a typed file you double-click
   (`.alfredworkflow`, `.sketchplugin`, `.mobileconfig`); Claude Desktop's own
-  Extensions pane is the same shape.
+  Extensions pane (called Plugins since 13 Nov 2026) is the same shape.
 - **Don't hand LaunchServices a path inside our bundle.** `Contents/Resources/`
   changes on every app update and can be replaced under a running Claude
   Desktop. Copy the `.mcpb` once into the container beside the handshake file

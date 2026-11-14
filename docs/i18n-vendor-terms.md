@@ -6,12 +6,12 @@
 
 - **Say what the vendor says, in that vendor's tab, in the user's language.** The vendors disagree with each other (Spanish: Claude says *Plugins*, ChatGPT/Codex says *Complementos*) and that is fine.
 - **Ground truth is two things together:** the vendor's sidebar label in its own app, and the same word in its public help centre. Where the vendor does not localise a language, use its English word.
-- **One key family per vendor** (`desktop.mcpAgents.claude*` and `chatgpt*`), never a shared key or a shared noun.
+- **One key family per vendor** (`desktop.mcpAgents.claude*` and `chatgpt*`, plus the ChatGPT-tab strings `updateChatGPT` and `moveToApplications`; the `keys` list in the JSON is the roster), never a shared key or a shared noun.
 - **Two tie-breaks.** Our own sentences use the noun the vendor's help title uses; a section or button we *quote* is spelled exactly as the app shows it (Russian: noun *плагин*, quoted «Plugins», because Claude's Russian help article leaves its UI path in English). Where help title and app disagree on form (Norwegian ChatGPT: help *Pluginer*, app *Plugins*), the help title decides the plural and the app decides the label.
 
 ## Where the answer lives
 
-`bristlenose/locales/vendor-terms.json` is the only table: per vendor, per locale, the `label` users see, the `stem` every string of that tab must carry, and the `evidence` grade. `tests/test_vendor_plugin_terms.py` pins it (a new language fails until both vendors have a row); the Swift `VendorPluginWordTests` checks the labels resolve and fit. The JSON covers "plugin" for these two vendors only; other vendor labels (Miro, Figma, Zoom, Teams) follow the same rule and have no data yet. macOS's own labels follow `.claude/agents/i18n-review.md` § 6c, not this.
+`bristlenose/locales/vendor-terms.json` is the only table: per vendor, per locale, the `label` users see, the `stem` every string in that vendor's `keys` list must carry, and the `evidence` grade. `tests/test_vendor_plugin_terms.py` pins it (a new language fails until both vendors have a row); the Swift `VendorPluginWordTests` (3 tests) checks that the button keys resolve in every language, that the longest label fits the pane, and that the Claude reinstall how-to names the tab's own Reinstall button. `label` is pinned for Claude only (inside `claudeReinstallHow`); the ChatGPT labels are reference data, not asserted. The JSON covers "plugin" for these two vendors only; other vendor labels (Miro, Figma, Zoom, Teams) follow the same rule and have no data yet. macOS's own labels follow `.claude/agents/i18n-review.md` § 6c, not this.
 
 ## Why not the platform glossary
 

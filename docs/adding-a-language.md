@@ -232,7 +232,7 @@ brief format.
 
 ## Step 5 — Glossary
 
-**Vendor words first.** Before seeding any string that names another app's label (the Claude, ChatGPT and Codex tabs of Settings ▸ MCP Agents, the Figma and Zoom flows), add the language's row for each vendor to `docs/i18n-vendor-terms.md` using its method: each vendor translates the same word differently, or not at all, and a noun that matches neither sends the user looking for something that is not on screen.
+**Vendor words first.** Add the language to `bristlenose/locales/vendor-terms.json` for BOTH vendors (`claude` and `chatgpt`); the coverage test fails until you do. Default: for Claude, if its help centre redirects to `/en/` the row is the English word with `english-fallback` evidence and you are done; for ChatGPT, read the sidebar label in the desktop app (Settings ▸ General ▸ Language). Rule: `docs/i18n-vendor-terms.md`.
 
 `bristlenose/locales/glossary.csv` carries Apple HIG + Bristlenose QDA
 terms. Add rows for the new locale. The `language` column is a string —

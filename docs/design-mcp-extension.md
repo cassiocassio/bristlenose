@@ -1049,7 +1049,7 @@ command = "bristlenose"
 args = ["mcp-proxy"]
 ```
 
-Worth noting ChatGPT desktop also has **Settings → MCP servers → Add server**,
+Worth noting ChatGPT desktop also has **Settings → MCP servers → Add server** (stale: the app now has Settings ▸ Plugins ▸ Add ▸ Add MCP server),
 its own form — so many researchers never edit the file at all. There is no
 `.mcpb` equivalent for ChatGPT (their Plugins need public HTTPS), so the form
 plus the TOML is the ceiling; one-click install is a Claude Desktop-only

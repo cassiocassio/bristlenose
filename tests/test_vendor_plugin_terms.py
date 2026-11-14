@@ -1,7 +1,7 @@
 """Each vendor tab says that vendor's own word for a plugin, in every language.
 
-The mapping is data (``bristlenose/locales/vendor-terms.json``, evidence in
-``docs/i18n-vendor-terms.md``). Two vendors call the same thing different words
+The mapping is data (``bristlenose/locales/vendor-terms.json``; rule and refresh
+method in ``docs/i18n-vendor-terms.md``). Two vendors call the same thing different words
 per language (Spanish: Claude "Plugins", ChatGPT/Codex "Complementos"), so a
 locale file that drifts to one shared word, or a vendor string that loses its
 noun, fails here and not on a researcher's screen.
@@ -64,3 +64,13 @@ def test_where_the_vendors_disagree_a_tab_does_not_borrow_the_other_vendors_word
         assert chatgpt not in strings[key].lower(), (
             f"{locale} Claude string {key} uses the ChatGPT word {chatgpt!r}: {strings[key]!r}"
         )
+
+
+@pytest.mark.parametrize("locale", _LOCALE_CODES)
+def test_the_claude_reinstall_how_to_quotes_claudes_sidebar_label(locale: str) -> None:
+    """claudeReinstallHow tells the user which Claude section to open: that label is
+    Claude's word as Claude shows it (Italian "Plugin", Russian "Plugins" in Latin)."""
+    label = _TERMS["claude"]["locales"][locale]["label"]
+    assert label in _mcp_agents(locale)["claudeReinstallHow"], (
+        f"{locale}: claudeReinstallHow should name Claude's section {label!r}"
+    )

@@ -1,6 +1,7 @@
 {
- "_about": "What each vendor itself calls a plugin, per language. Bristlenose says the vendor's own word in that vendor's tab (docs/i18n-vendor-terms.md). 'stem' is a lowercase fragment every string of that vendor's key family must contain, so inflected forms (wtyczkę, lisäosana) still match. Change a row only with evidence from the vendor's app or help centre, and update 'checked'.",
+ "_about": "What each vendor itself calls a plugin, per language: THE table (rule and method: docs/i18n-vendor-terms.md). label = the word as the user sees it in that vendor's sidebar; stem = a lowercase fragment every string of that vendor's key family must contain (so inflected forms still match); evidence = app | help-path | help-title | english-fallback. Change a row only on a vendor rename, a new language or a user report, and update 'checked'.",
  "claude": {
+  "checked": "2026-11-14",
   "keys": [
    "claudeInstall",
    "claudeReinstall",
@@ -12,113 +13,128 @@
   ],
   "locales": {
    "ca": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "cs": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "da": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "de": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-path"
    },
    "en": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app + help centre (English is the source of both vendors' wording)",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "es": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app+help",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "fi": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "fr": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app+help",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "it": {
+    "label": "Plugin",
     "stem": "plugin",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-path"
    },
    "ja": {
+    "label": "プラグイン",
     "stem": "プラグイン",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-path"
    },
    "ko": {
+    "label": "플러그인",
     "stem": "플러그인",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-title",
+    "note": "article title only, it quotes no UI path"
    },
    "nb": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "nl": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "pl": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "pt-BR": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-path",
+    "note": "one pt help article serves both pt-BR and pt-PT"
    },
    "pt-PT": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-path",
+    "note": "one pt help article serves both pt-BR and pt-PT"
    },
    "ru": {
+    "label": "Plugins",
     "stem": "плагин",
-    "source": "help (UI path in English)",
-    "checked": "2026-11-13"
+    "evidence": "help-path",
+    "note": "help article quotes the UI path in English (Customize > Plugins), so Claude's UI is probably English; our sentences keep the noun, the quoted label stays Plugins"
    },
    "sv": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "tr": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "uk": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
-    "checked": "2026-11-13"
+    "evidence": "english-fallback",
+    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
    },
    "zh-Hant": {
+    "label": "外掛程式",
     "stem": "外掛程式",
-    "source": "help",
-    "checked": "2026-11-13"
+    "evidence": "help-path"
    }
   }
  },
  "chatgpt": {
+  "checked": "2026-11-14",
   "keys": [
    "chatgptInstall",
    "chatgptReinstall",
@@ -130,109 +146,113 @@
   ],
   "locales": {
    "ca": {
+    "label": "Connectors",
     "stem": "connector",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app",
+    "note": "app and help title both say Connectors"
    },
    "cs": {
+    "label": "Pluginy",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "da": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "de": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "en": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app + help centre (English is the source of both vendors' wording)",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "es": {
+    "label": "Complementos",
     "stem": "complement",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "fi": {
+    "label": "Lisäosat",
     "stem": "lisäos",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "fr": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app",
+    "note": "France French (Canada says Plugiciels)"
    },
    "it": {
+    "label": "Plugin",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "ja": {
+    "label": "プラグイン",
     "stem": "プラグイン",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "ko": {
+    "label": "플러그인",
     "stem": "플러그인",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "nb": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app",
+    "note": "app sidebar says Plugins, help-centre title says Pluginer"
    },
    "nl": {
+    "label": "Plug-ins",
     "stem": "plug-in",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "pl": {
+    "label": "Wtyczki",
     "stem": "wtyc",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "pt-BR": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "pt-PT": {
+    "label": "Plugins",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "ru": {
+    "label": "Плагины",
     "stem": "плагин",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "sv": {
+    "label": "Pluginer",
     "stem": "plugin",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "tr": {
+    "label": "Eklentiler",
     "stem": "eklent",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "uk": {
+    "label": "Плагіни",
     "stem": "плагін",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app"
    },
    "zh-Hant": {
+    "label": "外掛程式",
     "stem": "外掛程式",
-    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
-    "checked": "2026-11-13"
+    "evidence": "app",
+    "note": "no help article exists (zh-tw, zh-hk, zh-cn are 404); app only"
    }
   }
  }

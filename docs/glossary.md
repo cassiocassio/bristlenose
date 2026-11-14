@@ -161,7 +161,7 @@ Existing leak in `bristlenose/cli.py:857` prints `"Pipeline failed."` — pre-ex
 
 | Canonical (user-facing) | Forbidden (in user text) | Where "extension" IS fine | Why |
 |---|---|---|---|
-| **plugin** (Claude Desktop and ChatGPT agent connection) | extension, "Claude extension" (in user text) | `.mcpb` / "Desktop extension" when naming Claude Desktop's own package format or its own UI label; `MCPExtension*` type names; `docs/design-mcp-extension.md` | Claude Desktop renamed Extensions to **Plugins** on 13 Nov 2026 (the owner saw it about ten minutes old); its install banner and confirm dialog still said "extension" that day (those are the package format's own words, like ours in code). The owner expects Plugins to stay: it aligns Claude with ChatGPT in English. **The word is vendor-owned per language and does not serve both tabs**: Spanish Claude says Plugins, Spanish ChatGPT/Codex says Complementos. Per-language evidence and the method to re-measure it: `docs/i18n-vendor-terms.md`. "Extension" stays correct for the file format, which is why code and design docs keep it. |
+| **plugin** (Claude Desktop and ChatGPT agent connection), **per vendor and per language**: use the row in `bristlenose/locales/vendor-terms.json` | extension, "Claude extension" (in user text) | `.mcpb` / "Desktop extension" when naming Claude Desktop's own package format; `MCPExtension*` type names; design docs | Each vendor's word is the one the user sees on its screen (Spanish: Claude *Plugins*, ChatGPT *Complementos*), so it is not a shared noun and not a platform term (Apple's noun is "Extension"). Rule and evidence: `docs/i18n-vendor-terms.md`. |
 
 ---
 

@@ -91,7 +91,7 @@ Flag:
 
 ## 4. Terminology consistency
 
-**Vendor labels are a different class: check them against `docs/i18n-vendor-terms.md`, not the table below.** Any string that tells the user what to click, open or look for inside Claude, ChatGPT, Codex, Figma, Zoom or Microsoft quotes that vendor's label as that vendor spells it in that language, and two vendors translate the same English word differently (`plugin`: Spanish Claude says *Plugins*, Spanish ChatGPT/Codex says *Complementos*). Where the vendor does not localise, the English label is right. Flag a single noun serving two vendors' tabs, and a translated noun where the vendor's UI is English. Re-measure with the method in that doc; the table dates itself.
+**Vendor labels are a different class.** A string that tells the user what to click or find in Claude, ChatGPT, Figma, Zoom or Teams quotes that vendor's own word in that language, and two vendors can differ (Spanish: Claude *Plugins*, ChatGPT *Complementos*). The settled word per vendor and language is `bristlenose/locales/vendor-terms.json`, pinned by `tests/test_vendor_plugin_terms.py`: run it, do not re-research. Flag a vendor-label string whose key is not in a vendor's `keys` list there, one noun serving two vendors' tabs, and a translated noun where the vendor's UI is English (rule: `docs/i18n-vendor-terms.md`).
 
 Cross-check translations against the terminology table in `docs/design-i18n.md`:
 

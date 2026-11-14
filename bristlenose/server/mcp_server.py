@@ -297,6 +297,19 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     slots_by_session: dict[str, list[Any]] = {}
     for slot in all_slots:
         slots_by_session.setdefault(slot.session_id, []).append(slot)
+    # How many visible quotes each speaker has in each session: counted by the
+    # transcript tag the quotes carry (never the identity code, which differs
+    # for an identified moderator and for a recoded speaker), over the SAME set
+    # search_quotes searches. A session's own total is not the sum of its
+    # speakers': a quote credited to a tag with no slot in its session belongs
+    # to no row, and the surplus is how an orphaned quote shows.
+    per_speaker: dict[tuple[str, str], int] = {}
+    per_session: dict[str, int] = {}
+    for q in all_quotes:
+        if q.id in visible_pks:
+            key = (q.session_id, q.participant_id.lower())
+            per_speaker[key] = per_speaker.get(key, 0) + 1
+            per_session[q.session_id] = per_session.get(q.session_id, 0) + 1
     for row in session_rows:
         team_names = session_names.get(row["session_id"], {})
         speakers_here: list[dict[str, Any]] = []
@@ -304,10 +317,14 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
             entry: dict[str, Any] = {"code": slot.code, "role": slot.role}
             if slot.slot_code != slot.code:
                 entry["slot_code"] = slot.slot_code
+            entry["visible_quotes"] = per_speaker.get(
+                (slot.session_id, slot.slot_code.lower()), 0
+            )
             names_for = team_names if speaker_slots.is_team(slot.row) else speaker_names
             if slot.code in names_for:
                 entry["name"] = names_for[slot.code]
             speakers_here.append(entry)
+        row["visible_quotes"] = per_session.get(row["session_id"], 0)
         row["speakers"] = speakers_here
 
     def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict[str, Any]]:
@@ -868,7 +885,9 @@ def create_mcp_server(
     @server.tool(annotations=read_only)
     def get_project_overview(project_id: int = 1) -> dict[str, Any]:
         """Cheap orientation: sessions (each listing every speaker in it,
-        with role and code), participants (codes only; `count` counts
+        with role, code and visible quote count; a session's visible_quotes
+        above its speakers' sum means quotes credited to a tag nobody in
+        that session holds), participants (codes only; `count` counts
         participants, not moderators), sections, themes, codebook summary,
         counts, top signals, and last-run status. Call this first; it also
         lists valid framework ids."""

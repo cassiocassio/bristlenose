@@ -1463,11 +1463,12 @@ class TestModeratorsAreNamedPerSession:
         # A1: a session row lists EVERY speaker, participants too; session 2's
         # moderator is the study's m2 but its transcript tag is still m1.
         assert rows["s1"]["speakers"] == [
-            {"code": "m1", "role": "researcher", "name": "Martin"},
-            {"code": "p1", "role": "participant"},
+            {"code": "m1", "role": "researcher", "name": "Martin", "visible_quotes": 0},
+            {"code": "p1", "role": "participant", "visible_quotes": 4},
         ]
         assert rows["s2"]["speakers"] == [
-            {"code": "m2", "role": "researcher", "slot_code": "m1", "name": "Jo"},
+            {"code": "m2", "role": "researcher", "slot_code": "m1", "name": "Jo",
+             "visible_quotes": 0},
         ]
         flat = {s["code"]: s for s in overview["participants"]["speakers"]}
         assert (flat["m1"]["name"], flat["m2"]["name"]) == ("Martin", "Jo")
@@ -1483,7 +1484,7 @@ class TestModeratorsAreNamedPerSession:
         assert "Martin" not in blob and "Jo" not in blob
         rows = {r["session_id"]: r for r in overview["sessions"]["items"]}
         assert rows["s2"]["speakers"] == [
-            {"code": "m2", "role": "researcher", "slot_code": "m1"},
+            {"code": "m2", "role": "researcher", "slot_code": "m1", "visible_quotes": 0},
         ]
 
 
@@ -1506,8 +1507,8 @@ class TestSessionRoster:
         # The smoke moderator is nobody anyone has identified, so it reads m?
         # (its transcript tag is still m1); the participant is its own tag.
         assert speakers == [
-            {"code": "m?", "role": "researcher", "slot_code": "m1"},
-            {"code": "p1", "role": "participant"},
+            {"code": "m?", "role": "researcher", "slot_code": "m1", "visible_quotes": 0},
+            {"code": "p1", "role": "participant", "visible_quotes": 4},
         ]
 
     def test_a_session_with_no_speakers_still_carries_the_key(self, db) -> None:
@@ -1537,6 +1538,60 @@ class TestSessionRoster:
         assert [s["role"] for s in speakers] == ["researcher", "observer"]
         observer = next(s for s in speakers if s["role"] == "observer")
         assert (observer["code"], observer["slot_code"]) == (code, "p1")
+
+    # --- A2: how many visible quotes each speaker has, per session ---------
+
+    def _agrees_with_search(self, db) -> dict:
+        """Every roster count equals the matching `search_quotes` rows. The
+        search has no session filter and a tag such as m1 restarts in every
+        session, so the rows are filtered by their session_id here."""
+        rows = self._rows(db)
+        found = _search(db, limit=50)["quotes"]
+        for sid, row in rows.items():
+            here = [q for q in found if q["session_id"] == sid]
+            assert row["visible_quotes"] == len(here)
+            for sp in row["speakers"]:
+                tag = sp.get("slot_code", sp["code"]).lower()
+                mine = [q for q in here if q["participant"].lower() == tag]
+                assert sp["visible_quotes"] == len(mine)
+        return rows
+
+    def test_a_count_equals_what_a_search_returns(self, db) -> None:
+        rows = self._agrees_with_search(db)
+        assert rows["s1"]["visible_quotes"] == 4
+        assert [(s["code"], s["visible_quotes"]) for s in rows["s1"]["speakers"]] == [
+            ("m?", 0), ("p1", 4),
+        ]
+
+    def test_hiding_a_quote_moves_the_count_and_the_search_together(self, db) -> None:
+        quote = db.query(Quote).filter_by(participant_id="p1").first()
+        db.add(QuoteState(quote_id=quote.id, is_hidden=True))
+        db.commit()
+        rows = self._agrees_with_search(db)
+        assert rows["s1"]["visible_quotes"] == 3
+        assert next(s for s in rows["s1"]["speakers"] if s["code"] == "p1")["visible_quotes"] == 3
+
+    def test_a_quote_credited_to_nobody_shows_as_the_gap_in_the_session_total(self, db) -> None:
+        """A quote whose tag matches no slot in its session (what a renamed
+        code leaves behind) belongs to no roster row; the session total
+        exceeds the speakers' sum by exactly that quote, so the gap says it."""
+        db.add(Quote(
+            project_id=1, session_id="s1", participant_id="p9", start_timecode=200.0,
+            end_timecode=205.0, text="Said by a tag nobody holds.",
+            quote_type="screen_specific", sentiment="confusion", intensity=1,
+        ))
+        db.commit()
+        row = self._agrees_with_search(db)["s1"]
+        assert row["visible_quotes"] == 5
+        assert sum(s["visible_quotes"] for s in row["speakers"]) == 4
+
+    def test_a_speaker_row_carries_no_hidden_or_extracted_count(self, db) -> None:
+        """Which participant's quotes were hidden is a side channel to what the
+        researcher found sensitive: only the visible count is ever sent."""
+        allowed = {"code", "role", "slot_code", "name", "visible_quotes"}
+        for row in self._rows(db).values():
+            for sp in row["speakers"]:
+                assert set(sp) <= allowed
 
     def _name_people(self, db) -> None:
         for i, p in enumerate(db.query(Person).all()):

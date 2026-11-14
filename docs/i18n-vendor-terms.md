@@ -43,6 +43,10 @@ The ChatGPT desktop app's own Plugins label in all 21 of our languages (the owne
 
 **Claude's section name, from its own localised help articles** (the article quotes the UI path "Customize > Plugins", so the path shows the label the app uses in that language; 14 Nov 2026): es, fr, de, pt **Plugins**; it **Plugin** (Personalizza > Plugin); ja プラグイン (カスタマイズ > プラグイン); zh-TW 外掛程式 (自訂 > 外掛程式); **ru left it English** ("Customize > Plugins" inside the Russian article, so Claude's UI is probably English there, and `claudeReinstallHow` quotes «Plugins»). ko's article gave no path; its title says 플러그인.
 
+## Open decision (owner), with a recommendation
+
+Rule 1 says our own buttons use our locale's word; rule 3 fills the Claude-tab button family (`claudeInstall`, `claudeReinstall`, `claudeUpdate`, `claudeBuild`, `claudeUnknownBuild`, `claudeDesktopHint`) from the Claude column, which is Latin "plugin" in the ten locales Claude does not localise. The result in uk, tr, fi and others is a loanword or Latin word inside a native sentence ("Встановити plugin…", "Asenna plugin…") next to a ChatGPT tab that says плагін, lisäosa. **Recommendation:** keep Latin only where we QUOTE Claude's screen (`claudeReinstallHow`'s section name «Plugins», which is what the user must find), and give the buttons and sentences our own locale's noun, the one the ChatGPT tab already uses, because a button is ours and the user does not search for it. That makes the Claude and ChatGPT tabs read alike in those ten locales and removes the uninflected Latin word from Cyrillic, Finnish and Turkish sentences. It is a 10-locale change (ca, cs, da, fi, nb, nl, pl, sv, tr, uk) to the five Claude-family keys plus the hint and prompt note; not made overnight because it reverses the 13 Nov ruling in rule 3 and wants a native read.
+
 ## Method (rerun it, do not trust the table's age)
 
 - **Claude**: `curl -s -L -A "<browser UA>" -H "Accept-Language: <loc>" https://support.claude.com/<loc>/articles/13837440-use-plugins-in-claude`, read the final URL and `<h1>`. An unlocalised locale redirects to `/en/`.

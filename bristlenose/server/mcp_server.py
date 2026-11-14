@@ -717,6 +717,7 @@ def _tool_search_quotes(
     candidates = [q for q in visible if _matches(q)]
     timed = min_duration_seconds is not None or max_duration_seconds is not None
     unknown_length = 0
+    unknown_ids: list[str] = []
     if timed:
         # A quote of unknown length cannot be "under 30 seconds": it is left
         # out and counted, so an untimed project's empty answer says why.
@@ -725,6 +726,8 @@ def _tool_search_quotes(
             length = _quote_seconds(q)
             if length is None:
                 unknown_length += 1
+                if len(unknown_ids) < 10:  # named, so no second search is needed to find them
+                    unknown_ids.append(quote_dom_id(q.participant_id, q.start_timecode, q.ordinal))
             elif (min_duration_seconds is None or length >= min_duration_seconds) and (
                 max_duration_seconds is None or length <= max_duration_seconds
             ):
@@ -775,6 +778,15 @@ def _tool_search_quotes(
         }
         for q in page
     ]
+    if rows:
+        # A quote credited to a tag nobody in its session holds (a renamed or
+        # swapped code's leftover) says so itself.
+        from bristlenose.server import speaker_slots as _slots
+
+        held = {(s.session_id, s.slot_code.lower()) for s in _slots.project_slots(db, project_id)}
+        for row, q in zip(rows, page, strict=True):
+            if (q.session_id, q.participant_id.lower()) not in held:
+                row["speaker_not_in_session"] = True
     result = {
         # Identity in EVERY payload, not just the overview. `project_id` is a
         # slot, not a name: it resolves to whichever project is exposed, so a
@@ -794,6 +806,7 @@ def _tool_search_quotes(
     }
     if timed:
         result["duration_unknown_excluded"] = unknown_length
+        result["duration_unknown_quote_ids"] = unknown_ids
     if group:
         result["groups_matched"] = matched_groups
     return result
@@ -1191,7 +1204,9 @@ def create_mcp_server(
         length of the quote's source speech, not of a clip, null when the
         transcript has no timing. min_duration_seconds / max_duration_seconds
         keep quotes of that length in seconds; quotes of unknown length are
-        left out and counted in duration_unknown_excluded. sort is time
+        left out, counted in duration_unknown_excluded and named (up to ten)
+        in duration_unknown_quote_ids. A quote credited to a tag nobody in its
+        session holds carries speaker_not_in_session: true. sort is time
         (default), intensity, or strength (starred first, then the strength of
         the signal a quote supports, then intensity, then time); the result
         says which it used in sorted_by. Bristlenose does not judge how well

@@ -175,20 +175,22 @@ LIVE_FINDINGS = [
                 "was inferring. Neither could say who or when the roles were changed."),
     ("LAB DATA", "Round 2 agents saw two Sentiment groups in the codebook: this lab seeded a second "
                  "one over the smoke fixture's. Fixed in the lab (round 2 transcripts still show it)."),
-    ("OPEN", "A quote result carries no warning when its speaker tag is not in its session (agent "
-             "b6); the overview flags it, the quote does not."),
+    ("FIXED", "A quote result carried no warning when its speaker tag was not in its session (agent "
+              "b6); each such quote now carries speaker_not_in_session."),
     ("OPEN", "A swapped session reads code p? with slot_code m1 and code m? with slot_code p1, "
              "which agents decoded only by careful reading; an explicit 'roles look swapped' note "
              "was suggested."),
-    ("OPEN", "Excluded-for-unknown-length quotes are counted but not named; an agent had to rerun "
-             "the search to find which."),
+    ("FIXED", "Excluded-for-unknown-length quotes were counted but not named; an agent had to rerun "
+              "the search. Up to ten are now named in duration_unknown_quote_ids."),
     ("FIXED", "get_signals' sentiment cards showed supporting quotes with tags: [] where "
               "search_quotes showed them tagged (two agents), and 3 shown of 5 with no note. "
               "Tags are filled in and supporting_quotes_omitted says how many are not shown."),
     ("OPEN", "Names appear while the agent is told to attribute by code; agents asked what to "
              "disclose in a readout. A product decision, not a code one."),
-    ("OPEN", "No way to read the text of set-aside quotes, so an agent cannot show the researcher "
-             "what was set aside."),
+    ("OPEN (owner's call)", "No way to read the text of set-aside quotes, so an agent cannot show "
+                            "the researcher what was set aside. Left alone on purpose: a recode "
+                            "says those words are the moderator's, and exposing them is a "
+                            "decision about what counts as evidence, not a bug."),
 ]
 
 
@@ -284,7 +286,11 @@ def main() -> None:
                   "the session total exceeds its speakers' sum: the gap IS the orphaned quotes"),
             check(s[1]["result"]["total_matched"] == 0, "searching p3 finds nothing"),
             check(any(x["session_id"] == "s3" for x in rows(s[2])),
-                  "the missing quotes are still there, under the tag p1")])(
+                  "the missing quotes are still there, under the tag p1"),
+            check(r3.get("quotes_with_no_speaker") == [{"tag": "p1", "visible_quotes": 2}],
+                  "the session row names the tag they are credited to"),
+            check(rows(s[2]) and all(x.get("speaker_not_in_session") for x in rows(s[2])),
+                  "and each quote carries speaker_not_in_session on its own")])(
             next(r for r in s[0]["result"]["sessions"]["items"] if r["session_id"] == "s3")))
 
     run("best3", "Find the best 3 clips under 30 seconds where users are most frustrated "
@@ -317,6 +323,8 @@ def main() -> None:
         lambda s: [check(s[0]["result"]["total_matched"] == 0 and
                          s[0]["result"]["duration_unknown_excluded"] == 1,
                          "nothing under 10 seconds, and exactly one s3 quote left out for unknown length"),
+                   check(s[0]["result"]["duration_unknown_quote_ids"] == ["q-p1-0"],
+                         "and it is named, so no second search is needed to find it"),
                    check(all(x["session_id"] == "s3" for x in rows(s[0])), "only session 3")])
 
     run("pain", "What are the pain points?",

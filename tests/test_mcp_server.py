@@ -1599,10 +1599,12 @@ class TestQuoteTiming:
         none = _search(db, sentiment="delight", query="Login", max_duration_seconds=30)
         assert none["total_matched"] == 0
 
-    def test_unknown_lengths_are_left_out_and_counted(self, db) -> None:
-        _seed_timed_quotes(db)
+    def test_unknown_lengths_are_left_out_counted_and_named(self, db) -> None:
+        made = _seed_timed_quotes(db)
         found = _search(db, query="Login", max_duration_seconds=30)
         assert found["duration_unknown_excluded"] == 2  # the zero-length and the reversed
+        assert set(found["duration_unknown_quote_ids"]) == {"q-p1-400", "q-p1-420"}
+        assert made["zero"].start_timecode == 400.0
         assert "duration_unknown_excluded" not in _search(db, query="Login")
 
     def test_a_bad_bound_teaches_the_unit(self, db) -> None:
@@ -1918,6 +1920,22 @@ class TestSignalCardTags:
                     if c["location"] == "Dashboard" and c["sentiment"] == "frustration")
         assert card["quote_count"] == len(card["supporting_quotes"]) + card["supporting_quotes_omitted"]
         assert card["supporting_quotes_omitted"] > 0
+
+
+class TestSpeakerNotInSession:
+    """A quote credited to a tag nobody in its session holds says so itself, so an
+    agent reading one quote is warned, not only an agent that read the overview."""
+
+    def test_such_a_quote_carries_the_warning_and_others_do_not(self, db) -> None:
+        db.add(Quote(
+            project_id=1, session_id="s1", participant_id="p9", start_timecode=200.0,
+            end_timecode=205.0, text="Credited to a tag nobody holds.",
+            quote_type="screen_specific", sentiment="confusion", intensity=1,
+        ))
+        db.commit()
+        rows = {q["quote_id"]: q for q in _search(db, limit=50)["quotes"]}
+        assert rows["q-p9-200"]["speaker_not_in_session"] is True
+        assert all("speaker_not_in_session" not in q for k, q in rows.items() if k != "q-p9-200")
 
 
 class TestUnknownParticipant:

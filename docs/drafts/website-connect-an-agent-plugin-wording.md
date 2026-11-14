@@ -1,6 +1,6 @@
 # Website edits owed: Claude Desktop says plugin
 
-**Applied 14 Nov 2026 on a held branch, not on `main`:** branch `after-app/plugin-wording` of the website repo (commit `1da8d23`, in the worktree `~/Code/.bn-website-plugin-wording`). Merge it when the Mac build that says "Install Plugin…" reaches users, then delete the worktree (`git worktree remove`). The one-sentence duplicate-row note and the older-Claude aside below, and the `bristlenose-website-miro-help` copy, were not applied.
+**Applied 14 Nov 2026 and merged to the website repo's local `main` the same day (owner's call; the held branch and its worktree are gone). Not pushed or deployed:** the page says "Install Plugin…" ahead of a shipped Mac build, so deploy it with the next release. The one-sentence duplicate-row note and the older-Claude aside below, and the `bristlenose-website-miro-help` copy, were not applied.
 
 `docs-src/connect-an-agent.md` lives in the website repo (`bristlenose-website`, and a copy in `bristlenose-website-miro-help`), whose `deploy.sh` publishes the working tree. These are the exact edits so they can be made on a clean checkout when the Mac app that says "Install Plugin…" ships (the page must not say a label the shipped app does not have yet). Written 14 Nov 2026 from commits `4f4f02167` and `aab597097`.
 

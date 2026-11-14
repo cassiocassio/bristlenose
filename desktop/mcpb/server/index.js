@@ -153,7 +153,7 @@ const TOOLS = [
     },
     {
       "name": "search_quotes",
-      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded.",
+      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded. sort is time (default), intensity, or strength (starred first, then the strength of the signal a quote supports, then intensity, then time); the result says which it used in sorted_by. Bristlenose does not judge how well a quote reads.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -196,6 +196,10 @@ const TOOLS = [
           },
           "max_duration_seconds": {
             "type": "number"
+          },
+          "sort": {
+            "type": "string",
+            "default": "time"
           },
           "project": {
             "type": "string",

@@ -72,7 +72,7 @@ def _search(db, **kwargs):
     defaults = {
         "project_id": 1, "query": None, "tag": None, "sentiment": None, "participant": None,
         "section": None, "theme": None, "starred_only": False, "limit": 20, "offset": 0,
-        "min_duration_seconds": None, "max_duration_seconds": None,
+        "min_duration_seconds": None, "max_duration_seconds": None, "sort": "time",
     }
     defaults.update(kwargs)
     return _tool_search_quotes(db, **defaults)
@@ -823,7 +823,7 @@ class TestProtocol:
         allowed = {
             "project_id", "query", "tag", "sentiment", "participant", "section",
             "theme", "starred_only", "limit", "offset", "lens", "framework_id",
-            "min_duration_seconds", "max_duration_seconds",
+            "min_duration_seconds", "max_duration_seconds", "sort",
         }
         for name, tool in tools.items():
             params = set(tool["inputSchema"].get("properties", {}))
@@ -1576,6 +1576,94 @@ class TestQuoteTiming:
             _search(db, min_duration_seconds=-5)
         with pytest.raises(ToolInputError, match="above"):
             _search(db, min_duration_seconds=40, max_duration_seconds=10)
+
+
+class TestRanking:
+    """B3 of docs/design-mcp-session-roster.md: "best" has one stated meaning.
+    Starred first (the researcher's judgement), then the strength of the signal
+    a quote supports (corroborated by several quotes about the same thing),
+    then intensity, then time; and the basis is always said."""
+
+    @pytest.fixture()
+    def ranked(self, db):
+        """The smoke project with a Dashboard|frustration signal (two quotes:
+        q-p1-26 and the seeded one at 80s) and two quotes outside every signal:
+        a high-intensity unclustered one, and a late, low-intensity one."""
+        _seed_second_frustration(db)
+        loud = Quote(
+            project_id=1, session_id="s1", participant_id="p1", start_timecode=500.0,
+            end_timecode=510.0, text="LOUD but in no signal.", quote_type="screen_specific",
+            sentiment="frustration", intensity=3,
+        )
+        late = Quote(
+            project_id=1, session_id="s1", participant_id="p1", start_timecode=900.0,
+            end_timecode=910.0, text="Late and quiet, but the researcher starred it.",
+            quote_type="screen_specific", sentiment="confusion", intensity=1,
+        )
+        db.add_all([loud, late])
+        db.commit()
+        # Precondition: the pair really is a signal, and the loud one is not in any.
+        signalled = {
+            f"q-{q.participant_id}-{int(q.start_seconds)}"
+            for lens in ("sentiment", "tags")
+            for s_ in load_signals(db, 1, lens, top_n=10_000).signals for q in s_.quotes
+        }
+        assert {"q-p1-26", "q-p1-80"} <= signalled
+        assert "q-p1-500" not in signalled
+        return {"loud": loud, "late": late}
+
+    def _ids(self, db, **kw) -> list[str]:
+        return [q["quote_id"] for q in _search(db, **kw)["quotes"]]
+
+    def test_the_basis_is_always_said(self, db) -> None:
+        assert _search(db)["sorted_by"] == "time"
+        assert _search(db, sort="intensity")["sorted_by"] == "intensity"
+        assert _search(db, sort="strength")["sorted_by"].startswith("strength")
+
+    def test_time_is_the_default_order(self, db, ranked) -> None:
+        ids = self._ids(db)
+        assert ids == sorted(ids, key=lambda i: int(i.split("-")[2]))
+
+    def test_intensity_puts_the_loudest_first(self, db, ranked) -> None:
+        assert self._ids(db, sort="intensity")[0] == "q-p1-500"
+
+    def test_a_signal_beats_a_louder_quote_in_none(self, db, ranked) -> None:
+        ids = self._ids(db, sort="strength")
+        assert ids.index("q-p1-26") < ids.index("q-p1-500")
+        assert ids.index("q-p1-80") < ids.index("q-p1-500")
+
+    def test_a_star_beats_everything_even_late_and_quiet(self, db, ranked) -> None:
+        db.add(QuoteState(quote_id=ranked["late"].id, is_starred=True))
+        db.commit()
+        assert self._ids(db, sort="strength")[0] == "q-p1-900"
+
+    def test_the_sort_comes_before_the_page(self, db, ranked) -> None:
+        """"The best one" is the best of everything matched, not of page one."""
+        db.add(QuoteState(quote_id=ranked["late"].id, is_starred=True))
+        db.commit()
+        assert self._ids(db, sort="strength", limit=1) == ["q-p1-900"]
+        assert self._ids(db, sort="strength", limit=1, offset=1) != ["q-p1-900"]
+
+    def test_a_hidden_quote_never_ranks(self, db, ranked) -> None:
+        db.add(QuoteState(quote_id=ranked["loud"].id, is_starred=True, is_hidden=True))
+        db.commit()
+        for how in ("strength", "intensity", "time"):
+            assert "q-p1-500" not in self._ids(db, sort=how)
+
+    def test_a_removed_badge_does_not_rank_on_its_old_intensity(self, db, ranked) -> None:
+        from bristlenose.server.models import DeletedBadge
+
+        db.add(DeletedBadge(quote_id=ranked["loud"].id, sentiment="frustration"))
+        db.commit()
+        assert self._ids(db, sort="intensity")[0] != "q-p1-500"
+
+    def test_an_unknown_sort_teaches_the_valid_ones(self, db) -> None:
+        with pytest.raises(ToolInputError, match="strength"):
+            _search(db, sort="best")
+
+    def test_the_instructions_say_what_best_means(self) -> None:
+        text = build_instructions().casefold()
+        assert "starred" in text and "signal" in text and "sort" in text
 
 
 class TestSessionRoster:

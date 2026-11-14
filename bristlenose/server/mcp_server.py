@@ -53,6 +53,9 @@ DEFAULT_SEARCH_LIMIT = 20
 SEARCH_LIMIT_CAP = 50
 SIGNALS_LIMIT_CAP = 25
 SIGNAL_QUOTES_PER_CARD = 3
+#: How search_quotes can order its matches (B3 of docs/design-mcp-session-roster.md).
+SEARCH_SORTS = ("time", "intensity", "strength")
+_STRENGTH_BASIS = "strength: starred first, then signal strength, then intensity, then time"
 TOP_SIGNALS_IN_OVERVIEW = 5
 
 #: Reserved framework id: the project's live codebook (researcher-owned).
@@ -125,6 +128,13 @@ def build_instructions() -> str:
         "CHANGE between calls — the researcher may switch studies mid-"
         "conversation — so check the name on each result rather than assuming "
         "continuity, and say so if it changes.\n\n"
+        "When asked for the BEST quotes, use search_quotes with "
+        "sort=\"strength\": the researcher's starred quotes first (their "
+        "judgement beats any score), then quotes that support the strongest "
+        "signals (a signal is strong when several participants corroborate "
+        "the same thing), then higher intensity. Say what \"best\" meant in "
+        "your answer, and do not claim a quote was picked for being the most "
+        "articulate or persuasive: Bristlenose cannot judge that.\n\n"
         "Start with get_project_overview (cheap orientation; it also lists "
         "valid framework ids). Use search_quotes for evidence, get_signals "
         "for concentration patterns, and get_framework to reason inside the "
@@ -419,6 +429,20 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     return overview
 
 
+def _signal_strength_by_quote_id(db: Any, project_id: int) -> dict[str, float]:
+    """Quote id → the highest composite signal among the curated signals that
+    quote supports, over both lenses. Built from `load_signals` directly:
+    `get_signals` shows only a few supporting quotes per card, which would
+    leave most of a signal's quotes looking like they support nothing."""
+    best: dict[str, float] = {}
+    for lens in SIGNAL_LENSES:
+        for sig in load_signals(db, project_id, lens, top_n=10_000).signals:
+            for q in sig.quotes:
+                qid = quote_dom_id(q.participant_id, q.start_seconds, q.ordinal)
+                best[qid] = max(best.get(qid, 0.0), sig.composite_signal)
+    return best
+
+
 def _quote_seconds(q: Any) -> float | None:
     """The length of a quote's source speech, in seconds to one decimal; None
     when unknown. The importer writes 0.0 when a transcript has no timing, so
@@ -441,6 +465,7 @@ def _tool_search_quotes(
     offset: int,
     min_duration_seconds: float | None = None,
     max_duration_seconds: float | None = None,
+    sort: str = "time",
 ) -> dict[str, Any]:
     from bristlenose.models import Sentiment
     from bristlenose.server.heading_names import HeadingNames
@@ -460,6 +485,8 @@ def _tool_search_quotes(
             raise ToolInputError(
                 f"unknown sentiment {sentiment[:80]!r} — valid values: {valid}"
             )
+    if sort not in SEARCH_SORTS:
+        raise ToolInputError(f"unknown sort {sort[:80]!r} — valid values: {list(SEARCH_SORTS)}")
     for bound, value in (
         ("min_duration_seconds", min_duration_seconds),
         ("max_duration_seconds", max_duration_seconds),
@@ -547,7 +574,25 @@ def _tool_search_quotes(
             ):
                 kept.append(q)
         candidates = kept
-    matched = sorted(candidates, key=lambda q: (q.session_id, q.start_timecode))
+    # Ordering happens BEFORE the page is cut, so "the best three" is the best
+    # three of everything matched, not of the first page.
+    strength = _signal_strength_by_quote_id(db, project_id) if sort == "strength" else {}
+
+    def _order(q: Any) -> tuple[Any, ...]:
+        # A removed sentiment badge leaves the quote with no sentiment to be
+        # intense about, so its stored intensity must not rank it.
+        intensity = 0 if (q.id, q.sentiment) in deleted else q.intensity
+        if sort == "intensity":
+            return (-intensity, q.session_id, q.start_timecode)
+        if sort == "strength":
+            qid = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+            return (
+                q.id not in starred, -strength.get(qid, 0.0), -intensity,
+                q.session_id, q.start_timecode,
+            )
+        return (q.session_id, q.start_timecode)
+
+    matched = sorted(candidates, key=_order)
     page = matched[offset : offset + limit]
     rows = [
         {
@@ -577,6 +622,7 @@ def _tool_search_quotes(
         # arrive under study A's frame with nothing to signal the change:
         # correct retrieval, wrong attribution, no error anywhere.
         "project": _project_identity(project),
+        "sorted_by": _STRENGTH_BASIS if sort == "strength" else sort,
         "total_matched": len(matched),
         "returned": len(rows),
         "offset": offset,
@@ -952,6 +998,7 @@ def create_mcp_server(
         offset: int = 0,
         min_duration_seconds: float | None = None,
         max_duration_seconds: float | None = None,
+        sort: str = "time",
     ) -> dict[str, Any]:
         """Search the curated quotes (hidden quotes excluded, researcher
         edits applied). Filters combine with AND; text is never truncated;
@@ -960,13 +1007,17 @@ def create_mcp_server(
         length of the quote's source speech, not of a clip, null when the
         transcript has no timing. min_duration_seconds / max_duration_seconds
         keep quotes of that length in seconds; quotes of unknown length are
-        left out and counted in duration_unknown_excluded."""
+        left out and counted in duration_unknown_excluded. sort is time
+        (default), intensity, or strength (starred first, then the strength of
+        the signal a quote supports, then intensity, then time); the result
+        says which it used in sorted_by. Bristlenose does not judge how well
+        a quote reads."""
         return _run(
             "search_quotes", project_id,
             lambda db: _tool_search_quotes(
                 db, project_id, query, tag, sentiment, participant,
                 section, theme, starred_only, limit, offset,
-                min_duration_seconds, max_duration_seconds,
+                min_duration_seconds, max_duration_seconds, sort,
             ),
         )
 

@@ -530,8 +530,6 @@ def _tool_search_quotes(
     from bristlenose.server.heading_names import HeadingNames
     from bristlenose.server.models import (
         ClusterQuote,
-        CodebookGroup,
-        ProjectCodebookGroup,
         QuoteTag,
         ScreenCluster,
         TagDefinition,

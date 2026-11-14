@@ -1125,7 +1125,7 @@
     "moveToApplications": "Mou el Bristlenose a la carpeta Aplicacions i obre'l des d'all\u00e0 per instal\u00b7lar el connector. El ChatGPT no el pot instal\u00b7lar des d'on s'executa ara el Bristlenose.",
     "connectByHand": "O connecta-ho a m\u00e0",
     "chatgptReinstallHow": "Al ChatGPT, tria \u22ef \u25b8 Desinstal\u00b7la i despr\u00e9s Instal\u00b7la el connector.",
-    "claudeReinstallHow": "Al Claude Desktop, obre Plugins i desinstal\u00b7la el Bristlenose, i despr\u00e9s fes clic a Torna a instal\u00b7lar el plugin\u2026 aqu\u00ed.",
+    "claudeReinstallHow": "Al Claude Desktop, obre Plugins, desinstal\u00b7la el Bristlenose i despr\u00e9s fes clic aqu\u00ed a Torna a instal\u00b7lar el plugin\u2026.",
     "claudeUnknownBuild": "Compilaci\u00f3 del plugin desconeguda",
     "installedDifferentBuild": "La c\u00f2pia instal\u00b7lada \u00e9s una compilaci\u00f3 diferent: {{version}}",
     "installedOlder": "La c\u00f2pia instal\u00b7lada \u00e9s anterior: {{version}}",

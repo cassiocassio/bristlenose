@@ -1125,7 +1125,7 @@
     "moveToApplications": "Zet Bristlenose in de map Apps en open het vanaf daar om de plug-in te installeren. ChatGPT kan hem niet installeren vanaf de plek waar Bristlenose nu draait.",
     "connectByHand": "Of handmatig verbinden",
     "chatgptReinstallHow": "Kies in ChatGPT \u22ef \u25b8 Verwijder en daarna Installeer plug-in.",
-    "claudeReinstallHow": "Open Plugins in Claude Desktop, verwijder Bristlenose en klik daarna op Plugin opnieuw installeren\u2026 hier.",
+    "claudeReinstallHow": "Open Plugins in Claude Desktop, verwijder Bristlenose en klik daarna hier op \u2018Plugin opnieuw installeren\u2026\u2019.",
     "claudeUnknownBuild": "Versie van plugin onbekend",
     "installedDifferentBuild": "Ge\u00efnstalleerde kopie is een andere build: {{version}}",
     "installedOlder": "Ge\u00efnstalleerde kopie is ouder: {{version}}",

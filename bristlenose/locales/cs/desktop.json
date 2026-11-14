@@ -1186,7 +1186,7 @@
     "moveToApplications": "P\u0159esu\u0148te Bristlenose do slo\u017eky Aplikace a otev\u0159ete jej odtud, abyste mohli plugin nainstalovat. ChatGPT jej nem\u016f\u017ee nainstalovat z m\u00edsta, odkud Bristlenose nyn\u00ed b\u011b\u017e\u00ed.",
     "connectByHand": "Nebo p\u0159ipojit ru\u010dn\u011b",
     "chatgptReinstallHow": "V ChatGPT zvolte \u22ef \u25b8 Odinstalovat a potom Nainstalovat plugin.",
-    "claudeReinstallHow": "V Claude Desktop otev\u0159ete Plugins a odinstalujte Bristlenose, pak klikn\u011bte na P\u0159einstalovat plugin\u2026 zde.",
+    "claudeReinstallHow": "V Claude Desktop otev\u0159ete Plugins a odinstalujte Bristlenose, pak zde klikn\u011bte na \u201eP\u0159einstalovat plugin\u2026\u201c.",
     "claudeUnknownBuild": "Nezn\u00e1m\u00e9 sestaven\u00ed pluginu",
     "installedDifferentBuild": "Nainstalovan\u00e1 kopie je jin\u00e9 sestaven\u00ed: {{version}}",
     "installedOlder": "Nainstalovan\u00e1 kopie je star\u0161\u00ed: {{version}}",

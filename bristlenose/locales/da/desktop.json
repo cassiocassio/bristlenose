@@ -1125,7 +1125,7 @@
     "moveToApplications": "Flyt Bristlenose til mappen Programmer, og \u00e5bn det derfra for at installere pluginet. ChatGPT kan ikke installere det fra det sted, Bristlenose k\u00f8rer fra nu.",
     "connectByHand": "Eller forbind manuelt",
     "chatgptReinstallHow": "V\u00e6lg \u22ef \u25b8 Afinstaller i ChatGPT, og derefter Installer plugin.",
-    "claudeReinstallHow": "\u00c5bn Plugins i Claude Desktop, afinstaller Bristlenose, og klik derefter p\u00e5 Geninstaller plugin\u2026 her.",
+    "claudeReinstallHow": "\u00c5bn Plugins i Claude Desktop, afinstaller Bristlenose, og klik derefter her p\u00e5 \u201cGeninstaller plugin\u2026\u201d.",
     "claudeUnknownBuild": "Pluginets build er ukendt",
     "installedDifferentBuild": "Den installerede kopi er et andet build: {{version}}",
     "installedOlder": "Den installerede kopi er \u00e6ldre: {{version}}",

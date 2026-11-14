@@ -1125,7 +1125,7 @@
     "moveToApplications": "Siirr\u00e4 Bristlenose Ohjelmat-kansioon ja avaa se sielt\u00e4 asentaaksesi lis\u00e4osan. ChatGPT ei voi asentaa sit\u00e4 paikasta, josta Bristlenose nyt toimii.",
     "connectByHand": "Tai yhdist\u00e4 k\u00e4sin",
     "chatgptReinstallHow": "Valitse ChatGPT:ss\u00e4 \u22ef \u25b8 Poista asennus ja sitten Asenna lis\u00e4osa.",
-    "claudeReinstallHow": "Avaa Claude Desktopin Plugins, poista Bristlenose ja valitse sitten Asenna plugin uudelleen\u2026 t\u00e4\u00e4ll\u00e4.",
+    "claudeReinstallHow": "Avaa Claude Desktopin Plugins, poista Bristlenose ja valitse sitten t\u00e4st\u00e4 \u201cAsenna plugin uudelleen\u2026\u201d.",
     "claudeUnknownBuild": "Pluginin versio tuntematon",
     "installedDifferentBuild": "Asennettu kopio on eri k\u00e4\u00e4nn\u00f6s: {{version}}",
     "installedOlder": "Asennettu kopio on vanhempi: {{version}}",

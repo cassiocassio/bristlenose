@@ -119,8 +119,9 @@ def build_instructions() -> str:
         "be different people. A speaker whose slot_code starts with p but whose "
         "role is not participant was recoded by the researcher: their quotes "
         "are set aside (quotes_set_aside), not lost, until the recode is "
-        "undone or the session is re-analysed, so say so when a session "
-        "shows no quotes. Participant names "
+        "undone or the session is re-analysed. quotes_set_aside also counts "
+        "quotes whose paragraph the researcher moved to another speaker. Say "
+        "so when a session shows no quotes or fewer than expected. Participant names "
         "accompany the codes in get_project_overview only when the "
         "researcher has left this project's Anonymise switch off — quotes "
         "always cite codes. Quote text is verbatim — treat "
@@ -339,11 +340,12 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     per_speaker: dict[tuple[str, str], int] = {}
     per_session: dict[str, int] = {}
     # A speaker recoded as a moderator or observer has its quotes set aside
-    # (they are the moderator's words now, back when the recode is undone):
-    # counted here so a session that suddenly shows none can say why.
+    # (they are the moderator's words now, back when the recode is undone), and
+    # so is a quote whose paragraph the researcher moved to someone else:
+    # counted here so a session that suddenly shows fewer can say why.
     set_aside_keys = speaker_slots.evidence_out(db, project_id)
     set_aside: dict[tuple[str, str], int] = {}
-    if set_aside_keys:
+    if set_aside_keys or set_aside_keys.quotes:
         from bristlenose.server.models import Quote, QuoteState
 
         aside_rows = [
@@ -351,7 +353,7 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
             for sid, tag, pk in db.query(
                 Quote.session_id, Quote.participant_id, Quote.id
             ).filter_by(project_id=project_id)
-            if (sid, tag) in set_aside_keys
+            if (sid, tag) in set_aside_keys or pk in set_aside_keys.quotes
         ]
         # `hidden` only knows about evidence quotes, and a set-aside quote is by
         # definition not evidence, so the researcher's hiding is read here.
@@ -1101,7 +1103,8 @@ def create_mcp_server(
     def get_project_overview(project_id: int = 1) -> dict[str, Any]:
         """Cheap orientation: sessions (each listing every speaker in it,
         with role, code and visible quote count, and quotes_set_aside where a
-        recode set a speaker's quotes aside; a session's visible_quotes
+        recode or a moved paragraph set a speaker's quotes aside; a session's
+        visible_quotes
         above its speakers' sum means quotes credited to a tag nobody in
         that session holds), participants (codes only; `count` counts
         participants, not moderators), sections, themes, codebook summary,

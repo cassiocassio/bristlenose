@@ -2029,8 +2029,12 @@ class TestSessionRoster:
             if seg.start_time < quote.end_timecode and seg.end_time > quote.start_timecode:
                 seg.speaker_code, seg.moved_from = "m1", "p1"
         db.commit()
-        after = self._agrees_with_search(db)["s1"]["visible_quotes"]  # roster == search
+        rows = self._agrees_with_search(db)  # roster == search
+        after = rows["s1"]["visible_quotes"]
         assert after < before
+        # The roster says why the count fell: those quotes are set aside, not lost.
+        p1 = next(s for s in rows["s1"]["speakers"] if s["code"] == "p1")
+        assert p1["quotes_set_aside"] == before - after
         assert "q-p1-26" not in {q["quote_id"] for q in _search(db, limit=50)["quotes"]}
 
     def test_a_quote_credited_to_nobody_shows_as_the_gap_in_the_session_total(self, db) -> None:

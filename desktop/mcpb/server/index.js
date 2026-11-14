@@ -153,7 +153,7 @@ const TOOLS = [
     },
     {
       "name": "search_quotes",
-      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; limit is capped at 50 - page with offset/next_offset.",
+      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -190,6 +190,12 @@ const TOOLS = [
           "offset": {
             "type": "integer",
             "default": 0
+          },
+          "min_duration_seconds": {
+            "type": "number"
+          },
+          "max_duration_seconds": {
+            "type": "number"
           },
           "project": {
             "type": "string",

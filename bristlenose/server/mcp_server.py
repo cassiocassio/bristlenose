@@ -419,6 +419,14 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     return overview
 
 
+def _quote_seconds(q: Any) -> float | None:
+    """The length of a quote's source speech, in seconds to one decimal; None
+    when unknown. The importer writes 0.0 when a transcript has no timing, so
+    an end that is not after the start means "unknown", never "0 seconds"."""
+    length = q.end_timecode - q.start_timecode
+    return round(length, 1) if length > 0 else None
+
+
 def _tool_search_quotes(
     db: Any,
     project_id: int,
@@ -431,6 +439,8 @@ def _tool_search_quotes(
     starred_only: bool,
     limit: int,
     offset: int,
+    min_duration_seconds: float | None = None,
+    max_duration_seconds: float | None = None,
 ) -> dict[str, Any]:
     from bristlenose.models import Sentiment
     from bristlenose.server.heading_names import HeadingNames
@@ -450,6 +460,20 @@ def _tool_search_quotes(
             raise ToolInputError(
                 f"unknown sentiment {sentiment[:80]!r} — valid values: {valid}"
             )
+    for bound, value in (
+        ("min_duration_seconds", min_duration_seconds),
+        ("max_duration_seconds", max_duration_seconds),
+    ):
+        if value is not None and not value > 0:
+            raise ToolInputError(f"{bound} must be a positive number of seconds, got {value!r}")
+    if (
+        min_duration_seconds is not None
+        and max_duration_seconds is not None
+        and min_duration_seconds > max_duration_seconds
+    ):
+        raise ToolInputError(
+            "min_duration_seconds is above max_duration_seconds — both are in seconds"
+        )
     limit = max(1, min(int(limit), SEARCH_LIMIT_CAP))
     offset = max(0, int(offset))
 
@@ -507,10 +531,23 @@ def _tool_search_quotes(
             return False
         return True
 
-    matched = sorted(
-        (q for q in visible if _matches(q)),
-        key=lambda q: (q.session_id, q.start_timecode),
-    )
+    candidates = [q for q in visible if _matches(q)]
+    timed = min_duration_seconds is not None or max_duration_seconds is not None
+    unknown_length = 0
+    if timed:
+        # A quote of unknown length cannot be "under 30 seconds": it is left
+        # out and counted, so an untimed project's empty answer says why.
+        kept = []
+        for q in candidates:
+            length = _quote_seconds(q)
+            if length is None:
+                unknown_length += 1
+            elif (min_duration_seconds is None or length >= min_duration_seconds) and (
+                max_duration_seconds is None or length <= max_duration_seconds
+            ):
+                kept.append(q)
+        candidates = kept
+    matched = sorted(candidates, key=lambda q: (q.session_id, q.start_timecode))
     page = matched[offset : offset + limit]
     rows = [
         {
@@ -519,6 +556,8 @@ def _tool_search_quotes(
             "participant": q.participant_id,
             "session_id": q.session_id,
             "timecode": format_timecode(q.start_timecode),
+            "end_timecode": format_timecode(q.end_timecode),
+            "duration_seconds": _quote_seconds(q),
             # A researcher-removed badge is curation: report no sentiment.
             "sentiment": None if (q.id, q.sentiment) in deleted else q.sentiment,
             "intensity": q.intensity,
@@ -529,7 +568,7 @@ def _tool_search_quotes(
         }
         for q in page
     ]
-    return {
+    result = {
         # Identity in EVERY payload, not just the overview. `project_id` is a
         # slot, not a name: it resolves to whichever project is exposed, so a
         # researcher switching studies mid-conversation silently re-points it.
@@ -545,6 +584,9 @@ def _tool_search_quotes(
         "next_offset": offset + limit if offset + limit < len(matched) else None,
         "quotes": rows,
     }
+    if timed:
+        result["duration_unknown_excluded"] = unknown_length
+    return result
 
 
 def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict[str, Any]:
@@ -908,15 +950,23 @@ def create_mcp_server(
         starred_only: bool = False,
         limit: int = DEFAULT_SEARCH_LIMIT,
         offset: int = 0,
+        min_duration_seconds: float | None = None,
+        max_duration_seconds: float | None = None,
     ) -> dict[str, Any]:
         """Search the curated quotes (hidden quotes excluded, researcher
         edits applied). Filters combine with AND; text is never truncated;
-        limit is capped at 50 — page with offset/next_offset."""
+        limit is capped at 50 — page with offset/next_offset. Each quote
+        carries timecode (its start), end_timecode and duration_seconds: the
+        length of the quote's source speech, not of a clip, null when the
+        transcript has no timing. min_duration_seconds / max_duration_seconds
+        keep quotes of that length in seconds; quotes of unknown length are
+        left out and counted in duration_unknown_excluded."""
         return _run(
             "search_quotes", project_id,
             lambda db: _tool_search_quotes(
                 db, project_id, query, tag, sentiment, participant,
                 section, theme, starred_only, limit, offset,
+                min_duration_seconds, max_duration_seconds,
             ),
         )
 

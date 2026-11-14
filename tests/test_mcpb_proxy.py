@@ -119,7 +119,7 @@ class TestProxyToolParity:
                     f"server types {sorted(server_types)}"
                 )
 
-    def test_the_overview_description_matches_the_servers(self) -> None:
+    def test_touched_descriptions_match_the_servers(self) -> None:
         # A description is what an agent reads to decide how to use a tool, and
         # the proxy's is a hand-kept copy that had already drifted (it said
         # "participants" where the server said "participants (codes only)").
@@ -131,8 +131,8 @@ class TestProxyToolParity:
 
         proxy = {t["name"]: t for t in _proxy_tools()}
         server = {t["name"]: t for t in _server_tools()}
-        name = "get_project_overview"
-        assert fold(proxy[name]["description"]) == fold(server[name]["description"])
+        for name in ("get_project_overview", "search_quotes"):
+            assert fold(proxy[name]["description"]) == fold(server[name]["description"]), name
 
     def test_annotations_match_per_tool(self) -> None:
         # The hints are what a host reads to decide whether to show an

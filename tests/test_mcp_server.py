@@ -72,6 +72,7 @@ def _search(db, **kwargs):
     defaults = {
         "project_id": 1, "query": None, "tag": None, "sentiment": None, "participant": None,
         "section": None, "theme": None, "starred_only": False, "limit": 20, "offset": 0,
+        "min_duration_seconds": None, "max_duration_seconds": None,
     }
     defaults.update(kwargs)
     return _tool_search_quotes(db, **defaults)
@@ -822,6 +823,7 @@ class TestProtocol:
         allowed = {
             "project_id", "query", "tag", "sentiment", "participant", "section",
             "theme", "starred_only", "limit", "offset", "lens", "framework_id",
+            "min_duration_seconds", "max_duration_seconds",
         }
         for name, tool in tools.items():
             params = set(tool["inputSchema"].get("properties", {}))
@@ -1486,6 +1488,94 @@ class TestModeratorsAreNamedPerSession:
         assert rows["s2"]["speakers"] == [
             {"code": "m2", "role": "researcher", "slot_code": "m1", "visible_quotes": 0},
         ]
+
+
+def _seed_timed_quotes(db) -> dict[str, Quote]:
+    """Quotes of known length for the duration tests, all frustration, all in
+    one section so the other filters can be combined with the length ones."""
+    dashboard = db.query(ScreenCluster).filter_by(screen_label="Dashboard").one()
+    spans = {"short": (300.0, 312.5), "edge": (320.0, 350.0), "long": (360.0, 391.0),
+             "zero": (400.0, 400.0), "reversed": (420.0, 410.0)}
+    made: dict[str, Quote] = {}
+    for name, (start, end) in spans.items():
+        q = Quote(
+            project_id=1, session_id="s1", participant_id="p1", start_timecode=start,
+            end_timecode=end, text=f"Login was a pain, {name}.", quote_type="screen_specific",
+            sentiment="frustration", intensity=2,
+        )
+        db.add(q)
+        db.flush()
+        db.add(ClusterQuote(cluster_id=dashboard.id, quote_id=q.id))
+        made[name] = q
+    db.commit()
+    return made
+
+
+class TestQuoteTiming:
+    """B1/B2 of docs/design-mcp-session-roster.md: where a quote starts and
+    ends, and asking for quotes of a given length ("under 30 seconds")."""
+
+    def _by_text(self, result) -> dict[str, dict]:
+        return {q["text"].rsplit(", ", 1)[-1].rstrip("."): q for q in result["quotes"]
+                if q["text"].startswith("Login")}
+
+    def test_rows_carry_the_end_and_the_length(self, db) -> None:
+        _seed_timed_quotes(db)
+        rows = self._by_text(_search(db, query="Login"))
+        assert (rows["short"]["timecode"], rows["short"]["end_timecode"]) == ("05:00", "05:12")
+        assert rows["short"]["duration_seconds"] == 12.5
+        assert rows["edge"]["duration_seconds"] == 30.0
+
+    def test_an_unknown_length_is_null_never_zero(self, db) -> None:
+        _seed_timed_quotes(db)
+        rows = self._by_text(_search(db, query="Login"))
+        assert rows["zero"]["duration_seconds"] is None
+        assert rows["reversed"]["duration_seconds"] is None
+
+    def test_a_text_edit_leaves_the_length_alone(self, db) -> None:
+        made = _seed_timed_quotes(db)
+        db.add(QuoteEdit(quote_id=made["short"].id, edited_text="Login hurt (edited)."))
+        db.commit()
+        row = _search(db, query="(edited)")["quotes"][0]
+        assert row["duration_seconds"] == 12.5
+
+    def test_quote_ids_are_unchanged(self, db) -> None:
+        _seed_timed_quotes(db)
+        ids = {q["quote_id"] for q in _search(db, query="Login")["quotes"]}
+        assert {"q-p1-300", "q-p1-320", "q-p1-360"} <= ids
+
+    def test_max_duration_keeps_the_short_ones_and_the_boundary(self, db) -> None:
+        _seed_timed_quotes(db)
+        found = _search(db, query="Login", max_duration_seconds=30)
+        assert set(self._by_text(found)) == {"short", "edge"}  # 30.0 is "30 or less"
+
+    def test_min_and_max_make_a_band(self, db) -> None:
+        _seed_timed_quotes(db)
+        found = _search(db, query="Login", min_duration_seconds=20, max_duration_seconds=30.5)
+        assert set(self._by_text(found)) == {"edge"}
+        just_over = _search(db, query="Login", max_duration_seconds=29.9)
+        assert set(self._by_text(just_over)) == {"short"}
+
+    def test_a_length_filter_combines_with_the_others(self, db) -> None:
+        _seed_timed_quotes(db)
+        found = _search(db, sentiment="frustration", query="Login", max_duration_seconds=30)
+        assert set(self._by_text(found)) == {"short", "edge"}
+        none = _search(db, sentiment="delight", query="Login", max_duration_seconds=30)
+        assert none["total_matched"] == 0
+
+    def test_unknown_lengths_are_left_out_and_counted(self, db) -> None:
+        _seed_timed_quotes(db)
+        found = _search(db, query="Login", max_duration_seconds=30)
+        assert found["duration_unknown_excluded"] == 2  # the zero-length and the reversed
+        assert "duration_unknown_excluded" not in _search(db, query="Login")
+
+    def test_a_bad_bound_teaches_the_unit(self, db) -> None:
+        with pytest.raises(ToolInputError, match="seconds"):
+            _search(db, max_duration_seconds=0)
+        with pytest.raises(ToolInputError, match="seconds"):
+            _search(db, min_duration_seconds=-5)
+        with pytest.raises(ToolInputError, match="above"):
+            _search(db, min_duration_seconds=40, max_duration_seconds=10)
 
 
 class TestSessionRoster:

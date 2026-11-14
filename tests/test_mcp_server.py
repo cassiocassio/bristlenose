@@ -73,7 +73,7 @@ def _search(db, **kwargs):
         "project_id": 1, "query": None, "tag": None, "sentiment": None, "participant": None,
         "section": None, "theme": None, "starred_only": False, "limit": 20, "offset": 0,
         "min_duration_seconds": None, "max_duration_seconds": None, "sort": "time",
-        "group": None,
+        "group": None, "session": None,
     }
     defaults.update(kwargs)
     return _tool_search_quotes(db, **defaults)
@@ -849,7 +849,7 @@ class TestProtocol:
         allowed = {
             "project_id", "query", "tag", "sentiment", "participant", "section",
             "theme", "starred_only", "limit", "offset", "lens", "framework_id",
-            "min_duration_seconds", "max_duration_seconds", "sort", "group",
+            "min_duration_seconds", "max_duration_seconds", "sort", "group", "session",
         }
         for name, tool in tools.items():
             params = set(tool["inputSchema"].get("properties", {}))
@@ -1771,6 +1771,114 @@ class TestGroupFilter:
         assert self._ids(db, group="Mental models") == {"q-p1-26"}
 
 
+class TestSessionFilterAndReconciliation:
+    """A speaker tag restarts in every session, so a participant filter alone
+    cannot reproduce one session's roster count; the session filter can."""
+
+    def _second_session_quote(self, db) -> None:
+        db.add(Quote(
+            project_id=1, session_id="s2", participant_id="p1", start_timecode=60.0,
+            end_timecode=70.0, text="Same tag, another session.", quote_type="screen_specific",
+            sentiment="confusion", intensity=1,
+        ))
+        from bristlenose.server.models import Session as SessionModel
+
+        db.add(SessionModel(project_id=1, session_id="s2", session_number=2))
+        db.commit()
+
+    def test_a_session_scopes_a_search(self, db) -> None:
+        self._second_session_quote(db)
+        assert {q["session_id"] for q in _search(db, session="s2")["quotes"]} == {"s2"}
+        assert _search(db, session="S1")["total_matched"] == 4  # case-insensitive
+
+    def test_the_roster_count_equals_participant_plus_session(self, db) -> None:
+        self._second_session_quote(db)
+        overview = _tool_get_project_overview(db, 1, None)
+        for row in overview["sessions"]["items"]:
+            for sp in row["speakers"]:
+                tag = sp.get("slot_code", sp["code"])
+                if _search(db, participant=tag, session=row["session_id"])["total_matched"] or \
+                        sp["visible_quotes"]:
+                    found = _search(db, participant=tag, session=row["session_id"])
+                    assert found["total_matched"] == sp["visible_quotes"]
+        # ...and the participant filter alone spans both sessions, which is why
+        # the session filter exists.
+        assert _search(db, participant="p1")["total_matched"] == 5
+
+    def test_an_unknown_session_lists_the_valid_ones(self, db) -> None:
+        with pytest.raises(ToolInputError, match="s1"):
+            _search(db, session="s9")
+
+
+class TestRoundTwoFixes:
+    """Findings of the independent review of the built work, 14 Nov 2026."""
+
+    def test_a_hidden_quote_is_not_counted_as_set_aside(self, db) -> None:
+        quote = db.query(Quote).filter_by(participant_id="p1").first()
+        db.add(QuoteState(quote_id=quote.id, is_hidden=True))
+        slot = db.query(SessionSpeaker).filter_by(speaker_code="p1").one()
+        slot.speaker_role, slot.person_id, slot.state = "observer", None, "cleared"
+        db.commit()
+        row = _tool_get_project_overview(db, 1, None)["sessions"]["items"][0]
+        observer = next(s for s in row["speakers"] if s.get("slot_code") == "p1")
+        assert observer["quotes_set_aside"] == 3  # four quotes, one the researcher hid
+
+    def test_an_identity_code_that_matches_nothing_is_not_called_valid(self, db) -> None:
+        """m? is a roster code, not a tag any quote carries; accepting it would
+        be the silent empty answer the unknown-code error exists to remove."""
+        with pytest.raises(ToolInputError):
+            _search(db, participant="m?")
+
+    def test_a_disabled_frameworks_group_is_not_the_researchers(self, db) -> None:
+        from bristlenose.server.models import ProjectFrameworkState
+
+        mine = CodebookGroup(name="Pain points", subtitle="", colour_set="emo")
+        theirs = CodebookGroup(name="pain points", subtitle="", colour_set="emo",
+                               framework_id="uxr")
+        db.add_all([mine, theirs])
+        db.flush()
+        db.add_all([ProjectCodebookGroup(project_id=1, codebook_group_id=mine.id),
+                    ProjectCodebookGroup(project_id=1, codebook_group_id=theirs.id)])
+        mine_tag = TagDefinition(codebook_group_id=mine.id, name="my tag")
+        their_tag = TagDefinition(codebook_group_id=theirs.id, name="their tag")
+        db.add_all([mine_tag, their_tag])
+        db.flush()
+        by_time = {int(q.start_timecode): q for q in db.query(Quote).all()}
+        db.add(QuoteTag(quote_id=by_time[10].id, tag_definition_id=mine_tag.id))
+        db.add(QuoteTag(quote_id=by_time[26].id, tag_definition_id=their_tag.id))
+        db.commit()
+
+        both = _search(db, group="Pain points")
+        assert {q["quote_id"] for q in both["quotes"]} == {"q-p1-10", "q-p1-26"}
+        assert {(g["name"], g["framework_id"]) for g in both["groups_matched"]} == {
+            ("Pain points", None), ("pain points", "uxr")}
+
+        db.add(ProjectFrameworkState(project_id=1, framework_id="uxr", enabled=False))
+        db.commit()
+        only_mine = _search(db, group="Pain points")
+        assert {q["quote_id"] for q in only_mine["quotes"]} == {"q-p1-10"}
+        assert only_mine["groups_matched"] == [{"name": "Pain points", "framework_id": None}]
+
+    def test_strength_is_not_borrowed_across_sessions_by_a_shared_report_id(self, db) -> None:
+        """q-p1-26 exists in s1 (inside a signal) and, by the same tag and second,
+        in s2 (inside none). The s2 quote must not inherit s1's strength."""
+        _seed_second_frustration(db)
+        db.add(Quote(
+            project_id=1, session_id="s2", participant_id="p1", start_timecode=26.0,
+            end_timecode=30.0, text="Same id, another session.", quote_type="screen_specific",
+            sentiment="confusion", intensity=1,
+        ))
+        db.add(Quote(
+            project_id=1, session_id="s1", participant_id="p1", start_timecode=700.0,
+            end_timecode=705.0, text="Unsignalled but louder.", quote_type="screen_specific",
+            sentiment="frustration", intensity=2,
+        ))
+        db.commit()
+        found = _search(db, sort="strength")["quotes"]
+        order = [(q["session_id"], q["quote_id"]) for q in found]
+        assert order.index(("s1", "q-p1-700")) < order.index(("s2", "q-p1-26"))
+
+
 class TestUnknownParticipant:
     """C1: an empty search for a code nobody holds is different from an empty
     search for a participant with no quotes, and the agent must be told which."""
@@ -1779,7 +1887,8 @@ class TestUnknownParticipant:
         with pytest.raises(ToolInputError) as caught:
             _search(db, participant="p9")
         message = str(caught.value)
-        assert "p9" in message and "p1" in message and "m?" in message
+        assert "p9" in message and "p1" in message and "m1" in message
+        assert "slot_code" in message
 
     def test_a_known_code_with_no_quotes_is_just_empty(self, db) -> None:
         # m1 is a real slot in the smoke study and says nothing.

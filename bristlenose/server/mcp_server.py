@@ -346,10 +346,25 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     if set_aside_keys:
         from bristlenose.server.models import Quote as _Quote
 
-        for sid, tag, pk in db.query(
-            _Quote.session_id, _Quote.participant_id, _Quote.id
-        ).filter_by(project_id=project_id):
-            if (sid, tag) in set_aside_keys and pk not in hidden:
+        from bristlenose.server.models import QuoteState as _QuoteState
+
+        aside_rows = [
+            (sid, tag, pk)
+            for sid, tag, pk in db.query(
+                _Quote.session_id, _Quote.participant_id, _Quote.id
+            ).filter_by(project_id=project_id)
+            if (sid, tag) in set_aside_keys
+        ]
+        # `hidden` only knows about evidence quotes, and a set-aside quote is by
+        # definition not evidence, so the researcher's hiding is read here.
+        hidden_aside = {
+            qid for (qid,) in db.query(_QuoteState.quote_id).filter(
+                _QuoteState.quote_id.in_([pk for _s, _t, pk in aside_rows]),
+                _QuoteState.is_hidden.is_(True),
+            )
+        } if aside_rows else set()
+        for sid, tag, pk in aside_rows:
+            if pk not in hidden_aside:
                 set_aside[(sid, tag.lower())] = set_aside.get((sid, tag.lower()), 0) + 1
     for q in all_quotes:
         if q.id in visible_pks:
@@ -468,17 +483,19 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     return overview
 
 
-def _signal_strength_by_quote_id(db: Any, project_id: int) -> dict[str, float]:
+def _signal_strength_by_quote_id(db: Any, project_id: int) -> dict[tuple[str, str], float]:
     """Quote id → the highest composite signal among the curated signals that
     quote supports, over both lenses. Built from `load_signals` directly:
     `get_signals` shows only a few supporting quotes per card, which would
     leave most of a signal's quotes looking like they support nothing."""
-    best: dict[str, float] = {}
+    best: dict[tuple[str, str], float] = {}
     for lens in SIGNAL_LENSES:
         for sig in load_signals(db, project_id, lens, top_n=10_000).signals:
             for q in sig.quotes:
-                qid = quote_dom_id(q.participant_id, q.start_seconds, q.ordinal)
-                best[qid] = max(best.get(qid, 0.0), sig.composite_signal)
+                # A report id carries no session, and a tag restarts in every
+                # session, so the key is (session, id).
+                key = (q.session_id, quote_dom_id(q.participant_id, q.start_seconds, q.ordinal))
+                best[key] = max(best.get(key, 0.0), sig.composite_signal)
     return best
 
 
@@ -508,6 +525,7 @@ def _tool_search_quotes(
     max_duration_seconds: float | None = None,
     sort: str = "time",
     group: str | None = None,
+    session: str | None = None,
 ) -> dict[str, Any]:
     from bristlenose.models import Sentiment
     from bristlenose.server.heading_names import HeadingNames
@@ -531,20 +549,36 @@ def _tool_search_quotes(
             )
     if sort not in SEARCH_SORTS:
         raise ToolInputError(f"unknown sort {sort[:80]!r} — valid values: {list(SEARCH_SORTS)}")
-    project_groups: dict[int, str] = {}
+    project_groups: dict[int, Any] = {}
+    matched_groups: list[dict[str, Any]] = []
     if group:
-        # The codebook groups this project has applied, by the name the
-        # researcher sees; an unknown one teaches the valid names.
+        # The codebook groups this project has applied AND enabled, by the name
+        # the researcher sees (a disabled framework's groups are not in the
+        # researcher's codebook); an unknown name teaches the valid ones. Two
+        # groups may share a name across frameworks: both match, and the
+        # result says which taxonomies they came from.
+        applied, framework_on = _applied_frameworks(db, project_id)
         project_groups = {
-            g.id: g.name
-            for g in db.query(CodebookGroup)
-            .join(ProjectCodebookGroup, ProjectCodebookGroup.codebook_group_id == CodebookGroup.id)
-            .filter(ProjectCodebookGroup.project_id == project_id)
+            g.id: g for g in applied if framework_on.get(g.framework_id, True)
         }
-        if group.lower() not in {n.lower() for n in project_groups.values()}:
+        if group.lower() not in {g.name.lower() for g in project_groups.values()}:
             raise ToolInputError(
                 f"unknown group {group[:80]!r} — this project's groups: "
-                f"{sorted(project_groups.values())}"
+                f"{sorted({g.name for g in project_groups.values()})}"
+            )
+        matched_groups = [
+            {"name": g.name, "framework_id": g.framework_id}
+            for g in project_groups.values() if g.name.lower() == group.lower()
+        ]
+    if session:
+        from bristlenose.server.models import Session as _SessionModel
+
+        session_ids = sorted(
+            sid for (sid,) in db.query(_SessionModel.session_id).filter_by(project_id=project_id)
+        )
+        if session.lower() not in {sid.lower() for sid in session_ids}:
+            raise ToolInputError(
+                f"unknown session {session[:80]!r} — valid sessions: {session_ids}"
             )
     for bound, value in (
         ("min_duration_seconds", min_duration_seconds),
@@ -576,12 +610,16 @@ def _tool_search_quotes(
         from bristlenose.server import speaker_slots
 
         known = {
-            c.lower() for slot in speaker_slots.project_slots(db, project_id)
-            for c in (slot.code, slot.slot_code)
+            slot.slot_code.lower() for slot in speaker_slots.project_slots(db, project_id)
         } | {q.participant_id.lower() for q in visible}
         if participant.lower() not in known:
+            # The filter compares the transcript TAG quotes carry, so that is
+            # what is valid; an identity code that differs from its tag (m2
+            # over m1, m?) would be accepted and match nothing.
             raise ToolInputError(
-                f"unknown participant {participant[:80]!r} — valid codes: {sorted(known)}"
+                f"unknown participant {participant[:80]!r} — valid codes (the tag a "
+                f"speaker's quotes carry; use a roster row's slot_code when it has one): "
+                f"{sorted(known)}"
             )
 
     # Batch-attach section / theme / tag names (the export_core pattern).
@@ -616,13 +654,15 @@ def _tool_search_quotes(
             if group_id in project_groups:
                 # Accepted tags only: a QuoteTag row is an accepted tag, a
                 # proposal is not one, so a group never counts a proposal.
-                groups_of.setdefault(qt.quote_id, set()).add(project_groups[group_id].lower())
+                groups_of.setdefault(qt.quote_id, set()).add(project_groups[group_id].name.lower())
 
     def _matches(q: Any) -> bool:
         text = edited.get(q.id, q.text)
         if query and query.lower() not in text.lower():
             return False
         if participant and q.participant_id.lower() != participant.lower():
+            return False
+        if session and q.session_id.lower() != session.lower():
             return False
         if sentiment and (
             (q.sentiment or "") != sentiment
@@ -668,9 +708,9 @@ def _tool_search_quotes(
         if sort == "intensity":
             return (-intensity, q.session_id, q.start_timecode)
         if sort == "strength":
-            qid = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+            key = (q.session_id, quote_dom_id(q.participant_id, q.start_timecode, q.ordinal))
             return (
-                q.id not in starred, -strength.get(qid, 0.0), -intensity,
+                q.id not in starred, -strength.get(key, 0.0), -intensity,
                 q.session_id, q.start_timecode,
             )
         return (q.session_id, q.start_timecode)
@@ -721,6 +761,8 @@ def _tool_search_quotes(
     }
     if timed:
         result["duration_unknown_excluded"] = unknown_length
+    if group:
+        result["groups_matched"] = matched_groups
     return result
 
 
@@ -1090,6 +1132,7 @@ def create_mcp_server(
         max_duration_seconds: float | None = None,
         sort: str = "time",
         group: str | None = None,
+        session: str | None = None,
     ) -> dict[str, Any]:
         """Search the curated quotes (hidden quotes excluded, researcher
         edits applied). Filters combine with AND; text is never truncated;
@@ -1105,14 +1148,17 @@ def create_mcp_server(
         a quote reads. A participant code nobody holds is an error that
         lists the valid codes; a valid code with no quotes returns empty.
         group is a codebook group's name (for example a framework's "Mental
-        models"): the quotes carrying any accepted tag in it. An unknown
-        group is an error listing this project's groups."""
+        models"): the quotes carrying any accepted tag in it; the result
+        lists groups_matched with their framework. An unknown group is an
+        error listing this project's groups. session scopes to one session
+        (such as "s2"): a speaker tag like m1 restarts in every session, so
+        use it with participant to read one speaker's words."""
         return _run(
             "search_quotes", project_id,
             lambda db: _tool_search_quotes(
                 db, project_id, query, tag, sentiment, participant,
                 section, theme, starred_only, limit, offset,
-                min_duration_seconds, max_duration_seconds, sort, group,
+                min_duration_seconds, max_duration_seconds, sort, group, session,
             ),
         )
 

@@ -153,7 +153,7 @@ const TOOLS = [
     },
     {
       "name": "search_quotes",
-      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded. sort is time (default), intensity, or strength (starred first, then the strength of the signal a quote supports, then intensity, then time); the result says which it used in sorted_by. Bristlenose does not judge how well a quote reads. A participant code nobody holds is an error that lists the valid codes; a valid code with no quotes returns empty. group is a codebook group's name (for example a framework's \"Mental models\"): the quotes carrying any accepted tag in it. An unknown group is an error listing this project's groups.",
+      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded. sort is time (default), intensity, or strength (starred first, then the strength of the signal a quote supports, then intensity, then time); the result says which it used in sorted_by. Bristlenose does not judge how well a quote reads. A participant code nobody holds is an error that lists the valid codes; a valid code with no quotes returns empty. group is a codebook group's name (for example a framework's \"Mental models\"): the quotes carrying any accepted tag in it; the result lists groups_matched with their framework. An unknown group is an error listing this project's groups. session scopes to one session (such as \"s2\"): a speaker tag like m1 restarts in every session, so use it with participant to read one speaker's words.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -202,6 +202,9 @@ const TOOLS = [
             "default": "time"
           },
           "group": {
+            "type": "string"
+          },
+          "session": {
             "type": "string"
           },
           "project": {

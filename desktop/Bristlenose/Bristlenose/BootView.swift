@@ -148,29 +148,35 @@ struct BootView: View {
                 // Our own row in the stock actions slot: the slot splits a plain
                 // HStack's width equally and a Button ellipsizes ("Show Det…",
                 // 9 Nov 2026). Each button keeps its label's width instead.
-                HStack(spacing: 12) {
-                    let set = Self.failureButtons(
-                        startedByRetry: serveManagerForPane?.startedByRetry ?? false,
-                        retryable: Self.isRetryable(message)
-                    )
-                    ForEach(set.buttons, id: \.self) { which in
-                        failureButton(which, retry: retry, sendFeedback: sendFeedback)
-                            .keyboardShortcut(set.defaultButton == which ? .defaultAction : nil)
+                // The slot lays its children out in a row, so the details go in
+                // a column with the buttons: they open underneath, and the
+                // buttons stay where they were clicked (14 Nov 2026).
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        let set = Self.failureButtons(
+                            startedByRetry: serveManagerForPane?.startedByRetry ?? false,
+                            retryable: Self.isRetryable(message)
+                        )
+                        ForEach(set.buttons, id: \.self) { which in
+                            failureButton(which, retry: retry, sendFeedback: sendFeedback)
+                                .keyboardShortcut(set.defaultButton == which ? .defaultAction : nil)
+                        }
                     }
-                }
-                .fixedSize(horizontal: true, vertical: false)
-                if detailsExpanded {
-                    ScrollView {
-                        Text((serveManagerForPane?.outputLines ?? []).suffix(40).joined(separator: "\n"))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                            .padding(8)
+                    .fixedSize(horizontal: true, vertical: false)
+                    if detailsExpanded {
+                        ScrollView {
+                            Text((serveManagerForPane?.outputLines ?? []).suffix(40).joined(separator: "\n"))
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                                .padding(8)
+                        }
+                        .frame(width: FailureDetailsBox.width)
+                        .frame(maxHeight: 140)
+                        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                    .frame(maxWidth: 480, maxHeight: 140)
-                    .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

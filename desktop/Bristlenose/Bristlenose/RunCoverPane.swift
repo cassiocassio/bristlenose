@@ -136,37 +136,44 @@ struct RunCoverPane: View {
                 // Our own row in the stock actions slot: the slot splits a plain
                 // HStack's width equally and a Button ellipsizes ("Show Det…",
                 // 9 Nov 2026). Each button keeps its label's width instead.
-                HStack(spacing: 12) {
-                    switch DetailPaneKind.FailureRemedy.of(category) {
-                    case .setUpProvider: setUpProviderButton
-                    case .retry: Button(i18n.t("desktop.boot.retry"), action: onAnalyse)
-                    case .none: EmptyView()
+                // The slot lays its children out in a row, so the details go in
+                // a column with the buttons: they open underneath, and the
+                // buttons stay where they were clicked (14 Nov 2026).
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        switch DetailPaneKind.FailureRemedy.of(category) {
+                        case .setUpProvider: setUpProviderButton
+                        case .retry: Button(i18n.t("desktop.boot.retry"), action: onAnalyse)
+                        case .none: EmptyView()
+                        }
+                        Button(i18n.t(detailsExpanded
+                                      ? "desktop.boot.hideDetails"
+                                      : "desktop.boot.showDetails")) {
+                            detailsToggled = !detailsExpanded
+                        }
                     }
-                    Button(i18n.t(detailsExpanded
-                                  ? "desktop.boot.hideDetails"
-                                  : "desktop.boot.showDetails")) {
-                        detailsToggled = !detailsExpanded
+                    .fixedSize(horizontal: true, vertical: false)
+                    if detailsExpanded {
+                        ScrollView {
+                            Text(forensicRecord(rawCause: rawCause, category: category, summary: summary))
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                                .padding(8)
+                        }
+                        .frame(width: FailureDetailsBox.width)
+                        .frame(maxHeight: 140)
+                        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                }
-                .fixedSize(horizontal: true, vertical: false)
-                if detailsExpanded {
-                    ScrollView {
-                        Text(forensicRecord(rawCause: rawCause, category: category, summary: summary))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                            .padding(8)
-                    }
-                    .frame(maxWidth: 480, maxHeight: 140)
-                    .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
         }
     }
 
     /// The row popover's Copy details text: English, as forensic records are.
+    /// (The details box's width lives in `FailureDetailsBox`, shared with BootView.)
     private func forensicRecord(
         rawCause: String?, category: PipelineFailureCategory, summary: PipelineSummary?
     ) -> String {
@@ -182,4 +189,24 @@ struct RunCoverPane: View {
             stdoutTail: Array((liveData.outputLines[project.id] ?? []).suffix(20))
         )
     }
+}
+
+/// The Show Details box on the failure panes (this file and `BootView`).
+///
+/// The record is CLI output, written for an 80-column terminal, so the box is
+/// 80 columns of its own font wide, plus its 8pt padding each side and a scroll
+/// bar. A width, not a ceiling: the `ContentUnavailableView` actions slot
+/// proposes only the buttons' width, and under `maxWidth: 480` the record
+/// wrapped at about 240pt (14 Nov 2026). Measured: 80 columns of caption
+/// monospace is 495pt, so the box is about 530pt.
+enum FailureDetailsBox {
+    static let columns = 80
+
+    static let width: CGFloat = {
+        let size = NSFont.preferredFont(forTextStyle: .caption1).pointSize
+        let font = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+        let column = ("0" as NSString).size(withAttributes: [.font: font]).width
+        let scroller = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
+        return (column * CGFloat(columns)).rounded(.up) + 16 + scroller
+    }()
 }

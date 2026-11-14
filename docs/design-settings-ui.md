@@ -9,9 +9,11 @@ trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 
 > **Truing status:** Partial — Phase 1 (web gear-icon modal, `SettingsModal.tsx`, `ModalNav.tsx`, `⌘,` shortcut) **shipped**; Phases 2/3/4 remain pending as described. The "API Keys" section is architecturally superseded for the desktop-embedded deployment — see banner there. The serve-mode CLI path still applies when running `bristlenose serve` outside the sandboxed desktop app.
 
+> _See also `design-azure-connection.md` (the Azure connection design) and `design-azure-state-matrix.md` (what every surface says in every state)._
+>
 > _Trued 12 Nov 2026 (`--topic azure`): the desktop Settings window is 660 wide and its minimum-height floor was deleted on 3 Sep (see `design-desktop-settings.md`); the web plan below is unchanged, and "Azure endpoint etc. stays CLI" is true for the web surface only, since the Mac pane has the Azure fields._
 >
-> **Two surfaces, one job.** The desktop alpha now has a fully shipped Mail-Accounts pattern with round-trip validation, verdict cache, and offline survival (`LLMSettingsView.swift`). The web SPA in this doc continues to host Phase 1 only. Two completely different UIs now exist for "manage keys" — desktop is canonical for embedded-alpha, this doc is canonical for the serve-mode path. The §Implementation plan modal dimensions (`42rem` / `11rem`) are web-SPA-only; the desktop ships `width: 720` + `minHeight: 660` as a separate native `Settings` scene. See `design-desktop-settings.md`.
+> **Two surfaces, one job.** The desktop alpha now has a fully shipped Mail-Accounts pattern with round-trip validation, verdict cache, and offline survival (`LLMSettingsView.swift`). The web SPA in this doc continues to host Phase 1 only. Two completely different UIs now exist for "manage keys" — desktop is canonical for embedded-alpha, this doc is canonical for the serve-mode path. The §Implementation plan modal dimensions (`42rem` / `11rem`) are web-SPA-only; the desktop ships `.frame(width: 660)` (the minimum-height floor was deleted on 3 Sep) as a separate native `Settings` scene. See `design-desktop-settings.md`.
 
 ## Changelog
 

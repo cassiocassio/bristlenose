@@ -155,7 +155,7 @@ If your organisation has a Microsoft Azure contract that includes Azure OpenAI S
 ```bash
 export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/
 export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name
-bristlenose configure azure    # validates the key and stores it in your system credential store
+bristlenose configure azure    # stores the key in your system credential store (does not validate it; set the endpoint and deployment name as environment variables)
 bristlenose run interviews --llm azure
 ```
 

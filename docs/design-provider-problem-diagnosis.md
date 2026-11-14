@@ -76,8 +76,8 @@ Channels by which the Mac host can learn of a refusal today: **(A)** the run ter
 
 ### 2.1 Today
 
-- `LLMFailureKind.NETWORK` exists (`failure_classifier.py:53`) but **`_RULES` has no rule that returns it** (checked by reading all 200 lines of the table). `classify_exception` / `classify_fields` cannot return it for Claude, ChatGPT, Azure, Gemini or Ollama.
-- The only producer is `anyllm.classify` → `is_network_error` (`anyllm.py:417-418`, `:555-572`): a **boolean** from exception class names (`_NETWORK_NAMES`: `ConnectError`, `ConnectTimeout`, `ReadTimeout`, `WriteTimeout`, `PoolTimeout`, `ReadError`, `WriteError`, `APIConnectionError`, `APITimeoutError`, `RemoteProtocolError`), walking `original_exception`, `__cause__`, `__context__`.
+- `LLMFailureKind.NETWORK` exists (`failure_classifier.py:53`) but **`_RULES` has no rule that returns it**. A transport failure is still classified `NETWORK` outside the table, by exception class (`is_network_error`), so a run reaches it; the table alone cannot.
+- The producer outside `_RULES` is `anyllm.classify` → `is_network_error` (`anyllm.py:417-418`, `:555-572`): a **boolean** from exception class names (`_NETWORK_NAMES`: `ConnectError`, `ConnectTimeout`, `ReadTimeout`, `WriteTimeout`, `PoolTimeout`, `ReadError`, `WriteError`, `APIConnectionError`, `APITimeoutError`, `RemoteProtocolError`), walking `original_exception`, `__cause__`, `__context__`.
 - For built-in providers the run path detects network separately: `run_lifecycle.categorise_exception` (`:743-748`) calls `is_network_error`, then a text regex `_NETWORK_RE`, yielding `CauseCategoryEnum.NETWORK` on a `Cause`.
 - `Cause` (`events.py:258-294`) has `category, code, message, reason, provider, model_host, stage, session_id, exit_code, signal, signal_name`. `code` is meant to hold the HTTP status (`run_lifecycle.py:869`) but **no caller passes `http_status=`** (grep: definition and docstring only), so it is always `None`. `message` is `"<stage> failed: <ClassName> on <provider>"`, built from structured fields only, never `str(exc)` (a rule: provider bodies can echo transcript, `stages/CLAUDE.md:315`). Keep that rule.
 - Swift: the terminus-level decoder reads only `category, message, signal_name, exit_code` (`EventLogReader.swift:101-115`); the summary-level one adds `code, reason, provider, stage, session_id` and ignores `model_host` (`PipelineSummary.swift:190`). `PipelineFailureCategory.network` exists (`PipelineRunner.swift:19`) and shows as a failed-row category. `ProviderProblemCondition` has only `keyRejected` and `outOfCredit` (`ProviderProblem.swift:11-12`), so **network never lights the pill**.
@@ -217,7 +217,7 @@ See § 3.3. Gaps to fill with the owner's hands: Azure with a real resource (key
 | Gemini 400 `API_KEY_INVALID` | `invalid_key` | Swift `classify` also maps this (`LLMValidator.swift:257`) |
 | Gemini 403 (any, incl. keyless) | `invalid_key` | |
 | Gemini 429 / 503 | `rate_limited` / `server_error` | credit and rate fold together by design |
-| Azure 401 / 404 DeploymentNotFound / 429 / 500 | `invalid_key` / `model_unavailable` / `rate_limited` / `server_error` | |
+| Azure 401 / 404 DeploymentNotFound / 429 / 500 | `invalid_key` / `model_unavailable` / `rate_limited` / `server_error` | The Mac Settings check calls any Azure 404 red "Invalid key" instead; see `design-azure-state-matrix.md` |
 | **Proxy 403 HTML, no request-id** | **`invalid_key`** | wrong: not the provider |
 | Proxy 407 | `bad_request` | |
 | **Proxy 502 HTML** | **`server_error`** | wrong: not the provider |

@@ -250,7 +250,7 @@ nothing has to be remembered.
 **Rung 3 in the app — paused, by the maintainer's call ("no decisions
 yet").** The direction as of 5 Sep is a **weekly cloud-matrix run from the
 maintainer's Mac** with candidate models added, plus the cheap change of
-pointing the existing one-token ping at the *selected* model. Replicating each
+pointing the existing one-token ping at the *selected* model (done for Azure by N162, `2e3f3b494`). Replicating each
 provider's request shape in Swift — proposed in the first handoff — is
 withdrawn: a second request builder drifts by construction, and the preflight
 regression above is exactly that failure. Running the sidecar's real

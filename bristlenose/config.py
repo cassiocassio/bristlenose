@@ -333,8 +333,9 @@ def configured_cloud_providers(settings: BristlenoseSettings) -> list[str]:
 
     Must be called on settings that have already been through
     ``_populate_keys_from_keychain`` so env vars, ``.env`` files, and the
-    system keychain are all visible. Azure counts on key presence alone —
-    endpoint/deployment are validated later by preflight.
+    system keychain are all visible. Azure counts on key presence alone.
+    Endpoint and deployment are checked later: the doctor reports them missing, the
+    preflight returns silently until both are set, and a run raises from ``LLMClient``.
 
     The ``isinstance`` guard keeps this meaningful for duck-typed settings
     (test doubles): only a real non-empty string counts as a key.

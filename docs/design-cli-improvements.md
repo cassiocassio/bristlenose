@@ -12,13 +12,13 @@ trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ## Changelog
 
 - _2026-04-21_ — trued up: fixed `bristlenose configure` → `bristlenose configure` throughout (11+ occurrences) — this was the highest-impact fix, users copy these snippets. Compacted Item #1 (render argument) with shipped anchor; updated Item #6 `--llm` naming to reflect shipped `claude/chatgpt/azure/gemini/local`; marked Provider Registry Abstraction section as "Aspirational — not shipped"; date-stamped cost tables; updated top-of-file status line. Anchors: `bristlenose/cli.py:1115-1140`, `bristlenose/cli.py:818,1061`, `bristlenose/cli.py:1613`, `bristlenose/cli.py:845`, commit "raise default llm_max_tokens from 32768 to 64000". Preserved: item-level analysis and rationale even for shipped items (useful context for future CLI design).
-- _Gemini provider shipment_: `config.py:66` has `google_api_key` field; runtime dispatch in `bristlenose/llm/` unverified by this pass — flagged for human.
+- _Gemini provider shipment_: shipped. `config.py` has `google_api_key` and `client.py` dispatches it (`_analyze_google`); `--llm gemini` is in the shipped list.
 
 # CLI improvements
 
 Catalogue of CLI warts, inconsistencies, and potential improvements. Prioritised by user friction, not implementation difficulty.
 
-**Status (Apr 2026):** many items completed since Feb 2026 snapshot below — including Ollama, Azure, Keychain, Gemini (config field present; runtime dispatch unverified in last truing pass — flag for confirm), `render --input` auto-detect, LLM product-name aliases (`claude`/`chatgpt`). The "Done" section at the bottom is the authoritative running list; top-inline ✅ markers are consolidated there. **Stale from Feb 2026:** "7 items completed, 9 items open, 4 won't fix" — out of date; do not trust the count.
+**Status (Apr 2026):** many items completed since Feb 2026 snapshot below — including Ollama, Azure, Keychain, Gemini (shipped: `_analyze_google`), `render --input` auto-detect, LLM product-name aliases (`claude`/`chatgpt`). The "Done" section at the bottom is the authoritative running list; top-inline ✅ markers are consolidated there. **Stale from Feb 2026:** "7 items completed, 9 items open, 4 won't fix" — out of date; do not trust the count.
 
 Detailed LLM provider implementation records (Ollama, Azure, Keychain — all shipped) archived to `archive/design-llm-providers-implementation.md`.
 
@@ -720,7 +720,7 @@ Think of it as ethnographically quirky. The tool is opinionated about language t
 ### Roadmap (enterprise enablement)
 
 6. ✅ **Azure OpenAI support** — DONE (v0.7.0)
-7. **Gemini support** — for Google Cloud shops (Phase 4, see LLM Provider Roadmap below)
+7. **Gemini support** — for Google Cloud shops (shipped; Phase 4, see LLM Provider Roadmap below)
 8. ✅ **Local model support (Ollama)** — DONE (v0.7.0)
 
 ---
@@ -769,7 +769,7 @@ bristlenose run ./interviews --llm chatgpt
 **Azure OpenAI** (enterprise)
 ```bash
 bristlenose configure azure
-# Prompts for the API key only, then prints the endpoint + deployment env vars to set
+# Prompts for the API key only, VALIDATES NOTHING ("Could not validate: needs endpoint and deployment to validate", "Storing anyway"), prints the endpoint + deployment env vars to set, then makes Azure the current provider
 bristlenose run ./interviews --llm azure
 ```
 
@@ -825,6 +825,8 @@ BRISTLENOSE_OPENAI_API_KEY=sk-...
 BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
 BRISTLENOSE_AZURE_API_KEY=abc123...   # the old name BRISTLENOSE_AZURE_KEY is never read
 BRISTLENOSE_AZURE_DEPLOYMENT=gpt-4o-research
+# A services.ai.azure.com host works with the same key. A pasted full URL (the portal's long Endpoint) is not
+# normalised today and fails: see design-azure-connection.md
 
 # Gemini
 BRISTLENOSE_GOOGLE_API_KEY=AIza...
@@ -848,7 +850,7 @@ bristlenose run ./interviews --llm local --model mistral
 
 - **Claude**: [console.anthropic.com](https://console.anthropic.com/settings/keys)
 - **ChatGPT**: [platform.openai.com](https://platform.openai.com/api-keys)
-- **Azure OpenAI**: Azure portal → your OpenAI resource → Keys
+- **Azure**: Azure portal → your resource → Keys and Endpoint (the deployment name is under Models ▸ Deployments in Microsoft Foundry; a key cannot list it)
 - **Gemini**: [aistudio.google.com](https://aistudio.google.com/apikey)
 - **Local**: No key needed, just run `ollama serve`
 ```
@@ -1065,9 +1067,9 @@ class LLMClient:
 | Aspect | Claude (current) | ChatGPT (current) | Azure OpenAI | Gemini |
 |--------|------------------|-------------------|--------------|--------|
 | **SDK** | `anthropic` | `openai` | `openai` (same SDK) | `google-genai` (new dep) |
-| **Structured output** | Tool use | JSON mode | JSON mode (same as OpenAI) | Native JSON schema |
+| **Structured output** | Tool use | JSON mode | Structured Outputs, strict `json_schema` (as built; not plain JSON mode) | Native JSON schema |
 | **Async support** | ✅ Full | ✅ Full | ✅ Full (same SDK) | ✅ Full (`client.aio`) |
-| **Implementation effort** | — | — | ~30 lines (copy OpenAI) | ~50 lines (new pattern) |
+| **Implementation effort** | — | — | ~30 lines (copy OpenAI; a pre-build estimate: as built it also needed the output-cap retry, deployment handling and its own preflight, see `design-azure-connection.md`) | ~50 lines (new pattern) |
 | **New dependency** | No | No | No | Yes (`google-genai`) |
 | **Auth complexity** | API key | API key | Endpoint + key + deployment | API key |
 | **Config fields** | 1 | 1 | 4 | 2 |
@@ -1138,9 +1140,9 @@ Gemini Flash could reduce costs by 5–7× for price-sensitive users.
 2. Minimal code (~30 lines, copy-paste from OpenAI implementation)
 3. High enterprise demand (unblocks paying customers)
 4. Identical quality to existing OpenAI support
-5. ~2 hours implementation + testing
+5. ~2 hours implementation + testing _(an estimate made before building, not a measurement)_
 
-**Do Gemini second:** (Phase 4, next up)
+**Do Gemini second:** (shipped)
 1. Requires new dependency (`google-genai`)
 2. Different structured output pattern (native JSON schema, not tool use)
 3. SDK has some rough edges (dict handling issues)

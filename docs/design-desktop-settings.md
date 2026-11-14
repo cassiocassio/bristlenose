@@ -86,7 +86,7 @@ Grouped controls, top to bottom: **Application appearance** radio (auto/light/da
 
 Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, Ollama) with two orthogonal indicators per row:
 - **Radio/checkmark** — which provider is active (user choice, `@AppStorage("activeProvider")`)
-- **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable"). While the row's last key save failed, the dot and label give way to the field's red icon and "Key not saved" (`APIKeyDrafts.caption`, decision #6, 22 Oct 2026), so a save that failed on leaving the row shows in the list rather than only under a field no longer on screen
+- **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid key" / orange "Unavailable"; also "Out of credit", and "Local" in place of "Online" for Ollama). While the row's last key save failed, the dot and label give way to the field's red icon and "Key not saved" (`APIKeyDrafts.caption`, decision #6, 22 Oct 2026), so a save that failed on leaving the row shows in the list rather than only under a field no longer on screen
 
 Right detail pane shows the selected provider's settings: API key (`SecureField` → `KeychainHelper.set`, which writes the app's data-protection item **and** the login-keychain copy the CLI reads, and reads both back; this pane is also the only reader that may raise the keychain dialog — `interaction: .allowed` — so a key `bristlenose configure` wrote is adopted here and nowhere else, `design-keychain.md` §"One keyspace, two keychains"), model picker (per-provider known models + "Custom…"), concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
 
@@ -214,9 +214,10 @@ from HTTP response → status lives in `LLMValidator.classify(provider:status:)`
 |--------|-----|-----------|
 | `.online` | Green | 2xx from test call; OR cached `.ok` verdict for current key; OR Anthropic 4xx ≠ 401/403/402/429 (auth-before-payload, robust against haiku-model deprecation); OR Ollama reachable with at least one model pulled |
 | `.notSetUp` | Grey | No key in Keychain (or empty Ollama URL) |
-| `.invalid` | Red | 401/403 from test call; OR Azure 404 (endpoint/deployment not found — message points at endpoint, not key); OR Azure URL missing https:// scheme |
+| `.notSetUp` (Azure, no deployment name) | Grey | key and endpoint set, deployment blank: no sentence, activation blocked (no new copy in 21 locales). A blank endpoint is `.unavailable` (orange, activatable): the two missing-config cases behave oppositely, see `design-azure-state-matrix.md` |
+| `.invalid` | Red | 401/403 from test call; OR Azure 404 (endpoint/deployment not found — message points at endpoint, not key); OR Azure URL with no scheme or that cannot be parsed (`http://` is accepted today; an https-only check is on a branch) |
 | `.unavailable` | Orange | 429/network error/timeout; OR Azure key entered but endpoint blank (started-but-incomplete) — transient/unverified, survives offline via cache |
-| `.outOfCredit` | Orange | 402 from test call — an *observed* negative (not a transient miss). Sticky and shown; deliberately NOT cache-masked back to `.online`. `LLMProvider.swift:238` |
+| `.outOfCredit` | Orange | 402 from test call — an *observed* negative (not a transient miss). Sticky and shown; deliberately NOT cache-masked back to `.online`. `ProviderStatus.outOfCredit` in `LLMProvider.swift` |
 | `.checking` | Spinner | Validation in progress — rendered as `ProgressView().controlSize(.small)` in both sidebar and detail pane (Mail "Status: Connecting…" pattern) |
 
 Activation is gated on `canActivate`, **not** a live `.online`: `.online`,
@@ -238,15 +239,15 @@ Ollama GET `/api/tags`).
 
 **Verdict cache.** Per-provider entries in `UserDefaults` keyed by truncated
 SHA-256 of the credential (8 bytes, ~5×10⁻¹⁰ collision rate at single-entry
-scale). Stores three fields: `_keyHash`, `_status` (`ok` / `invalid`),
+scale). Stores three fields: `_keyHash`, `_status` (`ok` / `invalid` / `outOfCredit`), keyed on the key hash alone (an endpoint or deployment edit does not invalidate it; a branch fixes that),
 `_lastCheckedAt` (ISO 8601). Only definitive verdicts (`.online`,
-`.invalid`) write the cache; transient `.unavailable` never overwrites.
+`.invalid`, `.outOfCredit`) write the cache; transient `.unavailable` never overwrites.
 The full credential lives in Keychain — UserDefaults stores opaque
 identity, not secret material. (Threat-model: a same-UID process can
 fingerprint provider config + rotation history but cannot recover the key.)
 
 **Offline survival.** When validation returns `.unavailable` (timeout,
-no connectivity, 402/429) AND the cache holds a definitive verdict for
+no connectivity, 429, 5xx; a 402 is `.outOfCredit`) AND the cache holds a definitive verdict for
 this exact key, the cache wins: `.online` from cache survives a flaky café
 connection; `.invalid` from cache survives an offline relaunch. The user
 keeps the radio activatable on a previously-good key without a fresh
@@ -317,7 +318,7 @@ same commit (the field's blur, a provider-row change, the pane disappearing, the
 Settings window resigning key or closing), so a value is compared against the
 last one committed by a `CommitGate`, settled once when the pane first appears;
 a Tab through an unedited field posts nothing. Azure revalidation (a billed call)
-runs only when the endpoint or API version actually changed — typing
+runs only when the endpoint, deployment or API version actually changed — typing
 `https://my-instance.openai.azure.com` used to be ~30 calls, and a Tab through
 the fields one per field. A keyboard change to the slider has no release event,
 so it commits when the pane is left or the window resigns key. (R34, 20 Oct 2026;
@@ -591,9 +592,9 @@ Two sub-decisions ride on it:
    (nothing in Keychain) and "cached `.ok`" (validated before). It means
    *"we have a key but have never seen it work."*
 
-### Credit / 402 — fix the masking, then re-check at the right moment
+### Credit / 402 — fix the masking, then re-check at the right moment _(fixed: 402 now maps to `.outOfCredit`; kept as the defect record)_
 
-**Bug to fix:** out-of-credit (402) currently maps to `.unavailable`, and the
+**Bug (since fixed):** out-of-credit (402) mapped to `.unavailable`, and the
 offline-survival rule (`cache wins on .unavailable`) promotes it back to green.
 A credit-exhausted provider shows green while runs fail on quota. The fix is to
 **split `.unavailable` by provenance:**
@@ -665,7 +666,7 @@ name, not a path that exists) are **the same operation**:
 `probe(provider, model) → ok / 404-unknown-model / 402-no-credit / auth /
 schema-malformed / unreachable`. Build it **once** as a reusable unit; call it
 from all three sites. Key-entry currently does *not* do rung 3 (it pings a
-fixed endpoint/model, not the chosen model) — so a typo'd-but-dead model name
+fixed endpoint/model, not the chosen model; Azure is the exception: since `2e3f3b494` it posts to the chosen deployment) — so a typo'd-but-dead model name
 isn't caught at entry; adding the rung-3 probe at key-entry is deferred but
 cheap to reverse once the probe exists.
 

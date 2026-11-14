@@ -121,7 +121,7 @@ $ bristlenose interviews
 No LLM provider configured.
 
 Set one up once — bristlenose configure <provider> validates your
-key and stores it securely (Keychain; not for Azure, which validates nothing at `configure` and needs an endpoint and deployment as well):
+key and stores it securely (Keychain):
 
   Claude    https://console.anthropic.com/settings/keys
   ChatGPT   https://platform.openai.com/api-keys
@@ -130,6 +130,8 @@ key and stores it securely (Keychain; not for Azure, which validates nothing at 
 
 For local models via Ollama:  bristlenose configure local
 ```
+
+_Azure caveat, not in the shipped text above: `configure azure` validates nothing and needs an endpoint and a deployment name as well (`design-azure-connection.md`)._
 
 First key — configure = choose; bare runs work forever after:
 

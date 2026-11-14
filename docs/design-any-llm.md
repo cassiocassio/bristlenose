@@ -185,7 +185,7 @@ the model (no default, its own field, no pricing, a synthesised pipeline row).
 | Errors | Typed errors on. Classify `original_exception` first, the any-llm class second, the generic status rules last. One new provider-agnostic rule: **402 → OUT_OF_CREDIT** (OpenRouter and DeepSeek use it; the classifier had none) | `classify_exception`; «Never classify billing on the HTTP status alone» (402 *is* the billing status) | follows |
 | Copy | Name the inner provider ("Mistral rejected the API key"); no `billing_hints` entry, so out-of-credit falls through to the provider's own words | Product names, never the library's, for an account | follows |
 | Telemetry | `cohort_normalise` knows `anyllm`, model kept opaque; no cost computed for `anyllm` rows | azure | follows. Without it every row is lost silently |
-| Pricing | None. No pre-run estimate, no cost in the summary, tokens still shown | azure (once fixed) | follows |
+| Pricing | None. No pre-run estimate, no cost in the summary, tokens still shown | azure (fixed in `68ecda94b`) | follows |
 | Server | The three existing `_has_api_key` sites each call `any_llm_ready` for `anyllm`; they are not restructured | — | follows (smallest change that stops AutoCode refusing and elaboration skipping silently) |
 | Pipeline view | A backend "any-llm", requirements in the Azure shape (package / model / key), model synthesised from settings, `? untested` | azure + `python_package` | follows |
 | doctor | `any-llm` row: the version and the inner providers this install carries. The API key row keeps today's shape (`Mistral (…ab1) (environment)`). No version-window warnings: the pin and the pipx advice are the fix | `check_local_provider` | follows |

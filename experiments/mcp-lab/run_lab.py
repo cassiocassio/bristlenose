@@ -238,8 +238,23 @@ def main() -> None:
     run("typo", "Show me what p9 said.",
         "A code that does not exist.",
         [("search_quotes", {"participant": "p9"})],
-        lambda s: [check("error" in s[0], "an unknown code gets an error that lists the valid ones "
-                                          "(not built yet: today this is an empty result)")])
+        lambda s: [check("error" in s[0] and "p1" in s[0]["error"],
+                         "an unknown code gets an error that lists the valid ones, "
+                         "not a silent empty result")])
+
+    run("ben", "What did Ben say in session 2?",
+        "Roster first (who is Ben's code), then his quotes: the two have to agree.",
+        [("get_project_overview", {}), ("search_quotes", {"participant": "p2"})],
+        lambda s: [check(len(rows(s[1])) == next(sp["visible_quotes"] for r in s[0]["result"]["sessions"]["items"]
+                                                 if r["session_id"] == "s2" for sp in r["speakers"]
+                                                 if sp["code"] == "p2"),
+                         "the roster's count for p2 equals the number of quotes found"),
+                   check(all(x["participant"] == "p2" for x in rows(s[1])), "only p2's words")])
+
+    run("stars", "What has the researcher starred?",
+        "The researcher's own judgement, surfaced as a filter.",
+        [("search_quotes", {"starred_only": True})],
+        lambda s: [check(rows(s[0]) and all(x["starred"] for x in rows(s[0])), "only starred quotes")])
 
     p = db.query(Project).one()
     p.mcp_anonymise = True

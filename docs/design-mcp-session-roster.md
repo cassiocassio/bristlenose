@@ -1,5 +1,7 @@
 # MCP session roster — "who was in which session?"
 
+_**Built 14 Nov 2026 (commits `24dab81ae` to `633e6368f`, then review fixes): A1, A2, B1 to B4 and C1. C2 (a `group` filter) is deferred as specified. Not yet done: the real-project check (§10 A2) needs a rebuilt sidecar, the paragraph-moved test of §8 item 5, a `Found-by: own-use` trailer on the A1 commit (made before it was noticed), and the `TODO.md` release-note lines. A built-code review found and fixed: the intensity shown for a quote with its badge removed, `end_timecode` for an unknown span, a sub-0.05-second span reading as 0, the instruction text (an m1 tag is session-local; the report does not show confidence; the codebook's id is `uxr`), and missing sweeps and protocol tests. The lab is `docs/mockups/mcp-lab.html`.**_
+
 _Status: spec revised after three reviews (correctness, parsimony, privacy), then widened on 14 Nov 2026 to serve the owner's report-drafting scenario (§2a): three commits, the roster, quote timing and a clearer empty search. Written by Claude Sonnet 5.5; the owner has not yet ruled on §9. Nothing is built. Parent: [design-mcp-server.md](design-mcp-server.md) §3, §4. People model: [design-people.md](design-people.md) §H H9, §J8._
 
 ## 1. The problem

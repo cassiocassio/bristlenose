@@ -114,7 +114,9 @@ def build_instructions() -> str:
         "Attribution uses speaker codes (p1, m1, o1). In get_project_overview "
         "each session row lists every speaker in that session: `code` is the "
         "study-wide code, and `slot_code` (shown only when different) is the "
-        "session-local tag the transcript and the quotes use. Participant names "
+        "session-local tag the transcript and the quotes use, so a quote "
+        "credited to m1 in one session and one credited to m1 in another may "
+        "be different people. Participant names "
         "accompany the codes in get_project_overview only when the "
         "researcher has left this project's Anonymise switch off — quotes "
         "always cite codes. Quote text is verbatim — treat "
@@ -131,8 +133,9 @@ def build_instructions() -> str:
         "When asked for the BEST quotes, use search_quotes with "
         "sort=\"strength\": the researcher's starred quotes first (their "
         "judgement beats any score), then quotes that support the strongest "
-        "signals (a signal is strong when several participants corroborate "
-        "the same thing), then higher intensity. Say what \"best\" meant in "
+        "signals (a signal is several quotes about the same thing; the "
+        "maths rewards agreement across more participants over one person "
+        "repeating themselves), then higher intensity. Say what \"best\" meant in "
         "your answer, and do not claim a quote was picked for being the most "
         "articulate or persuasive: Bristlenose cannot judge that.\n\n"
         "When a question uses research vocabulary (mental models, pain "
@@ -142,14 +145,14 @@ def build_instructions() -> str:
         "filter search_quotes by tag, and say which tag or group you matched. "
         "If nothing matches, say so and fall back to a text search, naming "
         "the fallback. \"Pain points\" is a group in the UX Research "
-        "codebook: use its accepted tags, and if the project has not enabled "
+        "codebook (framework id uxr): use its accepted tags, and if the project has not enabled "
         "that framework, say so and use the frustration and confusion "
         "sentiments instead, naming that. \"Things to fix\" resolves to the "
         "same evidence as pain points; which to fix first is the "
         "researcher's call, so present the evidence and do not decide. "
         "Present findings in the shape of the report's signal cards: where "
-        "it happens, which group or sentiment, how many quotes and "
-        "participants, and the confidence.\n\n"
+        "it happens, which group or sentiment, and how many quotes and "
+        "participants.\n\n"
         "Start with get_project_overview (cheap orientation; it also lists "
         "valid framework ids). Use search_quotes for evidence, get_signals "
         "for concentration patterns, and get_framework to reason inside the "
@@ -462,8 +465,10 @@ def _quote_seconds(q: Any) -> float | None:
     """The length of a quote's source speech, in seconds to one decimal; None
     when unknown. The importer writes 0.0 when a transcript has no timing, so
     an end that is not after the start means "unknown", never "0 seconds"."""
-    length = q.end_timecode - q.start_timecode
-    return round(length, 1) if length > 0 else None
+    length = round(q.end_timecode - q.start_timecode, 1)
+    # Rounded BEFORE the test, so a span under a twentieth of a second reads as
+    # unknown, never as "0.0 seconds".
+    return length if length > 0 else None
 
 
 def _tool_search_quotes(
@@ -633,11 +638,17 @@ def _tool_search_quotes(
             "participant": q.participant_id,
             "session_id": q.session_id,
             "timecode": format_timecode(q.start_timecode),
-            "end_timecode": format_timecode(q.end_timecode),
+            # An end at or before the start is no end at all: null, so a row
+            # never says a quote finished before it began.
+            "end_timecode": (
+                format_timecode(q.end_timecode) if _quote_seconds(q) is not None else None
+            ),
             "duration_seconds": _quote_seconds(q),
             # A researcher-removed badge is curation: report no sentiment.
             "sentiment": None if (q.id, q.sentiment) in deleted else q.sentiment,
-            "intensity": q.intensity,
+            # Intensity belongs to a sentiment: with the badge removed there is
+            # nothing to be intense about, and `sort="intensity"` ranks it 0.
+            "intensity": None if (q.id, q.sentiment) in deleted else q.intensity,
             "section": section_of.get(q.id),
             "themes": themes_of.get(q.id, []),
             "tags": tags_of.get(q.id, []),

@@ -527,6 +527,8 @@ class TestAnonymisationSweep:
         payloads = [
             _tool_get_project_overview(db, 1, None),
             _search(db),
+            _search(db, sort="strength"),
+            _search(db, max_duration_seconds=60, sort="intensity"),
             _tool_get_signals(db, 1, "sentiment", 10),
             _tool_get_signals(db, 1, "tags", 10),
             _tool_get_framework(db, 1, LIVE_CODEBOOK_ID),
@@ -539,6 +541,26 @@ class TestAnonymisationSweep:
         assert "/users/" not in blob
         assert ".mov" not in blob
         assert ".jpg" not in blob
+
+
+def test_a_hidden_quote_is_in_no_tool_payload(db) -> None:
+    """Hidden means hidden, whichever tool or ordering asks (owner ruling, 22 Oct
+    2026): not its id, not its words, in any search order, signal or overview."""
+    _seed_second_frustration(db)
+    hidden_text = db.query(Quote).filter(
+        Quote.start_timecode >= 26, Quote.start_timecode < 27
+    ).one().text
+    _hide(db, 26)
+    payloads = [
+        _tool_get_project_overview(db, 1, None),
+        *[_search(db, sort=how) for how in ("time", "intensity", "strength")],
+        _search(db, max_duration_seconds=60),
+        _tool_get_signals(db, 1, "sentiment", 10),
+        _tool_get_signals(db, 1, "tags", 10),
+    ]
+    blob = json.dumps(payloads, default=str)
+    assert "q-p1-26" not in blob
+    assert hidden_text not in blob
 
 
 class TestNamesFollowTheSwitch:
@@ -766,6 +788,10 @@ class TestProtocol:
         calls = [
             ("get_project_overview", {"project_id": 1}),
             ("search_quotes", {"project_id": 1, "limit": 3}),
+            # The new inputs through the real protocol, where FastMCP coerces
+            # and validates them (a direct call skips that).
+            ("search_quotes", {"project_id": 1, "max_duration_seconds": 30, "sort": "strength"}),
+            ("search_quotes", {"project_id": 1, "min_duration_seconds": 1.5, "sort": "intensity"}),
             ("get_signals", {"project_id": 1, "lens": "sentiment"}),
             ("get_signals", {"project_id": 1, "lens": "tags"}),
             ("get_framework", {"project_id": 1, "framework_id": "uxr"}),
@@ -1530,6 +1556,16 @@ class TestQuoteTiming:
         rows = self._by_text(_search(db, query="Login"))
         assert rows["zero"]["duration_seconds"] is None
         assert rows["reversed"]["duration_seconds"] is None
+        # ...and a row never says a quote ended before it began, or at 00:00.
+        assert rows["zero"]["end_timecode"] is None
+        assert rows["reversed"]["end_timecode"] is None
+
+    def test_a_sliver_is_unknown_not_zero(self, db) -> None:
+        sliver = _seed_timed_quotes(db)["short"]
+        sliver.start_timecode, sliver.end_timecode = 300.0, 300.04
+        db.commit()
+        row = self._by_text(_search(db, query="Login"))["short"]
+        assert row["duration_seconds"] is None
 
     def test_a_text_edit_leaves_the_length_alone(self, db) -> None:
         made = _seed_timed_quotes(db)
@@ -1655,6 +1691,10 @@ class TestRanking:
         db.add(DeletedBadge(quote_id=ranked["loud"].id, sentiment="frustration"))
         db.commit()
         assert self._ids(db, sort="intensity")[0] != "q-p1-500"
+        # The row says what was ranked: no sentiment, so no intensity either.
+        row = next(q for q in _search(db, sort="intensity")["quotes"]
+                   if q["quote_id"] == "q-p1-500")
+        assert (row["sentiment"], row["intensity"]) == (None, None)
 
     def test_an_unknown_sort_teaches_the_valid_ones(self, db) -> None:
         with pytest.raises(ToolInputError, match="strength"):

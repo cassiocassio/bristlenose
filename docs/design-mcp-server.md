@@ -34,6 +34,8 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 
 ## Changelog
 
+- _14 Nov 2026_ — the overview's session rows list every speaker (participants too) with role, code, `slot_code` where the session's transcript tag differs, and a visible quote count; a session's `visible_quotes` above its speakers' sum shows quotes credited to a tag nobody holds. `search_quotes` gained `end_timecode`, `duration_seconds`, `min_duration_seconds` / `max_duration_seconds` (unknown length is null and counted in `duration_unknown_excluded`), `sort` (`time`, `intensity`, `strength`: starred, then signal strength, then intensity) with `sorted_by` echoed, and an unknown participant code is now an error listing the valid ones. The server instructions gained the ranking and research-vocabulary rules. Spec and build record: [design-mcp-session-roster.md](design-mcp-session-roster.md). Anchors: `server/mcp_server.py`, `desktop/mcpb/server/index.js` (the extension and helper advertise the new inputs only after a rebuild and reinstall), `tests/test_mcp_server.py`.
+
 - _2026-10-25_ — trued the CLI name-sharing explanation and §7's default against the checked working tree (not yet released). The CLI prints the existing global override or study policy, warns that quote text may contain names, and explains its broader API credential. Anchors: `bristlenose/cli.py` (`_print_mcp_connect`), `bristlenose/server/grounding.py` (`_mcp_anonymise_active`), `tests/test_mcp_server.py`. Other phases and historical decisions were not re-audited.
 
 - _14 Oct 2026_ — trued up (progressive lenses): the tools answer during a first

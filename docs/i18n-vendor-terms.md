@@ -41,6 +41,8 @@ Vendor-side words that are not ours: Claude's **Plugins** sidebar item and **Uni
 
 The ChatGPT desktop app's own Plugins label in all 21 of our languages (the owner approved driving the app; its language override applies immediately, and the setting was returned to Auto detect): es **Complementos**, fr **Plugins**, de **Plugins**, it **Plugin**, pt-BR and pt-PT **Plugins**, ja プラグイン, ko 플러그인, nl **Plug-ins**, pl **Wtyczki**, ru **Плагины**, sv **Pluginer**, da **Plugins**, nb **Plugins**, fi **Lisäosat**, tr **Eklentiler**, uk **Плагіни**, cs **Pluginy**, ca **Connectors**, zh-TW and zh-HK 外掛程式, en **Plugins**. It agreed with the help-centre titles in every language; the help centre was right even where it looked wrong (Catalan "Connectors"). So the cheap method below is reliable for ChatGPT; the app check is for a language the help centre lacks. Claude Desktop's own app was checked only in Spanish and French (Plugins in both) plus English.
 
+**Claude's section name, from its own localised help articles** (the article quotes the UI path "Customize > Plugins", so the path shows the label the app uses in that language; 14 Nov 2026): es, fr, de, pt **Plugins**; it **Plugin** (Personalizza > Plugin); ja プラグイン (カスタマイズ > プラグイン); zh-TW 外掛程式 (自訂 > 外掛程式); **ru left it English** ("Customize > Plugins" inside the Russian article, so Claude's UI is probably English there, and `claudeReinstallHow` quotes «Plugins»). ko's article gave no path; its title says 플러그인.
+
 ## Method (rerun it, do not trust the table's age)
 
 - **Claude**: `curl -s -L -A "<browser UA>" -H "Accept-Language: <loc>" https://support.claude.com/<loc>/articles/13837440-use-plugins-in-claude`, read the final URL and `<h1>`. An unlocalised locale redirects to `/en/`.

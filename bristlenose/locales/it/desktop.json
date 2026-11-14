@@ -1125,7 +1125,7 @@
     "moveToApplications": "Sposta Bristlenose nella cartella Applicazioni e aprilo da l\u00ec per installare il plugin. ChatGPT non pu\u00f2 installarlo dalla posizione da cui Bristlenose \u00e8 in esecuzione ora.",
     "connectByHand": "Oppure collega manualmente",
     "chatgptReinstallHow": "In ChatGPT, scegli \u22ef \u25b8 Disinstalla, poi Installa plugin.",
-    "claudeReinstallHow": "In Claude, apri Plugins, disinstalla prima Bristlenose, poi fai clic su Reinstalla plugin\u2026.",
+    "claudeReinstallHow": "In Claude Desktop, apri Plugin, disinstalla Bristlenose, poi fai clic su Reinstalla plugin\u2026 qui.",
     "claudeUnknownBuild": "Build del plugin sconosciuta",
     "installedDifferentBuild": "La copia installata \u00e8 una build diversa: {{version}}",
     "installedOlder": "La copia installata \u00e8 precedente: {{version}}",

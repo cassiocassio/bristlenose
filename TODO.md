@@ -8,6 +8,8 @@ copy and remaining worktree after the 30 October consolidation.
 
 **Pushed state, checked 6 Nov 2026 against `origin/main`.** On `origin/main`: `cfe9697c3`, `62f8cc65f`, `4dda06ea6`, `28ef8783b`. Not found in the GitHub clone, so possibly local-only on the maintainer's Mac or rewritten since: `c344fdcd3`, `a672d2715`, `4ba513387`, `56b46608a`, `5a7830935`, `2bc0c5196`. An entry below that says "not pushed" for one of the second group may still be true; check the working checkout before assuming it landed. The `v0.44.0` tag is on `2a9e0769d` (released 2 Nov); the entry that said 0.44.0 was staged and unreleased is in the archive.
 
+**Claude/ChatGPT "plugin" wording, 14 Nov 2026 (committed on `main`, nothing pushed; Claude Sonnet 5.5, self-review plus independent agent reviews).** Key families `claude*`/`chatgpt*` in 21 locales, table in `bristlenose/locales/vendor-terms.json` (rule: `docs/i18n-vendor-terms.md`), manifests carry author Martin Storey. Owed to the owner: (1) a native-speaker look at the Latin-script "plugin" wording in cs, pl, nb, tr, uk; (2) merge the website branch `after-app/plugin-wording` (worktree `~/Code/.bn-website-plugin-wording`, then remove it) when the Mac build saying "Install Plugin…" ships; website `main` holds the "Unknown developer" note and is not deployed (deploy needs the owner's go); (3) "Unknown developer" on Claude's Plugins page is not fixable by us, see `docs/research/claude-unknown-developer-2026-11.md`. Release-note candidate: Claude Desktop connection now says plugin.
+
 **Older entries that read as open, parked or owed** (headings only, from the archive, not re-verified; search the archive for the words):
 
 - 16 Oct 2026 — open: on Windows, a stopped in-process report server still holds `bristlenose.db`.

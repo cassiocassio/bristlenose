@@ -270,6 +270,29 @@ def main() -> None:
                    check(all(sp["visible_quotes"] >= 0 for r in s[0]["result"]["sessions"]["items"]
                              for sp in r["speakers"]), "codes and counts still there")])
 
+    # A second, separate study: the participant and the moderator of session 1
+    # have their roles swapped (the real incident that started this work).
+    db = create_app(project_dir=FIXTURE, dev=True, db_url="sqlite://").state.db_factory()
+    build_study(db)
+    s1 = db.query(SessionModel).filter_by(session_id="s1").one()
+    for slot in db.query(SessionSpeaker).filter_by(session_id=s1.id):
+        slot.person_id, slot.state = None, None
+        slot.speaker_role = "researcher" if slot.speaker_code == "p1" else "participant"
+    db.commit()
+    run("swap", "Why does session 1 show no quotes at all? Ada talked for most of it.",
+        "Roles swapped by mistake: the participant's tag recoded as researcher, the moderator's as "
+        "participant. The quotes are set aside, not lost; the roster has to say so.",
+        [("get_project_overview", {}), ("search_quotes", {"participant": "p1"})],
+        lambda s: (lambda r1: [
+            check(r1["visible_quotes"] == 0, "the session shows no visible quotes"),
+            check(any(sp.get("quotes_set_aside", 0) > 0 and sp["role"] == "researcher"
+                      and sp.get("slot_code") == "p1" for sp in r1["speakers"]),
+                  "the row for the tag p1 now says researcher, with quotes_set_aside > 0"),
+            check(any(sp["role"] == "participant" and sp["visible_quotes"] == 0
+                      for sp in r1["speakers"]),
+                  "the moderator's tag now reads as a participant with nothing to show")])(
+            next(r for r in s[0]["result"]["sessions"]["items"] if r["session_id"] == "s1")))
+
     commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
     payload = {

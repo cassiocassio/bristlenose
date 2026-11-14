@@ -71,6 +71,7 @@ $("#live").innerHTML=LIVE.map(p=>{const c=store.get(p.id)||{};return`<section cl
 <div class=prompt>“${esc(p.prompt)}”</div><p class=intent>${p.round==2?"Round 2, after fixes · ":"Round 1 · "}Study: ${esc(p.study)} · ${p.steps.length} call${p.steps.length==1?"":"s"} made by the agent</p>
 <div class=lbl>The agent called</div>${p.steps.map(s=>`<div><span class=chip>${esc(s.tool)}(${esc(args(s.args))})</span>${render(s)}<details><summary>raw output</summary><pre>${esc(JSON.stringify(s.result??{error:s.error},null,1))}</pre></details></div>`).join("")}
 <div class=lbl>What the agent answered, and what it said about the tools</div><pre style="white-space:pre-wrap;max-height:none">${esc(p.answer||"(no answer file)")}</pre>
+${p.grade?`<div class=lbl>Independent grader (a separate agent, checking the answer only against the logged tool results)</div><div class=sess><b>${esc(p.grade.verdict)}</b> · ${esc(p.grade.note||"")}${(p.grade.wrong_or_unsupported||[]).length?"<ul>"+p.grade.wrong_or_unsupported.map(x=>"<li>wrong or unsupported: "+esc(x)+"</li>").join("")+"</ul>":""}${(p.grade.missed||[]).length?"<ul>"+p.grade.missed.map(x=>"<li>missed: "+esc(x)+"</li>").join("")+"</ul>":""}</div>`:""}
 <div class=cmt><div>${verdicts.map(([v,t])=>`<label><input type=radio name="v-${p.id}" value="${v}" ${c.v==v?"checked":""}> ${t}</label>`).join("")}</div>
 <textarea placeholder="Comment: would you trust this answer? What did it miss?" data-id="${p.id}">${esc(c.t||"")}</textarea></div></section>`}).join("")}
 const ALL=[...DATA.prompts,...LIVE];

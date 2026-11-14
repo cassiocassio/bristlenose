@@ -187,6 +187,12 @@ LIVE_FINDINGS = [
               "Tags are filled in and supporting_quotes_omitted says how many are not shown."),
     ("OPEN", "Names appear while the agent is told to attribute by code; agents asked what to "
              "disclose in a readout. A product decision, not a code one."),
+    ("GRADED", "A separate grader agent checked each live answer only against the tool output its "
+               "agent saw: 4 accurate, 5 with minor issues, none major. The recurring weakness: "
+               "answers used the unattributable session-3 quotes in their main text and flagged the "
+               "doubt only in the notes. The instructions now say to call such quotes unattributed "
+               "in the body. Round-1 timecode complaints (a 78-second session) are a lab-data "
+               "artefact, fixed since."),
     ("OPEN (owner's call)", "No way to read the text of set-aside quotes, so an agent cannot show "
                             "the researcher what was set aside. Left alone on purpose: a recode "
                             "says those words are the moderator's, and exposing them is a "
@@ -197,6 +203,9 @@ LIVE_FINDINGS = [
 def load_live() -> list[dict]:
     """Merge each live agent's call log and its written answer into lab cards."""
     live_dir = Path(__file__).with_name("live")
+    grades_file = live_dir / "grades.json"
+    grades = {g["id"]: g for g in json.loads(grades_file.read_text(encoding="utf-8"))} \
+        if grades_file.exists() else {}
     out = []
     for aid, (study, prompt) in LIVE_PROMPTS.items():
         log = live_dir / f"{aid}.jsonl"
@@ -205,7 +214,7 @@ def load_live() -> list[dict]:
             continue
         steps = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line]
         out.append({"id": aid, "study": study, "prompt": prompt,
-                    "round": 2 if aid.startswith("b") else 1,
+                    "round": 2 if aid.startswith("b") else 1, "grade": grades.get(aid),
                     "steps": [s for s in steps if s["tool"] in
                               ("get_project_overview", "search_quotes", "get_signals", "get_framework")],
                     "answer": answer.read_text(encoding="utf-8") if answer.exists() else ""})

@@ -1713,7 +1713,8 @@ class TestRanking:
         decision; answers take the shape of the report's signal cards."""
         text = build_instructions().casefold()
         for phrase in ("codebook", "pain points", "things to fix", "signal cards",
-                       "say which tag or group", "fall back"):
+                       "say which tag or group", "fall back", "speaker_not_in_session",
+                       "unattributed"):
             assert phrase in text, phrase
 
 

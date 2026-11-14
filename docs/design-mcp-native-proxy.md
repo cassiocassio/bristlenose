@@ -765,7 +765,9 @@ rises. *As built, the Claude manifest carries the plain release version, not the
 below the Node extension it replaces). So a different **build** of the same release lands on the
 Uninstall-only preview; the Claude tab's foot line tells the researcher to uninstall in Claude
 first, then Install Extension… (`claudeReinstallHow`, `bb50067c`). Only ChatGPT's plugin version
-carries the build (D8).
+carries the build (D8). _The buttons in this section and the 29 Sep measurements below are quoted as
+they read then; since 13 Nov 2026 they say **Install Plugin…** / **Update Plugin…**
+(`docs/i18n-vendor-terms.md`)._
 
 **P0.4, partly measured the same evening.** A sandboxed probe (Developer ID, fresh id) wrote a
 dummy `.mcpb` into its own container's `tmp` and opened it with Claude via

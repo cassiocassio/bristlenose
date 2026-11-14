@@ -161,7 +161,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 
 **i18n** — [full entries](.claude/gotchas.md#i18n)
 
-- **Read § i18n before touching locales**: locale files live in `bristlenose/locales/` only; a new key goes into all 21 full locales (`zh-Hant-HK` takes only real overrides); rewording an `en` value is a 21-file change (`check-locales.py --strict`, pins); a value edit can redden vitest; reuse a key only if it means the same thing; scope locale JSON edits to the block; a new language has 9 registration sites across web, Python and Swift.
+- **Read § i18n before touching locales**: locale files live in `bristlenose/locales/` only; a new key goes into all 21 full locales (`zh-Hant-HK` takes only real overrides); rewording an `en` value is a 21-file change (`check-locales.py --strict`, pins); a value edit can redden vitest; reuse a key only if it means the same thing; scope locale JSON edits to the block; a new language has 9 registration sites across web, Python and Swift; a word naming another vendor's label ("plugin") is that vendor's per language, never one noun for two (`docs/i18n-vendor-terms.md`).
 
 **macOS app, Xcode, signing and sandbox** — [full entries](.claude/gotchas.md#macos-app-xcode-signing-and-sandbox)
 

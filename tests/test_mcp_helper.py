@@ -93,7 +93,7 @@ def test_helper_permission_sentence_points_at_reinstall_not_files_and_folders() 
     # Folders switch cannot help, and sending the researcher there is a dead end.
     text = _swift_message("MSG_PERMISSION")
     assert "Files & Folders" not in text
-    assert "install the extension again" in text
+    assert "install the plugin again" in text
 
 
 def test_build_script_targets_the_apps_deployment_floor() -> None:

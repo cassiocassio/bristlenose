@@ -34,12 +34,12 @@ let GROUNDING = "Do not answer from memory or from general knowledge."
 let MSG_CLOSED = "Bristlenose isn't open, so there is no study data available. Tell the person to open Bristlenose and select a project, then ask again. " + GROUNDING
 let MSG_STARTING = "Bristlenose is starting — ask again in a moment. " + GROUNDING
 // Sandboxed: the sandbox refuses the path before TCC is asked, so no Files &
-// Folders switch can help. The remedy is the extension itself.
-let MSG_PERMISSION = "This Bristlenose extension can't reach Bristlenose's data. Tell the person to open Bristlenose ▸ Settings ▸ MCP Agents and install the extension again, or check for a Bristlenose update, then ask again. " + GROUNDING
+// Folders switch can help. The remedy is the plugin itself.
+let MSG_PERMISSION = "This Bristlenose plugin can't reach Bristlenose's data. Tell the person to open Bristlenose ▸ Settings ▸ MCP Agents and install the plugin again, or check for a Bristlenose update, then ask again. " + GROUNDING
 // The remaining sentences are the Node proxy's MSG table, word for word
 // (desktop/mcpb/server/index.js), so both proxies say the same thing.
 let MSG_AUTH = "Bristlenose refused this connection's stored credential. Tell the person to open Bristlenose ▸ Settings ▸ MCP Agents (⌘,) and check this project's agent access is turned on, then ask again. " + GROUNDING
-let MSG_OUTDATED = "This Bristlenose extension is older than the Bristlenose app and can no longer read it correctly. Tell the person to open Bristlenose \u{25b8} Settings \u{25b8} MCP Agents and install the extension again — it takes a moment and keeps every setting. " + GROUNDING
+let MSG_OUTDATED = "This Bristlenose plugin is older than the Bristlenose app and can no longer read it correctly. Tell the person to open Bristlenose \u{25b8} Settings \u{25b8} MCP Agents and install the plugin again — it takes a moment and keeps every setting. " + GROUNDING
 let MSG_NO_AGENT = "This copy of Bristlenose was built without agent support. No setting will enable it. " + GROUNDING
 func msgAmbiguous(_ e: [[String: Any]]) -> String {
     "Bristlenose has more than one project open, so this question needs one named. Ask the person which they mean, then pass its `project` key: " + listing(e) + ". " + GROUNDING

@@ -1,6 +1,6 @@
 # Bristlenose `.mcpb` extension
 
-The shipping home of the Claude Desktop extension: a zero-dependency Node
+The shipping home of the Claude Desktop plugin (Claude Desktop's own package format is still called an extension, hence `.mcpb` and this folder's vocabulary): a zero-dependency Node
 proxy that connects an MCP client to whatever Bristlenose is currently
 serving, via the handshake file the macOS host writes
 (`…/Application Support/Bristlenose/mcp-handshake.json`). No token paste, no
@@ -28,7 +28,7 @@ Mach-O members, no `.env*`, no dev-override string.
 ## Dev loop
 
 Claude Desktop ▸ Settings ▸ Extensions ▸ Advanced ▸ **Install Unpacked
-Extension** pointed at this directory. The unpacked copy keeps the dev
+Extension** (Claude Desktop renamed Extensions to Plugins in Nov 2026; this dev path is unverified since, look under Plugins if it has moved) pointed at this directory. The unpacked copy keeps the dev
 handshake override for testing against a fixture serve. Local installs
 never auto-update — uninstall/reinstall to pick up edits, and watch
 `~/Library/Logs/Claude/mcp-server-Bristlenose.log` for the proxy's stderr.

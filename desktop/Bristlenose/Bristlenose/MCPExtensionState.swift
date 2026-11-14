@@ -136,9 +136,9 @@ extension MCPExtensionState {
     /// one replaces a build, the other advances a version.
     var buttonKey: String {
         switch self {
-        case .unknown, .matching:            return "desktop.mcpAgents.install"
-        case .differentBuild, .newerRelease: return "desktop.mcpAgents.reinstall"
-        case .olderRelease:                  return "desktop.mcpAgents.update"
+        case .unknown, .matching:            return "desktop.mcpAgents.claudeInstall"
+        case .differentBuild, .newerRelease: return "desktop.mcpAgents.claudeReinstall"
+        case .olderRelease:                  return "desktop.mcpAgents.claudeUpdate"
         }
     }
 

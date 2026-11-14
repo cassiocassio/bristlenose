@@ -964,6 +964,10 @@ cannot find in the author's table of contents or index.
 
 ## i18n
 
+### A word that names another vendor's label is that vendor's, per language
+
+Claude renamed Extensions to Plugins on 13 Nov 2026 and we followed with "plugin". Then a Spanish macOS showed Claude saying *Plugins* and Codex saying *Complementos* for the same thing, and OpenAI's help centre showed the same split in cs, de, fr, it, nb and pt-PT against what our ChatGPT tab said. Claude's help centre localises 9 languages, so in the other ten the user probably sees English. A string that points at a vendor's screen is evidence about that vendor, per language; one shared noun for two vendor tabs is the shared-key mistake below. Table, method and status: `docs/i18n-vendor-terms.md`. **Tell:** a sentence naming a menu or button of another app, in a language where you never opened that app.
+
 ### A locale key that fits is not a locale key that MEANS the same thing
 
 `s11`'s thin-theme bucket reused the Quotes lens's `uncategorisedHeading` /

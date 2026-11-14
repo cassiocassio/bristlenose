@@ -35,7 +35,7 @@ struct MCPExtensionStateTests {
         let s = MCPExtensionState.compare(bundled: "0.26.0+abc1234", running: "0.26.0+abc1234")
         #expect(s == .matching)
         #expect(s.footnoteKey == nil)
-        #expect(s.buttonKey == "desktop.mcpAgents.install")
+        #expect(s.buttonKey == "desktop.mcpAgents.claudeInstall")
     }
 
     @Test("same release, different hash is 'different' and never 'older'")
@@ -46,7 +46,7 @@ struct MCPExtensionStateTests {
         let s = MCPExtensionState.compare(bundled: "0.26.0+aaaaaaa", running: "0.26.0+bbbbbbb")
         #expect(s == .differentBuild(installed: "0.26.0 (bbbbbbb)"))
         #expect(s.footnoteKey == "desktop.mcpAgents.installedDifferentBuild")
-        #expect(s.buttonKey == "desktop.mcpAgents.reinstall")
+        #expect(s.buttonKey == "desktop.mcpAgents.claudeReinstall")
     }
 
     @Test("an older installed release orders, and offers Update")
@@ -54,7 +54,7 @@ struct MCPExtensionStateTests {
         let s = MCPExtensionState.compare(bundled: "0.26.0+aaaaaaa", running: "0.25.3+bbbbbbb")
         #expect(s == .olderRelease(installed: "0.25.3 (bbbbbbb)"))
         #expect(s.footnoteKey == "desktop.mcpAgents.installedOlder")
-        #expect(s.buttonKey == "desktop.mcpAgents.update")
+        #expect(s.buttonKey == "desktop.mcpAgents.claudeUpdate")
     }
 
     @Test("a newer installed release is not reported as older")

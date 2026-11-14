@@ -91,6 +91,8 @@ Flag:
 
 ## 4. Terminology consistency
 
+**Vendor labels are a different class: check them against `docs/i18n-vendor-terms.md`, not the table below.** Any string that tells the user what to click, open or look for inside Claude, ChatGPT, Codex, Figma, Zoom or Microsoft quotes that vendor's label as that vendor spells it in that language, and two vendors translate the same English word differently (`plugin`: Spanish Claude says *Plugins*, Spanish ChatGPT/Codex says *Complementos*). Where the vendor does not localise, the English label is right. Flag a single noun serving two vendors' tabs, and a translated noun where the vendor's UI is English. Re-measure with the method in that doc; the table dates itself.
+
 Cross-check translations against the terminology table in `docs/design-i18n.md`:
 
 | Concept | de | fr | es |

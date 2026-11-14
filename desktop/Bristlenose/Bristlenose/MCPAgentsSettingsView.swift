@@ -963,9 +963,9 @@ struct MCPAgentsSettingsView: View {
 
     private var chatGPTButtonKey: String {
         switch chatGPTState {
-        case .unknown, .matching:            return "desktop.mcpAgents.installPlugin"
-        case .differentBuild, .newerRelease: return "desktop.mcpAgents.reinstallPlugin"
-        case .olderRelease:                  return "desktop.mcpAgents.updatePlugin"
+        case .unknown, .matching:            return "desktop.mcpAgents.chatgptInstall"
+        case .differentBuild, .newerRelease: return "desktop.mcpAgents.chatgptReinstall"
+        case .olderRelease:                  return "desktop.mcpAgents.chatgptUpdate"
         }
     }
 
@@ -993,7 +993,7 @@ struct MCPAgentsSettingsView: View {
                 Text("Bristlenose")
                     .font(.body.weight(.semibold))
                 Text(ChatGPTPluginInstaller.bundledVersion.map {
-                    i18n.t("desktop.mcpAgents.pluginBuild", ["version": MCPExtensionState.display($0)])
+                    i18n.t("desktop.mcpAgents.chatgptBuild", ["version": MCPExtensionState.display($0)])
                 } ?? "")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -1038,7 +1038,7 @@ struct MCPAgentsSettingsView: View {
         // minutes loses nothing; the reverse would lose the install
         // confirmation entirely. Decided 20 Aug 2026.
         //
-        // The size ("Extension · 8 KB") held this slot until the same pass
+        // The size ("Plugin · 8 KB") held this slot until the same pass
         // and was dropped: it answered no question anyone asks, while the
         // build number is something a researcher might act on.
         //
@@ -1048,8 +1048,8 @@ struct MCPAgentsSettingsView: View {
             return i18n.t("desktop.mcpAgents.recentActivity")
         }
         let identity = MCPExtensionState.identity(bundled: MCPExtensionInstaller.bundledStamp)
-        guard let identity else { return i18n.t("desktop.mcpAgents.extensionUnknownBuild") }
-        return i18n.t("desktop.mcpAgents.extensionBuild", ["version": identity])
+        guard let identity else { return i18n.t("desktop.mcpAgents.claudeUnknownBuild") }
+        return i18n.t("desktop.mcpAgents.claudeBuild", ["version": identity])
     }
 
     /// The comparison line — and ONLY a comparison, never a restatement.

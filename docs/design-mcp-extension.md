@@ -264,7 +264,7 @@ below, full record in native-proxy §6.9.
     the Claude tab, and the ChatGPT Work note names @Bristlenose. The help
     draft's Part 2 is not yet deployed. **Then the copy follows:** the pane stops pre-announcing Files & Folders.
     The proxy's `permission` sentence stays as a recovery path, for unsandboxed
-    readers only; the sandboxed build says "install the extension again, or
+    readers only; the sandboxed build says "install the plugin again, or
     check for an update". Deploy the help draft's Part 2.
 12. **Still to run** (native-proxy §6.8). **End-to-end on a real TestFlight build:** Claude and ChatGPT each read a
     study with Files & Folders off, on a clean account.

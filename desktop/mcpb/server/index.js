@@ -57,11 +57,11 @@ const MSG = {
     "named. Ask the person which they mean, then pass its `project` key: " +
     entries.map((e) => `${e.name || "(unnamed)"} = ${e.key}`).join(", ") + ". " +
     GROUNDING,
-  // Not "reinstall the app" — the app is fine and newer. The extension is
+  // Not "reinstall the app" — the app is fine and newer. The plugin is
   // the stale half, and Settings is where it is replaced.
-  outdated: "This Bristlenose extension is older than the Bristlenose app and " +
+  outdated: "This Bristlenose plugin is older than the Bristlenose app and " +
     "can no longer read it correctly. Tell the person to open Bristlenose \u25b8 " +
-    "Settings \u25b8 MCP Agents and install the extension again — it takes a " +
+    "Settings \u25b8 MCP Agents and install the plugin again — it takes a " +
     "moment and keeps every setting. " + GROUNDING,
   unknownProject: (entries) =>
     "That project is not open in Bristlenose right now — its window may have " +
@@ -99,7 +99,7 @@ const MSG = {
       " in the list, and turn on Bristlenose, then ask again. Nothing in Bristlenose " +
       "needs changing. " + GROUNDING
     : "macOS is asking whether " + (HOST || "your AI app") + " may access data from " +
-      "other apps — that permission is how this extension finds Bristlenose. Tell the " +
+      "other apps — that permission is how this plugin finds Bristlenose. Tell the " +
       "person to click Allow on the macOS dialog (or grant it in System Settings ▸ " +
       "Privacy & Security), then ask again. " + GROUNDING,
 };

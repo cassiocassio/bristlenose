@@ -226,7 +226,7 @@ permission: SILENT_TCC
     (HOST || "your AI app") + " in the list, and turn on Bristlenose, then ask " +
     "again. Nothing in Bristlenose needs changing. " + GROUNDING
   : "macOS is asking whether " + (HOST || "your AI app") + " may access data from " +
-    "other apps — that permission is how this extension finds Bristlenose. Tell " +
+    "other apps — that permission is how this plugin finds Bristlenose. Tell " +
     "the person to click Allow on the macOS dialog (or grant it in System " +
     "Settings ▸ Privacy & Security), then ask again. " + GROUNDING,
 ```

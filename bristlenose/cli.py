@@ -616,6 +616,13 @@ def _print_provider_guidance() -> None:
         ("Azure", "https://portal.azure.com"),
     ):
         console.print(f"  {name.ljust(9)}[link={url}]{url}[/link]")
+    # configure azure stores the key without checking it (no endpoint or
+    # deployment is asked for yet), so the line above is not true for it.
+    console.print(
+        "[dim]Azure is the exception: configure azure stores the key without checking it, and "
+        "also needs an endpoint and a deployment name.[/dim]",
+        highlight=False,
+    )
     console.print()
     console.print(
         "For local models via Ollama:  [bold cyan]bristlenose configure local[/bold cyan]",

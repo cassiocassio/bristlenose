@@ -95,6 +95,8 @@ class TestNewUserNoConfig:
           ChatGPT  https://platform.openai.com/api-keys
           Gemini   https://aistudio.google.com/apikey
           Azure    https://portal.azure.com
+        Azure is the exception: configure azure stores the key without checking it, and
+        also needs an endpoint and a deployment name.
 
         For local models via Ollama:  bristlenose configure local
 

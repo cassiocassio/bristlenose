@@ -34,6 +34,7 @@ state is still evidenced, the day is not.
 
 | File | Last edit | Lifecycle |
 | --- | --- | --- |
+| `mcp-lab.html` | 14 Nov 2026 | SANDPIT — an instrument, not a design: researcher prompts run against the MCP tools on a synthetic study, with the real output beside each prompt and a comment box. Regenerate with `experiments/mcp-lab/run_lab.py`; tool calls are chosen by hand, not by a live model. |
 | `multi-mac-draft-recovery.html` | 28 Oct 2026 | PROPOSED — recovery disclosure and copy separation within the existing status popover; the illustrated reader is not implemented or approved to ship. |
 | `multi-mac-study.html` | 27 Oct 2026 | PARKED — historical full N-Mac/version-choice exploration; not the sequential v1 build target and not shipped. |
 | `multi-mac-v1-guards.html` | 27 Oct 2026 | PROPOSED — reduced enforced-lock review aid; warning-only comparisons are historical and do not authorise release. The optional reader remains deferred and unshipped. |

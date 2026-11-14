@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MCP lab</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1d1d1b;--mute:#6b6a64;--line:#e2e0d9;--accent:#1f5f8b;--ok:#1d7a46;--bad:#b3261e;--warn:#9a6700;--chip:#eeece6;--code:#f1efe9}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#1c1c1c;--card:#222;--ink:#ececea;--mute:#a09f98;--line:#343432;--accent:#7db7e3;--ok:#5cc58a;--bad:#ff8a80;--warn:#e0b050;--chip:#2c2c2a;--code:#292927}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mute);margin:0 0 14px}
+.note{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:10px 14px;margin:0 0 16px;font-size:14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 18px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 18px}
+.prompt{background:var(--chip);border-radius:10px;padding:10px 14px;font-size:16px;margin:0 0 6px}
+.intent{color:var(--mute);font-size:13px;margin:0 0 12px}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:14px 0 6px}
+.chip{display:inline-block;background:var(--chip);border-radius:6px;padding:2px 8px;font:12.5px ui-monospace,Menlo,monospace;margin:0 4px 4px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mute);font-weight:600;font-size:12px}
+.num{white-space:nowrap;font-variant-numeric:tabular-nums}
+.star{color:var(--warn)}.err{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid var(--bad);border-radius:8px;padding:8px 12px}
+.sess{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:0 0 8px}.sess b{margin-right:8px}
+.spk{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;font-size:13px}
+.gap{color:var(--bad);font-weight:600}
+.checks{list-style:none;padding:0;margin:0}.checks li{padding:2px 0}.ok::before{content:"✓ ";color:var(--ok);font-weight:700}.no::before{content:"✕ ";color:var(--bad);font-weight:700}
+details summary{cursor:pointer;color:var(--accent);font-size:13px;margin:6px 0}
+pre{background:var(--code);border-radius:8px;padding:10px;overflow:auto;font-size:12px;max-height:340px}
+.cmt{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+.cmt label{margin-right:12px;font-size:14px;white-space:nowrap}
+textarea{width:100%;min-height:64px;margin-top:8px;font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+.card.has{border-color:var(--accent)}
+</style></head><body><div class="wrap">
+<h1>MCP lab</h1>
+<p class="sub">Researcher prompts, the tool calls an agent would make, and what Bristlenose really returned. Comment on the reality.</p>
+<div class="note" id="note"></div>
+<div class="bar"><button id="exp">Copy my comments (markdown)</button><button id="ins">Show the server instructions</button><span id="count" class="sub"></span></div>
+<pre id="instr" hidden></pre>
+<div id="cards"></div>
+</div>
+<script>
+const DATA=__DATA__;
+const $=(s,e=document)=>e.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mem={};const store={get(k){try{const v=localStorage.getItem("mcplab:"+k);if(v)return JSON.parse(v)}catch(e){}return mem[k]||null},set(k,v){mem[k]=v;try{localStorage.setItem("mcplab:"+k,JSON.stringify(v))}catch(e){}}};
+$("#note").innerHTML="<b>Read this first.</b> "+esc(DATA.note)+" Commit <code>"+esc(DATA.commit)+"</code>. A ✕ is a real gap, not a styling fault.";
+$("#instr").textContent=DATA.instructions;$("#ins").onclick=()=>{const p=$("#instr");p.hidden=!p.hidden};
+const args=a=>Object.entries(a).map(([k,v])=>k+"="+JSON.stringify(v)).join(", ");
+function quoteTable(r){const q=r.quotes;if(!q.length)return"<p class=sub>No quotes returned.</p>"+extra(r);
+return"<table><tr><th>Quote</th><th>Who</th><th>When</th><th>Length</th><th>Feeling</th><th>Tags</th></tr>"+q.map(x=>`<tr><td>${x.starred?'<span class=star>★</span> ':''}${esc(x.text)}<div class=sub>${esc(x.quote_id)}</div></td><td class=num>${esc(x.participant)} · ${esc(x.session_id)}</td><td class=num>${esc(x.timecode)}→${esc(x.end_timecode)}</td><td class=num>${x.duration_seconds==null?'<i>unknown</i>':x.duration_seconds+'s'}</td><td>${esc(x.sentiment||"")} ${x.intensity?'· '+x.intensity:''}</td><td>${(x.tags||[]).map(t=>'<span class=chip>'+esc(t)+'</span>').join("")}</td></tr>`).join("")+"</table>"+extra(r)}
+function extra(r){let b=[];b.push("matched "+r.total_matched);if(r.sorted_by)b.push("sorted by <b>"+esc(r.sorted_by)+"</b>");if("duration_unknown_excluded"in r)b.push("unknown length left out: <b>"+r.duration_unknown_excluded+"</b>");return"<p class=sub>"+b.join(" · ")+"</p>"}
+function overview(r){return r.sessions.items.map(s=>{const sum=s.speakers.reduce((n,x)=>n+x.visible_quotes,0),gap=s.visible_quotes-sum;return`<div class=sess><b>${esc(s.session_id)}</b><span class=sub>${s.visible_quotes} visible quotes${gap?` · <span class=gap>${gap} credited to a tag nobody here holds</span>`:""}</span><div>${s.speakers.map(x=>`<span class=spk>${esc(x.code)} · ${esc(x.role)}${x.slot_code?` <span class=sub>(tag ${esc(x.slot_code)})</span>`:""}${x.name?` · ${esc(x.name)}`:""} · <b>${x.visible_quotes}</b></span>`).join("")||"<i>nobody listed</i>"}</div></div>`}).join("")+`<p class=sub>Codebook groups: ${r.codebook.groups.filter(g=>g.tag_count).map(g=>esc(g.name)+" ("+g.tag_count+")").join(", ")}</p>`}
+function signals(r){return r.signals.map(s=>`<div class=sess><b>${esc(s.location)}</b> · ${esc(s.sentiment||s.group)} · ${s.quote_count} quotes · participants ${esc((s.participants||[]).join(", "))} · ${esc(s.confidence)}</div>`).join("")||"<p class=sub>No signals.</p>"}
+function framework(r){return r.groups?`<p class=sub>${r.groups.map(g=>esc(g.name)+": "+g.tags.map(t=>esc(t.name)).join(", ")).join(" — ")}</p>`:""}
+function render(step){if(step.error)return`<div class=err><b>Error from the tool:</b> ${esc(step.error)}</div>`;const r=step.result;
+return step.tool=="search_quotes"?quoteTable(r):step.tool=="get_project_overview"?overview(r):step.tool=="get_signals"?signals(r):framework(r)}
+const verdicts=[["real","Matches reality"],["surprise","Surprising"],["wrong","Wrong"],["missing","Something missing"]];
+$("#cards").innerHTML=DATA.prompts.map(p=>{const c=store.get(p.id)||{};return`<section class="card${c.v||c.t?" has":""}" id="c-${p.id}">
+<div class=prompt>“${esc(p.prompt)}”</div><p class=intent>${esc(p.intent)}</p>
+<div class=lbl>An agent would call</div>${p.steps.map(s=>`<span class=chip>${esc(s.tool)}(${esc(args(s.args))})</span>`).join("")}
+<div class=lbl>Bristlenose returned</div>${p.steps.map(s=>`<div>${render(s)}<details><summary>raw ${esc(s.tool)} output</summary><pre>${esc(JSON.stringify(s.result??{error:s.error},null,1))}</pre></details></div>`).join("")}
+<div class=lbl>Automatic checks</div><ul class=checks>${p.checks.map(k=>`<li class="${k.ok?"ok":"no"}">${esc(k.text)}</li>`).join("")}</ul>
+<div class=cmt><div>${verdicts.map(([v,t])=>`<label><input type=radio name="v-${p.id}" value="${v}" ${c.v==v?"checked":""}> ${t}</label>`).join("")}</div>
+<textarea placeholder="Comment on the reality: what would a researcher make of this?" data-id="${p.id}">${esc(c.t||"")}</textarea></div></section>`}).join("");
+function save(id){const sec=$("#c-"+id),v=($("input:checked",sec)||{}).value||"",t=$("textarea",sec).value;store.set(id,{v,t});sec.classList.toggle("has",!!(v||t));tally()}
+function tally(){const n=DATA.prompts.filter(p=>{const c=store.get(p.id)||{};return c.v||c.t}).length;$("#count").textContent=n+" of "+DATA.prompts.length+" commented"}
+DATA.prompts.forEach(p=>{const sec=$("#c-"+p.id);sec.addEventListener("change",()=>save(p.id));$("textarea",sec).addEventListener("input",()=>save(p.id))});tally();
+$("#exp").onclick=async()=>{const md=DATA.prompts.map(p=>{const c=store.get(p.id)||{};if(!c.v&&!c.t)return"";const lab=(verdicts.find(x=>x[0]==c.v)||["",""])[1];return"### “"+p.prompt+"”\n"+(lab?"**"+lab+"**\n":"")+(c.t||"")+"\n"}).filter(Boolean).join("\n");try{await navigator.clipboard.writeText("# MCP lab comments (commit "+DATA.commit+")\n\n"+md);$("#exp").textContent="Copied"}catch(e){$("#exp").textContent="Copy failed";prompt("Copy:",md)}setTimeout(()=>$("#exp").textContent="Copy my comments (markdown)",1500)};
+</script></body></html>

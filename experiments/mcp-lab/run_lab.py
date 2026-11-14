@@ -79,6 +79,8 @@ def build_study(db) -> None:
          "The code text never arrived so I just gave up."),
         ("faceid", "s2", "p2", 400, 408, "delight", 1, "Login",
          "Face ID worked, honestly that was fine."),
+        ("locked", "s2", "p2", 620, 631, "frustration", 2, "Login",
+         "Locked out again, second time today."),
         ("hidden", "s1", "p1", 700, 712, "frustration", 3, "Login",
          "My name is Alex Rivers and the login kicked me out at my desk."),
         ("pending", "s2", "p2", 500, 520, "confusion", 2, "Payments",
@@ -185,11 +187,12 @@ def main() -> None:
 
     run("best3", "Find the best 3 clips under 30 seconds where users are most frustrated "
         "with login.", "The owner's scenario: filter by feeling, topic and length, then rank.",
-        [("search_quotes", {"sentiment": "frustration", "query": "log", "max_duration_seconds": 30,
+        [("search_quotes", {"sentiment": "frustration", "section": "Login", "max_duration_seconds": 30,
                             "sort": "strength", "limit": 3})],
         lambda s: [
             check(all((x["duration_seconds"] or 999) <= 30 for x in rows(s[0])),
                   "every quote is 30 seconds or less"),
+            check(len(rows(s[0])) == 3, "three clips come back"),
             check(rows(s[0])[0]["starred"], "the researcher's starred quote comes first"),
             check(not any("Alex Rivers" in x["text"] for x in rows(s[0])), "the hidden quote is absent"),
             check(s[0]["result"]["sorted_by"].startswith("strength"), "the basis is stated: sorted_by"),

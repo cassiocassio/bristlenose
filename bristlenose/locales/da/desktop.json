@@ -1055,7 +1055,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Inds\u00e6t i en vilk\u00e5rlig terminal:",
-    "chatgptCodexHow": "I ChatGPT: Indstillinger \u2192 MCP-servere \u2192 Tilf\u00f8j server \u2014 eller tilf\u00f8j til ~/.codex/config.toml (\u00e9n post d\u00e6kker ChatGPT desktop, Codex CLI og IDE-udvidelsen):",
+    "chatgptCodexHow": "Tilf\u00f8j dette til ~/.codex/config.toml (\u00e9n post d\u00e6kker ChatGPT desktop, Codex CLI og IDE-udvidelsen):",
     "copyConfig": "Kopi\u00e9r konfiguration",
     "copyCommand": "Kopi\u00e9r kommando",
     "copied": "Kopieret",

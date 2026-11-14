@@ -1055,7 +1055,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Lim inn i en hvilken som helst terminal:",
-    "chatgptCodexHow": "I ChatGPT: Innstillinger \u2192 MCP-servere \u2192 Legg til server \u2014 eller legg til i ~/.codex/config.toml (\u00e9n oppf\u00f8ring dekker ChatGPT for skrivebord, Codex CLI og IDE-utvidelsen):",
+    "chatgptCodexHow": "Legg dette til i ~/.codex/config.toml (\u00e9n oppf\u00f8ring dekker ChatGPT for skrivebord, Codex CLI og IDE-utvidelsen):",
     "copyConfig": "Kopier konfigurasjon",
     "copyCommand": "Kopier kommando",
     "copied": "Kopiert",

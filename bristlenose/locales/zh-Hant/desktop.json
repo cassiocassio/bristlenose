@@ -1026,7 +1026,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "\u8cbc\u5230\u4efb\u4f55\u7d42\u7aef\u6a5f\uff1a",
-    "chatgptCodexHow": "\u5728 ChatGPT \u4e2d\uff1a\u8a2d\u5b9a \u2192 MCP \u4f3a\u670d\u5668 \u2192 \u52a0\u5165\u4f3a\u670d\u5668 \u2014 \u6216\u52a0\u5165 ~/.codex/config.toml\uff08\u55ae\u4e00\u9805\u76ee\u6db5\u84cb ChatGPT \u684c\u9762\u7248\u3001Codex CLI \u8207 IDE \u5ef6\u4f38\u529f\u80fd\uff09\uff1a",
+    "chatgptCodexHow": "\u5c07\u4e0b\u5217\u5167\u5bb9\u52a0\u5165 ~/.codex/config.toml\uff08\u55ae\u4e00\u9805\u76ee\u6db5\u84cb ChatGPT \u684c\u9762\u7248\u3001Codex CLI \u8207 IDE \u5ef6\u4f38\u529f\u80fd\uff09\uff1a",
     "copyConfig": "\u62f7\u8c9d\u8a2d\u5b9a",
     "copyCommand": "\u62f7\u8c9d\u6307\u4ee4",
     "copied": "\u5df2\u62f7\u8c9d",

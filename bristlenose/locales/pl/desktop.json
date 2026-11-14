@@ -1113,7 +1113,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Wklej w dowolnym terminalu:",
-    "chatgptCodexHow": "W ChatGPT: Ustawienia \u2192 Serwery MCP \u2192 Dodaj serwer \u2014 albo dodaj do ~/.codex/config.toml (jeden wpis obejmuje ChatGPT na komputer, Codex CLI i rozszerzenie IDE):",
+    "chatgptCodexHow": "Dodaj to do ~/.codex/config.toml (jeden wpis obejmuje ChatGPT na komputer, Codex CLI i rozszerzenie IDE):",
     "copyConfig": "Skopiuj konfiguracj\u0119",
     "copyCommand": "Skopiuj polecenie",
     "copied": "Skopiowano",

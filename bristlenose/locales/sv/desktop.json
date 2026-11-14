@@ -1055,7 +1055,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Klistra in i valfri terminal:",
-    "chatgptCodexHow": "I ChatGPT: Inst\u00e4llningar \u2192 MCP-servrar \u2192 L\u00e4gg till server \u2014 eller l\u00e4gg till i ~/.codex/config.toml (en post t\u00e4cker ChatGPT f\u00f6r skrivbordet, Codex CLI och IDE-till\u00e4gget):",
+    "chatgptCodexHow": "L\u00e4gg till detta i ~/.codex/config.toml (en post t\u00e4cker ChatGPT f\u00f6r skrivbordet, Codex CLI och IDE-till\u00e4gget):",
     "copyConfig": "Kopiera konfiguration",
     "copyCommand": "Kopiera kommando",
     "copied": "Kopierat",

@@ -1055,7 +1055,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Liit\u00e4 mihin tahansa terminaaliin:",
-    "chatgptCodexHow": "ChatGPT:ss\u00e4: Asetukset \u2192 MCP-palvelimet \u2192 Lis\u00e4\u00e4 palvelin \u2014 tai lis\u00e4\u00e4 tiedostoon ~/.codex/config.toml (yksi merkint\u00e4 kattaa ChatGPT-ty\u00f6p\u00f6yt\u00e4sovelluksen, Codex CLI:n ja IDE-laajennuksen):",
+    "chatgptCodexHow": "Lis\u00e4\u00e4 t\u00e4m\u00e4 tiedostoon ~/.codex/config.toml (yksi merkint\u00e4 kattaa ChatGPT-ty\u00f6p\u00f6yt\u00e4sovelluksen, Codex CLI:n ja IDE-laajennuksen):",
     "copyConfig": "Kopioi m\u00e4\u00e4ritys",
     "copyCommand": "Kopioi komento",
     "copied": "Kopioitu",

@@ -1055,7 +1055,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Plak in een willekeurige terminal:",
-    "chatgptCodexHow": "In ChatGPT: Instellingen \u2192 MCP-servers \u2192 Voeg server toe \u2014 of voeg toe aan ~/.codex/config.toml (\u00e9\u00e9n vermelding dekt ChatGPT desktop, de Codex-CLI en de IDE-extensie):",
+    "chatgptCodexHow": "Voeg dit toe aan ~/.codex/config.toml (\u00e9\u00e9n vermelding dekt ChatGPT desktop, de Codex-CLI en de IDE-extensie):",
     "copyConfig": "Kopieer configuratie",
     "copyCommand": "Kopieer opdracht",
     "copied": "Gekopieerd",

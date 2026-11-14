@@ -1112,7 +1112,7 @@
       "chatgptCodex": "ChatGPT & Codex"
     },
     "claudeCodeHow": "Vlo\u017ete do libovoln\u00e9ho termin\u00e1lu:",
-    "chatgptCodexHow": "V ChatGPT: Nastaven\u00ed \u2192 MCP servery \u2192 P\u0159idat server \u2014 nebo p\u0159idejte do ~/.codex/config.toml (jedna polo\u017eka pokryje ChatGPT desktop, Codex CLI i roz\u0161\u00ed\u0159en\u00ed pro IDE):",
+    "chatgptCodexHow": "P\u0159idejte to do ~/.codex/config.toml (jedna polo\u017eka pokryje ChatGPT desktop, Codex CLI i roz\u0161\u00ed\u0159en\u00ed pro IDE):",
     "copyConfig": "Zkop\u00edrovat konfiguraci",
     "copyCommand": "Zkop\u00edrovat p\u0159\u00edkaz",
     "copied": "Zkop\u00edrov\u00e1no",

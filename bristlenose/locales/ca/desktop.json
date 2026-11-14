@@ -1055,7 +1055,7 @@
       "chatgptCodex": "ChatGPT i Codex"
     },
     "claudeCodeHow": "Enganxa-ho en qualsevol terminal:",
-    "chatgptCodexHow": "Al ChatGPT: Configuració → Servidors MCP → Afegeix un servidor — o afegeix-ho a ~/.codex/config.toml (una sola entrada cobreix el ChatGPT d'escriptori, el Codex CLI i l'extensió de l'IDE):",
+    "chatgptCodexHow": "Afegeix-ho a ~/.codex/config.toml (una sola entrada cobreix el ChatGPT d'escriptori, el Codex CLI i l'extensió de l'IDE):",
     "copyConfig": "Copia la configuració",
     "copyCommand": "Copia l'ordre",
     "copied": "Copiat",

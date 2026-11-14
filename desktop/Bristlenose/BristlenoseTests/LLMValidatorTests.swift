@@ -339,6 +339,92 @@ struct LLMValidatorTests {
         }
     }
 
+    /// Runs `body` with the Azure settings Settings would have saved (`@AppStorage` keys in
+    /// `UserDefaults.standard`, which `identity()` reads when no config is passed), then puts the
+    /// developer's own values back.
+    private func withSavedAzure(
+        endpoint: String, deployment: String, apiVersion: String, _ body: () -> Void
+    ) {
+        let d = UserDefaults.standard
+        let keys = ["azureEndpoint", "azureDeployment", "azureAPIVersion"]
+        let before = keys.map { d.object(forKey: $0) }
+        d.set(endpoint, forKey: "azureEndpoint")
+        d.set(deployment, forKey: "azureDeployment")
+        d.set(apiVersion, forKey: "azureAPIVersion")
+        defer {
+            for (k, v) in zip(keys, before) {
+                if let v { d.set(v, forKey: k) } else { d.removeObject(forKey: k) }
+            }
+        }
+        body()
+    }
+
+    @Test("Azure: a verdict recorded with a config is read back with none, from the saved settings")
+    func azureNilConfigFallsBackToSaved() {
+        withIsolatedStore {
+            withSavedAzure(
+                endpoint: "https://acme.openai.azure.com", deployment: "prod",
+                apiVersion: "2024-10-21"
+            ) {
+                // The Settings check records with the live fields; the run's refusal record and the
+                // consent sheet read knowing only provider and key.
+                LLMValidator.recordVerdict(
+                    provider: .azure, key: "k", status: .online, azureConfig: azure())
+                #expect(LLMValidator.cachedVerdict(provider: .azure, key: "k") == .ok)
+                #expect(LLMValidator.cacheIsFresh(provider: .azure, key: "k", ttl: 60))
+            }
+            // The saved settings moved on (a mistyped host): the same read is now a miss.
+            withSavedAzure(
+                endpoint: "https://acmee.openai.azure.com", deployment: "prod",
+                apiVersion: "2024-10-21"
+            ) {
+                #expect(LLMValidator.cachedVerdict(provider: .azure, key: "k") == nil)
+            }
+        }
+    }
+
+    @Test("Azure: a verdict recorded with none is read back with the same config")
+    func azureRecordWithoutConfigReadWith() {
+        withIsolatedStore {
+            withSavedAzure(
+                endpoint: "https://acme.openai.azure.com/", deployment: " prod ", apiVersion: ""
+            ) {
+                LLMValidator.recordVerdict(provider: .azure, key: "k", status: .online)
+                // Saved version is empty, which means the default: same identity as spelling it out.
+                #expect(LLMValidator.cachedVerdict(
+                    provider: .azure, key: "k", azureConfig: azure()) == .ok)
+            }
+        }
+    }
+
+    @Test("Azure: the default API version is one literal in the check, the cache and the settings field")
+    func azureDefaultAPIVersionHasNoDrift() throws {
+        // The request side: an empty version is sent as the default.
+        let req = try LLMValidator.buildRequest(
+            provider: .azure, key: "k",
+            azureConfig: .init(
+                endpoint: "https://acme.openai.azure.com", apiVersion: "", deployment: "prod"))
+        let url = try #require(req.url)
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+        let sent = try #require(items?.first { $0.name == "api-version" }?.value)
+        // The cache side: an empty version has the identity of the sent default, so a typo in the
+        // cache's own literal is a permanent miss and fails here.
+        withIsolatedStore {
+            LLMValidator.recordVerdict(
+                provider: .azure, key: "k", status: .online,
+                azureConfig: .init(endpoint: "https://a.openai.azure.com", apiVersion: sent, deployment: "d"))
+            #expect(LLMValidator.cachedVerdict(
+                provider: .azure, key: "k",
+                azureConfig: .init(endpoint: "https://a.openai.azure.com", apiVersion: "", deployment: "d")) == .ok)
+        }
+        // The settings field's own default, read from source (a view cannot be built here).
+        let viewSource = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Bristlenose/LLMSettingsView.swift")
+        let text = try String(contentsOf: viewSource, encoding: .utf8)
+        #expect(text.contains("@AppStorage(\"azureAPIVersion\") private var azureAPIVersion: String = \"\(sent)\""))
+    }
+
     @Test("Other providers' cache keys are unchanged: an Azure config is ignored")
     func otherProvidersIgnoreAzureConfig() {
         withIsolatedStore {

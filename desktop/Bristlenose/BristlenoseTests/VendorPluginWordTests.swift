@@ -3,12 +3,12 @@ import Foundation
 import Testing
 @testable import Bristlenose
 
-/// The Claude and ChatGPT tabs of Settings ▸ MCP Agents each say what that
-/// vendor's own app says, per language (docs/i18n-vendor-terms.md). These read
-/// the shipping locale files through the app's own `I18n`, pinned to a
-/// language, so a key the tab asks for that resolves to nothing, or a vendor
-/// noun that drifts back to one shared word, fails here and not on a user's
-/// screen.
+/// What the Claude and ChatGPT tabs of Settings ▸ MCP Agents render, read
+/// through the app's own `I18n` from the shipping locale files, pinned to a
+/// language: every button key resolves (never the raw key), the longest label
+/// fits the pane, and the reinstall how-to contains its button. Which WORD each
+/// vendor gets per language is pinned by `tests/test_vendor_plugin_terms.py`
+/// against `bristlenose/locales/vendor-terms.json`, not here.
 @MainActor
 @Suite struct VendorPluginWordTests {
 
@@ -38,20 +38,6 @@ import Testing
                 #expect(text != key && !text.isEmpty, "\(locale): \(key) resolved to \(text)")
             }
         }
-    }
-
-    @Test("Spanish: Plugins on the Claude tab, Complementos on the ChatGPT tab")
-    func spanishSplitsTheVendors() throws {
-        let es = try i18n("es")
-        #expect(es.t("desktop.mcpAgents.claudeInstall") == "Instalar plugin\u{2026}")
-        #expect(es.t("desktop.mcpAgents.chatgptInstall") == "Instalar complemento\u{2026}")
-    }
-
-    @Test("Catalan ChatGPT tab says Connectors, as the ChatGPT app does")
-    func catalanChatGPTSaysConnector() throws {
-        let ca = try i18n("ca")
-        #expect(ca.t("desktop.mcpAgents.chatgptInstall").contains("connector"))
-        #expect(!ca.t("desktop.mcpAgents.claudeInstall").contains("connector"))
     }
 
     @Test("the longest button label in any language fits the pane with room to spare")

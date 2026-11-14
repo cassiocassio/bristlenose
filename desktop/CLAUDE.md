@@ -508,7 +508,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - Safari Web Inspector for WKWebView debugging
 - Web Inspector
 
-**Platform APIs, policy and sign-in** (13) — [full entries](gotchas.md#platform-apis-policy-and-sign-in)
+**Platform APIs, policy and sign-in** (14) — [full entries](gotchas.md#platform-apis-policy-and-sign-in)
 
 - `import Security` does NOT re-export Foundation on macOS 15 SDK
 - "This application does not support printing. Please contact the application's…
@@ -523,6 +523,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - An HTTPS OAuth callback on a developer Mac can fail because a DIFFERENT copy of the app…
 - Printing is post-v1 (owner, 23 Oct 2026): no `com.apple.security.print`, no File ▸…
 - Consent version bumping
+- A Claude Desktop extension's id includes `author.name`: changing it installs a second copy (13 Nov 2026)
 
 **Tests, harnesses and verification** (13) — [full entries](gotchas.md#tests-harnesses-and-verification)
 

@@ -30,7 +30,10 @@ enum NativeExtensionPackage {
             "display_name": "Bristlenose",
             "version": version,
             "description": "Ask your Bristlenose study — quotes, themes, signals, frameworks — from your agent. Read-only.",
-            "author": ["name": "Bristlenose"],
+            "author": ["name": "Martin Storey", "url": "https://bristlenose.app"],
+            "homepage": "https://bristlenose.app",
+            "repository": ["type": "git", "url": "https://github.com/cassiocassio/bristlenose"],
+            "license": "AGPL-3.0-only",
             "icon": "icon.png",
             "server": [
                 "type": "binary",

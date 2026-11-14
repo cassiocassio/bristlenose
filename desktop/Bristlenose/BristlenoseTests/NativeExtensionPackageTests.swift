@@ -25,9 +25,24 @@ struct NativeExtensionPackageTests {
     }
 
     @Test func manifest_keepsTheNodeExtensionsName_soItReplacesIt() throws {
-        // Same `name` → same Claude extension id (local.mcpb.bristlenose.bristlenose),
-        // so installing the native package updates the Node one in place.
+        // Same `name` AND same `author.name` → same Claude extension id
+        // (local.mcpb.martin-storey.bristlenose), so installing the native package
+        // updates the Node one in place. Measured 13 Nov 2026: the id is built from
+        // the author as well, so changing `author.name` (it was "Bristlenose" until
+        // then, id local.mcpb.bristlenose.bristlenose) installs beside the old copy.
         #expect(try manifest()["name"] as? String == "bristlenose")
+    }
+
+    @Test("the manifest names its publisher, so Claude Desktop has more than a bare string to show")
+    func manifestNamesPublisher() throws {
+        let m = try manifest()
+        let author = try #require(m["author"] as? [String: Any])
+        #expect(author["name"] as? String == "Martin Storey")
+        #expect(author["url"] as? String == "https://bristlenose.app")
+        #expect(m["homepage"] as? String == "https://bristlenose.app")
+        #expect(m["license"] as? String == "AGPL-3.0-only")
+        #expect((m["repository"] as? [String: Any])?["url"] as? String
+                == "https://github.com/cassiocassio/bristlenose")
     }
 
     @Test func manifest_versionIsThePlainRelease() throws {

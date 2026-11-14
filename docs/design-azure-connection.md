@@ -32,10 +32,10 @@ Nothing below is pushed (`main` is ahead of `origin/main`); nothing is released 
 | Mac Settings check posts one token | **Shipped in 0.46.0**, unproven | `2e3f3b494` | Built blind. It never meets the run's output cap, and keeps no Azure body (matrix, "Disagreements"). |
 | This design, the connection mockup, the decision mockup, the state matrix | **Done, on `main`** (this pass) | `4601a867f` and the pass after | Proposal only; wording not owner-approved except where §10 says so. |
 | Diagnostics ▸ Azure Settings (failure states at real height) | **Done, on `main`** | `30717e7be` | Debug and beta channels only. Measure the collapsed failure on the M1 Air floor. |
-| Log redactor for the two Azure key shapes | **Built; on the integration branch, not on `main`** | `worktree-agent-a57c2426a9853157d`, `azure-integration` | Review: ship as is. Full Swift suite green on the integration branch (3313 passed). |
-| Mac check: cache keyed on endpoint, deployment, version | **Built, tested; on the integration branch, not on `main`** | `c87fdcd82` and a test commit, `azure-integration` | The missing nil-config test is added. One billed recheck per Azure user after upgrade. |
+| Log redactor for the two Azure key shapes | **Done, on `main`** (landed 14 Nov) | `worktree-agent-a57c2426a9853157d`, `azure-integration` | Review: ship as is. Full Swift suite green on the integration branch (3313 passed). |
+| Mac check: cache keyed on endpoint, deployment, version | **Done, on `main`** (landed 14 Nov) | `c87fdcd82` and a test commit, `azure-integration` | The missing nil-config test is added. One billed recheck per Azure user after upgrade. |
 | Mac check: https only, no userinfo | **Built, HOLD** | same branch, `ca0661234` (the redirect commit sits on top of it, so take that one by cherry-pick) | Gives a false green or red until Python parses the endpoint the same way. |
-| Mac check: refuse redirects | **Built; on the integration branch** | `42ffdae7d` | Safe; a refused 3xx reads "unavailable" (a string is an owner call). |
+| Mac check: refuse redirects | **Done, on `main`** (landed 14 Nov) | `42ffdae7d` | Safe; a refused 3xx reads "unavailable" (a string is an owner call). |
 | Rename "Azure OpenAI" to "Azure" | **Built on a branch; the Swift now builds and its 38 tests pass** | `worktree-agent-a3300d2fa9649ab56` (7 commits, 53 files) | D10 decided. Cosmetic; after the 24 Nov submission. `preflight.json:51` is a reword needing approval. |
 | The connection finder, one client builder, the preflight profile | **Designed only** | §5, D13, D7 | Blocked on D13. The widest piece (about 13 call sites). |
 | `configure azure` that asks for all three values and validates | **Designed only** | §7, D5, D12 | Today it validates nothing. |

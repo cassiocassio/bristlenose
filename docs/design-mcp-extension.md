@@ -44,6 +44,7 @@ over a real study through the installed extension.
 | Scope model | **Not Option B.** Option A + explicit per-project allowlist | §3.3 SUPERSEDED |
 | Anonymise | **Global on desktop**, not per-project | §3.3 SUPERSEDED, `MCPAgentsSettingsView.swift` (the Anonymise property) |
 | Settings agent-access project list | **Uncut and shipped 21 Aug 2026** — cut 1 Aug (`76d9e92a`), rebuilt as the projects register | §5a-bis, `AgentProjectRegister.swift`, `2741a61c` / `5f5c8eda` / `028d539b` |
+| Claude tab says "Plugin"; manifests name Martin Storey | **Shipped on `main` 14 Nov 2026, not yet in a release** | `MCPExtensionState.claudeButtonKey`, `tests/test_mcpb_manifest_parity.py`, `bristlenose/locales/vendor-terms.json` |
 | `bristlenose mcp-proxy` CLI subcommand | **Not shipped** | §7 Q3 |
 | Directory submission | Not done — local install only | §7 Q4, as recommended |
 | Native helper `bristlenose-mcp` (sandboxed, team app group) | **Shipped in 0.32.0 (30 Sep 2026)** — the Claude tab installs it as a `type: binary` `.mcpb` when the build carries it; the Node `.mcpb` stays the fallback | `desktop/mcp-helper/`, `NativeExtensionPackage.swift`, native-proxy §6.9 |

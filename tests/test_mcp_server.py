@@ -1460,8 +1460,15 @@ class TestModeratorsAreNamedPerSession:
         self._two_moderators(db)
         overview = _tool_get_project_overview(db, 1, None)
         rows = {r["session_id"]: r for r in overview["sessions"]["items"]}
-        assert rows["s1"]["speakers"] == [{"code": "m1", "role": "researcher", "name": "Martin"}]
-        assert rows["s2"]["speakers"] == [{"code": "m2", "role": "researcher", "name": "Jo"}]
+        # A1: a session row lists EVERY speaker, participants too; session 2's
+        # moderator is the study's m2 but its transcript tag is still m1.
+        assert rows["s1"]["speakers"] == [
+            {"code": "m1", "role": "researcher", "name": "Martin"},
+            {"code": "p1", "role": "participant"},
+        ]
+        assert rows["s2"]["speakers"] == [
+            {"code": "m2", "role": "researcher", "slot_code": "m1", "name": "Jo"},
+        ]
         flat = {s["code"]: s for s in overview["participants"]["speakers"]}
         assert (flat["m1"]["name"], flat["m2"]["name"]) == ("Martin", "Jo")
 
@@ -1475,7 +1482,100 @@ class TestModeratorsAreNamedPerSession:
         blob = json.dumps(overview)
         assert "Martin" not in blob and "Jo" not in blob
         rows = {r["session_id"]: r for r in overview["sessions"]["items"]}
-        assert rows["s2"]["speakers"] == [{"code": "m2", "role": "researcher"}]
+        assert rows["s2"]["speakers"] == [
+            {"code": "m2", "role": "researcher", "slot_code": "m1"},
+        ]
+
+
+class TestSessionRoster:
+    """A1 of docs/design-mcp-session-roster.md: "who was in which session?"
+    The overview's session rows used to list moderators and observers only, so
+    an agent could not see a session's participants at all."""
+
+    @staticmethod
+    def _rows(db) -> dict:
+        overview = _tool_get_project_overview(db, 1, None)
+        return {r["session_id"]: r for r in overview["sessions"]["items"]}
+
+    @staticmethod
+    def _slot(db, tag: str) -> SessionSpeaker:
+        return db.query(SessionSpeaker).filter_by(speaker_code=tag).one()
+
+    def test_a_session_lists_every_speaker_in_slot_order(self, db) -> None:
+        speakers = self._rows(db)["s1"]["speakers"]
+        # The smoke moderator is nobody anyone has identified, so it reads m?
+        # (its transcript tag is still m1); the participant is its own tag.
+        assert speakers == [
+            {"code": "m?", "role": "researcher", "slot_code": "m1"},
+            {"code": "p1", "role": "participant"},
+        ]
+
+    def test_a_session_with_no_speakers_still_carries_the_key(self, db) -> None:
+        from bristlenose.server.models import Session as SessionModel
+
+        db.add(SessionModel(project_id=1, session_id="s3", session_number=3))
+        db.commit()
+        assert self._rows(db)["s3"]["speakers"] == []
+
+    @pytest.mark.parametrize("named, code", [(True, "o1"), (False, "o?")])
+    def test_a_participant_recoded_as_observer_is_listed_as_what_it_is_now(
+        self, db, named: bool, code: str,
+    ) -> None:
+        """A recode moves the speaker out of the participants. Its transcript
+        tag (and its quotes' tag) stays p1, so the row says so."""
+        slot = self._slot(db, "p1")
+        slot.speaker_role = "observer"
+        if named:
+            person = Person(full_name="Olive Observer", short_name="Olive")
+            db.add(person)
+            db.flush()
+            slot.person_id, slot.state = person.id, "confirmed"
+        else:
+            slot.person_id, slot.state = None, "cleared"
+        db.commit()
+        speakers = self._rows(db)["s1"]["speakers"]
+        assert [s["role"] for s in speakers] == ["researcher", "observer"]
+        observer = next(s for s in speakers if s["role"] == "observer")
+        assert (observer["code"], observer["slot_code"]) == (code, "p1")
+
+    def _name_people(self, db) -> None:
+        for i, p in enumerate(db.query(Person).all()):
+            p.full_name = f"Jane Example{i}"
+            p.short_name = f"Jane{i}"
+        db.commit()
+
+    def test_participant_names_ride_the_row_when_the_switch_is_off(self, db) -> None:
+        self._name_people(db)
+        participant = next(s for s in self._rows(db)["s1"]["speakers"] if s["code"] == "p1")
+        assert participant["name"].startswith("Jane")
+
+    def test_no_name_on_any_row_under_the_project_flag(self, db) -> None:
+        from bristlenose.server.models import Project
+
+        self._name_people(db)
+        db.query(Project).one().mcp_anonymise = True
+        db.commit()
+        overview = _tool_get_project_overview(db, 1, None)
+        for row in overview["sessions"]["items"]:
+            assert all("name" not in s for s in row["speakers"])
+        assert "jane" not in json.dumps(overview).casefold()
+
+    def test_no_name_on_any_row_under_the_desktop_switch_with_the_flag_off(
+        self, db, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The Mac sets BRISTLENOSE_MCP_ANONYMISE and usually leaves the project
+        flag False; a helper that read the flag directly would pass the test
+        above and leak here."""
+        from bristlenose.server.models import Project
+
+        self._name_people(db)
+        db.query(Project).one().mcp_anonymise = False
+        db.commit()
+        monkeypatch.setenv("BRISTLENOSE_MCP_ANONYMISE", "1")
+        overview = _tool_get_project_overview(db, 1, None)
+        for row in overview["sessions"]["items"]:
+            assert all("name" not in s for s in row["speakers"])
+        assert "jane" not in json.dumps(overview).casefold()
 
 
 def test_every_result_carries_coverage_while_the_delivery_is_partial(db) -> None:

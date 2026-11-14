@@ -119,6 +119,21 @@ class TestProxyToolParity:
                     f"server types {sorted(server_types)}"
                 )
 
+    def test_the_overview_description_matches_the_servers(self) -> None:
+        # A description is what an agent reads to decide how to use a tool, and
+        # the proxy's is a hand-kept copy that had already drifted (it said
+        # "participants" where the server said "participants (codes only)").
+        # Compared after folding whitespace and dashes, which FastMCP and the
+        # JSON copy render differently. Only the tools a change has touched are
+        # pinned; the other descriptions differ for older reasons.
+        def fold(text: str) -> str:
+            return " ".join(text.replace("—", "-").split())
+
+        proxy = {t["name"]: t for t in _proxy_tools()}
+        server = {t["name"]: t for t in _server_tools()}
+        name = "get_project_overview"
+        assert fold(proxy[name]["description"]) == fold(server[name]["description"])
+
     def test_annotations_match_per_tool(self) -> None:
         # The hints are what a host reads to decide whether to show an
         # approval card per call, so a copy that lost them would bring the

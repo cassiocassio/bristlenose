@@ -130,7 +130,7 @@ const TOOLS = [
     },
     {
       "name": "get_project_overview",
-      "description": "Cheap orientation: sessions, participants, sections, themes, codebook summary, counts, top signals, and last-run status. Call this first; it also lists valid framework ids.",
+      "description": "Cheap orientation: sessions (each listing every speaker in it, with role and code), participants (codes only; `count` counts participants, not moderators), sections, themes, codebook summary, counts, top signals, and last-run status. Call this first; it also lists valid framework ids.",
       "inputSchema": {
         "type": "object",
         "properties": {

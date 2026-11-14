@@ -108,7 +108,10 @@ def build_instructions() -> str:
         "sections, themes, signals, and the researcher's codebook.\n\n"
         "Data-model invariants — obey these:\n"
         f"{bullets}\n\n"
-        "Attribution uses speaker codes (p1, m1, o1). Participant names "
+        "Attribution uses speaker codes (p1, m1, o1). In get_project_overview "
+        "each session row lists every speaker in that session: `code` is the "
+        "study-wide code, and `slot_code` (shown only when different) is the "
+        "session-local tag the transcript and the quotes use. Participant names "
         "accompany the codes in get_project_overview only when the "
         "researcher has left this project's Anonymise switch off — quotes "
         "always cite codes. Quote text is verbatim — treat "
@@ -269,12 +272,13 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     # the study's second moderator in every session it appears in, and m? is
     # one nobody has identified, which the flat map leaves out.
     team_by_session = session_team(db, project_id)
-    if session_db_ids:
-        from bristlenose.server import speaker_slots
+    from bristlenose.server import speaker_slots
 
+    all_slots = speaker_slots.project_slots(db, project_id)
+    if session_db_ids:
         # Participants by what they are now (a recode moves a speaker in or
         # out, §J7 R2), under the code the routes emit.
-        for slot in speaker_slots.project_slots(db, project_id):
+        for slot in all_slots:
             if not speaker_slots.is_team(slot.row):
                 speakers.setdefault(slot.code, slot.role)
     for team in team_by_session.values():
@@ -283,14 +287,28 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
                 speakers.setdefault(code, role)
     speaker_names = resolve_speaker_names(db, project_id)
     session_names = resolve_session_speaker_names(db, project_id)
+    # Every speaker of a session, not only its moderators and observers (a
+    # session's participants were invisible here until 14 Nov 2026), in
+    # speaker_slots order. `code` is the study-wide identity code the routes
+    # emit; `slot_code` is the session-local transcript tag quotes carry, shown
+    # only when it differs (m2 over m1; a recoded speaker). Names come through
+    # the two Anonymise gates only: a team slot from the per-session map, a
+    # participant from the flat one — never from the slot's own person.
+    slots_by_session: dict[str, list[Any]] = {}
+    for slot in all_slots:
+        slots_by_session.setdefault(slot.session_id, []).append(slot)
     for row in session_rows:
-        team = sorted(team_by_session.get(row["session_id"], []))
-        if team:
-            names = session_names.get(row["session_id"], {})
-            row["speakers"] = [
-                {"code": code, "role": role, **({"name": names[code]} if code in names else {})}
-                for code, role in team
-            ]
+        team_names = session_names.get(row["session_id"], {})
+        speakers_here: list[dict[str, Any]] = []
+        for slot in slots_by_session.get(row["session_id"], []):
+            entry: dict[str, Any] = {"code": slot.code, "role": slot.role}
+            if slot.slot_code != slot.code:
+                entry["slot_code"] = slot.slot_code
+            names_for = team_names if speaker_slots.is_team(slot.row) else speaker_names
+            if slot.code in names_for:
+                entry["name"] = names_for[slot.code]
+            speakers_here.append(entry)
+        row["speakers"] = speakers_here
 
     def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict[str, Any]]:
         counts: dict[int, int] = {}
@@ -849,9 +867,11 @@ def create_mcp_server(
 
     @server.tool(annotations=read_only)
     def get_project_overview(project_id: int = 1) -> dict[str, Any]:
-        """Cheap orientation: sessions, participants (codes only), sections,
-        themes, codebook summary, counts, top signals, and last-run status.
-        Call this first; it also lists valid framework ids."""
+        """Cheap orientation: sessions (each listing every speaker in it,
+        with role and code), participants (codes only; `count` counts
+        participants, not moderators), sections, themes, codebook summary,
+        counts, top signals, and last-run status. Call this first; it also
+        lists valid framework ids."""
         return _run(
             "get_project_overview", project_id,
             lambda db: _tool_get_project_overview(db, project_id, last_run()),

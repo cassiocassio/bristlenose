@@ -1864,6 +1864,13 @@ class TestSessionRoster:
         assert [s["role"] for s in speakers] == ["researcher", "observer"]
         observer = next(s for s in speakers if s["role"] == "observer")
         assert (observer["code"], observer["slot_code"]) == (code, "p1")
+        # Its quotes are set aside, not lost, and the row says how many, so a
+        # session that suddenly shows no quotes explains itself (the 14 Nov
+        # incident: a participant and a moderator had their roles swapped).
+        assert observer["visible_quotes"] == 0
+        assert observer["quotes_set_aside"] == 4
+        # ...and a speaker nobody recoded carries no such key.
+        assert all("quotes_set_aside" not in s for s in speakers if s is not observer)
 
     # --- A2: how many visible quotes each speaker has, per session ---------
 
@@ -1934,7 +1941,7 @@ class TestSessionRoster:
     def test_a_speaker_row_carries_no_hidden_or_extracted_count(self, db) -> None:
         """Which participant's quotes were hidden is a side channel to what the
         researcher found sensitive: only the visible count is ever sent."""
-        allowed = {"code", "role", "slot_code", "name", "visible_quotes"}
+        allowed = {"code", "role", "slot_code", "name", "visible_quotes", "quotes_set_aside"}
         for row in self._rows(db).values():
             for sp in row["speakers"]:
                 assert set(sp) <= allowed

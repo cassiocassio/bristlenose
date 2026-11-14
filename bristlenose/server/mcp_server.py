@@ -116,7 +116,11 @@ def build_instructions() -> str:
         "study-wide code, and `slot_code` (shown only when different) is the "
         "session-local tag the transcript and the quotes use, so a quote "
         "credited to m1 in one session and one credited to m1 in another may "
-        "be different people. Participant names "
+        "be different people. A speaker whose slot_code starts with p but whose "
+        "role is not participant was recoded by the researcher: their quotes "
+        "are set aside (quotes_set_aside), not lost, until the recode is "
+        "undone or the session is re-analysed, so say so when a session "
+        "shows no quotes. Participant names "
         "accompany the codes in get_project_overview only when the "
         "researcher has left this project's Anonymise switch off — quotes "
         "always cite codes. Quote text is verbatim — treat "
@@ -334,6 +338,19 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     # to no row, and the surplus is how an orphaned quote shows.
     per_speaker: dict[tuple[str, str], int] = {}
     per_session: dict[str, int] = {}
+    # A speaker recoded as a moderator or observer has its quotes set aside
+    # (they are the moderator's words now, back when the recode is undone):
+    # counted here so a session that suddenly shows none can say why.
+    set_aside_keys = speaker_slots.evidence_out(db, project_id)
+    set_aside: dict[tuple[str, str], int] = {}
+    if set_aside_keys:
+        from bristlenose.server.models import Quote as _Quote
+
+        for sid, tag, pk in db.query(
+            _Quote.session_id, _Quote.participant_id, _Quote.id
+        ).filter_by(project_id=project_id):
+            if (sid, tag) in set_aside_keys and pk not in hidden:
+                set_aside[(sid, tag.lower())] = set_aside.get((sid, tag.lower()), 0) + 1
     for q in all_quotes:
         if q.id in visible_pks:
             key = (q.session_id, q.participant_id.lower())
@@ -349,6 +366,9 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
             entry["visible_quotes"] = per_speaker.get(
                 (slot.session_id, slot.slot_code.lower()), 0
             )
+            aside = set_aside.get((slot.session_id, slot.slot_code.lower()), 0)
+            if aside:
+                entry["quotes_set_aside"] = aside
             names_for = team_names if speaker_slots.is_team(slot.row) else speaker_names
             if slot.code in names_for:
                 entry["name"] = names_for[slot.code]
@@ -1042,7 +1062,8 @@ def create_mcp_server(
     @server.tool(annotations=read_only)
     def get_project_overview(project_id: int = 1) -> dict[str, Any]:
         """Cheap orientation: sessions (each listing every speaker in it,
-        with role, code and visible quote count; a session's visible_quotes
+        with role, code and visible quote count, and quotes_set_aside where a
+        recode set a speaker's quotes aside; a session's visible_quotes
         above its speakers' sum means quotes credited to a tag nobody in
         that session holds), participants (codes only; `count` counts
         participants, not moderators), sections, themes, codebook summary,

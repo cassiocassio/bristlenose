@@ -37,6 +37,9 @@ textarea{width:100%;min-height:64px;margin-top:8px;font:inherit;background:var(-
 <div class="bar"><button id="exp">Copy my comments (markdown)</button><button id="ins">Show the server instructions</button><span id="count" class="sub"></span></div>
 <pre id="instr" hidden></pre>
 <div id="cards"></div>
+<h2 id="livehead" hidden>Live agent runs</h2>
+<p class="sub" id="livenote" hidden></p>
+<div id="live"></div>
 </div>
 <script>
 const DATA=__DATA__;
@@ -61,8 +64,18 @@ $("#cards").innerHTML=DATA.prompts.map(p=>{const c=store.get(p.id)||{};return`<s
 <div class=lbl>Automatic checks</div><ul class=checks>${p.checks.map(k=>`<li class="${k.ok?"ok":"no"}">${esc(k.text)}</li>`).join("")}</ul>
 <div class=cmt><div>${verdicts.map(([v,t])=>`<label><input type=radio name="v-${p.id}" value="${v}" ${c.v==v?"checked":""}> ${t}</label>`).join("")}</div>
 <textarea placeholder="Comment on the reality: what would a researcher make of this?" data-id="${p.id}">${esc(c.t||"")}</textarea></div></section>`}).join("");
+const LIVE=(DATA.live||[]).map(l=>({...l,id:"live-"+l.id,live:true}));
+if(LIVE.length){$("#livehead").hidden=false;$("#livenote").hidden=false;$("#livenote").textContent="Fresh agents were given only the server instructions, the tool descriptions and this command line, and chose their own calls. Calls and answers are theirs, unedited; nothing here was picked by the author of the tools.";
+$("#livenote").insertAdjacentHTML("afterend","<div class=card><b>What the live agents hit, and what became of it</b><table>"+(DATA.live_findings||[]).map(f=>`<tr><td class=num><b>${esc(f[0])}</b></td><td>${esc(f[1])}</td></tr>`).join("")+"</table></div>");
+$("#live").innerHTML=LIVE.map(p=>{const c=store.get(p.id)||{};return`<section class="card${c.v||c.t?" has":""}" id="c-${p.id}">
+<div class=prompt>“${esc(p.prompt)}”</div><p class=intent>${p.round==2?"Round 2, after fixes · ":"Round 1 · "}Study: ${esc(p.study)} · ${p.steps.length} call${p.steps.length==1?"":"s"} made by the agent</p>
+<div class=lbl>The agent called</div>${p.steps.map(s=>`<div><span class=chip>${esc(s.tool)}(${esc(args(s.args))})</span>${render(s)}<details><summary>raw output</summary><pre>${esc(JSON.stringify(s.result??{error:s.error},null,1))}</pre></details></div>`).join("")}
+<div class=lbl>What the agent answered, and what it said about the tools</div><pre style="white-space:pre-wrap;max-height:none">${esc(p.answer||"(no answer file)")}</pre>
+<div class=cmt><div>${verdicts.map(([v,t])=>`<label><input type=radio name="v-${p.id}" value="${v}" ${c.v==v?"checked":""}> ${t}</label>`).join("")}</div>
+<textarea placeholder="Comment: would you trust this answer? What did it miss?" data-id="${p.id}">${esc(c.t||"")}</textarea></div></section>`}).join("")}
+const ALL=[...DATA.prompts,...LIVE];
 function save(id){const sec=$("#c-"+id),v=($("input:checked",sec)||{}).value||"",t=$("textarea",sec).value;store.set(id,{v,t});sec.classList.toggle("has",!!(v||t));tally()}
-function tally(){const n=DATA.prompts.filter(p=>{const c=store.get(p.id)||{};return c.v||c.t}).length;$("#count").textContent=n+" of "+DATA.prompts.length+" commented"}
-DATA.prompts.forEach(p=>{const sec=$("#c-"+p.id);sec.addEventListener("change",()=>save(p.id));$("textarea",sec).addEventListener("input",()=>save(p.id))});tally();
-$("#exp").onclick=async()=>{const md=DATA.prompts.map(p=>{const c=store.get(p.id)||{};if(!c.v&&!c.t)return"";const lab=(verdicts.find(x=>x[0]==c.v)||["",""])[1];return"### “"+p.prompt+"”\n_calls: "+p.steps.map(s=>s.tool+"("+args(s.args)+")").join("; ")+"_\n"+(lab?"**"+lab+"**\n":"")+(c.t||"")+"\n"}).filter(Boolean).join("\n");try{await navigator.clipboard.writeText("# MCP lab comments (commit "+DATA.commit+")\n\n"+md);$("#exp").textContent="Copied"}catch(e){$("#exp").textContent="Copy failed";prompt("Copy:",md)}setTimeout(()=>$("#exp").textContent="Copy my comments (markdown)",1500)};
+function tally(){const n=ALL.filter(p=>{const c=store.get(p.id)||{};return c.v||c.t}).length;$("#count").textContent=n+" of "+ALL.length+" commented"}
+ALL.forEach(p=>{const sec=$("#c-"+p.id);sec.addEventListener("change",()=>save(p.id));$("textarea",sec).addEventListener("input",()=>save(p.id))});tally();
+$("#exp").onclick=async()=>{const md=ALL.map(p=>{const c=store.get(p.id)||{};if(!c.v&&!c.t)return"";const lab=(verdicts.find(x=>x[0]==c.v)||["",""])[1];return"### “"+p.prompt+"”\n_"+(p.live?"(live agent) ":"")+"calls: "+p.steps.map(s=>s.tool+"("+args(s.args)+")").join("; ")+"_\n"+(lab?"**"+lab+"**\n":"")+(c.t||"")+"\n"}).filter(Boolean).join("\n");try{await navigator.clipboard.writeText("# MCP lab comments (commit "+DATA.commit+")\n\n"+md);$("#exp").textContent="Copied"}catch(e){$("#exp").textContent="Copy failed";prompt("Copy:",md)}setTimeout(()=>$("#exp").textContent="Copy my comments (markdown)",1500)};
 </script></body></html>

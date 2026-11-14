@@ -117,7 +117,9 @@ def build_instructions() -> str:
         "session-local tag the transcript and the quotes use, so a quote "
         "credited to m1 in one session and one credited to m1 in another may "
         "be different people. A speaker whose slot_code starts with p but whose "
-        "role is not participant was recoded by the researcher: their quotes "
+        "role is not participant was recoded by the researcher (a participant "
+        "recoded from a moderator whom nobody has identified reads p?, as an "
+        "unidentified moderator reads m?): their quotes "
         "are set aside (quotes_set_aside), not lost, until the recode is "
         "undone or the session is re-analysed. quotes_set_aside also counts "
         "quotes whose paragraph the researcher moved to another speaker. Say "
@@ -390,6 +392,18 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
             speakers_here.append(entry)
         row["visible_quotes"] = per_session.get(row["session_id"], 0)
         row["speakers"] = speakers_here
+        # Quotes credited to a tag nobody in this session holds (what a renamed
+        # or swapped code leaves behind): named, so an agent can say whose tag
+        # they carry instead of guessing at an unexplained surplus.
+        held = {slot.slot_code.lower() for slot in slots_by_session.get(row["session_id"], [])}
+        loose = sorted(
+            (tag, n) for (sid, tag), n in per_speaker.items()
+            if sid == row["session_id"] and tag not in held
+        )
+        if loose:
+            row["quotes_with_no_speaker"] = [
+                {"tag": tag, "visible_quotes": n} for tag, n in loose
+            ]
 
     def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict[str, Any]]:
         counts: dict[int, int] = {}
@@ -481,6 +495,27 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
         "top_signals": top_signals,
     }
     return overview
+
+
+def _accepted_tags_by_report_key(db: Any, project_id: int) -> dict[tuple[str, str], list[str]]:
+    """(session, report id) -> the quote's accepted tag names, as search_quotes shows them."""
+    from bristlenose.server.models import QuoteTag, TagDefinition
+
+    all_quotes, hidden, _starred, _edited, _deleted = _curation_maps(db, project_id)
+    by_pk = {q.id: q for q in all_quotes if q.id not in hidden}
+    out: dict[tuple[str, str], list[str]] = {}
+    if not by_pk:
+        return out
+    for qt, name in (
+        db.query(QuoteTag, TagDefinition.name)
+        .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
+        .filter(QuoteTag.quote_id.in_(by_pk))
+        .order_by(TagDefinition.name)
+    ):
+        q = by_pk[qt.quote_id]
+        key = (q.session_id, quote_dom_id(q.participant_id, q.start_timecode, q.ordinal))
+        out.setdefault(key, []).append(name)
+    return out
 
 
 def _signal_strength_by_quote_id(db: Any, project_id: int) -> dict[tuple[str, str], float]:
@@ -779,6 +814,11 @@ def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict[s
 
     result = load_signals(db, project_id, lens, top_n=limit)
     elaborations = load_cached_elaborations(db, project_id, result.signals)
+    # The sentiment lens' quotes carry no tag names (the engine groups by
+    # sentiment, not by tag), so a card's supporting quotes read tags: [] while
+    # search_quotes shows them tagged. Fill them from the accepted tags, here and
+    # not in the shared engine, whose sentiment labelling reads tag names.
+    accepted_tags = _accepted_tags_by_report_key(db, project_id) if lens == "sentiment" else {}
 
     cards = []
     for s in result.signals:
@@ -800,11 +840,20 @@ def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict[s
                     "text": q.text,
                     "participant": q.participant_id,
                     "session_id": q.session_id,
-                    "tags": list(q.tag_names or []),
+                    "tags": (
+                        accepted_tags.get(
+                            (q.session_id, quote_dom_id(q.participant_id, q.start_seconds, q.ordinal)),
+                            [],
+                        )
+                        if lens == "sentiment" else list(q.tag_names or [])
+                    ),
                 }
                 for q in s.quotes[:SIGNAL_QUOTES_PER_CARD]
             ],
         }
+        if len(s.quotes) > SIGNAL_QUOTES_PER_CARD:
+            # quote_count is the whole cell; say plainly how many are not shown.
+            card["supporting_quotes_omitted"] = len(s.quotes) - SIGNAL_QUOTES_PER_CARD
         if lens == "tags":
             card["colour_set"] = result.group_colour_sets.get(s.sentiment, "")
         cached = elaborations.get(compute_signal_key(s.source_type, s.location, s.sentiment))
@@ -1104,9 +1153,9 @@ def create_mcp_server(
         """Cheap orientation: sessions (each listing every speaker in it,
         with role, code and visible quote count, and quotes_set_aside where a
         recode or a moved paragraph set a speaker's quotes aside; a session's
-        visible_quotes
-        above its speakers' sum means quotes credited to a tag nobody in
-        that session holds), participants (codes only; `count` counts
+        quotes_with_no_speaker names any tag that quotes are credited to though
+        nobody in that session holds it, which is why its visible_quotes can
+        exceed its speakers' sum), participants (codes only; `count` counts
         participants, not moderators), sections, themes, codebook summary,
         counts, top signals, and last-run status. Call this first; it also
         lists valid framework ids."""
@@ -1135,7 +1184,9 @@ def create_mcp_server(
     ) -> dict[str, Any]:
         """Search the curated quotes (hidden quotes excluded, researcher
         edits applied). Filters combine with AND; text is never truncated;
-        limit is capped at 50 — page with offset/next_offset. Each quote
+        limit is capped at 50 — page with offset/next_offset. query is a
+        case-insensitive substring of the quote's own words only, not its
+        section, tags or theme: for a topic use section, tag, group or theme. Each quote
         carries timecode (its start), end_timecode and duration_seconds: the
         length of the quote's source speech, not of a clip, null when the
         transcript has no timing. min_duration_seconds / max_duration_seconds
@@ -1164,7 +1215,10 @@ def create_mcp_server(
     @server.tool(annotations=read_only)
     def get_signals(project_id: int = 1, lens: str = "sentiment", limit: int = 10) -> dict[str, Any]:
         """Concentration/agreement/intensity signals over the curated corpus.
-        lens="sentiment" or "tags" (accepted tags only). Includes cached
+        A signal needs at least two quotes in one cell, so a single quote
+        never shows here. Each card shows a few supporting quotes;
+        supporting_quotes_omitted says how many more it has. lens="sentiment"
+        or "tags" (accepted tags only). Includes cached
         elaborations when present; never calls an LLM."""
         return _run(
             "get_signals", project_id,

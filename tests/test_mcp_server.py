@@ -1879,6 +1879,47 @@ class TestRoundTwoFixes:
         assert order.index(("s1", "q-p1-700")) < order.index(("s2", "q-p1-26"))
 
 
+class TestSignalCardTags:
+    """Round-1 live agents (a4, b4) saw tags: [] on a sentiment card's supporting
+    quotes while search_quotes showed them tagged, and 3 shown of 5 with no note."""
+
+    def test_a_supporting_quote_carries_the_same_tags_as_a_search(self, db) -> None:
+        _seed_second_frustration(db)
+        group = CodebookGroup(name="Pain points", subtitle="", colour_set="emo")
+        db.add(group)
+        db.flush()
+        db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=group.id))
+        tag = TagDefinition(codebook_group_id=group.id, name="auth friction")
+        db.add(tag)
+        db.flush()
+        quote = db.query(Quote).filter(Quote.start_timecode >= 26, Quote.start_timecode < 27).one()
+        db.add(QuoteTag(quote_id=quote.id, tag_definition_id=tag.id))
+        db.commit()
+        cards = _tool_get_signals(db, 1, "sentiment", 10)["signals"]
+        shown = {q["quote_id"]: q["tags"] for c in cards for q in c["supporting_quotes"]}
+        assert "auth friction" in shown["q-p1-26"]
+        searched = next(q for q in _search(db)["quotes"] if q["quote_id"] == "q-p1-26")
+        assert shown["q-p1-26"] == searched["tags"]
+
+    def test_a_card_says_when_it_shows_fewer_quotes_than_it_has(self, db) -> None:
+        _seed_second_frustration(db)
+        dashboard = db.query(ScreenCluster).filter_by(screen_label="Dashboard").one()
+        for start in (100.0, 110.0, 120.0):
+            q = Quote(
+                project_id=1, session_id="s1", participant_id="p1", start_timecode=start,
+                end_timecode=start + 5, text=f"Another frustrating moment at {int(start)}.",
+                quote_type="screen_specific", sentiment="frustration", intensity=2,
+            )
+            db.add(q)
+            db.flush()
+            db.add(ClusterQuote(cluster_id=dashboard.id, quote_id=q.id))
+        db.commit()
+        card = next(c for c in _tool_get_signals(db, 1, "sentiment", 10)["signals"]
+                    if c["location"] == "Dashboard" and c["sentiment"] == "frustration")
+        assert card["quote_count"] == len(card["supporting_quotes"]) + card["supporting_quotes_omitted"]
+        assert card["supporting_quotes_omitted"] > 0
+
+
 class TestUnknownParticipant:
     """C1: an empty search for a code nobody holds is different from an empty
     search for a participant with no quotes, and the agent must be told which."""
@@ -2050,6 +2091,8 @@ class TestSessionRoster:
         row = self._agrees_with_search(db)["s1"]
         assert row["visible_quotes"] == 5
         assert sum(s["visible_quotes"] for s in row["speakers"]) == 4
+        # ...and the row names the tag those quotes carry, so nobody has to guess.
+        assert row["quotes_with_no_speaker"] == [{"tag": "p9", "visible_quotes": 1}]
 
     def test_a_speaker_row_carries_no_hidden_or_extracted_count(self, db) -> None:
         """Which participant's quotes were hidden is a side channel to what the
@@ -2058,6 +2101,7 @@ class TestSessionRoster:
         for row in self._rows(db).values():
             for sp in row["speakers"]:
                 assert set(sp) <= allowed
+            assert "quotes_with_no_speaker" not in row  # nothing orphaned in the smoke study
 
     def _name_people(self, db) -> None:
         for i, p in enumerate(db.query(Person).all()):

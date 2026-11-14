@@ -49,6 +49,7 @@ def build_study(db) -> None:
     db.commit()
 
     s1 = db.query(SessionModel).filter_by(session_id="s1").one()
+    s1.duration_seconds = 2400.0  # the smoke fixture's 78 seconds would make timecodes absurd
     mod_slot = db.query(SessionSpeaker).filter_by(session_id=s1.id, speaker_code="m1").one()
     p1_slot = db.query(SessionSpeaker).filter_by(session_id=s1.id, speaker_code="p1").one()
     people = {n: Person(full_name=f"{n} (synthetic)", short_name=n) for n in ("Ada", "Ben", "Cleo")}
@@ -108,7 +109,7 @@ def build_study(db) -> None:
 
     for name, colour, tags in (("Pain points", "emo", {"auth friction": ("pw", "again", "code")}),
                                ("Mental models", "task", {"borrowed model": ("orphan", "code")})):
-        group = CodebookGroup(name=name, subtitle="", colour_set=colour)
+        group = CodebookGroup(name=name, subtitle="", colour_set=colour, framework_id="uxr")
         db.add(group)
         db.flush()
         db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=group.id))
@@ -118,6 +119,103 @@ def build_study(db) -> None:
             db.flush()
             for k in keys:
                 db.add(QuoteTag(quote_id=q[k].id, tag_definition_id=td.id))
+    # The importer tags every quote with its sentiment (the Sentiment framework),
+    # so a real quote's tags always include it; seed the same.
+    # The smoke fixture already carries the Sentiment group: reuse it (a second one,
+    # which round-1 agents noticed, was this lab's own mistake, not the product's).
+    sentiment_group = db.query(CodebookGroup).filter_by(name="Sentiment").one()
+    sentiment_tags = {
+        t.name: t for t in db.query(TagDefinition).filter_by(codebook_group_id=sentiment_group.id)
+    }
+    for key, *_rest in spec:
+        db.add(QuoteTag(quote_id=q[key].id,
+                        tag_definition_id=sentiment_tags[next(r for r in spec if r[0] == key)[5]].id))
+    db.commit()
+
+
+#: The live-agent runs: id -> (study, the researcher's words). The agents were given
+#: ONLY tool_cli.py (see its docstring) and chose their own calls; their call logs and
+#: answers live in experiments/mcp-lab/live/ and are shown unedited.
+LIVE_PROMPTS = {
+    "a1": ("main", "Find the best 3 clips under 30 seconds where users are most frustrated with login, "
+                   "and tell me who each one is."),
+    "a2": ("main", "Who did we interview and which sessions were they in? I want it for a "
+                   "'who we interviewed' slide."),
+    "a3": ("swap", "Session 1 looks empty to me. Ada talked for most of it. What's going on?"),
+    "a4": ("main", "What are the pain points? Give me the top three with a quote each, in the shape "
+                   "of the report."),
+    "a5": ("main", "Pull the juiciest login rants for the readout."),
+    "a6": ("main", "Anything about mental models? Who said it?"),
+    # Round 2: the same prompts to fresh agents after the fixes the first round exposed.
+    "b3": ("swap", "Session 1 looks empty to me. Ada talked for most of it. What's going on?"),
+    "b4": ("main", "What are the pain points? Give me the top three with a quote each, in the shape "
+                   "of the report."),
+    "b6": ("main", "Anything about mental models? Who said it?"),
+}
+
+#: What six fresh agents (round 1) hit, and what became of it. Written by the author from their
+#: reports; the reports themselves are shown unedited below.
+LIVE_FINDINGS = [
+    ("FIXED", "Four of six agents could not attribute two quotes in session 3 (credited to p1, "
+              "while the session's only participant is p3): the overview showed a surplus but not "
+              "whose tag carried it. The session row now lists quotes_with_no_speaker."),
+    ("FIXED", "'login' as a text query found one quote (it matches the quote's words only). The "
+              "description now says so and points to section, tag, group and theme."),
+    ("FIXED", "get_signals showed one pattern and agents wondered where the rest were: the "
+              "two-quotes-per-cell rule was undocumented. Now in the description."),
+    ("FIXED", "A participant recoded from an unidentified moderator reads p?, which the instructions "
+              "did not explain (they explained m?). They do now."),
+    ("LAB DATA", "Session 1 was 78 seconds long and the quotes had no sentiment tags, which agents "
+                 "noticed as odd. Artefacts of the synthetic study; fixed there, not in the product."),
+    ("LAB DATA", "last_run is null in this command line (the real server fills it); agents asked "
+                 "what null meant. Not a product bug, but worth saying what null means."),
+    ("ROUND 2", "After the fixes, the mental-models agent used quotes_with_no_speaker and called "
+                "session 3's attribution unresolved instead of guessing; the swap agent diagnosed "
+                "session 1 from the set-aside count and the instructions alone, and said what it "
+                "was inferring. Neither could say who or when the roles were changed."),
+    ("LAB DATA", "Round 2 agents saw two Sentiment groups in the codebook: this lab seeded a second "
+                 "one over the smoke fixture's. Fixed in the lab (round 2 transcripts still show it)."),
+    ("OPEN", "A quote result carries no warning when its speaker tag is not in its session (agent "
+             "b6); the overview flags it, the quote does not."),
+    ("OPEN", "A swapped session reads code p? with slot_code m1 and code m? with slot_code p1, "
+             "which agents decoded only by careful reading; an explicit 'roles look swapped' note "
+             "was suggested."),
+    ("OPEN", "Excluded-for-unknown-length quotes are counted but not named; an agent had to rerun "
+             "the search to find which."),
+    ("FIXED", "get_signals' sentiment cards showed supporting quotes with tags: [] where "
+              "search_quotes showed them tagged (two agents), and 3 shown of 5 with no note. "
+              "Tags are filled in and supporting_quotes_omitted says how many are not shown."),
+    ("OPEN", "Names appear while the agent is told to attribute by code; agents asked what to "
+             "disclose in a readout. A product decision, not a code one."),
+    ("OPEN", "No way to read the text of set-aside quotes, so an agent cannot show the researcher "
+             "what was set aside."),
+]
+
+
+def load_live() -> list[dict]:
+    """Merge each live agent's call log and its written answer into lab cards."""
+    live_dir = Path(__file__).with_name("live")
+    out = []
+    for aid, (study, prompt) in LIVE_PROMPTS.items():
+        log = live_dir / f"{aid}.jsonl"
+        answer = live_dir / f"{aid}.answer.md"
+        if not log.exists():
+            continue
+        steps = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line]
+        out.append({"id": aid, "study": study, "prompt": prompt,
+                    "round": 2 if aid.startswith("b") else 1,
+                    "steps": [s for s in steps if s["tool"] in
+                              ("get_project_overview", "search_quotes", "get_signals", "get_framework")],
+                    "answer": answer.read_text(encoding="utf-8") if answer.exists() else ""})
+    return out
+
+
+def apply_swap(db) -> None:
+    """Session 1's participant tag recoded as researcher, its moderator tag as participant."""
+    s1 = db.query(SessionModel).filter_by(session_id="s1").one()
+    for slot in db.query(SessionSpeaker).filter_by(session_id=s1.id):
+        slot.person_id, slot.state = None, None
+        slot.speaker_role = "researcher" if slot.speaker_code == "p1" else "participant"
     db.commit()
 
 
@@ -231,7 +329,7 @@ def main() -> None:
             check({x["quote_id"] for x in rows(s[2])} == {"q-p1-120", "q-p2-200", "q-p1-300"}
                   and s[2]["result"]["total_matched"] == 3,
                   "the group returns exactly the three quotes tagged inside it"),
-            check(s[2]["result"]["groups_matched"] == [{"name": "Pain points", "framework_id": None}],
+            check(s[2]["result"]["groups_matched"] == [{"name": "Pain points", "framework_id": "uxr"}],
                   "the result says which group matched")])
 
     run("mental", "What came up about mental models?",
@@ -252,13 +350,18 @@ def main() -> None:
         lambda s: [check(s[0]["result"]["signals"] and all(c["participants"] and c["confidence"]
                                                           for c in s[0]["result"]["signals"]),
                          "every card names its participants and its confidence"),
-                   check(len(s[0]["result"]["signals"]) <= 3, "limited to the three asked for")])
+                   check(len(s[0]["result"]["signals"]) <= 3, "limited to the three asked for"),
+                   check(all(q["tags"] for c in s[0]["result"]["signals"] for q in c["supporting_quotes"]),
+                         "every supporting quote carries its tags (they read [] before the live "
+                         "agents noticed)")])
 
     run("best", "What are the best quotes overall?",
         "A bare 'best': the stated ranking, and the basis named.",
         [("search_quotes", {"sort": "strength", "limit": 3})],
-        lambda s: [check([x["quote_id"] for x in rows(s[0])][:2] == ["q-p2-200", "q-p1-120"],
-                         "the starred quote first, then the strongest-signal, highest-intensity one"),
+        lambda s: [check([x["quote_id"] for x in rows(s[0])] == ["q-p2-200", "q-p1-600", "q-p2-500"],
+                         "the starred quote first, then the two Payments quotes: that cell has two "
+                         "participants agreeing, a stronger signal than Login's (OBSERVED, and worth "
+                         "arguing with: a researcher may not call that 'best')"),
                    check(not any("Alex Rivers" in x["text"] for x in rows(s[0])), "the hidden quote is absent")])
 
     run("typo", "Show me what p9 said.",
@@ -347,11 +450,7 @@ def main() -> None:
     # have their roles swapped (the real incident that started this work).
     db = create_app(project_dir=FIXTURE, dev=True, db_url="sqlite://").state.db_factory()
     build_study(db)
-    s1 = db.query(SessionModel).filter_by(session_id="s1").one()
-    for slot in db.query(SessionSpeaker).filter_by(session_id=s1.id):
-        slot.person_id, slot.state = None, None
-        slot.speaker_role = "researcher" if slot.speaker_code == "p1" else "participant"
-    db.commit()
+    apply_swap(db)
     run("swap", "Why does session 1 show no quotes at all? Ada talked for most of it.",
         "Roles swapped by mistake: the participant's tag recoded as researcher, the moderator's as "
         "participant. The quotes are set aside, not lost; the roster has to say so.",
@@ -376,6 +475,7 @@ def main() -> None:
         commit += "+uncommitted"  # the run imports the working tree, not the commit
     payload = {
         "commit": commit, "instructions": build_instructions(), "prompts": results,
+        "live": load_live(), "live_findings": LIVE_FINDINGS,
         "note": "Synthetic study. Tool calls chosen by hand, not by a live model; outputs are real "
                 "results of the server's tool functions at this commit. The checks were written by "
                 "the same author that chose the calls: a tick means that one-line claim holds, not "

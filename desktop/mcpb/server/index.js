@@ -130,7 +130,7 @@ const TOOLS = [
     },
     {
       "name": "get_project_overview",
-      "description": "Cheap orientation: sessions (each listing every speaker in it, with role, code and visible quote count, and quotes_set_aside where a recode or a moved paragraph set a speaker's quotes aside; a session's visible_quotes above its speakers' sum means quotes credited to a tag nobody in that session holds), participants (codes only; `count` counts participants, not moderators), sections, themes, codebook summary, counts, top signals, and last-run status. Call this first; it also lists valid framework ids.",
+      "description": "Cheap orientation: sessions (each listing every speaker in it, with role, code and visible quote count, and quotes_set_aside where a recode or a moved paragraph set a speaker's quotes aside; a session's quotes_with_no_speaker names any tag that quotes are credited to though nobody in that session holds it, which is why its visible_quotes can exceed its speakers' sum), participants (codes only; `count` counts participants, not moderators), sections, themes, codebook summary, counts, top signals, and last-run status. Call this first; it also lists valid framework ids.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -153,7 +153,7 @@ const TOOLS = [
     },
     {
       "name": "search_quotes",
-      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded. sort is time (default), intensity, or strength (starred first, then the strength of the signal a quote supports, then intensity, then time); the result says which it used in sorted_by. Bristlenose does not judge how well a quote reads. A participant code nobody holds is an error that lists the valid codes; a valid code with no quotes returns empty. group is a codebook group's name (for example a framework's \"Mental models\"): the quotes carrying any accepted tag in it; the result lists groups_matched with their framework. An unknown group is an error listing this project's groups. session scopes to one session (such as \"s2\"): a speaker tag like m1 restarts in every session, so use it with participant to read one speaker's words.",
+      "description": "Search the curated quotes (hidden quotes excluded, researcher edits applied). Filters combine with AND; text is never truncated; limit is capped at 50 - page with offset/next_offset. query is a case-insensitive substring of the quote's own words only, not its section, tags or theme: for a topic use section, tag, group or theme. Each quote carries timecode (its start), end_timecode and duration_seconds: the length of the quote's source speech, not of a clip, null when the transcript has no timing. min_duration_seconds / max_duration_seconds keep quotes of that length in seconds; quotes of unknown length are left out and counted in duration_unknown_excluded. sort is time (default), intensity, or strength (starred first, then the strength of the signal a quote supports, then intensity, then time); the result says which it used in sorted_by. Bristlenose does not judge how well a quote reads. A participant code nobody holds is an error that lists the valid codes; a valid code with no quotes returns empty. group is a codebook group's name (for example a framework's \"Mental models\"): the quotes carrying any accepted tag in it; the result lists groups_matched with their framework. An unknown group is an error listing this project's groups. session scopes to one session (such as \"s2\"): a speaker tag like m1 restarts in every session, so use it with participant to read one speaker's words.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -222,7 +222,7 @@ const TOOLS = [
     },
     {
       "name": "get_signals",
-      "description": "Concentration/agreement/intensity signals over the curated corpus. lens=\"sentiment\" or \"tags\" (accepted tags only). Never calls an LLM.",
+      "description": "Concentration/agreement/intensity signals over the curated corpus. A signal needs at least two quotes in one cell, so a single quote never shows here. Each card shows a few supporting quotes; supporting_quotes_omitted says how many more it has. lens=\"sentiment\" or \"tags\" (accepted tags only). Never calls an LLM.",
       "inputSchema": {
         "type": "object",
         "properties": {

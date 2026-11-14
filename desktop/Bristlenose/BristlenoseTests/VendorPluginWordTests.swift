@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Bristlenose
@@ -51,6 +52,26 @@ import Testing
         let ca = try i18n("ca")
         #expect(ca.t("desktop.mcpAgents.chatgptInstall").contains("connector"))
         #expect(!ca.t("desktop.mcpAgents.claudeInstall").contains("connector"))
+    }
+
+    @Test("the longest button label in any language fits the pane with room to spare")
+    func longestButtonFitsThePane() throws {
+        // The install button is `.fixedSize` and sits in a 660 pt pane beside a
+        // name and a build line (docs/design-control-labels.md: a label never
+        // truncates). Measure the real strings in the system font at the
+        // button's size; 300 pt leaves the name and padding their room.
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        var widest: (locale: String, key: String, width: CGFloat) = ("", "", 0)
+        for locale in I18n.supportedLocales.sorted() {
+            let i = try i18n(locale)
+            for key in Self.claudeKeys + Self.chatgptKeys {
+                let width = (i.t(key) as NSString)
+                    .size(withAttributes: [.font: font]).width
+                if width > widest.width { widest = (locale, key, width) }
+            }
+        }
+        #expect(widest.width < 300,
+                "\(widest.locale) \(widest.key) is \(Int(widest.width)) pt wide")
     }
 
     @Test("the reinstall how-to names the Claude tab's own reinstall button, in every language")

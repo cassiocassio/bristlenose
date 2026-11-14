@@ -45,7 +45,11 @@ The ChatGPT desktop app's own Plugins label in all 21 of our languages (the owne
 
 **The new Debug build was checked running (14 Nov 2026, English UI, read through macOS accessibility, not by screenshot):** Settings ▸ MCP Agents ▸ Claude Desktop shows "Adds Bristlenose to Claude Desktop as a plugin. Claude Desktop will ask you to confirm." and "Plugin 0.46.0 (6528)". The ChatGPT tab and the other languages were not read in the running app (only the bundle's locale files).
 
-## Open decision (owner), with a recommendation
+## Resolved 14 Nov 2026: the Latin word stays on the Claude tab, until the owner reverses it
+
+Resolution, not an open item: the rule below was approved with the key split on 13 Nov 2026 ("Claude tab: the Claude column where it's localised, otherwise the English 'plugin'"), so it stands. The recommendation that follows is the alternative if a native reader finds the Latin word jarring; it is a 10-locale revert of the five Claude-family keys plus the hint, prompt note and welcome tip, with the ChatGPT-tab values as the source.
+
+### Recommendation if revisited
 
 Rule 1 says our own buttons use our locale's word; rule 3 fills the Claude-tab button family (`claudeInstall`, `claudeReinstall`, `claudeUpdate`, `claudeBuild`, `claudeUnknownBuild`, `claudeDesktopHint`) from the Claude column, which is Latin "plugin" in the ten locales Claude does not localise. The result in uk, tr, fi and others is a loanword or Latin word inside a native sentence ("Встановити plugin…", "Asenna plugin…") next to a ChatGPT tab that says плагін, lisäosa. **Recommendation:** keep Latin only where we QUOTE Claude's screen (`claudeReinstallHow`'s section name «Plugins», which is what the user must find), and give the buttons and sentences our own locale's noun, the one the ChatGPT tab already uses, because a button is ours and the user does not search for it. That makes the Claude and ChatGPT tabs read alike in those ten locales and removes the uninflected Latin word from Cyrillic, Finnish and Turkish sentences. It is a 10-locale change (ca, cs, da, fi, nb, nl, pl, sv, tr, uk) to the five Claude-family keys plus the hint and prompt note; not made overnight because it reverses the 13 Nov ruling in rule 3 and wants a native read.
 

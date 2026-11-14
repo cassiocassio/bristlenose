@@ -28,7 +28,7 @@ Mach-O members, no `.env*`, no dev-override string.
 ## Dev loop
 
 Claude Desktop ▸ Settings ▸ Extensions ▸ Advanced ▸ **Install Unpacked
-Extension** (Claude Desktop renamed Extensions to Plugins in Nov 2026; this dev path is unverified since, look under Plugins if it has moved) pointed at this directory. The unpacked copy keeps the dev
+Extension** (Claude Desktop renamed Extensions to Plugins in Nov 2026; the menu string "Install Unpacked Extension…" is still in the installed app's code on 14 Nov 2026, but where the menu now sits was not looked at, so look under Plugins if it has moved) pointed at this directory. The unpacked copy keeps the dev
 handshake override for testing against a fixture serve. Local installs
 never auto-update — uninstall/reinstall to pick up edits, and watch
 `~/Library/Logs/Claude/mcp-server-Bristlenose.log` for the proxy's stderr.

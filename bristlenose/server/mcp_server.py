@@ -523,6 +523,23 @@ def _tool_search_quotes(
     visible = [q for q in all_quotes if q.id not in hidden]
     visible_pks = {q.id for q in visible}
 
+    if participant:
+        # An empty result for a code nobody holds looks exactly like a
+        # participant with no quotes. The valid set is built from CODES only
+        # (never the gated name map, which is empty under Anonymise): every
+        # slot's identity code and transcript tag, plus any tag a visible
+        # quote carries, so quotes a renamed code left behind stay findable.
+        from bristlenose.server import speaker_slots
+
+        known = {
+            c.lower() for slot in speaker_slots.project_slots(db, project_id)
+            for c in (slot.code, slot.slot_code)
+        } | {q.participant_id.lower() for q in visible}
+        if participant.lower() not in known:
+            raise ToolInputError(
+                f"unknown participant {participant[:80]!r} — valid codes: {sorted(known)}"
+            )
+
     # Batch-attach section / theme / tag names (the export_core pattern).
     # Names as the researcher sees them: a filter takes the shown name.
     names = HeadingNames.load(db, project_id)
@@ -1026,7 +1043,8 @@ def create_mcp_server(
         (default), intensity, or strength (starred first, then the strength of
         the signal a quote supports, then intensity, then time); the result
         says which it used in sorted_by. Bristlenose does not judge how well
-        a quote reads."""
+        a quote reads. A participant code nobody holds is an error that
+        lists the valid codes; a valid code with no quotes returns empty."""
         return _run(
             "search_quotes", project_id,
             lambda db: _tool_search_quotes(

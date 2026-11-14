@@ -233,7 +233,6 @@ class TestSearchQuotes:
 
     def test_participant_filter_is_case_insensitive(self, db) -> None:
         assert _search(db, participant="P1")["total_matched"] == 4
-        assert _search(db, participant="p9")["total_matched"] == 0
 
     def test_hidden_quotes_are_excluded(self, db) -> None:
         _hide(db, 26)
@@ -1673,6 +1672,49 @@ class TestRanking:
         for phrase in ("codebook", "pain points", "things to fix", "signal cards",
                        "say which tag or group", "fall back"):
             assert phrase in text, phrase
+
+
+class TestUnknownParticipant:
+    """C1: an empty search for a code nobody holds is different from an empty
+    search for a participant with no quotes, and the agent must be told which."""
+
+    def test_an_unknown_code_raises_and_lists_the_valid_ones(self, db) -> None:
+        with pytest.raises(ToolInputError) as caught:
+            _search(db, participant="p9")
+        message = str(caught.value)
+        assert "p9" in message and "p1" in message and "m?" in message
+
+    def test_a_known_code_with_no_quotes_is_just_empty(self, db) -> None:
+        # m1 is a real slot in the smoke study and says nothing.
+        result = _search(db, participant="m1")
+        assert result["total_matched"] == 0 and result["quotes"] == []
+
+    def test_the_match_is_case_insensitive(self, db) -> None:
+        assert _search(db, participant="P1")["total_matched"] == 4
+
+    def test_a_tag_only_quotes_carry_is_not_refused(self, db) -> None:
+        """What a renamed code leaves behind: quotes credited to a tag no slot
+        holds. They are visible, so the tag is valid and finds them."""
+        db.add(Quote(
+            project_id=1, session_id="s1", participant_id="p9", start_timecode=200.0,
+            end_timecode=205.0, text="Credited to a tag nobody holds.",
+            quote_type="screen_specific", sentiment="confusion", intensity=1,
+        ))
+        db.commit()
+        assert _search(db, participant="p9")["total_matched"] == 1
+
+    def test_a_long_value_is_cut_in_the_message(self, db) -> None:
+        with pytest.raises(ToolInputError) as caught:
+            _search(db, participant="x" * 500)
+        assert len(str(caught.value)) < 400
+
+    def test_no_name_in_the_error_even_when_names_are_on(self, db) -> None:
+        for person in db.query(Person).all():
+            person.full_name, person.short_name = "Zebediah Zed", "Zeb"
+        db.commit()
+        with pytest.raises(ToolInputError) as caught:
+            _search(db, participant="p9")
+        assert "zeb" not in str(caught.value).casefold()
 
 
 class TestSessionRoster:

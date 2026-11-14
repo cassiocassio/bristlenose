@@ -344,22 +344,21 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     set_aside_keys = speaker_slots.evidence_out(db, project_id)
     set_aside: dict[tuple[str, str], int] = {}
     if set_aside_keys:
-        from bristlenose.server.models import Quote as _Quote
-        from bristlenose.server.models import QuoteState as _QuoteState
+        from bristlenose.server.models import Quote, QuoteState
 
         aside_rows = [
             (sid, tag, pk)
             for sid, tag, pk in db.query(
-                _Quote.session_id, _Quote.participant_id, _Quote.id
+                Quote.session_id, Quote.participant_id, Quote.id
             ).filter_by(project_id=project_id)
             if (sid, tag) in set_aside_keys
         ]
         # `hidden` only knows about evidence quotes, and a set-aside quote is by
         # definition not evidence, so the researcher's hiding is read here.
         hidden_aside = {
-            qid for (qid,) in db.query(_QuoteState.quote_id).filter(
-                _QuoteState.quote_id.in_([pk for _s, _t, pk in aside_rows]),
-                _QuoteState.is_hidden.is_(True),
+            qid for (qid,) in db.query(QuoteState.quote_id).filter(
+                QuoteState.quote_id.in_([pk for _s, _t, pk in aside_rows]),
+                QuoteState.is_hidden.is_(True),
             )
         } if aside_rows else set()
         for sid, tag, pk in aside_rows:

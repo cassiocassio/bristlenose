@@ -39,12 +39,15 @@ SCOPE = "scopes a tag/edit lookup to this project; not a count of evidence"
 LOSS = "a loss the researcher confirms counts hidden tagging on purpose"
 FILTERED = "a count that applies the evidence filter after the read"
 CHOSEN = "rows for ids its caller chose; scoped-export tests filter upstream"
+ASIDE = ("counts the quotes a recode set aside: by definition not evidence, so the evidence "
+         "filter must NOT apply; the researcher's hiding is applied by hand")
 
 #: "file::function" -> (reads, why this one is not an unfiltered count).
 LISTED: dict[str, tuple[int, str]] = {
     "speaker_slots.py::analysis_quotes": (1, FILTER),
     "speaker_slots.py::evidence_quotes": (1, FILTER),
     "speaker_slots.py::_moved_quotes": (1, FILTER),
+    "mcp_server.py::_tool_get_project_overview": (1, ASIDE),
     "importer.py::import_project": (1, IMPORT),
     "importer.py::_assign_ordinals": (1, IMPORT),
     "importer.py::_auto_tag_from_sentiment_field": (1, IMPORT),

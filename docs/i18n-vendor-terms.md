@@ -45,13 +45,11 @@ The ChatGPT desktop app's own Plugins label in all 21 of our languages (the owne
 
 **The new Debug build was checked running (14 Nov 2026, English UI, read through macOS accessibility, not by screenshot):** Settings ▸ MCP Agents ▸ Claude Desktop shows "Adds Bristlenose to Claude Desktop as a plugin. Claude Desktop will ask you to confirm." and "Plugin 0.46.0 (6528)". The ChatGPT tab and the other languages were not read in the running app (only the bundle's locale files).
 
-## Resolved 14 Nov 2026: the Latin word stays on the Claude tab, until the owner reverses it
+## Owner ruling, 14 Nov 2026: say what each vendor says, in each language
 
-Resolution, not an open item: the rule below was approved with the key split on 13 Nov 2026 ("Claude tab: the Claude column where it's localised, otherwise the English 'plugin'"), so it stands. The recommendation that follows is the alternative if a native reader finds the Latin word jarring; it is a 10-locale revert of the five Claude-family keys plus the hint, prompt note and welcome tip, with the ChatGPT-tab values as the source.
+**The principle:** whichever agent a researcher uses, in whichever language they use it, Bristlenose's wording matches that vendor's own word for the thing. The vendors do not agree with each other (Spanish: Claude "Plugins", ChatGPT/Codex "Complementos") and that is fine: the truth is what each vendor's app and docs say, found by reading them (the evidence above), not by our preference or a shared translation. Where a vendor does not localise a language, its English word is what the user sees, so that is the word we use.
 
-### Recommendation if revisited
-
-Rule 1 says our own buttons use our locale's word; rule 3 fills the Claude-tab button family (`claudeInstall`, `claudeReinstall`, `claudeUpdate`, `claudeBuild`, `claudeUnknownBuild`, `claudeDesktopHint`) from the Claude column, which is Latin "plugin" in the ten locales Claude does not localise. The result in uk, tr, fi and others is a loanword or Latin word inside a native sentence ("Встановити plugin…", "Asenna plugin…") next to a ChatGPT tab that says плагін, lisäosa. **Recommendation:** keep Latin only where we QUOTE Claude's screen (`claudeReinstallHow`'s section name «Plugins», which is what the user must find), and give the buttons and sentences our own locale's noun, the one the ChatGPT tab already uses, because a button is ours and the user does not search for it. That makes the Claude and ChatGPT tabs read alike in those ten locales and removes the uninflected Latin word from Cyrillic, Finnish and Turkish sentences. It is a 10-locale change (ca, cs, da, fi, nb, nl, pl, sv, tr, uk) to the five Claude-family keys plus the hint and prompt note; not made overnight because it reverses the 13 Nov ruling in rule 3 and wants a native read.
+**Consequence for the open question:** the Claude tab uses Claude's word, which in the ten languages Claude does not localise (ca cs da fi nb nl pl sv tr uk) is the English "plugin". The current implementation follows the ruling, so nothing is reverted; the native-noun alternative previously recommended here is withdrawn.
 
 ## Method (rerun it, do not trust the table's age)
 

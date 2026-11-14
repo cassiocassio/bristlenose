@@ -45,3 +45,14 @@ def test_the_node_and_native_manifests_share_their_id_and_publisher() -> None:
     repo = re.search(r'"repository":\s*\[([^\]]*)\]', swift)
     assert repo, "NativeExtensionPackage.swift has no repository literal"
     assert _swift_string("url", repo.group(1)) == node["repository"]["url"]
+
+
+def test_the_chatgpt_plugin_names_the_same_publisher_as_the_claude_manifests() -> None:
+    """ChatGPT's installed copy is keyed on marketplace, plugin name and version, not the
+    author (cache folder ``~/.codex/plugins/cache/<marketplace>/<plugin>/<version>``,
+    read 14 Nov 2026), so this cannot make a second copy; it only keeps three manifests
+    saying one publisher on screen."""
+    publisher = json.loads(_NODE.read_text(encoding="utf-8"))["author"]["name"]
+    build = (_REPO / "desktop" / "mcp-helper" / "build-helper.sh").read_text(encoding="utf-8")
+    assert f'"author": {{"name": "{publisher}"' in build
+    assert f'"developerName": "{publisher}"' in build

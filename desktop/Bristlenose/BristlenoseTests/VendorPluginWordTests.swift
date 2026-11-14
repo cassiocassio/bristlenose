@@ -64,7 +64,9 @@ import Testing
     func howToQuotesTheButton() throws {
         for locale in I18n.supportedLocales.sorted() {
             let i = try i18n(locale)
-            let button = i.t("desktop.mcpAgents.claudeReinstall")
+            // The how-to is shown in the different-build state, so ask that state which
+            // button it offers rather than naming a key here.
+            let button = i.t(MCPExtensionState.differentBuild(installed: "0").claudeButtonKey)
             let how = i.t("desktop.mcpAgents.claudeReinstallHow")
             #expect(how.contains(button), "\(locale): how-to does not contain its button \(button)")
         }

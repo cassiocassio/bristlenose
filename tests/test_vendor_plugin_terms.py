@@ -74,3 +74,26 @@ def test_the_claude_reinstall_how_to_quotes_claudes_sidebar_label(locale: str) -
     assert label in _mcp_agents(locale)["claudeReinstallHow"], (
         f"{locale}: claudeReinstallHow should name Claude's section {label!r}"
     )
+
+
+def test_the_roster_is_not_empty_and_every_row_has_a_word() -> None:
+    """An empty roster, stem or label would pass every other test having asserted nothing
+    (`"" in text` is always true)."""
+    for vendor in ("claude", "chatgpt"):
+        assert _TERMS[vendor]["keys"], f"{vendor} has no keys to check"
+        for locale, row in _TERMS[vendor]["locales"].items():
+            assert row["stem"].strip() and row["stem"] == row["stem"].lower(), (vendor, locale)
+            assert row["label"].strip(), (vendor, locale)
+
+
+def test_every_english_vendor_string_that_says_plugin_is_in_the_roster() -> None:
+    """A new claude*/chatgpt* string that says "plugin" in English must be listed (and so
+    checked in 21 languages) or named here as covered another way."""
+    covered_elsewhere = {"claudeReinstallHow"}  # pinned by the sidebar-label test below
+    english = _mcp_agents("en")
+    says_plugin = {
+        k for k, v in english.items()
+        if k.startswith(("claude", "chatgpt")) and "plugin" in v.lower()
+    }
+    listed = set(_TERMS["claude"]["keys"]) | set(_TERMS["chatgpt"]["keys"]) | covered_elsewhere
+    assert says_plugin <= listed, f"not in vendor-terms.json keys: {sorted(says_plugin - listed)}"

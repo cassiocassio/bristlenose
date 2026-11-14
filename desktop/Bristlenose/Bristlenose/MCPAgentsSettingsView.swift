@@ -1038,7 +1038,7 @@ struct MCPAgentsSettingsView: View {
         // minutes loses nothing; the reverse would lose the install
         // confirmation entirely. Decided 20 Aug 2026.
         //
-        // The size ("Plugin · 8 KB") held this slot until the same pass
+        // The size ("Extension · 8 KB", as it read then) held this slot until the same pass
         // and was dropped: it answered no question anyone asks, while the
         // build number is something a researcher might act on.
         //

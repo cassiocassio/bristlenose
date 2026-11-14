@@ -142,7 +142,8 @@
    "chatgptBuild",
    "chatgptHint",
    "updateChatGPT",
-   "moveToApplications"
+   "moveToApplications",
+   "chatgptReinstallHow"
   ],
   "locales": {
    "ca": {

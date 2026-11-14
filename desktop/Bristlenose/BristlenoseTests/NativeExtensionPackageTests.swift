@@ -30,19 +30,20 @@ struct NativeExtensionPackageTests {
         // updates the Node one in place. Measured 13 Nov 2026: the id is built from
         // the author as well, so changing `author.name` (it was "Bristlenose" until
         // then, id local.mcpb.bristlenose.bristlenose) installs beside the old copy.
-        #expect(try manifest()["name"] as? String == "bristlenose")
+        let m = try manifest()
+        #expect(m["name"] as? String == "bristlenose")
+        #expect((m["author"] as? [String: Any])?["name"] as? String == "Martin Storey")
     }
 
     @Test("the manifest names its publisher, so Claude Desktop has more than a bare string to show")
     func manifestNamesPublisher() throws {
+        // The other fields (author url, homepage, licence, repository) are held equal to the
+        // Node manifest by tests/test_mcpb_manifest_parity.py; the author name is asserted
+        // above because it is half of the extension's id.
         let m = try manifest()
         let author = try #require(m["author"] as? [String: Any])
-        #expect(author["name"] as? String == "Martin Storey")
         #expect(author["url"] as? String == "https://bristlenose.app")
-        #expect(m["homepage"] as? String == "https://bristlenose.app")
         #expect(m["license"] as? String == "AGPL-3.0-only")
-        #expect((m["repository"] as? [String: Any])?["url"] as? String
-                == "https://github.com/cassiocassio/bristlenose")
     }
 
     @Test func manifest_versionIsThePlainRelease() throws {

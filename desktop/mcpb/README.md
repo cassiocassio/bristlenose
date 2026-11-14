@@ -35,6 +35,6 @@ never auto-update — uninstall/reinstall to pick up edits, and watch
 
 ## Not here yet (handoff 2 — surface work)
 
-- `icon.png` (512×512) — needs real artwork, not placeholder art.
+- `icon.png` (512×512) for this Node fallback package, which has none; the native package carries the app icon (`NativeExtensionPackage.swift`).
 - Copying the packed `.mcpb` into `Contents/Resources/` + the container,
   and the Install button that `NSWorkspace.open`s it (design §3.4).

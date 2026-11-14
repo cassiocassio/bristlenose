@@ -37,7 +37,7 @@ over a real study through the installed extension.
 | Piece | State | Anchor |
 |---|---|---|
 | Handshake file (`mcp-handshake.json`, 0600, container) | Shipped | `desktop/Bristlenose/Bristlenose/MCPHandshake.swift` |
-| Node proxy inside the `.mcpb` | Shipped — **564 lines**, zero deps (308 at 2 Aug; schema-2 + staleness detection since) | `desktop/mcpb/server/index.js`, `manifest.json` |
+| Node proxy inside the `.mcpb` | Shipped — **622 lines** at 14 Nov 2026 (564 at 11 Oct, 308 at 2 Aug; schema-2 + staleness detection since), zero deps | `desktop/mcpb/server/index.js`, `manifest.json` |
 | Settings ▸ MCP Agents (4th pane, antenna) | Shipped | `desktop/Bristlenose/Bristlenose/MCPAgentsSettingsView.swift` |
 | `Turn On / Turn Off Agent Access` verb swap | Shipped | `AgentAccessPolicy.swift`, `ProjectSidebarOutline.swift:1736` |
 | Exposure badge (no badge / pale / solid) | Shipped | `ProjectSidebarOutline.swift` `agentBadgeView` |
@@ -674,7 +674,7 @@ memory.
 
 ### 3.2 The proxy
 
-`server/index.js` — ~150 lines as designed, **564 as shipped** (schema-2 project
+`server/index.js` — ~150 lines as designed, **564 as shipped on 11 Oct (622 by 14 Nov)** (schema-2 project
 selection and staleness detection are the difference) — using the official MCP
 SDK's own transports:
 `StdioServerTransport` on the client side, `StreamableHTTPClientTransport`

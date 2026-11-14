@@ -710,7 +710,7 @@
         },
         "connectAgent": {
           "text": "Kysy projektista **Claude Desktop** -sovelluksesta tai mist\u00e4 tahansa MCP-agentista.",
-          "more": "Ota agenttik\u00e4ytt\u00f6 k\u00e4ytt\u00f6\u00f6n, asenna lis\u00e4osa kerran ja kysy omin sanoin.",
+          "more": "Ota agenttik\u00e4ytt\u00f6 k\u00e4ytt\u00f6\u00f6n, asenna plugin kerran ja kysy omin sanoin.",
           "link": "Yhdist\u00e4 agentti"
         },
         "useCodebooks": {

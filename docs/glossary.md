@@ -145,7 +145,6 @@ Three orthogonal display axes. Same internal/external split as provider names ab
 | Canonical (user-facing) | Forbidden (in user text) | Where "pipeline" IS fine | Why |
 |---|---|---|---|
 | **analysis** / **analyse** (verb) / **run** (noun for an instance) | pipeline (in user-facing chrome) | CLI command verbs (`bristlenose run` / `analyse`); design docs; commit messages; man page; code identifiers (`pipeline.py`, `PipelineRunner`); CHANGELOG | Researchers don't have "pipelines"; they have analyses. "Pipeline" is a Pythonista / CS term — correct internally, wrong in chrome. "Running analysis on these interviews" reads naturally; "running the pipeline on these interviews" reads like a developer talking to themselves. |
-| **plugin** (Claude Desktop and ChatGPT agent connection) | extension, "Claude extension" (in user text) | `.mcpb` / "Desktop extension" when naming Claude Desktop's own package format or its own UI label; `MCPExtension*` type names; `docs/design-mcp-extension.md` | Claude Desktop renamed Extensions to **Plugins** on 13 Nov 2026 (the owner saw it about ten minutes old); its install banner and confirm dialog still said "extension" that day (those are the package format's own words, like ours in code). The owner expects Plugins to stay: it aligns Claude with ChatGPT in English. **The word is vendor-owned per language and does not serve both tabs**: Spanish Claude says Plugins, Spanish ChatGPT/Codex says Complementos. Per-language evidence and the method to re-measure it: `docs/i18n-vendor-terms.md`. "Extension" stays correct for the file format, which is why code and design docs keep it. |
 
 Examples:
 - ✓ "Analysing…" (popover, sidebar) ✗ "Running pipeline…"
@@ -156,6 +155,13 @@ Examples:
 - ✓ commit message "fix pipeline early-exit when …" — internal audience, no problem
 
 Existing leak in `bristlenose/cli.py:857` prints `"Pipeline failed."` — pre-existing main-branch issue; small sweep when convenient.
+
+
+### Vendor labels
+
+| Canonical (user-facing) | Forbidden (in user text) | Where "extension" IS fine | Why |
+|---|---|---|---|
+| **plugin** (Claude Desktop and ChatGPT agent connection) | extension, "Claude extension" (in user text) | `.mcpb` / "Desktop extension" when naming Claude Desktop's own package format or its own UI label; `MCPExtension*` type names; `docs/design-mcp-extension.md` | Claude Desktop renamed Extensions to **Plugins** on 13 Nov 2026 (the owner saw it about ten minutes old); its install banner and confirm dialog still said "extension" that day (those are the package format's own words, like ours in code). The owner expects Plugins to stay: it aligns Claude with ChatGPT in English. **The word is vendor-owned per language and does not serve both tabs**: Spanish Claude says Plugins, Spanish ChatGPT/Codex says Complementos. Per-language evidence and the method to re-measure it: `docs/i18n-vendor-terms.md`. "Extension" stays correct for the file format, which is why code and design docs keep it. |
 
 ---
 

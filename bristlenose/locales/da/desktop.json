@@ -1122,7 +1122,7 @@
     "claudeBuild": "Plugin {{version}}",
     "downloadChatGPT": "ChatGPT er ikke installeret \u2014 hent det p\u00e5 chatgpt.com",
     "updateChatGPT": "Denne version af ChatGPT kan ikke tilf\u00f8je plugins fra andre apps \u2014 opdater ChatGPT",
-    "moveToApplications": "Flyt Bristlenose til mappen Programmer, og \u00e5bn det derfra for at installere pluginnet. ChatGPT kan ikke installere det fra det sted, Bristlenose k\u00f8rer fra nu.",
+    "moveToApplications": "Flyt Bristlenose til mappen Programmer, og \u00e5bn det derfra for at installere pluginet. ChatGPT kan ikke installere det fra det sted, Bristlenose k\u00f8rer fra nu.",
     "connectByHand": "Eller forbind manuelt",
     "chatgptReinstallHow": "V\u00e6lg \u22ef \u25b8 Afinstaller i ChatGPT, og derefter Installer plugin.",
     "claudeReinstallHow": "\u00c5bn Plugins i Claude, afinstaller f\u00f8rst Bristlenose, og klik derefter p\u00e5 Geninstaller plugin\u2026.",

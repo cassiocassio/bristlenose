@@ -764,7 +764,7 @@
         },
         "connectAgent": {
           "text": "Zadawaj pytania o projekt z **Claude Desktop** lub dowolnego agenta MCP.",
-          "more": "Włącz dostęp agentów, zainstaluj wtyczkę raz i pytaj własnymi słowami.",
+          "more": "Włącz dostęp agentów, zainstaluj plugin raz i pytaj własnymi słowami.",
           "link": "Połącz agenta"
         },
         "useCodebooks": {

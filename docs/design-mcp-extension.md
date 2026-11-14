@@ -981,7 +981,7 @@ Two fixes, both cheap:
 > rather than copied from the bundled Node package.
 
 1. In Bristlenose: **Connect Agent…** → Claude Desktop.
-2. Click **Install Extension…** (ellipsis: the action completes in *another*
+2. Click **Install Plugin…** (it said Install Extension… until 13 Nov 2026; ellipsis: the action completes in *another*
    app). `NSWorkspace.shared.open` on the `.mcpb`; LaunchServices hands it to
    Claude Desktop, which runs its own install flow. The sheet dismisses on a
    successful hand-off — otherwise Claude Desktop comes forward and strands a
@@ -1384,7 +1384,7 @@ the constraint was found.
 > three tabs it does nothing for were selected), and the pane is **660pt wide**
 > to match Appearance / LLM Provider / Transcription exactly, because the
 > Settings package animates height only and 560 was a visible horizontal jump.
-> `Install Extension…` is the pane's single `borderedProminent`. *Since 29 Sep
+> `Install Plugin…` (Install Extension… until 13 Nov 2026) is the pane's single `borderedProminent`. *Since 29 Sep
 > 2026 there is one per tab:* the ChatGPT tab's **Install Plugin…** is its own
 > prominent button, and only one tab shows at a time.
 >

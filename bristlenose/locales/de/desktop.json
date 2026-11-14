@@ -710,7 +710,7 @@
         },
         "connectAgent": {
           "text": "Stellen Sie Fragen zu einem Projekt aus **Claude Desktop** oder jedem MCP-Agenten.",
-          "more": "Agentenzugriff aktivieren, Plug-in einmal installieren, in eigenen Worten fragen.",
+          "more": "Agentenzugriff aktivieren, Plugin einmal installieren, in eigenen Worten fragen.",
           "link": "Agent verbinden"
         },
         "useCodebooks": {

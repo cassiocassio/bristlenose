@@ -130,11 +130,13 @@ enum MCPExtensionState: Equatable {
 
 extension MCPExtensionState {
 
-    /// The install button's verb. An offer, never a verdict — we can propose
+    /// The Claude tab's install button verb (the ChatGPT tab has its own table,
+    /// `chatGPTButtonKey`, because the two vendors name the thing differently
+    /// per language). An offer, never a verdict — we can propose
     /// an action on our own file; we cannot pronounce on Claude Desktop's
     /// state. Reinstall/Update differ because the researcher's intent differs:
     /// one replaces a build, the other advances a version.
-    var buttonKey: String {
+    var claudeButtonKey: String {
         switch self {
         case .unknown, .matching:            return "desktop.mcpAgents.claudeInstall"
         case .differentBuild, .newerRelease: return "desktop.mcpAgents.claudeReinstall"

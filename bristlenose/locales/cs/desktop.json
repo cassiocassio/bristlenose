@@ -763,7 +763,7 @@
         },
         "connectAgent": {
           "text": "Ptejte se na projekt z **Claude Desktop** nebo z jak\u00e9hokoli agenta MCP.",
-          "more": "Zapn\u011bte p\u0159\u00edstup agent\u016f, jednou nainstalujte z\u00e1suvn\u00fd modul a ptejte se vlastn\u00edmi slovy.",
+          "more": "Zapn\u011bte p\u0159\u00edstup agent\u016f, jednou nainstalujte plugin a ptejte se vlastn\u00edmi slovy.",
           "link": "P\u0159ipojit agenta"
         },
         "useCodebooks": {

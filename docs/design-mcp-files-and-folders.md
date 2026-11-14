@@ -693,7 +693,9 @@ untested, so there's nothing to quote yet.
 > **Shipped 29 Sep 2026 under different keys and wording — the locale files
 > are the source of truth, not this table.** The hint is
 > `desktop.mcpAgents.chatgptHint` (en: "…ChatGPT will open and ask you to
-> install it."), beside `installPlugin`, `reinstallPlugin`, `updatePlugin`,
+> install it."), beside `chatgptInstall`, `chatgptReinstall`, `chatgptUpdate` (named
+> `installPlugin`, `reinstallPlugin`, `updatePlugin` until the 13 Nov 2026 split into
+> Claude and ChatGPT key families),
 > `downloadChatGPT`, `updateChatGPT`, `moveToApplications`, `connectByHand` and
 > `chatgptReinstallHow`. The table is kept as the reviewed starting point.
 

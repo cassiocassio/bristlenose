@@ -35,7 +35,7 @@
 
 Claude's help centre localises only es, fr, de, it, pt, ja, ko, ru and zh-TW; every other locale path serves the English article. OpenAI's localises 20 of our 21.
 
-Vendor-side words that are not ours and stay English in our copy until a locale proves otherwise: Claude's **Uninstall** button (the Plugins page, English UI), ChatGPT's **Install plugin**, **Plugins** sidebar item, **Work** mode.
+Vendor-side words that are not ours: Claude's **Plugins** sidebar item and **Uninstall** button, ChatGPT's **Install plugin** and **Work** mode. Where that vendor localises (see the table) our copy uses its localised word; where it does not (the ten locales Claude's help centre skips), the word is probably English on the user's screen, and our sentences quote it as English. Claude's own app was checked only in es, fr and en.
 
 ## App ground truth, 13 Nov 2026 (ChatGPT/Codex desktop, Settings ▸ Integrations sidebar item, language set per language)
 
@@ -54,4 +54,4 @@ The ChatGPT desktop app's own Plugins label in all 21 of our languages (the owne
 - `docs/glossary.md` row **plugin** (user text) points here.
 - `.claude/agents/i18n-review.md` § 4 checks vendor-label strings against this table.
 - `docs/adding-a-language.md` Step 5: a new language needs a row per vendor here before its Claude and ChatGPT tab strings are seeded.
-- Keys: `desktop.mcpAgents.*` (Claude tab: `claudeDesktopHint`, `claudeReinstallHow`, `claudeDesktopPromptNote`; ChatGPT tab: `chatgptHint`, `chatgptReinstallHow`, `updateChatGPT`, `moveToApplications`; shared today: the `*Plugin` buttons and `pluginBuild`).
+- Keys: `desktop.mcpAgents.*` (Claude tab: `claudeDesktopHint`, `claudeReinstallHow`, `claudeDesktopPromptNote`; ChatGPT tab: `chatgptHint`, `chatgptReinstallHow`, `updateChatGPT`, `moveToApplications`; buttons and build lines are per tab: `claudeInstall` / `claudeReinstall` / `claudeUpdate` / `claudeBuild` / `claudeUnknownBuild` and `chatgptInstall` / `chatgptReinstall` / `chatgptUpdate` / `chatgptBuild`; no key is shared between the tabs). Where the two sources disagree on a form (nb: the help centre says Pluginer, the app's sidebar says Plugins) the help-centre title decides plural forms and the app decides the label.

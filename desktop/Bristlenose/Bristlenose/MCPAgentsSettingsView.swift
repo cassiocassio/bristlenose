@@ -897,7 +897,7 @@ struct MCPAgentsSettingsView: View {
             if MCPExtensionInstaller.claudeDesktopCanInstall {
                 // The pane's ONE prominent action (HIG: a single filled
                 // button per surface; the per-tab Copy stays bordered).
-                Button(i18n.t(extensionState.buttonKey)) {
+                Button(i18n.t(extensionState.claudeButtonKey)) {
                     let outcome = MCPExtensionInstaller.installOutcome()
                     claudeLastInstall = outcome
                     if outcome.opened { claudeLastOpened = outcome }

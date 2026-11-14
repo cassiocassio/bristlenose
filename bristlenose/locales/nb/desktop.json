@@ -710,7 +710,7 @@
         },
         "connectAgent": {
           "text": "Still spørsmål om et prosjekt fra **Claude Desktop** eller en annen MCP-agent.",
-          "more": "Slå på agenttilgang, installer tillegget én gang, og spør med egne ord.",
+          "more": "Slå på agenttilgang, installer pluginet én gang, og spør med egne ord.",
           "link": "Koble til en agent"
         },
         "useCodebooks": {

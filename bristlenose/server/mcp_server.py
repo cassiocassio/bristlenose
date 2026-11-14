@@ -345,7 +345,6 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     set_aside: dict[tuple[str, str], int] = {}
     if set_aside_keys:
         from bristlenose.server.models import Quote as _Quote
-
         from bristlenose.server.models import QuoteState as _QuoteState
 
         aside_rows = [

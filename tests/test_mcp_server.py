@@ -1665,6 +1665,15 @@ class TestRanking:
         text = build_instructions().casefold()
         assert "starred" in text and "signal" in text and "sort" in text
 
+    def test_the_instructions_carry_the_research_vocabulary_rules(self) -> None:
+        """B4: a researcher's words map to the codebook first; "pain points" is
+        a real group with a named fallback; "things to fix" is evidence, not a
+        decision; answers take the shape of the report's signal cards."""
+        text = build_instructions().casefold()
+        for phrase in ("codebook", "pain points", "things to fix", "signal cards",
+                       "say which tag or group", "fall back"):
+            assert phrase in text, phrase
+
 
 class TestSessionRoster:
     """A1 of docs/design-mcp-session-roster.md: "who was in which session?"

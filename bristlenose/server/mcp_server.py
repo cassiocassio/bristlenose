@@ -142,7 +142,8 @@ def build_instructions() -> str:
         "points, expectations), match it to the researcher's own codebook "
         "before searching text: read the codebook groups in "
         "get_project_overview and the tag definitions in get_framework, "
-        "filter search_quotes by tag, and say which tag or group you matched. "
+        "filter search_quotes by tag (or by group, for a whole codebook group "
+        "such as Mental models), and say which tag or group you matched. "
         "If nothing matches, say so and fall back to a text search, naming "
         "the fallback. \"Pain points\" is a group in the UX Research "
         "codebook (framework id uxr): use its accepted tags, and if the project has not enabled "
@@ -486,11 +487,14 @@ def _tool_search_quotes(
     min_duration_seconds: float | None = None,
     max_duration_seconds: float | None = None,
     sort: str = "time",
+    group: str | None = None,
 ) -> dict[str, Any]:
     from bristlenose.models import Sentiment
     from bristlenose.server.heading_names import HeadingNames
     from bristlenose.server.models import (
         ClusterQuote,
+        CodebookGroup,
+        ProjectCodebookGroup,
         QuoteTag,
         ScreenCluster,
         TagDefinition,
@@ -507,6 +511,21 @@ def _tool_search_quotes(
             )
     if sort not in SEARCH_SORTS:
         raise ToolInputError(f"unknown sort {sort[:80]!r} — valid values: {list(SEARCH_SORTS)}")
+    project_groups: dict[int, str] = {}
+    if group:
+        # The codebook groups this project has applied, by the name the
+        # researcher sees; an unknown one teaches the valid names.
+        project_groups = {
+            g.id: g.name
+            for g in db.query(CodebookGroup)
+            .join(ProjectCodebookGroup, ProjectCodebookGroup.codebook_group_id == CodebookGroup.id)
+            .filter(ProjectCodebookGroup.project_id == project_id)
+        }
+        if group.lower() not in {n.lower() for n in project_groups.values()}:
+            raise ToolInputError(
+                f"unknown group {group[:80]!r} — this project's groups: "
+                f"{sorted(project_groups.values())}"
+            )
     for bound, value in (
         ("min_duration_seconds", min_duration_seconds),
         ("max_duration_seconds", max_duration_seconds),
@@ -565,14 +584,19 @@ def _tool_search_quotes(
         ):
             themes_of.setdefault(tq.quote_id, []).append(names.theme(theme_row))
     tags_of: dict[int, list[str]] = {}
+    groups_of: dict[int, set[str]] = {}
     if visible_pks:
-        for qt, name in (
-            db.query(QuoteTag, TagDefinition.name)
+        for qt, name, group_id in (
+            db.query(QuoteTag, TagDefinition.name, TagDefinition.codebook_group_id)
             .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
             .filter(QuoteTag.quote_id.in_(visible_pks))
             .order_by(TagDefinition.name)
         ):
             tags_of.setdefault(qt.quote_id, []).append(name)
+            if group_id in project_groups:
+                # Accepted tags only: a QuoteTag row is an accepted tag, a
+                # proposal is not one, so a group never counts a proposal.
+                groups_of.setdefault(qt.quote_id, set()).add(project_groups[group_id].lower())
 
     def _matches(q: Any) -> bool:
         text = edited.get(q.id, q.text)
@@ -592,6 +616,8 @@ def _tool_search_quotes(
         if theme and theme.lower() not in [t.lower() for t in themes_of.get(q.id, [])]:
             return False
         if tag and tag.lower() not in [t.lower() for t in tags_of.get(q.id, [])]:
+            return False
+        if group and group.lower() not in groups_of.get(q.id, set()):
             return False
         return True
 
@@ -1042,6 +1068,7 @@ def create_mcp_server(
         min_duration_seconds: float | None = None,
         max_duration_seconds: float | None = None,
         sort: str = "time",
+        group: str | None = None,
     ) -> dict[str, Any]:
         """Search the curated quotes (hidden quotes excluded, researcher
         edits applied). Filters combine with AND; text is never truncated;
@@ -1055,13 +1082,16 @@ def create_mcp_server(
         the signal a quote supports, then intensity, then time); the result
         says which it used in sorted_by. Bristlenose does not judge how well
         a quote reads. A participant code nobody holds is an error that
-        lists the valid codes; a valid code with no quotes returns empty."""
+        lists the valid codes; a valid code with no quotes returns empty.
+        group is a codebook group's name (for example a framework's "Mental
+        models"): the quotes carrying any accepted tag in it. An unknown
+        group is an error listing this project's groups."""
         return _run(
             "search_quotes", project_id,
             lambda db: _tool_search_quotes(
                 db, project_id, query, tag, sentiment, participant,
                 section, theme, starred_only, limit, offset,
-                min_duration_seconds, max_duration_seconds, sort,
+                min_duration_seconds, max_duration_seconds, sort, group,
             ),
         )
 

@@ -73,6 +73,7 @@ def _search(db, **kwargs):
         "project_id": 1, "query": None, "tag": None, "sentiment": None, "participant": None,
         "section": None, "theme": None, "starred_only": False, "limit": 20, "offset": 0,
         "min_duration_seconds": None, "max_duration_seconds": None, "sort": "time",
+        "group": None,
     }
     defaults.update(kwargs)
     return _tool_search_quotes(db, **defaults)
@@ -848,7 +849,7 @@ class TestProtocol:
         allowed = {
             "project_id", "query", "tag", "sentiment", "participant", "section",
             "theme", "starred_only", "limit", "offset", "lens", "framework_id",
-            "min_duration_seconds", "max_duration_seconds", "sort",
+            "min_duration_seconds", "max_duration_seconds", "sort", "group",
         }
         for name, tool in tools.items():
             params = set(tool["inputSchema"].get("properties", {}))
@@ -1714,6 +1715,62 @@ class TestRanking:
             assert phrase in text, phrase
 
 
+class TestGroupFilter:
+    """C2: ask by codebook group ("mental models") instead of one tag at a time."""
+
+    @pytest.fixture()
+    def groups(self, db):
+        """Two applied groups: 'Mental models' (two tags) and 'Pain points' (one)."""
+        made: dict[str, tuple[CodebookGroup, dict[str, TagDefinition]]] = {}
+        for name, tags in (("Mental models", ("borrowed model", "folk theory")),
+                           ("Pain points", ("auth friction",)), ("Unused group", ())):
+            group = CodebookGroup(name=name, subtitle="", colour_set="ux")
+            db.add(group)
+            db.flush()
+            db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=group.id))
+            defs = {}
+            for t in tags:
+                td = TagDefinition(codebook_group_id=group.id, name=t)
+                db.add(td)
+                db.flush()
+                defs[t] = td
+            made[name] = (group, defs)
+        by_time = {int(q.start_timecode): q for q in db.query(Quote).all()}
+        for start, group_name, tag in ((10, "Mental models", "borrowed model"),
+                                       (26, "Mental models", "folk theory"),
+                                       (46, "Pain points", "auth friction")):
+            db.add(QuoteTag(quote_id=by_time[start].id,
+                            tag_definition_id=made[group_name][1][tag].id))
+        db.commit()
+        return made
+
+    def _ids(self, db, **kw) -> set[str]:
+        return {q["quote_id"] for q in _search(db, **kw)["quotes"]}
+
+    def test_a_group_returns_the_union_of_its_tags(self, db, groups) -> None:
+        assert self._ids(db, group="Mental models") == {"q-p1-10", "q-p1-26"}
+        assert self._ids(db, group="Pain points") == {"q-p1-46"}
+
+    def test_the_group_name_is_case_insensitive(self, db, groups) -> None:
+        assert self._ids(db, group="mental MODELS") == {"q-p1-10", "q-p1-26"}
+
+    def test_it_combines_with_the_other_filters(self, db, groups) -> None:
+        both = self._ids(db, group="Mental models", sentiment="frustration")
+        assert both == {"q-p1-26"}  # q-p1-10 is confusion
+
+    def test_a_group_with_no_tagged_quotes_is_empty_not_an_error(self, db, groups) -> None:
+        assert _search(db, group="Unused group")["total_matched"] == 0
+
+    def test_an_unknown_group_lists_the_groups_the_project_has(self, db, groups) -> None:
+        with pytest.raises(ToolInputError) as caught:
+            _search(db, group="Delight")
+        assert "Mental models" in str(caught.value) and "Pain points" in str(caught.value)
+
+    def test_a_hidden_quote_is_not_returned_by_its_group(self, db, groups) -> None:
+        _hide(db, 10)
+        assert self._ids(db, group="Mental models") == {"q-p1-26"}
+
+
 class TestUnknownParticipant:
     """C1: an empty search for a code nobody holds is different from an empty
     search for a participant with no quotes, and the agent must be told which."""
@@ -1839,6 +1896,26 @@ class TestSessionRoster:
         rows = self._agrees_with_search(db)
         assert rows["s1"]["visible_quotes"] == 3
         assert next(s for s in rows["s1"]["speakers"] if s["code"] == "p1")["visible_quotes"] == 3
+
+    def test_a_quote_whose_paragraph_was_moved_to_someone_else_does_not_count(self, db) -> None:
+        """The researcher moved the paragraph a quote came from to the moderator
+        (picker's Paragraph scope): those words are no longer the participant's
+        evidence, so neither the roster nor the search counts them."""
+        from bristlenose.server.models import TranscriptSegment
+
+        quote = db.query(Quote).filter(
+            Quote.start_timecode >= 26, Quote.start_timecode < 27
+        ).one()
+        before = self._agrees_with_search(db)["s1"]["visible_quotes"]
+        # Every paragraph the quote's words overlap goes to the moderator: a
+        # quote spanning a moved and an unmoved paragraph would stay.
+        for seg in db.query(TranscriptSegment).all():
+            if seg.start_time < quote.end_timecode and seg.end_time > quote.start_timecode:
+                seg.speaker_code, seg.moved_from = "m1", "p1"
+        db.commit()
+        after = self._agrees_with_search(db)["s1"]["visible_quotes"]  # roster == search
+        assert after < before
+        assert "q-p1-26" not in {q["quote_id"] for q in _search(db, limit=50)["quotes"]}
 
     def test_a_quote_credited_to_nobody_shows_as_the_gap_in_the_session_total(self, db) -> None:
         """A quote whose tag matches no slot in its session (what a renamed

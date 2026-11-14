@@ -124,7 +124,7 @@
     "label": "Plugins",
     "stem": "plugin",
     "evidence": "english-fallback",
-    "note": "Claude's help centre is not localised here (redirects to /en/); app not opened, its UI is probably English"
+    "note": "Claude's help centre is not localised here (re-checked 14 Nov 2026: /uk/ still redirects to /en/, where the article says Plugin); app not opened, its UI is probably English. Owner ruled 14 Nov 2026: follow the vendor, so the Claude tab keeps the English word"
    },
    "zh-Hant": {
     "label": "外掛程式",

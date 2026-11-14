@@ -523,7 +523,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - An HTTPS OAuth callback on a developer Mac can fail because a DIFFERENT copy of the app…
 - Printing is post-v1 (owner, 23 Oct 2026): no `com.apple.security.print`, no File ▸…
 - Consent version bumping
-- A Claude Desktop extension's id includes `author.name`: changing it installs a second copy (13 Nov 2026)
+- A Claude Desktop extension's id includes `author.name`: changing it installs a second copy (13 Nov 2026); "Unknown developer" on its Plugins row is not fixable by us (14 Nov 2026)
 
 **Tests, harnesses and verification** (13) — [full entries](gotchas.md#tests-harnesses-and-verification)
 

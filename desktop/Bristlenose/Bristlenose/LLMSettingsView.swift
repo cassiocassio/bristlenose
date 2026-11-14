@@ -54,6 +54,11 @@ struct LLMSettingsView: View {
     /// True only under `init(measuring:)`.
     private let measuring: Bool
 
+    /// A Diagnostics ▸ Azure Settings fixture, overlaid at read time. Never
+    /// written by validation, so a check landing mid-visit cannot clobber it.
+    /// Dropped on leaving Azure and when the package re-adds the pane.
+    @State private var fixture: AzureSettingsFixture?
+
     init() { measuring = false }
 
     /// Measurement seam — pins the pane to one provider so its natural height
@@ -63,8 +68,9 @@ struct LLMSettingsView: View {
     /// `List`, and the on-appear pass reads the real Keychain and can fire a
     /// billed validation round-trip — neither belongs in a test. Production
     /// always uses `init()`.
-    init(measuring provider: LLMProvider) {
+    init(measuring provider: LLMProvider, fixture: AzureSettingsFixture? = nil) {
         _selectedProvider = State(initialValue: provider)
+        _fixture = State(initialValue: fixture)
         measuring = true
     }
 
@@ -87,6 +93,13 @@ struct LLMSettingsView: View {
         .frame(width: 660)
         .onAppear {
             if measuring { return }
+            // A Diagnostics fixture is per visit: the package keeps this pane (and
+            // its @State) across tab switches and window closes, so a fixture from
+            // an earlier visit is dropped here, and one asked for just now is
+            // collected FIRST, before the Keychain sweep below can stall past its
+            // three-second lifetime (an ad-hoc debug build waits on a prompt).
+            fixture = nil
+            let requestedFixture = AzureSettingsFixture.takePending()
             // Quit has no exit of its own here, so it asks for the drafts (R38).
             // Never cleared: the pane outlives its tab and window, so a paste
             // whose save failed on close is still there for quit to try again,
@@ -118,6 +131,7 @@ struct LLMSettingsView: View {
             // before this closure moves `selectedProvider` off its `.claude`
             // default — so opening Settings straight onto Azure would otherwise
             // measure Claude's shape. A no-op when it already agrees.
+            if let requestedFixture { apply(requestedFixture) }
             refit()
         }
         // Lazy load: when the user clicks a different provider in the
@@ -125,6 +139,7 @@ struct LLMSettingsView: View {
         // entry point for the per-row "open the account" prompt — Mail
         // Accounts pattern.
         .onChange(of: selectedProvider) { previous, _ in
+            if selectedProvider != .azure { fixture = nil }
             // Save the row being left before anything else. Here, not on the
             // key field: picking Ollama removes the field, and with it any
             // handler it carried (R38).
@@ -155,7 +170,10 @@ struct LLMSettingsView: View {
         // content changes shape, the window follows. Covers the provider switch
         // AND a validation landing — an error paragraph with its `ollama pull`
         // copy-rows is a bigger shape change than most switches.
-        .onChange(of: heightSignature) { _, _ in refit() }
+        .onChange(of: heightSignature) { _, _ in refit(exact: fixture != nil) }
+        .onReceive(NotificationCenter.default.publisher(for: .azureSettingsFixture)) { note in
+            if let requested = note.object as? AzureSettingsFixture { apply(requested) }
+        }
         // Refresh "Last verified" relative-time labels every 30s so they
         // don't go stale (e.g. "1 minute ago" forever).
         .task {
@@ -173,7 +191,8 @@ struct LLMSettingsView: View {
     private var heightSignature: String {
         [selectedProvider.rawValue,
          String(describing: statusFor(selectedProvider)),
-         statusErrors[selectedProvider]?.resolved(i18n) ?? "",
+         failure(for: selectedProvider)?.resolved(i18n) ?? "",
+         fixture?.rawValue ?? "",
          keyDrafts.failed.contains(selectedProvider) ? "keyNotSaved" : "",
          useCustomModel ? "custom" : "listed"].joined(separator: "|")
     }
@@ -183,9 +202,13 @@ struct LLMSettingsView: View {
     /// After the change, not during it: SwiftUI has not laid the new content out
     /// when `onChange` fires, so measuring here would measure the old height.
     /// One turn of the main queue — same shape as MCP Agents' `refit()`.
-    private func refit() {
+    ///
+    /// `exact` fits both ways with no shrink deadband. A Diagnostics fixture wants
+    /// it: its whole job is to show a height, and with the 60pt deadband the
+    /// window would keep the taller fixture's height after a shorter one is picked.
+    private func refit(exact: Bool = false) {
         DispatchQueue.main.async {
-            SettingsWindow.shared.refitToContent(shrinkThreshold: Self.shrinkThreshold)
+            SettingsWindow.shared.refitToContent(shrinkThreshold: exact ? 0 : Self.shrinkThreshold)
         }
     }
 
@@ -235,7 +258,7 @@ struct LLMSettingsView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            .modifier(OptionalHelp(text: statusErrors[provider]?.resolved(i18n)))
+                            .modifier(OptionalHelp(text: failure(for: provider)?.resolved(i18n)))
                         case .keyNotSaved:
                             // The field's own error, shown where the row is still
                             // on screen after the row it was typed in is left. The
@@ -281,7 +304,7 @@ struct LLMSettingsView: View {
                     .animation(
                         reduceMotion ? nil : .easeInOut(duration: 0.2),
                         value: statusFor(selectedProvider))
-                    if let error = statusErrors[selectedProvider]?.resolved(i18n),
+                    if let error = failure(for: selectedProvider)?.resolved(i18n),
                        statusFor(selectedProvider) != .online {
                         // Per Mac convention (Mail, Internet Accounts) the dot
                         // carries the colour signal; the error text is .secondary
@@ -315,7 +338,8 @@ struct LLMSettingsView: View {
                             }
                         }
                     }
-                    if let lastVerified = lastVerifiedText(for: selectedProvider) {
+                    // The proposed design shows this line only when Online.
+                    if fixture == nil, let lastVerified = lastVerifiedText(for: selectedProvider) {
                         Text(lastVerified)
                             .font(.caption)
                             .foregroundStyle(.tertiary)
@@ -791,7 +815,20 @@ struct LLMSettingsView: View {
     // MARK: - Status helpers
 
     private func statusFor(_ provider: LLMProvider) -> ProviderStatus {
-        statuses[provider, default: .notSetUp]
+        if provider == .azure, fixture != nil { return .invalid }
+        return statuses[provider, default: .notSetUp]
+    }
+
+    /// The failure sentence to show for a provider: a fixture's, or the real one.
+    /// Every read of `statusErrors` that reaches the screen goes through here.
+    private func failure(for provider: LLMProvider) -> FailureMessage? {
+        if provider == .azure, let fixture { return fixture.failure }
+        return statusErrors[provider]
+    }
+
+    private func apply(_ requested: AzureSettingsFixture) {
+        selectedProvider = .azure
+        fixture = requested
     }
 
     /// Three small inline links under the "Use this provider" toggle:

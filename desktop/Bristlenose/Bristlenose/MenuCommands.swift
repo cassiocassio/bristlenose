@@ -238,6 +238,22 @@ private struct DiagnosticsMenuContent: View {
                     }
                 }
             }
+
+            // Settings ▸ LLM Provider ▸ Azure, forced into a failure.
+            //
+            // The Settings window never scrolls and nothing limits it to the
+            // screen, so an Azure failure's height is a budget against the
+            // smallest Mac we support (M1 Air, 1440×900). These open the real
+            // pane with fake state, so the window can be seen refitting. See
+            // `AzureSettingsFixture` for what is proposed wording. Never reaches
+            // an App Store build (same gate as above).
+            Menu("Azure Settings") {
+                ForEach(AzureSettingsFixture.allCases) { fixture in
+                    Button(fixture.menuTitle) {
+                        AzureSettingsFixture.present(fixture)
+                    }
+                }
+            }
         }
 
         #if DEBUG

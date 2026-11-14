@@ -87,6 +87,38 @@ import Testing
                 "the non-Azure providers span \(spread)pt, at or past the \(LLMSettingsView.shrinkThreshold)pt threshold — the window will now move while the user is comparing them")
     }
 
+    // MARK: - The Azure failure fixtures (Diagnostics ▸ Azure Settings)
+
+    /// Azure's height with a fixture overlaid, or bare.
+    private func azureHeight(_ fixture: AzureSettingsFixture?) -> CGFloat {
+        let host = NSHostingController(
+            rootView: LLMSettingsView(measuring: .azure, fixture: fixture).environmentObject(I18n()))
+        host.sizingOptions = .preferredContentSize
+        host.view.layoutSubtreeIfNeeded()
+        return host.view.fittingSize.height
+    }
+
+    @Test func everyAzureFixtureReachesTheScreen() {
+        // Pins the `failure(for:)` read: if it stops reading the fixture, the
+        // sentence disappears and a fixture measures as the bare pane. It does NOT
+        // pin the `statusFor` half (the red dot, the label, the disabled toggle):
+        // bare status is already not-online, so removing that line changes no
+        // height. A failure sentence always adds at least a line.
+        let bare = azureHeight(nil)
+        for fixture in AzureSettingsFixture.allCases {
+            #expect(azureHeight(fixture) > bare,
+                    "\(fixture.rawValue) is not taller than the bare Azure pane (\(bare)pt): the overlay is not reaching the view")
+        }
+    }
+
+    @Test func theLongestSentenceIsTheTallestFixture() {
+        // The point of the worst case: the long deployment name wraps further than
+        // any other sentence, so it is the number to hold against the screen.
+        let tallest = AzureSettingsFixture.allCases.map(azureHeight).max()!
+        #expect(azureHeight(.longestSentence) == tallest)
+        #expect(azureHeight(.longestSentence) > azureHeight(.noSuchDeployment))
+    }
+
     @Test func azureIsFarEnoughAwayToEarnTheMove() {
         // The other side: if Azure crept close to the group the threshold would
         // swallow it, and Azure would silently start compressing again.

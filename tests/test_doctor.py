@@ -822,9 +822,12 @@ class TestKeyValidatorsNeverEchoTheKey:
         "sk-ant-AAAA BBBBBBBB",
     ])
     def test_unsendable_key_is_rejected_without_a_request(self, validate, key) -> None:
-        with patch("urllib.request.urlopen") as urlopen:
+        with patch("urllib.request.urlopen") as urlopen, patch(
+            "urllib.request.OpenerDirector.open"
+        ) as opener_open:
             valid, err = validate(key)
         urlopen.assert_not_called()
+        opener_open.assert_not_called()
         assert valid is False
         assert key.strip() not in err
         assert "SECRET" not in err and "AAAA" not in err
@@ -832,7 +835,9 @@ class TestKeyValidatorsNeverEchoTheKey:
     @pytest.mark.parametrize("validate", _validators())
     def test_unexpected_error_text_is_scrubbed(self, validate) -> None:
         err_text = f"Invalid header value b'{_SECRET}' at /v1?key={_SECRET}"
-        with patch("urllib.request.urlopen", side_effect=ValueError(err_text)):
+        with patch("urllib.request.urlopen", side_effect=ValueError(err_text)), patch(
+            "urllib.request.OpenerDirector.open", side_effect=ValueError(err_text)
+        ):
             valid, err = validate(_SECRET)
         assert valid is None
         assert _SECRET not in err
@@ -2333,7 +2338,7 @@ class TestValidateAzureKeySendsTheRunsRequest:
             return MagicMock()
 
         settings = _settings(**self._AZURE)
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        with patch("urllib.request.OpenerDirector.open", side_effect=fake_urlopen):
             result = check_api_key(settings)
 
         assert result.status == CheckStatus.OK
@@ -2351,7 +2356,7 @@ class TestValidateAzureKeySendsTheRunsRequest:
         exc = urllib.error.HTTPError(
             "u", 400, "Bad Request", {}, io.BytesIO(body.encode()),  # type: ignore[arg-type]
         )
-        with patch("urllib.request.urlopen", side_effect=exc):
+        with patch("urllib.request.OpenerDirector.open", side_effect=exc):
             result = check_api_key(_settings(**self._AZURE))
         assert result.status == CheckStatus.FAIL
         assert message in result.detail

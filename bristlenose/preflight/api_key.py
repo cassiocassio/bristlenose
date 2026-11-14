@@ -263,6 +263,20 @@ def _classify_network_error(exc: BaseException) -> ValidationResult | None:
                 "Underlying: " + str(exc)
             ),
         )
+    # The openai SDK wraps a connection failure or timeout in its own
+    # APIConnectionError / APITimeoutError, the httpx cause is down the chain:
+    # the run's classifier reads the chain, so the check does too.
+    from bristlenose.llm.anyllm import is_network_error
+
+    if is_network_error(exc):
+        return ValidationResult(
+            ok=False,
+            error_class="network",
+            raw_message=(
+                "Network connect failed — check DNS / VPN / offline status. "
+                "Underlying: " + str(exc)
+            ),
+        )
     return None
 
 
@@ -476,12 +490,12 @@ def _validate_azure(
         remember_azure_ceiling,
     )
 
-    def _send(sent: dict[str, Any]) -> None:
+    def _send(sent: dict[str, Any]) -> Any:
         # The legacy shape, as ``LLMClient._analyze_azure`` sends it: a
         # deployment name is the customer's own word and cannot say whether a
         # GPT-5-class model sits behind it. One builder (``request_params``),
         # so the two move together.
-        client.chat.completions.create(
+        return client.chat.completions.create(
             model=deployment,
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
             **sent,
@@ -493,7 +507,7 @@ def _validate_azure(
         params = {**params, "max_tokens": learned}
     try:
         try:
-            _send(params)
+            reply = _send(params)
         except openai.BadRequestError as refused:
             # The run's own request refused for an output cap above the model's
             # ceiling (a gpt-4.1-mini deployment answered 400 to the 64000 default,
@@ -506,7 +520,7 @@ def _validate_azure(
             if ceiling is None:
                 raise
             remember_azure_ceiling(endpoint, deployment, ceiling)
-            _send({**params, "max_tokens": ceiling})
+            reply = _send({**params, "max_tokens": ceiling})
     except openai.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
     except openai.NotFoundError as exc:
@@ -548,6 +562,12 @@ def _validate_azure(
             type(exc).__name__, exc,
         )
         return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
+    if not hasattr(reply, "choices"):
+        # A 200 that is not a chat completion (an HTML page after a followed
+        # redirect): not a pass, so it is not cached for a day either.
+        return ValidationResult(
+            ok=False, error_class=None, raw_message=str(reply)[:200],
+        )
     return ValidationResult(ok=True)
 
 

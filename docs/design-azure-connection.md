@@ -28,6 +28,7 @@ Nothing below is pushed (`main` is ahead of `origin/main`); nothing is released 
 | Piece | State | Where | Note |
 |---|---|---|---|
 | Output-cap retry (the run, preflight, `doctor`) | **Done, on `main`** | `9dc0a4578`, `f932b75e2` | Not in 0.46.0. The Mac app gets it only from a rebuilt sidecar; a real analysis on a lower-cap deployment is the check (grep `azure_output_cap` in the project log). |
+| Reliability fixes from the matrix: preflight classifies offline and DNS as network; doctor no longer silent on 429 and 5xx; redirects are not a pass | **Done, on `main`** (14 Nov) | `tests/test_azure_cli_reliability.py` | Existing wording only. A redirect during a run is unchanged. |
 | Mac Settings check posts one token | **Shipped in 0.46.0**, unproven | `2e3f3b494` | Built blind. It never meets the run's output cap, and keeps no Azure body (matrix, "Disagreements"). |
 | This design, the connection mockup, the decision mockup, the state matrix | **Done, on `main`** (this pass) | `4601a867f` and the pass after | Proposal only; wording not owner-approved except where §10 says so. |
 | Diagnostics ▸ Azure Settings (failure states at real height) | **Done, on `main`** | `30717e7be` | Debug and beta channels only. Measure the collapsed failure on the M1 Air floor. |

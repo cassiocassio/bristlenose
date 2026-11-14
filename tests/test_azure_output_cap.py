@@ -328,7 +328,7 @@ class TestDoctor:
             return MagicMock()
 
         params = request_params("azure", DEPLOYMENT, 64000, 0.1)
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        with patch("urllib.request.OpenerDirector.open", side_effect=fake_urlopen):
             result = _validate_azure_key(
                 ENDPOINT, "test-key", DEPLOYMENT, "2024-10-21", params=params, **kwargs)
         return result, sent

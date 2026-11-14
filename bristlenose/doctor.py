@@ -2152,6 +2152,12 @@ def _validate_azure_key(
 
     from bristlenose.preflight.api_key import _VALIDATION_PROMPT, _params_for
 
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        """Refuse to follow a redirect, so a 3xx surfaces as an ``HTTPError``."""
+
+        def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
     if not _key_is_sendable(key):
         return (False, _UNSENDABLE_KEY)
     params = _params_for("azure", deployment, params)
@@ -2186,7 +2192,13 @@ def _validate_azure_key(
                     **params,
                 }).encode(),
             )
-            with urllib.request.urlopen(req, timeout=10, context=https_context()):
+            # No redirects: urllib would repeat the POST as a GET of wherever it is
+            # sent and a 200 from a sign-in page would read as a good key. A 3xx
+            # raises HTTPError here and is "could not validate" below.
+            opener = urllib.request.build_opener(
+                _NoRedirect, urllib.request.HTTPSHandler(context=https_context())
+            )
+            with opener.open(req, timeout=10):
                 pass
             return (True, "")
         except urllib.error.HTTPError as exc:
@@ -2213,8 +2225,6 @@ def _validate_azure_key(
                     params = {**params, "max_tokens": ceiling}
                     continue
                 return (False, _without_key(refusal, key))
-            if exc.code in (429, 500, 503):
-                return (True, "")
             return (None, f"HTTP {exc.code}")
         except urllib.error.URLError as exc:
             return (None, _without_key(str(exc.reason), key))

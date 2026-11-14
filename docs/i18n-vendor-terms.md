@@ -7,6 +7,7 @@
 - **Say what the vendor says, in that vendor's tab, in the user's language.** The vendors disagree with each other (Spanish: Claude says *Plugins*, ChatGPT/Codex says *Complementos*) and that is fine.
 - **Ground truth is two things together:** the vendor's sidebar label in its own app, and the same word in its public help centre. Where the vendor does not localise a language, use its English word.
 - **One key family per vendor** (`desktop.mcpAgents.claude*` and `chatgpt*`, plus the ChatGPT-tab strings `updateChatGPT` and `moveToApplications`; the `keys` list in the JSON is the roster), never a shared key or a shared noun.
+- **The welcome tip follows Claude** (owner, 14 Nov 2026). `welcome.home.tips.connectAgent.more` names no vendor but says "plugin" in Claude's word per language, because Claude is the first-listed route. It is deliberately not in either key family, so a ChatGPT-only reading of it is expected, not a bug.
 - **Two tie-breaks.** Our own sentences use the noun the vendor's help title uses; a section or button we *quote* is spelled exactly as the app shows it (Russian: noun *плагин*, quoted «Plugins», because Claude's Russian help article leaves its UI path in English). Where help title and app disagree on form (Norwegian ChatGPT: help *Pluginer*, app *Plugins*), the help title decides the plural and the app decides the label.
 
 ## Where the answer lives

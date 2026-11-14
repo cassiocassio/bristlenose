@@ -82,3 +82,33 @@ The glossary normally settles basic computer words (window, paste, zoom) from Ap
 - `.claude/agents/i18n-review.md` § 4 checks vendor-label strings against this table.
 - `docs/adding-a-language.md` Step 5: a new language needs a row per vendor here before its Claude and ChatGPT tab strings are seeded.
 - Keys: `desktop.mcpAgents.*` (Claude tab: `claudeDesktopHint`, `claudeReinstallHow`, `claudeDesktopPromptNote`; ChatGPT tab: `chatgptHint`, `chatgptReinstallHow`, `updateChatGPT`, `moveToApplications`; buttons and build lines are per tab: `claudeInstall` / `claudeReinstall` / `claudeUpdate` / `claudeBuild` / `claudeUnknownBuild` and `chatgptInstall` / `chatgptReinstall` / `chatgptUpdate` / `chatgptBuild`; no key is shared between the tabs). Where the two sources disagree on a form (nb: the help centre says Pluginer, the app's sidebar says Plugins) the help-centre title decides plural forms and the app decides the label.
+
+## Appendix, 14 Nov 2026: the ChatGPT Add menu, read in all 21 languages (not used)
+
+Read from the ChatGPT/Codex desktop app (Settings ▸ Plugins ▸ Add menu), one language at a time, so the stale `desktop.connectAgent.chatgptCodexHow` path ("Settings → MCP servers → Add server") could be restored. The owner ruled it out of scope (the sidebar word plus the help centre is the ground truth), so the string says only to add the entry to `~/.codex/config.toml`. Kept in case the path is ever wanted. Real path in English: Settings ▸ Plugins ▸ Add ▸ Add MCP server. Menu items: Create plugin, Add a marketplace, Add MCP server, Record a skill.
+
+| Locale | Settings | Plugins page | Add | Add MCP server |
+|---|---|---|---|---|
+| en | Settings | Plugins | Add | Add MCP server |
+| ca | Configuració | Connectors | Afegeix | Afegeix un servidor MCP |
+| cs | Nastavení | Pluginy | Přidat | Přidat server MCP |
+| da | Indstillinger | Plugins | Tilføj | Tilføj MCP-server |
+| de | Einstellungen | Plugins | Hinzufügen | MCP-Server hinzufügen |
+| es | Ajustes | Complementos | Añadir | Añadir servidor MCP |
+| fi | Asetukset | Lisäosat | Lisää | Lisää MCP-palvelin |
+| fr (France) | Paramètres | Plugins | Ajouter | Ajouter un serveur MCP |
+| it | Impostazioni | Plugin | Aggiungi | Aggiungi server MCP |
+| ja | 設定 | プラグイン | 追加 | MCP サーバーを追加 |
+| ko | 설정 | 플러그인 | 추가 | MCP 서버 추가 |
+| nb | Innstillinger | Pluginer | Legg til | Legg til MCP-server |
+| nl | Instellingen | Plug-ins | Toevoegen | MCP-server toevoegen |
+| pl | Ustawienia | Wtyczki | Dodaj | Dodaj serwer MCP |
+| pt-BR | Configurações | Plugins | Adicionar | Adicionar servidor MCP |
+| pt-PT | Definições | Plugins | Adicionar | Adicionar servidor MCP |
+| ru | Настройки | Плагины | Добавить | Добавить сервер MCP |
+| sv | Inställningar | Pluginer | Lägg till | Lägg till MCP-server |
+| tr | Ayarlar | Eklentiler | Ekle | MCP sunucusu ekle |
+| uk | Налаштування | Плагіни | Додати | Додати сервер MCP |
+| zh-Hant (Taiwan) | 設定 | 外掛程式 | 新增 | 新增 MCP 伺服器 |
+
+French Canada reads Plugiciels / Ajouter / Ajouter un serveur MCP.

@@ -2,7 +2,7 @@
 status: current
 last-trued: 2026-10-29
 trued-against: combined recovery/status source on codex/sidebar-status-separated, 2026-10-29
-updated: 2026-10-29
+updated: 2026-11-14
 scope: R114 / reliability 179; machine-owned recovery and fresh-start refusal
 ---
 
@@ -11,6 +11,23 @@ scope: R114 / reliability 179; machine-owned recovery and fresh-start refusal
 > **29 October reconciliation:** backend admission and approved native refusal
 > presentation are merged into local main. Retry preserves running documents.
 > Combined main verification is recorded below; no push or release claimed.
+
+> **10 November amendment (`06ee5b874`, shipped in 0.46.0):** the "output-to-backup
+> start gap refuses" rule below locked a study for good when a Re-analyse was
+> stopped or killed inside that gap: the backup stayed, no run named an owner,
+> and every later Analyse and serve start refused it as unverifiable (owner's QA
+> study, 2 Nov). The owner's rulings, 10 Nov: the guard must not treat a run this
+> Mac is still starting as unconfirmed, and the one-Mac case is the one to make
+> near-perfect, while two Macs must not break in normal operation. So `stash`
+> writes an owner note (`_OWNER_MARKER`: machine id, pid, process start) into the
+> report before setting it aside, and the gap is read by `set_aside_owner`:
+> this Mac's note admits (a live owner is left alone, a dead one is put back by
+> the next run or serve), another Mac's note refuses as *Started on another Mac*,
+> and a note-less backup from an older build is put back once its folder has been
+> quiet ten minutes (`_QUIET_S`). A note-less backup younger than that still
+> refuses: only a build without the note can leave one. The CLI's `try` now
+> opens before the stash, with the run's signal handlers, so a Stop or Quit in
+> the gap puts the report back at once. Evidence: lifecycle register row 59.
 
 Owner requested a William of Ockham reset on 28 October: deliver the simplest
 implementation providing most of the safety benefit, step by step. Later work

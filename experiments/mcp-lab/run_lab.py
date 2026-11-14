@@ -156,8 +156,12 @@ def main() -> None:
 
     def run(pid, prompt, intent, calls, checks):
         steps = [call(t, db, **a) for t, a in calls]
+        try:
+            verdicts = checks(steps)
+        except Exception as exc:  # a broken output is a failed check, not a dead lab
+            verdicts = [{"ok": False, "text": f"the checks could not run: {type(exc).__name__}: {exc}"}]
         results.append({"id": pid, "prompt": prompt, "intent": intent, "steps": steps,
-                        "checks": checks(steps)})
+                        "checks": verdicts})
 
     run("who", "Who did we interview, and which sessions were they in?",
         "A session-by-session roster an agent can turn into a 'who we interviewed' slide.",
@@ -174,7 +178,7 @@ def main() -> None:
     run("gap", "Cleo's session doesn't seem to have any quotes from her. What happened?",
         "The 14 Nov incident: quotes credited to a tag nobody in the session holds.",
         [("get_project_overview", {}), ("search_quotes", {"participant": "p3"}),
-         ("search_quotes", {"participant": "p1"})],
+         ("search_quotes", {"participant": "p1", "session": "s3"})],
         lambda s: (lambda r3: [
             check(next(sp for sp in r3["speakers"] if sp["code"] == "p3")["visible_quotes"] == 0,
                   "p3 is listed with visible_quotes: 0 (not omitted)"),
@@ -192,7 +196,9 @@ def main() -> None:
         lambda s: [
             check(all((x["duration_seconds"] or 999) <= 30 for x in rows(s[0])),
                   "every quote is 30 seconds or less"),
-            check(len(rows(s[0])) == 3, "three clips come back"),
+            check([x["quote_id"] for x in rows(s[0])] == ["q-p2-200", "q-p1-120", "q-p2-620"],
+                  "exactly the three expected clips, in order: the starred one, then the two in the "
+                  "same signal by intensity (3 then 2)"),
             check(rows(s[0])[0]["starred"], "the researcher's starred quote comes first"),
             check(not any("Alex Rivers" in x["text"] for x in rows(s[0])), "the hidden quote is absent"),
             check(s[0]["result"]["sorted_by"].startswith("strength"), "the basis is stated: sorted_by"),
@@ -202,41 +208,58 @@ def main() -> None:
     run("long", "Which frustrated quotes are over 40 seconds? (what's the longest?)",
         "min_duration_seconds, and the timing fields on each row.",
         [("search_quotes", {"sentiment": "frustration", "min_duration_seconds": 40})],
-        lambda s: [check(all(x["duration_seconds"] >= 40 for x in rows(s[0])) and rows(s[0]),
-                         "only quotes of 40 seconds or more, each with start, end and length")])
+        lambda s: [check({x["quote_id"] for x in rows(s[0])} == {"q-p1-300", "q-p1-600"},
+                         "exactly the two frustrated quotes of 40 seconds or more (45s and 40s)"),
+                   check(all(x["end_timecode"] and x["duration_seconds"] for x in rows(s[0])),
+                         "each carries its start, end and length")])
 
     run("untimed", "Show me quotes under 10 seconds from session 3.",
         "An untimed transcript: the answer must say why it is empty, not look like an empty study.",
-        [("search_quotes", {"max_duration_seconds": 10, "section": "Login"})],
-        lambda s: [check("duration_unknown_excluded" in s[0]["result"],
-                         "the result carries duration_unknown_excluded")])
+        [("search_quotes", {"max_duration_seconds": 10, "session": "s3"})],
+        lambda s: [check(s[0]["result"]["total_matched"] == 0 and
+                         s[0]["result"]["duration_unknown_excluded"] == 1,
+                         "nothing under 10 seconds, and exactly one s3 quote left out for unknown length"),
+                   check(all(x["session_id"] == "s3" for x in rows(s[0])), "only session 3")])
 
     run("pain", "What are the pain points?",
         "Research vocabulary mapped to the codebook: the Pain points group and its tags.",
         [("get_project_overview", {}), ("get_framework", {"framework_id": "codebook"}),
-         ("search_quotes", {"tag": "auth friction", "sort": "strength"})],
+         ("search_quotes", {"group": "Pain points", "sort": "strength"})],
         lambda s: [
             check(any(g["name"] == "Pain points" for g in s[0]["result"]["codebook"]["groups"]),
                   "the overview lists a 'Pain points' group the agent can match to"),
-            check(rows(s[2]) and all("auth friction" in x["tags"] for x in rows(s[2])),
-                  "filtering by the matched tag returns tagged quotes only")])
+            check({x["quote_id"] for x in rows(s[2])} == {"q-p1-120", "q-p2-200", "q-p1-300"}
+                  and s[2]["result"]["total_matched"] == 3,
+                  "the group returns exactly the three quotes tagged inside it"),
+            check(s[2]["result"]["groups_matched"] == [{"name": "Pain points", "framework_id": None}],
+                  "the result says which group matched")])
 
     run("mental", "What came up about mental models?",
         "The researcher's words ('mental models') are a real codebook group, not a text search.",
-        [("get_framework", {"framework_id": "codebook"}), ("search_quotes", {"tag": "borrowed model"})],
-        lambda s: [check(rows(s[1]) and all("borrowed model" in x["tags"] for x in rows(s[1])),
-                         "the matched tag finds the quotes")])
+        [("get_framework", {"framework_id": "codebook"}),
+         ("search_quotes", {"group": "Mental models"})],
+        lambda s: [check({x["quote_id"] for x in rows(s[1])} == {"q-p1-60", "q-p1-300"}
+                         and s[1]["result"]["total_matched"] == 2,
+                         "exactly the two quotes carrying a Mental models tag"),
+                   check(any(x["session_id"] == "s3" and x["participant"] == "p1" for x in rows(s[1])),
+                         "WATCH THIS: one of them is session 3's words, credited to the tag p1, which "
+                         "the roster says is Ada in session 1. An agent that attributes by tag alone "
+                         "would misattribute it.")])
 
     run("signals", "What did we learn? Give me the strongest patterns.",
         "Signal cards for the 'what we learned' slide.",
         [("get_signals", {"lens": "sentiment", "limit": 3})],
-        lambda s: [check(s[0]["result"]["signals"], "signal cards come back with participants and confidence")])
+        lambda s: [check(s[0]["result"]["signals"] and all(c["participants"] and c["confidence"]
+                                                          for c in s[0]["result"]["signals"]),
+                         "every card names its participants and its confidence"),
+                   check(len(s[0]["result"]["signals"]) <= 3, "limited to the three asked for")])
 
     run("best", "What are the best quotes overall?",
         "A bare 'best': the stated ranking, and the basis named.",
         [("search_quotes", {"sort": "strength", "limit": 3})],
-        lambda s: [check(rows(s[0])[0]["starred"], "starred first"),
-                   check(s[0]["result"]["sorted_by"].startswith("strength"), "basis stated")])
+        lambda s: [check([x["quote_id"] for x in rows(s[0])][:2] == ["q-p2-200", "q-p1-120"],
+                         "the starred quote first, then the strongest-signal, highest-intensity one"),
+                   check(not any("Alex Rivers" in x["text"] for x in rows(s[0])), "the hidden quote is absent")])
 
     run("typo", "Show me what p9 said.",
         "A code that does not exist.",
@@ -247,17 +270,53 @@ def main() -> None:
 
     run("ben", "What did Ben say in session 2?",
         "Roster first (who is Ben's code), then his quotes: the two have to agree.",
-        [("get_project_overview", {}), ("search_quotes", {"participant": "p2"})],
-        lambda s: [check(len(rows(s[1])) == next(sp["visible_quotes"] for r in s[0]["result"]["sessions"]["items"]
-                                                 if r["session_id"] == "s2" for sp in r["speakers"]
-                                                 if sp["code"] == "p2"),
-                         "the roster's count for p2 equals the number of quotes found"),
-                   check(all(x["participant"] == "p2" for x in rows(s[1])), "only p2's words")])
+        [("get_project_overview", {}), ("search_quotes", {"participant": "p2", "session": "s2"})],
+        lambda s: [check(s[1]["result"]["total_matched"] == next(
+                             sp["visible_quotes"] for r in s[0]["result"]["sessions"]["items"]
+                             if r["session_id"] == "s2" for sp in r["speakers"] if sp["code"] == "p2"),
+                         "the roster's count for p2 in s2 equals the total the search matched"),
+                   check(all(x["participant"] == "p2" and x["session_id"] == "s2" for x in rows(s[1])),
+                         "only p2's words, only session 2")])
 
     run("stars", "What has the researcher starred?",
         "The researcher's own judgement, surfaced as a filter.",
         [("search_quotes", {"starred_only": True})],
-        lambda s: [check(rows(s[0]) and all(x["starred"] for x in rows(s[0])), "only starred quotes")])
+        lambda s: [check([x["quote_id"] for x in rows(s[0])] == ["q-p2-200"], "exactly the one starred quote")])
+
+    run("s2", "Summarise what happened in session 2.",
+        "A session-scoped question: the roster for who, then every quote of that session in time order.",
+        [("get_project_overview", {}), ("search_quotes", {"session": "s2"})],
+        lambda s: [check(all(x["session_id"] == "s2" for x in rows(s[1])) and rows(s[1]),
+                         "only session 2's quotes"),
+                   check(s[1]["result"]["total_matched"] == next(
+                       r["visible_quotes"] for r in s[0]["result"]["sessions"]["items"]
+                       if r["session_id"] == "s2"),
+                       "as many quotes as the roster says session 2 has")])
+
+    run("2fa", "Anything about 2FA or text codes?",
+        "A synonym miss: the quote says 'the code text never arrived'. Substring search cannot know "
+        "2FA means that. An honest lab shows the miss.",
+        [("search_quotes", {"query": "2FA"}), ("search_quotes", {"query": "code"})],
+        lambda s: [check(s[0]["result"]["total_matched"] == 0,
+                         "KNOWN LIMIT: searching '2FA' finds nothing, though a quote is about exactly that"),
+                   check(any("code" in x["text"].lower() for x in rows(s[1])),
+                         "a second try with the quote's own word does find it: the agent has to retry")])
+
+    run("rants", "Pull the juiciest login rants for the readout.",
+        "A messier, human phrasing of 'best': no length limit, no tool vocabulary.",
+        [("search_quotes", {"sentiment": "frustration", "section": "Login", "sort": "strength",
+                            "limit": 5})],
+        lambda s: [check(rows(s[0])[0]["quote_id"] == "q-p2-200", "the starred quote leads"),
+                   check(all(x["sentiment"] == "frustration" for x in rows(s[0])),
+                         "only frustration"),
+                   check(not any("Alex Rivers" in x["text"] for x in rows(s[0])),
+                         "the hidden quote is not offered")])
+
+    run("hiddenprobe", "Include the quotes I hid too.",
+        "The researcher asks for hidden quotes. There is no way to: hidden means hidden.",
+        [("search_quotes", {"query": "Alex Rivers"})],
+        lambda s: [check(s[0]["result"]["total_matched"] == 0,
+                         "a hidden quote cannot be found, even by its exact words")])
 
     p = db.query(Project).one()
     p.mcp_anonymise = True
@@ -267,8 +326,22 @@ def main() -> None:
         [("get_project_overview", {})],
         lambda s: [check(not any(n in json.dumps(s[0]["result"]) for n in ("Ada", "Ben", "Cleo", "synthetic")),
                          "no participant name anywhere in the payload"),
-                   check(all(sp["visible_quotes"] >= 0 for r in s[0]["result"]["sessions"]["items"]
-                             for sp in r["speakers"]), "codes and counts still there")])
+                   check(all("name" not in sp for r in s[0]["result"]["sessions"]["items"]
+                             for sp in r["speakers"]), "no speaker row carries a name key"),
+                   check({(r["session_id"], sp["code"], sp["visible_quotes"])
+                          for r in s[0]["result"]["sessions"]["items"] for sp in r["speakers"]} ==
+                         {(r["session_id"], sp["code"], sp["visible_quotes"])
+                          for r in results[0]["steps"][0]["result"]["sessions"]["items"]
+                          for sp in r["speakers"]},
+                         "codes and counts are exactly what they were with names on")])
+
+    run("anonada", "What did Ada say in session 1? (Anonymise on)",
+        "A researcher asks by name. The tools only know codes, and no name leaks back.",
+        [("search_quotes", {"participant": "p1", "session": "s1"})],
+        lambda s: [check(s[0]["result"]["total_matched"] == 3 and
+                         not any(n in json.dumps(s[0]["result"]) for n in ("Ada", "synthetic")),
+                         "three quotes (the fourth is hidden) come back under the code p1, with no "
+                         "name in the payload")])
 
     # A second, separate study: the participant and the moderator of session 1
     # have their roles swapped (the real incident that started this work).
@@ -285,9 +358,10 @@ def main() -> None:
         [("get_project_overview", {}), ("search_quotes", {"participant": "p1"})],
         lambda s: (lambda r1: [
             check(r1["visible_quotes"] == 0, "the session shows no visible quotes"),
-            check(any(sp.get("quotes_set_aside", 0) > 0 and sp["role"] == "researcher"
+            check(any(sp.get("quotes_set_aside") == 3 and sp["role"] == "researcher"
                       and sp.get("slot_code") == "p1" for sp in r1["speakers"]),
-                  "the row for the tag p1 now says researcher, with quotes_set_aside > 0"),
+                  "the row for the tag p1 now says researcher, with exactly 3 quotes set aside "
+                  "(four were extracted; the researcher hid one, and a hidden quote is not counted)"),
             check(any(sp["role"] == "participant" and sp["visible_quotes"] == 0
                       for sp in r1["speakers"]),
                   "the moderator's tag now reads as a participant with nothing to show")])(
@@ -295,10 +369,17 @@ def main() -> None:
 
     commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
+    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--",
+                            "bristlenose/server", "desktop/mcpb"],
+                           capture_output=True, text=True).stdout.strip()
+    if dirty:
+        commit += "+uncommitted"  # the run imports the working tree, not the commit
     payload = {
         "commit": commit, "instructions": build_instructions(), "prompts": results,
         "note": "Synthetic study. Tool calls chosen by hand, not by a live model; outputs are real "
-                "results of the server's tool functions at this commit.",
+                "results of the server's tool functions at this commit. The checks were written by "
+                "the same author that chose the calls: a tick means that one-line claim holds, not "
+                "that the answer is good. Judge the output, not the ticks.",
     }
     OUT.write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
     template = Path(__file__).with_name("lab-template.html").read_text(encoding="utf-8")

@@ -1,0 +1,239 @@
+{
+ "_about": "What each vendor itself calls a plugin, per language. Bristlenose says the vendor's own word in that vendor's tab (docs/i18n-vendor-terms.md). 'stem' is a lowercase fragment every string of that vendor's key family must contain, so inflected forms (wtyczkę, lisäosana) still match. Change a row only with evidence from the vendor's app or help centre, and update 'checked'.",
+ "claude": {
+  "keys": [
+   "claudeInstall",
+   "claudeReinstall",
+   "claudeUpdate",
+   "claudeBuild",
+   "claudeUnknownBuild",
+   "claudeDesktopHint",
+   "claudeDesktopPromptNote"
+  ],
+  "locales": {
+   "ca": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "cs": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "da": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "de": {
+    "stem": "plugin",
+    "source": "help",
+    "checked": "2026-11-13"
+   },
+   "en": {
+    "stem": "plugin",
+    "source": "app + help centre (English is the source of both vendors' wording)",
+    "checked": "2026-11-13"
+   },
+   "es": {
+    "stem": "plugin",
+    "source": "app+help",
+    "checked": "2026-11-13"
+   },
+   "fi": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "fr": {
+    "stem": "plugin",
+    "source": "app+help",
+    "checked": "2026-11-13"
+   },
+   "it": {
+    "stem": "plugin",
+    "source": "help",
+    "checked": "2026-11-13"
+   },
+   "ja": {
+    "stem": "プラグイン",
+    "source": "help",
+    "checked": "2026-11-13"
+   },
+   "ko": {
+    "stem": "플러그인",
+    "source": "help",
+    "checked": "2026-11-13"
+   },
+   "nb": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "nl": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "pl": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "pt-BR": {
+    "stem": "plugin",
+    "source": "help",
+    "checked": "2026-11-13"
+   },
+   "pt-PT": {
+    "stem": "plugin",
+    "source": "help",
+    "checked": "2026-11-13"
+   },
+   "ru": {
+    "stem": "плагин",
+    "source": "help (UI path in English)",
+    "checked": "2026-11-13"
+   },
+   "sv": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "tr": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "uk": {
+    "stem": "plugin",
+    "source": "english fallback: Claude's help centre is not localised, its UI is probably English",
+    "checked": "2026-11-13"
+   },
+   "zh-Hant": {
+    "stem": "外掛程式",
+    "source": "help",
+    "checked": "2026-11-13"
+   }
+  }
+ },
+ "chatgpt": {
+  "keys": [
+   "chatgptInstall",
+   "chatgptReinstall",
+   "chatgptUpdate",
+   "chatgptBuild",
+   "chatgptHint",
+   "updateChatGPT",
+   "moveToApplications"
+  ],
+  "locales": {
+   "ca": {
+    "stem": "connector",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "cs": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "da": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "de": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "en": {
+    "stem": "plugin",
+    "source": "app + help centre (English is the source of both vendors' wording)",
+    "checked": "2026-11-13"
+   },
+   "es": {
+    "stem": "complement",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "fi": {
+    "stem": "lisäos",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "fr": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "it": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "ja": {
+    "stem": "プラグイン",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "ko": {
+    "stem": "플러그인",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "nb": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "nl": {
+    "stem": "plug-in",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "pl": {
+    "stem": "wtyc",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "pt-BR": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "pt-PT": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "ru": {
+    "stem": "плагин",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "sv": {
+    "stem": "plugin",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "tr": {
+    "stem": "eklent",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "uk": {
+    "stem": "плагін",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   },
+   "zh-Hant": {
+    "stem": "外掛程式",
+    "source": "app (ChatGPT/Codex desktop sidebar, every language) + help centre",
+    "checked": "2026-11-13"
+   }
+  }
+ }
+}

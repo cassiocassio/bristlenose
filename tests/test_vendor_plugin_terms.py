@@ -1,0 +1,66 @@
+"""Each vendor tab says that vendor's own word for a plugin, in every language.
+
+The mapping is data (``bristlenose/locales/vendor-terms.json``, evidence in
+``docs/i18n-vendor-terms.md``). Two vendors call the same thing different words
+per language (Spanish: Claude "Plugins", ChatGPT/Codex "Complementos"), so a
+locale file that drifts to one shared word, or a vendor string that loses its
+noun, fails here and not on a researcher's screen.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+_LOCALES = Path(__file__).resolve().parent.parent / "bristlenose" / "locales"
+_TERMS = json.loads((_LOCALES / "vendor-terms.json").read_text(encoding="utf-8"))
+
+# The 21 full locales; zh-Hant-HK is a thin override that inherits zh-Hant.
+_LOCALE_CODES = sorted(_TERMS["claude"]["locales"])
+
+
+def _mcp_agents(locale: str) -> dict[str, str]:
+    data = json.loads((_LOCALES / locale / "desktop.json").read_text(encoding="utf-8"))
+    return (data["desktop"] if "desktop" in data else data)["mcpAgents"]
+
+
+def test_the_data_covers_every_full_locale_for_both_vendors() -> None:
+    shipped = sorted(
+        p.name for p in _LOCALES.iterdir()
+        if p.is_dir() and p.name != "zh-Hant-HK" and (p / "desktop.json").exists()
+    )
+    assert sorted(_TERMS["claude"]["locales"]) == shipped
+    assert sorted(_TERMS["chatgpt"]["locales"]) == shipped
+
+
+@pytest.mark.parametrize("vendor", ["claude", "chatgpt"])
+@pytest.mark.parametrize("locale", _LOCALE_CODES)
+def test_every_string_of_a_vendor_tab_carries_that_vendors_word(vendor: str, locale: str) -> None:
+    stem = _TERMS[vendor]["locales"][locale]["stem"].lower()
+    strings = _mcp_agents(locale)
+    for key in _TERMS[vendor]["keys"]:
+        assert key in strings, f"{locale} has no {key}"
+        assert stem in strings[key].lower(), (
+            f"{locale} {key} should carry the {vendor} word {stem!r}: {strings[key]!r}"
+        )
+
+
+@pytest.mark.parametrize("locale", _LOCALE_CODES)
+def test_where_the_vendors_disagree_a_tab_does_not_borrow_the_other_vendors_word(
+    locale: str,
+) -> None:
+    claude = _TERMS["claude"]["locales"][locale]["stem"].lower()
+    chatgpt = _TERMS["chatgpt"]["locales"][locale]["stem"].lower()
+    if claude in chatgpt or chatgpt in claude:
+        return  # same word, or one stem inside the other: nothing to separate
+    strings = _mcp_agents(locale)
+    for key in _TERMS["chatgpt"]["keys"]:
+        assert claude not in strings[key].lower(), (
+            f"{locale} ChatGPT string {key} uses the Claude word {claude!r}: {strings[key]!r}"
+        )
+    for key in _TERMS["claude"]["keys"]:
+        assert chatgpt not in strings[key].lower(), (
+            f"{locale} Claude string {key} uses the ChatGPT word {chatgpt!r}: {strings[key]!r}"
+        )

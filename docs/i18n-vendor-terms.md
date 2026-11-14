@@ -51,6 +51,15 @@ The ChatGPT desktop app's own Plugins label in all 21 of our languages (the owne
 
 **Consequence for the open question:** the Claude tab uses Claude's word, which in the ten languages Claude does not localise (ca cs da fi nb nl pl sv tr uk) is the English "plugin". The current implementation follows the ruling, so nothing is reverted; the native-noun alternative previously recommended here is withdrawn.
 
+## The mapping as data, and sweep findings (14 Nov 2026)
+
+`bristlenose/locales/vendor-terms.json` carries the table above as data, and `tests/test_vendor_plugin_terms.py` fails when a vendor family's string loses that vendor's word or borrows the other vendor's. **Update the JSON and the table together, with evidence and the date.**
+
+**Sweep: other strings that quote a vendor's UI (not yet checked per language):**
+- `desktop.connectAgent.chatgptCodexHow`: "In ChatGPT: Settings → MCP servers → Add server …". The real ChatGPT app (13 Nov 2026) has Settings ▸ Integrations ▸ **Plugins**, with tabs Plugins, Apps, MCP and Skills and an **Add** menu, so this path is probably stale. Re-check in the app, then word it per language from the OpenAI column.
+- `desktop.mcpAgents.filesFoldersNote` and similar quote macOS labels: those follow the Apple loctable rule (`.claude/agents/i18n-review.md` § 6c), not this table.
+- Miro, Figma, Zoom and Teams labels in `desktop.miro*`, the FigJam sheet and the cloud-import flows are the same class and have no per-language evidence yet.
+
 ## Method (rerun it, do not trust the table's age)
 
 - **Claude**: `curl -s -L -A "<browser UA>" -H "Accept-Language: <loc>" https://support.claude.com/<loc>/articles/13837440-use-plugins-in-claude`, read the final URL and `<h1>`. An unlocalised locale redirects to `/en/`.

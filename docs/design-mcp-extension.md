@@ -7,6 +7,8 @@ trued-against: HEAD@main on 2026-10-11 (after 7a519706)
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
 
+> **Trued 14 Nov 2026 ("Unknown developer").** Claude Desktop's Plugins page labels this extension "Unknown developer" whatever the manifest says, because it is a privately distributed local extension: the directory no longer accepts MCPB and chat ignores a plugin's local servers, so no verified route exists. Researched and closed in `docs/research/claude-unknown-developer-2026-11.md`; do not try to fix it in the manifest.
+
 > **Trued 4 Oct 2026 (--doc, §3.1 only).** The two handshake copies are now byte-identical by construction: `writeBoth` builds the payload once, so both carry one `updated_at` (before, each copy built its own and two writes straddling a second disagreed). §3.1 says so, and its `payload` anchor is a symbol rather than a stale line number. Nothing else changed.
 
 > **Trued 4 Sep 2026 (--topic keychain), three token-store edits.** The Generic-MCP caveat said an ad-hoc build's token "falls back to the rotating one" — the unscoped `/api/*` token §3.1 exists to keep out of the handshake; it mints an ephemeral scoped token instead. §3.1 now says the token is the one credential in the app that does not sync, and why. The address/token table names the keychain. Nothing else changed.

@@ -130,7 +130,7 @@ const TOOLS = [
     },
     {
       "name": "get_project_overview",
-      "description": "Cheap orientation: sessions (each listing every speaker in it, with role, code and visible quote count, and quotes_set_aside where a recode or a moved paragraph set a speaker's quotes aside; a session's quotes_with_no_speaker names any tag that quotes are credited to though nobody in that session holds it, which is why its visible_quotes can exceed its speakers' sum), participants (codes only; `count` counts participants, not moderators), sections, themes, codebook summary, counts, top signals, and last-run status. Call this first; it also lists valid framework ids.",
+      "description": "Cheap orientation: sessions (each listing every speaker in it, with role, code and visible quote count, and quotes_set_aside where a recode or a moved paragraph set a speaker's quotes aside; a session's quotes_with_no_speaker names any tag that quotes are credited to though nobody in that session holds it, which is why its visible_quotes can exceed its speakers' sum), participants (codes only; `count` counts participants, not moderators), sections, themes, codebook summary, counts (quotes.hidden_by_researcher counts quotes no tool returns), names_withheld (whether Anonymise is withholding names), top signals, and last-run status. Call this first; it also lists valid framework ids.",
       "inputSchema": {
         "type": "object",
         "properties": {

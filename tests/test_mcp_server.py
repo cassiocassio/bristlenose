@@ -1774,6 +1774,32 @@ class TestGroupFilter:
         assert self._ids(db, group="Mental models") == {"q-p1-26"}
 
 
+class TestNamesWithheldStatus:
+    """Round-3 live agents (c3) could not tell "no names exist" from "names are
+    withheld by Anonymise": the overview now says which."""
+
+    def test_it_says_names_are_not_withheld_by_default(self, db) -> None:
+        assert _tool_get_project_overview(db, 1, None)["names_withheld"] is False
+
+    def test_it_says_so_under_the_project_flag(self, db) -> None:
+        from bristlenose.server.models import Project
+
+        db.query(Project).one().mcp_anonymise = True
+        db.commit()
+        assert _tool_get_project_overview(db, 1, None)["names_withheld"] is True
+
+    def test_it_says_so_under_the_desktop_switch_with_the_flag_off(
+        self, db, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("BRISTLENOSE_MCP_ANONYMISE", "1")
+        assert _tool_get_project_overview(db, 1, None)["names_withheld"] is True
+
+    def test_the_instructions_say_what_to_do_about_it_and_about_hidden_quotes(self) -> None:
+        text = build_instructions().casefold()
+        assert "names_withheld" in text
+        assert "hidden_by_researcher" in text and "cannot be read" in text
+
+
 class TestSessionFilterAndReconciliation:
     """A speaker tag restarts in every session, so a participant filter alone
     cannot reproduce one session's roster count; the session filter can."""

@@ -1,11 +1,153 @@
 [
-{"id":"a1","verdict":"minor_issues","wrong_or_unsupported":["'Speaker codes only: p1 (two of the clips: q-p1-120)' is wrong. Only one of the three clips is p1 (q-p1-120); two are p2. The answer later says p1 is 'only represented once', so it contradicts itself.","'It does not judge how articulate or persuasive a quote is' is the answer's own gloss. The logs show only the sorted_by text (starred, then signal strength, then intensity, then time).","'Covers both people who voiced frustration with login' relies on the Login signal's participants p1/p2. That signal includes q-p1-0, whose p1 credit sits in s3, a session whose only participant is p3. The answer notes this oddity separately but still presents the two-person coverage as settled."],"missed":["s1 duration_seconds is 78, but clip 1 for p1 is timed 02:00-02:18 (120-138 s) and q-p1-300 at 05:00-05:45 is also past the end. The timecodes lie outside the session, so the p1 clip cannot be cut as timed. The answer says nothing about this.","The answer lists participants as codes only. That matches the logs, but it does not say that q-p1-0's p1 credit is unresolved."],"note":"The three clips, timings and tags match the logs. There is one clear attribution-count slip (p1 'two of the clips') and an unflagged 78 s session against a 120 s timecode."},
-{"id":"a2","verdict":"accurate","wrong_or_unsupported":["'Names appear because the project's Anonymise switch is off' cannot be checked in the logged results. The logs only show that names are present."],"missed":["The answer does not say that s3's two visible quotes are credited to a tag nobody in s3 holds. It does say they are unattributed and tells the researcher to check s3."],"note":"Sessions, participants, names, date, durations and the 3/4/0/9/1-hidden counts all match the overview. The only soft spot is the unverifiable Anonymise explanation."},
-{"id":"a3","verdict":"accurate","wrong_or_unsupported":["Equating the p1-slot speaker with Ada ('presumably Ada') comes from the prompt, not the logs. The answer says the tools do not name her and says this is an inference."],"missed":["Nothing material. The swapped code/slot_code, the 3 set-aside quotes, 0 visible in s1, and s3's two p1-credited quotes are all reported correctly."],"note":"Matches the swap-study logs closely and flags its inferences honestly."},
-{"id":"a4","verdict":"minor_issues","wrong_or_unsupported":["Pain point #1 says the Login signal has 'group Pain points / tag auth friction'. Only 3 of its 5 quotes carry that tag; q-p2-620 and q-p1-0 have no tags.","In the main body q-p1-0 and q-p1-60 are listed as p1 without a caveat. The doubt about attribution appears only in the Tool experience notes. Pain point #2 is described as '1 quote, 1 participant', and its only quote is the unattributable s3 one.","'Pain points group ... instructions describe it as uxr' cannot be checked from the logs. It is not contradicted either: framework_id is null in this main study."],"missed":["s1 is 78 s long, but q-p1-120 (02:00), q-p1-300 (05:00-05:45) and q-p1-600 (10:00-10:40) are all timed past its end. The answer never mentions it.","q-p1-0 and q-p1-60 are both s3 quotes with no resolvable speaker. They make up 2 of the evidence for the top two pain points, and the researcher is not told this in the answer body."],"note":"Quotes, tags, counts (6 frustration, 2 confusion, 7 of 9 Login) and signal values are right. The weakness is that pains #1 and #2 rest partly on quotes the answer itself says cannot be attributed."},
-{"id":"a5","verdict":"minor_issues","wrong_or_unsupported":["'Only 7 Login quotes exist, from 3 participants' is not supported. The 7 Login quotes are credited to p1 and p2 only. The two s3 quotes cannot be attributed to p3 and the answer says as much elsewhere.","'Nothing tells me the ranking's basis for the three intensity-tied quotes' is loose. Only q-p1-120 and q-p1-300 tie at intensity 3, and the starred quote already ranks first.","'Quotes are verbatim' is not checkable from the logs."],"missed":["Picks 2 and 3 are timed 02:00 and 05:00-05:45, but s1 is 78 s long per the overview. The answer only says 'check the timecodes' and never mentions the mismatch."],"note":"Quote ids, text, tags, order, the skipped quotes and the s3 attribution warning match the logs. The participant count and the missed timecode problem are the weak points."},
-{"id":"a6","verdict":"accurate","wrong_or_unsupported":["'Anonymise is off' is inferred from names appearing. It is not stated in the logs."],"missed":["Nothing material. The answer even catches that q-p1-300's timecode (05:00) is past the 78 s session, and treats q-p1-60's p1 credit as unverified."],"note":"Quotes, tags, intensity, group usage counts, and the s3 attribution problem all match the logs; the answer is cautious in the right places."},
-{"id":"b3","verdict":"minor_issues","wrong_or_unsupported":["'The two quotes ... are probably Cleo's' is a guess. The overview lists them under quotes_with_no_speaker (tag p1, nobody in s3 holds it), so the data does not say whose they are. The answer does label it an inference, but it still steers the researcher toward an attribution the tools leave open.","'That p1 mixes quotes from two different sessions' p1 tags' is unsupported. In the swap study s1's p1-slot quotes are set aside, so the Login signal's p1 can only come from the s3 quote.","'The tool documentation says ...' and 'Ada is p1 slot' rest on the instructions and on the prompt, not on the results. The answer flags the Ada link as an inference."],"missed":["Nothing important. Set-aside count of 3, role/slot swap, 6 visible quotes, and the duplicated Sentiment group (7 and 3 tags) are all correctly reported."],"note":"Diagnosis is right and well supported. The weak points are the guess that the s3 quotes are Cleo's and the stray p1-mix claim."},
-{"id":"b4","verdict":"minor_issues","wrong_or_unsupported":["'Payments: 1 quote, 1 participant ... an anecdote' understates the evidence. The overview shows 2 Payments quotes and a Payments confusion quote exists (q-p2-500, p2 per the main study). The answer's frustration-only definition of pain point hides it, and it still states the section count as 1.","'Below the signal threshold (a signal needs 2+ quotes)' cannot be confirmed from the logs. The answer cites it as an instruction.","Pain points #1 and #2 overlap. q-p1-120 and q-p1-300 are among the 5 Login frustration quotes counted in #1 and are also the 2 quotes in #2, so the 'top three' are really two areas plus one quote."],"missed":["q-p1-0 is listed as a 'related' quote in #1 with p1 attribution implied. The overview says it has no speaker in s3. The answer flags this later, but not where the quote is used.","s3 quotes 'Login again? Ok.' and q-p1-60 are in the signal's evidence but cannot be attributed. This only appears as a 'what the tools could not tell me' item."],"note":"Quotes, counts, tags, and the observation that get_signals shows empty tags and 3 of 5 supporting quotes are accurate. The Payments sizing and the overlapping top-three are the flaws."},
-{"id":"b6","verdict":"accurate","wrong_or_unsupported":["'Anonymise is off' is inferred from the presence of names, not stated in the logs."],"missed":["Nothing material. It correctly calls q-p1-60's attribution unresolved using quotes_with_no_speaker, notes the tag on q-p1-300 is the researcher's rather than the wording, and spots the duplicate Sentiment group and the zero usage counts."],"note":"Every quote, tag, intensity, timecode and count matches, and the unresolved s3 attribution is handled correctly."}
+ {
+  "id": "a1",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "'Speaker codes only: p1 (two of the clips: q-p1-120)' is wrong. Only one of the three clips is p1 (q-p1-120); two are p2. The answer later says p1 is 'only represented once', so it contradicts itself.",
+   "'It does not judge how articulate or persuasive a quote is' is the answer's own gloss. The logs show only the sorted_by text (starred, then signal strength, then intensity, then time).",
+   "'Covers both people who voiced frustration with login' relies on the Login signal's participants p1/p2. That signal includes q-p1-0, whose p1 credit sits in s3, a session whose only participant is p3. The answer notes this oddity separately but still presents the two-person coverage as settled."
+  ],
+  "missed": [
+   "s1 duration_seconds is 78, but clip 1 for p1 is timed 02:00-02:18 (120-138 s) and q-p1-300 at 05:00-05:45 is also past the end. The timecodes lie outside the session, so the p1 clip cannot be cut as timed. The answer says nothing about this.",
+   "The answer lists participants as codes only. That matches the logs, but it does not say that q-p1-0's p1 credit is unresolved."
+  ],
+  "note": "The three clips, timings and tags match the logs. There is one clear attribution-count slip (p1 'two of the clips') and an unflagged 78 s session against a 120 s timecode."
+ },
+ {
+  "id": "a2",
+  "verdict": "accurate",
+  "wrong_or_unsupported": [
+   "'Names appear because the project's Anonymise switch is off' cannot be checked in the logged results. The logs only show that names are present."
+  ],
+  "missed": [
+   "The answer does not say that s3's two visible quotes are credited to a tag nobody in s3 holds. It does say they are unattributed and tells the researcher to check s3."
+  ],
+  "note": "Sessions, participants, names, date, durations and the 3/4/0/9/1-hidden counts all match the overview. The only soft spot is the unverifiable Anonymise explanation."
+ },
+ {
+  "id": "a3",
+  "verdict": "accurate",
+  "wrong_or_unsupported": [
+   "Equating the p1-slot speaker with Ada ('presumably Ada') comes from the prompt, not the logs. The answer says the tools do not name her and says this is an inference."
+  ],
+  "missed": [
+   "Nothing material. The swapped code/slot_code, the 3 set-aside quotes, 0 visible in s1, and s3's two p1-credited quotes are all reported correctly."
+  ],
+  "note": "Matches the swap-study logs closely and flags its inferences honestly."
+ },
+ {
+  "id": "a4",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "Pain point #1 says the Login signal has 'group Pain points / tag auth friction'. Only 3 of its 5 quotes carry that tag; q-p2-620 and q-p1-0 have no tags.",
+   "In the main body q-p1-0 and q-p1-60 are listed as p1 without a caveat. The doubt about attribution appears only in the Tool experience notes. Pain point #2 is described as '1 quote, 1 participant', and its only quote is the unattributable s3 one.",
+   "'Pain points group ... instructions describe it as uxr' cannot be checked from the logs. It is not contradicted either: framework_id is null in this main study."
+  ],
+  "missed": [
+   "s1 is 78 s long, but q-p1-120 (02:00), q-p1-300 (05:00-05:45) and q-p1-600 (10:00-10:40) are all timed past its end. The answer never mentions it.",
+   "q-p1-0 and q-p1-60 are both s3 quotes with no resolvable speaker. They make up 2 of the evidence for the top two pain points, and the researcher is not told this in the answer body."
+  ],
+  "note": "Quotes, tags, counts (6 frustration, 2 confusion, 7 of 9 Login) and signal values are right. The weakness is that pains #1 and #2 rest partly on quotes the answer itself says cannot be attributed."
+ },
+ {
+  "id": "a5",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "'Only 7 Login quotes exist, from 3 participants' is not supported. The 7 Login quotes are credited to p1 and p2 only. The two s3 quotes cannot be attributed to p3 and the answer says as much elsewhere.",
+   "'Nothing tells me the ranking's basis for the three intensity-tied quotes' is loose. Only q-p1-120 and q-p1-300 tie at intensity 3, and the starred quote already ranks first.",
+   "'Quotes are verbatim' is not checkable from the logs."
+  ],
+  "missed": [
+   "Picks 2 and 3 are timed 02:00 and 05:00-05:45, but s1 is 78 s long per the overview. The answer only says 'check the timecodes' and never mentions the mismatch."
+  ],
+  "note": "Quote ids, text, tags, order, the skipped quotes and the s3 attribution warning match the logs. The participant count and the missed timecode problem are the weak points."
+ },
+ {
+  "id": "a6",
+  "verdict": "accurate",
+  "wrong_or_unsupported": [
+   "'Anonymise is off' is inferred from names appearing. It is not stated in the logs."
+  ],
+  "missed": [
+   "Nothing material. The answer even catches that q-p1-300's timecode (05:00) is past the 78 s session, and treats q-p1-60's p1 credit as unverified."
+  ],
+  "note": "Quotes, tags, intensity, group usage counts, and the s3 attribution problem all match the logs; the answer is cautious in the right places."
+ },
+ {
+  "id": "b3",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "'The two quotes ... are probably Cleo's' is a guess. The overview lists them under quotes_with_no_speaker (tag p1, nobody in s3 holds it), so the data does not say whose they are. The answer does label it an inference, but it still steers the researcher toward an attribution the tools leave open.",
+   "'That p1 mixes quotes from two different sessions' p1 tags' is unsupported. In the swap study s1's p1-slot quotes are set aside, so the Login signal's p1 can only come from the s3 quote.",
+   "'The tool documentation says ...' and 'Ada is p1 slot' rest on the instructions and on the prompt, not on the results. The answer flags the Ada link as an inference."
+  ],
+  "missed": [
+   "Nothing important. Set-aside count of 3, role/slot swap, 6 visible quotes, and the duplicated Sentiment group (7 and 3 tags) are all correctly reported."
+  ],
+  "note": "Diagnosis is right and well supported. The weak points are the guess that the s3 quotes are Cleo's and the stray p1-mix claim."
+ },
+ {
+  "id": "b4",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "'Payments: 1 quote, 1 participant ... an anecdote' understates the evidence. The overview shows 2 Payments quotes and a Payments confusion quote exists (q-p2-500, p2 per the main study). The answer's frustration-only definition of pain point hides it, and it still states the section count as 1.",
+   "'Below the signal threshold (a signal needs 2+ quotes)' cannot be confirmed from the logs. The answer cites it as an instruction.",
+   "Pain points #1 and #2 overlap. q-p1-120 and q-p1-300 are among the 5 Login frustration quotes counted in #1 and are also the 2 quotes in #2, so the 'top three' are really two areas plus one quote."
+  ],
+  "missed": [
+   "q-p1-0 is listed as a 'related' quote in #1 with p1 attribution implied. The overview says it has no speaker in s3. The answer flags this later, but not where the quote is used.",
+   "s3 quotes 'Login again? Ok.' and q-p1-60 are in the signal's evidence but cannot be attributed. This only appears as a 'what the tools could not tell me' item."
+  ],
+  "note": "Quotes, counts, tags, and the observation that get_signals shows empty tags and 3 of 5 supporting quotes are accurate. The Payments sizing and the overlapping top-three are the flaws."
+ },
+ {
+  "id": "b6",
+  "verdict": "accurate",
+  "wrong_or_unsupported": [
+   "'Anonymise is off' is inferred from the presence of names, not stated in the logs."
+  ],
+  "missed": [
+   "Nothing material. It correctly calls q-p1-60's attribution unresolved using quotes_with_no_speaker, notes the tag on q-p1-300 is the researcher's rather than the wording, and spots the duplicate Sentiment group and the zero usage counts."
+  ],
+  "note": "Every quote, tag, intensity, timecode and count matches, and the unresolved s3 attribution is handled correctly."
+ },
+ {
+  "id": "c1",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "'Search is a plain substring match on quote text' is not shown in any logged result; it is only consistent with the 'code' hit and the 'text code' miss.",
+   "'I read the whole Login section ... and found no other quote about codes' is true for Login, but the two Payments quotes were never fetched, so only the 'code' search covers that section; the absence claim is slightly overstated."
+  ],
+  "missed": [
+   "The 1 hidden quote could itself be about 2FA; the answer treats absence as weak evidence but does not name the hidden quote as a specific blind spot for this question."
+  ],
+  "note": "Quote ids, wording, speakers, sessions, timecodes, intensity, starred flag and counts all check out against the logs, and the p1-in-s3 caveat is correct; only the unlogged substring-search claim and the unread Payments section are soft."
+ },
+ {
+  "id": "c2",
+  "verdict": "minor_issues",
+  "wrong_or_unsupported": [
+   "'search_quotes excludes hidden quotes by design, and it has no option to include them' is not shown in the logs: the agent made one search_quotes call (limit 2) whose result says nothing about hidden quotes; it cites the tool description, which is not in the log.",
+   "'get_signals and get_framework work from the same curated set, so none of them can reach it' is unsupported: the agent never called either tool.",
+   "'Participant names appear because Anonymise is off for this project' is an inference; the logs show names (Ada, Ben, Cleo) but never state an Anonymise setting.",
+   "'The analysis may be incomplete, since last_run is null' is speculation; the logs show only that last_run is null."
+  ],
+  "missed": [
+   "The overview does not give the hidden quote's session or section; the answer does say it cannot tell, so this is covered.",
+   "Only 2 of 9 quotes were fetched; the answer admits the s3 quotes were not pulled and describes the visible 9 only through overview aggregates."
+  ],
+  "note": "Counts, sections, top signal and the s3 unattributed quotes match the logs and 'hidden quote unreachable' is the correct outcome, but several statements about tool behaviour and the Anonymise state rest on things the logs do not show."
+ },
+ {
+  "id": "c3",
+  "verdict": "accurate",
+  "wrong_or_unsupported": [
+   "'The overview says names appear only when the researcher has left Anonymise off' comes from instructions or tool text, not from the logged results (the answer correctly says the logs do not say whether Anonymise is on).",
+   "'Moderator ... not identified' and 'these are curated quotes, not the full transcript' rely on instructions rather than the logged results; plausible but not in the logs."
+  ],
+  "missed": [
+   "The answer could have said more plainly that the absence of names is consistent with Anonymise being on (the study is 'anon'); it does take the right cautious stance, treating Ada as p1 only as an assumption."
+  ],
+  "note": "All three quotes, ids, timecodes, sections, tags, the hidden-quote count and the s3 p1-tag caveat match the logs, and it correctly refuses to map Ada to p1 as fact."
+ }
 ]

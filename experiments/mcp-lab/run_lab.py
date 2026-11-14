@@ -146,6 +146,10 @@ LIVE_PROMPTS = {
                    "of the report."),
     "a5": ("main", "Pull the juiciest login rants for the readout."),
     "a6": ("main", "Anything about mental models? Who said it?"),
+    # Round 3: prompts the first rounds did not cover.
+    "c1": ("main", "Anything about 2FA or text codes?"),
+    "c2": ("main", "Include the quotes I hid too, I want the full picture for the readout."),
+    "c3": ("anon", "What did Ada say in session 1?"),
     # Round 2: the same prompts to fresh agents after the fixes the first round exposed.
     "b3": ("swap", "Session 1 looks empty to me. Ada talked for most of it. What's going on?"),
     "b4": ("main", "What are the pain points? Give me the top three with a quote each, in the shape "
@@ -193,6 +197,20 @@ LIVE_FINDINGS = [
                "doubt only in the notes. The instructions now say to call such quotes unattributed "
                "in the body. Round-1 timecode complaints (a 78-second session) are a lab-data "
                "artefact, fixed since."),
+    ("GRADED", "Round 3, graded the same way: 1 accurate, 2 minor issues, none major. The minor "
+               "issues are claims about how the tools behave (hidden quotes are unreachable; search "
+               "is a substring match) that the agent took from the descriptions, which the grader "
+               "could not see in the logs. The three agents also made one wrong inference each "
+               "(Anonymise is 'off' because names appear: true, but not stated)."),
+    ("FIXED", "Round 3 (c3, Ada by name under Anonymise): the agent could not tell 'no names exist' "
+              "from 'names are withheld'. The overview now carries names_withheld and the "
+              "instructions say what to do. Round 3 (c2, 'include the quotes I hid'): nothing "
+              "said hidden quotes cannot be retrieved; the overview description and the "
+              "instructions now say so. All three round-3 agents declined to attribute the "
+              "unattributable session-3 quotes, which the round-1 instruction change was for."),
+    ("OPEN", "Round 3 (c1): the overview lists codebook groups and tag counts but not tag names, so "
+             "an agent looking for a topic reads a section to learn the tags (or calls "
+             "get_framework). Not changed: listing every tag would grow a 'cheap' call."),
     ("OPEN (owner's call)", "No way to read the text of set-aside quotes, so an agent cannot show "
                             "the researcher what was set aside. Left alone on purpose: a recode "
                             "says those words are the moderator's, and exposing them is a "
@@ -214,7 +232,7 @@ def load_live() -> list[dict]:
             continue
         steps = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line]
         out.append({"id": aid, "study": study, "prompt": prompt,
-                    "round": 2 if aid.startswith("b") else 1, "grade": grades.get(aid),
+                    "round": {"a": 1, "b": 2, "c": 3}[aid[0]], "grade": grades.get(aid),
                     "steps": [s for s in steps if s["tool"] in
                               ("get_project_overview", "search_quotes", "get_signals", "get_framework")],
                     "answer": answer.read_text(encoding="utf-8") if answer.exists() else ""})
@@ -282,7 +300,9 @@ def main() -> None:
                       for sp in r["speakers"]), "a session names its participant"),
             check(all("name" in sp for r in s[0]["result"]["sessions"]["items"]
                       for sp in r["speakers"] if sp["role"] == "participant"),
-                  "names ride along (Anonymise is off)")])
+                  "names ride along (Anonymise is off)"),
+            check(s[0]["result"]["names_withheld"] is False,
+                  "and the overview says names are not withheld")])
 
     run("gap", "Cleo's session doesn't seem to have any quotes from her. What happened?",
         "The 14 Nov incident: quotes credited to a tag nobody in the session holds.",
@@ -448,6 +468,8 @@ def main() -> None:
                          "no participant name anywhere in the payload"),
                    check(all("name" not in sp for r in s[0]["result"]["sessions"]["items"]
                              for sp in r["speakers"]), "no speaker row carries a name key"),
+                   check(s[0]["result"]["names_withheld"] is True,
+                         "the overview SAYS names are withheld, so 'no names exist' is not the answer"),
                    check({(r["session_id"], sp["code"], sp["visible_quotes"])
                           for r in s[0]["result"]["sessions"]["items"] for sp in r["speakers"]} ==
                          {(r["session_id"], sp["code"], sp["visible_quotes"])

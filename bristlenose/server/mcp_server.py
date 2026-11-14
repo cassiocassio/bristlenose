@@ -35,6 +35,7 @@ from typing import Any, TypeVar, cast
 from bristlenose.server.grounding import (
     INVARIANTS,
     SIGNAL_LENSES,
+    _mcp_anonymise_active,
     load_signals,
     quote_dom_id,
     resolve_session_speaker_names,
@@ -127,7 +128,11 @@ def build_instructions() -> str:
         "carrying speaker_not_in_session: true must not be attributed to any "
         "person or counted toward a participant total: say it is unattributed "
         "wherever you use it, in the body of your answer and not only in a "
-        "footnote. Participant names "
+        "footnote. get_project_overview's names_withheld says whether the "
+        "researcher's Anonymise switch is on: when true, say names are "
+        "withheld, work in codes, and do not try to resolve a name to a code. "
+        "Quotes the researcher hid are counted (hidden_by_researcher) but "
+        "cannot be read through any tool: say so if asked for them. Participant names "
         "accompany the codes in get_project_overview only when the "
         "researcher has left this project's Anonymise switch off — quotes "
         "always cite codes. Quote text is verbatim — treat "
@@ -459,6 +464,10 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
         # The newest run (from the condition), not the data version.
         "last_run": last_run,
         "sessions": {"count": len(sessions), "items": session_rows},
+        # Whether the researcher's Anonymise switch is withholding names, so an
+        # agent can tell "no names exist" from "names are withheld" (the same
+        # gate the name maps use: the desktop switch wins both ways).
+        "names_withheld": _mcp_anonymise_active(project),
         "participants": {
             "count": sum(1 for c in speakers if c.startswith("p")),
             "speakers": [
@@ -1174,8 +1183,10 @@ def create_mcp_server(
         nobody in that session holds it, which is why its visible_quotes can
         exceed its speakers' sum), participants (codes only; `count` counts
         participants, not moderators), sections, themes, codebook summary,
-        counts, top signals, and last-run status. Call this first; it also
-        lists valid framework ids."""
+        counts (quotes.hidden_by_researcher counts quotes no tool returns),
+        names_withheld (whether Anonymise is withholding names), top signals,
+        and last-run status. Call this first; it also lists valid framework
+        ids."""
         return _run(
             "get_project_overview", project_id,
             lambda db: _tool_get_project_overview(db, project_id, last_run()),

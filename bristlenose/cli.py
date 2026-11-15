@@ -137,9 +137,12 @@ def _confirm_clean_discards(output_dir: Path, project: str) -> None:
     """Ask before `--clean` discards the researcher's work on a report.
 
     Typing --clean is a deliberate act, but a terminal is easy to skim and the
-    loss can't be undone (owner, 24 Oct 2026). Mirrors the Mac's Re-analyse
-    sheet: nothing to lose, no question; a count that couldn't be taken asks
-    anyway. Where nobody can answer, it refuses rather than guess; --yes skips.
+    loss can't be undone (owner, 24 Oct 2026). Something counted, or a count
+    that couldn't be taken, asks. **A real zero does not ask, on purpose**: the
+    Mac's sheet always asks since 12 Nov 2026 (N130, option C), but the owner
+    kept the command line silent there, since "the cli people get a bit less
+    handholding" and an unattended `run --clean` must not start refusing.
+    Where nobody can answer, it refuses rather than guess; --yes skips.
     """
     from bristlenose import curation_counts
 

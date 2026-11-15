@@ -1,0 +1,170 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palette lab</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box} body{margin:0;font:12px/1.4 Inter,system-ui,sans-serif;background:#e9e9ec;color:#1a1a1a;display:grid;grid-template-columns:var(--w1,330px) var(--w2,290px) 1fr;height:100vh}
+aside{overflow:auto;padding:12px 14px;background:#f6f6f7;border-right:1px solid #d0d0d4} main{display:flex;flex-direction:column;min-width:0}
+h1{font-size:14px;margin:0 0 8px} h2{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#666;margin:14px 0 4px}
+.k{display:grid;grid-template-columns:104px 1fr 40px 18px;gap:6px;align-items:center;margin:2px 0} .k label{color:#333} .k output{font:11px ui-monospace,Menlo,monospace;text-align:right}
+.k.moved label{font-weight:700} .k .rs{visibility:hidden;border:0;background:none;padding:0;cursor:pointer;font-size:14px;line-height:1;color:#444} .k.moved .rs{visibility:visible} .k .rs:hover{color:#000} input[type=range]{width:100%}
+.bar{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid #d0d0d4;flex-wrap:wrap}
+button,select{font:inherit;padding:3px 9px} button.hold{background:#1a1a1a;color:#fff;border:0;border-radius:5px}
+.frames{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;min-height:0}
+.fw{display:flex;flex-direction:column;min-height:0} .fw b{font-size:11px;margin-bottom:3px;color:#555} iframe{flex:1;border:1px solid #c4c4c8;border-radius:6px;background:#fff;width:100%}
+table{border-collapse:collapse;font:11px ui-monospace,Menlo,monospace;width:100%} td,th{padding:1px 6px;text-align:left} td.bad{background:#f4d9d1;color:#a33217;font-weight:700}
+.keep{position:sticky;top:-12px;margin:8px -14px 0;padding:8px 14px;background:#f6f6f7;border-bottom:1px solid #d0d0d4;z-index:3} .keeprow{display:flex;gap:6px} .keeprow input{flex:1;min-width:0} .keep textarea{margin-top:4px;resize:vertical} .notes{color:#a33217} .muted{color:#666} textarea{width:100%;font:inherit} details{margin:6px 0}
+@media (max-width:1100px){body{grid-template-columns:1fr;grid-template-rows:auto auto 1fr;height:auto;min-height:100vh}aside,#tokens{max-height:42vh;border-right:0;border-bottom:1px solid #d0d0d4}.frames{grid-template-columns:1fr;grid-auto-rows:80vh}}
+#tokens{overflow:auto;padding:10px 12px;background:#fbfbfc;border-right:1px solid #d0d0d4} #tokens h1{font-size:13px}
+#tokens input[type=search]{width:100%;margin:4px 0 2px;padding:3px 6px}
+#tokens h2{position:sticky;top:-10px;background:#fbfbfc;margin:10px 0 2px;padding:2px 0}
+.tk{display:grid;grid-template-columns:1fr 24px 24px 16px;gap:5px;align-items:center;padding:1px 0}
+.tk .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;font-size:11px} .tk.ov .tn{font-weight:700} .tk.mv .tn::after{content:" •";color:#999}
+.chip{width:24px;height:18px;border-radius:4px;border:1px solid #0004;padding:0;cursor:pointer;background-size:auto,8px 8px} .chip:disabled{cursor:not-allowed;opacity:.55}
+.chip.on{outline:2px solid #1a1a1a} .tk .rs{visibility:hidden;border:0;background:none;padding:0;cursor:pointer;font-size:13px;color:#444} .tk.ov .rs{visibility:visible}
+#pop{position:fixed;z-index:20;width:262px;background:#fff;border:1px solid #bbb;border-radius:8px;box-shadow:0 8px 28px #0003;padding:10px 12px;display:none}
+#pop h3{margin:0 0 6px;font-size:12px} #pop .r{display:grid;grid-template-columns:34px 1fr 44px;gap:6px;align-items:center;margin:3px 0} #pop .r output{font:11px ui-monospace,Menlo,monospace;text-align:right}
+#pop .top{display:flex;gap:6px;align-items:center} #pop .top input[type=color]{width:44px;height:30px;padding:0;border:1px solid #bbb;border-radius:5px} #pop .top input[type=text]{flex:1;font:12px ui-monospace,Menlo,monospace}
+#pop .cr{font:11px ui-monospace,Menlo,monospace;color:#444;margin:6px 0} #pop .btns{display:flex;justify-content:space-between;margin-top:8px}
+.gutter{position:fixed;top:0;bottom:0;width:9px;cursor:col-resize;z-index:15;touch-action:none} .gutter::after{content:"";position:absolute;left:4px;top:0;bottom:0;width:1px;background:transparent} .gutter:hover::after,.gutter.drag::after{background:#2563eb;width:2px;left:3px}
+#g1{left:calc(var(--w1,330px) - 4px)} #g2{left:calc(var(--w1,330px) + var(--w2,290px) - 4px)}
+@media (max-width:1100px){.gutter{display:none}}
+</style></head><body>
+<aside>
+  <h1>Palette lab <span class="muted" id="base"></span></h1>
+  <div class="muted">Sliders nudge whole families of tokens together, relative to the base. Hold <b>Compare</b> to flash the base.</div>
+  <div class="keep">
+    <div class="keeprow"><input id="name" placeholder="name, e.g. edo2-a"><button id="save">Save iteration</button></div>
+    <textarea id="note" rows="1" placeholder="what this tries, one line"></textarea>
+    <span id="saved" class="muted"></span>
+    <details><summary>Saved iterations</summary><div id="its"></div></details>
+  </div>
+  <div id="knobs"></div>
+  <h2>Reading: text pairs</h2>
+  <div class="muted">WCAG ratio, then APCA Lc (for reading text; ~75+ body, ~60 secondary).</div><table id="matrix"></table>
+  <h2>Type hierarchy</h2><div class="muted">How far each rung sits from the page, in Lc. Body, muted and link should be distinct steps, none lost.</div><table id="ladder"></table>
+  <div class="notes" id="notes"></div>
+  <h2>Differs from base</h2><div id="diffcount" class="muted"></div>
+</aside>
+<section id="tokens"><h1>Tokens</h1><div class="muted">Chips are light and dark. Click one to edit that colour alone; ↺ puts it back to what the sliders give. • = moved by the sliders.</div>
+  <input type="search" id="tfilter" placeholder="filter tokens…"><div id="tlist"></div></section>
+<div class="gutter" id="g1" title="Drag to resize. Double-click to reset." role="separator" aria-orientation="vertical"></div><div class="gutter" id="g2" title="Drag to resize. Double-click to reset." role="separator" aria-orientation="vertical"></div>
+<div id="pop" role="dialog" aria-label="Edit colour"></div>
+<main>
+  <div class="bar">Page <select id="page"></select> Colour vision <select id="cvd"><option>none</option><option>deuteranopia</option><option>protanopia</option><option>tritanopia</option></select>
+    <button class="hold" id="cmp">Hold to compare with base</button> <button id="reset">Reset</button></div>
+  <div class="frames"><div class="fw"><b>Light</b><iframe id="fl"></iframe></div><div class="fw"><b>Dark</b><iframe id="fd"></iframe></div></div>
+</main>
+<svg width="0" height="0" style="position:absolute"><filter id="deuteranopia"><feColorMatrix type="matrix" values="0.367 0.861 -0.228 0 0 0.280 0.673 0.047 0 0 -0.012 0.043 0.969 0 0 0 0 0 1 0"/></filter><filter id="protanopia"><feColorMatrix type="matrix" values="0.152 1.053 -0.205 0 0 0.115 0.786 0.099 0 0 -0.004 -0.048 1.052 0 0 0 0 0 1 0"/></filter><filter id="tritanopia"><feColorMatrix type="matrix" values="1.256 -0.077 -0.179 0 0 -0.078 0.931 0.148 0 0 0.005 0.691 0.304 0 0 0 0 0 1 0"/></filter></svg>
+<script type="module">
+import {KNOBS,FAMILIES,neutralKnobs,applyKnobs,toCss,matrix,hexToLch,lchToHex,isHex,apca,contrast,parseColour,formatColour} from "/knobs.mjs";
+const $=s=>document.querySelector(s), q=new URLSearchParams(location.search);
+const baseName=q.get("base")||"edo-v1";
+const base=await (await fetch("/api/base?name="+baseName)).json();
+const pages=await (await fetch("/api/pages")).json();
+let knobs=neutralKnobs(), cmp=false, ov={}, tbl=null, popFor=null;
+$("#base").textContent="on "+baseName;
+$("#page").innerHTML=pages.map(p=>`<option value="${p.url}">${p.label}</option>`).join("");
+function build(){
+  const sliders=["light","dark"].map(m=>`<h2>${m}</h2>`+Object.entries(KNOBS).map(([k,[l,mn,mx,st,nv,tip]])=>
+   `<div class="k ${knobs[m][k]!==nv?"moved":""}" title="${tip}"><label>${l}</label><input type="range" min="${mn}" max="${mx}" step="${st}" value="${knobs[m][k]}" data-m="${m}" data-k="${k}"><output>${(+knobs[m][k]).toFixed(st<0.01?3:2)}</output><button class="rs" data-m="${m}" data-k="${k}" title="Reset ${l} (${m}) to ${nv}" aria-label="Reset ${l} (${m})">↺</button></div>`).join("")).join("");
+  $("#knobs").innerHTML=sliders;
+}
+let cur; 
+function paint(){
+  const {table,notes}=applyKnobs(base,knobs,ov); cur=table; tbl=table; renderTokens(); refreshPop();
+  const show=cmp?base:table;
+  for(const [id,mode] of [["#fl","light"],["#fd","dark"]]){
+    const d=$(id).contentDocument; if(!d||!d.documentElement)continue;
+    let st=d.getElementById("wb"); if(!st){st=d.createElement("style");st.id="wb";(d.head||d.documentElement).appendChild(st)}
+    st.textContent=toCss(show,"wb")+`html{color-scheme:${mode} !important}`;
+    d.documentElement.setAttribute("data-color-theme","wb"); d.documentElement.setAttribute("data-theme",mode);
+  }
+  const f=$("#cvd").value; document.querySelector(".frames").style.filter=f==="none"?"":`url(#${f})`;
+  $("#matrix").innerHTML="<tr><th></th><th>light</th><th>dark</th></tr>"+matrix(table).map(r=>`<tr><td>${r.label.replace(/colour-/g,"")}</td>`+["light","dark"].map(m=>`<td class="${r[m]!=null&&r[m]<r.target?"bad":""}">${r[m]==null?"-":r[m].toFixed(1)+" · Lc"+r[m+"Lc"].toFixed(0)}</td>`).join("")+"</tr>").join("");
+  const rung=[["Body","--bn-colour-text"],["Muted","--bn-colour-muted"],["Link","--bn-colour-accent"],["Badge","--bn-colour-badge-text"],["Negative","--bn-colour-negative"]];
+  const lc=(t,m,k)=>apca(t[k][m],t["--bn-colour-bg"][m]);
+  $("#ladder").innerHTML="<tr><th></th><th>light Lc</th><th>dark Lc</th></tr>"+rung.map(([n,k])=>`<tr><td>${n}</td>`+["light","dark"].map(m=>`<td>${lc(table,m,k).toFixed(0)}</td>`).join("")+"</tr>").join("")+
+    `<tr><td>Body-Muted step</td>`+["light","dark"].map(m=>{const d=lc(table,m,"--bn-colour-text")-lc(table,m,"--bn-colour-muted");return `<td class="${d<8||d>40?"bad":""}">${d.toFixed(0)}</td>`}).join("")+"</tr>";
+  $("#notes").innerHTML=notes.length?"Guard moved:<br>"+notes.map(n=>n.replace(/--bn-/g,"")).join("<br>"):"";
+  let n=0; for(const k in base) for(const m of ["light","dark"]) if(base[k][m]!==table[k][m]) n++;
+  $("#diffcount").textContent=n+" of "+Object.keys(base).length*2+" cells differ";
+}
+function resetKnob(m,k){const row=document.querySelector(`input[data-m="${m}"][data-k="${k}"]`); knobs[m][k]=KNOBS[k][4]; row.value=KNOBS[k][4]; row.nextElementSibling.textContent=(+KNOBS[k][4]).toFixed(KNOBS[k][3]<0.01?3:2); row.parentElement.classList.remove("moved"); paint()}
+$("#knobs").addEventListener("click",e=>{const b=e.target.closest(".rs"); if(b) resetKnob(b.dataset.m,b.dataset.k)});
+$("#knobs").addEventListener("dblclick",e=>{if(e.target.matches("input[type=range]")) resetKnob(e.target.dataset.m,e.target.dataset.k)});
+$("#knobs").addEventListener("input",e=>{const {m,k}=e.target.dataset; if(!k)return; knobs[m][k]=+e.target.value; e.target.nextElementSibling.textContent=(+e.target.value).toFixed(2); e.target.parentElement.classList.toggle("moved",knobs[m][k]!==KNOBS[k][4]); paint()});
+$("#cmp").onpointerdown=()=>{cmp=true;paint()}; for(const ev of["pointerup","pointerleave"])$("#cmp").addEventListener(ev,()=>{if(cmp){cmp=false;paint()}});
+$("#reset").onclick=()=>{knobs=neutralKnobs();ov={};closePop();build();paint()}; $("#cvd").onchange=paint;
+function load(url){for(const id of["#fl","#fd"]){const f=$(id);f.onload=paint;f.src=url}}
+$("#page").onchange=e=>load(e.target.value); load(pages[0]?.url||"about:blank");
+$("#save").onclick=async()=>{const name=$("#name").value.trim(); if(!/^[a-z0-9_-]+$/.test(name)){$("#saved").textContent="name: a-z 0-9 - _";return}
+  const r=await fetch("/api/save",{method:"POST",body:JSON.stringify({name,base:baseName,knobs,overrides:ov,note:$("#note").value})}); $("#saved").textContent=r.ok?"saved "+name:"failed"; its()};
+async function its(){const l=await (await fetch("/api/iterations")).json(); $("#its").innerHTML=l.map(i=>`<div><a href="#" data-n="${i.name}">${i.name}</a> <span class="muted">${i.note||""}</span></div>`).join("")||"none yet"}
+$("#its").onclick=async e=>{const n=e.target.dataset.n; if(!n)return; e.preventDefault(); const it=await (await fetch("/api/iteration?name="+n)).json(); knobs=it.knobs; ov=it.overrides||{}; $("#name").value=n; $("#note").value=it.note||""; build(); paint()};
+
+// ── tokens column ──
+const GROUPS=[["Paper and surfaces","paper"],["Ink","ink"],["Accent","accent"],["Negative","negative"],["Positive","positive"],["Caution","caution"]];
+const famOf=t=>{for(const [,f] of GROUPS) if(FAMILIES[f].includes(t)) return f; return "other"};
+const short=t=>t.replace("--bn-","").replace(/^colour-/,"");
+const chipBg=v=>{const c=parseColour(v); const col=c?v:(v.match(/#[0-9a-f]{6}|rgba?\([^)]*\)/i)||["transparent"])[0];
+  return `background-image:linear-gradient(${col},${col}),conic-gradient(#ccc 25%,#fff 0 50%,#ccc 0 75%,#fff 0)`};
+function renderTokens(){
+  const f=($("#tfilter").value||"").toLowerCase(), names=Object.keys(base), out=[];
+  for(const [title,fam] of [...GROUPS,["Other","other"]]){
+    const rows=names.filter(t=>famOf(t)===fam&&short(t).includes(f)).map(t=>{
+      const moved=["light","dark"].some(m=>tbl[t][m]!==base[t][m]), over=!!ov[t]&&Object.keys(ov[t]).length;
+      const chips=["light","dark"].map(m=>{const v=tbl[t][m], ed=!!parseColour(v);
+        return `<button class="chip ${popFor&&popFor.t===t&&popFor.m===m?"on":""}" data-t="${t}" data-m="${m}" style="${chipBg(v)}" title="${m}: ${v}${ed?"":" (compound: set by the sliders)"}" ${ed?"":"disabled"} aria-label="Edit ${short(t)} ${m}"></button>`}).join("");
+      return `<div class="tk ${over?"ov":""} ${moved?"mv":""}"><span class="tn" title="${t}">${short(t)}</span>${chips}<button class="rs" data-t="${t}" title="Reset ${short(t)}" aria-label="Reset ${short(t)}">↺</button></div>`}).join("");
+    if(rows) out.push(`<h2>${title}</h2>`+rows);
+  }
+  $("#tlist").innerHTML=out.join("");
+}
+$("#tfilter").oninput=renderTokens;
+$("#tlist").addEventListener("click",e=>{
+  const rs=e.target.closest(".rs"); if(rs){delete ov[rs.dataset.t]; if(popFor&&popFor.t===rs.dataset.t) closePop(); paint(); return}
+  const ch=e.target.closest(".chip"); if(ch&&!ch.disabled) openPop(ch.dataset.t,ch.dataset.m,ch)});
+const pop=$("#pop");
+function openPop(t,m,anchor){popFor={t,m}; const r=anchor.getBoundingClientRect(); pop.style.display="block";
+  pop.style.left=Math.min(r.right+8,innerWidth-278)+"px"; pop.style.top=Math.max(8,Math.min(r.top-20,innerHeight-330))+"px"; drawPop(); renderTokens()}
+function closePop(){popFor=null; pop.style.display="none"; renderTokens()}
+function drawPop(){ if(!popFor)return; const {t,m}=popFor, c=parseColour(tbl[t][m]); const lch=hexToLch(c.hex);
+  pop.innerHTML=`<h3>${short(t)} <span class="muted">· ${m}</span></h3>
+   <div class="top"><input type="color" id="pc" value="${c.hex}"><input type="text" id="ph" value="${c.hex}" spellcheck="false"></div>
+   <div class="r"><label>L</label><input type="range" id="pl" min="0" max="1" step="0.005" value="${lch.L.toFixed(3)}"><output>${lch.L.toFixed(2)}</output></div>
+   <div class="r"><label>C</label><input type="range" id="pch" min="0" max="0.37" step="0.002" value="${lch.C.toFixed(3)}"><output>${lch.C.toFixed(3)}</output></div>
+   <div class="r"><label>h</label><input type="range" id="phh" min="0" max="360" step="1" value="${Math.round(lch.h)}"><output>${Math.round(lch.h)}</output></div>
+   ${c.alpha===null?"":`<div class="r"><label>α</label><input type="range" id="pa" min="0" max="1" step="0.01" value="${c.alpha}"><output>${c.alpha}</output></div>`}
+   <div class="cr" id="pcr"></div>
+   <div class="btns"><button id="pres">Reset this colour</button><button id="pdone">Done</button></div>`;
+  pop.dataset.alpha=c.alpha===null?"":c.alpha; popContrast()}
+function popContrast(){ if(!popFor)return; const {t,m}=popFor, c=parseColour(tbl[t][m]); const bg=tbl["--bn-colour-bg"][m];
+  $("#pcr").textContent=isHex(bg)?`on page: ${contrast(c.hex,bg).toFixed(2)}:1 · Lc ${apca(c.hex,bg).toFixed(0)}`:""}
+function refreshPop(){ if(!popFor||!pop.style.display||pop.style.display==="none")return; const el=document.activeElement; if(pop.contains(el)&&el.id)return; drawPop()}
+function setFromPop(hex,alpha){const {t,m}=popFor; (ov[t]=ov[t]||{})[m]=formatColour(hex,alpha); paint(); popContrast()}
+pop.addEventListener("input",e=>{ if(!popFor)return; const a=pop.dataset.alpha===""?null:+($("#pa")?.value??pop.dataset.alpha); let hex;
+  if(e.target.id==="pc") hex=e.target.value;
+  else if(e.target.id==="ph"){ if(!isHex(e.target.value.trim()))return; hex=e.target.value.trim().toLowerCase() }
+  else if(["pl","pch","phh"].includes(e.target.id)) hex=lchToHex({L:+$("#pl").value,C:+$("#pch").value,h:+$("#phh").value});
+  else if(e.target.id==="pa"){ pop.dataset.alpha=e.target.value; e.target.nextElementSibling.textContent=e.target.value; hex=parseColour(tbl[popFor.t][popFor.m]).hex; setFromPop(hex,+e.target.value); return }
+  else return;
+  // keep the other controls in step without redrawing (a redraw would drop the drag)
+  const l=hexToLch(hex); if(e.target.id!=="pc") $("#pc").value=hex; if(e.target.id!=="ph") $("#ph").value=hex;
+  if(!["pl","pch","phh"].includes(e.target.id)){ $("#pl").value=l.L; $("#pch").value=l.C; $("#phh").value=Math.round(l.h) }
+  $("#pl").nextElementSibling.textContent=(+$("#pl").value).toFixed(2); $("#pch").nextElementSibling.textContent=(+$("#pch").value).toFixed(3); $("#phh").nextElementSibling.textContent=Math.round($("#phh").value);
+  setFromPop(hex,a)});
+pop.addEventListener("click",e=>{ if(e.target.id==="pdone") closePop();
+  if(e.target.id==="pres"&&popFor){const {t,m}=popFor; if(ov[t]){delete ov[t][m]; if(!Object.keys(ov[t]).length) delete ov[t]} paint(); drawPop()}});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&popFor)closePop()});
+
+// ── resizable columns: drag a gutter, double-click to reset; remembered per browser ──
+const COL={g1:["--w1",330,220,640],g2:["--w2",290,200,560]};
+try{const w=JSON.parse(localStorage.getItem("palette-lab-cols")||"{}"); for(const k in w) document.documentElement.style.setProperty(k,w[k]+"px")}catch(e){}
+const saveCols=()=>{try{localStorage.setItem("palette-lab-cols",JSON.stringify({"--w1":parseInt(getComputedStyle(document.documentElement).getPropertyValue("--w1"))||330,"--w2":parseInt(getComputedStyle(document.documentElement).getPropertyValue("--w2"))||290}))}catch(e){}};
+for(const [id,[v,def,mn,mx]] of Object.entries(COL)){const g=document.getElementById(id);
+  g.onpointerdown=e=>{g.setPointerCapture(e.pointerId); g.classList.add("drag"); const x0=e.clientX, w0=parseInt(getComputedStyle(document.documentElement).getPropertyValue(v))||def;
+    g.onpointermove=ev=>{document.documentElement.style.setProperty(v,Math.max(mn,Math.min(mx,w0+ev.clientX-x0))+"px")};
+    g.onpointerup=()=>{g.classList.remove("drag"); g.onpointermove=g.onpointerup=null; saveCols()}};
+  g.ondblclick=()=>{document.documentElement.style.removeProperty(v); saveCols()}}
+build(); its(); paint();
+</script></body></html>

@@ -415,6 +415,8 @@
       "header": {
         "completed_partial": "\ubd80\ubd84 \uc644\ub8cc",
         "failed": "\uc2e4\ud589 \uc2e4\ud328",
+        "failedAuth": "{{provider}} 키 거부됨",
+        "failedAuthGeneric": "API 키 거부됨",
         "reportError": "보고서를 표시할 수 없음"
       },
       "action": {

@@ -19,11 +19,15 @@ enum SubtitleVariant: Equatable {
     /// The view shows it behind a clickable error glyph, resolving the message
     /// in the language showing now rather than the one in force when the run
     /// exited — see `FailureMessage`.
-    case failed(message: FailureMessage)
+    /// `category` picks the row's short label (`SidebarSubtitleText.failedText`);
+    /// nil where there is none (a startup refusal).
+    case failed(message: FailureMessage, category: PipelineFailureCategory? = nil)
     /// `run_failed` with a structured diagnostic but no inline summary — the
     /// view shows the localised "Run failed" header behind the error glyph; the
     /// detail lives in the popover.
-    case failedDiagnostic
+    /// `category` is the summary's dominant one, nil when it has no
+    /// `PipelineFailureCategory` (`cloud_fetch`, `deferred`).
+    case failedDiagnostic(category: PipelineFailureCategory? = nil)
     /// `run_completed` at reduced fidelity (≥1 session failed), behind the
     /// warning glyph. Reads "6 of 8 sessions analysed" when the run analysed
     /// fewer sessions than it tried (decision #139); `analysed` is nil when
@@ -241,7 +245,7 @@ extension SubtitleVariant {
     /// glyph for two months.
     var glyphKind: MessageKind? {
         switch self {
-        case .failed(let message):
+        case .failed(let message, _):
             return message.startupRefusal == nil ? .error : .warning
         case .failedDiagnostic:
             return .error
@@ -401,10 +405,11 @@ enum ProjectSubtitle {
         // an unmapped future `PipelineState` should be a compile error here,
         // not a silent fall-through to "ready".
         switch pipelineState {
-        case .failed(let message, _):
-            return .failed(message: message)
-        case .failedWithDiagnostic:
-            return .failedDiagnostic
+        case .failed(let message, let category):
+            return .failed(message: message, category: category)
+        case .failedWithDiagnostic(let summary):
+            return .failedDiagnostic(category: PipelineFailureCategory(
+                rawValue: summary.dominantCategory().rawValue))
         case .completedPartial(let summary):
             // Every failure a deferral is a session waiting for Whisper, not a
             // run that went wrong. A real failure beside one keeps the warning.

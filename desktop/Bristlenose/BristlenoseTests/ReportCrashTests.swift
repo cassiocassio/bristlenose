@@ -50,8 +50,9 @@ import Testing
     func verbLedStatesWin() {
         #expect(resolve(.running, crash: crash) == .running)
         #expect(resolve(.failed(.passthrough("boom"), category: .unknown), crash: crash)
-                == .failed(message: .passthrough("boom")))
-        #expect(resolve(.failedWithDiagnostic(summary: summary), crash: crash) == .failedDiagnostic)
+                == .failed(message: .passthrough("boom"), category: .unknown))
+        if case .failedDiagnostic = resolve(.failedWithDiagnostic(summary: summary), crash: crash) {
+        } else { Issue.record("a failed run with a summary should outrank the crash") }
         #expect(resolve(.unreachable(reason: .timedOut), crash: crash)
                 == .unreachable(reason: .timedOut))
         // A partial run is a plausible cause, and its bucket breakdown must

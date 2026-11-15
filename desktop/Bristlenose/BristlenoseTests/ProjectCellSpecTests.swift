@@ -23,7 +23,7 @@ import Testing
             .copying(fraction: 0.5),
             .copyCancelling,
             .failed(message: .passthrough("boom")),
-            .failedDiagnostic,
+            .failedDiagnostic(),
             .completedPartial(analysed: SessionsAnalysed(done: 6, total: 8)),
             .unreachable(reason: .timedOut),
         ]

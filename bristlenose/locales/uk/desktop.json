@@ -487,6 +487,8 @@
       "header": {
         "completed_partial": "Часткове завершення",
         "failed": "Не вдалося виконати запуск",
+        "failedAuth": "Ключ {{provider}} відхилено",
+        "failedAuthGeneric": "Ключ API відхилено",
         "reportError": "Звіт не вдалося показати"
       },
       "action": {

@@ -486,6 +486,8 @@
       "header": {
         "completed_partial": "Částečné dokončení",
         "failed": "Běh selhal",
+        "failedAuth": "Klíč {{provider}} odmítnut",
+        "failedAuthGeneric": "Klíč API odmítnut",
         "reportError": "Zprávu nelze zobrazit"
       },
       "action": {

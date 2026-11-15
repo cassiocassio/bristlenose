@@ -478,6 +478,8 @@
       "header": {
         "completed_partial": "\u4e00\u90e8\u306e\u307f\u5b8c\u4e86",
         "failed": "\u5b9f\u884c\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
+        "failedAuth": "{{provider}} のキーが拒否されました",
+        "failedAuthGeneric": "APIキーが拒否されました",
         "reportError": "レポートを表示できません"
       },
       "action": {

@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Teilweise abgeschlossen",
         "failed": "Lauf fehlgeschlagen",
+        "failedAuth": "{{provider}}-Schlüssel abgelehnt",
+        "failedAuthGeneric": "API-Schlüssel abgelehnt",
         "reportError": "Bericht nicht anzeigbar"
       },
       "action": {

@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Delvis slutförd",
         "failed": "Körningen misslyckades",
+        "failedAuth": "{{provider}}-nyckel avvisad",
+        "failedAuthGeneric": "API-nyckel avvisad",
         "reportError": "Rapporten kunde inte visas"
       },
       "action": {

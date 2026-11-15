@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Delvis fullført",
         "failed": "Kjøring mislyktes",
+        "failedAuth": "{{provider}}-nøkkel avvist",
+        "failedAuthGeneric": "API-nøkkel avvist",
         "reportError": "Rapporten kunne ikke vises"
       },
       "action": {

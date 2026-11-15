@@ -85,12 +85,14 @@ import Testing
 
     @Test func failedCarriesSummary() {
         #expect(resolve(pipelineState: .failed(.passthrough("provider 404"), category: .unknown))
-            == .failed(message: .passthrough("provider 404")))
+            == .failed(message: .passthrough("provider 404"), category: .unknown))
     }
 
     @Test func failedWithDiagnosticMapsToHeaderCase() {
-        #expect(resolve(pipelineState: .failedWithDiagnostic(summary: summary))
-            == .failedDiagnostic)
+        let variant = resolve(pipelineState: .failedWithDiagnostic(summary: summary))
+        guard case .failedDiagnostic = variant else {
+            Issue.record("expected .failedDiagnostic, got \(variant)"); return
+        }
     }
 
     @Test func completedPartialMapsToOwnCase() {
@@ -253,7 +255,7 @@ import Testing
 
     @Test func isDiagnostic_trueForFailureAndPartial() {
         #expect(SubtitleVariant.failed(message: .passthrough("boom")).isDiagnostic)
-        #expect(SubtitleVariant.failedDiagnostic.isDiagnostic)
+        #expect(SubtitleVariant.failedDiagnostic().isDiagnostic)
         #expect(SubtitleVariant.completedPartial(analysed: nil).isDiagnostic)
     }
 

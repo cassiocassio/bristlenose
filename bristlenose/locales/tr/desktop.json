@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Kısmi tamamlanma",
         "failed": "Çalıştırma başarısız oldu",
+        "failedAuth": "{{provider}} anahtarı reddedildi",
+        "failedAuthGeneric": "API anahtarı reddedildi",
         "reportError": "Rapor gösterilemedi"
       },
       "action": {

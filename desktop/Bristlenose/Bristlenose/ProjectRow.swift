@@ -255,22 +255,25 @@ struct ProjectRow: View {
             } else {
                 Text(" ").font(.caption).hidden()
             }
-        case .failed(let message):
+        case .failed(let message, let category):
             // Localised short header, not Python's raw summary — see
             // `SidebarSubtitleText.text` for why (row budget is ~22 chars; the
             // summary goes to the popover). Kept identical to the shipped
             // AppKit cell so the retired row can't disagree with it.
             diagnosticSubtitle(kind: message.startupRefusal == nil ? .error : .warning,
                                text: message.startupRefusal?.headline(using: i18n)
-                                   ?? i18n.t("desktop.pipeline.diagnostic.header.failed"))
-        case .failedDiagnostic:
+                                   ?? SidebarSubtitleText.failedText(
+                                       category: category, provider: message.vars["provider"],
+                                       i18n: i18n))
+        case .failedDiagnostic(let category):
             // Sidebar is the attention surface, not the detail surface —
             // budget is ~22 EN chars before DE/ES/FR swell truncates. The
             // toolbar pill carries the dominant category + count; the sidebar
             // row just says "row needs your eyes". Per
             // `feedback_sidebar_is_attention_not_affordance`.
             diagnosticSubtitle(kind: .error,
-                               text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
+                               text: SidebarSubtitleText.failedText(
+                                   category: category, provider: nil, i18n: i18n))
         case .completedPartial(let analysed):
             diagnosticSubtitle(kind: .warning,
                                text: SidebarSubtitleText.completedPartialText(analysed, i18n: i18n))
@@ -708,7 +711,7 @@ struct ProjectRow: View {
         case .importingBatch, .readingScreens:
             // As above — never produced for this row.
             return nil
-        case .failed(let message):
+        case .failed(let message, _):
             // Spoken in the language showing now, not the one in force when the
             // run exited. NB this arm speaks the summary while the sighted row
             // shows the short "Run failed" header — a drift against this

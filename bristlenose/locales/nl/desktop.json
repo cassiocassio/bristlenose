@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Gedeeltelijk voltooid",
         "failed": "Run mislukt",
+        "failedAuth": "{{provider}}-sleutel geweigerd",
+        "failedAuthGeneric": "API-sleutel geweigerd",
         "reportError": "Kan rapport niet tonen"
       },
       "action": {

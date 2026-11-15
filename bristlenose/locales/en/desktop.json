@@ -440,6 +440,8 @@
       "header": {
         "completed_partial": "Partial completion",
         "failed": "Run failed",
+        "failedAuth": "{{provider}} key rejected",
+        "failedAuthGeneric": "API key rejected",
         "reportError": "Report couldn’t be shown"
       },
       "action": {

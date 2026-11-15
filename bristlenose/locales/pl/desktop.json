@@ -487,6 +487,8 @@
       "header": {
         "completed_partial": "Ukończono częściowo",
         "failed": "Analiza nie powiodła się",
+        "failedAuth": "Klucz {{provider}} odrzucony",
+        "failedAuthGeneric": "Klucz API odrzucony",
         "reportError": "Nie można wyświetlić raportu"
       },
       "action": {

@@ -745,8 +745,8 @@ final class ReviewGallerySidebarFixture {
 
         enum Kind { case provider, damaged, exporting, downloading, afterDownload, crash, nothing, missing }
         let plan: [(String, Kind, String, String)] = [
-            ("Acme onboarding", .provider, "Provider not set up — the row says the run failed; the popover names the cause",
-             "desktop.pipeline.diagnostic.header.failed"),
+            ("Acme onboarding", .provider, "Provider not set up — the row names the cause (14 Nov 2026)",
+             PipelineFailureCategory.providerNotSetUp.labelKey),
             ("Checkout v2", .damaged, "Project file damaged (.unreachable(.damaged))",
              UnreachableReason.damaged.localeKey),
             ("Pricing interviews", .exporting, "Exporting… (exportingReportProjectID)",
@@ -757,8 +757,8 @@ final class ReviewGallerySidebarFixture {
              "desktop.chrome.pipeline.stage.transcribe"),
             ("Kitchen study", .crash, "This report couldn’t be shown (reportCrash)",
              "desktop.pipeline.diagnostic.header.reportError"),
-            ("Empty folder", .nothing, "No analysable interviews — the row says the run failed; the popover names the cause",
-             "desktop.pipeline.diagnostic.header.failed"),
+            ("Empty folder", .nothing, "No analysable interviews — the row names the cause (14 Nov 2026)",
+             PipelineFailureCategory.missingInput.labelKey),
             ("Old shoot", .missing, "Missing (a folder that was never there)",
              "desktop.availability.missing"),
         ]

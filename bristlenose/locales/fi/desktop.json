@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Osittainen valmistuminen",
         "failed": "Ajo epäonnistui",
+        "failedAuth": "Palvelun {{provider}} avain hylätty",
+        "failedAuthGeneric": "API-avain hylätty",
         "reportError": "Raporttia ei voitu näyttää"
       },
       "action": {

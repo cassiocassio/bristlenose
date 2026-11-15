@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Termin\u00e9 partiellement",
         "failed": "\u00c9chec de l\u2019ex\u00e9cution",
+        "failedAuth": "Clé {{provider}} refusée",
+        "failedAuthGeneric": "Clé d’API refusée",
         "reportError": "Rapport impossible à afficher"
       },
       "action": {

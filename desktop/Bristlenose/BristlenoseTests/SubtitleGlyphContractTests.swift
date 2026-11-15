@@ -45,7 +45,7 @@ import Testing
     static let exemplars: [SubtitleVariant] = [
         .cantFind(reason: .moved),
         .failed(message: .passthrough("All topic segmentation calls failed.")),
-        .failedDiagnostic,
+        .failedDiagnostic(),
         .completedPartial(analysed: SessionsAnalysed(done: 6, total: 8)),
         .stopping,
         .running,

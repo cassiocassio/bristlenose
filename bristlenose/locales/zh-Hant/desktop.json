@@ -415,6 +415,8 @@
       "header": {
         "completed_partial": "部分完成",
         "failed": "執行失敗",
+        "failedAuth": "{{provider}} 金鑰遭拒",
+        "failedAuthGeneric": "API 金鑰遭拒",
         "reportError": "無法顯示報告"
       },
       "action": {

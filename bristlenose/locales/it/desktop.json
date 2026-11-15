@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Completamento parziale",
         "failed": "Esecuzione non riuscita",
+        "failedAuth": "Chiave {{provider}} rifiutata",
+        "failedAuthGeneric": "Chiave API rifiutata",
         "reportError": "Impossibile mostrare il report"
       },
       "action": {

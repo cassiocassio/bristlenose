@@ -9,7 +9,7 @@ import os
 /// Categorises a pipeline failure so the UI can show a human summary + CTA
 /// without leaking raw stderr. Regex-based heuristics today; would be replaced
 /// by explicit error codes if the CLI gains structured progress output.
-enum PipelineFailureCategory: String, Codable, Equatable {
+enum PipelineFailureCategory: String, Codable, Equatable, CaseIterable {
     case auth
     /// Provider account out of credit (billing exhausted). Distinct from
     /// `quota` (transient rate-limit): re-running before a top-up fails
@@ -3101,8 +3101,13 @@ var args = ["run", project.path, "--no-serve"]
             // Python's own sentence wins when it has one — it is more specific
             // than anything a category can say — and passes through untouched,
             // English, as the events log is a forensic record.
-            summary = msg.map(FailureMessage.passthrough)
-                ?? FailureMessage.failure(for: cat, provider: activeProvider)
+            // The run's provider rides along (unused by `resolved`) so the
+            // sidebar row can say "Gemini key rejected" without re-deriving
+            // it at display time, when the user may have switched.
+            summary = msg.map {
+                FailureMessage(vars: activeProvider.map { ["provider": $0.displayName] } ?? [:],
+                               english: $0)
+            } ?? FailureMessage.failure(for: cat, provider: activeProvider)
         } else {
             category = Self.categoriseFailure(
                 lines: lines, exitStatus: status, projectName: project?.name,

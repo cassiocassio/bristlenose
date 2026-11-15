@@ -487,6 +487,8 @@
       "header": {
         "completed_partial": "Частичное завершение",
         "failed": "Анализ не удался",
+        "failedAuth": "Ключ {{provider}} отклонён",
+        "failedAuthGeneric": "Ключ API отклонён",
         "reportError": "Отчёт не удалось показать"
       },
       "action": {

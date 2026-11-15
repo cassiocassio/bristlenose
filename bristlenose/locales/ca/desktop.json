@@ -439,6 +439,8 @@
       "header": {
         "completed_partial": "Compleció parcial",
         "failed": "L'execució ha fallat",
+        "failedAuth": "Clau de {{provider}} rebutjada",
+        "failedAuthGeneric": "Clau d'API rebutjada",
         "reportError": "No es mostra l'informe"
       },
       "action": {

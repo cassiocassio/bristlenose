@@ -29,7 +29,7 @@ enum SidebarSubtitleText {
         case .cantFind:
             // Text + glyph both derive from `availability` (`:234`).
             return availability.subtitle(using: i18n)
-        case .failed(let message):
+        case .failed(let message, let category):
             if let refusal = message.startupRefusal { return refusal.headline(using: i18n) }
             // **Not the summary.** `.failed` used to pass Python's raw sentence
             // straight through — "All topic segmentation calls failed." is 36
@@ -41,9 +41,11 @@ enum SidebarSubtitleText {
             // row said different things about the same event. Now both say
             // "Run failed"; the summary is rendered by `degradedBody` in
             // `ProjectDiagnosticPopover`, which is sized for it. (26 Aug 2026.)
-            return i18n.t("desktop.pipeline.diagnostic.header.failed")
-        case .failedDiagnostic:
-            return i18n.t("desktop.pipeline.diagnostic.header.failed")       // :250-251
+            // A cause the researcher can fix gets its own short label instead
+            // (14 Nov 2026): see `failedText`.
+            return failedText(category: category, provider: message.vars["provider"], i18n: i18n)
+        case .failedDiagnostic(let category):
+            return failedText(category: category, provider: nil, i18n: i18n)
         case .completedPartial(let analysed):
             return Self.completedPartialText(analysed, i18n: i18n)
         case .reportError:
@@ -63,6 +65,44 @@ enum SidebarSubtitleText {
         case .placeholder:
             return nil                                                       // :273-275 → collapse
         }
+    }
+
+    /// The row text for a failed run: what failed, in the category's short
+    /// label, so the researcher can tell what to fix.
+    ///
+    /// The red error glyph already says it failed, so "Run failed" adds nothing
+    /// to act on (owner, 14 Nov 2026). Keyed on the **category**, which every
+    /// failed state carries, not on the sentence: Python usually writes its own
+    /// sentence, which reaches the app as a passthrough with no key.
+    ///
+    /// - Rejected key: "Gemini key rejected" (owner's wording), naming the
+    ///   provider the run used when we know it, else "API key rejected".
+    /// - Unknown cause: "Run failed", the one honest thing to say.
+    /// - Everything else: `desktop.pipeline.category.*`, the label the popover
+    ///   already shows beside "Category:", translated in every locale.
+    ///
+    /// A missing translation falls back to "Run failed", never the raw key.
+    /// Audit and the labels not yet decided: `docs/private/reviews/sidebar-status-audit.md`.
+    static func failedText(category: PipelineFailureCategory?, provider: String?,
+                           i18n: I18n) -> String {
+        let fallback = "desktop.pipeline.diagnostic.header.failed"
+        let key: String
+        var vars: [String: String] = [:]
+        switch category {
+        case nil, .unknown:
+            return i18n.t(fallback)
+        case .auth:
+            if let provider {
+                key = "desktop.pipeline.diagnostic.header.failedAuth"
+                vars = ["provider": provider]
+            } else {
+                key = "desktop.pipeline.diagnostic.header.failedAuthGeneric"
+            }
+        case let category?:
+            key = category.labelKey
+        }
+        let value = vars.isEmpty ? i18n.t(key) : i18n.t(key, vars)
+        return value == key ? i18n.t(fallback) : value
     }
 
     /// Localised text for the verb-led activity variants. Verbatim

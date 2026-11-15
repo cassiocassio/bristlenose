@@ -667,6 +667,27 @@ class TestAskEdges:
         assert "RuntimeError" in r.json()["detail"]
         assert "provider exploded" in r.json()["detail"]
 
+    def test_llm_failure_detail_carries_no_key_and_no_echoed_prompt(self) -> None:
+        # A provider's error str is its whole body; OpenRouter's moderation 403
+        # puts the prompt (the transcript) in metadata.flagged_input.
+        key = "sk-proj-" + "Zz9_" * 13
+        exc = RuntimeError(f"echo {key} PARTICIPANT_WORDS")
+        exc.body = {  # type: ignore[attr-defined]
+            "error": {"message": f"blocked, key {key}"},
+            "metadata": {"flagged_input": "PARTICIPANT_WORDS"},
+        }
+        exc.status_code = 403  # type: ignore[attr-defined]
+        app = _make_app()
+        with _patch_llm(AsyncMock(side_effect=exc)):
+            r = AuthTestClient(app).post(
+                "/api/dev/chat-lens/ask", json={"question": "q"}
+            )
+        assert r.status_code == 502
+        detail = r.json()["detail"]
+        assert key not in detail
+        assert "PARTICIPANT_WORDS" not in detail
+        assert "status=403" in detail
+
 
 def test_a_partial_delivery_puts_a_coverage_note_in_the_prompt() -> None:
     """docs/design-progressive-lenses.md §5.5: before the whole report, an answer

@@ -207,10 +207,18 @@ class ValidationResult:
 
     ok: bool
     error_class: str | None = None  # one of billing_hints' four buckets or None
+    #: The provider's own words, shown to the researcher; key-shaped text masked.
     raw_message: str = ""
     #: The model's host behind a gateway, when the host failed (any-llm only):
     #: its name, "" when the gateway didn't name it, None when it wasn't the host.
     host: str | None = None
+
+    def __post_init__(self) -> None:
+        # Every site builds this from ``str(exc)``; mask keys in one place
+        # rather than at each of them (the terminal copy is often pasted).
+        from bristlenose.utils.key_redaction import redact_keys
+
+        object.__setattr__(self, "raw_message", redact_keys(self.raw_message))
 
 
 def _params_for(provider: str, model: str, params: dict[str, Any] | None) -> dict[str, Any]:
@@ -477,11 +485,14 @@ def _validate_azure(
     import openai
 
     params = _params_for("azure", deployment, params)
+    # Redirects refused, as in ``LLMClient._ensure_azure_client``: the key
+    # header would follow a 3xx to wherever it points.
     client = openai.AzureOpenAI(
         api_key=api_key,
         azure_endpoint=endpoint,
         api_version=api_version,
         default_headers={"User-Agent": f"bristlenose/{__version__}"},
+        http_client=openai.DefaultHttpxClient(follow_redirects=False),
     )
     from bristlenose.llm.client import (
         azure_error_message,

@@ -627,9 +627,12 @@ def _sanitise_message(msg: str) -> str:
 
     Run on every exception message before it lands in a ``Cause`` so audio
     filenames (often participant-bearing — `interview-jane-doe.wav`) don't
-    leak into ``pipeline-events.jsonl``.
+    leak into ``pipeline-events.jsonl``. Key-shaped text is masked too: a
+    provider's error can echo the request's headers.
     """
-    return _PATH_RE.sub("<path>", msg)
+    from bristlenose.utils.key_redaction import redact_keys
+
+    return redact_keys(_PATH_RE.sub("<path>", msg))
 
 
 def categorise_exception(exc: BaseException, *, provider: str | None = None) -> Cause:

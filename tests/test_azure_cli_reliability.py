@@ -38,7 +38,10 @@ from bristlenose.preflight.api_key import (
 # The SDK's own HTTP library: httpx, or httpx2 where the SDK has moved to it. Exceptions
 # and responses must come from the one the SDK catches, so build them from it.
 httpx = getattr(_sdk, "httpx2", None) or _sdk.httpx
-_Client = _sdk.SyncHttpxClientWrapper
+# Patch the base client class, not the SDK's wrapper: our Azure clients pass
+# their own (redirects refused), so a patch on the wrapper would miss them and
+# the test would reach the real network.
+_Client = httpx.Client
 
 ENDPOINT = "https://x.openai.azure.com/"
 DEPLOYMENT = "my-research-deployment"
@@ -163,6 +166,49 @@ class TestDoctorDoesNotFollowRedirects:
         assert detail == f"HTTP {code}"
         # Followed, the POST would have been repeated as a GET of /portal-login.
         assert [m for m, _ in azure_server["hits"]] == ["POST"]
+
+
+class TestTheSdkClientsDoNotFollowRedirects:
+    """The openai SDK's own httpx client follows redirects, and the ``api-key``
+    header (httpx strips only ``Authorization``) and the transcript in the body
+    would go wherever a 3xx points. Both of our Azure clients refuse."""
+
+    @pytest.mark.parametrize("code", [302, 307, 308])
+    def test_preflight_check_is_not_ok_and_sends_nothing_onward(
+        self, azure_server, code
+    ) -> None:
+        azure_server["status"] = code
+        azure_server["headers"] = {"Location": "/elsewhere"}
+        result = _validate_azure("az-key", azure_server["endpoint"], DEPLOYMENT, "2024-10-21")
+        assert not result.ok
+        assert len(azure_server["hits"]) == 1, azure_server["hits"]
+
+    @pytest.mark.parametrize("code", [302, 307, 308])
+    def test_the_runs_client_raises_and_sends_nothing_onward(
+        self, azure_server, code
+    ) -> None:
+        import asyncio
+
+        import openai
+
+        from bristlenose.llm.client import LLMClient
+
+        azure_server["status"] = code
+        azure_server["headers"] = {"Location": "/elsewhere"}
+        settings = BristlenoseSettings(
+            llm_provider="azure", azure_api_key="az-key",
+            azure_endpoint=azure_server["endpoint"], azure_deployment=DEPLOYMENT,
+        )
+        client = LLMClient(settings)._ensure_azure_client()
+
+        async def call() -> None:
+            await client.chat.completions.create(
+                model=DEPLOYMENT, messages=[{"role": "user", "content": "hi"}], max_tokens=1,
+            )
+
+        with pytest.raises(openai.APIStatusError):
+            asyncio.run(call())
+        assert len(azure_server["hits"]) == 1, azure_server["hits"]
 
 
 def _html_200(self, request, **kw):

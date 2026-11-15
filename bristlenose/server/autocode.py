@@ -563,7 +563,11 @@ async def run_autocode_job(
             job.failure_kind = classify_exception(
                 job.llm_provider or None, first_error
             ).value
-            job.error_message = str(first_error)
+            # Never ``str(exc)``: a provider's error is its whole body, which can
+            # carry the prompt (participants' quotes) and an echoed key.
+            from bristlenose.llm.client import failure_summary
+
+            job.error_message = failure_summary(first_error)
         # This pass's own batches: what an earlier pass coded does not make a
         # pass that coded nothing a partial success (#127).
         nothing_landed = processed_count == already_done and bool(batch_errors)
@@ -603,7 +607,9 @@ async def run_autocode_job(
             )
             if job and job.status != "cancelled":
                 job.status = "failed"
-                job.error_message = str(exc)
+                from bristlenose.llm.client import failure_summary
+
+                job.error_message = failure_summary(exc)
                 # Name the failure. str(exc) cannot tell an exhausted account
                 # from a rate limit — Anthropic returns 400 for both — and
                 # telling a bankrupt researcher to "try again shortly" is the

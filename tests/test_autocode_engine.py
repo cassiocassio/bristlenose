@@ -430,6 +430,66 @@ class TestRunAutoCodeJob:
         )
         assert results == {}, "a framework that coded nothing must not be maintained"
 
+    def test_a_failed_jobs_message_carries_no_key_and_no_echoed_prompt(
+        self, project_with_garrett
+    ) -> None:
+        """``error_message`` is stored in SQLite; never the provider's whole body."""
+        project_id, framework_id, db_factory = project_with_garrett
+        key = "sk-proj-" + "Zz9_" * 13
+        exc = RuntimeError(f"echo {key} PARTICIPANT_WORDS")
+        exc.body = {  # type: ignore[attr-defined]
+            "error": {"message": f"blocked, key {key}"},
+            "metadata": {"flagged_input": "PARTICIPANT_WORDS"},
+        }
+        exc.status_code = 403  # type: ignore[attr-defined]
+
+        with _patch_llm(AsyncMock(side_effect=exc)):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        try:
+            job = db.query(AutoCodeJob).filter_by(
+                project_id=project_id, framework_id=framework_id
+            ).first()
+            assert job is not None
+            assert job.error_message
+            assert key not in job.error_message
+            assert "PARTICIPANT_WORDS" not in job.error_message
+        finally:
+            db.close()
+
+    def test_a_job_that_fails_before_any_batch_stores_no_key(
+        self, project_with_garrett
+    ) -> None:
+        """The outer handler (a failure outside the batches, e.g. building the
+        client) stores ``failure_summary`` too, never ``str(exc)``."""
+        from unittest.mock import patch
+
+        project_id, framework_id, db_factory = project_with_garrett
+        key = "sk-proj-" + "Zz9_" * 13
+
+        with patch(
+            "bristlenose.llm.client.LLMClient",
+            side_effect=RuntimeError(f"could not build client with {key}"),
+        ):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        try:
+            job = db.query(AutoCodeJob).filter_by(
+                project_id=project_id, framework_id=framework_id
+            ).first()
+            assert job is not None
+            assert job.status == "failed"
+            assert "could not build client" in job.error_message
+            assert key not in job.error_message
+        finally:
+            db.close()
+
     def test_a_retry_after_total_failure_codes_the_whole_corpus(
         self, project_with_garrett
     ) -> None:

@@ -275,7 +275,12 @@ def failure_summary(exc: BaseException) -> str:
     any-llm, the provider's error it wraps) has a body, log its status and its
     ``message`` only. Anything else is collapsed to one line and capped, so an
     HTML error page can't flood the log.
+
+    Key-shaped text is masked (``redact_keys``): a proxy or gateway that echoes
+    the request's headers would otherwise put the key in the run log.
     """
+    from bristlenose.utils.key_redaction import redact_keys
+
     if isinstance(exc, ValidationError):
         errors = exc.errors(include_input=False, include_url=False)
         fields = ", ".join(
@@ -287,9 +292,9 @@ def failure_summary(exc: BaseException) -> str:
     if found is not None:
         status, body = found
         err = body["error"] if isinstance(body.get("error"), dict) else body
-        message = " ".join(str(err.get("message") or "").split())[:200]
+        message = redact_keys(" ".join(str(err.get("message") or "").split()))[:200]
         return f"status={status} | message={message}"
-    return " ".join(str(exc).split())[:500]
+    return redact_keys(" ".join(str(exc).split()))[:500]
 
 
 def _error_body(exc: BaseException) -> tuple[object, dict[str, Any]] | None:
@@ -874,11 +879,17 @@ class LLMClient:
         import openai
 
         if self._azure_client is None:
+            # Redirects refused: the SDK's own client follows them, and the
+            # ``api-key`` header (httpx strips only ``Authorization``) and the
+            # transcript in the body would go wherever a 3xx points. The
+            # endpoint is the researcher's own typed URL, so a redirect is
+            # never part of a working setup; it surfaces as the 3xx it is.
             self._azure_client = openai.AsyncAzureOpenAI(
                 api_key=self.settings.azure_api_key,
                 azure_endpoint=self.settings.azure_endpoint,
                 api_version=self.settings.azure_api_version,
                 max_retries=_CLOUD_MAX_RETRIES,
+                http_client=openai.DefaultAsyncHttpxClient(follow_redirects=False),
             )
         return self._azure_client
 

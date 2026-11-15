@@ -89,11 +89,17 @@ async def chat_lens_ask(request: Request, body: _AskRequest) -> dict[str, object
                 coverage=delivery_coverage(request.app.state),
             )
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            from bristlenose.utils.key_redaction import redact_keys
+
+            raise HTTPException(status_code=400, detail=redact_keys(str(exc))) from exc
         except Exception as exc:
+            from bristlenose.llm.client import failure_summary
+
             logger.exception("chat_lens_ask_failed")
+            # ``failure_summary``, never ``str(exc)``: a provider's error is its
+            # whole body, which can carry the prompt (the transcript) back.
             raise HTTPException(
-                status_code=502, detail=f"{type(exc).__name__}: {exc}"
+                status_code=502, detail=f"{type(exc).__name__}: {failure_summary(exc)}"
             ) from exc
     finally:
         db.close()

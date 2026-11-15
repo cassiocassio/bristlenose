@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} sessions",
     "missingSubtitle_one": "1 que falta",
     "missingSubtitle_other": "{{count}} que falten",
+    "missingFilesSubtitle_one": "Falta {{count}} fitxer",
+    "missingFilesSubtitle_other": "Falten {{count}} fitxers",
     "databaseForked": "Informe desactualitzat",
     "tooltipWaiting": "{{count}} en espera",
     "tooltipCopiedFrom": "Copiat de {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "No respon",
         "unreadable": "No es pot llegir",
+        "noAccess": "Sense accés a la carpeta",
         "folderMissing": "Carpeta no trobada",
         "damaged": "Fitxer del projecte malm\u00e8s",
         "scanFailed": "Error d'exploraci\u00f3"
@@ -441,6 +444,20 @@
         "failed": "L'execució ha fallat",
         "failedAuth": "Clau de {{provider}} rebutjada",
         "failedAuthGeneric": "Clau d'API rebutjada",
+        "interrupted": "Interromput",
+        "failedLaunch": "No s’ha pogut iniciar",
+        "serveFailed": "No s’ha pogut obrir",
+        "someStepsFailed": "Alguns passos han fallat",
+        "failedOutOfCredit": "{{provider}} sense crèdit",
+        "failedNetwork": "{{provider}} inaccessible",
+        "failedNetworkGeneric": "Sense connexió",
+        "failedApiServer": "{{provider}} no disponible",
+        "failedApiRequest": "Petició rebutjada",
+        "failedNoProvider": "Cap proveïdor d’IA",
+        "failedDisk": "Disc ple",
+        "failedNoInput": "No hi ha entrevistes",
+        "failedNoFFmpeg": "Falta FFmpeg",
+        "failedUnusableInput": "Fitxers no analitzats",
         "reportError": "No es mostra l'informe"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · no disponible",
-    "networkUnreachable": "{{host}} · inaccessible",
-    "missing": "no disponible"
+    "notConnected": "{{name}} no connectat",
+    "networkUnreachable": "{{host}} · inaccessible"
   },
   "boot": {
     "failure": {

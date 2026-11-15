@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} sessies",
     "missingSubtitle_one": "1 ontbrekend",
     "missingSubtitle_other": "{{count}} ontbrekend",
+    "missingFilesSubtitle_one": "{{count}} bestand ontbreekt",
+    "missingFilesSubtitle_other": "{{count}} bestanden ontbreken",
     "databaseForked": "Rapport verouderd",
     "tooltipWaiting": "{{count}} in wachtrij",
     "tooltipCopiedFrom": "Gekopieerd van {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Reageert niet",
         "unreadable": "Kan niet worden gelezen",
+        "noAccess": "Geen toegang tot map",
         "folderMissing": "Map niet gevonden",
         "damaged": "Projectbestand beschadigd",
         "scanFailed": "Scan mislukt"
@@ -441,6 +444,20 @@
         "failed": "Run mislukt",
         "failedAuth": "{{provider}}-sleutel geweigerd",
         "failedAuthGeneric": "API-sleutel geweigerd",
+        "interrupted": "Onderbroken",
+        "failedLaunch": "Starten mislukt",
+        "serveFailed": "Openen mislukt",
+        "someStepsFailed": "Enkele stappen mislukt",
+        "failedOutOfCredit": "{{provider}}: geen tegoed",
+        "failedNetwork": "{{provider}} onbereikbaar",
+        "failedNetworkGeneric": "Geen verbinding",
+        "failedApiServer": "{{provider}} niet beschikbaar",
+        "failedApiRequest": "Verzoek geweigerd",
+        "failedNoProvider": "Geen AI-provider ingesteld",
+        "failedDisk": "Schijf vol",
+        "failedNoInput": "Geen interviews gevonden",
+        "failedNoFFmpeg": "FFmpeg ontbreekt",
+        "failedUnusableInput": "Bestanden niet geanalyseerd",
         "reportError": "Kan rapport niet tonen"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · ontbreekt",
-    "networkUnreachable": "{{host}} · onbereikbaar",
-    "missing": "ontbreekt"
+    "notConnected": "{{name}} niet verbonden",
+    "networkUnreachable": "{{host}} · onbereikbaar"
   },
   "boot": {
     "failure": {

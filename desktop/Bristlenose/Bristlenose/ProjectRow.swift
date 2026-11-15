@@ -260,23 +260,30 @@ struct ProjectRow: View {
             // `SidebarSubtitleText.text` for why (row budget is ~22 chars; the
             // summary goes to the popover). Kept identical to the shipped
             // AppKit cell so the retired row can't disagree with it.
-            diagnosticSubtitle(kind: message.startupRefusal == nil ? .error : .warning,
-                               text: message.startupRefusal?.headline(using: i18n)
-                                   ?? SidebarSubtitleText.failedText(
-                                       category: category, provider: message.vars["provider"],
-                                       i18n: i18n))
+            let text = message.startupRefusal?.headline(using: i18n)
+                ?? SidebarSubtitleText.failedText(
+                    category: category, provider: message.vars["provider"],
+                    messageKey: message.key, i18n: i18n)
+            if let kind = subtitleVariant.glyphKind {
+                diagnosticSubtitle(kind: kind, text: text)
+            } else {
+                subtitleText(prefix: nil, text: text, style: .secondary)
+            }
         case .failedDiagnostic(let category):
             // Sidebar is the attention surface, not the detail surface —
             // budget is ~22 EN chars before DE/ES/FR swell truncates. The
             // toolbar pill carries the dominant category + count; the sidebar
             // row just says "row needs your eyes". Per
             // `feedback_sidebar_is_attention_not_affordance`.
-            diagnosticSubtitle(kind: .error,
-                               text: SidebarSubtitleText.failedText(
-                                   category: category, provider: nil, i18n: i18n))
+            let text = SidebarSubtitleText.failedText(category: category, provider: nil, i18n: i18n)
+            if let kind = subtitleVariant.glyphKind {
+                diagnosticSubtitle(kind: kind, text: text)
+            } else {
+                subtitleText(prefix: nil, text: text, style: .secondary)
+            }
         case .completedPartial(let analysed):
             diagnosticSubtitle(kind: .warning,
-                               text: SidebarSubtitleText.completedPartialText(analysed, i18n: i18n))
+                               text: SidebarSubtitleText.completedPartialRowText(analysed, i18n: i18n))
         case .reportError:
             // Unreachable on this row: it passes no `reportCrash` (the
             // window's crash is published to the AppKit sidebar, the shipped
@@ -284,6 +291,12 @@ struct ProjectRow: View {
             // disagree with it.
             diagnosticSubtitle(kind: .warning,
                                text: i18n.t("desktop.pipeline.diagnostic.header.reportError"))
+        case .stopped(interrupted: true):
+            // Kept identical to the AppKit cell: "Interrupted" behind the warning glyph.
+            subtitleText(prefix: MessageKind.warning.symbolName,
+                         prefixColor: MessageKind.warning.tint,
+                         text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
+                         style: .secondary)
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
              .addingInterviews, .exportingReport, .preparingSignals, .copying, .copyCancelling,
              .waitingForWhisper:
@@ -323,14 +336,16 @@ struct ProjectRow: View {
         case .queued(let position):
             return i18n.t("desktop.chrome.pipeline.queuedPosition",
                           ["position": String(position)])
-        case .stopped:
-            return i18n.t("desktop.chrome.pipeline.stopped")
+        case .stopped(let interrupted):
+            return i18n.t(interrupted
+                ? "desktop.pipeline.diagnostic.header.interrupted"
+                : "desktop.chrome.pipeline.stopped")
         case .partial(let transcribeOnly):
             return i18n.t(transcribeOnly
                 ? "desktop.chrome.pipeline.transcribed"
                 : "desktop.chrome.pipeline.partialRun")
         case .unreachable(let reason):
-            return i18n.t(reason.localeKey)
+            return i18n.t(SidebarSubtitleText.rowKey(for: reason))
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .exportingReport:
@@ -490,7 +505,7 @@ struct ProjectRow: View {
             .accessibilityHint(i18n.t("desktop.chrome.unanalysedSheetTitle",
                                       ["project": project.name]))
         case .missing(let count):
-            Text(deltaText(prefix: "missingSubtitle", count: count))
+            Text(deltaText(prefix: "missingFilesSubtitle", count: count))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .databaseForked:
@@ -683,7 +698,7 @@ struct ProjectRow: View {
                                     ["count": String(state.newFiles.count)]))
             }
             if !state.missingFiles.isEmpty {
-                parts.append(deltaText(prefix: "missingSubtitle",
+                parts.append(deltaText(prefix: "missingFilesSubtitle",
                                        count: state.missingFiles.count))
             }
         }
@@ -768,7 +783,7 @@ struct ProjectRow: View {
                 label += ", \(i18n.t("desktop.chrome.tooltipWaiting", ["count": String(state.newFiles.count)]))"
             }
             if !state.missingFiles.isEmpty {
-                label += ", \(deltaText(prefix: "missingSubtitle", count: state.missingFiles.count))"
+                label += ", \(deltaText(prefix: "missingFilesSubtitle", count: state.missingFiles.count))"
             }
         }
         return label

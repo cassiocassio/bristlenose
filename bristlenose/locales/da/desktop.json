@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} sessioner",
     "missingSubtitle_one": "1 mangler",
     "missingSubtitle_other": "{{count}} mangler",
+    "missingFilesSubtitle_one": "{{count}} fil mangler",
+    "missingFilesSubtitle_other": "{{count}} filer mangler",
     "databaseForked": "Rapport for\u00e6ldet",
     "tooltipWaiting": "{{count}} venter",
     "tooltipCopiedFrom": "Kopieret fra {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Svarer ikke",
         "unreadable": "Kan ikke l\u00e6ses",
+        "noAccess": "Ingen adgang til mappen",
         "folderMissing": "Mappe ikke fundet",
         "damaged": "Projektarkiv beskadiget",
         "scanFailed": "Scanning mislykkedes"
@@ -441,6 +444,20 @@
         "failed": "Kørslen mislykkedes",
         "failedAuth": "{{provider}}-nøgle afvist",
         "failedAuthGeneric": "API-nøgle afvist",
+        "interrupted": "Afbrudt",
+        "failedLaunch": "Kunne ikke starte",
+        "serveFailed": "Kunne ikke åbne",
+        "someStepsFailed": "Nogle trin mislykkedes",
+        "failedOutOfCredit": "{{provider}}: ingen kredit",
+        "failedNetwork": "Kan ikke nå {{provider}}",
+        "failedNetworkGeneric": "Ingen forbindelse",
+        "failedApiServer": "{{provider}} utilgængelig",
+        "failedApiRequest": "Forespørgsel afvist",
+        "failedNoProvider": "Ingen AI-udbyder valgt",
+        "failedDisk": "Disken er fuld",
+        "failedNoInput": "Ingen interview fundet",
+        "failedNoFFmpeg": "FFmpeg mangler",
+        "failedUnusableInput": "Filer ikke analyseret",
         "reportError": "Rapporten kunne ikke vises"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · mangler",
-    "networkUnreachable": "{{host}} · ikke tilgængelig",
-    "missing": "mangler"
+    "notConnected": "{{name}} ikke tilsluttet",
+    "networkUnreachable": "{{host}} · ikke tilgængelig"
   },
   "boot": {
     "failure": {

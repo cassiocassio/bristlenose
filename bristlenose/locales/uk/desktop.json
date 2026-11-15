@@ -265,6 +265,10 @@
     "missingSubtitle_few": "{{count}} відсутні",
     "missingSubtitle_many": "{{count}} відсутніх",
     "missingSubtitle_other": "{{count}} відсутніх",
+    "missingFilesSubtitle_one": "Бракує {{count}} файлу",
+    "missingFilesSubtitle_few": "Бракує {{count}} файлів",
+    "missingFilesSubtitle_many": "Бракує {{count}} файлів",
+    "missingFilesSubtitle_other": "Бракує {{count}} файлу",
     "databaseForked": "\u0417\u0432\u0456\u0442 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0432",
     "tooltipWaiting": "{{count}} в очікуванні",
     "tooltipCopiedFrom": "Скопійовано з: {{name}}",
@@ -359,6 +363,7 @@
       "unreachable": {
         "timedOut": "\u041d\u0435 \u0432\u0456\u0434\u043f\u043e\u0432\u0456\u0434\u0430\u0454",
         "unreadable": "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u043f\u0440\u043e\u0447\u0438\u0442\u0430\u0442\u0438",
+        "noAccess": "Немає доступу до теки",
         "folderMissing": "\u041f\u0430\u043f\u043a\u0443 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e",
         "damaged": "\u0424\u0430\u0439\u043b \u043f\u0440\u043e\u0454\u043a\u0442\u0443 \u043f\u043e\u0448\u043a\u043e\u0434\u0436\u0435\u043d\u043e",
         "scanFailed": "\u0417\u0431\u0456\u0439 \u043f\u0435\u0440\u0435\u0432\u0456\u0440\u043a\u0438"
@@ -489,6 +494,20 @@
         "failed": "Не вдалося виконати запуск",
         "failedAuth": "Ключ {{provider}} відхилено",
         "failedAuthGeneric": "Ключ API відхилено",
+        "interrupted": "Перервано",
+        "failedLaunch": "Не вдалося запустити",
+        "serveFailed": "Не вдалося відкрити",
+        "someStepsFailed": "Деякі кроки не вдалися",
+        "failedOutOfCredit": "{{provider}}: немає коштів",
+        "failedNetwork": "Немає зв’язку з {{provider}}",
+        "failedNetworkGeneric": "Немає з’єднання",
+        "failedApiServer": "{{provider}} недоступний",
+        "failedApiRequest": "Запит відхилено",
+        "failedNoProvider": "Постачальника ШІ не вибрано",
+        "failedDisk": "Диск заповнено",
+        "failedNoInput": "Інтерв’ю не знайдено",
+        "failedNoFFmpeg": "Немає FFmpeg",
+        "failedUnusableInput": "Файли не проаналізовано",
         "reportError": "Звіт не вдалося показати"
       },
       "action": {
@@ -539,9 +558,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · відсутній",
-    "networkUnreachable": "{{host}} · недоступний",
-    "missing": "відсутній"
+    "notConnected": "{{name}} не під’єднано",
+    "networkUnreachable": "{{host}} · недоступний"
   },
   "boot": {
     "failure": {

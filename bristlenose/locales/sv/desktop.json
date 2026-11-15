@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} sessioner",
     "missingSubtitle_one": "1 saknas",
     "missingSubtitle_other": "{{count}} saknas",
+    "missingFilesSubtitle_one": "{{count}} fil saknas",
+    "missingFilesSubtitle_other": "{{count}} filer saknas",
     "databaseForked": "Rapporten \u00e4r inaktuell",
     "tooltipWaiting": "{{count}} väntar",
     "tooltipCopiedFrom": "Kopierat från {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Svarar inte",
         "unreadable": "Kan inte l\u00e4sas",
+        "noAccess": "Ingen åtkomst till mappen",
         "folderMissing": "Mappen hittades inte",
         "damaged": "Projektfilen \u00e4r skadad",
         "scanFailed": "Genoms\u00f6kningen misslyckades"
@@ -441,6 +444,20 @@
         "failed": "Körningen misslyckades",
         "failedAuth": "{{provider}}-nyckel avvisad",
         "failedAuthGeneric": "API-nyckel avvisad",
+        "interrupted": "Avbruten",
+        "failedLaunch": "Kunde inte starta",
+        "serveFailed": "Kunde inte öppna",
+        "someStepsFailed": "Vissa steg misslyckades",
+        "failedOutOfCredit": "{{provider}}: slut på saldo",
+        "failedNetwork": "Når inte {{provider}}",
+        "failedNetworkGeneric": "Ingen anslutning",
+        "failedApiServer": "{{provider}} otillgänglig",
+        "failedApiRequest": "Begäran avvisad",
+        "failedNoProvider": "Ingen AI-leverantör vald",
+        "failedDisk": "Disken är full",
+        "failedNoInput": "Inga intervjuer hittades",
+        "failedNoFFmpeg": "FFmpeg saknas",
+        "failedUnusableInput": "Filer ej analyserade",
         "reportError": "Rapporten kunde inte visas"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · saknas",
-    "networkUnreachable": "{{host}} · går inte att nå",
-    "missing": "saknas"
+    "notConnected": "{{name}} inte ansluten",
+    "networkUnreachable": "{{host}} · går inte att nå"
   },
   "boot": {
     "failure": {

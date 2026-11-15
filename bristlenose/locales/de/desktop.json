@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} Interviews",
     "missingSubtitle_one": "1 fehlt",
     "missingSubtitle_other": "{{count}} fehlen",
+    "missingFilesSubtitle_one": "{{count}} Datei fehlt",
+    "missingFilesSubtitle_other": "{{count}} Dateien fehlen",
     "databaseForked": "Bericht veraltet",
     "tooltipWaiting": "{{count}} ausstehend",
     "tooltipCopiedFrom": "Kopie von {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Reagiert nicht",
         "unreadable": "Nicht lesbar",
+        "noAccess": "Kein Zugriff auf Ordner",
         "folderMissing": "Ordner nicht gefunden",
         "damaged": "Projektdatei besch\u00e4digt",
         "scanFailed": "Pr\u00fcfung fehlgeschlagen"
@@ -441,6 +444,20 @@
         "failed": "Lauf fehlgeschlagen",
         "failedAuth": "{{provider}}-Schlüssel abgelehnt",
         "failedAuthGeneric": "API-Schlüssel abgelehnt",
+        "interrupted": "Unterbrochen",
+        "failedLaunch": "Start fehlgeschlagen",
+        "serveFailed": "Öffnen fehlgeschlagen",
+        "someStepsFailed": "Einige Schritte fehlgeschlagen",
+        "failedOutOfCredit": "{{provider}}: kein Guthaben",
+        "failedNetwork": "{{provider}} nicht erreichbar",
+        "failedNetworkGeneric": "Keine Verbindung",
+        "failedApiServer": "{{provider}} nicht verfügbar",
+        "failedApiRequest": "Anfrage abgelehnt",
+        "failedNoProvider": "Kein KI-Anbieter eingerichtet",
+        "failedDisk": "Festplatte voll",
+        "failedNoInput": "Keine Interviews gefunden",
+        "failedNoFFmpeg": "FFmpeg fehlt",
+        "failedUnusableInput": "Dateien nicht analysiert",
         "reportError": "Bericht nicht anzeigbar"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · nicht gefunden",
-    "networkUnreachable": "{{host}} · nicht erreichbar",
-    "missing": "nicht gefunden"
+    "notConnected": "{{name}} nicht verbunden",
+    "networkUnreachable": "{{host}} · nicht erreichbar"
   },
   "boot": {
     "failure": {

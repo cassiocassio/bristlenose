@@ -43,11 +43,12 @@ enum SidebarSubtitleText {
             // `ProjectDiagnosticPopover`, which is sized for it. (26 Aug 2026.)
             // A cause the researcher can fix gets its own short label instead
             // (14 Nov 2026): see `failedText`.
-            return failedText(category: category, provider: message.vars["provider"], i18n: i18n)
+            return failedText(category: category, provider: message.vars["provider"],
+                              messageKey: message.key, i18n: i18n)
         case .failedDiagnostic(let category):
             return failedText(category: category, provider: nil, i18n: i18n)
         case .completedPartial(let analysed):
-            return Self.completedPartialText(analysed, i18n: i18n)
+            return Self.completedPartialRowText(analysed, i18n: i18n)
         case .reportError:
             // One key for the row and the popover headline, as "Run failed"
             // is. 24 characters in English against the ~22 budget: it fits the
@@ -75,29 +76,67 @@ enum SidebarSubtitleText {
     /// failed state carries, not on the sentence: Python usually writes its own
     /// sentence, which reaches the app as a passthrough with no key.
     ///
-    /// - Rejected key: "Gemini key rejected" (owner's wording), naming the
-    ///   provider the run used when we know it, else "API key rejected".
+    /// - A cause fixed at the provider (key, credit, reachability, outage)
+    ///   names the provider the run used when we know it: "Gemini key
+    ///   rejected", "Gemini out of credit", "Couldn’t reach Gemini". Without
+    ///   one: "API key rejected", the category label, "No connection".
+    /// - A run that never ended ("Interrupted"), never launched ("Couldn’t
+    ///   start"), or a report server that never started ("Couldn’t open") is
+    ///   told apart by its message, since all three are category `unknown`.
+    /// - A stop filed as a failure reads "Stopped", as the researcher's own stop does.
     /// - Unknown cause: "Run failed", the one honest thing to say.
-    /// - Everything else: `desktop.pipeline.category.*`, the label the popover
-    ///   already shows beside "Category:", translated in every locale.
+    /// - Everything else: a row label where the category's own is vague
+    ///   ("Disk full", "FFmpeg missing"), else `desktop.pipeline.category.*`,
+    ///   the label the popover shows beside "Category:".
     ///
     /// A missing translation falls back to "Run failed", never the raw key.
-    /// Audit and the labels not yet decided: `docs/private/reviews/sidebar-status-audit.md`.
+    /// Owner-approved from the mockup `docs/mockups/sidebar-failure-labels.html`
+    /// (15 Nov 2026); audit: `docs/private/reviews/sidebar-status-audit.md`.
     static func failedText(category: PipelineFailureCategory?, provider: String?,
-                           i18n: I18n) -> String {
+                           messageKey: String? = nil, i18n: I18n) -> String {
+        // Keys spelled whole, not built from a prefix: the orphan gate
+        // (`tests/test_locale_key_readers.py`) reads literals.
         let fallback = "desktop.pipeline.diagnostic.header.failed"
         let key: String
         var vars: [String: String] = [:]
+        /// The provider-named label when the run's provider is known, else `generic`.
+        func named(_ withProvider: String, else generic: String) -> String {
+            guard let provider else { return generic }
+            vars = ["provider": provider]
+            return withProvider
+        }
+        switch messageKey {
+        case EventLogReader.stranded.key:
+            return i18n.t("desktop.pipeline.diagnostic.header.interrupted")
+        case FailureMessage.launchFailedKey:
+            return i18n.t("desktop.pipeline.diagnostic.header.failedLaunch")
+        case ProjectSubtitle.serveFailed.key:
+            return i18n.t("desktop.pipeline.diagnostic.header.serveFailed")
+        default:
+            break
+        }
         switch category {
         case nil, .unknown:
             return i18n.t(fallback)
         case .auth:
-            if let provider {
-                key = "desktop.pipeline.diagnostic.header.failedAuth"
-                vars = ["provider": provider]
-            } else {
-                key = "desktop.pipeline.diagnostic.header.failedAuthGeneric"
-            }
+            key = named("desktop.pipeline.diagnostic.header.failedAuth",
+                        else: "desktop.pipeline.diagnostic.header.failedAuthGeneric")
+        case .outOfCredit:
+            key = named("desktop.pipeline.diagnostic.header.failedOutOfCredit",
+                        else: PipelineFailureCategory.outOfCredit.labelKey)
+        case .network:
+            key = named("desktop.pipeline.diagnostic.header.failedNetwork",
+                        else: "desktop.pipeline.diagnostic.header.failedNetworkGeneric")
+        case .apiServer:
+            key = named("desktop.pipeline.diagnostic.header.failedApiServer",
+                        else: PipelineFailureCategory.apiServer.labelKey)
+        case .apiRequest: key = "desktop.pipeline.diagnostic.header.failedApiRequest"
+        case .providerNotSetUp: key = "desktop.pipeline.diagnostic.header.failedNoProvider"
+        case .disk: key = "desktop.pipeline.diagnostic.header.failedDisk"
+        case .missingInput: key = "desktop.pipeline.diagnostic.header.failedNoInput"
+        case .missingBinary: key = "desktop.pipeline.diagnostic.header.failedNoFFmpeg"
+        case .unusableInput: key = "desktop.pipeline.diagnostic.header.failedUnusableInput"
+        case .userSignal: key = "desktop.chrome.pipeline.stopped"
         case let category?:
             key = category.labelKey
         }
@@ -145,14 +184,18 @@ enum SidebarSubtitleText {
             )
         case .queued(let position):
             return i18n.t("desktop.chrome.pipeline.queuedPosition", ["position": String(position)])
-        case .stopped:
-            return i18n.t("desktop.chrome.pipeline.stopped")
+        case .stopped(let interrupted):
+            // The app quit or the Mac lost power mid-run: not the researcher's
+            // stop, so it says so, beside a warning glyph (audit row 42).
+            return i18n.t(interrupted
+                ? "desktop.pipeline.diagnostic.header.interrupted"
+                : "desktop.chrome.pipeline.stopped")
         case .partial(let transcribeOnly):
             return i18n.t(transcribeOnly
                 ? "desktop.chrome.pipeline.transcribed"
                 : "desktop.chrome.pipeline.partialRun")
         case .unreachable(let reason):
-            return i18n.t(reason.localeKey)
+            return i18n.t(rowKey(for: reason))
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .exportingReport:
@@ -186,17 +229,33 @@ enum SidebarSubtitleText {
                            ["done": String(analysed.done), "total": String(analysed.total)])
     }
 
+    /// The row's line for a partial completion. With no count, "Some steps
+    /// failed" (audit row 29): "Partial completion" doesn't say what's missing.
+    /// The popover headline keeps "Partial completion", above the list it heads.
+    static func completedPartialRowText(_ analysed: SessionsAnalysed?, i18n: I18n) -> String {
+        analysed == nil
+            ? i18n.t("desktop.pipeline.diagnostic.header.someStepsFailed")
+            : completedPartialText(analysed, i18n: i18n)
+    }
+
     static func readyText(date: Date, delta: SubtitleDelta?, i18n: I18n) -> String {
         let dateText = formatBareDate(date, i18n: i18n)
         guard let delta else { return dateText }
         return "\(dateText) · \(deltaText(for: delta, i18n: i18n))"
     }
 
+    /// The row's words for an unreachable folder. A folder that is there but
+    /// can't be read says what Locate… fixes ("No access to folder", audit
+    /// row 24); the popover keeps the reason's own headline.
+    static func rowKey(for reason: UnreachableReason) -> String {
+        reason == .unreadable ? "desktop.chrome.pipeline.unreachable.noAccess" : reason.localeKey
+    }
+
     /// Delta segment → string. `ProjectRow.deltaSegment` (`:421-444`).
     static func deltaText(for delta: SubtitleDelta, i18n: I18n) -> String {
         switch delta {
         case .unanalysed(let count): return deltaText(prefix: "unanalysedSubtitle", count: count, i18n: i18n)
-        case .missing(let count):    return deltaText(prefix: "missingSubtitle", count: count, i18n: i18n)
+        case .missing(let count):    return deltaText(prefix: "missingFilesSubtitle", count: count, i18n: i18n)
         case .databaseForked:        return i18n.t("desktop.chrome.databaseForked")
         }
     }
@@ -286,7 +345,7 @@ enum SidebarSubtitleText {
                                     ["count": String(data.newFiles.count)]))
             }
             if !data.missingFiles.isEmpty {
-                parts.append(deltaText(prefix: "missingSubtitle",
+                parts.append(deltaText(prefix: "missingFilesSubtitle",
                                        count: data.missingFiles.count, i18n: i18n))
             }
         }

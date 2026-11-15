@@ -49,6 +49,15 @@ final class ServeFleet: ObservableObject {
         managers.compactMapValues { $0.startupRefusal }
     }
 
+    /// Projects whose report server failed to start (not a startup refusal,
+    /// which has its own line): their sidebar row reads "Couldn’t open".
+    var serveFailures: Set<UUID> {
+        Set(managers.compactMap { id, manager in
+            if case .failed = manager.state, manager.startupRefusal == nil { return id }
+            return nil
+        })
+    }
+
 
     /// The project whose serve is fronted — what app-level surfaces
     /// (`MenuCommands`, Settings ▸ MCP Agents) resolve "which instance" to.

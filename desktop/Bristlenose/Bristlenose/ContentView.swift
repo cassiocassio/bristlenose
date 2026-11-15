@@ -3458,6 +3458,7 @@ struct ContentView: View {
                     bridgeHandler.reportCrash.map { (projectID: p.id, crash: $0) }
                 },
                 startupRefusals: serveFleet.startupRefusals,
+                serveFailures: serveFleet.serveFailures,
                 renameRequest: renameRequest,
                 // Export Report acts on this window's document, so the row
                 // is the sole-selected study's, paired as the crash is (#24).

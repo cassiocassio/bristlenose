@@ -241,6 +241,7 @@
     "filesToAnalyse_other": "\ubd84\uc11d\ud560 \ud30c\uc77c {{count}}\uac1c",
     "titleSessions_other": "{{count}}\uac1c \uc138\uc158",
     "missingSubtitle_other": "{{count}}\uac1c \ub204\ub77d",
+    "missingFilesSubtitle_other": "파일 {{count}}개 누락",
     "databaseForked": "\ubcf4\uace0\uc11c\uac00 \ucd5c\uc2e0\uc774 \uc544\ub2d8",
     "tooltipWaiting": "{{count}}\uac1c \ub300\uae30 \uc911",
     "tooltipCopiedFrom": "{{name}}\uc5d0\uc11c \ubcf5\uc0ac\ub428",
@@ -293,6 +294,7 @@
       "unreachable": {
         "timedOut": "\uc751\ub2f5 \uc5c6\uc74c",
         "unreadable": "\uc77d\uc744 \uc218 \uc5c6\uc74c",
+        "noAccess": "폴더 접근 불가",
         "folderMissing": "\ud3f4\ub354\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc74c",
         "damaged": "\ud504\ub85c\uc81d\ud2b8 \ud30c\uc77c \uc190\uc0c1\ub428",
         "scanFailed": "\uac80\uc0ac \uc2e4\ud328"
@@ -417,6 +419,20 @@
         "failed": "\uc2e4\ud589 \uc2e4\ud328",
         "failedAuth": "{{provider}} 키 거부됨",
         "failedAuthGeneric": "API 키 거부됨",
+        "interrupted": "중단됨",
+        "failedLaunch": "시작할 수 없음",
+        "serveFailed": "열 수 없음",
+        "someStepsFailed": "일부 단계 실패",
+        "failedOutOfCredit": "{{provider}} 크레딧 소진",
+        "failedNetwork": "{{provider}}에 연결할 수 없음",
+        "failedNetworkGeneric": "연결 없음",
+        "failedApiServer": "{{provider}} 사용 불가",
+        "failedApiRequest": "요청 거부됨",
+        "failedNoProvider": "AI 제공자 미설정",
+        "failedDisk": "디스크 가득 참",
+        "failedNoInput": "인터뷰 없음",
+        "failedNoFFmpeg": "FFmpeg 없음",
+        "failedUnusableInput": "파일 분석 안 됨",
         "reportError": "보고서를 표시할 수 없음"
       },
       "action": {
@@ -458,9 +474,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · 없음",
-    "networkUnreachable": "{{host}} · 연결할 수 없음",
-    "missing": "없음"
+    "notConnected": "{{name}} 연결 안 됨",
+    "networkUnreachable": "{{host}} · 연결할 수 없음"
   },
   "boot": {
     "failure": {

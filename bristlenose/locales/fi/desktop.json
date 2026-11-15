@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} istuntoa",
     "missingSubtitle_one": "1 puuttuu",
     "missingSubtitle_other": "{{count}} puuttuu",
+    "missingFilesSubtitle_one": "{{count}} tiedosto puuttuu",
+    "missingFilesSubtitle_other": "{{count}} tiedostoa puuttuu",
     "databaseForked": "Raportti vanhentunut",
     "tooltipWaiting": "{{count}} odottaa",
     "tooltipCopiedFrom": "Kopioitu projektista {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Ei vastaa",
         "unreadable": "Ei voi lukea",
+        "noAccess": "Ei pääsyä kansioon",
         "folderMissing": "Kansiota ei l\u00f6ydy",
         "damaged": "Projektitiedosto vaurioitunut",
         "scanFailed": "Tarkistus ep\u00e4onnistui"
@@ -441,6 +444,20 @@
         "failed": "Ajo epäonnistui",
         "failedAuth": "Palvelun {{provider}} avain hylätty",
         "failedAuthGeneric": "API-avain hylätty",
+        "interrupted": "Keskeytyi",
+        "failedLaunch": "Käynnistys epäonnistui",
+        "serveFailed": "Avaaminen epäonnistui",
+        "someStepsFailed": "Osa vaiheista epäonnistui",
+        "failedOutOfCredit": "{{provider}}: saldo loppu",
+        "failedNetwork": "Ei yhteyttä: {{provider}}",
+        "failedNetworkGeneric": "Ei yhteyttä",
+        "failedApiServer": "{{provider}} ei käytettävissä",
+        "failedApiRequest": "Pyyntö hylätty",
+        "failedNoProvider": "Ei tekoälypalvelua",
+        "failedDisk": "Levy täynnä",
+        "failedNoInput": "Haastatteluja ei löytynyt",
+        "failedNoFFmpeg": "FFmpeg puuttuu",
+        "failedUnusableInput": "Tiedostoja ei analysoitu",
         "reportError": "Raporttia ei voitu näyttää"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · puuttuu",
-    "networkUnreachable": "{{host}} · ei tavoitettavissa",
-    "missing": "puuttuu"
+    "notConnected": "{{name}} ei yhdistetty",
+    "networkUnreachable": "{{host}} · ei tavoitettavissa"
   },
   "boot": {
     "failure": {

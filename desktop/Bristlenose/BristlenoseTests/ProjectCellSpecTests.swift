@@ -18,7 +18,7 @@ import Testing
             .running,
             .stopping,
             .queued(position: 1),
-            .stopped,
+            .stopped(),
             .partial(transcribeOnly: false),
             .copying(fraction: 0.5),
             .copyCancelling,

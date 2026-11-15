@@ -50,7 +50,7 @@ import Testing
         .stopping,
         .running,
         .queued(position: 2),
-        .stopped,
+        .stopped(),
         .partial(transcribeOnly: true),
         .unreachable(reason: .timedOut),
         .addingInterviews(count: 3),
@@ -139,7 +139,7 @@ import Testing
     @Test("Progress states carry no glyph and no door — info, by the 18 Jun rulings")
     func progressStatesAreInert() {
         let progress: [SubtitleVariant] = [
-            .stopping, .running, .queued(position: 1), .stopped,
+            .stopping, .running, .queued(position: 1), .stopped(),
             .partial(transcribeOnly: true), .addingInterviews(count: 1), .exportingReport,
             .preparingSignals,
             .copying(fraction: 0.5), .importingBatch(done: 1, total: 2),
@@ -185,7 +185,7 @@ import Testing
         // get no glyph, because they already know: they caused it. `.unanalysed`
         // has the same shape of act and does get one, because the app noticed
         // something that happened outside it.
-        #expect(SubtitleVariant.stopped.glyphKind == nil)
+        #expect(SubtitleVariant.stopped().glyphKind == nil)
         #expect(SubtitleVariant.partial(transcribeOnly: true).glyphKind == nil)
         #expect(SubtitleVariant.deltaOnly(.unanalysed(count: 1)).glyphKind != nil)
     }

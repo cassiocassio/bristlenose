@@ -265,6 +265,10 @@
     "missingSubtitle_few": "{{count}} brakujące",
     "missingSubtitle_many": "{{count}} brakujących",
     "missingSubtitle_other": "{{count}} brakujących",
+    "missingFilesSubtitle_one": "Brak {{count}} pliku",
+    "missingFilesSubtitle_few": "Brak {{count}} plików",
+    "missingFilesSubtitle_many": "Brak {{count}} plików",
+    "missingFilesSubtitle_other": "Brak {{count}} pliku",
     "databaseForked": "Raport nieaktualny",
     "tooltipWaiting": "{{count}} oczekuje",
     "tooltipCopiedFrom": "Skopiowano z: {{name}}",
@@ -359,6 +363,7 @@
       "unreachable": {
         "timedOut": "Nie odpowiada",
         "unreadable": "Nie mo\u017cna odczyta\u0107",
+        "noAccess": "Brak dostępu do folderu",
         "folderMissing": "Nie znaleziono folderu",
         "damaged": "Plik projektu uszkodzony",
         "scanFailed": "Skanowanie nie powiod\u0142o si\u0119"
@@ -489,6 +494,20 @@
         "failed": "Analiza nie powiodła się",
         "failedAuth": "Klucz {{provider}} odrzucony",
         "failedAuthGeneric": "Klucz API odrzucony",
+        "interrupted": "Przerwano",
+        "failedLaunch": "Nie można uruchomić",
+        "serveFailed": "Nie można otworzyć",
+        "someStepsFailed": "Niektóre kroki nie powiodły się",
+        "failedOutOfCredit": "{{provider}}: brak środków",
+        "failedNetwork": "Brak połączenia z {{provider}}",
+        "failedNetworkGeneric": "Brak połączenia",
+        "failedApiServer": "{{provider}} niedostępny",
+        "failedApiRequest": "Żądanie odrzucone",
+        "failedNoProvider": "Brak dostawcy AI",
+        "failedDisk": "Dysk pełny",
+        "failedNoInput": "Nie znaleziono wywiadów",
+        "failedNoFFmpeg": "Brak FFmpeg",
+        "failedUnusableInput": "Pliki nieprzeanalizowane",
         "reportError": "Nie można wyświetlić raportu"
       },
       "action": {
@@ -539,9 +558,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · brak",
-    "networkUnreachable": "{{host}} · nieosiągalny",
-    "missing": "brak"
+    "notConnected": "{{name}} niepodłączony",
+    "networkUnreachable": "{{host}} · nieosiągalny"
   },
   "boot": {
     "failure": {

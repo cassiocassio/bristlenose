@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} Sesiones",
     "missingSubtitle_one": "1 falta",
     "missingSubtitle_other": "{{count}} faltan",
+    "missingFilesSubtitle_one": "Falta {{count}} archivo",
+    "missingFilesSubtitle_other": "Faltan {{count}} archivos",
     "databaseForked": "Informe desactualizado",
     "tooltipWaiting": "{{count}} en espera",
     "tooltipCopiedFrom": "Copiado de {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "No responde",
         "unreadable": "No se puede leer",
+        "noAccess": "Sin acceso a la carpeta",
         "folderMissing": "Carpeta no encontrada",
         "damaged": "Archivo de proyecto da\u00f1ado",
         "scanFailed": "Error de exploraci\u00f3n"
@@ -441,6 +444,20 @@
         "failed": "Ejecuci\u00f3n fallida",
         "failedAuth": "Clave de {{provider}} rechazada",
         "failedAuthGeneric": "Clave de API rechazada",
+        "interrupted": "Interrumpido",
+        "failedLaunch": "No se pudo iniciar",
+        "serveFailed": "No se pudo abrir",
+        "someStepsFailed": "Algunos pasos fallaron",
+        "failedOutOfCredit": "{{provider}} sin crédito",
+        "failedNetwork": "Sin acceso a {{provider}}",
+        "failedNetworkGeneric": "Sin conexión",
+        "failedApiServer": "{{provider}} no disponible",
+        "failedApiRequest": "Petición rechazada",
+        "failedNoProvider": "Sin proveedor de IA",
+        "failedDisk": "Disco lleno",
+        "failedNoInput": "No hay entrevistas",
+        "failedNoFFmpeg": "Falta FFmpeg",
+        "failedUnusableInput": "Archivos sin analizar",
         "reportError": "No se pudo mostrar el informe"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · no disponible",
-    "networkUnreachable": "{{host}} · inaccesible",
-    "missing": "no disponible"
+    "notConnected": "{{name}} no conectado",
+    "networkUnreachable": "{{host}} · inaccesible"
   },
   "boot": {
     "failure": {

@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} Entretiens",
     "missingSubtitle_one": "1 manquant",
     "missingSubtitle_other": "{{count}} manquants",
+    "missingFilesSubtitle_one": "{{count}} fichier manquant",
+    "missingFilesSubtitle_other": "{{count}} fichiers manquants",
     "databaseForked": "Rapport obsol\u00e8te",
     "tooltipWaiting": "{{count}} en attente",
     "tooltipCopiedFrom": "Copié depuis {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Ne r\u00e9pond pas",
         "unreadable": "Lecture impossible",
+        "noAccess": "Accès au dossier refusé",
         "folderMissing": "Dossier introuvable",
         "damaged": "Fichier de projet endommag\u00e9",
         "scanFailed": "\u00c9chec de l'exploration"
@@ -441,6 +444,20 @@
         "failed": "\u00c9chec de l\u2019ex\u00e9cution",
         "failedAuth": "Clé {{provider}} refusée",
         "failedAuthGeneric": "Clé d’API refusée",
+        "interrupted": "Interrompu",
+        "failedLaunch": "Démarrage impossible",
+        "serveFailed": "Ouverture impossible",
+        "someStepsFailed": "Certaines étapes ont échoué",
+        "failedOutOfCredit": "Crédit {{provider}} épuisé",
+        "failedNetwork": "{{provider}} injoignable",
+        "failedNetworkGeneric": "Pas de connexion",
+        "failedApiServer": "{{provider}} indisponible",
+        "failedApiRequest": "Requête refusée",
+        "failedNoProvider": "Aucun fournisseur d’IA",
+        "failedDisk": "Disque plein",
+        "failedNoInput": "Aucun entretien trouvé",
+        "failedNoFFmpeg": "FFmpeg manquant",
+        "failedUnusableInput": "Fichiers non analysés",
         "reportError": "Rapport impossible à afficher"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · introuvable",
-    "networkUnreachable": "{{host}} · injoignable",
-    "missing": "introuvable"
+    "notConnected": "{{name}} non connecté",
+    "networkUnreachable": "{{host}} · injoignable"
   },
   "boot": {
     "failure": {

@@ -250,6 +250,8 @@
     "titleSessions_other": "{{count}} Sessions",
     "missingSubtitle_one": "1 missing",
     "missingSubtitle_other": "{{count}} missing",
+    "missingFilesSubtitle_one": "{{count}} file missing",
+    "missingFilesSubtitle_other": "{{count}} files missing",
     "databaseForked": "Report out of date",
     "tooltipWaiting": "{{count}} waiting",
     "tooltipCopiedFrom": "Copied from {{name}}",
@@ -316,6 +318,7 @@
       "unreachable": {
         "timedOut": "Not responding",
         "unreadable": "Can't be read",
+        "noAccess": "No access to folder",
         "folderMissing": "Folder not found",
         "damaged": "Project file damaged",
         "scanFailed": "Scan failed"
@@ -442,6 +445,20 @@
         "failed": "Run failed",
         "failedAuth": "{{provider}} key rejected",
         "failedAuthGeneric": "API key rejected",
+        "interrupted": "Interrupted",
+        "failedLaunch": "Couldn’t start",
+        "serveFailed": "Couldn’t open",
+        "someStepsFailed": "Some steps failed",
+        "failedOutOfCredit": "{{provider}} out of credit",
+        "failedNetwork": "Couldn’t reach {{provider}}",
+        "failedNetworkGeneric": "No connection",
+        "failedApiServer": "{{provider}} unavailable",
+        "failedApiRequest": "Request rejected",
+        "failedNoProvider": "No AI provider set up",
+        "failedDisk": "Disk full",
+        "failedNoInput": "No interviews found",
+        "failedNoFFmpeg": "FFmpeg missing",
+        "failedUnusableInput": "Files not analysed",
         "reportError": "Report couldn’t be shown"
       },
       "action": {
@@ -486,9 +503,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · missing",
-    "networkUnreachable": "{{host}} · unreachable",
-    "missing": "missing"
+    "notConnected": "{{name}} not connected",
+    "networkUnreachable": "{{host}} · unreachable"
   },
   "boot": {
     "failure": {

@@ -118,7 +118,7 @@ import Testing
     }
 
     @Test func stoppedMapsToOwnCase() {
-        #expect(resolve(pipelineState: .stopped(stagesComplete: [])) == .stopped)
+        #expect(resolve(pipelineState: .stopped(stagesComplete: [])) == .stopped())
     }
 
     @Test func partialTranscribeOnly() {
@@ -228,7 +228,7 @@ import Testing
 
     @Test func stoppedOutranksCopying() {
         #expect(resolve(pipelineState: .stopped(stagesComplete: []),
-                        copy: .copying(fraction: 0.5)) == .stopped)
+                        copy: .copying(fraction: 0.5)) == .stopped())
     }
 
     // (cantFind-outranks-copying is covered structurally: copying is only reached

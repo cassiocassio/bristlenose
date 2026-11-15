@@ -241,6 +241,7 @@
     "filesToAnalyse_other": "{{count}} \u500b\u6a94\u6848\u5f85\u5206\u6790",
     "titleSessions_other": "{{count}} 個工作階段",
     "missingSubtitle_other": "{{count}} 則遺失",
+    "missingFilesSubtitle_other": "缺少 {{count}} 個檔案",
     "databaseForked": "\u5831\u544a\u975e\u6700\u65b0",
     "tooltipWaiting": "{{count}} 則等待中",
     "tooltipCopiedFrom": "複製自 {{name}}",
@@ -293,6 +294,7 @@
       "unreachable": {
         "timedOut": "\u6c92\u6709\u56de\u61c9",
         "unreadable": "\u7121\u6cd5\u8b80\u53d6",
+        "noAccess": "無法存取資料夾",
         "folderMissing": "\u627e\u4e0d\u5230\u6a94\u6848\u593e",
         "damaged": "\u5c08\u6848\u6a94\u6848\u5df2\u640d\u6bc0",
         "scanFailed": "\u6383\u63cf\u5931\u6557"
@@ -417,6 +419,20 @@
         "failed": "執行失敗",
         "failedAuth": "{{provider}} 金鑰遭拒",
         "failedAuthGeneric": "API 金鑰遭拒",
+        "interrupted": "已中斷",
+        "failedLaunch": "無法開始",
+        "serveFailed": "無法開啟",
+        "someStepsFailed": "部分步驟失敗",
+        "failedOutOfCredit": "{{provider}} 額度用盡",
+        "failedNetwork": "無法連線到 {{provider}}",
+        "failedNetworkGeneric": "沒有網路連線",
+        "failedApiServer": "{{provider}} 無法使用",
+        "failedApiRequest": "請求遭拒",
+        "failedNoProvider": "未設定 AI 供應商",
+        "failedDisk": "磁碟已滿",
+        "failedNoInput": "找不到訪談",
+        "failedNoFFmpeg": "缺少 FFmpeg",
+        "failedUnusableInput": "檔案未分析",
         "reportError": "無法顯示報告"
       },
       "action": {
@@ -458,9 +474,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · 遺失",
-    "networkUnreachable": "{{host}} · 無法連線",
-    "missing": "遺失"
+    "notConnected": "{{name}} 未連接",
+    "networkUnreachable": "{{host}} · 無法連線"
   },
   "boot": {
     "failure": {

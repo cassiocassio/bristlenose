@@ -51,7 +51,7 @@ import Testing
 
     @Test func theDistressAndVerbStatesOutrankIt() {
         #expect(resolve(availability: .cantFind(reason: .moved)) == .cantFind(reason: .moved))
-        #expect(resolve(pipelineState: .stopped(stagesComplete: [])) == .stopped)
+        #expect(resolve(pipelineState: .stopped(stagesComplete: [])) == .stopped())
         #expect(resolve(pipelineState: .partial(kind: "transcribe-only", stagesComplete: []))
             == .partial(transcribeOnly: true))
         #expect(resolve(pipelineState: .unreachable(reason: .timedOut))

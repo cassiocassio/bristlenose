@@ -158,6 +158,8 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// typed so a crash, and its clearing, re-run `updateNSViewController`.
     let reportCrash: (projectID: UUID, crash: ReportCrash)?
     var startupRefusals: [UUID: StudyStartupRefusal] = [:]
+    /// Projects whose report server failed to start (`ServeFleet.serveFailures`).
+    var serveFailures: Set<UUID> = []
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -216,6 +218,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.handshakeProjectPaths = handshakeProjectPaths
         controller.reportCrash = reportCrash
         controller.startupRefusals = startupRefusals
+        controller.serveFailures = serveFailures
         controller.exportingReportProjectID = exportingReportProjectID
         controller.preparingSignalsProjectID = preparingSignalsProjectID
         controller.noteAgentCalls(lastAgentCallAt)
@@ -322,6 +325,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// representable's `reportCrash`.
     var reportCrash: (projectID: UUID, crash: ReportCrash)?
     var startupRefusals: [UUID: StudyStartupRefusal] = [:]
+    var serveFailures: Set<UUID> = []
     /// See the representable's `exportingReportProjectID`.
     var exportingReportProjectID: UUID?
     /// See the representable's `preparingSignalsProjectID`.
@@ -2231,6 +2235,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
             reportCrash: reportCrash.flatMap { $0.projectID == id ? $0.crash : nil },
             startupRefusal: startupRefusals[id],
+            serveFailedToStart: serveFailures.contains(id),
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
             unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0,

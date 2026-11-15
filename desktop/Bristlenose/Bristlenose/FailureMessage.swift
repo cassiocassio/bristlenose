@@ -200,6 +200,9 @@ extension FailureMessage {
         FailureMessage(key: key, vars: vars, english: englishSentence(for: key, vars: vars))
     }
 
+    /// The spawn-threw moment's key, which the sidebar row reads as "Couldn’t start".
+    static let launchFailedKey = "desktop.pipeline.failure.launchFailed"
+
     /// `englishSentences[key]` with its variables filled in. Falls back to the
     /// key rather than trapping — a missing entry must not take out a failure
     /// report, which is the one moment the app is already in trouble.

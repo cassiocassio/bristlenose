@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} Oturum",
     "missingSubtitle_one": "1 eksik",
     "missingSubtitle_other": "{{count}} eksik",
+    "missingFilesSubtitle_one": "{{count}} dosya eksik",
+    "missingFilesSubtitle_other": "{{count}} dosya eksik",
     "databaseForked": "Rapor g\u00fcncel de\u011fil",
     "tooltipWaiting": "{{count}} bekliyor",
     "tooltipCopiedFrom": "Kopyalandığı proje: {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Yan\u0131t vermiyor",
         "unreadable": "Okunam\u0131yor",
+        "noAccess": "Klasöre erişim yok",
         "folderMissing": "Klas\u00f6r bulunamad\u0131",
         "damaged": "Proje dosyas\u0131 hasarl\u0131",
         "scanFailed": "Tarama ba\u015far\u0131s\u0131z"
@@ -441,6 +444,20 @@
         "failed": "Çalıştırma başarısız oldu",
         "failedAuth": "{{provider}} anahtarı reddedildi",
         "failedAuthGeneric": "API anahtarı reddedildi",
+        "interrupted": "Kesintiye uğradı",
+        "failedLaunch": "Başlatılamadı",
+        "serveFailed": "Açılamadı",
+        "someStepsFailed": "Bazı adımlar başarısız",
+        "failedOutOfCredit": "{{provider}} kredisi bitti",
+        "failedNetwork": "{{provider}} bağlantısı yok",
+        "failedNetworkGeneric": "Bağlantı yok",
+        "failedApiServer": "{{provider}} kullanılamıyor",
+        "failedApiRequest": "İstek reddedildi",
+        "failedNoProvider": "Yapay zekâ sağlayıcısı yok",
+        "failedDisk": "Disk dolu",
+        "failedNoInput": "Görüşme bulunamadı",
+        "failedNoFFmpeg": "FFmpeg eksik",
+        "failedUnusableInput": "Dosyalar analiz edilmedi",
         "reportError": "Rapor gösterilemedi"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · eksik",
-    "networkUnreachable": "{{host}} · erişilemiyor",
-    "missing": "eksik"
+    "notConnected": "{{name}} bağlı değil",
+    "networkUnreachable": "{{host}} · erişilemiyor"
   },
   "boot": {
     "failure": {

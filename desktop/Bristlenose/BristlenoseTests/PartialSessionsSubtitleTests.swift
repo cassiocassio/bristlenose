@@ -59,7 +59,9 @@ import Testing
             """#)
         let variant = resolve(s)
         #expect(variant == .completedPartial(analysed: nil))
-        #expect(text(variant) == "Partial completion")
+        // The row says something went wrong without a count (owner, 15 Nov
+        // 2026, audit row 29); the popover headline keeps "Partial completion".
+        #expect(text(variant) == "Some steps failed")
     }
 
     /// More than ten recordings waiting for Whisper: the truncated terminus's

@@ -241,6 +241,7 @@
     "filesToAnalyse_other": "\u5206\u6790\u3059\u308b\u30d5\u30a1\u30a4\u30eb {{count}} \u4ef6",
     "titleSessions_other": "{{count}} \u30bb\u30c3\u30b7\u30e7\u30f3",
     "missingSubtitle_other": "{{count}} \u4ef6\u4e0d\u8db3",
+    "missingFilesSubtitle_other": "{{count}} 件のファイルがありません",
     "databaseForked": "\u30ec\u30dd\u30fc\u30c8\u304c\u6700\u65b0\u3067\u306a\u3044",
     "tooltipWaiting": "{{count}} \u4ef6\u5f85\u6a5f\u4e2d",
     "tooltipCopiedFrom": "{{name}} \u304b\u3089\u30b3\u30d4\u30fc",
@@ -293,6 +294,7 @@
       "unreachable": {
         "timedOut": "\u5fdc\u7b54\u306a\u3057",
         "unreadable": "\u8aad\u307f\u53d6\u308c\u307e\u305b\u3093",
+        "noAccess": "フォルダにアクセスできません",
         "folderMissing": "\u30d5\u30a9\u30eb\u30c0\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093",
         "damaged": "\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u30d5\u30a1\u30a4\u30eb\u304c\u7834\u640d",
         "scanFailed": "\u30b9\u30ad\u30e3\u30f3\u306b\u5931\u6557"
@@ -480,6 +482,20 @@
         "failed": "\u5b9f\u884c\u306b\u5931\u6557\u3057\u307e\u3057\u305f",
         "failedAuth": "{{provider}} のキーが拒否されました",
         "failedAuthGeneric": "APIキーが拒否されました",
+        "interrupted": "中断されました",
+        "failedLaunch": "開始できませんでした",
+        "serveFailed": "開けませんでした",
+        "someStepsFailed": "一部のステップが失敗",
+        "failedOutOfCredit": "{{provider}} のクレジット不足",
+        "failedNetwork": "{{provider}} に接続できません",
+        "failedNetworkGeneric": "接続がありません",
+        "failedApiServer": "{{provider}} は利用できません",
+        "failedApiRequest": "リクエスト拒否",
+        "failedNoProvider": "AIプロバイダー未設定",
+        "failedDisk": "ディスクがいっぱい",
+        "failedNoInput": "インタビューが見つかりません",
+        "failedNoFFmpeg": "FFmpeg がありません",
+        "failedUnusableInput": "ファイルが未分析",
         "reportError": "レポートを表示できません"
       },
       "action": {
@@ -521,9 +537,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · 見つかりません",
-    "networkUnreachable": "{{host}} · 接続できません",
-    "missing": "見つかりません"
+    "notConnected": "{{name}} が接続されていません",
+    "networkUnreachable": "{{host}} · 接続できません"
   },
   "boot": {
     "failure": {

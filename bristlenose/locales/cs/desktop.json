@@ -264,6 +264,10 @@
     "missingSubtitle_few": "{{count}} chybí",
     "missingSubtitle_many": "{{count}} chybí",
     "missingSubtitle_other": "{{count}} chybí",
+    "missingFilesSubtitle_one": "Chybí {{count}} soubor",
+    "missingFilesSubtitle_few": "Chybí {{count}} soubory",
+    "missingFilesSubtitle_many": "Chybí {{count}} souboru",
+    "missingFilesSubtitle_other": "Chybí {{count}} souborů",
     "databaseForked": "Zpr\u00e1va nen\u00ed aktu\u00e1ln\u00ed",
     "tooltipWaiting": "{{count}} čeká",
     "tooltipCopiedFrom": "Zkopírováno z: {{name}}",
@@ -358,6 +362,7 @@
       "unreachable": {
         "timedOut": "Neodpov\u00edd\u00e1",
         "unreadable": "Nelze p\u0159e\u010d\u00edst",
+        "noAccess": "Bez přístupu ke složce",
         "folderMissing": "Slo\u017eka nenalezena",
         "damaged": "Soubor projektu po\u0161kozen",
         "scanFailed": "Kontrola selhala"
@@ -488,6 +493,20 @@
         "failed": "Běh selhal",
         "failedAuth": "Klíč {{provider}} odmítnut",
         "failedAuthGeneric": "Klíč API odmítnut",
+        "interrupted": "Přerušeno",
+        "failedLaunch": "Nelze spustit",
+        "serveFailed": "Nelze otevřít",
+        "someStepsFailed": "Některé kroky selhaly",
+        "failedOutOfCredit": "{{provider}}: došel kredit",
+        "failedNetwork": "{{provider}}: bez spojení",
+        "failedNetworkGeneric": "Bez připojení",
+        "failedApiServer": "{{provider}} nedostupný",
+        "failedApiRequest": "Požadavek odmítnut",
+        "failedNoProvider": "Žádný poskytovatel AI",
+        "failedDisk": "Plný disk",
+        "failedNoInput": "Žádné rozhovory",
+        "failedNoFFmpeg": "Chybí FFmpeg",
+        "failedUnusableInput": "Soubory neanalyzovány",
         "reportError": "Zprávu nelze zobrazit"
       },
       "action": {
@@ -538,9 +557,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · chybí",
-    "networkUnreachable": "{{host}} · nedostupný",
-    "missing": "chybí"
+    "notConnected": "{{name}} nepřipojen",
+    "networkUnreachable": "{{host}} · nedostupný"
   },
   "boot": {
     "failure": {

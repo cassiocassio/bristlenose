@@ -249,6 +249,8 @@
     "titleSessions_other": "{{count}} sessioni",
     "missingSubtitle_one": "1 mancante",
     "missingSubtitle_other": "{{count}} mancanti",
+    "missingFilesSubtitle_one": "{{count}} file mancante",
+    "missingFilesSubtitle_other": "{{count}} file mancanti",
     "databaseForked": "Report non aggiornato",
     "tooltipWaiting": "{{count}} in attesa",
     "tooltipCopiedFrom": "Copiato da {{name}}",
@@ -315,6 +317,7 @@
       "unreachable": {
         "timedOut": "Non risponde",
         "unreadable": "Impossibile leggere",
+        "noAccess": "Nessun accesso alla cartella",
         "folderMissing": "Cartella non trovata",
         "damaged": "File di progetto danneggiato",
         "scanFailed": "Scansione non riuscita"
@@ -441,6 +444,20 @@
         "failed": "Esecuzione non riuscita",
         "failedAuth": "Chiave {{provider}} rifiutata",
         "failedAuthGeneric": "Chiave API rifiutata",
+        "interrupted": "Analisi interrotta",
+        "failedLaunch": "Avvio non riuscito",
+        "serveFailed": "Apertura non riuscita",
+        "someStepsFailed": "Alcuni passaggi non riusciti",
+        "failedOutOfCredit": "{{provider}}: credito esaurito",
+        "failedNetwork": "{{provider}} non raggiungibile",
+        "failedNetworkGeneric": "Nessuna connessione",
+        "failedApiServer": "{{provider}} non disponibile",
+        "failedApiRequest": "Richiesta rifiutata",
+        "failedNoProvider": "Nessun fornitore IA",
+        "failedDisk": "Disco pieno",
+        "failedNoInput": "Nessuna intervista trovata",
+        "failedNoFFmpeg": "FFmpeg mancante",
+        "failedUnusableInput": "File non analizzati",
         "reportError": "Impossibile mostrare il report"
       },
       "action": {
@@ -485,9 +502,8 @@
     }
   },
   "availability": {
-    "unmountedVolume": "{{name}} · mancante",
-    "networkUnreachable": "{{host}} · non raggiungibile",
-    "missing": "mancante"
+    "notConnected": "{{name}} non collegato",
+    "networkUnreachable": "{{host}} · non raggiungibile"
   },
   "boot": {
     "failure": {

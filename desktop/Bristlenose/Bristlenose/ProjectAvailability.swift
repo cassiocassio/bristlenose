@@ -96,13 +96,16 @@ extension ProjectAvailability {
         case .cantFind(let reason):
             switch reason {
             case .unmountedVolume(let name):
-                return i18n.t("desktop.availability.unmountedVolume",
+                // "Interviews SSD not connected", the pane's own words (audit
+                // row 34, 15 Nov 2026); a long volume name truncates on the row.
+                return i18n.t("desktop.availability.notConnected",
                               ["name": name])
             case .networkUnreachable(let host):
                 return i18n.t("desktop.availability.networkUnreachable",
                               ["host": host])
             case .moved, .missingBookmark:
-                return i18n.t("desktop.availability.missing")
+                // "Folder not found", as the unreachable reason says it (row 36).
+                return i18n.t(UnreachableReason.folderMissing.localeKey)
             }
         }
     }

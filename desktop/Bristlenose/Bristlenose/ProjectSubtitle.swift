@@ -45,7 +45,9 @@ enum SubtitleVariant: Equatable {
     /// Waiting behind another project's run in the single-slot queue.
     case queued(position: Int)
     /// A prior run was cancelled and left resumable stages on disk.
-    case stopped
+    /// `interrupted`: the app quit or the Mac lost power, not the researcher's
+    /// Stop — "Interrupted" behind a warning glyph, since Resume fixes it.
+    case stopped(interrupted: Bool = false)
     /// A `transcribe-only` (or otherwise partial) run completed cleanly.
     /// `transcribeOnly` picks "Transcribed" vs "Partial run".
     case partial(transcribeOnly: Bool)
@@ -189,6 +191,10 @@ extension SubtitleVariant {
     /// researcher actually wants mid-run.
     var glyphAction: SubtitleGlyphAction {
         switch self {
+        case .failed(let message, _) where message == ProjectSubtitle.serveFailed:
+            // The report server never started: the pane says why and offers
+            // Retry, and the popover has no pipeline state to show.
+            return .none
         case .failed, .failedDiagnostic, .completedPartial, .unreachable:
             return .diagnostics
         case .reportError:
@@ -245,10 +251,16 @@ extension SubtitleVariant {
     /// glyph for two months.
     var glyphKind: MessageKind? {
         switch self {
-        case .failed(let message, _):
-            return message.startupRefusal == nil ? .error : .warning
-        case .failedDiagnostic:
-            return .error
+        case .failed(let message, let category):
+            if message.startupRefusal != nil { return .warning }
+            // Stranded: the app quit or the Mac lost power, and Resume fixes it.
+            if message == EventLogReader.stranded { return .warning }
+            return Self.failureGlyph(category)
+        case .failedDiagnostic(let category):
+            return Self.failureGlyph(category)
+        case .stopped(let interrupted):
+            // Not the researcher's stop, so news; Resume fixes it.
+            return interrupted ? .warning : nil
         case .completedPartial:
             return .warning
         case .unreachable(let reason):
@@ -278,13 +290,24 @@ extension SubtitleVariant {
             // `ProjectSidebarOutline.subtitlePrefixGlyph` for why ⓘ is the right
             // picture and how it amends the `info` ruling.
             return .info
-        case .stopping, .running, .queued, .stopped, .partial,
+        case .stopping, .running, .queued, .partial,
              .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
              .readingScreens, .copyCancelling, .waitingForWhisper, .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
             // nothing, because the act is not the test. They already know.
             return nil
+        }
+    }
+
+    /// A failed run's glyph by category (audit, owner-approved 15 Nov 2026):
+    /// "Already analysed" is not a failure (info), and a stop filed as a
+    /// failure is the researcher's own act (no glyph, as `.stopped`).
+    private static func failureGlyph(_ category: PipelineFailureCategory?) -> MessageKind? {
+        switch category {
+        case .outputExists: return .info
+        case .userSignal: return nil
+        default: return .error
         }
     }
 
@@ -332,6 +355,12 @@ enum CopyDisplay: Equatable {
 /// No `i18n`, no `DateFormatter`, no SwiftUI — inputs are plain values, the
 /// output is a `SubtitleVariant` carrying raw data the view then renders.
 enum ProjectSubtitle {
+
+    /// The report server for this project couldn't start (audit row 27): the
+    /// row reads "Couldn’t open" behind the error glyph. A sentinel message, as
+    /// `EventLogReader.stranded` is, so the variant needs no case of its own.
+    static let serveFailed = FailureMessage(
+        key: "desktop.pipeline.diagnostic.header.serveFailed", vars: [:], english: "Couldn’t open")
 
     /// Apply the precedence chain to the concurrent conditions and return the
     /// single winning variant.
@@ -386,6 +415,7 @@ enum ProjectSubtitle {
         screens: (done: Int, total: Int)? = nil,
         reportCrash: ReportCrash? = nil,
         startupRefusal: StudyStartupRefusal? = nil,
+        serveFailedToStart: Bool = false,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int,
@@ -399,6 +429,17 @@ enum ProjectSubtitle {
 
         if let startupRefusal {
             return .failed(message: startupRefusal.failureMessage)
+        }
+
+        // The report server couldn't start, so the report can't open. A run in
+        // flight, and a failed run (which says more), keep the line.
+        if serveFailedToStart {
+            switch pipelineState {
+            case .running, .queued, .failed, .failedWithDiagnostic, .unreachable:
+                break
+            case .completedPartial, .stopped, .partial, .ready, .none, .scanning, .idle:
+                return .failed(message: Self.serveFailed)
+            }
         }
 
         // Tier 2–4 — verb-led pipeline activity. Exhaustive with no `default`:
@@ -428,9 +469,9 @@ enum ProjectSubtitle {
             // `PipelineState`; the arms above it never reach here.
             if let reportCrash, ReportCrash.outranks(pipelineState) { return .reportError(reportCrash) }
             return .queued(position: position)
-        case .stopped:
+        case .stopped(_, let interrupted):
             if let reportCrash, ReportCrash.outranks(pipelineState) { return .reportError(reportCrash) }
-            return .stopped
+            return .stopped(interrupted: interrupted)
         case .partial(let kind, _):
             if let reportCrash, ReportCrash.outranks(pipelineState) { return .reportError(reportCrash) }
             return .partial(transcribeOnly: kind == "transcribe-only")

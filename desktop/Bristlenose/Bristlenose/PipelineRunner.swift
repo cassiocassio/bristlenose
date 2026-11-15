@@ -3096,8 +3096,15 @@ var args = ["run", project.path, "--no-serve"]
         let activeProvider = runProvider ?? self.activeProvider()
         let category: PipelineFailureCategory
         let summary: FailureMessage
-        if let (cat, msg) = derived {
+        if let (cat, msg, causeProvider) = derived {
             category = cat
+            // The log's own record of the provider wins, so the live sentence
+            // and the one read back after a relaunch name the same provider.
+            // The fallback matters for a reconnected run whose pid file has no
+            // provider line: "the one active now" may be a provider the
+            // researcher switched to since, and naming it sends them to fix the
+            // wrong key.
+            let namedProvider = causeProvider ?? activeProvider
             // Python's own sentence wins when it has one — it is more specific
             // than anything a category can say — and passes through untouched,
             // English, as the events log is a forensic record.
@@ -3105,9 +3112,9 @@ var args = ["run", project.path, "--no-serve"]
             // sidebar row can say "Gemini key rejected" without re-deriving
             // it at display time, when the user may have switched.
             summary = msg.map {
-                FailureMessage(vars: activeProvider.map { ["provider": $0.displayName] } ?? [:],
+                FailureMessage(vars: namedProvider.map { ["provider": $0.displayName] } ?? [:],
                                english: $0)
-            } ?? FailureMessage.failure(for: cat, provider: activeProvider)
+            } ?? FailureMessage.failure(for: cat, provider: namedProvider)
         } else {
             category = Self.categoriseFailure(
                 lines: lines, exitStatus: status, projectName: project?.name,
@@ -3461,7 +3468,7 @@ var args = ["run", project.path, "--no-serve"]
     /// attempt (see `terminusIsCurrentAttempt`).
     private static func deriveFailureFromEvents(
         project: Project, spawnedAt: Date?, attachedFromOrphan: Bool
-    ) -> (PipelineFailureCategory, String?)? {
+    ) -> (PipelineFailureCategory, String?, LLMProvider?)? {
         let eventsURL = URL(fileURLWithPath: project.path)
             .appendingPathComponent("bristlenose-output")
             .appendingPathComponent(".bristlenose")
@@ -3483,7 +3490,7 @@ var args = ["run", project.path, "--no-serve"]
             )
             return nil
         }
-        return (cause.category, cause.message)
+        return (cause.category, cause.message, cause.llmProvider)
     }
 
     private static func matches(_ haystack: String, _ pattern: String) -> Bool {

@@ -125,6 +125,27 @@ struct DetailPaneRunCoverTests {
         #expect(sentence == keyed)
     }
 
+    /// A passthrough that carries the run's provider gets the provider's
+    /// sentence, the one the row also names (owner, 15 Nov 2026): "Your Gemini
+    /// key was rejected.", not "Your API key was rejected.", because the
+    /// provider is the fact that tells the researcher which key to fix.
+    @Test func aFailureCarryingTheProviderNamesItInThePane() {
+        let message = FailureMessage(vars: ["provider": "Gemini"], english: "400 API key not valid")
+        guard case .failed(let sentence, let raw, _, _)? = DetailPaneKind.runCover(
+            pipelineState: .failed(message, category: .auth), documentState: failedPage)
+        else { Issue.record("not covered as failed"); return }
+        #expect(sentence == FailureMessage.failure(for: .auth, provider: .gemini))
+        #expect(sentence.english == "Your Gemini key was rejected.")
+        #expect(raw == "400 API key not valid")
+    }
+
+    /// A category that never names a provider ignores one it is handed.
+    @Test func aNonProviderCategoryIgnoresTheProvider() {
+        let message = FailureMessage(vars: ["provider": "Gemini"], english: "No space left")
+        #expect(FailureMessage.sentence(for: .disk, from: message)
+                    == FailureMessage.failure(for: .disk))
+    }
+
     /// A refusal names its one door, not the page's "Not analysed yet."
     @Test func aRunRefusedForAProviderIsCoveredAsNeedingOne() {
         #expect(DetailPaneKind.runCover(

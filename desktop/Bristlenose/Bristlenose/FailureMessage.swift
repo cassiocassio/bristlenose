@@ -106,13 +106,45 @@ extension FailureMessage {
         for category: PipelineFailureCategory,
         provider: LLMProvider? = nil
     ) -> FailureMessage {
-        let name = provider?.displayName
+        failure(for: category, providerName: provider?.displayName)
+    }
+
+    /// The same, from a provider's display name as a failure already carries it
+    /// in `vars["provider"]`.
+    ///
+    /// **Extension point for provider-specific sentences** (none yet). A
+    /// provider whose fix differs from the shared sentence (Azure's model is a
+    /// deployment name, not a menu choice) gets its own leaf chosen here, so
+    /// every surface that comes through `sentence(for:from:)` picks it up at
+    /// once. Proposed in `docs/design-azure-connection.md` §9; not keyed.
+    static func failure(
+        for category: PipelineFailureCategory,
+        providerName name: String?
+    ) -> FailureMessage {
         let named = category.namesProvider && name != nil
         let leaf = category.localeLeaf + (category.namesProvider && !named ? "Generic" : "")
         return keyed(
             "desktop.pipeline.failure." + leaf,
             vars: named ? ["provider": name!] : [:]
         )
+    }
+
+    /// The one sentence a surface says about a failed run (the normal
+    /// register: `docs/design-pipeline-diagnostic-popover.md` §"Registers").
+    ///
+    /// A keyed message is already ours and already names what it knows, so it
+    /// is said as it is. A passthrough is the record's English, kept for Show
+    /// Details; the surface says the category's sentence instead, naming the
+    /// run's provider when the failure carries it (`vars["provider"]`, set
+    /// live by `PipelineRunner` and on relaunch by `EventLogReader`). Before
+    /// this, the pane dropped the provider ("Your API key was rejected.")
+    /// while the row named it ("Gemini key rejected"), and the one word was
+    /// the fix: the wrong provider was selected.
+    static func sentence(
+        for category: PipelineFailureCategory, from message: FailureMessage
+    ) -> FailureMessage {
+        if message.key != nil { return message }
+        return failure(for: category, providerName: message.vars["provider"])
     }
 
     /// The English of every localised failure sentence in the app, verbatim,

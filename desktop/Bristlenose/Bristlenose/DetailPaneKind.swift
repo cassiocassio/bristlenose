@@ -135,10 +135,9 @@ enum DetailPaneKind: Equatable {
         // A stop the classifier filed as a failure is still the researcher's.
         case .failed(_, .userSignal): return .stopped
         case .failed(let message, let category):
-            // A keyed message is already ours (the classifier names the
-            // provider it saw); a passthrough is the record's English, so the
-            // pane says the category's sentence and keeps the words for details.
-            let sentence = message.key == nil ? FailureMessage.failure(for: category) : message
+            // The shared sentence (naming the run's provider when known); the
+            // record's English is kept for details.
+            let sentence = FailureMessage.sentence(for: category, from: message)
             return .failed(sentence: sentence, rawCause: message.english,
                            category: category, summary: nil)
         case .failedWithDiagnostic(let summary):

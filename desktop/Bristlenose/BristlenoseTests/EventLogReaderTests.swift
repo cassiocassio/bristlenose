@@ -359,6 +359,55 @@ struct EventLogReaderTests {
         #expect(category == .unknown)
     }
 
+    /// After a relaunch the failure still names the run's provider, read from
+    /// the log rather than the provider selected now (owner, 15 Nov 2026). An
+    /// id the app doesn't know decodes and names nobody.
+    @Test func deriveStateReadsTheRunsProviderBack() {
+        for (id, expected) in [("google", "Gemini"), ("azure", "Azure OpenAI"),
+                               ("anyllm", nil as String?)] {
+            let dir = makeTempDir()
+            defer { try? FileManager.default.removeItem(at: dir) }
+            writeEventLog(in: dir, lines: [
+                runStartedLine(),
+                """
+                {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_failed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"failed","cause":{"category":"auth","message":"400 API key not valid","provider":"\(id)"}}
+                """,
+            ])
+            let result = EventLogReader.deriveState(
+                eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+                pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+                stagesComplete: [],
+            )
+            guard case .failed(let summary, let category) = result else {
+                Issue.record("expected .failed for \(id), got \(String(describing: result))")
+                continue
+            }
+            #expect(category == .auth)
+            #expect(summary.key == nil, "the record's words stay a passthrough")
+            #expect(summary.english == "400 API key not valid")
+            #expect(summary.vars["provider"] == expected, "provider for \(id)")
+        }
+    }
+
+    /// With no message, the category's own sentence names the provider.
+    @Test func deriveStateWithoutAMessageNamesTheProviderInTheSentence() {
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [
+            runStartedLine(),
+            """
+            {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_failed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"failed","cause":{"category":"out_of_credit","provider":"anthropic"}}
+            """,
+        ])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        #expect(result == .failed(.failure(for: .outOfCredit, provider: .claude),
+                                  category: .outOfCredit))
+    }
+
     @Test func deriveStateStrandedRunStartedMapsToFailedUnknown() {
         let dir = makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }

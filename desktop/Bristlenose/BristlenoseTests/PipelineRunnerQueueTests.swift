@@ -585,12 +585,14 @@ struct PipelineRunnerQueueTests {
 
     /// A run's events log with a failed terminus carrying `category`, begun now
     /// so it is this attempt's own (an older terminus is rightly ignored).
-    private func writeFailedRun(in p: Project, category: String, startedAt: Date = Date()) throws {
+    private func writeFailedRun(in p: Project, category: String, startedAt: Date = Date(),
+                                provider: String? = nil) throws {
         let dir = try dotBristlenose(p)
         let now = ISO8601DateFormatter().string(from: startedAt)
+        let providerField = provider.map { #","provider":"\#($0)""# } ?? ""
         let lines = [
             #"{"schema_version":5,"ts":"\#(now)","event":"run_started","run_id":"rf","kind":"run","started_at":"\#(now)"}"#,
-            #"{"schema_version":5,"ts":"\#(now)","event":"run_failed","run_id":"rf","kind":"run","started_at":"\#(now)","ended_at":"\#(now)","outcome":"failed","cause":{"category":"\#(category)","message":"refused"}}"#,
+            #"{"schema_version":5,"ts":"\#(now)","event":"run_failed","run_id":"rf","kind":"run","started_at":"\#(now)","ended_at":"\#(now)","outcome":"failed","cause":{"category":"\#(category)","message":"refused"\#(providerField)}}"#,
         ]
         try Data((lines.joined(separator: "\n") + "\n").utf8)
             .write(to: dir.appendingPathComponent(EventLogReader.filename))
@@ -613,6 +615,28 @@ struct PipelineRunnerQueueTests {
         #expect(rig.refusals.first?.condition == .keyRejected)
         #expect(rig.refusals.first?.provider == .claude, "blamed the provider active now, not the run's")
         #expect(rig.refusals.first?.fingerprint == "fp-a", "carried the key now held, not the run's")
+    }
+
+    /// The failure names the provider the log records, the same one a relaunch
+    /// reads back, rather than one the app guessed (for a reconnected run with
+    /// no recorded provider, the guess is whatever is selected now). Here the
+    /// two are made to disagree so the test can tell which one won.
+    @Test func aFailureNamesTheProviderTheLogRecords() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "auth", provider: "google")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        guard case .failed(let message, let category) = rig.runner.state[a.id] else {
+            Issue.record("expected .failed"); return
+        }
+        #expect(category == .auth)
+        #expect(message.vars["provider"] == "Gemini")
+        #expect(FailureMessage.sentence(for: category, from: message).english
+                    == "Your Gemini key was rejected.")
     }
 
     @Test func aRunRefusedForNoCreditTellsThePill() async throws {

@@ -105,12 +105,22 @@ enum EventLogReader {
         /// Set only when the CLI exited non-zero (`run_lifecycle`'s SystemExit
         /// path, the one writer). `message` then holds the English record.
         let exitCode: Int?
+        /// The provider the run used, as Python's config id ("anthropic",
+        /// "google", "azure", "anyllm" …). A plain string so an id the app
+        /// doesn't know never fails the decode; `llmProvider` maps the ones it
+        /// does. Read back so a relaunch still names the provider ("Gemini key
+        /// rejected"), which is the fact the researcher acts on.
+        var provider: String? = nil
+
+        /// The provider as the app knows it, or nil for an unknown id.
+        var llmProvider: LLMProvider? { provider.flatMap(LLMProvider.init(rawValue:)) }
 
         enum CodingKeys: String, CodingKey {
             case category
             case message
             case signalName = "signal_name"
             case exitCode = "exit_code"
+            case provider
         }
     }
 
@@ -317,12 +327,19 @@ enum EventLogReader {
             // record ("CLI exited with code 2"), not someone else's words, so it
             // is said from the code in the app's language, as the browser status
             // page does (`status_page.py`).
+            //
+            // The run's provider rides along in `vars`, as the live path sets it
+            // (`PipelineRunner`), so the row and pane still name it after a
+            // relaunch, when the provider selected now may be a different one.
+            let provider = event.cause?.llmProvider
             let summary: FailureMessage
             if let code = event.cause?.exitCode {
                 summary = .keyed("desktop.pipeline.failure.cliExited", vars: ["code": String(code)])
             } else {
-                summary = event.cause?.message.map(FailureMessage.passthrough)
-                    ?? .failure(for: category)
+                summary = event.cause?.message.map {
+                    FailureMessage(vars: provider.map { ["provider": $0.displayName] } ?? [:],
+                                   english: $0)
+                } ?? .failure(for: category, provider: provider)
             }
             return .failed(summary, category: category)
         default:

@@ -90,9 +90,10 @@ class ReflowScopeEnum(str, Enum):
 class CauseCategoryEnum(str, Enum):
     """Dispatch enum for failure / cancellation cause.
 
-    Names match shipped Swift ``PipelineFailureCategory`` exactly so there
-    is no rename across the boundary. Existing cases (auth, network, quota,
-    disk, whisper, unknown) preserved; Phase 1f extends additively.
+    The source of the vocabulary. Swift ``CauseCategory`` mirrors it exactly;
+    Swift ``PipelineFailureCategory`` mirrors it with named differences. Both,
+    and the status page and AutoCode maps, are read and checked by
+    ``tests/test_failure_category_parity.py``. Add cases; never rename one.
     """
 
     USER_SIGNAL = "user_signal"

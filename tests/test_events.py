@@ -129,32 +129,6 @@ def _make_failed(
 # ---------------------------------------------------------------------------
 
 
-def test_cause_category_matches_swift_enum():
-    """Names must match shipped Swift PipelineFailureCategory exactly.
-
-    Existing cases (auth/network/quota/disk/whisper/unknown) preserved;
-    new cases additive. Cross-boundary rename was rejected — see design
-    doc round-2 changelog.
-    """
-    expected = {
-        "user_signal", "auth", "out_of_credit", "quota", "api_request",
-        "api_server", "network", "whisper", "missing_dep", "missing_input",
-        "missing_binary", "disk", "output_truncated", "cloud_fetch",
-        # One input file isn't in the report — declined by format, or accepted
-        # and then unreadable. Mirrored as `.unusableInput` in Swift.
-        "unusable_input",
-        # Apple's first-run model sent the session on to Whisper (wrong
-        # language). Mirrored as `.deferred` in Swift's `CauseCategory`.
-        "deferred",
-        # The provider doesn't serve the model (R102). Mirrored as
-        # `.modelUnavailable` in both Swift enums.
-        "model_unavailable",
-        "unknown",
-    }
-    actual = {c.value for c in CauseCategoryEnum}
-    assert actual == expected
-
-
 def test_kind_enum_does_not_include_render():
     """Render does NOT write the events log — see design doc round-2."""
     values = {k.value for k in KindEnum}

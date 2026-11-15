@@ -553,6 +553,9 @@ def sync_sprints_to_board(
             set_field(item["id"], sprint_field_id, option_id)
             updated += 1
             time.sleep(0.2)
+        else:
+            print(f"  ! no '{sprint}' option on the board's Sprint field; "
+                  f"skipped: {item['title']}")
 
     print(f"  Updated {updated} card(s)")
     return updated

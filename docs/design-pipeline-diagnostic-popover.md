@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+last-trued: 2026-11-15
+trued-against: HEAD@main (6c19cf072) on 2026-11-15
 ---
 
 > **Trued 27 Aug 2026.** Two rows in the state table below had drifted in
@@ -16,7 +16,9 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 > `.partial` / `.stopped` read `not-implemented`, which invites someone to
 > implement them. They are a **decision**: a row shows a glyph when there is
 > something the researcher would want to *know and might not*, and a run they
-> stopped is not news. The rule, and the table of which states earn a glyph and
+> stopped is not news. _(15 Nov 2026: a stop the researcher did **not** make, the app quitting or
+> the Mac losing power, is news: `.stopped(interrupted: true)` reads "Interrupted" behind a warning
+> glyph, `6c19cf072`.)_ The rule, and the table of which states earn a glyph and
 > which earn a door, is in `docs/design-desktop-project-status.md` §"The glyph
 > rule". A second popover — `ProjectFilesPopover` — now shares this surface for
 > data drift; same shell, same anchoring, different body. _Since 12 Oct 2026 it
@@ -82,6 +84,7 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 
 ## Changelog
 
+- _2026-11-15_ — **Registers and the reading ladder (proposal); the row's words trued.** The sidebar row now names the cause rather than "Run failed" (`f319cedb1`, `6c19cf072`, from `docs/mockups/sidebar-failure-labels.html`), and the glyph is chosen by category: info for "Already analysed", none for a stop filed as a failure, warning for an interrupted run. Trued in place, originals kept: the top banner (interrupted stops), the state catalog's `.failed` and `.stopped` rows, the "What goes where" sessions row, the standing pattern's examples, the implementation-references row for the subtitle, the popover-header claim of one surface for every failure (the report server failing to start has no popover), and dated riders on the two Proposed subsections whose premise moved. New subsection under the standing pattern, **"Registers and the reading ladder"**: the owner's 15 Nov discussion of compact / normal / verbose / payload registers chosen per surface, the reading ladder the standing pattern's three levels sit on, and "a register may drop words, never the fact the reader acts on". Proposal; nothing in it is built.
 - _2026-11-11_ — **The standing pattern for a status line and its popover: state, nature, cause.** Settled with the owner on the "Done with warnings" rows (`docs/mockups/done-with-warnings-mac-row.html`): the row says the state, the popover header the nature of the failure, and the body rows the cause in plain words, never a bare "Not built". No bottom action row; no retry offered unless a retry could plausibly succeed; an expected absence (no screens, a monologue, no guide) is not a warning. New section "The standing pattern", below.
 - _2026-11-06_ — **Stray files stop being refusals; the popover gains a quiet footer.** A study folder's scripts and logs (`unsupported_format`) were counted as refusals and turned a run with two good interviews into "Partial completion". Files in a format we never offered are now *left alone*: `StageOutcome.left_alone` (an optional count on the wire, `leftAlone: Int?` in Swift, absent from an older sidecar), never a row. Where the popover is already open for a real failure it ends with a footer, "Other files left alone: N · Supported formats" (`desktop.pipeline.diagnostic.leftAlone`, `.supportedFormats`; a label form so there is one key per locale, not CLDR plural forms). The link goes to `bristlenose.app/docs/supported-files.html`. A clean run has no popover and so no footer: that is the owner's call (6 Nov), not an omission. New reason `no_transcript` ("No transcript in this document.") for a `.docx` that holds no timed or speaker-turn text. The copied plaintext diagnostic gains one English line, `Left alone (formats Bristlenose does not read): N`. Mockup: `docs/mockups/ingest-unreadable-files-states.html`. `unsupported_format` stays in the enum and the locales: `analyze` still uses it for an untimed `.txt`.
 - _2026-10-13_ — trued up: the shared-surface banner names the forked-database state; the flowchart gains the data-state route. Anchors: `SubtitleDelta.databaseForked`, `ProjectFilesPopover.databaseForked`, `eb8509e1`.
@@ -322,12 +325,12 @@ rendering in `PipelineActivityItem.swift`:
 | `.running` — mid-pipeline (`stageIndex > 0`) | Live status line _(the flicking bug; deferred target = phase progression + log)_ | "Stage N · stageName" + elapsed + Stop | real-condition-only |
 | `.running` — stopping (`isStopping`) | Indeterminate progress | "Stopping…" / "Waiting for the analysis subprocess to exit." | real-condition-only |
 | `.ready(Date)` | _(hidden — clean success)_ | pill hidden | real-condition-only |
-| `.failed(message, category)` | Terminal failure with reason _(degraded body)_ | message + `Category:` line | fixture `failed_no_summary` (env, relaunch) |
+| `.failed(message, category)` | Terminal failure with reason _(degraded body)_ | message + `Category:` line. _Row glyph by category since 15 Nov 2026 (`ProjectSubtitle.failureGlyph`): info for `outputExists`, none for `userSignal`, warning for a stranded run and a startup refusal, error otherwise; a report server that could not start reads "Couldn’t open" with no popover door (`glyphAction == .none`)._ | fixture `failed_no_summary` (env, relaunch) |
 | `.completedPartial(summary)` | Terminal failure with reason _(accumulating rows)_ | per-bucket failure grid | fixtures `run_completed_partial`, `run_completed_partial_truncated`, `showcase_partial_dense`, `showcase_truncated_varied`, `showcase_typical_partial`, `showcase_overflow_one` |
 | `.failedWithDiagnostic(summary)` | Terminal failure with reason | per-bucket failure grid | fixtures `run_failed_abandoned`, `run_failed_abandoned_at_topics`, `showcase_failed_auth_burst`, `showcase_failed_multi_category` |
 | `.unreachable(reason)` | Inline sidebar glyph **→ popover** | Reason headline + the folder path; row dimmed. `.unreadable` swaps Show Log for Locate… | real-condition-only |
 | `SubtitleVariant.reportError(ReportCrash)` — not a `PipelineState`; the window's `BridgeHandler.reportCrash`, set by the SPA's `report-error` post (decision #2, 21 Oct 2026) | Inline sidebar glyph (warning) **→ popover** | Headline `header.reportError` ("Report couldn't be shown", the row's key); body = callout `diagnostic.reportError` + a caption of `error · route`; Copy details = `formatReportCrashPlaintext` (route, error, frames, project, version). Yields to failed/running/unreachable/partial-completion and, in the idle tier, to adding/batch/copy and the forked-database delta; outranks queued/stopped/partial, screen reading and the missing/unanalysed deltas. Not in `bristlenose.log` by decision. Cleared by the next `route-change` (not `ready`), a status page, or a project switch | real-condition-only (throw in `AppLayout`'s own render, or in a modal's body above its boundary); spec `docs/mockups/report-crash-fallback.html` |
-| `.partial(kind, stages)` / `.stopped(stages)` | _(no glyph, no popover)_ | — | **by decision, not a gap** — see below |
+| `.partial(kind, stages)` / `.stopped(stages)` | _(no glyph, no popover)_ | — | **by decision, not a gap** — see below. _Except `.stopped(interrupted: true)` (15 Nov 2026): "Interrupted" behind a warning glyph, still no popover._ |
 | `run_completed_clean` | _(validates clean — no override)_ | pill stays hidden | fixture (env, relaunch) |
 | `showcase_all_glyphs` | Design gallery _(special-cased body)_ | 5-glyph `MessageKind` reference card | fixture (env, relaunch) |
 | `showcase_all_states` | Design gallery _(special-cased body)_ | 5 states, varied message lengths | fixture (env, relaunch) |
@@ -402,7 +405,8 @@ deferred appendix) extends *where* the settled vocabulary is used — never
 |---|---|---|---|---|---|---|
 | Distinctive failure label ("Whisper timeouts") | ✓ | — | — | — | — | ✓ |
 | Status verb ("Partial completion" / "Run failed") | — | ✓ | — | — | — | ✓ |
-| Sessions analysed ("6 of 8 sessions analysed", the sidebar row on a partial completion since 24 Oct 2026, decision #139; "Partial completion" when it can't be said) | — | — | — | row subtitle | — | — |
+| Sessions analysed ("6 of 8 sessions analysed", the sidebar row on a partial completion since 24 Oct 2026, decision #139; ~~"Partial completion" when it can't be said~~ "Some steps failed" when it can't be said, since 15 Nov 2026, and the popover header keeps "Partial completion") | — | — | — | row subtitle | — | — |
+| Cause, compact ("Gemini key rejected", "Disk full"; "Run failed" only for an unknown cause; since 14–15 Nov 2026, `SidebarSubtitleText.failedText`) | — | — | — | row subtitle | — | — |
 | Project name | — | — | — | — | — | ✓ |
 | Run timestamp range | — | — | — | — | — | ✓ |
 | Per-stage outcome (verbatim CLI string) | — | — | — | — | — | ✓ |
@@ -708,6 +712,9 @@ deferred to a future design pass.
 all route through the same SwiftUI view, `ProjectDiagnosticPopover.swift`
 (`header` + `diagnosticBody`; the `PipelineActivityItem.unifiedPopoverBody`
 it grew out of is deleted).
+_(15 Nov 2026: one failure-shaped state has no popover: a report server that could not start reads
+"Couldn’t open" on the row with no door, because the main pane already says why and offers Retry, and
+there is no pipeline state for the popover to show.)_
 Chrome is identical; only the body content branches. Was two surfaces
 through May 2026 — the legacy `.failed` popover was undesigned scaffolding
 that grew out of spec; `unify-failure-popover` (May 2026) deleted it.
@@ -965,7 +972,9 @@ matches what the popover already does for a failed or partial run. Explain **pro
 each level adding detail to the one before:
 
 1. **State: the sidebar row, the status line.** What the researcher has now, in a few words ("Partial
-   completion", "6 of 8 sessions analysed"). It carries the kind's glyph and nothing else.
+   completion", "6 of 8 sessions analysed"). _(15 Nov 2026: the row no longer says "Partial completion";
+   it says "Some steps failed" when the count can't be said, and names the cause for a failed run,
+   "Gemini key rejected". See "Registers and the reading ladder" below.)_ It carries the kind's glyph and nothing else.
 2. **Nature: the popover header.** What kind of thing happened, as one status verb ("Partial completion",
    "Run failed"). No project name (it is already in the window), no timestamp. As built, a finished run
    whose sessions can be counted repeats the row's words here ("6 of 8 sessions analysed":
@@ -992,6 +1001,51 @@ Rules that come with it:
   the same words, as built (nature); rows "Discussion: Couldn't tell who the moderator is in any session." and
   "people.yaml: Couldn't be read (line 14), so names you added aren't shown." (cause).
 
+### Registers and the reading ladder (proposal, owner, 15 Nov 2026)
+
+> **Proposal. Nothing in this subsection is built.** It extends the standing pattern above from one popover to every surface and every language, after the sidebar labels shipped (`6c19cf072`) and showed the surfaces disagreeing.
+
+**The principle (owner):** *can we use the writing to support the human fixing the problem?* Bristlenose is the translation layer between the pipeline's raw output and the researcher, and a rendering is judged by usefulness, not length: compact, in plain words rather than CLI text, and specific enough to act on.
+
+**Why now.** A rejected Gemini key, as shipped: the row says "Gemini key rejected"; the pane "The analysis didn’t finish / Your API key was rejected." (`desktop.chrome.failedTitle` + `desktop.pipeline.failure.authGeneric`, the provider dropped); the popover leads with Python's raw English, the category label as a caption; after a relaunch the row says "API key rejected" (the event-log reader doesn't read the provider back). The owner had left Gemini selected instead of Claude: the one word "Gemini" told them the fix, and the pane's sentence would have sent them to re-paste a Claude key that was fine. The cause is structural: keys are named after a place (`header`, `row`), so each surface writes or borrows its own string. Six categories borrow the popover's `desktop.pipeline.category.*` label for the row, so a row reword also rewords the `Category:` line and the run banner.
+
+**The reading ladder.** The standing pattern's three levels sit on five rungs, each the reader's next question: (1) is something wrong? the glyph; (2) what kind? the category; (3) which thing? the fact, such as Gemini, "Interviews SSD", two files; (4) which exact cause? credit, permission or a malformed key, because the fixes differ; (5) show me: the raw record. Bristlenose owns rungs 1–4. **A rendering is useful when its first visible rung reaches the action**, and each deeper level adds a rung, never the same rung louder, never raw before interpreted. When causes can't be told apart, the writing still supports the fix: say what is known in fixable terms; never pick one cause and send them the wrong way. (Example: `failure_classifier.py:142-149` maps a 403 `PERMISSION_DENIED` and a malformed key to one `invalid_key`. For Gemini a new key fixes both; for a provider whose 403 means "no access to this deployment", "key rejected" would mislead. Probe per provider before splitting.)
+
+**Three layers.**
+- **Raw (payload).** The exception, stderr, exit code, the provider's words. English, never translated, behind a disclosure. Privacy-sensitive (paths, file names that are participant names, provider text echoing prompts): the status page already keeps the log off `/report/*` (`status_page.py`, `StatusInfo.details`), and a system notification must never carry it.
+- **Interpretation**, shared by every surface: *category* (`CauseCategoryEnum`); *moment*, for the failures with no category (interrupted, couldn’t start, the report server couldn’t start: category `unknown` today, told apart by comparing messages, `EventLogReader.stranded` and `ProjectSubtitle.serveFailed`; they should be cases); *facts* (provider, model, volume, counts), **stored with the failure**, not looked up at display time; *kind*, decided once; *remedy*, an action id worded per platform (`DetailPaneKind.FailureRemedy` is the Mac's).
+- **Message**, in registers, in every locale.
+
+| Register | Shape | Today's nearest keys | Example |
+|---|---|---|---|
+| **compact** | a phrase, no full stop, ~22 English characters | `diagnostic.header.failed*`; six categories borrow `pipeline.category.*` | Gemini key rejected |
+| **normal** | one sentence about the cause | `pipeline.failure.*` (+ `…Generic`) | Your Gemini key was rejected. |
+| **verbose** | a title about the **outcome** + a body about the **cause** | `chrome.failedTitle` + the normal sentence | The analysis didn’t finish / Your Gemini key was rejected. |
+| **payload** | the English record, behind a disclosure | `Cause.message`; `FailureMessage.english` | `400 API key not valid…` |
+
+Rules: verbose is two facts, not a longer sentence (the title belongs to the outcome, of which there are a handful; the body to the cause; compact drops the outcome because the glyph carries it). Compact is authored, never cut down from normal. **A register may drop words, never the fact the reader acts on**; the generic variant is for an unknown fact only. The category label ("Provider key issue") names a type for filing, not this failure: it stays the `Category:` line and no surface borrows it as a message. A compact may be a count ("2 files missing") as well as a phrase. The same layers serve status conditions, not only errors.
+
+**Surfaces pick a register** in one table per platform, so "compact in the window subtitle" is one line, not a new string:
+
+| Surface | Register | As built, 15 Nov 2026 |
+|---|---|---|
+| Sidebar row, window subtitle, browser tab title | compact + glyph | row compact (rung 3); tab title is the outcome line for every failure |
+| System notification | title compact, body normal | run banner names the category label |
+| Toast | normal + glyph | AutoCode toast normal (`codebook.autocodeFailure.*`) |
+| VoiceOver | normal | raw English or compact, by surface |
+| Popover | verbose + payload disclosure | leads with raw: the ladder upside down |
+| Detail pane | verbose + remedy + payload disclosure | right shape, drops the fact |
+| Status page (`/report/*`, failed CLI run) | verbose + payload disclosure | `StatusInfo` is already `kind`, `short`, `long`, `details` |
+| CLI banner | normal + CLI remedy, English | its own inline copy, English by design (`design-i18n.md`) |
+
+**Fallbacks are schema, not code.** Missing fact → the `{leaf}Generic` key. Missing register → one step down to the unknown compact or sentence, not to the category label. Missing translation → English for that register, never the raw key. Today each is hand-written (`value == key ? fallback` in `failedText`).
+
+**Where it would live.** Words in the locale files, keyed by register rather than surface (a migration, not a prerequisite). Structure in one `tests/fixtures/*-contract.json` (root `CLAUDE.md` §"Seams"): per category and moment, its kind, remedy, needed facts and registers, read by or tested against in Python, Swift and TypeScript. No code generation. It makes four things testable that nothing tests today: the category list matches across languages; every category has its declared registers in every locale; **every register of a fact-needing category carries the placeholder** (`{{provider}}`, `{{name}}`, `{{count}}`) except the generic fallback, the "specific enough to act" rule made mechanical; a surface's kind is the contract's kind. The human half stays a review question: after reading only this surface, what would the researcher do next?
+
+**Migration, each step shippable alone.** (1) Pin the category seam with a parity test (in progress, 15 Nov 2026, its own session). (2) Store the provider with the failure and read it back on relaunch; the pane names it when known (owner, 15 Nov). (3) Moments become cases. (4) One function picks the sentence for pane, popover and status page. (5) The contract file and its tests, starting with the 18 failure categories. (6) Keys renamed by register as surfaces adopt them; the six borrowing categories get their own compact. (7) The popover turned the right way up, if the owner agrees.
+
+**Open (owner's).** Severity of a rate limit, an unreachable provider and an outage (warning or error; the web report and the Mac disagree today). Popover order (interpreted first, raw behind Show Details?). Tab title and window subtitle carrying the compact line. The local provider's name ("Ollama", "Local" or "Local (Ollama)"; Python spells it three ways). Splitting `invalid_key` where a 403 means missing access.
+
 ## Implementation references
 
 | Area | File |
@@ -1006,7 +1060,7 @@ Rules that come with it:
 | Failure-category enum (single source) | `bristlenose/events.py:CauseCategoryEnum` — **mirrored by TWO Swift enums, both of which must be updated together**: `PipelineSummary.swift::CauseCategory` (decodes `cause.category` off the wire) and `PipelineRunner.swift::PipelineFailureCategory` (drives the row summary + popover label). See the two-mirror trap below. |
 | Swift diagnostic popover | `desktop/Bristlenose/Bristlenose/ProjectDiagnosticPopover.swift` (extracted from the deleted `PipelineActivityItem.swift`, commit `02ad258`) |
 | Sidebar run indicator (spinner + hover-× Stop) | `desktop/Bristlenose/Bristlenose/ProjectRowActivityIndicator.swift` |
-| Sidebar subtitle / failure glyph → popover | `desktop/Bristlenose/Bristlenose/ProjectRow.swift` (search for `pipelineStateSubtitle`; glyph `Button` → `.popover`) |
+| Sidebar subtitle / failure glyph → popover | ~~`desktop/Bristlenose/Bristlenose/ProjectRow.swift` (search for `pipelineStateSubtitle`; glyph `Button` → `.popover`)~~ _(15 Nov 2026: that symbol is gone.)_ Row text `SidebarSubtitleText.text` / `failedText`; glyph and door `SubtitleVariant.glyphKind` / `glyphAction` in `ProjectSubtitle.swift`; drawn by the AppKit cell in `ProjectSidebarOutline.swift` |
 | State-machine guard against scan clobber | `desktop/Bristlenose/Bristlenose/PipelineRunner.swift::applyScanResult` |
 | Event-log → state routing | `desktop/Bristlenose/Bristlenose/EventLogReader.swift::deriveState` |
 | Plaintext diagnostic formatter | `ProjectDiagnosticPopover.swift::formatDiagnosticPlaintext` (static) |
@@ -1103,11 +1157,16 @@ happening. The shipped corpus already contradicts itself —
 `Analysis finished with failures`. This settles it in the direction the tooltip
 already chose. Affected: that header, `pipeline.status.headline.failed`,
 `pipeline.diagnostic.pill.unknown` ("Run had failures").
+_(15 Nov 2026: `header.failed` is now only the row's fallback for an unknown cause; every
+classified failure's row names its cause. The vocabulary question stands for the fallback and the
+popover headline.)_
 
 ### Two states that are decisions, not drawings
 
 - **All new files refused** collapses today to `unknown` → the row reads "Run had
   failures", which is false severity for a run in which nothing malfunctioned.
+  _(15 Nov 2026: the row now reads "Files not analysed" for an `unusable_input` failure; the
+  `pill.*` keys are read by nothing. The proposed header below is still open.)_
   Proposed header: **"Nothing new to analyse"**. This needs the missing
   `unusable_input` entries in `PipelineSummary.pillPrecedence` and the pill
   strings — the defect this doc's own truing banner already logs.

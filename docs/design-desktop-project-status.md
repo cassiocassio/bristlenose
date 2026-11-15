@@ -1,8 +1,15 @@
 ---
 status: partial
-last-trued: 2026-10-29
-trued-against: codex/study-recovery-guard sidebar-status truth fix, 2026-10-29
+last-trued: 2026-11-15
+trued-against: HEAD@main (6c19cf072) on 2026-11-15
 ---
+
+> **Trued 15 Nov 2026 (§"The glyph rule" and §10).** The sidebar row now names the cause of a
+> failure and picks its glyph by category (`f319cedb1`, `6c19cf072`, from
+> `docs/mockups/sidebar-failure-labels.html`). The glyph table below gained the new rows; the
+> original rows are kept. §10's proposed status lines predate that and carry a dated note. The words
+> each surface shows are in `design-pipeline-diagnostic-popover.md` §"Registers and the reading
+> ladder" (proposal).
 
 > **Trued 27 Aug 2026.** Three line anchors into `ProjectSubtitle.swift` had
 > rotted — the second time for these — after the file gained `glyphKind`,
@@ -172,7 +179,9 @@ controls.
 *know* and might not — not when there is something they *could do*.** That
 distinction does the real work: `Stopped` and `Transcribed` both have an
 available act (resume, analyse) and get **no** glyph, because the researcher
-caused them and already knows. `+3 unanalysed` has the same shape of act and
+caused them and already knows. _(15 Nov 2026: a stop the researcher did not
+cause, the app quitting or the Mac losing power, is news: `.stopped(interrupted: true)`
+reads "Interrupted" behind a warning glyph. The rule held; the case was new.)_ `+3 unanalysed` has the same shape of act and
 **does** get one, because the app noticed something that happened outside it.
 News, not opportunity.
 
@@ -187,7 +196,8 @@ open it. The glyph is a **10pt** target — small on a trackpad, unkind at any
 accessibility setting — while the text beside it is a comfortable one; and they
 are one message, so splitting the hit region between them is an implementation
 artefact rather than a design. The accepted cost is that the subtitle strip stops
-being row-selection area: clicking "Run failed" opens the popover instead of
+being row-selection area: clicking "Run failed" (since 15 Nov 2026, more often
+the cause itself, "Gemini key rejected") opens the popover instead of
 selecting the project. Someone aiming at those words is asking why, and the title
 line — the larger half of the row — remains the row's own target. (Added 27 Aug
 2026 after the two halves were briefly inconsistent: the text became a target
@@ -208,7 +218,18 @@ no target at all.
 | `deltaOnly(.databaseForked)` | ✗ | files — one sentence (*Report out of date*, `filesPopover.databaseForkedFooter`), **no Analyse** (12 Oct 2026, `eb8509e1`) |
 | `deltaOnly(.missing)` | ⚠ | files — which recordings have vanished |
 | `deltaOnly(.unanalysed)` | ⓘ | files — which files are waiting, plus **Analyse** |
+| `failed` — `outputExists` ("Already analysed") | ⓘ (since 15 Nov 2026: not a failure) | diagnostics |
+| `failed` — `userSignal` (a stop filed as a failure) | none, as `stopped` (15 Nov 2026) | diagnostics |
+| `failed` — stranded ("Interrupted") and a startup refusal | ⚠ (15 Nov 2026: Resume or Retry fixes it) | diagnostics |
+| `failed` — the report server couldn’t start ("Couldn’t open") | ✗ | **none** — the main pane says why and offers Retry; no pipeline state for the popover (15 Nov 2026) |
+| `stopped(interrupted: true)` ("Interrupted") | ⚠ | none (15 Nov 2026) |
+| `reportError` | ⚠ | diagnostics — route, error, frames |
 | everything else | none | none |
+
+_Row words, 15 Nov 2026 (`SidebarSubtitleText`, `ProjectAvailability.subtitle`): a failure names
+its cause ("Gemini key rejected", "Disk full"; "Run failed" only when unknown); `unreachable(.unreadable)`
+reads "No access to folder"; `cantFind` reads "{name} not connected" or "Folder not found";
+`deltaOnly(.missing)` reads "N files missing"._
 
 Both halves are lifted out of the view and unit-tested —
 `SubtitleVariant.glyphKind` and `.glyphAction`, pinned by
@@ -634,6 +655,11 @@ diverge silently after a failed incremental run and the row shows only the one.
 
 **Proposed status lines** (measured against the shipped 272pt row — none of these
 truncate at `.caption1`/10pt):
+
+> _15 Nov 2026: shipped work went another way for the failed rows. A failed row now names its
+> cause ("Gemini key rejected", `6c19cf072`) rather than "Analysis failed", so a count would join
+> that label, not replace it. The `stopped` row's "none" holds only for the researcher's own stop;
+> an interrupted run is "Interrupted" behind ⚠. The table is kept as proposed._
 
 | state | status line | glyph |
 |---|---|---|

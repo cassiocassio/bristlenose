@@ -1,8 +1,14 @@
 ---
 status: current
-last-trued: 2026-10-14
-trued-against: HEAD@main (6562c7be) on 2026-10-14
+last-trued: 2026-11-15
+trued-against: HEAD@main (6c19cf072) on 2026-11-15
 ---
+
+> **Trued 15 Nov 2026 (row words only).** The sidebar row now names the cause of a failure
+> (`f319cedb1`, `6c19cf072`). The three passages below that quoted the row ("Partial completion",
+> "Run failed", the stranded state) carry dated notes; their original wording is kept. What each
+> surface says, and why, is in `design-pipeline-diagnostic-popover.md` §"Registers and the
+> reading ladder".
 
 > **Trued 27 Aug 2026.** The affordance inventory below named *the sheet* as the
 > Analyse surface in three rows, and recorded the `+N unanalysed` delta as
@@ -265,7 +271,9 @@ and §7 item 15.
 
 **Why `Stranded` is a state and not an accident.** A run whose process dies
 without writing a terminus event is indistinguishable, on disk, from one still
-in flight. The reconciliation on next start is what converts it to `Failed`.
+in flight. The reconciliation on next start is what converts it to `Failed`. _(15 Nov 2026: still
+`Failed` in the state machine, but the row reads "Interrupted" behind a warning glyph, not
+"Run failed", because Resume fixes it.)_
 Without that state named, the row shows a spinner forever — which is what an
 eleven-hour hang looked like on 19 Aug 2026.
 
@@ -369,7 +377,10 @@ crashed before any session's quotes were in (`output_backup.settle`). A run that
 analysed one session replaces the report even with other sessions failed. Its
 row reads as that run ended (**6 of 8 sessions analysed** on a `run_completed` with
 failures, since 24 Oct 2026, decision #139, or **Partial completion** when only
-files were refused; **Run failed** or **Stopped** otherwise; the CLI ends "Done
+files were refused; **Run failed** or **Stopped** otherwise _(15 Nov 2026: "Partial completion"
+is now "Some steps failed" on the row, the popover header keeping "Partial completion"; a failed
+run's row names its cause, "Gemini key rejected", "Disk full", with "Run failed" only when the
+cause is unknown; a stop the app or the power caused reads "Interrupted")_; the CLI ends "Done
 with warnings — 8 of 10 sessions analysed", #134), and **Analyse** finishes the
 rest from its manifest, paying only for what is missing. The Mac half of offering
 Analyse on such a row is RE#R3's. A crash is settled by the same rule at the next
@@ -537,7 +548,8 @@ drawing.
 **Decided 20 Oct 2026.** Every route to a run (Add Files, a drop, Analyse,
 Re-analyse…, the discussion rerun) goes through `PipelineRunner.start`, and with
 no key for the active cloud provider it now refuses there instead of spawning.
-The project takes `.failed(category: .providerNotSetUp)`: the row's failure glyph,
+The project takes `.failed(category: .providerNotSetUp)`: the row's failure glyph
+(the row reads "No AI provider set up" since 15 Nov 2026), the popover's sentence
 "No AI provider is set up yet." (or "ChatGPT isn't set up yet." when one was
 chosen), and a **Set Up Provider…** button in the diagnostic popover that opens
 Settings ▸ LLM Provider, in Show Log's place, as Locate… is for a folder it can't
@@ -551,7 +563,8 @@ failure the same category from Python's setup-check output.
 
 Two things it does not do, on purpose: it does not start the run when a key is
 later saved (Analyse does), and the row still reads "Run failed", the existing
-header for *the analysis you asked for didn't happen*.
+header for *the analysis you asked for didn't happen*. _(15 Nov 2026: superseded. The row
+reads "No AI provider set up", owner-approved from `docs/mockups/sidebar-failure-labels.html`.)_
 
 ---
 

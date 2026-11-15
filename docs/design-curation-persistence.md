@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-21
-trued-against: HEAD@main 19797094 on 2026-08-21
+last-trued: 2026-11-15
+trued-against: HEAD@main (f599d8b1c) on 2026-11-15
 ---
 
 # Curation persistence across incremental re-runs
@@ -263,14 +263,17 @@ survives. It doesn't, in three distinct ways._
    **inside the tree being moved**. So `--clean` doesn't merely lose curation; it
    destroys the machinery this whole doc describes. _Corrected 12 Oct 2026:_ it
    is **not** CLI-only. The Mac app's **Re-analyse…** calls
-   `pipelineRunner.start(project:, clean: true)` (`ContentView.swift:1120` after
-   the counted confirmation sheet, and `:1618` directly when the curation count
-   is zero), so every app re-analysis takes this path — by design, with the loss
+   `pipelineRunner.start(project:, clean: true)` (`ContentView.swift`, from the counted
+   confirmation sheet; since 12 Nov 2026 the sheet is shown even when the count is
+   zero), so every app re-analysis takes this path — by design, with the loss
    counted and confirmed (`docs/design-analysis-lifecycle.md` §6). _Since
    24 Oct 2026 the CLI asks too_ (R113, decision #135): `run --clean` counts the
-   same five things (`bristlenose/curation_counts.py`) and asks on a terminal;
-   `--yes` skips it; with no terminal it refuses. A run the Mac hosts is not
-   asked twice.
+   same nine kinds (`bristlenose/curation_counts.py`; five until N131, and a name
+   counts only once a researcher confirmed it, N130) and asks on a terminal when
+   something is counted or the count can't be taken; `--yes` skips it; with no
+   terminal it refuses. A real zero proceeds silently, on purpose (owner, 12 Nov
+   2026: the CLI gets less hand-holding than the Mac sheet, which always asks). A
+   run the Mac hosts is not asked twice.
 2. **Whole-session removal drops that session's pins — by governance, not
    accident.** Pins protect a quote only while its session survives
    (`importer.py:1528`); the carve-out exists so consent withdrawal genuinely
@@ -283,8 +286,9 @@ survives. It doesn't, in three distinct ways._
 with **no new files changes nothing at all**. Stage skipping is content-hash
 verified, and clustering + thematic grouping are a single cache-gated stage
 (`STAGE_CLUSTER_AND_GROUP`) keyed only on the upstream quote hash
-(`pipeline.py:1655`). Unchanged inputs → every stage reports `(cached)` → no-op.
+(`pipeline.py`, at the `STAGE_CLUSTER_AND_GROUP` cache check). Unchanged inputs → every stage reports `(cached)` → no-op.
 **The cache key contains no provider, model, or prompt version**, so switching
-LLM provider and re-running silently reuses the previous analysis. That is the
-gap behind "Re-analyse" having no safe implementation today — see
+LLM provider and re-running silently reuses the previous analysis. That was the
+gap behind "Re-analyse" having no safe implementation; it shipped as a deliberate
+fresh start (`--clean`, `design-analysis-lifecycle.md` §6) rather than a cache-busting re-run — see
 [`design-project-sidebar.md`](design-project-sidebar.md) §run-trigger verbs.

@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-10-08
-trued-against: HEAD@main on 2026-10-08
+last-trued: 2026-11-15
+trued-against: HEAD@main (f599d8b1c) on 2026-11-15
 ---
 
 # People — who is in a study, and how the researcher fixes it
@@ -21,6 +21,7 @@ predate all of it — `get_people` / `put_people` in `server/routes/data.py`,
 
 ## Changelog
 
+- _2026-11-15_ — **Trued against the 11 Nov ruling and N130.** Dated pointers, original text kept, at §0 (the `full_name` row and the `people.yaml` row), §C1 (the `cleared` rows), §C2 ("retired as a store"), §C5 and §H1. (1) **Hand-editing `people.yaml` is no longer a supported path** (owner, 11 Nov 2026): names are made and edited in the Sessions grid and the report's rename box; the CLI-era merge rules that assume a human edits the file (the importer's "empty fields only, browser edits win", `auto_populate_names`' "never overwrites user edits") are legacy assumptions. (2) A typed name is a **confirmed** slot and the pipeline writes only `proposed`; only confirmed names count as the researcher's work (N130, `curation_counts.py` `RENAMED_SPEAKERS_SQL`), so a Re-analyse that re-reads the same Zoom or Teams labels loses nothing. (3) A participant rename in the report writes `short_name` only, so `full_name` can be empty after a researcher names someone; either field counts.
 - _2026-10-08_ — **Trued to 0.35.0 and the work after it.** The intro, §I's status, §J7's
   banner (the swap row is parked behind `speakerSwap`, not offered), and the points that
   §J8.22 and §K6 answered (§J8.10, 15, 20(c), 21, 22; §K1, K3, K4) each gain a dated
@@ -310,9 +311,9 @@ Worth stating first, because it bounds the work and prevents re-derivation:
 |---|---|
 | `Person` rows are **instance-scoped** — no `project_id`, deliberately, so a person can outlive a project | `server/models.py` `Person` |
 | `SessionSpeaker` joins person↔session **per session**, carrying code, role and per-session stats | `server/models.py` `SessionSpeaker` |
-| Two name fields exist and mean different things — `full_name` (the record) and `short_name` (what appears beside a quote) | `models.py` `PersonEditable` |
+| Two name fields exist and mean different things — `full_name` (the record) and `short_name` (what appears beside a quote). _15 Nov 2026: the report's rename box sends `short_name` only for a participant, so `full_name` can be empty after a researcher names someone; readers use `short_name or full_name` (`speaker_slots.py`)_ | `models.py` `PersonEditable` |
 | Short-name derivation is genuinely careful — honorific stripping, family-name-first detection, 337 surnames, and collision handling that yields "Sarah J." / "Sarah K." | `people.py` `suggest_short_names` |
-| `people.yaml` is canonical, the DB is a materialised view, and browser edits write through to both. *4 Oct 2026: for participants only — since 3 Oct a moderator's or observer's name is per session, in the DB and `session-speakers.json`, and `PUT /people` no longer writes `m*`/`o*`* | `design-html-report.md` § People file |
+| `people.yaml` is canonical, the DB is a materialised view, and browser edits write through to both. _15 Nov 2026: the DB is the identity store and the importer reads the file into empty fields only; hand-editing the file is no longer a supported path (owner, 11 Nov 2026)._ *4 Oct 2026: for participants only — since 3 Oct a moderator's or observer's name is per session, in the DB and `session-speakers.json`, and `PUT /people` no longer writes `m*`/`o*`* | `design-html-report.md` § People file |
 | Speaker codes are the public identity; display names are a working tool | `SECURITY.md`, `docs/glossary.md` |
 | **A name belongs to a code, and a code has one name — everywhere in the study.** `people.yaml` is keyed by code and holds one name per key. *Corrected 1 Oct 2026: a name belongs to a **person**; a code is the derived label of an identity, and a session's `m`/`o` slot may hold no identity at all (`m?`). The invariant survives one level up — a person has one name everywhere — and `people.yaml` is retired as the store (§C2)* | `people.py`, `models.py` `PeopleFile` |
 | `p` codes are globally numbered across a study, so they never collide — one human returning gets several, which is normal. *Since 3 Oct 2026 they also stay put across runs and are never reissued (`session_registry.py`)* | `s05b_identify_speakers.py` `assign_speaker_codes` |
@@ -1143,7 +1144,7 @@ Implementation last, and smaller than it looks. Grouped by the job it serves.
 | **No contextual-menu machinery at all.** Zero `onContextMenu` handlers in `frontend/src` | grep | all |
 | ~~**No undo.** `NSUndoManager` used nowhere; the `undo-state` bridge channel is dead on both ends; `bridge.ts` hard-codes `canUndo: false`~~ — the channel is live and speaker naming is on the stack (4 Oct 2026, §B10) | `design-undo-catalog.md` § What exists today | all |
 | **No recorded name origin**, so a confirmed guess and an unchecked guess are indistinguishable. *4 Oct 2026: the second half is fixed — `session_speakers.name_confirmed` (012) tells them apart; per-field origin is still unrecorded* | `design-html-report.md` § Auto name/role extraction | J7 |
-| **No `cleared` state** — a deleted name is refilled by the next run | roadmap; `people.py` `auto_populate_names` | J7 |
+| **No `cleared` state** — a deleted name is refilled by the next run _(shipped 6 Oct 2026: `speaker_slots.CLEARED`, sticky in the importer; see §J8)_ | roadmap; `people.py` `auto_populate_names` | J7 |
 | **Anonymisation decides by code prefix**, not by person | `server/routes/export.py` `_anonymise_data` | J13 |
 | **No read-time membership filter on the Quotes lens** — extraction is the only gate; a re-credited quote would stay visible wearing an `m` code | `routes/quotes.py` (verified: filters are project + quote-ids only) | J9 |
 | **Observer speech is not excluded from quote extraction.** `s09` feeds `full_text()`, which tags every non-unknown role — so an observer's segments arrive marked `[OBSERVER]` — while the prompt's Rule 1 names only `[RESEARCHER]` and never mentions `[OBSERVER]` *(fixed 27 Aug 2026, `deb62808`: Rule 1 names both)*. Exclusion rests on the model generalising from "only extract participant speech" while being shown a tag it was never told about. `participant_text()` exists, filters to `PARTICIPANT`, and **is unused by `s09`** | `s09_quote_extraction.py:231`; `llm/prompts/quote-extraction.md:21`; `models.py:227-240` | J3 |
@@ -1176,7 +1177,7 @@ Stated as consequences of §A/§B, not as a schema proposal.
   `inherited` · `pick`); `persons` gain a per-project `code`, a `uuid`, an
   `origin` and `me`. One Alembic revision on tables that exist; one `Person` per
   identity instead of one per session.*
-- ***`people.yaml` is retired as a store (1 Oct 2026).*** Names, identities, the
+- ***`people.yaml` is retired as a store (1 Oct 2026).*** _(Status, 15 Nov 2026: not done as written. The pipeline still runs `merge_people`, `auto_populate_names` and `write_people_file`, `routes/data.py` still writes through to the file, and the importer reads it into empty fields only; §J8 records that the file is not retired in Phase 1. Hand-editing it is no longer a supported path, owner 11 Nov 2026.)_ Names, identities, the
   per-session map and origin live in the project database like stars and tags,
   which never had a file twin. The pipeline carries *evidence* forward in its
   intermediates (platform labels, heard names, the per-session speaker tags) and
@@ -1254,7 +1255,7 @@ they are not all bad:
 
 ### C5 · The person state machine — three lifecycles, deliberately independent
 
-There is none today. Written here as a consequence of §A and §B, and the
+There was none when this was written _(15 Nov 2026: for the slot half, `session_speakers.state` — `proposed` | `confirmed` | `cleared`, migrations 012 and 013, `speaker_slots.py` — is that machine; the pipeline writes only `proposed`, a typed, picked or accepted name sets `confirmed`, and **only confirmed names count as the researcher's work**, N130)_. Written here as a consequence of §A and §B, and the
 load-bearing claim is that **these are separate machines on one object.**
 Collapsing them into a single status enum is the trap: a person can be
 confidently named and identity-provisional, or a guess and already joined.
@@ -1347,7 +1348,7 @@ is independently useful and independently shippable.
 | Step | The sentence | How often | Cost |
 |---|---|---|---|
 | **1** | "m1 is me." · "That m1 is Steve." · "p4 is Jane Smith." · "Jane is an observer." | **Every session, every path** — 10–30 times a study | **Small — plus two real prerequisites, and one item that does not belong here (J1: role is a recode, so it belongs with step 4).** `PUT /people` exists; role needs one endpoint; "that's me" needs no typing. But **the bank has no store** — `Person` rows do not span projects today (§B4 spec), so it needs the instance DB of `design-multi-project.md` §2 first; and `NSFullUserName()` has zero uses in `desktop/`. But every step-1 act is drawn with an Undo, and the undo bridge is dead (`canUndo` hard-coded false, `NSUndoManager` used nowhere) — **the undo contract is a step-1 gate, not a parallel workstream** (§H, H4). *4 Oct 2026: both done — the Mac picker's That's Me reads `NSFullUserName()`, and undo on speaker naming is built (§B10); the bank is still unbuilt* |
-| **2** | "Michel Hurlly is Mickael Hurley." · "Call him Mike." · "Yes, that guess is right." | Every study with raw audio | **Medium.** Name origin per field, a `cleared` state, a narrowed write payload, and a `full_name` editor |
+| **2** | "Michel Hurlly is Mickael Hurley." · "Call him Mike." · "Yes, that guess is right." | Every study with raw audio | **Medium.** Name origin per field, a `cleared` state, a narrowed write payload, and a `full_name` editor _(15 Nov 2026: the `cleared` state and the per-session speaker PUT have shipped; origin per field and a `full_name` editor have not)_ |
 | **3** | "That quote was Sarah, not Jane." | A few times a study — **and it is what gets published** | **Small-to-medium.** The speech moves (§B9): a whole-turn quote is one segment update; a fragment inside a longer turn is a turn split whose split point the quote's own timecodes supply. ⌘Z spans card and speech. Plus the lens needs the membership filter it currently lacks (§C4) |
 | **4** | **What naming implies.** "p6 is the same Mary as p3." · "The moderator in s9 is Mike, not Martin" → Mike becomes `m2` | Follows from step 1 — **no separate UX, no blocking decision** | **Medium.** Speaker→person remap, moderator renumber, stats recompute. All bookkeeping behind an act the researcher has already performed. *1 Oct 2026: for `m`/`o` the renumber is gone — "the moderator in s9 is Mike" is one row (`session_speakers(s9).person_id`), and the v1 package in §H H9 ships it with step 1* |
 | **5** | "That whole paragraph was Sarah." | Concentrated on raw audio | **Largest.** Batch segment endpoints, split/merge, word-timing division, stats recompute, the unsolved quote cascade |
@@ -1996,7 +1997,7 @@ equally to the proposed replacement. ~~Reconcile the wiring doc first.~~
    mixes a possessive into a per-person state.
 3. **The job-title field's user-facing label.** `role_title` already exists in
    code, but `people.yaml`'s key is `role` and is a documented hand-editable
-   surface — renaming it is a file-format change for studies in the field. It
+   surface _(15 Nov 2026: no longer a supported editing path, owner 11 Nov)_ — renaming it is a file-format change for studies in the field. It
    collides with the incoming Role submenu either way.
    **Reopened 4 Oct 2026, wider: "role" names three different things.**
    Not "job title" (owner). But "role" is already doing three jobs, and

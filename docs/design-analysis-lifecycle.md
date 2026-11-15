@@ -1,8 +1,13 @@
 ---
 status: current
 last-trued: 2026-11-15
-trued-against: HEAD@main (6c19cf072) on 2026-11-15
+trued-against: HEAD@main (f599d8b1c) on 2026-11-15
 ---
+
+> **Trued 15 Nov 2026 (the Re-analyse confirmation).** Decision #314 (12 Nov) made the Mac sheet always ask and counted
+> only confirmed names; N131 widened the count to nine kinds. The flow in §3.3, the two menu rows in §4, §6.1 and §7 still
+> described the earlier rule (silence at zero, five counts, `rmtree`); each now carries a dated note or the corrected
+> fact, with the original wording kept where it is history. `run --clean`'s own rule is set down in §6.1.
 
 > **Trued 15 Nov 2026 (row words only).** The sidebar row now names the cause of a failure
 > (`f319cedb1`, `6c19cf072`). The three passages below that quoted the row ("Partial completion",
@@ -20,7 +25,7 @@ trued-against: HEAD@main (6c19cf072) on 2026-11-15
 
 ## Changelog
 
-- _2026-11-12_ — decision #314 (N130, owner): **the sheet counts only what a researcher did, and asks even when that is nothing.** (1) A name counts as a rename only when a slot of that person is `confirmed` (typed, picked or accepted; the pipeline writes only `proposed`), and either name field counts, since the report's rename box sends `short_name` alone for a participant. A Zoom or Teams study nobody touched counts zero names, because a re-run reads the same labels. `curation_counts.py` and `CurationCountsReader.swift` hold the one query, and a test compares the two. (2) **Reverses decision #1's "a real zero proceeds":** with nothing counted the Mac sheet still asks, because a re-analysis spends transcription and model time, but draws no "Your work … will be discarded:" over an empty list (`ReAnalyseDecision` has no `.proceed`; mockup C of `docs/mockups/reanalyse-nothing-to-lose.html`). The §3 text below that says "silence when there is nothing to lose" is the earlier ruling. `run --clean` is unchanged: a zero count still proceeds. Not counted, by accepted gap: a name typed before 4 Oct 2026 (migration 012 read every earlier name as a proposal) and a name hand-typed into `people.yaml` (the owner: nobody edits it by hand any more).
+- _2026-11-12_ — decision #314 (N130, owner): **the sheet counts only what a researcher did, and asks even when that is nothing.** (1) A name counts as a rename only when a slot of that person is `confirmed` (typed, picked or accepted; the pipeline writes only `proposed`), and either name field counts, since the report's rename box sends `short_name` alone for a participant. A Zoom or Teams study nobody touched counts zero names, because a re-run reads the same labels. `curation_counts.py` and `CurationCountsReader.swift` hold the one query, and a test compares the two. (2) **Reverses decision #1's "a real zero proceeds":** with nothing counted the Mac sheet still asks, because a re-analysis spends transcription and model time, but draws no "Your work … will be discarded:" over an empty list (`ReAnalyseDecision` has no `.proceed`; mockup C of `docs/mockups/reanalyse-nothing-to-lose.html`). The §3.3 flow's "no modal" branch and §6.1's "silence when there is nothing to lose" were the earlier ruling (both now carry dated notes). It also supersedes the 21 Oct clause below that a missing database file, or a table an older schema lacks, "is still a real zero and runs unasked": on the Mac that now asks. `run --clean` is unchanged: a real zero still proceeds, on purpose (owner, 12 Nov 2026: "the cli people get a bit less handholding"; §6.1). Not counted, by accepted gap: a name typed before 4 Oct 2026 (migration 012 read every earlier name as a proposal) and a name hand-typed into `people.yaml` (the owner: nobody edits it by hand any more).
 - _2026-11-06_ — owner ruling: **a file in a format we never offered is left alone, not refused.** Talismanic read "Partial completion" because ~30 scripts, logs and data files each counted as an ingest refusal (`unsupported_format`). Only a format we say we read (audio, video, `.srt`, `.vtt`, `.docx`) can fail, and it fails with a reason from the stage that opened it. Unoffered extensions (`.py`, `.txt`, `.md`, `.pdf`, `.xlsx`, an unlisted media extension such as `.opus`) are counted on `summary.ingest.left_alone`, named only in the log, never in `attempted` or `failed`, and never change the outcome. §5.1 outcome 3 therefore covers refusals of *offered* formats only; the two §5.2 rows below say what changed. `analyze` is unchanged: a `.txt` there is a format it offers, so an untimed one is still refused by name. Mockup: `docs/mockups/ingest-unreadable-files-states.html`.
 - _2026-10-23_ — RE#R3 (owner): the per-session *Re-analyse session N?* folds into **Analyse**. A speaker recode into or out of participant is outstanding work: the recode writes the role pins (`routes/data.py` `sync_role_pins`), the Mac counts owed sessions from the database (`UnanalysedState.recodedSessionCount`, `SourceFilesReader.recodedSessionSQL`) and `hasWorkToDo` offers Analyse on it; the Sessions row's button, sheet and `POST …/reanalyse` are gone. A partial completion (`.completedPartial`) now offers Analyse unless every failure is a refusal (`unusable_input`), which the survey found hidden. §4 and §4.1 updated, and corrected: there is no Project ▸ Analyse menu-bar item (both rows said there was; a proposal is in `docs/mockups/owed-work-rows.html` §4). Anchors: `analyseIsOffered`, `hasWorkToDo` (`ProjectSidebarOutline.swift`), `RecodedSessionWorkTests`, `tests/test_swift_python_contract.py` `TestRecodedSessionSqlContract`.
 - _2026-10-23_ — decision 1b (owner): Re-analyse is a deliberate fresh start. A `--clean` run replaces the report once it holds an analysed session, other sessions failed or not, and **Analyse** finishes the rest as for any partial run; a run that produced nothing puts the report back, and its tree is deleted, not kept. The 22 Oct hold-back is removed: nothing is kept for a later run to swap in, so no plain run replaces a report. Exported `clips/` and `screens/` move into the new output under the old analysis's date. §3's Re-analyse note and the row-42 caveat updated. Anchors: `settle`, `holds_an_analysed_session`, `carry_exports` (`utils/output_backup.py`), `tests/test_cli_reanalyse_fresh_start.py`.
@@ -358,8 +363,9 @@ sequenceDiagram
     else the count could not be read
         C->>R: "Bristlenose couldn't count your stars, tags and edits — re-analysing may discard them."
         R->>C: Re-analyse / Cancel
-    else nothing to lose
-        Note over C: no modal — nothing to measure
+    else nothing counted (since 12 Nov 2026, #314)
+        C->>R: the title and the "again from scratch" line, no list
+        R->>C: Re-analyse / Cancel
     end
     C->>PR: run(project, clean: true)
     PR->>SC: run <path> --no-serve --clean
@@ -408,8 +414,8 @@ Where each verb can be reached, and what gates it.
 | **Analyse** (recoded session) | context menu | analysed, and a speaker was recoded into or out of participant (`recodedSessionCount > 0`) | Shipped 23 Oct 2026 (RE#R3) — replaces the Sessions row's per-session **Re-analyse…**; the run honours the role pins the recode wrote. How the row says it is unbuilt (mockup) |
 | Primary action on the files popover | popover header | `newFiles` non-empty | Shipped (§6.2 amendment) |
 | **Stop Analysis** ⌘. | Project menu, row hover-× | running | Shipped |
-| **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`); confirms when curation can't be counted (21 Oct, decision #1) |
-| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — hides (§6.1); state gate fixed 21 Aug (`06b57843`); confirms when curation can't be counted (21 Oct, decision #1) |
+| **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`); always confirms (12 Nov 2026, #314; from 21 Oct also when the curation can't be counted, decision #1) |
+| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — hides (§6.1); state gate fixed 21 Aug (`06b57843`); always confirms (12 Nov 2026, #314; from 21 Oct also when the curation can't be counted, decision #1) |
 | **Locate…** | context menu, Project menu | `cantFind` | Shipped |
 | **Show Diagnostics…** | failure glyph, context menu | `failed` / `completedPartial` | Shipped |
 
@@ -712,7 +718,7 @@ Two items, both measured, both owned by
 
 ### 6.1 Re-analyse is a placeholder at both ends — **shipped 19 Aug 2026**
 
-`MenuCommands.swift:1003` is `.disabled(true)  // Future — Phase 2+`, and the
+**As of 18 Aug 2026, before the build:** `MenuCommands.swift:1003` is `.disabled(true)  // Future — Phase 2+`, and the
 action it fires — `bridgeHandler.menuAction("reAnalyse")` — dispatches an event
 into the web layer that **nothing listens for**. Flipping the boolean produces a
 control that appears to work and silently does nothing.
@@ -727,7 +733,8 @@ Implementing it needs four things, not one:
    becomes honest and the item can stay visible.
 3. **A confirmation that measures the loss**, in the researcher's terms
    ("47 edited quotes, 12 tags, 3 renamed speakers"), and silence when there is
-   nothing to lose. The `…` already promises this.
+   nothing to lose. The `…` already promises this. _(Reversed on the Mac 12 Nov 2026, decision #314: it
+   asks even when nothing is counted, with no list.)_
 4. **The context menu**, where by the codebase's own rule it is present or
    absent, never dimmed.
 
@@ -737,7 +744,7 @@ act never touched the web view. `reAnalyseIsOffered` is the mirror of
 `analyseIsOffered`; a *drifted* project is offered both, deliberately.
 
 **The confirmation is the sheet drawn in §"The confirmation — measured, not
-vague"** — counted losses, and silence when there are none. An interim
+vague"** — counted losses, and, since 12 Nov 2026, the same sheet with no list when there are none (silence was the plan when this was written). An interim
 `.alert` shipped first with neither, described in its own commit as "a
 deliberate departure from the plan". It was a departure from the **drawn spec**,
 decided in code, and that is the thing this document exists to prevent; it was
@@ -754,19 +761,18 @@ now agree.
 
 **The finding that prompted the departure is real, and does not change the
 design.** `--clean` moves `bristlenose-output/` aside and discards it once the
-run succeeds (`cli.py:1352-1360`, `utils/output_backup.py` — it was
+run succeeds (`cli.py`'s `--clean` set-aside, `utils/output_backup.py` — it was
 `shutil.rmtree(output_dir)` until 30 Aug 2026, and this sentence said so until
 12 Oct 2026), so a re-analysis always destroys the existing analysis, not only
 the curation on top of it. But derived
 output is not a loss for the researcher to weigh — it is the thing they just
 asked to have rebuilt, and the sheet's opening line already states it ("…will
 transcribe and analyse all 14 interviews again from scratch"). The counted block
-is about *their* work. So "silence when there is nothing to lose" was coherent, and was the rule until 12 Nov 2026 (changelog, decision #314: the sheet now asks without a list):
-confirm when their work is at risk, and otherwise do what was asked. A count that could not be taken counts as at risk: since 21 Oct 2026 it confirms, with its own sentence in place of the list (decision #1); before that, an unreadable database ran `--clean` unasked.
+is about *their* work. So "silence when there is nothing to lose" was coherent, and was the rule until 12 Nov 2026, when decision #314 reversed it on the Mac: the sheet now asks without a list, because the re-run spends transcription and model time even when none of their work is at risk. **The CLI keeps the old rule, on purpose.** `run --clean` confirms when their work is at risk and otherwise does what was asked; the owner kept it silent on a real zero ("the cli people get a bit less handholding"), so an unattended `run --clean` never starts refusing. At a terminal it asks; with no terminal it refuses unless `--yes` is given (`_confirm_clean_discards` in `cli.py`). A count that could not be taken counts as at risk: since 21 Oct 2026 it confirms, with its own sentence in place of the list (decision #1); before that, an unreadable database ran `--clean` unasked.
 
 **This also settles §7's codebook question, for now.** "Does Re-analyse keep
 the codebook?" has one answer today — nothing is kept, because the mechanism is
-`rmtree` — so the sheet is truthful without waiting on the design call. What
+a set-aside that is discarded once the run has an analysed session — so the sheet is truthful without waiting on the design call. What
 stays open is whether Re-analyse should *learn* to preserve it, which is a
 feature and a methodology decision, not a precondition.
 
@@ -955,12 +961,12 @@ locales.
 ## 7. Open questions
 
 - ~~**Does the confirmation count, or estimate?**~~ **Settled — it counts.**
-  `CurationCountsReader` runs five `COUNT(*)`s against the project database at
+  `CurationCountsReader` runs nine `COUNT(*)`s (the original five plus hidden quotes, transcript edits, speaker choices and removed badges, N131) against the project database at
   the moment of asking, and zero-count kinds are omitted from the list. The
   argument recorded here (a terse modal measures) is the one that won.
 - ~~**Should Re-analyse offer to keep the codebook?**~~ **Settled for now** —
   §3.3 already says so, and this line contradicted it. Nothing is kept, because
-  the mechanism is `rmtree`. What stays open is whether Re-analyse should
+  the mechanism is a set-aside that is discarded once the run succeeds. What stays open is whether Re-analyse should
   *learn* to preserve the codebook, which is a feature and a methodology call;
   `design-incremental-analysis.md` §"What's immutable" is still where that
   lands.

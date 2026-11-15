@@ -1,11 +1,11 @@
 ---
 status: proposal
-updated: 11 Nov 2026
+updated: 15 Nov 2026
 ---
 
 # Versioned study state ("go back in time")
 
-> **Status: an idea, post-beta, filed in the project backlog under "Post 100 days".** Nothing here is built.
+> **Status: an idea, post-beta, filed in the project backlog under "Post 100 days".** Versioning itself is not built; the small workaround under "Settled and built" below is.
 > It came out of one conversation on 10–11 Nov 2026 about what a Re-analyse that stops halfway should leave
 > behind, and grew into the larger design the owner called the versioning engineering: "we can't do a much
 > much better UX and reliability until we really do that." Prior-art claims below (other products' names for
@@ -133,8 +133,8 @@ chooses** "Restore previous version" or continues with what was processed:
 ## What it would dissolve or soften
 
 The stops-halfway question; reliability rows N117 and N116; R54 (undo a deleted sidebar folder, at a
-different scale); N130 (Re-analyse warns about names the pipeline filled in, which a typed-by record would
-fix exactly); and part of R114 (two Macs on one synced folder). It also gives backups and a way to hand a
+different scale); ~~N130 (Re-analyse warns about names the pipeline filled in, which a typed-by record would
+fix exactly)~~ _(fixed 12 Nov 2026 without versioning: the typed-by record already existed as `session_speakers.state`, migrations 012 and 013, and Re-analyse now counts only `confirmed` names)_; and part of R114 (two Macs on one synced folder). It also gives backups and a way to hand a
 study to a colleague without the recordings.
 
 ## Open questions

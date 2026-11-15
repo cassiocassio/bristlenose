@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-20
+last-trued: 2026-11-15
+trued-against: HEAD@main (f599d8b1c) on 2026-11-15
 ---
 
 # Design Decisions
@@ -508,12 +508,21 @@ straight through: a dialog taxes every delete to catch the rare misfire, and one
 that names no loss is pure friction. Same principle as the sidebar's
 absence-is-information — chrome for the exception, nothing for the norm.
 
+**One recorded exception (12 Nov 2026, decision #314).** The Mac's Re-analyse sheet
+asks even when nothing is counted, because the re-run spends transcription and
+model time: there the trigger is cost, not loss, and the sheet draws no list over
+an empty count. `run --clean` keeps the rule above and stays silent on a real zero
+(`design-analysis-lifecycle.md` §6.1).
+
 **The corollary, which is where it actually goes wrong.** The predicate deciding
 "nothing to lose" must enumerate *every* kind of loss. The tag gate read
 `tag.count`, which counts **accepted** quotes only; a tag with no accepted quotes
 and twelve pending AutoCode proposals was on twelve quotes the researcher had not
 ruled on, and deleted them silently. The field is called `count`, the rule is
-about "quotes", and the two are not the same set — nothing in the name says so.
+about "quotes", and the two are not the same set — nothing in the name says so. _A second case, 12 Nov
+2026:_ the Re-analyse count missed four kinds of loss until N131 (hidden quotes,
+transcript edits, speaker choices, removed badges), and over-counted another, taking
+names the pipeline had filled in itself for the researcher's renames until N130.
 
 **Why nothing was red.** The suite pinned the rule *as written* — a test named
 "deletes a zero-count tag with no confirmation at all" passes whether or not

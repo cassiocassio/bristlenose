@@ -1,8 +1,8 @@
 ---
 status: partial
-last-trued: 2026-09-04
-previous-trued: 2026-04-21
-trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+last-trued: 2026-11-15
+previous-trued: 2026-09-04
+trued-against: HEAD@main (f599d8b1c) on 2026-11-15
 ---
 
 > **Trued 4 Sep 2026 (--topic keychain).** The README-proposal block named an env var that is not read (`BRISTLENOSE_AZURE_KEY` → `BRISTLENOSE_AZURE_API_KEY`, the name the code actually reads), a prompt sequence `configure azure` does not have, and a provider switch that predates `bristlenose use` (shipped 31 Jul 2026 — the "future verb" section below now says so). `configure` reads the key back before claiming it. Two anchors repointed. The parked-idea analyses are untouched.
@@ -123,7 +123,7 @@ transcribe = app.command(name="transcribe", hidden=True)(transcribe_only)
 
 ### 3. Output directory exists → error (no merge, no prompt)
 
-_Since 24 Oct 2026 (R113, decision #135):_ the refusal reads "`<dir>` holds a report Bristlenose can't resume. To start afresh, use --clean (it discards that report's stars, tags and edits)." — it fires only for a report with no manifest, since a manifest is resumed. And `--clean` itself now lists the curation it would discard and asks on a terminal (`--yes` to skip; it refuses with no terminal). The proposal below predates both.
+_Since 24 Oct 2026 (R113, decision #135):_ the refusal reads "`<dir>` holds a report Bristlenose can't resume. To start afresh, use --clean (it discards that report's stars, tags and edits)." — it fires only for a report with no manifest, since a manifest is resumed. And `--clean` itself now lists the curation it would discard and asks on a terminal (`--yes` to skip; it refuses with no terminal; a real zero count proceeds silently, on purpose: owner, 12 Nov 2026). The proposal below predates both.
 
 Running `bristlenose run ./input/ -o ./output/` fails if `./output/` exists and isn't empty:
 
@@ -139,7 +139,7 @@ This is safe but annoying. Users often want to re-run with tweaks.
 - `bristlenose analyze` takes a transcripts dir and writes to a new output
 
 **Pain points:**
-- `--clean` is nuclear — wipes `people.yaml` edits, transcripts, everything
+- `--clean` is nuclear — wipes `people.yaml` edits, transcripts, everything _(since 30 Aug 2026 it sets the output aside and discards it only once the fresh run has an analysed session; `clips/` and `screens/` carry across)_
 - No "resume from stage X" option
 - No merge/update mode for HTML output while preserving other files
 
@@ -379,6 +379,8 @@ The `_help_commands()`, `_help_config()`, `_help_workflows()` functions are hand
 **Recommendation:** (c) for now — the manual help is intentionally better than auto-generated. But (b) would catch drift.
 
 ### 14. No coloured diff on `--clean`
+
+> **Superseded 24 Oct 2026 (R113, decision #135).** `--clean` now counts the researcher's work and asks on a terminal (`--yes` to skip), nine kinds since N131 and confirmed names only since N130; a real zero stays silent on purpose. The "Cleaned output" line and recommendation (c) below are the baseline it departed from, kept as history.
 
 When `--clean` wipes the output directory, it just says:
 

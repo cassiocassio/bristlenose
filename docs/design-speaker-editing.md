@@ -1,5 +1,7 @@
 # Design: Speaker Editing
 
+> **Trued 15 Nov 2026 (people and layout edits shipped).** The status table, Operations 3 and 4, the Sequence and the open questions below were written when naming, role changes and paragraph edits were all unbuilt. Each stale passage now carries a dated pointer; the original text stays as the baseline. The canonical sources are [`design-people.md`](design-people.md) (§H9, §J7, §J8, §K6) and [`design-transcript-editing.md`](design-transcript-editing.md) §"Split and join, stage 1". Hand-editing `people.yaml` is no longer a supported path (owner, 11 Nov 2026).
+
 ## Problem
 
 The pipeline's speaker identification (Stage 5b) makes mistakes. Names are guessed from context, roles are inferred from heuristics, and segment-to-speaker assignment can be wrong — especially when LLM splitting handles raw audio with no platform diarization. Researchers notice these errors immediately when reading transcripts and need to fix them in place.
@@ -53,10 +55,10 @@ The pipeline's job is to get from the first to the second — turn flowing text 
 
 | Capability | Status |
 |-----------|--------|
-| Name a speaker (full/short name) | API exists (`PUT /people`), write-through to `people.yaml`. No UI |
+| Name a speaker (full/short name) | API exists (`PUT /people`), write-through to `people.yaml`. No UI _(shipped 7 Oct 2026: the picker and inline rename on the Sessions grid; a typed name is a `confirmed` slot, and a participant rename writes `short_name` only)_ |
 | Change speaker role | Data model supports it (`SessionSpeaker.speaker_role` is mutable). No endpoint, no UI |
 | Reassign segment to different speaker | `TranscriptSegment.speaker_code` is mutable in the DB. No endpoint, no UI. **Quote cascade is unsolved** |
-| Editable speaker summary on project page | Not implemented. `SessionsTable` shows speakers read-only |
+| Editable speaker summary on project page | Not implemented. `SessionsTable` shows speakers read-only _(shipped 7 Oct 2026: the Sessions grid has the person picker and the inline rename, `SessionsTable.tsx`)_ |
 | Merge two speakers (cross-session identity) | Not implemented. `person_links` table noted as future work in code comments |
 
 > **Trued 25 Aug 2026 against [`design-people.md`](design-people.md).** The rows
@@ -168,6 +170,8 @@ This is useful even without the segment reassignment feature. It gives the resea
 
 ### Operation 3: Split a segment (inverse of merge)
 
+> _Superseded 15 Nov 2026._ What shipped edits **paragraph layout**, not segments: `POST …/transcripts/{sid}/split`, `…/join` and `…/reassign`, plus `DELETE …/layout-edits/{edit_id}`, recorded and replayed on every import (`routes/transcript.py`; `design-transcript-editing.md` §"Split and join, stage 1"). The endpoints proposed below were not built. Kept as the baseline.
+
 **Where it lives:** Transcript page.
 
 Interaction: click into a segment's text → position cursor at the speaker boundary → press Enter (or a split button) → segment splits into two at that point. The new second segment inherits the original speaker but is immediately available for reassignment (Operation 2).
@@ -186,6 +190,8 @@ This is the fix for the most common diarization failure: two speakers merged int
 **Complementary to reassignment:** split first, then reassign the new segment. These two operations compose naturally — the UX should make the flow seamless (split → the new segment's speaker badge is immediately highlighted/editable).
 
 ### Operation 4: Merge segments (inverse of split)
+
+> _Superseded 15 Nov 2026:_ see the note under Operation 3; the shipped join is `POST …/transcripts/{sid}/join`.
 
 **Where it lives:** Transcript page.
 
@@ -207,6 +213,8 @@ Common pattern: participant is mid-thought, interviewer interjects "mm-hmm" or "
 **Delete + merge flow:** Deleting an interjection and merging the surrounding segments is a two-step operation that should feel like one. The UX could offer "delete and merge with neighbours" as a single action when deleting a segment that sits between two same-speaker segments.
 
 ## Sequence
+
+> _15 Nov 2026: item 1 (the editable speaker summary) shipped with the Sessions grid; the segment-level endpoints named for the later items were replaced by the layout-edit routes under Operation 3._
 
 These don't all need to ship together. Each phase is independently useful:
 
@@ -232,7 +240,7 @@ These don't all need to ship together. Each phase is independently useful:
 ## Open questions
 
 - Should segment reassignment trigger a re-run of downstream stages (quote extraction, clustering) for affected segments? Or is manual quote reassignment sufficient?
-- How does this interact with pipeline re-runs? If the user fixes speakers in serve mode, then re-runs the pipeline, the pipeline's Stage 5b will overwrite their corrections. The `people.yaml` write-through preserves names but not segment assignments. Need a "user override" flag or a way to lock segments
+- How does this interact with pipeline re-runs? If the user fixes speakers in serve mode, then re-runs the pipeline, the pipeline's Stage 5b will overwrite their corrections. The `people.yaml` write-through preserves names but not segment assignments. Need a "user override" flag or a way to lock segments _(answered 15 Nov 2026: a typed, picked or accepted name is a `confirmed` slot the importer never overwrites, and a paragraph's split, join or re-attribution is a recorded layout edit replayed on import; `people.yaml` is no longer the preserving mechanism)_
 - Range selection UX for consecutive misidentified segments — shift-click? Drag? Select-all-by-speaker-in-range?
 - Segment splitting: should Enter split at cursor (natural text editing) or should there be an explicit split button (safer, less accidental)?
 - Split + reassign flow: should the new segment auto-open a speaker picker, or wait for the researcher to click?

@@ -118,6 +118,46 @@ describe("SpeakerPickerTrigger", () => {
     expect(screen.getByTestId("bn-speaker-trigger-m1").getAttribute("tabindex")).toBe("-1");
   });
 
+  describe("on a transcript paragraph (design-people.md §B3, §K6)", () => {
+    const scopeWords = (picker: HTMLElement) =>
+      Array.from(picker.querySelectorAll<HTMLElement>(".bn-picker-scope-btn"))
+        .map((w) => [w.textContent, w.getAttribute("aria-checked")]);
+    const badge = () => (
+      <SpeakerPickerTrigger sessionId="s1" code="m1" role="moderator" name="Sarah"
+        paragraph={{ position: 4, verify: "Yes that is true" }} />
+    );
+
+    it("opens on Paragraph: the act is this one piece of speech, not the whole session", async () => {
+      render(badge());
+      fireEvent.click(screen.getByTestId("bn-speaker-trigger-m1"));
+      expect(scopeWords(await pickerMenu())).toEqual([["Session", "false"], ["Paragraph", "true"]]);
+      // No swap and no rename are on offer until Session is chosen.
+      expect(document.querySelector(".bn-person-picker input")).toBeNull();
+    });
+
+    it("Session is a switch that does not stick: the next open is on Paragraph again", async () => {
+      render(badge());
+      const trigger = screen.getByTestId("bn-speaker-trigger-m1");
+      fireEvent.click(trigger);
+      const first = await pickerMenu();
+      fireEvent.click(first.querySelectorAll<HTMLElement>(".bn-picker-scope-btn")[0]);
+      // The other scope's picker mounts in its place, so read the page again.
+      await waitFor(() =>
+        expect(scopeWords(document.querySelector<HTMLElement>(".bn-person-picker")!)[0])
+          .toEqual(["Session", "true"]));
+      fireEvent.click(trigger); // close
+      await waitFor(() => expect(document.querySelector(".bn-person-picker")).toBeNull());
+      fireEvent.click(trigger);
+      expect(scopeWords(await pickerMenu())).toEqual([["Session", "false"], ["Paragraph", "true"]]);
+    });
+
+    it("a badge that is not a paragraph's has no scope: it is the whole session", async () => {
+      render(<SpeakerPickerTrigger sessionId="s1" code="m1" role="moderator" name="Sarah" />);
+      fireEvent.click(screen.getByTestId("bn-speaker-trigger-m1"));
+      expect(scopeWords(await pickerMenu())).toEqual([]);
+    });
+  });
+
   it("an exported report draws the badge plain, with no picker", () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = {
       version: 1, exported_at: "2026-10-06T00:00:00Z", health: {}, endpoints: {},

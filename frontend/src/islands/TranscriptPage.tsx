@@ -50,7 +50,6 @@ import { isEmbedded } from "../utils/embedded";
 import { PreloadSessionsSidebar } from "../components/DeferredSessionsSidebar";
 import { isExportMode } from "../utils/exportData";
 import { redo, undo } from "../contexts/UndoStore";
-import { resetParagraphScope } from "../utils/paragraphScope";
 import { copyTranscriptSelection } from "../utils/transcriptCopy";
 import { drawsCapital } from "../utils/sentenceStart";
 import {
@@ -475,9 +474,6 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // Splitting and joining paragraphs: not in an exported report, which has no
   // server to keep them.
   const paragraphEditing = !isExportMode();
-  // The picker's Paragraph scope sticks for a run of paragraphs and goes back
-  // to Session on leaving this transcript (design-people.md §K).
-  useEffect(() => () => resetParagraphScope(), [sessionId]);
   // The browser's own input events — typing, dictation, autocorrect, a context
   // menu's delete — never edit a paragraph. Native, not React's onBeforeInput,
   // which is a keypress polyfill and misses most of them. A layout effect, so

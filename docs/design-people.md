@@ -3568,7 +3568,7 @@ reassignment, per-quote reassignment, and what each means for re-analysis.
 
 ### K6 · Paragraph scope — built 6 Oct 2026
 
-The answers to K5, as built. **1:** the owner's sticky switch, *Session | Paragraph*,
+The answers to K5, as built. **1:** the owner's switch, *Session | Paragraph*,
 transcript only to start with (mockup §7). **2:** a third layout edit, `kind = "speaker"`, beside
 split and join (migration 016): the paragraph's position and first words, and the **slot** it
 moves to. Replayed on every import, undone by forgetting it, as a split is. **3:** evidence
@@ -3581,9 +3581,12 @@ reads which paragraphs a quote overlaps, but only in sessions where a paragraph 
   It offers no rename (a name is the person's, everywhere) and no ✕. Under Moderator its last
   row is **New moderator** (owner, 6 Oct 2026): an unknown moderator the move makes, for a
   call collapsed into one voice, named afterwards from the paragraph's badge like any
-  unknown speaker. The
-  choice sticks for a run of paragraphs and goes back to Session on leaving the transcript
-  (`utils/paragraphScope.ts`). On the Mac the same request carries `scope`, and a paragraph
+  unknown speaker. A
+  paragraph's badge **opens on Paragraph, every time** (owner, 14 Nov 2026, reversing the
+  6 Oct default of Session with a sticky switch): in a transcript the act is "this one was
+  the other speaker" (§B3), and a whole-speaker act, the swap among them, is a deliberate
+  switch to Session that does not stick. The sticky default cost a session its quotes on
+  14 Nov, when one misattributed line was fixed under Session and read as a swap. On the Mac the same request carries `scope`, and a paragraph
   pick replies `{kind: "paragraph", slot}` (bridge contract version 9).
 - **Evidence** (`speaker_slots.evidence_out` → `EvidenceOut.quotes`). A quote leaves when a
   paragraph its window overlaps was moved off its credited tag (`transcript_segments.moved_from`)

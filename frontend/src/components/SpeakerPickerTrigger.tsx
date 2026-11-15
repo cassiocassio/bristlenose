@@ -17,7 +17,6 @@ import { PersonBadge } from "./PersonBadge";
 import { isExportMode } from "../utils/exportData";
 import { isEmbedded } from "../utils/embedded";
 import { reassignParagraph } from "../utils/paragraphEdits";
-import { paragraphScopeFor, setParagraphScope } from "../utils/paragraphScope";
 import type { ParagraphTarget } from "../utils/personPicker";
 import {
   applySpeakerChoice,
@@ -52,17 +51,17 @@ export function SpeakerPickerTrigger({
 }: SpeakerPickerTriggerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<SpeakerPickContext | null>(null);
-  // Sticky across the transcript's badges (paragraphScope), read on open.
-  const [onParagraph, setOnParagraph] = useState(false);
+  // A paragraph's badge opens on Paragraph, every time: in a transcript the
+  // act is "this one was the other speaker" (design-people.md §B3, §K6).
+  // Session is a deliberate switch and does not stick, so a later click on
+  // another badge can never be whole-session by leftover state.
+  const [onParagraph, setOnParagraph] = useState(true);
   const scopeFor = (ctx: SpeakerPickContext) =>
     paragraph
       ? {
           paragraph: onParagraph,
           speakers: ctx.sessionSpeakers,
-          onScope: (p: boolean) => {
-            setParagraphScope(sessionId, p);
-            setOnParagraph(p);
-          },
+          onScope: setOnParagraph,
           onMove: (to: ParagraphTarget) => {
             void reassignParagraph(sessionId, paragraph.position, paragraph.verify, to)
               .catch(() => undefined);
@@ -81,12 +80,12 @@ export function SpeakerPickerTrigger({
       return;
     }
     const anchor = e.currentTarget;
-    setOnParagraph(paragraphScopeFor(sessionId));
+    setOnParagraph(true);
     void loadSpeakerContext(sessionId, code).then((ctx) => {
       if (!ctx) return;
       if (isEmbedded() && hasNativePersonPicker()) {
         const scope = paragraph
-          ? { ...scopeFor(ctx)!, paragraph: paragraphScopeFor(sessionId) }
+          ? { ...scopeFor(ctx)!, paragraph: true }
           : undefined;
         openNativePicker(
           {

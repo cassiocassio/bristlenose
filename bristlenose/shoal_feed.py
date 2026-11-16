@@ -19,7 +19,10 @@ it eagerly; deferred — the write-path fail-safe is the load-bearing invariant,
 not eager cleanup.)
 
 A SEPARATE file from ``pipeline-events.jsonl`` by design — that one is kept
-string-free / travel-clean; this one carries content.
+free of transcript and participant content; this one carries content. (It is not
+free of file names: ``StageFailure.source_file`` already carries the input file's
+basename there, by design — see ``events.StageFailure`` — so "travel-clean" means
+no content and no paths, not no names.)
 """
 
 from __future__ import annotations

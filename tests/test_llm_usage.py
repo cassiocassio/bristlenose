@@ -77,6 +77,19 @@ class TestEstimateCost:
         """The default model from config.py must have a pricing entry."""
         assert "claude-sonnet-4-20250514" in PRICING
 
+    def test_claude_5_5_models_are_priced(self) -> None:
+        """Fable 5.2, Opus 5.5 and Sonnet 5.5 estimate a cost (a missing row is a
+        silently absent estimate). Haiku 5.5 stays out: its price is tiered."""
+        assert estimate_cost("claude-opus-5-5", 1_000_000, 1_000_000) == 24.0
+        assert estimate_cost("claude-sonnet-5-5", 1_000_000, 1_000_000) == 12.0
+        assert estimate_cost("claude-fable-5-2", 1_000_000, 1_000_000) == 48.0
+        assert estimate_cost("claude-haiku-5-5", 1000, 1000) is None
+
+    def test_every_priced_model_has_a_provider(self) -> None:
+        from bristlenose.llm.pricing import _MODEL_PROVIDER
+
+        assert set(PRICING) == set(_MODEL_PROVIDER)
+
     def test_pricing_urls_have_all_cloud_providers(self) -> None:
         assert "anthropic" in PRICING_URLS
         assert "openai" in PRICING_URLS

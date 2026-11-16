@@ -27,12 +27,20 @@ from .telemetry import iter_rows
 
 # Bump when any rate changes — stamped onto every cost-bearing event so a
 # future reader can recompute against a newer table.
-PRICE_TABLE_VERSION = "2026-09-04"
+PRICE_TABLE_VERSION = "2026-11-16"
 CURRENCY = "USD"
 
 # Pricing per million tokens: (input_rate_usd, output_rate_usd).
 PRICING: dict[str, tuple[float, float]] = {
-    # Anthropic (Claude)
+    # Anthropic (Claude). The three 5.5 rows (added 16 Nov 2026) are from the
+    # Claude API skill's model table, cached 3 Nov 2026 (input / output per MTok:
+    # Fable 5.2 $8/$40, Opus 5.5 $4/$20, Sonnet 5.5 $2/$10). Not yet checked
+    # against the pricing page itself. Haiku 5.5 is deliberately absent: its price
+    # is tiered on prompt size ($0.10/$0.50 up to 100K tokens, $0.50/$2.50 beyond),
+    # which a flat pair would misstate for long prompts.
+    "claude-fable-5-2": (8.0, 40.0),
+    "claude-opus-5-5": (4.0, 20.0),
+    "claude-sonnet-5-5": (2.0, 10.0),
     "claude-sonnet-5": (2.0, 10.0),
     "claude-opus-5": (5.0, 25.0),
     "claude-haiku-4-5-20251001": (1.0, 5.0),
@@ -71,6 +79,9 @@ PRICING: dict[str, tuple[float, float]] = {
 
 # Mirrors PRICING — provider lookup for cohort key resolution.
 _MODEL_PROVIDER: dict[str, str] = {
+    "claude-fable-5-2": "anthropic",
+    "claude-opus-5-5": "anthropic",
+    "claude-sonnet-5-5": "anthropic",
     "claude-sonnet-5": "anthropic",
     "claude-opus-5": "anthropic",
     "claude-haiku-4-5-20251001": "anthropic",

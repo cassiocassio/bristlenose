@@ -257,7 +257,7 @@ ents_with() {   # ents_with <out> <extra-xml-keys>  — sandbox + whatever else
 <plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/>$2</dict></plist>
 E
 }
-GRP='<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string></array>'
+GRP='<key>com.apple.security.application-groups</key><array><string>Z56GZVA2QB.app.bristlenose</string></array>'
 OTHER_GRP='<key>com.apple.security.application-groups</key><array><string>group.com.evil.other</string></array>'
 ents_with "$WORK/ents-host-grp.plist" "$GRP"
 ents_with "$WORK/ents-ext-ok.plist" "$GRP"
@@ -313,18 +313,18 @@ reject_case "extension in a different group" "✗.*extensions.*BAExt.appex: app 
 D=$WORK/e5; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "$TREE_VER" 0)
 reject_case "extension without its own profile" "✗.*extensions.*BAExt.appex: no embedded provisioning profile" "$D"
 # a group the host does not hold is refused even beside one it does
-ents_with "$WORK/ents-ext-extra.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>group.com.evil.other</string></array>'
+ents_with "$WORK/ents-ext-extra.plist" '<key>com.apple.security.application-groups</key><array><string>Z56GZVA2QB.app.bristlenose</string><string>group.com.evil.other</string></array>'
 D=$WORK/e4b; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-extra.plist")
 reject_case "extension holding the host's group plus another" "✗.*extensions.*BAExt.appex: app group group.com.evil.other is not one the host holds" "$D"
 # the real shape: the host holds two groups, the extension only the Background Assets one
-ents_with "$WORK/ents-host-two.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>TEAM.app.bristlenose</string></array>'
+ents_with "$WORK/ents-host-two.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>Z56GZVA2QB.app.bristlenose</string></array>'
 D=$WORK/e4d; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$WORK/ents-host-two.plist"
 if make_pkg "$A" "$D/t.pkg"; then OUT4D=$("$GATE" "$D/t.pkg" 2>&1); else OUT4D=""; fi
 if grep -qi '✓.*extensions.*1 .appex' <<<"$OUT4D"; then pass "extension with one of the host's two groups passes"; else fail "extension with one of the host's two groups did not pass"; sed 's/^/        /' <<<"$OUT4D" | grep -iE 'extensions' >&2; fi
-# ...but an extension holding only the host's OTHER group is refused: it needs the BA group itself
-ents_with "$WORK/ents-ext-team.plist" '<key>com.apple.security.application-groups</key><array><string>TEAM.app.bristlenose</string></array>'
+# ...but an extension holding only the host's OTHER group is refused: it needs the team-prefixed group itself
+ents_with "$WORK/ents-ext-team.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string></array>'
 D=$WORK/e4e; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-team.plist"); sign_app "$A" "$WORK/ents-host-two.plist"
-reject_case "extension without the Background Assets group" "✗.*extensions.*BAExt.appex: not in group.app.bristlenose" "$D"
+reject_case "extension without the Background Assets group" "✗.*extensions.*BAExt.appex: not in Z56GZVA2QB.app.bristlenose" "$D"
 # a host with no readable group cannot vouch for an extension's
 D=$WORK/e4c; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$ENTS"
 reject_case "host without an app group cannot vouch for an extension's" "✗.*extensions.*host has no readable app group" "$D"

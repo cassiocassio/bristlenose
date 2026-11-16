@@ -13,7 +13,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.app.bristlenose</string>
+		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
 	</array>
 	<key>com.apple.application-identifier</key>
 	<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>

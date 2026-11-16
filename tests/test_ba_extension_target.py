@@ -29,7 +29,8 @@ _EXT_ID = "app.bristlenose.BAExtension"
 #: as a PBXBuildFile; nothing else does, whatever Xcode calls the phase or its comment.
 _PRODUCT_REF = "BA0000000000000000000005"
 _EMBED_BUILD_FILE = re.compile(r"isa = PBXBuildFile; fileRef = " + _PRODUCT_REF + r"[ ;]")
-_BA_GROUP = "group.app.bristlenose"
+#: Team-prefixed, so it needs no portal registration; the host holds it in both store and .dmg files.
+_BA_GROUP = "$(TeamIdentifierPrefix)app.bristlenose"
 
 
 def _load(path: Path) -> dict:

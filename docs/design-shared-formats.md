@@ -214,6 +214,27 @@ KNOWN-WRONG section about the underlying value. That is the standard.
 
 ---
 
+### `people.yaml` `computed.status` (16 Nov 2026, BR-16)
+
+`people.yaml` is a file researchers own and older Bristlenose versions read, so a
+new key must be invisible to them. The contract:
+
+- **Where:** `participants.<id>.computed.status`. Present only as `status: failed`;
+  an ordinary row carries no key (the writer drops `None`), so files written
+  before this date are valid unchanged.
+- **Meaning:** the session was ingested (the row holds its id, number and source
+  file) but produced no transcript. The stats beside it are zeros, not
+  measurements. Rows are kept deliberately, because ids are stable keys and the
+  number must not be reissued; the mark says what the zeros are.
+- **Older readers:** `PersonComputed` is a pydantic model with the default
+  `extra="ignore"`, so a reader that does not know the key skips it. A reader that
+  is strict about extra keys must be loosened before it reads a newer file.
+- **Lifetime:** `computed` is replaced whole on every run, so a session that
+  succeeds on a later run loses the mark. `editable` fields are never touched.
+- **Readers of the mark:** the Sessions lens shows the same session as a muted
+  "not analysed" row (BR-15); a failed session's placeholder is never counted as a
+  participant. Pinned by `tests/test_people_failed_status.py`.
+
 ## 4. The gaps
 
 Both gaps found in the 22 Aug 2026 audit closed the same day. Their records are

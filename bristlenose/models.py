@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
@@ -510,6 +510,15 @@ class PersonComputed(BaseModel):
     pct_words: float  # % of total words across all participants
     pct_time_speaking: float  # % of session duration spent speaking
     source_file: str
+    #: ``"failed"`` marks a placeholder row: the session was ingested (it holds
+    #: this id and number) but no transcript came out of it, so the stats above
+    #: are zeros, not measurements. ``None`` (written as no key at all) is every
+    #: ordinary row, so files written before 16 Nov 2026 read unchanged and a
+    #: reader that has never heard of the field ignores it (pydantic's default
+    #: ``extra="ignore"``). Refreshed with the rest of ``computed`` each run, so
+    #: a session that later succeeds loses the mark. Contract:
+    #: ``docs/design-shared-formats.md`` § people.yaml.
+    status: Literal["failed"] | None = None
 
 
 class PersonEditable(BaseModel):

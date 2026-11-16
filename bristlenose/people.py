@@ -261,6 +261,7 @@ def compute_participant_stats(
                 pct_words=0.0,
                 pct_time_speaking=0.0,
                 source_file=session.files[0].path.name if session.files else "",
+                status="failed",
             )
             continue
 
@@ -388,6 +389,11 @@ def write_people_file(people: PeopleFile, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     data = people.model_dump(mode="json")
+    # `status` is written only when it says something: an ordinary row carries no
+    # key, so the file a researcher opens is unchanged for every working session.
+    for entry in data.get("participants", {}).values():
+        if entry.get("computed", {}).get("status") is None:
+            entry["computed"].pop("status", None)
 
     yaml_content = yaml.dump(
         data,

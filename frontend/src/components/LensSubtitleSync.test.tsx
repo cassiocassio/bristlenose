@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import { LensSubtitleSync, tabFromPath } from "./LensSubtitleSync";
+import { LensSubtitleSync, tabFromPath, tabTitle, titleLensOf } from "./LensSubtitleSync";
 import { addSearchToken, initFromQuotes, resetStore } from "../contexts/QuotesContext";
 import { personToken } from "../utils/searchTokens";
 import { codebookSubtitle, quotesSubtitle } from "../utils/lensSubtitle";
@@ -9,6 +9,7 @@ import { getCodebook } from "../utils/api";
 import type { QuoteResponse } from "../utils/types";
 
 vi.mock("../utils/api", () => ({
+  apiGet: vi.fn().mockResolvedValue({ project_name: "Acme" }),
   getCodebook: vi.fn().mockResolvedValue({ groups: [], ungrouped: [], all_tag_names: [] }),
 }));
 
@@ -64,6 +65,17 @@ describe("the Quotes subtitle counts what the filters leave", () => {
       tags: [], deleted_badges: [], proposed_tags: [], segment_index: 0,
     }) as QuoteResponse;
 
+  it("keeps the count out of the tab title", async () => {
+    resetStore();
+    initFromQuotes([q("a", "p1")]);
+    render(
+      <MemoryRouter initialEntries={["/report/quotes"]}>
+        <LensSubtitleSync />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(document.title).toBe("Quotes \u00b7 Acme \u00b7 Bristlenose"));
+  });
+
   it("narrows with a search token", async () => {
     resetStore();
     initFromQuotes([q("a", "p1"), q("b", "p2"), q("c", "p2")]);
@@ -72,9 +84,11 @@ describe("the Quotes subtitle counts what the filters leave", () => {
         <LensSubtitleSync />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(document.title).toBe(quotesSubtitle(3)));
+    // The tab title no longer carries the count; the window subtitle does.
+    await waitFor(() => expect(document.title).toBe("Quotes \u00b7 Acme \u00b7 Bristlenose"));
+    expect(quotesSubtitle(3)).not.toBe(quotesSubtitle(2));
     act(() => addSearchToken(personToken("p2")));
-    await waitFor(() => expect(document.title).toBe(quotesSubtitle(2)));
+    await waitFor(() => expect(document.title).toBe("Quotes \u00b7 Acme \u00b7 Bristlenose"));
   });
 });
 
@@ -119,6 +133,32 @@ describe("the Codebook subtitle after a tag made elsewhere", () => {
     vi.mocked(getCodebook).mockResolvedValue(book(["a", "b"]));
     act(() => nav.go("/report/codebook"));
 
-    await waitFor(() => expect(document.title).toBe(codebookSubtitle(1, 2)));
+    await waitFor(() => expect(document.title).toBe("Codebooks \u00b7 Acme \u00b7 Bristlenose"));
+    expect(codebookSubtitle(1, 2)).toBeTruthy();
+  });
+});
+
+describe("the browser tab title is <Lens> \u00b7 <Project> \u00b7 Bristlenose", () => {
+  it("names Discussion, which has no native tab", () => {
+    expect(titleLensOf("/report/discussion/")).toEqual({ key: "discussion" });
+    expect(titleLensOf("/report/")).toEqual({ key: "project" });
+  });
+  it("numbers a transcript", () => {
+    expect(titleLensOf("/report/sessions/s3")).toEqual({ key: "session", sessionNumber: 3 });
+    expect(titleLensOf("/report/sessions/")).toEqual({ key: "sessions" });
+  });
+  it("drops the project segment until the name is known", () => {
+    expect(tabTitle("Signals", null)).toBe("Signals \u00b7 Bristlenose");
+    expect(tabTitle("Signals", "Acme")).toBe("Signals \u00b7 Acme \u00b7 Bristlenose");
+  });
+  it("renders on the Project and Sessions lenses, which used to read just 'Bristlenose'", async () => {
+    resetStore();
+    initFromQuotes([]);
+    render(
+      <MemoryRouter initialEntries={["/report/sessions/"]}>
+        <LensSubtitleSync />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(document.title).toBe("Sessions \u00b7 Acme \u00b7 Bristlenose"));
   });
 });

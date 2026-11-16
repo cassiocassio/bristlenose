@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 
 import { useSignalStore } from "../contexts/SignalStore";
@@ -6,7 +7,7 @@ import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
 import { useLocaleStore } from "../i18n/LocaleStore";
 import { postLensSubtitle, postQuotesFilter } from "../shims/bridge";
 import { tokensToWire } from "../utils/searchBridge";
-import { getCodebook } from "../utils/api";
+import { apiGet, getCodebook } from "../utils/api";
 import { isEmbedded } from "../utils/embedded";
 import { filterQuotes } from "../utils/filter";
 import {
@@ -37,12 +38,29 @@ export function tabFromPath(pathname: string): string {
   return "project";
 }
 
+/** Which lens the browser-tab title names. Finer than `tabFromPath`, whose
+ *  tag is the Swift `Tab` rawValue (Discussion has no native tab, so it is
+ *  "project" there): the tab title must say "Discussion". */
+export function titleLensOf(pathname: string): { key: string; sessionNumber?: number } {
+  const m = pathname.match(/^\/report\/sessions\/s?(\d+)\/?$/);
+  if (m) return { key: "session", sessionNumber: Number(m[1]) };
+  if (pathname.startsWith("/report/discussion")) return { key: "discussion" };
+  return { key: tabFromPath(pathname) };
+}
+
+/** `<Lens> \u00b7 <Project> \u00b7 Bristlenose`; the project segment is dropped
+ *  until its name is known. The native window subtitle is unaffected. */
+export function tabTitle(lens: string, project: string | null): string {
+  return [lens, project, "Bristlenose"].filter(Boolean).join(" \u00b7 ");
+}
+
 /**
  * Side-effect-only: derives the active lens's subtitle and pushes it to both
  * surfaces — the desktop window subtitle (via the native bridge) and the
- * browser tab (`document.title`). One string, computed where the live counts
- * already are. Sessions/Project carry no SPA subtitle (the desktop renders
- * those from its own DB read); their tab title falls back to the app name.
+ * browser tab (`document.title`). The window subtitle is the lens's live count
+ * (Sessions/Project carry none: the desktop renders those from its own DB
+ * read). The tab title is `<Lens> \u00b7 <Project> \u00b7 Bristlenose` and carries no
+ * count (BR-19, owner ruling 16 Nov 2026; it used to equal the subtitle).
  *
  * Renders `null` so the store + route subscriptions that drive it re-render
  * this leaf, not the whole `AppShell`.
@@ -56,6 +74,19 @@ export function LensSubtitleSync(): null {
   const signals = useSignalStore();
   const screensCount = useScreensCount();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
+  const { t } = useTranslation();
+  const [projectName, setProjectName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiGet<{ project_name: string }>("/info")
+      .then((info) => {
+        if (!cancelled) setProjectName(info.project_name || null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const onCodebook = tab === "codebook";
 
   // Codebook is fetched, not a reactive store — load on mount, refetch when
@@ -93,7 +124,12 @@ export function LensSubtitleSync(): null {
       subtitle = screensSubtitle(screensCount.screens, screensCount.screenshots, screensCount.quotes);
     }
 
-    document.title = subtitle || "Bristlenose";
+    const lens = titleLensOf(pathname);
+    const lensLabel =
+      lens.key === "session"
+        ? t("dashboard.coverageSession", { number: lens.sessionNumber })
+        : t(`nav.${lens.key}`);
+    document.title = tabTitle(lensLabel, projectName);
     if (isEmbedded()) {
       postLensSubtitle(tab, subtitle);
       // Mirror the Quotes filter state to the native toolbar (search field +
@@ -104,7 +140,7 @@ export function LensSubtitleSync(): null {
         postQuotesFilter(store.searchQuery, store.viewMode, tokensToWire(store.searchTokens));
       }
     }
-  }, [tab, store, signals, codebook, locale, screensCount]);
+  }, [tab, pathname, store, signals, codebook, locale, screensCount, projectName, t]);
 
   return null;
 }

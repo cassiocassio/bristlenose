@@ -33,6 +33,7 @@ from bristlenose.models import (
     SpeakerRole,
     TopicBoundary,
     TranscriptSegment,
+    TransitionType,
 )
 from bristlenose.run_lifecycle import _build_cause
 from bristlenose.stages.s06_merge_transcript import reading_length
@@ -475,7 +476,7 @@ async def _extract_one_pass(
             continue
 
         # Apply smart quotes to the text (curly quotes)
-        text = apply_smart_quotes(item.text)
+        text = apply_smart_quotes(_restore_sentence_start(item.text, item.verbatim_excerpt))
 
         quotes.append(
             ExtractedQuote(
@@ -485,7 +486,9 @@ async def _extract_one_pass(
                 end_timecode=end_tc,
                 text=text,
                 verbatim_excerpt=item.verbatim_excerpt or "",
-                topic_label=item.topic_label,
+                topic_label=_checked_topic_label(
+                    item.topic_label, topic_map.boundaries if topic_map else [], start_tc,
+                ),
                 quote_type=quote_type,
                 researcher_context=item.researcher_context,
                 sentiment=sentiment,
@@ -496,6 +499,14 @@ async def _extract_one_pass(
                 emotion=emotion,
                 journey_stage=journey_stage,
             )
+        )
+
+    unrepaired = sum(_is_transition_word(q.topic_label) for q in quotes)
+    if unrepaired:
+        # Nothing better to say (no boundary to snap to): the word will head a section.
+        logger.warning(
+            "quote_topic_label_is_transition_type | session=%s | quotes=%d",
+            transcript.session_id, unrepaired,
         )
 
     if any(repairs.values()):
@@ -621,6 +632,94 @@ def _pass_timeout(depth: int) -> PassDeadlineError:
         f"quote extraction timeout: a pass at split depth {depth} ran past "
         f"{_PASS_DEADLINE_S:.0f} s"
     )
+
+
+_TRANSITION_WORDS = frozenset(t.value for t in TransitionType)
+
+
+def _checked_topic_label(label: str, boundaries: list[TopicBoundary], at: float) -> str:
+    """A quote's topic label, with a transition type put back to the topic it stood for.
+
+    The prompt lists each boundary as "[00:10] Settings navigation (screen_change)", and a small
+    model sometimes answers with the parenthetical, so a quote's label becomes "screen_change".
+    That word then names a section in the report and over MCP (a 16 Nov 2026 walk showed it as a
+    heading). A transition type is never a topic: snap it to the boundary in force at the quote's
+    start. Any other label is left as the model wrote it, and with no boundary to snap to there
+    is nothing better to say.
+    """
+    # The whole prompt line copied back ("Settings navigation (screen_change)"): the topic
+    # is the part before the parenthetical.
+    copied = _COPIED_LINE.fullmatch(label)
+    if copied and _is_transition_word(copied.group("kind")):
+        topic = copied.group("topic").strip()
+        if topic and not _is_transition_word(topic):
+            return topic
+        label = copied.group("kind")
+    if not _is_transition_word(label):
+        return label
+    # A boundary whose own label is a transition word (the same slip, one stage earlier)
+    # is no better a topic to snap to. With no usable boundary already started, a later one
+    # would file an early quote under a screen it has not reached: leave the label as it is.
+    earlier = [
+        b for b in boundaries
+        if b.timecode_seconds <= at and not _is_transition_word(b.topic_label)
+    ]
+    if not earlier:
+        return label
+    return max(earlier, key=lambda b: b.timecode_seconds).topic_label
+
+
+_COPIED_LINE = re.compile(
+    r"\s*(?:\[[\d:]+\]\s*)?(?P<topic>.*?)\s*\(\s*(?P<kind>[\w -]+?)\s*\)\s*"
+)
+
+
+def _is_transition_word(label: str) -> bool:
+    return label.strip().lower().replace(" ", "_").replace("-", "_") in _TRANSITION_WORDS
+
+
+_SENTENCE_END = (".", "?", "!")
+
+
+def _restore_sentence_start(text: str, excerpt: str) -> str:
+    """Capitalise a quote that begins a sentence of the original but starts in lower case.
+
+    The prompt has the model drop a leading filler ("Oh, the search was great"), and the
+    text can come back as "the search was great": lower case at the start of a quote the
+    participant did begin a sentence with. When the original (``verbatim_excerpt``) shows
+    what was cut (a capitalised lead-in of up to three words ending in a comma, or any
+    lead-in ending a sentence) the first letter is capitalised. No word is changed.
+    A quote that starts mid-sentence in the original, begins with an ellipsis or a bracket,
+    or has no excerpt to check against is left exactly as the model wrote it.
+    """
+    if not text or not text[0].islower() or not excerpt:
+        return text
+    words = re.findall(r"\w+", text)[:3]
+    first = words[0]
+    # A brand written with an inner capital ("iPhone", "eBay") or a hyphenated start ("e-mail")
+    # is not a lower-case slip: capitalising it would misspell it.
+    # Turkish dotted I and Dutch IJ: str.upper() would write the wrong letter.
+    if first[0] == "i" and (first.startswith("ij") or any(c in text for c in "\u0131\u00e7\u015f\u011f")):
+        return text
+    if first[1:] != first[1:].lower() or text[len(first):len(first) + 1] in ("-", "'", "\u2019"):
+        return text
+    # Anchor on the quote's own opening words, not on the first word alone ("the" is everywhere).
+    found = re.search(
+        r"(?<!\w)" + r"\W+".join(re.escape(w) for w in words) + r"(?!\w)",
+        excerpt, re.IGNORECASE,
+    )
+    if found is None or found.start() == 0:
+        return text
+    lead = excerpt[: found.start()].rstrip()
+    if not lead or not lead[0].isupper():
+        return text
+    # A one-word lead-in ("Oh,", "Well,") is a filler; a longer clause before a comma is not,
+    # and a trailing ellipsis is a pause, not a full stop.
+    one_filler = lead.endswith(",") and len(lead.split()) == 1
+    ended = lead.endswith(_SENTENCE_END) and not lead.endswith(("..", "\u2026"))
+    if ended or one_filler:
+        return text[0].upper() + text[1:]
+    return text
 
 
 def _boundaries_in_range(

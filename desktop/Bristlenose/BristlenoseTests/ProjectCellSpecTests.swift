@@ -9,6 +9,21 @@ import Testing
 /// against the gallery; the *rule* and the height *ordering* are invariants.
 @Suite struct ProjectCellSpecTests {
 
+    /// BR-14 (16 Nov 2026): a clean completed run — `.ready`, nothing missing or
+    /// unanalysed — resolves to `.placeholder`, which is a single-line row. A tall
+    /// row with an empty second line after a normal run therefore means a delta or
+    /// another state is on the line, not the placeholder reservation.
+    @Test func cleanCompletedRunIsSingleLine() {
+        let variant = ProjectSubtitle.resolve(
+            availability: .ready, pipelineState: .ready(Date()), isStopping: false,
+            addingCount: nil, copy: nil, importBatch: nil, lastRunAt: Date(),
+            missingCount: 0, unanalysedCount: 0)
+        #expect(variant == .placeholder)
+        #expect(ProjectCellSpec.isTwoLine(variant) == false)
+        #expect(ProjectCellSpec.rowHeight(twoLine: ProjectCellSpec.isTwoLine(variant))
+                == ProjectCellSpec.singleLineHeight)
+    }
+
     @Test func placeholderIsSingleLine() {
         #expect(ProjectCellSpec.isTwoLine(.placeholder) == false)
     }

@@ -350,6 +350,15 @@ def _with_unread_sessions(
     return out
 
 
+#: The reasons a session can end with no transcript that the row words. A failure with any other
+#: reason (a set-aside duplicate, a file added later, an unsupported format) is not a missing
+#: session, and one with no reason is not stated: the row needs evidence, not just a gap.
+FAILED_ROW_REASONS = frozenset({
+    "empty", "incomplete", "not_a_recording", "no_audio", "no_speech", "no_lines",
+    "notes_only", "no_transcript", "unreadable",
+})
+
+
 def _failure_reasons(output_dir: _Path) -> tuple[dict[str, str], dict[str, str]]:
     """The last finished run's per-file failure reasons: by session id and by file name."""
     from bristlenose.events import RunCancelledEvent, RunCompletedEvent, RunFailedEvent, read_events
@@ -365,13 +374,15 @@ def _failure_reasons(output_dir: _Path) -> tuple[dict[str, str], dict[str, str]]
          if isinstance(e, (RunCompletedEvent, RunFailedEvent, RunCancelledEvent))),
         None,
     )
-    summary = getattr(last, "summary", None)
+    # Only a run that completed imported its sessions; after a cancelled or failed
+    # run an absent session is unfinished, not failed.
+    summary = getattr(last, "summary", None) if isinstance(last, RunCompletedEvent) else None
     if summary is None:
         return by_session, by_file
     for stage in (summary.ingest, summary.transcripts):
         for failure in (stage.failed if stage else []):
             reason = failure.cause.reason
-            if reason is None:
+            if reason is None or reason.value not in FAILED_ROW_REASONS:
                 continue
             if failure.session_id:
                 by_session.setdefault(failure.session_id, reason.value)
@@ -401,7 +412,7 @@ def _with_failed_sessions(
         if tail_run_state(output_dir / ".bristlenose" / "pipeline-events.jsonl").in_flight:
             return rows
     except OSError:
-        pass
+        return rows  # cannot tell whether a run is in flight: say nothing
     by_session, by_file = _failure_reasons(output_dir)
     out = list(rows)
     for f in missing:
@@ -410,6 +421,9 @@ def _with_failed_sessions(
         if not sid or not isinstance(number, int):
             continue
         source = _Path(str(f.get("source") or "")).name
+        reason = by_session.get(sid) or by_file.get(source)
+        if reason is None:
+            continue  # nothing says this session failed: a gap is not evidence
         start = f.get("start")
         out.append(SessionResponse(
             session_id=sid,
@@ -425,7 +439,7 @@ def _with_failed_sessions(
             source_files=[SourceFileResponse(path=source, file_type="", filename=source)]
             if source else [],
             state="failed",
-            failure_reason=by_session.get(sid) or by_file.get(source),
+            failure_reason=reason,
         ))
     out.sort(key=lambda r: r.session_number)
     return out

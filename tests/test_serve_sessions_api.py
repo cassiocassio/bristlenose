@@ -245,12 +245,17 @@ class TestFailedSessionRows:
         assert row["failure_reason"] == "empty"
 
     def test_gap_comes_back_as_a_failed_row_keeping_its_number(self, tmp_path: Path) -> None:
-        data = self._project(tmp_path).get("/api/projects/1/sessions").json()
+        data = self._project(tmp_path, reason=True).get("/api/projects/1/sessions").json()
         rows = {r["session_number"]: r for r in data["sessions"]}
         assert sorted(rows) == [1, 2]
         assert rows[1]["state"] == "readable"
         assert rows[2]["state"] == "failed"
         assert rows[2]["source_files"][0]["filename"] == "empty.vtt"
+
+    def test_a_gap_with_no_recorded_failure_is_not_called_failed(self, tmp_path: Path) -> None:
+        """No events, a cancelled run or a failed import all leave gaps that prove nothing."""
+        data = self._project(tmp_path).get("/api/projects/1/sessions").json()
+        assert [r["session_number"] for r in data["sessions"]] == [1]
 
     def test_no_failed_row_while_a_run_is_in_flight(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -259,5 +264,5 @@ class TestFailedSessionRows:
         from bristlenose.events import RunState
 
         monkeypatch.setattr(events, "tail_run_state", lambda *a, **k: RunState(in_flight=True))
-        data = self._project(tmp_path).get("/api/projects/1/sessions").json()
+        data = self._project(tmp_path, reason=True).get("/api/projects/1/sessions").json()
         assert [r["session_number"] for r in data["sessions"]] == [1]

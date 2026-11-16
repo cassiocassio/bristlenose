@@ -70,7 +70,8 @@ export function SessionsSidebar() {
 
   return (
     <nav aria-label={t("nav.sessions")} ref={navRef}>
-      {data.sessions.map((session) => (
+      {/* A failed session has no transcript to open (BR-15). */}
+      {data.sessions.filter((session) => session.state !== "failed").map((session) => (
         <SessionEntryRow
           key={session.session_id}
           session={session}

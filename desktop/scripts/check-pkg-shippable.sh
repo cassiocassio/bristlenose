@@ -355,6 +355,66 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 6e. Background Assets download extension(s) — design: background-assets-whisper plan §7
+#
+# Today the store build carries NO extension, and that passes. Once one ships
+# (StoreDownloaderExtension in Contents/PlugIns/), each .appex must be its own signed
+# sandbox: app-sandbox + the host's team app group, NEVER `inherit` (an extension is
+# not a child process: inherit makes launchd refuse it), its own embedded profile
+# (an extension with the host's profile, or none, is rejected at upload), and the
+# host's marketing version and build number (ITMS-90125-class mismatches). The generic
+# "nested app-sandbox" row above already counts the extension's executable; this row
+# is what is specific to an extension.
+# ---------------------------------------------------------------------------
+EXTS=()
+while IFS= read -r -d '' e; do EXTS+=("$e"); done \
+    < <(find "$APP/Contents/PlugIns" -maxdepth 1 -name '*.appex' -type d -print0 2>/dev/null)
+if [ "${#EXTS[@]}" -eq 0 ]; then
+    ok "extensions" "none in this build"
+else
+    HOST_ENTS_FILE="$WORK/host-ents.plist"
+    codesign -d --entitlements :- "$OUTER" 2>/dev/null >"$HOST_ENTS_FILE" || true
+    HOST_GROUP=$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' \
+        "$HOST_ENTS_FILE" 2>/dev/null || echo "")
+    EXT_PROBLEMS=()
+    for e in "${EXTS[@]}"; do
+        en="$(basename "$e")"
+        eplist="$e/Contents/Info.plist"
+        eexec=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$eplist" 2>/dev/null || echo "")
+        ebin="$e/Contents/MacOS/$eexec"
+        if [ -z "$eexec" ] || [ ! -f "$ebin" ]; then
+            EXT_PROBLEMS+=("$en: no executable"); continue
+        fi
+        eents="$WORK/ext-ents.plist"
+        codesign -d --entitlements :- "$ebin" 2>/dev/null >"$eents" || true
+        grep -q '<key>com.apple.security.app-sandbox</key>' "$eents" \
+            || EXT_PROBLEMS+=("$en: no app-sandbox")
+        grep -q '<key>com.apple.security.inherit</key>' "$eents" \
+            && EXT_PROBLEMS+=("$en: carries inherit (an extension is not a child process)")
+        egroup=$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' \
+            "$eents" 2>/dev/null || echo "")
+        if [ -z "$egroup" ]; then
+            EXT_PROBLEMS+=("$en: no app group")
+        elif [ -n "$HOST_GROUP" ] && [ "$egroup" != "$HOST_GROUP" ]; then
+            EXT_PROBLEMS+=("$en: app group $egroup is not the host's $HOST_GROUP")
+        fi
+        [ -f "$e/Contents/embedded.provisionprofile" ] \
+            || EXT_PROBLEMS+=("$en: no embedded provisioning profile of its own")
+        ever=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$eplist" 2>/dev/null || echo "")
+        ebuild=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$eplist" 2>/dev/null || echo "")
+        [ "$ever" = "$GOT_VER" ] && [ "$ebuild" = "$GOT_BUILD" ] \
+            || EXT_PROBLEMS+=("$en: version $ever ($ebuild) is not the host's $GOT_VER ($GOT_BUILD)")
+    done
+    if [ "${#EXT_PROBLEMS[@]}" -eq 0 ]; then
+        ok "extensions" "${#EXTS[@]} .appex, sandboxed, host's group, own profile, host's version"
+    else
+        # All on the ✗ line itself: the self-test matches that line, so a row that stopped
+        # failing cannot be mistaken for one that still names its problem.
+        die "extensions" "$(IFS=';'; printf '%s' "${EXT_PROBLEMS[*]}")"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Framework identifiers — ASC rejection #3, 14 Jul 2026
 #
 # sign-sidecar.sh passes --identifier from each framework's CFBundleIdentifier.

@@ -94,6 +94,8 @@ A value or name that Python, TypeScript and Swift must all agree on is **declare
 
 Bristlenose runs on three targets: macOS arm64 (primary dev), Linux x86_64 via GitHub Actions CI (release pipeline), and — newly — Claude Code Cloud VMs (ephemeral Ubuntu x86_64,  but reachable when the user picks Cloud in the picker). Cloud is useful for code/test/lint/frontend-build work, **not** for pipeline runs on private interview data. See `docs/design-deployment-targets.md for the audit checklist and use-case boundary table.
 
+**Iona** is the external drive (`/Volumes/Iona`, 1.8 TB APFS) that holds the Tart macOS VMs (`TART_HOME=/Volumes/Iona/tart`: `walk27-base`, `sequoia`, `tahoe`, plus walk baselines and evidence). When the owner says "Iona", that is the drive, never a machine: the nightly Swift matrix and the guest walk (`desktop/scripts/guest-matrix.sh`, `desktop/scripts/guest-walk/`, `docs/design-guest-walk.md`) need it mounted, and their config is `/Volumes/Iona/tart/guest-matrix.conf`. Check `ls /Volumes/Iona`; if it is absent, say so rather than running Tart against the default home.
+
 ## HTML report features
 
 The generated HTML report has interactive features: inline editing (quotes, headings, names), search-as-you-type, view switching, CSV export, tag filter, hidden quotes, and per-participant transcript pages with deep-linked timecodes. Full implementation details in `docs/design-html-report.md`. Key concepts: people file merge strategy, speaker codes, anonymisation boundary, tag filter persistence, hidden quotes with `.bn-hidden` defence-in-depth. See `bristlenose/theme/CLAUDE.md` for CSS/design gotchas, `bristlenose/theme/js/MODULES.md` for JS module details, `bristlenose/theme/CSS-REFERENCE.md` for per-component CSS docs.

@@ -77,3 +77,5 @@ Codex-managed paths need not match the skill's example directory names.
 For Swift changes, use `desktop/scripts/test-swift.sh` for the authoritative
 local suite verdict. A compiler warning mentioning "exit code 0" is not a build
 or test verdict. Follow each lifecycle skill's remaining checks for the scope.
+
+**Iona** is the external drive (`/Volumes/Iona`, 1.8 TB APFS) that holds the Tart macOS VMs (`TART_HOME=/Volumes/Iona/tart`: `walk27-base`, `sequoia`, `tahoe`, plus walk baselines and evidence). When the owner says "Iona", that is the drive, never a machine: the nightly Swift matrix and the guest walk (`desktop/scripts/guest-matrix.sh`, `desktop/scripts/guest-walk/`, `docs/design-guest-walk.md`) need it mounted, and their config is `/Volumes/Iona/tart/guest-matrix.conf`. Check `ls /Volumes/Iona`; if it is absent, say so rather than running Tart against the default home.

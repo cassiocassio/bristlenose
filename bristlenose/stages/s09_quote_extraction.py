@@ -643,14 +643,15 @@ def _checked_topic_label(label: str, boundaries: list[TopicBoundary], at: float)
     """A quote's topic label, with a transition type put back to the topic it stood for.
 
     Until quote-extraction 0.2.0 the prompt listed each boundary as "[00:10] Settings navigation
-    (screen_change)", and a small model sometimes answered with the parenthetical, so a quote's label becomes "screen_change".
+    (screen_change)", and a small model sometimes answered with the parenthetical, so a quote's
+    label became "screen_change".
     That word then names a section in the report and over MCP (a 16 Nov 2026 walk showed it as a
     heading). A transition type is never a topic: snap it to the boundary in force at the quote's
     start. Any other label is left as the model wrote it, and with no boundary to snap to there
     is nothing better to say.
     """
-    # The whole old-format prompt line copied back (older replies, cached data) ("Settings navigation (screen_change)"): the topic
-    # is the part before the parenthetical.
+    # The whole old-format prompt line copied back ("Settings navigation (screen_change)", from
+    # older or cached replies): the topic is the part before the parenthetical.
     copied = _COPIED_LINE.fullmatch(label)
     if copied and _is_transition_word(copied.group("kind")):
         topic = copied.group("topic").strip()

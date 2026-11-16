@@ -1,7 +1,7 @@
 """A quote's topic label is never a transition type ("screen_change").
 
 Found on a 0.46.0 walk (16 Nov 2026): a small model copied the "(screen_change)" suffix the prompt
-puts after each boundary, the label became a section heading in the report and over MCP.
+put after each boundary (until quote-extraction 0.2.0), the label became a section heading in the report and over MCP.
 """
 
 from __future__ import annotations

@@ -540,6 +540,50 @@ async def identify_speaker_roles_llm(
                 job_title=getattr(assignment, "job_title", "") or "",
             ))
 
+        # Owner ruling BR-07 (16 Nov 2026, "gate on evidence"): a model that returns no
+        # researcher in a session of 2+ speakers cannot remove a researcher the heuristic
+        # found WITH POSITIVE EVIDENCE. The heuristic always ranks someone first, so
+        # ranking alone is no evidence: an unmoderated study keeps the model's "no
+        # researcher" (and its no_moderator state). Evidence = two or more host-script phrases and no
+        # guest phrases, or the same question bar the heuristic uses for a second
+        # moderator (3+ questions, over half of their turns). Behaviour change; the risk
+        # is a participant who talks like a host. No researcher-facing message; the log line is counts only.
+        applied = {
+            (seg.speaker_label or "Unknown"): role_map.get(
+                seg.speaker_label or "Unknown", seg.speaker_role
+            )
+            for seg in segments
+        }
+        if len(unique_speakers) >= 2 and SpeakerRole.RESEARCHER not in applied.values():
+            stats = _count_speakers(segments)
+            evidenced = [
+                label for label, st in stats.items()
+                # Only a speaker the model called a participant: an observer stays one.
+                if role_map.get(label) == SpeakerRole.PARTICIPANT
+                and st.guest_phrase_hits == 0
+                and (
+                    st.host_phrase_hits >= 2
+                    or (st.question_count >= 3 and st.question_count / st.segment_count >= 0.5)
+                )
+                and any(
+                    seg.speaker_role == SpeakerRole.RESEARCHER
+                    for seg in segments
+                    if (seg.speaker_label or "Unknown") == label
+                )
+            ]
+            if evidenced:
+                logger.info(
+                    "LLM returned no researcher; keeping heuristic researcher"
+                    " | heuristic_researchers=%d | llm_researchers=0 | speakers=%d",
+                    len(evidenced),
+                    len(unique_speakers),
+                )
+                for label in evidenced:
+                    role_map[label] = SpeakerRole.RESEARCHER
+                for info in infos:
+                    if info.speaker_label in evidenced:
+                        info.role = SpeakerRole.RESEARCHER
+
         for seg in segments:
             label = seg.speaker_label or "Unknown"
             if label in role_map:

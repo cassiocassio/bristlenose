@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Get Info</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page: light-dark(#f5f5f7, #1c1c1e);
+    --ink: light-dark(#1d1d1f, #f5f5f7);
+    --muted: light-dark(#6e6e73, #98989d);
+    --tertiary: light-dark(#a1a1a6, #6e6e73);
+    --sidebar: light-dark(#e8e8ed, #2c2c2e);
+    --row-sel: light-dark(#d4d4d9, #3a3a3c);
+    --pop: light-dark(rgba(246,246,248,0.97), rgba(44,44,46,0.97));
+    --pop-edge: light-dark(rgba(0,0,0,0.12), rgba(255,255,255,0.14));
+    --menu: light-dark(rgba(240,240,242,0.98), rgba(50,50,52,0.98));
+    --btn: light-dark(#e3e3e8, #48484a);
+    --rule: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.12));
+    --orange: light-dark(#ff9500, #ff9f0a);
+    --blue: light-dark(#007aff, #0a84ff);
+    --link: light-dark(#0066cc, #4da3ff);
+    --hatch: light-dark(rgba(0,0,0,0.13), rgba(255,255,255,0.14));
+    --chrome: light-dark(#e2e2e6, #3a3a3c);
+    --good: light-dark(#e3f4e6, #1f3a25);
+    --bad: light-dark(#fbe6e4, #44221f);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 16px 60px;
+    background: var(--page); color: var(--ink);
+    font: 13px/1.35 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 34px 0 12px; }
+  .key { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); margin-bottom: 22px; }
+  .key b { color: var(--ink); font-weight: 600; }
+  .controls { margin: 0 0 22px; font-size: 12px; color: var(--muted); }
+  .controls button { font: inherit; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--rule); background: var(--btn); color: var(--ink); cursor: pointer; }
+
+  .frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 22px; align-items: start; }
+  .frame { border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); background: var(--sidebar); color: var(--ink); }
+  .frame-bar { background: var(--chrome); padding: 6px 12px; font: 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+  .frame-bar b { color: var(--ink); }
+  .stage { padding: 14px 12px 20px; position: relative; }
+
+  /* sidebar rows */
+  .row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: 8px; width: 250px; }
+  .row.sel { background: var(--row-sel); }
+  .row .ico { width: 18px; height: 18px; flex: none; margin-top: 1px; color: var(--blue); }
+  .row .name { font-size: 13px; font-weight: 600; }
+  .row .sub { display: flex; gap: 4px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .row .count { margin-left: auto; font-size: 11px; color: var(--muted); }
+  .glyph { width: 11px; height: 11px; flex: none; }
+  .tag { font: 10px ui-monospace, Menlo, monospace; color: var(--muted); margin: 10px 0 4px 10px; }
+
+  /* popover */
+  .pop {
+    position: relative; margin: 12px 0 0 0; width: 340px;
+    background: var(--pop); border: 1px solid var(--pop-edge); border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18); padding: 14px 16px 12px;
+  }
+  .pop::before {
+    content: ""; position: absolute; top: -8px; left: 22px; width: 14px; height: 14px;
+    background: var(--pop); border-left: 1px solid var(--pop-edge); border-top: 1px solid var(--pop-edge);
+    transform: rotate(45deg);
+  }
+  .pop-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .pop-head .title { font-size: 13px; font-weight: 600; flex: 1; }
+  .pop-head .bigico { width: 28px; height: 28px; color: var(--blue); flex: none; }
+  .pop-head .stitle { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .btn-sm { font-size: 11px; padding: 2px 9px; border-radius: 5px; background: var(--btn); white-space: nowrap; display: inline-block; }
+  .btn-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+  /* files-popover section, as ProjectFilesPopover draws it */
+  .fsec-label { display: flex; gap: 5px; align-items: center; font-size: 11px; font-weight: 500; margin-bottom: 5px; }
+  .file { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 0 0 4px; }
+  .file .doc { width: 11px; height: 13px; color: var(--muted); flex: none; }
+  .file .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file .sz { font-size: 10px; color: var(--tertiary); }
+  .fsec-foot { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .newcopy { outline: 1.5px dashed var(--blue); outline-offset: 2px; border-radius: 2px; }
+
+  /* Get Info: grouped label/value grid, Finder Get Info idiom */
+  .info-sec { border-top: 1px solid var(--rule); padding: 8px 0 6px; }
+  .info-sec:first-of-type { border-top: 0; padding-top: 0; }
+  .info-sec h4 { margin: 0 0 5px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .kv { display: grid; grid-template-columns: 112px 1fr; gap: 3px 10px; font-size: 12px; }
+  .kv .k { color: var(--muted); text-align: right; }
+  .kv .v { min-width: 0; }
+  .kv .v small { color: var(--muted); font-size: 11px; }
+  .disc { display: inline-flex; gap: 4px; align-items: center; }
+  .disc::before { content: "›"; display: inline-block; width: 8px; color: var(--muted); }
+  .disc.open::before { transform: rotate(90deg); }
+  .nested { grid-column: 2; margin: 2px 0 4px; }
+
+  /* context menu */
+  .menu {
+    position: absolute; left: 150px; top: 44px; width: 220px; z-index: 2;
+    background: var(--menu); border: 1px solid var(--pop-edge); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: 5px; font-size: 13px;
+  }
+  .menu .mi { display: flex; padding: 3px 9px; border-radius: 4px; }
+  .menu .mi span:last-child { margin-left: auto; color: var(--muted); }
+  .menu .mi.hl { background: var(--blue); color: #fff; }
+  .menu .mi.hl span:last-child { color: rgba(255,255,255,0.8); }
+  .menu .sep { height: 1px; background: var(--rule); margin: 4px 8px; }
+
+  .quiet { font-size: 11px; color: var(--muted); margin: 14px 4px 0; max-width: 320px; }
+  .verdict { font-size: 11px; margin: 12px 4px 0; padding: 6px 8px; border-radius: 6px; max-width: 330px; }
+  .verdict.no { background: var(--bad); }
+  .verdict.yes { background: var(--good); }
+
+  /* commentary: hatched edge band only */
+  .commentary {
+    margin-top: 34px; padding: 16px 20px;
+    border: 7px solid transparent; border-left: 3px solid var(--muted);
+    background:
+      linear-gradient(var(--page), var(--page)) padding-box,
+      repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box;
+  }
+  .commentary .lbl { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); margin-bottom: 8px; }
+  .commentary p, .commentary li { font-size: 13px; line-height: 1.5; max-width: 900px; }
+  .commentary table { border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; width: 100%; }
+  .commentary td, .commentary th { border-bottom: 1px solid var(--rule); padding: 5px 10px 5px 0; text-align: left; vertical-align: top; }
+  .commentary th { font-weight: 600; color: var(--muted); font-size: 11px; }
+  .commentary code { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+  .commentary h3 { font-size: 13px; margin: 18px 0 4px; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="folder" viewBox="0 0 20 20"><path fill="currentColor" d="M2 5.5A1.5 1.5 0 0 1 3.5 4h4l1.6 1.6H16.5A1.5 1.5 0 0 1 18 7.1v7.4a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 2 14.5z"/></symbol>
+  <symbol id="info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="var(--blue)"/><rect x="7.3" y="7" width="1.4" height="5" fill="#fff"/><rect x="7.3" y="4.3" width="1.4" height="1.4" fill="#fff"/></symbol>
+  <symbol id="warn" viewBox="0 0 16 16"><path d="M8 1.5 15 14.5H1z" fill="var(--orange)"/><rect x="7.3" y="6" width="1.4" height="4.6" fill="#fff"/><rect x="7.3" y="11.6" width="1.4" height="1.4" fill="#fff"/></symbol>
+  <symbol id="doc" viewBox="0 0 12 14"><path d="M1.5 1.5h6l3 3v8h-9z" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M7.5 1.5v3h3" fill="none" stroke="currentColor" stroke-width="1.1"/></symbol>
+</svg>
+
+<div class="wrap">
+  <h1>Informational project facts: where they live</h1>
+  <div class="key"><b>Frames</b> = the Mac app as it would draw it. <b>Commentary</b> = the hatched blocks. A <span class="newcopy">&nbsp;dashed outline&nbsp;</span> marks proposed new copy. Discussion only, nothing built. Follows <code>zoom-per-person-tracks-popover.html</code> (frame B there).</div>
+  <div class="controls">Appearance:
+    <button onclick="document.documentElement.style.colorScheme='light'">Light</button>
+    <button onclick="document.documentElement.style.colorScheme='dark'">Dark</button>
+    <button onclick="document.documentElement.style.colorScheme=''">Auto</button>
+  </div>
+
+  <h2>1 · The problem: a row mark for every standing fact</h2>
+  <div class="frames">
+    <div class="frame">
+      <div class="frame-bar"><b>1 · six months on</b>, if every info fact got an ⓘ on the row</div>
+      <div class="stage">
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Checkout study</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>4 audio tracks unused</div></div><div class="count">6</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Onboarding v2</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>Used Zoom's transcript</div></div><div class="count">8</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Pharmacy app</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>2 identical copies set aside</div></div><div class="count">5</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Diary study</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>6 files left alone</div></div><div class="count">12</div></div>
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Zoom</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>4 audio tracks unused</div></div><div class="count">2</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Banking pilot</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>+2 unanalysed</div></div><div class="count">4</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Kiosk</div><div class="sub"><svg class="glyph"><use href="#warn"/></svg>Partial completion</div></div><div class="count">3</div></div>
+        <div class="verdict no">Every row is two lines, so a taller row no longer means more to say. The one ⓘ that is news (+2 unanalysed) and the one warning both disappear into the crowd. This breaks Schema E: a clean row is silent.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>2 · Three ways out</h2>
+  <div class="frames">
+
+    <!-- A: see once -->
+    <div class="frame">
+      <div class="frame-bar"><b>A · see it once</b>, then the ⓘ goes</div>
+      <div class="stage">
+        <div class="tag">after the run</div>
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Zoom</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>4 audio tracks unused</div></div><div class="count">2</div></div>
+        <div class="tag">after the popover was opened once</div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Zoom</div></div><div class="count">2</div></div>
+        <div class="verdict no">"Seen" has no good definition: opening the popover, selecting the row, or opening the report? Every one of these misfires: a click to select the row clears a note nobody read. The fact is then gone, with nowhere to find it again, so A needs a permanent home anyway.</div>
+        <div class="quiet">Also new state to store per project, per fact, and an answer for re-analyse: does the mark come back?</div>
+      </div>
+    </div>
+
+    <!-- B1: clear button -->
+    <div class="frame">
+      <div class="frame-bar"><b>B1 · a Clear button</b> in the popover</div>
+      <div class="stage">
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Zoom</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>4 audio tracks unused</div></div><div class="count">2</div></div>
+        <div class="pop">
+          <div class="pop-head"><div class="title">Individual audio tracks</div></div>
+          <div class="fsec-label"><svg class="glyph"><use href="#info"/></svg>4 audio tracks unused</div>
+          <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">audio_only_16778242_Alex_Example.m4a</span><span class="sz">447 KB</span></div>
+          <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">audio_only_16779266_Sam_Sample.m4a</span><span class="sz">370 KB</span></div>
+          <div class="fsec-foot">Zoom saved one track per person. Each meeting's combined audio was transcribed.</div>
+          <div class="btn-row"><span class="btn-sm newcopy">Hide This Note</span></div>
+        </div>
+        <div class="verdict no">Needy: it hands the researcher a chore for something that needs no action. A notification-centre habit, not a sidebar one. Same per-fact state as A.</div>
+      </div>
+    </div>
+
+    <!-- B2: Get Info -->
+    <div class="frame">
+      <div class="frame-bar"><b>B2 · Get Info</b>: the row stays silent, ⌘I asks</div>
+      <div class="stage" style="min-height:330px">
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Checkout study</div></div><div class="count">6</div></div>
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Zoom</div></div><div class="count">2</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Banking pilot</div><div class="sub"><svg class="glyph"><use href="#info"/></svg>+2 unanalysed</div></div><div class="count">4</div></div>
+        <div class="row"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Kiosk</div><div class="sub"><svg class="glyph"><use href="#warn"/></svg>Partial completion</div></div><div class="count">3</div></div>
+        <div class="menu" style="top:40px">
+          <div class="mi"><span>Open in New Window</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span>Show in Finder</span></div>
+          <div class="mi hl"><span class="newcopy">Get Info</span><span>⌘I</span></div>
+          <div class="mi"><span>Rename</span></div>
+          <div class="mi"><span>Choose Icon…</span></div>
+          <div class="mi"><span>Move to Folder</span><span>›</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span>Re-analyse…</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span>Remove from Sidebar</span></div>
+        </div>
+        <div style="height:170px"></div>
+        <div class="verdict yes">Only news and trouble mark a row. A standing fact is there when asked, always, in one place. No "seen" state, nothing to clear. Finder, Mail and Photos all have ⌘I.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>3 · B2 in detail: what Get Info shows</h2>
+  <div class="frames">
+
+    <div class="frame">
+      <div class="frame-bar"><b>3a · Get Info</b> on the Zoom study (both disclosures open)</div>
+      <div class="stage">
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Zoom</div></div><div class="count">2</div></div>
+        <div class="pop">
+          <div class="pop-head">
+            <svg class="bigico"><use href="#folder"/></svg>
+            <div class="title">Zoom<br><span class="stitle">2 sessions · 2 participants · 41 min</span></div>
+          </div>
+
+          <div class="info-sec">
+            <h4>Analysis</h4>
+            <div class="kv">
+              <div class="k">Analysed</div><div class="v">15 Nov 2026, 14:02 <small>· took 6 min</small></div>
+              <div class="k">AI</div><div class="v">Claude</div>
+              <div class="k">Transcription</div><div class="v">Whisper</div>
+              <div class="k">Codebook</div><div class="v">Bristlenose default</div>
+            </div>
+          </div>
+
+          <div class="info-sec">
+            <h4>Files</h4>
+            <div class="kv">
+              <div class="k">Recordings</div><div class="v">2 analysed</div>
+              <div class="k">Not used</div><div class="v"><span class="disc open newcopy">4 per-person audio tracks</span></div>
+              <div class="nested">
+                <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">audio_only_16778242_Alex_Example.m4a</span><span class="sz">447 KB</span></div>
+                <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">audio_only_16779266_Sam_Sample.m4a</span><span class="sz">370 KB</span></div>
+                <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">audioAlexExample11470811890.m4a</span><span class="sz">184 KB</span></div>
+                <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">audioSamSample21470811890.m4a</span><span class="sz">278 KB</span></div>
+                <div class="fsec-foot newcopy">Zoom saved one track per person. The combined audio was transcribed.</div>
+              </div>
+              <div class="k">Left alone</div><div class="v"><span class="disc open">6 other files</span></div>
+              <div class="nested">
+                <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">double_click_to_convert_01.zoom</span><span class="sz">2 KB</span></div>
+                <div class="file"><svg class="doc"><use href="#doc"/></svg><span class="nm">playback.m3u</span><span class="sz">1 KB</span></div>
+                <div class="fsec-foot">…and 4 more. <a href="#" style="color:var(--link);text-decoration:none">Supported formats</a></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-sec">
+            <h4>Where</h4>
+            <div class="kv">
+              <div class="k">Folder</div><div class="v">~/Documents/Zoom</div>
+              <div class="k">Agent access</div><div class="v">Off</div>
+            </div>
+          </div>
+          <div class="btn-row"><span class="btn-sm">Show in Finder</span></div>
+        </div>
+        <div class="quiet">Rows with nothing to say are left out (absence is information): no "Duplicates: 0", no "Missing: 0". Provider in product names, never the model string unless Diagnostics is on.</div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><b>3b · Get Info</b> on an ordinary study</div>
+      <div class="stage">
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Checkout study</div></div><div class="count">6</div></div>
+        <div class="pop">
+          <div class="pop-head">
+            <svg class="bigico"><use href="#folder"/></svg>
+            <div class="title">Checkout study<br><span class="stitle">6 sessions · 6 participants · 4 h 52 min</span></div>
+          </div>
+          <div class="info-sec">
+            <h4>Analysis</h4>
+            <div class="kv">
+              <div class="k">Analysed</div><div class="v">3 Nov 2026, 09:40 <small>· took 22 min</small></div>
+              <div class="k">AI</div><div class="v">ChatGPT</div>
+              <div class="k">Transcription</div><div class="v">Teams transcript <small>(4)</small>, Whisper <small>(2)</small></div>
+            </div>
+          </div>
+          <div class="info-sec">
+            <h4>Files</h4>
+            <div class="kv">
+              <div class="k">Recordings</div><div class="v">6 analysed</div>
+            </div>
+          </div>
+          <div class="info-sec">
+            <h4>Where</h4>
+            <div class="kv">
+              <div class="k">Folder</div><div class="v">~/Library/CloudStorage/OneDrive…/Checkout</div>
+              <div class="k">Agent access</div><div class="v">On</div>
+            </div>
+          </div>
+          <div class="btn-row"><span class="btn-sm">Show in Finder</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><b>3c · Get Info</b> on a study that is in trouble</div>
+      <div class="stage">
+        <div class="row sel"><svg class="ico"><use href="#folder"/></svg><div><div class="name">Kiosk</div><div class="sub"><svg class="glyph"><use href="#warn"/></svg>Partial completion</div></div><div class="count">3</div></div>
+        <div class="pop">
+          <div class="pop-head">
+            <svg class="bigico"><use href="#folder"/></svg>
+            <div class="title">Kiosk<br><span class="stitle">3 sessions · 3 participants · 2 h 05 min</span></div>
+          </div>
+          <div class="info-sec">
+            <h4>Analysis</h4>
+            <div class="kv">
+              <div class="k">Status</div><div class="v"><span class="disc" style="gap:4px"><svg class="glyph"><use href="#warn"/></svg>Partial completion</span> <a href="#" style="color:var(--link);text-decoration:none;font-size:11px">Show Diagnostics…</a></div>
+              <div class="k">Analysed</div><div class="v">12 Nov 2026, 17:15</div>
+              <div class="k">AI</div><div class="v">Claude</div>
+            </div>
+          </div>
+          <div class="info-sec">
+            <h4>Where</h4>
+            <div class="kv"><div class="k">Folder</div><div class="v">~/Research/Kiosk</div></div>
+          </div>
+        </div>
+        <div class="quiet">Get Info is always on the menu, like Finder's. When there is trouble it names the status and links to the diagnostic popover. It never repeats the failure list: that has one home.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <div class="lbl">COMMENTARY · audit of non-error, non-warning project states (read off <code>SubtitleVariant</code>, <code>PipelineSummary</code>, the context menu, 16 Nov 2026)</div>
+
+    <h3>The rule this proposes</h3>
+    <p>Three kinds of "info", three homes. <b>Activity</b> is on the row while it happens and leaves by itself. <b>News</b> (the app noticed something you may not know, that changed since you last looked) earns the ⓘ on the row and leaves when you act on it. <b>Standing facts</b> (true for as long as the analysis stands; nothing to do) never mark the row and live in Get Info. The Zoom tracks are a standing fact. That is why they felt wrong as a row mark.</p>
+
+    <h3>What the row shows today (from <code>SubtitleVariant</code>)</h3>
+    <div class="scroll"><table>
+      <tr><th>State</th><th>Row line</th><th>Kind</th><th>Leaves when</th><th>Change?</th></tr>
+      <tr><td>running · stopping · queued</td><td>stage ladder · Stopping… · Waiting</td><td>activity</td><td>run ends</td><td>none</td></tr>
+      <tr><td>copying · copyCancelling · addingInterviews</td><td>Copying · N% · Cancelling… · Adding N interviews…</td><td>activity</td><td>copy ends</td><td>none</td></tr>
+      <tr><td>importingBatch</td><td>3 of 4</td><td>activity</td><td>batch ends</td><td>none</td></tr>
+      <tr><td>readingScreens · codingQuotes · preparingSignals · exportingReport</td><td>Screens · N of M · AutoCode · N of M · Picking up Signals… · Exporting…</td><td>activity</td><td>job ends</td><td>none</td></tr>
+      <tr><td>waitingForWhisper</td><td>Waiting for download</td><td>activity (deferred)</td><td>Whisper lands, rerun</td><td>none</td></tr>
+      <tr><td>delta .unanalysed</td><td>ⓘ +N unanalysed</td><td><b>news</b></td><td>Analyse</td><td>none: the model case for a row ⓘ</td></tr>
+      <tr><td>stopped</td><td>Stopped</td><td>your own act</td><td>Resume / Analyse</td><td>none</td></tr>
+      <tr><td>partial(transcribeOnly)</td><td>Transcribed · Partial run</td><td>your own act</td><td>Analyse</td><td>none</td></tr>
+      <tr><td>ready, no delta</td><td>(nothing)</td><td>clean</td><td>n/a</td><td>Schema E stands; Get Info becomes the home of the date Schema E dropped</td></tr>
+    </table></div>
+
+    <h3>Standing facts we could show in Get Info</h3>
+    <div class="scroll"><table>
+      <tr><th>Fact</th><th>Where it is today</th><th>Notes</th></tr>
+      <tr><td>Sessions, participants, total duration</td><td>serve DB (<code>sessionCount</code> already read by the Mac)</td><td>participants and duration need a read; header line</td></tr>
+      <tr><td>Last analysed, run length</td><td><code>lastPipelineRunAt</code> (write-only today); stage <code>durationMs</code> in the summary</td><td>gives the field a reader at last</td></tr>
+      <tr><td>AI provider</td><td>run log (<code>llm_resolve</code>)</td><td>product name only; model string behind Diagnostics</td></tr>
+      <tr><td>Transcription source per session: Apple speech, Whisper, Zoom/Teams transcript</td><td>run log / manifest, partly</td><td>likely needs a summary field</td></tr>
+      <tr><td>Per-person tracks not used</td><td>today a <i>failure</i> (<code>DUPLICATE_RECORDING</code>)</td><td>needs the new non-failure list (the build planned yesterday)</td></tr>
+      <tr><td>Identical copies set aside (R49, #97)</td><td>fingerprint folds, in the summary?</td><td>check whether the count reaches the summary</td></tr>
+      <tr><td>Other files left alone</td><td><code>ingest.leftAlone</code> (count only)</td><td>a count today; listing names needs the list</td></tr>
+      <tr><td>Codebook applied</td><td>serve DB</td><td>one line; skip when none</td></tr>
+      <tr><td>Screens read</td><td>serve</td><td>Diagnostics feature; show only when Diagnostics is on</td></tr>
+      <tr><td>Folder, cloud location</td><td><code>ProjectIndex</code> bookmark</td><td>Show in Finder button already a menu verb</td></tr>
+      <tr><td>Agent access</td><td>agent register</td><td>the antenna already says it; one line is cheap</td></tr>
+      <tr><td>Bristlenose version that analysed it</td><td><code>run_started.process.bristlenose_version</code></td><td>Diagnostics only; useful in bug reports</td></tr>
+    </table></div>
+    <p><b>Left out on purpose:</b> anything from the PII summary or the call log (re-identification keys, never surfaced), cost, and token counts. A count of redacted names is a re-identification hint too; at most "Names redacted: On".</p>
+
+    <h3>Open questions</h3>
+    <ul>
+      <li><b>Popover or window?</b> Finder's Get Info is a window, Photos' ⌘I a floating panel. A popover off the row matches the two popovers we already have and dismisses lightly. Proposed: popover.</li>
+      <li><b>⌘I</b> looks free in <code>MenuCommands.swift</code>. Needs a check that the web report doesn't use it while focused. The menu-bar home would be the Project menu (or File, like Finder).</li>
+      <li><b>One "once" that is natural:</b> the moment a run finishes is already a once. If the completion surface ever carries a line, "4 per-person audio tracks set aside" could ride it there, with no "seen" state. Not proposed now.</li>
+      <li><b>Order of work:</b> Get Info is a new feature in a reliability phase. The smallest honest step is still yesterday's fix: tracks stop being failures (the study reads complete), and they appear as one row in the existing left-alone footer. Get Info could follow later.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

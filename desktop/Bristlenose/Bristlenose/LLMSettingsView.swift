@@ -31,7 +31,11 @@ struct LLMSettingsView: View {
         return f
     }()
 
-    @AppStorage("activeProvider") private var activeProvider: String = "anthropic"
+    // Unset until a provider is chosen or its first key validates. Every other
+    // reader (`PipelineRunner`, `ProviderProblemModel`, `BristlenoseShared`)
+    // treats a missing key as "no choice", so a default of "anthropic" here made
+    // Settings show a tick the rest of the app did not hold (BR-05).
+    @AppStorage("activeProvider") private var activeProvider: String = ActiveProviderChoice.unset
     @State private var selectedProvider: LLMProvider = .claude
     @State private var statuses: [LLMProvider: ProviderStatus] = [:]
     /// The validator's explanation per provider, unresolved. `FailureMessage`
@@ -1121,6 +1125,13 @@ struct LLMSettingsView: View {
                 provider: provider, key: key, azureConfig: azureCfg)
             let resolved = LLMValidator.resolveStatus(observed: status, cached: cached)
             statuses[provider] = resolved
+            // First provider to validate while nothing is chosen becomes the
+            // choice, so a researcher who pastes one key is not left with a
+            // blank radio and a working run.
+            if let adopted = ActiveProviderChoice.adopt(
+                current: activeProvider, validated: provider, status: resolved) {
+                activate(adopted)
+            }
             if resolved != status {
                 // Fell back to a cached verdict (transient failure). Surface the
                 // network error so the user knows we tried; a cached .invalid
@@ -1183,5 +1194,20 @@ private struct OptionalHelp: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// What "no provider chosen yet" means for the two views that show the choice.
+enum ActiveProviderChoice {
+    /// Stored value of `activeProvider` before any choice. Matches an absent
+    /// UserDefaults key for every `LLMProvider(rawValue:)` reader.
+    static let unset = ""
+
+    /// The provider to adopt when `validated` settles, or nil. Only when no
+    /// valid choice exists and the provider may be activated.
+    static func adopt(current: String, validated: LLMProvider, status: ProviderStatus)
+        -> LLMProvider? {
+        guard LLMProvider(rawValue: current) == nil, status.canActivate else { return nil }
+        return validated
     }
 }

@@ -38,7 +38,7 @@ struct AIConsentView: View {
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
-    @AppStorage("activeProvider") private var activeProvider: String = "anthropic"
+    @AppStorage("activeProvider") private var activeProvider: String = ActiveProviderChoice.unset
     @AppStorage("llmModel_local") private var ollamaModel: String = ""
 
     /// When true, shows "Done" instead of "Continue" (re-access mode).
@@ -303,7 +303,7 @@ struct AIConsentView: View {
         let entry: [String: String] = [
             "version": "\(Self.currentVersion)",
             "date": Date().ISO8601Format(),
-            "provider": activeProvider,
+            "provider": activeProvider.isEmpty ? "none" : activeProvider,
             "action": action,
         ]
 

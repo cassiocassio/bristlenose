@@ -3357,7 +3357,14 @@ var args = ["run", project.path, "--no-serve"]
         if matches(tail, #"no api credit"#) { return .outOfCredit }
         // `rate[ -]limit`: the preflight says "rate-limiting this account".
         if matches(tail, #"rate[ -]limit|quota|\b429\b"#) { return .quota }
-        if matches(tail, #"connection refused|timed out|dns|could not resolve"#) {
+        // The local model's server is down: the setup check prints "Ollama isn't
+        // running" (desktop) or "Ollama is installed but not running" (CLI) and exits
+        // before the run opens. It is a reach failure, so the row reads "Couldn't
+        // reach Ollama" (BR-02).
+        if matches(
+            tail,
+            #"connection refused|timed out|dns|could not resolve|ollama (isn['\u{2019}]t|is not|is installed but not) running"#
+        ) {
             return .network
         }
         if matches(tail, #"no space|enospc|disk full"#) { return .disk }

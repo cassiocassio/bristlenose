@@ -118,3 +118,19 @@ struct FailureCategoryPreflightSentenceTests {
         #expect(PipelineRunner.categoriseFailure(lines: lines, exitStatus: 1) == .whisper)
     }
 }
+
+@MainActor
+@Suite("Ollama not running reads as a reach failure (BR-02)")
+struct OllamaDownFailureTests {
+    @Test("Every phrasing of the local server being down is .network",
+          arguments: [
+              "Ollama isn't running",
+              "Ollama isn\u{2019}t running",
+              "Ollama is installed but not running",
+              "Ollama is not running",
+          ])
+    func ollamaDownIsNetwork(line: String) {
+        #expect(PipelineRunner.categoriseFailure(
+            lines: ["\u{2717} Local model  " + line], exitStatus: 1, provider: .ollama) == .network)
+    }
+}

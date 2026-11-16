@@ -23,12 +23,16 @@ enum CloudNetworking {
     ///
     /// - Parameter delegate: retained by the session until it is invalidated,
     ///   which is why every caller must invalidate. See `CloudSessionOwner`.
-    static func makeSession(delegate: URLSessionDelegate? = nil) -> URLSession {
+    /// - Parameter protocolClasses: the seam a test uses to answer in place of
+    ///   the network (`NewsFetcherTests`); production passes nothing.
+    static func makeSession(delegate: URLSessionDelegate? = nil,
+                            protocolClasses: [AnyClass]? = nil) -> URLSession {
         let config = URLSessionConfiguration.ephemeral
         config.urlCache = nil
         config.httpCookieStorage = nil
         config.httpShouldSetCookies = false
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        if let protocolClasses { config.protocolClasses = protocolClasses }
         return URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
     }
 }

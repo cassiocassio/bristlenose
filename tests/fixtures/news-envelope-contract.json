@@ -1,0 +1,26 @@
+{
+  "_comment": "Signed by tests/test_sign_news.py with a PUBLIC test key; verified by NewsCheckTests (Swift). Regenerate: .venv/bin/python tests/test_sign_news.py",
+  "public_key": "eOiEz+WM7TPW7VBcViM+NQi+pLl0Lh/TSIRwLMsoLd8=",
+  "kid": "k1",
+  "context": {
+    "now": "2026-12-12T12:00:00Z",
+    "interface_language": "en",
+    "channel": "store",
+    "app_version": "0.47.0"
+  },
+  "envelope": {
+    "kid": "k1",
+    "payload": "ewogICJzY2hlbWEiOiAxLAogICJlbnYiOiAicHJvZCIsCiAgImlzc3VlZCI6ICIyMDI2LTExLTIwVDA5OjAwOjAwWiIsCiAgImV4cGlyZXMiOiAiMjAyNi0xMi0zMVQwMDowMDowMFoiLAogICJpdGVtcyI6IFsKICAgIHsKICAgICAgImlkIjogIm9mZmljZS1ob3Vycy0yMDI2LTEyLTE1IiwKICAgICAgImNoYW5uZWxzIjogWwogICAgICAgICJzdG9yZSIsCiAgICAgICAgImRtZyIKICAgICAgXSwKICAgICAgImZyb20iOiAiMjAyNi0xMi0xMVQwMDowMDowMFoiLAogICAgICAidW50aWwiOiAiMjAyNi0xMi0xNVQxODozMDowMFoiLAogICAgICAibG9jYWxlcyI6IFsKICAgICAgICAiZW4iCiAgICAgIF0sCiAgICAgICJ0b25lIjogImNvbW11bml0eSIsCiAgICAgICJ0ZXh0IjogewogICAgICAgICJlbiI6IHsKICAgICAgICAgICJ0aXRsZSI6ICJPZmZpY2UgaG91cnMiLAogICAgICAgICAgInRleHQiOiAiRHJvcCBpbiB3aXRoIE1hcnRpbiBTdG9yZXksIGF1dGhvciBvZiBCcmlzdGxlbm9zZSwgb24gVHVlc2RheSAxNSBEZWNlbWJlciwgNS4zMCB0byA2LjMwcG0gVUsgdGltZS4iLAogICAgICAgICAgIm1vcmUiOiAiQnJpbmcgYSBxdWVzdGlvbiwgb3Igc29tZXRoaW5nIHRoYXQgbmVlZHMgZml4aW5nLCBpbXByb3Zpbmcgb3IgYWRkaW5nLiIsCiAgICAgICAgICAibGluayI6ICJPZmZpY2UgaG91cnMgZGV0YWlscyIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJocmVmIjogImh0dHBzOi8vYnJpc3RsZW5vc2UuYXBwL2NvbW11bml0eS8/cmVmPWFwcC1uZXdzJmlkPW9mZmljZS1ob3Vycy0yMDI2LTEyLTE1I29mZmljZS1ob3VycyIKICAgIH0KICBdCn0K",
+    "sig": "+yY7dPHFtYhnqDMdssjFQxO5f03Jsd7v/I2mZB4iJjZqjgbF53KpanRzF+YUJRRAZcBvwGNkFB7LtfjLxDw+BQ=="
+  },
+  "expect": {
+    "id": "office-hours-2026-12-15",
+    "tone": "community",
+    "title": "Office hours",
+    "text": "Drop in with Martin Storey, author of Bristlenose, on Tuesday 15 December, 5.30 to 6.30pm UK time.",
+    "more": "Bring a question, or something that needs fixing, improving or adding.",
+    "link": "Office hours details",
+    "href": "https://bristlenose.app/community/?ref=app-news&id=office-hours-2026-12-15#office-hours",
+    "until": "2026-12-15T18:30:00Z"
+  }
+}

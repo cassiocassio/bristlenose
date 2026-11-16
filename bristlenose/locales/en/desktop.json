@@ -581,7 +581,7 @@
     "newProjectHint": "Pick a folder of recordings or transcripts and start fresh.",
     "dropFolderTitle": "Drop a folder of recordings or transcripts",
     "dropFolderHint": "Bristlenose adds the folder as a project.",
-    "aiPrivacyLink": "Review AI & privacy settings…",
+    "aiPrivacyLink": "AI & privacy",
     "aiSetup": "Setup",
     "_divergent_aiSetup": "en:7013af — English keeps the noun; the 20 locales take a verb (ca Configura, de Konfigurieren, fi Ota käyttöön, ru Настроить). Part of speech follows each language's UI convention, not English's: a link that performs the action takes a verb there, and Apple's noun forms read as section titles. Deliberate — see 89b11f5a and the call-site comment in WelcomeHomeView.swift.",
     "steps": {

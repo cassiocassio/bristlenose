@@ -615,7 +615,7 @@
     "newProjectHint": "録音や書き起こしのフォルダを選んで始めましょう。",
     "dropFolderTitle": "録音や書き起こしのフォルダをドロップ",
     "dropFolderHint": "Bristlenose がフォルダをプロジェクトとして追加します。",
-    "aiPrivacyLink": "AI とプライバシー設定を確認…",
+    "aiPrivacyLink": "AI とプライバシー",
     "aiSetup": "\u8a2d\u5b9a",
     "steps": {
       "ingestTitle": "インタビューを追加",

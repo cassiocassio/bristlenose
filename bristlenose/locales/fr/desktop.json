@@ -580,7 +580,7 @@
     "newProjectHint": "Choisissez un dossier d’enregistrements ou de transcriptions pour démarrer.",
     "dropFolderTitle": "Déposez un dossier d’enregistrements ou de transcriptions",
     "dropFolderHint": "Bristlenose ajoute le dossier comme projet.",
-    "aiPrivacyLink": "Vérifier les réglages IA et confidentialité…",
+    "aiPrivacyLink": "IA et vie privée",
     "aiSetup": "Configurer",
     "steps": {
       "ingestTitle": "Ajoutez les entretiens",

@@ -50,7 +50,7 @@
   },
   "language": {
     "relaunchTitle": "Spr\u00e5kinnstillingen for Bristlenose er endret. Vil du starte appen p\u00e5 nytt n\u00e5?",
-    "relaunchBody": "Bristlenose m\u00e5 startes p\u00e5 nytt for at det nye spr\u00e5ket skal tas i bruk.",
+    "relaunchBody": "Menyene oppdateres etter omstart.",
     "relaunchNow": "Start p\u00e5 nytt n\u00e5",
     "dontRelaunch": "Ikke start p\u00e5 nytt",
     "legend": "Språk",

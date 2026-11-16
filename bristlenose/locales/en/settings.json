@@ -50,7 +50,7 @@
   },
   "language": {
     "relaunchTitle": "Language setting for Bristlenose has changed. Do you want to relaunch the app now?",
-    "relaunchBody": "Bristlenose will not use the new language until relaunched.",
+    "relaunchBody": "Menus update after you relaunch.",
     "relaunchNow": "Relaunch Now",
     "dontRelaunch": "Don\u2019t Relaunch",
     "legend": "Language",

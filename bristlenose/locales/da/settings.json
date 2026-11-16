@@ -50,7 +50,7 @@
   },
   "language": {
     "relaunchTitle": "Sprogindstillingen til Bristlenose er \u00e6ndret. Vil du starte appen igen nu?",
-    "relaunchBody": "Bristlenose bruger f\u00f8rst det nye sprog efter en genstart.",
+    "relaunchBody": "Menuer opdateres efter genstart.",
     "relaunchNow": "Start igen nu",
     "dontRelaunch": "Start ikke igen",
     "legend": "Sprog",

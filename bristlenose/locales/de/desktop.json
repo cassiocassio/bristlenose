@@ -580,7 +580,7 @@
     "newProjectHint": "Wählen Sie einen Ordner mit Aufnahmen oder Transkripten und legen Sie los.",
     "dropFolderTitle": "Ordner mit Aufnahmen oder Transkripten ablegen",
     "dropFolderHint": "Bristlenose fügt den Ordner als Projekt hinzu.",
-    "aiPrivacyLink": "KI- und Datenschutz-Einstellungen prüfen…",
+    "aiPrivacyLink": "KI & Datenschutz",
     "aiSetup": "Konfigurieren",
     "steps": {
       "ingestTitle": "Interviews hinzufügen",

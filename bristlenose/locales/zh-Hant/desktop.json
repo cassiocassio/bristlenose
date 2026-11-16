@@ -552,7 +552,7 @@
     "newProjectHint": "選擇一個裝有錄音或逐字稿的檔案夾，從頭開始。",
     "dropFolderTitle": "放入裝有錄音或逐字稿的檔案夾",
     "dropFolderHint": "Bristlenose 會將檔案夾加為專案。",
-    "aiPrivacyLink": "查看 AI 與隱私設定⋯",
+    "aiPrivacyLink": "AI 與隱私",
     "aiSetup": "\u8a2d\u5b9a",
     "steps": {
       "ingestTitle": "加入訪談",

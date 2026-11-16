@@ -50,7 +50,7 @@
   },
   "language": {
     "relaunchTitle": "Le r\u00e9glage de langue de Bristlenose a \u00e9t\u00e9 modifi\u00e9. Voulez-vous relancer l\u2019app maintenant\u00a0?",
-    "relaunchBody": "L\u2019app Bristlenose n\u2019utilisera la nouvelle langue qu\u2019apr\u00e8s avoir \u00e9t\u00e9 relanc\u00e9e.",
+    "relaunchBody": "Les menus changeront apr\u00e8s la relance.",
     "relaunchNow": "Relancer maintenant",
     "dontRelaunch": "Ne pas relancer",
     "legend": "Langue",

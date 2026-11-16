@@ -189,22 +189,23 @@ final class SettingsWindow {
     /// start while everything else follows `I18n` live.
     ///
     /// **Never relaunches during an analysis.** That would kill the subprocess
-    /// mid-run to fix a cosmetic mismatch. The alert then states Apple's own
-    /// "will not use the new language until relaunched" and offers no button.
+    /// mid-run to fix a cosmetic mismatch. The alert then states only the
+    /// consequence ("Menus update after you relaunch.") and offers OK.
+    ///
+    /// **What the body says (BR-11).** The window already speaks the new
+    /// language; only AppKit's menu bar waits for a relaunch. The body used to
+    /// be Apple's "will not use the new language until relaunched", which is
+    /// false of everything but the menus, so it now names the menus. The title
+    /// and the two buttons are still Apple's lifted wording.
     private func promptToRelaunch() {
         guard let i18n else { return }
         let busy = isAnalysing
+        let copy = RelaunchSheetCopy.keys(busy: busy)
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = i18n.t(
-            busy ? "settings.language.relaunchBody" : "settings.language.relaunchTitle")
-        if busy {
-            alert.addButton(withTitle: i18n.t("common.buttons.ok"))
-        } else {
-            alert.informativeText = i18n.t("settings.language.relaunchBody")
-            alert.addButton(withTitle: i18n.t("settings.language.relaunchNow"))
-            alert.addButton(withTitle: i18n.t("settings.language.dontRelaunch"))
-        }
+        alert.messageText = i18n.t(copy.message)
+        if let detail = copy.detail { alert.informativeText = i18n.t(detail) }
+        for button in copy.buttons { alert.addButton(withTitle: i18n.t(button)) }
 
         let act = { (response: NSApplication.ModalResponse) in
             guard !busy, response == .alertFirstButtonReturn else { return }
@@ -454,5 +455,25 @@ private struct SettingsPaneChrome: ViewModifier {
 
     private var colorScheme: ColorScheme? {
         AppAppearance.colorScheme(for: appearance)
+    }
+}
+
+/// Which strings the relaunch sheet shows, as keys, so the choice is testable
+/// without building an `NSAlert`.
+enum RelaunchSheetCopy {
+    struct Keys: Equatable {
+        let message: String
+        let detail: String?
+        let buttons: [String]
+    }
+
+    static func keys(busy: Bool) -> Keys {
+        if busy {
+            return Keys(message: "settings.language.relaunchBody", detail: nil,
+                        buttons: ["common.buttons.ok"])
+        }
+        return Keys(message: "settings.language.relaunchTitle",
+                    detail: "settings.language.relaunchBody",
+                    buttons: ["settings.language.relaunchNow", "settings.language.dontRelaunch"])
     }
 }

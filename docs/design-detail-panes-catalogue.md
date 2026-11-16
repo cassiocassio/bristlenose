@@ -332,7 +332,7 @@ view isn't internationalised. `{{…}}` / `%d` / `%@` mark runtime-interpolated 
 | ~~N11~~ | Subtitle | `welcome.subtitle` | Turn a folder of interviews into a report you can share — on your laptop, nothing uploaded. |
 | ~~N11~~ | Card 1 | `welcome.newProject` · `welcome.newProjectHint` | New Project · Pick a folder of recordings or transcripts and start fresh. |
 | ~~N11~~ | Card 2 | ✅ `welcome.dropFolderTitle` · `welcome.dropFolderHint` | Drop a folder · Drag a folder of recordings or transcripts here to add it as a project. — _verbatim-live in `WelcomeHomeView.swift:189,190`_ |
-| ~~N11~~ | Link | ✅ `welcome.aiPrivacyLink` | Review AI & privacy settings… — _verbatim-live in `WelcomeHomeView.swift:157`_ |
+| ~~N11~~ | Link | ✅ `welcome.aiPrivacyLink` | AI & privacy (was "Review AI & privacy settings…", which ellipsised in the 87 x 44 pt card; BR-08) — _verbatim-live in `WelcomeHomeView.swift:157`_ |
 | ~~N11~~ | Step 1 | `welcome.steps.ingest*` | Add interviews — Audio, video, or existing transcripts. |
 | ~~N11~~ | Step 2 | `welcome.steps.process*` | Bristlenose analyses — Transcribe, find quotes, cluster themes. |
 | ~~N11~~ | Step 3 | `welcome.steps.export*` | Browse & export — Read findings, export HTML or CSV. |

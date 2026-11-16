@@ -132,8 +132,10 @@ researcher's back"* (line 174). They are all true, of different surfaces. The sp
 The four strings are lifted verbatim out of Apple's own
 `Localization.appex/Localizable.loctable` and are present in all 21 full locales
 (`settings.language.{relaunchTitle,relaunchBody,relaunchNow,dontRelaunch}`). During an
-analysis the alert states Apple's *"will not use the new language until relaunched"* and
-offers no button, so a run is never killed to fix a cosmetic mismatch.
+analysis the alert states only *"Menus update after you relaunch."* (BR-11: the window already
+speaks the new language, only AppKit's menu bar waits; the body used to be Apple's "will not use
+the new language until relaunched") and offers no button, so a run is never killed to fix a
+cosmetic mismatch.
 
 **This supersedes the 21 Sep note that telling the researcher was "the one piece still
 owed".** It was owed for about ninety minutes.

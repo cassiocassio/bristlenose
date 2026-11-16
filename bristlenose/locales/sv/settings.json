@@ -50,7 +50,7 @@
   },
   "language": {
     "relaunchTitle": "Spr\u00e5kinst\u00e4llningen f\u00f6r Bristlenose har \u00e4ndrats. Vill du starta om appen nu?",
-    "relaunchBody": "Bristlenose anv\u00e4nder det nya spr\u00e5ket efter en omstart.",
+    "relaunchBody": "Menyerna uppdateras efter omstart.",
     "relaunchNow": "Starta om nu",
     "dontRelaunch": "Starta inte om",
     "legend": "Språk",

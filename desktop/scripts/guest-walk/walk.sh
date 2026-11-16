@@ -50,6 +50,12 @@ log "walk $RUN: $(g sw_vers -productVersion) guest, app $(g defaults read /Appli
 # Fresh state every walk: the .dmg build keeps everything in its sandbox
 # container (no app group), so removing it is a first launch. Guest only.
 g sh -c 'pkill -x Bristlenose; sleep 1; rm -rf ~/Library/Containers/app.bristlenose ~/Documents/smoke-project/bristlenose-output ~/Documents/smoke-project/bristlenose-study.txt ~/Documents/"New Project"' >/dev/null 2>&1
+if [ "${PRESEED:-0}" = 1 ]; then
+  # First-launch state written before launch (no sheet, no Welcome), so the walk does not depend on clicking through them.
+  # Keys: AIConsentView.currentVersion (2), WelcomeWindow.showOnLaunchKey, activeProvider.
+  PREF=/Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose
+  g sh -c "mkdir -p /Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences; defaults write $PREF aiConsentVersion -int 2; defaults write $PREF showWelcomeOnLaunch -bool false; defaults write $PREF activeProvider -string local" >>"$OUT/$RUN/walk.log" 2>&1
+fi
 g open -a /Applications/Bristlenose.app
 do_ "app window appears" wait "$B" "Bristlenose" 60
 shot first-launch
@@ -165,6 +171,9 @@ echo "$end" > "$OUT/$RUN/run-end.json"
 log "run ended: $(python3 "$HERE/run_summary.py" < "$OUT/$RUN/run-end.json")"
 sleep 3
 shot run-outcome
+if g "$W" tree "$B" "New Project" 2>/dev/null | grep -q 'Notify me when analysis finishes'; then
+  do_ "dismiss the notify sheet" press "$B" AXButton "Continue" "New Project"; sleep 2; shot after-notify-sheet
+fi
 
 # --- Every lens ----------------------------------------------------------------
 for lens in Project Sessions Quotes Codebooks Signals Discussion; do

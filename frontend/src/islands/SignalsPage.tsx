@@ -14,7 +14,7 @@
 
 import { useLenses } from "../contexts/ConditionStore";
 import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWorkingStore";
-import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { Fragment, createContext, type ReactNode, useContext, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Metric, MetricLabel, PersonBadge, SectionHeading, TimecodeLink } from "../components";
 import { IntensityDots } from "../components/IntensityDots";
@@ -31,6 +31,7 @@ import {
 } from "../contexts/SignalStore";
 import { useIsDarkAppearance } from "../hooks/useIsDarkAppearance";
 import { apiGet } from "../utils/api";
+import { speakerNameKey, useSessionSpeakerNames } from "../hooks/useSessionSpeakerNames";
 import {
   dedupeSignals,
   groupSignalsByLocation,
@@ -882,6 +883,15 @@ function EvidenceAssertions({
   );
 }
 
+/** Names by session and code, for the quote rows: the Signals payload has codes only. */
+const SpeakerNames = createContext<ReadonlyMap<string, string>>(new Map());
+
+/** Mounted only where cards show, so the empty and loading states stay one read. */
+function SpeakerNamesProvider({ children }: { children: ReactNode }) {
+  const names = useSessionSpeakerNames();
+  return <SpeakerNames.Provider value={names}>{children}</SpeakerNames.Provider>;
+}
+
 function QuoteBlock({
   quote,
   isSentiment,
@@ -896,6 +906,7 @@ function QuoteBlock({
   isDissenting?: boolean;
 }) {
   const { t } = useTranslation();
+  const speakerNames = useContext(SpeakerNames);
   const transcriptHref = transcriptHrefFor(quote);
   // Break long paragraphs (the Display setting): the words as blocks, computed from the
   // text each time. Blocks are drawn only when it splits; display-prefs.css styles them.
@@ -942,6 +953,7 @@ function QuoteBlock({
               <span className="speaker">
                 <PersonBadge
                   code={quote.pid}
+                  name={speakerNames.get(speakerNameKey(quote.sessionId, quote.pid))}
                   role="participant"
                   href={transcriptHref}
                   place={momentPlace("navigate", quote.sessionId, quote.startSeconds, quote.sessionId)}
@@ -1670,6 +1682,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
   }
 
   return (
+    <SpeakerNamesProvider>
     <div className="signals-layout" data-testid="bn-signals-page">
       {/* ── Center pane: signal cards ───────────────────────── */}
       <div className="signals-center">
@@ -1730,5 +1743,6 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
       {/* ── Inspector panel: heatmaps ──────────────────────── */}
       <InspectorPanel sources={heatmapSources} shimmerTrigger={shimmerTrigger} />
     </div>
+    </SpeakerNamesProvider>
   );
 }

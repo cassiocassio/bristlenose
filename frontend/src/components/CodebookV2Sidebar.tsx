@@ -449,7 +449,9 @@ export function buildBooks(
   const rows: V2NavBook[] = [
     {
       id: "",
-      title: projectName ? `${projectName} tags` : "Your tags",
+      title: projectName
+        ? i18n.t("codebook.projectTagsHeading", { project: projectName })
+        : i18n.t("codebook.yourTags"),
       provenance: "",
       provenanceIsPerson: false,
       floor: true,

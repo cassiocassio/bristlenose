@@ -32,6 +32,7 @@ import {
 import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
 import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
+import { conjunctionList } from "../utils/listFormat";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
@@ -381,16 +382,33 @@ function CompactSessionRow({
   );
 }
 
-function CompactSessionsTable({
-  sessions,
-  moderatorHeader,
-  observerHeader,
-}: {
-  sessions: DashboardSessionResponse[];
-  moderatorHeader: string;
-  observerHeader: string;
-}) {
-  const { t } = useTranslation();
+/** Distinct names of the speakers in a role, in session order. Roles arrive as the
+ *  database's words (`researcher` for a moderator), so the match is on those. */
+function namesInRole(sessions: DashboardSessionResponse[], roles: string[]): string[] {
+  const names: string[] = [];
+  for (const sess of sessions) {
+    for (const sp of sess.speakers) {
+      if (roles.includes(sp.role) && sp.name && !names.includes(sp.name)) names.push(sp.name);
+    }
+  }
+  return names;
+}
+
+function CompactSessionsTable({ sessions }: { sessions: DashboardSessionResponse[] }) {
+  const { t, i18n } = useTranslation();
+  // Built here, not read from the payload's `moderator_header` / `observer_header`:
+  // the server wrote those in English whatever the language (BR-10).
+  const moderators = namesInRole(sessions, ["researcher", "moderator"]);
+  const observers = namesInRole(sessions, ["observer"]);
+  const moderatorHeader = moderators.length
+    ? t("sessions.moderatedBy", { names: conjunctionList(moderators, i18n.language) })
+    : "";
+  const observerHeader = observers.length
+    ? t("sessions.observer", {
+        count: observers.length,
+        names: conjunctionList(observers, i18n.language),
+      })
+    : "";
   return (
     <div className="bn-dashboard-pane bn-dashboard-full">
       <section className="bn-session-table">
@@ -754,11 +772,7 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
     <div className={handoverClass(handingOver, "bn-dashboard")}>
       <StatsRow stats={data.stats} />
 
-      <CompactSessionsTable
-        sessions={data.sessions}
-        moderatorHeader={data.moderator_header}
-        observerHeader={data.observer_header}
-      />
+      <CompactSessionsTable sessions={data.sessions} />
 
       <FeaturedQuotesRow quotes={data.featured_quotes} />
 

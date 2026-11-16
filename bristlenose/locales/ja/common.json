@@ -553,6 +553,7 @@
     "tagCount_other": "{{count}} \u500b\u306e\u30bf\u30b0",
     "appliedToQuotes_other": "{{project}} \u306e {{count}} \u4ef6\u306e\u5f15\u7528\u306b\u9069\u7528",
     "noneApplied": "{{project}} \u306b\u306f\u672a\u9069\u7528",
+    "notInstalled": "未インストール",
     "tentativeCount_other": "{{count}} \u66ab\u5b9a",
     "importCodebook": "インストール",
     "viewReport": "レポートを表示",

@@ -30,6 +30,19 @@ vi.mock("../contexts/ConditionStore", async (importOriginal) => {
   };
 });
 
+// The quote rows' speaker names come from the session list, read apart from the signal reads
+// (their fetch counts are pinned below), so it is answered here rather than through fetch.
+const sessionList = vi.hoisted(() => ({
+  sessions: [] as {
+    session_id: string; session_number: number; session_date: string | null;
+    speakers: { speaker_code: string; name: string; role: string }[];
+  }[],
+}));
+vi.mock("../utils/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../utils/api")>()),
+  getSessionList: () => Promise.resolve(sessionList.sessions),
+}));
+
 // ---------------------------------------------------------------------------
 // Mock data — per-codebook shape
 // ---------------------------------------------------------------------------
@@ -240,6 +253,7 @@ let fetchMock: any;
 
 beforeEach(() => {
   _resetDisplayPrefs();
+  sessionList.sessions = [];
   lensState.signalsWithheld = false;
     resetSignalWorkingStore();
     resetFeatureFlags();
@@ -278,6 +292,24 @@ function mockFetchCodebookSignals(data: CodebookSignalsListResponse) {
 // ---------------------------------------------------------------------------
 
 describe("SignalsPage", () => {
+  // BR-13: quote rows showed "p1" where every other lens shows "p1 Tom".
+  it("a quote row names its speaker, as the other lenses do", async () => {
+    sessionList.sessions = [{
+      session_id: "s1", session_number: 1, session_date: null,
+      speakers: [
+        { speaker_code: "p1", name: "Tom", role: "participant" },
+        { speaker_code: "p2", name: "p2", role: "participant" },
+      ],
+    }];
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
+    await waitFor(() => expect(document.querySelector(".quote-row .bn-speaker-badge-name")?.textContent).toBe("Tom"));
+    const row = screen.getByText("I had to wait for ages").closest(".quote-row")!;
+    // A name equal to its code is no name: control, the badge stays code-only.
+    expect(row.querySelector(".bn-speaker-badge-name")).toBeNull();
+  });
+
   it("renders tag signal cards when API returns data", async () => {
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);

@@ -566,6 +566,7 @@
     "appliedToQuotes_one": "aplicades a {{count}} cita a {{project}}",
     "appliedToQuotes_other": "aplicades a {{count}} cites a {{project}}",
     "noneApplied": "cap aplicada a {{project}}",
+    "notInstalled": "no instal·lat",
     "tentativeCount_one": "{{count}} Provisional",
     "tentativeCount_other": "{{count}} Provisional",
     "importCodebook": "Instal·la",

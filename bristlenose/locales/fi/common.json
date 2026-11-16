@@ -566,6 +566,7 @@
     "appliedToQuotes_one": "k\u00e4ytetty {{count}} sitaatissa projektissa {{project}}",
     "appliedToQuotes_other": "k\u00e4ytetty {{count}} sitaatissa projektissa {{project}}",
     "noneApplied": "ei k\u00e4ytetty projektissa {{project}}",
+    "notInstalled": "ei asennettu",
     "tentativeCount_one": "{{count}} Alustava",
     "tentativeCount_other": "{{count}} Alustava",
     "importCodebook": "Asenna",

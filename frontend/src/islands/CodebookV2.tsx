@@ -293,7 +293,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     const rows: LensBook[] = [
       {
         id: "",
-        title: projectName ? `${projectName} tags` : "Your tags",
+        title: projectName
+          ? t("codebook.projectTagsHeading", { project: projectName })
+          : t("codebook.yourTags"),
         provenance: "",
         provenanceIsPerson: false,
         floor: true,
@@ -330,7 +332,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       });
     }
     return { rows };
-  }, [codebook, templates, states, projectName]);
+  }, [codebook, templates, states, projectName, t]);
 
   /**
    * Tell everyone the codebook moved.

@@ -568,6 +568,7 @@
     "appliedToQuotes_one": "applied to {{count}} quote in {{project}}",
     "appliedToQuotes_other": "applied to {{count}} quotes in {{project}}",
     "noneApplied": "none applied to {{project}}",
+    "notInstalled": "not installed",
     "tentativeCount_one": "{{count}} tentative",
     "tentativeCount_other": "{{count}} tentative",
     "importCodebook": "Install",

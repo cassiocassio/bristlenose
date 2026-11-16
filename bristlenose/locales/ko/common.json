@@ -535,6 +535,7 @@
     "tagCount_other": "\ud0dc\uadf8 {{count}}\uac1c",
     "appliedToQuotes_other": "{{project}}\uc758 \uc778\uc6a9 {{count}}\uac1c\uc5d0 \uc801\uc6a9\ub428",
     "noneApplied": "{{project}}\uc5d0 \uc801\uc6a9\ub418\uc9c0 \uc54a\uc74c",
+    "notInstalled": "설치되지 않음",
     "tentativeCount_other": "{{count}} \uc7a0\uc815",
     "importCodebook": "설치",
     "viewReport": "보고서 보기",

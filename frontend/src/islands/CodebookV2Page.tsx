@@ -240,7 +240,7 @@ export function CodebookV2Page({
             <div className="pg-stat">
               {book.installed
                 ? reachPhrase(tagCount, book.quotes, projectName)
-                : `${vocabularyPhrase(tagCount)} \u00b7 not installed`}
+                : `${vocabularyPhrase(tagCount)} \u00b7 ${t("codebook.notInstalled")}`}
             </div>
           )}
 

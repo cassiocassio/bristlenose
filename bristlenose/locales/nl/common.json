@@ -566,6 +566,7 @@
     "appliedToQuotes_one": "toegepast op {{count}} citaat in {{project}}",
     "appliedToQuotes_other": "toegepast op {{count}} citaten in {{project}}",
     "noneApplied": "niet toegepast in {{project}}",
+    "notInstalled": "niet geïnstalleerd",
     "tentativeCount_one": "{{count}} Voorlopig",
     "tentativeCount_other": "{{count}} Voorlopig",
     "importCodebook": "Installeer",

@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { NavigateFunction } from "react-router-dom";
 import { installNavigationShims } from "../shims/navigation";
 import { Dashboard } from "./Dashboard";
+import i18n from "../i18n";
+import deCommon from "../../../bristlenose/locales/de/common.json";
 import type { DashboardResponse } from "../utils/types";
 import { HANDOVER_MS, RETRY_PAUSE_MS } from "../hooks/useLensRead";
 
@@ -480,5 +482,56 @@ describe("Dashboard featured quote", () => {
     expect(container.querySelector(".bn-featured-quote .speaker-link")?.getAttribute("href")).toBe(
       "/report/sessions/s1#t-123",
     );
+  });
+});
+
+// BR-10: the "Moderated by" line was written by the server, in English, in every language.
+describe("Dashboard — moderator and observer lines follow the language", () => {
+  const people = {
+    ...baseDashboard,
+    moderator_header: "Moderated by Server English",
+    observer_header: "Observer: Server English",
+    sessions: [
+      {
+        ...baseDashboard.sessions[0],
+        speakers: [
+          { speaker_code: "m1", name: "Alex", role: "researcher" },
+          { speaker_code: "m2", name: "Sam", role: "researcher" },
+          { speaker_code: "o1", name: "Robin", role: "observer" },
+          { speaker_code: "p1", name: "Jordan", role: "participant" },
+        ],
+      },
+    ],
+  };
+  afterEach(async () => {
+    await act(async () => { await i18n.changeLanguage("en"); });
+  });
+
+  it("English: built from the speakers, not the payload's string", async () => {
+    mockFetch(people);
+    render(<Dashboard projectId="1" />);
+    expect(await screen.findByText("Moderated by Alex and Sam")).toBeTruthy();
+    expect(screen.getByText("Observer: Robin")).toBeTruthy();
+    expect(screen.queryByText(/Server English/)).toBeNull();
+  });
+
+  it("German: the real de strings, no English fragment", async () => {
+    i18n.addResourceBundle("de", "common", deCommon, true, true);
+    await act(async () => { await i18n.changeLanguage("de"); });
+    mockFetch(people);
+    render(<Dashboard projectId="1" />);
+    expect(await screen.findByText("Moderiert von Alex und Sam")).toBeTruthy();
+    expect(screen.getByText("Beobachter: Robin")).toBeTruthy();
+    expect(screen.queryByText(/Moderated by|Observer/)).toBeNull();
+  });
+
+  it("control: no moderator, no line", async () => {
+    mockFetch({
+      ...people,
+      sessions: [{ ...people.sessions[0], speakers: [{ speaker_code: "p1", name: "Jordan", role: "participant" }] }],
+    });
+    render(<Dashboard projectId="1" />);
+    await screen.findByText("Transcript coverage");
+    expect(screen.queryByText(/Moderated by/)).toBeNull();
   });
 });

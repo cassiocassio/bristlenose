@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render as rtlRender, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { CodebookV2 } from "./CodebookV2";
+import i18n from "../i18n";
+import deCommon from "../../../bristlenose/locales/de/common.json";
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { resetCodebookV2Selection } from "../contexts/CodebookV2Store";
 import { RETRY_PAUSE_MS } from "../hooks/useLensRead";
@@ -192,6 +194,20 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
     render(<Lens projectId="1" projectName="Ikea" />);
     await waitFor(() => screen.getByTestId("bn-v2-nav-row-floor"));
     expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Ikea tags");
+  });
+
+  // BR-10: the title was a template literal, "{project} tags" in English in every language.
+  it("names the floor in the reader's language", async () => {
+    i18n.addResourceBundle("de", "common", deCommon, true, true);
+    await act(async () => { await i18n.changeLanguage("de"); });
+    try {
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav-row-floor"));
+      expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Tags von Ikea");
+      expect(screen.getByTestId("bn-v2-nav-row-floor")).not.toHaveTextContent("Ikea tags");
+    } finally {
+      await act(async () => { await i18n.changeLanguage("en"); });
+    }
   });
 });
 

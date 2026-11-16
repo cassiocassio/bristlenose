@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { anySidebarOpen, resetSidebarStore } from "../contexts/SidebarStore";
 import { resetCodebookFocus } from "../contexts/CodebookFocusStore";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
+import i18n from "../i18n";
+import deCommon from "../../../bristlenose/locales/de/common.json";
 import { ANCHOR_SELECTORS } from "../hooks/useAnchorReporter";
 import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import type { CodebookGroupResponse } from "../utils/types";
@@ -109,6 +111,18 @@ describe("D20 — three shapes", () => {
     // One slot, two verbs — not two placements that happen to agree today.
     renderPage(book({ installed: false }));
     expect(screen.getByTestId("bn-v2-install").closest(".pg-titlerow")).not.toBeNull();
+  });
+
+  it("says 'not installed' in the reader's language (BR-10)", async () => {
+    i18n.addResourceBundle("de", "common", deCommon, true, true);
+    await act(async () => { await i18n.changeLanguage("de"); });
+    try {
+      renderPage(book({ installed: false }));
+      expect(screen.getByText(/nicht installiert/)).toBeInTheDocument();
+      expect(screen.queryByText(/not installed/)).toBeNull();
+    } finally {
+      await act(async () => { await i18n.changeLanguage("en"); });
+    }
   });
 
   it("offers Install when not installed", () => {

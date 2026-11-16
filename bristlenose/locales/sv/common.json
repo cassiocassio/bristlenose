@@ -566,6 +566,7 @@
     "appliedToQuotes_one": "anv\u00e4nda p\u00e5 {{count}} citat i {{project}}",
     "appliedToQuotes_other": "anv\u00e4nda p\u00e5 {{count}} citat i {{project}}",
     "noneApplied": "inte anv\u00e4nda i {{project}}",
+    "notInstalled": "inte installerad",
     "tentativeCount_one": "{{count}} Prelimin\u00e4r",
     "tentativeCount_other": "{{count}} Prelimin\u00e4r",
     "importCodebook": "Installera",

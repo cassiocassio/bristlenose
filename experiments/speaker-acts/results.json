@@ -9,7 +9,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s1/speakers/m1 {\"person\": \"88382258-94b6-491e-b8f2-828529c92875\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"b280df12-9a86-4c41-83ce-4b0c0f85b7ad\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -82,7 +82,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s1/speakers/m1 {\"person\": \"19116de6-58e2-472a-a93a-169d396f42bd\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"0063f6bc-e31f-446f-9640-c4b21b9af4d7\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -297,7 +297,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s3/speakers/m1 {\"person\": \"326ae7a9-f603-4901-98f6-8630bf3ef4e8\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/m1 {\"person\": \"d0de410c-8da3-419d-9ba3-679a02deabbb\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -406,7 +406,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s1/speakers/m1 {\"person\": \"bcc14f7a-9ac2-4478-974f-6b23da587a48\", \"create\": true, \"kind\": \"moderator\", \"full_name\": \"Priya\", \"short_name\": \"Priya\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"96e0e74c-5ee0-4e17-afda-75bcc6bc8e22\", \"create\": true, \"kind\": \"moderator\", \"full_name\": \"Priya\", \"short_name\": \"Priya\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -701,7 +701,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s3/speakers/o1 {\"person\": \"d070220a-d707-4d8d-9391-5c906aa5f5b6\", \"create\": true, \"kind\": \"observer\", \"full_name\": \"Sam\", \"short_name\": \"Sam\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"08f4b56c-8958-4200-b875-44a42844610c\", \"create\": true, \"kind\": \"observer\", \"full_name\": \"Sam\", \"short_name\": \"Sam\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -801,7 +801,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s3/speakers/m1 {\"person\": \"dc1f5033-e6bb-4920-a053-c505609722da\", \"kind\": \"observer\", \"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/m1 {\"person\": \"6c640b57-f49b-4183-bc0f-12d498ed7353\", \"kind\": \"observer\", \"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -936,7 +936,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s3/speakers/o1 {\"person\": \"d7643201-293d-47b0-a163-89806d9a2de2\", \"kind\": \"moderator\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"3e6288a1-25d2-46c8-b3fc-5e22568c6591\", \"kind\": \"moderator\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -1067,7 +1067,7 @@
   "want_out": [],
   "want_owed": false,
   "requests": [
-   "PUT /sessions/s3/speakers/o1 {\"person\": \"bfe329e6-f0a0-4042-aa9f-c6f4ab0d6323\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"0f7342ca-4010-416e-b42d-5b40675bc645\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -1200,7 +1200,7 @@
   ],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s1/speakers/p1 {\"person\": \"07fd58da-bb79-4e00-aac5-ce014cf7bd12\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/p1 {\"person\": \"001d701f-e5f4-4984-af26-1e726bb38d2a\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -1529,7 +1529,7 @@
   ],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s1/speakers/p1 {\"person\": \"9e2b5ff0-54b4-4e97-a27b-ff4b00d6abef\", \"create\": true, \"kind\": \"moderator\", \"full_name\": \"Priya\", \"short_name\": \"Priya\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/p1 {\"person\": \"dcdfb78f-e4eb-45e6-98e6-10b394f409c1\", \"create\": true, \"kind\": \"moderator\", \"full_name\": \"Priya\", \"short_name\": \"Priya\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -1914,7 +1914,7 @@
   ],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s3/speakers/p3 {\"person\": \"97541522-31b9-4afc-bfd7-1b50ae07ab3d\", \"kind\": \"observer\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/p3 {\"person\": \"e14ee2d8-406a-463e-b4f4-b16258235050\", \"kind\": \"observer\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -2482,7 +2482,7 @@
   "want_out": [],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s3/speakers/m1 {\"person\": \"db18c45f-8846-478b-9db9-d87edc4fbe7d\", \"kind\": \"participant\", \"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/m1 {\"person\": \"223263d2-5c50-4afe-a87f-f83e4885ce67\", \"kind\": \"participant\", \"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -2652,7 +2652,7 @@
   "want_out": [],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s3/speakers/o1 {\"person\": \"fc4ab146-0ebd-43fa-aaee-ff509f476138\", \"kind\": \"participant\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"cbe9545d-3c0a-47c7-9271-e623a2f97e4a\", \"kind\": \"participant\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -2804,7 +2804,7 @@
   "want_out": [],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s1/speakers/m1 {\"person\": \"e43fe7b3-c8f2-4696-aafb-41eed16e2853\", \"create\": true, \"kind\": \"participant\", \"full_name\": \"Zed\", \"short_name\": \"Zed\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"6b858603-943b-4505-abfa-43e3e649bd80\", \"create\": true, \"kind\": \"participant\", \"full_name\": \"Zed\", \"short_name\": \"Zed\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {
@@ -3039,16 +3039,16 @@
     "detail": ""
    },
    "R9 re-import": {
-    "ok": false,
-    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+    "ok": true,
+    "detail": ""
    },
    "R10 undo": {
     "ok": true,
     "detail": ""
    },
    "R11 late undo": {
-    "ok": false,
-    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+    "ok": true,
+    "detail": ""
    }
   },
   "changes": {
@@ -3372,16 +3372,16 @@
     "detail": ""
    },
    "R9 re-import": {
-    "ok": false,
-    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+    "ok": true,
+    "detail": ""
    },
    "R10 undo": {
     "ok": true,
     "detail": ""
    },
    "R11 late undo": {
-    "ok": false,
-    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+    "ok": true,
+    "detail": ""
    }
   },
   "changes": {
@@ -3702,16 +3702,16 @@
     "detail": ""
    },
    "R9 re-import": {
-    "ok": false,
-    "detail": "people.p4: 'Dana' -> 'Olu'; s3.speakers: ['m1>m2 researcher \"Kerri\" ?', 'p3>o1 observer \"Olu\" ?', 'o1>p4 participant \"Dana\" ?'] -> ['m1>m2 researcher \"Kerri\" ?', 'p3>o1 observer \"Olu\" ?', 'o1>p4 participant \"Olu\" ?']; s3.transcript.speakers: ['m2 Kerri', 'o1 Olu', 'p4 Dana'] -> ['m2 Kerri', 'o1 Olu', 'p4 Olu']"
+    "ok": true,
+    "detail": ""
    },
    "R10 undo": {
     "ok": true,
     "detail": ""
    },
    "R11 late undo": {
-    "ok": false,
-    "detail": "lens.credit.q-p3-20: 'p3 Dana' -> 'p3 Olu'; lens.credit.q-p3-40: 'p3 Dana' -> 'p3 Olu'; people.p3: 'Dana' -> 'Olu'; s3.speakers: ['m1>m2 researcher \"Kerri\" ?', 'p3>p3 participant \"Dana\" ?', 'o1>o1 observer \"Olu\" ?'] -> ['m1>m2 researcher \"Kerri\" ?', 'p3>p3 participant \"Olu\" ?', 'o1>o1 observer \"Olu\" ?']"
+    "ok": true,
+    "detail": ""
    }
   },
   "changes": {
@@ -5651,16 +5651,16 @@
     "detail": ""
    },
    "R9 re-import": {
-    "ok": false,
-    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+    "ok": true,
+    "detail": ""
    },
    "R10 undo": {
     "ok": true,
     "detail": ""
    },
    "R11 late undo": {
-    "ok": false,
-    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+    "ok": true,
+    "detail": ""
    }
   },
   "changes": {
@@ -5987,16 +5987,16 @@
     "detail": ""
    },
    "R9 re-import": {
-    "ok": false,
-    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+    "ok": true,
+    "detail": ""
    },
    "R10 undo": {
     "ok": true,
     "detail": ""
    },
    "R11 late undo": {
-    "ok": false,
-    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+    "ok": true,
+    "detail": ""
    }
   },
   "changes": {
@@ -6285,8 +6285,8 @@
   ],
   "want_owed": true,
   "requests": [
-   "PUT /sessions/s1/speakers/m1 {\"person\": \"c219bd69-afe2-41d9-8d81-e6ccccfa5ef4\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200",
-   "PUT /sessions/s1/speakers/p1 {\"person\": \"c219bd69-afe2-41d9-8d81-e6ccccfa5ef4\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200"
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"c218e0d8-3b84-444e-bda7-37339dfd2de3\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200",
+   "PUT /sessions/s1/speakers/p1 {\"person\": \"c218e0d8-3b84-444e-bda7-37339dfd2de3\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200"
   ],
   "error": "",
   "verdict": {

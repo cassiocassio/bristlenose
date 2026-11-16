@@ -259,13 +259,16 @@ final class FakeAcquirer: WhisperModelAcquirer {
 // MARK: - The Background Assets acquirer over a fake adapter
 
 final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
-    enum Behaviour { case succeed, throwError(Error), hang }
+    enum Behaviour { case succeed, throwError(Error), hang, hangIgnoringCancel }
     private let lock = NSLock()
     private var behaviours: [Behaviour]
     private var cancelled = false
     private(set) var ensureCalls = 0
     private(set) var removeCalls = 0
     private(set) var directoryCalls = 0
+    private var released = false
+    var removeDelay: Duration = .zero
+    var onRemove: (@Sendable () -> Void)?
     let dir: URL
 
     init(_ behaviours: [Behaviour], dir: URL) { self.behaviours = behaviours; self.dir = dir }
@@ -279,6 +282,13 @@ final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
         switch behaviour {
         case .succeed: report(10, 100); report(100, 100)
         case .throwError(let e): throw e
+        case .hangIgnoringCancel:
+            // A system call that never notices cancellation: only `release()` lets it go.
+            while true {
+                try? await Task.sleep(for: .milliseconds(20))
+                lock.lock(); let r = released; lock.unlock()
+                if r { return }
+            }
         case .hang:
             while true {
                 try await Task.sleep(for: .milliseconds(20))
@@ -288,8 +298,13 @@ final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
         }
     }
     func cancelEnsure() { lock.lock(); cancelled = true; lock.unlock() }
+    func release() { lock.lock(); released = true; lock.unlock() }
     func directory() throws -> URL { lock.lock(); directoryCalls += 1; lock.unlock(); return dir }
-    func remove() async throws { lock.lock(); removeCalls += 1; lock.unlock() }
+    func remove() async throws {
+        lock.lock(); removeCalls += 1; let delay = removeDelay; let hook = onRemove; lock.unlock()
+        hook?()
+        if delay > .zero { try? await Task.sleep(for: delay) }
+    }
 }
 
 @MainActor
@@ -324,13 +339,28 @@ final class RecordingEvents: WhisperAcquisitionEvents {
     }
 
     private func make(_ behaviours: [FakeAdapter.Behaviour], verdicts: [WhisperPackVerdict] = [.ok],
-                      silence: Duration = .seconds(60), complete: Bool = true)
+                      silence: Duration = .seconds(60), complete: Bool = true, verified: Bool = true,
+                      turbo: Bool = true)
         throws -> (BackgroundAssetsAcquirer, FakeAdapter, RecordingEvents) {
+        let (a, ad, ev, _) = try makeWithStamp(behaviours, verdicts: verdicts, silence: silence,
+                                               complete: complete, verified: verified, turbo: turbo)
+        return (a, ad, ev)
+    }
+
+    private func makeWithStamp(_ behaviours: [FakeAdapter.Behaviour], verdicts: [WhisperPackVerdict] = [.ok],
+                               silence: Duration = .seconds(60), complete: Bool = true, verified: Bool = true,
+                               turbo: Bool = true)
+        throws -> (BackgroundAssetsAcquirer, FakeAdapter, RecordingEvents, MemoryStamp) {
         let adapter = FakeAdapter(behaviours, dir: try dir(complete: complete))
         let queue = VerdictQueue(verdicts)
+        let stamp = MemoryStamp()
+        if verified, complete {
+            stamp.verifiedFingerprint = WhisperPackVerifier.fingerprint(directory: adapter.dir, manifest: manifest)
+        }
         let acquirer = BackgroundAssetsAcquirer(
-            adapter: adapter, manifest: manifest, silenceLimit: silence, verify: { _, _ in queue.next() })
-        return (acquirer, adapter, RecordingEvents())
+            adapter: adapter, manifest: manifest, silenceLimit: silence,
+            verify: { _, _ in queue.next() }, stamp: stamp, servesChosenModel: { turbo })
+        return (acquirer, adapter, RecordingEvents(), stamp)
     }
 
     @Test func aPackThatArrivesAndVerifiesSucceeds() async throws {
@@ -399,6 +429,73 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         #expect(ev.progress.contains(100))
     }
 
+    /// The system call may never notice cancellation (not in the measured facts): Stop and the
+    /// watchdog must end the attempt anyway, or the pill stays on "Downloading" for good.
+    @Test func stopBeforeTheFirstByteEndsEvenIfTheCallIgnoresCancellation() async throws {
+        let (a, adapter, ev) = try make([.hangIgnoringCancel])
+        _ = a.start(events: ev)
+        try await Task.sleep(for: .milliseconds(100))
+        a.stop()
+        await ev.waitForEnd(seconds: 2)
+        adapter.release()
+        #expect(ev.outcome == .stopped)
+        #expect(!a.isRunning)
+    }
+
+    @Test func silenceEndsEvenIfTheCallIgnoresCancellation() async throws {
+        let (a, adapter, ev) = try make([.hangIgnoringCancel], silence: .milliseconds(300))
+        _ = a.start(events: ev)
+        await ev.waitForEnd(seconds: 3)
+        adapter.release()
+        #expect(ev.outcome == .failed(cause: nil))
+    }
+
+    /// Stop while the bad pack is being removed must not go on to download it all again.
+    @Test func stopDuringTheRepairDoesNotAskForThePackAgain() async throws {
+        let (a, adapter, ev) = try make([.succeed, .succeed], verdicts: [.wrongHash("w"), .ok])
+        adapter.removeDelay = .milliseconds(400)
+        _ = a.start(events: ev)
+        try await Task.sleep(for: .milliseconds(150))
+        a.stop()
+        await ev.waitForEnd()
+        #expect(ev.outcome == .stopped)
+        #expect(adapter.ensureCalls == 1)
+    }
+
+    /// A pack the app has not verified (the system delivered it on its own, or it failed its
+    /// hash and was left behind) is not handed to the sidecar on names and sizes alone.
+    @Test func anUnverifiedPackIsNotHandedOver() async throws {
+        let (a, _, ev, stamp) = try makeWithStamp([.succeed], verified: false)
+        #expect(a.runEnvironment.isEmpty, "complete on disk, never verified: no environment")
+        _ = a.start(events: ev)
+        await ev.waitForEnd()
+        #expect(ev.outcome == .succeeded)
+        #expect(stamp.verifiedFingerprint != nil)
+        #expect(a.runEnvironment["BRISTLENOSE_WHISPER_MODEL_DIR"] != nil, "verified now")
+        // The bytes change on disk: no longer trusted.
+        let weights = a.presentDirectory()!.appendingPathComponent("weights.safetensors")
+        try Data("TENSORS".utf8).write(to: weights)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(60)],
+                                              ofItemAtPath: weights.path)
+        #expect(a.runEnvironment.isEmpty)
+    }
+
+    @Test func aFailedHashLeavesNoStamp() async throws {
+        let (a, _, ev, stamp) = try makeWithStamp([.succeed, .succeed],
+                                                  verdicts: [.wrongHash("w"), .wrongHash("w")])
+        _ = a.start(events: ev)
+        await ev.waitForEnd()
+        #expect(ev.outcome == .failed(cause: nil))
+        #expect(stamp.verifiedFingerprint == nil)
+        #expect(a.runEnvironment.isEmpty)
+    }
+
+    /// Another model chosen in Settings is not the app's to deliver.
+    @Test func anotherChosenModelIsNeverClaimed() async throws {
+        let (a, _, _) = try make([.succeed], turbo: false)
+        #expect(a.runEnvironment.isEmpty)
+    }
+
     /// The sandboxed child's access to the pack is granted per `url(for:)` request, made by the
     /// process that spawns it (measured 16 Nov 2026: a child spawned after a request for the
     /// weights alone got ENOENT on config.json). So every environment built for a spawn asks for
@@ -429,6 +526,10 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         coming.stop()
         await ev.waitForEnd()
     }
+}
+
+final class MemoryStamp: WhisperPackStampStore {
+    var verifiedFingerprint: String?
 }
 
 final class VerdictQueue: @unchecked Sendable {
@@ -476,6 +577,30 @@ final class VerdictQueue: @unchecked Sendable {
     }
 
     /// A failed sidecar fetch is a failure: only Background Assets falls back.
+    /// Stop landing together with a failure: the researcher's Stop wins, nothing starts.
+    @Test func aFailureAfterStopDoesNotFallBack() {
+        let ba = FakeAcquirer(); ba.kind = .backgroundAssets
+        let fetch = FakeAcquirer()
+        var queue = [ba, fetch]
+        let m = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in queue.removeFirst() })
+        m.downloadNow()
+        m.stop()
+        ba.end(.failed(cause: nil))
+        #expect(fetch.startCalls == 0)
+        #expect(m.phase != .downloading)
+    }
+
+    @Test func theStopNoteIsNotShownOnTheBackgroundAssetsPath() {
+        let ba = FakeAcquirer(); ba.kind = .backgroundAssets
+        let m = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in ba })
+        m.downloadNow()
+        #expect(m.stopNoteApplies == false)
+        let fetch = FakeAcquirer()
+        let m2 = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in fetch })
+        m2.downloadNow()
+        #expect(m2.stopNoteApplies == true)
+    }
+
     @Test func aSidecarFailureDoesNotFallBackToItself() {
         let fetch = FakeAcquirer()
         let m = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in fetch })
@@ -504,6 +629,23 @@ final class VerdictQueue: @unchecked Sendable {
         d.set(false, forKey: "whisperDownloadStoppedByUser")  // forget it, to see whether `.stopped` sets it again
         fetch.end(.stopped)
         #expect(d.bool(forKey: "whisperDownloadStoppedByUser") == false)
+    }
+}
+
+@Suite struct ChosenModelTests {
+    @Test func onlyTurboIsThePacksModel() {
+        let suite = "bn-model-\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        #expect(WhisperDownloadModel.chosenModelIsPackModel(d) == true, "unset is the default, turbo")
+        for yes in ["large-v3-turbo", "turbo"] {
+            d.set(yes, forKey: "whisperModel")
+            #expect(WhisperDownloadModel.chosenModelIsPackModel(d) == true, "\(yes)")
+        }
+        for no in ["small", "large-v3", "org/custom"] {
+            d.set(no, forKey: "whisperModel")
+            #expect(WhisperDownloadModel.chosenModelIsPackModel(d) == false, "\(no)")
+        }
+        d.removePersistentDomain(forName: suite)
     }
 }
 

@@ -83,6 +83,21 @@ enum WhisperPackVerifier {
         return .ok
     }
 
+    /// What identifies these exact bytes on this disk without reading them: each file's name,
+    /// size and modification time, and the manifest's hash for it. Recorded after a full
+    /// `verify`; a later difference means the pack changed and must be verified again.
+    static func fingerprint(directory: URL, manifest: WhisperPackManifest) -> String? {
+        var parts: [String] = []
+        for file in manifest.files {
+            let url = directory.appendingPathComponent(file.name)
+            guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+                  let size = (attrs[.size] as? NSNumber)?.int64Value,
+                  let mtime = attrs[.modificationDate] as? Date else { return nil }
+            parts.append("\(file.name):\(size):\(Int64(mtime.timeIntervalSince1970 * 1000)):\(file.sha256)")
+        }
+        return parts.joined(separator: "|")
+    }
+
     static func sha256(of url: URL) -> String? {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }

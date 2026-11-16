@@ -112,10 +112,12 @@ struct WhisperDownloadDetail: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Divider().padding(.top, 2)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(i18n.t("desktop.modelDownload.stopNote"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if model.stopNoteApplies {
+                        Text(i18n.t("desktop.modelDownload.stopNote"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     Spacer(minLength: 8)
                     Button(i18n.t("desktop.modelDownload.stop")) { model.stop() }
                         .controlSize(.small)

@@ -173,7 +173,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         /// Not asked yet, or being asked.
         case unknown
         case missing
-        /// A download was interrupted; it starts again from the beginning.
+        /// The Hugging Face cache holds part of it (an interrupted fetch).
         case partial
         case downloading
         case onDisk
@@ -429,7 +429,16 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         WhisperAcquirerPicker.pick(
             osMajor: ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
             channel: .current, killSwitchOn: BristlenoseFlags.backgroundAssets,
-            backgroundAssetsUsable: backgroundAssetsUsable && backgroundAssetsCompiledIn)
+            backgroundAssetsUsable: backgroundAssetsUsable && backgroundAssetsCompiledIn
+                && chosenModelIsPackModel())
+    }
+
+    /// The app's one pack is `large-v3-turbo`. Another model chosen in Settings, or a
+    /// repo id, is not the app's to deliver (Python fetches it as it always has), so Background
+    /// Assets is neither used nor claimed for it. An unset preference is the default, turbo.
+    nonisolated static func chosenModelIsPackModel(_ defaults: UserDefaults = .standard) -> Bool {
+        let model = defaults.string(forKey: "whisperModel") ?? "large-v3-turbo"
+        return model == "large-v3-turbo" || model == "turbo"
     }
 
     /// Background Assets is built only into the store build with the flag on
@@ -497,7 +506,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     func downloadNow() {
         stoppedByUser = false
         hasAnswered = true
-        backgroundAssetsUsable = true
+        if acquirer == nil { backgroundAssetsUsable = true }  // a fallback fetch in flight stays
         start()
     }
 
@@ -527,8 +536,8 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         }
     }
 
-    /// Stop Download. On the Hugging Face path there is no resume (hf_xet starts again), which
-    /// is why the button says so beside it.
+    /// Stop Download. The note beside the button (`stopNoteApplies`) is about the Hugging Face
+    /// path only; on the other path the app says nothing about resuming.
     func stop() {
         guard let acquirer, acquirer.isRunning else { return }
         stoppedByUser = true
@@ -682,6 +691,16 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         }
     }
 
+    /// The researcher's Stop ended a Background Assets attempt that also reported a failure.
+    private func acquisitionEndedAfterStop() {
+        phase = .unknown
+        Task { @MainActor in await refresh() }
+    }
+
+    /// Whether the "starts again from the beginning" note belongs beside Stop: it describes the
+    /// Hugging Face fetch. Nothing is said about what the system does on the other path.
+    var stopNoteApplies: Bool { acquirer?.kind != .backgroundAssets }
+
     // MARK: Events from the acquirer
 
     func acquisitionTotal(_ bytes: Int64, from sender: WhisperModelAcquirer) {
@@ -703,6 +722,11 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         acquirer = nil
         // Background Assets failed: this launch goes to the sidecar fetch, now, so the researcher
         // is not left with nothing. The next opportunity (a launch, Download Now) asks again.
+        if case .failed = outcome, ended.kind == .backgroundAssets, stopAsked {
+            // Stop landed together with a failure: the researcher's Stop wins, nothing starts.
+            acquisitionEndedAfterStop()
+            return
+        }
         if case .failed = outcome, ended.kind == .backgroundAssets {
             Self.logger.error("background assets failed; falling back to the sidecar fetch for this launch")
             backgroundAssetsUsable = false

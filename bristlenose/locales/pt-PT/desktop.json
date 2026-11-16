@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ de transferência",
     "done": "Concluído",
     "countsChoice": "Enviar contagens diárias anónimas para ajudar a melhorar o Bristlenose",
-    "countsExplain": "Uma vez por dia: a versão da app e onde a obteve, se esta é a primeira verificação de sempre ou a primeira deste mês e quantas vezes a janela de boas-vindas foi aberta. Nada sobre os seus projetos. Pode alterar isto nas Definições."
+    "countsExplain": "Uma vez por dia: versão, App Store ou transferência, primeira verificação de sempre ou do mês e aberturas da janela de boas-vindas. Nenhum identificador. Nada dos seus projetos. Pode alterar nas Definições."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Procurar novidades em bristlenose.app",
       "checkExplain": "No máximo uma vez por dia. As novidades e os eventos da comunidade aparecem na janela de boas-vindas.",
       "countsLabel": "Enviar contagens diárias anónimas",
-      "countsExplain": "Enviadas com a verificação diária: a versão da app e onde a obteve, se é a primeira verificação de sempre ou a primeira deste mês e quantas vezes a janela de boas-vindas foi aberta. Nada sobre os seus projetos.",
+      "countsExplain": "Uma vez por dia: versão, App Store ou transferência, primeira verificação de sempre ou do mês e aberturas da janela de boas-vindas. Nenhum identificador. Nada dos seus projetos.",
       "managed": "Gerido pela sua organização"
     }
   }

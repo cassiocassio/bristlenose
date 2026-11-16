@@ -70,12 +70,16 @@ struct NewsFetcherTests {
     }
 
     final class Clock: @unchecked Sendable { var now = NewsTestKit.date(2026, 12, 12) }
+    /// Every session a test makes, invalidated at clean-up (a session retains
+    /// its delegate until then: the `CloudNetworking` convention).
+    final class Sessions: @unchecked Sendable { var all: [URLSession] = [] }
 
     let k1 = Curve25519.Signing.PrivateKey()
     let k0 = Curve25519.Signing.PrivateKey()
     let suite = "news-tests-\(UUID().uuidString)"
     let defaults: UserDefaults
     let clock = Clock()
+    let sessions = Sessions()
 
     init() {
         defaults = UserDefaults(suiteName: suite)!
@@ -87,10 +91,12 @@ struct NewsFetcherTests {
                          channel: NewsCheck.Channel? = .store,
                          keyring: NewsCheck.Keyring? = nil) -> NewsFetcher {
         let clock = self.clock
+        let session = CloudNetworking.makeSession(delegate: LLMValidator.RefuseRedirects(),
+                                                  protocolClasses: [NewsStub.self])
+        sessions.all.append(session)
         return NewsFetcher(world: .init(
             defaults: defaults,
-            session: CloudNetworking.makeSession(delegate: LLMValidator.RefuseRedirects(),
-                                                 protocolClasses: [NewsStub.self]),
+            session: session,
             endpoint: endpoint,
             policy: .init(keyring: keyring ?? K.keyring(["k1": k1, "k0": k0]), requiredEnv: "prod"),
             channel: channel,
@@ -117,7 +123,11 @@ struct NewsFetcherTests {
         return Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value ?? "") })
     }
 
-    private func cleanUp() { defaults.removePersistentDomain(forName: suite) }
+    private func cleanUp() {
+        defaults.removePersistentDomain(forName: suite)
+        sessions.all.forEach { $0.invalidateAndCancel() }
+        sessions.all = []
+    }
 
     // MARK: Switches and gates
 
@@ -180,6 +190,22 @@ struct NewsFetcherTests {
         _ = await f.checkIfDue()
         #expect(NewsStub.seen.count == 1)
         #expect(NewsStub.seen[0].url?.absoluteString == "https://bristlenose.app/app/news?s=1")
+    }
+
+    @Test("No yes to counts: no version anywhere in the request, and a plain User-Agent",
+          arguments: [nil, false] as [Bool?])
+    func noVersionWithoutYes(consent: Bool?) async {
+        defer { cleanUp() }
+        if let consent { defaults.set(consent, forKey: NewsPreferences.countsKey) }
+        armFile()
+        _ = await fetcher().checkIfDue()
+        #expect(NewsStub.seen.count == 1)
+        let request = NewsStub.seen[0]
+        #expect(request.value(forHTTPHeaderField: "User-Agent") == "Bristlenose")
+        #expect(request.url?.absoluteString.contains("0.47.0") == false)
+        for (name, value) in request.allHTTPHeaderFields ?? [:] {
+            #expect(!value.contains("0.47"), "header \(name) carries the version")
+        }
     }
 
     @Test("A managed counts key sends no flags, even if it says yes")
@@ -266,10 +292,57 @@ struct NewsFetcherTests {
         f.recordWelcomeShown()
         NewsStub.arm(.init(fail: true))
         #expect(await f.checkIfDue() == .transportFailure)
+        clock.now = clock.now.addingTimeInterval(NewsFetcher.transportBackoff + 60)
         armFile()
         #expect(await f.checkIfDue() == .accepted)
         #expect(NewsStub.seen.count == 2)
         #expect(query(1)["first"] == "1" && query(1)["month"] == "1" && query(1)["w"] == "1")
+    }
+
+    @Test("After a transport failure, no retry in this process for 30 minutes")
+    func transportFailureBacksOff() async {
+        defer { cleanUp() }
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        let f = fetcher()
+        NewsStub.arm(.init(fail: true))
+        #expect(await f.checkIfDue() == .transportFailure)
+        armFile()
+        // Activation after activation (Cmd-Tab) while offline: nothing is sent.
+        clock.now = clock.now.addingTimeInterval(60)
+        #expect(await f.checkIfDue() == .backingOff)
+        clock.now = clock.now.addingTimeInterval(NewsFetcher.transportBackoff - 120)
+        #expect(await f.checkIfDue() == .backingOff)
+        #expect(NewsStub.seen.count == 1)
+        // Once the backoff has passed, one try, still carrying the kept flags.
+        clock.now = clock.now.addingTimeInterval(120)
+        #expect(await f.checkIfDue() == .accepted)
+        #expect(NewsStub.seen.count == 2)
+        #expect(query(1)["first"] == "1")
+    }
+
+    @Test("News switched off while the request is out: nothing is cached, the floor stays")
+    func switchedOffInFlight() async {
+        defer { cleanUp() }
+        let f = fetcher()
+        armFile()
+        var reply = NewsStub.reply
+        reply.delay = 0.3
+        NewsStub.arm(reply)
+        async let outcome = f.checkIfDue()
+        // Let the request leave, then switch news off while it is held.
+        let deadline = Date().addingTimeInterval(2)
+        while NewsStub.seen.isEmpty && Date() < deadline {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        defaults.set(false, forKey: NewsPreferences.enabledKey)
+        f.newsSwitchChanged()
+        #expect(await outcome == .newsOff)
+        #expect(NewsStub.seen.count == 1)
+        #expect(defaults.data(forKey: NewsStateKeys.production.envelope) == nil)
+        #expect(defaults.object(forKey: NewsStateKeys.production.maxIssued) == nil)
+        #expect(defaults.data(forKey: NewsStateKeys.production.maxIssuedDigest) == nil)
+        #expect(f.items.isEmpty)
+        #expect(f.currentItems().isEmpty)
     }
 
     @Test("A 404 spends the flags")
@@ -385,6 +458,35 @@ struct NewsFetcherTests {
         clock.now = K.date(2026, 12, 31, 1)
         f.reloadFromCache()
         #expect(f.items.isEmpty)
+    }
+
+    @Test("currentItems judges the time window now: an item past its until is gone without a fetch")
+    func currentItemsPastUntil() async {
+        defer { cleanUp() }
+        let f = fetcher()
+        armFile(K.payload(items: [K.item(id: "office-hours-2026-12-15",
+                                         until: K.date(2026, 12, 15))]))
+        #expect(await f.checkIfDue() == .accepted)
+        #expect(f.currentItems().map(\.id) == ["office-hours-2026-12-15"])
+        NewsStub.reset()
+        // No check runs: the item must go on the clock alone.
+        clock.now = K.date(2026, 12, 15).addingTimeInterval(60)
+        #expect(f.currentItems().isEmpty)
+        #expect(NewsStub.seen.isEmpty)
+        #expect(f.items.count == 1)  // the published list is untouched until a reload
+    }
+
+    @Test("A clicked news item is gone from the next window's currentItems")
+    func currentItemsAfterClick() async {
+        defer { cleanUp() }
+        let f = fetcher()
+        armFile(K.payload(items: [K.item(id: "office-hours-2026-12-15"),
+                                  K.item(id: "news-0-47", tone: "news")]))
+        _ = await f.checkIfDue()
+        let firstWindow = f.currentItems()
+        #expect(firstWindow.map(\.id) == ["news-0-47", "office-hours-2026-12-15"])
+        for item in firstWindow { f.recordClick(on: item) }
+        #expect(f.currentItems().map(\.id) == ["office-hours-2026-12-15"])
     }
 
     @Test("A clicked news item hides from the next load; a community item does not")

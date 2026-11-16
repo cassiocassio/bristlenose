@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ lataus",
     "done": "Valmis",
     "countsChoice": "Lähetä nimettömiä päivittäisiä laskureita Bristlenosen parantamiseksi",
-    "countsExplain": "Kerran päivässä: apin versio ja mistä hankit sen, onko tämä sen kaikkien aikojen ensimmäinen tarkistus vai tämän kuun ensimmäinen ja kuinka monta kertaa tervetuloikkuna avattiin. Ei mitään projekteistasi. Voit muuttaa tämän asetuksissa."
+    "countsExplain": "Kerran päivässä: versio, App Store vai lataus, ensimmäinen tarkistus ikinä tai tässä kuussa sekä tervetuloikkunan avauskerrat. Ei tunnistetta. Ei mitään projekteistasi. Muuta asetuksissa."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Tarkista uutiset bristlenose.appista",
       "checkExplain": "Enintään kerran päivässä. Uutiset ja yhteisön tapahtumat näkyvät tervetuloikkunassa.",
       "countsLabel": "Lähetä nimettömiä päivittäisiä laskureita",
-      "countsExplain": "Lähetetään päivittäisen tarkistuksen mukana: apin versio ja mistä hankit sen, onko kyseessä kaikkien aikojen ensimmäinen tarkistus vai tämän kuun ensimmäinen ja kuinka monta kertaa tervetuloikkuna avattiin. Ei mitään projekteistasi.",
+      "countsExplain": "Kerran päivässä: versio, App Store vai lataus, ensimmäinen tarkistus ikinä tai tässä kuussa sekä tervetuloikkunan avauskerrat. Ei tunnistetta. Ei mitään projekteistasi.",
       "managed": "Organisaatiosi hallinnoima"
     }
   }

@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ download",
     "done": "Klaar",
     "countsChoice": "Stuur anonieme dagelijkse tellingen om Bristlenose te helpen verbeteren",
-    "countsExplain": "Eén keer per dag: de versie van de app en waar je die vandaan hebt, of dit de allereerste controle is of de eerste van deze maand, en hoe vaak het welkomstvenster is geopend. Niets over je projecten. Je kunt dit wijzigen in Instellingen."
+    "countsExplain": "Eens per dag: versie, App Store of download, eerste controle ooit of deze maand, en openingen van het welkomstvenster. Geen ID. Niets uit je projecten. Wijzig dit in Instellingen."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Zoek naar nieuws op bristlenose.app",
       "checkExplain": "Hooguit één keer per dag. Nieuws en communityevenementen verschijnen in het welkomstvenster.",
       "countsLabel": "Stuur anonieme dagelijkse tellingen",
-      "countsExplain": "Verstuurd met de dagelijkse controle: de versie van de app en waar je die vandaan hebt, of het de allereerste controle is of de eerste van deze maand, en hoe vaak het welkomstvenster is geopend. Niets over je projecten.",
+      "countsExplain": "Eens per dag: versie, App Store of download, eerste controle ooit of deze maand, en openingen van het welkomstvenster. Geen ID. Niets uit je projecten.",
       "managed": "Beheerd door je organisatie"
     }
   }

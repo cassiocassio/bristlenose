@@ -911,7 +911,7 @@
     "ollamaDownloadSize": "~%@ download",
     "done": "Done",
     "countsChoice": "Send anonymous daily counts to help improve Bristlenose",
-    "countsExplain": "Once a day: the app's version and where you got it, whether this is its first check ever or this month, and how many times the Welcome window opened. Nothing about your projects. You can change this in Settings."
+    "countsExplain": "Once a day: version, store or download, first check ever or this month, and Welcome window opens. No identifier. Nothing from your projects. Change it in Settings."
   },
   "llmSettings": {
     "validation": {
@@ -1388,7 +1388,7 @@
       "checkLabel": "Check bristlenose.app for news",
       "checkExplain": "At most once a day. News and community events appear in the Welcome window.",
       "countsLabel": "Send anonymous daily counts",
-      "countsExplain": "Sent with the daily check: the app's version and where you got it, whether it is the first check ever or this month, and how many times the Welcome window opened. Nothing about your projects.",
+      "countsExplain": "Once a day: version, store or download, first check ever or this month, and Welcome window opens. No identifier. Nothing from your projects.",
       "managed": "Managed by your organisation"
     }
   }

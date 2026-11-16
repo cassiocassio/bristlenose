@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ download",
     "done": "Færdig",
     "countsChoice": "Send anonyme daglige optællinger for at hjælpe med at forbedre Bristlenose",
-    "countsExplain": "Én gang om dagen: appens version og hvor du har den fra, om det er dens allerførste tjek eller første i denne måned, og hvor mange gange velkomstvinduet er blevet åbnet. Intet om dine projekter. Du kan ændre det i Indstillinger."
+    "countsExplain": "Én gang om dagen: version, App Store eller download, første tjek nogensinde eller i denne måned og åbninger af velkomstvinduet. Intet id. Intet fra dine projekter. Kan ændres i Indstillinger."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Tjek bristlenose.app for nyheder",
       "checkExplain": "Højst én gang om dagen. Nyheder og fællesskabsbegivenheder vises i velkomstvinduet.",
       "countsLabel": "Send anonyme daglige optællinger",
-      "countsExplain": "Sendes med det daglige tjek: appens version og hvor du har den fra, om det er det allerførste tjek eller første i denne måned, og hvor mange gange velkomstvinduet er blevet åbnet. Intet om dine projekter.",
+      "countsExplain": "Én gang om dagen: version, App Store eller download, første tjek nogensinde eller i denne måned og åbninger af velkomstvinduet. Intet id. Intet fra dine projekter.",
       "managed": "Administreres af din organisation"
     }
   }

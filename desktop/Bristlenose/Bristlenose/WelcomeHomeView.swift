@@ -580,8 +580,15 @@ enum WelcomeNewsTone {
     }
 
     /// The tint colour set, alpha baked in per appearance and with an Increase
-    /// Contrast variant (~5 %). Measured against AA for the link, the title and
-    /// the secondary text on each surface: see the colour sets' commit.
+    /// Contrast variant (5 %). Contrast (WCAG ratio, AA needs 4.5) of the link
+    /// and the secondary body text on the tinted card:
+    /// - Default community, light (11 %): link 4.51, body 3.83.
+    /// - Default community, dark (18 %): link 4.85, body 5.21.
+    /// - Edo community, light (12 %): Prussian link (`PaletteEdoNewsLink`) 5.90.
+    /// - Edo, dark (20 %) on `PaletteEdoPaper` dark #3A2E1C, link #A6D1F5 and
+    ///   body white at 70 % (`PaletteEdoNewsSecondary`): community (#EB8BA5)
+    ///   link 5.75, body 5.50; news (#B9AEDD) link 5.51, body 5.33.
+    /// Recompute these when a tint, the paper or a text colour changes.
     static func tintAsset(for tone: NewsCheck.Tone, edo: Bool) -> String {
         let palette = edo ? "PaletteEdo" : "PaletteDefault"
         switch tone {
@@ -1088,6 +1095,11 @@ private struct SlotRotator: View {
             // `Setup →`); the AppKit Settings window opens on the requested pane directly, so
             // no SettingsLink (tied to the removed SwiftUI Settings scene) and no tab-key hack.
             if let news = item.news {
+                // v1 news has no graphic, so nothing fills the slot's middle: push
+                // the link down to where the drawn slides put theirs (under the
+                // illustration, just above the dots), as the approved mockup does,
+                // rather than leaving it floating under the text with a gap below.
+                if item.illustration == .none { Spacer(minLength: 8) }
                 // A Button rather than a `Link` so the click is recorded before
                 // the browser opens; drawn as a link. The href passed the app's
                 // allowlist in `NewsCheck.validateLink`. Words verbatim; the

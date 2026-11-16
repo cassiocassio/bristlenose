@@ -513,6 +513,15 @@ struct FieldRules {
         #expect(item.link == "Details")
     }
 
+    @Test("Line and paragraph separators become spaces; tag characters are stripped")
+    func separatorsAndTags() {
+        #expect(NewsCheck.sanitize("Line one\u{2028}two\u{2029}three") == "Line one two three")
+        // Tag characters spell hidden text ("hi") and must not survive.
+        #expect(NewsCheck.sanitize("Office\u{E0001}\u{E0068}\u{E0069}\u{E007F} hours")
+                == "Office hours")
+        #expect(NewsCheck.sanitize("\u{E0000}\u{2028}") == "")
+    }
+
     @Test("A kind in the file is ignored, never a failure; the eyebrow is the tone's")
     func kindIgnored() throws {
         let withKind = try shown(K.item(text: ["en": [

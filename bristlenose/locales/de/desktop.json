@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ Download",
     "done": "Fertig",
     "countsChoice": "Anonyme tägliche Zählungen senden, um Bristlenose zu verbessern",
-    "countsExplain": "Einmal täglich: die Version der App und woher Sie sie haben, ob dies ihre allererste Prüfung oder die erste in diesem Monat ist und wie oft das Willkommensfenster geöffnet wurde. Nichts über Ihre Projekte. Sie können das in den Einstellungen ändern."
+    "countsExplain": "Einmal täglich: Version, App Store oder Download, erste Prüfung überhaupt oder in diesem Monat und Öffnungen des Willkommensfensters. Keine Kennung. Nichts aus Ihren Projekten. Änderbar in den Einstellungen."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Auf bristlenose.app nach Neuigkeiten suchen",
       "checkExplain": "Höchstens einmal täglich. Neuigkeiten und Community-Termine erscheinen im Willkommensfenster.",
       "countsLabel": "Anonyme tägliche Zählungen senden",
-      "countsExplain": "Mit der täglichen Prüfung gesendet: die Version der App und woher Sie sie haben, ob es die allererste Prüfung oder die erste in diesem Monat ist und wie oft das Willkommensfenster geöffnet wurde. Nichts über Ihre Projekte.",
+      "countsExplain": "Einmal täglich: Version, App Store oder Download, erste Prüfung überhaupt oder in diesem Monat und Öffnungen des Willkommensfensters. Keine Kennung. Nichts aus Ihren Projekten.",
       "managed": "Von Ihrer Organisation verwaltet"
     }
   }

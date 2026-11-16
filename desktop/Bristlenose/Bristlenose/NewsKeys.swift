@@ -36,6 +36,19 @@ enum NewsKeys {
                           backupKID: backupKID)
     }
 
+    /// Whether this build can ever accept a news file. While it can't (today:
+    /// the production keys are empty), the app also shows NO news or counts
+    /// controls: no first-run checkbox, no Settings rows. A switch for
+    /// something that never happens is an offer the build can't keep, and
+    /// the store build's declarations ("Data Not Collected") stay true.
+    static var isLive: Bool {
+        #if DEBUG
+        NewsCheck.mayRequest(with: stagingKeyring)
+        #else
+        NewsCheck.mayRequest(with: productionKeyring)
+        #endif
+    }
+
     #if DEBUG
     /// The staging key, accepted **only** by Debug builds, and only for files
     /// whose `env` is `staging`, fetched from `BRISTLENOSE_DEBUG_NEWS_URL`.

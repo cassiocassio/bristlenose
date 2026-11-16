@@ -66,12 +66,17 @@ enum WelcomeWindow {
 /// frame-restoring accessor underneath.
 struct WelcomeWindowContent: View {
     @EnvironmentObject private var news: NewsFetcher
+    /// This window's news, taken once when it is first built and kept for its
+    /// life: a fetch, a click or a passing `until` never changes slides under
+    /// a reader. The next window asks again.
+    @State private var snapshot: [NewsItem]?
 
     var body: some View {
-        // `news.items` is read on every body pass, but the view takes it as a
-        // snapshot once per window (`WelcomeHomeView.init`): a fetch never
-        // changes slides under a reader. A new item first shows next time.
-        WelcomeHomeView(newsItems: news.items,
+        // Asked fresh while this window has no snapshot, so the time window,
+        // the file's expiry and earlier clicks are judged now, not when the
+        // cache was last loaded (which may have been days ago).
+        let newsItems = snapshot ?? news.currentItems()
+        WelcomeHomeView(newsItems: newsItems,
                         onNewsLink: { news.recordClick(on: $0) })
             .frame(minWidth: WelcomeWindow.minimumContentWidth,
                    idealWidth: WelcomeWindow.naturalContentWidth,
@@ -82,7 +87,10 @@ struct WelcomeWindowContent: View {
             .background(WelcomeWindowFrameAccessor())
             // Once per Welcome window shown (the scene rebuilds this view on
             // every open). Counted only while news is on and counts are a yes.
-            .onAppear { news.recordWelcomeShown() }
+            .onAppear {
+                if snapshot == nil { snapshot = newsItems }
+                news.recordWelcomeShown()
+            }
     }
 }
 

@@ -961,7 +961,7 @@
     "ollamaDownloadSize": "~%@ ke stažení",
     "done": "Hotovo",
     "countsChoice": "Odesílat anonymní denní počty a pomoci tak vylepšit Bristlenose",
-    "countsExplain": "Jednou denně: verze aplikace a odkud jste ji získali, zda jde o vůbec první kontrolu nebo první v tomto měsíci a kolikrát se otevřelo uvítací okno. Nic o vašich projektech. Můžete to změnit v Nastavení."
+    "countsExplain": "Jednou denně: verze, App Store nebo stažení, první kontrola vůbec nebo v tomto měsíci a otevření uvítacího okna. Žádný identifikátor. Nic z vašich projektů. Lze změnit v Nastavení."
   },
   "llmSettings": {
     "validation": {
@@ -1465,7 +1465,7 @@
       "checkLabel": "Kontrolovat novinky na bristlenose.app",
       "checkExplain": "Nejvýše jednou denně. Novinky a komunitní akce se zobrazí v uvítacím okně.",
       "countsLabel": "Odesílat anonymní denní počty",
-      "countsExplain": "Odesílá se s denní kontrolou: verze aplikace a odkud jste ji získali, zda jde o vůbec první kontrolu nebo první v tomto měsíci a kolikrát se otevřelo uvítací okno. Nic o vašich projektech.",
+      "countsExplain": "Jednou denně: verze, App Store nebo stažení, první kontrola vůbec nebo v tomto měsíci a otevření uvítacího okna. Žádný identifikátor. Nic z vašich projektů.",
       "managed": "Spravováno vaší organizací"
     }
   }

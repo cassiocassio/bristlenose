@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ indirme",
     "done": "Bitti",
     "countsChoice": "Bristlenose’un geliştirilmesine yardımcı olmak için anonim günlük sayımlar gönder",
-    "countsExplain": "Günde bir kez: uygulamanın sürümü ve nereden edindiğiniz, bunun ilk denetim mi yoksa bu ayın ilk denetimi mi olduğu ve hoş geldiniz penceresinin kaç kez açıldığı. Projelerinizle ilgili hiçbir şey yok. Bunu Ayarlar’da değiştirebilirsiniz."
+    "countsExplain": "Günde bir kez: sürüm, App Store veya indirme, ilk denetim (hiç ya da bu ay) ve karşılama penceresinin açılışları. Kimlik yok. Projelerinizden hiçbir şey yok. Ayarlar'dan değiştirilebilir."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Haberler için bristlenose.app’i denetle",
       "checkExplain": "En fazla günde bir kez. Haberler ve topluluk etkinlikleri hoş geldiniz penceresinde görünür.",
       "countsLabel": "Anonim günlük sayımlar gönder",
-      "countsExplain": "Günlük denetimle gönderilir: uygulamanın sürümü ve nereden edindiğiniz, ilk denetim mi yoksa bu ayın ilk denetimi mi olduğu ve hoş geldiniz penceresinin kaç kez açıldığı. Projelerinizle ilgili hiçbir şey yok.",
+      "countsExplain": "Günde bir kez: sürüm, App Store veya indirme, ilk denetim (hiç ya da bu ay) ve karşılama penceresinin açılışları. Kimlik yok. Projelerinizden hiçbir şey yok.",
       "managed": "Kuruluşunuz tarafından yönetiliyor"
     }
   }

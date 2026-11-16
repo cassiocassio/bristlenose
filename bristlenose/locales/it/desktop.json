@@ -906,7 +906,7 @@
     "ollamaDownloadSize": "~%@ di download",
     "done": "Fine",
     "countsChoice": "Invia conteggi giornalieri anonimi per aiutare a migliorare Bristlenose",
-    "countsExplain": "Una volta al giorno: la versione dell'app e da dove l'hai ottenuta, se è il suo primo controllo in assoluto o il primo del mese e quante volte si è aperta la finestra di benvenuto. Niente sui tuoi progetti. Puoi cambiarlo in Impostazioni."
+    "countsExplain": "Una volta al giorno: versione, App Store o download, primo controllo in assoluto o del mese e aperture della finestra di benvenuto. Nessun identificativo. Niente dai progetti. Modificabile in Impostazioni."
   },
   "llmSettings": {
     "validation": {
@@ -1383,7 +1383,7 @@
       "checkLabel": "Cerca novità su bristlenose.app",
       "checkExplain": "Al massimo una volta al giorno. Le novità e gli eventi della community compaiono nella finestra di benvenuto.",
       "countsLabel": "Invia conteggi giornalieri anonimi",
-      "countsExplain": "Inviati con il controllo giornaliero: la versione dell'app e da dove l'hai ottenuta, se è il primo controllo in assoluto o il primo del mese e quante volte si è aperta la finestra di benvenuto. Niente sui tuoi progetti.",
+      "countsExplain": "Una volta al giorno: versione, App Store o download, primo controllo in assoluto o del mese e aperture della finestra di benvenuto. Nessun identificativo. Niente dai progetti.",
       "managed": "Gestito dalla tua organizzazione"
     }
   }

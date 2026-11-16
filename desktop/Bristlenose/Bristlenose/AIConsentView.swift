@@ -51,8 +51,10 @@ struct AIConsentView: View {
     /// D1, path B). **Off until ticked**: an explicit choice, never a
     /// pre-ticked box. Written as `true` or `false` when the disclosure is
     /// answered, by either button. Shown on first run only, not in review mode:
-    /// existing users are never prompted, and change it in Settings ▸ General.
-    /// This is not a disclosure change, so `currentVersion` is untouched.
+    /// existing users are not prompted unless the disclosure version
+    /// (`currentVersion`) is bumped, which shows the whole disclosure again;
+    /// otherwise they change it in Settings ▸ General. Adding this choice is
+    /// not a disclosure change, so `currentVersion` is untouched.
     @State private var sendCounts = NewsPreferences.countsChoiceStartsOn(
         in: .standard, isForced: NewsPreferences.isManaged)
 
@@ -72,7 +74,7 @@ struct AIConsentView: View {
             providersRow
             responsibilityText
 
-            if !isReviewMode {
+            if !isReviewMode && NewsKeys.isLive {
                 countsChoice
             }
 
@@ -209,7 +211,8 @@ struct AIConsentView: View {
 
     /// Both buttons answer the disclosure, so both record the counts choice.
     private func recordCountsChoice() {
-        guard !isReviewMode else { return }
+        // Not shown, not answered: a hidden box must not record a "no".
+        guard !isReviewMode, NewsKeys.isLive else { return }
         NewsPreferences.recordCountsAnswer(sendCounts, in: .standard,
                                            isForced: NewsPreferences.isManaged)
     }

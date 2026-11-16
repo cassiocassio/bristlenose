@@ -526,14 +526,18 @@ enum NewsCheck {
         return cleaned
     }
 
-    /// Removes bidirectional controls and zero-width characters, turns other
-    /// control characters (newlines, tabs) into spaces, and trims. Nothing else
-    /// changes: Markdown stays literal (the card draws it with `Text(verbatim:)`).
+    /// Removes bidirectional controls, zero-width characters and tag
+    /// characters, turns line breaks (control characters such as newlines and
+    /// tabs, and the Unicode line and paragraph separators) into spaces, and
+    /// trims. Nothing else changes: Markdown stays literal (the card draws it
+    /// with `Text(verbatim:)`).
     static func sanitize(_ raw: String) -> String {
         var scalars = String.UnicodeScalarView()
         for scalar in raw.unicodeScalars {
             if isInvisibleFormatting(scalar) { continue }
-            scalars.append(scalar.properties.generalCategory == .control ? " " : scalar)
+            let breaks = scalar.properties.generalCategory == .control
+                || scalar.value == 0x2028 || scalar.value == 0x2029
+            scalars.append(breaks ? " " : scalar)
         }
         return String(scalars).trimmingCharacters(in: .whitespaces)
     }
@@ -546,7 +550,8 @@ enum NewsCheck {
              0x202A...0x202E,  // LRE, RLE, PDF, LRO, RLO
              0x2060...0x2064,  // word joiner, invisible operators
              0x2066...0x2069,  // LRI, RLI, FSI, PDI
-             0xFEFF:           // zero-width no-break space / BOM
+             0xFEFF,           // zero-width no-break space / BOM
+             0xE0000...0xE007F: // tag characters (invisible; can carry hidden text)
             return true
         default:
             return false

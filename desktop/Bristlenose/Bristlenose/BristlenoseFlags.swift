@@ -172,13 +172,30 @@ enum NewsPreferences {
 
     /// On unless written off. A managed value is what `UserDefaults` returns
     /// (the forced domain wins the search), so a profile's `false` is read
-    /// here as off and cannot be switched back on; `isForced` only tells the
-    /// Settings row to show as locked.
-    static func newsEnabled(in defaults: UserDefaults, isForced: (String) -> Bool) -> Bool {
-        if isForced(enabledKey), (defaults.object(forKey: enabledKey) as? Bool) != true {
-            return false
-        }
+    /// here as off and cannot be switched back on.
+    ///
+    /// A profile's `true` is not a lock: a forced value never turns anything
+    /// on, so the switch stays the person's. `UserDefaults` would answer the
+    /// forced `true` whatever they chose, so their own choice is read from
+    /// their own domain (`ownValue`, default `ownStoredValue`).
+    static func newsEnabled(in defaults: UserDefaults, isForced: (String) -> Bool,
+                            ownValue: (String) -> Any? = ownStoredValue) -> Bool {
+        if isForcedOff(enabledKey, in: defaults, isForced: isForced) { return false }
+        if isForced(enabledKey) { return ownValue(enabledKey) as? Bool ?? true }
         return defaults.object(forKey: enabledKey) as? Bool ?? true
+    }
+
+    /// Forced, and to anything but `true`: the only managed state that locks.
+    static func isForcedOff(_ key: String, in defaults: UserDefaults,
+                            isForced: (String) -> Bool) -> Bool {
+        isForced(key) && (defaults.object(forKey: key) as? Bool) != true
+    }
+
+    /// The person's own value for `key` in this app's user domain, which a
+    /// configuration profile's managed domain does not touch.
+    static func ownStoredValue(_ key: String) -> Any? {
+        CFPreferencesCopyValue(key as CFString, kCFPreferencesCurrentApplication,
+                               kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
     }
 
     static func countsConsent(in defaults: UserDefaults,
@@ -216,8 +233,10 @@ enum NewsPreferences {
         var isLocked: Bool
     }
 
-    static func newsRow(in defaults: UserDefaults, isForced: (String) -> Bool) -> Row {
-        Row(isOn: newsEnabled(in: defaults, isForced: isForced), isLocked: isForced(enabledKey))
+    static func newsRow(in defaults: UserDefaults, isForced: (String) -> Bool,
+                        ownValue: (String) -> Any? = ownStoredValue) -> Row {
+        Row(isOn: newsEnabled(in: defaults, isForced: isForced, ownValue: ownValue),
+            isLocked: isForcedOff(enabledKey, in: defaults, isForced: isForced))
     }
 
     static func countsRow(in defaults: UserDefaults, isForced: (String) -> Bool) -> Row {

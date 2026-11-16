@@ -104,24 +104,27 @@ struct GeneralSettingsView: View {
             // News and the anonymous counts: two switches, each the stock
             // switch row with a secondary line, the way the notification row
             // above is built. A profile can lock either; the row then says so.
-            Section {
-                newsSwitch(
-                    label: i18n.t("desktop.news.settings.checkLabel"),
-                    explanation: i18n.t("desktop.news.settings.checkExplain"),
-                    row: NewsPreferences.newsRow(in: .standard, isForced: NewsPreferences.isManaged),
-                    set: { on in
-                        newsStored = on
-                        SettingsWindow.shared.newsFetcher?.newsSwitchChanged()
-                    })
-                newsSwitch(
-                    label: i18n.t("desktop.news.settings.countsLabel"),
-                    explanation: i18n.t("desktop.news.settings.countsExplain"),
-                    row: NewsPreferences.countsRow(in: .standard, isForced: NewsPreferences.isManaged),
-                    set: { on in
-                        NewsPreferences.recordCountsAnswer(on, in: .standard,
-                                                           isForced: NewsPreferences.isManaged)
-                        countsStored = on
-                    })
+            // Shown only once this build can receive news (NewsKeys.isLive).
+            if NewsKeys.isLive {
+                Section {
+                    newsSwitch(
+                        label: i18n.t("desktop.news.settings.checkLabel"),
+                        explanation: i18n.t("desktop.news.settings.checkExplain"),
+                        row: NewsPreferences.newsRow(in: .standard, isForced: NewsPreferences.isManaged),
+                        set: { on in
+                            newsStored = on
+                            SettingsWindow.shared.newsFetcher?.newsSwitchChanged()
+                        })
+                    newsSwitch(
+                        label: i18n.t("desktop.news.settings.countsLabel"),
+                        explanation: i18n.t("desktop.news.settings.countsExplain"),
+                        row: NewsPreferences.countsRow(in: .standard, isForced: NewsPreferences.isManaged),
+                        set: { on in
+                            NewsPreferences.recordCountsAnswer(on, in: .standard,
+                                                               isForced: NewsPreferences.isManaged)
+                            countsStored = on
+                        })
+                }
             }
         }
         .formStyle(.grouped)

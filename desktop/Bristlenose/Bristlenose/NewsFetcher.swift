@@ -39,7 +39,7 @@ struct NewsStateKeys {
 /// **Ownership.** An app-level object, like `ServeFleet`: a `@StateObject`
 /// in `BristlenoseApp`, which calls `checkIfDue()` once the first window is up
 /// and again on wake and on activation (never on a timer), and hands it to the
-/// Welcome window, which reads `items` once per window and calls
+/// Welcome window, which asks `currentItems()` once per window and calls
 /// `recordWelcomeShown()` once per window, and to Settings ▸ General. Two
 /// windows must share one instance, because the single-flight guard below is
 /// what stops a launch and a wake from both sending `first=1`.
@@ -47,8 +47,10 @@ struct NewsStateKeys {
 final class NewsFetcher: ObservableObject {
 
     /// The current displayable items, from the **cached** verified file only.
-    /// A fetch refreshes the cache and then this; a welcome window reads it
-    /// once when it builds its slides, so a slide never jumps under a reader.
+    /// A fetch refreshes the cache and then this. A welcome window does not
+    /// read it: it asks `currentItems()` once when it builds its slides, so
+    /// the time window, the file's expiry and clicks are judged at that moment
+    /// and a slide never jumps under a reader.
     @Published private(set) var items: [NewsItem] = []
 
     /// What one `checkIfDue()` did. For tests and logs; nothing is shown.
@@ -60,6 +62,9 @@ final class NewsFetcher: ObservableObject {
         case noEndpoint
         case notDue
         case alreadyInFlight
+        /// A recent transport failure: no retry in this process until
+        /// `transportBackoff` has passed (activation fires on every Cmd-Tab).
+        case backingOff
         case transportFailure
         /// An HTTP response that was not an acceptable file (the flags are spent).
         case notAFile(status: Int)
@@ -87,6 +92,11 @@ final class NewsFetcher: ObservableObject {
 
     private let world: World
     private var inFlight = false
+    /// Set by a transport failure; the next attempt waits until then.
+    private var retryNotBefore: Date?
+    /// How long a transport failure holds the next attempt off. The flags are
+    /// kept meanwhile, so nothing is lost by waiting.
+    static let transportBackoff: TimeInterval = 30 * 60
     private static let log = Logger(subsystem: "app.bristlenose", category: "news")
 
     init(world: World) {
@@ -173,32 +183,47 @@ final class NewsFetcher: ObservableObject {
         guard NewsCheck.mayRequest(with: world.policy.keyring) else { return .noKeys }
         guard let endpoint = world.endpoint else { return .noEndpoint }
         guard !inFlight else { return .alreadyInFlight }
+        if let retryNotBefore, world.now() < retryNotBefore { return .backingOff }
 
         let before = loadState()
         let serverNow = NewsCheck.estimatedServerNow(before, localNow: world.now())
         guard NewsCheck.isDue(before, serverNow: serverNow) else { return .notDue }
 
-        let query = NewsCheck.query(state: before, consent: countsConsent,
+        let consent = countsConsent
+        let query = NewsCheck.query(state: before, consent: consent,
                                     appVersion: world.appVersion, channel: world.channel,
                                     serverNow: serverNow)
         guard let url = query.url(base: endpoint) else { return .noEndpoint }
 
         inFlight = true
         defer { inFlight = false }
-        let result = await Self.fetch(Self.request(url, appVersion: world.appVersion,
-                                                   timeout: world.timeout),
-                                      session: world.session, cap: NewsCheck.maxEnvelopeBytes,
-                                      deadline: world.timeout)
+        // The version reaches the host's log in the User-Agent too, so it
+        // rides there only with the same yes that puts `v` in the query.
+        let result = await Self.fetch(
+            Self.request(url, appVersion: consent == .yes ? world.appVersion : nil,
+                         timeout: world.timeout),
+            session: world.session, cap: NewsCheck.maxEnvelopeBytes, deadline: world.timeout)
 
         guard case let .response(status, contentType, serverDate, body) = result else {
-            // No response at all: the flags are kept for the next try.
+            // No response at all: the flags are kept for the next try, which
+            // waits out the backoff rather than following every activation.
+            retryNotBefore = world.now().addingTimeInterval(Self.transportBackoff)
             return .transportFailure
         }
+        retryNotBefore = nil
         // Any HTTP response reached the log: the flags are spent. Re-read the
         // state so views recorded during the request are kept.
         let after = NewsCheck.afterResponse(loadState(), sent: query, serverDate: serverDate,
                                             localNow: world.now())
         saveState(after)
+
+        // News was switched off while the request was out: the flags are
+        // spent (the request reached the log), but nothing it brought is kept,
+        // the replay floor does not move, and the cache stays deleted.
+        guard newsEnabled else {
+            deleteCache()
+            return .newsOff
+        }
 
         guard NewsCheck.isAcceptableResponse(status: status, contentType: contentType),
               let body
@@ -242,28 +267,29 @@ final class NewsFetcher: ObservableObject {
 
     // MARK: Cache
 
-    /// Re-verifies the stored envelope (signature, revocation, freshness,
-    /// expiry, `env`) and republishes `items` from it.
+    /// Re-verifies the stored envelope and republishes `items` from it.
     func reloadFromCache() {
+        items = currentItems()
+    }
+
+    /// The items to show if a window were built now: the stored envelope
+    /// re-verified (signature, revocation, freshness, expiry, `env`), then
+    /// filtered at this moment (each item's `from`/`until`, clicked `news`
+    /// items). Publishes nothing, so a view may call it while building.
+    func currentItems() -> [NewsItem] {
         guard newsEnabled,
               let envelope = world.defaults.data(forKey: world.keys.envelope)
-        else {
-            items = []
-            return
-        }
+        else { return [] }
         let serverNow = NewsCheck.estimatedServerNow(loadState(), localNow: world.now())
         let verification = NewsCheck.verify(envelope: envelope, policy: world.policy,
                                             revoked: revoked, freshness: freshness,
                                             now: serverNow)
-        guard case let .success(file) = verification.result else {
-            items = []
-            return
-        }
+        guard case let .success(file) = verification.result else { return [] }
         let context = NewsCheck.DisplayContext(
             channel: world.channel, appVersion: world.appVersion,
             interfaceLanguage: world.interfaceLanguage(), now: serverNow,
             hiddenIDs: Set(world.defaults.stringArray(forKey: world.keys.seen) ?? []))
-        items = NewsCheck.displayableItems(file, context: context)
+        return NewsCheck.displayableItems(file, context: context)
     }
 
     private func deleteCache() {
@@ -317,13 +343,15 @@ final class NewsFetcher: ObservableObject {
     /// it empty is the only way to stop CFNetwork filling in the weighted
     /// language list (measured 16 Nov 2026: an unset header sent
     /// `en-GB,en;q=0.9`; an empty one sends the header with no value).
-    nonisolated static func request(_ url: URL, appVersion: String,
+    /// `appVersion` nil (no counts yes): the User-Agent is plain `Bristlenose`.
+    nonisolated static func request(_ url: URL, appVersion: String?,
                                     timeout: TimeInterval) -> URLRequest {
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData,
                                  timeoutInterval: timeout)
         request.httpMethod = "GET"
         request.httpShouldHandleCookies = false
-        request.setValue("Bristlenose/\(appVersion)", forHTTPHeaderField: "User-Agent")
+        let agent = appVersion.map { "Bristlenose/\($0)" } ?? "Bristlenose"
+        request.setValue(agent, forHTTPHeaderField: "User-Agent")
         request.setValue("", forHTTPHeaderField: "Accept-Language")
         return request
     }

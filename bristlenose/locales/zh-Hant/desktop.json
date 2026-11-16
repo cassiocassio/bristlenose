@@ -878,7 +878,7 @@
     "ollamaDownloadSize": "約 %@ 下載量",
     "done": "完成",
     "countsChoice": "傳送匿名每日計數以協助改進 Bristlenose",
-    "countsExplain": "每天一次：App 的版本與取得來源、這是否為它的首次檢查或本月首次檢查，以及歡迎視窗開啟的次數。不包含任何與你的專案有關的資訊。你可以在「設定」中更改。"
+    "countsExplain": "每天一次：版本、App Store 或下載、是否為首次或本月首次檢查、歡迎視窗開啟次數。沒有識別碼。不含你的專案內容。可在「設定」中更改。"
   },
   "llmSettings": {
     "validation": {
@@ -1332,7 +1332,7 @@
       "checkLabel": "在 bristlenose.app 檢查最新消息",
       "checkExplain": "每天最多一次。最新消息與社群活動會顯示在歡迎視窗中。",
       "countsLabel": "傳送匿名每日計數",
-      "countsExplain": "隨每日檢查一起傳送：App 的版本與取得來源、這是否為首次檢查或本月首次檢查，以及歡迎視窗開啟的次數。不包含任何與你的專案有關的資訊。",
+      "countsExplain": "每天一次：版本、App Store 或下載、是否為首次或本月首次檢查、歡迎視窗開啟次數。沒有識別碼。不含你的專案內容。",
       "managed": "由你的組織管理"
     }
   }

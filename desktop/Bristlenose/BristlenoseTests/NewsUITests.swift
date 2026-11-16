@@ -77,6 +77,25 @@ struct NewsUITests {
         #expect(NewsPreferences.countsRow(in: defaults, isForced: forced) == .init(isOn: false, isLocked: true))
     }
 
+    @Test("A profile forcing news ON is not a lock: the switch stays the person's")
+    func forcedNewsOnIsNotALock() {
+        defer { cleanUp() }
+        let forced: (String) -> Bool = { $0 == NewsPreferences.enabledKey }
+        // What UserDefaults answers under a profile's `true`, whatever the person chose.
+        defaults.set(true, forKey: NewsPreferences.enabledKey)
+        var own: Bool?
+        let ownValue: (String) -> Any? = { _ in own }
+        #expect(NewsPreferences.newsRow(in: defaults, isForced: forced, ownValue: ownValue)
+                == .init(isOn: true, isLocked: false))
+        // The person turns it off in their own domain: off, still unlocked.
+        own = false
+        #expect(!NewsPreferences.newsEnabled(in: defaults, isForced: forced, ownValue: ownValue))
+        #expect(NewsPreferences.newsRow(in: defaults, isForced: forced, ownValue: ownValue)
+                == .init(isOn: false, isLocked: false))
+        own = true
+        #expect(NewsPreferences.newsEnabled(in: defaults, isForced: forced, ownValue: ownValue))
+    }
+
     @Test("The Settings explanation carries one link, the privacy page, whatever the text says")
     func settingsExplanationLink() {
         let text = GeneralSettingsView.explanation("See [x](https://e.com) here.", privacy: "Privacy")

@@ -221,8 +221,12 @@ def _has_recording(session: InputSession) -> bool:
 
 
 def _any_recording(sessions: Sequence[InputSession]) -> bool:
-    """Whether any session holds a recording: else audio was never extracted or transcribed."""
-    return any(_has_recording(s) for s in sessions)
+    """Whether any session needs its recording read: else no audio was extracted or transcribed.
+
+    A video beside its own transcript (a Teams or Zoom export) is not decoded and not
+    sent to Whisper (``has_existing_transcript``), so it does not count.
+    """
+    return any(_has_recording(s) and not s.has_existing_transcript for s in sessions)
 
 
 def _transcribed_verb(sessions: Sequence[InputSession]) -> str:
@@ -2841,13 +2845,13 @@ class Pipeline:
                 _n_new_tx = len(_new_tx_sessions)
                 if _cached_segments and _n_new_tx:
                     msg = (
-                        f"{_transcribed_verb(sessions)} {count_noun(len(_tx_sessions), 'session')}"
+                        f"{_transcribed_verb(_tx_sessions)} {count_noun(len(_tx_sessions), 'session')}"
                         f" ({count_noun(total_segments, 'segment')},"
                         f" {count_noun(_n_new_tx, 'new session')})"
                     )
                 else:
                     msg = (
-                        f"{_transcribed_verb(sessions)} {count_noun(len(_tx_sessions), 'session')}"
+                        f"{_transcribed_verb(_tx_sessions)} {count_noun(len(_tx_sessions), 'session')}"
                         f" ({count_noun(total_segments, 'segment')}"
                     )
                     if audio_str:

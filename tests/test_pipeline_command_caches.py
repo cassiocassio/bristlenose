@@ -734,7 +734,8 @@ def test_a_skip_run_beside_a_transcript_counts_only_what_it_read(
 
     printed = out.getvalue()
     assert "2 recordings not transcribed (--skip-transcription)" in printed, printed
-    assert "Transcribed 1 session" in printed, printed
+    # "Read", not "Transcribed" (BR-25): Whisper ran on none of them.
+    assert "Read 1 session" in printed, printed
     assert result is not None
     transcripts = result.summary.transcripts
     assert transcripts.attempted == 1, transcripts

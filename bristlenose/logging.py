@@ -73,7 +73,8 @@ class _FileOnly(logging.Filter):
         if getattr(record, "file_only", False):
             return False
         # run_lifecycle's own abandon record: the failure line under it says the same
-        # thing; run_lifecycle is outside this fix's reach, so it is named here.
+        # thing. Named here rather than tagged at run_lifecycle.py's log.error (one line there,
+        # `extra={"file_only": True}`, is the tidier fix and is owed).
         return not (
             record.name == "bristlenose" and str(record.msg).startswith("run_abandoned ")
         )

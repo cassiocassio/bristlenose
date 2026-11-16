@@ -154,3 +154,33 @@ def test_a_transcript_only_folder_does_not_claim_audio_was_extracted(
     assert "Read 1 session" in out, out
     assert "Extracted audio" not in out, out
     assert "Transcribed" not in out, out
+
+
+def _session(*, recording: bool, transcript: bool):
+    from datetime import datetime, timezone
+
+    from bristlenose.models import FileType, InputFile, InputSession
+
+    files = [
+        InputFile(
+            path=Path("rec.mp4"), file_type=FileType.VIDEO,
+            created_at=datetime.now(timezone.utc), size_bytes=1,
+        )
+    ] if recording else []
+    return InputSession(
+        session_id="s1", session_number=1, participant_id="p1", participant_number=1,
+        session_date=datetime.now(timezone.utc), files=files,
+        has_existing_transcript=transcript,
+    )
+
+
+def test_a_video_beside_its_own_transcript_is_not_transcribed() -> None:
+    """Teams and Zoom exports: video plus .vtt. Whisper and ffmpeg never run."""
+    from bristlenose.pipeline import _any_recording, _transcribed_verb
+
+    with_transcript = [_session(recording=True, transcript=True)]
+    assert not _any_recording(with_transcript)
+    assert _transcribed_verb(with_transcript) == "Read"
+    # control: a bare recording is transcribed
+    bare = [_session(recording=True, transcript=False)]
+    assert _any_recording(bare) and _transcribed_verb(bare) == "Transcribed"

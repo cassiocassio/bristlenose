@@ -236,6 +236,20 @@ def _text(value: object) -> str:
     return escape(str(value))
 
 
+def _refuse_missing_folder(path: Path) -> None:
+    """Exit 1 with one plain line when ``path`` is not a folder (BR-26).
+
+    ``status`` and ``serve`` take a folder from the user's own typing; one that does
+    not exist is a typo, and saying "run bristlenose run" on it suggested analysing
+    a folder that is not there (``serve`` raised a traceback).
+    """
+    if path.is_dir():
+        return
+    reason = "is not a folder" if path.exists() else "doesn't exist"
+    _say(MessageKind.ERROR, f"[bold]{_text(path)}[/bold] {reason}. Check the folder name.")
+    raise typer.Exit(1)
+
+
 def _typed(command: str, *args: object) -> str:
     """A command as the shell reads it back, as Rich markup text (N149).
 
@@ -2567,6 +2581,8 @@ def serve(
         from bristlenose.standby import await_claim
 
         project_dir = await_claim()
+    if project_dir is not None and not check_startup_only:
+        _refuse_missing_folder(project_dir)
     if project_dir is not None:
         from bristlenose.output_paths import project_output_dir
 
@@ -2722,6 +2738,7 @@ def status(
     from bristlenose.output_paths import project_output_dir
     from bristlenose.status import get_project_status
 
+    _refuse_missing_folder(project_dir)
     # Resolve output directory — accept either input dir or output dir
     output_dir = _resolve_output_dir(project_dir)
     if output_dir is None:
@@ -3689,7 +3706,10 @@ def help_cmd(
         _help_config()
     elif topic == "workflows":
         _help_workflows()
-    elif topic in ("run", "transcribe", "analyze", "analyse", "render", "doctor", "help"):
+    elif topic in (
+        "run", "transcribe", "analyze", "analyse", "render", "doctor", "help",
+        "serve", "status", "use", "configure", "codebooks", "pipeline",
+    ):
         import subprocess
         import sys
 
@@ -3707,7 +3727,13 @@ def _help_overview() -> None:
     console.print("  run               Full pipeline: transcribe → analyse → render")
     console.print("  transcribe        Transcription only, no LLM calls")
     console.print("  analyze           LLM analysis on existing transcripts")
+    console.print("  serve             Open a previous report in your browser, no analysis")
+    console.print("  status            Show what a project has done so far (read-only)")
+    console.print("  use               Choose which AI provider runs the analysis")
+    console.print("  configure         Store an API key and make that provider current")
     console.print("  doctor            Check dependencies and configuration")
+    console.print("  codebooks         List the codebook frameworks AutoCode can use")
+    console.print("  pipeline          Show which model runs each pipeline stage")
     console.print("  help              This help (try: help commands, help config, help workflows)")
     console.print()
     console.print("[bold]Quick start[/bold]")
@@ -3754,6 +3780,21 @@ def _help_commands() -> None:
     console.print("  -p, --project NAME       Project name")
     console.print("  -l, --llm               LLM provider")
     console.print("  -v, --verbose           Verbose logging")
+    console.print()
+    console.print("[bold]bristlenose serve[/bold] [<project-dir>] \\[options]")
+    console.print("  Open a previous report in your browser. No analysis, no LLM calls.")
+    console.print("  -p, --port PORT          Port to serve on")
+    console.print("  --no-open                Don't open the browser")
+    console.print()
+    console.print("[bold]bristlenose status[/bold] <project-dir>")
+    console.print("  Show which stages a project has finished. Read-only, no LLM calls.")
+    console.print("  -v, --verbose           Per-session detail")
+    console.print()
+    console.print("[bold]bristlenose codebooks[/bold]")
+    console.print("  List the codebook frameworks available to AutoCode (--codebook=<id>).")
+    console.print()
+    console.print("[bold]bristlenose pipeline[/bold]")
+    console.print("  Show which model runs each pipeline stage. Read-only.")
     console.print()
     console.print("[bold]bristlenose configure[/bold] <provider>")
     console.print("  Store an API key and make that provider current.")

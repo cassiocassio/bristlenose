@@ -969,7 +969,11 @@ def ingest(
     if not files:
         # Not "no supported files" straight after naming the ones refused (#81).
         if not refused:
-            logger.warning("No supported files found in %s", input_dir)
+            # The run says it in its own words ("No supported files found."); the raw
+            # record, with its absolute path, belongs in the log file only (BR-24).
+            logger.warning(
+                "No supported files found in %s", input_dir, extra={"file_only": True}
+            )
         return []
 
     logger.info("Found %d supported files", len(files))

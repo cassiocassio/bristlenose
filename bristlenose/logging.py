@@ -59,6 +59,26 @@ _ONE_LINE = {c: f"\\x{c:02x}" for c in [*range(0x20), *range(0x7F, 0xA0)] if c !
 _ONE_LINE |= {0x0A: "\\n", 0x0D: "\\r", 0x2028: "\\u2028", 0x2029: "\\u2029"}
 
 
+class _FileOnly(logging.Filter):
+    """Keep a record out of the terminal when the caller says the researcher has
+    already been told in the run's own words (``extra={"file_only": True}``).
+
+    A failed run printed one event three times: the raw ``WARNING | …s01_ingest |``
+    line with an absolute path, the formatted line, and a raw ``ERROR | … run_abandoned``
+    line (BR-24). The record still reaches the log file, which is where a raw
+    record belongs.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if getattr(record, "file_only", False):
+            return False
+        # run_lifecycle's own abandon record: the failure line under it says the same
+        # thing; run_lifecycle is outside this fix's reach, so it is named here.
+        return not (
+            record.name == "bristlenose" and str(record.msg).startswith("run_abandoned ")
+        )
+
+
 class _OneLineFormatter(logging.Formatter):
     """A formatter that keeps each record's message on one line.
 
@@ -117,6 +137,7 @@ def setup_logging(
     terminal = logging.StreamHandler()
     terminal_level = logging.DEBUG if verbose else logging.WARNING
     terminal.setLevel(terminal_level)
+    terminal.addFilter(_FileOnly())
     terminal.setFormatter(_OneLineFormatter("%(levelname)s | %(name)s | %(message)s"))
     root.addHandler(terminal)
 

@@ -220,6 +220,20 @@ def _has_recording(session: InputSession) -> bool:
     return any(f.file_type in (FileType.AUDIO, FileType.VIDEO) for f in session.files)
 
 
+def _any_recording(sessions: Sequence[InputSession]) -> bool:
+    """Whether any session holds a recording: else audio was never extracted or transcribed."""
+    return any(_has_recording(s) for s in sessions)
+
+
+def _transcribed_verb(sessions: Sequence[InputSession]) -> str:
+    """"Transcribed" for a folder with recordings, "Read" for transcripts alone (BR-25).
+
+    A folder of subtitle or Teams transcripts goes through the same stage, which only
+    parses them; "Transcribed 3 sessions" claimed Whisper had run.
+    """
+    return "Transcribed" if _any_recording(sessions) else "Read"
+
+
 def _refused_recording_sids(
     sessions: list[InputSession],
     session_segments: Mapping[str, Sequence[object]],
@@ -2509,14 +2523,15 @@ class Pipeline:
             )
             _to_decode = [s for s in sessions if s.session_id not in _cached_before_decode]
             await extract_audio_for_sessions(_to_decode, temp_dir)
-            _print_step(
-                f"Extracted audio from {count_noun(len(_to_decode), 'session')}"
-                + (
-                    f" ({count_noun(len(_cached_before_decode), 'session')} cached)"
-                    if _cached_before_decode else ""
-                ),
-                time.perf_counter() - t0,
-            )
+            if _any_recording(sessions):  # a transcript-only folder has no audio to extract
+                _print_step(
+                    f"Extracted audio from {count_noun(len(_to_decode), 'session')}"
+                    + (
+                        f" ({count_noun(len(_cached_before_decode), 'session')} cached)"
+                        if _cached_before_decode else ""
+                    ),
+                    time.perf_counter() - t0,
+                )
             self._record_ingest_outcome(
                 sessions, declined, elapsed_s=ingest_elapsed, left_alone=left_alone
             )
@@ -2583,7 +2598,7 @@ class Pipeline:
                 session_segments = _ss_raw
                 total_segments = sum(len(s) for s in session_segments.values())
                 _print_cached_step(
-                    f"Transcribed {count_noun(len(sessions), 'session')}"
+                    f"{_transcribed_verb(sessions)} {count_noun(len(sessions), 'session')}"
                     f" ({count_noun(total_segments, 'segment')})",
                 )
                 # The stage-level hash has just proved every input unchanged:
@@ -2826,13 +2841,13 @@ class Pipeline:
                 _n_new_tx = len(_new_tx_sessions)
                 if _cached_segments and _n_new_tx:
                     msg = (
-                        f"Transcribed {count_noun(len(_tx_sessions), 'session')}"
+                        f"{_transcribed_verb(sessions)} {count_noun(len(_tx_sessions), 'session')}"
                         f" ({count_noun(total_segments, 'segment')},"
                         f" {count_noun(_n_new_tx, 'new session')})"
                     )
                 else:
                     msg = (
-                        f"Transcribed {count_noun(len(_tx_sessions), 'session')}"
+                        f"{_transcribed_verb(sessions)} {count_noun(len(_tx_sessions), 'session')}"
                         f" ({count_noun(total_segments, 'segment')}"
                     )
                     if audio_str:
@@ -4408,14 +4423,15 @@ class Pipeline:
             temp_dir = output_dir / ".bristlenose" / "temp"
             temp_dir.mkdir(parents=True, exist_ok=True)
             await extract_audio_for_sessions(_remaining, temp_dir)
-            _print_step(
-                f"Extracted audio from {count_noun(len(_remaining), 'session')}"
-                + (
-                    f" ({count_noun(len(_cached_segments), 'session')} cached)"
-                    if _cached_segments else ""
-                ),
-                time.perf_counter() - t0,
-            )
+            if _any_recording(sessions):  # a transcript-only folder has no audio to extract
+                _print_step(
+                    f"Extracted audio from {count_noun(len(_remaining), 'session')}"
+                    + (
+                        f" ({count_noun(len(_cached_segments), 'session')} cached)"
+                        if _cached_segments else ""
+                    ),
+                    time.perf_counter() - t0,
+                )
             self._record_ingest_outcome(
                 sessions, declined, elapsed_s=ingest_elapsed, left_alone=left_alone
             )
@@ -4516,12 +4532,12 @@ class Pipeline:
             if _cached_segments and not _remaining:
                 # As run() says it: nothing was transcribed this time.
                 _print_cached_step(
-                    f"Transcribed {count_noun(_n_transcribed, 'session')}"
+                    f"{_transcribed_verb(sessions)} {count_noun(_n_transcribed, 'session')}"
                     f" ({count_noun(total_segments, 'segment')})",
                 )
             else:
                 msg = (
-                    f"Transcribed {count_noun(_n_transcribed, 'session')}"
+                    f"{_transcribed_verb(sessions)} {count_noun(_n_transcribed, 'session')}"
                     f" ({count_noun(total_segments, 'segment')}"
                 )
                 if _cached_segments and _n_new:

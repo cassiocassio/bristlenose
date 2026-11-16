@@ -30,6 +30,13 @@ export default defineConfig({
       // every one of them into the single chunk. That was 1,802 KB of a 3.38 MB
       // report. See docs/design-export-locale.md.
       "./localeLoader": path.resolve(__dirname, "src/i18n/localeLoader.export.ts"),
+      // Dev specimen pages (Grid Specimen, Picker Lab) are serve-only: the Mac
+      // Diagnostics menu opens them. Their fixtures must not ship in an export
+      // (PickerSpecimen carried a real name). An alias, not a runtime gate, so
+      // the code is absent from the module graph, not merely hidden.
+      // Guarded by src/exportBundle.guard.test.ts.
+      "./pages/SpecimenTab": path.resolve(__dirname, "src/pages/specimenTabs.export.tsx"),
+      "./pages/PickerSpecimenTab": path.resolve(__dirname, "src/pages/specimenTabs.export.tsx"),
     },
   },
   build: {

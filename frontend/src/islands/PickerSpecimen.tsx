@@ -26,7 +26,7 @@ import type {
 /** The people the study knows, per role. */
 const KNOWN: Record<PickerRole, PersonPickerRow[]> = {
   moderator: [
-    { name: "Martin B Storey", code: "m1", person: "lab-martin" },
+    { name: "Marcus Bell", code: "m1", person: "lab-marcus" },
     { name: "Kerri Ng", code: "m2", person: "lab-kerri" },
   ],
   participant: [
@@ -40,8 +40,8 @@ const KNOWN: Record<PickerRole, PersonPickerRow[]> = {
 /** The same four the native half offers; chosen in the lab's toolbar, which
  *  reloads this page with `?scenario=<name>`. */
 const SCENARIOS: Record<string, PersonPickerSlot> = {
-  proposed: { code: "m1", role: "moderator", name: "Martin B Storey", confirmed: false, person: "lab-martin" },
-  confirmed: { code: "m1", role: "moderator", name: "Martin B Storey", confirmed: true, person: "lab-martin" },
+  proposed: { code: "m1", role: "moderator", name: "Marcus Bell", confirmed: false, person: "lab-marcus" },
+  confirmed: { code: "m1", role: "moderator", name: "Marcus Bell", confirmed: true, person: "lab-marcus" },
   unknown: { code: "m1", role: "moderator", name: "", confirmed: false },
   participant: { code: "p3", role: "participant", name: "Mary Adeyemi", confirmed: false },
 };

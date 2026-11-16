@@ -8,6 +8,7 @@ pass, embeds screenshots (macOS `sips`), escapes the JSON for a <script> block, 
 prepends the document header for a file on disk. `--fragment` skips the header, for
 publishing as an Artifact (the host wraps the page itself).
 """
+
 import base64
 import html
 import json
@@ -86,8 +87,20 @@ def embed_shots(data, root, stats):
             continue
         with tempfile.TemporaryDirectory() as td:
             out = os.path.join(td, "t.jpg")
-            rc = run("sips", "-Z", "960", "-s", "format", "jpeg",
-                     "-s", "formatOptions", "60", full, "--out", out)
+            rc = run(
+                "sips",
+                "-Z",
+                "960",
+                "-s",
+                "format",
+                "jpeg",
+                "-s",
+                "formatOptions",
+                "60",
+                full,
+                "--out",
+                out,
+            )
             if rc != 0 or not os.path.isfile(out):
                 s["src"], s["gone"] = None, True
                 stats["shots_gone"] += 1
@@ -112,7 +125,7 @@ def main(argv):
     src, dst = args
     with open(src, encoding="utf-8") as fh:
         data = json.load(fh)
-    stats = dict(refs_ok=0, refs_gone=0, shots_embedded=0, shots_gone=0, shots_skipped=0)
+    stats = {"refs_ok": 0, "refs_gone": 0, "shots_embedded": 0, "shots_gone": 0, "shots_skipped": 0}
     walk(data, root, stats)
     for a in data.get("artefacts") or []:
         if not a.get("ref") and a.get("path"):
@@ -121,9 +134,14 @@ def main(argv):
     embed_shots(data, root, stats)
 
     # `<`, `>` and `&` escaped so no string can close the script block or open a comment.
-    text = (json.dumps(data, ensure_ascii=False)
-            .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
-            .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+    text = (
+        json.dumps(data, ensure_ascii=False)
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as fh:
         page = fh.read()
     a = page.index(OPEN) + len(OPEN)
@@ -131,8 +149,9 @@ def main(argv):
     page = page[:a] + "\n" + text + "\n" + page[b:]
     name = data.get("name")
     if name:
-        page = re.sub(r"<title>.*?</title>", "<title>" + html.escape(str(name)) + "</title>",
-                      page, count=1)
+        page = re.sub(
+            r"<title>.*?</title>", "<title>" + html.escape(str(name)) + "</title>", page, count=1
+        )
     if not fragment:
         page = HEADER + page
     if len(page.encode()) > MAX_PAGE:

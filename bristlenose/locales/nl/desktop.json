@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose heeft geen account van {{platform}} ontvangen. Als je het inlogvenster hebt gesloten, probeer het opnieuw.",
     "signInIncompleteDetailAdmin": "Bristlenose heeft geen account van {{platform}} ontvangen. Als je het inlogvenster hebt gesloten, probeer het opnieuw \u2014 en als {{platform}} om goedkeuring van je beheerder vroeg, wordt het inloggen pas voltooid als die is gegeven.",
     "tryAgain": "Probeer opnieuw",
+    "copyLinkForIT": "Kopieer link voor IT",
     "signInAgain": "Opnieuw inloggen",
     "loadFailedTitle": "Kan je vergaderingen niet laden",
     "emptyTitle_one": "Geen opnames in de laatste {{count}} dag",

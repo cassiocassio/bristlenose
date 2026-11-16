@@ -1259,6 +1259,7 @@
     "signInIncompleteDetail": "Bristlenose nedostal od {{platform}} \u017e\u00e1dn\u00fd \u00fa\u010det. Pokud jste okno p\u0159ihl\u00e1\u0161en\u00ed zav\u0159eli, zkuste to znovu.",
     "signInIncompleteDetailAdmin": "Bristlenose nedostal od {{platform}} \u017e\u00e1dn\u00fd \u00fa\u010det. Pokud jste okno p\u0159ihl\u00e1\u0161en\u00ed zav\u0159eli, zkuste to znovu \u2014 a pokud {{platform}} vy\u017e\u00e1dal schv\u00e1len\u00ed spr\u00e1vce, p\u0159ihl\u00e1\u0161en\u00ed se dokon\u010d\u00ed a\u017e po jeho ud\u011blen\u00ed.",
     "tryAgain": "Zkusit znovu",
+    "copyLinkForIT": "Zkop\u00edrovat odkaz pro IT",
     "signInAgain": "P\u0159ihl\u00e1sit se znovu",
     "loadFailedTitle": "Sch\u016fzky se nepoda\u0159ilo na\u010d\u00edst",
     "emptyTitle_one": "\u017d\u00e1dn\u00e9 nahr\u00e1vky za posledn\u00ed {{count}} den",

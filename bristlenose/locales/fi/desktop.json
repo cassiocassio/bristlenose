@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose ei saanut tili\u00e4 palvelusta {{platform}}. Jos suljit kirjautumisikkunan, yrit\u00e4 uudelleen.",
     "signInIncompleteDetailAdmin": "Bristlenose ei saanut tili\u00e4 palvelusta {{platform}}. Jos suljit kirjautumisikkunan, yrit\u00e4 uudelleen \u2014 ja jos {{platform}} pyysi j\u00e4rjestelm\u00e4nvalvojan hyv\u00e4ksynt\u00e4\u00e4, kirjautuminen valmistuu vasta hyv\u00e4ksynn\u00e4n j\u00e4lkeen.",
     "tryAgain": "Yrit\u00e4 uudelleen",
+    "copyLinkForIT": "Kopioi linkki IT-tuelle",
     "signInAgain": "Kirjaudu uudelleen",
     "loadFailedTitle": "Kokouksia ei voitu ladata",
     "emptyTitle_one": "Ei tallenteita viimeisimm\u00e4lt\u00e4 {{count}} p\u00e4iv\u00e4lt\u00e4",

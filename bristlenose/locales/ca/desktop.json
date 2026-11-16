@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose no ha rebut cap compte de {{platform}}. Si has tancat la finestra d\u2019inici de sessi\u00f3, torna-ho a provar.",
     "signInIncompleteDetailAdmin": "Bristlenose no ha rebut cap compte de {{platform}}. Si has tancat la finestra d\u2019inici de sessi\u00f3, torna-ho a provar; i si {{platform}} ha demanat l\u2019aprovaci\u00f3 de l\u2019administrador, la sessi\u00f3 no s\u2019iniciar\u00e0 fins que la concedeixi.",
     "tryAgain": "Torna-ho a provar",
+    "copyLinkForIT": "Copia l'enlla\u00e7 per a TI",
     "signInAgain": "Inicia la sessi\u00f3 de nou",
     "loadFailedTitle": "No s\u2019han pogut carregar les reunions",
     "emptyTitle_one": "Cap enregistrament l\u2019\u00faltim {{count}} dia",

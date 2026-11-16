@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose non ha ricevuto alcun account da {{platform}}. Se hai chiuso la finestra di accesso, riprova.",
     "signInIncompleteDetailAdmin": "Bristlenose non ha ricevuto alcun account da {{platform}}. Se hai chiuso la finestra di accesso, riprova; e se {{platform}} ha richiesto l\u2019approvazione dell\u2019amministratore, l\u2019accesso non si completer\u00e0 finch\u00e9 non la concede.",
     "tryAgain": "Riprova",
+    "copyLinkForIT": "Copia link per l\u2019IT",
     "signInAgain": "Accedi di nuovo",
     "loadFailedTitle": "Impossibile caricare le riunioni",
     "emptyTitle_one": "Nessuna registrazione nell\u2019ultimo {{count}} giorno",

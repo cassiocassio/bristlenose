@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose n\u2019a re\u00e7u aucun compte de {{platform}}. Si vous avez ferm\u00e9 la fen\u00eatre de connexion, r\u00e9essayez.",
     "signInIncompleteDetailAdmin": "Bristlenose n\u2019a re\u00e7u aucun compte de {{platform}}. Si vous avez ferm\u00e9 la fen\u00eatre de connexion, r\u00e9essayez ; et si {{platform}} a demand\u00e9 l\u2019approbation de votre administrateur, la connexion n\u2019aboutira qu\u2019une fois celle-ci accord\u00e9e.",
     "tryAgain": "R\u00e9essayer",
+    "copyLinkForIT": "Copier le lien pour l\u2019informatique",
     "signInAgain": "Se reconnecter",
     "loadFailedTitle": "Impossible de charger vos r\u00e9unions",
     "emptyTitle_one": "Aucun enregistrement le dernier jour",

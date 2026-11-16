@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "O Bristlenose n\u00e3o recebeu qualquer conta do {{platform}}. Se fechou a janela de in\u00edcio de sess\u00e3o, tente novamente.",
     "signInIncompleteDetailAdmin": "O Bristlenose n\u00e3o recebeu qualquer conta do {{platform}}. Se fechou a janela de in\u00edcio de sess\u00e3o, tente novamente \u2014 e se o {{platform}} pediu aprova\u00e7\u00e3o do administrador, o in\u00edcio de sess\u00e3o s\u00f3 ficar\u00e1 conclu\u00eddo quando este a conceder.",
     "tryAgain": "Tentar novamente",
+    "copyLinkForIT": "Copiar liga\u00e7\u00e3o para a TI",
     "signInAgain": "Iniciar sess\u00e3o novamente",
     "loadFailedTitle": "N\u00e3o foi poss\u00edvel carregar suas reuni\u00f5es",
     "emptyTitle_one": "Nenhuma grava\u00e7\u00e3o no \u00faltimo {{count}} dia",

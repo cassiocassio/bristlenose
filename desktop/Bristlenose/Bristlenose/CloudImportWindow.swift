@@ -54,6 +54,11 @@ struct CloudImportWindow: View {
     /// leaves the fixed floor in charge of the states that have no grid.
     @State private var gridMinimumWidth: CGFloat = 0
 
+    /// The copy-link button reads "Copied" briefly after a click, as the MCP
+    /// pane's copy buttons do.
+    @State private var helpLinkCopied = false
+    @State private var helpLinkResetTask: Task<Void, Never>?
+
     var body: some View {
         VStack(spacing: 0) {
             content
@@ -243,7 +248,13 @@ struct CloudImportWindow: View {
             } description: {
                 Text(incompleteSignInDetail)
             } actions: {
-                Button(i18n.t("desktop.cloudImport.tryAgain"), action: store.signIn)
+                // An unfinished sign-in may be an admin wall the app cannot see,
+                // so the link for IT sits beside Try Again.
+                HStack {
+                    Button(i18n.t("desktop.cloudImport.tryAgain"), action: store.signIn)
+                    copyHelpLinkButton
+                }
+                .fixedSize(horizontal: true, vertical: false)
             }
 
         case .failed(let failure, let worthRetrying):
@@ -264,6 +275,11 @@ struct CloudImportWindow: View {
                 // click it correctly.
                 if worthRetrying {
                     Button(i18n.t("desktop.cloudImport.tryAgain"), action: store.signIn)
+                }
+                // The admin wall's one move is the researcher's IT team; the
+                // message names a link, and this is it.
+                if failure.key == MicrosoftSignInRefusal.adminApprovalKey {
+                    copyHelpLinkButton
                 }
             }
 
@@ -298,6 +314,35 @@ struct CloudImportWindow: View {
                 }
             }
             .controlSize(.large)
+        }
+    }
+
+    /// Copies the page for the researcher's IT team. Absent where the platform
+    /// has no such page (`adminApprovalHelpURL` is nil).
+    @ViewBuilder private var copyHelpLinkButton: some View {
+        if let url = platform.adminApprovalHelpURL {
+            Button { copyHelpLink(url) } label: {
+                // Both labels laid out, one shown, so the button keeps its width.
+                ZStack {
+                    Text(i18n.t("desktop.cloudImport.copyLinkForIT")).opacity(helpLinkCopied ? 0 : 1)
+                    Text(i18n.t("desktop.connectAgent.copied")).opacity(helpLinkCopied ? 1 : 0)
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+
+    private func copyHelpLink(_ url: URL) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
+        helpLinkCopied = true
+        AccessibilityNotification.Announcement(i18n.t("desktop.connectAgent.copied")).post()
+        helpLinkResetTask?.cancel()
+        helpLinkResetTask = Task {
+            try? await Task.sleep(for: .seconds(1.6))
+            guard !Task.isCancelled else { return }
+            helpLinkCopied = false
         }
     }
 

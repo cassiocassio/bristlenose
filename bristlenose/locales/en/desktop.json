@@ -1198,6 +1198,7 @@
     "signInIncompleteDetail": "Bristlenose didn't receive an account from {{platform}}. If you closed the sign-in window, try again.",
     "signInIncompleteDetailAdmin": "Bristlenose didn't receive an account from {{platform}}. If you closed the sign-in window, try again \u2014 and if {{platform}} asked for your administrator's approval, sign-in won't complete until they grant it.",
     "tryAgain": "Try Again",
+    "copyLinkForIT": "Copy Link for IT",
     "signInAgain": "Sign In Again",
     "loadFailedTitle": "Couldn't load your meetings",
     "emptyTitle_one": "No recordings in the last {{count}} day",

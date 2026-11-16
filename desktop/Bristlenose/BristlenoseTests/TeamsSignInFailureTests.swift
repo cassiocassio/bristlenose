@@ -86,10 +86,22 @@ struct TeamsSignInFailureTests {
         let phase = await phase(refusing: MicrosoftOAuthError.consentRefused(
             code: "AADSTS90094",
             description: "The grant requires an administrator's permission."))
-        guard case .failed(_, let worthRetrying) = phase else {
+        guard case .failed(let failure, let worthRetrying) = phase else {
             Issue.record("expected a failure, got \(phase)"); return
         }
         #expect(!worthRetrying)
+        // The window offers Copy Link for IT on exactly this key.
+        #expect(failure.key == MicrosoftSignInRefusal.adminApprovalKey)
+    }
+
+    /// One address in both verification outcomes; the website carries the
+    /// wording. Zoom and Meet have no such page, so no button.
+    @Test("Only Teams has a page for the IT team")
+    func adminApprovalHelpPage() {
+        #expect(CloudPlatform.teams.adminApprovalHelpURL?.absoluteString
+                == "https://bristlenose.app/docs/teams-admin-approval.html")
+        #expect(CloudPlatform.zoom.adminApprovalHelpURL == nil)
+        #expect(CloudPlatform.meet.adminApprovalHelpURL == nil)
     }
 
     /// Conditional Access refuses at the *token* leg, after the authorize leg

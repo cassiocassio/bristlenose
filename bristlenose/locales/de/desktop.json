@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose hat kein Konto von {{platform}} erhalten. Wenn du das Anmeldefenster geschlossen hast, versuch es erneut.",
     "signInIncompleteDetailAdmin": "Bristlenose hat kein Konto von {{platform}} erhalten. Wenn du das Anmeldefenster geschlossen hast, versuch es erneut \u2014 und falls {{platform}} die Zustimmung deiner Administration verlangt hat, wird die Anmeldung erst nach deren Freigabe abgeschlossen.",
     "tryAgain": "Erneut versuchen",
+    "copyLinkForIT": "Link f\u00fcr die IT kopieren",
     "signInAgain": "Erneut anmelden",
     "loadFailedTitle": "Besprechungen konnten nicht geladen werden",
     "emptyTitle_one": "Keine Aufzeichnungen im letzten {{count}} Tag",

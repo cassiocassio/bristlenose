@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose, {{platform}} taraf\u0131ndan bir hesap almad\u0131. Oturum a\u00e7ma penceresini kapatt\u0131ysan\u0131z yeniden deneyin.",
     "signInIncompleteDetailAdmin": "Bristlenose, {{platform}} taraf\u0131ndan bir hesap almad\u0131. Oturum a\u00e7ma penceresini kapatt\u0131ysan\u0131z yeniden deneyin; {{platform}} y\u00f6neticinizin onay\u0131n\u0131 istediyse oturum a\u00e7ma, onay verilene kadar tamamlanmaz.",
     "tryAgain": "Yeniden Dene",
+    "copyLinkForIT": "BT \u0130\u00e7in Ba\u011flant\u0131y\u0131 Kopyala",
     "signInAgain": "Yeniden oturum a\u00e7",
     "loadFailedTitle": "Toplant\u0131lar\u0131n\u0131z y\u00fcklenemedi",
     "emptyTitle_one": "Son {{count}} g\u00fcnde kay\u0131t yok",

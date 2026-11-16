@@ -1263,6 +1263,7 @@
     "signInIncompleteDetail": "Bristlenose nie otrzyma\u0142 konta z {{platform}}. Je\u015bli zamkni\u0119to okno logowania, spr\u00f3buj ponownie.",
     "signInIncompleteDetailAdmin": "Bristlenose nie otrzyma\u0142 konta z {{platform}}. Je\u015bli zamkni\u0119to okno logowania, spr\u00f3buj ponownie \u2014 a je\u015bli {{platform}} poprosi\u0142 o zgod\u0119 administratora, logowanie zako\u0144czy si\u0119 dopiero po jej udzieleniu.",
     "tryAgain": "Spr\u00f3buj ponownie",
+    "copyLinkForIT": "Skopiuj link dla dzia\u0142u IT",
     "signInAgain": "Zaloguj si\u0119 ponownie",
     "loadFailedTitle": "Nie uda\u0142o si\u0119 wczyta\u0107 spotka\u0144",
     "emptyTitle_one": "Brak nagra\u0144 z ostatniego {{count}} dnia",

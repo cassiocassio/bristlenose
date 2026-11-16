@@ -109,6 +109,9 @@ struct MicrosoftOAuthConfig {
 /// round trip, per the house rule that a decision belongs in a helper rather
 /// than in whatever view happens to render it.
 enum MicrosoftSignInRefusal: Equatable {
+    /// The window offers the copy-link button on exactly this message.
+    static let adminApprovalKey = "desktop.cloudImport.signInAdminApproval"
+
     /// `AADSTS65004` — they read the consent screen and said no. Retrying is
     /// exactly right, and is the only one of these where it is.
     case userDeclined
@@ -178,7 +181,7 @@ enum MicrosoftSignInRefusal: Equatable {
                 ? .init(key: "desktop.cloudImport.signInDeclined", english: en)
                 : .passthrough(en)
         case .adminApprovalRequired:
-            return .init(key: "desktop.cloudImport.signInAdminApproval", english: en)
+            return .init(key: Self.adminApprovalKey, english: en)
         case .conditionalAccess:
             return .init(key: "desktop.cloudImport.signInPolicyBlocked", english: en)
         case .other(let description):

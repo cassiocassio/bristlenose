@@ -426,6 +426,17 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// platforms, the copy must offer "your admin may need to approve this"
     /// alongside "you cancelled" — because the two are indistinguishable from
     /// here, and only one of them is the researcher's own doing.
+    /// The page a researcher sends their IT team when Microsoft wants an
+    /// administrator's approval. One address whatever Microsoft decides about
+    /// publisher verification: the website carries the wording that is true, so
+    /// neither outcome needs an app release. Teams only; Zoom has no such page.
+    var adminApprovalHelpURL: URL? {
+        switch self {
+        case .teams: return URL(string: "https://bristlenose.app/docs/teams-admin-approval.html")!
+        case .zoom, .meet: return nil
+        }
+    }
+
     var signInMayAwaitAdminApproval: Bool {
         switch self {
         case .zoom, .teams: return true

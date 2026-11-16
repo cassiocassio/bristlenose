@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose mottok ingen konto fra {{platform}}. Hvis du lukket innloggingsvinduet, pr\u00f8v igjen.",
     "signInIncompleteDetailAdmin": "Bristlenose mottok ingen konto fra {{platform}}. Hvis du lukket innloggingsvinduet, pr\u00f8v igjen \u2014 og hvis {{platform}} ba om godkjenning fra administratoren din, blir innloggingen f\u00f8rst fullf\u00f8rt n\u00e5r den er gitt.",
     "tryAgain": "Pr\u00f8v igjen",
+    "copyLinkForIT": "Kopier lenke til IT",
     "signInAgain": "Logg inn p\u00e5 nytt",
     "loadFailedTitle": "Kunne ikke laste m\u00f8tene dine",
     "emptyTitle_one": "Ingen opptak den siste {{count}} dagen",

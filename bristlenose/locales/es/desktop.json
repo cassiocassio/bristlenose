@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose no recibi\u00f3 ninguna cuenta de {{platform}}. Si cerraste la ventana de inicio de sesi\u00f3n, int\u00e9ntalo de nuevo.",
     "signInIncompleteDetailAdmin": "Bristlenose no recibi\u00f3 ninguna cuenta de {{platform}}. Si cerraste la ventana de inicio de sesi\u00f3n, int\u00e9ntalo de nuevo; y si {{platform}} pidi\u00f3 la aprobaci\u00f3n de tu administrador, el inicio de sesi\u00f3n no se completar\u00e1 hasta que la conceda.",
     "tryAgain": "Reintentar",
+    "copyLinkForIT": "Copiar enlace para TI",
     "signInAgain": "Iniciar sesi\u00f3n de nuevo",
     "loadFailedTitle": "No se pudieron cargar tus reuniones",
     "emptyTitle_one": "Sin grabaciones en el \u00faltimo {{count}} d\u00eda",

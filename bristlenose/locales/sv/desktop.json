@@ -1193,6 +1193,7 @@
     "signInIncompleteDetail": "Bristlenose fick inget konto fr\u00e5n {{platform}}. Om du st\u00e4ngde inloggningsf\u00f6nstret, f\u00f6rs\u00f6k igen.",
     "signInIncompleteDetailAdmin": "Bristlenose fick inget konto fr\u00e5n {{platform}}. Om du st\u00e4ngde inloggningsf\u00f6nstret, f\u00f6rs\u00f6k igen \u2014 och om {{platform}} bad om din administrat\u00f6rs godk\u00e4nnande slutf\u00f6rs inloggningen f\u00f6rst n\u00e4r den ges.",
     "tryAgain": "F\u00f6rs\u00f6k igen",
+    "copyLinkForIT": "Kopiera l\u00e4nk till IT",
     "signInAgain": "Logga in igen",
     "loadFailedTitle": "Kunde inte l\u00e4sa in dina m\u00f6ten",
     "emptyTitle_one": "Inga inspelningar den senaste {{count}} dagen",

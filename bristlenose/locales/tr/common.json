@@ -461,7 +461,7 @@
     "labelMixedShort": "Karışık",
     "heading": "Sinyaller",
     "loadingData": "Sinyaller yükleniyor…",
-    "noData": "Henüz sinyal yok. Sinyal oluşturmak için işlem hattını çalıştırın veya kod kitabı etiketleri uygulayın.",
+    "noData": "Gösterilecek sinyal henüz yok.",
     "tagError": "Etiket sinyali hatası: {{error}}",
     "title": "Sinyaller",
     "sentiment": "Duygu durumu",

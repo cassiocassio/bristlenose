@@ -461,7 +461,7 @@
     "labelMixedShort": "Ristiriitainen",
     "heading": "Signaalit",
     "loadingData": "Ladataan signaaleja…",
-    "noData": "Ei vielä signaaleja. Suorita analyysi tai lisää koodikirjatunnisteita tuottaaksesi signaaleja.",
+    "noData": "Ei vielä näytettäviä signaaleja.",
     "tagError": "Tunnistesignaalien virhe: {{error}}",
     "title": "Signaalit",
     "sentiment": "Tunnesävy",

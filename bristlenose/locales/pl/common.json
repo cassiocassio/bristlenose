@@ -514,7 +514,7 @@
     "labelMixedShort": "Mieszane",
     "heading": "Sygnały",
     "loadingData": "Wczytywanie sygnałów…",
-    "noData": "Nie ma jeszcze sygnałów. Uruchom potok lub zastosuj tagi z księgi kodów, aby wygenerować sygnały.",
+    "noData": "Nie ma jeszcze sygnałów do wyświetlenia.",
     "tagError": "Błąd sygnałów tagów: {{error}}",
     "title": "Sygnały",
     "sentiment": "Sentyment",

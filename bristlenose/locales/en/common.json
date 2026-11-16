@@ -463,7 +463,7 @@
     "labelMixedShort": "Mixed",
     "heading": "Signals",
     "loadingData": "Loading signals…",
-    "noData": "No signals yet. Run the pipeline or apply codebook tags to generate signals.",
+    "noData": "No signals to show yet.",
     "tagError": "Tag signal error: {{error}}",
     "title": "Signals",
     "sentiment": "Sentiment",

@@ -461,7 +461,7 @@
     "labelMixedShort": "Misto",
     "heading": "Sinais",
     "loadingData": "Carregando sinais…",
-    "noData": "Ainda não há sinais. Execute o pipeline ou aplique etiquetas do livro de códigos para gerá-los.",
+    "noData": "Ainda não há sinais para mostrar.",
     "tagError": "Erro nos sinais de etiqueta: {{error}}",
     "title": "Sinais",
     "sentiment": "Sentimento",

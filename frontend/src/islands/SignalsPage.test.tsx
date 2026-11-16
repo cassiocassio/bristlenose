@@ -394,7 +394,7 @@ describe("SignalsPage", () => {
     rerender(<SignalsPage projectId="1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
-    expect(container.textContent).not.toContain("No signals yet");
+    expect(container.textContent).not.toContain("No signals to show yet");
   });
 
   it("publishes no entries to the sidebar while the body is empty", async () => {
@@ -575,7 +575,7 @@ describe("SignalsPage", () => {
     render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no signals yet/i)).toBeTruthy();
+      expect(screen.getByText(/no signals to show yet/i)).toBeTruthy();
     }, { timeout: 3000 });
   });
 
@@ -663,7 +663,7 @@ describe("SignalsPage", () => {
     render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No signals yet\./)).toBeTruthy();
+      expect(screen.getByText("No signals to show yet.")).toBeTruthy();
     });
 
     const pane = document.querySelector(".signals-center");

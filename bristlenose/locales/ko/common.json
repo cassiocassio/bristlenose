@@ -436,7 +436,7 @@
     "labelMixedShort": "복합적",
     "heading": "시그널",
     "loadingData": "시그널 로드 중…",
-    "noData": "아직 시그널이 없습니다. 파이프라인을 실행하거나 코드북 태그를 적용하여 시그널을 생성하세요.",
+    "noData": "아직 표시할 시그널이 없습니다.",
     "tagError": "태그 시그널 오류: {{error}}",
     "title": "시그널",
     "sentiment": "감정",

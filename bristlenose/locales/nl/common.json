@@ -461,7 +461,7 @@
     "labelMixedShort": "Gemengd",
     "heading": "Signalen",
     "loadingData": "Signalen laden…",
-    "noData": "Nog geen signalen. Voer de pijplijn uit of pas codeboektags toe om signalen te genereren.",
+    "noData": "Nog geen signalen om te tonen.",
     "tagError": "Fout in tagsignalen: {{error}}",
     "title": "Signalen",
     "sentiment": "Sentiment",

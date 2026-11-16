@@ -461,7 +461,7 @@
     "labelMixedShort": "Contrastante",
     "heading": "Segnali",
     "loadingData": "Caricamento dei segnali…",
-    "noData": "Nessun segnale per ora. Esegui la pipeline o applica i tag del libro dei codici per generarne.",
+    "noData": "Ancora nessun segnale da mostrare.",
     "tagError": "Errore nei segnali dei tag: {{error}}",
     "title": "Segnali",
     "sentiment": "Sentiment",

@@ -461,7 +461,7 @@
     "labelMixedShort": "Mitigé",
     "heading": "Signaux",
     "loadingData": "Chargement des signaux…",
-    "noData": "Aucun signal pour l'instant. Exécutez le pipeline ou appliquez des étiquettes de la grille de codage pour en générer.",
+    "noData": "Aucun signal à afficher pour l’instant.",
     "tagError": "Erreur lors du calcul des signaux d'étiquettes : {{error}}",
     "title": "Signaux",
     "sentiment": "Sentiment",

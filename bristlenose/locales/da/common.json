@@ -461,7 +461,7 @@
     "labelMixedShort": "Blandet",
     "heading": "Signaler",
     "loadingData": "Indlæser signaler…",
-    "noData": "Ingen signaler endnu. Kør pipelinen, eller anvend kodebogstags for at generere signaler.",
+    "noData": "Ingen signaler at vise endnu.",
     "tagError": "Fejl i tag-signaler: {{error}}",
     "title": "Signaler",
     "sentiment": "Stemning",

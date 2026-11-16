@@ -506,7 +506,7 @@
     "labelMixedShort": "Smíšené",
     "heading": "Signály",
     "loadingData": "Načítání signálů…",
-    "noData": "Zatím žádné signály. Spusťte zpracování nebo použijte štítky z knihy kódů, abyste signály vygenerovali.",
+    "noData": "Zatím nejsou k zobrazení žádné signály.",
     "tagError": "Chyba signálů štítků: {{error}}",
     "title": "Signály",
     "sentiment": "Nálada",

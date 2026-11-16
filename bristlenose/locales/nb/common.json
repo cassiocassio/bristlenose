@@ -461,7 +461,7 @@
     "labelMixedShort": "Blandet",
     "heading": "Signaler",
     "loadingData": "Laster inn signaler …",
-    "noData": "Ingen signaler ennå. Kjør pipelinen eller bruk kodebok-tagger for å generere signaler.",
+    "noData": "Ingen signaler å vise ennå.",
     "tagError": "Feil i tagg-signaler: {{error}}",
     "title": "Signaler",
     "sentiment": "Sentiment",

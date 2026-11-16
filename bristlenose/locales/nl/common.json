@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} citaten die je hebt bewaard, zitten op dit moment in geen enkele sectie of thema — maar ze staan hier veilig, er is niets verloren gegaan."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Niet geanalyseerd: het bestand is leeg.",
+      "incomplete": "Niet geanalyseerd: het bestand is onvolledig.",
+      "not_a_recording": "Niet geanalyseerd: dit is geen opname.",
+      "no_audio": "Niet geanalyseerd: dit bestand bevat geen geluid.",
+      "no_speech": "Niet geanalyseerd: er is geen spraak gevonden.",
+      "no_lines": "Niet geanalyseerd: het transcript bevat geen regels.",
+      "notes_only": "Niet geanalyseerd: dit document bevat alleen vergadernotities.",
+      "no_transcript": "Niet geanalyseerd: in dit document is geen transcript gevonden.",
+      "unreadable": "Niet geanalyseerd: het bestand kon niet worden gelezen."
+    },
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Deelnemer",

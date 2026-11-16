@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} citazioni che hai conservato al momento non sono in nessuna sezione né tema — ma sono al sicuro qui, non è andato perso nulla."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Non analizzata: il file \u00e8 vuoto.",
+      "incomplete": "Non analizzata: il file \u00e8 incompleto.",
+      "not_a_recording": "Non analizzata: non \u00e8 una registrazione.",
+      "no_audio": "Non analizzata: questo file non contiene audio.",
+      "no_speech": "Non analizzata: non \u00e8 stato trovato alcun parlato.",
+      "no_lines": "Non analizzata: la trascrizione non contiene righe.",
+      "notes_only": "Non analizzata: questo documento contiene solo appunti della riunione.",
+      "no_transcript": "Non analizzata: in questo documento non \u00e8 stata trovata alcuna trascrizione.",
+      "unreadable": "Non analizzata: non \u00e8 stato possibile leggere il file."
+    },
     "moderatedBy": "Moderata da {{names}}",
     "observer_one": "Osservatore: {{names}}",
     "observer_other": "Osservatori: {{names}}",

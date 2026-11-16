@@ -725,9 +725,13 @@ export interface SessionResponse {
    *  being worked on now, or known and waiting. Absent from older servers,
    *  where every row is readable. */
   state?: SessionState;
+  /** `state: "failed"` only: why the session produced no transcript, an
+   *  `UnusableReason` value, or null when the run did not say. */
+  failure_reason?: string | null;
 }
 
-export type SessionState = "readable" | "processing" | "waiting";
+/** "failed": ingest numbered the session and no transcript came out of it (BR-15). */
+export type SessionState = "readable" | "processing" | "waiting" | "failed";
 
 export interface SessionsListResponse {
   sessions: SessionResponse[];

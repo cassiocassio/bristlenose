@@ -119,6 +119,17 @@
     "uncategorisedIntro_other": "{{count}} citas que has conservado ahora mismo no están en ninguna sección ni tema — pero están a salvo aquí, no se ha perdido nada."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "No analizada: el archivo est\u00e1 vac\u00edo.",
+      "incomplete": "No analizada: el archivo est\u00e1 incompleto.",
+      "not_a_recording": "No analizada: no es una grabaci\u00f3n.",
+      "no_audio": "No analizada: este archivo no tiene sonido.",
+      "no_speech": "No analizada: no se encontr\u00f3 ninguna voz.",
+      "no_lines": "No analizada: la transcripci\u00f3n no tiene l\u00edneas.",
+      "notes_only": "No analizada: este documento solo contiene notas de la reuni\u00f3n.",
+      "no_transcript": "No analizada: no se encontr\u00f3 ninguna transcripci\u00f3n en este documento.",
+      "unreadable": "No analizada: no se pudo leer el archivo."
+    },
     "moderatedBy": "Moderado por {{names}}",
     "observer_one": "Observador: {{names}}",
     "observer_other": "Observadores: {{names}}",

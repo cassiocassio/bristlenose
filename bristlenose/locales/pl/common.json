@@ -145,6 +145,17 @@
     "uncategorisedIntro_many": "{{count}} zachowanych cytatów nie należy teraz do żadnej sekcji ani tematu — ale są tu bezpieczne, nic nie przepadło."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Nie przeanalizowano: plik jest pusty.",
+      "incomplete": "Nie przeanalizowano: plik jest niekompletny.",
+      "not_a_recording": "Nie przeanalizowano: to nie jest nagranie.",
+      "no_audio": "Nie przeanalizowano: ten plik nie zawiera d\u017awi\u0119ku.",
+      "no_speech": "Nie przeanalizowano: nie znaleziono mowy.",
+      "no_lines": "Nie przeanalizowano: transkrypcja nie zawiera \u017cadnych wierszy.",
+      "notes_only": "Nie przeanalizowano: ten dokument zawiera tylko notatki ze spotkania.",
+      "no_transcript": "Nie przeanalizowano: nie znaleziono transkrypcji w tym dokumencie.",
+      "unreadable": "Nie przeanalizowano: nie uda\u0142o si\u0119 odczyta\u0107 pliku."
+    },
     "moderatedBy": "Moderacja: {{names}}",
     "observer_one": "Obserwator: {{names}}",
     "observer_few": "Obserwatorzy: {{names}}",

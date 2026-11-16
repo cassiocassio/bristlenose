@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} citações que guardou não estão em nenhuma secção ou tema neste momento — mas estão seguras aqui, nada se perdeu."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "N\u00e3o analisada: o ficheiro est\u00e1 vazio.",
+      "incomplete": "N\u00e3o analisada: o ficheiro est\u00e1 incompleto.",
+      "not_a_recording": "N\u00e3o analisada: isto n\u00e3o \u00e9 uma grava\u00e7\u00e3o.",
+      "no_audio": "N\u00e3o analisada: este ficheiro n\u00e3o tem som.",
+      "no_speech": "N\u00e3o analisada: n\u00e3o foi encontrada nenhuma fala.",
+      "no_lines": "N\u00e3o analisada: a transcri\u00e7\u00e3o n\u00e3o tem linhas.",
+      "notes_only": "N\u00e3o analisada: este documento cont\u00e9m apenas notas da reuni\u00e3o.",
+      "no_transcript": "N\u00e3o analisada: n\u00e3o foi encontrada nenhuma transcri\u00e7\u00e3o neste documento.",
+      "unreadable": "N\u00e3o analisada: n\u00e3o foi poss\u00edvel ler o ficheiro."
+    },
     "moderatedBy": "Moderado por {{names}}",
     "observer_one": "Observador: {{names}}",
     "observer_other": "Observadores: {{names}}",

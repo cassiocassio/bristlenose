@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} säilyttämääsi sitaattia ei ole juuri nyt missään osiossa tai teemassa — mutta ne ovat täällä tallessa, mitään ei kadonnut."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Ei analysoitu: tiedosto on tyhj\u00e4.",
+      "incomplete": "Ei analysoitu: tiedosto on vajaa.",
+      "not_a_recording": "Ei analysoitu: t\u00e4m\u00e4 ei ole tallenne.",
+      "no_audio": "Ei analysoitu: tiedostossa ei ole \u00e4\u00e4nt\u00e4.",
+      "no_speech": "Ei analysoitu: puhetta ei l\u00f6ytynyt.",
+      "no_lines": "Ei analysoitu: litteraatissa ei ole rivej\u00e4.",
+      "notes_only": "Ei analysoitu: t\u00e4m\u00e4 asiakirja sis\u00e4lt\u00e4\u00e4 vain kokousmuistiinpanoja.",
+      "no_transcript": "Ei analysoitu: t\u00e4st\u00e4 asiakirjasta ei l\u00f6ytynyt litteraattia.",
+      "unreadable": "Ei analysoitu: tiedostoa ei voitu lukea."
+    },
     "moderatedBy": "Moderaattori: {{names}}",
     "observer_one": "Tarkkailija: {{names}}",
     "observer_other": "Tarkkailijat: {{names}}",

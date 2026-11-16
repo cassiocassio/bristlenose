@@ -119,6 +119,17 @@
     "uncategorisedIntro_other": "{{count}} verbatims que vous avez conservés ne sont actuellement dans aucune section ni aucun thème — mais ils sont en sécurité ici, rien n’a été perdu."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Non analys\u00e9e\u00a0: le fichier est vide.",
+      "incomplete": "Non analys\u00e9e\u00a0: le fichier est incomplet.",
+      "not_a_recording": "Non analys\u00e9e\u00a0: ce n\u2019est pas un enregistrement.",
+      "no_audio": "Non analys\u00e9e\u00a0: ce fichier ne contient aucun son.",
+      "no_speech": "Non analys\u00e9e\u00a0: aucune parole n\u2019a \u00e9t\u00e9 trouv\u00e9e.",
+      "no_lines": "Non analys\u00e9e\u00a0: la transcription ne contient aucune ligne.",
+      "notes_only": "Non analys\u00e9e\u00a0: ce document ne contient que des notes de r\u00e9union.",
+      "no_transcript": "Non analys\u00e9e\u00a0: aucune transcription n\u2019a \u00e9t\u00e9 trouv\u00e9e dans ce document.",
+      "unreadable": "Non analys\u00e9e\u00a0: le fichier n\u2019a pas pu \u00eatre lu."
+    },
     "moderatedBy": "Animé par {{names}}",
     "observer_one": "Observateur : {{names}}",
     "observer_other": "Observateurs : {{names}}",

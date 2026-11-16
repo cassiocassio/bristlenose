@@ -189,6 +189,12 @@ function oxfordList(items: string[]): string {
 // Main component
 // ---------------------------------------------------------------------------
 
+/** The reasons a session can end with no transcript that the row words; any other reads as unreadable. */
+const FAILED_REASONS: ReadonlySet<string> = new Set([
+  "empty", "incomplete", "not_a_recording", "no_audio", "no_speech", "no_lines",
+  "notes_only", "no_transcript", "unreadable",
+]);
+
 export function SessionsTable({
   projectId,
   refreshKey = 0,
@@ -1069,6 +1075,16 @@ function SessionRow({
         )}
       </div>
       <div className="bn-sessions-cell bn-cell-speakers bn-session-speakers" role="cell">
+        {session.state === "failed" && (
+          // A muted row (aria-disabled above) that keeps the number and says why (BR-15).
+          <span data-testid="bn-session-failed-reason">
+            {t(
+              FAILED_REASONS.has(session.failure_reason ?? "")
+                ? `sessions.failedReason.${session.failure_reason}`
+                : "sessions.failedReason.unreadable",
+            )}
+          </span>
+        )}
         {speakers.map((sp) => {
           // /people has one entry per code, so for a moderator or observer it
           // holds whichever session's name came last: use this session's.

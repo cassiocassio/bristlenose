@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} citater, du har beholdt, er ikke i nogen sektion eller noget tema lige nu — men de er sikre her, intet gik tabt."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Ikke analyseret: filen er tom.",
+      "incomplete": "Ikke analyseret: filen er ufuldst\u00e6ndig.",
+      "not_a_recording": "Ikke analyseret: det er ikke en optagelse.",
+      "no_audio": "Ikke analyseret: der er ingen lyd i denne fil.",
+      "no_speech": "Ikke analyseret: der blev ikke fundet nogen tale.",
+      "no_lines": "Ikke analyseret: transskriptionen har ingen linjer.",
+      "notes_only": "Ikke analyseret: dette dokument indeholder kun m\u00f8denoter.",
+      "no_transcript": "Ikke analyseret: der blev ikke fundet nogen transskription i dette dokument.",
+      "unreadable": "Ikke analyseret: filen kunne ikke l\u00e6ses."
+    },
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Deltager",

@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} cites que has conservat ara mateix no són a cap secció ni tema — però són segures aquí, no s'ha perdut res."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "No analitzada: el fitxer \u00e9s buit.",
+      "incomplete": "No analitzada: el fitxer est\u00e0 incomplet.",
+      "not_a_recording": "No analitzada: no \u00e9s un enregistrament.",
+      "no_audio": "No analitzada: aquest fitxer no t\u00e9 so.",
+      "no_speech": "No analitzada: no s\u2019ha trobat cap parla.",
+      "no_lines": "No analitzada: la transcripci\u00f3 no t\u00e9 cap l\u00ednia.",
+      "notes_only": "No analitzada: aquest document nom\u00e9s cont\u00e9 notes de la reuni\u00f3.",
+      "no_transcript": "No analitzada: no s\u2019ha trobat cap transcripci\u00f3 en aquest document.",
+      "unreadable": "No analitzada: no s\u2019ha pogut llegir el fitxer."
+    },
     "moderatedBy": "Moderada per {{names}}",
     "observer_one": "Observador: {{names}}",
     "observer_other": "Observadors: {{names}}",

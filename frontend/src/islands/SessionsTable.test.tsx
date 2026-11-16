@@ -1681,3 +1681,46 @@ describe("SessionsTable — a recoded session (§J7 R3)", () => {
     expect(asked.some((url) => url.includes("/reanalyse"))).toBe(false);
   });
 });
+
+// BR-15: a session that produced no transcript keeps its number and says why.
+describe("SessionsTable: a failed session", () => {
+  const failedRow = (reason: string | null) => ({
+    session_id: "s2", session_number: 2, session_date: null, duration_seconds: 0,
+    has_media: false, has_video: false, speakers: [], journey_labels: [], journey: [],
+    sentiment_counts: {}, source_files: [{ path: "empty.vtt", file_type: "", filename: "empty.vtt" }],
+    state: "failed", failure_reason: reason,
+  });
+  const serve = (reason: string | null) =>
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("/sessions")
+          ? { ok: true, json: async () => ({ ...sessionsResponse, sessions: [sessionsResponse.sessions[0], failedRow(reason)] }) }
+          : url.includes("/people")
+            ? { ok: true, json: async () => peopleResponse }
+            : { ok: false, status: 404, json: async () => ({}) },
+      ),
+    );
+
+  it("keeps #2 as a muted, non-link row and gives the reason", async () => {
+    serve("empty");
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#2");
+    const row = screen.getByText("#2").closest('[role="row"]') as HTMLElement;
+    expect(row.getAttribute("aria-disabled")).toBe("true");
+    expect(row.getAttribute("data-session")).toBeNull();
+    expect(screen.getByText("#2").closest("a")).toBeNull();
+    expect(container.querySelector('[data-testid="bn-session-failed-reason"]')?.textContent).toBe(
+      "Not analysed: the file is empty.",
+    );
+    expect(row.textContent).toContain("empty.vtt");
+  });
+
+  it("an unnamed or unknown reason reads as unreadable, never as a key", async () => {
+    serve(null);
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#2");
+    expect(container.querySelector('[data-testid="bn-session-failed-reason"]')?.textContent).toBe(
+      "Not analysed: the file could not be read.",
+    );
+  });
+});

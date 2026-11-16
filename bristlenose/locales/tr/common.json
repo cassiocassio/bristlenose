@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "Sakladığınız {{count}} alıntı şu anda hiçbir bölümde veya temada değil — ama burada güvende, hiçbir şey kaybolmadı."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Analiz edilmedi: dosya bo\u015f.",
+      "incomplete": "Analiz edilmedi: dosya eksik.",
+      "not_a_recording": "Analiz edilmedi: bu bir kay\u0131t de\u011fil.",
+      "no_audio": "Analiz edilmedi: bu dosyada ses yok.",
+      "no_speech": "Analiz edilmedi: konu\u015fma bulunamad\u0131.",
+      "no_lines": "Analiz edilmedi: d\u00f6k\u00fcmde sat\u0131r yok.",
+      "notes_only": "Analiz edilmedi: bu belge yaln\u0131zca toplant\u0131 notlar\u0131 i\u00e7eriyor.",
+      "no_transcript": "Analiz edilmedi: bu belgede d\u00f6k\u00fcm bulunamad\u0131.",
+      "unreadable": "Analiz edilmedi: dosya okunamad\u0131."
+    },
     "moderatedBy": "Moderatör: {{names}}",
     "observer_one": "Gözlemci: {{names}}",
     "observer_other": "Gözlemciler: {{names}}",

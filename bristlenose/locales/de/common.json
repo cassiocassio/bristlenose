@@ -119,6 +119,17 @@
     "uncategorisedIntro_other": "{{count}} Zitate, die Sie behalten haben, gehören derzeit zu keinem Abschnitt und keinem Thema — sie sind hier aber sicher aufgehoben, nichts ist verloren."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Nicht analysiert: die Datei ist leer.",
+      "incomplete": "Nicht analysiert: die Datei ist unvollst\u00e4ndig.",
+      "not_a_recording": "Nicht analysiert: das ist keine Aufnahme.",
+      "no_audio": "Nicht analysiert: diese Datei enth\u00e4lt keinen Ton.",
+      "no_speech": "Nicht analysiert: es wurde keine Sprache gefunden.",
+      "no_lines": "Nicht analysiert: das Transkript enth\u00e4lt keine Zeilen.",
+      "notes_only": "Nicht analysiert: dieses Dokument enth\u00e4lt nur Besprechungsnotizen.",
+      "no_transcript": "Nicht analysiert: in diesem Dokument wurde kein Transkript gefunden.",
+      "unreadable": "Nicht analysiert: die Datei konnte nicht gelesen werden."
+    },
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Teilnehmer",

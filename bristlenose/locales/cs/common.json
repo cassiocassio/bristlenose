@@ -141,6 +141,17 @@
     "uncategorisedIntro_many": "{{count}} citátu, které jste si ponechali, teď není v žádné sekci ani tématu — ale je tu v bezpečí, nic se neztratilo."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Neanalyzov\u00e1no: soubor je pr\u00e1zdn\u00fd.",
+      "incomplete": "Neanalyzov\u00e1no: soubor je ne\u00fapln\u00fd.",
+      "not_a_recording": "Neanalyzov\u00e1no: toto nen\u00ed nahr\u00e1vka.",
+      "no_audio": "Neanalyzov\u00e1no: tento soubor neobsahuje zvuk.",
+      "no_speech": "Neanalyzov\u00e1no: nebyla nalezena \u017e\u00e1dn\u00e1 \u0159e\u010d.",
+      "no_lines": "Neanalyzov\u00e1no: p\u0159epis neobsahuje \u017e\u00e1dn\u00e9 \u0159\u00e1dky.",
+      "notes_only": "Neanalyzov\u00e1no: tento dokument obsahuje jen pozn\u00e1mky ze sch\u016fzky.",
+      "no_transcript": "Neanalyzov\u00e1no: v tomto dokumentu nebyl nalezen \u017e\u00e1dn\u00fd p\u0159epis.",
+      "unreadable": "Neanalyzov\u00e1no: soubor se nepoda\u0159ilo p\u0159e\u010d\u00edst."
+    },
     "moderatedBy": "Moderoval(a) {{names}}",
     "observer_one": "Pozorovatel: {{names}}",
     "observer_few": "Pozorovatelé: {{names}}",

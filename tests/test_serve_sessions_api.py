@@ -173,6 +173,7 @@ class TestSessionsResponseShape:
             "source_files",
             "needs_reanalysis",
             "state",
+            "failure_reason",
         }
         assert set(session.keys()) == expected_keys
 
@@ -190,3 +191,73 @@ class TestSessionsResponseShape:
         sf = data["sessions"][0]["source_files"][0]
         expected_keys = {"path", "file_type", "filename"}
         assert set(sf.keys()) == expected_keys
+
+
+class TestFailedSessionRows:
+    """BR-15: a finished project lists the sessions that produced no transcript."""
+
+    @staticmethod
+    def _project(tmp_path: Path, *, reason: bool = False) -> TestClient:
+        import json
+        import shutil
+
+        proj = tmp_path / "proj"
+        shutil.copytree(_FIXTURE_DIR, proj)
+        inter = proj / "bristlenose-output" / ".bristlenose" / "intermediate"
+        inter.mkdir(parents=True, exist_ok=True)
+        facts = [
+            {"session_id": "s1", "session_number": 1, "start": "2026-01-01T10:00:00+00:00",
+             "source": "ok.vtt"},
+            {"session_id": "s2", "session_number": 2, "start": "2026-01-02T10:00:00+00:00",
+             "source": "/abs/dir/empty.vtt"},
+        ]
+        (inter / "ingest-facts.json").write_text(json.dumps({"sessions": facts}), encoding="utf-8")
+        if reason:
+            from bristlenose.events import (
+                Cause,
+                CauseCategoryEnum,
+                PipelineSummary,
+                RunCompletedEvent,
+                StageFailure,
+                StageOutcome,
+                UnusableReason,
+                append_event,
+            )
+
+            cause = Cause(
+                category=CauseCategoryEnum.UNUSABLE_INPUT, reason=UnusableReason.EMPTY,
+                message="The file is empty.",
+            )
+            append_event(inter.parent / "pipeline-events.jsonl", RunCompletedEvent(
+                ts="2026-01-03T00:05:00Z", run_id="r1", kind="run",
+                started_at="2026-01-03T00:00:00Z", ended_at="2026-01-03T00:05:00Z",
+                summary=PipelineSummary(ingest=StageOutcome(
+                    attempted=2, succeeded=1,
+                    failed=[StageFailure(source_file="empty.vtt", cause=cause)],
+                )),
+            ))
+        app = create_app(project_dir=proj, dev=True, db_url="sqlite://")
+        return AuthTestClient(app)
+
+    def test_the_failed_row_carries_the_runs_reason(self, tmp_path: Path) -> None:
+        data = self._project(tmp_path, reason=True).get("/api/projects/1/sessions").json()
+        row = next(r for r in data["sessions"] if r["session_number"] == 2)
+        assert row["failure_reason"] == "empty"
+
+    def test_gap_comes_back_as_a_failed_row_keeping_its_number(self, tmp_path: Path) -> None:
+        data = self._project(tmp_path).get("/api/projects/1/sessions").json()
+        rows = {r["session_number"]: r for r in data["sessions"]}
+        assert sorted(rows) == [1, 2]
+        assert rows[1]["state"] == "readable"
+        assert rows[2]["state"] == "failed"
+        assert rows[2]["source_files"][0]["filename"] == "empty.vtt"
+
+    def test_no_failed_row_while_a_run_is_in_flight(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from bristlenose import events
+        from bristlenose.events import RunState
+
+        monkeypatch.setattr(events, "tail_run_state", lambda *a, **k: RunState(in_flight=True))
+        data = self._project(tmp_path).get("/api/projects/1/sessions").json()
+        assert [r["session_number"] for r in data["sessions"]] == [1]

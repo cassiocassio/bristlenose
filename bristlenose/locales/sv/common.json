@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} citat du har behållit hör just nu inte till någon sektion eller något tema — men de ligger tryggt här, ingenting har gått förlorat."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Inte analyserad: filen \u00e4r tom.",
+      "incomplete": "Inte analyserad: filen \u00e4r ofullst\u00e4ndig.",
+      "not_a_recording": "Inte analyserad: det h\u00e4r \u00e4r ingen inspelning.",
+      "no_audio": "Inte analyserad: det finns inget ljud i den h\u00e4r filen.",
+      "no_speech": "Inte analyserad: inget tal hittades.",
+      "no_lines": "Inte analyserad: transkriptet har inga rader.",
+      "notes_only": "Inte analyserad: det h\u00e4r dokumentet inneh\u00e5ller bara m\u00f6tesanteckningar.",
+      "no_transcript": "Inte analyserad: inget transkript hittades i det h\u00e4r dokumentet.",
+      "unreadable": "Inte analyserad: filen kunde inte l\u00e4sas."
+    },
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Deltagare",

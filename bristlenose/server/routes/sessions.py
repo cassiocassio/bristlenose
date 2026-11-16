@@ -98,6 +98,10 @@ class SessionResponse(BaseModel):
     #: waiting its turn (``waiting``). Every row of a finished project is
     #: ``readable``.
     state: str = "readable"
+    #: ``state == "failed"`` only: why no transcript came out of the session, as
+    #: an ``UnusableReason`` value, or None when the run did not say. The SPA
+    #: words it; the row keeps the session's number (ids are stable keys).
+    failure_reason: str | None = None
 
 
 class SessionsListResponse(BaseModel):
@@ -301,11 +305,13 @@ def _with_unread_sessions(
 
     progress = getattr(request.app.state, "progress", None)
     project_dir = getattr(request.app.state, "project_dir", None)
-    if progress is None or project_dir is None:
+    if project_dir is None:
         return rows
     facts = read_ingest_facts(project_output_dir(project_dir))
     if not facts:
         return rows
+    if progress is None:
+        return _with_failed_sessions(rows, facts, project_output_dir(project_dir))
     have = {r.session_id: r for r in rows}
     # A row the database holds is readable: progress only moves forward
     # (§3 principle 4), even when a resumed run's fresh manifest has not yet
@@ -341,6 +347,87 @@ def _with_unread_sessions(
     # Anything imported that ingest did not list (it cannot happen in one run,
     # but never drop a row the database holds).
     out.extend(have.values())
+    return out
+
+
+def _failure_reasons(output_dir: _Path) -> tuple[dict[str, str], dict[str, str]]:
+    """The last finished run's per-file failure reasons: by session id and by file name."""
+    from bristlenose.events import RunCancelledEvent, RunCompletedEvent, RunFailedEvent, read_events
+
+    by_session: dict[str, str] = {}
+    by_file: dict[str, str] = {}
+    try:
+        events = read_events(output_dir / ".bristlenose" / "pipeline-events.jsonl")
+    except OSError:
+        return by_session, by_file
+    last = next(
+        (e for e in reversed(events)
+         if isinstance(e, (RunCompletedEvent, RunFailedEvent, RunCancelledEvent))),
+        None,
+    )
+    summary = getattr(last, "summary", None)
+    if summary is None:
+        return by_session, by_file
+    for stage in (summary.ingest, summary.transcripts):
+        for failure in (stage.failed if stage else []):
+            reason = failure.cause.reason
+            if reason is None:
+                continue
+            if failure.session_id:
+                by_session.setdefault(failure.session_id, reason.value)
+            if failure.source_file:
+                by_file.setdefault(failure.source_file, reason.value)
+    return by_session, by_file
+
+
+def _with_failed_sessions(
+    rows: list[SessionResponse], facts: list[dict[str, object]], output_dir: _Path,
+) -> list[SessionResponse]:
+    """A finished project's sessions that produced no transcript, kept in number order.
+
+    Ingest numbered them and the database never got a row, so the list read
+    #1, #3, #5 with the missing numbers unexplained (BR-15). Each comes back as a
+    ``failed`` row carrying the facts ingest knew and the reason the run gave.
+    """
+    have = {r.session_id for r in rows}
+    missing = [f for f in facts if str(f.get("session_id", "")) not in have]
+    if not missing:
+        return rows
+    from bristlenose.events import tail_run_state
+
+    # A run in flight has not imported its sessions yet: a gap then is waiting,
+    # not failing.
+    try:
+        if tail_run_state(output_dir / ".bristlenose" / "pipeline-events.jsonl").in_flight:
+            return rows
+    except OSError:
+        pass
+    by_session, by_file = _failure_reasons(output_dir)
+    out = list(rows)
+    for f in missing:
+        sid = str(f.get("session_id", ""))
+        number = f.get("session_number")
+        if not sid or not isinstance(number, int):
+            continue
+        source = _Path(str(f.get("source") or "")).name
+        start = f.get("start")
+        out.append(SessionResponse(
+            session_id=sid,
+            session_number=number,
+            session_date=iso_utc(_parse_iso(start)) if isinstance(start, str) and _parse_iso(start) else None,
+            duration_seconds=0.0,
+            has_media=False,
+            has_video=False,
+            speakers=[],
+            journey_labels=[],
+            journey=[],
+            sentiment_counts={},
+            source_files=[SourceFileResponse(path=source, file_type="", filename=source)]
+            if source else [],
+            state="failed",
+            failure_reason=by_session.get(sid) or by_file.get(source),
+        ))
+    out.sort(key=lambda r: r.session_number)
     return out
 
 

@@ -129,6 +129,17 @@
     "uncategorisedIntro_other": "{{count}} quotes you kept aren’t in any section or theme right now — but they’re safe here, nothing was lost."
   },
   "sessions": {
+    "failedReason": {
+      "empty": "Not analysed: the file is empty.",
+      "incomplete": "Not analysed: the file is incomplete.",
+      "not_a_recording": "Not analysed: this is not a recording.",
+      "no_audio": "Not analysed: there is no sound in this file.",
+      "no_speech": "Not analysed: no speech was found.",
+      "no_lines": "Not analysed: the transcript has no lines.",
+      "notes_only": "Not analysed: this document holds only meeting notes.",
+      "no_transcript": "Not analysed: no transcript was found in this document.",
+      "unreadable": "Not analysed: the file could not be read."
+    },
     "moderatedBy": "Moderated by {{names}}",
     "observer_one": "Observer: {{names}}",
     "observer_other": "Observers: {{names}}",

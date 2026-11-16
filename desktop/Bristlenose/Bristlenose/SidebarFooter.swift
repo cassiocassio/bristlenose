@@ -56,7 +56,13 @@ struct SidebarFooter: View {
 /// runs under the same StoreKit sandbox receipt as TestFlight
 /// (`DistributionChannel.swift`), so a "TestFlight only" check would also show
 /// the word to the App Store reviewer, and Guideline 2.2 rejects apps presented
-/// as betas. Set this to `false` before the first App Store submission.
+/// as betas. So it is on only in the Developer ID `.dmg` (`DEVELOPER_ID_BETA`,
+/// set by `build-dmg.sh`), which Apple never reviews; the App Store and
+/// TestFlight archive compiles it off.
 enum ReleaseStage {
+    #if DEVELOPER_ID_BETA
     static let showsPrereleaseVersion = true
+    #else
+    static let showsPrereleaseVersion = false
+    #endif
 }

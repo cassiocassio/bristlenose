@@ -1024,6 +1024,230 @@ enum WelcomeTimelineCSS {
     }
 }
 
+/* ════ bristlenose/theme/colors/palette-edo3.css — lines 1–110 ════ */
+/* palette-edo3 - an experiment slot, a copy of edo-v1 until an iteration is promoted into it
+   (workbench.py promote <iteration> --as edo3). Removed by `workbench.py finish`. */
+
+[data-color-theme="edo3"] {
+    --bn-colour-bg: #ffffff;  /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;  /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #dfd8c1;  /* Sail Parchment — warm border */
+    --bn-colour-accent: #0761aa;  /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #fffaed;  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #ffffff;  /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+    --bn-colour-quote-bg: #fffdf7;  /* Warm off-white */
+    --bn-colour-paper: #ffffff;  /* Washi / Sumi */
+    --bn-colour-sheet: #ffffff;  /* 1.08:1 / 1.12:1 off the paper */
+    --bn-colour-badge-bg-paper: #fbf5e6;  /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #fbf5e6;  /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;  /* Court Indigo */
+    --bn-colour-user-tag-bg: #fbf5e6;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;  /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;  /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;  /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;  /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;  /* Gold Ochre highlight */
+    --bn-colour-negative: #b5432a;
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+    --bn-glow-colour: rgba(7, 97, 170, 0.08);
+    --bn-glow-colour-strong: rgba(7, 97, 170, 0.15);
+    --bn-minimap-quote: #dfd8c1;
+    --bn-minimap-heading: #a79a85;
+    --bn-minimap-viewport-bg: rgba(7, 97, 170, 0.12);
+    --bn-minimap-viewport-border: rgba(7, 97, 170, 0.25);
+    --bn-coverage-report: #5784aa;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #dfd8c1;
+    --bn-group-none: #fffdf7;
+    --bn-bar-none: #cfc7b0;
+    --bn-colour-border-hover: #c3bba8;
+    --bn-colour-icon-idle: #c3bba8;
+    --bn-colour-starred: #a79a85;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(7, 97, 170, 0.15);
+    --bn-hover-bg: rgba(30,20,10,0.05);
+    --bn-hover-bg-subtle: rgba(30,20,10,0.03);
+    --bn-selection-bg: #dee8f2;
+    --bn-selection-border: #0761aa;
+    --bn-selection-bg-inactive: #fbf7ed;
+    --bn-selection-border-inactive: #c3bba8;
+    --bn-nav-selection-bg: #f9f3e5;
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+    --bn-colour-suggestion: #0761aa;
+    --bn-colour-suggestion-bg: #dee8f2;
+    --bn-colour-cited-bg: #f5ecd0;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo3"] {
+        --bn-colour-bg:                 light-dark(#ffffff, #1a1816);
+        --bn-colour-text:               light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:              light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:             light-dark(#dfd8c1, #2d2820);
+        --bn-colour-accent:             light-dark(#0761aa, #4d9fe0);
+        --bn-colour-hover:              light-dark(#fffaed, #252118);
+        --bn-colour-inspector-bg:       light-dark(#ffffff, #211e18);
+        --bn-colour-quote-bg:           light-dark(#fffdf7, #211e18);
+        --bn-colour-paper:              light-dark(#ffffff, #1a1816);
+        --bn-colour-sheet:              light-dark(#ffffff, #26221b);
+        --bn-colour-badge-bg-paper:     light-dark(#fbf5e6, #2d2820);
+        --bn-colour-badge-bg:           light-dark(#fbf5e6, #2d2820);
+        --bn-colour-badge-text:         light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:        light-dark(#fbf5e6, #2d2820);
+        --bn-colour-user-tag-text:      light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:            light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:        light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:         light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:          light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:          light-dark(#c4a96a, #6b5528);
+        --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
+        --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:            light-dark(#a8842c, #c4a96a);
+        --bn-glow-colour:               light-dark(rgba(7, 97, 170, 0.08), rgba(77, 159, 224, 0.1));
+        --bn-glow-colour-strong:        light-dark(rgba(7, 97, 170, 0.15), rgba(77, 159, 224, 0.18));
+        --bn-minimap-quote:             light-dark(#dfd8c1, #2d2820);
+        --bn-minimap-heading:           light-dark(#a79a85, #4a4030);
+        --bn-minimap-viewport-bg:       light-dark(rgba(7, 97, 170, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border:   light-dark(rgba(7, 97, 170, 0.25), rgba(77, 159, 224, 0.3));
+        --bn-coverage-report:           light-dark(#5784aa, #4a6a80);
+        --bn-coverage-moderator:        light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:          light-dark(#dfd8c1, #3d3830);
+        --bn-group-none:                light-dark(#fffdf7, #211e18);
+        --bn-bar-none:                  light-dark(#cfc7b0, #4a4030);
+        --bn-colour-border-hover:       light-dark(#c3bba8, #4a4030);
+        --bn-colour-icon-idle:          light-dark(#c3bba8, #4a4030);
+        --bn-colour-starred:            light-dark(#a79a85, #b8a880);
+        --bn-colour-shadow:             light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(7, 97, 170, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-hover-bg:                  light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+        --bn-selection-bg:              light-dark(#dee8f2, #1e2830);
+        --bn-selection-border:          light-dark(#0761aa, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#fbf7ed, #26231d);
+        --bn-selection-border-inactive: light-dark(#c3bba8, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#f9f3e5, #2d2922);
+        --bn-colour-suggestion:         light-dark(#0761aa, #4d9fe0);
+        --bn-colour-suggestion-bg:      light-dark(#dee8f2, #1e2830);
+        --bn-colour-cited-bg:           light-dark(#f5ecd0, #3b3010);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-edo4.css — lines 1–110 ════ */
+/* palette-edo4 - an experiment slot, a copy of edo-v1 until an iteration is promoted into it
+   (workbench.py promote <iteration> --as edo4). Removed by `workbench.py finish`. */
+
+[data-color-theme="edo4"] {
+    --bn-colour-bg: #faf9f8;  /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;  /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #ccc8bb;  /* Sail Parchment — warm border */
+    --bn-colour-accent: #4191e2;  /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #f4f1e9;  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f8f6f2;  /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+    --bn-colour-quote-bg: #f5f3eb;  /* Warm off-white */
+    --bn-colour-paper: #f8f6f2;  /* Washi / Sumi */
+    --bn-colour-sheet: #faf9f8;  /* 1.08:1 / 1.12:1 off the paper */
+    --bn-colour-badge-bg-paper: #f1eee5;  /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #f1eee5;  /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;  /* Court Indigo */
+    --bn-colour-user-tag-bg: #f1eee5;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #fee8d4;  /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;  /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;  /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;  /* Pine Green tint */
+    --bn-colour-highlight: #eca061;  /* Gold Ochre highlight */
+    --bn-colour-negative: #b5432a;
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #d4740d;
+    --bn-glow-colour: rgba(70, 150, 231, 0.08);
+    --bn-glow-colour-strong: rgba(70, 150, 231, 0.15);
+    --bn-minimap-quote: #ccc8bb;
+    --bn-minimap-heading: #938b80;
+    --bn-minimap-viewport-bg: rgba(70, 150, 231, 0.12);
+    --bn-minimap-viewport-border: rgba(70, 150, 231, 0.25);
+    --bn-coverage-report: #8bb9e0;
+    --bn-coverage-moderator: #eca061;
+    --bn-coverage-omitted: #ccc8bb;
+    --bn-group-none: #f5f3eb;
+    --bn-bar-none: #bcb7aa;
+    --bn-colour-border-hover: #b0aca1;
+    --bn-colour-icon-idle: #b0aca1;
+    --bn-colour-starred: #938b80;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(70, 150, 231, 0.15);
+    --bn-hover-bg: rgba(30,20,10,0.05);
+    --bn-hover-bg-subtle: rgba(30,20,10,0.03);
+    --bn-selection-bg: #dfe8f2;
+    --bn-selection-border: #4696e7;
+    --bn-selection-bg-inactive: #f2f0ea;
+    --bn-selection-border-inactive: #b0aca1;
+    --bn-nav-selection-bg: #f1eee5;
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+    --bn-colour-suggestion: #4696e7;
+    --bn-colour-suggestion-bg: #dfe8f2;
+    --bn-colour-cited-bg: #fee8d4;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo4"] {
+        --bn-colour-bg:                 light-dark(#faf9f8, #1a1816);
+        --bn-colour-text:               light-dark(#1b2230, #e6e3dd);
+        --bn-colour-muted:              light-dark(#4a698a, #8da39f);
+        --bn-colour-border:             light-dark(#ccc8bb, #2d2820);
+        --bn-colour-accent:             light-dark(#4191e2, #4d9fe0);
+        --bn-colour-hover:              light-dark(#f4f1e9, #252118);
+        --bn-colour-inspector-bg:       light-dark(#f8f6f2, #211e18);
+        --bn-colour-quote-bg:           light-dark(#f5f3eb, #211e18);
+        --bn-colour-paper:              light-dark(#f8f6f2, #1a1816);
+        --bn-colour-sheet:              light-dark(#faf9f8, #26221b);
+        --bn-colour-badge-bg-paper:     light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-bg:           light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-text:         light-dark(#2d3654, #beb8a9);
+        --bn-colour-user-tag-bg:        light-dark(#f1eee5, #2d2820);
+        --bn-colour-user-tag-text:      light-dark(#3d4a5c, #beb8a9);
+        --bn-colour-crop-bg:            light-dark(#fee8d4, #392006);
+        --bn-crop-handle-colour:        light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:         light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:          light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:          light-dark(#eca061, #914b04);
+        --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
+        --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:            light-dark(#d4740d, #f99b44);
+        --bn-glow-colour:               light-dark(rgba(70, 150, 231, 0.08), rgba(77, 159, 224, 0.1));
+        --bn-glow-colour-strong:        light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.18));
+        --bn-minimap-quote:             light-dark(#ccc8bb, #2d2820);
+        --bn-minimap-heading:           light-dark(#938b80, #4a4030);
+        --bn-minimap-viewport-bg:       light-dark(rgba(70, 150, 231, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border:   light-dark(rgba(70, 150, 231, 0.25), rgba(77, 159, 224, 0.3));
+        --bn-coverage-report:           light-dark(#8bb9e0, #4a6a80);
+        --bn-coverage-moderator:        light-dark(#eca061, #d27a04);
+        --bn-coverage-omitted:          light-dark(#ccc8bb, #3d3830);
+        --bn-group-none:                light-dark(#f5f3eb, #211e18);
+        --bn-bar-none:                  light-dark(#bcb7aa, #4a4030);
+        --bn-colour-border-hover:       light-dark(#b0aca1, #4a4030);
+        --bn-colour-icon-idle:          light-dark(#b0aca1, #4a4030);
+        --bn-colour-starred:            light-dark(#938b80, #b8a880);
+        --bn-colour-shadow:             light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-hover-bg:                  light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+        --bn-selection-bg:              light-dark(#dfe8f2, #1e2830);
+        --bn-selection-border:          light-dark(#4696e7, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#f2f0ea, #26231d);
+        --bn-selection-border-inactive: light-dark(#b0aca1, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#f1eee5, #2d2922);
+        --bn-colour-suggestion:         light-dark(#4696e7, #4d9fe0);
+        --bn-colour-suggestion-bg:      light-dark(#dfe8f2, #1e2830);
+        --bn-colour-cited-bg:           light-dark(#fee8d4, #492803);
+    }
+}
+
 /* ════ bristlenose/theme/colors/palette-catppuccin.css — lines 1–160 ════ */
 /* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
    Source: https://github.com/catppuccin/palette (catppuccin.com/palette).

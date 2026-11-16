@@ -35,6 +35,7 @@ table{border-collapse:collapse;font:11px ui-monospace,Menlo,monospace;width:100%
   <div class="keep">
     <div class="keeprow"><input id="name" placeholder="name, e.g. edo2-a"><button id="save">Save iteration</button></div>
     <textarea id="note" rows="1" placeholder="what this tries, one line"></textarea>
+    <div class="keeprow" style="margin-top:4px"><select id="slot"></select><button id="send" title="Saves the iteration, writes it into that palette slot, and regenerates the app's copies">Send to app</button></div>
     <span id="saved" class="muted"></span>
     <details><summary>Saved iterations</summary><div id="its"></div></details>
   </div>
@@ -99,6 +100,11 @@ function load(url){for(const id of["#fl","#fd"]){const f=$(id);f.onload=paint;f.
 $("#page").onchange=e=>load(e.target.value); load(pages[0]?.url||"about:blank");
 $("#save").onclick=async()=>{const name=$("#name").value.trim(); if(!/^[a-z0-9_-]+$/.test(name)){$("#saved").textContent="name: a-z 0-9 - _";return}
   const r=await fetch("/api/save",{method:"POST",body:JSON.stringify({name,base:baseName,knobs,overrides:ov,note:$("#note").value})}); $("#saved").textContent=r.ok?"saved "+name:"failed"; its()};
+$("#send").onclick=async()=>{const name=$("#name").value.trim(); if(!/^[a-z0-9_-]+$/.test(name)){$("#saved").textContent="name it first: a-z 0-9 - _";return}
+  $("#saved").textContent="sending…";
+  const r=await fetch("/api/promote",{method:"POST",body:JSON.stringify({name,slot:$("#slot").value,base:baseName,knobs,overrides:ov,note:$("#note").value})});
+  if(!r.ok){$("#saved").textContent=await r.text();return}
+  const j=await r.json(); $("#saved").innerHTML="sent to <b>"+j.slot+"</b>. Reload the report in the app; the sidebar colours need a Cmd+R rebuild."+(j.failing.length?"<br><span class=notes>text pairs failing: "+j.failing.length+"</span>":""); its()};
 async function its(){const l=await (await fetch("/api/iterations")).json(); $("#its").innerHTML=l.map(i=>`<div><a href="#" data-n="${i.name}">${i.name}</a> <span class="muted">${i.note||""}</span></div>`).join("")||"none yet"}
 $("#its").onclick=async e=>{const n=e.target.dataset.n; if(!n)return; e.preventDefault(); const it=await (await fetch("/api/iteration?name="+n)).json(); knobs=it.knobs; ov=it.overrides||{}; $("#name").value=n; $("#note").value=it.note||""; build(); paint()};
 
@@ -166,5 +172,6 @@ for(const [id,[v,def,mn,mx]] of Object.entries(COL)){const g=document.getElement
     g.onpointermove=ev=>{document.documentElement.style.setProperty(v,Math.max(mn,Math.min(mx,w0+ev.clientX-x0))+"px")};
     g.onpointerup=()=>{g.classList.remove("drag"); g.onpointermove=g.onpointerup=null; saveCols()}};
   g.ondblclick=()=>{document.documentElement.style.removeProperty(v); saveCols()}}
+fetch("/api/slots").then(r=>r.json()).then(l=>{$("#slot").innerHTML=l.map(k=>`<option>${k}</option>`).join("")||"<option value=\"\">no slots: run workbench.py slots</option>"});
 build(); its(); paint();
 </script></body></html>

@@ -10,7 +10,7 @@
  */
 
 /** All valid colour-palette identifiers. Order is the picker's order. */
-export const PALETTES = ["default", "edo", "catppuccin", "gruvbox", "rose-pine", "solarized"] as const;
+export const PALETTES = ["default", "edo", "edo3", "edo4", "catppuccin", "gruvbox", "rose-pine", "solarized"] as const;
 
 export type Palette = (typeof PALETTES)[number];
 

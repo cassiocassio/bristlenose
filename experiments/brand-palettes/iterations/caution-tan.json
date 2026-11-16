@@ -1,0 +1,11 @@
+{
+  "base": "edo2",
+  "note": "caution: tan (one root colour; the caution family follows)",
+  "knobs": {},
+  "overrides": {
+    "--bn-colour-warning": {
+      "light": "#d4740d",
+      "dark": "#f99b44"
+    }
+  }
+}

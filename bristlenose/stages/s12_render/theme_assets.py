@@ -36,6 +36,8 @@ _THEME_FILES: list[str] = [
     # Layer 2: colour palettes (default first as :root fallback, then themed overrides)
     "colors/palette-default.css",
     "colors/palette-edo.css",
+    "colors/palette-edo3.css",
+    "colors/palette-edo4.css",
     "colors/palette-catppuccin.css",
     "colors/palette-gruvbox.css",
     "colors/palette-rose-pine.css",

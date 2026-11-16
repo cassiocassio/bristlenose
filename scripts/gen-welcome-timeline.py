@@ -45,6 +45,8 @@ FILES = [
     "tokens-desktop.css",
     "colors/palette-default.css",
     "colors/palette-edo.css",
+    "colors/palette-edo3.css",
+    "colors/palette-edo4.css",
     "colors/palette-catppuccin.css",
     "colors/palette-gruvbox.css",
     "colors/palette-rose-pine.css",

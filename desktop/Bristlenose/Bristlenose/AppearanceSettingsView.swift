@@ -61,6 +61,8 @@ struct AppearanceSettingsView: View {
                 Picker(i18n.t("settings.palette.legend"), selection: $palette) {
                     Text(i18n.t("settings.palette.default")).tag("default")
                     Text(i18n.t("settings.palette.edo")).tag("edo")
+                    Text(i18n.t("settings.palette.edo3")).tag("edo3")
+                    Text(i18n.t("settings.palette.edo4")).tag("edo4")
                     Text(i18n.t("settings.palette.catppuccin")).tag("catppuccin")
                     Text(i18n.t("settings.palette.gruvbox")).tag("gruvbox")
                     Text(i18n.t("settings.palette.rose-pine")).tag("rose-pine")

@@ -324,6 +324,12 @@ private struct DebugMenuContent: View {
         // The moderator-identity picker, AppKit beside WebKit, on real tokens.
         Button("Picker Lab") { openWindow(id: "picker-lab") }
 
+        // The colour tool: nudge a palette, judge it on real report pages and an
+        // every-component page, light and dark, then send it to the app. Starts
+        // experiments/brand-palettes/workbench.py from this checkout and opens it
+        // in the browser (see PaletteLabLauncher).
+        Button("Palette Lab") { PaletteLabLauncher.open() }
+
         // Every changed surface in the state that shows it, on fake inputs —
         // the real views, with Mark Reviewed per commit list.
         Button("Review Gallery") { openWindow(id: "review-gallery") }

@@ -56,7 +56,7 @@ TYPE = f'''
   <div class="section-heading"><h2>Section heading: Themes</h2><span class="section-heading-action">action</span></div>
   <h3>Subsection heading: Onboarding friction</h3>
   <p class="bn-lead-para"><span class="bn-lead-claim">Lead claim in the report voice.</span> <span class="bn-lead-rest">The rest of the lead paragraph carries the evidence a researcher reads first, at reading length, so line length and colour both get judged.</span></p>
-  <p>Body text. Participants described the checkout as <strong>fast but opaque</strong>: they could finish it, but not explain afterwards what had happened to their money. <a href="#">A link inside body text</a> sits next to <em>emphasis</em>, a <code>code span</code> and a <kbd>⌘K</kbd> key.</p>
+  <p>Body text. Participants described the checkout as <strong>fast but opaque</strong>: they could finish it, but not explain afterwards what had happened to their money. <a href="#" style="color:var(--bn-colour-accent)">A link inside body text</a> sits next to <em>emphasis</em>, a <code>code span</code> and a <kbd>⌘K</kbd> key.</p>
   <p style="color:var(--bn-colour-muted)">Muted text: the secondary tier. Timestamps, captions, counts, “6 quotes · 3 participants”.</p>
   <p style="font-size:.85em;color:var(--bn-colour-muted)">Small muted: footnotes and metadata at the smallest size the app uses.</p>
   <div class="transcript-like" style="background:var(--bn-colour-paper);padding:.8rem 1rem;border-radius:6px;max-width:44rem">
@@ -116,7 +116,7 @@ SIGNALS = row("Sentiment badges", *[cell(s, f'<span class="badge badge-{s}">{s}<
     row("Modal", cell("dialog", '<div class="bn-modal" style="position:static;transform:none;opacity:1"><h2>Export report</h2><p class="bn-modal-subtitle">Choose what to include.</p>'
                       '<div class="bn-modal-footer"><div class="bn-modal-actions"><button class="bn-btn bn-btn-cancel">Cancel</button><button class="bn-btn bn-btn-primary">Export</button></div></div></div>', True))
 
-SURFACES = row("Surface stack", *[cell(n, f'<div style="background:var(--bn-colour-{t});color:var(--bn-colour-text);padding:.7rem .9rem;border:1px solid var(--bn-colour-border);border-radius:6px;min-width:8.5rem">{n}<div style="color:var(--bn-colour-muted);font-size:.85em">muted on {n}</div><a href="#">link</a></div>')
+SURFACES = row("Surface stack", *[cell(n, f'<div style="background:var(--bn-colour-{t});color:var(--bn-colour-text);padding:.7rem .9rem;border:1px solid var(--bn-colour-border);border-radius:6px;min-width:8.5rem">{n}<div style="color:var(--bn-colour-muted);font-size:.85em">muted on {n}</div><a href="#" style="color:var(--bn-colour-accent)">link</a></div>')
               for n, t in (("page", "bg"), ("paper", "paper"), ("quote card", "quote-bg"), ("sheet", "sheet"), ("inspector", "inspector-bg"))])
 
 

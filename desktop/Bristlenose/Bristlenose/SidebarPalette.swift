@@ -49,7 +49,7 @@ enum SidebarPalette {
     /// Palettes that tint the native sidebar — every palette except Default,
     /// which leaves the system colours alone. Mirrors the picker in
     /// `AppearanceSettingsView` and `PALETTES` in the frontend.
-    static let tinted: Set<String> = ["edo", "catppuccin", "gruvbox", "rose-pine", "solarized"]
+    static let tinted: Set<String> = ["edo", "edo3", "edo4", "catppuccin", "gruvbox", "rose-pine", "solarized"]
 
     /// The active palette, read from `UserDefaults` (same key as
     /// `@AppStorage("palette")` in `AppearanceSettingsView`). An unknown value

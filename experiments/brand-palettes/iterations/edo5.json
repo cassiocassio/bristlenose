@@ -1,0 +1,31 @@
+{
+  "base": "edo-v1",
+  "note": "more attempts at taming things\n",
+  "knobs": {
+    "light": {
+      "paperHue": 0,
+      "paperChroma": 0.7,
+      "paperLift": 0.045,
+      "surfaceStep": 0.75,
+      "inkHue": 0,
+      "inkChroma": 1,
+      "accentHue": 0,
+      "accentChroma": 1.25,
+      "accentLight": 0.02,
+      "semChroma": 1
+    },
+    "dark": {
+      "paperHue": 0,
+      "paperChroma": 1,
+      "paperLift": 0,
+      "surfaceStep": 1,
+      "inkHue": 0,
+      "inkChroma": 1,
+      "accentHue": 0,
+      "accentChroma": 1,
+      "accentLight": 0,
+      "semChroma": 1
+    }
+  },
+  "overrides": {}
+}

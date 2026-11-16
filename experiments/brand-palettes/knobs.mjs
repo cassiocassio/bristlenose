@@ -108,6 +108,18 @@ export const FAMILIES = {
   positive: t("colour-positive", "colour-active-bg"),
   caution: t("colour-warning", "colour-highlight", "colour-crop-bg", "colour-cited-bg", "coverage-moderator"),
 };
+// The accent family has two kinds of member. SOLID ones are the accent itself or a direct use of it, so they
+// follow it in lightness. TINTS are the pale wash behind a selection: they must stay pale, so they follow the
+// accent's hue and chroma but never its lightness (lifting a tint to white makes a selection invisible).
+export const ACCENT_TINTS = t("selection-bg", "colour-suggestion-bg");
+const ACCENT_SOLID = FAMILIES.accent.filter((n) => !ACCENT_TINTS.includes(n));
+// Family roots: overriding the root token re-colours its family. [solids that follow in lightness, washes that do not].
+const ROOTS = {
+  "--bn-colour-accent": [ACCENT_SOLID, ACCENT_TINTS],
+  "--bn-colour-warning": [t("colour-warning", "colour-highlight", "coverage-moderator"), t("colour-crop-bg", "colour-cited-bg")],
+  "--bn-colour-negative": [FAMILIES.negative, []],
+  "--bn-colour-positive": [t("colour-positive"), t("colour-active-bg")],
+};
 // Surfaces whose distance from the page ("how far a card sits off the page") the step knob scales.
 const STEPPED = t("colour-quote-bg", "colour-paper", "colour-sheet", "colour-inspector-bg", "colour-badge-bg",
   "colour-badge-bg-paper", "colour-user-tag-bg", "colour-hover", "nav-selection-bg", "selection-bg-inactive", "group-none");
@@ -122,7 +134,7 @@ export const KNOBS = {
   inkChroma:   ["Ink chroma", 0, 2.5, 0.05, 1, "multiplier on the ink's colour"],
   accentHue:   ["Accent hue", -30, 30, 1, 0, "degrees added to the accent and everything tinted from it"],
   accentChroma:["Accent chroma", 0.3, 1.8, 0.05, 1, "multiplier on the accent's vividness"],
-  accentLight: ["Accent lightness", -0.08, 0.08, 0.005, 0, "lightness added to the accent family"],
+  accentLight: ["Accent lightness", -0.08, 0.08, 0.005, 0, "lightness added to the accent and what is drawn in it (washes behind selections stay pale)"],
   semChroma:   ["Signal chroma", 0.3, 1.6, 0.05, 1, "multiplier on negative, positive and caution"],
 };
 const MODES = ["light", "dark"];
@@ -148,17 +160,34 @@ export function applyKnobs(base, knobs, overrides = {}) {
     move(FAMILIES.paper, (c) => ({ L: c.L + k.paperLift, C: c.C * k.paperChroma, h: c.h + k.paperHue }));
     move(STEPPED, (c) => ({ ...c, L: bgL + k.paperLift + (c.L - k.paperLift - bgL) * k.surfaceStep }));
     move(FAMILIES.ink, (c) => ({ ...c, C: c.C * k.inkChroma, h: c.h + k.inkHue }));
-    move(FAMILIES.accent, (c) => ({ L: c.L + k.accentLight, C: c.C * k.accentChroma, h: c.h + k.accentHue }));
+    move(ACCENT_SOLID, (c) => ({ L: c.L + k.accentLight, C: c.C * k.accentChroma, h: c.h + k.accentHue }));
+    move(ACCENT_TINTS, (c) => ({ ...c, C: c.C * k.accentChroma, h: c.h + k.accentHue }));
     move([...FAMILIES.negative, ...FAMILIES.positive, ...FAMILIES.caution], (c) => ({ ...c, C: c.C * k.semChroma }));
     // contrast guard: move the foreground's lightness away from its ground until the target holds
     for (const [fg, bg, target] of GUARD) {
       const f = out[fg]?.[mode], b = out[bg]?.[mode];
       if (!isHex(f) || !isHex(b) || contrast(f, b) >= target) continue;
+      // only a pair THIS nudge made worse: a failure inherited from the base (a deliberate choice) is left alone
+      const bf = base[fg]?.[mode], bb = base[bg]?.[mode];
+      if (isHex(bf) && isHex(bb) && contrast(f, b) >= contrast(bf, bb) - 1e-9) continue;
       const c = hexToLch(f), dir = hexToLch(b).L > 0.6 ? -1 : 1;
       let cur = f;
       for (let i = 0; i < 80 && contrast(cur, b) < target; i++) cur = lchToHex({ ...c, L: (c.L += dir * 0.005) });
       notes.push(`${fg.slice(5)} on ${bg.slice(5)} (${mode}): ${f} -> ${cur} to hold ${target}:1`);
       out[fg][mode] = cur;
+    }
+    // An override of a family's root token carries the whole family: every other member moves by the same
+    // change in lightness (solids only), chroma and hue, so one choice of blue, yellow or red is one colour everywhere.
+    for (const [root, [solid, tints]] of Object.entries(ROOTS)) {
+      const rootOv = overrides?.[root]?.[mode];
+      if (rootOv === undefined || !isHex(out[root][mode]) || !isHex(rootOv)) continue;
+      const from = hexToLch(out[root][mode]), to = hexToLch(rootOv);
+      const dL = to.L - from.L, kC = from.C > 1e-4 ? to.C / from.C : 1, dh = to.h - from.h;
+      const follow = (names, withL) => names.forEach((n) => {
+        if (n === root || overrides?.[n]?.[mode] !== undefined || !out[n]) return;
+        out[n][mode] = mapValue(out[n][mode], (c) => ({ L: c.L + (withL ? dL : 0), C: c.C * kC, h: c.h + dh }));
+      });
+      follow(solid, true); follow(tints, false);
     }
     // single-token overrides win over the families and the guard: a deliberate choice is not second-guessed
     // (the lab's contrast table still flags it if it breaks a text pair)

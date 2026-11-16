@@ -1,0 +1,11 @@
+{
+  "base": "edo2",
+  "note": "caution: orpiment (one root colour; the caution family follows)",
+  "knobs": {},
+  "overrides": {
+    "--bn-colour-warning": {
+      "light": "#e7c03a",
+      "dark": "#efcf53"
+    }
+  }
+}

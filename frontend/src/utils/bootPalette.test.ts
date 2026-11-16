@@ -8,7 +8,7 @@ function makeStorage(value?: string): Pick<Storage, "getItem"> {
 
 describe("bootPalette", () => {
   it("PALETTES is the closed valid set", () => {
-    expect([...PALETTES]).toEqual(["default", "edo", "catppuccin", "gruvbox", "rose-pine", "solarized"]);
+    expect([...PALETTES]).toEqual(["default", "edo", "edo3", "edo4", "catppuccin", "gruvbox", "rose-pine", "solarized"]);
   });
 
   describe("isPalette", () => {
@@ -18,7 +18,7 @@ describe("bootPalette", () => {
     });
     it("rejects unknown / malformed values", () => {
       // The exact case the boot-script regex used to accept (review Finding 2).
-      expect(isPalette("edo2")).toBe(false);
+      expect(isPalette("edo-9")).toBe(false);
       expect(isPalette("")).toBe(false);
       expect(isPalette(null)).toBe(false);
       expect(isPalette(42)).toBe(false);
@@ -36,7 +36,7 @@ describe("bootPalette", () => {
       expect(readSavedPalette(makeStorage("edo"))).toBe("edo");
     });
     it("returns null for an unknown stored value (no silent wrong-palette)", () => {
-      expect(readSavedPalette(makeStorage('"edo2"'))).toBeNull();
+      expect(readSavedPalette(makeStorage('"edo-9"'))).toBeNull();
       expect(readSavedPalette(makeStorage("garbage"))).toBeNull();
     });
   });
@@ -55,7 +55,7 @@ describe("bootPalette", () => {
     });
     it("does not apply an unknown stored value", () => {
       const root = document.createElement("html");
-      applyBootPalette(root, makeStorage('"edo2"'));
+      applyBootPalette(root, makeStorage('"edo-9"'));
       expect(root.hasAttribute("data-color-theme")).toBe(false);
     });
   });

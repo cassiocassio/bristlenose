@@ -526,7 +526,7 @@ class TestGroupIntoSessions:
     def test_zoom_local_mixed_audio_is_the_one_transcribed(self, tmp_path: Path) -> None:
         """Stage 2 transcribes the session's first audio file. That must be
         the meeting's mixed track, never one participant's alone; the tracks
-        are kept in the session and stated as set aside."""
+        are kept in the session and left alone, never stated (16 Nov 2026)."""
         import asyncio
 
         from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
@@ -539,8 +539,8 @@ class TestGroupIntoSessions:
         assert with_track.audio_path == self._ZOOM_TODAY / "audio1470811890.m4a"
         set_aside = {f.path.name: f.error for f in with_track.files}
         assert set_aside == {
-            "audioAlexExample11470811890.m4a": "duplicate_recording",
-            "audioSamSample21470811890.m4a": "duplicate_recording",
+            "audioAlexExample11470811890.m4a": "zoom_participant_track",
+            "audioSamSample21470811890.m4a": "zoom_participant_track",
             "video1470811890.mp4": None,
             "audio1470811890.m4a": None,
         }

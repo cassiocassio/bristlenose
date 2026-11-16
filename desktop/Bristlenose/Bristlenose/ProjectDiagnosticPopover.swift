@@ -780,7 +780,9 @@ struct ProjectDiagnosticPopover: View {
             lines.append("")
         }
         if let leftAlone = summary.ingest?.leftAlone, leftAlone > 0 {
-            lines.append("Left alone (formats Bristlenose does not read): \(leftAlone)")
+            // Formats we never read, and Zoom's per-person audio tracks
+            // beside a meeting's own recording (16 Nov 2026).
+            lines.append("Left alone (files Bristlenose does not use): \(leftAlone)")
             lines.append("")
         }
         if !summary.leftOutBySession.isEmpty {

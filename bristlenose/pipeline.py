@@ -250,7 +250,10 @@ def _refused_recording_sids(
     about a file that was never heard. A recording that is merely a duplicate beside a
     used one does not make its session refused, and neither does a transcript file that
     gave the session words (or a transcription that failed for its own reason)."""
-    reasons = {r.value for r in UnusableReason}
+    from bristlenose.stages.s01_ingest import ZOOM_PARTICIPANT_TRACK
+
+    # A Zoom participant track left alone was never heard either.
+    reasons = {r.value for r in UnusableReason} | {ZOOM_PARTICIPANT_TRACK}
     out: set[str] = set()
     for s in sessions:
         recordings = [f for f in s.files if f.file_type in (FileType.AUDIO, FileType.VIDEO)]
@@ -712,6 +715,8 @@ def _set_aside_late_files(
     function's; the caller says so where that call is made
     (``_say_read_unconfirmed``), so a session the cache serves is not named.
     """
+    from bristlenose.stages.s01_ingest import ZOOM_PARTICIPANT_TRACK, is_zoom_participant_track
+
     if prev_manifest is None or fresh_start:
         return []
     analysed = (
@@ -793,9 +798,18 @@ def _set_aside_late_files(
                     ", ".join(g.path.name for g, _fp in known if g not in late),
                 )
                 continue
+            set_aside += 1
+            if is_zoom_participant_track(f, session.files):
+                # Never transcribed beside the meeting's recording, late or not,
+                # so it is left alone quietly, not stated as late (16 Nov 2026).
+                f.error = ZOOM_PARTICIPANT_TRACK
+                logger.info(
+                    "%s: %s is a Zoom participant track, left alone",
+                    session.session_id, f.path.name,
+                )
+                continue
             f.error = UnusableReason.ADDED_AFTER_ANALYSIS.value
             f.error_stage = "s01_ingest"
-            set_aside += 1
             logger.warning(
                 "%s: %s was added after the session was analysed — set aside",
                 session.session_id, f.path.name,
@@ -5123,6 +5137,8 @@ class Pipeline:
         participant, but a *permission-denied* on a folder the researcher chose
         is worth stating rather than quietly walking past.
         """
+        from bristlenose.stages.s01_ingest import ZOOM_PARTICIPANT_TRACK
+
         failed: list[StageFailure] = [
             refusal_stage_failure(
                 source_file=entry.path.name, reason=entry.reason, stage="s01_ingest"
@@ -5134,6 +5150,12 @@ class Pipeline:
             for input_file in session.files:
                 if input_file.error is None:
                     succeeded += 1
+                    continue
+                if input_file.error == ZOOM_PARTICIPANT_TRACK:
+                    # One person's Zoom track beside the meeting's recording:
+                    # never attempted, so left alone and only counted, like a
+                    # format we do not read. Nothing went wrong.
+                    left_alone += 1
                     continue
                 if input_file.error == CauseCategoryEnum.CLOUD_FETCH.value:
                     # Not a refusal: the file was not here in time, and the

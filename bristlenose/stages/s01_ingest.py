@@ -692,6 +692,38 @@ def _group_by_stem(files: list[InputFile]) -> list[list[InputFile]]:
 _MEDIA_TYPES = (FileType.AUDIO, FileType.VIDEO)
 _TRANSCRIPT_TYPES = (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT, FileType.DOCX)
 
+#: ``InputFile.error`` for one person's audio track in a Zoom local recording
+#: folder whose meeting recording is usable (16 Nov 2026). **Not an**
+#: ``UnusableReason``: nothing is wrong with the file and nothing is stated. The
+#: track is an export option, not a second recording, so it is left alone like
+#: the folder's ``.zoom`` and ``.m3u`` files: counted on
+#: ``StageOutcome.left_alone``, never a failure, so the run reads complete.
+#: Before this, each track was a "second recording" and a successful study read
+#: as "Partial completion". Like ``cloud_fetch``, a token the reason enum does
+#: not hold, so it needs no sentence and no locale key.
+#:
+#: **Written by stage 2, not here**, on purpose: the session's file fingerprint
+#: is taken between the two stages and has always included the tracks, so a
+#: study analysed before this change is not paid for again; and only stage 2
+#: knows whether the meeting's own recording is usable (an empty ``audio.m4a``
+#: leaves a track as the only recording there is).
+ZOOM_PARTICIPANT_TRACK = "zoom_participant_track"
+
+
+def is_zoom_participant_track(f: InputFile, session_files: list[InputFile]) -> bool:
+    """Whether *f* is one person's track inside a Zoom meeting folder that
+    this session holds: an audio file one folder down (``Audio Record/``,
+    matched by place as ``_zoom_local_dir_of`` claims it) whose meeting folder
+    also gave the session files of its own. Pointed at ``Audio Record/``
+    itself, a track is its own session and is not one of these.
+    """
+    if f.file_type != FileType.AUDIO:
+        return False
+    meeting = f.path.parent.parent
+    if not meeting.name or not _is_zoom_local_dir(meeting.name):
+        return False
+    return any(g.path.parent == meeting for g in session_files)
+
 
 def _split_by_folder_if_colliding(group: list[InputFile]) -> list[list[InputFile]]:
     """One session per folder when two folders both hold a recording (or both

@@ -94,11 +94,14 @@ class Rig(Study):
         def _ffmpeg(**_kw):
             rec["ffmpeg"] += 1
 
+        from bristlenose.stages.s02_extract_audio import leave_participant_tracks_alone
+
         async def _stage2(sessions, _tmp, **_kw):
             # As the real stage 2: an audio file is used, a session with a
             # transcript file is not decoded, a video stands in for its audio.
             for s in sessions:
-                usable = [f for f in s.files if f.error is None]
+                usable = leave_participant_tracks_alone(
+                    s, [f for f in s.files if f.error is None])
                 aud = [f for f in usable if f.file_type == FileType.AUDIO]
                 vid = [f for f in usable if f.file_type == FileType.VIDEO]
                 if aud:
@@ -320,20 +323,51 @@ def test_a_transcript_dropped_into_an_analysed_zoom_folder_is_set_aside(
 # ── Case B: a recording joins an analysed Zoom folder ───────────────────────
 
 
-@pytest.mark.parametrize("added", [
-    "Audio Record/audioPat21234567890.m4a", "video2_1234567890.mp4",
-], ids=["participant-track", "second-video"])
 def test_a_recording_added_to_an_analysed_zoom_folder_is_not_transcribed(
-    tmp_path: Path, fast_watcher, added: str,
+    tmp_path: Path, fast_watcher,
 ) -> None:
     rig = new_rig(tmp_path, "Interview 1.wav", f"{ZOOM}/audio1234567890.m4a",
                   f"{ZOOM}/video1234567890.mp4")
     rig.run()
-    path = rig.folder / ZOOM / added
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = rig.folder / ZOOM / "video2_1234567890.mp4"
     path.write_bytes(b"RIFF a late recording" * 99)
     rig.run()
     _said_set_aside(rig, path.name)
+    _nothing_paid(rig)
+
+
+def test_a_zoom_folder_with_tracks_is_complete_and_not_paid_for_twice(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """The tracks are left alone on the first run, and the second run finds the
+    session as it was analysed: nothing stated, nothing paid again."""
+    rig = new_rig(tmp_path, "Interview 1.wav", f"{ZOOM}/audio1234567890.m4a",
+                  f"{ZOOM}/video1234567890.mp4", f"{ZOOM}/Audio Record/audioPat11234567890.m4a",
+                  f"{ZOOM}/Audio Record/audioSam21234567890.m4a")
+    rig.run()
+    assert rig.set_aside() == []
+    assert (rig.last_summary().get("ingest") or {}).get("left_alone") == 2
+    rig.run()
+    assert rig.set_aside() == []
+    _nothing_paid(rig)
+
+
+def test_a_participant_track_added_to_an_analysed_zoom_folder_is_left_alone(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """One person's track is never transcribed beside the meeting's recording,
+    late or not, so it is left alone quietly rather than stated as late
+    (16 Nov 2026): it is counted, not named, and nothing is paid."""
+    rig = new_rig(tmp_path, "Interview 1.wav", f"{ZOOM}/audio1234567890.m4a",
+                  f"{ZOOM}/video1234567890.mp4")
+    rig.run()
+    before = (rig.last_summary().get("ingest") or {}).get("left_alone") or 0
+    path = rig.folder / ZOOM / "Audio Record" / "audioPat21234567890.m4a"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"RIFF a late recording" * 99)
+    rig.run()
+    assert rig.set_aside() == []
+    assert (rig.last_summary().get("ingest") or {}).get("left_alone") == before + 1
     _nothing_paid(rig)
 
 

@@ -363,7 +363,9 @@ class StageOutcome(BaseModel):
     #: ``attempted``. A count only — the names stay in the log, because this
     #: summary reaches ``pipeline-events.jsonl``. The desktop popover says
     #: "N other files left alone" from it, only when it is already open for a
-    #: real failure (6 Nov 2026).
+    #: real failure (6 Nov 2026). Also counts Zoom's per-person audio tracks
+    #: beside a meeting's own recording (``s01_ingest.ZOOM_PARTICIPANT_TRACK``,
+    #: 16 Nov 2026): an export option, never transcribed, nothing to state.
     left_alone: int = 0
 
 

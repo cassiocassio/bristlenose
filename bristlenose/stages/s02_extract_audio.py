@@ -7,8 +7,9 @@ import logging
 from pathlib import Path
 
 from bristlenose.events import CauseCategoryEnum
-from bristlenose.models import FileType, InputSession
+from bristlenose.models import FileType, InputFile, InputSession
 from bristlenose.refusals import MESSAGES, UnusableReason, classify_unreadable
+from bristlenose.stages.s01_ingest import ZOOM_PARTICIPANT_TRACK, is_zoom_participant_track
 from bristlenose.utils.audio import (
     MediaExtractionTimedOutError,
     MediaFileDamagedError,
@@ -63,6 +64,7 @@ async def extract_audio_for_sessions(
         for empty in [f for f in usable if f.file_type == FileType.AUDIO and _is_empty(f.path)]:
             _record_unusable(session, empty.path, UnusableReason.EMPTY, None)
         usable = [f for f in usable if f.error is None]
+        usable = leave_participant_tracks_alone(session, usable)
         audio_files = [f for f in usable if f.file_type == FileType.AUDIO]
         video_files = [f for f in usable if f.file_type == FileType.VIDEO]
         # One recording per session is used — the first audio file, else the
@@ -206,6 +208,28 @@ def _is_empty(path: Path) -> bool:
         return path.stat().st_size == 0
     except OSError:
         return False
+
+
+def leave_participant_tracks_alone(
+    session: InputSession, usable: list[InputFile],
+) -> list[InputFile]:
+    """Leave one person's Zoom tracks alone, quietly, when the meeting's own
+    recording is still among *usable*; return what is left to use.
+
+    The meeting's mixed audio (or its video) is the conversation, and a track
+    is an export option beside it, so it is never transcribed and never stated
+    (``ZOOM_PARTICIPANT_TRACK``, 16 Nov 2026). With that recording gone or
+    empty, a track is the only recording there is and stays usable, so the
+    one-recording rule uses it and states the rest. Here, after the empty
+    check and after the session's fingerprint, never at ingest: see the token.
+    """
+    tracks = [f for f in usable if is_zoom_participant_track(f, session.files)]
+    recordings = [f for f in usable if f.file_type in (FileType.AUDIO, FileType.VIDEO)]
+    if not tracks or len(tracks) == len(recordings):
+        return usable
+    for track in tracks:
+        track.error = ZOOM_PARTICIPANT_TRACK
+    return [f for f in usable if f.error is None]
 
 
 def _record_unusable(

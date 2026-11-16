@@ -63,6 +63,12 @@
     justify-content: space-between;
     /* Title text can never crash into the action, at any width or locale. */
     gap: var(--bn-space-lg);
+    /* A one-word title ("Abschnitte") cannot wrap inside itself, so with
+       `min-width: 0` below it was clipped by the action. Let the ACTION drop
+       to its own line instead (BR-09). A row that fits is unchanged (the one-height-with-or-without-an-action
+       rule above holds only while the row fits). */
+    flex-wrap: wrap;
+    row-gap: var(--bn-space-sm);
     max-width: none;
     margin: 2.5rem 0 1rem;
     padding-bottom: 0.4rem;
@@ -94,4 +100,6 @@
     align-items: center;
     gap: var(--bn-space-sm);
     flex-shrink: 0;
+    /* Stays right-aligned when it wraps onto a line of its own. */
+    margin-left: auto;
 }

@@ -58,6 +58,17 @@
     border-right: 1px solid var(--bn-colour-border);
 }
 .dl-bar .dimension-toggle { margin-left: var(--bn-space-sm); justify-self: start; }
+/* The tabs' labels never wrap (docs/design-control-labels.md): where the guide column is
+   too narrow for both ("Нормализованные вопросы" and "Добавить ваш гайд" at 280 px) the
+   second tab stacks under the first rather than breaking a label across two lines (BR-09). */
+/* A 1px gap over the border colour draws the divider whether the buttons sit side by side
+   or stacked, where the shipped first-child border-right would float mid-box. */
+.dl-bar-nav .dimension-toggle { flex-wrap: wrap; gap: 1px; background: var(--bn-colour-border); }
+.dl-bar-nav .dimension-btn {
+    white-space: nowrap; flex: 1 1 auto; border-right: 0;
+    background: var(--bn-colour-inspector-bg);
+}
+.dl-bar-nav .dimension-btn:hover, .dl-bar-nav .dimension-btn.active { background: var(--bn-colour-hover); }
 /* The rule under the bar runs under the conversation only, never across the guide. */
 .dl-sessions {
     grid-column: 2 / -1;

@@ -17,6 +17,10 @@
     display: flex;
     align-items: baseline;
     gap: 0.6rem;
+    /* A phone-width column is narrower than logo + nowrap title (BR-18: 30 px
+       page overflow on every route at 390 px). Shrink with the column instead. */
+    min-width: 0;
+    max-width: 100%;
 }
 
 .report-logo {
@@ -44,16 +48,19 @@
 }
 
 .header-title {
-    white-space: nowrap;
+    min-width: 0;
 }
 
 .header-logotype {
+    white-space: nowrap;
     font-size: var(--bn-text-title);
     font-weight: var(--bn-weight-emphasis);
     letter-spacing: -0.01em;
 }
 
 .header-project {
+    /* User data, so it may break anywhere: a long compound must not push the page wide. */
+    overflow-wrap: anywhere;
     font-size: var(--bn-text-title);
     font-weight: var(--bn-weight-normal);
     letter-spacing: -0.01em;

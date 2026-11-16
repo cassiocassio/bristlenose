@@ -203,3 +203,16 @@ def test_the_frozen_app_is_walked_only_on_opt_in(tmp_path: Path) -> None:
     r = _check(tmp_path, GW_FROZEN_APP="1")
     assert r.returncode == 4
     assert r.stdout == ""
+
+
+def test_an_incomplete_walk_never_becomes_the_baseline() -> None:
+    """BR-30: the baseline link is only moved by a COMPLETED verdict.
+
+    guest-walk.sh needs a guest to run, so this pins the case line itself:
+    an INCOMPLETE walk (lenses missing) must not become the reference."""
+    src = (Path(__file__).resolve().parent.parent / "desktop/scripts/guest-walk/guest-walk.sh").read_text(
+        encoding="utf-8"
+    )
+    lines = [ln for ln in src.splitlines() if '"$WALKS/baseline"' in ln and "ln -sfn" in ln]
+    assert len(lines) == 1, lines
+    assert "COMPLETED*" in lines[0] and "INCOMPLETE" not in lines[0], lines[0]

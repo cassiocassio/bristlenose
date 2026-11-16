@@ -144,6 +144,6 @@ if [ -n "$verdict" ]; then
     fi
 fi
 ln -sfn "$RUN" "$WALKS/latest"
-# INCOMPLETE (lenses not shown) still moves the baseline today; whether it should is the owner's call (docs/private/bug-campaign/reports/F.md).
-case "$verdict" in COMPLETED*|INCOMPLETE*) ln -sfn "$RUN" "$WALKS/baseline" ;; esac
+# INCOMPLETE (lenses not shown) never becomes the baseline: missing lenses would become the reference (owner ruling 16 Nov 2026, BR-30).
+case "$verdict" in COMPLETED*) ln -sfn "$RUN" "$WALKS/baseline" ;; esac
 exit 0

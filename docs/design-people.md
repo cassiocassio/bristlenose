@@ -3600,6 +3600,15 @@ reads which paragraphs a quote overlaps, but only in sessions where a paragraph 
   Every evidence surface reads it through `counts`, so the Quotes lens, signals, dashboard,
   search, exports and the agent endpoint agree. The transcript stops marking the paragraph,
   because a quote marks only paragraphs credited to its own tag.
+- **A discounted quote stays visible, greyed** (owner, 15 Nov 2026; **not built**). Today a
+  quote that leaves the evidence also leaves the transcript marks, the timeline and the
+  journey, so a falling count has no visible cause. The ruling: it counts nowhere, as now,
+  and stays in place greyed, as a hidden quote does (`design-delete-and-bin.md`, "Hide stays
+  as Archive"). The timeline has no greyed treatment and needs a mockup first. **Open,
+  owner's calls:** whether a whole-session swap should discount the participant's quotes at
+  all or re-credit them to the person; whether a display code is stable once issued (a write
+  can renumber it). The harness that found these is `experiments/speaker-acts/`; the working
+  list is the "Speaker acts" entry in `TODO.md`.
 - **What it does not do.** A paragraph moved *into* the participant brings no quotes with it;
   only a re-analysis would find them, and R3's pins are per speaker label, not per paragraph.
   A move whose target slot has gone after a re-analysis (R3 renumbers) is refused at replay and

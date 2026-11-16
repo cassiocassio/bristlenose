@@ -118,7 +118,12 @@ struct GeneralSettingsView: View {
                     newsSwitch(
                         label: i18n.t("desktop.news.settings.countsLabel"),
                         explanation: i18n.t("desktop.news.settings.countsExplain"),
-                        row: NewsPreferences.countsRow(in: .standard, isForced: NewsPreferences.isManaged),
+                        // Dimmed while news is off: counts ride on the news check,
+                        // so with news off nothing is sent either way.
+                        row: NewsPreferences.countsRow(
+                            in: .standard, isForced: NewsPreferences.isManaged,
+                            newsOn: newsStored && NewsPreferences.newsRow(
+                                in: .standard, isForced: NewsPreferences.isManaged).isOn),
                         set: { on in
                             NewsPreferences.recordCountsAnswer(on, in: .standard,
                                                                isForced: NewsPreferences.isManaged)
@@ -163,7 +168,7 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .disabled(row.isLocked)
+        .disabled(row.isLocked || row.waitsForNews)
     }
 
     /// The explanation, a space, and the word "Privacy" as a real link. Built

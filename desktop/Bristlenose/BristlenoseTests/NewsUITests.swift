@@ -77,6 +77,16 @@ struct NewsUITests {
         #expect(NewsPreferences.countsRow(in: defaults, isForced: forced) == .init(isOn: false, isLocked: true))
     }
 
+    @Test("with news off, the counts switch is dimmed and keeps its answer")
+    func countsWaitForNews() {
+        defer { cleanUp() }
+        let none: (String) -> Bool = { _ in false }
+        NewsPreferences.recordCountsAnswer(true, in: defaults, isForced: none)
+        #expect(NewsPreferences.countsRow(in: defaults, isForced: none, newsOn: false)
+                == .init(isOn: true, isLocked: false, waitsForNews: true))
+        #expect(NewsPreferences.countsRow(in: defaults, isForced: none, newsOn: true).waitsForNews == false)
+    }
+
     @Test("A profile forcing news ON is not a lock: the switch stays the person's")
     func forcedNewsOnIsNotALock() {
         defer { cleanUp() }

@@ -231,6 +231,10 @@ enum NewsPreferences {
     struct Row: Equatable {
         var isOn: Bool
         var isLocked: Bool
+        /// The counts row only: news is off, so no request is made and the
+        /// counts switch has nothing to act on. Shown dimmed, keeping the
+        /// person's own answer for when news comes back on.
+        var waitsForNews: Bool = false
     }
 
     static func newsRow(in defaults: UserDefaults, isForced: (String) -> Bool,
@@ -239,9 +243,11 @@ enum NewsPreferences {
             isLocked: isForcedOff(enabledKey, in: defaults, isForced: isForced))
     }
 
-    static func countsRow(in defaults: UserDefaults, isForced: (String) -> Bool) -> Row {
+    static func countsRow(in defaults: UserDefaults, isForced: (String) -> Bool,
+                          newsOn: Bool = true) -> Row {
         Row(isOn: countsConsent(in: defaults, isForced: isForced) == .yes,
-            isLocked: isForced(countsKey))
+            isLocked: isForced(countsKey),
+            waitsForNews: !newsOn)
     }
 
     /// Where both rows and the first-run line send someone who wants the detail.

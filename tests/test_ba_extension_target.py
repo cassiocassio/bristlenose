@@ -25,6 +25,10 @@ _EXPORT = _DESKTOP / "Bristlenose" / "ExportOptions.plist"
 _BUILD_ALL = _DESKTOP / "scripts" / "build-all.sh"
 
 _EXT_ID = "app.bristlenose.BAExtension"
+#: The extension's product (BAExtension.appex) file reference. An embed phase names the product
+#: as a PBXBuildFile; nothing else does, whatever Xcode calls the phase or its comment.
+_PRODUCT_REF = "BA0000000000000000000005"
+_EMBED_BUILD_FILE = re.compile(r"isa = PBXBuildFile; fileRef = " + _PRODUCT_REF + r"[ ;]")
 _BA_GROUP = "group.app.bristlenose"
 
 
@@ -90,7 +94,8 @@ class TestTheExtensionFiles:
     def test_the_source_is_the_one_line_extension(self) -> None:
         src = (_EXT / "BAExtension.swift").read_text(encoding="utf-8")
         assert "StoreDownloaderExtension" in src, "Apple-hosted packs use the Store downloader"
-        assert "ManagedDownloaderExtension" not in src.replace("// ", ""), "self-hosted is the other class"
+        code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("//"))
+        assert "ManagedDownloaderExtension" not in code, "self-hosted is the other class"
         assert "@main" in src
 
 
@@ -128,8 +133,14 @@ class TestTheExtensionIsStillDark:
 
     def test_the_app_neither_depends_on_nor_embeds_it(self) -> None:
         text = _text()
-        assert "BAExtension.appex in Embed" not in text
+        assert not _EMBED_BUILD_FILE.search(text), "an embed phase would put the extension in every app"
         assert "remoteInfo = BAExtension;" not in text, "a target dependency would make every app build sign it"
+
+    def test_no_shared_scheme_builds_it(self) -> None:
+        """The other route to an IDE build signing it: a scheme build entry."""
+        schemes = (_DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "xcshareddata" / "xcschemes")
+        for scheme in schemes.glob("*.xcscheme"):
+            assert "BAExtension" not in scheme.read_text(encoding="utf-8"), scheme.name
 
     def test_the_compile_flag_is_defined_nowhere_in_the_project(self) -> None:
         """Owner, 16 Nov 2026: BA_WHISPER stays undefined until a TestFlight build has shown the
@@ -141,12 +152,17 @@ class TestTheLaneIsReadyForTheEmbed:
     """Dormant while the extension is not embedded; they bite the moment it is."""
 
     def _embedded(self) -> bool:
-        return "BAExtension.appex in Embed" in _text()
+        return bool(_EMBED_BUILD_FILE.search(_text()))
 
     def test_export_options_map_the_extension_s_profile_once_it_is_embedded(self) -> None:
+        # Read as text: ExportOptions.plist carries a long XML comment that plistlib rejects.
+        text = _EXPORT.read_text(encoding="utf-8")
+        profiles = dict(re.findall(
+            r"<key>(app\.bristlenose[\w.]*)</key>\s*<string>([^<]+)</string>", text))
+        # The host's mapping must be intact whether or not the extension is embedded.
+        assert "app.bristlenose" in profiles
         if not self._embedded():
             return
-        profiles = _load(_EXPORT)["provisioningProfiles"]
         assert _EXT_ID in profiles, "the store export would sign the extension with no profile"
         assert profiles[_EXT_ID] != profiles["app.bristlenose"], "its own profile, not the host's"
 
@@ -154,6 +170,10 @@ class TestTheLaneIsReadyForTheEmbed:
         text = _BUILD_ALL.read_text(encoding="utf-8")
         assert "EXT_PROFILE_PATH" in text and "project_embeds_extension" in text
         assert _EXT_ID in text
+        # The detector must key on the same id this file pins, or the guards never switch on.
+        assert _PRODUCT_REF.replace("BA0000000000000000000005", "BA0*5") in text
+        # ...and that id must really be the extension's product in the project.
+        assert re.search(_PRODUCT_REF + r" /\* BAExtension.appex \*/ = \{isa = PBXFileReference", _text())
 
     def test_the_dmg_lane_never_passes_a_command_line_entitlements_file(self) -> None:
         build_dmg = (_DESKTOP / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")

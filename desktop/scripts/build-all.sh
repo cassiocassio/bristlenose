@@ -148,7 +148,9 @@ EXT_BUNDLE_ID="app.bristlenose.BAExtension"
 EXT_PROFILE_NAME="Bristlenose BAExtension Mac App Store"
 EXT_PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_BAExtension_Mac_App_Store.provisionprofile"
 project_embeds_extension() {
-    grep -q 'BAExtension.appex in Embed' "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj/project.pbxproj"
+    # The extension's product file reference is only ever used as a build file by an embed
+    # phase (whatever Xcode names it); keyed on the id, not on a comment Xcode may reword.
+    grep -qE 'isa = PBXBuildFile; fileRef = BA0*5 ' "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj/project.pbxproj"
 }
 
 # ------------------------------------------------------------

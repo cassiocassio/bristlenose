@@ -403,6 +403,10 @@ else
             # Every group the extension holds must be one the host holds (the host has the
             # Background Assets group AND the team group; the extension needs only the first).
             # A group the host lacks is a capability the host's profile does not authorise.
+            case " $egroups " in
+                *" group.app.bristlenose "*) : ;;
+                *) EXT_PROBLEMS+=("$en: not in group.app.bristlenose, the group Background Assets uses") ;;
+            esac
             for g in $egroups; do
                 case " $HOST_GROUPS " in
                     *" $g "*) : ;;

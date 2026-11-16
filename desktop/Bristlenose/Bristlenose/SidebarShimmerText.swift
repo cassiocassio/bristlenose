@@ -38,8 +38,23 @@ struct ShimmerText: View {
     var angleDeg: Double = 100
     var easing: ShimmerEasing = .easeInOut
     var animate: Bool = true
+    /// Where the text sits when the view is given more width than it needs.
+    /// Nil = hug the text (SwiftUI stacks place it). A view hosted in an
+    /// `NSHostingView` that Auto Layout stretches MUST set this: SwiftUI centres
+    /// unframed content in a wider host, which is how the sidebar's running
+    /// status line came to sit centred under the project name (16 Nov 2026).
+    var fillAlignment: Alignment? = nil
 
+    @ViewBuilder
     var body: some View {
+        if let fillAlignment {
+            line.frame(maxWidth: .infinity, alignment: fillAlignment)
+        } else {
+            line
+        }
+    }
+
+    private var line: some View {
         Text(text)
             .font(font)
             .lineLimit(lineLimit)

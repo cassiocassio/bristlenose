@@ -1,14 +1,15 @@
 ---
 status: partial
-last-trued: 2026-10-03
-trued-against: HEAD@main on 2026-10-03
-last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26), top-edge slice (2026-09-29), new-item slice (2026-10-03)]
+last-trued: 2026-11-16
+trued-against: working tree on main, 2026-11-16 (status-line slice)
+last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26), top-edge slice (2026-09-29), new-item slice (2026-10-03), status-line slice (2026-11-16)]
 ---
 
 # Desktop sidebar — native AppKit source list (`NSOutlineView`)
 
 ## Changelog
 
+- _2026-11-16_ — **status-line slice trued** (`/true-the-docs --topic` sidebar status line). §item 6 said no SwiftUI island belongs in the cell; one has been there since July (the shimmering status line). Recorded as the single exception, with the rule it must follow. The status line is now built in one place, `ProjectStatusLine.make(text:kind:)`.
 - _2026-10-03_ — **new-item slice trued** (`/true-the-docs --topic toolbar`). New Project now opens for inline rename on this path too (it set only the SwiftUI path's `renamingProjectID` until 3 Oct). The New-Project affordance is a `+⌄` plain menu on the sidebar column — it is not part of the outline, which never had the SwiftUI path's grey in-list row. §2.6 and §3.4 trued; old text kept inline.
 
 - _2026-09-29_ — **top-edge slice trued** (`/true-the-docs --topic sidebar top edge`, after *"sidebar top edge: the list runs under the toolbar and headings scroll away, as in photos and notes"*). The doc said `floatsGroupRows = true` in three places (§1.3, §2 recipe, §2.1) and nothing about the column's top edge. Scrolled, that pinning stuck the **blank** lens heading under the toolbar as a 32 pt frosted band with a 0.5 pt line, and the hosted outline stopped at the toolbar's bottom edge, so there was a hard clip and no soft scroll edge. Photos and Notes on the same OS pin nothing and let rows fade under the traffic lights. Shipped: headings scroll, the outline runs under the toolbar. §1.4 gains the top-edge paragraph, §3.1 the blank-heading note, §5 the Sidebar Lab, §6 the top-edge QA points and a retired seam risk. The old text stays inline as the delta. The Lab's fixed-lens layouts were explored and not chosen, so §4 decision 1 stands.
@@ -128,6 +129,8 @@ NSScrollView(hasVerticalScroller: true)
 4. **Don't draw a custom selection fill or disclosure triangle** — both native.
 5. **Don't build a custom group-header view** — a plain string cell gets group styling automatically.
 6. **Trailing status stays plain AppKit (`NSImageView` + `NSProgressIndicator`) — never an `NSHostingView` of the SwiftUI indicator.** Hosting a SwiftUI island in the cell re-introduces the cell-reuse + `backgroundStyle`-forwarding + popover-anchoring problems the whole migration exists to escape (trap #1, one level down). The cell carries **two image views with opposite tint policies**: the leading identity `imageView` *inherits* accent via `backgroundStyle`; the trailing status glyph sets `contentTintColor` *explicitly* to its semantic colour. `backgroundStyle didSet` is hand-implemented **per-subview** — the "automatic forwarding" (§2.1) only covers the standard `imageView`/`textField`, not the rich subviews.
+
+   **One exception, recorded 16 Nov 2026: the shimmering status line.** A running row's status text is the shared SwiftUI `ShimmerText` in an `NSHostingView` (since July 2026, "shimmer: thinking-text sweep on activity chip + native sidebar status line"; design-motion §4.7.1), because the sweep has one implementation and the tuner reads it. It is display-only text, so it has no popover to anchor and takes no tint from `backgroundStyle`; the reasons above do not reach it. It did bring a fault of its own kind: unframed SwiftUI content is centred in a hosting view that Auto Layout stretches, so "Screens · 2 of 3" sat centred under the project name until 16 Nov. **The status line is built only by `ProjectStatusLine.make(text:kind:)`** (`ProjectStatusLine.swift`: plain label, shimmer host, or text button), which owns font, colour, truncation, priorities and leading alignment for all three; `projectTwoLineCell` only chooses the kind. `ProjectStatusLineTests` draws each kind stretched and reads where the ink starts. A new kind of status line is a new `Kind` there and a case in that test, not a branch in the cell.
 
 ### 2.4 The cell — bn.app's row on `NSTableCellView`
 `ProjectRow`'s content becomes an `NSTableCellView` subclass:

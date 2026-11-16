@@ -2123,7 +2123,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             imageView.leadingAnchor.constraint(equalTo: cell.leadingAnchor),
             imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
             imageView.widthAnchor.constraint(equalToConstant: ProjectCellSpec.iconWidth),
-            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
+            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor,
+                                               constant: ProjectCellSpec.iconToText),
             textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
         ]
         // Trailing edge, outermost: the agent badge when present. Status
@@ -2132,7 +2133,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // so keeping the glyph outermost here means the collapse doesn't
         // move it. The count then sits inboard of it.
         var trailingAnchorView: NSView = cell
-        var trailingInset: CGFloat = -4
+        var trailingInset: CGFloat = -ProjectCellSpec.trailingInset
         if let agentExposedNow {
             let antenna = agentBadgeView(exposedNow: agentExposedNow, projectID: agentProjectID)
             cell.addSubview(antenna)
@@ -2149,15 +2150,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // Trailing session count — Finder's right column (ProjectRow's title
             // right-slot: footnote / tertiary, system-sized). The name truncates
             // before the count, so the count stays visible on a narrow sidebar.
-            let countField = NSTextField(labelWithString: trailing)
-            countField.font = .preferredFont(forTextStyle: .footnote)
-            countField.textColor = .tertiaryLabelColor
-            countField.translatesAutoresizingMaskIntoConstraints = false
-            countField.setContentHuggingPriority(.required, for: .horizontal)
-            countField.setContentCompressionResistancePriority(.required, for: .horizontal)
+            let countField = Self.countField(trailing)
             cell.addSubview(countField)
             constraints += [
-                textField.trailingAnchor.constraint(lessThanOrEqualTo: countField.leadingAnchor, constant: -6),
+                textField.trailingAnchor.constraint(lessThanOrEqualTo: countField.leadingAnchor,
+                                                    constant: -ProjectCellSpec.titleInternal),
                 countField.trailingAnchor.constraint(
                     equalTo: trailingAnchorView === cell
                         ? cell.trailingAnchor : trailingAnchorView.leadingAnchor,
@@ -2193,7 +2190,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     /// Whether the status line should shimmer (design-motion §4.7.1): only a live
-    /// run (`.running`) or the Signals report being built (`.preparingSignals`,
+    /// run (`.running`), the Signals report being built (`.preparingSignals`,
     /// 30 Oct 2026: shimmer on a small status line means the AI is thinking, and
     /// here it is), the shared screens being read (`.readingScreens`, owner,
     /// 14 Nov 2026: "Screens · 1 of 3" is work in progress and looked frozen), or a codebook
@@ -3028,23 +3025,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // Name yields before the count under pressure (count stays visible).
         nameField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        // Running rows shimmer the status line ("Identifying speakers") — the
-        // native rendering of the thinking spec (design-motion §4.7.1), hosting
-        // the shared SwiftUI `ShimmerText`. `shimmer` is pre-gated by the caller
-        // on `showAnalysisAnimation && !reduceMotion`; off → plain static label.
-        let subtitleField: NSView
+        // One builder for every kind of status line (`ProjectStatusLine`): it
+        // owns font, colour, truncation, priorities and leading alignment, so
+        // the kinds cannot drift. This only chooses the kind. Running rows
+        // shimmer ("Identifying speakers", design-motion §4.7.1); `shimmer` is
+        // pre-gated by the caller on `showAnalysisAnimation && !reduceMotion`.
+        let statusKind: ProjectStatusLine.Kind
         if shimmer {
-            let host = NSHostingView(rootView: ShimmerText(
-                text: subtitle,
-                rest: Color(nsColor: .secondaryLabelColor),
-                font: Font(ProjectCellSpec.subtitleFont as CTFont),
-                lineLimit: 1))
-            host.translatesAutoresizingMaskIntoConstraints = false
-            // Yield (truncate) before pushing the trailing ring/glyph off-edge —
-            // the plain field does this via lineBreakMode; the host needs it set.
-            host.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            host.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            subtitleField = host
+            statusKind = .shimmer
         } else if subtitleAction != .none, let subtitleActionProjectID {
             // **The glyph and its status text are one control** — wherever there
             // is a door, both open it.
@@ -3076,30 +3064,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                               action: #selector(subtitleActionClicked(_:)))
             button.projectID = subtitleActionProjectID
             button.subtitleAction = subtitleAction
-            button.isBordered = false
-            button.setButtonType(.momentaryChange)
-            button.alignment = .left          // NSButton centres by default.
-            let para = NSMutableParagraphStyle()
-            para.lineBreakMode = .byTruncatingTail
-            para.alignment = .left
-            button.attributedTitle = NSAttributedString(string: subtitle, attributes: [
-                .font: ProjectCellSpec.subtitleFont,
-                .foregroundColor: NSColor.secondaryLabelColor,
-                .paragraphStyle: para,
-            ])
-            button.setAccessibilityLabel(subtitle)
-            button.translatesAutoresizingMaskIntoConstraints = false
-            button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            button.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            subtitleField = button
+            statusKind = .button(button)
         } else {
-            let field = NSTextField(labelWithString: subtitle)
-            field.font = ProjectCellSpec.subtitleFont
-            field.textColor = .secondaryLabelColor
-            field.lineBreakMode = .byTruncatingTail
-            field.translatesAutoresizingMaskIntoConstraints = false
-            subtitleField = field
+            statusKind = .plain
         }
+        let subtitleField = ProjectStatusLine.make(text: subtitle, kind: statusKind)
 
         cell.imageView = imageView
         cell.textField = nameField
@@ -3205,12 +3174,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                                                        constant: -ProjectCellSpec.trailingInset))
         }
         if let count {
-            let countField = NSTextField(labelWithString: count)
-            countField.font = ProjectCellSpec.countFont
-            countField.textColor = .tertiaryLabelColor
-            countField.translatesAutoresizingMaskIntoConstraints = false
-            countField.setContentHuggingPriority(.required, for: .horizontal)
-            countField.setContentCompressionResistancePriority(.required, for: .horizontal)
+            let countField = Self.countField(count)
             cell.addSubview(countField)
             constraints += [
                 nameField.trailingAnchor.constraint(lessThanOrEqualTo: countField.leadingAnchor,
@@ -3225,6 +3189,18 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
         NSLayoutConstraint.activate(constraints)
         return cell
+    }
+
+    /// The trailing session count, for the single-line and the two-line cell
+    /// alike: footnote, tertiary, and it never yields (the name truncates first).
+    private static func countField(_ text: String) -> NSTextField {
+        let field = NSTextField(labelWithString: text)
+        field.font = ProjectCellSpec.countFont
+        field.textColor = .tertiaryLabelColor
+        field.translatesAutoresizingMaskIntoConstraints = false
+        field.setContentHuggingPriority(.required, for: .horizontal)
+        field.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return field
     }
 
     private func groupCell(text: String) -> NSTableCellView {

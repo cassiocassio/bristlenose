@@ -270,7 +270,7 @@ Every state transition in the UI falls into one of these **semantic categories**
 | L4 | **AutoCode spinner** | idle / spinning | Rotation | 800ms linear infinite | ✓ Done |
 | L5 | **Activity chip spinner** | idle / spinning | Rotation | linear infinite | ⊘ Removed 18 Jul — replaced by the L7 thinking shimmer on the chip label |
 | L6 | **Word-level highlight** (karaoke) | inactive / active | Background highlight | Instant (perf) | ✓ Done |
-| L7 | **Thinking shimmer** (analysing) | idle / thinking | Single-hue brightness sweep on text | 2.7s (1.8s sweep + 0.9s gap) | ● Built 18 Jul — web activity chip (`atoms/shimmer.css`, verified) + native sidebar status line (`SidebarShimmerText.swift` hosted in `ProjectSidebarOutline`, pending Xcode build-verify) |
+| L7 | **Thinking shimmer** (analysing) | idle / thinking | Single-hue brightness sweep on text | 2.7s (1.8s sweep + 0.9s gap) | ● Built 18 Jul — web activity chip (`atoms/shimmer.css`, verified) + native sidebar status line (`SidebarShimmerText.swift`, hosted by `ProjectStatusLine.make` for the outline's project cell; drawn and measured by `ProjectStatusLineTests`, 16 Nov 2026) |
 | L8 | **Working block shimmer** (tapestry strip) | idle / working | Translucent ink sweep over the box | the L7 timing | ● Built 9 Nov 2026, owner saw it live 13 Nov and passed it (`atoms/shimmer.css` `.is-working`) |
 
 ---

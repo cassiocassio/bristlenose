@@ -12,7 +12,7 @@ import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -48,13 +48,22 @@ def _linked(app: FastAPI) -> bool:
         db.close()
 
 
-def _run(app: FastAPI, *, screens: bool = True, ready: bool = True) -> tuple[bool, AsyncMock]:
-    start = AsyncMock()
+def _run(app: FastAPI, *, screens: bool = True, ready: bool = True,
+         complete: bool = True) -> tuple[bool, AsyncMock]:
+    """One decision. ``complete`` makes the stubbed job finish, as the real one calls
+    ``after_apply`` when it has completed; the cutoff step itself is stubbed."""
+
+    def finish(*_a: object, after_apply: object = None, **_k: object) -> None:
+        if complete and after_apply is not None:
+            after_apply()  # type: ignore[operator]
+
+    start = AsyncMock(side_effect=finish)
     refuse = RefusalError(503, RefusalReason.NO_API_KEY, "no key")
     with (
         patch.object(hd, "_has_screens", lambda _a: screens),
         patch(READY, side_effect=None if ready else refuse),
         patch(START, start),
+        patch("bristlenose.server.routes.autocode.accept_at_default_cutoff", MagicMock()),
     ):
         return asyncio.run(hd.maybe_apply(app)), start
 
@@ -144,6 +153,49 @@ def test_a_researcher_who_already_has_uxr_is_left_alone(app: FastAPI) -> None:
     assert not hd.already_done(app)  # we did nothing, so there is nothing to record
 
 
+def _job_row(app: FastAPI, status: str, applied: bool) -> None:
+    db = app.state.db_factory()
+    try:
+        db.add(AutoCodeJob(project_id=1, framework_id="uxr", status=status,
+                           completed_at=datetime.now(timezone.utc) if applied else None))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_a_job_the_restart_killed_is_retried_on_the_next_completed_run(app: FastAPI) -> None:
+    """14 Nov 2026: a rebuild restarted the serve 28 s into the job, startup reconciled it to
+    failed with nothing coded, and the one-shot marker kept it from ever running again."""
+    hd.arm(app)
+    _run(app, complete=False)
+    assert not hd.already_done(app)
+    _job_row(app, "failed", applied=False)  # what startup's reconcile leaves
+    hd.arm(app)
+    started, start = _run(app)
+    assert started is True
+    start.assert_awaited_once()
+    assert hd.already_done(app)
+
+
+@pytest.mark.parametrize(("status", "applied"), [("running", False), ("completed", True),
+                                                 ("failed", True)])
+def test_a_job_in_flight_or_applied_is_never_retried(app: FastAPI, status: str,
+                                                     applied: bool) -> None:
+    hd.arm(app)
+    _run(app, complete=False)
+    _job_row(app, status, applied)
+    hd.arm(app)
+    started, start = _run(app)
+    assert started is False
+    start.assert_not_awaited()
+
+
+def test_an_old_bare_timestamp_marker_reads_as_started_not_done(app: FastAPI) -> None:
+    hd.marker_path(app).write_text('{"uxr": "2026-11-14T17:50:25+00:00"}', encoding="utf-8")
+    assert not hd.already_done(app)
+    assert hd._read_marker(app).get("started")
+
+
 def test_a_run_in_progress_keeps_it_armed(app: FastAPI) -> None:
     hd.arm(app)
     with patch.object(app.state.screen_text, "run_in_progress", lambda: True):
@@ -153,7 +205,7 @@ def test_a_run_in_progress_keeps_it_armed(app: FastAPI) -> None:
     assert app.state.house_default_due is True
 
 
-def test_a_failed_start_is_logged_not_raised_and_the_try_is_recorded(app: FastAPI) -> None:
+def test_a_failed_start_is_logged_not_raised_and_stays_retryable(app: FastAPI) -> None:
     hd.arm(app)
     with (
         patch.object(hd, "_has_screens", lambda _a: True),
@@ -161,8 +213,9 @@ def test_a_failed_start_is_logged_not_raised_and_the_try_is_recorded(app: FastAP
         patch(START, AsyncMock(side_effect=RuntimeError("boom"))),
     ):
         assert asyncio.run(hd.maybe_apply(app)) is False
-    # Installed, so tried: one shot, the manual Apply button is the way on.
-    assert hd.already_done(app)
+    # Installed and started, but not finished: not "done", so the next completed run retries.
+    assert not hd.already_done(app)
+    assert hd._read_marker(app).get("started")
     assert _linked(app)
 
 

@@ -16,6 +16,9 @@ When it fires, and only then:
   already installed or applied by the researcher, a run in progress (stays armed), or no
   screens. A skip other than "run in progress" disarms until the next completed run.
 
+Progress is the project row's line "AutoCode · N of M" (the Mac polls ``/autocode/jobs``), not a
+toast: no page started this job.
+
 What it does: installs the framework (the same helper the Import button uses; AutoCode resolves
 answers against the installed rows), starts the ordinary AutoCode job, and when that job has
 completed applies the default cutoff, because no researcher is there to open the review. The band
@@ -27,11 +30,12 @@ so later sessions are coded at the same line.
 Known overlap, as with the Apply button: the job can run while the same run's re-apply of other
 codebooks and its Signals snapshot are still going.
 
-One shot: ``<output>/.bristlenose/house-codebooks.json`` records that it was done, written once
-the install has been tried. It is a file beside the database, not a row, so Remove (which deletes
-the job) cannot bring it back. A start that fails after the install, or a first job that dies,
-leaves the marker, the installed codebook and the manual Apply button; retrying a failure nobody
-asked for would spend again.
+One shot, to completion: ``<output>/.bristlenose/house-codebooks.json`` records ``started`` when
+the job is launched and ``completed`` when it has finished and the cutoff is applied. It is a file
+beside the database, not a row, so Remove (which deletes the job) cannot bring it back. A job
+that did not finish (a restart or a closed window killed it: 14 Nov 2026, 28 s in, nothing coded)
+is retried on the next completed run that shows screens; the register keeps quotes already coded
+from being paid for twice. A researcher who had uxr before the marker existed is still left alone.
 """
 
 from __future__ import annotations
@@ -61,25 +65,37 @@ def marker_path(app: Any) -> Path:
     return project_output_dir(app.state.project_dir) / ".bristlenose" / MARKER_NAME
 
 
-def already_done(app: Any) -> bool:
+def _read_marker(app: Any) -> dict[str, Any]:
+    """The framework's record: ``{"started": iso, "completed": iso | absent}``. A marker from
+    before the two were told apart (a bare timestamp) reads as started, not completed."""
     try:
         data = json.loads(marker_path(app).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return False
-    return isinstance(data, dict) and FRAMEWORK_ID in data
+        return {}
+    entry = data.get(FRAMEWORK_ID) if isinstance(data, dict) else None
+    if isinstance(entry, dict):
+        return entry
+    return {"started": entry} if entry else {}
 
 
-def _write_marker(app: Any) -> None:
+def already_done(app: Any) -> bool:
+    """The default has gone through to the end: the job completed and the cutoff was applied."""
+    return bool(_read_marker(app).get("completed"))
+
+
+def _write_marker(app: Any, *, completed: bool) -> None:
     from datetime import datetime, timezone
 
     path = marker_path(app)
+    now = datetime.now(timezone.utc).isoformat()
+    entry = _read_marker(app)
+    entry.setdefault("started", now)
+    if completed:
+        entry["completed"] = now
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_name(path.name + ".tmp")
-        tmp.write_text(
-            json.dumps({FRAMEWORK_ID: datetime.now(timezone.utc).isoformat()}),
-            encoding="utf-8",
-        )
+        tmp.write_text(json.dumps({FRAMEWORK_ID: entry}), encoding="utf-8")
         os.replace(tmp, path)
     except OSError:
         logger.warning("Could not record the house default", exc_info=True)
@@ -160,14 +176,23 @@ async def _apply(app: Any) -> bool:
     try:
         if not analysis_quotes(db, PROJECT_ID):
             return False
-        if (
-            db.query(AutoCodeJob.id)
+        started_before = bool(_read_marker(app).get("started"))
+        existing = (
+            db.query(AutoCodeJob)
             .filter_by(project_id=PROJECT_ID, framework_id=FRAMEWORK_ID)
             .first()
-            is not None
+        )
+        if not started_before:
+            if existing is not None:
+                return False  # the researcher has it, or had it: theirs to decide
+        elif existing is not None and (
+            existing.status not in ("failed", "cancelled") or existing.completed_at is not None
         ):
-            return False  # the researcher has it, or had it: theirs to decide
-        if not link_framework_once(db, PROJECT_ID, template):
+            return False  # in flight, or applied: nothing to retry
+        # An earlier attempt of ours that did not finish is retried (a restart or a closed window
+        # killed it): the job row is re-run and the register keeps quotes already coded from
+        # being paid for twice.
+        if not link_framework_once(db, PROJECT_ID, template) and not started_before:
             return False  # already installed (checked under the install lock): theirs
     finally:
         db.close()
@@ -183,16 +208,14 @@ async def _apply(app: Any) -> bool:
                 accept_at_default_cutoff(
                     app.state.db_factory, PROJECT_ID, FRAMEWORK_ID, DEFAULT_ACCEPT_THRESHOLD
                 )
+                _write_marker(app, completed=True)
                 return
             except Exception:  # noqa: BLE001
                 if attempt == 2:
                     raise
                 logger.warning("House default: applying the cutoff failed, retrying", exc_info=True)
 
-    try:
-        await routes.start_autocode(app, PROJECT_ID, FRAMEWORK_ID, after_apply=_apply_cutoff)
-    finally:
-        # Installed, so tried: recorded whether or not the start went through (see the docstring).
-        _write_marker(app)
+    _write_marker(app, completed=False)  # tried: a retry is allowed, an unasked first one is not
+    await routes.start_autocode(app, PROJECT_ID, FRAMEWORK_ID, after_apply=_apply_cutoff)
     logger.info("House default: %s applied to a study with screens", FRAMEWORK_ID)
     return True

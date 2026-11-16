@@ -153,6 +153,12 @@ struct WindowSubtitleTests {
                 == .stopping)
     }
 
+    @Test("a stopped run leaves isStopping behind; the titlebar shows the count, not Stopping")
+    func staleStoppingShowsCount() {
+        #expect(WindowSubtitle.body(narratesRun: true, isStopping: true, isRunning: false)
+                == .count)
+    }
+
     @Test("no run means the count, key window or not")
     func idleShowsCount() {
         #expect(WindowSubtitle.body(narratesRun: true, isStopping: false, isRunning: false)

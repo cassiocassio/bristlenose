@@ -51,9 +51,9 @@ enum WindowSubtitle {
     enum Body: Equatable {
         /// The resting per-lens count.
         case count
-        /// "Stopping…" — the immediate acknowledgement.
-        case runProgress
         /// The live stage / ETA narration.
+        case runProgress
+        /// "Stopping…" — the immediate acknowledgement.
         case stopping
     }
 
@@ -78,7 +78,9 @@ enum WindowSubtitle {
     /// decision from this one.
     static func body(narratesRun: Bool, isStopping: Bool, isRunning: Bool) -> Body {
         guard narratesRun else { return .count }
-        if isStopping { return .stopping }
+        // A finished run leaves its progress entry (and isStopping) in place until the
+        // next run replaces it, so Stopping only counts while a run is in flight.
+        if isStopping && isRunning { return .stopping }
         return isRunning ? .runProgress : .count
     }
 

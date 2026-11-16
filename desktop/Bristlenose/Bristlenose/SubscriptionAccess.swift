@@ -3,10 +3,10 @@ import Foundation
 /// What a person's subscription lets them do. Pure logic: no StoreKit import,
 /// so every rule here is testable without a store.
 ///
-/// **The one rule the product has so far:** a subscription lets you *analyse
-/// new recordings*. Projects already analysed stay readable either way. That
-/// second half is a product decision not yet confirmed by the owner, so it
-/// lives in one place (`canStartAnalysis` / `canOpenProjects`) where changing
+/// **The rule:** a subscription is needed for work that is sent to an AI
+/// provider. Everything else stays free, including opening, reading and hand
+/// edits (stars, hides, manual tags) on projects that were already analysed.
+/// It lives in one place (`canStartAnalysis` / `canOpenProjects`), so changing
 /// it is one line.
 ///
 /// Only the App Store channel is gated. The Developer ID `.dmg`, local debug

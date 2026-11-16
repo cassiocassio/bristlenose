@@ -1,0 +1,686 @@
+<title>Session Digest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one dense page. Where you were first, then the goals, a dated map, visuals,
+   and small panels that wrap to one column on a phone. Every state is a glyph plus a
+   word, never colour alone. The renderer reads the JSON block and builds the DOM with
+   textContent only; edit the JSON (via build.py), not the renderer. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #1b2130; --muted: #566074; --line: #dde1e8;
+  --accent: #2c5c9e; --good: #1a6e43; --wip: #845900; --idle: #566074; --bad: #b0271f;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --surface: #1a2029; --ink: #e5e8ee; --muted: #9aa4b6; --line: #2a3240;
+    --accent: #85adea; --good: #62c68f; --wip: #e2b44c; --idle: #9aa4b6; --bad: #f18c84;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #1a2029; --ink: #e5e8ee; --muted: #9aa4b6; --line: #2a3240;
+  --accent: #85adea; --good: #62c68f; --wip: #e2b44c; --idle: #9aa4b6; --bad: #f18c84;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 13px/1.4 var(--font);
+  padding-block: 14px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 1180px; margin: 0 auto; display: grid; gap: 10px; }
+h1 { font-size: 17px; line-height: 1.25; margin: 0; text-wrap: balance; }
+h3 { margin: 0; }
+.sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+h2 { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; font-weight: 650; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0; scroll-margin-top: 3.5em; }
+ul, ol { list-style: none; margin: 0; padding: 0; }
+ul { display: grid; gap: 3px; }
+li { min-width: 0; overflow-wrap: anywhere; }
+.why { color: var(--muted); }
+.empty { color: var(--muted); font-style: italic; margin: 0; }
+.mono { font-family: var(--mono); font-size: 11.5px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 3px;
+  font-size: 11px; line-height: 18px; white-space: nowrap; vertical-align: baseline;
+  color: var(--c); background: color-mix(in srgb, var(--c) 15%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 38%, var(--surface));
+}
+.chip.good { --c: var(--good); } .chip.wip { --c: var(--wip); }
+.chip.idle { --c: var(--idle); } .chip.bad { --c: var(--bad); }
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 6px; }
+li.lead { display: grid; grid-template-columns: minmax(92px, max-content) minmax(0, 1fr); column-gap: 8px; align-items: baseline; }
+li.lead > .chip { justify-self: start; }
+.stat {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px;
+  display: grid; grid-template-columns: auto 1fr; gap: 0 8px; align-items: baseline; min-width: 0;
+}
+.stat b { font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--c, var(--ink)); }
+.stat span { font-size: 11px; color: var(--muted); }
+.stat.good { --c: var(--good); } .stat.bad { --c: var(--bad); } .stat.wip { --c: var(--wip); }
+.stat.good, .stat.bad, .stat.wip { background: color-mix(in srgb, var(--c) 6%, var(--surface)); border-color: color-mix(in srgb, var(--c) 22%, var(--line)); }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 10.5px; padding: 2px 6px 4px 0; }
+td { padding: 3px 6px 3px 0; border-top: 1px solid var(--line); vertical-align: top; min-width: 0; }
+.sc { overflow-x: auto; }
+.sc:focus-visible, .sc:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sq { display: inline-flex; gap: 2px; flex-wrap: wrap; vertical-align: middle; }
+.sq i { width: 9px; height: 9px; border: 1.5px solid var(--accent); border-radius: 2px; display: block; }
+.sq i.f { background: var(--accent); }
+.sq i.u { border-color: var(--bad); }
+.num { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11px; margin-left: 4px; }
+.axes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.axis { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; }
+.axis h3 { margin: 0 0 3px; font-size: 11px; text-transform: capitalize; }
+.axis p { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.axis p b { color: var(--muted); font-weight: 600; }
+.three { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.legend { color: var(--muted); font-size: 11px; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.foot { color: var(--muted); font-size: 11.5px; }
+.resume { border-left: 3px solid var(--accent); }
+.resume > p, .resume > div { margin: 0 0 6px; }
+.resume .k { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; display: block; }
+nav.jump {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 4px 0; font-size: 11.5px; border-bottom: 1px solid var(--line);
+}
+nav.jump a { color: var(--accent); text-decoration: none; }
+nav.jump a:hover, nav.jump a:focus-visible { text-decoration: underline; }
+.map { display: flex; }
+.node { flex: 0 0 128px; padding: 0 8px 0 0; position: relative; }
+.node::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; border-top: 1px solid var(--line); }
+.node .dot {
+  position: relative; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; font-size: 10px;
+  background: color-mix(in srgb, var(--c, var(--idle)) 12%, var(--surface));
+  border: 1.5px solid var(--c, var(--idle)); color: var(--c, var(--idle));
+}
+.node.good { --c: var(--good); } .node.wip { --c: var(--wip); } .node.bad { --c: var(--bad); } .node.idle { --c: var(--idle); }
+.node .when { font-size: 10.5px; color: var(--muted); margin-top: 3px; display: block; }
+.node .what { font-size: 11.5px; line-height: 1.3; display: block; overflow-wrap: anywhere; }
+.node.now .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.film { display: flex; align-items: stretch; padding-bottom: 4px; }
+.step { display: flex; align-items: center; flex: 0 0 auto; }
+.arrow { color: var(--muted); padding: 0 4px; }
+.frame { width: 150px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--bg); }
+.frame img { display: block; width: 100%; height: 84px; object-fit: cover; border-bottom: 1px solid var(--line); }
+.frame .cap { padding: 3px 6px; font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.frame .cap b { display: block; font-size: 10.5px; color: var(--muted); }
+.subject { font-size: 11px; font-weight: 650; margin: 8px 0 3px; }
+.subject:first-child { margin-top: 0; }
+button.thumb { all: unset; cursor: zoom-in; display: block; position: relative; }
+button.thumb img { display: block; border-radius: 3px; border: 1px solid var(--line); background: var(--bg); }
+button.thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sheet { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.shot { min-width: 0; font-size: 11px; }
+.shot img { width: 100%; height: 72px; object-fit: cover; }
+.shot .cap { display: block; margin-top: 2px; line-height: 1.3; overflow-wrap: anywhere; }
+.shot .meta { color: var(--muted); font-size: 10.5px; display: block; }
+.gone { min-height: 72px; border: 1.5px dashed var(--line); border-radius: 3px; display: grid; place-items: center; color: var(--muted); font-size: 10.5px; text-align: center; padding: 4px; overflow-wrap: anywhere; }
+.node .mini { margin-top: 4px; }
+.node .mini img { width: 100%; height: 44px; object-fit: cover; }
+.wd { display: grid; gap: 6px; }
+.wd .row { border-top: 1px solid var(--line); padding-top: 5px; min-width: 0; overflow-wrap: anywhere; }
+.wd .where { font-size: 10.5px; color: var(--muted); display: block; }
+.wd del { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.wd ins { color: var(--good); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
+dialog.lb { border: 1px solid var(--line); border-radius: 8px; padding: 0; background: var(--surface); color: var(--ink); width: min(96vw, 1100px); max-height: 94vh; }
+dialog.lb::backdrop { background: rgb(0 0 0 / .55); }
+.lb-body { display: grid; grid-template-rows: 1fr auto; max-height: 94vh; }
+.lb-img { overflow: auto; text-align: center; background: var(--bg); padding: 8px; }
+.lb-img img { max-width: 100%; max-height: 72vh; border: 1px solid var(--line); }
+.lb-bar { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 8px 12px; font-size: 12px; }
+.lb-bar .grow { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.lb-bar button, .cp {
+  font: inherit; font-size: 11.5px; padding: 2px 8px; border-radius: 4px; cursor: pointer;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--muted);
+}
+.lb-bar button:focus-visible, .cp:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ref { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px; max-width: 100%; vertical-align: baseline; }
+.ref .lbl { font: 11px var(--mono); padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: var(--surface); overflow-wrap: anywhere; }
+.ref a.lbl { color: var(--accent); text-decoration: none; }
+.ref a.lbl:hover, .ref a.lbl:focus-visible { text-decoration: underline; }
+.ref.gone .lbl { text-decoration: line-through; }
+.ref .cp { padding: 0 4px; line-height: 15px; font-size: 11px; }
+.pick { font: 11px var(--mono); width: 18em; max-width: 100%; }
+.gen { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin-top: 3px; }
+@media (max-width: 480px) { .axes { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<main id="root"></main>
+
+<script type="application/json" id="digest">
+{
+  "mode": "session",
+  "name": "Session Digest",
+  "title": "UI libraries vs our design system, and a motion-tokens plan",
+  "window": "8–13 Nov 2026",
+  "scope": "this conversation (not compacted); 1 forked session read by its reports only",
+  "generated": { "at": "2026-11-13T09:40:00Z", "head": "c57184b6e", "branch": "main", "dirty": true,
+    "repo": "https://github.com/cassiocassio/bristlenose", "root": "/Users/cassio/Code/bristlenose" },
+  "last_active": "2026-11-13",
+  "resume": {
+    "where": "Motion plan is final and unbuilt; the digest skill is drafted and reviewed.",
+    "next": { "t": "Phase 1: CSS lint test and the two transition: all fixes.", "ref": { "file": "docs/design-motion-tokens.md" } },
+    "blocked": [
+      { "t": "Add zero-seam line to CLAUDE.md?", "cause": "decision", "ref": { "file": "CLAUDE.md" } },
+      { "t": "Commit the two docs?", "cause": "approval" }
+    ]
+  },
+  "goals": [
+    { "problem": "Borrow from the experts instead of hand-rolling", "state": "partly", "quote": "stood on the shoulders of giants" },
+    { "problem": "No seam between the Mac app and the webview", "state": "met", "quote": "seam ... is zero" },
+    { "problem": "One toast story across web, notifications, pills, rings", "state": "pivot", "quote": "toast story is complex" },
+    { "problem": "Stop hand-typing motion numbers in two languages", "state": "partly", "quote": "good thing to DRY" },
+    { "problem": "A “where was I?” map of a session, with links", "state": "open", "quote": "don't scroll the whole thing" }
+  ],
+  "timeline": [
+    { "when": "8 Nov", "label": "Compared UI libraries to our system", "state": "done" },
+    { "when": "8 Nov", "label": "Seam principle: native wins, libraries give behaviour", "state": "decided" },
+    { "when": "9 Nov", "label": "Toast work forked to its own session", "state": "done" },
+    { "when": "9 Nov", "label": "Motion plan drafted, 3 reviews", "state": "done", "ref": { "file": "docs/design-motion-tokens.md" } },
+    { "when": "9 Nov", "label": "Hand-written Motion.swift chosen", "state": "decided" },
+    { "when": "13 Nov", "label": "Digest skill drafted, reviewed", "state": "drafted", "now": true, "ref": { "file": ".claude/skills/session-digest/SKILL.md" } }
+  ],
+  "shots": [
+    { "id": "d1", "kind": "design", "when": "13 Nov", "caption": "Digest page v1 (placeholder)", "path": "docs/private/digests/example-v1.png", "gone": false,
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 90'%3E%3Crect width='160' height='90' fill='%23dde1e8'/%3E%3Crect x='8' y='8' width='144' height='14' fill='%23b8c0cf'/%3E%3Crect x='8' y='28' width='70' height='54' fill='%23c9d0dc'/%3E%3Crect x='82' y='28' width='70' height='54' fill='%23c9d0dc'/%3E%3C/svg%3E" },
+    { "id": "d2", "kind": "design", "when": "13 Nov", "caption": "Digest page v2 with map (placeholder)", "path": "docs/private/digests/example-v2.png", "gone": false,
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 90'%3E%3Crect width='160' height='90' fill='%23dde1e8'/%3E%3Crect x='8' y='8' width='144' height='14' fill='%23b8c0cf'/%3E%3Crect x='8' y='26' width='144' height='10' fill='%2385adea'/%3E%3Crect x='8' y='40' width='70' height='42' fill='%23c9d0dc'/%3E%3Crect x='82' y='40' width='70' height='42' fill='%23c9d0dc'/%3E%3C/svg%3E" },
+    { "id": "q1", "kind": "qa", "when": "12 Nov", "caption": "QA screenshot, path no longer exists", "path": "/Users/example/Desktop/qa-1.png", "gone": true, "src": null }
+  ],
+  "evolution": [
+    { "subject": "Digest page", "steps": [
+      { "label": "v1", "note": "flat panels, no map", "shot": "d1" },
+      { "label": "v2", "note": "where-you-were, map, jump nav", "shot": "d2" } ] },
+    { "subject": "Motion plan", "steps": [
+      { "label": "v1", "note": "5 phases, generated Swift" },
+      { "label": "v2", "note": "3 phases, hand-written file" },
+      { "label": "v3", "note": "decision logged; measurements parked" } ] }
+  ],
+  "wording": [
+    { "where": "Motion plan §3", "before": "Owner decision 1.", "after": "Owner decision 1, decided: hand-written (§8)." },
+    { "where": "Press state, my table row", "before": "scale(0.97) on :active", "after": "pressed fill, no size change" }
+  ],
+  "before": [
+    "No comparison of our UI against Sonner, Radix, Base UI and friends",
+    "Motion numbers hand-typed: 34 CSS literals, 8 Swift",
+    "Toasts: one function, 27 call sites, one at a time"
+  ],
+  "after": [
+    "Audit: toasts, buttons, motion, dialog, heatmap, menus, autocomplete",
+    "Motion plan: 3 phases, hand-written Motion.swift + 1 parity test",
+    "Notification-surfaces doc, 11 phases, 7 owner decisions (other session)",
+    "Zero-seam principle named; not yet in CLAUDE.md"
+  ],
+  "reviews": [
+    { "round": "1", "reviewer": "facts", "H": [0, 0], "M": [0, 0], "L": [0, 0], "U": [8, 0] },
+    { "round": "1", "reviewer": "parsimony", "H": [0, 0], "M": [0, 0], "L": [0, 0], "U": [6, 0] },
+    { "round": "1", "reviewer": "native fit", "H": [0, 0], "M": [0, 0], "L": [0, 0], "U": [10, 2] }
+  ],
+  "decisions": [
+    { "text": "Hand-written Motion.swift + parity test", "logged_in": "docs/design-motion-tokens.md §8", "ref": { "file": "docs/design-motion-tokens.md" } },
+    { "text": "CSS tokens are the source; Swift follows", "logged_in": "docs/design-motion-tokens.md §3" },
+    { "text": "Native control wins; libraries give behaviour only", "logged_in": null },
+    { "text": "Toast work runs in its own session", "logged_in": "docs/private/100days.md (by that session)" }
+  ],
+  "rejected": [
+    { "idea": "Install Sonner / Radix wholesale", "why": "export bundle; styled defaults are a seam" },
+    { "idea": "scale(0.97) on press", "why": "no Mac control shrinks" },
+    { "idea": "Generated MotionTokens.swift", "why": "8 sites; too much machinery" },
+    { "idea": "Ratchets on allowlist and Swift literals", "why": "the test already is the gate" },
+    { "idea": "⌘K palette, drawer, number roll", "why": "no native twin; parked" }
+  ],
+  "artefacts": [
+    { "path": "docs/design-motion-tokens.md", "kind": "plan", "state": "drafted" },
+    { "path": "docs/design-notification-surfaces.md", "kind": "plan", "state": "committed", "unverified": true },
+    { "path": ".claude/skills/session-digest/", "kind": "skill", "state": "drafted" }
+  ],
+  "checks": [
+    { "pattern": "Is the principle already recorded?", "times": 3, "quote": "is that strategic goal not clear?", "answered": "evidence", "note": "grep: no single statement; rules scattered" },
+    { "pattern": "Does this change what users see?", "times": 2, "quote": "why would i want that?", "answered": "conceded", "note": "press state was taste, not a gap" },
+    { "pattern": "Did you flatten something we matched?", "times": 1, "quote": "we matched the animation of the modal", "answered": "conceded", "note": "plan reworked to keep measured values" }
+  ],
+  "axes": {
+    "product": { "chose": "zero seam between app and webview", "undone": "line not in CLAUDE.md", "deferred": "—" },
+    "feature": { "chose": "none (beta: reliability only)", "undone": "—", "deferred": "toast stacking, ⌘K" },
+    "design": { "chose": "roles not numbers; measured only", "undone": "10 Mac measurements", "deferred": "button states" },
+    "implementation": { "chose": "3 phases, beta-safe", "undone": "all 3 unbuilt; scroll a11y fix", "deferred": "springs via linear()" }
+  },
+  "done": ["Audit and comparison", "Motion plan, 3 reviews folded in", "Skill drafted and reviewed"],
+  "undone": ["Nothing committed", "Phases 1–3 unbuilt", "Smooth-scroll Reduce Motion fix", "10 Mac measurements"],
+  "deferred": [
+    { "item": "Button hover/press vs native", "trigger": "after Mac measurement", "age": 4 },
+    { "item": "Spring roles via CSS linear()", "trigger": "if roles pass ~10" }
+  ],
+  "owner_open": ["Add zero-seam line to CLAUDE.md?", "Swift snaps vs fades under Reduce Motion", "Keep the 75ms “matches native” claim?", "Commit the two docs?"],
+  "unverified": ["Notification doc committed (child session said so)", "100days.md rebuilt cleanly after the child's corruption"]
+}
+</script>
+
+<script>
+(function () {
+  document.documentElement.lang = document.documentElement.lang || "en";
+  var root = document.getElementById("root");
+  var D;
+  try { D = JSON.parse(document.getElementById("digest").textContent); }
+  catch (e) { root.textContent = "Digest data is not valid JSON."; return; }
+  if (!D || typeof D !== "object") D = {};
+
+  // ---- tolerant input: every key optional ------------------------------------------
+  function arr(v) { return Array.isArray(v) ? v : []; }
+  function str(v) { return v == null ? "" : String(v); }
+  ["before", "after", "done", "undone", "owner_open", "unverified", "goals", "timeline", "evolution", "shots",
+   "wording", "reviews", "decisions", "rejected", "artefacts", "checks", "deferred", "sessions"]
+    .forEach(function (k) { D[k] = arr(D[k]); });
+  D.axes = D.axes && typeof D.axes === "object" ? D.axes : {};
+  var G = D.generated && typeof D.generated === "object" ? D.generated : null;
+  function https(u) { return /^https:\/\//i.test(str(u)) ? str(u) : null; }
+  function imgSrc(u) { return /^data:image\/(png|jpeg|webp|gif|svg\+xml)[;,]/i.test(str(u)) ? str(u) : null; }
+  function q(s) { return "'" + str(s).replace(/'/g, "'\\''") + "'"; }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+  var PAUSE = "⏸︎", FLAG = "⚑︎";
+  var STATE = {
+    shipped: ["●", "good"], committed: ["✓", "good"], decided: ["✓", "good"], logged: ["✓", "good"], done: ["✓", "good"],
+    verified: ["✓", "good"], met: ["✓", "good"], drafted: ["◐", "wip"], uncommitted: ["◐", "wip"], partly: ["◐", "wip"],
+    unverified: ["?", "wip"], deferred: [PAUSE, "idle"], rejected: ["✕", "idle"], unbuilt: ["○", "idle"],
+    pivot: ["↪", "idle"], undone: ["○", "bad"], open: ["○", "bad"], blocked: [FLAG, "bad"], nowhere: ["!", "bad"]
+  };
+  function chip(state) {
+    var s = STATE[state] || ["·", "idle"], c = el("span", "chip " + s[1]);
+    var g = el("span", null, s[0]); g.setAttribute("aria-hidden", "true");
+    c.appendChild(g); c.appendChild(document.createTextNode(" " + str(state)));
+    return c;
+  }
+  function panel(title, body) {
+    var p = el("section", "panel");
+    p.appendChild(el("h2", null, title));
+    p.appendChild(body);
+    return p;
+  }
+  function list(items, render) {
+    if (!items || !items.length) return el("p", "empty", "none");
+    var ul = el("ul");
+    items.forEach(function (it) { var li = el("li"); render(li, it); ul.appendChild(li); });
+    return ul;
+  }
+  function scroller(child, label) {
+    var d = el("div", "sc"); d.tabIndex = 0; d.setAttribute("role", "region"); d.setAttribute("aria-label", label);
+    d.appendChild(child); return d;
+  }
+
+  // ---- copy, with a visible fallback and a polite announcement ------------------------
+  var live = el("p", "sr"); live.setAttribute("role", "status");
+  function say(t) { live.textContent = ""; setTimeout(function () { live.textContent = t; }, 30); }
+  function flash(btn, t) {
+    if (!btn.dataset.o) btn.dataset.o = btn.textContent;
+    btn.textContent = t; clearTimeout(btn._t);
+    btn._t = setTimeout(function () { btn.textContent = btn.dataset.o; btn.dataset.o = ""; }, 1200);
+  }
+  function copy(text, btn) {
+    var ok = function () { flash(btn, "copied"); say("Copied"); };
+    var fail = function () {
+      var inp = el("input", "pick"); inp.readOnly = true; inp.value = text; inp.setAttribute("aria-label", "Command to copy");
+      btn.parentNode.insertBefore(inp, btn.nextSibling); inp.focus(); inp.select();
+      inp.addEventListener("blur", function () { inp.remove(); });
+      say("Copy failed. The command is selected: " + text);
+    };
+    try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+  }
+
+  // ---- source chips: a link when a durable https target exists, always a copy button -----
+  // ref = {file?, lines?, sha?, url?, cmd?, label?, v?: "ok"|"gone", snip?}
+  function ref(r) {
+    if (!r || typeof r !== "object") return document.createTextNode("");
+    var repo = https(G && G.repo); if (repo) repo = repo.replace(/\.git$/, "");
+    var lines = r.lines ? "#L" + str(r.lines).replace("-", "-L") : "";
+    var href = https(r.url) || (repo && r.sha && r.file ? repo + "/blob/" + r.sha + "/" + r.file + lines : (repo && r.sha ? repo + "/commit/" + r.sha : null));
+    var label = r.label || (r.file ? str(r.file).split("/").pop() + (r.lines ? ":" + r.lines : "") : (r.sha ? str(r.sha).slice(0, 7) : "link"));
+    var cmd = r.cmd || (r.sha && r.file ? "git show " + q(r.sha + ":" + r.file) : r.sha ? "git show " + q(r.sha)
+      : r.file ? "open -R " + q((G && G.root ? G.root + "/" : "") + r.file) : https(r.url) || "");
+    var wrap = el("span", "ref" + (r.v === "gone" ? " gone" : ""));
+    var l = href ? el("a", "lbl", label) : el("span", "lbl", label);
+    if (href) { l.href = href; l.target = "_blank"; l.rel = "noopener"; }
+    if (r.snip) l.title = str(r.snip);
+    wrap.appendChild(l);
+    if (r.v === "gone") wrap.appendChild(el("span", "why", " gone"));
+    if (cmd) {
+      var b = el("button", "cp", "⧉"); b.type = "button"; b.title = cmd;
+      b.setAttribute("aria-label", "Copy command for " + label);
+      b.onclick = function () { copy(cmd, b); }; wrap.appendChild(b);
+    }
+    return wrap;
+  }
+  function plain(li, t) { // a string, or {t, ref}
+    if (t == null) return;
+    if (typeof t !== "object") { li.textContent = str(t); return; }
+    li.appendChild(document.createTextNode(str(t.t) + " "));
+    if (t.ref) li.appendChild(ref(t.ref));
+  }
+  function addRef(parent, r) { if (r) { parent.appendChild(document.createTextNode(" ")); parent.appendChild(ref(r)); } }
+
+  // ---- screenshots and the lightbox (built once, so focus stays put) ------------------
+  var SHOTS = {}, ORDER = [];
+  D.shots.forEach(function (s) { if (s && s.id) { SHOTS[s.id] = s; if (imgSrc(s.src) && !s.gone) ORDER.push(s.id); } });
+  var dlg = el("dialog", "lb"); dlg.setAttribute("aria-label", "Screenshot viewer");
+  var lbBody = el("div", "lb-body"), lbImg = el("div", "lb-img"), bar = el("div", "lb-bar");
+  var capEl = el("div", "grow"); capEl.setAttribute("aria-live", "polite");
+  var btnCopy = el("button", null, "copy path"), btnPrev = el("button", null, "prev"), btnNext = el("button", null, "next"), btnClose = el("button", null, "close");
+  [btnCopy, btnPrev, btnNext, btnClose].forEach(function (b) { b.type = "button"; });
+  bar.appendChild(capEl); bar.appendChild(btnCopy); bar.appendChild(btnPrev); bar.appendChild(btnNext); bar.appendChild(btnClose);
+  lbBody.appendChild(lbImg); lbBody.appendChild(bar); dlg.appendChild(lbBody);
+  var cur = 0;
+  function show(i) {
+    cur = (i + ORDER.length) % ORDER.length;
+    var s = SHOTS[ORDER[cur]];
+    lbImg.textContent = "";
+    var im = el("img"); im.src = imgSrc(s.src); im.alt = str(s.caption); lbImg.appendChild(im);
+    capEl.textContent = "";
+    capEl.appendChild(el("b", null, str(s.caption)));
+    capEl.appendChild(el("span", "why", " · " + str(s.kind) + " · " + str(s.when) + " · " + (cur + 1) + "/" + ORDER.length + " · "));
+    capEl.appendChild(el("span", "mono", str(s.path)));
+    btnCopy.onclick = function () { copy(str(s.path), btnCopy); };
+    btnPrev.hidden = btnNext.hidden = ORDER.length < 2;
+  }
+  btnPrev.onclick = function () { show(cur - 1); };
+  btnNext.onclick = function () { show(cur + 1); };
+  btnClose.onclick = function () { dlg.close(); };
+  dlg.addEventListener("keydown", function (e) {
+    if (ORDER.length > 1 && e.key === "ArrowLeft") { show(cur - 1); e.preventDefault(); }
+    if (ORDER.length > 1 && e.key === "ArrowRight") { show(cur + 1); e.preventDefault(); }
+  });
+  function openShot(id) { var i = ORDER.indexOf(id); if (i < 0 || !dlg.showModal) return; show(i); dlg.showModal(); }
+  function thumb(id) {
+    var s = SHOTS[id]; if (!s) return null;
+    if (!imgSrc(s.src) || s.gone) return el("div", "gone", "image gone");
+    var b = el("button", "thumb"); b.type = "button"; b.setAttribute("aria-label", "Open: " + str(s.caption));
+    var im = el("img"); im.src = imgSrc(s.src); im.alt = ""; im.loading = "lazy";
+    b.appendChild(im); b.onclick = function () { openShot(id); }; return b;
+  }
+
+  // ---- dates ------------------------------------------------------------------------
+  function isoDay(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(str(s)); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+  function daysSince(d) { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate()); return Math.max(0, Math.floor((t - d) / 864e5)); }
+
+  // ---- header --------------------------------------------------------------------------
+  var head = el("header");
+  head.appendChild(el("h1", null, str(D.title) || "Session digest"));
+  var la = isoDay(D.last_active), agoTxt = "";
+  if (la) { var dd = daysSince(la); agoTxt = "last active " + str(D.last_active).slice(0, 10) + (dd ? " (" + dd + " day" + (dd === 1 ? "" : "s") + " ago)" : " (today)"); }
+  var subParts = [str(D.window), agoTxt, D.scope ? "read: " + str(D.scope) : ""].filter(Boolean);
+  if (subParts.length) head.appendChild(el("div", "sub", subParts.join(" · ")));
+  if (G && G.head) {
+    var gl = el("div", "sub gen"), at = new Date(G.at);
+    gl.appendChild(document.createTextNode("digest " + (isNaN(at) ? "" : at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) + " ") + "at "));
+    gl.appendChild(ref({ sha: G.head, label: str(G.head) }));
+    gl.appendChild(document.createTextNode(" " + str(G.branch) + (G.dirty ? " + uncommitted" : "")));
+    var ageH = isNaN(at) ? NaN : daysSince(new Date(at.getFullYear(), at.getMonth(), at.getDate()));
+    var fr = isNaN(ageH) ? ["?", "idle", "age unknown"] : ageH < 2 ? ["✓", "good", "fresh"] : ageH < 7 ? ["◐", "wip", "aging"] : ["!", "bad", "stale"];
+    var fc = el("span", "chip " + fr[1]); var fg = el("span", null, fr[0]); fg.setAttribute("aria-hidden", "true");
+    fc.appendChild(fg); fc.appendChild(document.createTextNode(" " + fr[2])); gl.appendChild(fc);
+    gl.appendChild(document.createTextNode("drift check:"));
+    gl.appendChild(ref({ label: "git log " + str(G.head) + "..HEAD", cmd: "git log " + q(str(G.head) + "..HEAD") + " --oneline" }));
+    head.appendChild(gl);
+  }
+  root.appendChild(head);
+
+  // ---- where you were (first), then goals --------------------------------------------------
+  if (D.resume && typeof D.resume === "object") {
+    var rs = el("section", "panel resume");
+    rs.appendChild(el("h2", null, "Where you were"));
+    var rp = el("p"); rp.appendChild(el("span", "k", "state")); rp.appendChild(document.createTextNode(str(D.resume.where) || "—")); rs.appendChild(rp);
+    var rn = el("p"); rn.appendChild(el("span", "k", "next")); plain(rn, D.resume.next || D.next_step || "—"); rs.appendChild(rn);
+    var bl = arr(D.resume.blocked);
+    if (bl.length) {
+      var rb = el("div"); rb.appendChild(el("span", "k", "waiting on you"));
+      var CAUSE = { decision: [FLAG, "wip"], approval: [FLAG, "wip"], input: [FLAG, "wip"], review: [FLAG, "wip"], external: [PAUSE, "idle"] };
+      rb.appendChild(list(bl, function (li, b) {
+        var o = typeof b === "object" && b ? b : { t: b }, c = CAUSE[o.cause];
+        li.className = "lead";
+        if (c) { var cc = el("span", "chip " + c[1]); var cg = el("span", null, c[0]); cg.setAttribute("aria-hidden", "true"); cc.appendChild(cg); cc.appendChild(document.createTextNode(" " + o.cause)); li.appendChild(cc); }
+        else li.appendChild(el("span", "why", "—"));
+        var bb = el("span"); plain(bb, { t: o.t, ref: o.ref }); li.appendChild(bb);
+      }));
+      rs.appendChild(rb);
+    }
+    root.appendChild(rs);
+  }
+  if (D.goals.length) {
+    root.appendChild(panel("What you were solving", list(D.goals, function (li, g) {
+      g = g || {}; li.className = "lead"; li.appendChild(chip(g.state));
+      var gb = el("span"); gb.appendChild(document.createTextNode(str(g.problem) + " "));
+      if (g.quote) gb.appendChild(el("span", "why", "“" + str(g.quote) + "”"));
+      li.appendChild(gb);
+    })));
+  }
+  var navSlot = el("nav", "jump"); navSlot.setAttribute("aria-label", "Sections");
+  root.appendChild(navSlot);
+
+  // ---- state strip ------------------------------------------------------------------------
+  var unlogged = D.decisions.filter(function (d) { return d && !d.logged_in; }).length;
+  var strip = el("div", "strip");
+  [["done", D.done.length, "good"], ["undone", D.undone.length, "bad"], ["deferred", D.deferred.length, "idle"],
+   ["decisions unlogged", unlogged, unlogged ? "bad" : "good"], ["open for you", D.owner_open.length, "wip"]
+  ].forEach(function (s) {
+    var d = el("div", "stat " + s[2]); d.appendChild(el("b", null, String(s[1]))); d.appendChild(el("span", null, s[0])); strip.appendChild(d);
+  });
+  root.appendChild(strip);
+
+  // ---- map ---------------------------------------------------------------------------------
+  if (D.timeline.length) {
+    var mp = el("ol", "map");
+    D.timeline.forEach(function (n) {
+      n = n || {};
+      var s = STATE[n.state] || ["·", "idle"], nd = el("li", "node " + s[1] + (n.now ? " now" : ""));
+      var dot = el("span", "dot", s[0]); dot.setAttribute("aria-hidden", "true"); nd.appendChild(dot);
+      nd.appendChild(el("span", "sr", str(n.state) + ": "));
+      nd.appendChild(el("span", "when", str(n.when) + (n.now ? " · now" : "")));
+      nd.appendChild(el("span", "what", str(n.label)));
+      if (n.ref) nd.appendChild(ref(n.ref));
+      var nth = n.shot ? thumb(n.shot) : null;
+      if (nth) { var mini = el("div", "mini"); mini.appendChild(nth); nd.appendChild(mini); }
+      mp.appendChild(nd);
+    });
+    root.appendChild(panel("Map", scroller(mp, "Map, scrolls sideways")));
+  }
+
+  // ---- evolution, visuals, wording ---------------------------------------------------------------
+  if (D.evolution.length) {
+    var ev = el("div");
+    D.evolution.forEach(function (e) {
+      e = e || {};
+      ev.appendChild(el("h3", "subject", str(e.subject)));
+      var fm = el("ol", "film");
+      arr(e.steps).forEach(function (st, i) {
+        st = st || {};
+        var li = el("li", "step");
+        if (i) { var ar = el("span", "arrow", "→"); ar.setAttribute("aria-hidden", "true"); li.appendChild(ar); }
+        var fr2 = el("div", "frame"), th = st.shot ? thumb(st.shot) : null;
+        if (th) fr2.appendChild(th);
+        var cp = el("div", "cap"); cp.appendChild(el("b", null, str(st.label))); cp.appendChild(document.createTextNode(str(st.note)));
+        fr2.appendChild(cp); li.appendChild(fr2); fm.appendChild(li);
+      });
+      ev.appendChild(scroller(fm, str(e.subject) + ", scrolls sideways"));
+    });
+    root.appendChild(panel("Evolution", ev));
+  }
+  var shotIds = D.shots.filter(function (s) { return s && s.id; });
+  if (shotIds.length) {
+    var sh = el("div", "sheet");
+    shotIds.forEach(function (s) {
+      var box = el("div", "shot");
+      box.appendChild(thumb(s.id));
+      box.appendChild(el("span", "cap", str(s.caption)));
+      box.appendChild(el("span", "meta", str(s.kind) + " · " + str(s.when) + (!imgSrc(s.src) || s.gone ? " · gone" : "")));
+      if (!imgSrc(s.src) || s.gone) { var pr = el("span", "meta mono", str(s.path)); box.appendChild(pr); }
+      sh.appendChild(box);
+    });
+    root.appendChild(panel("Visuals", sh));
+  }
+  if (D.wording.length) {
+    var wd = el("div", "wd");
+    D.wording.forEach(function (w) {
+      w = w || {};
+      var r = el("div", "row"); r.appendChild(el("span", "where", str(w.where)));
+      var p = el("div");
+      var del = el("del"); del.appendChild(el("span", "sr", "was: ")); del.appendChild(document.createTextNode(str(w.before)));
+      var arw = el("span", null, "  →  "); arw.setAttribute("aria-hidden", "true");
+      var ins = el("ins"); ins.appendChild(el("span", "sr", "now: ")); ins.appendChild(document.createTextNode(str(w.after)));
+      p.appendChild(del); p.appendChild(arw); p.appendChild(ins); addRef(p, w.ref);
+      r.appendChild(p); wd.appendChild(r);
+    });
+    root.appendChild(panel("Wording changed", wd));
+  }
+
+  // ---- week roll-up, or before/after ----------------------------------------------------------------
+  if (D.mode === "week") {
+    var wt = el("table"), whr = el("tr");
+    [["session"], ["state"], ["product"], ["feature"], ["design"], ["implementation"]].forEach(function (h) { var th = el("th", null, h[0]); th.scope = "col"; whr.appendChild(th); });
+    wt.appendChild(whr);
+    D.sessions.forEach(function (s) {
+      s = s || {};
+      var tr = el("tr"), t1 = el("th", null, str(s.title)); t1.scope = "row"; t1.style.fontWeight = "400"; t1.style.color = "inherit"; tr.appendChild(t1);
+      var st = el("td"); st.appendChild(chip(s.state)); tr.appendChild(st);
+      ["product", "feature", "design", "implementation"].forEach(function (a) {
+        var v = s.axes && s.axes[a]; v = v && typeof v === "object" ? v.chose : v; tr.appendChild(el("td", null, str(v) || "—"));
+      });
+      wt.appendChild(tr);
+    });
+    root.appendChild(panel("Sessions by axis", D.sessions.length ? scroller(wt, "Sessions by axis, scrolls sideways") : el("p", "empty", "none")));
+  } else {
+    var g1 = el("div", "grid");
+    g1.appendChild(panel("Before", list(D.before, plain)));
+    g1.appendChild(panel("After", list(D.after, plain)));
+    root.appendChild(g1);
+  }
+
+  // ---- reviews and decisions ----------------------------------------------------------------------------
+  var g2 = el("div", "grid");
+  (function () {
+    var wrap = el("div");
+    if (!D.reviews.length) wrap.appendChild(el("p", "empty", "no review run"));
+    else {
+      var t = el("table"), hr = el("tr");
+      [["rd", "round"], ["reviewer", "reviewer"], ["H", "high"], ["M", "medium"], ["L", "low"], ["unclassified", "unclassified"]].forEach(function (h) {
+        var th = el("th"); th.scope = "col";
+        if (h[0] === h[1]) th.textContent = h[0]; else { var ab = el("abbr", null, h[0]); ab.title = h[1]; th.appendChild(ab); }
+        hr.appendChild(th);
+      });
+      t.appendChild(hr);
+      D.reviews.forEach(function (r) {
+        r = r || {};
+        var tr = el("tr"); tr.appendChild(el("td", "mono", str(r.round))); tr.appendChild(el("td", null, str(r.reviewer)));
+        ["H", "M", "L", "U"].forEach(function (k) {
+          var c = Array.isArray(r[k]) ? r[k] : [Number(r[k]) || 0, 0];
+          var f = Number(c[0]) || 0, u = Number(c[1]) || 0, td = el("td"), sq = el("span", "sq"), shown = 0;
+          sq.setAttribute("aria-hidden", "true");
+          for (var i = 0; i < f && shown < 12; i++, shown++) sq.appendChild(el("i", "f"));
+          for (var j = 0; j < u && shown < 12; j++, shown++) sq.appendChild(el("i", "u"));
+          td.appendChild(sq);
+          td.appendChild(el("span", "num", f + u ? f + " fixed / " + u + " unfixed" : "—"));
+          tr.appendChild(td);
+        });
+        t.appendChild(tr);
+      });
+      wrap.appendChild(scroller(t, "Reviews, scrolls sideways"));
+      var lg = el("div", "legend"); lg.appendChild(el("span", null, "■ fixed")); lg.appendChild(el("span", null, "□ unfixed (red edge)")); wrap.appendChild(lg);
+    }
+    g2.appendChild(panel("Reviews", wrap));
+  })();
+  g2.appendChild(panel("Decisions", list(D.decisions, function (li, d) {
+    d = d || {};
+    li.appendChild(document.createTextNode(str(d.text) + " "));
+    if (d.logged_in) li.appendChild(el("span", "why", "→ " + str(d.logged_in))); else li.appendChild(chip("nowhere"));
+    addRef(li, d.ref);
+  })));
+  root.appendChild(g2);
+
+  // ---- artefacts and rejected ideas ---------------------------------------------------------------------------
+  var g3 = el("div", "grid");
+  g3.appendChild(panel("Mockups & artefacts", list(D.artefacts, function (li, a) {
+    a = a || {}; li.className = "lead"; li.appendChild(chip(a.unverified ? "unverified" : a.state));
+    var ab = el("span"); ab.appendChild(ref(a.ref || { file: a.path, label: str(a.path), v: a.gone ? "gone" : undefined }));
+    ab.appendChild(el("span", "why", " · " + str(a.kind) + (a.unverified ? " · " + str(a.state) : ""))); li.appendChild(ab);
+  })));
+  g3.appendChild(panel("Ideas rejected", list(D.rejected, function (li, r) {
+    r = r || {}; li.appendChild(document.createTextNode(str(r.idea) + " "));
+    if (r.why) li.appendChild(el("span", "why", "— " + str(r.why)));
+    addRef(li, r.ref);
+  })));
+  root.appendChild(g3);
+
+  // ---- checks and axes ---------------------------------------------------------------------------------------------
+  var g4 = el("div", "grid");
+  g4.appendChild(panel("Checks you made", list(D.checks, function (li, c) {
+    c = c || {};
+    var ans = { evidence: ["✓", "good"], conceded: ["!", "wip"], assertion: ["?", "wip"], open: ["○", "bad"] }[c.answered] || ["·", "idle"];
+    li.className = "lead";
+    var ch = el("span", "chip " + ans[1]); var cg = el("span", null, ans[0]); cg.setAttribute("aria-hidden", "true");
+    ch.appendChild(cg); ch.appendChild(document.createTextNode(" " + str(c.answered))); li.appendChild(ch);
+    var cb = el("span"); cb.appendChild(document.createTextNode(str(c.pattern) + " "));
+    if (c.times) cb.appendChild(el("span", "num", "×" + str(c.times)));
+    if (c.note) cb.appendChild(el("span", "why", " — " + str(c.note)));
+    addRef(cb, c.ref); li.appendChild(cb);
+  })));
+  var ax = el("div", "axes");
+  ["product", "feature", "design", "implementation"].forEach(function (k) {
+    var a = D.axes[k] || {}, box = el("div", "axis");
+    box.appendChild(el("h3", null, k));
+    [["chose", a.chose], ["undone", a.undone], ["deferred", a.deferred]].forEach(function (r) {
+      var p = el("p"); p.appendChild(el("b", null, r[0] + " ")); p.appendChild(document.createTextNode(str(r[1]) || "—")); box.appendChild(p);
+    });
+    ax.appendChild(box);
+  });
+  g4.appendChild(panel("Where it landed", ax));
+  root.appendChild(g4);
+
+  // ---- done / undone / deferred ----------------------------------------------------------------------------------------
+  var tri = el("div", "three");
+  tri.appendChild(panel("Done", list(D.done, plain)));
+  tri.appendChild(panel("Undone", list(D.undone, plain)));
+  tri.appendChild(panel("Deferred", list(D.deferred, function (li, d) {
+    if (typeof d !== "object" || !d) { plain(li, d); return; }
+    li.appendChild(document.createTextNode(str(d.item || d.t) + " "));
+    if (d.trigger) li.appendChild(el("span", "why", "— " + str(d.trigger)));
+    if (d.age != null) li.appendChild(el("span", "num", str(d.age) + "d"));
+    addRef(li, d.ref);
+  })));
+  root.appendChild(tri);
+
+  // ---- open for you, not verified --------------------------------------------------------------------------------------------
+  var g5 = el("div", "grid");
+  g5.appendChild(panel("Open for you", list(D.owner_open, plain)));
+  if (!D.resume || D.unverified.length) {
+    var nx = el("div");
+    if (!D.resume) nx.appendChild(el("p", null, str(D.next_step) || "—"));
+    if (D.unverified.length) nx.appendChild(list(D.unverified, function (li, t) { li.className = "foot"; plain(li, typeof t === "object" ? t : "? " + str(t)); }));
+    g5.appendChild(panel(D.resume ? "Not verified" : "Next", nx));
+  }
+  root.appendChild(g5);
+
+  document.body.appendChild(dlg);
+  document.body.appendChild(live);
+
+  // ---- jump nav, built from the panel titles (stable, de-duplicated ids) -------------------------------------------------------------
+  var seen = {};
+  Array.prototype.forEach.call(root.querySelectorAll("section.panel"), function (p) {
+    var h = p.querySelector("h2"); if (!h) return;
+    var slug = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "section";
+    seen[slug] = (seen[slug] || 0) + 1; if (seen[slug] > 1) slug += "-" + seen[slug];
+    p.id = slug;
+    var a = el("a", null, h.textContent); a.href = "#" + slug;
+    a.addEventListener("click", function (e) { e.preventDefault(); p.scrollIntoView({ block: "start" }); });
+    navSlot.appendChild(a);
+  });
+})();
+</script>

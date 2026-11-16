@@ -502,7 +502,8 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     }
 
     private func start() {
-        guard acquirer == nil else { return }
+        // A build without Whisper has no acquirer at all, whatever the picker would say.
+        guard Self.whisperInBuild, acquirer == nil else { return }
         downloadEpoch += 1
         probeAskedAgain = false  // a re-ask that predates this download is moot: its outcome stands
         let next = makeAcquirer(backgroundAssetsUsable)

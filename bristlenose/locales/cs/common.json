@@ -63,9 +63,9 @@
     "codebooks_one": "{{count}} Kniha kódů",
     "codebooks_few": "{{count}} Knihy kódů",
     "codebooks_other": "{{count}} Knih kódů",
-    "tags_one": "{{count}} Štítek",
-    "tags_few": "{{count}} Štítky",
-    "tags_other": "{{count}} Štítků"
+    "tags_one": "{{count}} Štítek z rámců",
+    "tags_few": "{{count}} Štítky z rámců",
+    "tags_other": "{{count}} Štítků z rámců"
   },
   "search": {
     "ariaLabel": "Hledat v citátech",

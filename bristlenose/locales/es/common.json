@@ -46,8 +46,8 @@
     "signals_other": "{{count}} Señales",
     "codebooks_one": "{{count}} Libro de códigos",
     "codebooks_other": "{{count}} Libros de códigos",
-    "tags_one": "{{count}} Etiqueta",
-    "tags_other": "{{count}} Etiquetas"
+    "tags_one": "{{count}} Etiqueta de marco",
+    "tags_other": "{{count}} Etiquetas de marco"
   },
   "search": {
     "ariaLabel": "Buscar citas",

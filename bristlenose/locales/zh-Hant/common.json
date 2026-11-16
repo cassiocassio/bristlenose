@@ -51,7 +51,7 @@
     "quotes_other": "{{count}} 則引述",
     "signals_other": "{{count}} 個訊號",
     "codebooks_other": "{{count}} 本編碼簿",
-    "tags_other": "{{count}} 個標籤"
+    "tags_other": "{{count}} 個框架標籤"
   },
   "search": {
     "ariaLabel": "搜尋引述",

@@ -56,8 +56,8 @@
     "signals_other": "{{count}} Sinyal",
     "codebooks_one": "{{count}} Kod Kitab\u0131",
     "codebooks_other": "{{count}} Kod Kitab\u0131",
-    "tags_one": "{{count}} Etiket",
-    "tags_other": "{{count}} Etiket"
+    "tags_one": "{{count}} Çerçeve Etiketi",
+    "tags_other": "{{count}} Çerçeve Etiketi"
   },
   "search": {
     "ariaLabel": "Alıntılarda ara",

@@ -56,8 +56,8 @@
     "signals_other": "{{count}} senyals",
     "codebooks_one": "{{count}} llibre de codis",
     "codebooks_other": "{{count}} llibres de codis",
-    "tags_one": "{{count}} etiqueta",
-    "tags_other": "{{count}} etiquetes"
+    "tags_one": "{{count}} etiqueta de marc",
+    "tags_other": "{{count}} etiquetes de marc"
   },
   "search": {
     "ariaLabel": "Cerca cites",

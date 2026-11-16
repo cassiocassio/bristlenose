@@ -130,4 +130,11 @@ describe("zero counts produce no subtitle", () => {
     expect(codebookSubtitle(1, 0)).not.toBe("");
     expect(codebookSubtitle(1, 4)).not.toBe("");
   });
+
+  it("codebook: the count names what it counts, framework tags (BR-12)", () => {
+    // The page's project-tags card is a different count; the header must not
+    // claim "tags" unqualified.
+    expect(codebookSubtitle(3, 47)).toBe("3\u00a0Codebooks · 47\u00a0Framework Tags");
+    expect(codebookSubtitle(1, 1)).toBe("1\u00a0Codebook · 1\u00a0Framework Tag");
+  });
 });

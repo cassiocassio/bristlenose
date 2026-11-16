@@ -66,10 +66,10 @@
     "codebooks_few": "{{count}} кодові книги",
     "codebooks_many": "{{count}} кодових книг",
     "codebooks_other": "{{count}} кодових книг",
-    "tags_one": "{{count}} тег",
-    "tags_few": "{{count}} теги",
-    "tags_many": "{{count}} тегів",
-    "tags_other": "{{count}} тегів"
+    "tags_one": "{{count}} тег фреймворку",
+    "tags_few": "{{count}} теги фреймворків",
+    "tags_many": "{{count}} тегів фреймворків",
+    "tags_other": "{{count}} тегів фреймворків"
   },
   "search": {
     "ariaLabel": "Шукати цитати",

@@ -46,8 +46,8 @@
     "signals_other": "{{count}} Signale",
     "codebooks_one": "{{count}} Codebuch",
     "codebooks_other": "{{count}} Codebücher",
-    "tags_one": "{{count}} Tag",
-    "tags_other": "{{count}} Tags"
+    "tags_one": "{{count}} Framework-Tag",
+    "tags_other": "{{count}} Framework-Tags"
   },
   "search": {
     "ariaLabel": "Zitate durchsuchen",

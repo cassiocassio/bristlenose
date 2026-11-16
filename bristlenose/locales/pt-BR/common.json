@@ -56,8 +56,8 @@
     "signals_other": "{{count}} Sinais",
     "codebooks_one": "{{count}} Livro de códigos",
     "codebooks_other": "{{count}} Livros de códigos",
-    "tags_one": "{{count}} Etiqueta",
-    "tags_other": "{{count}} Etiquetas"
+    "tags_one": "{{count}} Etiqueta de framework",
+    "tags_other": "{{count}} Etiquetas de framework"
   },
   "search": {
     "ariaLabel": "Buscar citações",

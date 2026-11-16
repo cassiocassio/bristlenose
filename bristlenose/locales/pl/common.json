@@ -66,10 +66,10 @@
     "codebooks_few": "{{count}} księgi kodów",
     "codebooks_many": "{{count}} ksiąg kodów",
     "codebooks_other": "{{count}} ksiąg kodów",
-    "tags_one": "{{count}} tag",
-    "tags_few": "{{count}} tagi",
-    "tags_many": "{{count}} tagów",
-    "tags_other": "{{count}} tagów"
+    "tags_one": "{{count}} tag z ram",
+    "tags_few": "{{count}} tagi z ram",
+    "tags_many": "{{count}} tagów z ram",
+    "tags_other": "{{count}} tagów z ram"
   },
   "search": {
     "ariaLabel": "Szukaj w cytatach",

@@ -56,8 +56,8 @@
     "signals_other": "{{count}} signaler",
     "codebooks_one": "{{count}} kodebog",
     "codebooks_other": "{{count}} kodebøger",
-    "tags_one": "{{count}} tag",
-    "tags_other": "{{count}} tags"
+    "tags_one": "{{count}} rammeværks-tag",
+    "tags_other": "{{count}} rammeværks-tags"
   },
   "search": {
     "ariaLabel": "Søg i citater",

@@ -399,3 +399,17 @@ import Testing
         }
     }
 }
+
+/// Which Whisper controls Settings ▸ Transcription carries: none at all in a
+/// build that ships no Whisper, whatever the Mac could otherwise offer.
+@Suite struct TranscriptionPaneLayoutTests {
+    @Test func noWhisperBuildOffersNoWhisperControl() {
+        #expect(TranscriptionPaneLayout.of(appleSpeech: true, whisperInBuild: false) == .noWhisper)
+        #expect(TranscriptionPaneLayout.of(appleSpeech: false, whisperInBuild: false) == .noWhisper)
+    }
+
+    @Test func withWhisperTheChoiceFollowsApplesModel() {
+        #expect(TranscriptionPaneLayout.of(appleSpeech: true, whisperInBuild: true) == .engineChoice)
+        #expect(TranscriptionPaneLayout.of(appleSpeech: false, whisperInBuild: true) == .whisperOnly)
+    }
+}

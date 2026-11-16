@@ -9,6 +9,22 @@ import SwiftUI
 /// Behind the Diagnostics preference sit a read-only line saying what was
 /// detected (the backend, MLX on Apple silicon: no choice, the Mac sidecar has
 /// only MLX) and the interim model picker. Off, the pane is as it shipped.
+/// Which Whisper controls the Transcription pane carries. A decision the view
+/// makes, so a helper (desktop/CLAUDE.md § Testing).
+enum TranscriptionPaneLayout: Equatable {
+    /// The engine pop-up, with Whisper's status and settings under it (macOS 26+).
+    case engineChoice
+    /// Whisper's backend, model and status rows: nothing to choose (macOS 15 to 25).
+    case whisperOnly
+    /// A build that ships no Whisper: no control offers it.
+    case noWhisper
+
+    static func of(appleSpeech: Bool, whisperInBuild: Bool) -> Self {
+        guard whisperInBuild else { return .noWhisper }
+        return appleSpeech ? .engineChoice : .whisperOnly
+    }
+}
+
 struct TranscriptionSettingsView: View {
 
     @EnvironmentObject var i18n: I18n
@@ -34,7 +50,11 @@ struct TranscriptionSettingsView: View {
 
     var body: some View {
         Form {
-            if appleSpeech {
+            switch TranscriptionPaneLayout.of(appleSpeech: appleSpeech,
+                                              whisperInBuild: WhisperDownloadModel.whisperInBuild) {
+            case .noWhisper:
+                EmptyView()
+            case .engineChoice:
                 // Behind Diagnostics: what was detected (read-only) and the
                 // model a run uses, which is still this preference and so must
                 // stay reachable. They concern Whisper, so they sit indented in
@@ -48,7 +68,7 @@ struct TranscriptionSettingsView: View {
                         modelPicker
                     }
                 }
-            } else {
+            case .whisperOnly:
                 backendSection
                 modelSection
                 // Whisper downloads in the background from launch, so its

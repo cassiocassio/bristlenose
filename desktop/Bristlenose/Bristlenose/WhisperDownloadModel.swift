@@ -329,7 +329,9 @@ final class WhisperDownloadModel: ObservableObject {
     /// background, so the first analysis doesn't wait 1.6 GB after the key.
     /// Once per process; never under a test host, which is the real app.
     func checkAtLaunch() {
-        guard !launched, !KeychainHelper.isUnderTestHost, PipelineRunner.hasAIConsent else { return }
+        // A build without Whisper asks nothing: no status probe, so no pill.
+        guard Self.whisperInBuild, !launched, !KeychainHelper.isUnderTestHost,
+              PipelineRunner.hasAIConsent else { return }
         launched = true
         // No sidecar to ask (the External Server dev scheme): nothing to fetch
         // with, and a failure pill every launch would say nothing true.

@@ -426,6 +426,13 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// platforms, the copy must offer "your admin may need to approve this"
     /// alongside "you cancelled" — because the two are indistinguishable from
     /// here, and only one of them is the researcher's own doing.
+    var signInMayAwaitAdminApproval: Bool {
+        switch self {
+        case .zoom, .teams: return true
+        case .meet:         return false
+        }
+    }
+
     /// The page a researcher sends their IT team when Microsoft wants an
     /// administrator's approval. One address whatever Microsoft decides about
     /// publisher verification: the website carries the wording that is true, so
@@ -437,11 +444,16 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var signInMayAwaitAdminApproval: Bool {
-        switch self {
-        case .zoom, .teams: return true
-        case .meet:         return false
+    /// The sentence under an unfinished sign-in. Only a platform with an IT
+    /// page may tell the researcher to copy its link, because only then does
+    /// the window show the Copy Link for IT button.
+    var incompleteSignInDetailKey: String {
+        if adminApprovalHelpURL != nil {
+            return "desktop.cloudImport.signInIncompleteDetailAdminLink"
         }
+        return signInMayAwaitAdminApproval
+            ? "desktop.cloudImport.signInIncompleteDetailAdmin"
+            : "desktop.cloudImport.signInIncompleteDetail"
     }
 
     /// Whether the platform serves a speaker-attributed transcript on a scope

@@ -104,6 +104,18 @@ struct TeamsSignInFailureTests {
         #expect(CloudPlatform.meet.adminApprovalHelpURL == nil)
     }
 
+    /// The unfinished-sign-in sentence may say "copy the link" only where the
+    /// window draws the button. Zoom can stall on an admin too, but has no page.
+    @Test("Only a platform with an IT page is told to copy its link")
+    func incompleteSentenceMatchesTheButton() {
+        #expect(CloudPlatform.teams.incompleteSignInDetailKey
+                == "desktop.cloudImport.signInIncompleteDetailAdminLink")
+        #expect(CloudPlatform.zoom.incompleteSignInDetailKey
+                == "desktop.cloudImport.signInIncompleteDetailAdmin")
+        #expect(CloudPlatform.meet.incompleteSignInDetailKey
+                == "desktop.cloudImport.signInIncompleteDetail")
+    }
+
     /// Conditional Access refuses at the *token* leg, after the authorize leg
     /// has already succeeded — which is why it reads as "sign-in worked and
     /// then nothing did", and why a retry is the most tempting wrong move.

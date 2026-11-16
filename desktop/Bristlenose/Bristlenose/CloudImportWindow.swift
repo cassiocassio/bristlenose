@@ -353,10 +353,7 @@ struct CloudImportWindow: View {
     /// with the admin theory would read as blame-shifting to someone who simply
     /// changed their mind.
     private var incompleteSignInDetail: String {
-        let key = platform.signInMayAwaitAdminApproval
-            ? "desktop.cloudImport.signInIncompleteDetailAdmin"
-            : "desktop.cloudImport.signInIncompleteDetail"
-        return i18n.t(key, ["platform": platform.displayName])
+        i18n.t(platform.incompleteSignInDetailKey, ["platform": platform.displayName])
     }
 
     /// One sentence naming the capability, not the account type.

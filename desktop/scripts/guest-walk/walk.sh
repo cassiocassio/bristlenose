@@ -54,7 +54,12 @@ if [ "${PRESEED:-0}" = 1 ]; then
   # First-launch state written before launch (no sheet, no Welcome), so the walk does not depend on clicking through them.
   # Keys: AIConsentView.currentVersion (2), WelcomeWindow.showOnLaunchKey, activeProvider.
   PREF=/Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose
-  g sh -c "mkdir -p /Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences; defaults write $PREF aiConsentVersion -int 2; defaults write $PREF showWelcomeOnLaunch -bool false; defaults write $PREF activeProvider -string local" >>"$OUT/$RUN/walk.log" 2>&1
+  g sh -c "mkdir -p /Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences && defaults write $PREF aiConsentVersion -int 2 && defaults write $PREF showWelcomeOnLaunch -bool false && defaults write $PREF activeProvider -string local" >>"$OUT/$RUN/walk.log" 2>&1 \
+    || halt "PRESEED: writing the first-launch preferences failed"
+  # Read back what was written, before launch (a write that did not stick would otherwise show only as a sheet in the way).
+  seen="$(g sh -c "defaults read $PREF aiConsentVersion; defaults read $PREF showWelcomeOnLaunch; defaults read $PREF activeProvider" 2>>"$OUT/$RUN/walk.log" | tr '\n' ' ')"
+  [ "$seen" = "2 0 local " ] || halt "PRESEED: read back '$seen', expected '2 0 local '"
+  log "preseed: consent 2, no Welcome, provider local (read back)"
 fi
 g open -a /Applications/Bristlenose.app
 do_ "app window appears" wait "$B" "Bristlenose" 60
@@ -62,6 +67,7 @@ shot first-launch
 
 # The AI consent sheet is first-launch only; a re-walk on the same guest skips it.
 if g "$W" tree "$B" "Bristlenose" 2>/dev/null | grep -q '"Continue"'; then
+  [ "${PRESEED:-0}" = 1 ] && halt "PRESEED=1 but the AI consent sheet is up: the preseed did not take"
   do_ "accept AI consent" press "$B" AXButton "Continue" "Bristlenose"
   shot consent-accepted
 fi
@@ -171,16 +177,30 @@ echo "$end" > "$OUT/$RUN/run-end.json"
 log "run ended: $(python3 "$HERE/run_summary.py" < "$OUT/$RUN/run-end.json")"
 sleep 3
 shot run-outcome
-if g "$W" tree "$B" "New Project" 2>/dev/null | grep -q 'Notify me when analysis finishes'; then
-  do_ "dismiss the notify sheet" press "$B" AXButton "Continue" "New Project"; sleep 2; shot after-notify-sheet
-fi
+# The notify sheet (SHEET_TEXT is the English title, runBanner.prealert.title; the guest is English and a test pins the string to the locale file).
+# Read the window into a variable: "could not read it" must not look like "no sheet" (a pipe into grep -q did, and raced under pipefail).
+SHEET_TEXT='Notify me when analysis finishes'
+tree="$(g "$W" tree "$B" "New Project" 2>&1)" || halt "cannot read the New Project window to look for the notify sheet"
+case "$tree" in
+  *"$SHEET_TEXT"*)
+    do_ "dismiss the notify sheet" press "$B" AXButton "Continue" "New Project"; sleep 2
+    tree="$(g "$W" tree "$B" "New Project" 2>&1)" || halt "cannot re-read the New Project window after dismissing the notify sheet"
+    case "$tree" in *"$SHEET_TEXT"*) halt "the notify sheet is still up after Continue" ;; esac
+    shot after-notify-sheet ;;
+esac
 
 # --- Every lens ----------------------------------------------------------------
+skipped=""
 for lens in Project Sessions Quotes Codebooks Signals Discussion; do
-  g "$W" menu "$B" "View>$lens" >>"$OUT/$RUN/walk.log" 2>&1 || { log "lens $lens: menu item not enabled (recorded, walk continues)"; continue; }
+  g "$W" menu "$B" "View>$lens" >>"$OUT/$RUN/walk.log" 2>&1 || { log "lens $lens: menu item not enabled (recorded, walk continues)"; skipped="${skipped:+$skipped }$lens"; continue; }
   shot "lens-$(echo "$lens" | tr 'A-Z' 'a-z')"
 done
 
 log "walk done in $(( $(date +%s) - T0 ))s, $N screens"
 "$HERE/pull.sh" "$GD" "$OUT/$RUN" >/dev/null || { echo "pull failed"; exit 1; }
-echo "COMPLETED $N screens in $(( $(date +%s) - T0 ))s" > "$OUT/$RUN/verdict.txt"
+# A lens whose menu item was disabled (a sheet in the way, a lens that did not load) is a screen the walk did not see: the verdict says so by name.
+if [ -n "$skipped" ]; then
+  echo "INCOMPLETE $N screens in $(( $(date +%s) - T0 ))s, lenses not shown: ${skipped// /, }" > "$OUT/$RUN/verdict.txt"
+else
+  echo "COMPLETED $N screens in $(( $(date +%s) - T0 ))s" > "$OUT/$RUN/verdict.txt"
+fi

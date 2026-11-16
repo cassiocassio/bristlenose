@@ -107,10 +107,15 @@ done
 "$HERE/g.sh" sh -c "mkdir -p ~/walk/bin && cp '/Volumes/My Shared Files/walk/walker-$wsha' ~/walk/bin/walker" || exit 2
 # A staged app (share/app-current.tar, a tar of Bristlenose.app made from a release .dmg) replaces the one frozen into the
 # base, so a base built from a 30-day alpha build does not outlive its clock. The old app is moved aside in the clone, never deleted;
-# the clone is deleted at the end of the night. Absent tar: the base's own app is walked, as before.
-if [ -f "$SHARE/app-current.tar" ]; then
-    "$HERE/g.sh" sh -c 'mkdir -p ~/walk/old && mv /Applications/Bristlenose.app ~/walk/old/Bristlenose-base.app && cd /Applications && tar -xf "/Volumes/My Shared Files/walk/app-current.tar" && test -d /Applications/Bristlenose.app' || { mkdir -p "$NIGHT_DIR"; echo "HALTED step 0: the staged app did not install" > "$NIGHT_DIR/verdict.txt"; exit 0; }
-fi
+# the clone is deleted at the end of the night. A missing, dangling or empty tar HALTS the night with its reason
+# (staged-app-check.sh); GW_FROZEN_APP=1 is the owner's opt-in to walk the base's own app.
+reason="$("$HERE/staged-app-check.sh" "$SHARE")"; staged=$?
+case "$staged" in
+    0)  "$HERE/g.sh" sh -c 'mkdir -p ~/walk/old && mv /Applications/Bristlenose.app ~/walk/old/Bristlenose-base.app && cd /Applications && tar -xf "/Volumes/My Shared Files/walk/app-current.tar" && test -d /Applications/Bristlenose.app' \
+            || { mkdir -p "$NIGHT_DIR"; echo "HALTED step 0: the staged app did not install" > "$NIGHT_DIR/verdict.txt"; exit 1; } ;;
+    4)  ;;
+    *)  mkdir -p "$NIGHT_DIR"; echo "HALTED step 0: no staged app (${reason:-staged-app-check.sh exit $staged})" > "$NIGHT_DIR/verdict.txt"; exit 1 ;;
+esac
 if [ "${FIXTURE:-smoke}" = screens ]; then
     "$HERE/g.sh" sh -c 'rm -rf ~/Documents/screens-project && cp -R "/Volumes/My Shared Files/walk/screens-project" ~/Documents/' || exit 2
 fi
@@ -139,5 +144,6 @@ if [ -n "$verdict" ]; then
     fi
 fi
 ln -sfn "$RUN" "$WALKS/latest"
-case "$verdict" in COMPLETED*) ln -sfn "$RUN" "$WALKS/baseline" ;; esac
+# INCOMPLETE (lenses not shown) still moves the baseline today; whether it should is the owner's call (docs/private/bug-campaign/reports/F.md).
+case "$verdict" in COMPLETED*|INCOMPLETE*) ln -sfn "$RUN" "$WALKS/baseline" ;; esac
 exit 0

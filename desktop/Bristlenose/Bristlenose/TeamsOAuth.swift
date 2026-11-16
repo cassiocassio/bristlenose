@@ -203,8 +203,8 @@ enum MicrosoftSignInRefusal: Equatable {
             return rawDescription.isEmpty ? "Sign-in was declined." : rawDescription
         case .adminApprovalRequired:
             return "Your organisation needs an administrator to approve "
-                 + "Bristlenose before it can read your recordings. Send your IT "
-                 + "team the approval link — this isn't one you can grant yourself."
+                 + "Bristlenose before it can read your recordings. You can't grant "
+                 + "this yourself. Copy the link below and send it to your IT team."
         case .conditionalAccess:
             return "Your organisation's security policy blocked this sign-in. "
                  + "This usually means it only allows managed devices, and it "

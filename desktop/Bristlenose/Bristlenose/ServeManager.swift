@@ -206,6 +206,10 @@ final class ServeManager: ObservableObject {
     /// once (20 Sep 2026). `nil` clears the row.
     var onScreensProgress: ((ScreenReadingProgress?) -> Void)?
 
+    /// Where a first AutoCode apply's progress goes — the same route as `onScreensProgress`
+    /// and for the same reason (never through `instance`). `nil` clears the row.
+    var onAutoCodeProgress: ((AutoCodeProgress?) -> Void)?
+
     /// Where "does this project have a Screens lens?" goes — set by
     /// `ServeFleet` to a write into `ScreenReadingStore.available`, by the same
     /// route and for the same reason as `onScreensProgress`. Called only with
@@ -441,6 +445,9 @@ final class ServeManager: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.screensPollInterval)
                 await self?.pollScreens()
+                // Its own call, never from inside `pollScreens`, which returns early when Read
+                // shared screens is off: a codebook applies whatever that preference says.
+                await self?.pollAutoCode()
             }
         }
 
@@ -1601,6 +1608,36 @@ final class ServeManager: ObservableObject {
         else { return }
         onScreensProgress?(ScreenReadingProgress.parse(json))
         onScreensAvailability?(ScreenReadingProgress.isAvailable(json))
+    }
+
+    /// Read a first AutoCode apply's progress for the project row, beside `pollScreens` and with
+    /// its guards: no running serve clears the row; no visible window skips the request and
+    /// keeps what is there; a failed request or any status but 200 or 404 keeps it (a flicker is
+    /// worse than a count one tick old); a 404 (an older serve) clears it.
+    @MainActor
+    func pollAutoCode() async {
+        guard case .running(let port) = state,
+              let token = authToken,
+              let url = URL(string: "http://127.0.0.1:\(port)/api/projects/1/autocode/jobs")
+        else {
+            onAutoCodeProgress?(nil)
+            return
+        }
+        guard Self.anyWindowVisible() else { return }
+        var request = URLRequest(url: url, timeoutInterval: 5)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return }
+        guard case .running(let current) = state, current == port else { return }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        if status == 404 {
+            onAutoCodeProgress?(nil)
+            return
+        }
+        guard status == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+        onAutoCodeProgress?(AutoCodeProgress.parse(json))
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

@@ -143,6 +143,9 @@ final class ServeFleet: ObservableObject {
         created.onScreensProgress = { [weak self] progress in
             self?.screenReading.set(progress, for: project)
         }
+        created.onAutoCodeProgress = { [weak self] progress in
+            self?.screenReading.setAutoCode(progress, for: project)
+        }
         created.onScreensAvailability = { [weak self] isAvailable in
             self?.screenReading.setAvailable(isAvailable, for: project)
         }
@@ -181,6 +184,7 @@ final class ServeFleet: ObservableObject {
         // `refreshAppLevelFacts`). A removed project has no row to render it.
         if forgettingAgentActivity { lastAgentCallAt[project] = nil }
         screenReading.set(nil, for: project)
+        screenReading.setAutoCode(nil, for: project)
         screenReading.setAvailable(false, for: project)
         readableProjects.remove(project)
         if frontedProject == project { frontedProject = nil }

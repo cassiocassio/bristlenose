@@ -12,6 +12,13 @@ trued-against: HEAD@main on 2026-10-11 (after 83bab663)
 
 ## Changelog
 
+- _2026-11-15_ — a **first apply shows on the project row** ("AutoCode · 25 of 101", shimmering,
+  no ring), so the house default (`server/autocode_house_default.py`), which no page started and
+  which has no toast, is visible. `GET /autocode/jobs` gained `processed_quotes` and
+  `total_quotes`; the Mac polls it beside `/screens/status` (`ServeManager.pollAutoCode`,
+  `AutoCodeProgress`, `SubtitleVariant.codingQuotes`). It ranks over "Picking up Signals…" (the apply holds that build open for its whole length) and over
+  "Screens · N of M". A catch-up pass has no row line, since it writes its counts once, at the end. Progress moves a batch (25 quotes) at a time. Reviewed by
+  Fable and William of Ockham before building.
 - _2026-10-11_ — trued up: proposals are one per quote (highest confidence) on both store paths, not every assignment; the `ProposedTag` unique constraint named; the Review door's path (`islands/`) and the test counts corrected. Anchors: commit "autocode: one duplicate assignment no longer throws away the whole paid job"; `bristlenose/server/models.py` `uq_proposed_tag_job_quote`.
 - _2026-09-20_ — the rationale hover tooltip on proposed badges is **parked**
   behind `featureFlags.proposalRationaleTooltip` (see § Parked). The
@@ -74,7 +81,7 @@ proposals with confidence + rationale).
 |--------|------|---------|
 | POST | `/projects/{id}/autocode/{framework_id}` | Start job |
 | GET | `/projects/{id}/autocode/{framework_id}/status` | Poll progress |
-| GET | `/projects/{id}/autocode/jobs` | Runs still pending or running, read once on report load to put back their chips (R14) |
+| GET | `/projects/{id}/autocode/jobs` | Runs still pending or running, read once on report load to put back their chips (R14), and by the Mac every 3 s for the project row (carries `processed_quotes`, `total_quotes`; only a job with no `completed_at` is a first apply) |
 | POST | `/projects/{id}/autocode/{framework_id}/cancel` | Cancel a running job |
 | GET | `/projects/{id}/autocode/{framework_id}/proposals` | List proposals (min_confidence filter) |
 | POST | `/projects/{id}/autocode/proposals/{id}/accept` | Accept → creates QuoteTag |

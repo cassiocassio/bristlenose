@@ -232,9 +232,9 @@ struct ProjectRow: View {
         // `resolve` arbitrates the precedence; this switch only *renders* the
         // winner — i18n + date formatting live here, not in the resolver.
         switch subtitleVariant {
-        case .readingScreens:
+        case .readingScreens, .codingQuotes:
             // Unreachable on this row, for the cloud batch's reason below: the
-            // screen-reading count is published to the AppKit sidebar only.
+            // screen-reading and AutoCode counts are published to the AppKit sidebar only.
             EmptyView()
         case .importingBatch:
             // Unreachable on this row: it passes `importBatch: nil`, because
@@ -356,7 +356,7 @@ struct ProjectRow: View {
             // Unreachable here, like `.exportingReport`: the window's bridge
             // state is published to the AppKit sidebar, the shipped row.
             return i18n.t("desktop.chrome.pipeline.pickingUpSignals")
-        case .readingScreens:
+        case .readingScreens, .codingQuotes:
             // Unreachable here, like `.importingBatch` below.
             return nil
         case .importingBatch:
@@ -723,7 +723,7 @@ struct ProjectRow: View {
     private var pipelineStateAccessibilityPhrase: String? {
         let variant = subtitleVariant
         switch variant {
-        case .importingBatch, .readingScreens:
+        case .importingBatch, .readingScreens, .codingQuotes:
             // As above — never produced for this row.
             return nil
         case .failed(let message, _):

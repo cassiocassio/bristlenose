@@ -391,6 +391,7 @@
       "etaUnderMinute": "<1 min pozostało",
       "importBatch": "{{done}} z {{total}}",
       "screens": "Ekrany \u00b7 {{done}} z {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} z {{total}}",
       "copying": "Kopiowanie · {{percent}}%",
       "stage": {
         "download": "Pobieranie modelu mowy",

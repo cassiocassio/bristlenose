@@ -22,6 +22,7 @@ One idea, written four times. Every long job reports some subset of the same fac
 | Analysis run | `run_progress` lines (`run_lifecycle.py`, `events.py:199`) | `TimingEstimator` (`timing.py`), Welford by stage, keyed by hardware, with a stage budget | the event; carries inputs, not a finished fraction | ring and subtitle, maths in Swift (`RunProgressMath`) |
 | Miro board | `BoardProgress.plan / enter / counted / call_done / waiting_for / unplan` (`board_progress.py`) | per-kind Welford rates, history in `board-timing.json` | `BoardBuild` (`routes/miro.py:92-108`) | one linear bar, a count line, a time line |
 | Screens reading | the job's counters (`screen_text_job.py`) | one live rate, recording seconds per wall second | `/screens/status` | "Screens · N of M" and a tooltip ETA; text in the SPA |
+| AutoCode first apply (15 Nov 2026) | the job row's counters, written per 25-quote batch | none | `/autocode/jobs` (`processed_quotes`, `total_quotes`) | "AutoCode · N of M" on the row, shimmering, no ring (nothing on the row can stop it); the SPA chip for a job the researcher started |
 | Whisper and Ollama download | bytes | `DownloadRate` (`WhisperDownloadModel.swift:66`), sliding window with hysteresis | Swift model properties | linear bar in a pill and Settings |
 | Copy into a project | bytes after each whole file | none | `InFlight.progress` in Swift | ring and "Copying · N%" |
 | Cloud import | bytes per file; settled files per batch | none | `FetchProgress`, `BatchProgress` in Swift | per-row bar; "3 of 4" and a ring |

@@ -2195,7 +2195,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Whether the status line should shimmer (design-motion §4.7.1): only a live
     /// run (`.running`) or the Signals report being built (`.preparingSignals`,
     /// 30 Oct 2026: shimmer on a small status line means the AI is thinking, and
-    /// here it is), and only when the "Show animation while analysing" toggle
+    /// here it is), the shared screens being read (`.readingScreens`, owner,
+    /// 14 Nov 2026: "Screens · 1 of 3" is work in progress and looked frozen), or a codebook
+    /// being applied (`.codingQuotes`, owner, 15 Nov 2026), and only when the "Show animation while analysing" toggle
     /// is on AND Reduce Motion is off — the native twin of the web CSS two-gate.
     /// Off → the plain static subtitle label.
     private func shimmerSubtitle(for variant: SubtitleVariant) -> Bool {
@@ -2214,8 +2216,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     /// The gate itself, apart from the two reads it needs, so the table is testable.
     static func shimmers(_ variant: SubtitleVariant, animationOn: Bool, reduceMotion: Bool) -> Bool {
-        guard variant == .running || variant == .preparingSignals else { return false }
-        return animationOn && !reduceMotion
+        switch variant {
+        case .running, .preparingSignals, .readingScreens, .codingQuotes:
+            return animationOn && !reduceMotion
+        default:
+            return false
+        }
     }
 
     /// The arbitrated subtitle state — mirrors `ProjectRow.subtitleVariant`
@@ -2233,6 +2239,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             copy: copyDisplay(for: project),
             importBatch: importBatchDisplay(for: project),
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
+            autocode: screenReading?.autocode[id].map { (done: $0.done, total: $0.total) },
             reportCrash: reportCrash.flatMap { $0.projectID == id ? $0.crash : nil },
             startupRefusal: startupRefusals[id],
             serveFailedToStart: serveFailures.contains(id),

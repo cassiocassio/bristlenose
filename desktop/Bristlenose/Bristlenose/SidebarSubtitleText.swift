@@ -57,7 +57,7 @@ enum SidebarSubtitleText {
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
              .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
-             .readingScreens, .copyCancelling, .waitingForWhisper:
+             .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -167,6 +167,12 @@ enum SidebarSubtitleText {
             // batch's sentence. No ETA here: it goes in the tooltip, and only
             // once the server has measured a rate (`screensTooltip`).
             return i18n.t("desktop.chrome.pipeline.screens",
+                          ["done": String(done), "total": String(total)])
+        case .codingQuotes(let done, let total):
+            // The screens line's shape with the product name for the noun, so the two read as
+            // siblings in every language (each locale's value is its screens phrase with
+            // "AutoCode" for the first word). No ETA anywhere: nothing measures a rate for it.
+            return i18n.t("desktop.chrome.pipeline.autocode",
                           ["done": String(done), "total": String(total)])
         case .stopping:
             return i18n.t("desktop.chrome.pipeline.stopping")
@@ -328,6 +334,12 @@ enum SidebarSubtitleText {
         // (German and Finnish are the long ones), and hover is where the whole
         // sentence lives, as the ladder's is.
         if case .preparingSignals = variant,
+           let line = activityText(variant, progress: nil, separator: " · ", i18n: i18n) {
+            parts.append(line)
+        }
+        // "AutoCode · 1012 of 2500" in full: a count over a thousand quotes in a long locale
+        // truncates on the row, and hover is where the whole line lives, as for Signals.
+        if case .codingQuotes = variant,
            let line = activityText(variant, progress: nil, separator: " · ", i18n: i18n) {
             parts.append(line)
         }

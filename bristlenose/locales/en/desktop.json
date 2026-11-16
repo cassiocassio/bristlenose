@@ -342,6 +342,7 @@
       "etaUnderMinute": "<1 min left",
       "importBatch": "{{done}} of {{total}}",
       "screens": "Screens \u00b7 {{done}} of {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} of {{total}}",
       "copying": "Copying \u00b7 {{percent}}%",
       "stage": {
         "download": "Downloading speech model",

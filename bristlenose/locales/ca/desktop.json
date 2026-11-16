@@ -341,6 +341,7 @@
       "etaUnderMinute": "<1 min restant",
       "importBatch": "{{done}} de {{total}}",
       "screens": "Pantalles \u00b7 {{done}} de {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} de {{total}}",
       "copying": "S'està copiant · {{percent}}%",
       "stage": {
         "download": "S'està baixant el model de veu",

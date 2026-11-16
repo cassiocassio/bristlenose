@@ -341,6 +341,7 @@
       "etaUnderMinute": "<1 min kvar",
       "importBatch": "{{done}} av {{total}}",
       "screens": "Sk\u00e4rmar \u00b7 {{done}} av {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} av {{total}}",
       "copying": "Kopierar · {{percent}} %",
       "stage": {
         "download": "Laddar ned talmodellen",

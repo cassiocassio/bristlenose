@@ -390,6 +390,7 @@
       "etaUnderMinute": "zb\u00fdv\u00e1 <1 min",
       "importBatch": "{{done}} z {{total}}",
       "screens": "Obrazovky \u00b7 {{done}} z {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} z {{total}}",
       "copying": "Kop\u00edrov\u00e1n\u00ed \u00b7 {{percent}} %",
       "stage": {
         "download": "Stahování řečového modelu",

@@ -139,13 +139,14 @@ import Testing
 
     /// The same two gates as a run's line: the preference and Reduce Motion.
     @Test func itShimmersUnderTheSameGatesAsARun() {
-        for variant in [SubtitleVariant.running, .preparingSignals] {
+        for variant in [SubtitleVariant.running, .preparingSignals, .readingScreens(done: 1, total: 3),
+                        .codingQuotes(done: 1, total: 3)] {
             #expect(SidebarOutlineController.shimmers(variant, animationOn: true, reduceMotion: false))
             #expect(!SidebarOutlineController.shimmers(variant, animationOn: false, reduceMotion: false))
             #expect(!SidebarOutlineController.shimmers(variant, animationOn: true, reduceMotion: true))
         }
         // …and no other line starts to.
-        for variant in [SubtitleVariant.exportingReport, .readingScreens(done: 1, total: 2),
+        for variant in [SubtitleVariant.exportingReport,
                         .stopping, .queued(position: 1), .placeholder] {
             #expect(!SidebarOutlineController.shimmers(variant, animationOn: true, reduceMotion: false))
         }

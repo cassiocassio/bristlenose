@@ -116,6 +116,14 @@ enum SubtitleVariant: Equatable {
     ///
     /// `done` counts recordings read; the warm-up reads "0 of M".
     case readingScreens(done: Int, total: Int)
+    /// The serve is applying a codebook to THIS project's quotes for the first time: the house
+    /// default after a run that shows screens, or an Apply the researcher pressed (the
+    /// project's row says what the project is doing; the toast is the act they started).
+    /// Renders "AutoCode · N of M" — the screens line's shape, the product name for the noun —
+    /// shimmering, **no ring** (nothing on the row stops it), no glyph. `done` counts quotes
+    /// answered, written per batch (25 quotes), so a small study reads 0, then most, then gone.
+    /// A catch-up pass is not this: it writes its counts once, at the end, so it has no row line.
+    case codingQuotes(done: Int, total: Int)
     /// A copy into THIS project is being cancelled (rollback in flight). Renders
     /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
     /// row's hover-cancel, mirroring what the removed toolbar pill showed.
@@ -224,7 +232,7 @@ extension SubtitleVariant {
             return delta == nil ? .none : .files
         case .stopping, .running, .queued, .stopped, .partial,
              .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
-             .readingScreens, .copyCancelling, .waitingForWhisper, .placeholder:
+             .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper, .placeholder:
             return .none
         }
     }
@@ -292,7 +300,7 @@ extension SubtitleVariant {
             return .info
         case .stopping, .running, .queued, .partial,
              .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
-             .readingScreens, .copyCancelling, .waitingForWhisper, .ready, .placeholder:
+             .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper, .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
             // nothing, because the act is not the test. They already know.
@@ -413,6 +421,7 @@ enum ProjectSubtitle {
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
+        autocode: (done: Int, total: Int)? = nil,
         reportCrash: ReportCrash? = nil,
         startupRefusal: StudyStartupRefusal? = nil,
         serveFailedToStart: Bool = false,
@@ -488,6 +497,7 @@ enum ProjectSubtitle {
                 copy: copy,
                 importBatch: importBatch,
                 screens: screens,
+                autocode: autocode,
                 reportCrash: ReportCrash.outranks(pipelineState) ? reportCrash : nil,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
@@ -516,6 +526,7 @@ enum ProjectSubtitle {
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)?,
+        autocode: (done: Int, total: Int)?,
         reportCrash: ReportCrash?,
         lastRunAt: Date?,
         missingCount: Int,
@@ -565,6 +576,22 @@ enum ProjectSubtitle {
         if let reportCrash {
             return .reportError(reportCrash)
         }
+        // Read off the delta's own glyph classification, so the two cannot
+        // disagree about which deltas are distress.
+        let deltaKind = delta.flatMap { SubtitleVariant.deltaOnly($0).glyphKind }
+        let deltaNeedsAttention = deltaKind == .warning || deltaKind == .error
+        // A codebook being applied for the first time is work on the quotes the run just made,
+        // and it ranks over the Signals line and the screen read. Over Signals because the apply
+        // holds the Signals build open for its whole length (`start_autocode` brackets the job
+        // with `begin_signals_preparing`), so with no report yet the window's bridge says "lens
+        // withheld" for minutes and "Picking up Signals…" would hide the count the entire time;
+        // the line hands over to Signals when the count reaches its total (`AutoCodeProgress.parse`
+        // returns nil then), which is when the build really begins. Over the screen read it
+        // usually follows because that has finished by the time the house default starts, and a
+        // manual Apply can overlap one. It yields to the same deltas screen reading does.
+        if let autocode, !deltaNeedsAttention {
+            return .codingQuotes(done: autocode.done, total: autocode.total)
+        }
         // The first Signals report is being built (the window's bridge says the
         // lens is withheld and no run is in flight, or the native prior for the
         // moment a first run ends). Above screen reading by the owner's call:
@@ -584,14 +611,8 @@ enum ProjectSubtitle {
         // something is happening in this project now. And it yields to a run
         // without asking: the main switch returns `.running` before the idle
         // tier is reached.
-        if let screens {
-            // Read off the delta's own glyph classification, so the two cannot
-            // disagree about which deltas are distress.
-            let kind = delta.flatMap { SubtitleVariant.deltaOnly($0).glyphKind }
-            let deltaNeedsAttention = kind == .warning || kind == .error
-            if !deltaNeedsAttention {
-                return .readingScreens(done: screens.done, total: screens.total)
-            }
+        if let screens, !deltaNeedsAttention {
+            return .readingScreens(done: screens.done, total: screens.total)
         }
         // **Schema E (settled 29 Jul 2026) — a clean row is silent.** A delta is
         // an exception and earns a line; a project that is simply analysed and

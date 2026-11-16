@@ -86,7 +86,39 @@ struct ScreenReadingProgress: Equatable {
     }
 }
 
-/// Per-project screen-reading progress, for the sidebar.
+/// How far a first AutoCode apply has got through a project's quotes: the house default after a
+/// run that shows screens, or an Apply the researcher pressed. Shown on the row as
+/// "AutoCode · N of M" (`SubtitleVariant.codingQuotes`), shaped like the screens line.
+///
+/// Read from `GET /api/projects/1/autocode/jobs`. **Only a first apply**: a job with a
+/// `completed_at` is a catch-up pass, whose counts are written once, at the end, so a line for it
+/// would sit at "101 of 101" for the whole pass. A job whose count is not below its total is
+/// finishing, so it shows nothing (the Signals build that follows takes over).
+struct AutoCodeProgress: Equatable {
+    /// Quotes answered so far, and in all.
+    let done: Int
+    let total: Int
+
+    /// `{"jobs": [{"status", "completed_at", "processed_quotes", "total_quotes", …}]}`; the first
+    /// job that is pending or running, never applied, and has something left to do. Pure, so the
+    /// rule for when the line appears is testable without a server.
+    static func parse(_ json: [String: Any]) -> AutoCodeProgress? {
+        guard let jobs = json["jobs"] as? [[String: Any]] else { return nil }
+        for job in jobs {
+            guard let status = job["status"] as? String, status == "pending" || status == "running",
+                  job["completed_at"] as? String == nil,
+                  let done = (job["processed_quotes"] as? NSNumber)?.intValue,
+                  let total = (job["total_quotes"] as? NSNumber)?.intValue,
+                  total > 0, done >= 0, done < total
+            else { continue }
+            return AutoCodeProgress(done: done, total: total)
+        }
+        return nil
+    }
+}
+
+/// Per-project serve background progress, for the sidebar: the screen-reading job's
+/// (`progress`, `available`) and a first AutoCode apply's (`autocode`).
 ///
 /// **Its own `ObservableObject`, never a field on `ServeInstance`.** A value
 /// published through `ServeInstance` reaches `ServeManager` and then
@@ -100,6 +132,9 @@ final class ScreenReadingStore: ObservableObject {
 
     @Published private(set) var progress: [UUID: ScreenReadingProgress] = [:]
 
+    /// A first AutoCode apply in each project, when one is running (`AutoCodeProgress`).
+    @Published private(set) var autocode: [UUID: AutoCodeProgress] = [:]
+
     /// The projects that have a Screens lens to offer
     /// (`ScreenReadingProgress.isAvailable`). Windows mirror their own
     /// project's membership onto the bridge, which is what puts the Screens
@@ -111,6 +146,13 @@ final class ScreenReadingStore: ObservableObject {
     func set(_ value: ScreenReadingProgress?, for project: UUID) {
         guard progress[project] != value else { return }
         progress[project] = value
+    }
+
+    /// Write a first AutoCode apply's `value` for `project`; publishes only on change, and `nil`
+    /// clears the row.
+    func setAutoCode(_ value: AutoCodeProgress?, for project: UUID) {
+        guard autocode[project] != value else { return }
+        autocode[project] = value
     }
 
     /// Record whether `project` has a Screens lens — publishing only on change,

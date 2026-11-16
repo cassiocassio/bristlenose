@@ -341,6 +341,7 @@
       "etaUnderMinute": "<1 min restante",
       "importBatch": "{{done}} de {{total}}",
       "screens": "Ecr\u00e3s \u00b7 {{done}} de {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} de {{total}}",
       "copying": "A copiar · {{percent}}%",
       "stage": {
         "download": "A transferir o modelo de fala",

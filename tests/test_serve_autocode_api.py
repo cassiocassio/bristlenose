@@ -603,7 +603,18 @@ class TestListAutoCodeJobs:
         self._add(client, retired="running")
         jobs = client.get("/api/projects/1/autocode/jobs").json()["jobs"]
         assert jobs == [{"framework_id": "retired", "title": "retired", "status": "running",
-                         "completed_at": None}]
+                         "completed_at": None, "processed_quotes": 0, "total_quotes": 0}]
+
+    def test_carries_the_counts_the_project_row_shows(self, client: TestClient) -> None:
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(project_id=1, framework_id="uxr", status="running",
+                               total_quotes=101, processed_quotes=25))
+            db.commit()
+        finally:
+            db.close()
+        (job,) = client.get("/api/projects/1/autocode/jobs").json()["jobs"]
+        assert (job["processed_quotes"], job["total_quotes"]) == (25, 101)
 
     def test_a_catch_up_carries_its_completed_at(self, client: TestClient) -> None:
         from datetime import datetime

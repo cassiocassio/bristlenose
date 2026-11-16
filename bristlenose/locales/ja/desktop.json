@@ -316,6 +316,7 @@
       "etaUnderMinute": "\u6b8b\u308a1\u5206\u672a\u6e80",
       "importBatch": "{{total}} \u4ef6\u4e2d {{done}} \u4ef6",
       "screens": "\u753b\u9762 \u00b7 {{total}} \u4ef6\u4e2d {{done}} \u4ef6",
+      "autocode": "AutoCode \u00b7 {{total}} \u4ef6\u4e2d {{done}} \u4ef6",
       "copying": "\u30b3\u30d4\u30fc\u4e2d \u00b7 {{percent}}%",
       "stage": {
         "download": "音声モデルをダウンロード中",

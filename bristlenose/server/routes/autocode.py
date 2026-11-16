@@ -489,6 +489,11 @@ class AutoCodeJobSummary(BaseModel):
     status: str
     #: Set on a catch-up (a finished run re-coding new sessions), None on a first run.
     completed_at: str | None
+    #: Quotes answered so far and in all, for the Mac's project row ("AutoCode · 25 of 101").
+    #: Written per batch on a first run; a catch-up writes them once, at the end, so the row
+    #: reads these only for a job with no ``completed_at``.
+    processed_quotes: int = 0
+    total_quotes: int = 0
 
 
 class AutoCodeJobsResponse(BaseModel):
@@ -527,6 +532,8 @@ def list_autocode_jobs(project_id: int, request: Request) -> AutoCodeJobsRespons
                 title=template.title if template else job.framework_id,
                 status=job.status,
                 completed_at=job.completed_at.isoformat() if job.completed_at else None,
+                processed_quotes=job.processed_quotes,
+                total_quotes=job.total_quotes,
             ))
         return AutoCodeJobsResponse(jobs=jobs)
     finally:

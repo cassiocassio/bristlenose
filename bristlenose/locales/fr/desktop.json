@@ -341,6 +341,7 @@
       "etaUnderMinute": "<1 min restante",
       "importBatch": "{{done}} sur {{total}}",
       "screens": "\u00c9crans \u00b7 {{done}} sur {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} sur {{total}}",
       "copying": "Copie \u00b7 {{percent}} %",
       "stage": {
         "download": "Téléchargement du modèle vocal",

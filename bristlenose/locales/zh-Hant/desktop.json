@@ -316,6 +316,7 @@
       "etaUnderMinute": "剩不到 1 分鐘",
       "importBatch": "{{total}} \u500b\u4e2d\u7684 {{done}} \u500b",
       "screens": "\u756b\u9762 \u00b7 {{total}} \u500b\u4e2d\u7684 {{done}} \u500b",
+      "autocode": "AutoCode \u00b7 {{total}} \u500b\u4e2d\u7684 {{done}} \u500b",
       "copying": "正在拷貝 · {{percent}}%",
       "stage": {
         "download": "正在下載語音模型",

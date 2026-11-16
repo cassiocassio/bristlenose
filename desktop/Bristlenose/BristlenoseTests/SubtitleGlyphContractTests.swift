@@ -37,7 +37,7 @@ import Testing
         case cantFind, failed, failedDiagnostic, completedPartial, stopping
         case running, queued, stopped, partial, unreachable, addingInterviews, exportingReport
         case preparingSignals
-        case copying, importingBatch, readingScreens, copyCancelling, waitingForWhisper
+        case copying, importingBatch, readingScreens, codingQuotes, copyCancelling, waitingForWhisper
         case ready, deltaOnly, placeholder, reportError
     }
 
@@ -59,6 +59,7 @@ import Testing
         .copying(fraction: 0.5),
         .importingBatch(done: 3, total: 4),
         .readingScreens(done: 0, total: 4),
+        .codingQuotes(done: 0, total: 4),
         .copyCancelling,
         .waitingForWhisper,
         .ready(date: Date(timeIntervalSince1970: 1_000_000), delta: nil),
@@ -143,7 +144,7 @@ import Testing
             .partial(transcribeOnly: true), .addingInterviews(count: 1), .exportingReport,
             .preparingSignals,
             .copying(fraction: 0.5), .importingBatch(done: 1, total: 2),
-            .readingScreens(done: 1, total: 2),
+            .readingScreens(done: 1, total: 2), .codingQuotes(done: 1, total: 2),
             .copyCancelling, .waitingForWhisper, .placeholder,
         ]
         for variant in progress {
@@ -194,7 +195,7 @@ import Testing
     func progressHasNoGlyph() {
         for variant in [SubtitleVariant.running, .stopping, .queued(position: 1),
                         .copying(fraction: 0.4), .importingBatch(done: 1, total: 2),
-                        .readingScreens(done: 1, total: 2),
+                        .readingScreens(done: 1, total: 2), .codingQuotes(done: 1, total: 2),
                         .addingInterviews(count: 2), .preparingSignals,
                         .copyCancelling, .placeholder] {
             #expect(variant.glyphKind == nil, "\(variant.tag) is progress, not news")
@@ -279,6 +280,7 @@ private extension SubtitleVariant {
         case .copying:          return .copying
         case .importingBatch:   return .importingBatch
         case .readingScreens:   return .readingScreens
+        case .codingQuotes:     return .codingQuotes
         case .copyCancelling:   return .copyCancelling
         case .waitingForWhisper: return .waitingForWhisper
         case .ready:            return .ready

@@ -341,6 +341,7 @@
       "etaUnderMinute": "<1 min. tilbage",
       "importBatch": "{{done}} af {{total}}",
       "screens": "Sk\u00e6rme \u00b7 {{done}} af {{total}}",
+      "autocode": "AutoCode \u00b7 {{done}} af {{total}}",
       "copying": "Kopierer · {{percent}}%",
       "stage": {
         "download": "Henter talemodellen",

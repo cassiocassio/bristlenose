@@ -65,8 +65,14 @@ enum WelcomeWindow {
 /// The Welcome window's content: the spiral, sized to its window, with the
 /// frame-restoring accessor underneath.
 struct WelcomeWindowContent: View {
+    @EnvironmentObject private var news: NewsFetcher
+
     var body: some View {
-        WelcomeHomeView()
+        // `news.items` is read on every body pass, but the view takes it as a
+        // snapshot once per window (`WelcomeHomeView.init`): a fetch never
+        // changes slides under a reader. A new item first shows next time.
+        WelcomeHomeView(newsItems: news.items,
+                        onNewsLink: { news.recordClick(on: $0) })
             .frame(minWidth: WelcomeWindow.minimumContentWidth,
                    idealWidth: WelcomeWindow.naturalContentWidth,
                    maxWidth: WelcomeWindow.naturalContentWidth,
@@ -74,6 +80,9 @@ struct WelcomeWindowContent: View {
                    idealHeight: WelcomeWindow.naturalContentHeight,
                    maxHeight: WelcomeWindow.maximumContentHeight)
             .background(WelcomeWindowFrameAccessor())
+            // Once per Welcome window shown (the scene rebuilds this view on
+            // every open). Counted only while news is on and counts are a yes.
+            .onAppear { news.recordWelcomeShown() }
     }
 }
 

@@ -398,7 +398,9 @@
     "continue": "続ける",
     "useOllama": "デバイス上で Ollama モデルを使用",
     "ollamaDownloadSize": "~%@ をダウンロード",
-    "done": "完了"
+    "done": "完了",
+    "countsChoice": "Bristlenose の改善のために匿名の日次カウントを送信する",
+    "countsExplain": "1 日 1 回：アプリのバージョンと入手元、初回または今月初めての確認かどうか、ようこそウインドウが開かれた回数。プロジェクトに関する情報は含まれません。この設定は「設定」で変更できます。"
   },
   "player": {
     "windowTitle": "Bristlenose \u30d7\u30ec\u30a4\u30e4\u30fc"
@@ -630,7 +632,9 @@
         "studyTools": "\u8abf\u67fb\u30c4\u30fc\u30eb",
         "science": "\u7814\u7a76\u306e\u80cc\u666f",
         "tip": "\u30d2\u30f3\u30c8",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "コミュニティ",
+        "news": "ニュース"
       },
       "learnMore": "\u8a73\u3057\u3044\u60c5\u5831",
       "more": "\u8a73\u7d30",
@@ -871,7 +875,9 @@
       },
       "clipsIllustration": {
         "subtitle": "\u767a\u8a00\u3054\u3068\u306b\u5207\u308a\u51fa\u3057\u305f\u30af\u30ea\u30c3\u30d7"
-      }
+      },
+      "rotatorItem": "{{kind}}、{{title}}、{{total}}件中{{n}}件目",
+      "rotatorKindPosition": "{{kind}}、{{total}}件中{{n}}件目"
     }
   },
   "llmSettings": {
@@ -1318,6 +1324,16 @@
       "title": "\u5206\u6790\u304c\u5b8c\u4e86\u3057\u305f\u3089\u901a\u77e5\u3059\u308b",
       "body": "\u6b21\u306b macOS \u304c\u3001Bristlenose \u304b\u3089\u901a\u77e5\u3092\u9001\u4fe1\u3057\u3066\u3088\u3044\u304b\u3092\u78ba\u8a8d\u3057\u307e\u3059\u3002\u3053\u306e\u8a2d\u5b9a\u306f\u300c{{path}}\u300d\u3067\u5909\u66f4\u3067\u304d\u307e\u3059\u3002",
       "continue": "\u7d9a\u3051\u308b"
+    }
+  },
+  "news": {
+    "privacy": "プライバシー",
+    "settings": {
+      "checkLabel": "bristlenose.app でニュースを確認",
+      "checkExplain": "最大で 1 日 1 回。ニュースやコミュニティのイベントがようこそウインドウに表示されます。",
+      "countsLabel": "匿名の日次カウントを送信",
+      "countsExplain": "毎日の確認と一緒に送信されます：アプリのバージョンと入手元、初回または今月初めての確認かどうか、ようこそウインドウが開かれた回数。プロジェクトに関する情報は含まれません。",
+      "managed": "組織によって管理されています"
     }
   }
 }

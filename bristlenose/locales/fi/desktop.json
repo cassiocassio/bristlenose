@@ -595,7 +595,9 @@
         "studyTools": "Tutkimusty\u00f6kalut",
         "science": "Tieteellinen tausta",
         "tip": "Vinkki",
-        "ai": "Teko\u00e4ly"
+        "ai": "Teko\u00e4ly",
+        "community": "Yhteisö",
+        "news": "Uutiset"
       },
       "learnMore": "Lue lis\u00e4\u00e4",
       "more": "Lis\u00e4\u00e4",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Rajattu leike per sitaatti"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}}/{{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}}/{{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Jatka",
     "useOllama": "Käytä Ollama-mallia laitteella",
     "ollamaDownloadSize": "~%@ lataus",
-    "done": "Valmis"
+    "done": "Valmis",
+    "countsChoice": "Lähetä nimettömiä päivittäisiä laskureita Bristlenosen parantamiseksi",
+    "countsExplain": "Kerran päivässä: apin versio ja mistä hankit sen, onko tämä sen kaikkien aikojen ensimmäinen tarkistus vai tämän kuun ensimmäinen ja kuinka monta kertaa tervetuloikkuna avattiin. Ei mitään projekteistasi. Voit muuttaa tämän asetuksissa."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Ilmoita minulle, kun analyysi on valmis",
       "body": "Seuraavaksi macOS kysyy, saako Bristlenose l\u00e4hett\u00e4\u00e4 ilmoituksia. Voit muuttaa t\u00e4m\u00e4n kohdassa {{path}}.",
       "continue": "Jatka"
+    }
+  },
+  "news": {
+    "privacy": "Yksityisyys",
+    "settings": {
+      "checkLabel": "Tarkista uutiset bristlenose.appista",
+      "checkExplain": "Enintään kerran päivässä. Uutiset ja yhteisön tapahtumat näkyvät tervetuloikkunassa.",
+      "countsLabel": "Lähetä nimettömiä päivittäisiä laskureita",
+      "countsExplain": "Lähetetään päivittäisen tarkistuksen mukana: apin versio ja mistä hankit sen, onko kyseessä kaikkien aikojen ensimmäinen tarkistus vai tämän kuun ensimmäinen ja kuinka monta kertaa tervetuloikkuna avattiin. Ei mitään projekteistasi.",
+      "managed": "Organisaatiosi hallinnoima"
     }
   }
 }

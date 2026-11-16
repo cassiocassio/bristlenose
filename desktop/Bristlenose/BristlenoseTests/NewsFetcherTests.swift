@@ -84,14 +84,15 @@ struct NewsFetcherTests {
 
     private func fetcher(answered: Bool = true, managed: Set<String> = [],
                          endpoint: URL? = NewsCheck.productionEndpoint,
-                         channel: NewsCheck.Channel? = .store) -> NewsFetcher {
+                         channel: NewsCheck.Channel? = .store,
+                         keyring: NewsCheck.Keyring? = nil) -> NewsFetcher {
         let clock = self.clock
         return NewsFetcher(world: .init(
             defaults: defaults,
             session: CloudNetworking.makeSession(delegate: LLMValidator.RefuseRedirects(),
                                                  protocolClasses: [NewsStub.self]),
             endpoint: endpoint,
-            policy: .init(keyring: K.keyring(["k1": k1, "k0": k0]), requiredEnv: "prod"),
+            policy: .init(keyring: keyring ?? K.keyring(["k1": k1, "k0": k0]), requiredEnv: "prod"),
             channel: channel,
             appVersion: "0.47.0",
             keys: .production,
@@ -148,6 +149,24 @@ struct NewsFetcherTests {
         #expect(await fetcher(answered: false).checkIfDue() == .firstRunUnanswered)
         #expect(await fetcher(endpoint: nil).checkIfDue() == .noEndpoint)
         #expect(NewsStub.seen.isEmpty)
+    }
+
+    @Test("No trusted key: no request at all, with counts on and a file waiting")
+    func noKeysNoRequest() async {
+        defer { cleanUp() }
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        armFile()
+        // The production placeholders today: both keys empty.
+        let empty = NewsCheck.Keyring(base64Keys: ["k1": "", "k0": ""], backupKID: "k0")
+        let f = fetcher(keyring: empty)
+        f.recordWelcomeShown()
+        #expect(await f.checkIfDue() == .noKeys)
+        // Waited as long as a request that did happen would take to be recorded.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(NewsStub.seen.isEmpty)
+        // The flags were not spent: nothing reached a log.
+        #expect(defaults.object(forKey: NewsStateKeys.production.lastCheck) == nil)
+        #expect(!defaults.bool(forKey: NewsStateKeys.production.everChecked))
     }
 
     @Test("Counting not answered, or no: the request carries no flags",

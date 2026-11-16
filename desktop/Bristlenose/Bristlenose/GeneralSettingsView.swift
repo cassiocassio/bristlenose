@@ -46,6 +46,14 @@ struct GeneralSettingsView: View {
     /// researcher changes it in System Settings, not here.
     @State private var notificationAuthorization: RunBannerAuthorization?
 
+    /// The two news switches (`NewsPreferences`). `@AppStorage` only so the
+    /// rows re-render when the keys change; what a row SHOWS comes from
+    /// `NewsPreferences.newsRow` / `countsRow`, which know about a managed
+    /// value. Swift-only: neither posts `.bristlenosePrefsChanged` (the serve
+    /// never reads them, and that notification restarts it).
+    @AppStorage(NewsPreferences.enabledKey) private var newsStored = true
+    @AppStorage(NewsPreferences.countsKey) private var countsStored = false
+
     var body: some View {
         Form {
             Section {
@@ -92,6 +100,29 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
+
+            // News and the anonymous counts: two switches, each the stock
+            // switch row with a secondary line, the way the notification row
+            // above is built. A profile can lock either; the row then says so.
+            Section {
+                newsSwitch(
+                    label: i18n.t("desktop.news.settings.checkLabel"),
+                    explanation: i18n.t("desktop.news.settings.checkExplain"),
+                    row: NewsPreferences.newsRow(in: .standard, isForced: NewsPreferences.isManaged),
+                    set: { on in
+                        newsStored = on
+                        SettingsWindow.shared.newsFetcher?.newsSwitchChanged()
+                    })
+                newsSwitch(
+                    label: i18n.t("desktop.news.settings.countsLabel"),
+                    explanation: i18n.t("desktop.news.settings.countsExplain"),
+                    row: NewsPreferences.countsRow(in: .standard, isForced: NewsPreferences.isManaged),
+                    set: { on in
+                        NewsPreferences.recordCountsAnswer(on, in: .standard,
+                                                           isForced: NewsPreferences.isManaged)
+                        countsStored = on
+                    })
+            }
         }
         .formStyle(.grouped)
         .frame(width: 660)
@@ -110,6 +141,37 @@ struct GeneralSettingsView: View {
         .onChange(of: notificationAuthorization) { _, _ in
             DispatchQueue.main.async { SettingsWindow.shared.refitToContent() }
         }
+    }
+
+    // MARK: - News
+
+    /// A switch row whose secondary line ends in a "Privacy" link. Locked by a
+    /// profile, it shows the value in force, dimmed, with "Managed by your
+    /// organisation" in place of nothing to do.
+    private func newsSwitch(label: String, explanation: String,
+                            row: NewsPreferences.Row,
+                            set: @escaping (Bool) -> Void) -> some View {
+        Toggle(isOn: Binding(get: { row.isOn }, set: set)) {
+            Text(label)
+            Text(Self.explanation(explanation, privacy: i18n.t("desktop.news.privacy")))
+                .foregroundStyle(.secondary)
+            if row.isLocked {
+                Text(i18n.t("desktop.news.settings.managed"))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .disabled(row.isLocked)
+    }
+
+    /// The explanation, a space, and the word "Privacy" as a real link. Built
+    /// as an `AttributedString` with a `.link` run rather than through
+    /// Markdown, so nothing a translator writes can become a link.
+    static func explanation(_ text: String, privacy: String) -> AttributedString {
+        var out = AttributedString(text + " ")
+        var link = AttributedString(privacy)
+        link.link = NewsPreferences.privacyURL
+        out.append(link)
+        return out
     }
 
     // MARK: - Notifications

@@ -47,6 +47,15 @@ struct AIConsentView: View {
     /// Dismiss action — provided by the .sheet binding in the parent.
     var onDismiss: () -> Void
 
+    /// The anonymous-counts answer (`docs/private/design-news-and-counts.md`
+    /// D1, path B). **Off until ticked**: an explicit choice, never a
+    /// pre-ticked box. Written as `true` or `false` when the disclosure is
+    /// answered, by either button. Shown on first run only, not in review mode:
+    /// existing users are never prompted, and change it in Settings ▸ General.
+    /// This is not a disclosure change, so `currentVersion` is untouched.
+    @State private var sendCounts = NewsPreferences.countsChoiceStartsOn(
+        in: .standard, isForced: NewsPreferences.isManaged)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
@@ -62,6 +71,10 @@ struct AIConsentView: View {
             agentAccessText
             providersRow
             responsibilityText
+
+            if !isReviewMode {
+                countsChoice
+            }
 
             Spacer(minLength: 8)
 
@@ -169,6 +182,38 @@ struct AIConsentView: View {
             .foregroundStyle(.secondary)
     }
 
+    // MARK: - Anonymous counts (first run only)
+
+    /// A checkbox, because it is a yes/no the person answers on their way
+    /// past, and the stock control for that in a dialog is a checkbox. Its
+    /// label and explanation wrap (a control's label never truncates,
+    /// `docs/design-control-labels.md`); the window is a fixed 520 pt wide.
+    private var countsChoice: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: $sendCounts) {
+                Text(i18n.t("desktop.aiConsent.countsChoice"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .toggleStyle(.checkbox)
+            .disabled(NewsPreferences.isManaged(NewsPreferences.countsKey))
+            Text(i18n.t("desktop.aiConsent.countsExplain"))
+                .fixedSize(horizontal: false, vertical: true)
+                .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.leading, 20)   // under the label, not the box
+            Link(i18n.t("desktop.news.privacy"), destination: NewsPreferences.privacyURL)
+                .font(.caption)
+                .padding(.leading, 20)
+        }
+    }
+
+    /// Both buttons answer the disclosure, so both record the counts choice.
+    private func recordCountsChoice() {
+        guard !isReviewMode else { return }
+        NewsPreferences.recordCountsAnswer(sendCounts, in: .standard,
+                                           isForced: NewsPreferences.isManaged)
+    }
+
     // MARK: - Buttons
 
     private var buttonBar: some View {
@@ -181,6 +226,7 @@ struct AIConsentView: View {
             // OllamaSetupSheet used to show).
             VStack(alignment: .leading, spacing: 2) {
                 Button(i18n.t("desktop.aiConsent.useOllama")) {
+                    recordCountsChoice()
                     activateLocalDefault()
                     onDismiss()
                 }
@@ -198,6 +244,7 @@ struct AIConsentView: View {
             Button(isReviewMode
                    ? i18n.t("desktop.aiConsent.done")
                    : i18n.t("desktop.aiConsent.continue")) {
+                recordCountsChoice()
                 activateChosenCloudProviderIfNeeded()
                 onDismiss()
             }

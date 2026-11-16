@@ -650,7 +650,9 @@
         "studyTools": "N\u00e1stroje pro studii",
         "science": "V\u011bdeck\u00e9 pozad\u00ed",
         "tip": "Tip",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "Komunita",
+        "news": "Novinky"
       },
       "learnMore": "Dal\u0161\u00ed informace",
       "more": "V\u00edce",
@@ -891,7 +893,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Klip ke ka\u017ed\u00e9mu cit\u00e1tu"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} z {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} z {{total}}"
     }
   },
   "toolbar": {
@@ -955,7 +959,9 @@
     "continue": "Pokračovat",
     "useOllama": "Použít model Ollama v zařízení",
     "ollamaDownloadSize": "~%@ ke stažení",
-    "done": "Hotovo"
+    "done": "Hotovo",
+    "countsChoice": "Odesílat anonymní denní počty a pomoci tak vylepšit Bristlenose",
+    "countsExplain": "Jednou denně: verze aplikace a odkud jste ji získali, zda jde o vůbec první kontrolu nebo první v tomto měsíci a kolikrát se otevřelo uvítací okno. Nic o vašich projektech. Můžete to změnit v Nastavení."
   },
   "llmSettings": {
     "validation": {
@@ -1451,6 +1457,16 @@
       "title": "Upozornit m\u011b po dokon\u010den\u00ed anal\u00fdzy",
       "body": "macOS se v\u00e1s te\u010f zept\u00e1, zda sm\u00ed Bristlenose pos\u00edlat ozn\u00e1men\u00ed. Toto m\u016f\u017eete zm\u011bnit v {{path}}.",
       "continue": "Pokra\u010dovat"
+    }
+  },
+  "news": {
+    "privacy": "Soukromí",
+    "settings": {
+      "checkLabel": "Kontrolovat novinky na bristlenose.app",
+      "checkExplain": "Nejvýše jednou denně. Novinky a komunitní akce se zobrazí v uvítacím okně.",
+      "countsLabel": "Odesílat anonymní denní počty",
+      "countsExplain": "Odesílá se s denní kontrolou: verze aplikace a odkud jste ji získali, zda jde o vůbec první kontrolu nebo první v tomto měsíci a kolikrát se otevřelo uvítací okno. Nic o vašich projektech.",
+      "managed": "Spravováno vaší organizací"
     }
   }
 }

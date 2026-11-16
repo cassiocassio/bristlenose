@@ -952,9 +952,34 @@ struct WelcomeDegradationLab: View {
                 grid
                 Divider()
                 LadderReadout(line: activeSpec.line)
+                Divider()
+                newsCardRow
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// A news item in the smallest Scientific background cell the spiral
+    /// draws, in German (the longest of the spec's drafts), light and dark:
+    /// the real card (`WelcomeNewsCardPreview`), so `more` drops whole and the
+    /// link never truncates, or this row shows it doesn't.
+    private var newsCardRow: some View {
+        let size = WelcomeNewsCardPreview.smallestCell
+        let item = WelcomeNewsCardPreview.officeHours(german: true)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("News card · community · German · smallest cell (\(Int(size.width))×\(Int(size.height)))")
+                .font(.system(size: 12, weight: .semibold))
+            HStack(alignment: .top, spacing: 22) {
+                WelcomeNewsCardPreview(item: item, size: size)
+                    .padding(12)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    .environment(\.colorScheme, .light)
+                WelcomeNewsCardPreview(item: item, size: size)
+                    .padding(12)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    .environment(\.colorScheme, .dark)
+            }
         }
     }
 
@@ -1090,6 +1115,8 @@ struct WelcomeDegradationLab: View {
 }
 
 #Preview("Degradation Lab") {
-    WelcomeDegradationLab().frame(width: 1240, height: 900)
+    let i18n = I18n()
+    if let dir = I18n.findLocalesDirectory() { i18n.configure(localesDirectory: dir) }
+    return WelcomeDegradationLab().frame(width: 1240, height: 900).environmentObject(i18n)
 }
 #endif

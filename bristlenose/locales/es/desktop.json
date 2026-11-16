@@ -595,7 +595,9 @@
         "studyTools": "Herramientas",
         "science": "Base científica",
         "tip": "Consejo",
-        "ai": "IA"
+        "ai": "IA",
+        "community": "Comunidad",
+        "news": "Novedades"
       },
       "learnMore": "Más información",
       "more": "Más",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Clip recortado por cita"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} de {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} de {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Continuar",
     "useOllama": "Usar modelo Ollama en el dispositivo",
     "ollamaDownloadSize": "~%@ de descarga",
-    "done": "Listo"
+    "done": "Listo",
+    "countsChoice": "Enviar recuentos diarios anónimos para ayudar a mejorar Bristlenose",
+    "countsExplain": "Una vez al día: la versión de la app y dónde la obtuvo, si es su primera comprobación o la primera de este mes, y cuántas veces se abrió la ventana de bienvenida. Nada sobre sus proyectos. Puede cambiarlo en Ajustes."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Avisarme cuando termine el an\u00e1lisis",
       "body": "macOS te preguntar\u00e1 ahora si Bristlenose puede enviar notificaciones. Puedes cambiarlo en {{path}}.",
       "continue": "Continuar"
+    }
+  },
+  "news": {
+    "privacy": "Privacidad",
+    "settings": {
+      "checkLabel": "Buscar novedades en bristlenose.app",
+      "checkExplain": "Como máximo una vez al día. Las novedades y los eventos de la comunidad aparecen en la ventana de bienvenida.",
+      "countsLabel": "Enviar recuentos diarios anónimos",
+      "countsExplain": "Se envían con la comprobación diaria: la versión de la app y dónde la obtuvo, si es la primera comprobación o la primera de este mes, y cuántas veces se abrió la ventana de bienvenida. Nada sobre sus proyectos.",
+      "managed": "Gestionado por su organización"
     }
   }
 }

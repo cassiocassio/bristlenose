@@ -595,7 +595,9 @@
         "studyTools": "Studienwerkzeuge",
         "science": "Forschungshintergrund",
         "tip": "Tipp",
-        "ai": "KI"
+        "ai": "KI",
+        "community": "Community",
+        "news": "Neuigkeiten"
       },
       "learnMore": "Mehr erfahren",
       "more": "Mehr",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Kurzer Clip pro Zitat"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} von {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} von {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Fortfahren",
     "useOllama": "Ollama-Modell auf dem Gerät verwenden",
     "ollamaDownloadSize": "~%@ Download",
-    "done": "Fertig"
+    "done": "Fertig",
+    "countsChoice": "Anonyme tägliche Zählungen senden, um Bristlenose zu verbessern",
+    "countsExplain": "Einmal täglich: die Version der App und woher Sie sie haben, ob dies ihre allererste Prüfung oder die erste in diesem Monat ist und wie oft das Willkommensfenster geöffnet wurde. Nichts über Ihre Projekte. Sie können das in den Einstellungen ändern."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Mich benachrichtigen, wenn die Analyse abgeschlossen ist",
       "body": "macOS fragt als N\u00e4chstes, ob Bristlenose Mitteilungen senden darf. Das l\u00e4sst sich unter {{path}} \u00e4ndern.",
       "continue": "Fortfahren"
+    }
+  },
+  "news": {
+    "privacy": "Datenschutz",
+    "settings": {
+      "checkLabel": "Auf bristlenose.app nach Neuigkeiten suchen",
+      "checkExplain": "Höchstens einmal täglich. Neuigkeiten und Community-Termine erscheinen im Willkommensfenster.",
+      "countsLabel": "Anonyme tägliche Zählungen senden",
+      "countsExplain": "Mit der täglichen Prüfung gesendet: die Version der App und woher Sie sie haben, ob es die allererste Prüfung oder die erste in diesem Monat ist und wie oft das Willkommensfenster geöffnet wurde. Nichts über Ihre Projekte.",
+      "managed": "Von Ihrer Organisation verwaltet"
     }
   }
 }

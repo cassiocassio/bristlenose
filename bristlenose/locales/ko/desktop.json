@@ -567,7 +567,9 @@
         "studyTools": "\uc5f0\uad6c \ub3c4\uad6c",
         "science": "\uacfc\ud559\uc801 \ubc30\uacbd",
         "tip": "\ud301",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "커뮤니티",
+        "news": "소식"
       },
       "learnMore": "\ub354 \uc54c\uc544\ubcf4\uae30",
       "more": "\ub354 \ubcf4\uae30",
@@ -808,7 +810,9 @@
       },
       "clipsIllustration": {
         "subtitle": "\uc778\uc6a9\ubb38\ub9c8\ub2e4 \uc798\ub77c\ub0b8 \ud074\ub9bd"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{total}}개 중 {{n}}번째",
+      "rotatorKindPosition": "{{kind}}, {{total}}개 중 {{n}}번째"
     }
   },
   "toolbar": {
@@ -872,7 +876,9 @@
     "continue": "계속",
     "useOllama": "기기에서 Ollama 모델 사용",
     "ollamaDownloadSize": "~%@ 다운로드",
-    "done": "완료"
+    "done": "완료",
+    "countsChoice": "Bristlenose 개선을 위해 익명의 일일 집계 보내기",
+    "countsExplain": "하루에 한 번: 앱 버전과 입수 경로, 최초 확인인지 또는 이번 달 첫 확인인지, 환영 윈도우가 열린 횟수. 프로젝트에 관한 정보는 포함되지 않습니다. 설정에서 변경할 수 있습니다."
   },
   "llmSettings": {
     "validation": {
@@ -1318,6 +1324,16 @@
       "title": "\ubd84\uc11d\uc774 \ub05d\ub098\uba74 \uc54c\ub9bc \ubc1b\uae30",
       "body": "\ub2e4\uc74c\uc73c\ub85c macOS\uac00 Bristlenose\uc758 \uc54c\ub9bc \uc804\uc1a1\uc744 \ud5c8\uc6a9\ud560\uc9c0 \ubb3b\uc2b5\ub2c8\ub2e4. {{path}}\uc5d0\uc11c \ubcc0\uacbd\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
       "continue": "\uacc4\uc18d"
+    }
+  },
+  "news": {
+    "privacy": "개인정보 보호",
+    "settings": {
+      "checkLabel": "bristlenose.app에서 소식 확인",
+      "checkExplain": "하루에 최대 한 번. 소식과 커뮤니티 이벤트가 환영 윈도우에 표시됩니다.",
+      "countsLabel": "익명의 일일 집계 보내기",
+      "countsExplain": "매일 확인할 때 함께 전송됩니다: 앱 버전과 입수 경로, 최초 확인인지 또는 이번 달 첫 확인인지, 환영 윈도우가 열린 횟수. 프로젝트에 관한 정보는 포함되지 않습니다.",
+      "managed": "조직에서 관리함"
     }
   }
 }

@@ -651,7 +651,9 @@
         "studyTools": "Narzędzia",
         "science": "Podstawy naukowe",
         "tip": "Wskazówka",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "Społeczność",
+        "news": "Aktualności"
       },
       "learnMore": "Więcej informacji",
       "more": "Więcej",
@@ -892,7 +894,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Przycięty klip na cytat"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} z {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} z {{total}}"
     }
   },
   "toolbar": {
@@ -956,7 +960,9 @@
     "continue": "Kontynuuj",
     "useOllama": "Użyj modelu Ollama na urządzeniu",
     "ollamaDownloadSize": "~%@ do pobrania",
-    "done": "Gotowe"
+    "done": "Gotowe",
+    "countsChoice": "Wysyłaj anonimowe dzienne liczniki, aby pomóc ulepszać Bristlenose",
+    "countsExplain": "Raz dziennie: wersja aplikacji i skąd ją masz, czy to jej pierwsze sprawdzenie w ogóle lub pierwsze w tym miesiącu oraz ile razy otwarto okno powitalne. Nic o Twoich projektach. Możesz to zmienić w Ustawieniach."
   },
   "llmSettings": {
     "validation": {
@@ -1471,6 +1477,16 @@
       "title": "Powiadom mnie po zako\u0144czeniu analizy",
       "body": "macOS zapyta teraz, czy Bristlenose mo\u017ce wysy\u0142a\u0107 powiadomienia. Mo\u017cesz to zmieni\u0107 w {{path}}.",
       "continue": "Kontynuuj"
+    }
+  },
+  "news": {
+    "privacy": "Prywatność",
+    "settings": {
+      "checkLabel": "Sprawdzaj aktualności w bristlenose.app",
+      "checkExplain": "Najwyżej raz dziennie. Aktualności i wydarzenia społeczności pojawiają się w oknie powitalnym.",
+      "countsLabel": "Wysyłaj anonimowe dzienne liczniki",
+      "countsExplain": "Wysyłane z codziennym sprawdzeniem: wersja aplikacji i skąd ją masz, czy to pierwsze sprawdzenie w ogóle lub pierwsze w tym miesiącu oraz ile razy otwarto okno powitalne. Nic o Twoich projektach.",
+      "managed": "Zarządzane przez Twoją organizację"
     }
   }
 }

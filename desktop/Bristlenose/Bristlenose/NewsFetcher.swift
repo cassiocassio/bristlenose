@@ -2,53 +2,7 @@ import CryptoKit
 import Foundation
 import os
 
-// MARK: - Preference and state keys
-
-/// The two switches (spec §7), in the style of `BristlenoseFlags`. Both can be
-/// forced **off** by a managed preference (an MDM configuration profile for
-/// `app.bristlenose`); a forced value never turns anything *on*.
-///
-/// - `news.enabled` (Bool, default **on**): "Check bristlenose.app for news".
-///   Off: no request of any kind, and the cached file is deleted.
-///   Managed: `<key>news.enabled</key><false/>`.
-/// - `news.counts` (Bool, **absent = not answered**): "Send anonymous daily
-///   counts", chosen explicitly on first run. Counts ride along only on an
-///   explicit `true` that the person set; absent or `false` sends the bare
-///   request. Managed: `<key>news.counts</key><false/>`. A managed `true` is
-///   not the person's yes, so it sends nothing either.
-///
-/// Neither posts `.bristlenosePrefsChanged`: the serve never reads them.
-enum NewsPreferences {
-    static let enabledKey = "news.enabled"
-    static let countsKey = "news.counts"
-
-    /// On unless written off. A managed value is what `UserDefaults` returns
-    /// (the forced domain wins the search), so a profile's `false` is read
-    /// here as off and cannot be switched back on; `isForced` only tells the
-    /// Settings row to show as locked.
-    static func newsEnabled(in defaults: UserDefaults, isForced: (String) -> Bool) -> Bool {
-        if isForced(enabledKey), (defaults.object(forKey: enabledKey) as? Bool) != true {
-            return false
-        }
-        return defaults.object(forKey: enabledKey) as? Bool ?? true
-    }
-
-    static func countsConsent(in defaults: UserDefaults,
-                              isForced: (String) -> Bool) -> NewsCheck.CountsConsent {
-        if isForced(countsKey) { return .no }
-        switch defaults.object(forKey: countsKey) as? Bool {
-        case true?: return .yes
-        case false?: return .no
-        case nil: return .unanswered
-        }
-    }
-
-    /// `CFPreferencesAppValueIsForced`: true when a configuration profile
-    /// manages the key, whatever value it set.
-    static func isManaged(_ key: String) -> Bool {
-        CFPreferencesAppValueIsForced(key as CFString, kCFPreferencesCurrentApplication)
-    }
-}
+// MARK: - State keys
 
 /// Where the check keeps its state (spec §3, "Local state"). Debug builds use
 /// a `news.debug.` prefix so a staging file can never move a Release build's
@@ -82,14 +36,13 @@ struct NewsStateKeys {
 /// counting flags when the person said yes. All decisions are in `NewsCheck`;
 /// this does the I/O.
 ///
-/// **Ownership (not wired yet).** This is an app-level object, like
-/// `ServeFleet`: it will be a `@StateObject` in `BristlenoseApp`, calling
-/// `checkIfDue()` at launch and on wake (`NSWorkspace.didWakeNotification`),
-/// and handed to the welcome window, which reads `items` once per window and
-/// calls `recordWelcomeShown()` once per window. Two windows must share one
-/// instance, because the single-flight guard below is what stops a launch
-/// and a wake from both sending `first=1`. Wiring waits for spec §10 steps 3
-/// and 4 (first-run choice, Settings rows, the card), after mockup approval.
+/// **Ownership.** An app-level object, like `ServeFleet`: a `@StateObject`
+/// in `BristlenoseApp`, which calls `checkIfDue()` once the first window is up
+/// and again on wake and on activation (never on a timer), and hands it to the
+/// Welcome window, which reads `items` once per window and calls
+/// `recordWelcomeShown()` once per window, and to Settings ▸ General. Two
+/// windows must share one instance, because the single-flight guard below is
+/// what stops a launch and a wake from both sending `first=1`.
 @MainActor
 final class NewsFetcher: ObservableObject {
 
@@ -102,6 +55,8 @@ final class NewsFetcher: ObservableObject {
     enum Outcome: Equatable {
         case newsOff
         case firstRunUnanswered
+        /// The build trusts no key, so no file could be accepted: no request.
+        case noKeys
         case noEndpoint
         case notDue
         case alreadyInFlight
@@ -215,6 +170,7 @@ final class NewsFetcher: ObservableObject {
             return .newsOff
         }
         guard world.firstRunAnswered() else { return .firstRunUnanswered }
+        guard NewsCheck.mayRequest(with: world.policy.keyring) else { return .noKeys }
         guard let endpoint = world.endpoint else { return .noEndpoint }
         guard !inFlight else { return .alreadyInFlight }
 

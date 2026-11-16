@@ -595,7 +595,9 @@
         "studyTools": "Ferramentas",
         "science": "Base científica",
         "tip": "Dica",
-        "ai": "IA"
+        "ai": "IA",
+        "community": "Comunidade",
+        "news": "Novidades"
       },
       "learnMore": "Saiba mais",
       "more": "Mais",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Clipe cortado por citação"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} de {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} de {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Continuar",
     "useOllama": "Usar modelo Ollama no dispositivo",
     "ollamaDownloadSize": "~%@ de download",
-    "done": "Concluído"
+    "done": "Concluído",
+    "countsChoice": "Enviar contagens diárias anônimas para ajudar a melhorar o Bristlenose",
+    "countsExplain": "Uma vez por dia: a versão do app e onde você o obteve, se esta é a primeira verificação de todas ou a primeira deste mês e quantas vezes a janela de boas-vindas foi aberta. Nada sobre seus projetos. Você pode mudar isso em Ajustes."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Avisar quando a an\u00e1lise terminar",
       "body": "O macOS vai perguntar em seguida se o Bristlenose pode enviar notifica\u00e7\u00f5es. Voc\u00ea pode mudar isso em {{path}}.",
       "continue": "Continuar"
+    }
+  },
+  "news": {
+    "privacy": "Privacidade",
+    "settings": {
+      "checkLabel": "Verificar novidades em bristlenose.app",
+      "checkExplain": "No máximo uma vez por dia. Novidades e eventos da comunidade aparecem na janela de boas-vindas.",
+      "countsLabel": "Enviar contagens diárias anônimas",
+      "countsExplain": "Enviadas com a verificação diária: a versão do app e onde você o obteve, se é a primeira verificação de todas ou a primeira deste mês e quantas vezes a janela de boas-vindas foi aberta. Nada sobre seus projetos.",
+      "managed": "Gerenciado pela sua organização"
     }
   }
 }

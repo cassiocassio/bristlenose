@@ -595,7 +595,9 @@
         "studyTools": "\u00c7al\u0131\u015fma ara\u00e7lar\u0131",
         "science": "Bilimsel arka plan",
         "tip": "\u0130pucu",
-        "ai": "Yapay zek\u00e2"
+        "ai": "Yapay zek\u00e2",
+        "community": "Topluluk",
+        "news": "Haberler"
       },
       "learnMore": "Daha fazla bilgi",
       "more": "Daha fazla",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Al\u0131nt\u0131 ba\u015f\u0131na bir klip"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} / {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} / {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Sürdür",
     "useOllama": "Aygıtta Ollama modelini kullan",
     "ollamaDownloadSize": "~%@ indirme",
-    "done": "Bitti"
+    "done": "Bitti",
+    "countsChoice": "Bristlenose’un geliştirilmesine yardımcı olmak için anonim günlük sayımlar gönder",
+    "countsExplain": "Günde bir kez: uygulamanın sürümü ve nereden edindiğiniz, bunun ilk denetim mi yoksa bu ayın ilk denetimi mi olduğu ve hoş geldiniz penceresinin kaç kez açıldığı. Projelerinizle ilgili hiçbir şey yok. Bunu Ayarlar’da değiştirebilirsiniz."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Analiz bitince beni bilgilendir",
       "body": "macOS \u015fimdi Bristlenose'un bildirim g\u00f6nderip g\u00f6nderemeyece\u011fini soracak. Bunu {{path}} b\u00f6l\u00fcm\u00fcnden de\u011fi\u015ftirebilirsiniz.",
       "continue": "S\u00fcrd\u00fcr"
+    }
+  },
+  "news": {
+    "privacy": "Gizlilik",
+    "settings": {
+      "checkLabel": "Haberler için bristlenose.app’i denetle",
+      "checkExplain": "En fazla günde bir kez. Haberler ve topluluk etkinlikleri hoş geldiniz penceresinde görünür.",
+      "countsLabel": "Anonim günlük sayımlar gönder",
+      "countsExplain": "Günlük denetimle gönderilir: uygulamanın sürümü ve nereden edindiğiniz, ilk denetim mi yoksa bu ayın ilk denetimi mi olduğu ve hoş geldiniz penceresinin kaç kez açıldığı. Projelerinizle ilgili hiçbir şey yok.",
+      "managed": "Kuruluşunuz tarafından yönetiliyor"
     }
   }
 }

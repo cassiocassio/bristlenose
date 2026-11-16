@@ -567,7 +567,9 @@
         "studyTools": "\u7814\u7a76\u5de5\u5177",
         "science": "\u79d1\u5b78\u80cc\u666f",
         "tip": "\u8a23\u7ac5",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "社群",
+        "news": "最新消息"
       },
       "learnMore": "\u9032\u4e00\u6b65\u77ad\u89e3",
       "more": "\u66f4\u591a",
@@ -808,7 +810,9 @@
       },
       "clipsIllustration": {
         "subtitle": "\u6bcf\u5247\u5f15\u8ff0\u4e00\u6bb5\u88c1\u526a\u7247\u6bb5"
-      }
+      },
+      "rotatorItem": "{{kind}}，{{title}}，第{{n}}個，共{{total}}個",
+      "rotatorKindPosition": "{{kind}}，第{{n}}個，共{{total}}個"
     }
   },
   "toolbar": {
@@ -872,7 +876,9 @@
     "continue": "繼續",
     "useOllama": "在裝置上使用 Ollama 模型",
     "ollamaDownloadSize": "約 %@ 下載量",
-    "done": "完成"
+    "done": "完成",
+    "countsChoice": "傳送匿名每日計數以協助改進 Bristlenose",
+    "countsExplain": "每天一次：App 的版本與取得來源、這是否為它的首次檢查或本月首次檢查，以及歡迎視窗開啟的次數。不包含任何與你的專案有關的資訊。你可以在「設定」中更改。"
   },
   "llmSettings": {
     "validation": {
@@ -1318,6 +1324,16 @@
       "title": "\u5206\u6790\u5b8c\u6210\u6642\u901a\u77e5\u6211",
       "body": "\u63a5\u4e0b\u4f86 macOS \u6703\u8a62\u554f\u662f\u5426\u5141\u8a31 Bristlenose \u50b3\u9001\u901a\u77e5\u3002\u4f60\u53ef\u4ee5\u5728\u300c{{path}}\u300d\u4e2d\u66f4\u6539\u3002",
       "continue": "\u7e7c\u7e8c"
+    }
+  },
+  "news": {
+    "privacy": "隱私權",
+    "settings": {
+      "checkLabel": "在 bristlenose.app 檢查最新消息",
+      "checkExplain": "每天最多一次。最新消息與社群活動會顯示在歡迎視窗中。",
+      "countsLabel": "傳送匿名每日計數",
+      "countsExplain": "隨每日檢查一起傳送：App 的版本與取得來源、這是否為首次檢查或本月首次檢查，以及歡迎視窗開啟的次數。不包含任何與你的專案有關的資訊。",
+      "managed": "由你的組織管理"
     }
   }
 }

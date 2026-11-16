@@ -151,6 +151,14 @@ struct BristlenoseApp: App {
     // Ambient local-model pull (Beat 3). Owned at app level so the download
     // survives the consent sheet's dismissal and surfaces in the toolbar pill.
     @StateObject private var ollamaDownload = OllamaDownloadModel()
+    /// The daily news check (`docs/private/design-news-and-counts.md`). One per
+    /// app, like the fleet: its single-flight guard is what stops a launch and
+    /// a wake from both sending `first=1`. Handed to the Welcome window (items,
+    /// once per window) and Settings ▸ General (the two switches).
+    @StateObject private var newsFetcher = NewsFetcher(world: NewsFetcher.productionWorld())
+    /// Wake and activation observers that ask the fetcher whether a check is
+    /// due. Registered once per process; never a timer.
+    @State private var newsObservers: [any NSObjectProtocol] = []
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -230,6 +238,28 @@ struct BristlenoseApp: App {
                     SettingsWindow.shared.serveFleet = serveFleet
                     SettingsWindow.shared.projectIndex = projectIndex
                     SettingsWindow.shared.pipelineRunner = pipelineRunner
+                    SettingsWindow.shared.newsFetcher = newsFetcher
+                    // The news check: now that a window is up, then on wake and
+                    // on activation. `checkIfDue()` makes at most one request a
+                    // (server) day and none at all while news is off, the AI
+                    // disclosure is unanswered or the build trusts no key, so
+                    // an activation that is not due costs a defaults read.
+                    // Once per process, for the same reason as the observers below.
+                    if newsObservers.isEmpty {
+                        let fetcher = newsFetcher
+                        let check: @Sendable (Notification) -> Void = { _ in
+                            Task { @MainActor in await fetcher.checkIfDue() }
+                        }
+                        newsObservers = [
+                            NSWorkspace.shared.notificationCenter.addObserver(
+                                forName: NSWorkspace.didWakeNotification, object: nil,
+                                queue: .main, using: check),
+                            NotificationCenter.default.addObserver(
+                                forName: NSApplication.didBecomeActiveNotification, object: nil,
+                                queue: .main, using: check),
+                        ]
+                        Task { @MainActor in await fetcher.checkIfDue() }
+                    }
                     // What a landed cloud batch is handed to. The coordinator
                     // is the one app-wide owner of the import store, so it is
                     // the only place this can live without a second open window
@@ -415,6 +445,7 @@ struct BristlenoseApp: App {
         Window(i18n.t("desktop.chrome.welcomeTitle"), id: WelcomeWindow.id) {
             WelcomeWindowContent()
                 .environmentObject(i18n)
+                .environmentObject(newsFetcher)
                 .tint(paletteAccent)
         }
         .defaultSize(width: WelcomeWindow.naturalContentWidth, height: WelcomeWindow.naturalContentHeight)
@@ -515,6 +546,7 @@ struct BristlenoseApp: App {
         // the fixed golden slot is too short. Diagnostics ▸ Degradation Lab.
         Window("Degradation Lab", id: "degradation-lab") {
             WelcomeDegradationLab()
+                .environmentObject(i18n)   // the news-card row draws the real card
                 .tint(paletteAccent)
         }
         .defaultSize(width: 1240, height: 900)

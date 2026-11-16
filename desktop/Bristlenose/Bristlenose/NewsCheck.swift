@@ -265,6 +265,15 @@ enum NewsCheck {
         let requiredEnv: String
     }
 
+    /// **No key, no request.** While a build trusts no key (the production
+    /// placeholders in `NewsKeys` are still empty, or a Debug build has no
+    /// staging key), every file it could fetch would be refused with
+    /// `unknownKey`. A request whose answer can never be shown is collection
+    /// for nothing, so the check makes none at all, counts included.
+    static func mayRequest(with keyring: Keyring) -> Bool {
+        !keyring.keys.isEmpty
+    }
+
     // MARK: - The file
 
     /// Why a file was refused. Never shown to anyone; tests and logs only.

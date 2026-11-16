@@ -595,7 +595,9 @@
         "studyTools": "Studieverktyg",
         "science": "Vetenskaplig bakgrund",
         "tip": "Tips",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "Gemenskap",
+        "news": "Nyheter"
       },
       "learnMore": "L\u00e4s mer",
       "more": "Mer",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Beskuret klipp per citat"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} av {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} av {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Fortsätt",
     "useOllama": "Använd Ollama-modell på enheten",
     "ollamaDownloadSize": "~%@ hämtning",
-    "done": "Klar"
+    "done": "Klar",
+    "countsChoice": "Skicka anonyma dagliga räkningar för att hjälpa till att förbättra Bristlenose",
+    "countsExplain": "En gång om dagen: appens version och var du fick den, om det är dess allra första kontroll eller den första den här månaden och hur många gånger välkomstfönstret har öppnats. Inget om dina projekt. Du kan ändra detta i Inställningar."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Meddela mig n\u00e4r analysen \u00e4r klar",
       "body": "D\u00e4refter fr\u00e5gar macOS om Bristlenose f\u00e5r skicka aviseringar. Du kan \u00e4ndra detta i {{path}}.",
       "continue": "Forts\u00e4tt"
+    }
+  },
+  "news": {
+    "privacy": "Integritet",
+    "settings": {
+      "checkLabel": "Sök efter nyheter på bristlenose.app",
+      "checkExplain": "Högst en gång om dagen. Nyheter och gemenskapsevenemang visas i välkomstfönstret.",
+      "countsLabel": "Skicka anonyma dagliga räkningar",
+      "countsExplain": "Skickas med den dagliga kontrollen: appens version och var du fick den, om det är den allra första kontrollen eller den första den här månaden och hur många gånger välkomstfönstret har öppnats. Inget om dina projekt.",
+      "managed": "Hanteras av din organisation"
     }
   }
 }

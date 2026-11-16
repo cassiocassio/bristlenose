@@ -149,3 +149,88 @@ enum TranscriptionEngineChoice: String, CaseIterable {
         }
     }
 }
+
+// MARK: - News and anonymous counts (Swift-only preferences)
+
+/// The two switches (spec §7), in the style of `BristlenoseFlags`. Both can be
+/// forced **off** by a managed preference (an MDM configuration profile for
+/// `app.bristlenose`); a forced value never turns anything *on*.
+///
+/// - `news.enabled` (Bool, default **on**): "Check bristlenose.app for news".
+///   Off: no request of any kind, and the cached file is deleted.
+///   Managed: `<key>news.enabled</key><false/>`.
+/// - `news.counts` (Bool, **absent = not answered**): "Send anonymous daily
+///   counts", chosen explicitly on first run. Counts ride along only on an
+///   explicit `true` that the person set; absent or `false` sends the bare
+///   request. Managed: `<key>news.counts</key><false/>`. A managed `true` is
+///   not the person's yes, so it sends nothing either.
+///
+/// Neither posts `.bristlenosePrefsChanged`: the serve never reads them.
+enum NewsPreferences {
+    static let enabledKey = "news.enabled"
+    static let countsKey = "news.counts"
+
+    /// On unless written off. A managed value is what `UserDefaults` returns
+    /// (the forced domain wins the search), so a profile's `false` is read
+    /// here as off and cannot be switched back on; `isForced` only tells the
+    /// Settings row to show as locked.
+    static func newsEnabled(in defaults: UserDefaults, isForced: (String) -> Bool) -> Bool {
+        if isForced(enabledKey), (defaults.object(forKey: enabledKey) as? Bool) != true {
+            return false
+        }
+        return defaults.object(forKey: enabledKey) as? Bool ?? true
+    }
+
+    static func countsConsent(in defaults: UserDefaults,
+                              isForced: (String) -> Bool) -> NewsCheck.CountsConsent {
+        if isForced(countsKey) { return .no }
+        switch defaults.object(forKey: countsKey) as? Bool {
+        case true?: return .yes
+        case false?: return .no
+        case nil: return .unanswered
+        }
+    }
+
+    /// The first-run answer (the counts checkbox on the AI disclosure), and the
+    /// Settings switch. An explicit `true` or `false` is written either way,
+    /// so "answered no" is told apart from "never asked". Nothing is written
+    /// while a profile manages the key.
+    static func recordCountsAnswer(_ yes: Bool, in defaults: UserDefaults,
+                                   isForced: (String) -> Bool) {
+        guard !isForced(countsKey) else { return }
+        defaults.set(yes, forKey: countsKey)
+    }
+
+    /// What the first-run checkbox starts at: **off**, unless this person
+    /// already said yes (in Settings, or on an earlier showing).
+    static func countsChoiceStartsOn(in defaults: UserDefaults,
+                                     isForced: (String) -> Bool) -> Bool {
+        countsConsent(in: defaults, isForced: isForced) == .yes
+    }
+
+    /// One Settings row: what the switch shows, and whether a profile locks it
+    /// ("Managed by your organisation"). A locked row shows the value that is
+    /// in force, which for counts is never on: a managed yes is not a yes.
+    struct Row: Equatable {
+        var isOn: Bool
+        var isLocked: Bool
+    }
+
+    static func newsRow(in defaults: UserDefaults, isForced: (String) -> Bool) -> Row {
+        Row(isOn: newsEnabled(in: defaults, isForced: isForced), isLocked: isForced(enabledKey))
+    }
+
+    static func countsRow(in defaults: UserDefaults, isForced: (String) -> Bool) -> Row {
+        Row(isOn: countsConsent(in: defaults, isForced: isForced) == .yes,
+            isLocked: isForced(countsKey))
+    }
+
+    /// Where both rows and the first-run line send someone who wants the detail.
+    static let privacyURL = URL(string: "https://bristlenose.app/privacy.html")!
+
+    /// `CFPreferencesAppValueIsForced`: true when a configuration profile
+    /// manages the key, whatever value it set.
+    static func isManaged(_ key: String) -> Bool {
+        CFPreferencesAppValueIsForced(key as CFString, kCFPreferencesCurrentApplication)
+    }
+}

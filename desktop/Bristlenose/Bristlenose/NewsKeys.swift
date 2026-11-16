@@ -9,8 +9,10 @@ import Foundation
 /// base64 public keys below, **a Release build accepts no news file at all**:
 /// an empty key is dropped by `NewsCheck.Keyring`, so every file fails with
 /// `unknownKey` and the welcome screen simply shows no news. That is the safe
-/// state, and it is deliberate. The request itself still goes out (it is how
-/// the counts reach the log); only the file is refused.
+/// state, and it is deliberate. **No request goes out either**: while the
+/// keyring is empty, `NewsCheck.mayRequest(with:)` stops the check before it
+/// asks, because a request whose file can never be accepted is collection for
+/// nothing (counts included).
 ///
 /// When the keys are set, also set `PUBLIC_KEYS` in `scripts/sign-news.py`:
 /// `tests/test_sign_news.py` fails if the two disagree (the repo's Seams rule).

@@ -595,7 +595,9 @@
         "studyTools": "Strumenti di studio",
         "science": "Basi scientifiche",
         "tip": "Suggerimento",
-        "ai": "IA"
+        "ai": "IA",
+        "community": "Community",
+        "news": "Novità"
       },
       "learnMore": "Scopri di più",
       "more": "Altro",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Una clip per citazione"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} di {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} di {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Continua",
     "useOllama": "Usa il modello Ollama sul dispositivo",
     "ollamaDownloadSize": "~%@ di download",
-    "done": "Fine"
+    "done": "Fine",
+    "countsChoice": "Invia conteggi giornalieri anonimi per aiutare a migliorare Bristlenose",
+    "countsExplain": "Una volta al giorno: la versione dell'app e da dove l'hai ottenuta, se è il suo primo controllo in assoluto o il primo del mese e quante volte si è aperta la finestra di benvenuto. Niente sui tuoi progetti. Puoi cambiarlo in Impostazioni."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Avvisami quando l'analisi \u00e8 completata",
       "body": "macOS ti chieder\u00e0 ora se Bristlenose pu\u00f2 inviare notifiche. Puoi cambiare questa scelta in {{path}}.",
       "continue": "Continua"
+    }
+  },
+  "news": {
+    "privacy": "Privacy",
+    "settings": {
+      "checkLabel": "Cerca novità su bristlenose.app",
+      "checkExplain": "Al massimo una volta al giorno. Le novità e gli eventi della community compaiono nella finestra di benvenuto.",
+      "countsLabel": "Invia conteggi giornalieri anonimi",
+      "countsExplain": "Inviati con il controllo giornaliero: la versione dell'app e da dove l'hai ottenuta, se è il primo controllo in assoluto o il primo del mese e quante volte si è aperta la finestra di benvenuto. Niente sui tuoi progetti.",
+      "managed": "Gestito dalla tua organizzazione"
     }
   }
 }

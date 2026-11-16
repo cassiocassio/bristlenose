@@ -31,11 +31,19 @@ import AppKit
 // arrow on a CTA stays in code (`cta(_:)`), so translators get a clean word
 // and a glyph cannot go missing from one of 21 files.
 
+/// What a slot's words come from.
+private enum SlotContent {
+    /// A path under `desktop.welcome.home.`, resolved from `I18n` at render time.
+    case keyed(String)
+    /// A verified item from the news file. Its words are the file's, drawn with
+    /// `Text(verbatim:)` only, never through the Markdown path keyed slots use.
+    case remote(NewsItem)
+    /// No words of its own: the illustration owns its prose (the book shelf).
+    case unkeyed
+}
+
 private struct SlotItem: Identifiable {
-    let id = UUID()
-    /// Path under `desktop.welcome.home.` — nil for a slot whose illustration
-    /// owns all of its own prose (the book shelf).
-    let key: String?
+    let content: SlotContent
     let href: String
     var href2: String? = nil
     var illustration: WelcomeIllustration = .none   // looping illustration for this slot (WelcomeIllustrations.swift)
@@ -44,6 +52,46 @@ private struct SlotItem: Identifiable {
     // reader to the browser to read about it is a detour; the link should land them on the
     // control. The docs move to the second CTA ("Learn more →") so both routes stay offered.
     var primaryDestination: SlotDestination? = nil
+
+    /// The pools' shape: a key (or none) plus where its links go.
+    init(key: String?, href: String, href2: String? = nil,
+         illustration: WelcomeIllustration = .none,
+         primaryDestination: SlotDestination? = nil) {
+        self.content = key.map(SlotContent.keyed) ?? .unkeyed
+        self.href = href
+        self.href2 = href2
+        self.illustration = illustration
+        self.primaryDestination = primaryDestination
+    }
+
+    /// A news item as a slide: its own words, its own (allowlisted) link.
+    init(news item: NewsItem) {
+        self.content = .remote(item)
+        self.href = item.href.absoluteString
+    }
+
+    /// The path under `desktop.welcome.home.`, for a keyed slot.
+    var key: String? {
+        if case .keyed(let key) = content { return key }
+        return nil
+    }
+
+    var news: NewsItem? {
+        if case .remote(let item) = content { return item }
+        return nil
+    }
+
+    /// **Stable across launches**, never `UUID()`: the rotator persists its
+    /// place by this id (`SlotRotation`), so a news item arriving at the front
+    /// of the list cannot make the reader's place jump. Keyed slots use their
+    /// key, a news item its file id, the book shelf its illustration.
+    var id: String {
+        switch content {
+        case .keyed(let key): return "keyed:" + key
+        case .remote(let item): return "news:" + item.id
+        case .unkeyed: return "illustration:" + String(describing: illustration)
+        }
+    }
 }
 
 /// An in-app destination for a slot's primary CTA.
@@ -63,6 +111,22 @@ private struct ResolvedSlot {
     let more: String?
     let linkLabel: String
     let linkLabel2: String?
+    /// True for a news item: its words are drawn verbatim (`WelcomeSlotProse`).
+    var remote = false
+}
+
+/// How a slot's sentence is drawn. The decision is here, not in the view, so
+/// a test can pin it: **a news item's words are never parsed**, so
+/// `[x](https://elsewhere)` in a field shows as typed and cannot become a link
+/// (spec §4, field rules). Keyed slots keep the Markdown path, which is how
+/// they draw bold and keycaps.
+enum WelcomeSlotProse: Equatable {
+    case markdown(String)
+    case verbatim(String)
+
+    static func of(_ text: String, remote: Bool) -> WelcomeSlotProse {
+        remote ? .verbatim(text) : .markdown(text)
+    }
 }
 
 private extension I18n {
@@ -104,8 +168,15 @@ private func cta(_ label: String) -> String {
 /// went from "Learn more →" to "More →" in all 21 locales.
 @MainActor private func resolve(_ item: SlotItem, _ i18n: I18n,
                                 fallbackLink: String = "learnMore") -> ResolvedSlot {
-    guard let key = item.key else {
+    let key: String
+    switch item.content {
+    case .unkeyed:
         return ResolvedSlot(title: nil, text: "", more: nil, linkLabel: "", linkLabel2: nil)
+    case .remote(let news):
+        return ResolvedSlot(title: news.title, text: news.text, more: news.more,
+                            linkLabel: news.link, linkLabel2: nil, remote: true)
+    case .keyed(let k):
+        key = k
     }
     let base = "desktop.welcome.home." + key
     return ResolvedSlot(
@@ -228,6 +299,16 @@ struct WelcomeHomeView: View {
     /// TODO: bind to real provider-configured state.
     var aiConfigured: Bool = false
 
+    /// The Scientific background card's slides: the news items first, then the
+    /// drawn science slides. Built ONCE per window from the fetcher's snapshot
+    /// (`WelcomeWindowContent`), so a fetch that lands while the window is
+    /// open never changes slides under a reader; the new item shows next time.
+    @State private var scienceItems: [SlotItem]
+    /// The slide the card opens on while a news item is in the file.
+    private let scienceLeadID: String?
+    /// A news item's link was clicked (`NewsFetcher.recordClick(on:)`).
+    private let onNewsLink: (NewsItem) -> Void
+
     /// The footer checkbox and Settings ▸ Appearance are two views of this one
     /// key. Unticking never closes the window — it governs the next launch.
     @AppStorage(WelcomeWindow.showOnLaunchKey) private var showOnLaunch = true
@@ -239,6 +320,15 @@ struct WelcomeHomeView: View {
     @StateObject private var baton = WelcomeBaton()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
+
+    init(aiConfigured: Bool = false, newsItems: [NewsItem] = [],
+         onNewsLink: @escaping (NewsItem) -> Void = { _ in }) {
+        self.aiConfigured = aiConfigured
+        let news = newsItems.map(SlotItem.init(news:))
+        self._scienceItems = State(initialValue: news + WelcomeContent.science)
+        self.scienceLeadID = news.first?.id
+        self.onNewsLink = onNewsLink
+    }
 
     var body: some View {
         // The arrangement is decided by the WINDOW's width, read outside the scroll
@@ -309,15 +399,10 @@ struct WelcomeHomeView: View {
     }
 
     private var scienceCell: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            tag(i18n.t("desktop.welcome.home.tags.science"))
-            SlotRotator(items: WelcomeContent.science, storageKey: "welcome.rotator.science",
-                        sizesToTallestWhenStacked: true,
-                        onCurrent: { item, userPicked in report(.science, item, userPicked) })
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .welcomeCell(.science, large: true)
-        .batonCell(.science, baton)
+        ScienceCell(items: scienceItems, leadID: scienceLeadID,
+                    storageKey: "welcome.rotator.science", baton: baton,
+                    onNewsLink: onNewsLink,
+                    onCurrent: { item, userPicked in report(.science, item, userPicked) })
     }
 
     private var tipCell: some View {
@@ -396,12 +481,7 @@ struct WelcomeHomeView: View {
 
     // MARK: building blocks
 
-    private func tag(_ s: String) -> some View {
-        Text(s)
-            .font(.subheadline).fontWeight(.medium)
-            .textCase(.uppercase).kerning(0.4)
-            .foregroundStyle(.secondary)
-    }
+    private func tag(_ s: String) -> some View { welcomeTag(s) }
 
     private func slotBody(_ item: SlotItem) -> some View {
         let slot = resolve(item, i18n, fallbackLink: "more")
@@ -425,6 +505,103 @@ struct WelcomeHomeView: View {
         (try? AttributedString(markdown: s)) ?? AttributedString(s)
     }
     private func url(_ s: String) -> URL { URL(string: s) ?? URL(string: "https://bristlenose.app")! }
+}
+
+/// A cell's eyebrow: small caps, secondary.
+private func welcomeTag(_ s: String) -> some View {
+    Text(s)
+        .font(.subheadline).fontWeight(.medium)
+        .textCase(.uppercase).kerning(0.4)
+        .foregroundStyle(.secondary)
+}
+
+// MARK: - Scientific background cell (and the news slide it can carry)
+
+/// The Scientific background card. Its own view because it holds the one
+/// piece of state no other cell has: which kind of slide is showing. The card's
+/// tag and tint follow the current slide (owner, 16 Nov 2026): SCIENTIFIC
+/// BACKGROUND and the science tint on the drawn slides, the item's tone
+/// ("Community", "News") and the tone's colour set on a news slide. Both
+/// cross-fade with the slide, instantly under Reduce Motion.
+private struct ScienceCell: View {
+    @EnvironmentObject var i18n: I18n
+    let items: [SlotItem]
+    let leadID: String?
+    let storageKey: String
+    @ObservedObject var baton: WelcomeBaton
+    let onNewsLink: (NewsItem) -> Void
+    let onCurrent: (SlotItem, Bool) -> Void
+
+    @State private var tone: NewsCheck.Tone?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let eyebrow = WelcomeNewsTone.eyebrowKey(for: tone)
+        VStack(alignment: .leading, spacing: 8) {
+            welcomeTag(i18n.t(eyebrow))
+                .id(eyebrow)
+                .transition(.opacity)
+                // The rotator's value names the kind ("Community, Office hours,
+                // 1 of 6"), so VoiceOver hears the swap; the tag would say it twice.
+                .accessibilityHidden(true)
+            SlotRotator(items: items, storageKey: storageKey,
+                        sizesToTallestWhenStacked: true,
+                        leadID: leadID,
+                        kind: { item in i18n.t(WelcomeNewsTone.eyebrowKey(for: item.news?.tone)) },
+                        onRemoteLink: onNewsLink,
+                        onCurrent: { item, userPicked in
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+                                tone = item.news?.tone
+                            }
+                            onCurrent(item, userPicked)
+                        })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .welcomeCell(.science, large: true, tone: tone)
+        .batonCell(.science, baton)
+    }
+}
+
+/// The app-owned look of a news item, by its `tone` (spec §4): the eyebrow's
+/// key and the colour set per palette. The file names the tone, never a word
+/// or a colour, so an old app can never show a later tone dressed as something
+/// else (unknown tones and `alert` never reach the card; `NewsCheck` drops them).
+enum WelcomeNewsTone {
+    /// The card's tag for a slide: the science tag on a drawn slide (nil tone),
+    /// the tone's own eyebrow on a news slide.
+    static func eyebrowKey(for tone: NewsCheck.Tone?) -> String {
+        switch tone {
+        case nil: return "desktop.welcome.home.tags.science"
+        case .community?: return "desktop.welcome.home.tags.community"
+        // `alert` is reserved and never shown in v1; were it ever to reach
+        // here it reads as News, never as something cheerful.
+        case .news?, .alert?: return "desktop.welcome.home.tags.news"
+        }
+    }
+
+    /// The tint colour set, alpha baked in per appearance and with an Increase
+    /// Contrast variant (~5 %). Measured against AA for the link, the title and
+    /// the secondary text on each surface: see the colour sets' commit.
+    static func tintAsset(for tone: NewsCheck.Tone, edo: Bool) -> String {
+        let palette = edo ? "PaletteEdo" : "PaletteDefault"
+        switch tone {
+        case .community: return palette + "Community"
+        case .news, .alert: return palette + "News"
+        }
+    }
+
+    /// The link on a news slide. Default: the system link colour, as every
+    /// other slide's `Link` draws. Edo: its own set, because on Edo's dark
+    /// paper the system link colour falls below 4.5:1 under a tone tint.
+    static func linkColor(edo: Bool) -> Color {
+        edo ? Color("PaletteEdoNewsLink") : Color(nsColor: .linkColor)
+    }
+
+    /// Secondary text on a news slide: the system's, except Edo dark, which
+    /// needs a stronger one to clear 4.5:1 under the tint (`PaletteEdoNewsSecondary`).
+    static func secondary(edo: Bool) -> Color {
+        edo ? Color("PaletteEdoNewsSecondary") : Color(nsColor: .secondaryLabelColor)
+    }
 }
 
 // MARK: - Spiral layout (natural size, or one reflow step below it)
@@ -668,6 +845,45 @@ private extension View {
 // (getting-started → obscure), then it goes random — an ambient tour that turns into
 // reinforcement once you've seen the whole map. No auto-advance. VoiceOver via an
 // adjustable action; reduce-motion → instant.
+/// Which slide a rotator opens on, by **slide id**, never by index alone: a
+/// news item inserted at the front of the science card must not move the
+/// reader's place in the drawn slides (spec §5, UX review 16 Nov 2026).
+enum SlotRotation {
+    struct Start: Equatable {
+        var index: Int
+        /// True when the lead slide won. The caller then leaves the stored
+        /// place alone, so the drawn slides carry on where they were.
+        var isLead: Bool
+    }
+
+    /// - A `leadID` that is present always wins (a news item leads).
+    /// - Curriculum (the Tip cell): the first `count` visits walk the list in
+    ///   order, one per launch; then random, never the last one shown twice.
+    /// - Otherwise next-per-visit: one past the stored slide. An id that is no
+    ///   longer in the list (an item that ended) restarts at the first slide.
+    ///   With no id stored yet, `legacyIndex` (what the rotator stored before
+    ///   ids) stands in, so an upgrade keeps the reader's place.
+    /// `random(n)` returns a value in `0..<n`.
+    static func start(ids: [String], lastID: String, legacyIndex: Int, visits: Int,
+                      curriculum: Bool, leadID: String?, random: (Int) -> Int) -> Start {
+        let count = ids.count
+        guard count > 0 else { return Start(index: 0, isLead: false) }
+        if let leadID, let lead = ids.firstIndex(of: leadID) {
+            return Start(index: lead, isLead: true)
+        }
+        let last: Int = lastID.isEmpty ? legacyIndex : (ids.firstIndex(of: lastID) ?? -1)
+        if curriculum {
+            if visits < count { return Start(index: visits, isLead: false) }
+            if count == 1 { return Start(index: 0, isLead: false) }
+            var pick = random(count)
+            if pick == last { pick = (pick + 1) % count }   // no back-to-back repeat
+            return Start(index: pick, isLead: false)
+        }
+        let next = (last + 1) % count
+        return Start(index: next < 0 ? 0 : next, isLead: false)
+    }
+}
+
 private struct SlotRotator: View {
     @EnvironmentObject var i18n: I18n
     let items: [SlotItem]
@@ -681,7 +897,20 @@ private struct SlotRotator: View {
     /// Baton: report the current slot, and whether the RESEARCHER put it there.
     /// A first appearance is registration; a chevron, swipe, dot or arrow key is intent.
     let onCurrent: ((SlotItem, Bool) -> Void)?
-    @AppStorage private var lastIndex: Int
+    /// A slide to open on whenever it is present (a news item), overriding
+    /// next-per-visit. See `SlotRotation.start`.
+    let leadID: String?
+    /// The card's kind for a slide, when the rotator speaks it (the science
+    /// card, whose visible tag swaps and is hidden from VoiceOver).
+    let kind: ((SlotItem) -> String)?
+    /// A news slide's link was clicked.
+    let onRemoteLink: ((NewsItem) -> Void)?
+    /// Where the reader last was, BY SLIDE ID (`SlotItem.id`), so a slide
+    /// inserted at the front never moves them.
+    @AppStorage private var lastID: String
+    /// The index this rotator stored before it stored ids. Read once, when no
+    /// id has been stored yet, so an upgrade keeps the reader's place.
+    @AppStorage private var legacyIndex: Int
     @AppStorage private var visits: Int
     @State private var index = 0
     @State private var started = false
@@ -689,17 +918,28 @@ private struct SlotRotator: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Caps are rasterised per appearance, so the rotator has to know it.
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.openURL) private var openURL
+    @AppStorage("palette") private var palette: String = "default"
 
     init(items: [SlotItem], storageKey: String, curriculum: Bool = false,
          sizesToTallestWhenStacked: Bool = false,
+         leadID: String? = nil,
+         kind: ((SlotItem) -> String)? = nil,
+         onRemoteLink: ((NewsItem) -> Void)? = nil,
          onCurrent: ((SlotItem, Bool) -> Void)? = nil) {
         self.items = items
         self.curriculum = curriculum
         self.sizesToTallestWhenStacked = sizesToTallestWhenStacked
+        self.leadID = leadID
+        self.kind = kind
+        self.onRemoteLink = onRemoteLink
         self.onCurrent = onCurrent
-        self._lastIndex = AppStorage(wrappedValue: -1, storageKey)
+        self._lastID = AppStorage(wrappedValue: "", storageKey + ".id")
+        self._legacyIndex = AppStorage(wrappedValue: -1, storageKey)
         self._visits = AppStorage(wrappedValue: 0, storageKey + ".visits")
     }
+
+    private var ids: [String] { items.map(\.id) }
 
     private var count: Int { items.count }
     private var currentItem: SlotItem { items[min(index, max(0, count - 1))] }
@@ -737,8 +977,7 @@ private struct SlotRotator: View {
         .onKeyPress(.leftArrow)  { go(index - 1); return .handled }
         .onKeyPress(.rightArrow) { go(index + 1); return .handled }
         .accessibilityElement(children: .contain)
-        .accessibilityValue(i18n.t("desktop.welcome.home.rotatorPosition",
-                                   ["n": "\(index + 1)", "total": "\(count)"]))
+        .accessibilityValue(accessibilityValue)
         .accessibilityAdjustableAction { dir in
             switch dir {
             case .increment: go(index + 1)
@@ -749,27 +988,32 @@ private struct SlotRotator: View {
         .onAppear {
             guard !started else { return }
             started = true
-            index = startIndex()
+            let start = SlotRotation.start(ids: ids, lastID: lastID, legacyIndex: legacyIndex,
+                                           visits: visits, curriculum: curriculum, leadID: leadID,
+                                           random: { Int.random(in: 0..<$0) })
+            index = start.index
             visits += 1
-            lastIndex = index
+            // A lead slide is the file's choice, not the reader's place: keep
+            // where they were, so the drawn slides carry on once the item ends.
+            if !start.isLead, ids.indices.contains(index) { lastID = ids[index] }
             onCurrent?(currentItem, false)   // registration, not a choice
         }
     }
 
-    // Which slot to open on this visit.
-    // • Curriculum, still touring (visits < count): walk the list in order, one per launch.
-    // • Curriculum, tour done: random, avoiding an immediate repeat of the last shown.
-    // • Non-curriculum (Science/Study cells): unchanged next-per-visit.
-    private func startIndex() -> Int {
-        guard count > 0 else { return 0 }
-        if curriculum {
-            if visits < count { return visits }
-            if count == 1 { return 0 }
-            var pick = Int.random(in: 0..<count)
-            if pick == lastIndex { pick = (pick + 1) % count }   // no back-to-back repeat
-            return pick
+    /// "Community, Office hours, 1 of 6" where the rotator speaks its kind (the
+    /// science card), else the plain "1 of 6".
+    private var accessibilityValue: String {
+        let n = "\(index + 1)", total = "\(count)"
+        guard let kind, count > 0 else {
+            return i18n.t("desktop.welcome.home.rotatorPosition", ["n": n, "total": total])
         }
-        return (lastIndex + 1) % count   // next-per-visit
+        let kindText = kind(currentItem)
+        guard let title = resolve(currentItem, i18n).title else {
+            return i18n.t("desktop.welcome.home.rotatorKindPosition",
+                          ["kind": kindText, "n": n, "total": total])
+        }
+        return i18n.t("desktop.welcome.home.rotatorItem",
+                      ["kind": kindText, "title": title, "n": n, "total": total])
     }
 
     private func go(_ n: Int) {
@@ -777,15 +1021,30 @@ private struct SlotRotator: View {
         let wrapped = ((n % count) + count) % count   // wrap-around; seamless because content cross-fades (no slide to teleport)
         guard wrapped != index else { return }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) { index = wrapped }
-        lastIndex = wrapped
+        lastID = ids[wrapped]
         onCurrent?(items[wrapped], true)   // every caller of `go` is the researcher
+    }
+
+    private var isEdo: Bool { palette == "edo" }
+
+    /// A slot's sentence, drawn as `WelcomeSlotProse` decides.
+    private func prose(_ text: String, remote: Bool) -> Text {
+        switch WelcomeSlotProse.of(text, remote: remote) {
+        case .verbatim(let s): return Text(verbatim: s)
+        case .markdown(let s): return welcomeKeyText(s, dark: scheme == .dark)
+        }
+    }
+
+    /// A news slide's secondary colour (Edo dark needs its own; see `WelcomeNewsTone`).
+    private func secondaryStyle(remote: Bool) -> AnyShapeStyle {
+        remote ? AnyShapeStyle(WelcomeNewsTone.secondary(edo: isEdo)) : AnyShapeStyle(.secondary)
     }
 
     @ViewBuilder private func slotView(_ item: SlotItem) -> some View {
         let slot = resolve(item, i18n)
         VStack(alignment: .leading, spacing: 3) {
             if let title = slot.title {
-                Text(title).font(.title3).fontWeight(.semibold)
+                Text(verbatim: title).font(.title3).fontWeight(.semibold)
             }
             if let more = slot.more {
                 // Progressive disclosure inside the fixed cell (never a trim): show
@@ -793,12 +1052,18 @@ private struct SlotRotator: View {
                 // sentence ONLY when a larger cell can display all of it un-truncated.
                 // ViewThatFits picks the first (richest) candidate that fits vertically.
                 ViewThatFits(in: .vertical) {
-                    tipBody(joinSentences(slot.text, more))
-                    tipBody(slot.text)
+                    tipBody(joinSentences(slot.text, more), remote: slot.remote)
+                    // A news item's core sentence is shown whole, never cut
+                    // mid-word (spec §5, "Fitting words"): it takes its own
+                    // height, and the cell's clip stays the last backstop.
+                    // Measured: German at the smallest cell otherwise ended
+                    // in "…" with two lines of room left under the link.
+                    tipBody(slot.text, remote: slot.remote)
+                        .fixedSize(horizontal: false, vertical: slot.remote)
                 }
             } else if !slot.text.isEmpty {
-                welcomeKeyText(slot.text, dark: scheme == .dark)
-                    .font(.body).foregroundStyle(.secondary)
+                prose(slot.text, remote: slot.remote)
+                    .font(.body).foregroundStyle(secondaryStyle(remote: slot.remote))
             }
             if item.illustration != .none {
                 illustrationView(item.illustration)
@@ -822,7 +1087,24 @@ private struct SlotRotator: View {
             // Styled to read as the same accent link a `Link` produces (matching the AI cell's
             // `Setup →`); the AppKit Settings window opens on the requested pane directly, so
             // no SettingsLink (tied to the removed SwiftUI Settings scene) and no tab-key hack.
-            if let destination = item.primaryDestination {
+            if let news = item.news {
+                // A Button rather than a `Link` so the click is recorded before
+                // the browser opens; drawn as a link. The href passed the app's
+                // allowlist in `NewsCheck.validateLink`. Words verbatim; the
+                // arrow is ours and VoiceOver does not read it.
+                Button {
+                    onRemoteLink?(news)
+                    openURL(news.href)
+                } label: {
+                    Text(verbatim: cta(news.link)).font(.callout)
+                        .foregroundStyle(WelcomeNewsTone.linkColor(edo: isEdo))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(verbatim: news.link))
+                .accessibilityAddTraits(.isLink)
+                .accessibilityRemoveTraits(.isButton)
+                .padding(.vertical, 2)
+            } else if let destination = item.primaryDestination {
                 Button {
                     switch destination {
                     case .mcpAgentsSettings: SettingsWindow.shared.show(pane: .mcpAgents)
@@ -861,12 +1143,12 @@ private struct SlotRotator: View {
         let slot = resolve(item, i18n)
         return VStack(alignment: .leading, spacing: 3) {
             if let title = slot.title {
-                Text(title).font(.title3).fontWeight(.semibold)
+                Text(verbatim: title).font(.title3).fontWeight(.semibold)
             }
             if let more = slot.more {
-                tipBody(joinSentences(slot.text, more))
+                tipBody(joinSentences(slot.text, more), remote: slot.remote)
             } else if !slot.text.isEmpty {
-                welcomeKeyText(slot.text, dark: scheme == .dark).font(.body)
+                prose(slot.text, remote: slot.remote).font(.body)
             }
             if item.illustration != .none {
                 Color.clear
@@ -874,7 +1156,7 @@ private struct SlotRotator: View {
                     .padding(.vertical, 8)
             }
             if item.primaryDestination != nil || !item.href.isEmpty {
-                Text(cta(slot.linkLabel)).font(.callout).padding(.vertical, 2)
+                Text(verbatim: cta(slot.linkLabel)).font(.callout).padding(.vertical, 2)
             }
             if let href2 = item.href2, !href2.isEmpty, let label2 = slot.linkLabel2 {
                 Text(cta(label2)).font(.callout).padding(.vertical, 2)
@@ -888,9 +1170,9 @@ private struct SlotRotator: View {
     // text to demand its full height and ignore the cell bounds, breaking the grid AND
     // ViewThatFits's fit test. Plain Text lets ViewThatFits measure the true wrapped
     // height against the cell's real height and pick the candidate that fits.
-    private func tipBody(_ s: String) -> some View {
-        welcomeKeyText(s, dark: scheme == .dark)
-            .font(.body).foregroundStyle(.secondary)
+    private func tipBody(_ s: String, remote: Bool) -> some View {
+        prose(s, remote: remote)
+            .font(.body).foregroundStyle(secondaryStyle(remote: remote))
             .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -1083,8 +1365,9 @@ private enum WelcomePalette {
 // MARK: - Cell surface (accent-tint over the control background)
 
 private extension View {
-    func welcomeCell(_ tint: WelcomeCellTint, large: Bool = false, alignment: Alignment = .topLeading) -> some View {
-        modifier(WelcomeCellStyle(tint: tint, large: large, alignment: alignment))
+    func welcomeCell(_ tint: WelcomeCellTint, large: Bool = false, alignment: Alignment = .topLeading,
+                     tone: NewsCheck.Tone? = nil) -> some View {
+        modifier(WelcomeCellStyle(tint: tint, large: large, alignment: alignment, tone: tone))
     }
 }
 
@@ -1098,8 +1381,17 @@ private struct WelcomeCellStyle: ViewModifier {
     let tint: WelcomeCellTint
     var large: Bool = false
     var alignment: Alignment = .topLeading
+    /// A news slide's tone: its colour set replaces the cell's tint for that
+    /// slide only. The set carries its own alpha per appearance and Increase
+    /// Contrast (`WelcomeNewsTone.tintAsset`), so no opacity is applied here.
+    var tone: NewsCheck.Tone? = nil
     @AppStorage("palette") private var palette: String = "default"
     @AppStorage(BristlenoseFlags.welcomeTintCandidateKey) private var candidate = false
+
+    private var fill: Color {
+        if let tone { return Color(WelcomeNewsTone.tintAsset(for: tone, edo: isEdo)) }
+        return accent.opacity(tint.value(candidate: candidate))
+    }
 
     private var isEdo: Bool { palette == "edo" }
     private var accent: Color { WelcomePalette.accent(edo: isEdo) }
@@ -1113,8 +1405,7 @@ private struct WelcomeCellStyle: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: r)
                     .fill(surface)
-                    .overlay(RoundedRectangle(cornerRadius: r)
-                        .fill(accent.opacity(tint.value(candidate: candidate))))
+                    .overlay(RoundedRectangle(cornerRadius: r).fill(fill))
             )
             // Backstop for the fixed geometry: content is meant to bend to the slot, but if
             // any ever exceeds it, clip to the cell rather than letting it break the spiral.
@@ -1152,6 +1443,60 @@ private func previewI18n() -> I18n {
     WelcomeHomeView(aiConfigured: true).frame(width: 940, height: 600)
         .environmentObject(previewI18n())
 }
+
+#if DEBUG
+/// The Scientific background card on its own, opening on a news item, at a
+/// given size: the real `ScienceCell`, not a copy. For the Degradation Lab's
+/// news row and for render probes. Its rotator stores its place under a key of
+/// its own, so a preview never moves the real card.
+struct WelcomeNewsCardPreview: View {
+    let item: NewsItem
+    let size: CGSize
+    @StateObject private var baton = WelcomeBaton()
+
+    var body: some View {
+        let news = SlotItem(news: item)
+        ScienceCell(items: [news] + WelcomeContent.science, leadID: news.id,
+                    storageKey: "welcome.rotator.newsPreview", baton: baton,
+                    onNewsLink: { _ in }, onCurrent: { _, _ in })
+            .frame(width: size.width, height: size.height)
+    }
+
+    /// The smallest Scientific background cell the spiral draws: the window at
+    /// the width below which it stacks (`WelcomeWindow.stackBelowContentWidth`).
+    static var smallestCell: CGSize {
+        let w = WelcomeWindow.stackBelowContentWidth - 40
+        return WelcomeSpiralLayout.frames(width: w, stacked: false)[1].size
+    }
+
+    /// Office hours, as the spec's sample file carries it (`en`), and a German
+    /// draft for the fit test (a fixture, not a translation to ship).
+    static func officeHours(german: Bool = false) -> NewsItem {
+        NewsItem(
+            id: "office-hours-2026-12-15", tone: .community, locale: german ? "de" : "en",
+            title: german ? "Sprechstunde" : "Office hours",
+            text: german
+                ? "Sprechen Sie mit Martin Storey, dem Autor von Bristlenose, am Dienstag, 15. Dezember, 17.30 bis 18.30 Uhr britischer Zeit."
+                : "Drop in with Martin Storey, author of Bristlenose, on Tuesday 15 December, 5.30 to 6.30pm UK time.",
+            more: german
+                ? "Bringen Sie eine Frage mit, oder etwas, das repariert, verbessert oder ergänzt werden soll."
+                : "Bring a question, or something that needs fixing, improving or adding.",
+            link: german ? "Zur Sprechstunde" : "Office hours details",
+            href: URL(string: "https://bristlenose.app/community/?ref=app-news&id=office-hours-2026-12-15#office-hours")!,
+            from: Date(timeIntervalSince1970: 1_765_411_200),
+            until: Date(timeIntervalSince1970: 1_765_823_400))
+    }
+}
+
+#Preview("News card · community · light") {
+    WelcomeNewsCardPreview(item: WelcomeNewsCardPreview.officeHours(), size: CGSize(width: 287, height: 285))
+        .padding().environmentObject(previewI18n())
+}
+#Preview("News card · community · dark") {
+    WelcomeNewsCardPreview(item: WelcomeNewsCardPreview.officeHours(), size: CGSize(width: 287, height: 285))
+        .padding().preferredColorScheme(.dark).environmentObject(previewI18n())
+}
+#endif
 
 // MARK: - Stacked arrangement flag
 

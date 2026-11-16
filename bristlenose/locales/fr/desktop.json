@@ -595,7 +595,9 @@
         "studyTools": "Outils d’étude",
         "science": "Fondements scientifiques",
         "tip": "Astuce",
-        "ai": "IA"
+        "ai": "IA",
+        "community": "Communauté",
+        "news": "Actualités"
       },
       "learnMore": "En savoir plus",
       "more": "Plus",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Clip découpé par verbatim"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} sur {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} sur {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Continuer",
     "useOllama": "Utiliser un modèle Ollama sur l'appareil",
     "ollamaDownloadSize": "~%@ à télécharger",
-    "done": "Terminé"
+    "done": "Terminé",
+    "countsChoice": "Envoyer des décomptes quotidiens anonymes pour aider à améliorer Bristlenose",
+    "countsExplain": "Une fois par jour : la version de l’app et sa provenance, s’il s’agit de sa toute première vérification ou de la première du mois, et le nombre d’ouvertures de la fenêtre de bienvenue. Rien sur vos projets. Vous pouvez modifier ce choix dans Réglages."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Me pr\u00e9venir \u00e0 la fin de l\u2019analyse",
       "body": "macOS va maintenant vous demander si Bristlenose peut envoyer des notifications. Vous pouvez modifier ce choix dans {{path}}.",
       "continue": "Continuer"
+    }
+  },
+  "news": {
+    "privacy": "Confidentialité",
+    "settings": {
+      "checkLabel": "Rechercher les actualités sur bristlenose.app",
+      "checkExplain": "Au plus une fois par jour. Les actualités et les événements de la communauté s’affichent dans la fenêtre de bienvenue.",
+      "countsLabel": "Envoyer des décomptes quotidiens anonymes",
+      "countsExplain": "Envoyés avec la vérification quotidienne : la version de l’app et sa provenance, s’il s’agit de la toute première vérification ou de la première du mois, et le nombre d’ouvertures de la fenêtre de bienvenue. Rien sur vos projets.",
+      "managed": "Géré par votre organisation"
     }
   }
 }

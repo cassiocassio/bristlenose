@@ -595,7 +595,9 @@
         "studyTools": "Eines d'estudi",
         "science": "Fonaments científics",
         "tip": "Consell",
-        "ai": "IA"
+        "ai": "IA",
+        "community": "Comunitat",
+        "news": "Novetats"
       },
       "learnMore": "Més informació",
       "more": "Més",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Un clip retallat per cita"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} de {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} de {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Continua",
     "useOllama": "Utilitza un model d'Ollama al dispositiu",
     "ollamaDownloadSize": "~%@ de baixada",
-    "done": "Fet"
+    "done": "Fet",
+    "countsChoice": "Envia recomptes diaris anònims per ajudar a millorar el Bristlenose",
+    "countsExplain": "Un cop al dia: la versió de l'app i d'on l'has obtingut, si és la primera comprovació de sempre o d'aquest mes, i quantes vegades s'ha obert la finestra de benvinguda. Res sobre els teus projectes. Ho pots canviar a Configuració."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Avisa'm quan acabi l'an\u00e0lisi",
       "body": "A continuaci\u00f3, macOS et preguntar\u00e0 si Bristlenose pot enviar notificacions. Ho pots canviar a {{path}}.",
       "continue": "Continua"
+    }
+  },
+  "news": {
+    "privacy": "Privadesa",
+    "settings": {
+      "checkLabel": "Comprova si hi ha novetats a bristlenose.app",
+      "checkExplain": "Com a màxim un cop al dia. Les novetats i els esdeveniments de la comunitat apareixen a la finestra de benvinguda.",
+      "countsLabel": "Envia recomptes diaris anònims",
+      "countsExplain": "S'envien amb la comprovació diària: la versió de l'app i d'on l'has obtingut, si és la primera comprovació de sempre o d'aquest mes, i quantes vegades s'ha obert la finestra de benvinguda. Res sobre els teus projectes.",
+      "managed": "Gestionat per la teva organització"
     }
   }
 }

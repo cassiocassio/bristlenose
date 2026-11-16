@@ -61,6 +61,9 @@ final class SettingsWindow {
     /// Read for one question only: is an analysis running? A language change
     /// offers to relaunch, and relaunching mid-run would kill the subprocess.
     var pipelineRunner: PipelineRunner?
+    /// The news check, set at launch like the others. General's news switch
+    /// calls `newsSwitchChanged()` on it (off deletes the cached file).
+    var newsFetcher: NewsFetcher?
 
     /// True when any project is mid-analysis.
     var isAnalysing: Bool {

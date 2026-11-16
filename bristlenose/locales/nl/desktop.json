@@ -595,7 +595,9 @@
         "studyTools": "Onderzoekstools",
         "science": "Wetenschappelijke basis",
         "tip": "Tip",
-        "ai": "AI"
+        "ai": "AI",
+        "community": "Community",
+        "news": "Nieuws"
       },
       "learnMore": "Meer info",
       "more": "Meer",
@@ -836,7 +838,9 @@
       },
       "clipsIllustration": {
         "subtitle": "Geknipte clip per citaat"
-      }
+      },
+      "rotatorItem": "{{kind}}, {{title}}, {{n}} van {{total}}",
+      "rotatorKindPosition": "{{kind}}, {{n}} van {{total}}"
     }
   },
   "toolbar": {
@@ -900,7 +904,9 @@
     "continue": "Ga door",
     "useOllama": "Gebruik Ollama-model op apparaat",
     "ollamaDownloadSize": "~%@ download",
-    "done": "Klaar"
+    "done": "Klaar",
+    "countsChoice": "Stuur anonieme dagelijkse tellingen om Bristlenose te helpen verbeteren",
+    "countsExplain": "Eén keer per dag: de versie van de app en waar je die vandaan hebt, of dit de allereerste controle is of de eerste van deze maand, en hoe vaak het welkomstvenster is geopend. Niets over je projecten. Je kunt dit wijzigen in Instellingen."
   },
   "llmSettings": {
     "validation": {
@@ -1369,6 +1375,16 @@
       "title": "Waarschuw me als de analyse klaar is",
       "body": "macOS vraagt nu of Bristlenose meldingen mag sturen. Je kunt dit wijzigen in {{path}}.",
       "continue": "Ga door"
+    }
+  },
+  "news": {
+    "privacy": "Privacy",
+    "settings": {
+      "checkLabel": "Zoek naar nieuws op bristlenose.app",
+      "checkExplain": "Hooguit één keer per dag. Nieuws en communityevenementen verschijnen in het welkomstvenster.",
+      "countsLabel": "Stuur anonieme dagelijkse tellingen",
+      "countsExplain": "Verstuurd met de dagelijkse controle: de versie van de app en waar je die vandaan hebt, of het de allereerste controle is of de eerste van deze maand, en hoe vaak het welkomstvenster is geopend. Niets over je projecten.",
+      "managed": "Beheerd door je organisatie"
     }
   }
 }

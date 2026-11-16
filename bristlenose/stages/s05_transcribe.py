@@ -1034,8 +1034,14 @@ def whisper_is_on_disk(settings: BristlenoseSettings) -> bool:
     that has always worked, and guessing "absent" would route around it.
     """
     try:
-        from bristlenose.preflight.whisper import _resolve_repo_id, cache_state
+        from bristlenose.preflight.whisper import (
+            _resolve_repo_id,
+            cache_state,
+            local_model_dir,
+        )
 
+        if local_model_dir(settings) is not None:
+            return True
         return cache_state(_resolve_repo_id(settings)) == "cached"
     except Exception:  # noqa: BLE001 — a probe must not cost the run
         logger.warning("Whisper cache probe failed; assuming it is on disk", exc_info=True)
@@ -1373,6 +1379,10 @@ def _init_mlx_backend(
         # heartbeat to surface (per-file progress still ticks in the caller).
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
+        from bristlenose.preflight.whisper import local_model_dir
+
+        if (host_dir := local_model_dir(settings)) is not None:
+            model_name = str(host_dir)  # delivered by the app (Background Assets)
 
         # Decode once, here, so the signal gate and Whisper read the same
         # samples. `transcribe` would otherwise run this same ffmpeg call on

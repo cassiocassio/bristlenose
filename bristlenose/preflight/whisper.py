@@ -197,6 +197,46 @@ def unknown_model_message(settings: BristlenoseSettings) -> str | None:
     return " ".join(parts)
 
 
+def local_model_dir(settings: BristlenoseSettings) -> Path | None:
+    """The host-delivered model directory for this run, else ``None`` (SPIKE).
+
+    The one resolver for a model the Mac app delivered outside the Hugging Face
+    cache (Background Assets). Honoured only on the MLX path: faster-whisper
+    resolves ``BRISTLENOSE_WHISPER_MODEL_DIR`` itself. The directory is
+    ``<BRISTLENOSE_WHISPER_MODEL_DIR>/<canonical name>``, canonical meaning the
+    longest key of the MLX table that points at the same repo (``turbo`` and
+    ``large-v3-turbo`` both live in ``large-v3-turbo/``). Valid only when
+    ``config.json`` and a weights file are both there: a half-delivered pack is
+    absent, never a crash.
+    """
+    base = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")
+    if not base or _active_backend(settings) != "mlx":
+        return None
+    from bristlenose.stages.s05_transcribe import MLX_REPO_FOR_MODEL
+
+    repo = MLX_REPO_FOR_MODEL.get(settings.whisper_model)
+    if repo is None:
+        return None
+    canonical = max((k for k, v in MLX_REPO_FOR_MODEL.items() if v == repo), key=len)
+    candidate = Path(base) / canonical
+    if not (candidate / "config.json").is_file():
+        return None
+    if not any((candidate / w).is_file() for w in ("weights.safetensors", "weights.npz")):
+        return None
+    return candidate
+
+
+#: Set by the Mac app whenever it owns the Whisper download (Background Assets,
+#: or a pack it has already delivered). Python then never fetches: it uses a
+#: valid host directory or stops with the same refusal as ``--no-fetch``.
+_HOST_OWNS_ENV = "_BRISTLENOSE_WHISPER_HOST_OWNS"
+
+
+def host_owns_download() -> bool:
+    """True when the host app, not Python, is responsible for the model."""
+    return os.environ.get(_HOST_OWNS_ENV, "").strip() == "1"
+
+
 def _hf_cache_root() -> Path:
     """Resolve the active HF Hub cache root, exactly as huggingface_hub does.
 
@@ -616,12 +656,15 @@ def preflight_whisper(
         raise WhisperPreflightAbortedError(refusal)
 
     repo_id = _resolve_repo_id(settings)
+    if local_model_dir(settings) is not None:
+        logger.info("preflight_whisper: %s delivered by the host app", repo_id)
+        return
     state = cache_state(repo_id)
     if state == "cached":
         logger.info("preflight_whisper: %s already cached", repo_id)
         return
 
-    if not allow_fetch:
+    if not allow_fetch or host_owns_download():
         raise WhisperPreflightAbortedError(
             t("preflight.whisper.aborted_no_fetch", repo_id=repo_id)
         )
@@ -831,6 +874,9 @@ def whisper_status_line(settings: BristlenoseSettings) -> str:
     0 when nothing is there.
     """
     repo_id = _resolve_repo_id(settings)
+    if (host_dir := local_model_dir(settings)) is not None:
+        size = sum(f.stat().st_size for f in host_dir.iterdir() if f.is_file())
+        return f"@whisper-status cached {repo_id} {size}"
     state = cache_state(repo_id)
     size = _bytes_on_disk(repo_id) if state == "cached" else 0
     return f"@whisper-status {state} {repo_id} {size}"
@@ -975,10 +1021,14 @@ def fetch_with_progress_lines(
         raise PreflightAbortedError(refusal)
     repo_id = _resolve_repo_id(settings)
     t0 = clock()
-    if cache_state(repo_id) == "cached":
+    if local_model_dir(settings) is not None or cache_state(repo_id) == "cached":
         out(f"@download-start {repo_id} 0")
         out("@download-done 0")
         return
+    if host_owns_download():
+        raise PreflightAbortedError(
+            t("preflight.whisper.aborted_no_fetch", repo_id=repo_id)
+        )
     discard_stale_partials(repo_id)
     ensure_disk_room(repo_id)
     total = _server_total_bytes(repo_id)

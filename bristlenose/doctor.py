@@ -325,17 +325,30 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     import os
 
     from bristlenose.preflight.whisper import (
+        _active_backend,
         _resolve_repo_id,
         cache_state,
         download_size_human,
+        local_model_dir,
         unknown_model_message,
     )
 
     model_name = settings.whisper_model
 
+    # A model the app delivered outside the Hugging Face cache, complete.
+    if (host_dir := local_model_dir(settings)) is not None:
+        host_bytes = sum(f.stat().st_size for f in host_dir.iterdir() if f.is_file())
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="Whisper model",
+            detail=f"{model_name} delivered by the app ({host_bytes / (1024**3):.1f} GB)",
+        )
+
     # Check bundled model directory first (desktop app sets BRISTLENOSE_WHISPER_MODEL_DIR)
     model_dir = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")
-    if model_dir:
+    # On the MLX path a bare directory proves nothing (the run needs config + weights,
+    # which `local_model_dir` already checked above), so only other backends trust it.
+    if model_dir and _active_backend(settings) != "mlx":
         candidate = os.path.join(model_dir, model_name)
         if os.path.isdir(candidate):
             # Count total size of the bundled model directory

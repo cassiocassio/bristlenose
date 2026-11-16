@@ -33,11 +33,13 @@ import re
 import subprocess
 import threading
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -45,10 +47,18 @@ from bristlenose import screen_text
 from bristlenose.output_paths import project_output_dir
 from bristlenose.screen_text import ReadFailure, Unavailable
 from bristlenose.screen_text.index import cache_key, index_dir, read_index, stored_key
-from bristlenose.screen_text.screens import SessionInput, derive_screens
+from bristlenose.screen_text.screens import (
+    SECTION,
+    NamedScreen,
+    SessionInput,
+    derive_screens,
+    named_eligible,
+    visits_of,
+)
 from bristlenose.server import speaker_slots
 from bristlenose.server.grounding import quote_dom_id
-from bristlenose.server.models import Project, ScreenArrangement
+from bristlenose.server.heading_names import HeadingNames
+from bristlenose.server.models import ClusterQuote, Project, ScreenArrangement, ScreenCluster
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.server.screen_text_job import session_durations
 from bristlenose.utils.bundled_binary import binary_command
@@ -59,8 +69,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 _CACHE: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
-#: Whether the indexes show any screen, by their identity (the first part of ``_CACHE``'s key). Not
-#: keyed on the quotes: they place and pin on screens, they never make or remove one.
+#: By the indexes' identity (the first part of ``_CACHE``'s key): whether they alone show a screen
+#: keyed on what was on screen (an address or a title), which quotes never make or remove, and
+#: whether any session may have its screens named by sections (``named_eligible``).
+_HAS_PAGE_SCREENS: dict[tuple[Any, ...], tuple[bool, bool]] = {}
+#: Whether the study has any screen at all, page or section, by the indexes' identity and the
+#: sections' (``_sections_ident``): a section's quotes make its screen where no page keys one.
 _HAS_SCREENS: dict[tuple[Any, ...], bool] = {}
 _DERIVE_LOCK = threading.Lock()
 _STILL_MAX_W = 1600
@@ -88,6 +102,67 @@ def _ident(project_id: int, mtimes: dict[str, int]) -> tuple[Any, ...]:
 def _remember_has_screens(ident: tuple[Any, ...], screens: list[dict[str, Any]]) -> None:
     _HAS_SCREENS.clear()  # one project per server; the latest identity is all that is wanted
     _HAS_SCREENS[ident] = bool(screens)
+
+
+def _remember_page_facts(ident: tuple[Any, ...], has_page: bool,
+                         recs: Iterable[dict[str, Any]]) -> tuple[bool, bool]:
+    facts = (has_page, any(named_eligible(rec, visits_of(rec)) for rec in recs))
+    _HAS_PAGE_SCREENS.clear()  # one project per server
+    _HAS_PAGE_SCREENS[ident] = facts
+    return facts
+
+
+def _evidence_ident(db: Session, project_id: int) -> tuple[Any, ...]:
+    """Which quotes count as evidence, as ``speaker_slots.evidence_out`` decides it (a speaker
+    recoded as moderator, words moved off a participant): a section screen exists only for the
+    evidence quotes, so a recode must re-derive ``has_screens``. A small set; fit for the poll."""
+    out = speaker_slots.evidence_out(db, project_id)
+    return tuple(sorted(out)), tuple(sorted(out.quotes))
+
+
+def _sections_ident(db: Session, project_id: int) -> tuple[int, int, int]:
+    """A cheap fingerprint of which quote is in which section: changes when a re-import or a
+    researcher's move changes membership. One aggregate query, fit for the 3 s status poll."""
+    row = (db.query(func.count(ClusterQuote.id), func.coalesce(func.sum(ClusterQuote.cluster_id), 0),
+                    func.coalesce(func.sum(ClusterQuote.cluster_id * ClusterQuote.quote_id), 0))
+           .join(ScreenCluster, ScreenCluster.id == ClusterQuote.cluster_id)
+           .filter(ScreenCluster.project_id == project_id).one())
+    return int(row[0]), int(row[1]), int(row[2])
+
+
+def _named_screens(db: Session, project_id: int, dom_of: dict[int, str]) -> list[NamedScreen]:
+    """The project's sections as screens: key ``section:<id>``, their quotes' DOM ids (only quotes
+    that count as evidence, ``dom_of``). Named with the pipeline's label; the researcher's rename
+    is applied after the cache (``_with_section_names``), so a rename never re-derives."""
+    members: dict[int, set[str]] = {}
+    for cid, qid in (db.query(ClusterQuote.cluster_id, ClusterQuote.quote_id)
+                     .join(ScreenCluster, ScreenCluster.id == ClusterQuote.cluster_id)
+                     .filter(ScreenCluster.project_id == project_id).all()):
+        if qid in dom_of:
+            members.setdefault(cid, set()).add(dom_of[qid])
+    labels = dict(db.query(ScreenCluster.id, ScreenCluster.screen_label)
+                  .filter(ScreenCluster.project_id == project_id).all())
+    return [NamedScreen(f"{SECTION}{cid}", labels.get(cid, ""), frozenset(ds))
+            for cid, ds in sorted(members.items())]
+
+
+def _with_section_names(db: Session, project_id: int,
+                        screens: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The screens with each section's name as the researcher sees it (``HeadingNames``: the rename
+    if there is one, else the pipeline's label; an empty rename falls back to the label, so a
+    screen is never untitled). Copies: the cached dicts are never changed."""
+    if not any(sc["key"].startswith(SECTION) for sc in screens):
+        return screens
+    names = HeadingNames.load(db, project_id)
+    labels = dict(db.query(ScreenCluster.id, ScreenCluster.screen_label)
+                  .filter(ScreenCluster.project_id == project_id).all())
+    out = []
+    for sc in screens:
+        if sc["key"].startswith(SECTION):
+            cid = int(sc["key"][len(SECTION):])
+            sc = {**sc, "name": names.section_edit(cid) or labels.get(cid, sc["name"])}
+        out.append(sc)
+    return out
 
 
 # The shape ``screen_text/screens.py``'s ``derive_screens`` returns, field for field.
@@ -159,9 +234,14 @@ class ScreensStatusResponse(BaseModel):
     #: Recording seconds read per wall-clock second by the current (or last) pass; null until
     #: that pass has read one recording.
     rate: float | None
-    #: At least one screen derived from this study's indexes. False with nothing indexed, and for
-    #: recordings that are all talking heads (text, but no address or title to key a screen on).
+    #: At least one screen derived from this study's indexes and sections. False with nothing
+    #: indexed, and for recordings that are all talking heads (text, but no address or title to
+    #: key a screen on, and too little text for a section to name one).
     has_screens: bool
+    #: At least one screen keyed on what a recording showed (an address or a title), from the
+    #: indexes alone. The AutoCode house default reads this, not ``has_screens``: whether it spends
+    #: is unchanged by section screens.
+    has_page_screens: bool
     #: Whether the Screens lens is offered: `screens_available`, the one copy of the rule. The SPA's
     #: nav and the Mac's rail, ⌘7 and View menu row read this, never re-derive it.
     available: bool
@@ -248,8 +328,10 @@ def derive_project_screens(
     quotes = speaker_slots.evidence_quotes(db, project_id)
     by_session: dict[str, list[dict[str, Any]]] = {}
     codes: dict[str, Counter[str]] = {}
+    dom_of: dict[int, str] = {}
     for q in quotes:
         dom_id = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+        dom_of[q.id] = dom_id
         owner[dom_id] = q.session_id
         by_session.setdefault(q.session_id, []).append({
             "dom_id": dom_id,
@@ -258,8 +340,11 @@ def derive_project_screens(
         })
         codes.setdefault(q.session_id, Counter())[q.participant_id] += 1
     ident = _ident(project_id, {sid: m for sid, (m, _) in indexes.items()})
+    named = _named_screens(db, project_id, dom_of)
+    # Membership, not names: a rename is applied after the cache and never re-derives.
+    members = tuple((ns.key, tuple(sorted(ns.dom_ids))) for ns in named)
     key = (*ident, len(quotes), max((q.id for q in quotes), default=0),
-           max((str(q.last_imported_at) for q in quotes), default=""))
+           max((str(q.last_imported_at) for q in quotes), default=""), members)
     screens = _CACHE.get(key)
     if screens is None:
         with _DERIVE_LOCK:  # one derivation at a time: a second request waits for the first's
@@ -268,11 +353,18 @@ def derive_project_screens(
                 sessions = [SessionInput(sid, codes[sid].most_common(1)[0][0] if sid in codes else sid,
                                          rec, by_session.get(sid, []))
                             for sid, (_, rec) in indexes.items()]
-                screens = derive_screens(sessions)
+                screens = derive_screens(sessions, named)
                 _CACHE.clear()  # one project per server; the latest derivation is all that is wanted
                 _CACHE[key] = screens
-                _remember_has_screens(ident, screens)
-    base["screens"] = screens
+                _remember_has_screens(
+                    (*ident, _sections_ident(db, project_id), _evidence_ident(db, project_id)), screens)
+                # The page facts (the house default's money signal) come from the indexes alone. Only
+                # where no session may be named by sections is this derivation that one, so only
+                # then does it answer them; otherwise the poll derives them quote-free itself.
+                recs = [rec for _, rec in indexes.values()]
+                if not any(named_eligible(rec, visits_of(rec)) for rec in recs):
+                    _remember_page_facts(ident, bool(screens), recs)
+    base["screens"] = _with_section_names(db, project_id, screens)
     return base, owner
 
 
@@ -372,10 +464,10 @@ def get_screens_status(project_id: int, request: Request,
                        db: Session = Depends(_get_db)) -> dict[str, Any]:
     """How far the screen-text job has got, for the Mac app's progress row, and whether the lens
     has anything to show. Polled every 3 s, so cheap by design: the database and a stat per
-    recording (an index parsed only when it has been rewritten). It never decodes a frame or reads
-    a recording's bytes, and derives screens only when the indexes' identity changes — once per
-    index the job writes, never per poll; with nothing indexed, ``has_screens`` is false without
-    deriving.
+    recording (an index parsed only when it has been rewritten) and one aggregate over section
+    membership. It never decodes a frame or reads a recording's bytes, and derives screens only when
+    the indexes' or the sections' identity changes — once per index the job writes or per change of
+    membership, never per poll; with nothing indexed, ``has_screens`` is false without deriving.
 
     ``available`` says whether the SPA and the Mac app show the Screens lens (`screens_available`):
     a study with screens, or one still being read."""
@@ -386,7 +478,7 @@ def get_screens_status(project_id: int, request: Request,
         out: dict[str, Any] = {"enabled": screens_enabled(request),
                "unavailable": job.unavailable() if job is not None else "no_job",
                "running": False, "done": 0, "total": 0, "seconds_done": 0.0, "seconds_total": 0.0,
-               "rate": None, "has_screens": False}
+               "rate": None, "has_screens": False, "has_page_screens": False}
         out_dir = _output_dir(request)
         if not out["enabled"]:
             out["unavailable"] = None  # off is its own answer; why it could not run is moot
@@ -396,6 +488,7 @@ def get_screens_status(project_id: int, request: Request,
         # Not filtered by project, like video_sessions: the two must agree on which sessions
         # count, or a database holding a forked second row reads a total with no durations.
         durations = session_durations(db)
+        sections = (_sections_ident(db, project_id), _evidence_ident(db, project_id))
     finally:
         db.close()
     out["total"] = len(videos)
@@ -419,17 +512,53 @@ def get_screens_status(project_id: int, request: Request,
         if current or job.why_unread(sid, in_run) is not None:
             out["done"] += 1
             out["seconds_done"] += durations.get(sid, 0.0)
-    out["has_screens"] = _has_screens(project_id, idir, mtimes)
+    out["has_page_screens"], eligible = _page_facts(project_id, idir, mtimes)
+    out["has_screens"] = out["has_page_screens"] or (eligible and _has_screens(
+        request, project_id, idir, mtimes, sections))
     out["available"] = screens_available(out)
     return out
 
 
-def _has_screens(project_id: int, idir: Path, mtimes: dict[str, int]) -> bool:
-    """Whether the current indexes show any screen: cached on their identity, which ``/screens``
-    shares, so a poll costs a lookup and a derivation runs once per change to the indexes."""
+def _read_indexes(idir: Path, mtimes: dict[str, int]) -> dict[str, dict[str, Any]] | None:
+    recs = {}
+    for sid in mtimes:
+        rec = read_index(idir / f"{sid}.json")
+        if rec is None:
+            return None  # replaced as we read; the next poll has a new identity
+        recs[sid] = rec
+    return recs
+
+
+def _page_facts(project_id: int, idir: Path, mtimes: dict[str, int]) -> tuple[bool, bool]:
+    """Whether the current indexes alone show a screen keyed on an address or a title, and whether
+    any session may be named by sections: cached on their identity, which ``/screens`` shares, so a
+    poll costs a lookup and a derivation runs once per change to the indexes. Without quotes or
+    sections: they never make or remove a page screen."""
     if not mtimes:
-        return False
+        return False, False
     ident = _ident(project_id, mtimes)
+    hit = _HAS_PAGE_SCREENS.get(ident)
+    if hit is not None:
+        return hit
+    with _DERIVE_LOCK:
+        hit = _HAS_PAGE_SCREENS.get(ident)
+        if hit is not None:
+            return hit
+        recs = _read_indexes(idir, mtimes)
+        if recs is None:
+            return False, False
+        screens = derive_screens([SessionInput(sid, sid, rec, []) for sid, rec in recs.items()])
+        return _remember_page_facts(ident, bool(screens), recs.values())
+
+
+def _has_screens(request: Request, project_id: int, idir: Path, mtimes: dict[str, int],
+                 sections: tuple[tuple[int, int, int], tuple[Any, ...]]) -> bool:
+    """Whether a section names a screen where no page keys one: derived with the quotes, as
+    ``/screens`` derives, cached on the indexes' and the sections' identity (which ``/screens``
+    writes too), so a poll costs a lookup and a derivation runs once per change."""
+    if not mtimes or not sections[0][0]:
+        return False
+    ident = (*_ident(project_id, mtimes), *sections)
     hit = _HAS_SCREENS.get(ident)
     if hit is not None:
         return hit
@@ -437,14 +566,24 @@ def _has_screens(project_id: int, idir: Path, mtimes: dict[str, int]) -> bool:
         hit = _HAS_SCREENS.get(ident)
         if hit is not None:
             return hit
-        sessions = []
-        for sid in mtimes:
-            rec = read_index(idir / f"{sid}.json")
-            if rec is None:
-                return False  # replaced as we read; the next poll has a new identity
-            sessions.append(SessionInput(sid, sid, rec, []))
-        # Without quotes: they decide where a quote goes, never whether a screen exists.
-        screens = derive_screens(sessions)
+        recs = _read_indexes(idir, mtimes)
+        if recs is None:
+            return False
+        db: Session = request.app.state.db_factory()
+        try:
+            dom_of: dict[int, str] = {}
+            by_session: dict[str, list[dict[str, Any]]] = {}
+            for q in speaker_slots.evidence_quotes(db, project_id):
+                dom_id = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+                dom_of[q.id] = dom_id
+                by_session.setdefault(q.session_id, []).append({
+                    "dom_id": dom_id, "start": float(q.start_timecode),
+                    "end": float(q.end_timecode), "text": q.verbatim_excerpt or q.text})
+            named = _named_screens(db, project_id, dom_of)
+        finally:
+            db.close()
+        screens = derive_screens(
+            [SessionInput(sid, sid, rec, by_session.get(sid, [])) for sid, rec in recs.items()], named)
         _remember_has_screens(ident, screens)
         return bool(screens)
 

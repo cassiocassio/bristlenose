@@ -87,7 +87,7 @@ import { setScreensCount, ZERO_SCREENS_COUNT } from "./screensCount";
 import { featureFlags } from "../../utils/featureFlags";
 import { choosePaper, papers, readAccents, samplePaper, type Rgb } from "./paper";
 import "./screens.css";
-import { screenRef, screensArrival, screenTitle, stillUrl } from "./screenModel";
+import { isPathScreen, screenRef, screensArrival, screenTitle, stillUrl } from "./screenModel";
 import { Icon } from "../../components/Icon";
 import { markArrived } from "../../utils/arrival";
 import { storePref } from "../../utils/nativePrefs";
@@ -945,7 +945,7 @@ function ScreenNav({
                 </span>
                 <span>
                   <span className="screens-nav-title">{screenTitle(s)}</span>
-                  {NAV_DETAILS && s.name.startsWith("/") && <span className="screens-nav-path">{s.name}</span>}
+                  {NAV_DETAILS && isPathScreen(s) && <span className="screens-nav-path">{s.name}</span>}
                   {NAV_DETAILS && (
                     <span className="screens-nav-meta">
                       <span className="screens-count">{quotesOnScreen(s, byId, hidden)}</span>
@@ -1955,7 +1955,7 @@ function ScreenBoard(props: BoardProps) {
         {screenTitle(screen, tab)}
       </SectionHeading>
       <p className="screens-sub">
-        {screen.name.startsWith("/") && <code>{screen.name}</code>}
+        {isPathScreen(screen) && <code>{screen.name}</code>}
         {featureFlags.screensQuoteCount && (
           <span>
             {people > 1 ? t("screens.quoteCountFrom", { count: quoteCount, people }) : t("screens.quoteCount", { count: quoteCount })}

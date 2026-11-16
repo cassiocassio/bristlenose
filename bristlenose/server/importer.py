@@ -2981,6 +2981,12 @@ def _cleanup_stale_data(
         # rowids (no AUTOINCREMENT), so a freed id can be reused by a later
         # new cluster — an orphaned rename would then silently resurface on it.
         _delete_heading_edits(db, project.id, "section-cluster-", stale_cluster_ids)
+        # And any Screens board arranged on a retiring section's screen (``section:<id>``), for
+        # the same reason: a later section given the freed id would inherit the old layout.
+        db.query(ScreenArrangement).filter(
+            ScreenArrangement.project_id == project.id,
+            ScreenArrangement.screen_key.in_([f"section:{cid}" for cid in stale_cluster_ids]),
+        ).delete(synchronize_session="fetch")
         db.query(ScreenCluster).filter(
             ScreenCluster.id.in_(stale_cluster_ids)
         ).delete(synchronize_session="fetch")

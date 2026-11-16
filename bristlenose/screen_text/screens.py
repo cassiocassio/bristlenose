@@ -6,8 +6,16 @@ The rules are the measured ones (``docs/design-screens.md`` §3.5–3.6,
 - **A screen's key** is the address bar's path with the locale prefix dropped and each slug cut to
   the ID at its end (``/gb/en/cat/jars-tins-15950`` → ``/cat/15950``), which matches the same page
   across languages and keeps different products and categories apart. Where the address bar shows
-  no path (Safari's default), the active tab's title is the key. Otherwise a session's moments have
-  no screen: v1 does not guess, and the researcher can say which pages are one screen (later).
+  no path (Safari's default), the active tab's title is the key.
+- **Where neither is read** (a native app, a desktop, a prototype: ``design-screens.md`` §3.6 rung
+  3), the pipeline's sections name the screens. Only in a session that is a screen share with
+  text (at least ``NAMED_MIN_LINES`` lines a sample, median) that addresses and titles mostly do
+  not cover (under ``NAMED_MAX_COVER`` of its samples): a talking head and a web study are as
+  before. There, each section quote said off any address or title visit makes a visit to the
+  section's screen (``section:<id>``) over the time it was said, and the quote is placed there by
+  membership. The still is then chosen as for any screen, among those moments. Measured on the
+  Inception study (16 Nov 2026): 8 screens, all browser detours, before; pixel change alone
+  could not tell a new screen from a scroll (F1 about 0.70), so the sections decide.
 - **Furniture** — a line flagged sticky, or on screen during visits to five or more screens of a
   session — is never a pin target. Browser chrome above the page is cut by position.
 - **A quote is placed** on the screen its time overlaps most (±4 s), and **pinned** to one line on
@@ -36,6 +44,13 @@ or our so that the their them then there they this to was we what when where whi
 yeah okay ok um uh oh well right yes really think know want would could should can also very here
 der die das und ist ein eine nicht mit für auf zu den dem des sie ich wir oder""".split())
 FURNITURE_SCREENS = 5
+#: A session gets named (section) screens only when addresses and titles cover less than this share
+#: of its samples (Inception 2–3%; the IKEA web sessions 53–56%, measured 16 Nov 2026) ...
+NAMED_MAX_COVER = 0.25
+#: ... and its samples carry at least this many lines, median, so it is a screen share and not a
+#: talking head (Inception 76–80, project-ikea 31–37, a talking-head session 1).
+NAMED_MIN_LINES = 15
+SECTION = "section:"
 
 
 # ── Addresses and titles ─────────────────────────────────────────────────
@@ -83,6 +98,15 @@ class SessionInput:
     code: str
     index: dict[str, Any]
     quotes: list[dict[str, Any]]  # dom_id, start, end, text
+
+
+@dataclass(frozen=True)
+class NamedScreen:
+    """A pipeline section as a screen: its key (``section:<id>``), its name, its quotes' DOM ids."""
+
+    key: str
+    name: str
+    dom_ids: frozenset[str]
 
 
 def _on(e: dict[str, Any], t: float, slack: float = 0.0) -> bool:
@@ -161,6 +185,90 @@ def visits_of(index: dict[str, Any]) -> list[Visit]:
         else:
             out.append(Visit(key, t, t, {key} | al))
     return out
+
+
+def _sample_times(index: dict[str, Any]) -> list[float]:
+    """The times the index sampled at, as its episodes' runs give them (on the ``every`` grid)."""
+    every = float(index.get("every", 4.0))
+    times = {round(r[0] + k * every, 2) for e in index["episodes"] for r in e["runs"]
+             for k in range(int((r[1] - r[0]) / every + 1e-6) + 1)}
+    return sorted(times)
+
+
+def _overlap(q: dict[str, Any], v: Visit, every: float) -> float:
+    """How long a quote's time (widened by ``WINDOW``) overlaps a visit, as placement counts it:
+    the page is on screen from the visit's first sample until a sample after its last."""
+    return float(min(q["end"] + WINDOW, v.t1 + every) - max(q["start"] - WINDOW, v.t0))
+
+
+def named_eligible(index: dict[str, Any], visits: list[Visit]) -> bool:
+    """Whether this session's screens may be named by sections: a screen share with text (not a
+    talking head) that addresses and titles mostly do not cover (not a web study)."""
+    every = float(index.get("every", 4.0))
+    n = int(index.get("samples") or 0)
+    if n <= 0:
+        return False
+    covered = sum(v.t1 - v.t0 + every for v in visits) / (n * every)
+    if covered >= NAMED_MAX_COVER:
+        return False
+    per: Counter[float] = Counter()
+    for e in index["episodes"]:
+        if e["sticky"]:
+            continue
+        for r in e["runs"]:
+            for k in range(int((r[1] - r[0]) / every + 1e-6) + 1):
+                per[round(r[0] + k * every, 2)] += 1
+    counts = sorted(list(per.values()) + [0] * max(0, n - len(per)))
+    return counts[len(counts) // 2] >= NAMED_MIN_LINES
+
+
+def named_visits(
+    index: dict[str, Any], visits: list[Visit], quotes: list[dict[str, Any]],
+    named: Iterable[NamedScreen],
+) -> tuple[list[Visit], dict[str, str]]:
+    """Visits to section screens in one session, and the quotes they place by membership.
+
+    A section quote said off every address or title visit (no overlap as placement counts it)
+    makes a visit over the samples within ``WINDOW`` of it, but not into the time another
+    section's quote was said before or after it, so two sections said one after the other do not
+    share a moment for their stills (two said over each other can). A quote said further than a
+    sample from any text on screen makes no visit, and is placed by time as any quote is. Visits to
+    one section closer than ``3 × every`` are one stay."""
+    every = float(index.get("every", 4.0))
+    section_of = {d: ns.key for ns in named for d in ns.dom_ids}
+    mine = [q for q in quotes if q["dom_id"] in section_of
+            and not any(_overlap(q, v, every) > 0 for v in visits)]
+    if not mine:
+        return [], {}
+    grid = _sample_times(index)
+    spans: list[tuple[str, float, float]] = []
+    kept: set[str] = set()  # quotes that made a visit; one said far from any sample makes none
+    for q in mine:
+        key = section_of[q["dom_id"]]
+        a, b = q["start"] - WINDOW, q["end"] + WINDOW
+        for o in mine:  # stop short of another section's quote
+            if section_of[o["dom_id"]] == key:
+                continue
+            if o["end"] <= q["start"] and o["end"] > a:
+                a = o["end"]
+            if o["start"] >= q["end"] and o["start"] < b:
+                b = o["start"]
+        ts = [t for t in grid if a <= t <= b]
+        if not ts and grid:  # a quote between two samples: the nearer one, if it is that near
+            mid = (q["start"] + q["end"]) / 2
+            near = min(grid, key=lambda t: abs(t - mid))
+            ts = [near] if a - every <= near <= b + every else []
+        if ts:
+            spans.append((key, ts[0], ts[-1]))
+            kept.add(q["dom_id"])
+    out: list[Visit] = []
+    # In time order, so a stay is never merged across another section's visit.
+    for key, t0, t1 in sorted(spans, key=lambda s: (s[1], s[2])):
+        if out and out[-1].key == key and t0 - out[-1].t1 <= 3 * every:
+            out[-1].t1 = max(out[-1].t1, t1)
+        else:
+            out.append(Visit(key, t0, t1, {key}))
+    return out, {d: section_of[d] for d in kept}
 
 
 # ── Pinning ──────────────────────────────────────────────────────────────
@@ -245,18 +353,24 @@ Pin = tuple[dict[str, Any], tuple[str, dict[str, Any]]]
 
 
 def _session_tabs(
-    s: SessionInput, visits: list[Visit],
+    s: SessionInput, visits: list[Visit], placed: dict[str, str] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[list[dict[str, Any]], Linker]]]:
     """One session's still, pins and unpinned quotes for each screen it visited, and for each
-    screen its quotes and a linker: which of any quotes (anyone's) find their line on this still."""
+    screen its quotes and a linker: which of any quotes (anyone's) find their line on this still.
+
+    ``placed`` maps a quote's DOM id to the screen it goes on regardless of time (a section quote
+    that made the section's visit); every other quote goes where its time overlaps most."""
     idx = s.index
     every = float(idx.get("every", 4.0))
     crop = content_crop(idx)
     top = crop[1]
-    # Furniture: sticky, or on screen during visits to FURNITURE_SCREENS or more screens.
+    # Furniture: sticky, or on screen during visits to FURNITURE_SCREENS or more pages. Pages only:
+    # a section's visit is where something was said, not a change of page that shows a line is
+    # chrome, and counting sections made a persistent window's own lines furniture (review).
+    pages = [v for v in visits if not v.key.startswith(SECTION)]
     seen: dict[str, set[str]] = defaultdict(set)
     for e in idx["episodes"]:
-        for v in visits:
+        for v in pages:
             if any(r[0] <= v.t1 + every and r[1] >= v.t0 for r in e["runs"]):
                 seen[fold(e["text"])].add(v.key)
     furniture = {k for k, ks in seen.items() if len(ks) >= FURNITURE_SCREENS}
@@ -282,9 +396,11 @@ def _session_tabs(
         return on_at[t]
 
     def screen_of(q: dict[str, Any]) -> str | None:
+        if placed and q["dom_id"] in placed:
+            return placed[q["dom_id"]]
         best, score = None, 0.0
         for v in visits:
-            ov = min(q["end"] + WINDOW, v.t1 + every) - max(q["start"] - WINDOW, v.t0)
+            ov = _overlap(q, v, every)
             if ov > score:
                 best, score = v.key, ov
         return best
@@ -350,11 +466,16 @@ def _session_tabs(
     return tabs, extra
 
 
-def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
+def derive_screens(
+    sessions: Iterable[SessionInput], named: Iterable[NamedScreen] = (),
+) -> list[dict[str, Any]]:
     """Every screen any session was on, with each session's still, pins and unpinned quotes.
 
-    Boxes are in the still's crop coordinates (0–1 of the cropped page)."""
+    ``named`` are the pipeline's sections, the screens of a session no address or title keys
+    (``named_eligible``). Boxes are in the still's crop coordinates (0–1 of the cropped page)."""
     sessions = list(sessions)
+    named = list(named)
+    named_name = {ns.key: ns.name for ns in named}
     per: dict[str, dict[str, Any]] = {}
     parent: dict[str, str] = {}
 
@@ -382,7 +503,13 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
             for a in al[1:]:
                 parent[find(a)] = find(al[0])
             find(al[0])
-        per[s.session_id] = {"s": s, "visits": visits}
+        placed: dict[str, str] = {}
+        if named and named_eligible(s.index, visits):
+            extra_visits, placed = named_visits(s.index, visits, s.quotes, named)
+            for v in extra_visits:
+                find(v.key)
+            visits = sorted(visits + extra_visits, key=lambda v: v.t0)
+        per[s.session_id] = {"s": s, "visits": visits, "placed": placed}
 
     names: dict[str, Counter[str]] = defaultdict(Counter)
     for d in per.values():
@@ -391,6 +518,8 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
                 names[find(a)][a] += 1
 
     def display(root: str) -> str:
+        if root in named_name:
+            return named_name[root]
         c = names[root]
         urls = [a for a, _ in c.most_common() if a.startswith("url:")]
         return urls[0][4:] if urls else c.most_common(1)[0][0][6:]
@@ -403,7 +532,7 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
         visits = d["visits"]
         for v in visits:
             v.key = find(sorted(v.aliases)[0])
-        tabs, extra = _session_tabs(d["s"], visits)
+        tabs, extra = _session_tabs(d["s"], visits, d["placed"])
         for key, tab in tabs.items():
             if key not in out:
                 out[key] = {"key": key, "name": display(key), "tabs": []}

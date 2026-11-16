@@ -1,8 +1,10 @@
 """The house default: a study that shows screens is coded with the UXR codebook, once.
 
 New researchers did not find AutoCode, so for a study that looks like a product study the first
-codebook is applied for them. "Looks like" is one signal: the Screens lens has found screens
-(``has_screens`` in ``/screens/status``). A study without screens spends nothing.
+codebook is applied for them. "Looks like" is one signal: the Screens lens has found a screen
+keyed on what was on screen, an address or a title (``has_page_screens`` in ``/screens/status``).
+A study without one spends nothing, including a study whose screens are named only by its
+sections (16 Nov 2026: section screens widened ``has_screens``, and did not widen spending).
 
 When it fires, and only then:
 
@@ -127,7 +129,9 @@ def _has_screens(app: Any) -> bool:
     db = app.state.db_factory()
     request: Any = SimpleNamespace(app=app)  # the route reads only ``request.app``
     status = get_screens_status(PROJECT_ID, request, db)  # closes ``db``
-    return bool(status.get("has_screens"))
+    # Page screens only (an address or a title was read): a study whose screens are named by its
+    # sections spends nothing unasked, as before section screens existed (16 Nov 2026).
+    return bool(status.get("has_page_screens"))
 
 
 async def maybe_apply(app: Any) -> bool:

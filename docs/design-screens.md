@@ -106,6 +106,15 @@ board on real data.
   screen and participant changes announced, ↑/↓ left alone with one screen, contrast of the
   participant buttons and the current navigator row.
 
+- **16 Nov 2026: rung 3 built, from the sections.** A usability test of a native app (the
+  Inception study: two participants testing Bristlenose itself, about 2 hours) showed 8 screens,
+  all browser detours (docs, a pricing page, a Miro sign-in), covering 3.0% and 1.9% of the two
+  recordings; the reading was fine (about 100,000 lines), there was just no address or title to key
+  on. Now, in a session that is a screen share with text (median 15 lines a sample or more) that
+  addresses and titles cover under a quarter of, the pipeline's sections name the screens (§3.6,
+  "Rung 3 as built"). Inception: 21 screens, the 13 sections and the 8 pages. Web studies and
+  talking heads are unchanged (measured on five trial studies). The house default (AutoCode
+  unasked) still reads only page screens, `has_page_screens`, so it spends no more than before.
 - **14 Oct 2026, night: out of Diagnostics.** Diagnostics gates Screens nowhere, on either side.
   - **The switch** is Settings ▸ Transcription ▸ *Read shared screens*, on by default, with §4.7's
     sentence under it (21 locales). Every serve gets `BRISTLENOSE_SCREEN_TEXT` from it (`1`/`0`),
@@ -552,7 +561,7 @@ class ScreenTextEngine(Protocol):
 | what | where | written by |
 |---|---|---|
 | screen-text index (episodes, moments, engine) | `<output>/.bristlenose/intermediate/screen-text/<session>.json` | serve job |
-| screens (screens, visits, keys, names and their sources) | derived in memory from the indexes, never written; `has_screens` cached on the indexes' identity | `routes/screens.py` |
+| screens (screens, visits, keys, names and their sources) | derived in memory from the indexes and, for rung 3, the sections (`screen_clusters` and `cluster_quotes`), never written; `has_page_screens` cached on the indexes' identity, `has_screens` on that and the sections' and evidence's | `routes/screens.py` |
 | researcher corrections | the board's arrangement only, so far: `screen_arrangements` in SQLite, one row per version (migration 018). Rename, merge, split and hide are not built | the lens |
 | stills | cached as JPEGs, `<output>/.bristlenose/intermediate/screen-text/stills/`, deleted with the index (`index.py`) | `routes/screens.py` |
 
@@ -625,6 +634,34 @@ a thumbnail, *Not the same screen* to peel one off). Full-screen browsing, mobil
 only), native apps and prototypes all fall to rung 3. The next spikes there: a picture match that
 tolerates scrolling, and the top of the screen alone (headers and app bars sit still), measured on
 real mobile recordings, of which there is one.
+
+**Rung 3 as built (16 Nov 2026): the sections, not a picture score.** Measured first on the
+Inception study (scratch trials, nothing shipped from them): participants talk over a still screen
+(a quote's median 95% of its time is over still frames), but telling a new screen from a scroll by
+the picture alone scored F1 about 0.70 against 100 hand-labelled transitions and over-split (82
+and 92 screens where about 50 to 60 were real). The pipeline's sections, named from what was said,
+were the better backbone. As built (`screen_text/screens.py`, `named_eligible`, `named_visits`):
+
+- **Only where the ladder's first rungs fail:** a session whose median sample has 15 or more
+  non-sticky lines (a screen share, not a talking head: Inception 76–80, the IKEA web sessions
+  21–22, a talking head 1) and that addresses and titles cover under 25% of (Inception 2–3%, the
+  IKEA web sessions 53–56%). Elsewhere nothing changes. Two sessions of `project-ikea` with no
+  address read (0%, 31–37 lines) gain section screens too.
+- **A section quote said off every page visit** makes a visit to `section:<cluster id>` over the
+  samples within 4 s of it, stopping at the neighbouring sections' quotes, and is placed there by
+  membership. A section quote said on a page stays on the page. The still is then chosen as for
+  any screen: a drawn moment in those visits that pins the most of the section's quotes.
+- **One section across participants is one screen**, a tab each. Its name is the section's as the
+  researcher sees it (a rename applies at once and does not re-derive), shown as written; section
+  screens put no mark in the transcript gutter, since they say where something was said, not a
+  change of page that was seen.
+- **Furniture is told from pages only**, so a window the participant stays in keeps its lines.
+- **By eye on Inception, about 9 of 13 stills show the named screen.** The misses are a moment
+  in the section's time that shows another view (a codebook section on the sections page).
+- **Accepted for now:** a page seen by one participant's address and by another's section is two
+  screens until rung 4's merge exists; a quote in no section said during a section's visit is
+  placed there by time, as on a page; a talking head whose captions or chat reach 15 lines a sample
+  passes the gate.
 
 ## 4. Privacy, merged
 

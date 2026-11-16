@@ -22,8 +22,23 @@ export interface ScreenLike {
   tabs: ScreenTabLike[];
 }
 
+/**
+ * A screen named by a pipeline section (`section:<id>`): a recording no address or title keyed, a
+ * native app or a desktop. Its name is the section's, as the researcher sees it, so it is shown
+ * as written; and it marks where something was said, not a page change seen on screen.
+ */
+export function isSectionScreen(screen: ScreenLike): boolean {
+  return screen.key.startsWith("section:");
+}
+
+/** Whether a screen's name is an address path, shown as code beside its title. */
+export function isPathScreen(screen: ScreenLike): boolean {
+  return !isSectionScreen(screen) && screen.name.startsWith("/");
+}
+
 /** The title the Screens lens's navigator shows for a screen (or for one of its versions). */
 export function screenTitle(screen: ScreenLike, tab?: ScreenTabLike): string {
+  if (isSectionScreen(screen)) return screen.name;
   if (!screen.name.startsWith("/")) return screen.name.charAt(0).toUpperCase() + screen.name.slice(1);
   if (tab?.heading) return tab.heading;
   const hs = [...new Set(screen.tabs.map((t) => t.heading).filter(Boolean))];
@@ -83,6 +98,7 @@ export function screenStarts(
 ): Map<number, ScreenStart[]> {
   const visits: ScreenStart[] = [];
   for (const screen of screens) {
+    if (isSectionScreen(screen)) continue; // said there, not seen to change: no gutter mark
     for (const tab of screen.tabs) {
       if (tab.session_id !== sessionId) continue;
       for (const [a] of tab.visits ?? []) visits.push({ screen, tab, at: a });

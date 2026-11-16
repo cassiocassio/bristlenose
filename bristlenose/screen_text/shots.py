@@ -31,8 +31,11 @@ def code_order(code: str) -> tuple[str, int, str]:
 
 def title_of(screen: Mapping[str, Any], tab: Mapping[str, Any]) -> str:
     """What the lens calls this version of the screen (`ScreensLens.tsx` `screenTitle`): a
-    title-keyed screen by its title, an address-keyed one by the page heading on this still."""
+    title-keyed screen by its title, an address-keyed one by the page heading on this still, a
+    section-named one by the section's name exactly as written."""
     name = str(screen["name"])
+    if str(screen.get("key", "")).startswith("section:"):
+        return name
     if not name.startswith("/"):
         return name[:1].upper() + name[1:]
     return str(tab.get("heading") or "") or name

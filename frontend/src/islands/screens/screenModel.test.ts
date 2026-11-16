@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  screenRef, screensArrival, screensPath, screenStarts, screenTitle, stillUrl,
+  isPathScreen, screenRef, screensArrival, screensPath, screenStarts, screenTitle, stillUrl,
   type ScreenLike, type ScreenTabLike,
 } from "./screenModel";
 
@@ -17,6 +17,15 @@ describe("screenTitle", () => {
     const s = screen("k", "/checkout/delivery", [tab("s1", [[0, 1]], "Delivery or collect"), tab("s2", [[0, 1]], "Lieferung")]);
     expect(screenTitle(s, s.tabs[1])).toBe("Lieferung");
     expect(screenTitle(s)).toBe("Delivery or collect · Lieferung");
+  });
+  it("is a section's name exactly as written, never a path or capitalised", () => {
+    // The researcher's rename is what surfaces show (heading_names.py): "eBay listing" stays so,
+    // and a section named like a path is still a name, not an address to swap for a heading.
+    expect(screenTitle(screen("section:3", "eBay listing", [tab("s1", [[0, 1]], "Heading")]))).toBe("eBay listing");
+    const pathLike = screen("section:4", "/settings", [tab("s1", [[0, 1]], "Heading")]);
+    expect(screenTitle(pathLike, pathLike.tabs[0])).toBe("/settings");
+    expect(isPathScreen(pathLike)).toBe(false);
+    expect(isPathScreen(screen("url:/a", "/a", []))).toBe(true);
   });
 });
 
@@ -81,6 +90,14 @@ describe("screenStarts", () => {
     expect(starts.get(1)!.map((v) => screenTitle(v.screen, v.tab))).toEqual(["Storage furniture", "Kitchenware"]);
     // Kitchenware at 31 s follows its own visit at 16 s with nothing between: the same stay.
     expect(starts.get(3)!.map((v) => screenTitle(v.screen, v.tab))).toEqual(["Storage furniture"]);
+  });
+
+  it("marks no section screen: it is where something was said, not a change seen", () => {
+    const starts = screenStarts(
+      [screen("section:1", "Quotes view", [tab("s1", [[12, 18]])]), screen("url:/home", "/home", [tab("s1", [[31, 35]], "Home")])],
+      "s1", at,
+    );
+    expect([...starts.keys()]).toEqual([3]);
   });
 
   it("skips a visit no paragraph holds", () => {

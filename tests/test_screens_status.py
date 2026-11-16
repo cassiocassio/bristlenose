@@ -275,7 +275,7 @@ def test_status_when_off_is_200_and_says_off(project: Path, monkeypatch: pytest.
     assert r.status_code == 200
     assert r.json() == {"enabled": False, "unavailable": None, "running": False, "done": 0, "total": 0,
                         "seconds_done": 0.0, "seconds_total": 0.0, "rate": None, "has_screens": False,
-                        "available": False}
+                        "has_page_screens": False, "available": False}
 
 
 def test_status_counts_from_the_database_and_never_decodes(project: Path,
@@ -295,7 +295,7 @@ def test_status_counts_from_the_database_and_never_decodes(project: Path,
     assert client.get("/api/projects/1/screens/status").json() == {
         "enabled": True, "unavailable": None, "running": True, "done": 0, "total": 1,
         "seconds_done": 0.0, "seconds_total": 600.0, "rate": 40.5, "has_screens": False,
-        "available": True}
+        "has_page_screens": False, "available": True}
 
     _write_index(project, video, job.engine)  # s1 read
     body = client.get("/api/projects/1/screens/status").json()
@@ -341,7 +341,7 @@ def test_a_pass_measures_its_own_rate_from_what_it_read(project: Path,
 def test_the_status_response_model_is_the_mac_contract() -> None:
     assert list(ScreensStatusResponse.model_fields) == [
         "enabled", "unavailable", "running", "done", "total", "seconds_done", "seconds_total", "rate",
-        "has_screens", "available"]
+        "has_screens", "has_page_screens", "available"]
 
 
 @pytest.mark.parametrize(("status", "expected"), [
@@ -371,10 +371,10 @@ def derives(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     routes._CACHE.clear()
     calls: list[int] = []
 
-    def counted(sessions):
+    def counted(sessions, named=()):
         sessions = list(sessions)
         calls.append(len(sessions))
-        return derive_screens(sessions)
+        return derive_screens(sessions, named)
     monkeypatch.setattr("bristlenose.server.routes.screens.derive_screens", counted)
     return calls
 
@@ -438,3 +438,134 @@ def test_quotes_never_make_or_remove_a_screen() -> None:
     with_quotes = derive_screens([SessionInput("s1", "p1", rec, quotes)])
     without = derive_screens([SessionInput("s1", "s1", rec, [])])
     assert with_quotes and {s["key"] for s in with_quotes} == {s["key"] for s in without}
+
+
+# ── Screens named by sections (design-screens.md §3.6 rung 3, 16 Nov 2026) ─────────────────────
+
+#: A native app's window: enough text to be a screen share, and no address or title to key on.
+_APP = [_line(f"the app window row {i}", 0.2 + i * 0.035) for i in range(20)]
+
+
+def _sections(app) -> dict[str, int]:
+    from bristlenose.server.models import ScreenCluster
+
+    db = app.state.db_factory()
+    try:
+        return {c.screen_label: c.id for c in db.query(ScreenCluster).filter_by(project_id=1).all()}
+    finally:
+        db.close()
+
+
+def test_an_app_recording_has_screens_named_by_its_sections(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                                            derives: list[int]) -> None:
+    """Where no address or title keys a screen, the study's sections name them: a researcher
+    recording a native app still sees screens. The house default does not spend on them."""
+    from bristlenose.server.autocode_house_default import _has_screens as house_default_fires
+    from bristlenose.server.models import HeadingEdit
+
+    app = _app(project, monkeypatch)
+    video = _give_s1_a_video(app, project)
+    _write_index(project, video, app.state.screen_text.engine, episodes=_APP)
+    client = AuthTestClient(app)
+    ids = _sections(app)
+    body = client.get("/api/projects/1/screens").json()
+    assert {(s["key"], s["name"]) for s in body["screens"]} == {
+        (f"section:{ids['Dashboard']}", "Dashboard"), (f"section:{ids['Search']}", "Search")}
+    status = client.get("/api/projects/1/screens/status").json()
+    assert (status["has_screens"], status["has_page_screens"], status["available"]) == (True, False, True)
+    assert house_default_fires(app) is False, "a section-named study spends nothing unasked"
+    # A rename shows at once, as the researcher wrote it, and does not re-derive.
+    n = len(derives)
+    db = app.state.db_factory()
+    try:
+        db.add(HeadingEdit(project_id=1, heading_key=f"section-cluster-{ids['Search']}:title",
+                           edited_text="eBay search"))
+        db.commit()
+    finally:
+        db.close()
+    names = {s["key"]: s["name"] for s in client.get("/api/projects/1/screens").json()["screens"]}
+    assert names[f"section:{ids['Search']}"] == "eBay search"
+    assert len(derives) == n
+
+
+def test_a_quote_moved_to_another_section_moves_its_screen(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Membership is in the derivation's identity: a researcher's move shows without a restart."""
+    from bristlenose.server.models import ClusterQuote
+
+    app = _app(project, monkeypatch)
+    video = _give_s1_a_video(app, project)
+    _write_index(project, video, app.state.screen_text.engine, episodes=_APP)
+    client = AuthTestClient(app)
+    ids = _sections(app)
+    assert len(client.get("/api/projects/1/screens").json()["screens"]) == 2
+    db = app.state.db_factory()
+    try:
+        for cq in db.query(ClusterQuote).filter_by(cluster_id=ids["Search"]).all():
+            cq.cluster_id = ids["Dashboard"]
+        db.commit()
+    finally:
+        db.close()
+    keys = [s["key"] for s in client.get("/api/projects/1/screens").json()["screens"]]
+    assert keys == [f"section:{ids['Dashboard']}"]
+
+
+def test_a_retired_sections_board_goes_with_it(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cluster ids are plain rowids, so a later section can be given a retired one's id: its saved
+    board must not come back on that section's screen (as a retired rename must not)."""
+    from bristlenose.server.importer import import_project
+    from bristlenose.server.models import ScreenArrangement
+
+    app = _app(project, monkeypatch)
+    ids = _sections(app)
+    db = app.state.db_factory()
+    try:
+        for label in ("Dashboard", "Search"):
+            db.add(ScreenArrangement(project_id=1, screen_key=f"section:{ids[label]}", session_id="s1"))
+        db.commit()
+    finally:
+        db.close()
+    path = _out(project) / ".bristlenose" / "intermediate" / "screen_clusters.json"
+    clusters = json.loads(path.read_text(encoding="utf-8"))
+    path.write_text(json.dumps([c for c in clusters if c["screen_label"] != "Search"]), encoding="utf-8")
+    db = app.state.db_factory()
+    try:
+        import_project(db, project)
+        keys = {a.screen_key for a in db.query(ScreenArrangement).all()}
+    finally:
+        db.close()
+    assert keys == {f"section:{ids['Dashboard']}"}
+
+
+def test_page_screens_are_the_same_whichever_route_asks_first(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``has_page_screens`` (the house default's money signal) is from the indexes alone, so it is
+    the same whether the lens or the poll derived first (review, 16 Nov)."""
+    from bristlenose.server.routes import screens as routes
+
+    answers = []
+    for lens_first in (True, False):
+        app = _app(project, monkeypatch)
+        video = _give_s1_a_video(app, project)
+        eps = [_line("example.com/gb/en/checkout", 0.03) | {"runs": [[0, 4]]}, *_APP]
+        _write_index(project, video, app.state.screen_text.engine, episodes=eps)
+        client = AuthTestClient(app)
+        if lens_first:
+            client.get("/api/projects/1/screens")
+        answers.append(client.get("/api/projects/1/screens/status").json()["has_page_screens"])
+        for cache in (routes._CACHE, routes._HAS_SCREENS, routes._HAS_PAGE_SCREENS):
+            cache.clear()
+    assert answers == [True, True]
+
+
+def test_a_recode_that_removes_the_quotes_removes_the_section_screens(project: Path,
+                                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    """Which quotes count is in the poll's identity: a speaker recoded as moderator takes their
+    section screens with them without a restart (review, 16 Nov)."""
+    from bristlenose.server import speaker_slots
+
+    app = _app(project, monkeypatch)
+    video = _give_s1_a_video(app, project)
+    _write_index(project, video, app.state.screen_text.engine, episodes=_APP)
+    client = AuthTestClient(app)
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is True
+    monkeypatch.setattr(speaker_slots, "evidence_out", lambda db, pid: speaker_slots.EvidenceOut({("s1", "p1")}))
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is False

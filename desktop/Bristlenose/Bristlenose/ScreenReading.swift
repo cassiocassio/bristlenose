@@ -59,7 +59,7 @@ struct ScreenReadingProgress: Equatable {
     /// Response shape (server-owned): `{"enabled": bool, "unavailable":
     /// null|"not_macos"|"vision_missing"|"no_job", "running": bool, "done":
     /// int, "total": int, "seconds_done": float, "seconds_total": float,
-    /// "rate": float|null, "has_screens": bool, "available": bool}`.
+    /// "rate": float|null, "has_screens": bool, "has_page_screens": bool, "available": bool}`.
     static func parse(_ json: [String: Any]) -> ScreenReadingProgress? {
         guard json["enabled"] as? Bool == true,
               json["running"] as? Bool == true,

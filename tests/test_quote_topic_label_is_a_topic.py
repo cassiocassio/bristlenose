@@ -202,3 +202,30 @@ def test_a_copied_prompt_line_keeps_its_topic(label: str, want: str) -> None:
 ])
 def test_review_cases_stay_as_the_model_wrote_them(text: str, excerpt: str, want: str) -> None:
     assert _restore_sentence_start(text, excerpt) == want
+
+
+def test_the_boundary_list_shows_the_topic_never_its_transition_type() -> None:
+    """BR-04 (owner ruling A): `- [00:10] Settings navigation`, no parenthesised type."""
+    seen: dict[str, str] = {}
+    transcript = PiiCleanTranscript(
+        participant_id="p1", session_id="s1", source_file="s1.mp4",
+        session_date=datetime(2026, 1, 1, tzinfo=timezone.utc), duration_seconds=60,
+        segments=[TranscriptSegment(
+            start_time=10, end_time=40, text=_FULL, speaker_label="p1",
+            speaker_role=SpeakerRole.PARTICIPANT, speaker_code="p1", source="whisper",
+            segment_index=0)],
+    )
+    topics = SessionTopicMap(participant_id="p1", session_id="s1", boundaries=[
+        TopicBoundary(timecode_seconds=10, topic_label="Settings navigation",
+                      transition_type=TransitionType.SCREEN_CHANGE)])
+
+    async def analyze(**kw: str) -> QuoteExtractionResult:
+        seen["prompt"] = kw["user_prompt"]
+        return QuoteExtractionResult(quotes=[])
+
+    client = AsyncMock()
+    client.analyze = analyze
+    asyncio.run(_extract_one_pass(transcript, topics, client, 3))
+    assert "Settings navigation" in seen["prompt"], "control: the boundary is listed"
+    assert "screen_change" not in seen["prompt"]
+    assert "Settings navigation (" not in seen["prompt"]

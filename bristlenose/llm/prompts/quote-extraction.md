@@ -1,6 +1,6 @@
 ---
 id: quote-extraction
-version: 0.1.1
+version: 0.2.0
 ---
 # Quote Extraction
 
@@ -43,6 +43,8 @@ Any words not actually spoken by the participant MUST be in [square brackets]. I
 
 ## Topic boundaries for this session
 
+Each line is a time and the name of the topic that starts there.
+
 {topic_boundaries}
 
 ## Transcript
@@ -52,7 +54,8 @@ Any words not actually spoken by the participant MUST be in [square brackets]. I
 Extract all substantive quotes from the PARTICIPANT segments, applying the editorial rules above.
 
 For each quote, provide:
-- Which topic/screen it relates to, and whether it is screen-specific or general context
+- **topic_label**: the topic name from the boundary list above, copied exactly as written, without the time and never any other word
+- **quote_type**: `screen_specific` or `general_context`
 - **sentiment**: the single dominant feeling expressed — one of:
   - `frustration` — difficulty, annoyance, friction ("This is so slow", "Why won't it work?")
   - `confusion` — not understanding, uncertainty ("I don't get what this means", "Where am I supposed to click?")

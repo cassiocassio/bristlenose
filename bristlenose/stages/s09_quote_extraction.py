@@ -358,7 +358,9 @@ async def _extract_one_pass(
             # Padded to match the transcript in the same prompt — one timecode
             # format per prompt, or the model has a mismatch to resolve again.
             f"- [{format_timecode_prompt(b.timecode_seconds)}] "
-            f"{b.topic_label} ({b.transition_type.value})"
+            # The transition type is deliberately NOT shown: a weak model copied
+            # the parenthesised word into topic_label (BR-04, owner ruling A).
+            + b.topic_label
             for b in relevant_boundaries
         )
     else:
@@ -640,14 +642,14 @@ _TRANSITION_WORDS = frozenset(t.value for t in TransitionType)
 def _checked_topic_label(label: str, boundaries: list[TopicBoundary], at: float) -> str:
     """A quote's topic label, with a transition type put back to the topic it stood for.
 
-    The prompt lists each boundary as "[00:10] Settings navigation (screen_change)", and a small
-    model sometimes answers with the parenthetical, so a quote's label becomes "screen_change".
+    Until quote-extraction 0.2.0 the prompt listed each boundary as "[00:10] Settings navigation
+    (screen_change)", and a small model sometimes answered with the parenthetical, so a quote's label becomes "screen_change".
     That word then names a section in the report and over MCP (a 16 Nov 2026 walk showed it as a
     heading). A transition type is never a topic: snap it to the boundary in force at the quote's
     start. Any other label is left as the model wrote it, and with no boundary to snap to there
     is nothing better to say.
     """
-    # The whole prompt line copied back ("Settings navigation (screen_change)"): the topic
+    # The whole old-format prompt line copied back (older replies, cached data) ("Settings navigation (screen_change)"): the topic
     # is the part before the parenthetical.
     copied = _COPIED_LINE.fullmatch(label)
     if copied and _is_transition_word(copied.group("kind")):

@@ -107,25 +107,10 @@ def has_usable_provider(settings: BristlenoseSettings) -> tuple[bool, str]:
     exactly the kind of thing the lab exists to find out, so it is not
     blocked here.
     """
-    provider = settings.llm_provider
-    if provider == "local":
-        return True, ""
-    if provider == "anyllm":
-        from bristlenose.llm import anyllm
+    from bristlenose.config import provider_not_ready
 
-        ready = anyllm.readiness(settings)
-        if ready.ready:
-            return True, ""
-        return False, " ".join(anyllm.explain(ready)[:1]) or "any-llm is not ready"
-    key_by_provider = {
-        "anthropic": settings.anthropic_api_key,
-        "openai": settings.openai_api_key,
-        "azure": settings.azure_api_key,
-        "google": settings.google_api_key,
-    }
-    if key_by_provider.get(provider):
-        return True, ""
-    return False, f"No API key configured for provider {provider!r}"
+    reason = provider_not_ready(settings)
+    return reason == "", reason
 
 
 def _normalise_abstain_reason(raw: str, has_claims: bool) -> str:

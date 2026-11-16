@@ -347,6 +347,45 @@ def configured_cloud_providers(settings: BristlenoseSettings) -> list[str]:
     ]
 
 
+def provider_not_ready(settings: BristlenoseSettings) -> str:
+    """Why the chosen provider cannot be called yet, or ``""`` when it can.
+
+    The one readiness answer for every in-app assistant (AutoCode, Signals
+    elaboration, the chat lens, the catch-up). A key alone is not enough for
+    Azure: without an endpoint and a deployment the call fails after the job has
+    started, so those are refused up front too. Offline: nothing is called.
+
+    ``local`` needs nothing and answers ``""``; a caller that refuses local
+    models says so itself. Reasons are English for the log, never shown as-is.
+    """
+    provider = getattr(settings, "llm_provider", "")
+    if provider == "local":
+        return ""
+    if provider == "anyllm":
+        # The inner provider's key, the model and the add-on (docs/design-any-llm.md).
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(settings)
+        if ready.ready:
+            return ""
+        return " ".join(anyllm.explain(ready)[:1]) or "any-llm is not ready"
+    field = _CLOUD_KEY_FIELDS.get(provider)
+    if field is None:
+        return f"Unknown provider {provider!r}"
+    if not _non_empty(getattr(settings, field, "")):
+        return f"No API key configured for provider {provider!r}"
+    if provider == "azure":
+        if not _non_empty(getattr(settings, "azure_endpoint", "")):
+            return "No Azure OpenAI endpoint configured"
+        if not _non_empty(getattr(settings, "azure_deployment", "")):
+            return "No Azure OpenAI deployment configured"
+    return ""
+
+
+def _non_empty(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 class ProviderResolution(NamedTuple):
     """How the LLM provider was (or wasn't) resolved for this process.
 

@@ -667,20 +667,10 @@ async def generate_elaborations(
 
 
 def _has_api_key(settings: BristlenoseSettings) -> bool:
-    """Check if the configured LLM provider has an API key set."""
-    provider = settings.llm_provider
-    if provider == "anthropic":
-        return bool(settings.anthropic_api_key)
-    if provider == "openai":
-        return bool(settings.openai_api_key)
-    if provider == "azure":
-        return bool(settings.azure_api_key)
-    if provider == "google":
-        return bool(settings.google_api_key)
-    if provider == "anyllm":
-        # The inner provider's key, the model and the add-on: any-llm's
-        # readiness answers all three, offline (docs/design-any-llm.md).
-        from bristlenose.llm import anyllm
+    """Whether the configured provider can be called: a key, plus an endpoint and a
+    deployment for Azure, or a ready any-llm (``config.provider_not_ready``)."""
+    from bristlenose.config import provider_not_ready
 
-        return anyllm.readiness(settings).ready
-    return False
+    if settings.llm_provider == "local":
+        return False
+    return provider_not_ready(settings) == ""

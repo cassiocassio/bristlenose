@@ -197,24 +197,18 @@ def _job_to_out(job: AutoCodeJob) -> AutoCodeJobOut:
     )
 
 
-def _has_api_key(settings: object) -> bool:
-    """Check if the configured LLM provider has an API key set."""
-    provider = getattr(settings, "llm_provider", "")
-    if provider == "anthropic":
-        return bool(getattr(settings, "anthropic_api_key", ""))
-    if provider == "openai":
-        return bool(getattr(settings, "openai_api_key", ""))
-    if provider == "azure":
-        return bool(getattr(settings, "azure_api_key", ""))
-    if provider == "google":
-        return bool(getattr(settings, "google_api_key", ""))
-    if provider == "anyllm":
-        # The inner provider's key, the model and the add-on: any-llm's
-        # readiness answers all three, offline (docs/design-any-llm.md).
-        from bristlenose.llm import anyllm
+def _azure_key_set(settings: object) -> bool:
+    return bool(getattr(settings, "azure_api_key", ""))
 
-        return anyllm.readiness(settings).ready  # type: ignore[arg-type]
-    return False
+
+def _has_api_key(settings: object) -> bool:
+    """Whether the configured provider can be called: a key, plus an endpoint and a
+    deployment for Azure, or a ready any-llm (``config.provider_not_ready``)."""
+    from bristlenose.config import provider_not_ready
+
+    if getattr(settings, "llm_provider", "") == "local":
+        return False
+    return provider_not_ready(settings) == ""  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -281,6 +275,16 @@ def require_provider_ready(settings: Any) -> None:
                 RefusalReason.PROVIDER_AMBIGUOUS,
                 lines[0] if lines else f"any-llm is not ready ({ready.status}).",
             )
+    elif settings.llm_provider == "azure" and _azure_key_set(settings):
+        # A key without an endpoint or a deployment is not a missing key: the job
+        # would start and then fail on the first call. "Add an API key" sends the
+        # researcher to the wrong field; "choose a provider in Settings" is the
+        # nearest true sentence already on screen (as for any-llm above).
+        from bristlenose.config import provider_not_ready
+
+        reason = provider_not_ready(settings)
+        if reason:
+            raise RefusalError(503, RefusalReason.PROVIDER_AMBIGUOUS, reason)
     elif not _has_api_key(settings):
         raise no_key
 

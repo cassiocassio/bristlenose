@@ -120,6 +120,18 @@ class ProgressiveImport:
         self._run_stamp: datetime | None = None
         #: Whether the run redacts, from its manifest: which folder is this run's.
         self._redacted = False
+        #: What an earlier attempt of this first analysis delivered and the database
+        #: still holds (a resume: Stop, then Analyse again). Published with the
+        #: overlay so progress only moves forward (design §3 principle 4), and kept
+        #: apart from ``_imported`` / ``_quotes_done``: those are this run's work
+        #: lists, and a seeded session must still reach the import (the redacted
+        #: re-read) once this run records it.
+        self._seed_readable: frozenset[str] = frozenset()
+        self._seed_quoted: frozenset[str] = frozenset()
+        #: The seed is final once this run's own manifest is on disk.
+        self._seeded = False
+        #: The last seed failure said, so a failure that persists is said once.
+        self._seed_error: str | None = None
 
     async def follow(self, condition: Condition) -> None:
         from bristlenose.run_condition import RunStateEnum
@@ -155,6 +167,9 @@ class ProgressiveImport:
             self._imported, self._refused = set(), set()
             self._quotes_done, self._quoted, self._quotes_refused = set(), set(), set()
             self._failures, self._quote_failures = {}, {}
+            self._seed_readable = self._seed_quoted = frozenset()
+            self._seeded = False
+            self._seed_error = None
             # The run's start, not this follower's: a serve restarted mid-run
             # stamps its sessions as the first serve did.
             try:
@@ -162,6 +177,8 @@ class ProgressiveImport:
             except ValueError:
                 self._run_stamp = datetime.now(timezone.utc)
             state.sessions_imported = False
+        if not self._seeded:
+            await asyncio.to_thread(self._seed, condition.latest.started_at)
         sets = self._manifest_sets(condition.latest.started_at)
         if sets is None:
             return  # unreadable manifest: keep saying what we said
@@ -181,13 +198,97 @@ class ProgressiveImport:
             moved = moved or any(counts.values())
         if moved:
             state.data_version = getattr(state, "data_version", 0) + 1
-        if self._imported:
+        if self._imported or self._seed_readable:
             # From what the database holds, not from what this call added: a
             # serve restarted mid-run finds session 1 imported at startup.
             state.sessions_imported = True
         state.progress = Progress(
-            readable=frozenset(self._imported), quoted=frozenset(self._quoted),
+            readable=frozenset(self._imported) | self._seed_readable,
+            quoted=frozenset(self._quoted) | self._seed_quoted,
         )
+
+    def _seed(self, run_started_at: str | None) -> None:
+        """Seed the overlay with what an earlier attempt delivered, for a resume.
+
+        A resumed run starts a fresh manifest, and the previous attempt's records
+        are what ``_manifest_sets`` refuses (``_predates``): until stages 6 and 9
+        record them again the overlay would read nothing, and Quotes would go dark
+        over rows the database still holds. The seed is the earlier attempt's own
+        record (the held ``pipeline-manifest.resume.json``, plus the live manifest
+        while it still predates this run: the held copy is written a little after
+        the run starts, and is the older of the two until then) intersected with
+        the database, so a session the record vouches for but nobody imported, or
+        one that was cleared away, is not claimed. A ``--clean`` re-analyse moves
+        both records aside with the output folder, so it seeds nothing and
+        Re-analyse stays the one way back to zero. Final once this run's own
+        manifest is written (the held copy is complete by then).
+        """
+        from bristlenose.manifest import PipelineManifest, _resume_path, load_manifest
+        from bristlenose.output_paths import project_output_dir
+        from bristlenose.server.lens_readiness import quoted_in_manifest, readable_in_manifest
+
+        output_dir = project_output_dir(self._project_dir)
+        try:
+            records: list[Any] = []
+            try:
+                records.append(PipelineManifest.model_validate_json(
+                    _resume_path(output_dir).read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                pass  # absent (the run has not held it yet) or damaged: it vouches for nothing
+            live = load_manifest(output_dir, strict=True)
+            this_runs_own = live is not None and not _predates(live.created_at, run_started_at)
+            if live is not None and not this_runs_own:
+                records.append(live)
+            readable: set[str] = set()
+            quoted: set[str] = set()
+            for record in records:
+                readable |= readable_in_manifest(record)
+                quoted |= quoted_in_manifest(record)
+            if readable or quoted:
+                try:
+                    readable, quoted = self._held_by_database(readable, quoted)
+                except Exception as exc:  # noqa: BLE001 — e.g. a database moved aside by --clean
+                    # No seed from a database that will not answer; said once, and the
+                    # run's own records fill the overlay as before.
+                    readable, quoted = set(), set()
+                    said = f"{type(exc).__name__}: {exc}"
+                    if said != self._seed_error:
+                        self._seed_error = said
+                        logger.warning("progressive | cannot read the database to seed the "
+                                       "overlay (%s)", said)
+            # Only ever grows within a run (design §3 principle 4): the held copy's
+            # merge is per stage, so once it replaces the live manifest it may vouch
+            # for fewer sessions than the two did together.
+            self._seed_readable |= frozenset(readable)
+            self._seed_quoted |= frozenset(quoted)
+            self._seeded = this_runs_own
+        except Exception:  # noqa: BLE001 — a half-written or moved file: no seed this tick
+            said = "manifest"
+            if said != self._seed_error:
+                self._seed_error = said
+                logger.info(
+                    "progressive | cannot read the earlier attempt's manifest to seed the "
+                    "overlay; it fills as this run records its sessions", exc_info=True,
+                )
+
+    def _held_by_database(
+        self, readable: set[str], quoted: set[str],
+    ) -> tuple[set[str], set[str]]:
+        """The sessions of each set that the database holds (and holds quotes for)."""
+        from sqlalchemy import select
+
+        from bristlenose.server.models import Quote
+        from bristlenose.server.models import Session as SessionModel
+
+        db = self._session_factory()
+        try:
+            have = {sid for (sid,) in db.execute(
+                select(SessionModel.session_id).where(SessionModel.project_id == 1))}
+            with_quotes = {sid for (sid,) in db.execute(
+                select(Quote.session_id).where(Quote.project_id == 1).distinct())}
+        finally:
+            db.close()
+        return readable & have, quoted & have & with_quotes
 
     def _manifest_sets(
         self, run_started_at: str | None,

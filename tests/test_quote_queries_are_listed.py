@@ -59,6 +59,7 @@ LISTED: dict[str, tuple[int, str]] = {
     "importer.py::_missing_output": (1, IMPORT),
     "importer.py::_pinned_quote_ids": (5, IMPORT),
     "importer.py::_prune_arrangements": (1, IMPORT),
+    "progressive.py::_held_by_database": (1, "a LOOKUP: which sessions the database holds quotes for, so a resumed run seeds only what is still there; it lights the Quotes lens, it is not a count"),
     "routes/data.py::_quote_ids_for_project": (1, STATE),
     "routes/data.py::_resolve_quote": (1, STATE),
     "routes/data.py::get_deleted_badges": (1, STATE),

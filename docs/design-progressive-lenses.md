@@ -1000,6 +1000,19 @@ Stopping mid-run keeps every readable session readable (principle 4). Resume
 continues from the manifest's per-session record. As built, the cancelled status
 page covers them (§7 item 15); what an SPA still open shows is in §5.7.
 
+**After Stop, Analyse again (built 15 Nov 2026).** The resumed run's manifest starts
+empty, so the overlay used to forget what the database still held: Quotes went dark,
+coverage dropped, the status page said nothing was readable, until stages 6 and 9
+recorded those sessions again. `ProgressiveImport._seed` (`server/progressive.py`)
+now seeds a separate published set, never the work sets (a seeded session must
+still reach the redacted re-read), from the earlier attempt's per-session records
+(the held `pipeline-manifest.resume.json` plus the live manifest while it predates
+the run), intersected with what the database holds. It only grows within a run and
+freezes once the new run writes its own manifest. `--clean` moves both records
+away, so Re-analyse still starts from zero. Open: if redaction is switched on
+between attempts, the seed shows unredacted database rows as readable until stage 8
+(no signal before then; the routes already served those rows).
+
 ### 5.3 Mixed projects (recordings and platform transcripts)
 
 A platform transcript is readable in seconds, but its participant codes depend on

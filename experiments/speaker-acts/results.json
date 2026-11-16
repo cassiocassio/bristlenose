@@ -1,0 +1,6626 @@
+[
+ {
+  "key": "A1",
+  "family": "A name",
+  "menu": "Confirm the proposed moderator name (Return)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"88382258-94b6-491e-b8f2-828529c92875\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\"",
+     "p1>p1 participant \"Rosalind\" ?"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "A2",
+  "family": "A name",
+  "menu": "Rename the moderator in place (Marcus -> Markus)",
+  "session": "s1",
+  "offered": true,
+  "note": "Marcus moderates s2 too: a spelling fix is meant to reach both.",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"19116de6-58e2-472a-a93a-169d396f42bd\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.m2: 'Kerri' -> 'Marcus'; people.m3: None -> 'Kerri'; s2.speakers: ['m1>m1 researcher \"Markus\" ?', 'p2>p2 participant \"Sarah\" ?'] -> ['m1>m2 researcher \"Marcus\" ?', 'p2>p2 participant \"Sarah\" ?']; s2.transcript.codes: ['m1', 'p2', 'm1', 'p2', 'm1', 'p2'] -> ['m2', 'p2', 'm2', 'p2', 'm2', 'p2']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "people.m1: 'Marcus' -> 'Markus'; people.m2: 'Kerri' -> 'Marcus'; people.m3: None -> 'Kerri'; s1.speakers: ['m1>m1 researcher \"Marcus\" ?', 'p1>p1 participant \"Rosalind\" ?'] -> ['m1>m1 researcher \"Markus\"', 'p1>p1 participant \"Rosalind\" ?']"
+   }
+  },
+  "changes": {
+   "people.m1": [
+    "Marcus",
+    "Markus"
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Markus\"",
+     "p1>p1 participant \"Rosalind\" ?"
+    ]
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Markus",
+     "p1 Rosalind"
+    ]
+   ],
+   "s2.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p2>p2 participant \"Sarah\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Markus\" ?",
+     "p2>p2 participant \"Sarah\" ?"
+    ]
+   ],
+   "s2.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p2 Sarah"
+    ],
+    [
+     "m1 Markus",
+     "p2 Sarah"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "A3",
+  "family": "A name",
+  "menu": "Rename the participant (Rosalind -> Ros)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /people {\"m1\": {\"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"role\": \"\"}, \"p1\": {\"full_name\": \"Ros\", \"short_name\": \"Ros\", \"role\": \"\"}, \"p2\": {\"full_name\": \"Sarah\", \"short_name\": \"Sarah\", \"role\": \"\"}, \"m2\": {\"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"role\": \"\"}, \"p3\": {\"full_name\": \"Dana\", \"short_name\": \"Dana\", \"role\": \"\"}, \"o1\": {\"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"role\": \"\"}} -> 200",
+   "PUT /sessions/s1/speakers/p1 {\"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    "p1 Ros"
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    "p1 Ros"
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    "p1 Ros"
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    "p1 Ros"
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    "p1 Ros"
+   ],
+   "people.p1": [
+    "Rosalind",
+    "Ros"
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Ros\""
+    ]
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Marcus",
+     "p1 Ros"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "A4",
+  "family": "A name",
+  "menu": "Moderator is that other known person (s3: Kerri -> Marcus)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s3/speakers/m1 {\"person\": \"326ae7a9-f603-4901-98f6-8630bf3ef4e8\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "people.m2": [
+    "Kerri",
+    null
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\"",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m1",
+     "o1",
+     "p3",
+     "m1",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m1 Marcus",
+     "p3 Dana",
+     "o1 Olu"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "A5",
+  "family": "A name",
+  "menu": "Moderator is someone new (s1: type 'Priya')",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"bcc14f7a-9ac2-4478-974f-6b23da587a48\", \"create\": true, \"kind\": \"moderator\", \"full_name\": \"Priya\", \"short_name\": \"Priya\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": false,
+    "detail": "s2: speakers ['m1>m1 researcher \"Marcus\" ?', 'p2>p2 participant \"Sarah\" ?']->['m1>m2 researcher \"Marcus\" ?', 'p2>p2 participant \"Sarah\" ?'], transcript.codes ['m1', 'p2', 'm1', 'p2', 'm1', 'p2']->['m2', 'p2', 'm2', 'p2', 'm2', 'p2'], transcript.speakers ['m1 Marcus', 'p2 Sarah']->['m2 Marcus', 'p2 Sarah']; s3: speakers ['m1>m2 researcher \"Kerri\" ?', 'p3>p3 participant \"Dana\" ?', 'o1>o1 observer \"Olu\" ?']->['m1>m3 researcher \"Kerri\" ?', 'p3>p3 participant \"Dana\" ?', 'o1>o1 observer \"Olu\" ?'], transcript.codes ['m2', 'o1', 'p3', 'm2', 'p3', 'o1']->['m3', 'o1', 'p3', 'm3', 'p3', 'o1'], transcript.speakers ['m2 Kerri', 'p3 Dana', 'o1 Olu']->['m3 Kerri', 'p3 Dana', 'o1 Olu']"
+   },
+   "R6 codes": {
+    "ok": false,
+    "detail": "s2 Marcus: m1 -> m2; s3 Kerri: m2 -> m3"
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.persons": [
+    6,
+    7
+   ],
+   "people.m1": [
+    "Marcus",
+    "Priya"
+   ],
+   "people.m2": [
+    "Kerri",
+    "Marcus"
+   ],
+   "people.m3": [
+    null,
+    "Kerri"
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Priya\"",
+     "p1>p1 participant \"Rosalind\" ?"
+    ]
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Priya",
+     "p1 Rosalind"
+    ]
+   ],
+   "s2.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p2>p2 participant \"Sarah\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Marcus\" ?",
+     "p2>p2 participant \"Sarah\" ?"
+    ]
+   ],
+   "s2.transcript.codes": [
+    [
+     "m1",
+     "p2",
+     "m1",
+     "p2",
+     "m1",
+     "p2"
+    ],
+    [
+     "m2",
+     "p2",
+     "m2",
+     "p2",
+     "m2",
+     "p2"
+    ]
+   ],
+   "s2.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p2 Sarah"
+    ],
+    [
+     "m2 Marcus",
+     "p2 Sarah"
+    ]
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m3 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m3",
+     "o1",
+     "p3",
+     "m3",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m3 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ]
+   ]
+  },
+  "undo_left": {
+   "db.persons": [
+    6,
+    7
+   ]
+  }
+ },
+ {
+  "key": "A6",
+  "family": "A name",
+  "menu": "Not this person (clear s1's moderator)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"clear\": true, \"kind\": \"moderator\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m? researcher \"\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m?",
+     "p1",
+     "m?",
+     "p1",
+     "m?",
+     "p1",
+     "m?",
+     "p1",
+     "m?",
+     "p1",
+     "m?"
+    ]
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m? m?",
+     "p1 Rosalind"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "A7",
+  "family": "A name",
+  "menu": "Observer is someone new (s3: type 'Sam')",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"d070220a-d707-4d8d-9391-5c906aa5f5b6\", \"create\": true, \"kind\": \"observer\", \"full_name\": \"Sam\", \"short_name\": \"Sam\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.persons": [
+    6,
+    7
+   ],
+   "people.o1": [
+    "Olu",
+    "Sam"
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Sam\""
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Sam"
+    ]
+   ]
+  },
+  "undo_left": {
+   "db.persons": [
+    6,
+    7
+   ]
+  }
+ },
+ {
+  "key": "B1",
+  "family": "B team recode",
+  "menu": "Moderator was an observer (same person)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s3/speakers/m1 {\"person\": \"dc1f5033-e6bb-4920-a053-c505609722da\", \"kind\": \"observer\", \"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": false,
+    "detail": "s3 Olu: o1 -> o2"
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "people.m2": [
+    "Kerri",
+    null
+   ],
+   "people.o1": [
+    "Olu",
+    "Kerri"
+   ],
+   "people.o2": [
+    null,
+    "Olu"
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>o1 observer \"Kerri\"",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o2 observer \"Olu\" ?"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "o1",
+     "o2",
+     "p3",
+     "o1",
+     "p3",
+     "o2"
+    ]
+   ],
+   "s3.transcript.moderator": [
+    [
+     1,
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "o1 Kerri",
+     "p3 Dana",
+     "o2 Olu"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "B2",
+  "family": "B team recode",
+  "menu": "Observer was a moderator (same person)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"d7643201-293d-47b0-a163-89806d9a2de2\", \"kind\": \"moderator\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "people.m3": [
+    null,
+    "Olu"
+   ],
+   "people.o1": [
+    "Olu",
+    null
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>m3 researcher \"Olu\""
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "m3",
+     "p3",
+     "m2",
+     "p3",
+     "m3"
+    ]
+   ],
+   "s3.transcript.moderator": [
+    [
+     1,
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    [
+     1,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "m3 Olu"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "B3",
+  "family": "B team recode",
+  "menu": "Observer was the moderator Marcus (pick under Moderator)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"bfe329e6-f0a0-4042-aa9f-c6f4ab0d6323\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "people.o1": [
+    "Olu",
+    null
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>m1 researcher \"Marcus\""
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "m1",
+     "p3",
+     "m2",
+     "p3",
+     "m1"
+    ]
+   ],
+   "s3.transcript.moderator": [
+    [
+     1,
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    [
+     1,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "m1 Marcus"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "C1",
+  "family": "C out of participant",
+  "menu": "Participant was the moderator Marcus (p1 -> Marcus)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/p1 {\"person\": \"07fd58da-bb79-4e00-aac5-ce014cf7bd12\", \"kind\": \"moderator\", \"full_name\": \"Marcus Stone\", \"short_name\": \"Marcus\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "info.participants": [
+    3,
+    2
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>m1 researcher \"Marcus\""
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Marcus",
+     "m1 Marcus"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "C2",
+  "family": "C out of participant",
+  "menu": "Participant was a new moderator (p1 -> 'Priya')",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/p1 {\"person\": \"9e2b5ff0-54b4-4e97-a27b-ff4b00d6abef\", \"create\": true, \"kind\": \"moderator\", \"full_name\": \"Priya\", \"short_name\": \"Priya\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": false,
+    "detail": "s3: speakers ['m1>m2 researcher \"Kerri\" ?', 'p3>p3 participant \"Dana\" ?', 'o1>o1 observer \"Olu\" ?']->['m1>m3 researcher \"Kerri\" ?', 'p3>p3 participant \"Dana\" ?', 'o1>o1 observer \"Olu\" ?'], transcript.codes ['m2', 'o1', 'p3', 'm2', 'p3', 'o1']->['m3', 'o1', 'p3', 'm3', 'p3', 'o1'], transcript.speakers ['m2 Kerri', 'p3 Dana', 'o1 Olu']->['m3 Kerri', 'p3 Dana', 'o1 Olu']"
+   },
+   "R6 codes": {
+    "ok": false,
+    "detail": "s3 Kerri: m2 -> m3"
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "db.persons": [
+    6,
+    7
+   ],
+   "info.participants": [
+    3,
+    2
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.m2": [
+    "Kerri",
+    "Priya"
+   ],
+   "people.m3": [
+    null,
+    "Kerri"
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>m2 researcher \"Priya\""
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "m2",
+     "m1",
+     "m2",
+     "m1",
+     "m2",
+     "m1",
+     "m2",
+     "m1",
+     "m2",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Marcus",
+     "m2 Priya"
+    ]
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m3 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m3",
+     "o1",
+     "p3",
+     "m3",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m3 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {
+   "db.persons": [
+    6,
+    7
+   ]
+  }
+ },
+ {
+  "key": "C3",
+  "family": "C out of participant",
+  "menu": "Participant was an observer (p3 -> Olu)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p3-20",
+   "q-p3-40"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s3/speakers/p3 {\"person\": \"97541522-31b9-4afc-bfd7-1b50ae07ab3d\", \"kind\": \"observer\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 2 -> 0 quotes, transcript marks 2 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p1",
+     "p2"
+    ]
+   ],
+   "csv.rows.s3": [
+    2,
+    null
+   ],
+   "dashboard.quotes": [
+    10,
+    8
+   ],
+   "info.participants": [
+    3,
+    2
+   ],
+   "lens.credit.q-p3-20": [
+    "p3 Dana",
+    null
+   ],
+   "lens.credit.q-p3-40": [
+    "p3 Dana",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50"
+    ]
+   ],
+   "people.p3": [
+    "Dana",
+    null
+   ],
+   "registry.pins.s3.Speaker B": [
+    null,
+    "observer"
+   ],
+   "s3.grid.journey": [
+    [
+     "Codebook"
+    ],
+    []
+   ],
+   "s3.grid.sentiment": [
+    2,
+    0
+   ],
+   "s3.owed": [
+    false,
+    true
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>o1 observer \"Olu\"",
+     "o1>o1 observer \"Olu\" ?"
+    ]
+   ],
+   "s3.timeline.quotes": [
+    2,
+    0
+   ],
+   "s3.timeline.sections": [
+    1,
+    0
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1*",
+     "o1*",
+     "p3*",
+     "m1*",
+     "p3*",
+     "o1*"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "o1",
+     "o1",
+     "m2",
+     "o1",
+     "o1"
+    ]
+   ],
+   "s3.transcript.quoted": [
+    [
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    []
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m2 Kerri",
+     "o1 Olu",
+     "o1 Olu"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "C4",
+  "family": "C out of participant",
+  "menu": "Participant was an unknown moderator (p1 -> m?)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/p1 {\"clear\": true, \"kind\": \"moderator\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "info.participants": [
+    3,
+    2
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>mB? researcher \"\" ?"
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "mB?",
+     "m1",
+     "mB?",
+     "m1",
+     "mB?",
+     "m1",
+     "mB?",
+     "m1",
+     "mB?",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Marcus",
+     "mB? mB?"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "D1",
+  "family": "D into participant",
+  "menu": "Moderator was a participant (same person, s3 Kerri)",
+  "session": "s3",
+  "offered": true,
+  "note": "Their words were never quote-mined; existing quotes should be untouched.",
+  "want_out": [],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s3/speakers/m1 {\"person\": \"db18c45f-8846-478b-9db9-d87edc4fbe7d\", \"kind\": \"participant\", \"full_name\": \"Kerri Lee\", \"short_name\": \"Kerri\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.persons": [
+    6,
+    7
+   ],
+   "info.participants": [
+    3,
+    4
+   ],
+   "people.m2": [
+    "Kerri",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Kerri"
+   ],
+   "registry.pins.s3.Speaker A": [
+    null,
+    "participant"
+   ],
+   "s3.owed": [
+    false,
+    true
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>p4 participant \"Kerri\"",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ]
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1",
+     "o1*",
+     "p3",
+     "m1",
+     "p3",
+     "o1*"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "p4",
+     "o1",
+     "p3",
+     "p4",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.moderator": [
+    [
+     1,
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "p4 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ]
+   ]
+  },
+  "undo_left": {
+   "db.persons": [
+    6,
+    7
+   ]
+  }
+ },
+ {
+  "key": "D2",
+  "family": "D into participant",
+  "menu": "Observer was a participant (same person, s3 Olu)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s3/speakers/o1 {\"person\": \"fc4ab146-0ebd-43fa-aaee-ff509f476138\", \"kind\": \"participant\", \"full_name\": \"Olu Ade\", \"short_name\": \"Olu\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.persons": [
+    6,
+    7
+   ],
+   "info.participants": [
+    3,
+    4
+   ],
+   "people.o1": [
+    "Olu",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Olu"
+   ],
+   "registry.pins.s3.Speaker C": [
+    null,
+    "participant"
+   ],
+   "s3.owed": [
+    false,
+    true
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>p4 participant \"Olu\""
+    ]
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1*",
+     "o1",
+     "p3",
+     "m1*",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "p4",
+     "p3",
+     "m2",
+     "p3",
+     "p4"
+    ]
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "p4 Olu"
+    ]
+   ]
+  },
+  "undo_left": {
+   "db.persons": [
+    6,
+    7
+   ]
+  }
+ },
+ {
+  "key": "D3",
+  "family": "D into participant",
+  "menu": "Moderator was a new participant (s1 m1 -> 'Zed')",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"e43fe7b3-c8f2-4696-aafb-41eed16e2853\", \"create\": true, \"kind\": \"participant\", \"full_name\": \"Zed\", \"short_name\": \"Zed\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.persons": [
+    6,
+    8
+   ],
+   "info.participants": [
+    3,
+    4
+   ],
+   "people.p4": [
+    null,
+    "Zed"
+   ],
+   "registry.pins.s1.Speaker A": [
+    null,
+    "participant"
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>p4 participant \"Zed\"",
+     "p1>p1 participant \"Rosalind\" ?"
+    ]
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "p4",
+     "p1",
+     "p4",
+     "p1",
+     "p4",
+     "p1",
+     "p4",
+     "p1",
+     "p4",
+     "p1",
+     "p4"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "p4 Zed",
+     "p1 Rosalind"
+    ]
+   ]
+  },
+  "undo_left": {
+   "db.persons": [
+    6,
+    8
+   ]
+  }
+ },
+ {
+  "key": "E1",
+  "family": "E swap",
+  "menu": "Swap with m1 (s1: participant <-> moderator)",
+  "session": "s1",
+  "offered": true,
+  "note": "The incident of 14 Nov. One row in the name list.",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/p1 {\"swap_with\": \"m1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Rosalind"
+   ],
+   "registry.pins.s1.Speaker A": [
+    null,
+    "participant"
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>p4 participant \"Rosalind\" ?",
+     "p1>m1 researcher \"Marcus\" ?"
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "p4 Rosalind",
+     "m1 Marcus"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "E2",
+  "family": "E swap",
+  "menu": "Swap, from the moderator's badge",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"swap_with\": \"p1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Rosalind"
+   ],
+   "registry.pins.s1.Speaker A": [
+    null,
+    "participant"
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>p4 participant \"Rosalind\" ?",
+     "p1>m1 researcher \"Marcus\" ?"
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "p4 Rosalind",
+     "m1 Marcus"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "E3",
+  "family": "E swap",
+  "menu": "Swap participant with the observer (s3)",
+  "session": "s3",
+  "offered": false,
+  "note": "",
+  "want_out": [
+   "q-p3-20",
+   "q-p3-40"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s3/speakers/p3 {\"swap_with\": \"o1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 2 -> 0 quotes, transcript marks 2 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.p4: 'Dana' -> 'Olu'; s3.speakers: ['m1>m2 researcher \"Kerri\" ?', 'p3>o1 observer \"Olu\" ?', 'o1>p4 participant \"Dana\" ?'] -> ['m1>m2 researcher \"Kerri\" ?', 'p3>o1 observer \"Olu\" ?', 'o1>p4 participant \"Olu\" ?']; s3.transcript.speakers: ['m2 Kerri', 'o1 Olu', 'p4 Dana'] -> ['m2 Kerri', 'o1 Olu', 'p4 Olu']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "lens.credit.q-p3-20: 'p3 Dana' -> 'p3 Olu'; lens.credit.q-p3-40: 'p3 Dana' -> 'p3 Olu'; people.p3: 'Dana' -> 'Olu'; s3.speakers: ['m1>m2 researcher \"Kerri\" ?', 'p3>p3 participant \"Dana\" ?', 'o1>o1 observer \"Olu\" ?'] -> ['m1>m2 researcher \"Kerri\" ?', 'p3>p3 participant \"Olu\" ?', 'o1>o1 observer \"Olu\" ?']"
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p1",
+     "p2"
+    ]
+   ],
+   "csv.rows.s3": [
+    2,
+    null
+   ],
+   "dashboard.quotes": [
+    10,
+    8
+   ],
+   "lens.credit.q-p3-20": [
+    "p3 Dana",
+    null
+   ],
+   "lens.credit.q-p3-40": [
+    "p3 Dana",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50"
+    ]
+   ],
+   "people.p3": [
+    "Dana",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Dana"
+   ],
+   "registry.pins.s3.Speaker B": [
+    null,
+    "observer"
+   ],
+   "registry.pins.s3.Speaker C": [
+    null,
+    "participant"
+   ],
+   "s3.grid.journey": [
+    [
+     "Codebook"
+    ],
+    []
+   ],
+   "s3.grid.sentiment": [
+    2,
+    0
+   ],
+   "s3.owed": [
+    false,
+    true
+   ],
+   "s3.speakers": [
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>p3 participant \"Dana\" ?",
+     "o1>o1 observer \"Olu\" ?"
+    ],
+    [
+     "m1>m2 researcher \"Kerri\" ?",
+     "p3>o1 observer \"Olu\" ?",
+     "o1>p4 participant \"Dana\" ?"
+    ]
+   ],
+   "s3.timeline.quotes": [
+    2,
+    0
+   ],
+   "s3.timeline.sections": [
+    1,
+    0
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1*",
+     "o1",
+     "p3*",
+     "m1*",
+     "p3*",
+     "o1"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "p4",
+     "o1",
+     "m2",
+     "o1",
+     "p4"
+    ]
+   ],
+   "s3.transcript.quoted": [
+    [
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    []
+   ],
+   "s3.transcript.speakers": [
+    [
+     "m2 Kerri",
+     "p3 Dana",
+     "o1 Olu"
+    ],
+    [
+     "m2 Kerri",
+     "o1 Olu",
+     "p4 Dana"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "F1",
+  "family": "F paragraph",
+  "menu": "Quoted participant paragraph was the moderator's (s1 #1 -> m1)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10"
+  ],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s1/reassign {\"position\": 1, \"verify\": \"Thanks for having me, the import\", \"slot\": \"m1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 4 quotes, transcript marks 5 -> 4"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.rows.s1": [
+    5,
+    4
+   ],
+   "dashboard.quotes": [
+    10,
+    9
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "s1.grid.sentiment": [
+    5,
+    4
+   ],
+   "s1.timeline.quotes": [
+    5,
+    4
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "m1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    [
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "F2",
+  "family": "F paragraph",
+  "menu": "Moderator's 'Yes that is true' was the participant's (s1 #4 -> p1)",
+  "session": "s1",
+  "offered": true,
+  "note": "The everyday fix. Nothing was quoted from it, so no evidence should move.",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s1/reassign {\"position\": 4, \"verify\": \"Yes that is true, it does\", \"slot\": \"p1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "p1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "F3",
+  "family": "F paragraph",
+  "menu": "Unquoted moderator opener was the participant's (s1 #0 -> p1)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s1/reassign {\"position\": 0, \"verify\": \"Welcome Rosalind, thanks for coming in\", \"slot\": \"p1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "p1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     0,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "F4",
+  "family": "F paragraph",
+  "menu": "Quoted paragraph was a new unknown moderator's (s1 #3 -> new)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-30"
+  ],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s1/reassign {\"position\": 3, \"verify\": \"I dragged the folder in and\", \"new\": \"moderator\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 4 quotes, transcript marks 5 -> 4"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.rows.s1": [
+    5,
+    4
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p1-50"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    9
+   ],
+   "db.session_speakers": [
+    7,
+    8
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "registry.speakers.s1.\u0000retired m2": [
+    null,
+    "m2"
+   ],
+   "s1.grid.sentiment": [
+    5,
+    4
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "m2>mB? researcher \"\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    4
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "m2*",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "p1",
+     "m1",
+     "mB?",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     1,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ]
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Marcus",
+     "mB? mB?",
+     "p1 Rosalind"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {
+   "registry.speakers.s1.\u0000retired m2": [
+    null,
+    "m2"
+   ]
+  }
+ },
+ {
+  "key": "F5",
+  "family": "F paragraph",
+  "menu": "Participant paragraph was the observer's (s3 #2 -> o1)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p3-20"
+  ],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s3/reassign {\"position\": 2, \"verify\": \"No problem, the codebook is the\", \"slot\": \"o1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 2 -> 1 quotes, transcript marks 2 -> 1"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.rows.s3": [
+    2,
+    1
+   ],
+   "dashboard.quotes": [
+    10,
+    9
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "lens.credit.q-p3-20": [
+    "p3 Dana",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-40"
+    ]
+   ],
+   "s3.grid.sentiment": [
+    2,
+    1
+   ],
+   "s3.timeline.quotes": [
+    2,
+    1
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1*",
+     "o1*",
+     "m1*",
+     "p3",
+     "o1*"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "o1",
+     "o1",
+     "m2",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.quoted": [
+    [
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p3-40"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "F6",
+  "family": "F paragraph",
+  "menu": "Observer's line was the participant's (s3 #5 -> p3)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s3/reassign {\"position\": 5, \"verify\": \"That matches what support hears.\", \"slot\": \"p3\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "p3"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "F7",
+  "family": "F paragraph",
+  "menu": "Observer's line was the moderator's (s3 #1 -> m1)",
+  "session": "s3",
+  "offered": true,
+  "note": "",
+  "want_out": [],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s3/reassign {\"position\": 1, \"verify\": \"Hello, pretend I am not here.\", \"slot\": \"m1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": true,
+    "detail": ""
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "s3.timeline.turns": [
+    [
+     "m1*",
+     "o1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ],
+    [
+     "m1*",
+     "p3",
+     "m1*",
+     "p3",
+     "o1*"
+    ]
+   ],
+   "s3.transcript.codes": [
+    [
+     "m2",
+     "o1",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ],
+    [
+     "m2",
+     "m2",
+     "p3",
+     "m2",
+     "p3",
+     "o1"
+    ]
+   ],
+   "s3.transcript.moderator": [
+    [
+     1,
+     0,
+     0,
+     1,
+     0,
+     0
+    ],
+    [
+     1,
+     1,
+     0,
+     1,
+     0,
+     0
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "G1",
+  "family": "G sequences",
+  "menu": "Three quick paragraph fixes in s1 (#4 -> p1, #1 -> m1, #6 -> p1)",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10"
+  ],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s1/reassign {\"position\": 4, \"verify\": \"Yes that is true, it does\", \"slot\": \"p1\"} -> 200",
+   "POST /transcripts/s1/reassign {\"position\": 1, \"verify\": \"Thanks for having me, the import\", \"slot\": \"m1\"} -> 200",
+   "POST /transcripts/s1/reassign {\"position\": 6, \"verify\": \"What did you expect instead?\", \"slot\": \"p1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 4 quotes, transcript marks 5 -> 4"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.rows.s1": [
+    5,
+    4
+   ],
+   "dashboard.quotes": [
+    10,
+    9
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    3
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "s1.grid.sentiment": [
+    5,
+    4
+   ],
+   "s1.timeline.quotes": [
+    5,
+    4
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "m1",
+     "m1",
+     "p1",
+     "p1",
+     "p1",
+     "p1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     0,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    [
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ]
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "G2",
+  "family": "G sequences",
+  "menu": "Every participant paragraph moved to m1, one at a time (s2)",
+  "session": "s2",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p2-10",
+   "q-p2-30",
+   "q-p2-50"
+  ],
+  "want_owed": false,
+  "requests": [
+   "POST /transcripts/s2/reassign {\"position\": 1, \"verify\": \"Sure, I mostly use the signals\", \"slot\": \"m1\"} -> 200",
+   "POST /transcripts/s2/reassign {\"position\": 3, \"verify\": \"It tells me which problems come\", \"slot\": \"m1\"} -> 200",
+   "POST /transcripts/s2/reassign {\"position\": 5, \"verify\": \"Export to slides is missing and\", \"slot\": \"m1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 3 -> 0 quotes, transcript marks 3 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": true,
+    "detail": ""
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": true,
+    "detail": ""
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p1",
+     "p3"
+    ]
+   ],
+   "csv.rows.s2": [
+    3,
+    null
+   ],
+   "dashboard.quotes": [
+    10,
+    7
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    3
+   ],
+   "lens.credit.q-p2-10": [
+    "p2 Sarah",
+    null
+   ],
+   "lens.credit.q-p2-30": [
+    "p2 Sarah",
+    null
+   ],
+   "lens.credit.q-p2-50": [
+    "p2 Sarah",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "s2.grid.journey": [
+    [
+     "Signals",
+     "Export"
+    ],
+    []
+   ],
+   "s2.grid.sentiment": [
+    3,
+    0
+   ],
+   "s2.timeline.quotes": [
+    3,
+    0
+   ],
+   "s2.timeline.sections": [
+    2,
+    0
+   ],
+   "s2.timeline.turns": [
+    [
+     "m1*",
+     "p2",
+     "m1*",
+     "p2",
+     "m1*",
+     "p2"
+    ],
+    [
+     "m1*"
+    ]
+   ],
+   "s2.transcript.codes": [
+    [
+     "m1",
+     "p2",
+     "m1",
+     "p2",
+     "m1",
+     "p2"
+    ],
+    [
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1"
+    ]
+   ],
+   "s2.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "s2.transcript.quoted": [
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "G3",
+  "family": "G sequences",
+  "menu": "Swap, then fix one paragraph the other way",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/p1 {\"swap_with\": \"m1\"} -> 200",
+   "POST /transcripts/s1/reassign {\"position\": 4, \"verify\": \"Yes that is true, it does\", \"slot\": \"p1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Rosalind"
+   ],
+   "registry.pins.s1.Speaker A": [
+    null,
+    "participant"
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>p4 participant \"Rosalind\" ?",
+     "p1>m1 researcher \"Marcus\" ?"
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "m1",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     0,
+     1,
+     0,
+     1,
+     1,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "p4 Rosalind",
+     "m1 Marcus"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "G4",
+  "family": "G sequences",
+  "menu": "Paragraph fix, then a swap on top of it",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "POST /transcripts/s1/reassign {\"position\": 1, \"verify\": \"Thanks for having me, the import\", \"slot\": \"m1\"} -> 200",
+   "PUT /sessions/s1/speakers/p1 {\"swap_with\": \"m1\"} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.p4: 'Rosalind' -> 'Marcus'; s1.speakers: ['m1>p4 participant \"Rosalind\" ?', 'p1>m1 researcher \"Marcus\" ?'] -> ['m1>p4 participant \"Marcus\" ?', 'p1>m1 researcher \"Marcus\" ?']; s1.transcript.speakers: ['p4 Rosalind', 'm1 Marcus'] -> ['p4 Marcus', 'm1 Marcus']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "lens.credit.q-p1-10: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-30: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-50: 'p1 Rosalind' -> 'p1 Marcus'; lens.credit.q-p1-70: 'p1 Rosalind' -> 'p1 Marcus'"
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "db.transcript_layout_edits": [
+    0,
+    1
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "people.p4": [
+    null,
+    "Rosalind"
+   ],
+   "registry.pins.s1.Speaker A": [
+    null,
+    "participant"
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>p4 participant \"Rosalind\" ?",
+     "p1>m1 researcher \"Marcus\" ?"
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1",
+     "p1*",
+     "m1"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "p4",
+     "p4",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4",
+     "m1",
+     "p4"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     0,
+     0,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "p4 Rosalind",
+     "m1 Marcus"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ },
+ {
+  "key": "G5",
+  "family": "G sequences",
+  "menu": "Rename the moderator, then recode the participant as them",
+  "session": "s1",
+  "offered": true,
+  "note": "",
+  "want_out": [
+   "q-p1-10",
+   "q-p1-30",
+   "q-p1-50",
+   "q-p1-70",
+   "q-p1-90"
+  ],
+  "want_owed": true,
+  "requests": [
+   "PUT /sessions/s1/speakers/m1 {\"person\": \"c219bd69-afe2-41d9-8d81-e6ccccfa5ef4\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200",
+   "PUT /sessions/s1/speakers/p1 {\"person\": \"c219bd69-afe2-41d9-8d81-e6ccccfa5ef4\", \"kind\": \"moderator\", \"full_name\": \"Markus Stone\", \"short_name\": \"Markus\", \"confirmed\": true} -> 200"
+  ],
+  "error": "",
+  "verdict": {
+   "R1 accepted": {
+    "ok": true,
+    "detail": ""
+   },
+   "R2 evidence": {
+    "ok": true,
+    "detail": ""
+   },
+   "R3 agree": {
+    "ok": true,
+    "detail": ""
+   },
+   "R4 record": {
+    "ok": false,
+    "detail": "timeline 5 -> 0 quotes, transcript marks 5 -> 0"
+   },
+   "R5 isolated": {
+    "ok": true,
+    "detail": ""
+   },
+   "R6 codes": {
+    "ok": true,
+    "detail": ""
+   },
+   "R7 kept": {
+    "ok": true,
+    "detail": ""
+   },
+   "R8 owed": {
+    "ok": true,
+    "detail": ""
+   },
+   "R9 re-import": {
+    "ok": false,
+    "detail": "people.m2: 'Kerri' -> 'Marcus'; people.m3: None -> 'Kerri'; s2.speakers: ['m1>m1 researcher \"Markus\" ?', 'p2>p2 participant \"Sarah\" ?'] -> ['m1>m2 researcher \"Marcus\" ?', 'p2>p2 participant \"Sarah\" ?']; s2.transcript.codes: ['m1', 'p2', 'm1', 'p2', 'm1', 'p2'] -> ['m2', 'p2', 'm2', 'p2', 'm2', 'p2']"
+   },
+   "R10 undo": {
+    "ok": true,
+    "detail": ""
+   },
+   "R11 late undo": {
+    "ok": false,
+    "detail": "people.m1: 'Marcus' -> 'Markus'; people.m2: 'Kerri' -> 'Marcus'; people.m3: None -> 'Kerri'; s1.speakers: ['m1>m1 researcher \"Marcus\" ?', 'p1>p1 participant \"Rosalind\" ?'] -> ['m1>m1 researcher \"Markus\"', 'p1>p1 participant \"Rosalind\" ?']"
+   }
+  },
+  "changes": {
+   "csv.codes": [
+    [
+     "p1",
+     "p2",
+     "p3"
+    ],
+    [
+     "p2",
+     "p3"
+    ]
+   ],
+   "csv.rows.s1": [
+    5,
+    null
+   ],
+   "dashboard.featured": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "dashboard.quotes": [
+    10,
+    5
+   ],
+   "info.participants": [
+    3,
+    2
+   ],
+   "lens.credit.q-p1-10": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-30": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-50": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-70": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.credit.q-p1-90": [
+    "p1 Rosalind",
+    null
+   ],
+   "lens.sections": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "lens.themes": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90",
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ],
+    [
+     "q-p2-10",
+     "q-p2-30",
+     "q-p2-50",
+     "q-p3-20",
+     "q-p3-40"
+    ]
+   ],
+   "people.m1": [
+    "Marcus",
+    "Markus"
+   ],
+   "people.p1": [
+    "Rosalind",
+    null
+   ],
+   "registry.pins.s1.Speaker B": [
+    null,
+    "researcher"
+   ],
+   "s1.grid.journey": [
+    [
+     "Import",
+     "Quotes"
+    ],
+    []
+   ],
+   "s1.grid.sentiment": [
+    5,
+    0
+   ],
+   "s1.owed": [
+    false,
+    true
+   ],
+   "s1.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p1>p1 participant \"Rosalind\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Markus\"",
+     "p1>m1 researcher \"Markus\""
+    ]
+   ],
+   "s1.timeline.quotes": [
+    5,
+    0
+   ],
+   "s1.timeline.sections": [
+    2,
+    0
+   ],
+   "s1.timeline.turns": [
+    [
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*",
+     "p1",
+     "m1*"
+    ],
+    [
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*",
+     "p1*",
+     "m1*"
+    ]
+   ],
+   "s1.transcript.codes": [
+    [
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1",
+     "p1",
+     "m1"
+    ],
+    [
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1",
+     "m1"
+    ]
+   ],
+   "s1.transcript.moderator": [
+    [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "s1.transcript.quoted": [
+    [
+     "q-p1-10",
+     "q-p1-30",
+     "q-p1-50",
+     "q-p1-70",
+     "q-p1-90"
+    ],
+    []
+   ],
+   "s1.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p1 Rosalind"
+    ],
+    [
+     "m1 Markus",
+     "m1 Markus"
+    ]
+   ],
+   "s2.speakers": [
+    [
+     "m1>m1 researcher \"Marcus\" ?",
+     "p2>p2 participant \"Sarah\" ?"
+    ],
+    [
+     "m1>m1 researcher \"Markus\" ?",
+     "p2>p2 participant \"Sarah\" ?"
+    ]
+   ],
+   "s2.transcript.speakers": [
+    [
+     "m1 Marcus",
+     "p2 Sarah"
+    ],
+    [
+     "m1 Markus",
+     "p2 Sarah"
+    ]
+   ],
+   "signals.count": [
+    4,
+    0
+   ],
+   "signals.participants": [
+    [
+     "p1"
+    ],
+    []
+   ],
+   "signals.quotes": [
+    [
+     "q-p1-30",
+     "q-p1-50"
+    ],
+    []
+   ]
+  },
+  "undo_left": {}
+ }
+]

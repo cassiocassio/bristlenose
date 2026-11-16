@@ -413,3 +413,23 @@ import Testing
         #expect(TranscriptionPaneLayout.of(appleSpeech: false, whisperInBuild: true) == .whisperOnly)
     }
 }
+
+/// The re-run owed to a project waiting for Whisper: once Whisper is on disk,
+/// once per project per process, and whatever deferred it (Apple's model or
+/// a run that met the app's own download), so on macOS 15 too.
+@Suite struct WhisperRerunTests {
+    let a = UUID(), b = UUID()
+
+    @Test func owedOnceWhisperIsOnDisk() {
+        #expect(PipelineRunner.owesWhisperRerun(whisperPhase: .onDisk, waiting: [a], alreadyRerun: []))
+        for phase in [WhisperDownloadModel.Phase.downloading, .missing, .partial, .failed, .unknown] {
+            #expect(!PipelineRunner.owesWhisperRerun(whisperPhase: phase, waiting: [a], alreadyRerun: []), "\(phase)")
+        }
+    }
+
+    @Test func onceEachAndNothingWithNobodyWaiting() {
+        #expect(!PipelineRunner.owesWhisperRerun(whisperPhase: .onDisk, waiting: [a], alreadyRerun: [a]))
+        #expect(PipelineRunner.owesWhisperRerun(whisperPhase: .onDisk, waiting: [a, b], alreadyRerun: [a]))
+        #expect(!PipelineRunner.owesWhisperRerun(whisperPhase: .onDisk, waiting: [], alreadyRerun: []))
+    }
+}

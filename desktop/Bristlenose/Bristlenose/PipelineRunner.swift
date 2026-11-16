@@ -808,7 +808,8 @@ final class PipelineRunner: ObservableObject {
         self.runKeyFingerprint = runKeyFingerprint
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
-        // first-run model, the wrong language) runs again, and the per-session
+        // first-run model, the wrong language, or a run that reached Whisper
+        // while the app owned its download) runs again, and the per-session
         // fingerprints mean only those sessions are transcribed
         // (docs/design-apple-first-transcription.md §2).
         whisperReadyObserver = notificationCenter.addObserver(
@@ -859,8 +860,18 @@ final class PipelineRunner: ObservableObject {
     /// defect must not become a loop of paid runs.
     private var rerunForWhisper: Set<UUID> = []
 
+    /// Whether a project waiting for Whisper is owed its re-run: Whisper is on
+    /// disk and one of them has not been re-run in this process. Not tied to
+    /// Apple's model: a session can also wait because the app owned the
+    /// download when the run reached it (Background Assets), on any macOS.
+    nonisolated static func owesWhisperRerun(
+        whisperPhase: WhisperDownloadModel.Phase, waiting: [UUID], alreadyRerun: Set<UUID>
+    ) -> Bool {
+        whisperPhase == .onDisk && waiting.contains { !alreadyRerun.contains($0) }
+    }
+
     private func rerunDeferredProjects() {
-        guard BristlenoseFlags.appleSpeechAvailable, let projects = projectIndex?.projects else { return }
+        guard let projects = projectIndex?.projects else { return }
         for id in projectsWaitingForWhisper where !rerunForWhisper.contains(id) {
             guard let project = projects.first(where: { $0.id == id }) else { continue }
             rerunForWhisper.insert(id)
@@ -876,9 +887,9 @@ final class PipelineRunner: ObservableObject {
     /// stages, or a launch scan read it after the status probe. Checked on
     /// every state change, acted on a turn later (never inside `didSet`).
     private func rerunWaitingProjectsIfWhisperIsReady() {
-        guard BristlenoseFlags.appleSpeechAvailable,
-              WhisperDownloadModel.shared.phase == .onDisk,
-              projectsWaitingForWhisper.contains(where: { !rerunForWhisper.contains($0) })
+        guard Self.owesWhisperRerun(whisperPhase: WhisperDownloadModel.shared.phase,
+                                    waiting: projectsWaitingForWhisper,
+                                    alreadyRerun: rerunForWhisper)
         else { return }
         Task { @MainActor [weak self] in self?.rerunDeferredProjects() }
     }

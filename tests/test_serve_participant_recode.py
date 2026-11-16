@@ -322,6 +322,21 @@ class TestSwap:
         assert _slots(client) == before
         assert _quote_ids(client) == {"q-p1-10", "q-p2-10"}
 
+    def test_a_re_import_leaves_the_swap_as_it_was(self, tmp_path: Path) -> None:
+        """The moderator's tag now holds the participant, and the pipeline's
+        name for that tag is the moderator's: the next import must not write it
+        onto the participant, or swapping back credits the quotes to them."""
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        before = _slots(client)
+        self._swap(client)
+        swapped = _slots(client)
+        _reimport(client, project)
+        assert _slots(client) == swapped
+        resp = client.put("/api/projects/1/sessions/s1/speakers/m1", json={"swap_with": "p1"})
+        assert resp.status_code == 200, resp.text
+        assert _slots(client) == before
+
     def test_the_participant_is_anonymised_where_they_now_sit(self, tmp_path: Path) -> None:
         from bristlenose.server.routes.export import _anonymise_data
 

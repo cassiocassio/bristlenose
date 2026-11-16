@@ -1620,6 +1620,12 @@ def _import_speakers(
                 if not speaker_slots.is_recoded_out(sp):
                     _import_participant(db, sp, people.get(code))
                 continue
+            if not speaker_slots.is_team(sp):
+                # The mirror: a moderator's or observer's tag that now holds the
+                # participant (a swap, or a recode into participant). The run's
+                # name for this tag is the moderator's, and must not be written
+                # onto the participant.
+                continue
             # A person's yes, or their "not this person", outlives every re-run.
             if sp.state in (speaker_slots.CONFIRMED, speaker_slots.CLEARED) or evidence is None:
                 continue

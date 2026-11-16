@@ -350,6 +350,7 @@ struct BristlenoseApp: App {
                     WhisperDownloadModel.shared.runIsLive = { [weak pipelineRunner] in
                         pipelineRunner?.state.values.contains(.running) ?? false
                     }
+                    WhisperDownloadModel.shared.askToDownload = WhisperDownloadModel.alertAsk(i18n: i18n)
                     WhisperDownloadModel.shared.checkAtLaunch()
                     pipelineRunner.scanAllProjects(projectIndex.projects)
                     // The queue the last Quit or crash left, in order, when it

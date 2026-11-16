@@ -1357,7 +1357,12 @@
     "stopNote": "Börjar om från början nästa gång.",
     "causeDisk": "Den här Macen har inte tillräckligt med ledigt utrymme.",
     "causeNetwork": "Anslutningen bröts och kom inte tillbaka.",
-    "causeCertificate": "Nätverkets säkerhetscertifikat godkändes inte."
+    "causeCertificate": "Nätverkets säkerhetscertifikat godkändes inte.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Startad på en annan Mac",

@@ -1357,7 +1357,12 @@
     "stopNote": "Begint de volgende keer opnieuw vanaf het begin.",
     "causeDisk": "Deze Mac heeft niet genoeg vrije ruimte.",
     "causeNetwork": "De verbinding viel weg en kwam niet terug.",
-    "causeCertificate": "Het beveiligingscertificaat van dit netwerk werd niet vertrouwd."
+    "causeCertificate": "Het beveiligingscertificaat van dit netwerk werd niet vertrouwd.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Gestart op een andere Mac",

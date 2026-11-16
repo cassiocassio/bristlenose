@@ -1457,7 +1457,12 @@
     "stopNote": "В следующий раз начнётся сначала.",
     "causeDisk": "На этом Mac недостаточно свободного места.",
     "causeNetwork": "Соединение прервалось и не восстановилось.",
-    "causeCertificate": "Сертификат безопасности этой сети не был признан надёжным."
+    "causeCertificate": "Сертификат безопасности этой сети не был признан надёжным.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Запущен на другом Mac",

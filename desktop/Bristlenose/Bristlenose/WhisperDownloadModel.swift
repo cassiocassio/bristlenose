@@ -202,6 +202,10 @@ final class WhisperDownloadModel: ObservableObject {
     /// not start the 1.6 GB again on its own until Download Now (the researcher
     /// may have stopped it on a metered connection).
     private static let stoppedKey = "whisperDownloadStoppedByUser"
+    /// The researcher answered the size question (Download or Not Now), so it
+    /// is never asked again on this install (App Review 4.2.3: the size is
+    /// shown, and the researcher agrees, before a large download starts).
+    private static let askedKey = "whisperDownloadAsked"
     private var process: Process?
     /// Bumped by every download start, so a status probe that began before one
     /// cannot overwrite what the download then did (a stale `.missing` over a
@@ -221,6 +225,23 @@ final class WhisperDownloadModel: ObservableObject {
         get { UserDefaults.standard.bool(forKey: Self.stoppedKey) }
         set { UserDefaults.standard.set(newValue, forKey: Self.stoppedKey) }
     }
+
+    private var hasAnswered: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.askedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.askedKey) }
+    }
+
+    /// Whether this build ships Whisper at all. The one place a build with
+    /// Apple's model only (a store-build option, decided near 24 Nov 2026)
+    /// turns the size question, and the download behind it, off.
+    nonisolated static let whisperInBuild = true
+
+    /// The size question, while it is on screen. A second ask is not stacked.
+    private var isAsking = false
+    /// Puts the size question to the researcher and answers true for Download.
+    /// Set by the app, which holds the strings (`BristlenoseApp`). Unset, the
+    /// app never asks and so never downloads on its own.
+    var askToDownload: (@MainActor () async -> Bool)?
 
     private init() {
         NotificationCenter.default.addObserver(
@@ -279,19 +300,28 @@ final class WhisperDownloadModel: ObservableObject {
     /// projects and 20 was asking for a Mac the researcher was not using the room on.
     nonisolated static let autoStartFloorBytes: Int64 = 10_000_000_000
 
-    /// Whether the app starts the download by itself: only after the AI
-    /// disclosure is acknowledged (owner, 22 Oct 2026), never over a Stop the
-    /// researcher chose, never while an analysis runs (it may be fetching the
-    /// model itself, and two fetchers each write their own partial), only for
-    /// a model missing or left partial, and only with room to spare. Unknown
-    /// free space starts: no crying wolf.
-    nonisolated static func shouldAutoStart(
-        phase: Phase, freeBytes: Int64?, stoppedByUser: Bool, hasConsent: Bool, runIsLive: Bool
-    ) -> Bool {
-        guard hasConsent, !stoppedByUser, !runIsLive else { return false }
-        guard phase == .missing || phase == .partial else { return false }
-        guard let freeBytes else { return true }
-        return freeBytes >= autoStartFloorBytes
+    enum AutoStart: Equatable {
+        case nothing
+        /// Show the size and ask first (once per install).
+        case ask
+        case start
+    }
+
+    /// What the app does by itself: only after the AI disclosure is
+    /// acknowledged (owner, 22 Oct 2026), never over a Stop the researcher
+    /// chose (Not Now is one), never while an analysis runs (it may be fetching
+    /// the model itself, and two fetchers each write their own partial), only
+    /// for a model missing or left partial, and only with room to spare.
+    /// Unknown free space counts as room: no crying wolf. When all that holds,
+    /// it asks first, unless the researcher already said Download.
+    nonisolated static func autoStart(
+        phase: Phase, freeBytes: Int64?, stoppedByUser: Bool, hasConsent: Bool, runIsLive: Bool,
+        hasAnswered: Bool, whisperInBuild: Bool
+    ) -> AutoStart {
+        guard whisperInBuild, hasConsent, !stoppedByUser, !runIsLive else { return .nothing }
+        guard phase == .missing || phase == .partial else { return .nothing }
+        if let freeBytes, freeBytes < autoStartFloorBytes { return .nothing }
+        return hasAnswered ? .start : .ask
     }
 
     /// At launch, and again when the AI disclosure is acknowledged: ask Python
@@ -306,11 +336,54 @@ final class WhisperDownloadModel: ObservableObject {
         guard Self.sidecar() != nil else { return }
         Task { @MainActor in
             await refresh()
-            if Self.shouldAutoStart(
+            switch Self.autoStart(
                 phase: phase, freeBytes: OllamaCatalog.freeDiskBytes(),
-                stoppedByUser: stoppedByUser, hasConsent: true, runIsLive: runIsLive()
-            ) { start() }
+                stoppedByUser: stoppedByUser, hasConsent: true, runIsLive: runIsLive(),
+                hasAnswered: hasAnswered, whisperInBuild: Self.whisperInBuild
+            ) {
+            case .nothing: break
+            case .start: start()
+            case .ask: await ask()
+            }
         }
+    }
+
+    /// The size question. Download starts it; Not Now is a remembered Stop, so
+    /// the app leaves it alone until Download Now in Settings. Asked once: an
+    /// answer either way is kept. A run that began while the question was up
+    /// wins (it fetches for itself), and the answer is kept for next time.
+    /// The size question as a standard alert, a sheet on the front window
+    /// (Download is the default; Not Now is Cancel, so Escape answers it).
+    static func alertAsk(i18n: I18n) -> @MainActor () async -> Bool {
+        { @MainActor in
+            let alert = NSAlert()
+            alert.messageText = i18n.t("desktop.modelDownload.askTitle")
+            alert.informativeText = i18n.t("desktop.modelDownload.askBody",
+                                           ["size": i18n.t("desktop.modelDownload.askSize")])
+            alert.addButton(withTitle: i18n.t("desktop.modelDownload.askDownload"))
+            alert.addButton(withTitle: i18n.t("desktop.modelDownload.askNotNow"))
+            let answer: NSApplication.ModalResponse
+            if let window = PanelHost.window {
+                answer = await alert.beginSheetModal(for: window)
+            } else {
+                answer = alert.runModal()
+            }
+            return answer == .alertFirstButtonReturn
+        }
+    }
+
+    private func ask() async {
+        guard !isAsking, let askToDownload else { return }
+        isAsking = true
+        let download = await askToDownload()
+        isAsking = false
+        hasAnswered = true
+        guard download else {
+            stoppedByUser = true
+            return
+        }
+        guard !runIsLive() else { return }
+        start()
     }
 
     /// Whether an analysis is running, set by the app (`PipelineRunner`). The
@@ -333,8 +406,12 @@ final class WhisperDownloadModel: ObservableObject {
 
     /// A run went to Apple's model (the sidecar printed `@transcription-engine
     /// apple`): fetch Whisper behind it, unless it is here, coming, or stopped.
+    ///
+    /// Only once the researcher has said Download: this fires during a run,
+    /// when the size question is not put (it waits for the next launch).
     func startIfNeeded() {
-        guard BristlenoseFlags.appleSpeechAvailable, !stoppedByUser else { return }
+        guard Self.whisperInBuild, BristlenoseFlags.appleSpeechAvailable,
+              !stoppedByUser, hasAnswered else { return }
         switch phase {
         case .downloading, .onDisk: return
         case .unknown:
@@ -351,6 +428,7 @@ final class WhisperDownloadModel: ObservableObject {
     /// forgotten. Single-flight.
     func downloadNow() {
         stoppedByUser = false
+        hasAnswered = true
         start()
     }
 

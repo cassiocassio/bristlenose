@@ -1362,7 +1362,12 @@
     "stopNote": "Starts again from the beginning next time.",
     "causeDisk": "This Mac doesn’t have enough free space for it.",
     "causeNetwork": "The connection dropped and didn’t come back.",
-    "causeCertificate": "This network’s security certificate wasn’t trusted."
+    "causeCertificate": "This network’s security certificate wasn’t trusted.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Started on another Mac",

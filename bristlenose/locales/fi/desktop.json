@@ -1357,7 +1357,12 @@
     "stopNote": "Alkaa ensi kerralla alusta.",
     "causeDisk": "Tällä Macilla ei ole tarpeeksi vapaata tilaa.",
     "causeNetwork": "Yhteys katkesi eikä palannut.",
-    "causeCertificate": "Tämän verkon suojaussertifikaattiin ei luotettu."
+    "causeCertificate": "Tämän verkon suojaussertifikaattiin ei luotettu.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Käynnistetty toisella Macilla",

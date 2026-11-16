@@ -1457,7 +1457,12 @@
     "stopNote": "Następnym razem zacznie się od początku.",
     "causeDisk": "Ten Mac nie ma dość wolnego miejsca.",
     "causeNetwork": "Połączenie zostało przerwane i nie wróciło.",
-    "causeCertificate": "Certyfikat bezpieczeństwa tej sieci nie został uznany za zaufany."
+    "causeCertificate": "Certyfikat bezpieczeństwa tej sieci nie został uznany za zaufany.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Rozpoczęta na innym Macu",

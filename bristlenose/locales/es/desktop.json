@@ -1357,7 +1357,12 @@
     "stopNote": "La próxima vez empieza de nuevo desde el principio.",
     "causeDisk": "Este Mac no tiene espacio libre suficiente.",
     "causeNetwork": "Se perdió la conexión y no volvió.",
-    "causeCertificate": "El certificado de seguridad de esta red no se consideró de confianza."
+    "causeCertificate": "El certificado de seguridad de esta red no se consideró de confianza.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Iniciado en otro Mac",

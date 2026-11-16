@@ -1357,7 +1357,12 @@
     "stopNote": "Bir sonraki sefer baştan başlar.",
     "causeDisk": "Bu Mac’te yeterli boş alan yok.",
     "causeNetwork": "Bağlantı koptu ve geri gelmedi.",
-    "causeCertificate": "Bu ağın güvenlik sertifikasına güvenilmedi."
+    "causeCertificate": "Bu ağın güvenlik sertifikasına güvenilmedi.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Başka bir Mac’te başlatıldı",

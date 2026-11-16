@@ -1357,7 +1357,12 @@
     "stopNote": "La propera vegada torna a començar des del principi.",
     "causeDisk": "Aquest Mac no té prou espai lliure.",
     "causeNetwork": "La connexió s’ha perdut i no ha tornat.",
-    "causeCertificate": "El certificat de seguretat d’aquesta xarxa no s’ha considerat de confiança."
+    "causeCertificate": "El certificat de seguretat d’aquesta xarxa no s’ha considerat de confiança.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Iniciada en un altre Mac",

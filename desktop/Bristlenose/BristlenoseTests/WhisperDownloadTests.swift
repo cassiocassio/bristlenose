@@ -242,37 +242,64 @@ import Testing
 
     @Test func startsWhenMissingOrPartialAndThereIsRoom() {
         for phase in [Model.Phase.missing, .partial] {
-            #expect(Model.shouldAutoStart(phase: phase, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: false))
+            #expect(Model.autoStart(phase: phase, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) == .start)
         }
     }
 
     @Test func waitsForTheDisclosure() {
-        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: plenty, stoppedByUser: false, hasConsent: false, runIsLive: false))
+        #expect(Model.autoStart(phase: .missing, freeBytes: plenty, stoppedByUser: false, hasConsent: false, runIsLive: false, hasAnswered: true, whisperInBuild: true) != .start)
     }
 
     @Test func notWhileAnAnalysisRuns() {
-        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: true))
+        #expect(Model.autoStart(phase: .missing, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: true, hasAnswered: true, whisperInBuild: true) != .start)
     }
 
     @Test func aStopIsRemembered() {
-        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: plenty, stoppedByUser: true, hasConsent: true, runIsLive: false))
+        #expect(Model.autoStart(phase: .missing, freeBytes: plenty, stoppedByUser: true, hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) != .start)
     }
 
     @Test func neverBelowTheFloorAndExactlyAtItIsEnough() {
         let floor = Model.autoStartFloorBytes
         #expect(floor == 10_000_000_000)
-        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: floor - 1, stoppedByUser: false, hasConsent: true, runIsLive: false))
-        #expect(Model.shouldAutoStart(phase: .missing, freeBytes: floor, stoppedByUser: false, hasConsent: true, runIsLive: false))
+        #expect(Model.autoStart(phase: .missing, freeBytes: floor - 1, stoppedByUser: false, hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) != .start)
+        #expect(Model.autoStart(phase: .missing, freeBytes: floor, stoppedByUser: false, hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) == .start)
     }
 
     @Test func unknownFreeSpaceStarts() {
-        #expect(Model.shouldAutoStart(phase: .missing, freeBytes: nil, stoppedByUser: false, hasConsent: true, runIsLive: false))
+        #expect(Model.autoStart(phase: .missing, freeBytes: nil, stoppedByUser: false, hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) == .start)
     }
 
     @Test func nothingToDoOnDiskDownloadingFailedOrUnasked() {
         for phase in [Model.Phase.onDisk, .downloading, .failed, .unknown] {
-            #expect(!Model.shouldAutoStart(phase: phase, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: false), "\(phase)")
+            #expect(Model.autoStart(phase: phase, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) != .start, "\(phase)")
         }
+    }
+
+    /// The size question (App Review 4.2.3): asked, once, wherever the app
+    /// would otherwise start by itself; never where it would not.
+    @Test func asksFirstUntilTheResearcherHasAnswered() {
+        func decide(_ phase: Model.Phase = .missing, stopped: Bool = false, consent: Bool = true,
+                    live: Bool = false, answered: Bool, inBuild: Bool = true) -> Model.AutoStart {
+            Model.autoStart(phase: phase, freeBytes: plenty, stoppedByUser: stopped, hasConsent: consent,
+                            runIsLive: live, hasAnswered: answered, whisperInBuild: inBuild)
+        }
+        // Not asked yet: ask, for a model missing or partial.
+        #expect(decide(answered: false) == .ask)
+        #expect(decide(.partial, answered: false) == .ask)
+        // Download was the answer: start, as before.
+        #expect(decide(answered: true) == .start)
+        // Not Now was the answer: it is a remembered Stop, so nothing.
+        #expect(decide(stopped: true, answered: true) == .nothing)
+        // Never asked where the app would not start: before the disclosure,
+        // during a run, with Whisper on disk, below the floor.
+        #expect(decide(consent: false, answered: false) == .nothing)
+        #expect(decide(live: true, answered: false) == .nothing)
+        #expect(decide(.onDisk, answered: false) == .nothing)
+        #expect(Model.autoStart(phase: .missing, freeBytes: Model.autoStartFloorBytes - 1, stoppedByUser: false,
+                                hasConsent: true, runIsLive: false, hasAnswered: false, whisperInBuild: true) == .nothing)
+        // A build without Whisper neither asks nor starts.
+        #expect(decide(answered: false, inBuild: false) == .nothing)
+        #expect(decide(answered: true, inBuild: false) == .nothing)
     }
 
     @Test func aRunIsToldOnlyWhileTheDownloadRuns() {
@@ -352,5 +379,23 @@ import Testing
     @Test func theLineShownIsTheCauseWhenThereIsOneAndTheOldSentenceWhenThereIsNot() {
         #expect(WhisperFailureCause.lineKey(for: .disk) == "desktop.modelDownload.causeDisk")
         #expect(WhisperFailureCause.lineKey(for: nil) == "desktop.transcriptionSettings.whisperFailed")
+    }
+}
+
+/// The size question's strings exist in English and the size reaches the body.
+/// English only until the owner approves the wording; the other 20 locales are
+/// deliberately pending (`check-locales.py --strict` lists them).
+@Suite @MainActor struct WhisperAskStringsTests {
+    @Test func theQuestionReadsInEnglish() throws {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
+        i18n.setLocale("en")
+        let size = i18n.t("desktop.modelDownload.askSize")
+        #expect(size == "1.5 GB")
+        #expect(i18n.t("desktop.modelDownload.askBody", ["size": size]).hasPrefix("About 1.5 GB."))
+        for key in ["askTitle", "askDownload", "askNotNow"] {
+            let full = "desktop.modelDownload.\(key)"
+            #expect(i18n.t(full) != full, "\(key)")
+        }
     }
 }

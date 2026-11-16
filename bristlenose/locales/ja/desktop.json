@@ -1307,7 +1307,12 @@
     "stopNote": "次回は最初からやり直しになります。",
     "causeDisk": "この Mac の空き容量が足りません。",
     "causeNetwork": "接続が切れ、戻りませんでした。",
-    "causeCertificate": "このネットワークのセキュリティ証明書は信頼されませんでした。"
+    "causeCertificate": "このネットワークのセキュリティ証明書は信頼されませんでした。",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "別の Mac で開始されました",

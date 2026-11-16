@@ -1357,7 +1357,12 @@
     "stopNote": "Starter forfra næste gang.",
     "causeDisk": "Denne Mac har ikke nok ledig plads.",
     "causeNetwork": "Forbindelsen blev afbrudt og kom ikke tilbage.",
-    "causeCertificate": "Netværkets sikkerhedscertifikat blev ikke godkendt."
+    "causeCertificate": "Netværkets sikkerhedscertifikat blev ikke godkendt.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Startet på en anden Mac",

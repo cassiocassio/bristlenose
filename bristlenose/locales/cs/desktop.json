@@ -1438,7 +1438,12 @@
     "stopNote": "Příště začne znovu od začátku.",
     "causeDisk": "Tento Mac nemá dost volného místa.",
     "causeNetwork": "Připojení se přerušilo a už se neobnovilo.",
-    "causeCertificate": "Bezpečnostní certifikát této sítě nebyl považován za důvěryhodný."
+    "causeCertificate": "Bezpečnostní certifikát této sítě nebyl považován za důvěryhodný.",
+    "askTitle": "Download the Whisper speech model?",
+    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askDownload": "Download",
+    "askNotNow": "Not Now",
+    "askSize": "1.5 GB"
   },
   "studyStartup": {
     "foreignTitle": "Spuštěno na jiném Macu",

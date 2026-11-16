@@ -37,6 +37,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes — and where work happens by default (solo trunk) |
+| `bristlenose_branch ba-whisper-build/` | `ba-whisper-build` | feature | Background Assets delivery of the Whisper model, built dark and reversible in parallel with a learn spike |
 | `.claude/worktrees/<name>/` | detached | — | **Agent-session worktrees** (`isolation: worktree`). Ephemeral, never registered here. The two live at the 22 Aug audit were **still there on 4 Sep**, clean, at 32 MB and 393 MB — "auto-removed when unchanged" did not fire in a month, so they were removed by hand. Check `git worktree list` rather than assuming they clear themselves |
 
 **Measured 22 Aug 2026, and the rows above are what was actually there.** `git worktree list` and the disk disagreed with this file on four rows: `tower-of-hanoi`, `responsive-signal-cards`, `symbology` and `living-fish` were each listed as a live worktree, and **none of the four directories exists on disk**. They were removed without the table following. The branches and the experiments behind them are unaffected — the parked ones are described under Historical experiments below. At that point only `drag-push` survived as a real worktree; it was retired 4 Sep 2026, so **no feature worktree exists now** — `main` is the only working copy, which is what the solo-trunk default expects.
@@ -124,6 +125,7 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `main` | `bristlenose/` | `origin/main` (push via `origin/main:wip` until release time) |
 | `tower-of-hanoi` | `bristlenose_branch tower-of-hanoi/` | local only |
 | `spike` | `bristlenose_branch spike/` | local only |
+| `ba-whisper-build` | `bristlenose_branch ba-whisper-build/` | local only |
 | `claude/debug-menu-instrumentation-4r9npy` _(merged)_ | _(worktree removed)_ | `origin/...` — merged to main 28 Jun 2026 (`252c1ce3`) |
 | `claude/figjam-miro-market-share-px52tg` _(merged)_ | `bristlenose_branch_figjam-miro-market-share/` _(detached, on disk)_ | local deleted — merged to main 28 Jun 2026 (66bc28c4) |
 | `claude/spa-sidebar-layout-9mlndt` _(merged)_ | `bristlenose_branch spa-sidebar-layout/` _(detached, on disk)_ | local only — merged to main 28 Jun 2026 (97c4fb42) |
@@ -154,6 +156,28 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 ---
 
 ## Active Branches
+
+---
+
+### `ba-whisper-build`
+
+**Kind:** feature — Background Assets (BA) delivery of the Whisper model for the Mac App Store build, built dark and reversible in parallel with a separate learn spike (`claude/ba-whisper-spike-8a2c97`, a throwaway toy outside the repo)
+**Status:** Just started
+**Started:** 16 Nov 2026
+**Worktree:** `/Users/cassio/Code/bristlenose_branch ba-whisper-build/`
+**Remote:** local only (push when ready)
+
+**What it does:** Python resolver and host-owns guard so the Mac's MLX path can load the model from a directory; additive release gates for a downloader extension; a pack-build script; a Swift acquirer seam and a BA adapter behind a kill switch; and, after the owner's go, the extension target and release-lane split. The plan and brief are in the private handoffs area (gitignored). Nothing merges to main before the owner's go/no-go gates (Wed 18 and Fri 20 Nov 2026).
+
+**Files this branch will touch:**
+- `bristlenose/stages/s05_transcribe.py`, `bristlenose/preflight/whisper.py`, `bristlenose/doctor.py` and their tests
+- `desktop/Bristlenose/Bristlenose/WhisperDownloadModel.swift` and a new acquirer file (later)
+- `desktop/scripts/check-pkg-shippable.sh`, `check-dmg-shippable.sh`, `check-release-binary.sh`, a new `build-whisper-pack.sh`, `tests/test_entitlements_split.py`, `tests/test_gate_selftests.py`
+- `desktop/BAExtension/` (new, after the go), `ExportOptions.plist`, `project.pbxproj` (after the go)
+
+**Potential conflicts with other branches:**
+- The first-run, locale and Settings work on main (flow session): `bristlenose/locales/en/desktop.json`, `PipelineRunner.swift`, `BristlenoseFlags.swift`, `WhisperDownloadModel.swift`.
+- Any Python change here moves the sidecar source hash; merge only with a sidecar rebuild scheduled.
 
 ---
 

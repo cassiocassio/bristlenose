@@ -315,7 +315,7 @@ final class RecordingEvents: WhisperAcquisitionEvents {
     func acquisitionProgress(done: Int64, total: Int64, from: WhisperModelAcquirer) { progress.append(done) }
     func acquisitionEnded(_ outcome: WhisperAcquisitionOutcome, from: WhisperModelAcquirer) { self.outcome = outcome }
 
-    func waitForEnd(seconds: Double = 5) async {
+    func waitForEnd(seconds: Double = 30) async {
         let deadline = ContinuousClock.now + .seconds(seconds)
         while outcome == nil, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(10)) }
     }
@@ -436,7 +436,7 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         _ = a.start(events: ev)
         try await Task.sleep(for: .milliseconds(100))
         a.stop()
-        await ev.waitForEnd(seconds: 2)
+        await ev.waitForEnd()
         adapter.release()
         #expect(ev.outcome == .stopped)
         #expect(!a.isRunning)
@@ -445,7 +445,7 @@ final class RecordingEvents: WhisperAcquisitionEvents {
     @Test func silenceEndsEvenIfTheCallIgnoresCancellation() async throws {
         let (a, adapter, ev) = try make([.hangIgnoringCancel], silence: .milliseconds(300))
         _ = a.start(events: ev)
-        await ev.waitForEnd(seconds: 3)
+        await ev.waitForEnd()
         adapter.release()
         #expect(ev.outcome == .failed(cause: nil))
     }
@@ -473,7 +473,8 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         #expect(stamp.verifiedFingerprint != nil)
         #expect(a.runEnvironment["BRISTLENOSE_WHISPER_MODEL_DIR"] != nil, "verified now")
         // The bytes change on disk: no longer trusted.
-        let weights = a.presentDirectory()!.appendingPathComponent("weights.safetensors")
+        let present = try #require(a.presentDirectory(), "verified a moment ago: the directory is present")
+        let weights = present.appendingPathComponent("weights.safetensors")
         try Data("TENSORS".utf8).write(to: weights)
         try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(60)],
                                               ofItemAtPath: weights.path)

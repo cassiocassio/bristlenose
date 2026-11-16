@@ -5308,11 +5308,26 @@ class Pipeline:
             carry file content into ``pipeline-events.jsonl``, a named
             re-identification surface.
             """
+            logger.error("%s: Failed to parse %s: %s", session_id, f.path.name, exc)
+            # A subtitle file that holds nothing (0 bytes, no cues, no timings)
+            # makes the parser raise before it can return "no segments", so the
+            # reason `empty_subtitle_reason` gives the zero-segment path never
+            # applied. Say it here too, with the same words, rather than the
+            # parser's exception class.
+            if f.file_type in (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT) and (
+                reason := empty_subtitle_reason(f.path)
+            ) is not None:
+                parse_failures.append(
+                    refusal_stage_failure(
+                        source_file=f.path.name, reason=reason, stage=stage,
+                        session_id=session_id,
+                    )
+                )
+                return
             if isinstance(exc, DocxParseRefusedError):
                 message = str(exc)
             else:
                 message = f"{f.path.name} could not be parsed: {type(exc).__name__}"
-            logger.error("%s: Failed to parse %s: %s", session_id, f.path.name, exc)
             parse_failures.append(
                 StageFailure(
                     session_id=session_id,

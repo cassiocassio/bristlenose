@@ -784,25 +784,53 @@ def iter_transcribe_sessions(
                 session.session_id,
                 exc,
             )
-            # Categorise the exception. Default-category fallback is WHISPER
-            # (more useful than UNKNOWN for transcription-stage failures).
-            cause = categorise_exception(exc)
-            if cause.category == CauseCategoryEnum.UNKNOWN:
-                cause = Cause(
-                    category=CauseCategoryEnum.WHISPER,
-                    message=cause.message,
-                    stage="s05_transcribe",
-                    session_id=session.session_id,
+            unreadable = None
+            if "Failed to load audio" in str(exc):
+                from bristlenose.refusals import UnusableReason, classify_unreadable
+
+                unreadable = classify_unreadable(session.audio_path)
+                if unreadable == UnusableReason.INCOMPLETE:
+                    # Looks like a recording and still would not decode: the file or the
+                    # decoder, and we cannot tell which (a sandboxed or killed ffmpeg
+                    # fails the same way), so keep the tool-side category.
+                    unreadable = None
+            if unreadable is not None:
+                # An audio file the decoder will not read (the message is "Failed to load
+                # audio:" followed by the whole ffmpeg banner) is a verdict on the file, not
+                # on Whisper. Say it as the other unreadable-file refusals do: a reason the
+                # desktop localises, the file's name, none of the banner. Video never gets
+                # here, s02 classifies it.
+                from bristlenose.refusals import stage_failure
+
+                done = SessionTranscription(
+                    session.session_id, [], None,
+                    stage_failure(
+                        source_file=session.audio_path.name,
+                        reason=unreadable,
+                        stage="s05_transcribe",
+                        session_id=session.session_id,
+                    ),
                 )
             else:
-                cause = cause.model_copy(update={
-                    "stage": "s05_transcribe",
-                    "session_id": session.session_id,
-                })
-            done = SessionTranscription(
-                session.session_id, [], None,
-                StageFailure(session_id=session.session_id, cause=cause),
-            )
+                # Categorise the exception. Default-category fallback is WHISPER
+                # (more useful than UNKNOWN for transcription-stage failures).
+                cause = categorise_exception(exc)
+                if cause.category == CauseCategoryEnum.UNKNOWN:
+                    cause = Cause(
+                        category=CauseCategoryEnum.WHISPER,
+                        message=cause.message,
+                        stage="s05_transcribe",
+                        session_id=session.session_id,
+                    )
+                else:
+                    cause = cause.model_copy(update={
+                        "stage": "s05_transcribe",
+                        "session_id": session.session_id,
+                    })
+                done = SessionTranscription(
+                    session.session_id, [], None,
+                    StageFailure(session_id=session.session_id, cause=cause),
+                )
         finally:
             _QUALITY_SINK.reset(sink_token)
 

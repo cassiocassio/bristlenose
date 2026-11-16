@@ -63,6 +63,7 @@ protocol WhisperAcquisitionEvents: AnyObject {
 
 @MainActor
 protocol WhisperModelAcquirer: AnyObject {
+    var kind: WhisperAcquirerKind { get }
     /// Whether this acquirer can run at all here (the sidecar to run, the pack manager to ask).
     /// False before anything is reset: the model says "didn't finish" and leaves its numbers.
     var isAvailable: Bool { get }
@@ -88,6 +89,7 @@ protocol WhisperModelAcquirer: AnyObject {
 final class SidecarFetchAcquirer: WhisperModelAcquirer {
     private static let logger = Logger(subsystem: "app.bristlenose", category: "whisper-download")
 
+    let kind: WhisperAcquirerKind = .sidecarFetch
     private var process: Process?
     private var stopRequested = false
     private var stderrTail: [String] = []

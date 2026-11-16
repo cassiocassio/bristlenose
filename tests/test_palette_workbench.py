@@ -35,8 +35,8 @@ def test_shipped_palette_round_trips(path: Path, tmp_path: Path) -> None:
 def test_neutral_knobs_leave_the_palette_alone(tmp_path: Path) -> None:
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")
     (tmp_path / "b.json").write_text(
-        json.dumps({k: {"light": c.light, "dark": c.dark} for k, c in base.cells.items()}))
-    (tmp_path / "k.json").write_text("{}")
+        json.dumps({k: {"light": c.light, "dark": c.dark} for k, c in base.cells.items()}), encoding="utf-8")
+    (tmp_path / "k.json").write_text("{}", encoding="utf-8")
     r = subprocess.run(["node", str(_BP / "knobs.mjs"), str(tmp_path / "b.json"), str(tmp_path / "k.json")],
                        capture_output=True, text=True, check=True)
     out = json.loads(r.stdout)["table"]
@@ -51,9 +51,9 @@ def test_neutral_knobs_leave_the_palette_alone(tmp_path: Path) -> None:
 def test_a_single_token_override_beats_the_sliders(tmp_path: Path) -> None:
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")
     (tmp_path / "b.json").write_text(
-        json.dumps({k: {"light": c.light, "dark": c.dark} for k, c in base.cells.items()}))
-    (tmp_path / "k.json").write_text(json.dumps({"dark": {"paperHue": 120, "accentChroma": 1.5}}))
-    (tmp_path / "o.json").write_text(json.dumps({"--bn-colour-accent": {"dark": "#123456"}}))
+        json.dumps({k: {"light": c.light, "dark": c.dark} for k, c in base.cells.items()}), encoding="utf-8")
+    (tmp_path / "k.json").write_text(json.dumps({"dark": {"paperHue": 120, "accentChroma": 1.5}}), encoding="utf-8")
+    (tmp_path / "o.json").write_text(json.dumps({"--bn-colour-accent": {"dark": "#123456"}}), encoding="utf-8")
     r = subprocess.run(
         ["node", str(_BP / "knobs.mjs"), *(str(tmp_path / n) for n in ("b.json", "k.json", "o.json"))],
         capture_output=True, text=True, check=True)
@@ -66,9 +66,9 @@ def test_a_single_token_override_beats_the_sliders(tmp_path: Path) -> None:
 def _apply(tmp_path: Path, knobs: dict, overrides: dict) -> tuple[dict, dict]:
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")
     raw = {k: {"light": c.light, "dark": c.dark} for k, c in base.cells.items()}
-    (tmp_path / "b.json").write_text(json.dumps(raw))
-    (tmp_path / "k.json").write_text(json.dumps(knobs))
-    (tmp_path / "o.json").write_text(json.dumps(overrides))
+    (tmp_path / "b.json").write_text(json.dumps(raw), encoding="utf-8")
+    (tmp_path / "k.json").write_text(json.dumps(knobs), encoding="utf-8")
+    (tmp_path / "o.json").write_text(json.dumps(overrides), encoding="utf-8")
     r = subprocess.run(
         ["node", str(_BP / "knobs.mjs"), *(str(tmp_path / n) for n in ("b.json", "k.json", "o.json"))],
         capture_output=True, text=True, check=True)
@@ -146,9 +146,9 @@ def test_the_guard_leaves_an_inherited_failure_alone(tmp_path: Path) -> None:
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")
     raw = {k: {"light": c.light, "dark": c.dark} for k, c in base.cells.items()}
     raw["--bn-colour-accent"]["light"] = "#4191e2"     # fails 4.5:1 on the page, deliberately
-    (tmp_path / "b.json").write_text(json.dumps(raw))
-    (tmp_path / "k.json").write_text("{}")
-    (tmp_path / "o.json").write_text("{}")
+    (tmp_path / "b.json").write_text(json.dumps(raw), encoding="utf-8")
+    (tmp_path / "k.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "o.json").write_text("{}", encoding="utf-8")
     r = subprocess.run(["node", str(_BP / "knobs.mjs"), *(str(tmp_path / n) for n in ("b.json", "k.json", "o.json"))],
                        capture_output=True, text=True, check=True)
     assert json.loads(r.stdout)["table"]["--bn-colour-accent"]["light"] == "#4191e2"

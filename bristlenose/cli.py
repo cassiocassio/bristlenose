@@ -243,9 +243,12 @@ def _refuse_missing_folder(path: Path) -> None:
     not exist is a typo, and saying "run bristlenose run" on it suggested analysing
     a folder that is not there (``serve`` raised a traceback).
     """
-    if path.is_dir():
-        return
-    reason = "is not a folder" if path.exists() else "doesn't exist"
+    try:
+        if path.is_dir():
+            return
+        reason = "is not a folder" if path.exists() else "doesn't exist"
+    except OSError:
+        reason = "can't be read"  # permission or an unmounted volume: not "doesn't exist"
     _say(MessageKind.ERROR, f"[bold]{_text(path)}[/bold] {reason}. Check the folder name.")
     raise typer.Exit(1)
 

@@ -559,6 +559,16 @@ def create_app(
         # folder, and every recording 404'd).
         _mount_media_route(app, project_input_dir(project_dir))
 
+    # Browsers ask for /favicon.ico on every page load whatever the markup says;
+    # a 404 there was a console error on every route (BR-21). Registered for the
+    # whole origin, not the report mount, so the no-report and bundle-missing
+    # pages answer it too. A link tag in index.html is no answer: the
+    # single-file export has no server to serve it and must not make a request.
+    # The logo is a PNG, which every browser accepts at this path.
+    @app.get("/favicon.ico", include_in_schema=False)
+    def serve_favicon() -> FileResponse:
+        return _logo_response(dark=False)
+
     # Serve the report SPA from the Vite build output
     if project_dir is not None:
         from bristlenose.output_paths import project_output_dir

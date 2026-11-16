@@ -4,7 +4,7 @@ This is the audit trail for every deliberate suppression in the Playwright e2e s
 
 The goal is to preserve the distinction, three months or three years from now, between:
 
-- **"CI lubricant"** — browser/runner/stack artefacts that are never our bug (e.g. favicon 404), and
+- **"CI lubricant"** — browser/runner/stack artefacts that are never our bug (e.g. a stale-fixture 404), and
 - **Real technical debt** — known product bugs that the test is quiet about because we haven't fixed them yet.
 
 Without this register, an accumulating pile of `if (...) return;` checks in spec files becomes impossible to audit, and the gate turns into theatre.
@@ -37,7 +37,6 @@ Sequential `CI-A1`, `CI-A2`, ... **Retired IDs are never reused** — this prese
 
 | ID | Category | Spec | Rationale | Tracker | Added |
 |---|---|---|---|---|---|
-| CI-A1 | `infra` | `console.spec.ts` (favicon check) | Browsers automatically request `/favicon.ico`; our smoke fixture doesn't ship one. Never a product bug. | n/a | pre-existing |
 | CI-A2 | `by-design` | `links.spec.ts` (`role=button` skip) | Interactive elements (modal openers, toggles) legitimately have no `href`; using `<a role="button">` is an intentional WAI-ARIA pattern. | n/a | pre-existing |
 | CI-A3 | `by-design` | `network.spec.ts` + `lenses-load-clean.spec.ts` (autocode status 404) | `GET /api/projects/*/autocode/*/status` returns 404 when no autocode job has been started for a framework — REST-correct ("resource absent"). No lens reads it on load since v1 `CodebookPanel.tsx` was deleted (`baa1aa0e`, 31 Aug 2026); the activity chip counts a 404 as a failed poll and ends the job after five. Changing the endpoint to 200+idle would be cosmetic churn on a working path. | n/a | 2026-04-18 (2026-07-07: shared by the every-lens-loads-clean spec) |
 
@@ -48,6 +47,7 @@ _When an entry is removed, move its row here with `removed: YYYY-MM-DD` and a on
 | ID | Category | Spec | Was | Removed | Reason |
 |---|---|---|---|---|---|
 | CI-A4 | `deferred-fix` | `console.spec.ts` (codebook route 404) | A 404 subresource on `/report/codebook/` whose URL `msg.text()` truncated. | removed: 2026-10-20 | Not reproducible: every response of 400 or above on the codebook route, on Chromium and WebKit, came back clean, and the spec passes on both without the suppression. Probable cause, gone with it: v1 `CodebookPanel.tsx` read AutoCode status per framework on load (the CI-A3 404), deleted in `baa1aa0e`. |
+| CI-A1 | `infra` | `console.spec.ts` (favicon check) | A 404 on `/favicon.ico` that Chromium logs as a console error on every load. | removed: 2026-11-16 | Fixed, not tolerated: `serve` now answers `/favicon.ico` with the logo (BR-21), so there is nothing left to suppress. |
 
 ## Future v2 (not yet in place)
 

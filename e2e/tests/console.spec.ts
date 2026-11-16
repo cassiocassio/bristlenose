@@ -15,8 +15,6 @@ test('no console errors on any route', async ({ page, baseURL }) => {
     if (msg.type() === 'error') {
       const text = msg.text();
       const url = page.url();
-      // ci-allowlist: CI-A1 (infra — see e2e/ALLOWLIST.md)
-      if (text.includes('favicon')) return;
       errors.push(`${url}: ${text}`);
     }
   });

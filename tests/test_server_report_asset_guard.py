@@ -209,6 +209,19 @@ class TestLogoIsThePackages:
         assert resp.status_code == 200
         assert resp.content == self._package_logo(name)
 
+    def test_favicon_is_the_logo_not_a_404(self, client: TestClient) -> None:
+        """Browsers ask for /favicon.ico on every load; a 404 was a console error (BR-21)."""
+        resp = client.get("/favicon.ico")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "image/png"
+        assert resp.content == self._package_logo("bristlenose-logo.png")
+
+    def test_favicon_answers_with_no_report_mounted(self, tmp_path: Path) -> None:
+        """Not tied to the report mount: a project with no output dir still has one."""
+        app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
+        client = TestClient(app, base_url="http://127.0.0.1")
+        assert client.get("/favicon.ico").status_code == 200
+
 
 class TestMediaPrivateFilesRefused:
     """``/media/`` serves the whole project dir and allows ``.txt`` — the same key."""

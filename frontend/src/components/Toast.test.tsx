@@ -71,3 +71,43 @@ describe("Toast", () => {
     expect(toast.parentElement).toBe(document.body);
   });
 });
+
+describe("Toast anatomy", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("draws a kind as an icon, not a character, in the kind's colour class", () => {
+    const { getByTestId } = render(<Toast message="Export failed" kind="error" onDismiss={vi.fn()} />);
+    const el = getByTestId("bn-toast");
+    expect(el.querySelector(".toast-glyph--error svg")).not.toBeNull();
+    expect(el.textContent).toBe("Export failed"); // no ✗ character in the text
+    expect(el.classList.contains("has-kind")).toBe(true);
+  });
+
+  it("draws skipped as info: a toast has four of the five kinds", () => {
+    const { getByTestId } = render(<Toast message="Not needed" kind="skipped" onDismiss={vi.fn()} />);
+    const el = getByTestId("bn-toast");
+    expect(el.querySelector(".toast-glyph--info svg")).not.toBeNull();
+    expect(el.querySelector(".toast-glyph--skipped")).toBeNull();
+    expect(el.getAttribute("data-kind")).toBe("skipped");
+  });
+
+  it("a title sits over a quieter body; a message alone is one regular line", () => {
+    const withTitle = render(
+      <Toast title="No quotes yet" message="Analyse your sessions first." onDismiss={vi.fn()} />,
+    );
+    expect(withTitle.getByText("No quotes yet").className).toBe("toast-title");
+    expect(withTitle.getByText("Analyse your sessions first.").className).toBe("toast-body");
+    withTitle.unmount();
+
+    const alone = render(<Toast message="Copied" onDismiss={vi.fn()} />);
+    expect(alone.getByText("Copied").className).toBe("toast-message");
+    expect(alone.container.querySelector(".toast-title")).toBeNull();
+  });
+
+  it("a plain toast has no icon", () => {
+    const { getByTestId } = render(<Toast message="Copied" onDismiss={vi.fn()} />);
+    expect(getByTestId("bn-toast").querySelector(".toast-glyph")).toBeNull();
+    expect(getByTestId("bn-toast").classList.contains("has-kind")).toBe(false);
+  });
+});

@@ -42,7 +42,7 @@ describe("extractVideoClips — burn-in", () => {
     setSubtitlePref("burnSubtitles", true);
     start.mockResolvedValue({ total: 2, pii_warning: false, burn_unavailable: true } as never);
     await extractVideoClips(["q1"], t);
-    expect(toast).toHaveBeenCalledWith("export.clips.burnUnavailable", 6000);
+    expect(toast).toHaveBeenCalledWith("export.clips.burnUnavailable", 6000, "warning");
   });
 
   it("keeps the privacy warning when both notices apply", async () => {
@@ -62,5 +62,44 @@ describe("extractVideoClips — burn-in", () => {
     const spoken = vi.mocked(announce).mock.calls[0][0];
     expect(spoken).toContain("export.clips.piiWarning");
     expect(spoken).toContain("export.clips.progress");
+  });
+});
+
+describe("extractVideoClips — what a refused start says", () => {
+  it("no FFmpeg (422): a title over a body, drawn as a failure", async () => {
+    start.mockRejectedValue(new Error("POST /clips 422"));
+    await extractVideoClips(["q1"], t);
+    expect(toast).toHaveBeenCalledWith("export.clips.ffmpegMissingBody", undefined, "error", {
+      title: "export.clips.ffmpegMissingTitle",
+    });
+  });
+
+  it("already running (409): information, not a failure", async () => {
+    start.mockRejectedValue(new Error("POST /clips 409"));
+    await extractVideoClips(["q1"], t);
+    expect(toast).toHaveBeenCalledWith("export.clips.inProgress", undefined, "info");
+  });
+
+  it("any other failure: an error", async () => {
+    start.mockRejectedValue(new Error("POST /clips 500"));
+    await extractVideoClips(["q1"], t);
+    expect(toast).toHaveBeenCalledWith("export.clips.failed", undefined, "error");
+  });
+
+  it("nothing starred: a neutral note", async () => {
+    start.mockResolvedValue({ total: 0 } as never);
+    await extractVideoClips(["q1"], t);
+    expect(toast).toHaveBeenCalledWith("export.clips.noClips", undefined, "info");
+  });
+
+  it("both notices are a warning, one per line", async () => {
+    setSubtitlePref("burnSubtitles", true);
+    start.mockResolvedValue({ total: 2, pii_warning: true, burn_unavailable: true } as never);
+    await extractVideoClips(["q1"], t, true);
+    expect(toast).toHaveBeenCalledWith(
+      "export.clips.piiWarning\nexport.clips.burnUnavailable",
+      6000,
+      "warning",
+    );
   });
 });

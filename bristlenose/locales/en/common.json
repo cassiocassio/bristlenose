@@ -323,13 +323,14 @@
       "donePartial": "{{count}} clips ready ({{skipped}} skipped)",
       "reveal": "Show in folder",
       "revealMac": "Reveal in Finder",
-      "piiWarning": "Clips contain original audio — PII redaction applies to transcript text only",
+      "piiWarning": "Clips contain original audio. PII redaction applies to transcript text only.",
       "failed": "Clip extraction failed",
-      "ffmpegMissing": "FFmpeg not found — install it to extract clips",
+      "ffmpegMissingTitle": "FFmpeg not found",
+      "ffmpegMissingBody": "Install it to extract clips.",
       "noClips": "No starred or featured quotes to extract",
       "burnSubtitles": "Burn subtitles into the video (for slides)",
-      "burnUnavailable": "This FFmpeg can\u2019t burn in subtitles \u2014 extracting plain clips only",
-      "burnPartial": "Clips ready \u2014 subtitled copies: {{burned}} of {{attempted}}"
+      "burnUnavailable": "This FFmpeg can\u2019t burn in subtitles. Extracting plain clips only.",
+      "burnPartial": "Clips ready. Subtitled copies: {{burned}} of {{attempted}}"
     },
     "screens": {
       "exportScreens": "Export screens",
@@ -338,8 +339,10 @@
       "copying": "Copying screens\u2026 ({{progress}} of {{total}})",
       "done_one": "{{count}} screenshot ready",
       "done_other": "{{count}} screenshots ready",
-      "copied_one": "{{count}} screenshot copied \u2014 paste it into Miro or FigJam",
-      "copied_other": "{{count}} screenshots copied \u2014 paste them into Miro or FigJam",
+      "copiedTitle_one": "{{count}} screenshot copied",
+      "copiedBody_one": "Paste it into Miro or FigJam.",
+      "copiedTitle_other": "{{count}} screenshots copied",
+      "copiedBody_other": "Paste them into Miro or FigJam.",
       "reveal": "Show in folder",
       "partial": "Screenshots written: {{written}} of {{total}}",
       "failed": "Screens export failed",
@@ -446,8 +449,8 @@
     "send": "Send",
     "sending": "Sending…",
     "anonymous": "Anonymous — only your rating, your message and the Bristlenose version are shared.",
-    "sent": "Feedback sent — thank you!",
-    "copyFailed": "Could not copy — please submit feedback manually.",
+    "sent": "Feedback sent. Thank you!",
+    "copyFailed": "Could not copy. Please submit feedback manually.",
     "sendFailed": "Couldn’t send your feedback. It’s copied to the clipboard. Try again later.",
     "sendFailedNotCopied": "Couldn’t send your feedback or copy it to the clipboard. Try again later."
   },
@@ -520,7 +523,7 @@
     "noTagsInCodebook": "This codebook has no tags.",
     "autocodeFailure": {
       "outOfCredit": "Your AI provider account is out of credit.",
-      "rateLimited": "Rate limited \u2014 tagging stopped. Try again soon.",
+      "rateLimited": "Rate limited, so tagging stopped. Try again soon.",
       "invalidKey": "Your API key was rejected.",
       "serverError": "The AI provider is unavailable. Try again shortly.",
       "badRequest": "The AI provider rejected the request.",
@@ -532,7 +535,8 @@
       "noApiKey": "Add an API key in Settings first.",
       "providerLocal": "This needs a cloud AI provider, not a local model.",
       "providerAmbiguous": "Choose an AI provider in Settings.",
-      "noQuotes": "No quotes yet \u2014 analyse your sessions first.",
+      "noQuotesTitle": "No quotes yet",
+      "noQuotesBody": "Analyse your sessions first.",
       "alreadyRunning": "Already tagging with this codebook.",
       "alreadyApplied": "Already applied.",
       "templateMissing": "That codebook is no longer available."
@@ -609,7 +613,7 @@
       "zoneExcluded": "Excluded"
     },
     "toast": {
-      "donePartial": "Tagged {{processed}} of {{total}} quotes \u2014 some batches failed.",
+      "donePartial": "Tagged {{processed}} of {{total}} quotes. Some batches failed.",
       "progress": "✦ AutoCoding {{processed}}/{{total}} quotes…",
       "done": "✦ AutoCoded {{total}} quotes in {{duration}}.",
       "report": "Report",
@@ -785,11 +789,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Couldn’t save your change — check your connection.",
+    "saveFailedTitle": "Couldn’t save your change",
+    "saveFailedBody": "Check your connection.",
     "saveRefused": "Couldn’t save your change.",
     "quoteGone": "That quote is no longer in the report, so your change wasn’t saved.",
-    "runInProgress": "An analysis is running. Try again when it finishes.",
-    "pageStale": "Couldn’t save your change — Bristlenose has restarted. Reload the page, then make the change again."
+    "runInProgressTitle": "An analysis is running",
+    "runInProgressBody": "Try again when it finishes.",
+    "pageStaleTitle": "Couldn’t save your change",
+    "pageStaleBody": "Bristlenose has restarted. Reload the page, then make the change again."
   },
   "screens": {
     "title": "Screens",

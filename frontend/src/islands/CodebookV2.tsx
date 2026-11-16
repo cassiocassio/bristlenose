@@ -76,6 +76,12 @@ import { isExportMode } from "../utils/exportData";
 import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import i18n from "../i18n";
 
+/** A refusal as a toast: its own kind, and a heading over a body when it has one. */
+function toastRefusal(refusal: NonNullable<ReturnType<typeof autocodeRefusal>>): void {
+  if (refusal.title) toast(refusal.message, undefined, refusal.kind, { title: refusal.title });
+  else toast(refusal.message, undefined, refusal.kind);
+}
+
 /** What the page needs to know about one codebook. Was `RailBook`, which
  *  belonged to the in-lens rail; the navigator now lives in the sidebar and
  *  derives its own rows from the wire. */
@@ -411,7 +417,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const reportActionError = useCallback((e: Error) => {
     const refusal = autocodeRefusal((e as ApiError).reason);
     if (refusal) {
-      toast(refusal.message, 4000, refusal.kind);
+      toastRefusal(refusal);
       return;
     }
     console.error("Codebook change failed:", e);
@@ -423,12 +429,12 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const reportStartError = useCallback((e: Error) => {
     const refusal = autocodeRefusal((e as ApiError).reason);
     if (refusal) {
-      toast(refusal.message, 4000, refusal.kind);
+      toastRefusal(refusal);
       return;
     }
     console.error("AutoCode did not start:", e);
     const failure = autocodeFailure(undefined);
-    toast(failure.message, 4000, failure.kind);
+    toast(failure.message, undefined, failure.kind);
   }, []);
 
   const onInstall = useCallback(

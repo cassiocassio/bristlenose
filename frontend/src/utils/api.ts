@@ -323,19 +323,22 @@ export function toastSaveFailed(err: unknown): void {
   // reason (Miro's `not_connected`) and is not this. Never reloaded for them:
   // that would lose an edit still in a field.
   if (status === 401 && !reason && authHeaders().Authorization) {
-    toast(i18n.t("sync.pageStale"), 6000);
+    toast(i18n.t("sync.pageStaleBody"), undefined, "error", { title: i18n.t("sync.pageStaleTitle") });
     return;
   }
-  const message =
-    reason === "run_in_progress"
-      ? i18n.t("sync.runInProgress")
-      : unresolved?.length
-        ? // A re-run removed the quote; the store re-reads them (RE#20 #21).
-          i18n.t("sync.quoteGone")
-        : typeof status === "number"
-          ? i18n.t("sync.saveRefused")
-          : i18n.t("sync.saveFailed");
-  toast(message, 4000);
+  if (reason === "run_in_progress") {
+    // WARNING, not error: waiting fixes it.
+    toast(i18n.t("sync.runInProgressBody"), undefined, "warning", {
+      title: i18n.t("sync.runInProgressTitle"),
+    });
+  } else if (unresolved?.length) {
+    // A re-run removed the quote; the store re-reads them (RE#20 #21).
+    toast(i18n.t("sync.quoteGone"), undefined, "error");
+  } else if (typeof status === "number") {
+    toast(i18n.t("sync.saveRefused"), undefined, "error");
+  } else {
+    toast(i18n.t("sync.saveFailedBody"), undefined, "error", { title: i18n.t("sync.saveFailedTitle") });
+  }
 }
 
 // ---------------------------------------------------------------------------

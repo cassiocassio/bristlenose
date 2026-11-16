@@ -323,13 +323,14 @@
       "donePartial": "{{count}} clips a punt ({{skipped}} omesos)",
       "reveal": "Mostra a la carpeta",
       "revealMac": "Mostra-ho al Finder",
-      "piiWarning": "Els clips contenen l'àudio original — l'ocultació de dades personals només s'aplica al text de la transcripció",
+      "piiWarning": "Els clips contenen l'àudio original. L'ocultació de dades personals només s'aplica al text de la transcripció.",
       "failed": "L'extracció de clips ha fallat",
-      "ffmpegMissing": "No s'ha trobat l'FFmpeg — instal·la'l per extreure clips",
+      "ffmpegMissingTitle": "No s'ha trobat l'FFmpeg",
+      "ffmpegMissingBody": "Instal·la'l per extreure clips.",
       "noClips": "No hi ha cites destacades ni rellevants per extreure",
       "burnSubtitles": "Incrusta els subt\u00edtols al v\u00eddeo (per a diapositives)",
-      "burnUnavailable": "Aquest FFmpeg no pot incrustar subt\u00edtols \u2014 nom\u00e9s s'extrauran clips sense subt\u00edtols",
-      "burnPartial": "Clips a punt \u2014 c\u00f2pies subtitulades: {{burned}} de {{attempted}}"
+      "burnUnavailable": "Aquest FFmpeg no pot incrustar subt\u00edtols. Nom\u00e9s s'extrauran clips sense subt\u00edtols.",
+      "burnPartial": "Clips a punt. C\u00f2pies subtitulades: {{burned}} de {{attempted}}"
     },
     "screens": {
       "exportScreens": "Exporta les pantalles",
@@ -338,8 +339,10 @@
       "copying": "S’estan copiant les pantalles… ({{progress}} de {{total}})",
       "done_one": "{{count}} captura de pantalla a punt",
       "done_other": "{{count}} captures de pantalla a punt",
-      "copied_one": "{{count}} captura de pantalla copiada — enganxa-la a Miro o FigJam",
-      "copied_other": "{{count}} captures de pantalla copiades — enganxa-les a Miro o FigJam",
+      "copiedTitle_one": "{{count}} captura de pantalla copiada",
+      "copiedBody_one": "Enganxa-la a Miro o FigJam.",
+      "copiedTitle_other": "{{count}} captures de pantalla copiades",
+      "copiedBody_other": "Enganxa-les a Miro o FigJam.",
       "reveal": "Mostra a la carpeta",
       "partial": "Captures de pantalla escrites: {{written}} de {{total}}",
       "failed": "No s’han pogut exportar les pantalles",
@@ -445,7 +448,7 @@
     "sending": "S'està enviant…",
     "anonymous": "Anònim: només es comparteixen la teva valoració, el teu missatge i la versió de Bristlenose.",
     "sent": "Comentaris enviats. Gràcies!",
-    "copyFailed": "No s'ha pogut copiar — envia els comentaris manualment.",
+    "copyFailed": "No s'ha pogut copiar. Envia els comentaris manualment.",
     "sendFailed": "No s’han pogut enviar els comentaris. S’han copiat al porta-retalls. Torna-ho a provar més tard.",
     "sendFailedNotCopied": "No s’han pogut enviar els comentaris ni copiar-los al porta-retalls. Torna-ho a provar més tard."
   },
@@ -530,7 +533,8 @@
       "noApiKey": "Afegeix una clau d'API a Configuraci\u00f3 primer.",
       "providerLocal": "Aix\u00f2 necessita un prove\u00efdor d'IA al n\u00favol, no un model local.",
       "providerAmbiguous": "Tria un prove\u00efdor d'IA a Configuraci\u00f3.",
-      "noQuotes": "Encara no hi ha cites: analitza primer les sessions.",
+      "noQuotesTitle": "Encara no hi ha cites",
+      "noQuotesBody": "Analitza primer les sessions.",
       "alreadyRunning": "Ja s'est\u00e0 etiquetant amb aquest manual de codis.",
       "alreadyApplied": "Ja aplicat.",
       "templateMissing": "Aquest manual de codis ja no est\u00e0 disponible."
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "No s’ha pogut desar el canvi. Comprova la connexió.",
+    "saveFailedTitle": "No s’ha pogut desar el canvi",
+    "saveFailedBody": "Comprova la connexió.",
     "saveRefused": "No s’ha pogut desar el canvi.",
     "quoteGone": "Aquesta cita ja no és a l'informe, així que el canvi no s'ha desat.",
-    "runInProgress": "S’està fent una anàlisi. Torna-ho a provar quan acabi.",
-    "pageStale": "No s’ha pogut desar el canvi. Bristlenose s’ha reiniciat. Torna a carregar la pàgina i fes el canvi de nou."
+    "runInProgressTitle": "S’està fent una anàlisi",
+    "runInProgressBody": "Torna-ho a provar quan acabi.",
+    "pageStaleTitle": "No s’ha pogut desar el canvi",
+    "pageStaleBody": "Bristlenose s’ha reiniciat. Torna a carregar la pàgina i fes el canvi de nou."
   },
   "screens": {
     "title": "Pantalles",

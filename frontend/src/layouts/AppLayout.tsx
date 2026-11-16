@@ -634,14 +634,14 @@ function AppShell() {
           const selected = selectedIdsBridgeRef.current;
           const ids = selected.size > 0 ? Array.from(selected) : focused ? [focused] : null;
           if (!ids || ids.length === 0) {
-            toast(i18n.t("toolbar.noQuotesSelected"));
+            toast(i18n.t("toolbar.noQuotesSelected"), undefined, "info");
             break;
           }
           const csv2 = buildCsvString(ids, snap2);
           navigator.clipboard
             .writeText(csv2)
             .then(() => toast(i18n.t("toolbar.csvCopied", { count: ids.length })))
-            .catch(() => toast(i18n.t("toolbar.csvFailed")));
+            .catch(() => toast(i18n.t("toolbar.csvFailed"), undefined, "error"));
           break;
         }
         // ── Canonical quote-export actions (shared with the SPA dropdown via
@@ -703,11 +703,13 @@ function AppShell() {
         case "screensCopied": {
           // The shell's word that the files are on the clipboard: only now is it said.
           const n = (payload as { count?: number } | undefined)?.count ?? 0;
-          toast(i18n.t("export.screens.copied", { count: n }), 6000);
+          toast(i18n.t("export.screens.copiedBody", { count: n }), 6000, undefined, {
+            title: i18n.t("export.screens.copiedTitle", { count: n }),
+          });
           break;
         }
         case "screensCopyFailed":
-          toast(i18n.t("export.screens.copyFailed"), 6000);
+          toast(i18n.t("export.screens.copyFailed"), undefined, "error");
           break;
         case "allQuotes":
           // Explicit "All Quotes" command — full reset (search + tokens + tags + mode).
@@ -873,18 +875,18 @@ function AppShell() {
                 .then((s) => {
                   // Only the export this window asked to copy, never a newer one (RE#38).
                   if (!sameExport(j.jobId, s.job_id)) {
-                    toast(i18n.t("export.screens.copyFailed"), 6000);
+                    toast(i18n.t("export.screens.copyFailed"), undefined, "error");
                     return;
                   }
                   if (s.status === "completed" && s.output_dir && s.files.length > 0) {
                     postScreensPasteboardWrite(s.output_dir, s.files);
                   } else if (s.status === "completed") {
-                    toast(i18n.t("export.screens.copyFailed"), 6000);
+                    toast(i18n.t("export.screens.copyFailed"), undefined, "error");
                   }
                 })
                 .catch((err) => {
                   console.error("Copy screens failed:", err);
-                  toast(i18n.t("export.screens.copyFailed"), 6000);
+                  toast(i18n.t("export.screens.copyFailed"), undefined, "error");
                 });
             },
             onAction: () => {

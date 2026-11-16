@@ -38,7 +38,7 @@ const FAILURES: Record<string, Failure> = {
   rate_limited: {
     kind: "warning",
     key: "codebook.autocodeFailure.rateLimited",
-    fallback: "Rate limited — tagging stopped. Try again soon.",
+    fallback: "Rate limited, so tagging stopped. Try again soon.",
   },
   invalid_key: {
     kind: "error",

@@ -323,13 +323,14 @@
       "donePartial": "{{count}} leikettä valmis ({{skipped}} ohitettu)",
       "reveal": "Näytä kansiossa",
       "revealMac": "Näytä Finderissa",
-      "piiWarning": "Leikkeet sisältävät alkuperäisen äänen — henkilötietojen peittäminen koskee vain litterointitekstiä",
+      "piiWarning": "Leikkeet sisältävät alkuperäisen äänen. Henkilötietojen peittäminen koskee vain litterointitekstiä.",
       "failed": "Leikkeiden erotus epäonnistui",
-      "ffmpegMissing": "FFmpeg ei löytynyt — asenna se leikkeiden erottamiseksi",
+      "ffmpegMissingTitle": "FFmpeg ei löytynyt",
+      "ffmpegMissingBody": "Asenna se leikkeiden erottamiseksi.",
       "noClips": "Ei tähdellä merkittyjä tai esiin nostettuja sitaatteja erotettavaksi",
       "burnSubtitles": "Polta tekstitys videoon (dioja varten)",
-      "burnUnavailable": "T\u00e4m\u00e4 FFmpeg ei osaa polttaa tekstityst\u00e4 \u2014 vain tekstitt\u00e4m\u00e4tt\u00f6m\u00e4t leikkeet erotetaan",
-      "burnPartial": "Leikkeet valmiina \u2014 tekstitetyt kopiot: {{burned}}/{{attempted}}"
+      "burnUnavailable": "T\u00e4m\u00e4 FFmpeg ei osaa polttaa tekstityst\u00e4. Vain tekstitt\u00e4m\u00e4tt\u00f6m\u00e4t leikkeet erotetaan.",
+      "burnPartial": "Leikkeet valmiina. Tekstitetyt kopiot: {{burned}}/{{attempted}}"
     },
     "screens": {
       "exportScreens": "Vie näytöt",
@@ -338,8 +339,10 @@
       "copying": "Kopioidaan näyttöjä… ({{progress}}/{{total}})",
       "done_one": "{{count}} kuvakaappaus valmis",
       "done_other": "{{count}} kuvakaappausta valmis",
-      "copied_one": "{{count}} kuvakaappaus kopioitu – liitä se Miroon tai FigJamiin",
-      "copied_other": "{{count}} kuvakaappausta kopioitu – liitä ne Miroon tai FigJamiin",
+      "copiedTitle_one": "{{count}} kuvakaappaus kopioitu",
+      "copiedBody_one": "Liitä se Miroon tai FigJamiin.",
+      "copiedTitle_other": "{{count}} kuvakaappausta kopioitu",
+      "copiedBody_other": "Liitä ne Miroon tai FigJamiin.",
       "reveal": "Näytä kansiossa",
       "partial": "Kuvakaappauksia kirjoitettu: {{written}}/{{total}}",
       "failed": "Näyttöjen vienti epäonnistui",
@@ -444,8 +447,8 @@
     "send": "Lähetä",
     "sending": "Lähetetään…",
     "anonymous": "Anonyymi – vain arviosi, viestisi ja Bristlenosen versio jaetaan.",
-    "sent": "Palaute lähetetty – kiitos!",
-    "copyFailed": "Kopiointi ei onnistunut — lähetä palaute manuaalisesti.",
+    "sent": "Palaute lähetetty. Kiitos!",
+    "copyFailed": "Kopiointi ei onnistunut. Lähetä palaute manuaalisesti.",
     "sendFailed": "Palautteen lähettäminen ei onnistunut. Se on kopioitu leikepöydälle. Yritä myöhemmin uudelleen.",
     "sendFailedNotCopied": "Palautteen lähettäminen tai kopioiminen leikepöydälle ei onnistunut. Yritä myöhemmin uudelleen."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "T\u00e4ss\u00e4 koodikirjassa ei ole tunnisteita.",
     "autocodeFailure": {
       "outOfCredit": "Teko\u00e4lypalvelun tilisi krediitit ovat loppuneet.",
-      "rateLimited": "Pyynt\u00f6raja saavutettu \u2013 merkint\u00e4 pys\u00e4ytetty. Yrit\u00e4 pian uudelleen.",
+      "rateLimited": "Pyynt\u00f6raja saavutettu. Merkint\u00e4 pys\u00e4ytetty. Yrit\u00e4 pian uudelleen.",
       "invalidKey": "API-avaimesi hyl\u00e4ttiin.",
       "serverError": "Teko\u00e4lypalvelu ei ole k\u00e4ytett\u00e4viss\u00e4. Yrit\u00e4 pian uudelleen.",
       "badRequest": "Teko\u00e4lypalvelu hylk\u00e4si pyynn\u00f6n.",
@@ -530,7 +533,8 @@
       "noApiKey": "Lis\u00e4\u00e4 ensin API-avain Asetuksissa.",
       "providerLocal": "T\u00e4h\u00e4n tarvitaan pilvipohjainen teko\u00e4lypalvelu, ei paikallista mallia.",
       "providerAmbiguous": "Valitse teko\u00e4lypalvelu Asetuksissa.",
-      "noQuotes": "Ei viel\u00e4 sitaatteja \u2013 analysoi ensin istuntosi.",
+      "noQuotesTitle": "Ei viel\u00e4 sitaatteja",
+      "noQuotesBody": "Analysoi ensin istuntosi.",
       "alreadyRunning": "Merkitsee jo t\u00e4ll\u00e4 koodikirjalla.",
       "alreadyApplied": "Jo k\u00e4yt\u00f6ss\u00e4.",
       "templateMissing": "T\u00e4t\u00e4 koodikirjaa ei en\u00e4\u00e4 ole saatavilla."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Poissuljettu"
     },
     "toast": {
-      "donePartial": "{{processed}}/{{total}} sitaattia merkitty \u2013 osa erist\u00e4 ep\u00e4onnistui.",
+      "donePartial": "{{processed}}/{{total}} sitaattia merkitty. Osa erist\u00e4 ep\u00e4onnistui.",
       "progress": "✦ AutoCode-merkitään {{processed}}/{{total}} sitaattia…",
       "done": "✦ AutoCode-merkitty {{total}} sitaattia ajassa {{duration}}.",
       "report": "Raportti",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Muutosta ei voitu tallentaa. Tarkista verkkoyhteys.",
+    "saveFailedTitle": "Muutosta ei voitu tallentaa",
+    "saveFailedBody": "Tarkista verkkoyhteys.",
     "saveRefused": "Muutosta ei voitu tallentaa.",
     "quoteGone": "Sitaatti ei ole enää raportissa, joten muutostasi ei tallennettu.",
-    "runInProgress": "Analyysi on käynnissä. Yritä uudelleen, kun se on valmis.",
-    "pageStale": "Muutosta ei voitu tallentaa, koska Bristlenose käynnistyi uudelleen. Lataa sivu uudelleen ja tee muutos uudestaan."
+    "runInProgressTitle": "Analyysi on käynnissä",
+    "runInProgressBody": "Yritä uudelleen, kun se on valmis.",
+    "pageStaleTitle": "Muutosta ei voitu tallentaa",
+    "pageStaleBody": "Bristlenose käynnistyi uudelleen. Lataa sivu uudelleen ja tee muutos uudestaan."
   },
   "screens": {
     "title": "N\u00e4yt\u00f6t",

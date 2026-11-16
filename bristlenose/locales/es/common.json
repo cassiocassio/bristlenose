@@ -323,13 +323,14 @@
       "donePartial": "{{count}} clips listos ({{skipped}} omitidos)",
       "reveal": "Mostrar en carpeta",
       "revealMac": "Mostrar en Finder",
-      "piiWarning": "Los clips contienen audio original — la anonimización solo se aplica al texto",
+      "piiWarning": "Los clips contienen audio original. La anonimización solo se aplica al texto.",
       "failed": "Error al extraer clips",
-      "ffmpegMissing": "FFmpeg no encontrado — instálelo para extraer clips",
+      "ffmpegMissingTitle": "FFmpeg no encontrado",
+      "ffmpegMissingBody": "Instálalo para extraer clips.",
       "noClips": "No hay citas destacadas o favoritas para extraer",
       "burnSubtitles": "Incrustar subt\u00edtulos en el v\u00eddeo (para diapositivas)",
-      "burnUnavailable": "Este FFmpeg no puede incrustar subt\u00edtulos \u2014 solo se extraer\u00e1n clips sin subt\u00edtulos",
-      "burnPartial": "Clips listos \u2014 copias subtituladas: {{burned}} de {{attempted}}"
+      "burnUnavailable": "Este FFmpeg no puede incrustar subt\u00edtulos. Solo se extraer\u00e1n clips sin subt\u00edtulos.",
+      "burnPartial": "Clips listos. Copias subtituladas: {{burned}} de {{attempted}}"
     },
     "screens": {
       "exportScreens": "Exportar pantallas",
@@ -338,8 +339,10 @@
       "copying": "Copiando pantallas… ({{progress}} de {{total}})",
       "done_one": "{{count}} captura de pantalla lista",
       "done_other": "{{count}} capturas de pantalla listas",
-      "copied_one": "{{count}} captura de pantalla copiada: pégala en Miro o FigJam",
-      "copied_other": "{{count}} capturas de pantalla copiadas: pégalas en Miro o FigJam",
+      "copiedTitle_one": "{{count}} captura de pantalla copiada",
+      "copiedBody_one": "Pégala en Miro o FigJam.",
+      "copiedTitle_other": "{{count}} capturas de pantalla copiadas",
+      "copiedBody_other": "Pégalas en Miro o FigJam.",
       "reveal": "Mostrar en carpeta",
       "partial": "Capturas de pantalla escritas: {{written}} de {{total}}",
       "failed": "No se pudieron exportar las pantallas",
@@ -444,8 +447,8 @@
     "send": "Enviar",
     "sending": "Enviando…",
     "anonymous": "Anónimo – solo se comparten tu valoración, tu mensaje y la versión de Bristlenose.",
-    "sent": "Comentarios enviados – ¡gracias!",
-    "copyFailed": "No se pudo copiar — envía los comentarios manualmente.",
+    "sent": "Comentarios enviados. ¡Gracias!",
+    "copyFailed": "No se pudo copiar. Envía los comentarios manualmente.",
     "sendFailed": "No se pudieron enviar tus comentarios. Están copiados en el portapapeles. Inténtalo de nuevo más tarde.",
     "sendFailedNotCopied": "No se pudieron enviar tus comentarios ni copiarlos al portapapeles. Inténtalo de nuevo más tarde."
   },
@@ -530,7 +533,8 @@
       "noApiKey": "A\u00f1ade una clave de API en Ajustes primero.",
       "providerLocal": "Esto necesita un proveedor de IA en la nube, no un modelo local.",
       "providerAmbiguous": "Elige un proveedor de IA en Ajustes.",
-      "noQuotes": "A\u00fan no hay citas: analiza primero tus sesiones.",
+      "noQuotesTitle": "A\u00fan no hay citas",
+      "noQuotesBody": "Analiza primero tus sesiones.",
       "alreadyRunning": "Ya se est\u00e1 etiquetando con este manual de c\u00f3digos.",
       "alreadyApplied": "Ya aplicado.",
       "templateMissing": "Ese manual de c\u00f3digos ya no est\u00e1 disponible."
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "No se ha podido guardar el cambio. Comprueba tu conexión.",
+    "saveFailedTitle": "No se ha podido guardar el cambio",
+    "saveFailedBody": "Comprueba tu conexión.",
     "saveRefused": "No se ha podido guardar el cambio.",
     "quoteGone": "Esa cita ya no está en el informe, así que el cambio no se ha guardado.",
-    "runInProgress": "Hay un análisis en curso. Vuelve a intentarlo cuando termine.",
-    "pageStale": "No se ha podido guardar el cambio. Bristlenose se ha reiniciado. Vuelve a cargar la página y haz el cambio de nuevo."
+    "runInProgressTitle": "Hay un análisis en curso",
+    "runInProgressBody": "Vuelve a intentarlo cuando termine.",
+    "pageStaleTitle": "No se ha podido guardar el cambio",
+    "pageStaleBody": "Bristlenose se ha reiniciado. Vuelve a cargar la página y haz el cambio de nuevo."
   },
   "screens": {
     "title": "Pantallas",

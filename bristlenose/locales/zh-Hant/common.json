@@ -304,13 +304,14 @@
       "donePartial": "{{count}} 個片段已就緒（已略過 {{skipped}} 個）",
       "reveal": "在檔案夾中顯示",
       "revealMac": "在 Finder 中顯示",
-      "piiWarning": "片段包含原始音訊——PII 編修僅套用至逐字稿文字",
+      "piiWarning": "片段包含原始音訊。PII 編修僅套用至逐字稿文字。",
       "failed": "片段擷取失敗",
-      "ffmpegMissing": "找不到 FFmpeg——請安裝以擷取片段",
+      "ffmpegMissingTitle": "找不到 FFmpeg",
+      "ffmpegMissingBody": "請安裝以擷取片段。",
       "noClips": "沒有已標示或精選的引述可擷取",
       "burnSubtitles": "\u5c07\u5b57\u5e55\u71d2\u5165\u5f71\u7247\uff08\u7528\u65bc\u7c21\u5831\uff09",
-      "burnUnavailable": "\u6b64 FFmpeg \u7121\u6cd5\u71d2\u5165\u5b57\u5e55\u2014\u2014\u50c5\u6703\u64f7\u53d6\u7121\u5b57\u5e55\u7684\u7247\u6bb5",
-      "burnPartial": "\u7247\u6bb5\u5df2\u5c31\u7dd2\u2014\u2014\u5b57\u5e55\u526f\u672c\uff1a{{attempted}} \u500b\u4e2d\u7684 {{burned}} \u500b"
+      "burnUnavailable": "\u6b64 FFmpeg \u7121\u6cd5\u71d2\u5165\u5b57\u5e55。\u50c5\u6703\u64f7\u53d6\u7121\u5b57\u5e55\u7684\u7247\u6bb5。",
+      "burnPartial": "\u7247\u6bb5\u5df2\u5c31\u7dd2。\u5b57\u5e55\u526f\u672c\uff1a{{attempted}} \u500b\u4e2d\u7684 {{burned}} \u500b"
     },
     "screens": {
       "exportScreens": "匯出畫面",
@@ -318,7 +319,8 @@
       "progress": "正在匯出畫面…（{{progress}}/{{total}}）",
       "copying": "正在拷貝畫面…（{{progress}}/{{total}}）",
       "done_other": "{{count}} 張螢幕截圖已就緒",
-      "copied_other": "已拷貝 {{count}} 張螢幕截圖，可貼到 Miro 或 FigJam",
+      "copiedTitle_other": "已拷貝 {{count}} 張螢幕截圖",
+      "copiedBody_other": "可貼到 Miro 或 FigJam。",
       "reveal": "在檔案夾中顯示",
       "partial": "已寫入的螢幕截圖：{{written}}/{{total}}",
       "failed": "無法匯出畫面",
@@ -420,8 +422,8 @@
     "send": "傳送",
     "sending": "正在傳送⋯",
     "anonymous": "匿名——僅會分享你的評分、訊息與 Bristlenose 版本。",
-    "sent": "已傳送意見回饋——謝謝你！",
-    "copyFailed": "無法拷貝——請手動提交意見回饋。",
+    "sent": "已傳送意見回饋。謝謝你！",
+    "copyFailed": "無法拷貝。請手動提交意見回饋。",
     "sendFailed": "無法傳送意見回饋。已拷貝至剪貼板，請稍後再試。",
     "sendFailedNotCopied": "無法傳送意見回饋，也無法拷貝至剪貼板。請稍後再試。"
   },
@@ -505,7 +507,8 @@
       "noApiKey": "\u8acb\u5148\u5728\u8a2d\u5b9a\u4e2d\u65b0\u589e API \u91d1\u9470\u3002",
       "providerLocal": "\u9019\u9700\u8981\u96f2\u7aef AI \u4f9b\u61c9\u5546\uff0c\u800c\u975e\u672c\u6a5f\u6a21\u578b\u3002",
       "providerAmbiguous": "\u8acb\u5728\u8a2d\u5b9a\u4e2d\u9078\u64c7 AI \u4f9b\u61c9\u5546\u3002",
-      "noQuotes": "\u5c1a\u7121\u5f15\u8a00\uff0c\u8acb\u5148\u5206\u6790\u60a8\u7684\u8a2a\u8ac7\u3002",
+      "noQuotesTitle": "\u5c1a\u7121\u5f15\u8a00",
+      "noQuotesBody": "\u8acb\u5148\u5206\u6790你\u7684\u8a2a\u8ac7\u3002",
       "alreadyRunning": "\u5df2\u5728\u4f7f\u7528\u6b64\u7de8\u78bc\u7c3f\u6a19\u8a3b\u3002",
       "alreadyApplied": "\u5df2\u5957\u7528\u3002",
       "templateMissing": "\u8a72\u7de8\u78bc\u7c3f\u5df2\u4e0d\u518d\u63d0\u4f9b\u3002"
@@ -750,11 +753,14 @@
     }
   },
   "sync": {
-    "saveFailed": "無法儲存變更。請檢查網路連線。",
+    "saveFailedTitle": "無法儲存變更",
+    "saveFailedBody": "請檢查網路連線。",
     "saveRefused": "無法儲存變更。",
     "quoteGone": "這則引述已不在報告中，因此未儲存你的變更。",
-    "runInProgress": "分析正在執行。請在完成後再試一次。",
-    "pageStale": "Bristlenose 已重新啟動，因此無法儲存變更。請重新載入頁面，然後再做一次變更。"
+    "runInProgressTitle": "分析正在執行",
+    "runInProgressBody": "請在完成後再試一次。",
+    "pageStaleTitle": "無法儲存變更",
+    "pageStaleBody": "Bristlenose 已重新啟動。請重新載入頁面，然後再做一次變更。"
   },
   "screens": {
     "title": "\u756b\u9762",

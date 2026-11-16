@@ -167,9 +167,13 @@ otherwise.
 | Close a side panel | `x` (picked over `panel-left-close`) | `sidebar.left` | × ×2 |
 | Dev playground | `sliders-horizontal` | — | SVG, ◆ |
 
-**Kept as characters.** The Toast and ActivityChip kind glyphs (✓ ℹ ⚠ ✗ —) are bound to
-the CLI's `CLI_GLYPH` (`utils/messageKind.ts`, `ui_kinds.py`) and stay Unicode until that
-parity is deliberately broken. The rest of the "kept" list is rule 1.
+**Kept as characters.** The CLI's lines and the Mac popover's copy-paste text keep the kind
+glyphs (✓ ℹ ⚠ ✗ —), bound to `CLI_GLYPH` (`utils/messageKind.ts`, `ui_kinds.py`). **The Toast
+and ActivityChip no longer do:** the chip already drew Lucide (`ActivityChip.tsx`: `check`,
+`warning`, `failed`), and the toast moved to Lucide on 13 Nov 2026 (`Toast.tsx` `KIND_ICON`,
+with `success` and `info` added to the concepts above), a deliberate break of that parity for
+toasts. A toast draws four of the five kinds (`skipped` as info). The rest of the "kept" list
+is rule 1. See `design-notification-surfaces.md` §6a.
 
 ## Weight: the stroke is the stem of the text
 

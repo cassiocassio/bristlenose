@@ -323,13 +323,14 @@
       "donePartial": "{{count}} clips gereed ({{skipped}} overgeslagen)",
       "reveal": "Toon in map",
       "revealMac": "Toon in Finder",
-      "piiWarning": "Clips bevatten de originele audio — PII-redactie geldt alleen voor transcripttekst",
+      "piiWarning": "Clips bevatten de originele audio. PII-redactie geldt alleen voor transcripttekst.",
       "failed": "Clip-extractie mislukt",
-      "ffmpegMissing": "FFmpeg niet gevonden — installeer het om clips te extraheren",
+      "ffmpegMissingTitle": "FFmpeg niet gevonden",
+      "ffmpegMissingBody": "Installeer het om clips te extraheren.",
       "noClips": "Geen citaten met ster of uitgelicht om te extraheren",
       "burnSubtitles": "Ondertiteling in de video branden (voor dia's)",
-      "burnUnavailable": "Deze FFmpeg kan geen ondertiteling inbranden \u2014 alleen clips zonder ondertiteling worden ge\u00ebxtraheerd",
-      "burnPartial": "Clips gereed \u2014 ondertitelde kopie\u00ebn: {{burned}} van {{attempted}}"
+      "burnUnavailable": "Deze FFmpeg kan geen ondertiteling inbranden. Alleen clips zonder ondertiteling worden ge\u00ebxtraheerd.",
+      "burnPartial": "Clips gereed. Ondertitelde kopie\u00ebn: {{burned}} van {{attempted}}"
     },
     "screens": {
       "exportScreens": "Schermen exporteren",
@@ -338,8 +339,10 @@
       "copying": "Schermen kopiëren… ({{progress}} van {{total}})",
       "done_one": "{{count}} schermafbeelding klaar",
       "done_other": "{{count}} schermafbeeldingen klaar",
-      "copied_one": "{{count}} schermafbeelding gekopieerd — plak hem in Miro of FigJam",
-      "copied_other": "{{count}} schermafbeeldingen gekopieerd — plak ze in Miro of FigJam",
+      "copiedTitle_one": "{{count}} schermafbeelding gekopieerd",
+      "copiedBody_one": "Plak hem in Miro of FigJam.",
+      "copiedTitle_other": "{{count}} schermafbeeldingen gekopieerd",
+      "copiedBody_other": "Plak ze in Miro of FigJam.",
       "reveal": "Toon in map",
       "partial": "Schermafbeeldingen geschreven: {{written}} van {{total}}",
       "failed": "Exporteren van schermen mislukt",
@@ -444,8 +447,8 @@
     "send": "Stuur",
     "sending": "Versturen…",
     "anonymous": "Anoniem — alleen je beoordeling, bericht en de Bristlenose-versie worden gedeeld.",
-    "sent": "Feedback verstuurd — bedankt!",
-    "copyFailed": "Kon niet kopiëren — dien de feedback handmatig in.",
+    "sent": "Feedback verstuurd. Bedankt!",
+    "copyFailed": "Kon niet kopiëren. Dien de feedback handmatig in.",
     "sendFailed": "Je feedback kon niet worden verstuurd. Hij staat op het klembord. Probeer het later opnieuw.",
     "sendFailedNotCopied": "Je feedback kon niet worden verstuurd of naar het klembord worden gekopieerd. Probeer het later opnieuw."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "Dit codeboek heeft geen tags.",
     "autocodeFailure": {
       "outOfCredit": "Het tegoed van je AI-provideraccount is op.",
-      "rateLimited": "Snelheidslimiet bereikt \u2014 taggen gestopt. Probeer het straks opnieuw.",
+      "rateLimited": "Snelheidslimiet bereikt. Taggen gestopt. Probeer het straks opnieuw.",
       "invalidKey": "Je API-sleutel is geweigerd.",
       "serverError": "De AI-provider is niet beschikbaar. Probeer het straks opnieuw.",
       "badRequest": "De AI-provider heeft het verzoek geweigerd.",
@@ -530,7 +533,8 @@
       "noApiKey": "Voeg eerst een API-sleutel toe in Instellingen.",
       "providerLocal": "Hiervoor is een cloud-AI-provider nodig, geen lokaal model.",
       "providerAmbiguous": "Kies een AI-provider in Instellingen.",
-      "noQuotes": "Nog geen citaten \u2014 analyseer eerst je sessies.",
+      "noQuotesTitle": "Nog geen citaten",
+      "noQuotesBody": "Analyseer eerst je sessies.",
       "alreadyRunning": "Er wordt al getagd met dit codeboek.",
       "alreadyApplied": "Al toegepast.",
       "templateMissing": "Dat codeboek is niet meer beschikbaar."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Uitgesloten"
     },
     "toast": {
-      "donePartial": "{{processed}} van {{total}} citaten getagd \u2014 sommige batches zijn mislukt.",
+      "donePartial": "{{processed}} van {{total}} citaten getagd. Sommige batches zijn mislukt.",
       "progress": "✦ {{processed}}/{{total}} citaten coderen…",
       "done": "✦ {{total}} citaten gecodeerd in {{duration}}.",
       "report": "Rapport",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Je wijziging kon niet worden bewaard. Controleer je verbinding.",
+    "saveFailedTitle": "Je wijziging kon niet worden bewaard",
+    "saveFailedBody": "Controleer je verbinding.",
     "saveRefused": "Je wijziging kon niet worden bewaard.",
     "quoteGone": "Dat citaat staat niet meer in het rapport, dus je wijziging is niet bewaard.",
-    "runInProgress": "Er loopt een analyse. Probeer het opnieuw als die klaar is.",
-    "pageStale": "Je wijziging kon niet worden bewaard. Bristlenose is opnieuw gestart. Laad de pagina opnieuw en breng de wijziging nogmaals aan."
+    "runInProgressTitle": "Er loopt een analyse",
+    "runInProgressBody": "Probeer het opnieuw als die klaar is.",
+    "pageStaleTitle": "Je wijziging kon niet worden bewaard",
+    "pageStaleBody": "Bristlenose is opnieuw gestart. Laad de pagina opnieuw en breng de wijziging nogmaals aan."
   },
   "screens": {
     "title": "Schermen",

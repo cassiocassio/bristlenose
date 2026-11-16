@@ -323,13 +323,14 @@
       "donePartial": "{{count}} Clips bereit ({{skipped}} übersprungen)",
       "reveal": "In Ordner anzeigen",
       "revealMac": "Im Finder anzeigen",
-      "piiWarning": "Clips enthalten Originalaudio — Anonymisierung gilt nur für den Text",
+      "piiWarning": "Clips enthalten Originalaudio. Anonymisierung gilt nur für den Text.",
       "failed": "Clip-Extraktion fehlgeschlagen",
-      "ffmpegMissing": "FFmpeg nicht gefunden — installieren Sie es, um Clips zu extrahieren",
+      "ffmpegMissingTitle": "FFmpeg nicht gefunden",
+      "ffmpegMissingBody": "Installieren Sie es, um Clips zu extrahieren.",
       "noClips": "Keine markierten oder hervorgehobenen Zitate zum Extrahieren",
       "burnSubtitles": "Untertitel ins Video einbrennen (f\u00fcr Pr\u00e4sentationen)",
-      "burnUnavailable": "Dieses FFmpeg kann keine Untertitel einbrennen \u2014 es werden nur Clips ohne Untertitel extrahiert",
-      "burnPartial": "Clips bereit \u2014 untertitelte Kopien: {{burned}} von {{attempted}}"
+      "burnUnavailable": "Dieses FFmpeg kann keine Untertitel einbrennen. Es werden nur Clips ohne Untertitel extrahiert.",
+      "burnPartial": "Clips bereit. Untertitelte Kopien: {{burned}} von {{attempted}}"
     },
     "screens": {
       "exportScreens": "Bildschirme exportieren",
@@ -338,8 +339,10 @@
       "copying": "Bildschirme werden kopiert… ({{progress}} von {{total}})",
       "done_one": "{{count}} Bildschirmfoto bereit",
       "done_other": "{{count}} Bildschirmfotos bereit",
-      "copied_one": "{{count}} Bildschirmfoto kopiert – in Miro oder FigJam einfügen",
-      "copied_other": "{{count}} Bildschirmfotos kopiert – in Miro oder FigJam einfügen",
+      "copiedTitle_one": "{{count}} Bildschirmfoto kopiert",
+      "copiedBody_one": "Fügen Sie es in Miro oder FigJam ein.",
+      "copiedTitle_other": "{{count}} Bildschirmfotos kopiert",
+      "copiedBody_other": "Fügen Sie sie in Miro oder FigJam ein.",
       "reveal": "In Ordner anzeigen",
       "partial": "Bildschirmfotos geschrieben: {{written}} von {{total}}",
       "failed": "Export der Bildschirme fehlgeschlagen",
@@ -444,8 +447,8 @@
     "send": "Senden",
     "sending": "Wird gesendet…",
     "anonymous": "Anonym – nur Ihre Bewertung, Ihre Nachricht und die Bristlenose-Version werden geteilt.",
-    "sent": "Feedback gesendet – vielen Dank!",
-    "copyFailed": "Kopieren nicht möglich — bitte Feedback manuell einreichen.",
+    "sent": "Feedback gesendet. Vielen Dank!",
+    "copyFailed": "Kopieren nicht möglich. Bitte Feedback manuell einreichen.",
     "sendFailed": "Ihr Feedback konnte nicht gesendet werden. Es liegt in der Zwischenablage. Versuchen Sie es später erneut.",
     "sendFailedNotCopied": "Ihr Feedback konnte weder gesendet noch in die Zwischenablage kopiert werden. Versuchen Sie es später erneut."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "Dieses Codebuch hat keine Tags.",
     "autocodeFailure": {
       "outOfCredit": "Das Guthaben Ihres KI-Anbieter-Kontos ist aufgebraucht.",
-      "rateLimited": "Ratenlimit erreicht \u2013 Verschlagwortung gestoppt. Versuchen Sie es bald erneut.",
+      "rateLimited": "Ratenlimit erreicht. Verschlagwortung gestoppt. Versuchen Sie es bald erneut.",
       "invalidKey": "Ihr API-Schl\u00fcssel wurde abgelehnt.",
       "serverError": "Der KI-Anbieter ist nicht erreichbar. Versuchen Sie es in K\u00fcrze erneut.",
       "badRequest": "Der KI-Anbieter hat die Anfrage abgelehnt.",
@@ -530,7 +533,8 @@
       "noApiKey": "F\u00fcgen Sie zuerst einen API-Schl\u00fcssel in den Einstellungen hinzu.",
       "providerLocal": "Daf\u00fcr wird ein Cloud-KI-Anbieter ben\u00f6tigt, kein lokales Modell.",
       "providerAmbiguous": "W\u00e4hlen Sie einen KI-Anbieter in den Einstellungen.",
-      "noQuotes": "Noch keine Zitate \u2013 analysieren Sie zuerst Ihre Sitzungen.",
+      "noQuotesTitle": "Noch keine Zitate",
+      "noQuotesBody": "Analysieren Sie zuerst Ihre Interviews.",
       "alreadyRunning": "Wird bereits mit diesem Codebuch verschlagwortet.",
       "alreadyApplied": "Bereits angewendet.",
       "templateMissing": "Dieses Codebuch ist nicht mehr verf\u00fcgbar."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Ausgeschlossen"
     },
     "toast": {
-      "donePartial": "{{processed}} von {{total}} Zitaten verschlagwortet \u2013 einige Stapel sind fehlgeschlagen.",
+      "donePartial": "{{processed}} von {{total}} Zitaten verschlagwortet. Einige Stapel sind fehlgeschlagen.",
       "progress": "✦ AutoCodierung {{processed}}/{{total}} Zitate…",
       "done": "✦ AutoCodiert {{total}} Zitate in {{duration}}.",
       "report": "Bericht",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Ihre Änderung konnte nicht gesichert werden. Prüfen Sie Ihre Verbindung.",
+    "saveFailedTitle": "Ihre Änderung konnte nicht gesichert werden",
+    "saveFailedBody": "Prüfen Sie Ihre Verbindung.",
     "saveRefused": "Ihre Änderung konnte nicht gesichert werden.",
     "quoteGone": "Dieses Zitat ist nicht mehr im Bericht, daher wurde Ihre Änderung nicht gesichert.",
-    "runInProgress": "Es läuft eine Analyse. Versuchen Sie es erneut, wenn sie fertig ist.",
-    "pageStale": "Ihre Änderung konnte nicht gesichert werden. Bristlenose wurde neu gestartet. Laden Sie die Seite neu und nehmen Sie die Änderung noch einmal vor."
+    "runInProgressTitle": "Es läuft eine Analyse",
+    "runInProgressBody": "Versuchen Sie es erneut, wenn sie fertig ist.",
+    "pageStaleTitle": "Ihre Änderung konnte nicht gesichert werden",
+    "pageStaleBody": "Bristlenose wurde neu gestartet. Laden Sie die Seite neu und nehmen Sie die Änderung noch einmal vor."
   },
   "screens": {
     "title": "Bildschirme",

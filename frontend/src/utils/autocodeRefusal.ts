@@ -20,6 +20,10 @@ import type { MessageKind } from "./messageKind";
 
 interface Refusal {
   kind: MessageKind;
+  /** When the message is two sentences, the heading: `key` is then the body. */
+  titleKey?: string;
+  /** English fallback for the heading — must match the `en` locale value. */
+  titleFallback?: string;
   /** Locale key under `codebook.autocodeRefusal.*`. */
   key: string;
   /** English fallback — must match the `en` locale value. */
@@ -45,8 +49,10 @@ const REFUSALS: Record<string, Refusal> = {
   no_quotes: {
     // Not an error: the run order is wrong, not the request.
     kind: "warning",
-    key: "codebook.autocodeRefusal.noQuotes",
-    fallback: "No quotes yet — analyse your sessions first.",
+    key: "codebook.autocodeRefusal.noQuotesBody",
+    fallback: "Analyse your sessions first.",
+    titleKey: "codebook.autocodeRefusal.noQuotesTitle",
+    titleFallback: "No quotes yet",
   },
   already_running: {
     kind: "info",
@@ -65,14 +71,18 @@ const REFUSALS: Record<string, Refusal> = {
   },
 };
 
-/** Resolve a refusal reason to a message and kind, or null if unrecognised. */
+/** Resolve a refusal reason to a message and kind, or null if unrecognised.
+ *  `title` is set when the message is a heading over a body (`message` is the body). */
 export function autocodeRefusal(
   reason: string | undefined,
-): { message: string; kind: MessageKind } | null {
+): { message: string; kind: MessageKind; title?: string } | null {
   const entry = reason ? REFUSALS[reason] : undefined;
   if (!entry) return null;
   return {
     message: i18n.t(entry.key, { defaultValue: entry.fallback }),
     kind: entry.kind,
+    ...(entry.titleKey
+      ? { title: i18n.t(entry.titleKey, { defaultValue: entry.titleFallback }) }
+      : {}),
   };
 }

@@ -27,7 +27,7 @@ import {
   AArrowDown, AArrowUp, ALargeSmall, AppWindowMac, Columns2, RectangleVertical,
   MessageCircleQuestionMark,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
-  ExternalLink, Eye, EyeOff, Folder, GalleryHorizontal, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
+  CircleCheck, ExternalLink, Eye, EyeOff, Folder, GalleryHorizontal, Info, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
   ImageOff, RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
   TriangleAlert, Undo2, X, ZoomIn, ZoomOut, type LucideIcon,
 } from "lucide-react";
@@ -94,6 +94,11 @@ const ICONS = {
   /** Add a group, a tag. */
   add: Plus,
   play: Play,
+  /** A toast that says something went right (a kind of message, not a control's tick:
+   *  the Mac's `checkmark.circle`). */
+  success: CircleCheck,
+  /** A toast that is a neutral note (the Mac's `info.circle`). Help keeps `circle-help`. */
+  info: Info,
   /** An activity that partly finished. */
   warning: TriangleAlert,
   /** An activity that failed or was cancelled. */

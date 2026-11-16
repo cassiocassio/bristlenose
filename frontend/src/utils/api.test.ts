@@ -32,7 +32,8 @@ function answer(status: number, body: unknown): Response {
 /** The one toast a failed write raised. */
 function said(): string {
   expect(toastMock).toHaveBeenCalledTimes(1);
-  return String(toastMock.mock.calls[0][0]);
+  const [message, , , options] = toastMock.mock.calls[0];
+  return [options?.title, message].filter(Boolean).join(". ");
 }
 
 beforeEach(() => {
@@ -57,6 +58,11 @@ describe("sendPut — what a failed write says", () => {
     fetchMock.mockRejectedValue(new TypeError("Load failed"));
     await expect(sendPut("/x", {})).rejects.toThrow();
     expect(said()).toMatch(/connection/i);
+    // A failed save is an error, and its heading says what failed while its body says why.
+    const [body, , kind, options] = toastMock.mock.calls[0];
+    expect(kind).toBe("error");
+    expect(options?.title).toMatch(/save/i);
+    expect(body).toMatch(/connection/i);
   });
 
   it("names a running analysis when the server says so", async () => {
@@ -67,6 +73,11 @@ describe("sendPut — what a failed write says", () => {
     const message = said();
     expect(message).toMatch(/analysis/i);
     expect(message).not.toMatch(/connection/i);
+    // Waiting fixes it, so a warning; the heading is the fact, the body is what to do.
+    const [body, , kind, options] = toastMock.mock.calls[0];
+    expect(kind).toBe("warning");
+    expect(options?.title).toMatch(/analysis/i);
+    expect(body).toMatch(/try again/i);
   });
 
   it("does not blame the connection for any other refusal", async () => {

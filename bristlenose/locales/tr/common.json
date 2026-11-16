@@ -323,13 +323,14 @@
       "donePartial": "{{count}} klip hazır ({{skipped}} atlandı)",
       "reveal": "Klasörde göster",
       "revealMac": "Finder'da Göster",
-      "piiWarning": "Klipler orijinal sesi içerir — PII maskeleme yalnızca deşifre metnine uygulanır",
+      "piiWarning": "Klipler orijinal sesi içerir. PII maskeleme yalnızca deşifre metnine uygulanır.",
       "failed": "Klip çıkarma başarısız oldu",
-      "ffmpegMissing": "FFmpeg bulunamadı — klip çıkarmak için yükleyin",
+      "ffmpegMissingTitle": "FFmpeg bulunamadı",
+      "ffmpegMissingBody": "Klip çıkarmak için yükleyin.",
       "noClips": "Çıkarılacak yıldızlı veya öne çıkan alıntı yok",
       "burnSubtitles": "Altyaz\u0131lar\u0131 videoya g\u00f6m (slaytlar i\u00e7in)",
-      "burnUnavailable": "Bu FFmpeg altyaz\u0131 g\u00f6memiyor \u2014 yaln\u0131zca altyaz\u0131s\u0131z klipler \u00e7\u0131kar\u0131lacak",
-      "burnPartial": "Klipler haz\u0131r \u2014 altyaz\u0131l\u0131 kopyalar: {{burned}}/{{attempted}}"
+      "burnUnavailable": "Bu FFmpeg altyaz\u0131 g\u00f6memiyor. Yaln\u0131zca altyaz\u0131s\u0131z klipler \u00e7\u0131kar\u0131lacak.",
+      "burnPartial": "Klipler haz\u0131r. Altyaz\u0131l\u0131 kopyalar: {{burned}}/{{attempted}}"
     },
     "screens": {
       "exportScreens": "Ekranları dışa aktar",
@@ -338,8 +339,10 @@
       "copying": "Ekranlar kopyalanıyor… ({{progress}}/{{total}})",
       "done_one": "{{count}} ekran görüntüsü hazır",
       "done_other": "{{count}} ekran görüntüsü hazır",
-      "copied_one": "{{count}} ekran görüntüsü kopyalandı — Miro veya FigJam’e yapıştırın",
-      "copied_other": "{{count}} ekran görüntüsü kopyalandı — Miro veya FigJam’e yapıştırın",
+      "copiedTitle_one": "{{count}} ekran görüntüsü kopyalandı",
+      "copiedBody_one": "Miro veya FigJam’e yapıştırın.",
+      "copiedTitle_other": "{{count}} ekran görüntüsü kopyalandı",
+      "copiedBody_other": "Miro veya FigJam’e yapıştırın.",
       "reveal": "Klasörde göster",
       "partial": "Yazılan ekran görüntüleri: {{written}}/{{total}}",
       "failed": "Ekranlar dışa aktarılamadı",
@@ -444,8 +447,8 @@
     "send": "Gönder",
     "sending": "Gönderiliyor…",
     "anonymous": "Anonim – yalnızca değerlendirmeniz, mesajınız ve Bristlenose sürümü paylaşılır.",
-    "sent": "Geri bildirim gönderildi – teşekkürler!",
-    "copyFailed": "Kopyalanamadı — lütfen geri bildirimi elle gönderin.",
+    "sent": "Geri bildirim gönderildi. Teşekkürler!",
+    "copyFailed": "Kopyalanamadı. Lütfen geri bildirimi elle gönderin.",
     "sendFailed": "Geri bildiriminiz gönderilemedi. Panoya kopyalandı. Daha sonra tekrar deneyin.",
     "sendFailedNotCopied": "Geri bildiriminiz gönderilemedi ve panoya kopyalanamadı. Daha sonra tekrar deneyin."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "Bu kod kitab\u0131nda etiket yok.",
     "autocodeFailure": {
       "outOfCredit": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 hesab\u0131n\u0131zda kredi kalmad\u0131.",
-      "rateLimited": "H\u0131z s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131 \u2014 etiketleme durdu. Birazdan tekrar deneyin.",
+      "rateLimited": "H\u0131z s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131. Etiketleme durdu. Birazdan tekrar deneyin.",
       "invalidKey": "API anahtar\u0131n\u0131z reddedildi.",
       "serverError": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 kullan\u0131lam\u0131yor. Birazdan tekrar deneyin.",
       "badRequest": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 iste\u011fi reddetti.",
@@ -530,7 +533,8 @@
       "noApiKey": "\u00d6nce Ayarlar'da bir API anahtar\u0131 ekleyin.",
       "providerLocal": "Bunun i\u00e7in yerel model de\u011fil, bulut yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 gerekir.",
       "providerAmbiguous": "Ayarlar'da bir yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 se\u00e7in.",
-      "noQuotes": "Hen\u00fcz al\u0131nt\u0131 yok \u2014 \u00f6nce oturumlar\u0131n\u0131z\u0131 analiz edin.",
+      "noQuotesTitle": "Hen\u00fcz al\u0131nt\u0131 yok",
+      "noQuotesBody": "Önce oturumlar\u0131n\u0131z\u0131 analiz edin.",
       "alreadyRunning": "Bu kod kitab\u0131yla etiketleme zaten s\u00fcr\u00fcyor.",
       "alreadyApplied": "Zaten uyguland\u0131.",
       "templateMissing": "Bu kod kitab\u0131 art\u0131k kullan\u0131lam\u0131yor."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Hariç tutuldu"
     },
     "toast": {
-      "donePartial": "{{total}} al\u0131nt\u0131dan {{processed}} tanesi etiketlendi \u2014 baz\u0131 gruplar ba\u015far\u0131s\u0131z oldu.",
+      "donePartial": "{{total}} al\u0131nt\u0131dan {{processed}} tanesi etiketlendi. Baz\u0131 gruplar ba\u015far\u0131s\u0131z oldu.",
       "progress": "✦ {{total}} alıntıdan {{processed}} tanesi AutoCode ile kodlanıyor…",
       "done": "✦ {{total}} alıntı {{duration}} içinde AutoCode ile kodlandı.",
       "report": "Rapor",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Değişiklik kaydedilemedi. Bağlantınızı kontrol edin.",
+    "saveFailedTitle": "Değişiklik kaydedilemedi",
+    "saveFailedBody": "Bağlantınızı kontrol edin.",
     "saveRefused": "Değişiklik kaydedilemedi.",
     "quoteGone": "Bu alıntı artık raporda yok, bu yüzden değişiklik kaydedilmedi.",
-    "runInProgress": "Bir analiz çalışıyor. Bittiğinde yeniden deneyin.",
-    "pageStale": "Bristlenose yeniden başlatıldığı için değişiklik kaydedilemedi. Sayfayı yeniden yükleyin ve değişikliği tekrar yapın."
+    "runInProgressTitle": "Bir analiz çalışıyor",
+    "runInProgressBody": "Bittiğinde yeniden deneyin.",
+    "pageStaleTitle": "Değişiklik kaydedilemedi",
+    "pageStaleBody": "Bristlenose yeniden başlatıldı. Sayfayı yeniden yükleyin ve değişikliği tekrar yapın."
   },
   "screens": {
     "title": "Ekranlar",

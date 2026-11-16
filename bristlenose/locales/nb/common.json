@@ -323,13 +323,14 @@
       "donePartial": "{{count}} klipp klare ({{skipped}} hoppet over)",
       "reveal": "Vis i mappe",
       "revealMac": "Vis i Finder",
-      "piiWarning": "Klipp inneholder original lyd – PII-redigering gjelder kun transkripsjonstekst",
+      "piiWarning": "Klipp inneholder original lyd. PII-redigering gjelder kun transkripsjonstekst.",
       "failed": "Uttrekking av klipp mislyktes",
-      "ffmpegMissing": "FFmpeg ikke funnet – installer det for å trekke ut klipp",
+      "ffmpegMissingTitle": "FFmpeg ikke funnet",
+      "ffmpegMissingBody": "Installer det for å trekke ut klipp.",
       "noClips": "Ingen stjernemerkede eller fremhevede sitater å trekke ut",
       "burnSubtitles": "Brenn inn undertekster i videoen (for lysbilder)",
-      "burnUnavailable": "Denne FFmpeg kan ikke brenne inn undertekster \u2013 bare klipp uten undertekster trekkes ut",
-      "burnPartial": "Klipp klare \u2013 kopier med undertekster: {{burned}} av {{attempted}}"
+      "burnUnavailable": "Denne FFmpeg kan ikke brenne inn undertekster. Bare klipp uten undertekster trekkes ut.",
+      "burnPartial": "Klipp klare. Kopier med undertekster: {{burned}} av {{attempted}}"
     },
     "screens": {
       "exportScreens": "Eksporter skjermer",
@@ -338,8 +339,10 @@
       "copying": "Kopierer skjermer… ({{progress}} av {{total}})",
       "done_one": "{{count}} skjermbilde klart",
       "done_other": "{{count}} skjermbilder klare",
-      "copied_one": "{{count}} skjermbilde kopiert – lim det inn i Miro eller FigJam",
-      "copied_other": "{{count}} skjermbilder kopiert – lim dem inn i Miro eller FigJam",
+      "copiedTitle_one": "{{count}} skjermbilde kopiert",
+      "copiedBody_one": "Lim det inn i Miro eller FigJam.",
+      "copiedTitle_other": "{{count}} skjermbilder kopiert",
+      "copiedBody_other": "Lim dem inn i Miro eller FigJam.",
       "reveal": "Vis i mappe",
       "partial": "Skjermbilder skrevet: {{written}} av {{total}}",
       "failed": "Eksport av skjermer mislyktes",
@@ -444,8 +447,8 @@
     "send": "Send",
     "sending": "Sender …",
     "anonymous": "Anonymt – bare vurderingen, meldingen og Bristlenose-versjonen deles.",
-    "sent": "Tilbakemelding sendt – takk!",
-    "copyFailed": "Kunne ikke kopiere – send inn tilbakemeldingen manuelt.",
+    "sent": "Tilbakemelding sendt. Takk!",
+    "copyFailed": "Kunne ikke kopiere. Send inn tilbakemeldingen manuelt.",
     "sendFailed": "Tilbakemeldingen kunne ikke sendes. Den er kopiert til utklippstavlen. Prøv igjen senere.",
     "sendFailedNotCopied": "Tilbakemeldingen kunne verken sendes eller kopieres til utklippstavlen. Prøv igjen senere."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "Denne kodeboken har ingen tagger.",
     "autocodeFailure": {
       "outOfCredit": "Kontoen din hos KI-leverand\u00f8ren er tom for kreditt.",
-      "rateLimited": "Hastighetsgrense n\u00e5dd \u2013 merking stoppet. Pr\u00f8v igjen snart.",
+      "rateLimited": "Hastighetsgrense n\u00e5dd. Merking stoppet. Pr\u00f8v igjen snart.",
       "invalidKey": "API-n\u00f8kkelen din ble avvist.",
       "serverError": "KI-leverand\u00f8ren er utilgjengelig. Pr\u00f8v igjen snart.",
       "badRequest": "KI-leverand\u00f8ren avviste foresp\u00f8rselen.",
@@ -530,7 +533,8 @@
       "noApiKey": "Legg f\u00f8rst til en API-n\u00f8kkel i Innstillinger.",
       "providerLocal": "Dette krever en sky-KI-leverand\u00f8r, ikke en lokal modell.",
       "providerAmbiguous": "Velg en KI-leverand\u00f8r i Innstillinger.",
-      "noQuotes": "Ingen sitater enn\u00e5 \u2013 analyser \u00f8ktene dine f\u00f8rst.",
+      "noQuotesTitle": "Ingen sitater enn\u00e5",
+      "noQuotesBody": "Analyser \u00f8ktene dine f\u00f8rst.",
       "alreadyRunning": "Merker allerede med denne kodeboken.",
       "alreadyApplied": "Allerede brukt.",
       "templateMissing": "Den kodeboken er ikke lenger tilgjengelig."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Utelatt"
     },
     "toast": {
-      "donePartial": "{{processed}} av {{total}} sitater merket \u2013 noen partier mislyktes.",
+      "donePartial": "{{processed}} av {{total}} sitater merket. Noen partier mislyktes.",
       "progress": "✦ AutoCoder {{processed}}/{{total}} sitater …",
       "done": "✦ AutoCodet {{total}} sitater på {{duration}}.",
       "report": "Rapport",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Kunne ikke lagre endringen. Sjekk tilkoblingen din.",
+    "saveFailedTitle": "Kunne ikke lagre endringen",
+    "saveFailedBody": "Sjekk tilkoblingen din.",
     "saveRefused": "Kunne ikke lagre endringen.",
     "quoteGone": "Det sitatet er ikke lenger i rapporten, så endringen ble ikke lagret.",
-    "runInProgress": "En analyse kjører. Prøv igjen når den er ferdig.",
-    "pageStale": "Kunne ikke lagre endringen. Bristlenose har startet på nytt. Last inn siden på nytt, og gjør endringen igjen."
+    "runInProgressTitle": "En analyse kjører",
+    "runInProgressBody": "Prøv igjen når den er ferdig.",
+    "pageStaleTitle": "Kunne ikke lagre endringen",
+    "pageStaleBody": "Bristlenose har startet på nytt. Last inn siden på nytt, og gjør endringen igjen."
   },
   "screens": {
     "title": "Skjermer",

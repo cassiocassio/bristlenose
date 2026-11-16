@@ -64,6 +64,6 @@ export async function revealExportOrSay(kind: "clips" | "screens"): Promise<void
     await revealExport(kind);
   } catch (err) {
     console.error(`Reveal ${kind} failed:`, err);
-    toast(i18n.t("export.revealFailed"), 6000);
+    toast(i18n.t("export.revealFailed"), undefined, "error");
   }
 }

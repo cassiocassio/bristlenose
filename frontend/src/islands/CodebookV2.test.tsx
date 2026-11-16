@@ -533,7 +533,7 @@ describe("phase 5 — the destructive edge", () => {
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(
         "Add an API key in Settings first.",
-        expect.any(Number),
+        undefined,
         "error",
       ),
     );
@@ -592,7 +592,7 @@ describe("phase 5 — the destructive edge", () => {
       fireEvent.click(screen.getByTestId("bn-v2-browse"));
       fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
 
-      await waitFor(() => expect(toast).toHaveBeenCalledWith("Tagging failed.", 4000, "error"));
+      await waitFor(() => expect(toast).toHaveBeenCalledWith("Tagging failed.", undefined, "error"));
       expect(heard).toHaveBeenCalled();
       expect(api.toastSaveFailed).not.toHaveBeenCalled();
       expect(screen.queryByText(/Could not load the codebook|autocode\/cliux/)).not.toBeInTheDocument();

@@ -154,7 +154,7 @@ export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatu
       ? i18n.t("autocode.toast.donePartial", {
           processed: status.processed_quotes,
           total: status.total_quotes,
-          defaultValue: "Tagged {{processed}} of {{total}} quotes — some batches failed.",
+          defaultValue: "Tagged {{processed}} of {{total}} quotes. Some batches failed.",
         })
       : null,
     // Resolve at the API/UI boundary, not at the render site: error_message is

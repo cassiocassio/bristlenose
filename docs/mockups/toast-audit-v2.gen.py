@@ -214,7 +214,7 @@ GROUPS = [
         "rows": [
             sc("No quote is starred or featured", old_toast("No starred or featured quotes to extract", meta="2000 ms · no kind"), menu_item("Extract clips", "disabled with its reason as the title; where it stays a toast, kind “info”"), "#13"),
             sc("Server says 422: no FFmpeg", old_toast("FFmpeg not found — install it to extract clips", meta="2000 ms · no kind"), toast("Install it to extract clips.", "error", title="FFmpeg not found", held=True), "#15"),
-            sc("Server says 409: already running", old_toast("Extraction in progress", meta="2000 ms · no kind"), toast("Extraction in progress", "error", held=True, meta="owner call: the chip already shows it"), "#16"),
+            sc("Server says 409: already running", old_toast("Extraction in progress", meta="2000 ms · no kind"), toast("Extraction in progress", "info", meta="information, not a failure; owner call: the chip already shows it"), "#16"),
             sc("Any other failure", old_toast("Clip extraction failed", meta="2000 ms · no kind"), toast("Clip extraction failed", "error", held=True), "#17"),
         ],
     },
@@ -232,7 +232,7 @@ GROUPS = [
             "shimmer, not a ring (the ring is the Mac sidebar’s). No new strings beyond the dash rewrite.</p>"
         ),
         "dec": [
-            dec("decided", "Title and body anatomy for toast and chip (title 490, body 420, quieter)"),
+            dec("decided", "Title and body anatomy (title 490, body 420, quieter): the toast now, the chip with this move"),
             dec("decided", "The job notice moves into the chip (phase 7)"),
             dec("open", "Does the PII notice need to show on every clip export, or once?"),
         ],
@@ -255,7 +255,7 @@ GROUPS = [
         ],
         "rows": [
             sc("Screens lens has nothing yet", old_toast("No screens to export yet", meta="2000 ms · no kind"), button_off("Export Screens", "No screens to export yet"), "#18"),
-            sc("A screens export is already running", old_toast("A screens export is already running", meta="2000 ms · no kind"), toast("A screens export is already running", "error", held=True, meta="owner call: the chip already shows it"), "#19"),
+            sc("A screens export is already running", old_toast("A screens export is already running", meta="2000 ms · no kind"), toast("A screens export is already running", "info", meta="information, not a failure; owner call: the chip already shows it"), "#19"),
             sc("Any other failure", old_toast("Screens export failed", meta="2000 ms · no kind"), toast("Screens export failed", "error", held=True), "#19"),
         ],
     },
@@ -379,11 +379,11 @@ GROUPS = [
         "issue": (
             "<p><b>Kind:</b> C. Already forked by deployment. The history of why this one is a toast was "
             "<i>not read</i>. The modal has closed, so no subject is left on screen and the toast is the only "
-            "signal the send worked: the plausible answer is keep, as a title and body.</p>"
+            "signal the send worked: the plausible answer is keep. It stays one line, because the native Swift feedback sheet reads the same key (`common.feedback.sent`) and the Mac toast has no title.</p>"
         ),
         "dec": [dec("leaning", "Keep in the browser. In the app the native sheet closing is the confirmation")],
         "rows": [
-            sc("Browser: modal closes after sending", old_toast("Feedback sent — thank you!", meta="2000 ms · no kind"), toast("Thank you!", title="Feedback sent"), "#27"),
+            sc("Browser: modal closes after sending", old_toast("Feedback sent — thank you!", meta="2000 ms · no kind"), toast("Feedback sent. Thank you!"), "#27"),
         ],
     },
     # ── L ────────────────────────────────────────────────────────────────
@@ -424,7 +424,7 @@ TRAIL = [
     ("decided", "Where the SPA is the product, the toast system is worth doing well", "Owner, 10 Nov. It owns concurrency, timing, pause and dismissal so no call site does."),
     ("decided", "Kind glyphs in the web view are Lucide shapes in the palette colours", "SF Symbols are for native chrome only: Apple’s terms scope them to apps drawing their own UI, and the project’s own rule (`design-icon-system.md`) says the same. Owner: “can live with that.” The shapes match the Mac’s symbols (circle-check, info, triangle-alert, circle-x)."),
     ("decided", "A toast takes four of the five kinds; `skipped` folds into info", "Owner, 10 Nov. The taxonomy keeps all five for the CLI and the Mac popover."),
-    ("decided", "Title and body anatomy, for toast and chip", "Title in the emphasis weight, body regular and quieter; a one-sentence message has no title; titles carry no full stop. The cut is at an existing full stop, so it costs two locale keys, not new copy."),
+    ("decided", "Title and body anatomy, for the toast (built 13 Nov 2026)", "Title in the emphasis weight, body regular and quieter; a one-sentence message has no title; titles carry no full stop. The cut is at an existing full stop, so it costs two locale keys, not new copy. The chip takes the same anatomy with the job notice move (phase 7): today a chip line has no body to carry. `feedback.sent` stays one line because the native feedback sheet reads the same key."),
     ("decided", "No em dash in toast copy", "Two short sentences, or a title and a body. Eleven values in the toast and chip set, one 21-locale pass."),
     ("decided", "The wording, type and glyph slice goes into the existing toast first", "Independent of the engine choice. Order: this mockup and the doc, owner approval, locale and wording pass, title/body and Lucide, then phases 2 and 3."),
     ("leaning", "One toast look the researcher ever sees, whichever side raised it", "Owner’s argument against leaving the Mac toast (UX mixture) and against dialogs (annoying for small failures). Revised the same day: a native look-alike, not a bridge route, because some native events have no web view."),

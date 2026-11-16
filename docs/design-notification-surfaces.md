@@ -1,12 +1,16 @@
 ---
-status: pending
+status: partial
 last-trued: 2026-11-13
-trued-against: HEAD@main on 2026-11-09
+trued-against: HEAD@main (6243e2b38) plus the uncommitted working tree on 2026-11-13
 ---
+
+## Changelog
+
+- _2026-11-13_ — trued against the working tree after phases 2, 2a, 2b and 3 were built (uncommitted at the time): status `partial`; §2 kept as the 9 Nov baseline with a dated note of what changed; §6 seam, behaviours and the priority rule stated as built; §6a wording table gives the keys that shipped, including the reasons `feedback.sent` and `rateLimited` stayed one line; chip anatomy moved to phase 7; §8 statuses and anchors; §9 unblocked by phases 2 and 3. Still owed: the glossary dash and mid-dot lines, `design-icon-system.md` §"Kept as characters", the engine spike, everything from phase 4 on.
 
 # Notification surfaces — which event goes where, and what the web toast becomes
 
-> **Research and plan. Nothing here is built.** It answers one question: Bristlenose
+> **Research and plan. Phases 2, 2a, 2b and 3 were built on 13 Nov 2026 (uncommitted when this doc was trued); everything else is plan.** It answers one question: Bristlenose
 > has five feedback surfaces that grew separately (the SPA toast, the SPA activity
 > chip, the Mac's sidebar and toolbar indicators, the Mac's one notification
 > banner, and the CLI's terminal lines). Which event belongs on which, and what does
@@ -50,7 +54,7 @@ trued-against: HEAD@main on 2026-11-09
 
 | Surface | Where | Who draws it | Used for |
 |---|---|---|---|
-| **SPA toast** | `frontend/src/utils/toast.ts`, `components/Toast.tsx`, `theme/atoms/toast.css` (`.clipboard-toast`, `--bn-toast-z`) | the page, in the browser **and** inside the Mac's web view | 27 call sites (§2): confirmations, no-op explanations, failures |
+| **SPA toast** | `frontend/src/utils/toast.ts`, `components/Toast.tsx`, `theme/atoms/toast.css` (`.clipboard-toast`, `--bn-toast-z`) | the page, in the browser **and** inside the Mac's web view | 31 call sites (27 on 9 Nov; §2): confirmations, no-op explanations, failures |
 | **SPA activity chip** | `components/ActivityChipStack.tsx`, `ActivityChip.tsx`, `contexts/ActivityStore.ts`, `theme/atoms/activity-chip.css` | the page, portalled to `document.body` | AutoCode, catch-up, clip export, screens export: progress, result, action, cancel. Survives lens switches (module-level store), and a reload (session storage, RE#38) |
 | **Screen-reader line** | `utils/announce.ts`, `components/AnnounceRegion.tsx` | the page | `toast()` calls it for you; about 20 other callers use it alone |
 | **Mac sidebar row** | `ProjectRowActivityIndicator.swift` (ring), `SidebarActivityRing.swift`, `ProjectSubtitle` / `SidebarSubtitleText` (status line) | the app | a pipeline run, a drag-import copy |
@@ -80,6 +84,8 @@ Counted with `rg 'toast\(' frontend/src` minus tests and `toast.ts`: **27 call e
 - **R — refusal with a kind.** The server said no for a named reason.
 - **J — a notice about a started job** that the job's own chip could carry.
 
+**The table below is the 9 Nov 2026 baseline**, kept so the history stays readable. Since 13 Nov: 31 call expressions (the save failures branch four ways; `CodebookV2.tsx` has `toastRefusal`); 27 now pass a kind (only `csvCopied`, screens copied, `quotesCopied` and feedback sent do not); only three explicit durations remain (6000 on screens copied, 5000 on name taken, 6000 on the clip notices), the rest use the default of their kind (`DEFAULT_DURATION` in `toast.ts`). Failures (F, S) now pass `error`; the no-op explanations (N) and the two "already running" refusals pass `info`; `sync.runInProgress` and the clip notices pass `warning`. Row 10's doubled `announce` is gone, and row 14 is one warning with a line per notice. The message keys for rows 4, 15, 22 and 23 are now `…Title` / `…Body` pairs (§6a). Line references have moved.
+
 | # | Site | Message (locale key) | ms | kind | Event | In the Mac app today |
 |---|---|---|---|---|---|---|
 | 1 | `AppLayout.tsx:637` | `toolbar.noQuotesSelected` | 2000 | — | N | Reachable only from the native menu (`copyAsCSV` bridge action). The menu item's enabled state is already mirrored (`quote-action-state`), so a correct disable makes this unreachable. **Verify.** |
@@ -106,10 +112,10 @@ Counted with `rg 'toast\(' frontend/src` minus tests and `toast.ts`: **27 call e
 
 Counts by event kind, per call site: **C 4** (#2, 4, 10, 27), **N 6** (#1, 9, 12, 13, 18, 20), **F 11** (#3, 5, 6–8, 11, 15–17, 19, 21), **S 2** (#22, 23), **R 3** (#24–26), **J 1** (#14). 4 + 6 + 11 + 2 + 3 + 1 = 27. The count of call expressions is exact; the kind of a few (a 'no files' message could be N or F) is a reading.
 
-Three defects the inventory turns up, all small:
+Three defects the inventory turns up, all small (1 and 2 were fixed on 13 Nov, phase 2):
 
-1. **A failure can be erased by a confirmation.** `toast()` is "one at a time, new calls replace the current" (`toast.ts`). A `csvCopied` fired 1.5 s after a failed save replaces the failed save's message. The save-failure site's own comment relies on the replace rule to collapse a burst; it never considers a different message replacing it.
-2. **Failures look like confirmations.** 11 of the 27 sites are failures and 24 pass no kind, so "Export failed" renders in the same plain inverted capsule as "Copied". The glyph vocabulary exists (`KIND_GLYPH`) and 3 sites use it.
+1. ✅ **A failure can be erased by a confirmation.** _Fixed 13 Nov._ `toast()` is "one at a time, new calls replace the current" (`toast.ts`). A `csvCopied` fired 1.5 s after a failed save replaces the failed save's message. The save-failure site's own comment relies on the replace rule to collapse a burst; it never considers a different message replacing it.
+2. ✅ **Failures look like confirmations.** _Fixed 13 Nov: failures pass `error`, and the toast draws a Lucide icon, not `KIND_GLYPH`._ 11 of the 27 sites are failures and 24 pass no kind, so "Export failed" renders in the same plain inverted capsule as "Copied". The glyph vocabulary exists (`KIND_GLYPH`) and 3 sites use it.
 3. **Three messages have no string.** `toolbar.noQuotesSelected`, `toolbar.csvCopied` and `toolbar.csvFailed` (rows 1–3, `AppLayout.tsx:637–644`) are called with no default and appear in no locale file, so i18next most likely draws the key itself. Reachable only from the native menu. **Not checked live**; check first.
 
 ## 2a. Why toasts became the answer (from git, 9 Nov 2026)
@@ -147,7 +153,7 @@ Four deployments. **Browser** is `bristlenose serve` opened in any browser. **Em
 |---|---|---|---|---|
 | **C — confirmation** ("47 quotes copied") | Today: toast. Proposed: keep, short (2 s), count only if it carries information. A browser has no clipboard feedback of its own | Today: toast inside the web view. Proposed **[owner]**: no visual toast; VoiceOver still hears it through `announce()`. Finder, Notes and Mail say nothing on ⌘C. If the count matters, it is already on `export-counts` and the menu | Cannot fire: the export controls and keys are gated (§5) | n/a |
 | **N — no-op** ("No quotes selected") | Toast, or better the control disabled with a reason | The menu item or control is disabled instead (`quote-action-state` exists for exactly this). Where the message is still reachable, keep the toast until each is proven unreachable | n/a | n/a |
-| **F — failure of a user action** | Toast with the `error` glyph; **not** replaced by a later success (§8 phase 2) | **[owner]** Today: web toast in the web view. Interim proposal: keep, with the glyph and a longer hold. Principled end state: a native alert or the row/pill, which needs a new bridge message (`notify`) the app does not have. See §7 | Cannot fire | Existing `✗` lines |
+| **F — failure of a user action** | Toast with the `error` icon, held 6 s, and not drawn over by a later confirmation (built 13 Nov, phase 2; the rule is in §6) | **[owner]** Today: web toast in the web view. Interim proposal: keep, with the glyph and a longer hold. Principled end state: a native alert or the row/pill, which needs a new bridge message (`notify`) the app does not have. See §7 | Cannot fire | Existing `✗` lines |
 | **S — a write that did not land** | Toast, collapsing a burst to one message. This is the one the browser cannot do without | Keep as a web toast. The page is the only party that knows; there is no native state to mirror. `sync.pageStale` should be rare (the app reloads on a serve change) | Cannot fire: writes are gated (`api.ts:257`) | n/a |
 | **R — refusal with a kind** ("Add an API key in Settings first.") | Toast with its kind. Gains an **action** ("Open Settings" is the obvious one) | Same toast, with the action posting `open-settings` (a bridge message that already exists, `BridgeHandler.swift:1899`). Not a new surface; the toast gets the button it was missing | Cannot fire | n/a |
 | **J — notice about a started job** (PII warning, burn unavailable) | Move into the job's chip: the chip already has a body and an action link | Same, in the docked chip | Cannot fire | n/a |
@@ -173,7 +179,7 @@ No call site fires both a web toast and a native notification: the notification 
 
 - **A provider problem** is told twice: the chip's error text and the native pill. This is intentional (different lifetimes) and the pill is fed by one bridge message, so it is not drift.
 - **Feedback** is already forked correctly: native sheet and native toast in the app, web modal and web toast in a browser.
-- **An announcement doubled:** `exportActions.ts:104` calls `toast()` (which calls `announce()`) and then `announce()` again with the same text. Harmless (the live region coalesces) and worth deleting.
+- **An announcement doubled (removed 13 Nov):** `exportActions.ts:104` calls `toast()` (which calls `announce()`) and then `announce()` again with the same text. Harmless (the live region coalesces) and worth deleting.
 
 ## 3a. One system, not a mapping (owner, 9 Nov 2026)
 
@@ -249,15 +255,18 @@ So the export needs the toast **component** (it ships in the single-file build w
 
 ### The seam
 
-All 27 call sites go through `toast(message, duration?, kind?)`. **Keep that signature.** Additions are an optional fourth argument and defaults, so no call site must change:
+All call sites go through `toast(message, duration?, kind?)` (27 on 9 Nov, 31 now). That signature is kept; additions are an optional fourth argument and defaults, so no call site had to change. Shipped 13 Nov: `options.title` and the defaults. `action` and `id` are still proposed (phases 4 and 5):
 
 ```ts
-toast(message, duration?, kind?, options?: { action?: { label: string; run: () => void }; id?: string })
+// shipped 13 Nov:
+toast(message, duration?, kind?, options?: { title?: string })
+// proposed, phases 4 and 5: options also takes
+//   { action?: { label: string; run: () => void }; id?: string }
 ```
 
 - `id` replaces a message of the same id (what the save-failure site hand-rolls today).
 - `action` is the Undo or "Open Settings" button; the Mac toast's unused `action` parameter is the nearest shipped sibling.
-- Default duration by kind when the caller passes none: success/info short, warning/error longer. The 14 sites that pass nothing get a rule; the 13 that pass a number keep it until each is migrated.
+- Default duration by kind when the caller passes none (built 13 Nov): plain and success 2 s, `skipped` and info 4 s, warning 5 s, error 6 s (`DEFAULT_DURATION` in `toast.ts`). Ten of the 13 hard-coded numbers were migrated; three stay on purpose (the screens-copied toast, the taken name, the clip notices).
 
 ### Behaviours to copy, and the ones not to
 
@@ -266,7 +275,7 @@ toast(message, duration?, kind?, options?: { action?: { label: string; run: () =
 | Stack up to ~3 rather than replace | Yes | Fixes the "failure erased by a confirmation" defect |
 | Pause on hover / focus | Yes | A 2 s toast cannot be read by a slower reader. Also helps keyboard users |
 | Action button | Yes | Gives refusals their "Open Settings" |
-| Priority: an error is not replaced by a success within its window | Yes | The smallest change, and a reliability fix, not polish |
+| Priority: an error is not replaced by a success within its window | **Taken, 13 Nov**, with a narrower rule than first drafted | **As built:** a *confirmation* (plain or success) is not drawn over a visible warning or error, and is still spoken; anything that carries information (info, warning, error) replaces what is up, because it answers a newer gesture. The hold ends when the visible toast is dismissed, not by a clock (a throttled web view stalls the timer while the wall clock runs on). The first draft said "an error holds against a lower kind"; the Fable review showed that would drop a privacy warning or a refusal, so the rule covers confirmations only. Stacking (phase 4) removes the remaining case, an info replacing an unread error |
 | Promise toast (loading → success/error) | **No** | The activity chip is already the progress surface; a second one is the duplication this doc exists to remove |
 | Swipe to dismiss | **No** | A desktop tool; the chip and toast are dismissed by their own control |
 | Expand-on-hover stack animation | **No** | Visual delight; not asked, and the motion brief wants "causal, proportional, interruptible" (`design-motion.md`) |
@@ -280,54 +289,55 @@ The triage in §3 says some confirmations should draw nothing in the app. Do it 
 
 ## 6a. Look, anatomy and wording (owner review, 10 Nov 2026)
 
-Mocked in [`docs/mockups/toast-audit-v2.html`](mockups/toast-audit-v2.html); the decision trail is at the foot of that page.
+Mocked in [`docs/mockups/toast-audit-v2.html`](mockups/toast-audit-v2.html) (generated by `toast-audit-v2.gen.py`: edit the generator); the decision trail is at the foot of that page.
 
 ### Kind glyphs: Lucide shapes in the web view (decided)
 
 | Kind | Toast icon (Lucide) | Native sibling (SF Symbol) | Status |
 |---|---|---|---|
-| success | `circle-check` | `checkmark.circle` | new concept in `Icon.tsx` (`check` exists; the circle form does not) |
-| info | `info` | `info.circle` | new concept |
+| success | `circle-check` | `checkmark.circle` | added to `Icon.tsx` 13 Nov (`check` exists; the circle form did not) |
+| info | `info` | `info.circle` | added to `Icon.tsx` 13 Nov |
 | warning | `triangle-alert` | `exclamationmark.triangle` | `warning` exists |
 | error | `circle-x` | `xmark.circle` | `failed` exists |
 
 - **A toast takes four of the five kinds (decided).** `skipped` ("not applicable in this run") folds into info if anything ever passes it. The taxonomy keeps all five in `ui_kinds.py`, `messageKind.ts` and `MessageKind.swift` for the CLI lines and the Mac popover, which are pinned by tests. This also maps Sonner's four types one to one.
-- **The icon follows the text stem** (`--bn-icon-stem`, `atoms/icon.css`), in the palette tokens (`--bn-colour-positive`, `-accent`, `-warning`, `-negative`). Today's toast draws the text characters `✓ ℹ ⚠ ✗`; that was kept for parity with the CLI (`design-icon-system.md` §"Kept as characters", "until that parity is deliberately broken"). This breaks it deliberately for toasts and the chip, so that line is updated in phase 0. Whether `⚠` and `ℹ` draw as colour emoji in the Mac web view is unchecked.
+- **The icon follows the text stem** (`--bn-icon-stem`, `atoms/icon.css`), in the palette tokens (`--bn-colour-positive`, `-accent`, `-warning`, `-negative`). Until 13 Nov 2026 the toast drew the text characters `✓ ℹ ⚠ ✗`, kept for parity with the CLI (`design-icon-system.md` §"Kept as characters"); it now draws Lucide through `Icon` (`Toast.tsx` `KIND_ICON`), which breaks that parity deliberately for the toast. The activity chip already drew Lucide (`ActivityChip.tsx`), so that line of the icon doc was already stale for the chip and is still to be updated (phase 0). The emoji-rendering question for `⚠` and `ℹ` in the Mac web view is moot for the toast.
 - **SF Symbols are not used in the web view (abandoned).** Apple scopes them to interfaces running on Apple platforms and the SF Fonts licence is quoted as forbidding website content; the project's own rule says the web uses Lucide and only AppKit/SwiftUI draws SF Symbols (`design-icon-system.md`). A private-use code point might render in the Mac web view, but the same bundle runs in browsers and the export, where it would show empty boxes. Not tested and not wanted. I could not retrieve Apple's licence text; the above is the forum quotation and the repo's own reading (`design-docs-system.md` §D3), not legal advice.
 - The native look (SF Symbols and the system tints) is available only to a native surface (§4). The seam rule from `design-native-colour-alignment.md` applies to the web toast: align shape and colour across the boundary, not the font.
 
-### Anatomy (decided)
+### Anatomy (decided; built for the toast 13 Nov)
 
 - A toast has an optional **title** and a **body**. Title in the emphasis weight (490), body regular (420) and a step quieter. A one-sentence message has **no title** and renders in the regular weight. Titles carry no full stop.
-- The title says what is the case; the body says what to do or why. The cut is at an existing full stop, so it costs two locale keys, not new copy. Contrast of the quieter body on the inverted capsule must be checked against AA.
-- **The activity chip takes the same anatomy** so the two read as one family: the live progress line ("Extracting clips… (0 of 12)") is the title, the job notices are the body.
+- The title says what is the case; the body says what to do or why. The cut is at an existing full stop, so it costs two locale keys, not new copy. Contrast of the quieter body (`opacity: 0.78`) on the inverted capsule: the Fable review computed about 10.8:1 in light mode and 7.3:1 in dark, not measured in a browser. The icon colours are weaker on the light capsule in dark mode (warning about 1.3:1, positive about 1.8:1, negative about 3.0:1; light mode is 3.6:1 or better): they predate this change but the stroke is now thin, so this is open (a capsule-scoped colour scheme is the likely fix).
+- **The activity chip takes the same anatomy when the job notices move into it (phase 7)**, so the two read as one family: the live progress line ("Extracting clips… (0 of 12)") is the title, the job notices are the body. **Not built:** a chip line has no body to carry today.
 - **The chip shows work as a shimmering label, not a ring or spinner** (`atoms/activity-chip.css`: the shimmer "replaces the old spinner"). The ring is the Mac sidebar's (`SidebarActivityRing.swift`, `ProjectRowActivityIndicator.swift`). The first draft of the mockup drew an invented spinner and was corrected.
-- The seam gains `options.title`; the message argument is the body. No call site has to change.
+- The seam gained `options.title` (built 13 Nov); the message argument is the body, and the screen reader hears the title then the body in the title's own punctuation. No call site had to change.
 
-### Wording: no em dash in toast copy (decided)
+### Wording: no em dash in toast copy (decided; built 13 Nov)
 
 An em dash joins two sentences. Use a full stop, a comma or a colon, or split into a title and a body. All values below are English locale values; the other 20 locales have their own dash conventions and the change is a 21-locale pass with `check-locales.py --strict`.
 
-| Key | Now | Proposed (title / body, or one line) |
+| Key | Was | Shipped 13 Nov |
 |---|---|---|
-| `export.clips.ffmpegMissing` | FFmpeg not found — install it to extract clips | FFmpeg not found / Install it to extract clips. |
+| `export.clips.ffmpegMissing` | FFmpeg not found — install it to extract clips | `…ffmpegMissingTitle` "FFmpeg not found" / `…ffmpegMissingBody` "Install it to extract clips." |
 | `export.clips.piiWarning` | Clips contain original audio — PII redaction applies to transcript text only | Clips contain original audio. PII redaction applies to transcript text only. |
 | `export.clips.burnUnavailable` | This FFmpeg can’t burn in subtitles — extracting plain clips only | This FFmpeg can’t burn in subtitles. Extracting plain clips only. |
-| `export.clips.burnPartial` | Clips ready — subtitled copies: {{burned}} of {{attempted}} | Clips ready. Subtitled copies: {{burned}} of {{attempted}}. (a mid-dot form is the alternative) |
-| `export.screens.copied` (one, other) | 3 screenshots copied — paste them into Miro or FigJam | 3 screenshots copied / Paste them into Miro or FigJam. |
-| `feedback.sent` | Feedback sent — thank you! | Feedback sent / Thank you! |
-| `codebook.autocodeFailure.rateLimited` | Rate limited — tagging stopped. Try again soon. | Rate limited / Tagging stopped. Try again soon. |
-| `codebook.autocodeRefusal.noQuotes` | No quotes yet — analyse your sessions first. | No quotes yet / Analyse your sessions first. |
-| `sync.saveFailed` | Couldn’t save your change — check your connection. | Couldn’t save your change / Check your connection. |
-| `sync.pageStale` | Couldn’t save your change — Bristlenose has restarted. Reload the page, then make the change again. | Couldn’t save your change / Bristlenose has restarted. Reload the page, then make the change again. |
-| `sync.runInProgress` | An analysis is running. Try again when it finishes. | An analysis is running / Try again when it finishes. |
+| `export.clips.burnPartial` | Clips ready — subtitled copies: {{burned}} of {{attempted}} | Clips ready. Subtitled copies: {{burned}} of {{attempted}} (no final stop; the mid-dot form was not taken) |
+| `export.screens.copied` (one, other) | 3 screenshots copied — paste them into Miro or FigJam | `copiedTitle_*` "{{count}} screenshot(s) copied" / `copiedBody_*` "Paste it / them into Miro or FigJam." |
+| `feedback.sent` | Feedback sent — thank you! | **One line:** Feedback sent. Thank you! The native Swift feedback sheet reads the same key (`common.feedback.sent`) and the Mac toast has no title |
+| `codebook.autocodeFailure.rateLimited` | Rate limited — tagging stopped. Try again soon. | **One line:** Rate limited, so tagging stopped. Try again soon. (one function feeds both the chip and the toast, so no split) |
+| `codebook.autocodeRefusal.noQuotes` | No quotes yet — analyse your sessions first. | `noQuotesTitle` "No quotes yet" / `noQuotesBody` "Analyse your sessions first." (via `autocodeRefusal.ts` `titleKey`) |
+| `sync.saveFailed` | Couldn’t save your change — check your connection. | `saveFailedTitle` "Couldn’t save your change" / `saveFailedBody` "Check your connection." |
+| `sync.pageStale` | Couldn’t save your change — Bristlenose has restarted. Reload the page, then make the change again. | `pageStaleTitle` "Couldn’t save your change" / `pageStaleBody` "Bristlenose has restarted. Reload the page, then make the change again." |
+| `sync.runInProgress` | An analysis is running. Try again when it finishes. (no dash; already two sentences) | `runInProgressTitle` "An analysis is running" / `runInProgressBody` "Try again when it finishes." |
+| `autocode.toast.donePartial` (a chip message) | Tagged {{processed}} of {{total}} quotes — some batches failed. | Tagged {{processed}} of {{total}} quotes. Some batches failed. |
 
-That is 11 values with an em dash in toast and chip messages, plus two outside the set: `feedback.copyFailed` ("Could not copy — please submit feedback manually.") and the Mac key with no caller. Other English strings use em dashes too and were not counted. **The mid-dot:** none of `glossary.md`, `design-i18n.md`, `platform-text-map.md` or the popover doc writes a rule for it, but it already separates a label from a value in status text (see decision 14); proposed as the only dash-like separator, never between sentences. Single-sentence messages ("Export failed", "Add an API key in Settings first.") are unchanged. Splitting a key into two is a new string in 21 locales, so the wording pass and the title/body split are done together, once.
+That is 11 values that had an em dash (the ten rows above that had one, plus `autocode.toast.donePartial`; `sync.runInProgress` had none and was split because it was already two sentences). Outside the set: `feedback.copyFailed` was reworded the same way ("Could not copy. Please submit feedback manually."); the Mac key `dropProjectOntoProjectToast` (no Swift caller) still has its dash and was not touched. Other English strings use em dashes too (the Miro panel, `autocode.review.applyFailed`, a modal error line, and others) and were not counted or changed. **The mid-dot:** none of `glossary.md`, `design-i18n.md`, `platform-text-map.md` or the popover doc writes a rule for it, but it already separates a label from a value in status text (see decision 14); proposed as the only dash-like separator, never between sentences. Single-sentence messages ("Export failed", "Add an API key in Settings first.") are unchanged. Splitting a key into two is a new string in 21 locales, so the wording pass and the title/body split are done together, once.
 
 ### Tokens: what comes from the design system today
 
 - **From tokens (toast):** `font-size: var(--bn-text-label)`, `background`/`color` from `--bn-colour-text`/`--bn-colour-bg`, `border-radius: var(--bn-radius-lg)`, `right: var(--bn-space-lg)`, `z-index: var(--bn-toast-z)` (1100, above a dialog).
-- **Literals (toast):** `padding: 0.6rem 1.2rem` (not on the space scale), `bottom: 90px`, `transition: 0.25s`, `translateY(0.5rem)`.
+- **Literals (toast):** `padding: 0.6rem 1.2rem` (not on the space scale), `bottom: 90px`, `transition: 0.25s`, `translateY(0.5rem)`, and since 13 Nov `opacity: 0.78` on the body, `margin-top: 0.1em` on the icon, `gap: 0.45rem`. The title takes `--bn-weight-emphasis`. The `.toast-glyph--skipped` rule is gone (a toast draws `skipped` as info).
 - **Literals (chip, `activity-chip.css`):** padding `0.6rem 1rem`, `bottom: 48px`, `right: 24px`, `gap: 6px`, `z-index: 200` (against the toast's token), `box-shadow` with an `rgba` literal, and the inverted palette written as hex and `rgba` (`#60a5fa`, `#e5e7eb`, `#111`, `rgba(255,255,255,…)`) with `[data-theme]` override blocks, so the chip and the toast do not share one inverted surface.
 - **Mac toast:** native SwiftUI literals (padding 16 and 10, radius 8, `.callout`, `.regularMaterial`), as a native surface should be.
 
@@ -336,9 +346,9 @@ Tokenising the pair (one inverted surface, padding on the scale, offsets and sha
 ## 7. Open decisions (the owner's)
 
 1. **Embedded confirmations: delete, or keep?** "47 quotes copied" from a menu command: a native app says nothing on ⌘C, and the agreed filter is "does this tell the user something they do not already know?". If the count is wanted it belongs at the action (the menu). Default proposed: suppress the visual in the app, keep `announce()`.
-2. **Embedded failures: web toast, or native?** Failures are 11 of 27 sites (16 with the save failures and refusals). Keeping them as web toasts in the web view is the interim and ships today. The principled answer needs a new web→native message (`notify`) and a native presenter (a sheet, an alert, or the existing `ToastSurface`); the web-origin failure then has a native home and the web toast is browser-only. This is new plumbing and **new UX**, so it sits behind the R114 gate (mockup, review, explicit approval).
-3. **Sonner or in-house?** Recommendation is in-house (§6). Decide whether a measured bundle-size comparison is worth doing before closing it.
-4. **Should an error toast outlast 2 s, and by how much?** (§6). Interacts with "not needy UX".
+2. **Embedded failures: web toast, or native?** Failures are 11 of 27 sites on the 9 Nov baseline (16 with the save failures and refusals). Keeping them as web toasts in the web view is the interim and ships today. The principled answer needs a new web→native message (`notify`) and a native presenter (a sheet, an alert, or the existing `ToastSurface`); the web-origin failure then has a native home and the web toast is browser-only. This is new plumbing and **new UX**, so it sits behind the R114 gate (mockup, review, explicit approval).
+3. **Sonner or in-house?** **Open**, to be settled by the phase 0b test-first spike (§6). The first draft recommended in-house; the owner's reasons for wanting a framework and the point that most of Sonner's surface would be switched off pull in different directions.
+4. **Should an error wait to be dismissed?** Partly answered 13 Nov: the default hold is now 6 s for an error and 5 s for a warning (phase 3). Whether it should stay until dismissed is still open. (§6). Interacts with "not needy UX".
 5. **Chip: dock it, or route it to native?** Strategy 1 (dock, no Swift) vs Strategy 2 (native slots), already open in the routing doc, where Strategy 1 is recommended for alpha. Unchanged by this doc.
 6. **The Copy Screens round trip (rows 4, 5):** native success draws nothing (drop the word), native failure drawn by native. Needs a yes before the page stops saying it.
 7. **`ToastView.swift`: keep, extend or retire?** Decide after 2 and 6.
@@ -353,38 +363,38 @@ Tokenising the pair (one inverted surface, padding on the scale, offsets and sha
 
 ## 8. Phased plan
 
-Same shape as [`design-settings-ui.md`](design-settings-ui.md): each phase ships alone, with a status and anchors. Phases marked **beta-safe** are small, behaviour-preserving or fix a real defect; the rest wait for after launch (first App Store submission 24 Nov 2026, per the project's lifecycle) or for owner sign-off. Nothing here is started.
+Same shape as [`design-settings-ui.md`](design-settings-ui.md): each phase ships alone, with a status and anchors. Phases marked **beta-safe** are small, behaviour-preserving or fix a real defect; the rest wait for after launch (first App Store submission 24 Nov 2026, per the project's lifecycle) or for owner sign-off. Phases 2, 2a, 2b and 3 were built on 13 Nov 2026 (uncommitted when trued); the rest is not started.
 
 | # | Phase | Status | Beta | Size | Anchors |
 |---|---|---|---|---|---|
 | **0** | **True the docs.** Correct `design-pipeline-diagnostic-popover.md`: "~8 call sites" is 4; `ToastStore.show(_, kind:)` and `.toast--{kind}` do not exist; `AutoCodeToast.tsx` (named in its file map) was deleted. Point `design-embedded-activity-routing.md` §"Scope boundary" at this doc. Update `design-icon-system.md` §"Kept as characters" (the toast and chip glyphs stop being characters) | pending | **yes** | doc only | `ToastView.swift`, `Toast.tsx`, `ActivityChipStack.tsx` header |
 | **0b** | **Engine spike.** The behaviour spec as vitest cases (an error holds against a success; stack to three; pause and resume with the remaining time; `id` replace; title and body; one announcement per toast; callable from outside React; clean teardown; works from `file://` in the export build), run against a thin Sonner wrapper and a hardened version of ours; measure the export bundle. Scratch directory, not `frontend/`. The decision (open, §6) is made on the result | pending | **yes** | small | `frontend/src/utils/toast.ts`, `Toast.test.tsx`, `scripts/check-bundle-budget.py` |
 | **1** | **Delete dead CSS.** `theme/atoms/autocode-toast.css` (27 hard-coded colours) is imported by nothing: it is in neither `theme/index.css`'s atoms list nor `theme_assets.py`'s CSS list, no TSX or JS uses its classes, and the only reference is `scripts/audit-css.py`. Confirm with `scripts/audit-css.py` and the theme tests, then remove. (The chip's own `activity-chip.css` has 31 literals and is live; tokenising it is a separate, visual change) | pending | **yes** | tiny | `atoms/autocode-toast.css`, `scripts/audit-css.py`, `tests/test_theme_token_resolution.py` |
-| **2** | **A failure is not erased by a confirmation**, and failures carry the `error` glyph. Priority rule in `toast()` (an error holds its window against a lower kind); pass `kind: "error"` at the 11 F sites; delete the doubled `announce` at `exportActions.ts:104` | pending | **yes** | small | `utils/toast.ts`, `Toast.tsx`, `Toast.test.tsx`, `exportActions.ts` |
-| **2a** | **The wording pass.** The 11 values above, plus `feedback.copyFailed`, in one 21-locale pass, with the dash and mid-dot lines added to `glossary.md`. Splits a key into title and body only where a message is already two sentences | pending, owner approval of the v2 page | **yes** | medium (locales) | `bristlenose/locales/*/common.json`, `docs/glossary.md`, `scripts/check-locales.py --strict` |
-| **2b** | **Anatomy and glyph.** `options.title` on `toast()`; Lucide kind icons through `Icon` (new concepts `success` and `info`); the chip takes the same anatomy; contrast check of the quieter body | pending, owner approval of the v2 page (R114) | **yes** | small | `utils/toast.ts`, `Toast.tsx`, `ActivityChip.tsx`, `components/Icon.tsx`, `atoms/toast.css`, `atoms/activity-chip.css` |
-| **3** | **Durations by kind.** A default by kind when the caller passes none; migrate the 13 hard-coded numbers one by one | pending | **yes** | small | `utils/toast.ts`, `messageKind.ts` |
+| **2** | **A failure is not erased by a confirmation**, and failures carry the `error` icon. As built: a confirmation (plain or success) is not drawn over a visible warning or error and is still spoken; anything that carries information replaces what is up; the hold ends when the visible toast is dismissed. `kind` passed at every failure site, `info` at the no-op and "already running" sites, `warning` at the run-in-progress save refusal and the clip notices; the doubled `announce` removed | **built 13 Nov 2026** (uncommitted at truing; Fable-reviewed, mutation-checked) | **yes** | small | `utils/toast.ts`, `Toast.tsx`, `utils/toast.test.ts`, `exportActions.ts` |
+| **2a** | **The wording pass.** The 11 values and `feedback.copyFailed`, one 21-locale pass, with the title/body key splits done in the same pass (table in §6a). **Owed:** the dash and mid-dot lines in `glossary.md` (decision 14 is still leaning) | **built 13 Nov 2026**, except the glossary lines | **yes** | medium (locales) | `bristlenose/locales/*/common.json`, `en-value-pins.json`, `scripts/check-locales.py --strict` (fails today only on another session's `desktop.*` pins) |
+| **2b** | **Anatomy and glyph, for the toast.** `options.title` on `toast()`; Lucide kind icons through `Icon` (new concepts `success` and `info`); `skipped` drawn as info. **Not built:** the chip taking the same anatomy (moved to phase 7: a chip line has no body today) and the AA contrast check | **built 13 Nov 2026** for the toast; chip anatomy deferred | **yes** | small | `utils/toast.ts`, `Toast.tsx`, `components/Icon.tsx`, `atoms/toast.css` |
+| **3** | **Durations by kind.** A default by kind when the caller passes none (2, 2, 4, 4, 5, 6 s); ten of the 13 hard-coded numbers migrated, three left on purpose | **built 13 Nov 2026** | **yes** | small | `utils/toast.ts` (`DEFAULT_DURATION`, `RANK`) |
 | **4** | **Stack, pause on hover and focus, `id` replace.** Same `toast()` signature; `_resetToast` and the detached-root teardown keep their contract | pending | after launch | medium | `utils/toast.ts`, `Toast.tsx`, `atoms/toast.css`, `Toast.test.tsx` |
-| **5** | **Action button**, first use: "Open Settings" on the `no_api_key`, `provider_ambiguous` and `provider_local` refusals, via the existing `open-settings` bridge message | pending | after launch | small | `CodebookV2.tsx:414`, `autocodeRefusal.ts`, `BridgeHandler.swift:1899` |
+| **5** | **Action button**, first use: "Open Settings" on the `no_api_key`, `provider_ambiguous` and `provider_local` refusals, via the existing `open-settings` bridge message | pending | after launch | small | `CodebookV2.tsx` (`toastRefusal`), `autocodeRefusal.ts`, `BridgeHandler.swift:1899` |
 | **6** | **Embedded fork at the seam** (`tone: "confirm"` suppresses the visual under `isEmbedded()`, keeps `announce()`), applied to the sites the owner picks | pending, owner-gated (decision 1) | after launch | small | `utils/toast.ts`, `utils/embedded.ts` |
-| **7** | **Move the job notice into the chip** (row 14) | pending | after launch | small | `exportActions.ts:183`, `ActivityChip.tsx` |
+| **7** | **Move the job notice into the chip** (row 14) | pending | after launch | small | `exportActions.ts` (the notices block), `ActivityChip.tsx` |
 | **8** | **Dock the activity chip when embedded** (Strategy 1) | pending (owned by the routing doc) | after launch | small | `design-embedded-activity-routing.md` |
 | **9** | **A native home for web-origin failures** (`notify` bridge message plus a presenter) | pending, owner-gated (decision 2), R114 gate | later | medium | `shims/bridge.ts`, `BridgeHandler.swift`, `ToastView.swift` |
 | **10** | **Resolve `ToastView.swift`** (keep, extend or retire) after 6 and 9 | pending (decision 7) | later | small | `ToastView.swift`, `tests/test_desktop_toast_scope.py` |
 
 ### Verification each phase needs
 
-- Phases 1–3: `.venv/bin/python -m pytest tests/`, `.venv/bin/ruff check .`, `cd frontend && npm test` and `npm run lint`. Phase 2 needs a vitest case that fires a failure and then a confirmation and asserts the failure is still shown (and that it fails without the change).
+- Phases 1–3: `.venv/bin/python -m pytest tests/`, `.venv/bin/ruff check .`, `cd frontend && npm test` and `npm run lint`. Phase 2 needs a vitest case that fires a failure and then a confirmation and asserts the failure is still shown (and that it fails without the change). **Done 13 Nov:** `utils/toast.test.ts`; breaking the priority rule, the keyed remount, the repeat handling, or both stale-timer guards together each fails a test (either stale-timer guard alone is covered by the other).
 - Phases 4–7 add a human check no test covers: a browser serve and the Mac app, with a deliberate failure (stop the serve and edit a quote) while triggering a confirmation. QA command: `.venv/bin/bristlenose serve --dev <a project folder>`, then `http://localhost:8484/report/`. The Mac app needs its own build; nothing here changes Swift until phase 9.
 - Anything that suppresses a visible message needs the R114 gate: a mockup, review, and explicit approval before it is built.
 
 ### What this plan deliberately leaves alone
 
-The design system (tokens, atoms, the glyph vocabulary), the Dialog, the activity chip's polling and persistence, the run banner, the CLI's lines, and every native indicator on the sidebar and toolbar. It adds no new string for the suppressed messages. It does change the toast's look (Lucide kind icons, a title and body, §6a), which is visible UX and so needs the owner's approval of the v2 page first; whether it adds a dependency is the engine spike's result.
+The design system (tokens, atoms, the glyph vocabulary), the Dialog, the activity chip's polling and persistence, the run banner, the CLI's lines, and every native indicator on the sidebar and toolbar. It adds no new string for the suppressed messages. It does change the toast's look (Lucide kind icons, a title and body, §6a), which is visible UX; the owner approved the v2 page on 13 Nov before it was built; whether it adds a dependency is the engine spike's result.
 
 ## 9. Follow-up: a native look-alike toast (parked, owner idea of 10 Nov 2026)
 
-**Status: parked, after phases 2 and 3. Nothing here is started.** It is the Mac half of "one toast the researcher ever sees", and it replaces the bridge-message route in decision 12.
+**Status: unblocked by phases 2 and 3 (built 13 Nov), still parked for after launch and the R114 gate. Nothing here is started.** It is the Mac half of "one toast the researcher ever sees", and it replaces the bridge-message route in decision 12.
 
 ### The idea
 
@@ -403,7 +413,7 @@ Re-implement the look and feel of the web toast as a near pixel-identical custom
 |---|---|
 | The inverted capsule: padding, radius, shadow, type size and weights (title 490, body 420, the quieter body) | Stacking, priority, `id` replace, pause on hover and focus: four call sites do not need them |
 | Kind colours (positive, accent, warning, negative); a four-kind toast (`skipped` folds into info) | The web engine, whichever it becomes (§6) |
-| Title and body anatomy; a one-sentence message has no title | Any new locale strings: the native keys are the ones that exist (`desktop.json`), reworded once in the §6a pass |
+| Title and body anatomy; a one-sentence message has no title | Any new locale strings: the native keys are the ones that exist (`desktop.json`), not reworded in the §6a pass, which touched only the shared `common.feedback.sent` |
 | A longer hold for a failure (`ToastStore.show(_, duration:)` already takes one) | Swipe, an expand animation, promise toasts |
 | VoiceOver announcement, per-window store (R90), Reduce Motion | |
 

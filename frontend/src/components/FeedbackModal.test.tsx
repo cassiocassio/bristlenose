@@ -93,7 +93,7 @@ describe("FeedbackModal", () => {
         }),
       );
       expect(onClose).toHaveBeenCalledOnce();
-      expect(vi.mocked(toast)).toHaveBeenCalledWith("Feedback sent — thank you!");
+      expect(vi.mocked(toast)).toHaveBeenCalledWith("Feedback sent. Thank you!");
     });
   });
 

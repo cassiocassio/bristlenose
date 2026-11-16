@@ -357,13 +357,14 @@
       "donePartial": "{{count}} klipů připraveno ({{skipped}} přeskočeno)",
       "reveal": "Zobrazit ve složce",
       "revealMac": "Zobrazit ve Finderu",
-      "piiWarning": "Klipy obsahují původní zvuk — redakce osobních údajů se vztahuje pouze na text přepisu",
+      "piiWarning": "Klipy obsahují původní zvuk. Redakce osobních údajů se vztahuje pouze na text přepisu.",
       "failed": "Extrakce klipu se nezdařila",
-      "ffmpegMissing": "FFmpeg nebyl nalezen — nainstalujte jej pro extrakci klipů",
+      "ffmpegMissingTitle": "FFmpeg nebyl nalezen",
+      "ffmpegMissingBody": "Nainstalujte jej pro extrakci klipů.",
       "noClips": "Žádné citáty s hvězdičkou ani vybrané citáty k extrakci",
       "burnSubtitles": "Vyp\u00e1lit titulky do videa (pro prezentace)",
-      "burnUnavailable": "Tento FFmpeg neum\u00ed vyp\u00e1lit titulky \u2014 extrahuj\u00ed se jen klipy bez titulk\u016f",
-      "burnPartial": "Klipy p\u0159ipraveny \u2014 kopie s titulky: {{burned}} z {{attempted}}"
+      "burnUnavailable": "Tento FFmpeg neum\u00ed vyp\u00e1lit titulky. Extrahuj\u00ed se jen klipy bez titulk\u016f.",
+      "burnPartial": "Klipy p\u0159ipraveny. Kopie s titulky: {{burned}} z {{attempted}}"
     },
     "screens": {
       "exportScreens": "Exportovat obrazovky",
@@ -374,10 +375,14 @@
       "done_few": "{{count}} snímky obrazovky připraveny",
       "done_many": "{{count}} snímku obrazovky připraveno",
       "done_other": "{{count}} snímků obrazovky připraveno",
-      "copied_one": "{{count}} snímek obrazovky zkopírován — vložte ho do Miro nebo FigJam",
-      "copied_few": "{{count}} snímky obrazovky zkopírovány — vložte je do Miro nebo FigJam",
-      "copied_many": "{{count}} snímku obrazovky zkopírováno — vložte je do Miro nebo FigJam",
-      "copied_other": "{{count}} snímků obrazovky zkopírováno — vložte je do Miro nebo FigJam",
+      "copiedTitle_one": "{{count}} snímek obrazovky zkopírován",
+      "copiedBody_one": "Vložte ho do Miro nebo FigJam.",
+      "copiedTitle_few": "{{count}} snímky obrazovky zkopírovány",
+      "copiedBody_few": "Vložte je do Miro nebo FigJam.",
+      "copiedTitle_many": "{{count}} snímku obrazovky zkopírováno",
+      "copiedBody_many": "Vložte je do Miro nebo FigJam.",
+      "copiedTitle_other": "{{count}} snímků obrazovky zkopírováno",
+      "copiedBody_other": "Vložte je do Miro nebo FigJam.",
       "reveal": "Zobrazit ve složce",
       "partial": "Zapsané snímky obrazovky: {{written}} z {{total}}",
       "failed": "Export obrazovek se nezdařil",
@@ -487,8 +492,8 @@
     "send": "Odeslat",
     "sending": "Odesílání…",
     "anonymous": "Anonymní – sdílí se pouze vaše hodnocení, zpráva a verze Bristlenose.",
-    "sent": "Zpětná vazba odeslána – děkujeme!",
-    "copyFailed": "Nepodařilo se zkopírovat — odešlete zpětnou vazbu ručně.",
+    "sent": "Zpětná vazba odeslána. Děkujeme!",
+    "copyFailed": "Nepodařilo se zkopírovat. Odešlete zpětnou vazbu ručně.",
     "sendFailed": "Zpětnou vazbu se nepodařilo odeslat. Je zkopírovaná ve schránce. Zkuste to později.",
     "sendFailedNotCopied": "Zpětnou vazbu se nepodařilo odeslat ani zkopírovat do schránky. Zkuste to později."
   },
@@ -563,7 +568,7 @@
     "noTagsInCodebook": "Tato k\u00f3dovac\u00ed kniha nem\u00e1 \u017e\u00e1dn\u00e9 \u0161t\u00edtky.",
     "autocodeFailure": {
       "outOfCredit": "Na \u00fa\u010dtu poskytovatele AI do\u0161el kredit.",
-      "rateLimited": "Dosa\u017een limit po\u017eadavk\u016f \u2013 ozna\u010dov\u00e1n\u00ed zastaveno. Zkuste to brzy znovu.",
+      "rateLimited": "Dosa\u017een limit po\u017eadavk\u016f. Ozna\u010dov\u00e1n\u00ed zastaveno. Zkuste to brzy znovu.",
       "invalidKey": "V\u00e1\u0161 kl\u00ed\u010d API byl odm\u00edtnut.",
       "serverError": "Poskytovatel AI je nedostupn\u00fd. Zkuste to za chv\u00edli.",
       "badRequest": "Poskytovatel AI odm\u00edtl po\u017eadavek.",
@@ -575,7 +580,8 @@
       "noApiKey": "Nejprve p\u0159idejte kl\u00ed\u010d API v Nastaven\u00ed.",
       "providerLocal": "Toto vy\u017eaduje cloudov\u00e9ho poskytovatele AI, ne lok\u00e1ln\u00ed model.",
       "providerAmbiguous": "Vyberte poskytovatele AI v Nastaven\u00ed.",
-      "noQuotes": "Zat\u00edm \u017e\u00e1dn\u00e9 citace \u2013 nejprve analyzujte relace.",
+      "noQuotesTitle": "Zat\u00edm \u017e\u00e1dn\u00e9 cit\u00e1ty",
+      "noQuotesBody": "Nejprve analyzujte relace.",
       "alreadyRunning": "Ozna\u010dov\u00e1n\u00ed t\u00edmto k\u00f3dovac\u00edm slovn\u00edkem u\u017e prob\u00edh\u00e1.",
       "alreadyApplied": "Ji\u017e pou\u017eito.",
       "templateMissing": "Tento k\u00f3dovac\u00ed slovn\u00edk ji\u017e nen\u00ed k dispozici."
@@ -666,7 +672,7 @@
       "zoneExcluded": "Vyloučeno"
     },
     "toast": {
-      "donePartial": "Ozna\u010deno {{processed}} z {{total}} citac\u00ed \u2013 n\u011bkter\u00e9 d\u00e1vky selhaly.",
+      "donePartial": "Ozna\u010deno {{processed}} z {{total}} citac\u00ed. N\u011bkter\u00e9 d\u00e1vky selhaly.",
       "progress": "✦ Automatické kódování {{processed}}/{{total}} citátů…",
       "done": "✦ Automaticky okódováno {{total}} citátů za {{duration}}.",
       "report": "Zpráva",
@@ -851,11 +857,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Změnu se nepodařilo uložit. Zkontrolujte připojení.",
+    "saveFailedTitle": "Změnu se nepodařilo uložit",
+    "saveFailedBody": "Zkontrolujte připojení.",
     "saveRefused": "Změnu se nepodařilo uložit.",
     "quoteGone": "Tento citát už ve zprávě není, takže se změna neuložila.",
-    "runInProgress": "Probíhá analýza. Zkuste to znovu, až skončí.",
-    "pageStale": "Změnu se nepodařilo uložit, protože se Bristlenose restartoval. Načtěte stránku znovu a změnu proveďte ještě jednou."
+    "runInProgressTitle": "Probíhá analýza",
+    "runInProgressBody": "Zkuste to znovu, až skončí.",
+    "pageStaleTitle": "Změnu se nepodařilo uložit",
+    "pageStaleBody": "Bristlenose se restartoval. Načtěte stránku znovu a změnu proveďte ještě jednou."
   },
   "screens": {
     "title": "Obrazovky",

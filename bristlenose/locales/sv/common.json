@@ -323,13 +323,14 @@
       "donePartial": "{{count}} klipp klara ({{skipped}} överhoppade)",
       "reveal": "Visa i mapp",
       "revealMac": "Visa i Finder",
-      "piiWarning": "Klippen innehåller originalljud — PII-redigering gäller endast transkriptionstext",
+      "piiWarning": "Klippen innehåller originalljud. PII-redigering gäller endast transkriptionstext.",
       "failed": "Klippextrahering misslyckades",
-      "ffmpegMissing": "FFmpeg hittades inte — installera det för att extrahera klipp",
+      "ffmpegMissingTitle": "FFmpeg hittades inte",
+      "ffmpegMissingBody": "Installera det för att extrahera klipp.",
       "noClips": "Inga stjärnmärkta eller utvalda citat att extrahera",
       "burnSubtitles": "Br\u00e4nn in undertexter i videon (f\u00f6r bildspel)",
-      "burnUnavailable": "Den h\u00e4r FFmpeg kan inte br\u00e4nna in undertexter \u2014 endast klipp utan undertexter extraheras",
-      "burnPartial": "Klipp klara \u2014 kopior med undertexter: {{burned}} av {{attempted}}"
+      "burnUnavailable": "Den h\u00e4r FFmpeg kan inte br\u00e4nna in undertexter. Endast klipp utan undertexter extraheras.",
+      "burnPartial": "Klipp klara. Kopior med undertexter: {{burned}} av {{attempted}}"
     },
     "screens": {
       "exportScreens": "Exportera skärmar",
@@ -338,8 +339,10 @@
       "copying": "Kopierar skärmar… ({{progress}} av {{total}})",
       "done_one": "{{count}} skärmbild klar",
       "done_other": "{{count}} skärmbilder klara",
-      "copied_one": "{{count}} skärmbild kopierad – klistra in den i Miro eller FigJam",
-      "copied_other": "{{count}} skärmbilder kopierade – klistra in dem i Miro eller FigJam",
+      "copiedTitle_one": "{{count}} skärmbild kopierad",
+      "copiedBody_one": "Klistra in den i Miro eller FigJam.",
+      "copiedTitle_other": "{{count}} skärmbilder kopierade",
+      "copiedBody_other": "Klistra in dem i Miro eller FigJam.",
       "reveal": "Visa i mapp",
       "partial": "Skärmbilder skrivna: {{written}} av {{total}}",
       "failed": "Det gick inte att exportera skärmarna",
@@ -444,8 +447,8 @@
     "send": "Skicka",
     "sending": "Skickar…",
     "anonymous": "Anonymt – endast ditt betyg, ditt meddelande och Bristlenose-versionen delas.",
-    "sent": "Feedback skickad – tack!",
-    "copyFailed": "Kunde inte kopiera — skicka feedback manuellt.",
+    "sent": "Feedback skickad. Tack!",
+    "copyFailed": "Kunde inte kopiera. Skicka feedback manuellt.",
     "sendFailed": "Din feedback kunde inte skickas. Den är kopierad till urklipp. Försök igen senare.",
     "sendFailedNotCopied": "Din feedback kunde varken skickas eller kopieras till urklipp. Försök igen senare."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "Den h\u00e4r kodboken har inga taggar.",
     "autocodeFailure": {
       "outOfCredit": "Ditt konto hos AI-leverant\u00f6ren har slut p\u00e5 kredit.",
-      "rateLimited": "Hastighetsgr\u00e4ns n\u00e5dd \u2013 taggning stoppad. F\u00f6rs\u00f6k igen snart.",
+      "rateLimited": "Hastighetsgr\u00e4ns n\u00e5dd. Taggning stoppad. F\u00f6rs\u00f6k igen snart.",
       "invalidKey": "Din API-nyckel avvisades.",
       "serverError": "AI-leverant\u00f6ren \u00e4r otillg\u00e4nglig. F\u00f6rs\u00f6k igen snart.",
       "badRequest": "AI-leverant\u00f6ren avvisade beg\u00e4ran.",
@@ -530,7 +533,8 @@
       "noApiKey": "L\u00e4gg f\u00f6rst till en API-nyckel i Inst\u00e4llningar.",
       "providerLocal": "Detta kr\u00e4ver en moln-AI-leverant\u00f6r, inte en lokal modell.",
       "providerAmbiguous": "V\u00e4lj en AI-leverant\u00f6r i Inst\u00e4llningar.",
-      "noQuotes": "Inga citat \u00e4nnu \u2013 analysera dina sessioner f\u00f6rst.",
+      "noQuotesTitle": "Inga citat \u00e4nnu",
+      "noQuotesBody": "Analysera dina sessioner f\u00f6rst.",
       "alreadyRunning": "Taggar redan med den h\u00e4r kodboken.",
       "alreadyApplied": "Redan till\u00e4mpad.",
       "templateMissing": "Den kodboken \u00e4r inte l\u00e4ngre tillg\u00e4nglig."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Exkluderad"
     },
     "toast": {
-      "donePartial": "{{processed}} av {{total}} citat taggade \u2013 vissa satser misslyckades.",
+      "donePartial": "{{processed}} av {{total}} citat taggade. Vissa satser misslyckades.",
       "progress": "✦ AutoCodar {{processed}}/{{total}} citat…",
       "done": "✦ AutoCodade {{total}} citat på {{duration}}.",
       "report": "Rapport",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Det gick inte att spara ändringen. Kontrollera din anslutning.",
+    "saveFailedTitle": "Det gick inte att spara ändringen",
+    "saveFailedBody": "Kontrollera din anslutning.",
     "saveRefused": "Det gick inte att spara ändringen.",
     "quoteGone": "Det citatet finns inte längre i rapporten, så ändringen sparades inte.",
-    "runInProgress": "En analys körs. Försök igen när den är klar.",
-    "pageStale": "Det gick inte att spara ändringen. Bristlenose har startats om. Läs in sidan igen och gör ändringen på nytt."
+    "runInProgressTitle": "En analys körs",
+    "runInProgressBody": "Försök igen när den är klar.",
+    "pageStaleTitle": "Det gick inte att spara ändringen",
+    "pageStaleBody": "Bristlenose har startats om. Läs in sidan igen och gör ändringen på nytt."
   },
   "screens": {
     "title": "Sk\u00e4rmar",

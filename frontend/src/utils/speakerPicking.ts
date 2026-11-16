@@ -170,7 +170,7 @@ function kindAfter(role: PickerRole | undefined, before: SpeakerNameState): Pick
 
 /** A name another person already goes by, refused aloud (§J8.11). */
 export function refuseTakenName(name: string): void {
-  toast(i18n.t("sessions.picker.nameTaken", { name }), 5000);
+  toast(i18n.t("sessions.picker.nameTaken", { name }), 5000, "info");
 }
 
 /** Whether the host draws its own picker. The Mac app says so by setting this

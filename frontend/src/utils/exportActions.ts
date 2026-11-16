@@ -94,19 +94,17 @@ export async function copyQuotesToClipboard(
   anonymise = false,
 ): Promise<number> {
   if (ids.length === 0) {
-    toast(t("export.noQuotesMatch"));
+    toast(t("export.noQuotesMatch"), undefined, "info");
     return 0;
   }
   const text = buildLeanQuotesText(store, ids, anonymise);
   try {
     await navigator.clipboard.writeText(text);
-    const msg = t("export.quotesCopied", { count: ids.length });
-    toast(msg);
-    announce(msg);
+    toast(t("export.quotesCopied", { count: ids.length }));
     return ids.length;
   } catch (err) {
     console.error("[exportActions] Copy failed:", err);
-    toast(t("export.exportFailed"));
+    toast(t("export.exportFailed"), undefined, "error");
     return 0;
   }
 }
@@ -130,7 +128,7 @@ export function saveQuotesSpreadsheet(
   format: SpreadsheetFormat = "xlsx",
 ): void {
   if (ids.length === 0) {
-    toast(t("export.noQuotesMatch"));
+    toast(t("export.noQuotesMatch"), undefined, "info");
     return;
   }
   const params = new URLSearchParams({
@@ -162,7 +160,7 @@ export async function extractVideoClips(
   try {
     const result = await startClipExtraction(anonymise, ids, getSubtitlePrefs().burnSubtitles);
     if (result.total === 0) {
-      toast(t("export.clips.noClips"));
+      toast(t("export.clips.noClips"), undefined, "info");
       return;
     }
     // Each export is its own job, as for screens below: under one fixed id the last export's
@@ -172,22 +170,25 @@ export async function extractVideoClips(
       type: "clips", frameworkId: "", frameworkTitle: "", total: result.total,
       ...(result.job_id ? { jobId: result.job_id } : {}),
     });
-    // One toast at a time replaces the last, so both notices share one, held
-    // long enough to read. A toast speaks itself, but the progress line below
-    // lands in the same frame and would replace it, so the spoken line carries
-    // the notices too, then the progress.
+    // One toast at a time replaces the last, so both notices share one, a line
+    // each and held long enough to read. A toast speaks itself, but the progress
+    // line below lands in the same frame and would replace it, so the spoken line
+    // carries the notices too, then the progress.
     const notices = [
       result.pii_warning ? t("export.clips.piiWarning") : null,
       result.burn_unavailable ? t("export.clips.burnUnavailable") : null,
     ].filter((n): n is string => n !== null);
-    if (notices.length > 0) toast(notices.join(" · "), 6000);
+    if (notices.length > 0) toast(notices.join("\n"), 6000, "warning");
     const progress = t("export.clips.progress", { progress: 0, total: result.total });
     announce([...notices, progress].join(". "));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("422")) toast(t("export.clips.ffmpegMissing"));
-    else if (msg.includes("409")) toast(t("export.clips.inProgress"));
-    else toast(t("export.clips.failed"));
+    if (msg.includes("422")) {
+      toast(t("export.clips.ffmpegMissingBody"), undefined, "error", {
+        title: t("export.clips.ffmpegMissingTitle"),
+      });
+    } else if (msg.includes("409")) toast(t("export.clips.inProgress"), undefined, "info");
+    else toast(t("export.clips.failed"), undefined, "error");
   }
 }
 
@@ -200,7 +201,7 @@ export async function exportScreens(t: TFunction, copy = false): Promise<void> {
   try {
     const result = await startScreensExport();
     if (result.total === 0) {
-      toast(t("export.screens.none"));
+      toast(t("export.screens.none"), undefined, "info");
       return;
     }
     // Each export is its own job: the chip remembers a finished job by its id, so a fixed id made a
@@ -214,6 +215,7 @@ export async function exportScreens(t: TFunction, copy = false): Promise<void> {
     announce(t("export.screens.progress", { progress: 0, total: result.total }));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";
-    toast(msg.includes("409") ? t("export.screens.inProgress") : t("export.screens.failed"));
+    if (msg.includes("409")) toast(t("export.screens.inProgress"), undefined, "info");
+    else toast(t("export.screens.failed"), undefined, "error");
   }
 }

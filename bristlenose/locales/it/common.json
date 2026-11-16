@@ -323,13 +323,14 @@
       "donePartial": "{{count}} clip pronte ({{skipped}} saltate)",
       "reveal": "Mostra nella cartella",
       "revealMac": "Mostra nel Finder",
-      "piiWarning": "Le clip contengono l'audio originale — la rimozione dei dati personali si applica solo al testo della trascrizione",
+      "piiWarning": "Le clip contengono l'audio originale. La rimozione dei dati personali si applica solo al testo della trascrizione.",
       "failed": "Estrazione delle clip non riuscita",
-      "ffmpegMissing": "FFmpeg non trovato — installalo per estrarre le clip",
+      "ffmpegMissingTitle": "FFmpeg non trovato",
+      "ffmpegMissingBody": "Installalo per estrarre le clip.",
       "noClips": "Nessuna citazione contrassegnata o in evidenza da estrarre",
       "burnSubtitles": "Imprimi i sottotitoli nel video (per le slide)",
-      "burnUnavailable": "Questo FFmpeg non pu\u00f2 imprimere i sottotitoli \u2014 verranno estratte solo clip senza sottotitoli",
-      "burnPartial": "Clip pronte \u2014 copie sottotitolate: {{burned}} su {{attempted}}"
+      "burnUnavailable": "Questo FFmpeg non pu\u00f2 imprimere i sottotitoli. Verranno estratte solo clip senza sottotitoli.",
+      "burnPartial": "Clip pronte. Copie sottotitolate: {{burned}} su {{attempted}}"
     },
     "screens": {
       "exportScreens": "Esporta schermate",
@@ -338,8 +339,10 @@
       "copying": "Copia delle schermate… ({{progress}} di {{total}})",
       "done_one": "{{count}} immagine della schermata pronta",
       "done_other": "{{count}} immagini delle schermate pronte",
-      "copied_one": "{{count}} immagine copiata: incollala in Miro o FigJam",
-      "copied_other": "{{count}} immagini copiate: incollale in Miro o FigJam",
+      "copiedTitle_one": "{{count}} immagine copiata",
+      "copiedBody_one": "Incollala in Miro o FigJam.",
+      "copiedTitle_other": "{{count}} immagini copiate",
+      "copiedBody_other": "Incollale in Miro o FigJam.",
       "reveal": "Mostra nella cartella",
       "partial": "Immagini scritte: {{written}} di {{total}}",
       "failed": "Esportazione delle schermate non riuscita",
@@ -444,8 +447,8 @@
     "send": "Invia",
     "sending": "Invio…",
     "anonymous": "Anonimo – vengono condivisi solo la valutazione, il messaggio e la versione di Bristlenose.",
-    "sent": "Feedback inviato – grazie!",
-    "copyFailed": "Impossibile copiare — invia il feedback manualmente.",
+    "sent": "Feedback inviato. Grazie!",
+    "copyFailed": "Impossibile copiare. Invia il feedback manualmente.",
     "sendFailed": "Impossibile inviare il feedback. È stato copiato negli appunti. Riprova più tardi.",
     "sendFailedNotCopied": "Impossibile inviare il feedback o copiarlo negli appunti. Riprova più tardi."
   },
@@ -530,7 +533,8 @@
       "noApiKey": "Aggiungi prima una chiave API in Impostazioni.",
       "providerLocal": "Serve un fornitore di IA nel cloud, non un modello locale.",
       "providerAmbiguous": "Scegli un fornitore di IA in Impostazioni.",
-      "noQuotes": "Nessuna citazione: analizza prima le sessioni.",
+      "noQuotesTitle": "Nessuna citazione",
+      "noQuotesBody": "Analizza prima le sessioni.",
       "alreadyRunning": "Etichettatura gi\u00e0 in corso con questo codebook.",
       "alreadyApplied": "Gi\u00e0 applicato.",
       "templateMissing": "Questo codebook non \u00e8 pi\u00f9 disponibile."
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Impossibile salvare la modifica. Controlla la connessione.",
+    "saveFailedTitle": "Impossibile salvare la modifica",
+    "saveFailedBody": "Controlla la connessione.",
     "saveRefused": "Impossibile salvare la modifica.",
     "quoteGone": "Questa citazione non è più nel report, quindi la modifica non è stata salvata.",
-    "runInProgress": "È in corso un’analisi. Riprova quando è terminata.",
-    "pageStale": "Impossibile salvare la modifica. Bristlenose è stato riavviato. Ricarica la pagina e ripeti la modifica."
+    "runInProgressTitle": "È in corso un’analisi",
+    "runInProgressBody": "Riprova quando è terminata.",
+    "pageStaleTitle": "Impossibile salvare la modifica",
+    "pageStaleBody": "Bristlenose è stato riavviato. Ricarica la pagina e ripeti la modifica."
   },
   "screens": {
     "title": "Schermate",

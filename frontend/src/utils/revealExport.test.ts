@@ -121,7 +121,7 @@ describe("revealExportOrSay", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       await revealExportOrSay("clips");
-      expect(toast).toHaveBeenCalledWith("Couldn’t show the folder.", 6000);
+      expect(toast).toHaveBeenCalledWith("Couldn’t show the folder.", undefined, "error");
       expect(logged).toHaveBeenCalled();
     } finally {
       logged.mockRestore();
@@ -136,7 +136,7 @@ describe("revealExportOrSay", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       await revealExportOrSay("screens");
-      expect(toast).toHaveBeenCalledWith("Couldn’t show the folder.", 6000);
+      expect(toast).toHaveBeenCalledWith("Couldn’t show the folder.", undefined, "error");
     } finally {
       logged.mockRestore();
     }

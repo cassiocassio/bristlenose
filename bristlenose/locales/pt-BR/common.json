@@ -323,13 +323,14 @@
       "donePartial": "{{count}} clipes prontos ({{skipped}} ignorados)",
       "reveal": "Mostrar na pasta",
       "revealMac": "Revelar no Finder",
-      "piiWarning": "Os clipes contêm o áudio original — a remoção de PII se aplica apenas ao texto da transcrição",
+      "piiWarning": "Os clipes contêm o áudio original. A remoção de PII se aplica apenas ao texto da transcrição.",
       "failed": "Falha na extração do clipe",
-      "ffmpegMissing": "FFmpeg não encontrado — instale-o para extrair clipes",
+      "ffmpegMissingTitle": "FFmpeg não encontrado",
+      "ffmpegMissingBody": "Instale-o para extrair clipes.",
       "noClips": "Nenhuma citação destacada ou em destaque para extrair",
       "burnSubtitles": "Embutir legendas no v\u00eddeo (para slides)",
-      "burnUnavailable": "Este FFmpeg n\u00e3o consegue embutir legendas \u2014 s\u00f3 ser\u00e3o extra\u00eddos clipes sem legendas",
-      "burnPartial": "Clipes prontos \u2014 c\u00f3pias legendadas: {{burned}} de {{attempted}}"
+      "burnUnavailable": "Este FFmpeg n\u00e3o consegue embutir legendas. S\u00f3 ser\u00e3o extra\u00eddos clipes sem legendas.",
+      "burnPartial": "Clipes prontos. C\u00f3pias legendadas: {{burned}} de {{attempted}}"
     },
     "screens": {
       "exportScreens": "Exportar telas",
@@ -338,8 +339,10 @@
       "copying": "Copiando telas… ({{progress}} de {{total}})",
       "done_one": "{{count}} captura de tela pronta",
       "done_other": "{{count}} capturas de tela prontas",
-      "copied_one": "{{count}} captura de tela copiada — cole no Miro ou no FigJam",
-      "copied_other": "{{count}} capturas de tela copiadas — cole no Miro ou no FigJam",
+      "copiedTitle_one": "{{count}} captura de tela copiada",
+      "copiedBody_one": "Cole no Miro ou no FigJam.",
+      "copiedTitle_other": "{{count}} capturas de tela copiadas",
+      "copiedBody_other": "Cole no Miro ou no FigJam.",
       "reveal": "Mostrar na pasta",
       "partial": "Capturas de tela gravadas: {{written}} de {{total}}",
       "failed": "Falha ao exportar as telas",
@@ -444,8 +447,8 @@
     "send": "Enviar",
     "sending": "Enviando…",
     "anonymous": "Anônimo – apenas sua avaliação, sua mensagem e a versão do Bristlenose são compartilhadas.",
-    "sent": "Feedback enviado – obrigado!",
-    "copyFailed": "Não foi possível copiar — envie o feedback manualmente.",
+    "sent": "Feedback enviado. Obrigado!",
+    "copyFailed": "Não foi possível copiar. Envie o feedback manualmente.",
     "sendFailed": "Não foi possível enviar seu feedback. Ele foi copiado para a área de transferência. Tente novamente mais tarde.",
     "sendFailedNotCopied": "Não foi possível enviar seu feedback nem copiá-lo para a área de transferência. Tente novamente mais tarde."
   },
@@ -518,7 +521,7 @@
     "noTagsInCodebook": "Este livro de c\u00f3digos n\u00e3o tem tags.",
     "autocodeFailure": {
       "outOfCredit": "Sua conta no provedor de IA est\u00e1 sem cr\u00e9ditos.",
-      "rateLimited": "Limite de requisi\u00e7\u00f5es atingido \u2014 etiquetagem interrompida. Tente em breve.",
+      "rateLimited": "Limite de requisi\u00e7\u00f5es atingido. Etiquetagem interrompida. Tente em breve.",
       "invalidKey": "Sua chave de API foi rejeitada.",
       "serverError": "O provedor de IA est\u00e1 indispon\u00edvel. Tente novamente em breve.",
       "badRequest": "O provedor de IA rejeitou a solicita\u00e7\u00e3o.",
@@ -530,7 +533,8 @@
       "noApiKey": "Adicione uma chave de API em Configura\u00e7\u00f5es primeiro.",
       "providerLocal": "Isto exige um provedor de IA na nuvem, n\u00e3o um modelo local.",
       "providerAmbiguous": "Escolha um provedor de IA em Configura\u00e7\u00f5es.",
-      "noQuotes": "Ainda n\u00e3o h\u00e1 cita\u00e7\u00f5es \u2014 analise suas sess\u00f5es primeiro.",
+      "noQuotesTitle": "Ainda n\u00e3o h\u00e1 cita\u00e7\u00f5es",
+      "noQuotesBody": "Analise suas sess\u00f5es primeiro.",
       "alreadyRunning": "J\u00e1 est\u00e1 etiquetando com este livro de c\u00f3digos.",
       "alreadyApplied": "J\u00e1 aplicado.",
       "templateMissing": "Esse livro de c\u00f3digos n\u00e3o est\u00e1 mais dispon\u00edvel."
@@ -607,7 +611,7 @@
       "zoneExcluded": "Excluídas"
     },
     "toast": {
-      "donePartial": "{{processed}} de {{total}} cita\u00e7\u00f5es etiquetadas \u2014 alguns lotes falharam.",
+      "donePartial": "{{processed}} de {{total}} cita\u00e7\u00f5es etiquetadas. Alguns lotes falharam.",
       "progress": "✦ AutoCode em andamento {{processed}}/{{total}} citações…",
       "done": "✦ AutoCode aplicado a {{total}} citações em {{duration}}.",
       "report": "Relatório",
@@ -782,11 +786,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Não foi possível salvar a alteração. Verifique sua conexão.",
+    "saveFailedTitle": "Não foi possível salvar a alteração",
+    "saveFailedBody": "Verifique sua conexão.",
     "saveRefused": "Não foi possível salvar a alteração.",
     "quoteGone": "Essa citação não está mais no relatório, então a alteração não foi salva.",
-    "runInProgress": "Há uma análise em andamento. Tente de novo quando ela terminar.",
-    "pageStale": "Não foi possível salvar a alteração. O Bristlenose foi reiniciado. Recarregue a página e faça a alteração de novo."
+    "runInProgressTitle": "Há uma análise em andamento",
+    "runInProgressBody": "Tente de novo quando ela terminar.",
+    "pageStaleTitle": "Não foi possível salvar a alteração",
+    "pageStaleBody": "O Bristlenose foi reiniciado. Recarregue a página e faça a alteração de novo."
   },
   "screens": {
     "title": "Telas",

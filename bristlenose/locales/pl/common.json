@@ -364,13 +364,14 @@
       "donePartial": "{{count}} klipów gotowych ({{skipped}} pominięto)",
       "reveal": "Pokaż w folderze",
       "revealMac": "Pokaż w Finderze",
-      "piiWarning": "Klipy zawierają oryginalne audio — redakcja PII dotyczy tylko tekstu transkrypcji",
+      "piiWarning": "Klipy zawierają oryginalne audio. Redakcja PII dotyczy tylko tekstu transkrypcji.",
       "failed": "Wyodrębnianie klipów nie powiodło się",
-      "ffmpegMissing": "Nie znaleziono FFmpeg — zainstaluj go, aby wyodrębniać klipy",
+      "ffmpegMissingTitle": "Nie znaleziono FFmpeg",
+      "ffmpegMissingBody": "Zainstaluj go, aby wyodrębniać klipy.",
       "noClips": "Brak cytatów z gwiazdką lub wyróżnionych do wyodrębnienia",
       "burnSubtitles": "Wypal napisy w wideo (do prezentacji)",
-      "burnUnavailable": "Ten FFmpeg nie potrafi wypala\u0107 napis\u00f3w \u2014 zostan\u0105 wyodr\u0119bnione tylko klipy bez napis\u00f3w",
-      "burnPartial": "Klipy gotowe \u2014 kopie z napisami: {{burned}} z {{attempted}}"
+      "burnUnavailable": "Ten FFmpeg nie potrafi wypala\u0107 napis\u00f3w. Zostan\u0105 wyodr\u0119bnione tylko klipy bez napis\u00f3w.",
+      "burnPartial": "Klipy gotowe. Kopie z napisami: {{burned}} z {{attempted}}"
     },
     "screens": {
       "exportScreens": "Eksportuj ekrany",
@@ -381,10 +382,14 @@
       "done_few": "{{count}} zrzuty ekranu gotowe",
       "done_many": "{{count}} zrzutów ekranu gotowych",
       "done_other": "{{count}} zrzutu ekranu gotowego",
-      "copied_one": "Skopiowano {{count}} zrzut ekranu — wklej go do Miro lub FigJam",
-      "copied_few": "Skopiowano {{count}} zrzuty ekranu — wklej je do Miro lub FigJam",
-      "copied_many": "Skopiowano {{count}} zrzutów ekranu — wklej je do Miro lub FigJam",
-      "copied_other": "Skopiowano {{count}} zrzutu ekranu — wklej je do Miro lub FigJam",
+      "copiedTitle_one": "Skopiowano {{count}} zrzut ekranu",
+      "copiedBody_one": "Wklej go do Miro lub FigJam.",
+      "copiedTitle_few": "Skopiowano {{count}} zrzuty ekranu",
+      "copiedBody_few": "Wklej je do Miro lub FigJam.",
+      "copiedTitle_many": "Skopiowano {{count}} zrzutów ekranu",
+      "copiedBody_many": "Wklej je do Miro lub FigJam.",
+      "copiedTitle_other": "Skopiowano {{count}} zrzutu ekranu",
+      "copiedBody_other": "Wklej je do Miro lub FigJam.",
       "reveal": "Pokaż w folderze",
       "partial": "Zapisane zrzuty ekranu: {{written}} z {{total}}",
       "failed": "Eksport ekranów nie powiódł się",
@@ -495,8 +500,8 @@
     "send": "Wyślij",
     "sending": "Wysyłanie…",
     "anonymous": "Anonimowo — udostępniane są tylko ocena, wiadomość i wersja Bristlenose.",
-    "sent": "Opinia wysłana — dziękujemy!",
-    "copyFailed": "Nie udało się skopiować — prześlij opinię ręcznie.",
+    "sent": "Opinia wysłana. Dziękujemy!",
+    "copyFailed": "Nie udało się skopiować. Prześlij opinię ręcznie.",
     "sendFailed": "Nie udało się wysłać opinii. Jest skopiowana do schowka. Spróbuj ponownie później.",
     "sendFailedNotCopied": "Nie udało się wysłać opinii ani skopiować jej do schowka. Spróbuj ponownie później."
   },
@@ -574,7 +579,7 @@
     "noTagsInCodebook": "Ta ksi\u0119ga kod\u00f3w nie ma tag\u00f3w.",
     "autocodeFailure": {
       "outOfCredit": "Na koncie dostawcy AI sko\u0144czy\u0142y si\u0119 \u015brodki.",
-      "rateLimited": "Osi\u0105gni\u0119to limit zapyta\u0144 \u2013 tagowanie zatrzymane. Spr\u00f3buj wkr\u00f3tce.",
+      "rateLimited": "Osi\u0105gni\u0119to limit zapyta\u0144. Tagowanie zatrzymane. Spr\u00f3buj wkr\u00f3tce.",
       "invalidKey": "Tw\u00f3j klucz API zosta\u0142 odrzucony.",
       "serverError": "Dostawca AI jest niedost\u0119pny. Spr\u00f3buj za chwil\u0119.",
       "badRequest": "Dostawca AI odrzuci\u0142 \u017c\u0105danie.",
@@ -586,7 +591,8 @@
       "noApiKey": "Najpierw dodaj klucz API w Ustawieniach.",
       "providerLocal": "To wymaga dostawcy AI w chmurze, nie modelu lokalnego.",
       "providerAmbiguous": "Wybierz dostawc\u0119 AI w Ustawieniach.",
-      "noQuotes": "Brak cytat\u00f3w \u2013 najpierw przeanalizuj sesje.",
+      "noQuotesTitle": "Brak cytat\u00f3w",
+      "noQuotesBody": "Najpierw przeanalizuj sesje.",
       "alreadyRunning": "Ju\u017c trwa tagowanie tym kodeksem.",
       "alreadyApplied": "Ju\u017c zastosowano.",
       "templateMissing": "Ten kodeks nie jest ju\u017c dost\u0119pny."
@@ -677,7 +683,7 @@
       "zoneExcluded": "Wykluczone"
     },
     "toast": {
-      "donePartial": "Otagowano {{processed}} z {{total}} cytat\u00f3w \u2014 cz\u0119\u015b\u0107 partii nie powiod\u0142a si\u0119.",
+      "donePartial": "Otagowano {{processed}} z {{total}} cytat\u00f3w. Cz\u0119\u015b\u0107 partii nie powiod\u0142a si\u0119.",
       "progress": "✦ AutoCode {{processed}}/{{total}} cytatów…",
       "done": "✦ AutoCode {{total}} cytatów w {{duration}}.",
       "report": "Raport",
@@ -862,11 +868,14 @@
     }
   },
   "sync": {
-    "saveFailed": "Nie można zapisać zmiany. Sprawdź połączenie.",
+    "saveFailedTitle": "Nie można zapisać zmiany",
+    "saveFailedBody": "Sprawdź połączenie.",
     "saveRefused": "Nie można zapisać zmiany.",
     "quoteGone": "Tego cytatu nie ma już w raporcie, więc zmiana nie została zapisana.",
-    "runInProgress": "Trwa analiza. Spróbuj ponownie, gdy się zakończy.",
-    "pageStale": "Nie można zapisać zmiany, ponieważ Bristlenose został uruchomiony ponownie. Odśwież stronę i wprowadź zmianę jeszcze raz."
+    "runInProgressTitle": "Trwa analiza",
+    "runInProgressBody": "Spróbuj ponownie, gdy się zakończy.",
+    "pageStaleTitle": "Nie można zapisać zmiany",
+    "pageStaleBody": "Bristlenose został uruchomiony ponownie. Odśwież stronę i wprowadź zmianę jeszcze raz."
   },
   "screens": {
     "title": "Ekrany",

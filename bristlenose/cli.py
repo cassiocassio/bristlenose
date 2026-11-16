@@ -1537,11 +1537,10 @@ def run(
         typer.Option(
             "--no-serve",
             help=(
-                "Don't auto-start the local web server when the pipeline finishes. "
-                "Used by the macOS desktop sidecar (the desktop app manages its own "
-                "serve lifecycle separately). Hidden — not part of the CLI happy path."
+                "Don't start the local report server when the pipeline finishes: "
+                "print the summary and exit. Runs without a terminal (cron, pipes, "
+                "CI) never start it."
             ),
-            hidden=True,
         ),
     ] = False,
     clean: Annotated[
@@ -1975,10 +1974,11 @@ def run(
 
     # uvicorn is guaranteed importable here — preflight gates `serve_deps`.
 
-    # `--no-serve` is the desktop sidecar's escape hatch: pipeline runs, summary
-    # prints, then exit cleanly without binding a server port. The desktop app
-    # manages its own serve lifecycle through ServeManager. Hidden from --help.
-    if no_serve:
+    # `--no-serve` (also the desktop sidecar's flag; ServeManager runs serve
+    # itself): summary prints, then exit without binding a port. A headless run
+    # (no terminal on stdin/stdout: cron, pipe, CI) behaves the same, because a
+    # blocking server there would never exit. BR-27.
+    if no_serve or not _stdin_is_a_terminal():
         _print_pipeline_summary(result)
         return
 

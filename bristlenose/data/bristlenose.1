@@ -303,10 +303,11 @@ With \fB\-\-clean\fR, don't ask before discarding the previous report's
 stars, tags and edits.
 .TP
 .BR \-\-no\-serve
-Suppress the auto-serve step at the end of the pipeline. By default, \fBrun\fR
-serves the report on a free port and opens it in the browser. Hidden from
-\fB\-\-help\fR; it exists for embedding contexts \(em notably the macOS app,
-whose sidecar manages the serve port itself.
+Don't start the report server when the pipeline finishes: print the summary
+and exit. By default, an interactive \fBrun\fR serves the report on a free port
+and waits for Ctrl\-C. A run with no terminal on standard input or output
+(cron, a pipe, CI) never starts the server, with or without this option.
+The macOS app passes it, because the app manages the serve port itself.
 .TP
 .BR \-\-dev
 Development mode: enable the responsive playground in the served report

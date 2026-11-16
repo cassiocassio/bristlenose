@@ -183,6 +183,8 @@ run "a different team's group is refused" 1 "team group" "$DMG" "$GOOD" STUB_ENT
 run "the print entitlement is refused (printing is post-v1)" 1 "PRESENT — printing is post-v1" "$DMG" "$GOOD" STUB_ENTS_FILE="$ENTS_PRINT"
 BAX=$(tree baext); mkdir -p "$BAX/Bristlenose.app/Contents/PlugIns/BAExt.appex"; manifest "$DMG" "$BAX"
 run "an extension in a Developer-ID image is refused" 1 "background assets" "$DMG" "$BAX"
+BAE=$(tree baextk); mkdir -p "$BAE/Bristlenose.app/Contents/Extensions/BAExt.appex"; manifest "$DMG" "$BAE"
+run "an ExtensionKit-style extension in a Developer-ID image is refused" 1 "background assets" "$DMG" "$BAE"
 BAK=$(tree bakey); sed -i '' 's|</dict></plist>|<key>BAUsesAppleHosting</key><true/></dict></plist>|' "$BAK/Bristlenose.app/Contents/Info.plist"; manifest "$DMG" "$BAK"
 run "a Background Assets key in a Developer-ID image is refused" 1 "keys BAUsesAppleHosting" "$DMG" "$BAK"
 manifest "$DMG" "$GOOD"

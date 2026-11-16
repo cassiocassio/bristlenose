@@ -368,15 +368,20 @@ fi
 # ---------------------------------------------------------------------------
 EXTS=()
 while IFS= read -r -d '' e; do EXTS+=("$e"); done \
-    < <(find "$APP/Contents/PlugIns" -maxdepth 1 -name '*.appex' -type d -print0 2>/dev/null)
+    < <(find "$APP/Contents/PlugIns" "$APP/Contents/Extensions" -maxdepth 1 -name '*.appex' -print0 2>/dev/null)
 if [ "${#EXTS[@]}" -eq 0 ]; then
     ok "extensions" "none in this build"
 else
     HOST_ENTS_FILE="$WORK/host-ents.plist"
     codesign -d --entitlements :- "$OUTER" 2>/dev/null >"$HOST_ENTS_FILE" || true
-    HOST_GROUP=$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' \
-        "$HOST_ENTS_FILE" 2>/dev/null || echo "")
+    # All the groups, sorted, one per line: the extension must hold exactly the host's set.
+    groups_of() {
+        /usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups' "$1" 2>/dev/null \
+            | sed -e '/^Array {$/d' -e '/^}$/d' -e 's/^ *//' | sort | tr '\n' ' ' || true
+    }
+    HOST_GROUPS=$(groups_of "$HOST_ENTS_FILE")
     EXT_PROBLEMS=()
+    [ -n "$HOST_GROUPS" ] || EXT_PROBLEMS+=("host has no readable app group, so an extension's cannot be compared")
     for e in "${EXTS[@]}"; do
         en="$(basename "$e")"
         eplist="$e/Contents/Info.plist"
@@ -387,22 +392,24 @@ else
         fi
         eents="$WORK/ext-ents.plist"
         codesign -d --entitlements :- "$ebin" 2>/dev/null >"$eents" || true
-        grep -q '<key>com.apple.security.app-sandbox</key>' "$eents" \
+        [ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$eents" 2>/dev/null || true)" = true ] \
             || EXT_PROBLEMS+=("$en: no app-sandbox")
         grep -q '<key>com.apple.security.inherit</key>' "$eents" \
             && EXT_PROBLEMS+=("$en: carries inherit (an extension is not a child process)")
-        egroup=$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' \
-            "$eents" 2>/dev/null || echo "")
-        if [ -z "$egroup" ]; then
+        egroups=$(groups_of "$eents")
+        if [ -z "$egroups" ]; then
             EXT_PROBLEMS+=("$en: no app group")
-        elif [ -n "$HOST_GROUP" ] && [ "$egroup" != "$HOST_GROUP" ]; then
-            EXT_PROBLEMS+=("$en: app group $egroup is not the host's $HOST_GROUP")
+        elif [ -n "$HOST_GROUPS" ] && [ "$egroups" != "$HOST_GROUPS" ]; then
+            EXT_PROBLEMS+=("$en: app groups $egroups are not the host's $HOST_GROUPS")
         fi
-        [ -f "$e/Contents/embedded.provisionprofile" ] \
-            || EXT_PROBLEMS+=("$en: no embedded provisioning profile of its own")
+        if [ ! -f "$e/Contents/embedded.provisionprofile" ]; then
+            EXT_PROBLEMS+=("$en: no embedded provisioning profile of its own")
+        elif cmp -s "$e/Contents/embedded.provisionprofile" "$APP/Contents/embedded.provisionprofile"; then
+            EXT_PROBLEMS+=("$en: its profile is a copy of the host's, not its own")
+        fi
         ever=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$eplist" 2>/dev/null || echo "")
         ebuild=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$eplist" 2>/dev/null || echo "")
-        [ "$ever" = "$GOT_VER" ] && [ "$ebuild" = "$GOT_BUILD" ] \
+        [ -n "$ever" ] && [ -n "$ebuild" ] && [ "$ever" = "$GOT_VER" ] && [ "$ebuild" = "$GOT_BUILD" ] \
             || EXT_PROBLEMS+=("$en: version $ever ($ebuild) is not the host's $GOT_VER ($GOT_BUILD)")
     done
     if [ "${#EXT_PROBLEMS[@]}" -eq 0 ]; then

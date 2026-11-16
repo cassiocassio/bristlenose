@@ -55,4 +55,13 @@ mk "$T/trunc" truncated ok;      case_ "a truncated weights file is refused" 1 "
 mk "$T/hdr" badheader ok;        case_ "an implausible header is refused" 1 "not plausible" "$T/hdr"
 case_ "a source that is not a directory is refused" 1 "not a directory" "$T/nope"
 
+beta() {  # beta <label> <want-exit> <needle> <version string>
+    local out rc
+    out=$(BN_TEST_XCODE_VERSION="$4" "$BUILD" --check-only --source "$T/ok" --out "$T/out" 2>&1); rc=$?
+    if [ "$rc" -ne "$2" ] || ! grep -qF -- "$3" <<<"$out"; then echo "  ✗ $1: exit $rc"; echo "$out" | sed 's/^/      /' | head -3; FAIL=$((FAIL+1)); else echo "  ✓ $1"; PASS=$((PASS+1)); fi
+}
+beta "a release Xcode build is accepted" 0 "source ok" "Xcode 27.2 Build version 27B52"
+beta "a beta Xcode build (letter-suffixed) is refused" 1 "looks like a beta" "Xcode 27.3 Build version 27C5012a"
+beta "a version string saying beta is refused" 1 "looks like a beta" "Xcode 27.3 beta 2"
+
 echo; echo "$PASS passed, $FAIL failed"; [ "$FAIL" -eq 0 ]

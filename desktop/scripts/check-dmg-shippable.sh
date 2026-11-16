@@ -278,7 +278,7 @@ else
     # image, and no BA* key in Info.plist (BAAppGroupID, BAHasManagedAssetPacks,
     # BAUsesAppleHosting): a host that declares managed packs without an extension is a
     # programmer error, and one with Apple hosting makes the OS look for a store it lacks.
-    BA_EXTS=$({ find "$INNER_APP/Contents/PlugIns" -maxdepth 1 -name '*.appex' 2>/dev/null || true; } | head -1)
+    BA_EXTS=$({ find "$INNER_APP/Contents/PlugIns" "$INNER_APP/Contents/Extensions" -maxdepth 1 -name '*.appex' 2>/dev/null || true; } | head -1)
     BA_KEYS=$(plutil -p "$INNER_APP/Contents/Info.plist" 2>/dev/null | { grep -oE '"BA[A-Za-z]+"' || true; } | tr -d '"' | tr '\n' ' ')
     if [ -n "$BA_EXTS" ] || [ -n "$BA_KEYS" ]; then
         fail "background assets" "Developer-ID must not carry it:${BA_EXTS:+ extension $(basename "$BA_EXTS")}${BA_KEYS:+ keys ${BA_KEYS% }}"

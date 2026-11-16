@@ -309,9 +309,20 @@ reject_case "extension carries inherit" "✗.*extensions.*BAExt.appex: carries i
 D=$WORK/e3; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nogrp.plist")
 reject_case "extension without the app group" "✗.*extensions.*BAExt.appex: no app group" "$D"
 D=$WORK/e4; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-othergrp.plist")
-reject_case "extension in a different group" "✗.*extensions.*BAExt.appex: app group group.com.evil.other is not the host's" "$D"
+reject_case "extension in a different group" "✗.*extensions.*BAExt.appex: app groups group.com.evil.other  *are not the host's" "$D"
 D=$WORK/e5; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "$TREE_VER" 0)
 reject_case "extension without its own profile" "✗.*extensions.*BAExt.appex: no embedded provisioning profile" "$D"
+# the group set must match exactly: the host's group PLUS another still differs
+ents_with "$WORK/ents-ext-extra.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>group.com.evil.other</string></array>'
+D=$WORK/e4b; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-extra.plist")
+reject_case "extension holding the host's group plus another" "✗.*extensions.*BAExt.appex: app groups" "$D"
+# a host with no readable group cannot vouch for an extension's
+D=$WORK/e4c; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$ENTS"
+reject_case "host without an app group cannot vouch for an extension's" "✗.*extensions.*host has no readable app group" "$D"
+# an extension carrying a copy of the host's profile
+D=$WORK/e5b; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); printf 'hostprofile' > "$A/Contents/embedded.provisionprofile"; cp "$A/Contents/embedded.provisionprofile" "$A/Contents/PlugIns/BAExt.appex/Contents/embedded.provisionprofile"
+codesign --force --options=runtime --entitlements "$WORK/ents-ext-ok.plist" --sign - "$A/Contents/PlugIns/BAExt.appex" 2>/dev/null; sign_app "$A" "$WORK/ents-host-grp.plist"
+reject_case "extension with a copy of the host's profile" "✗.*extensions.*its profile is a copy of the host's" "$D"
 D=$WORK/e6; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "9.9.9")
 reject_case "extension version differs from the host" "✗.*extensions.*BAExt.appex: version 9.9.9" "$D"
 

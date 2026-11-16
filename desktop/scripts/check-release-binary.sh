@@ -84,6 +84,7 @@ if [ -n "$APP" ]; then
     # App extensions too (the Background Assets downloader, when the store build has one):
     # its executable lives at PlugIns/<name>.appex/Contents/MacOS/, which find reaches.
     [ -d "$APP/Contents/PlugIns" ] && SEARCH_PATHS+=("$APP/Contents/PlugIns")
+    [ -d "$APP/Contents/Extensions" ] && SEARCH_PATHS+=("$APP/Contents/Extensions")  # ExtensionKit products
     if [ ${#SEARCH_PATHS[@]} -eq 0 ]; then
         echo "error: $APP contains neither Contents/MacOS nor Contents/Frameworks" >&2
         exit 2

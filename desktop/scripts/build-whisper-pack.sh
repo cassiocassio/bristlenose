@@ -126,6 +126,18 @@ if 8 + n + end != size:
 print(f"source ok: {size} bytes of weights, {len(h) - ('__metadata__' in h)} tensors")
 PY
 
+# --- 3b. refuse a beta packager (before anything is built) ------------------------------------
+# `xcodebuild -version` never says "beta"; a beta's build number ends in a lowercase letter
+# (27B5xa), a release's does not (27B52). BN_TEST_XCODE_VERSION is for the self-test only.
+XCODE_PATH="$(xcode-select -p 2>/dev/null || echo '')"
+XCODE_VER="${BN_TEST_XCODE_VERSION:-$(xcodebuild -version 2>/dev/null | tr '\n' ' ' || true)}"
+if [ "${BN_ALLOW_BETA_PACKAGER:-}" != 1 ]; then
+    if [[ "$XCODE_PATH $XCODE_VER" =~ [Bb]eta|"Release Candidate"|" RC" ]] \
+       || [[ "$XCODE_VER" =~ Build\ version\ [0-9]+[A-Z][0-9]+[a-z]+ ]]; then
+        die "Xcode looks like a beta ($XCODE_PATH / $XCODE_VER): a pack from a beta packager cannot be submitted. BN_ALLOW_BETA_PACKAGER=1 for a local-only pack."
+    fi
+fi
+
 if [ "$CHECK_ONLY" = 1 ]; then
     echo "check-only: would package ${ALLOWED[*]} from $SOURCE as $PACK_ID (onDemand) into $OUT"
     exit 0
@@ -133,14 +145,6 @@ fi
 
 # --- 4. the packaging tool ------------------------------------------------------------------
 xcrun --find ba-package >/dev/null 2>&1 || die "xcrun cannot find ba-package (needs Xcode 26+)"
-XCODE_PATH="$(xcode-select -p 2>/dev/null || echo '')"
-XCODE_VER="$(xcodebuild -version 2>/dev/null | tr '\n' ' ' || true)"
-if [ "${BN_ALLOW_BETA_PACKAGER:-}" != 1 ]; then
-    case "$XCODE_PATH $XCODE_VER" in
-        *[Bb]eta*|*"Release Candidate"*|*" RC"*)
-            die "Xcode looks like a beta ($XCODE_PATH): a pack from a beta packager cannot be submitted. BN_ALLOW_BETA_PACKAGER=1 for a local-only pack." ;;
-    esac
-fi
 
 # --- 5. stage only the allowlist (APFS clone: instant, no extra 1.6 GB) ---------------------
 STAGE="$RESOLVED/stage"; mkdir -p "$STAGE/$DEST_DIR"
@@ -152,7 +156,9 @@ GOT="$(cd "$STAGE" && find . -type f | sed 's|^\./||' | sort | tr '\n' ' ')"
 WANT="$(for f in "${ALLOWED[@]}"; do echo "$DEST_DIR/$f"; done | sort | tr '\n' ' ')"
 [ "$GOT" = "$WANT" ] || die "stage differs from the allowlist: have [$GOT], want [$WANT]"
 
-mkdir -p "$OUT"
+mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"   # absolute: ba-package runs from the stage directory
+# A failed run must not leave the previous run's pinned hashes beside a new archive.
+rm -f "$OUT/manifest.json" "$OUT/pack-manifest.json" "$OUT/$PACK_ID.aar"
 MANIFEST="$OUT/manifest.json"
 # fileSource is relative to the stage directory, where ba-package runs (it rejects absolute paths).
 python3 - "$PACK_ID" "$DEST_DIR" "${ALLOWED[@]}" > "$MANIFEST" <<'PY'

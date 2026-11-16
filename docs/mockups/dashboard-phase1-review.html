@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Phase 1 — consistency & infoviz review · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   TOKENS — lifted from the live theme on 7 Nov 2026:
+     bristlenose/theme/tokens.css · tokens-typography.css ·
+     colors/palette-default.css · colors/palette-edo.css
+   (space-xs/sm changed since the July gallery: .25→.15rem, .5→.35rem; real
+    --bn-selection-* now exist. Refreshed here.)
+   ========================================================================= */
+:root{
+  color-scheme: light dark;
+  --bn-font-body:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+  --bn-font-mono:ui-monospace,Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+
+  --bn-text-micro:.6rem;--bn-text-badge:.72rem;--bn-text-caption:.75rem;--bn-text-label:.8125rem;
+  --bn-text-body:.9375rem;--bn-text-heading:1.125rem;--bn-text-title:1.375rem;--bn-text-display:1.75rem;
+  --bn-text-display-lh:1.2;
+
+  --bn-weight-light:370;--bn-weight-normal:420;--bn-weight-emphasis:490;--bn-weight-starred:520;--bn-weight-strong:700;
+  --bn-weight-mono:400;--bn-weight-mono-tag:460;
+
+  --bn-space-xs:.15rem;--bn-space-sm:.35rem;--bn-space-md:.75rem;--bn-space-lg:1.5rem;--bn-space-xl:2rem;--bn-space-2xl:3rem;
+  --bn-radius-sm:3px;--bn-radius-md:6px;--bn-radius-lg:8px;--bn-radius-pill:999px;
+  --bn-transition-fast:.15s ease;
+
+  --bn-colour-bg:light-dark(#ffffff,#111111);
+  --bn-colour-text:light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted:light-dark(#6b7280,#9ca3af);
+  --bn-colour-border:light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent:light-dark(#007aff,#0a84ff);
+  --bn-colour-hover:light-dark(#e8f0fe,#1e293b);
+  --bn-colour-quote-bg:light-dark(#f9fafb,#1a1a1a);
+  --bn-colour-badge-bg:light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text:light-dark(#374151,#d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db,#3a3a3a);
+  --bn-selection-bg:light-dark(#eef4fc,#16324f);
+  --bn-selection-border:light-dark(#007aff,#0a84ff);
+  --bn-coverage-report:light-dark(#93b4f4,#4a7ecf);
+  --bn-coverage-moderator:light-dark(#d97706,#fbbf24);
+  --bn-coverage-omitted:light-dark(#d1d5db,#4b5563);
+  --bn-colour-shadow:light-dark(rgba(0,0,0,.1),rgba(0,0,0,.4));
+
+  /* sentiment — shared across palettes (tokens.css) */
+  --bn-sentiment-frustration:light-dark(#ea580c,#fb923c);--bn-sentiment-frustration-bg:light-dark(#fff7ed,#2d1d0e);
+  --bn-sentiment-confusion:light-dark(#dc2626,#f87171);--bn-sentiment-confusion-bg:light-dark(#fef2f2,#2d1515);
+  --bn-sentiment-doubt:light-dark(#7c3aed,#a78bfa);--bn-sentiment-doubt-bg:light-dark(#f5f3ff,#1e1533);
+  --bn-sentiment-surprise:light-dark(#d97706,#fbbf24);--bn-sentiment-surprise-bg:light-dark(#fffbeb,#2d2305);
+  --bn-sentiment-satisfaction:light-dark(#16a34a,#4ade80);--bn-sentiment-satisfaction-bg:light-dark(#f0fdf4,#0f2918);
+  --bn-sentiment-delight:light-dark(#059669,#34d399);--bn-sentiment-delight-bg:light-dark(#ecfdf5,#0d261c);
+  --bn-sentiment-confidence:light-dark(#2563eb,#60a5fa);--bn-sentiment-confidence-bg:light-dark(#eff6ff,#111d2e);
+}
+[data-color-theme="edo"]{
+  --bn-colour-bg:light-dark(#fdfbf7,#1a1816);
+  --bn-colour-text:light-dark(#1b2230,#e8e3d6);
+  --bn-colour-muted:light-dark(#4a698a,#7ba8a0);
+  --bn-colour-border:light-dark(#d4c9a8,#2d2820);
+  --bn-colour-accent:light-dark(#0f5c9e,#4d9fe0);
+  --bn-colour-hover:light-dark(#ede5d1,#252118);
+  --bn-colour-quote-bg:light-dark(#f0e9d8,#211e18);
+  --bn-colour-badge-bg:light-dark(#e8dfc9,#2d2820);
+  --bn-colour-badge-text:light-dark(#2d3654,#c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91,#4a4030);
+  --bn-selection-bg:light-dark(#ede5d1,#252118);
+  --bn-selection-border:light-dark(#0f5c9e,#4d9fe0);
+  --bn-coverage-report:light-dark(#5a7d9b,#4a6a80);
+  --bn-coverage-moderator:light-dark(#c4a96a,#a08848);
+  --bn-coverage-omitted:light-dark(#d4c9a8,#3d3830);
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+body{background:var(--bn-colour-bg);color:var(--bn-colour-text);font-family:var(--bn-font-body);
+  margin:0;padding:32px;line-height:1.5;-webkit-font-smoothing:antialiased;font-weight:var(--bn-weight-normal);}
+.wrap{max-width:1300px;margin:0 auto;}
+
+/* ============================================================================
+   REAL COMPONENT CSS — verbatim from bristlenose/theme/organisms/global-nav.css
+   and coverage.css (7 Nov 2026). The dashboard is drawn by these classes.
+   ========================================================================= */
+.bn-project-stats{display:flex;flex-wrap:wrap;gap:var(--bn-space-md);}      /* SHIPPED: ragged-right */
+.bn-project-stat{display:flex;flex-direction:column;align-items:center;
+  padding:var(--bn-space-md) var(--bn-space-lg);border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md);min-width:5.5rem;cursor:pointer;
+  transition:background-color .15s ease;text-decoration:none;color:inherit;}
+.bn-project-stat:hover{background-color:var(--bn-colour-hover);}
+.bn-project-stat-value{font-size:var(--bn-text-display);font-weight:var(--bn-weight-normal);
+  color:var(--bn-colour-text);line-height:var(--bn-text-display-lh);}
+.bn-project-stat-label{font-size:var(--bn-text-label);color:var(--bn-colour-text);margin-top:.15rem;text-align:center;}
+.bn-project-stat--pair{flex-direction:row;padding:0;gap:0;cursor:default;}
+.bn-project-stat--pair:hover{background-color:transparent;}
+.bn-project-stat--pair-half{display:flex;flex-direction:column;align-items:center;
+  padding:var(--bn-space-md) var(--bn-space-lg);cursor:pointer;transition:background-color .15s ease;
+  border-radius:var(--bn-radius-md);text-decoration:none;color:inherit;}
+.bn-project-stat--pair-half:hover{background-color:var(--bn-colour-hover);}
+
+.bn-featured-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--bn-space-md);}  /* SHIPPED: 3-up (5 at ≥1400px) */
+.bn-featured-quote{border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-lg);
+  padding:var(--bn-space-md) var(--bn-space-lg);min-width:0;overflow:hidden;display:flex;
+  flex-direction:column;cursor:pointer;transition:background-color .15s ease;}
+.bn-featured-quote:hover{background-color:var(--bn-colour-hover);}
+.bn-featured-quote .context{display:block;font-size:var(--bn-text-label);color:var(--bn-colour-muted);margin-bottom:var(--bn-space-xs);}
+.bn-featured-quote .quote-text{font-size:var(--bn-text-label);line-height:1.55;flex:1;}
+.bn-featured-footer{display:flex;align-items:center;gap:1rem;margin-top:var(--bn-space-sm);
+  font-size:var(--bn-text-label);color:var(--bn-colour-muted);flex-wrap:wrap;}
+.bn-featured-footer .timecode{color:var(--bn-colour-accent);font-family:var(--bn-font-mono);}
+.bn-featured-footer a.badge{text-decoration:none;color:var(--bn-colour-badge-text);}
+
+.bn-dashboard-pane--pair{display:flex;gap:0;padding:0;}
+.bn-dashboard-nav ul{list-style:none;padding:0;margin:0;}
+.bn-dashboard-nav li{margin:var(--bn-space-xs) 0;font-size:var(--bn-text-label);}
+.bn-dashboard-nav a{color:var(--bn-colour-accent);text-decoration:none;}
+.bn-dashboard-nav a:hover{text-decoration:underline;}
+
+.bn-coverage-box h3{margin:0 0 var(--bn-space-md);font-size:var(--bn-text-heading);font-weight:var(--bn-weight-emphasis);}
+.bn-coverage-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:var(--bn-space-md);}
+.bn-coverage-bar-segment--report{background:var(--bn-coverage-report);}
+.bn-coverage-bar-segment--moderator{background:var(--bn-coverage-moderator);}
+.bn-coverage-bar-segment--omitted{background:var(--bn-coverage-omitted);}
+.bn-coverage-legend{display:flex;gap:var(--bn-space-lg);flex-wrap:wrap;font-size:var(--bn-text-label);color:var(--bn-colour-muted);align-items:center;}
+.bn-coverage-legend-item{display:flex;align-items:center;gap:var(--bn-space-sm);}
+.bn-coverage-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.bn-coverage-legend-dot--report{background:var(--bn-coverage-report);}
+.bn-coverage-legend-dot--moderator{background:var(--bn-coverage-moderator);}
+.bn-coverage-legend-dot--omitted{background:var(--bn-coverage-omitted);}
+.bn-coverage-legend-value{font-weight:var(--bn-weight-emphasis);color:var(--bn-colour-text);}
+.bn-coverage-box details{margin-top:var(--bn-space-md);}
+.bn-coverage-box details summary{cursor:pointer;font-size:var(--bn-text-label);color:var(--bn-colour-accent);
+  list-style:none;display:flex;align-items:center;}
+.bn-coverage-box details summary::-webkit-details-marker{display:none;}
+.bn-coverage-box details summary .bn-icon{margin-inline-end:.25em;transition:transform var(--bn-transition-fast);}
+.bn-coverage-box details[open] summary .bn-icon{transform:rotate(90deg);}
+
+/* the real .badge atom */
+.badge{display:inline-block;font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);
+  font-weight:var(--bn-weight-mono-tag);padding:var(--bn-space-xs) .45rem;border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text);line-height:1.3;}
+.badge-satisfaction{background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction);}
+.badge-frustration{background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration);}
+.badge-confusion{background:var(--bn-sentiment-confusion-bg);color:var(--bn-sentiment-confusion);}
+.badge-confidence{background:var(--bn-sentiment-confidence-bg);color:var(--bn-sentiment-confidence);}
+.badge-surprise{background:var(--bn-sentiment-surprise-bg);color:var(--bn-sentiment-surprise);}
+
+/* ── compact sessions table (shipped shape) ── */
+.bn-sessions{width:100%;border-collapse:collapse;font-size:var(--bn-text-label);}
+.bn-sessions th{text-align:left;font-weight:var(--bn-weight-emphasis);color:var(--bn-colour-muted);
+  font-size:var(--bn-text-caption);padding:.15rem .5rem .15rem 0;}
+.bn-sessions td{padding:.2rem .5rem .2rem 0;color:var(--bn-colour-text);white-space:nowrap;border-bottom:1px solid var(--bn-colour-border);}
+.bn-sessions td.mono{font-family:var(--bn-font-mono);color:var(--bn-colour-muted);}
+
+/* ============================================================================
+   PHASE 1 ADDITIONS — the proposed "great versions". Each is a change to the
+   CONTAINER or the card, never a new token.
+   ========================================================================= */
+/* A · Study at a glance — justified grid instead of flex-wrap */
+.bn-project-stats--justified{display:grid;grid-template-columns:repeat(var(--units,8),minmax(0,1fr));
+  gap:var(--bn-space-md);flex-wrap:unset;}
+.bn-project-stats--justified .bn-project-stat--pair{grid-column:span 2;}
+/* the number-altitude variant: every number gets equal air; pairs still span 2 */
+/* B · Key quotes — line-clamp bounds the card height (the pre-TF stopgap) */
+.quote-text--clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;}
+.quote-text--c3{-webkit-line-clamp:3;}
+.quote-text--c4{-webkit-line-clamp:4;}
+/* C · Sections | Themes — proportional, equal-length columns (CSS multicol
+   stands in for the shipped largest-remainder JS allocation) */
+.st{display:flex;gap:var(--bn-space-2xl);align-items:flex-start;}
+.st-pane h3{font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);margin:0 0 var(--bn-space-sm);}
+.st-cols{column-gap:var(--bn-space-lg);}
+.st-cols--3{column-count:3;}
+.st-cols--2{column-count:2;}
+.st-cols a{display:block;color:var(--bn-colour-accent);text-decoration:none;font-size:var(--bn-text-label);
+  margin:var(--bn-space-xs) 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;break-inside:avoid;max-width:180px;}
+.st-cols a:hover{text-decoration:underline;}
+
+/* ============================================================================
+   MOCKUP CHROME — not the product. Walled off from the artefact.
+   ========================================================================= */
+h1.page{font-size:var(--bn-text-title);font-weight:var(--bn-weight-strong);margin:0 0 4px;}
+.lede{color:var(--bn-colour-muted);font-size:var(--bn-text-label);max-width:76ch;margin:0 0 18px;}
+.lede b{color:var(--bn-colour-text);font-weight:var(--bn-weight-emphasis);}
+.toolbar{display:flex;gap:12px;margin:0 0 20px;flex-wrap:wrap;align-items:center;}
+.seg{display:inline-flex;border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-md);overflow:hidden;}
+.seg button{font:inherit;font-size:var(--bn-text-caption);padding:.3rem .7rem;border:0;background:var(--bn-colour-bg);color:var(--bn-colour-text);cursor:pointer;}
+.seg button+button{border-left:1px solid var(--bn-colour-border);}
+.seg button.on{background:var(--bn-colour-accent);color:#fff;}
+.seg .lbl{font-size:var(--bn-text-micro);font-family:var(--bn-font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--bn-colour-muted);padding:.3rem .5rem;align-self:center;}
+.key{display:flex;gap:28px;font-size:var(--bn-text-caption);color:var(--bn-colour-muted);margin:0 0 24px;flex-wrap:wrap;align-items:center;}
+.key .sw{display:inline-block;width:34px;height:12px;border-radius:2px;margin-right:7px;vertical-align:middle;}
+.key .sw--art{background:var(--bn-colour-bg);border:1px solid var(--bn-colour-border);}
+.key .sw--cmt{border:4px solid transparent;border-left:3px solid var(--bn-colour-accent);height:14px;width:30px;
+  background:linear-gradient(var(--bn-colour-bg),var(--bn-colour-bg)) padding-box,
+    repeating-linear-gradient(135deg,color-mix(in oklab,var(--bn-colour-accent) 22%,transparent) 0 5px,transparent 5px 10px) border-box;}
+.key b{color:var(--bn-colour-text);font-weight:var(--bn-weight-emphasis);}
+
+/* artefact frame = the real pixels, clean */
+.art{border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-lg);overflow:hidden;
+  margin:0 0 44px;box-shadow:0 1px 4px var(--bn-colour-shadow);}
+.art-bar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:var(--bn-colour-badge-bg);
+  border-bottom:1px solid var(--bn-colour-border);font-size:var(--bn-text-caption);
+  color:var(--bn-colour-muted);font-family:var(--bn-font-mono);}
+.art-bar .d{width:10px;height:10px;border-radius:50%;background:var(--bn-colour-border-hover);}
+.art-body{padding:28px 32px;background:var(--bn-colour-bg);}
+/* dashboard brick rhythm inside the artefact */
+.dash-brick{margin-bottom:var(--bn-space-2xl);}
+.dash-brick:last-child{margin-bottom:0;}
+.w-head{font-size:var(--bn-text-badge);text-transform:uppercase;letter-spacing:.04em;
+  color:var(--bn-colour-muted);font-weight:var(--bn-weight-normal);margin:0 0 var(--bn-space-md);}
+
+/* commentary = deliberately-not-the-product: hatched edge band + mono label */
+.cmt{border:7px solid transparent;border-left:3px solid var(--bn-colour-accent);border-radius:var(--bn-radius-md);
+  background:linear-gradient(var(--bn-colour-bg),var(--bn-colour-bg)) padding-box,
+    repeating-linear-gradient(135deg,color-mix(in oklab,var(--bn-colour-accent) 20%,transparent) 0 5px,transparent 5px 10px) border-box;
+  padding:16px 22px 20px;margin:0 0 28px;}
+.cmt-label{font-family:var(--bn-font-mono);font-size:var(--bn-text-micro);text-transform:uppercase;
+  letter-spacing:.08em;color:var(--bn-colour-accent);font-weight:var(--bn-weight-mono-tag);margin:0 0 4px;}
+.cmt h3{font-size:var(--bn-text-heading);font-weight:var(--bn-weight-emphasis);margin:0 0 8px;}
+.cmt p{font-size:var(--bn-text-label);margin:0 0 10px;max-width:74ch;}
+.cmt p.q{color:var(--bn-colour-muted);}
+.cmt ul{margin:0 0 10px;padding-left:1.1rem;font-size:var(--bn-text-label);}
+.cmt li{margin:.2rem 0;max-width:72ch;}
+.tag{display:inline-block;font-family:var(--bn-font-mono);font-size:var(--bn-text-micro);text-transform:uppercase;
+  letter-spacing:.05em;padding:1px 6px;border-radius:var(--bn-radius-sm);margin-right:7px;font-weight:var(--bn-weight-mono-tag);}
+.tag--var{background:var(--bn-sentiment-confidence-bg);color:var(--bn-sentiment-confidence);}
+.tag--iss{background:var(--bn-sentiment-frustration-bg);color:var(--bn-sentiment-frustration);}
+.tag--opt{background:var(--bn-sentiment-doubt-bg);color:var(--bn-sentiment-doubt);}
+.tag--ok{background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction);}
+
+/* before/after mini-frames inside commentary — label the frame, not the UI */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 6px;}
+.ba--wide{grid-template-columns:1fr;}
+.fr{border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-md);overflow:hidden;background:var(--bn-colour-bg);}
+.fr-cap{font-family:var(--bn-font-mono);font-size:var(--bn-text-micro);text-transform:uppercase;letter-spacing:.06em;
+  color:var(--bn-colour-muted);padding:5px 10px;border-bottom:1px solid var(--bn-colour-border);background:var(--bn-colour-quote-bg);}
+.fr-body{padding:16px;}
+@media(max-width:820px){.ba{grid-template-columns:1fr;}}
+
+.sec-rule{border:0;border-top:1px solid var(--bn-colour-border);margin:40px 0 28px;}
+.sec-h{font-size:var(--bn-text-heading);font-weight:var(--bn-weight-emphasis);margin:0 0 4px;}
+.sec-n{font-family:var(--bn-font-mono);color:var(--bn-colour-accent);margin-right:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="page">Dashboard — Phase 1 review</h1>
+  <p class="lede"><b>Great versions of what we ship today.</b> Visual + infoviz + design-system consistency, no new
+     capability and no new data. Grounded in the <em>current</em> shipped dashboard (theme read 7 Nov 2026), so the
+     "before" frames are real, not remembered — coverage's round dots + disclosure chevron and the 3→5 key-quote
+     reflow <b>already shipped</b>, so they're shown as the benchmark, not proposed again.</p>
+
+  <div class="toolbar">
+    <span class="seg" role="group" aria-label="Palette">
+      <span class="lbl">Palette</span>
+      <button class="on" data-pal="default" onclick="setPal('default',this)">Default</button>
+      <button data-pal="edo" onclick="setPal('edo',this)">Edo</button>
+    </span>
+    <span class="seg" role="group" aria-label="Appearance">
+      <span class="lbl">Mode</span>
+      <button class="on" data-mode="light" onclick="setMode('light',this)">Light</button>
+      <button data-mode="dark" onclick="setMode('dark',this)">Dark</button>
+      <button data-mode="auto" onclick="setMode('auto',this)">Auto</button>
+    </span>
+  </div>
+
+  <div class="key">
+    <span><span class="sw sw--art"></span><b>Artefact</b> — the real pixels, what ships</span>
+    <span><span class="sw sw--cmt"></span><b>Commentary</b> — variations · options · issues (not the product)</span>
+    <span><span class="tag tag--var">var</span>variation &nbsp; <span class="tag tag--opt">opt</span>option &nbsp; <span class="tag tag--iss">issue</span> &nbsp; <span class="tag tag--ok">shipped</span></span>
+  </div>
+
+  <!-- ══════════════════ ARTEFACT ══════════════════ -->
+  <div class="art">
+    <div class="art-bar"><span class="d"></span><span class="d"></span><span class="d"></span>
+      &nbsp;IKEA usability · Project · Phase 1 dashboard · default / light · ~1180px content</div>
+    <div class="art-body">
+
+      <!-- 1 · Study at a glance (JUSTIFIED grid) -->
+      <section class="dash-brick">
+        <div class="w-head">Study at a glance</div>
+        <div class="bn-project-stats bn-project-stats--justified" style="--units:8">
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">8</span><span class="bn-project-stat-label">sessions</span></a>
+          <div class="bn-project-stat bn-project-stat--pair"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">2h 14m</span><span class="bn-project-stat-label">of sessions</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">104,832</span><span class="bn-project-stat-label">words</span></a></div>
+          <div class="bn-project-stat bn-project-stat--pair"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">353</span><span class="bn-project-stat-label">quotes</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">11</span><span class="bn-project-stat-label">themes</span></a></div>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">16</span><span class="bn-project-stat-label">sections</span></a>
+          <div class="bn-project-stat bn-project-stat--pair"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">240</span><span class="bn-project-stat-label">AI tags</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">37</span><span class="bn-project-stat-label">user tags</span></a></div>
+        </div>
+      </section>
+
+      <!-- 2 · Sessions (compact, shipped) -->
+      <section class="dash-brick">
+        <div class="w-head">Sessions</div>
+        <table class="bn-sessions">
+          <thead><tr><th>ID</th><th>Participant</th><th>Start</th><th>Duration</th><th>Interviews</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">s1</td><td>P1 · Parent</td><td class="mono">09:12</td><td class="mono">28m</td><td>Zoom</td></tr>
+            <tr><td class="mono">s2</td><td>P2 · Student</td><td class="mono">11:40</td><td class="mono">19m</td><td>Teams</td></tr>
+            <tr><td class="mono">s3</td><td>P3 · Designer</td><td class="mono">14:05</td><td class="mono">24m</td><td>Meet</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3 · Key quotes (3-up, CLAMPED to 3 lines) -->
+      <section class="dash-brick">
+        <div class="w-head">Key quotes</div>
+        <div class="bn-featured-row">
+          <div class="bn-featured-quote" role="button" tabindex="0"><span class="context">[On checkout]</span><span class="quote-text quote-text--clamp quote-text--c3">“Honestly the checkout was the smoothest part of the whole thing — I’d braced myself for another fiddly address form but it just remembered everything and I was done before I expected to be, which almost never happens to me online.”</span><div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div></div>
+          <div class="bn-featured-quote" role="button" tabindex="0"><span class="context">[Bed in stock]</span><span class="quote-text quote-text--clamp quote-text--c3">“I genuinely couldn’t tell which of the beds was actually available to buy today versus just shown for ideas, and after clicking in and out of three of them I gave up and searched Google instead to see if anyone had it in stock.”</span><div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div></div>
+          <div class="bn-featured-quote" role="button" tabindex="0"><span class="context">[Delivery]</span><span class="quote-text quote-text--clamp quote-text--c3">“Wait — is ‘aftercare’ the delivery thing, or is that the returns thing? Because I’ve seen that word twice now on different pages and I’m not totally sure they mean the same bit of the process.”</span><div class="bn-featured-footer"><span class="timecode">[07:05]</span><a class="badge" href="#">P7</a><span class="badge badge-confusion">confusion</span></div></div>
+        </div>
+      </section>
+
+      <!-- 4 · Sections | Themes (PROPORTIONAL equal-length columns) -->
+      <section class="dash-brick">
+        <div class="w-head">Sections | Themes</div>
+        <div class="st">
+          <div class="st-pane"><h3>Sections</h3>
+            <div class="st-cols st-cols--3">
+              <a href="#">Beds category</a><a href="#">Checkout</a><a href="#">Search results</a><a href="#">Login &amp; app</a><a href="#">Duvets browsing</a><a href="#">Top navigation</a><a href="#">Product page</a><a href="#">Post-surgery aftercare</a><a href="#">Notifications</a><a href="#">Shopping bag</a><a href="#">Delivery options</a><a href="#">Returns &amp; refunds</a><a href="#">Stock availability</a><a href="#">Room planner</a><a href="#">Click &amp; collect</a><a href="#">Store locator</a>
+            </div>
+          </div>
+          <div class="st-pane"><h3>Themes</h3>
+            <div class="st-cols st-cols--2">
+              <a href="#">Trust &amp; credibility</a><a href="#">Findability</a><a href="#">Delivery clarity</a><a href="#">Cross-device continuity</a><a href="#">Price transparency</a><a href="#">Assembly anxiety</a><a href="#">Stock confidence</a><a href="#">Decision paralysis</a><a href="#">Brand expectations</a><a href="#">Time pressure</a><a href="#">Comparison behaviour</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 · Transcript coverage (already design-system-true — benchmark) -->
+      <section class="dash-brick">
+        <div class="bn-coverage-box">
+          <h3 style="font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis)">Transcript coverage</h3>
+          <div class="bn-coverage-bar"><div class="bn-coverage-bar-segment bn-coverage-bar-segment--report" style="width:68%"></div><div class="bn-coverage-bar-segment bn-coverage-bar-segment--moderator" style="width:14%"></div><div class="bn-coverage-bar-segment bn-coverage-bar-segment--omitted" style="width:18%"></div></div>
+          <div class="bn-coverage-legend"><span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--report"></span><span class="bn-coverage-legend-value">68%</span>&nbsp;In report</span><span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--moderator"></span><span class="bn-coverage-legend-value">14%</span>&nbsp;Moderator</span><span class="bn-coverage-legend-item"><span class="bn-coverage-legend-dot bn-coverage-legend-dot--omitted"></span><span class="bn-coverage-legend-value">18%</span>&nbsp;Omitted</span></div>
+          <details><summary><svg class="bn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>Show omitted quotes</summary></details>
+        </div>
+      </section>
+
+    </div><!-- /art-body -->
+  </div><!-- /art -->
+
+  <!-- ══════════════════ COMMENTARY ══════════════════ -->
+  <hr class="sec-rule">
+  <h2 class="sec-h"><span class="sec-n">A</span>Study at a glance — justify the number row</h2>
+
+  <div class="cmt">
+    <div class="cmt-label">Commentary · the change</div>
+    <p>Shipped is <code>display:flex; flex-wrap:wrap</code> — cards are content-sized and the row ends
+       ragged. Phase 1 switches the container to a <b>justified grid</b>: fixed <code>--bn-space-md</code>
+       gutters, cards flex to fill, flush both edges. Singles span 1 unit, pairs span 2; every card is
+       conditional so the unit count is data-driven (1–8). <b>Card internals are untouched</b> — same
+       28px display number, same label, pairs still share one border.</p>
+    <div class="ba">
+      <div class="fr"><div class="fr-cap">before · shipped (flex-wrap, ragged)</div><div class="fr-body">
+        <div class="bn-project-stats">
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">8</span><span class="bn-project-stat-label">sessions</span></a>
+          <div class="bn-project-stat bn-project-stat--pair"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">2h 14m</span><span class="bn-project-stat-label">of sessions</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">104,832</span><span class="bn-project-stat-label">words</span></a></div>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">353</span><span class="bn-project-stat-label">quotes</span></a>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">16</span><span class="bn-project-stat-label">sections</span></a>
+        </div>
+      </div></div>
+      <div class="fr"><div class="fr-cap">after · Phase 1 (justified grid, flush)</div><div class="fr-body">
+        <div class="bn-project-stats bn-project-stats--justified" style="--units:5">
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">8</span><span class="bn-project-stat-label">sessions</span></a>
+          <div class="bn-project-stat bn-project-stat--pair"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">2h 14m</span><span class="bn-project-stat-label">of sessions</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">104,832</span><span class="bn-project-stat-label">words</span></a></div>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">353</span><span class="bn-project-stat-label">quotes</span></a>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">16</span><span class="bn-project-stat-label">sections</span></a>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="cmt">
+    <div class="cmt-label">Commentary · variation & issue</div>
+    <p><span class="tag tag--var">var</span><b>Two honest altitudes.</b> "How many units?" has two answers. The grid above is the
+       <b>number altitude</b> — singles 1, pairs 2 — so every number gets equal air. The alternative is the
+       <b>card altitude</b>: five equal cards, the pair subdividing <em>inside</em> its card.</p>
+    <div class="ba">
+      <div class="fr"><div class="fr-cap">number altitude (pairs span 2)</div><div class="fr-body">
+        <div class="bn-project-stats bn-project-stats--justified" style="--units:6">
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">8</span><span class="bn-project-stat-label">sessions</span></a>
+          <div class="bn-project-stat bn-project-stat--pair"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">104,832</span><span class="bn-project-stat-label">words</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value">353</span><span class="bn-project-stat-label">quotes</span></a></div>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">16</span><span class="bn-project-stat-label">sections</span></a>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">11</span><span class="bn-project-stat-label">themes</span></a>
+        </div>
+      </div></div>
+      <div class="fr"><div class="fr-cap">card altitude (5 equal cards)</div><div class="fr-body">
+        <div class="bn-project-stats bn-project-stats--justified" style="--units:4">
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">8</span><span class="bn-project-stat-label">sessions</span></a>
+          <div class="bn-project-stat bn-project-stat--pair" style="grid-column:span 1"><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value" style="font-size:var(--bn-text-title)">104,832</span><span class="bn-project-stat-label">words</span></a><a class="bn-project-stat--pair-half" href="#"><span class="bn-project-stat-value" style="font-size:var(--bn-text-title)">353</span><span class="bn-project-stat-label">quotes</span></a></div>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">16</span><span class="bn-project-stat-label">sections</span></a>
+          <a class="bn-project-stat" href="#"><span class="bn-project-stat-value">11</span><span class="bn-project-stat-label">themes</span></a>
+        </div>
+      </div></div>
+    </div>
+    <p><span class="tag tag--iss">issue</span>The card altitude puts the <b>widest number</b> (<code>104,832</code>) in the
+       <b>narrowest slot</b> — a pair-half is ~half a single's box — so it either shrinks (shown here at title size) or
+       crowds. The number altitude avoids that but gives two card sizes. <b>Recommendation: number altitude</b> (the
+       artefact above), card altitude offered only if you want a strict equal-card rhythm.</p>
+  </div>
+
+  <hr class="sec-rule">
+  <h2 class="sec-h"><span class="sec-n">B</span>Key quotes — bound the card, honestly</h2>
+
+  <div class="cmt">
+    <div class="cmt-label">Commentary · the change</div>
+    <p>The grid is <b>already right</b> (<span class="tag tag--ok">shipped</span> 3-up, 5-up at ≥1400px — count always matches
+       columns, no orphan). The gap is <b>height</b>: BN's quotes run 4–8× longer than a human would pull (IKEA median
+       79 words), so an unbounded card becomes a wall of text and the first-glance "oh, that moment" is lost. Phase 1
+       adds a <b>line-clamp</b> — presentation-only, the lens keeps the full quote.</p>
+    <div class="ba">
+      <div class="fr"><div class="fr-cap">before · shipped (unbounded)</div><div class="fr-body">
+        <div class="bn-featured-quote" style="max-width:320px"><span class="context">[On checkout]</span><span class="quote-text">“Honestly the checkout was the smoothest part of the whole thing — I’d braced myself for another fiddly address form but it just remembered everything and I was done before I expected to be, which almost never happens to me online.”</span><div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div></div>
+      </div></div>
+      <div class="fr"><div class="fr-cap">after · Phase 1 (clamp 3 lines)</div><div class="fr-body">
+        <div class="bn-featured-quote" style="max-width:320px"><span class="context">[On checkout]</span><span class="quote-text quote-text--clamp quote-text--c3">“Honestly the checkout was the smoothest part of the whole thing — I’d braced myself for another fiddly address form but it just remembered everything and I was done before I expected to be, which almost never happens to me online.”</span><div class="bn-featured-footer"><span class="timecode">[04:12]</span><a class="badge" href="#">P4</a><span class="badge badge-satisfaction">satisfaction</span></div></div>
+      </div></div>
+    </div>
+    <p><span class="tag tag--var">var</span><b>Clamp depth: 3 vs 4 lines.</b> Choose at the worst case (HD / 5-up, median-length quote).
+       3 is tighter and more scannable; 4 keeps more context before the cut.</p>
+    <div class="ba">
+      <div class="fr"><div class="fr-cap">clamp 3</div><div class="fr-body">
+        <div class="bn-featured-quote" style="max-width:300px"><span class="context">[Bed in stock]</span><span class="quote-text quote-text--clamp quote-text--c3">“I genuinely couldn’t tell which of the beds was actually available to buy today versus just shown for ideas, and after clicking in and out of three of them I gave up and searched Google instead.”</span><div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div></div>
+      </div></div>
+      <div class="fr"><div class="fr-cap">clamp 4</div><div class="fr-body">
+        <div class="bn-featured-quote" style="max-width:300px"><span class="context">[Bed in stock]</span><span class="quote-text quote-text--clamp quote-text--c4">“I genuinely couldn’t tell which of the beds was actually available to buy today versus just shown for ideas, and after clicking in and out of three of them I gave up and searched Google instead.”</span><div class="bn-featured-footer"><span class="timecode">[11:38]</span><a class="badge" href="#">P2</a><span class="badge badge-frustration">frustration</span></div></div>
+      </div></div>
+    </div>
+    <p><span class="tag tag--iss">issue</span>Clamp cuts the <b>tail</b>, and in think-aloud the payload is usually at the end
+       (“…so I gave up”). It's a <b>knowing pre-TF stopgap</b> — the real fix (an LLM “pull” that elides low-signal
+       clauses to surface cause→feeling→consequence) is <b>Phase 3</b>, post-launch. Don't read the clamp as the answer;
+       read it as “stop the wall of text until the pull ships.”</p>
+  </div>
+
+  <hr class="sec-rule">
+  <h2 class="sec-h"><span class="sec-n">C</span>Sections | Themes — equal-length columns</h2>
+
+  <div class="cmt">
+    <div class="cmt-label">Commentary · the change</div>
+    <p>Shipped is two plain accent-link lists side by side. With real cardinalities they're almost always
+       <b>lopsided</b> (16 sections vs 11 themes, or 25 vs 13), so one column runs long and the other leaves a column of
+       whitespace. Phase 1 splits each pane into <b>multiple ~30-char columns</b>, the column count allocated in
+       proportion to each group's item count (largest-remainder), so the columns come out <b>roughly equal length</b>
+       even when the groups aren't. <span class="tag tag--ok">shipped</span> link styling unchanged — accent, underline on hover.</p>
+    <div class="ba ba--wide">
+      <div class="fr"><div class="fr-cap">before · shipped (two lists, unequal)</div><div class="fr-body">
+        <div class="bn-dashboard-pane--pair" style="gap:var(--bn-space-2xl)">
+          <div class="bn-dashboard-nav"><h3 style="font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);margin:0 0 .35rem">Sections</h3><ul><li><a href="#">Beds category</a></li><li><a href="#">Checkout</a></li><li><a href="#">Search results</a></li><li><a href="#">Login &amp; app</a></li><li><a href="#">Duvets browsing</a></li><li><a href="#">Top navigation</a></li><li><a href="#">Product page</a></li><li><a href="#">Post-surgery aftercare</a></li><li><a href="#">Notifications</a></li><li><a href="#">Shopping bag</a></li><li><a href="#">Delivery options</a></li><li><a href="#">Returns &amp; refunds</a></li></ul></div>
+          <div class="bn-dashboard-nav"><h3 style="font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);margin:0 0 .35rem">Themes</h3><ul><li><a href="#">Trust &amp; credibility</a></li><li><a href="#">Findability</a></li><li><a href="#">Delivery clarity</a></li></ul></div>
+        </div>
+      </div></div>
+      <div class="fr"><div class="fr-cap">after · Phase 1 (proportional, equal-length)</div><div class="fr-body">
+        <div class="st">
+          <div class="st-pane"><h3>Sections</h3><div class="st-cols st-cols--3"><a href="#">Beds category</a><a href="#">Checkout</a><a href="#">Search results</a><a href="#">Login &amp; app</a><a href="#">Duvets browsing</a><a href="#">Top navigation</a><a href="#">Product page</a><a href="#">Post-surgery aftercare</a><a href="#">Notifications</a><a href="#">Shopping bag</a><a href="#">Delivery options</a><a href="#">Returns &amp; refunds</a></div></div>
+          <div class="st-pane"><h3>Themes</h3><div class="st-cols st-cols--2"><a href="#">Trust &amp; credibility</a><a href="#">Findability</a><a href="#">Delivery clarity</a><a href="#">Cross-device continuity</a><a href="#">Price transparency</a><a href="#">Assembly anxiety</a></div></div>
+        </div>
+      </div></div>
+    </div>
+    <p><span class="tag tag--opt">opt</span><b>Uncategorised as a third group.</b> When quotes don't cluster, a third labelled
+       column “Uncategorised” carries them (its own heading, not mixed into Sections). Include when present, omit when
+       empty.</p>
+    <p><span class="tag tag--iss">issue</span>Multicol here is a static stand-in; the shipped mechanism is the
+       largest-remainder JS allocation (so a 25/13 study lands ~4+2 columns, not 3+2). The visual target is “columns of
+       equalish length,” which this frame shows; the exact split is the allocator's job.</p>
+  </div>
+
+  <hr class="sec-rule">
+  <h2 class="sec-h"><span class="sec-n">D</span>Transcript coverage — already there</h2>
+  <div class="cmt">
+    <div class="cmt-label">Commentary · benchmark, no change</div>
+    <p><span class="tag tag--ok">shipped</span>Coverage is <b>already design-system-true</b>: the 8px bar with 4px radius, the
+       round 8px legend dots, and the “Show omitted quotes” <b>disclosure chevron</b> (a Lucide-style chevron that rotates
+       90° on open) all landed since July. <b>No Phase 1 work here</b> — it's the <b>benchmark</b> the stat row, quote
+       cards and nav columns are being brought up to. It re-tones correctly in Edo (flip the palette toggle) because its
+       colours are palette-specific tokens.</p>
+  </div>
+
+  <hr class="sec-rule">
+  <h2 class="sec-h"><span class="sec-n">✎</span>One thing to decide before build</h2>
+  <div class="cmt">
+    <div class="cmt-label">Commentary · scope flag</div>
+    <ul>
+      <li><span class="tag tag--opt">opt</span><b>The scaffolding reframe</b> (bricks carry no chrome; only cards own borders;
+        whole dashboard on a reflowing RAM grid) is in the gallery but is a <b>bigger move</b> than A–C and I've kept it
+        <b>out of this Phase-1 artefact</b> deliberately — it changes the frame, not a widget, and wants its own before/after
+        against the current React dashboard. Say if you want it in Phase 1 or held for Phase 2 with the matrix.</li>
+      <li><span class="tag tag--iss">issue</span><b>Beta freeze.</b> A–C are consistency/visual on shipped surfaces, which beta
+        permits — but they're real SPA work competing with the reliability burn-down. They need your explicit “in scope for
+        the pre-24-Nov window” before I touch the React dashboard; otherwise they're a clean Jan-launch batch.</li>
+      <li><span class="tag tag--var">var</span>Each of A, B, C is <b>independent</b> — you can greenlight the stat grid without the
+        clamp, etc. Smallest-first order if you want to trickle: <b>A (justify) → C (columns) → B (clamp)</b>.</li>
+    </ul>
+  </div>
+
+  <p class="lede" style="margin-top:28px">Open this file at a real width to judge the artefact; drag the window to see the
+     3-up quotes hold. <b>bn-accurate:</b> every token + component class is lifted from the live theme (7 Nov 2026); the
+     only hand-authored CSS is the three Phase-1 container/card changes and this review chrome.</p>
+
+</div>
+
+<script>
+function setPal(p,btn){document.documentElement.setAttribute('data-color-theme',p);
+  [].forEach.call(btn.parentNode.querySelectorAll('[data-pal]'),function(b){b.classList.remove('on');});btn.classList.add('on');}
+function setMode(m,btn){document.documentElement.style.colorScheme=(m==='auto')?'light dark':m;
+  [].forEach.call(btn.parentNode.querySelectorAll('[data-mode]'),function(b){b.classList.remove('on');});btn.classList.add('on');}
+</script>
+</body>
+</html>

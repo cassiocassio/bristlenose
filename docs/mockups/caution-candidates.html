@@ -1,0 +1,481 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Caution candidates</title><style>
+
+
+[data-color-theme="c0"] {
+    --bn-colour-bg: #faf9f8;  /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;  /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #ccc8bb;  /* Sail Parchment — warm border */
+    --bn-colour-accent: #4191e2;  /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #f4f1e9;  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f8f6f2;  /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+    --bn-colour-quote-bg: #f5f3eb;  /* Warm off-white */
+    --bn-colour-paper: #f8f6f2;  /* Washi / Sumi */
+    --bn-colour-sheet: #faf9f8;  /* 1.08:1 / 1.12:1 off the paper */
+    --bn-colour-badge-bg-paper: #f1eee5;  /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #f1eee5;  /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;  /* Court Indigo */
+    --bn-colour-user-tag-bg: #f1eee5;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;  /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;  /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;  /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;  /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;  /* Gold Ochre highlight */
+    --bn-colour-negative: #b5432a;
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+    --bn-glow-colour: rgba(70, 150, 231, 0.08);
+    --bn-glow-colour-strong: rgba(70, 150, 231, 0.15);
+    --bn-minimap-quote: #ccc8bb;
+    --bn-minimap-heading: #938b80;
+    --bn-minimap-viewport-bg: rgba(70, 150, 231, 0.12);
+    --bn-minimap-viewport-border: rgba(70, 150, 231, 0.25);
+    --bn-coverage-report: #8bb9e0;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #ccc8bb;
+    --bn-group-none: #f5f3eb;
+    --bn-bar-none: #bcb7aa;
+    --bn-colour-border-hover: #b0aca1;
+    --bn-colour-icon-idle: #b0aca1;
+    --bn-colour-starred: #938b80;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(70, 150, 231, 0.15);
+    --bn-hover-bg: rgba(30,20,10,0.05);
+    --bn-hover-bg-subtle: rgba(30,20,10,0.03);
+    --bn-selection-bg: #dfe8f2;
+    --bn-selection-border: #4696e7;
+    --bn-selection-bg-inactive: #f2f0ea;
+    --bn-selection-border-inactive: #b0aca1;
+    --bn-nav-selection-bg: #f1eee5;
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+    --bn-colour-suggestion: #4696e7;
+    --bn-colour-suggestion-bg: #dfe8f2;
+    --bn-colour-cited-bg: #f5ecd0;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="c0"] {
+        --bn-colour-bg:                 light-dark(#faf9f8, #1a1816);
+        --bn-colour-text:               light-dark(#1b2230, #e6e3dd);
+        --bn-colour-muted:              light-dark(#4a698a, #8da39f);
+        --bn-colour-border:             light-dark(#ccc8bb, #2d2820);
+        --bn-colour-accent:             light-dark(#4191e2, #4d9fe0);
+        --bn-colour-hover:              light-dark(#f4f1e9, #252118);
+        --bn-colour-inspector-bg:       light-dark(#f8f6f2, #211e18);
+        --bn-colour-quote-bg:           light-dark(#f5f3eb, #211e18);
+        --bn-colour-paper:              light-dark(#f8f6f2, #1a1816);
+        --bn-colour-sheet:              light-dark(#faf9f8, #26221b);
+        --bn-colour-badge-bg-paper:     light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-bg:           light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-text:         light-dark(#2d3654, #beb8a9);
+        --bn-colour-user-tag-bg:        light-dark(#f1eee5, #2d2820);
+        --bn-colour-user-tag-text:      light-dark(#3d4a5c, #beb8a9);
+        --bn-colour-crop-bg:            light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:        light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:         light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:          light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:          light-dark(#c4a96a, #6b5528);
+        --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
+        --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:            light-dark(#a8842c, #c4a96a);
+        --bn-glow-colour:               light-dark(rgba(70, 150, 231, 0.08), rgba(77, 159, 224, 0.1));
+        --bn-glow-colour-strong:        light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.18));
+        --bn-minimap-quote:             light-dark(#ccc8bb, #2d2820);
+        --bn-minimap-heading:           light-dark(#938b80, #4a4030);
+        --bn-minimap-viewport-bg:       light-dark(rgba(70, 150, 231, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border:   light-dark(rgba(70, 150, 231, 0.25), rgba(77, 159, 224, 0.3));
+        --bn-coverage-report:           light-dark(#8bb9e0, #4a6a80);
+        --bn-coverage-moderator:        light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:          light-dark(#ccc8bb, #3d3830);
+        --bn-group-none:                light-dark(#f5f3eb, #211e18);
+        --bn-bar-none:                  light-dark(#bcb7aa, #4a4030);
+        --bn-colour-border-hover:       light-dark(#b0aca1, #4a4030);
+        --bn-colour-icon-idle:          light-dark(#b0aca1, #4a4030);
+        --bn-colour-starred:            light-dark(#938b80, #b8a880);
+        --bn-colour-shadow:             light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-hover-bg:                  light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+        --bn-selection-bg:              light-dark(#dfe8f2, #1e2830);
+        --bn-selection-border:          light-dark(#4696e7, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#f2f0ea, #26231d);
+        --bn-selection-border-inactive: light-dark(#b0aca1, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#f1eee5, #2d2922);
+        --bn-colour-suggestion:         light-dark(#4696e7, #4d9fe0);
+        --bn-colour-suggestion-bg:      light-dark(#dfe8f2, #1e2830);
+        --bn-colour-cited-bg:           light-dark(#f5ecd0, #3b3010);
+    }
+}
+
+
+
+[data-color-theme="c1"] {
+    --bn-colour-bg: #faf9f8;  /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;  /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #ccc8bb;  /* Sail Parchment — warm border */
+    --bn-colour-accent: #4191e2;  /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #f4f1e9;  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f8f6f2;  /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+    --bn-colour-quote-bg: #f5f3eb;  /* Warm off-white */
+    --bn-colour-paper: #f8f6f2;  /* Washi / Sumi */
+    --bn-colour-sheet: #faf9f8;  /* 1.08:1 / 1.12:1 off the paper */
+    --bn-colour-badge-bg-paper: #f1eee5;  /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #f1eee5;  /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;  /* Court Indigo */
+    --bn-colour-user-tag-bg: #f1eee5;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #fbebc5;  /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;  /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;  /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;  /* Pine Green tint */
+    --bn-colour-highlight: #fcce73;  /* Gold Ochre highlight */
+    --bn-colour-negative: #b5432a;
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #e2a50a;
+    --bn-glow-colour: rgba(70, 150, 231, 0.08);
+    --bn-glow-colour-strong: rgba(70, 150, 231, 0.15);
+    --bn-minimap-quote: #ccc8bb;
+    --bn-minimap-heading: #938b80;
+    --bn-minimap-viewport-bg: rgba(70, 150, 231, 0.12);
+    --bn-minimap-viewport-border: rgba(70, 150, 231, 0.25);
+    --bn-coverage-report: #8bb9e0;
+    --bn-coverage-moderator: #fcce73;
+    --bn-coverage-omitted: #ccc8bb;
+    --bn-group-none: #f5f3eb;
+    --bn-bar-none: #bcb7aa;
+    --bn-colour-border-hover: #b0aca1;
+    --bn-colour-icon-idle: #b0aca1;
+    --bn-colour-starred: #938b80;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(70, 150, 231, 0.15);
+    --bn-hover-bg: rgba(30,20,10,0.05);
+    --bn-hover-bg-subtle: rgba(30,20,10,0.03);
+    --bn-selection-bg: #dfe8f2;
+    --bn-selection-border: #4696e7;
+    --bn-selection-bg-inactive: #f2f0ea;
+    --bn-selection-border-inactive: #b0aca1;
+    --bn-nav-selection-bg: #f1eee5;
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+    --bn-colour-suggestion: #4696e7;
+    --bn-colour-suggestion-bg: #dfe8f2;
+    --bn-colour-cited-bg: #fbebc5;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="c1"] {
+        --bn-colour-bg:                 light-dark(#faf9f8, #1a1816);
+        --bn-colour-text:               light-dark(#1b2230, #e6e3dd);
+        --bn-colour-muted:              light-dark(#4a698a, #8da39f);
+        --bn-colour-border:             light-dark(#ccc8bb, #2d2820);
+        --bn-colour-accent:             light-dark(#4191e2, #4d9fe0);
+        --bn-colour-hover:              light-dark(#f4f1e9, #252118);
+        --bn-colour-inspector-bg:       light-dark(#f8f6f2, #211e18);
+        --bn-colour-quote-bg:           light-dark(#f5f3eb, #211e18);
+        --bn-colour-paper:              light-dark(#f8f6f2, #1a1816);
+        --bn-colour-sheet:              light-dark(#faf9f8, #26221b);
+        --bn-colour-badge-bg-paper:     light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-bg:           light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-text:         light-dark(#2d3654, #beb8a9);
+        --bn-colour-user-tag-bg:        light-dark(#f1eee5, #2d2820);
+        --bn-colour-user-tag-text:      light-dark(#3d4a5c, #beb8a9);
+        --bn-colour-crop-bg:            light-dark(#fbebc5, #322401);
+        --bn-crop-handle-colour:        light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:         light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:          light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:          light-dark(#fcce73, #8d6605);
+        --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
+        --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:            light-dark(#e2a50a, #f0bb3b);
+        --bn-glow-colour:               light-dark(rgba(70, 150, 231, 0.08), rgba(77, 159, 224, 0.1));
+        --bn-glow-colour-strong:        light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.18));
+        --bn-minimap-quote:             light-dark(#ccc8bb, #2d2820);
+        --bn-minimap-heading:           light-dark(#938b80, #4a4030);
+        --bn-minimap-viewport-bg:       light-dark(rgba(70, 150, 231, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border:   light-dark(rgba(70, 150, 231, 0.25), rgba(77, 159, 224, 0.3));
+        --bn-coverage-report:           light-dark(#8bb9e0, #4a6a80);
+        --bn-coverage-moderator:        light-dark(#fcce73, #c79a17);
+        --bn-coverage-omitted:          light-dark(#ccc8bb, #3d3830);
+        --bn-group-none:                light-dark(#f5f3eb, #211e18);
+        --bn-bar-none:                  light-dark(#bcb7aa, #4a4030);
+        --bn-colour-border-hover:       light-dark(#b0aca1, #4a4030);
+        --bn-colour-icon-idle:          light-dark(#b0aca1, #4a4030);
+        --bn-colour-starred:            light-dark(#938b80, #b8a880);
+        --bn-colour-shadow:             light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-hover-bg:                  light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+        --bn-selection-bg:              light-dark(#dfe8f2, #1e2830);
+        --bn-selection-border:          light-dark(#4696e7, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#f2f0ea, #26231d);
+        --bn-selection-border-inactive: light-dark(#b0aca1, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#f1eee5, #2d2922);
+        --bn-colour-suggestion:         light-dark(#4696e7, #4d9fe0);
+        --bn-colour-suggestion-bg:      light-dark(#dfe8f2, #1e2830);
+        --bn-colour-cited-bg:           light-dark(#fbebc5, #3f2f00);
+    }
+}
+
+
+
+[data-color-theme="c2"] {
+    --bn-colour-bg: #faf9f8;  /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;  /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #ccc8bb;  /* Sail Parchment — warm border */
+    --bn-colour-accent: #4191e2;  /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #f4f1e9;  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f8f6f2;  /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+    --bn-colour-quote-bg: #f5f3eb;  /* Warm off-white */
+    --bn-colour-paper: #f8f6f2;  /* Washi / Sumi */
+    --bn-colour-sheet: #faf9f8;  /* 1.08:1 / 1.12:1 off the paper */
+    --bn-colour-badge-bg-paper: #f1eee5;  /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #f1eee5;  /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;  /* Court Indigo */
+    --bn-colour-user-tag-bg: #f1eee5;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #fee8d4;  /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;  /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;  /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;  /* Pine Green tint */
+    --bn-colour-highlight: #eca061;  /* Gold Ochre highlight */
+    --bn-colour-negative: #b5432a;
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #d4740d;
+    --bn-glow-colour: rgba(70, 150, 231, 0.08);
+    --bn-glow-colour-strong: rgba(70, 150, 231, 0.15);
+    --bn-minimap-quote: #ccc8bb;
+    --bn-minimap-heading: #938b80;
+    --bn-minimap-viewport-bg: rgba(70, 150, 231, 0.12);
+    --bn-minimap-viewport-border: rgba(70, 150, 231, 0.25);
+    --bn-coverage-report: #8bb9e0;
+    --bn-coverage-moderator: #eca061;
+    --bn-coverage-omitted: #ccc8bb;
+    --bn-group-none: #f5f3eb;
+    --bn-bar-none: #bcb7aa;
+    --bn-colour-border-hover: #b0aca1;
+    --bn-colour-icon-idle: #b0aca1;
+    --bn-colour-starred: #938b80;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(70, 150, 231, 0.15);
+    --bn-hover-bg: rgba(30,20,10,0.05);
+    --bn-hover-bg-subtle: rgba(30,20,10,0.03);
+    --bn-selection-bg: #dfe8f2;
+    --bn-selection-border: #4696e7;
+    --bn-selection-bg-inactive: #f2f0ea;
+    --bn-selection-border-inactive: #b0aca1;
+    --bn-nav-selection-bg: #f1eee5;
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+    --bn-colour-suggestion: #4696e7;
+    --bn-colour-suggestion-bg: #dfe8f2;
+    --bn-colour-cited-bg: #fee8d4;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="c2"] {
+        --bn-colour-bg:                 light-dark(#faf9f8, #1a1816);
+        --bn-colour-text:               light-dark(#1b2230, #e6e3dd);
+        --bn-colour-muted:              light-dark(#4a698a, #8da39f);
+        --bn-colour-border:             light-dark(#ccc8bb, #2d2820);
+        --bn-colour-accent:             light-dark(#4191e2, #4d9fe0);
+        --bn-colour-hover:              light-dark(#f4f1e9, #252118);
+        --bn-colour-inspector-bg:       light-dark(#f8f6f2, #211e18);
+        --bn-colour-quote-bg:           light-dark(#f5f3eb, #211e18);
+        --bn-colour-paper:              light-dark(#f8f6f2, #1a1816);
+        --bn-colour-sheet:              light-dark(#faf9f8, #26221b);
+        --bn-colour-badge-bg-paper:     light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-bg:           light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-text:         light-dark(#2d3654, #beb8a9);
+        --bn-colour-user-tag-bg:        light-dark(#f1eee5, #2d2820);
+        --bn-colour-user-tag-text:      light-dark(#3d4a5c, #beb8a9);
+        --bn-colour-crop-bg:            light-dark(#fee8d4, #392006);
+        --bn-crop-handle-colour:        light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:         light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:          light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:          light-dark(#eca061, #914b04);
+        --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
+        --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:            light-dark(#d4740d, #f99b44);
+        --bn-glow-colour:               light-dark(rgba(70, 150, 231, 0.08), rgba(77, 159, 224, 0.1));
+        --bn-glow-colour-strong:        light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.18));
+        --bn-minimap-quote:             light-dark(#ccc8bb, #2d2820);
+        --bn-minimap-heading:           light-dark(#938b80, #4a4030);
+        --bn-minimap-viewport-bg:       light-dark(rgba(70, 150, 231, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border:   light-dark(rgba(70, 150, 231, 0.25), rgba(77, 159, 224, 0.3));
+        --bn-coverage-report:           light-dark(#8bb9e0, #4a6a80);
+        --bn-coverage-moderator:        light-dark(#eca061, #d27a04);
+        --bn-coverage-omitted:          light-dark(#ccc8bb, #3d3830);
+        --bn-group-none:                light-dark(#f5f3eb, #211e18);
+        --bn-bar-none:                  light-dark(#bcb7aa, #4a4030);
+        --bn-colour-border-hover:       light-dark(#b0aca1, #4a4030);
+        --bn-colour-icon-idle:          light-dark(#b0aca1, #4a4030);
+        --bn-colour-starred:            light-dark(#938b80, #b8a880);
+        --bn-colour-shadow:             light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-hover-bg:                  light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+        --bn-selection-bg:              light-dark(#dfe8f2, #1e2830);
+        --bn-selection-border:          light-dark(#4696e7, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#f2f0ea, #26231d);
+        --bn-selection-border-inactive: light-dark(#b0aca1, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#f1eee5, #2d2922);
+        --bn-colour-suggestion:         light-dark(#4696e7, #4d9fe0);
+        --bn-colour-suggestion-bg:      light-dark(#dfe8f2, #1e2830);
+        --bn-colour-cited-bg:           light-dark(#fee8d4, #492803);
+    }
+}
+
+
+
+[data-color-theme="c3"] {
+    --bn-colour-bg: #faf9f8;  /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;  /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #ccc8bb;  /* Sail Parchment — warm border */
+    --bn-colour-accent: #4191e2;  /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #f4f1e9;  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f8f6f2;  /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+    --bn-colour-quote-bg: #f5f3eb;  /* Warm off-white */
+    --bn-colour-paper: #f8f6f2;  /* Washi / Sumi */
+    --bn-colour-sheet: #faf9f8;  /* 1.08:1 / 1.12:1 off the paper */
+    --bn-colour-badge-bg-paper: #f1eee5;  /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #f1eee5;  /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;  /* Court Indigo */
+    --bn-colour-user-tag-bg: #f1eee5;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5edc7;  /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;  /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;  /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;  /* Pine Green tint */
+    --bn-colour-highlight: #fee89f;  /* Gold Ochre highlight */
+    --bn-colour-negative: #b5432a;
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #e7c03a;
+    --bn-glow-colour: rgba(70, 150, 231, 0.08);
+    --bn-glow-colour-strong: rgba(70, 150, 231, 0.15);
+    --bn-minimap-quote: #ccc8bb;
+    --bn-minimap-heading: #938b80;
+    --bn-minimap-viewport-bg: rgba(70, 150, 231, 0.12);
+    --bn-minimap-viewport-border: rgba(70, 150, 231, 0.25);
+    --bn-coverage-report: #8bb9e0;
+    --bn-coverage-moderator: #fee89f;
+    --bn-coverage-omitted: #ccc8bb;
+    --bn-group-none: #f5f3eb;
+    --bn-bar-none: #bcb7aa;
+    --bn-colour-border-hover: #b0aca1;
+    --bn-colour-icon-idle: #b0aca1;
+    --bn-colour-starred: #938b80;
+    --bn-colour-shadow: rgba(30,20,10,0.12);
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(70, 150, 231, 0.15);
+    --bn-hover-bg: rgba(30,20,10,0.05);
+    --bn-hover-bg-subtle: rgba(30,20,10,0.03);
+    --bn-selection-bg: #dfe8f2;
+    --bn-selection-border: #4696e7;
+    --bn-selection-bg-inactive: #f2f0ea;
+    --bn-selection-border-inactive: #b0aca1;
+    --bn-nav-selection-bg: #f1eee5;
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+    --bn-colour-suggestion: #4696e7;
+    --bn-colour-suggestion-bg: #dfe8f2;
+    --bn-colour-cited-bg: #f5edc7;
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="c3"] {
+        --bn-colour-bg:                 light-dark(#faf9f8, #1a1816);
+        --bn-colour-text:               light-dark(#1b2230, #e6e3dd);
+        --bn-colour-muted:              light-dark(#4a698a, #8da39f);
+        --bn-colour-border:             light-dark(#ccc8bb, #2d2820);
+        --bn-colour-accent:             light-dark(#4191e2, #4d9fe0);
+        --bn-colour-hover:              light-dark(#f4f1e9, #252118);
+        --bn-colour-inspector-bg:       light-dark(#f8f6f2, #211e18);
+        --bn-colour-quote-bg:           light-dark(#f5f3eb, #211e18);
+        --bn-colour-paper:              light-dark(#f8f6f2, #1a1816);
+        --bn-colour-sheet:              light-dark(#faf9f8, #26221b);
+        --bn-colour-badge-bg-paper:     light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-bg:           light-dark(#f1eee5, #2d2820);
+        --bn-colour-badge-text:         light-dark(#2d3654, #beb8a9);
+        --bn-colour-user-tag-bg:        light-dark(#f1eee5, #2d2820);
+        --bn-colour-user-tag-text:      light-dark(#3d4a5c, #beb8a9);
+        --bn-colour-crop-bg:            light-dark(#f5edc7, #2e2603);
+        --bn-crop-handle-colour:        light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:         light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:          light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:          light-dark(#fee89f, #927610);
+        --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
+        --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:            light-dark(#e7c03a, #efcf53);
+        --bn-glow-colour:               light-dark(rgba(70, 150, 231, 0.08), rgba(77, 159, 224, 0.1));
+        --bn-glow-colour-strong:        light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.18));
+        --bn-minimap-quote:             light-dark(#ccc8bb, #2d2820);
+        --bn-minimap-heading:           light-dark(#938b80, #4a4030);
+        --bn-minimap-viewport-bg:       light-dark(rgba(70, 150, 231, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border:   light-dark(rgba(70, 150, 231, 0.25), rgba(77, 159, 224, 0.3));
+        --bn-coverage-report:           light-dark(#8bb9e0, #4a6a80);
+        --bn-coverage-moderator:        light-dark(#fee89f, #c8ad23);
+        --bn-coverage-omitted:          light-dark(#ccc8bb, #3d3830);
+        --bn-group-none:                light-dark(#f5f3eb, #211e18);
+        --bn-bar-none:                  light-dark(#bcb7aa, #4a4030);
+        --bn-colour-border-hover:       light-dark(#b0aca1, #4a4030);
+        --bn-colour-icon-idle:          light-dark(#b0aca1, #4a4030);
+        --bn-colour-starred:            light-dark(#938b80, #b8a880);
+        --bn-colour-shadow:             light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-hover-bg:                  light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+        --bn-selection-bg:              light-dark(#dfe8f2, #1e2830);
+        --bn-selection-border:          light-dark(#4696e7, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#f2f0ea, #26231d);
+        --bn-selection-border-inactive: light-dark(#b0aca1, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#f1eee5, #2d2922);
+        --bn-colour-suggestion:         light-dark(#4696e7, #4d9fe0);
+        --bn-colour-suggestion-bg:      light-dark(#dfe8f2, #1e2830);
+        --bn-colour-cited-bg:           light-dark(#f5edc7, #3a3103);
+    }
+}
+
+body{margin:0;padding:22px;background:#e9e9ec;color:#1a1a1a;font:13px/1.45 Inter,system-ui,sans-serif} h1{font-size:18px;margin:0 0 4px} h2{font-size:13px;margin:22px 0 6px} .note{max-width:60em;color:#444}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px} .cell{background:var(--bn-colour-bg);color:var(--bn-colour-text);border:1px solid var(--bn-colour-border);border-radius:10px;padding:14px 16px}
+.row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap} .warnchip{background:var(--bn-colour-crop-bg);box-shadow:inset 0 0 0 1.5px var(--bn-colour-warning);padding:3px 10px;border-radius:6px} .negchip{color:var(--bn-colour-negative);box-shadow:inset 0 0 0 1.5px var(--bn-colour-negative);padding:3px 10px;border-radius:6px}
+.line{margin:.4rem 0 .8rem;font-size:15px} mark{background:var(--bn-colour-highlight);color:inherit;padding:0 3px} .crop{background:var(--bn-colour-crop-bg);box-shadow:inset 3px 0 0 var(--bn-crop-handle-colour),inset -3px 0 0 var(--bn-crop-handle-colour);padding:0 6px}
+.bar{display:flex;height:9px;gap:2px;border-radius:5px;overflow:hidden;margin:6px 0} .bar i{display:block} .meta{color:var(--bn-colour-muted);font-size:12px} .glyph{color:var(--bn-colour-warning);font-size:15px;vertical-align:-1px} code{font:11px ui-monospace,Menlo,monospace}
+</style></head><body><h1>Caution: the current khaki against three print pigments</h1>
+<p class="note">Each row is the same specimen with only the caution family changed: one root colour, and the highlight, crop tint, moderator bar and glyph follow it. The negative chip sits beside it to show the two signals stay apart. Built from the workbench iterations <code>caution-gamboge</code>, <code>caution-tan</code>, <code>caution-orpiment</code> (base <code>edo2</code>).</p>
+<section><h2>Now (Gold Ochre, aged masstone)</h2><div class="pair"><div class="cell" data-color-theme="c0" style="color-scheme:light">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#a8842c</code></div></div><div class="cell" data-color-theme="c0" style="color-scheme:dark">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#c4a96a</code></div></div></div></section><section><h2>Gamboge (tō-ō), saffron gold</h2><div class="pair"><div class="cell" data-color-theme="c1" style="color-scheme:light">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#e2a50a</code></div></div><div class="cell" data-color-theme="c1" style="color-scheme:dark">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#f0bb3b</code></div></div></div></section><section><h2>Tan, red-lead orange</h2><div class="pair"><div class="cell" data-color-theme="c2" style="color-scheme:light">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#d4740d</code></div></div><div class="cell" data-color-theme="c2" style="color-scheme:dark">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#f99b44</code></div></div></div></section><section><h2>Orpiment (sekiō), bright gold</h2><div class="pair"><div class="cell" data-color-theme="c3" style="color-scheme:light">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#e7c03a</code></div></div><div class="cell" data-color-theme="c3" style="color-scheme:dark">
+ <div class="row"><span class="warnchip">⚠ Partial: 2 recordings skipped</span><span class="negchip">Delete 2 recordings</span></div>
+ <p class="line">Participants described the checkout as <mark>fast but opaque</mark>, and said so <span class="crop">twice in this session</span>.</p>
+ <div class="bar"><i style="background:var(--bn-colour-accent);flex:5"></i><i style="background:var(--bn-coverage-moderator);flex:2"></i><i style="background:var(--bn-coverage-omitted);flex:1"></i></div>
+ <div class="meta"><span class="glyph">▲</span> caution <code>#efcf53</code></div></div></div></section></body></html>

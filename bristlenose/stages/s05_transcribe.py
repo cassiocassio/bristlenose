@@ -1379,10 +1379,19 @@ def _init_mlx_backend(
         # heartbeat to surface (per-file progress still ticks in the caller).
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
-        from bristlenose.preflight.whisper import local_model_dir
+        from bristlenose.preflight.whisper import host_owns_download, local_model_dir
 
         if (host_dir := local_model_dir(settings)) is not None:
             model_name = str(host_dir)  # delivered by the app (Background Assets)
+        elif host_owns_download():
+            # The pack was there at preflight and is gone now (or the preflight was skipped):
+            # mlx-whisper would otherwise download the repo from Hugging Face behind the app.
+            from bristlenose.i18n import t
+            from bristlenose.preflight import PreflightAbortedError
+
+            raise PreflightAbortedError(
+                t("preflight.whisper.aborted_no_fetch", repo_id=model_name)
+            )
 
         # Decode once, here, so the signal gate and Whisper read the same
         # samples. `transcribe` would otherwise run this same ffmpeg call on

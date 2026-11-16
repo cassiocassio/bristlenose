@@ -329,6 +329,7 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
         _resolve_repo_id,
         cache_state,
         download_size_human,
+        host_dir_bytes,
         local_model_dir,
         unknown_model_message,
     )
@@ -337,7 +338,7 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
 
     # A model the app delivered outside the Hugging Face cache, complete.
     if (host_dir := local_model_dir(settings)) is not None:
-        host_bytes = sum(f.stat().st_size for f in host_dir.iterdir() if f.is_file())
+        host_bytes = host_dir_bytes(host_dir)
         return CheckResult(
             status=CheckStatus.OK,
             label="Whisper model",

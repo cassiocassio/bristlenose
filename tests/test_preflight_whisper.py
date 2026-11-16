@@ -737,7 +737,7 @@ def _pack(tmp_path, *, config=True, weights="weights.safetensors"):
     if config:
         (d / "config.json").write_text("{}", encoding="utf-8")
     if weights:
-        (d / weights).write_bytes(b"x" * 10)
+        (d / weights).write_bytes(b"x" * (1024 * 1024))
     return d
 
 
@@ -774,6 +774,15 @@ class TestLocalModelDir:
             assert local_model_dir(_settings()) is None
             assert " missing " in whisper_status_line(_settings())
 
+    def test_a_stub_weights_file_is_absent(self, tmp_path, monkeypatch):
+        from bristlenose.preflight.whisper import local_model_dir
+
+        d = _pack(tmp_path)
+        (d / "weights.safetensors").write_bytes(b"x" * 10)  # truncated copy
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
+        with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"):
+            assert local_model_dir(_settings()) is None
+
     def test_faster_whisper_backend_ignores_it(self, tmp_path, monkeypatch):
         from bristlenose.preflight.whisper import local_model_dir
 
@@ -793,7 +802,7 @@ class TestLocalModelDir:
             "bristlenose.preflight.whisper.cache_state", return_value="missing"
         ), patch("bristlenose.utils.package_install.ensure_hf_model") as fetch:
             assert whisper_status_line(_settings()) == (
-                "@whisper-status cached mlx-community/whisper-large-v3-turbo 12"
+                "@whisper-status cached mlx-community/whisper-large-v3-turbo 1048578"
             )
             assert whisper_is_on_disk(_settings()) is True
             fetch_with_progress_lines(_settings(), lines.append)
@@ -868,6 +877,21 @@ class TestHostOwnsDownload:
         self._run(allow_fetch=True)  # returns, no abort
         self.fetch.assert_not_called()
 
+    def test_the_run_itself_refuses_when_the_pack_vanished_after_preflight(
+        self, tmp_path, monkeypatch
+    ):
+        """mlx-whisper would snapshot_download the repo if handed the repo id."""
+        pytest.importorskip("mlx_whisper")
+        from bristlenose.preflight import PreflightAbortedError
+        from bristlenose.stages import s05_transcribe
+
+        monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))  # no pack
+        settings = _settings()
+        with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"):
+            with pytest.raises(PreflightAbortedError):
+                s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
     def test_doctor_fetch_path_refuses_too(self, tmp_path, monkeypatch):
         from bristlenose.preflight import PreflightAbortedError
         from bristlenose.preflight.whisper import fetch_with_progress_lines
@@ -893,7 +917,7 @@ class TestHostOwnsDownload:
         ):
             assert check_whisper_model(_settings()).status != CheckStatus.OK
         (tmp_path / "large-v3-turbo" / "config.json").write_text("{}", encoding="utf-8")
-        (tmp_path / "large-v3-turbo" / "weights.safetensors").write_bytes(b"x")
+        (tmp_path / "large-v3-turbo" / "weights.safetensors").write_bytes(b"x" * (1024 * 1024))
         with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"):
             r = check_whisper_model(_settings())
         assert r.status == CheckStatus.OK and "delivered by the app" in r.detail

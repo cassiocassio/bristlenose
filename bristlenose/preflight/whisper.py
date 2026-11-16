@@ -221,9 +221,39 @@ def local_model_dir(settings: BristlenoseSettings) -> Path | None:
     candidate = Path(base) / canonical
     if not (candidate / "config.json").is_file():
         return None
-    if not any((candidate / w).is_file() for w in ("weights.safetensors", "weights.npz")):
+    # A size floor, not a checksum: it catches an empty or stub file from a non-atomic copy.
+    # The app verifies the pack's size and SHA-256 manifest before it sets the variable.
+    if not any(
+        _is_real_file(candidate / w, _MIN_WEIGHTS_BYTES)
+        for w in ("weights.safetensors", "weights.npz")
+    ):
         return None
     return candidate
+
+
+_MIN_WEIGHTS_BYTES = 1024 * 1024
+
+
+def _is_real_file(path: Path, min_bytes: int) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size >= min_bytes
+    except OSError:
+        return False
+
+
+def host_dir_bytes(directory: Path) -> int:
+    """Bytes in the files directly under ``directory``; a file that vanishes counts 0."""
+    total = 0
+    try:
+        for f in directory.iterdir():
+            try:
+                if f.is_file():
+                    total += f.stat().st_size
+            except OSError:
+                continue
+    except OSError:
+        return 0
+    return total
 
 
 #: Set by the Mac app whenever it owns the Whisper download (Background Assets,
@@ -875,8 +905,7 @@ def whisper_status_line(settings: BristlenoseSettings) -> str:
     """
     repo_id = _resolve_repo_id(settings)
     if (host_dir := local_model_dir(settings)) is not None:
-        size = sum(f.stat().st_size for f in host_dir.iterdir() if f.is_file())
-        return f"@whisper-status cached {repo_id} {size}"
+        return f"@whisper-status cached {repo_id} {host_dir_bytes(host_dir)}"
     state = cache_state(repo_id)
     size = _bytes_on_disk(repo_id) if state == "cached" else 0
     return f"@whisper-status {state} {repo_id} {size}"

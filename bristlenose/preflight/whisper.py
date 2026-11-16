@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from bristlenose.i18n import t
-from bristlenose.preflight import PreflightAbortedError
+from bristlenose.preflight import PreflightAbortedError, WhisperHostOwnsError
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 
 if TYPE_CHECKING:
@@ -694,7 +694,14 @@ def preflight_whisper(
         logger.info("preflight_whisper: %s already cached", repo_id)
         return
 
-    if not allow_fetch or host_owns_download():
+    if host_owns_download():
+        # The app is delivering the model (or will). Aborting the whole run here would show as
+        # "Run failed" and never re-run; instead each session that needs Whisper defers in
+        # stage 5 (`WhisperHostOwnsError` there), the run completes with them waiting, and the
+        # app runs the study again when the model lands. Python never fetches.
+        logger.info("preflight_whisper: %s is the app's to deliver; sessions will wait for it", repo_id)
+        return
+    if not allow_fetch:
         raise WhisperPreflightAbortedError(
             t("preflight.whisper.aborted_no_fetch", repo_id=repo_id)
         )
@@ -1055,9 +1062,7 @@ def fetch_with_progress_lines(
         out("@download-done 0")
         return
     if host_owns_download():
-        raise PreflightAbortedError(
-            t("preflight.whisper.aborted_no_fetch", repo_id=repo_id)
-        )
+        raise WhisperHostOwnsError(t("preflight.whisper.aborted_host_owns"))
     discard_stale_partials(repo_id)
     ensure_disk_room(repo_id)
     total = _server_total_bytes(repo_id)

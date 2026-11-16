@@ -677,6 +677,13 @@ def categorise_exception(exc: BaseException, *, provider: str | None = None) -> 
     if isinstance(exc, CloudFetchTimeoutError):
         return Cause(category=CauseCategoryEnum.CLOUD_FETCH, message=CLOUD_FETCH_MESSAGE)
 
+    # The Mac app is delivering the Whisper model and it is not here yet: a "not yet", not a
+    # failure. Deferred is owner-neutral, and the app re-runs the study when the model lands.
+    from bristlenose.preflight import WhisperHostOwnsError
+
+    if isinstance(exc, WhisperHostOwnsError):
+        return Cause(category=CauseCategoryEnum.DEFERRED, message=msg)
+
     # Disk space.
     if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:  # ENOSPC
         return Cause(category=CauseCategoryEnum.DISK, message=msg)

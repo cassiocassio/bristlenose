@@ -31,6 +31,7 @@ from bristlenose.events import (
     StageOutcome,
 )
 from bristlenose.models import InputSession, TranscriptSegment, Word
+from bristlenose.preflight import WhisperHostOwnsError
 from bristlenose.run_lifecycle import categorise_exception
 from bristlenose.utils.fs import ensure_materialised
 from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_hardware
@@ -778,6 +779,22 @@ def iter_transcribe_sessions(
                 )),
                 quality=_quality_record(session.session_id, [], sink),
             )
+        except WhisperHostOwnsError as waiting:
+            # The Mac app is delivering Whisper and it is not here yet. The same stated,
+            # retryable outcome as an Apple-model deferral: the run completes with this
+            # session waiting, and the app runs the study again when the model lands.
+            logger.info("%s: deferred to the app's Whisper download", session.session_id)
+            done = SessionTranscription(
+                session.session_id, [], None,
+                StageFailure(session_id=session.session_id, cause=Cause(
+                    category=CauseCategoryEnum.DEFERRED,
+                    code="host_downloading",
+                    message=str(waiting),
+                    stage="s05_transcribe",
+                    session_id=session.session_id,
+                )),
+                quality=_quality_record(session.session_id, [], sink),
+            )
         except Exception as exc:
             logger.error(
                 "%s: Transcription failed: %s",
@@ -1387,11 +1404,9 @@ def _init_mlx_backend(
             # The pack was there at preflight and is gone now (or the preflight was skipped):
             # mlx-whisper would otherwise download the repo from Hugging Face behind the app.
             from bristlenose.i18n import t
-            from bristlenose.preflight import PreflightAbortedError
+            from bristlenose.preflight import WhisperHostOwnsError
 
-            raise PreflightAbortedError(
-                t("preflight.whisper.aborted_no_fetch", repo_id=model_name)
-            )
+            raise WhisperHostOwnsError(t("preflight.whisper.aborted_host_owns"))
 
         # Decode once, here, so the signal gate and Whisper read the same
         # samples. `transcribe` would otherwise run this same ffmpeg call on

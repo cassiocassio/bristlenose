@@ -15,3 +15,14 @@ class PreflightAbortedError(RuntimeError):
     billing-empty, etc.). The CLI catches this once at the pipeline-run call
     site and exits 2.
     """
+
+
+class WhisperHostOwnsError(PreflightAbortedError):
+    """The Mac app owns the Whisper model's delivery, and it is not here yet.
+
+    Raised instead of fetching from Hugging Face when ``_BRISTLENOSE_WHISPER_HOST_OWNS=1`` and no
+    complete model directory is present (the app is downloading it, or has not yet). It is the
+    "not yet", never a broken run: the lifecycle classifies it as ``deferred`` and the app
+    re-runs the study when the model lands (``bristlenoseWhisperReady``). The message takes no
+    arguments: it names no path and no repo.
+    """

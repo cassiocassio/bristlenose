@@ -853,12 +853,50 @@ class TestHostOwnsDownload:
             finally:
                 self.fetch = fetch
 
-    def test_model_missing_is_refused_and_never_fetched(self, tmp_path, monkeypatch):
+    def test_model_missing_does_not_abort_the_run_and_never_fetches(self, tmp_path, monkeypatch):
+        """An abort here is a failed run on the Mac that never re-runs; sessions defer in stage 5."""
         monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
         monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))  # empty
-        with pytest.raises(WhisperPreflightAbortedError):
-            self._run(allow_fetch=True)
+        self._run(allow_fetch=True)  # returns
         self.fetch.assert_not_called()
+
+    def test_a_session_waits_for_the_app_instead_of_failing(self, monkeypatch, tmp_path):
+        """Stage 5: the refusal inside the per-file closure becomes a DEFERRED failure, so the
+        run completes with the session waiting: the row the Mac re-runs on (a run-level abort
+        would be "Run failed" and never re-run)."""
+        from datetime import datetime
+
+        from bristlenose.events import CauseCategoryEnum
+        from bristlenose.models import FileType, InputFile, InputSession
+        from bristlenose.preflight import WhisperHostOwnsError
+        from bristlenose.stages import s05_transcribe
+
+        audio = tmp_path / "p1.wav"
+        audio.write_bytes(b"RIFFxxxx")
+
+        def _fake_init(_settings):
+            def _t(_path, _settings, **_kw):
+                raise WhisperHostOwnsError("not yet")
+
+            return _t
+
+        monkeypatch.setattr(s05_transcribe, "_init_mlx_backend", _fake_init)
+        monkeypatch.setattr(s05_transcribe, "_resolve_backend", lambda _c, _h: "mlx")  # noqa: ARG005
+        session = InputSession(
+            session_id="s1", session_number=1, participant_id="p1", participant_number=1,
+            files=[InputFile(path=audio, file_type=FileType.AUDIO,
+                             created_at=datetime(2026, 11, 16), size_bytes=audio.stat().st_size)],
+            audio_path=audio, session_date=datetime(2026, 11, 16),
+        )
+        settings = type("S", (), {
+            "whisper_backend": "mlx", "whisper_model": "tiny", "whisper_language": "auto",
+        })()
+        _r, _l, outcome = s05_transcribe.transcribe_sessions([session], settings)
+        assert len(outcome.failed) == 1
+        cause = outcome.failed[0].cause
+        assert cause.category == CauseCategoryEnum.DEFERRED
+        assert cause.code == "host_downloading"
+        assert cause.stage == "s05_transcribe" and cause.session_id == "s1"
 
     def test_without_the_env_the_same_state_fetches(self, tmp_path, monkeypatch):
         """The control: proves the test above can fail (the guard is what stops the fetch)."""
@@ -882,18 +920,18 @@ class TestHostOwnsDownload:
     ):
         """mlx-whisper would snapshot_download the repo if handed the repo id."""
         pytest.importorskip("mlx_whisper")
-        from bristlenose.preflight import PreflightAbortedError
+        from bristlenose.preflight import WhisperHostOwnsError
         from bristlenose.stages import s05_transcribe
 
         monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
         monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))  # no pack
         settings = _settings()
         with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"):
-            with pytest.raises(PreflightAbortedError):
+            with pytest.raises(WhisperHostOwnsError):
                 s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
 
     def test_doctor_fetch_path_refuses_too(self, tmp_path, monkeypatch):
-        from bristlenose.preflight import PreflightAbortedError
+        from bristlenose.preflight import WhisperHostOwnsError
         from bristlenose.preflight.whisper import fetch_with_progress_lines
 
         monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
@@ -901,9 +939,30 @@ class TestHostOwnsDownload:
         with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"), patch(
             "bristlenose.preflight.whisper.cache_state", return_value="missing"
         ), patch("bristlenose.utils.package_install.ensure_hf_model") as fetch:
-            with pytest.raises(PreflightAbortedError):
+            with pytest.raises(WhisperHostOwnsError):
                 fetch_with_progress_lines(_settings(), lambda _l: None)
         fetch.assert_not_called()
+
+    def test_the_refusal_is_a_not_yet_not_a_failure(self) -> None:
+        """Deferred is what the app re-runs on (the model landing); a type and a category, not
+        English: the sentence is a locale string."""
+        from bristlenose.events import CauseCategoryEnum
+        from bristlenose.preflight import PreflightAbortedError, WhisperHostOwnsError
+        from bristlenose.run_lifecycle import categorise_exception
+
+        err = WhisperHostOwnsError("anything at all")
+        assert isinstance(err, PreflightAbortedError)  # callers that catch the base still work
+        assert categorise_exception(err).category == CauseCategoryEnum.DEFERRED
+        # Not the --no-fetch refusal, which is the researcher's own setting and stays a failure.
+        plain = categorise_exception(WhisperPreflightAbortedError("x is not in cache"))
+        assert plain.category != CauseCategoryEnum.DEFERRED
+
+    def test_the_message_is_its_own_key_and_takes_no_arguments(self) -> None:
+        from bristlenose.i18n import t
+
+        text = t("preflight.whisper.aborted_host_owns")
+        assert text and "aborted_host_owns" not in text, "the key resolves"
+        assert "--no-fetch" not in text and "{" not in text
 
     def test_doctor_reads_the_delivered_pack_and_refuses_a_bare_directory(
         self, tmp_path, monkeypatch

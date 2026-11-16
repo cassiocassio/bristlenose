@@ -309,13 +309,18 @@ reject_case "extension carries inherit" "✗.*extensions.*BAExt.appex: carries i
 D=$WORK/e3; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nogrp.plist")
 reject_case "extension without the app group" "✗.*extensions.*BAExt.appex: no app group" "$D"
 D=$WORK/e4; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-othergrp.plist")
-reject_case "extension in a different group" "✗.*extensions.*BAExt.appex: app groups group.com.evil.other  *are not the host's" "$D"
+reject_case "extension in a different group" "✗.*extensions.*BAExt.appex: app group group.com.evil.other is not one the host holds" "$D"
 D=$WORK/e5; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "$TREE_VER" 0)
 reject_case "extension without its own profile" "✗.*extensions.*BAExt.appex: no embedded provisioning profile" "$D"
-# the group set must match exactly: the host's group PLUS another still differs
+# a group the host does not hold is refused even beside one it does
 ents_with "$WORK/ents-ext-extra.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>group.com.evil.other</string></array>'
 D=$WORK/e4b; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-extra.plist")
-reject_case "extension holding the host's group plus another" "✗.*extensions.*BAExt.appex: app groups" "$D"
+reject_case "extension holding the host's group plus another" "✗.*extensions.*BAExt.appex: app group group.com.evil.other is not one the host holds" "$D"
+# the real shape: the host holds two groups, the extension only the Background Assets one
+ents_with "$WORK/ents-host-two.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>TEAM.app.bristlenose</string></array>'
+D=$WORK/e4d; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$WORK/ents-host-two.plist"
+if make_pkg "$A" "$D/t.pkg"; then OUT4D=$("$GATE" "$D/t.pkg" 2>&1); else OUT4D=""; fi
+if grep -qi '✓.*extensions.*1 .appex' <<<"$OUT4D"; then pass "extension with one of the host's two groups passes"; else fail "extension with one of the host's two groups did not pass"; sed 's/^/        /' <<<"$OUT4D" | grep -iE 'extensions' >&2; fi
 # a host with no readable group cannot vouch for an extension's
 D=$WORK/e4c; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$ENTS"
 reject_case "host without an app group cannot vouch for an extension's" "✗.*extensions.*host has no readable app group" "$D"

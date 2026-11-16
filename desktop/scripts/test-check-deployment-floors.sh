@@ -45,6 +45,7 @@ check() {  # <label> <want-exit> <needle> [VAR=value ...]
     local out rc
     out=$(env FLOOR_Bristlenose_Debug=15.0 FLOOR_Bristlenose_Release=15.0 \
               FLOOR_BristlenoseTests_Debug=15.0 FLOOR_BristlenoseTests_Release=15.0 \
+              FLOOR_BAExtension_Debug=26.0 FLOOR_BAExtension_Release=26.0 BN_FLOORS_EXT=absent \
               "$@" PATH="$TMP/bin:$PATH" bash "$GATE" 2>&1); rc=$?
     if [ "$rc" -ne "$want" ]; then
         echo "  ✗ $label: exit $rc, wanted $want"; echo "$out" | sed 's/^/      /' | head -5; FAIL=$((FAIL+1)); return
@@ -66,6 +67,13 @@ check "both floors drifting reports both" 1 "test Release" FLOOR_Bristlenose_Rel
 check "a drift names how to change it on purpose" 1 "update EXPECT_*" FLOOR_Bristlenose_Debug=16.0
 check "an unreadable app floor is a failure, not a pass" 1 "could not read app floor" FLOOR_Bristlenose_Debug= 
 check "an unreadable test floor is a failure, not a pass" 1 "could not read test floor" FLOOR_BristlenoseTests_Release=
+
+# The extension: 26.0, only checked once the target exists.
+check "with no extension target the row is skipped" 0 "no extension target yet" FLOOR_BAExtension_Debug=27.2
+check "an extension at 26.0 passes" 0 "ext=26.0" BN_FLOORS_EXT=present
+check "an extension left at the SDK default is refused" 1 "ext  Release  expected 26.0, got 27.2" BN_FLOORS_EXT=present FLOOR_BAExtension_Release=27.2
+check "an extension at the app's 15.0 is refused too" 1 "ext  Debug" BN_FLOORS_EXT=present FLOOR_BAExtension_Debug=15.0
+check "an unreadable extension floor is a failure, not a pass" 1 "could not read extension floor" BN_FLOORS_EXT=present FLOOR_BAExtension_Debug=
 
 echo
 echo "$PASS passed, $FAIL failed"

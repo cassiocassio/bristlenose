@@ -238,7 +238,7 @@ else
     fi
 
     # Entitlements. Both channels build `Release`, so the Developer-ID/MAS
-    # split lives ONLY in a `CODE_SIGN_ENTITLEMENTS` override inside
+    # split lives ONLY in a `BN_APP_ENTITLEMENTS` override inside
     # `build-dmg.sh`'s archive invocation — one typo there and this image
     # carries an app group Apple will not authorise outside the App Store.
     # Until 12 Sep 2026 this gate read no entitlements at all, so the typo

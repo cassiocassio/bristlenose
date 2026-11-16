@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		DFEDF1F7301654C6008039BA /* Settings in Frameworks */ = {isa = PBXBuildFile; productRef = DFEDF1F6301654C6008039BA /* Settings */; };
+		BA0000000000000000000006 /* BAExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0000000000000000000001 /* BAExtension.swift */; };
+		BA0000000000000000000007 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BA0000000000000000000004 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,6 +25,11 @@
 /* Begin PBXFileReference section */
 		DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BristlenoseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFF545042F466A4A00A539C4 /* Bristlenose.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bristlenose.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA0000000000000000000001 /* BAExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BAExtension.swift; sourceTree = "<group>"; };
+		BA0000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BA0000000000000000000003 /* BAExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BAExtension.entitlements; sourceTree = "<group>"; };
+		BA0000000000000000000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		BA0000000000000000000005 /* BAExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BAExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -74,6 +81,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BA000000000000000000000A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -82,6 +96,7 @@
 			children = (
 				DFF545062F466A4A00A539C4 /* Bristlenose */,
 				DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */,
+				BA0000000000000000000008 /* BAExtension */,
 				DFF545052F466A4A00A539C4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -91,8 +106,21 @@
 			children = (
 				DFF545042F466A4A00A539C4 /* Bristlenose.app */,
 				DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */,
+				BA0000000000000000000005 /* BAExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BA0000000000000000000008 /* BAExtension */ = {
+			isa = PBXGroup;
+			children = (
+				BA0000000000000000000001 /* BAExtension.swift */,
+				BA0000000000000000000002 /* Info.plist */,
+				BA0000000000000000000003 /* BAExtension.entitlements */,
+				BA0000000000000000000004 /* PrivacyInfo.xcprivacy */,
+			);
+			name = BAExtension;
+			path = ../BAExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -147,6 +175,25 @@
 			productReference = DFF545042F466A4A00A539C4 /* Bristlenose.app */;
 			productType = "com.apple.product-type.application";
 		};
+		BA000000000000000000000C /* BAExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA000000000000000000000D /* Build configuration list for PBXNativeTarget "BAExtension" */;
+			buildPhases = (
+				BA0000000000000000000009 /* Sources */,
+				BA000000000000000000000A /* Frameworks */,
+				BA000000000000000000000B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BAExtension;
+			packageProductDependencies = (
+			);
+			productName = BAExtension;
+			productReference = BA0000000000000000000005 /* BAExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -163,6 +210,9 @@
 					};
 					DFF545032F466A4A00A539C4 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					BA000000000000000000000C = {
+						CreatedOnToolsVersion = 27.2;
 					};
 				};
 			};
@@ -206,6 +256,7 @@
 			targets = (
 				DFF545032F466A4A00A539C4 /* Bristlenose */,
 				DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */,
+				BA000000000000000000000C /* BAExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -222,6 +273,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA000000000000000000000B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA0000000000000000000007 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,6 +361,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA0000000000000000000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA0000000000000000000006 /* BAExtension.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -486,7 +553,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = Bristlenose/BristlenoseDebug.entitlements;
+				BN_APP_ENTITLEMENTS = Bristlenose/BristlenoseDebug.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(BN_APP_ENTITLEMENTS)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -530,7 +598,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = Bristlenose/Bristlenose.entitlements;
+				BN_APP_ENTITLEMENTS = Bristlenose/Bristlenose.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(BN_APP_ENTITLEMENTS)";
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -571,6 +640,63 @@
 			};
 			name = Release;
 		};
+		BA000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ../BAExtension/BAExtension.entitlements;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 6528;
+				DEVELOPMENT_TEAM = Z56GZVA2QB;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ../BAExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.46.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose.BAExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				CODE_SIGN_IDENTITY = "-";
+			};
+			name = Debug;
+		};
+		BA000000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ../BAExtension/BAExtension.entitlements;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 6528;
+				DEVELOPMENT_TEAM = Z56GZVA2QB;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ../BAExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.46.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose.BAExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				PROVISIONING_PROFILE_SPECIFIER = "Bristlenose BAExtension Mac App Store";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -597,6 +723,15 @@
 			buildConfigurations = (
 				DFF545102F466A4B00A539C4 /* Debug */,
 				DFF545112F466A4B00A539C4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BA000000000000000000000D /* Build configuration list for PBXNativeTarget "BAExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA000000000000000000000E /* Debug */,
+				BA000000000000000000000F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

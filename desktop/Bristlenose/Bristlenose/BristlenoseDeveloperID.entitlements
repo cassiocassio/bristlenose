@@ -7,7 +7,7 @@
 	     Assets group. Both channels build the Release configuration, so without
 	     this split the .dmg would carry a group it cannot use. It does not need
 	     one: the .dmg acquires the PII model by plain HTTPS, not Background
-	     Assets. Selected by the CODE_SIGN_ENTITLEMENTS override in
+	     Assets. Selected by the BN_APP_ENTITLEMENTS override in
 	     desktop/scripts/build-dmg.sh.
 
 	     It DOES carry the Team-ID-prefixed group, for the MCP handshake

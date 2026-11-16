@@ -359,7 +359,7 @@ fi
 #
 # Today the store build carries NO extension, and that passes. Once one ships
 # (StoreDownloaderExtension in Contents/PlugIns/), each .appex must be its own signed
-# sandbox: app-sandbox + the host's team app group, NEVER `inherit` (an extension is
+# sandbox: app-sandbox + app groups the host holds, NEVER `inherit` (an extension is
 # not a child process: inherit makes launchd refuse it), its own embedded profile
 # (an extension with the host's profile, or none, is rejected at upload), and the
 # host's marketing version and build number (ITMS-90125-class mismatches). The generic
@@ -374,7 +374,7 @@ if [ "${#EXTS[@]}" -eq 0 ]; then
 else
     HOST_ENTS_FILE="$WORK/host-ents.plist"
     codesign -d --entitlements :- "$OUTER" 2>/dev/null >"$HOST_ENTS_FILE" || true
-    # All the groups, sorted, one per line: the extension must hold exactly the host's set.
+    # All the groups, sorted, space-separated: the extension's must be within the host's set.
     groups_of() {
         /usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups' "$1" 2>/dev/null \
             | sed -e '/^Array {$/d' -e '/^}$/d' -e 's/^ *//' | sort | tr '\n' ' ' || true
@@ -399,8 +399,16 @@ else
         egroups=$(groups_of "$eents")
         if [ -z "$egroups" ]; then
             EXT_PROBLEMS+=("$en: no app group")
-        elif [ -n "$HOST_GROUPS" ] && [ "$egroups" != "$HOST_GROUPS" ]; then
-            EXT_PROBLEMS+=("$en: app groups $egroups are not the host's $HOST_GROUPS")
+        elif [ -n "$HOST_GROUPS" ]; then
+            # Every group the extension holds must be one the host holds (the host has the
+            # Background Assets group AND the team group; the extension needs only the first).
+            # A group the host lacks is a capability the host's profile does not authorise.
+            for g in $egroups; do
+                case " $HOST_GROUPS " in
+                    *" $g "*) : ;;
+                    *) EXT_PROBLEMS+=("$en: app group $g is not one the host holds ($HOST_GROUPS)") ;;
+                esac
+            done
         fi
         if [ ! -f "$e/Contents/embedded.provisionprofile" ]; then
             EXT_PROBLEMS+=("$en: no embedded provisioning profile of its own")

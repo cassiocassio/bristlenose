@@ -333,6 +333,19 @@ final class PersonPickerModel: ObservableObject {
         request.scope?.speakers.first { $0.code == request.slot.code }
     }
 
+    /// Where Paragraph opens: in a session of one participant and one
+    /// moderator, the OTHER one (the usual fix is "that was the other
+    /// person"); otherwise the paragraph's own speaker. Observers don't count.
+    private var paragraphStart: PersonPickerRequest.SessionSpeaker? {
+        guard let current = paragraphSpeaker, let all = request.scope?.speakers else { return paragraphSpeaker }
+        let participants = all.filter { $0.role == .participant }
+        let moderators = all.filter { $0.role == .moderator }
+        guard participants.count == 1, moderators.count == 1 else { return current }
+        if current == participants[0] { return moderators[0] }
+        if current == moderators[0] { return participants[0] }
+        return current
+    }
+
     func speaker(_ id: String) -> PersonPickerRequest.SessionSpeaker? {
         guard id.hasPrefix(Self.paragraphPrefix) else { return nil }
         let slot = String(id.dropFirst(Self.paragraphPrefix.count))
@@ -347,8 +360,8 @@ final class PersonPickerModel: ObservableObject {
         draft = ""
         if on {
             renaming = false
-            browsing = paragraphSpeaker?.role ?? request.slot.role
-            selection = paragraphSpeaker.map { Self.paragraphPrefix + $0.slot } ?? names.first
+            browsing = paragraphStart?.role ?? request.slot.role
+            selection = paragraphStart.map { Self.paragraphPrefix + $0.slot } ?? names.first
         } else {
             browsing = request.slot.role
             let name = request.slot.name

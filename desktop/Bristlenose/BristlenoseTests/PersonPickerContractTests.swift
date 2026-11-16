@@ -156,7 +156,13 @@ struct PersonPickerContractTests {
                                       onChoose: { sent.append($0) }, onClose: { closed += 1 })
         #expect(model.paragraph && !model.renaming && !model.offersNew)
         #expect(model.openRoles == [.moderator, .participant])
-        // The paragraph's own speaker is ticked; picking them moves nothing.
+        // A two-person session opens on the OTHER speaker (the usual fix):
+        // the paragraph is p3's, so Moderator opens with m1 first.
+        #expect(model.browsing == .moderator)
+        #expect(model.selection == PersonPickerModel.paragraphPrefix + "m1")
+        // The paragraph's own speaker is still ticked, under Participant;
+        // picking them moves nothing.
+        model.browse(.participant)
         let own = try #require(model.rows.first)
         #expect(model.isAnswer(own) && model.displayName(own) == "Mary Adeyemi" && !model.canRename(own))
         model.choose(own)

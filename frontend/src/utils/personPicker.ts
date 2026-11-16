@@ -310,6 +310,24 @@ export interface PickerSessionSpeaker {
   role: PickerRole;
 }
 
+/** Who the Paragraph scope opens on. A paragraph badge is opened to fix a
+ *  wrong credit, and in a session of one participant and one moderator (the
+ *  common case) the fix is always the other one, so that is the default.
+ *  Otherwise the paragraph's own speaker. Observers do not count. */
+export function paragraphDefaultSpeaker(
+  speakers: PickerSessionSpeaker[],
+  code: string,
+): PickerSessionSpeaker | undefined {
+  const current = speakers.find((s) => s.code === code);
+  const participants = speakers.filter((s) => s.role === "participant");
+  const moderators = speakers.filter((s) => s.role === "moderator");
+  if (current && participants.length === 1 && moderators.length === 1) {
+    if (current === participants[0]) return moderators[0];
+    if (current === moderators[0]) return participants[0];
+  }
+  return current;
+}
+
 /** The picker's strings for one slot. */
 export function personPickerLabels(slot: PersonPickerSlot, t: TFunction): PersonPickerLabels {
   const roles = Object.fromEntries(

@@ -533,13 +533,15 @@ describe("the transcript's Session | Paragraph switch (design-people.md §K)", (
     expect(s.onScope).toHaveBeenCalledWith(true);
   });
 
-  it("on Paragraph lists the session's speakers, ticks this one's, and offers no rename", () => {
+  it("on Paragraph opens on the other speaker of a two-person session, and offers no rename", () => {
     render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={scope(true)}
       onChoose={vi.fn()} onClose={vi.fn()} />);
-    expect(items().map((li) => [li.textContent, li.getAttribute("aria-checked")])).toEqual([["p1Simon", "true"]]);
-    expect(menu().querySelector("input")).toBeNull();
-    fireEvent.click(screen.getByRole("radio", { name: "Moderator" }));
+    // Simon is p1, so the likely fix is the moderator: Moderator opens, m1 first.
     expect(items().map((li) => li.textContent)).toEqual(["m1Martin", "m?New moderator"]);
+    expect(document.activeElement).toBe(items()[0]);
+    expect(menu().querySelector("input")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Participant" }));
+    expect(items().map((li) => [li.textContent, li.getAttribute("aria-checked")])).toEqual([["p1Simon", "true"]]);
     expect(screen.getByRole("radio", { name: "Observer" })).toBeDisabled();
   });
 
@@ -548,7 +550,6 @@ describe("the transcript's Session | Paragraph switch (design-people.md §K)", (
     const onChoose = vi.fn();
     const onClose = vi.fn();
     render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={s} onChoose={onChoose} onClose={onClose} />);
-    fireEvent.click(screen.getByRole("radio", { name: "Moderator" }));
     fireEvent.click(items()[0]);
     expect(s.onMove).toHaveBeenCalledWith({ slot: "m1" });
     expect(onChoose).not.toHaveBeenCalled();
@@ -558,6 +559,7 @@ describe("the transcript's Session | Paragraph switch (design-people.md §K)", (
   it("picking the paragraph's own speaker moves nothing", () => {
     const s = scope(true);
     render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={s} onChoose={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Participant" }));
     fireEvent.click(items()[0]);
     expect(s.onMove).not.toHaveBeenCalled();
   });

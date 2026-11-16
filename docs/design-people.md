@@ -3587,7 +3587,11 @@ reads which paragraphs a quote overlaps, but only in sessions where a paragraph 
   6 Oct default of Session with a sticky switch): in a transcript the act is "this one was
   the other speaker" (§B3), and a whole-speaker act, the swap among them, is a deliberate
   switch to Session that does not stick. The sticky default cost a session its quotes on
-  14 Nov, when one misattributed line was fixed under Session and read as a swap. On the Mac the same request carries `scope`, and a paragraph
+  14 Nov, when one misattributed line was fixed under Session and read as a swap. Paragraph
+  **opens on the other speaker** when the session has exactly one participant and one
+  moderator (observers do not count): that row's role is showing and it is selected, so the
+  commonest fix, "that was the other one", is one Return. Any other session opens on the
+  paragraph's own speaker (`paragraphDefaultSpeaker`; the Mac's `paragraphStart`). On the Mac the same request carries `scope`, and a paragraph
   pick replies `{kind: "paragraph", slot}` (bridge contract version 9).
 - **Evidence** (`speaker_slots.evidence_out` → `EvidenceOut.quotes`). A quote leaves when a
   paragraph its window overlaps was moved off its credited tag (`transcript_segments.moved_from`)

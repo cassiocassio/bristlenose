@@ -28,6 +28,7 @@ import type { TFunction } from "i18next";
 
 import {
   PICKER_ROLES,
+  paragraphDefaultSpeaker,
   personPickerCanClear,
   personPickerCanRename,
   personPickerChoice,
@@ -148,10 +149,12 @@ function ScopeHead({ scope, labels, onEscape }: {
  */
 function ParagraphPicker({ slot, labels, onClose, scope }: PersonPickerProps & { scope: PickerScope }) {
   const current = scope.speakers.find((s) => s.code === slot.code);
-  const [browsing, setBrowsing] = useState<PickerRole>(current?.role ?? slot.role);
+  // Opens on the likeliest fix: the other speaker of a two-person session.
+  const start = paragraphDefaultSpeaker(scope.speakers, slot.code);
+  const [browsing, setBrowsing] = useState<PickerRole>(start?.role ?? slot.role);
   const rows = scope.speakers.filter((s) => s.role === browsing);
   const [selected, setSelected] = useState<string | null>(
-    (rows.find((r) => r.code === slot.code) ?? rows[0])?.slot ?? null,
+    (rows.find((r) => r.slot === start?.slot) ?? rows[0])?.slot ?? null,
   );
   const menuRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});

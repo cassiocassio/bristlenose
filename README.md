@@ -61,7 +61,7 @@ The report includes:
 - **Send to Miro** -- push analysed quotes straight onto a Miro board (a native sheet on macOS; a panel in the browser report)
 - **Incremental analysis** -- add more interviews to a finished project and re-run; your starred, tagged, and edited quotes carry across, and new material is flagged
 - **Ask your study from your own agent** -- a read-only MCP endpoint gives Claude, Claude Code, ChatGPT or Codex four tools over your quotes, themes, signals and codebook; on macOS it installs into Claude Desktop and the ChatGPT app in one click, and a project is exposed only when you turn agent access on
-- **22 UI languages** -- en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; most are machine-seeded previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
+- **21 UI languages** -- en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, nl, fi, pl, ru, uk, da, sv, nb, tr, plus a Hong Kong variant of Traditional Chinese, zh-Hant-HK (`--lang` flag; most are machine-seeded previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
 
 
 ## Install

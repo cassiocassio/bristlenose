@@ -1396,15 +1396,15 @@ def _init_mlx_backend(
         # heartbeat to surface (per-file progress still ticks in the caller).
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
-        from bristlenose.preflight.whisper import host_owns_download, local_model_dir
+        from bristlenose.preflight.whisper import host_owned_and_absent, local_model_dir
 
         if (host_dir := local_model_dir(settings)) is not None:
             model_name = str(host_dir)  # delivered by the app (Background Assets)
-        elif host_owns_download():
-            # The pack was there at preflight and is gone now (or the preflight was skipped):
-            # mlx-whisper would otherwise download the repo from Hugging Face behind the app.
+        elif host_owned_and_absent(settings):
+            # The pack was there at preflight and is gone now (or the preflight was skipped),
+            # and the model is not in the Hugging Face cache either: mlx-whisper would
+            # otherwise download the repo from Hugging Face behind the app.
             from bristlenose.i18n import t
-            from bristlenose.preflight import WhisperHostOwnsError
 
             raise WhisperHostOwnsError(t("preflight.whisper.aborted_host_owns"))
 
@@ -1732,6 +1732,22 @@ def _init_faster_whisper_backend(
                 "falling back to download",
                 candidate,
             )
+
+    from bristlenose.preflight.whisper import host_owned_and_absent
+
+    if not local_only and host_owned_and_absent(settings):
+        # The app owns the model's delivery and it is not here: constructing `WhisperModel`
+        # below would download it from Hugging Face. Each session waits instead.
+        def waiting_for_the_app(
+            audio_path: Path,
+            settings: BristlenoseSettings,
+            on_segment: FileSegmentCallback | None = None,
+        ) -> tuple[list[TranscriptSegment], str | None]:
+            from bristlenose.i18n import t
+
+            raise WhisperHostOwnsError(t("preflight.whisper.aborted_host_owns"))
+
+        return waiting_for_the_app
 
     # faster-whisper's Silero VAD imports onnxruntime lazily, on the first
     # vad_filter=True call, mid-run. Importing it here, quietly, puts its

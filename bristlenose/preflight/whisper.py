@@ -267,6 +267,21 @@ def host_owns_download() -> bool:
     return os.environ.get(_HOST_OWNS_ENV, "").strip() == "1"
 
 
+def host_owned_and_absent(settings: BristlenoseSettings) -> bool:
+    """The app owns delivery and the model Python would use is not here by any route.
+
+    Not here means: no complete app-delivered directory (:func:`local_model_dir`) AND not in the
+    Hugging Face cache either (a model the researcher chose that was fetched earlier, or an
+    older install, is usable and must not be refused: only a genuinely missing model waits).
+    """
+    if not host_owns_download() or local_model_dir(settings) is not None:
+        return False
+    try:
+        return cache_state(_resolve_repo_id(settings)) != "cached"
+    except Exception:  # noqa: BLE001 — a probe that cannot answer is not evidence of absence
+        return False
+
+
 def _hf_cache_root() -> Path:
     """Resolve the active HF Hub cache root, exactly as huggingface_hub does.
 

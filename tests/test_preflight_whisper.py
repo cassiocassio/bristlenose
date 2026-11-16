@@ -915,6 +915,46 @@ class TestHostOwnsDownload:
         self._run(allow_fetch=True)  # returns, no abort
         self.fetch.assert_not_called()
 
+    def test_absent_means_absent_everywhere_not_just_the_apps_directory(self, tmp_path, monkeypatch):
+        """Only a model missing by EVERY route waits for the app. One already in the Hugging
+        Face cache (another model the researcher chose, an older install) is usable, and
+        refusing it would defer every session for a model the app will never deliver."""
+        from bristlenose.preflight.whisper import host_owned_and_absent
+
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))  # empty
+        monkeypatch.delenv("_BRISTLENOSE_WHISPER_HOST_OWNS", raising=False)
+        with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"), patch(
+            "bristlenose.preflight.whisper.cache_state", return_value="missing"
+        ):
+            assert host_owned_and_absent(_settings()) is False, "the app does not own it"
+            monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
+            assert host_owned_and_absent(_settings()) is True, "owned and missing: wait"
+            _pack(tmp_path)
+            assert host_owned_and_absent(_settings()) is False, "the app's pack is here"
+        (tmp_path / "large-v3-turbo" / "config.json").unlink()
+        with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"), patch(
+            "bristlenose.preflight.whisper.cache_state", return_value="cached"
+        ):
+            assert host_owned_and_absent(_settings()) is False, "in the Hugging Face cache: usable"
+
+    def test_the_faster_whisper_backend_waits_instead_of_downloading(self, tmp_path, monkeypatch):
+        """`WhisperModel(...)` fetches at construction, so the guard has to sit before it."""
+        from bristlenose.preflight import WhisperHostOwnsError
+        from bristlenose.stages import s05_transcribe
+
+        monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
+        monkeypatch.delenv("BRISTLENOSE_WHISPER_MODEL_DIR", raising=False)
+        pytest.importorskip("faster_whisper")
+        settings = _settings(whisper_backend="faster-whisper")
+        hw = MagicMock()
+        with patch("bristlenose.preflight.whisper.cache_state", return_value="missing"), patch(
+            "faster_whisper.WhisperModel"
+        ) as model:
+            fn = s05_transcribe._init_faster_whisper_backend(settings, hw)
+            with pytest.raises(WhisperHostOwnsError):
+                fn(tmp_path / "x.wav", settings)
+        model.assert_not_called()
+
     def test_the_run_itself_refuses_when_the_pack_vanished_after_preflight(
         self, tmp_path, monkeypatch
     ):
@@ -926,7 +966,10 @@ class TestHostOwnsDownload:
         monkeypatch.setenv("_BRISTLENOSE_WHISPER_HOST_OWNS", "1")
         monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))  # no pack
         settings = _settings()
-        with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"):
+        # The model must be missing by every route, whatever this machine's own cache holds.
+        with _on_backend("mlx"), patch("bristlenose.utils.hardware.detect_hardware"), patch(
+            "bristlenose.preflight.whisper.cache_state", return_value="missing"
+        ):
             with pytest.raises(WhisperHostOwnsError):
                 s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
 

@@ -951,13 +951,17 @@ def _print_header(settings: BristlenoseSettings, *, show_provider: bool = True, 
             )
 
 
-def _named_participant_summary(people: object, n_participants: int) -> str:
+def _named_participant_summary(
+    people: object, n_participants: int, *, skip_sessions: frozenset[str] = frozenset()
+) -> str:
     """Build a short summary of named participants for the stats line.
 
     Returns the short names joined by comma (e.g. "Martin, Sarah, Fred, Fritz")
     when all participants are named, or "3 of 5 named" when partial, or ""
     when no names exist.  Only considers participant codes (p1, p2, ...)
-    — moderators and observers are excluded.
+    — moderators and observers are excluded. Entries of *skip_sessions* (sessions
+    that failed and produced no transcript) are left out, so a failed file is
+    not "unnamed".
     """
     if people is None:
         return ""
@@ -969,6 +973,8 @@ def _named_participant_summary(people: object, n_participants: int) -> str:
     total = 0
     for pid, entry in participants.items():
         if not pid.startswith("p"):
+            continue
+        if getattr(getattr(entry, "computed", None), "session_id", "") in skip_sessions:
             continue
         total += 1
         ed = getattr(entry, "editable", None)
@@ -1044,9 +1050,26 @@ def _print_pipeline_summary(
     # Stats line — build dynamically from what's available
     parts: list[str] = []
     participants = getattr(result, "participants", [])
+    # A session that failed before it had a transcript is not a participant in
+    # the report: counting it printed "5 participants (3 of 5 named)" for a run
+    # that analysed three. Ids stay as issued; only the count changes.
+    run_summary = getattr(result, "summary", None)
+    transcripts_bucket = getattr(run_summary, "transcripts", None)
+    # Failures are per file: a session whose .vtt failed but whose recording or
+    # other transcript was read still has a transcript, and stays counted.
+    transcribed = {t.session_id for t in getattr(result, "raw_transcripts", [])}
+    failed_sessions = frozenset(
+        f.session_id for f in (transcripts_bucket.failed if transcripts_bucket else [])
+        if f.session_id and f.session_id not in transcribed
+    )
+    participants = [
+        p for p in participants if getattr(p, "session_id", None) not in failed_sessions
+    ]
     if participants:
         people = getattr(result, "people", None)
-        named = _named_participant_summary(people, len(participants))
+        named = _named_participant_summary(
+            people, len(participants), skip_sessions=failed_sessions
+        )
         if named:
             parts.append(f"{count_noun(len(participants), 'participant')} ({named})")
         else:

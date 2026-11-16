@@ -105,6 +105,12 @@ done
 [ "$up" = 1 ] || { mkdir -p "$NIGHT_DIR"; echo "HALTED step 0: the guest never answered" > "$NIGHT_DIR/verdict.txt"; exit 0; }
 # Tonight's walker, over whatever the base was frozen with.
 "$HERE/g.sh" sh -c "mkdir -p ~/walk/bin && cp '/Volumes/My Shared Files/walk/walker-$wsha' ~/walk/bin/walker" || exit 2
+# A staged app (share/app-current.tar, a tar of Bristlenose.app made from a release .dmg) replaces the one frozen into the
+# base, so a base built from a 30-day alpha build does not outlive its clock. The old app is moved aside in the clone, never deleted;
+# the clone is deleted at the end of the night. Absent tar: the base's own app is walked, as before.
+if [ -f "$SHARE/app-current.tar" ]; then
+    "$HERE/g.sh" sh -c 'mkdir -p ~/walk/old && mv /Applications/Bristlenose.app ~/walk/old/Bristlenose-base.app && cd /Applications && tar -xf "/Volumes/My Shared Files/walk/app-current.tar" && test -d /Applications/Bristlenose.app' || { mkdir -p "$NIGHT_DIR"; echo "HALTED step 0: the staged app did not install" > "$NIGHT_DIR/verdict.txt"; exit 0; }
+fi
 if [ "${FIXTURE:-smoke}" = screens ]; then
     "$HERE/g.sh" sh -c 'rm -rf ~/Documents/screens-project && cp -R "/Volumes/My Shared Files/walk/screens-project" ~/Documents/' || exit 2
 fi

@@ -250,6 +250,13 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         if outcome != .arrived {
             adapter.cancelEnsure()
             ensureTask.cancel()
+            // The call may never notice (before the first byte there is no Progress to cancel),
+            // so the system could be left fetching 1.6 GB beside the Hugging Face fallback. With
+            // no verified pack on disk, ask it to drop what it has: best effort, result ignored.
+            // A verified pack is never touched (a Stop during a re-check must not delete it).
+            if presentDirectory() == nil {
+                Task.detached { try? await adapter.remove() }
+            }
         }
         return outcome
     }

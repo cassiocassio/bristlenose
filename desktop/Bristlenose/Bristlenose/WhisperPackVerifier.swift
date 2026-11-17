@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 // What the app trusts about a Whisper pack the system delivered
-// (docs/private/background-assets-whisper-plan-2026-11.md §4, "Integrity").
+// (the Background Assets plan, integrity section).
 //
 // Apple hosts and delivers the pack; the app still checks what it is about to hand to the
 // sidecar, because the sidecar loads these bytes as tensors and runs with

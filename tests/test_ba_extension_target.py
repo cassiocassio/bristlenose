@@ -1,4 +1,4 @@
-"""Pins for the Background Assets extension target (plan: docs/private/background-assets-whisper-plan-2026-11.md §7).
+"""Pins for the Background Assets extension target (the Background Assets plan, section on the release lanes).
 
 The extension is a second signed process in the store build, and several things about it are
 invisible until upload or a release night: the Developer-ID lane signing it with the app's

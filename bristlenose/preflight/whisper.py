@@ -198,7 +198,7 @@ def unknown_model_message(settings: BristlenoseSettings) -> str | None:
 
 
 def local_model_dir(settings: BristlenoseSettings) -> Path | None:
-    """The host-delivered model directory for this run, else ``None`` (SPIKE).
+    """The host-delivered model directory for this run, else ``None``.
 
     The one resolver for a model the Mac app delivered outside the Hugging Face
     cache (Background Assets). Honoured only on the MLX path: faster-whisper

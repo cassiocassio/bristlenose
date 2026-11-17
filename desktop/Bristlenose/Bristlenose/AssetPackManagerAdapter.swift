@@ -40,7 +40,14 @@ final class AssetPackManagerAdapter: WhisperPackAdapter, @unchecked Sendable {
             }
         }
         defer { watcher.cancel(); setProgress(nil) }
-        try await manager.ensureLocalAvailability(of: pack)
+        // Task cancellation reaches the system call's Progress when there is one; before the first
+        // byte there is none, and the acquirer then does not wait for this call (it asks for the
+        // pack to be removed instead, see `BackgroundAssetsAcquirer.ensureWithWatchdog`).
+        try await withTaskCancellationHandler {
+            try await manager.ensureLocalAvailability(of: pack)
+        } onCancel: { [weak self] in
+            self?.cancelEnsure()
+        }
     }
 
     func cancelEnsure() { currentProgress()?.cancel() }

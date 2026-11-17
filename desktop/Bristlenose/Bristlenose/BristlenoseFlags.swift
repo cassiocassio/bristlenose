@@ -111,7 +111,7 @@ enum BristlenoseFlags {
     }
 
     /// Deliver the Whisper model by **Apple Background Assets** in the store build on macOS 26+
-    /// (`docs/private/background-assets-whisper-plan-2026-11.md`). On unless written off: the
+    /// (the Background Assets plan). On unless written off: the
     /// kill switch for a tester who hits trouble, and a guard on `AssetPackManager.shared`,
     /// which is never touched when this is off. Only means something in a build compiled with
     /// `BA_WHISPER`; the Developer-ID `.dmg` never has it.

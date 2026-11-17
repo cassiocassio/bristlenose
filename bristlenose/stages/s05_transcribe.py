@@ -1722,7 +1722,14 @@ def _init_faster_whisper_backend(
     local_only = False
     if model_dir:
         candidate = os.path.join(model_dir, settings.whisper_model)
-        if os.path.isdir(candidate):
+        if os.path.isdir(candidate) and not os.path.isfile(os.path.join(candidate, "model.bin")):
+            # An MLX-format model (config.json + weights.safetensors, as the Mac app delivers)
+            # is not a faster-whisper model: loading it would fail on the first file.
+            logger.warning(
+                "BRISTLENOSE_WHISPER_MODEL_DIR holds %s without a model.bin (not a "
+                "faster-whisper model); ignoring it", candidate,
+            )
+        elif os.path.isdir(candidate):
             model_id = candidate
             local_only = True
             logger.info("Using bundled Whisper model: %s", candidate)

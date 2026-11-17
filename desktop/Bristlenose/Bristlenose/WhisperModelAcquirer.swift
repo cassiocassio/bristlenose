@@ -2,7 +2,7 @@ import Foundation
 import os
 
 // How the Whisper model reaches this Mac: one seam, one picker, one owner of the download
-// (docs/private/background-assets-whisper-plan-2026-11.md §4).
+// (the Background Assets plan, design section).
 //
 // `WhisperDownloadModel` keeps the phases, the pill and the launch rules. What it no longer
 // knows is *how* the bytes arrive: that is an acquirer. Today there is one, the sidecar's own

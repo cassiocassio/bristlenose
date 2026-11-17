@@ -10,7 +10,7 @@
 #
 # WHAT IT NEVER DOES: upload. Uploading is a separate, deliberate, owner-run step (below).
 #
-# THE PACK (design: docs/private/background-assets-whisper-plan-2026-11.md §4)
+# THE PACK (design: the Background Assets plan, pack layout section)
 #   One pack, id `whisper-large-v3-turbo`, policy onDemand (the app starts it, after the size
 #   prompt; `prefetch` would start before our consent screen). Destination directory
 #   `large-v3-turbo/` holding config.json and weights.safetensors ONLY. Every pack of an app

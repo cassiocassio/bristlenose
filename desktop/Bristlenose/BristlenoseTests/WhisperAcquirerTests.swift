@@ -3,7 +3,7 @@ import Testing
 @testable import Bristlenose
 
 /// The seam that decides how the Whisper model reaches this Mac
-/// (`WhisperModelAcquirer.swift`, docs/private/background-assets-whisper-plan-2026-11.md §4).
+/// (`WhisperModelAcquirer.swift`, the Background Assets plan, design section).
 @Suite struct WhisperAcquirerPickerTests {
 
     private typealias Pick = WhisperAcquirerPicker
@@ -448,6 +448,36 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         await ev.waitForEnd()
         adapter.release()
         #expect(ev.outcome == .failed(cause: nil))
+    }
+
+    /// An attempt abandoned before any byte (Stop, or silence) while the system call ignores
+    /// cancellation must not leave the system fetching 1.6 GB beside the Hugging Face fallback:
+    /// with no verified pack on disk the acquirer asks for it to be removed.
+    @Test func anAbandonedAttemptWithNoVerifiedPackAsksTheSystemToDropIt() async throws {
+        for stopped in [true, false] {
+            let (a, adapter, ev) = try make([.hangIgnoringCancel], silence: .milliseconds(300),
+                                            complete: false)
+            _ = a.start(events: ev)
+            if stopped { try await Task.sleep(for: .milliseconds(100)); a.stop() }
+            await ev.waitForEnd()
+            let deadline = ContinuousClock.now + .seconds(5)
+            while adapter.removeCalls == 0, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
+            adapter.release()
+            #expect(adapter.removeCalls >= 1, "stopped=\(stopped): asked the system to drop the unfinished pack")
+        }
+    }
+
+    /// ...but a verified pack on disk is never removed by a Stop or a timeout (a re-check must
+    /// not delete a good pack).
+    @Test func anAbandonedRecheckNeverRemovesAVerifiedPack() async throws {
+        let (a, adapter, ev) = try make([.hangIgnoringCancel], complete: true, verified: true)
+        _ = a.start(events: ev)
+        try await Task.sleep(for: .milliseconds(100))
+        a.stop()
+        await ev.waitForEnd()
+        try await Task.sleep(for: .milliseconds(300))
+        adapter.release()
+        #expect(adapter.removeCalls == 0)
     }
 
     /// Stop while the bad pack is being removed must not go on to download it all again.

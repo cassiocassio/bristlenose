@@ -955,6 +955,42 @@ class TestHostOwnsDownload:
                 fn(tmp_path / "x.wav", settings)
         model.assert_not_called()
 
+    def test_faster_whisper_ignores_an_mlx_format_directory(self, tmp_path, monkeypatch):
+        """The Mac app's pack is MLX format (config.json + weights.safetensors). Handed to
+        faster-whisper as a local model it would fail on the first file."""
+        from bristlenose.stages import s05_transcribe
+
+        pytest.importorskip("faster_whisper")
+        d = tmp_path / "large-v3-turbo"
+        d.mkdir()
+        (d / "config.json").write_text("{}", encoding="utf-8")
+        (d / "weights.safetensors").write_bytes(b"x" * 16)
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
+        monkeypatch.delenv("_BRISTLENOSE_WHISPER_HOST_OWNS", raising=False)
+        settings = _settings(whisper_backend="faster-whisper")
+        with patch("faster_whisper.WhisperModel") as model, patch(
+            "bristlenose.preflight.whisper.cache_state", return_value="missing"
+        ):
+            s05_transcribe._init_faster_whisper_backend(settings, MagicMock())
+        args, kwargs = model.call_args
+        assert args[0] != str(d), "the MLX-format directory must not be loaded as a faster-whisper model"
+        assert kwargs["local_files_only"] is False
+
+    def test_faster_whisper_still_uses_a_directory_that_has_model_bin(self, tmp_path, monkeypatch):
+        from bristlenose.stages import s05_transcribe
+
+        pytest.importorskip("faster_whisper")
+        d = tmp_path / "large-v3-turbo"
+        d.mkdir()
+        (d / "model.bin").write_bytes(b"x" * 16)
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
+        monkeypatch.delenv("_BRISTLENOSE_WHISPER_HOST_OWNS", raising=False)
+        settings = _settings(whisper_backend="faster-whisper")
+        with patch("faster_whisper.WhisperModel") as model:
+            s05_transcribe._init_faster_whisper_backend(settings, MagicMock())
+        args, kwargs = model.call_args
+        assert args[0] == str(d) and kwargs["local_files_only"] is True
+
     def test_the_run_itself_refuses_when_the_pack_vanished_after_preflight(
         self, tmp_path, monkeypatch
     ):

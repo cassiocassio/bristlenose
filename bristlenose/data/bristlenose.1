@@ -539,7 +539,10 @@ Log file verbosity (\fI<output-dir>/.bristlenose/bristlenose.log\fR). Default:
 .TP
 .B BRISTLENOSE_WHISPER_MODEL_DIR
 Directory containing pre-downloaded Whisper models, used by the desktop
-sidecar to bypass the runtime cache. Not needed for CLI use.
+sidecar to bypass the runtime cache. Not needed for CLI use. On Apple Silicon
+(MLX) a complete model in \fI<dir>/<model>\fR (\fIconfig.json\fR and a weights
+file) is used instead of the Hugging Face cache; the faster\-whisper backend
+reads \fI<dir>/<model>\fR only when it holds a \fImodel.bin\fR.
 .TP
 .B BRISTLENOSE_VOICE_PASS
 Set to \fBfalse\fR to switch off the voice pass in speaker identification.

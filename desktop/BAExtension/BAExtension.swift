@@ -2,7 +2,7 @@ import BackgroundAssets
 import StoreKit
 
 // The Background Assets download extension for the Mac App Store build
-// (docs/private/background-assets-whisper-plan-2026-11.md §4). It has no code of its own:
+// (the Background Assets plan, design section). It has no code of its own:
 // Apple hosts the asset pack, and the system runs this extension to fetch it. The app
 // asks for the pack through `AssetPackManager` (`AssetPackManagerAdapter.swift`).
 //

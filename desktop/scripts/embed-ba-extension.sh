@@ -4,7 +4,7 @@
 # Does nothing unless BN_EMBED_BA=YES (set only by the store lane, `build-all.sh`, on the
 # command line). The .dmg lane, IDE builds and the other schemes never set it, and the
 # extension target is built only by the "Bristlenose Store" scheme, so nothing else ever builds,
-# signs or registers it (docs/private/background-assets-whisper-plan-2026-11.md §7).
+# signs or registers it (the Background Assets plan, release lanes section).
 #
 # With BN_EMBED_BA=YES it (1) copies BAExtension.appex into Contents/PlugIns, (2) adds the
 # host's Background Assets keys to the built Info.plist: BAAppGroupID (the team-prefixed group
@@ -21,14 +21,18 @@ if [ "${BN_EMBED_BA:-NO}" != "YES" ]; then
     # Not a store build. An earlier store build in the same derived data may have left the
     # extension and the host's BA keys behind (an incremental build does not always rebuild
     # Info.plist): remove them, so this build can never carry them by accident.
-    rm -rf "${TARGET_BUILD_DIR:-/nonexistent}/${CONTENTS_FOLDER_PATH:-x}/PlugIns/BAExtension.appex"
+    removed=""
+    STALE="${TARGET_BUILD_DIR:-/nonexistent}/${CONTENTS_FOLDER_PATH:-x}/PlugIns/BAExtension.appex"
+    if [ -e "$STALE" ]; then rm -rf "$STALE"; removed="a stale extension"; fi
     PLIST="${TARGET_BUILD_DIR:-}/${INFOPLIST_PATH:-}"
     if [ -n "${TARGET_BUILD_DIR:-}" ] && [ -f "$PLIST" ]; then
         for key in BAAppGroupID BAHasManagedAssetPacks BAUsesAppleHosting; do
-            /usr/libexec/PlistBuddy -c "Delete :$key" "$PLIST" >/dev/null 2>&1 || true
+            if /usr/libexec/PlistBuddy -c "Delete :$key" "$PLIST" >/dev/null 2>&1; then
+                removed="${removed:+$removed, }stale key $key"
+            fi
         done
     fi
-    echo "embed-ba-extension: BN_EMBED_BA is not YES; nothing embedded (stale extension and keys removed)"
+    echo "embed-ba-extension: BN_EMBED_BA is not YES; nothing embedded${removed:+ (removed: $removed)}"
     exit 0
 fi
 case " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " in
@@ -52,16 +56,18 @@ if [ -z "$SRC" ]; then
     exit 1
 fi
 
+# Check everything the plist step needs BEFORE copying anything, so a refusal leaves nothing behind.
+PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+[ -f "$PLIST" ] || { echo "error: embed-ba-extension: no Info.plist at $PLIST" >&2; exit 1; }
+GROUP="${DEVELOPMENT_TEAM:?DEVELOPMENT_TEAM is not set}.app.bristlenose"
+
 DEST="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/PlugIns"
 mkdir -p "$DEST"
 rm -rf "$DEST/BAExtension.appex"
 ditto "$SRC" "$DEST/BAExtension.appex"
 echo "embed-ba-extension: embedded $SRC"
 
-PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
-[ -f "$PLIST" ] || { echo "error: embed-ba-extension: no Info.plist at $PLIST" >&2; exit 1; }
 PB=/usr/libexec/PlistBuddy
-GROUP="${DEVELOPMENT_TEAM:?DEVELOPMENT_TEAM is not set}.app.bristlenose"
 for kv in "BAAppGroupID:string:$GROUP" "BAHasManagedAssetPacks:bool:true" "BAUsesAppleHosting:bool:true"; do
     key="${kv%%:*}"; rest="${kv#*:}"; type="${rest%%:*}"; val="${rest#*:}"
     "$PB" -c "Delete :$key" "$PLIST" >/dev/null 2>&1 || true

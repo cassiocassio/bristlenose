@@ -35,8 +35,13 @@ has_key "$d" BAAppGroupID && has_key "$d" BAHasManagedAssetPacks && has_key "$d"
 run "$d" BN_EMBED_BA=NO
 [ $RC -eq 0 ] && [ ! -e "$d/products/Bristlenose.app/Contents/PlugIns/BAExtension.appex" ] && ok "flag off: a stale extension is removed" || bad "flag off: stale extension kept"
 ! has_key "$d" BAAppGroupID && ! has_key "$d" BAHasManagedAssetPacks && ! has_key "$d" BAUsesAppleHosting && ok "flag off: stale host keys are removed" || bad "flag off: stale keys kept"
-d=$(tree unset); run "$d"
-[ $RC -eq 0 ] && ok "flag unset: does nothing and succeeds" || bad "flag unset (rc=$RC)"
+d=$(tree unset); product "$d"; mkdir -p "$d/products/Bristlenose.app/Contents/PlugIns"; run "$d"
+[ $RC -eq 0 ] && [ ! -e "$d/products/Bristlenose.app/Contents/PlugIns/BAExtension.appex" ] && grep -q "nothing embedded" <<<"$OUT" && ok "flag unset: nothing embedded, succeeds, says so honestly (no 'removed' claim when nothing was)" || bad "flag unset (rc=$RC): $OUT"
+! grep -q "removed:" <<<"$OUT" && ok "flag unset: no stale artefacts, so no removal is claimed" || bad "flag unset claims a removal"
+# no Xcode variables at all (a wrong environment): must neither fail nor delete anything unrelated
+sentinel="$T/sentinel"; mkdir -p "$sentinel/PlugIns/BAExtension.appex"
+OUT=$(env -i PATH="$PATH" BN_EMBED_BA=NO bash "$SCRIPT" 2>&1); RC=$?
+[ $RC -eq 0 ] && [ -d "$sentinel/PlugIns/BAExtension.appex" ] && ok "no Xcode variables: succeeds and touches nothing" || bad "no-variables case (rc=$RC)"
 
 d=$(tree nosrc); run "$d" BN_EMBED_BA=YES
 [ $RC -ne 0 ] && grep -q "BAExtension.appex not found" <<<"$OUT" && ok "flag on, no product: refuses (a store build must not quietly lack it)" || bad "flag on, no product: did not refuse"
@@ -44,7 +49,8 @@ d=$(tree nosrc); run "$d" BN_EMBED_BA=YES
 d=$(tree dmg); product "$d"; run "$d" BN_EMBED_BA=YES SWIFT_ACTIVE_COMPILATION_CONDITIONS="DEBUG DEVELOPER_ID_BETA"
 [ $RC -ne 0 ] && grep -q "DEVELOPER_ID_BETA" <<<"$OUT" && [ ! -e "$d/products/Bristlenose.app/Contents/PlugIns" ] && ok "flag on in a .dmg build: refuses, embeds nothing" || bad ".dmg build not refused"
 
-d=$(tree noteam); product "$d"; run "$d" BN_EMBED_BA=YES DEVELOPMENT_TEAM=
-[ $RC -ne 0 ] && ok "flag on, no team: refuses (the group needs it)" || bad "no team not refused"
+d=$(tree noteam); product "$d"; before=$(cat "$d/products/Bristlenose.app/Contents/Info.plist")
+run "$d" BN_EMBED_BA=YES DEVELOPMENT_TEAM=
+[ $RC -ne 0 ] && [ ! -e "$d/products/Bristlenose.app/Contents/PlugIns" ] && [ "$before" = "$(cat "$d/products/Bristlenose.app/Contents/Info.plist")" ] && ok "flag on, no team: refuses and leaves the bundle untouched (no appex copied, plist unchanged)" || bad "no team: refused too late or changed something"
 
 echo; echo "$PASS passed, $FAIL failed"; [ "$FAIL" -eq 0 ]

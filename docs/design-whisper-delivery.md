@@ -1,5 +1,5 @@
 ---
-status: design for the first App Store submission (24 Nov 2026); built on unmerged branches; one TestFlight evidence build exists; not reviewed by App Review; several decisions open (§11)
+status: design for the first App Store submission (24 Nov 2026). Shipping tree decided 17 Nov (Tree B, the candidate, branch `ba-whisper-candidate`) but not yet in any build; the only signed evidence is the Tree A build 6532; not reviewed by App Review; D3 to D15 open (§11)
 date: 17 Nov 2026
 trued-against: see "Which tree this describes" below. Main was at `ddbe9b51a`.
 ---
@@ -15,11 +15,13 @@ Two source trees matter, and they behave differently. Every sentence below that 
 | Name | What it is | Where it exists | Built or observed |
 |---|---|---|---|
 | **Tree A** | Branch `ba-whisper-embed` at the commit that produced TestFlight build 6532 (`e9f3617ff`, built in a clone with `BN_BA_WHISPER=1`). The branch tip `1c3e5f027` has the same key files. | Local branch, not merged | TestFlight 0.46.0 build 6532, internal only, macOS 27, one Mac (E5). An evidence build, not a ship candidate: its dependencies differ from the main venv. |
-| **Tree B** | Tree A plus commit `bb60d1b0c` (system cancel is not a Stop; Hugging Face fetch pinned and hash-checked; a run honours Not Now; the "Zero KB" text fixed). | Branch `claude/ba-gap-closure-488c85`, not merged | **In no build.** Unit-tested only (Swift flag off and on, Python for the touched areas). |
+| **Tree B (the candidate, the shipping tree, decided D1 on 17 Nov 2026)** | Tree A plus commit `bb60d1b0c` (system cancel is not a Stop; Hugging Face fetch pinned and hash-checked; a run honours Not Now; the "Zero KB" text fixed), plus the release-script row that sets `BN_BA_WHISPER=1` and a binary gate (D2). | Branch `ba-whisper-candidate`, tip `8f4fd1f25`; `bb60d1b0c` itself is on `claude/ba-gap-closure-488c85`. Not merged: the owner expects to merge the candidate into main before submitting, moment not chosen. | **In no build yet.** Unit-tested only (Swift flag off and on, Python for the touched areas). The first signed, TestFlight-verified candidate build is still to be produced by the build session. |
 
 Main carries neither: it has the Hugging Face path, the size alert (`2fcbaaccc`) and Apple's engine, with the Background Assets adapter compiled out.
 
-**A default store archive does not use Background Assets.** `desktop/scripts/build-all.sh` defines the `BA_WHISPER` compile condition only when `BN_BA_WHISPER=1` is set (the script's own comment: "the committed default stays dark"), while the extension and the Background Assets keys are embedded regardless. An archive made without that variable carries the extension and keys with the adapter compiled out, so every user gets the Hugging Face route (build 6531 was built this way). Which tree ships, and how the switch is set for the release archive, is open decision D1 and D2 in §11. Nothing below should be read as describing a default archive.
+**A default store archive does not use Background Assets.** `desktop/scripts/build-all.sh` defines the `BA_WHISPER` compile condition only when `BN_BA_WHISPER=1` is set (the script's own comment: "the committed default stays dark"), while the extension and the Background Assets keys are embedded regardless. An archive made without that variable carries the extension and keys with the adapter compiled out, so every user gets the Hugging Face route (build 6531 was built this way). The owner decided on 17 Nov 2026 that Tree B ships (D1) and that `release.sh` sets the variable for the store lane with a gate that fails if the extension is embedded and the adapter is not compiled in (D2). Both are in the candidate and in no build yet. Plan A for 24 Nov includes Background Assets; if Apple rejects it, the plan is to unwind to the Hugging Face path. Nothing below should be read as describing a default archive.
+
+Until a candidate build exists and has been verified on TestFlight, every statement about Tree B is by unit test or code reading, and the signed-build evidence (E5) is Tree A's.
 
 ## 1. Purpose and decision summary
 
@@ -248,10 +250,10 @@ All of this is by design or code reading, not observed under review conditions.
 
 ## 11. Owner decisions
 
-Open decisions, each with the recommendation first. None is settled in this document.
+D1 and D2 were decided by the owner on 17 Nov 2026 and are recorded first. D3 to D15 are open, each with the recommendation first.
 
-1. **D1. Which tree ships.** Tree A plus `bb60d1b0c` (Tree B), rebuilt, re-run and re-verified, since Tree A alone fetches without the alert and records a system cancel as a Stop. Alternatives: Tree A as built; or Background Assets dark (Hugging Face only, with the pack not submitted).
-2. **D2. The `BN_BA_WHISPER=1` default.** Make the release archive set it in `release.sh` and add a gate that fails when the extension is embedded and the adapter is not compiled in. Alternatives: a manual export on release night; leave it dark.
+1. **D1. Which tree ships. DECIDED 17 Nov 2026: Tree B, the candidate** (branch `ba-whisper-candidate`, tip `8f4fd1f25`: the embed work, `bb60d1b0c`, and the D2 row and gate). Reason: Tree A alone fetches without the alert and records a system cancel as a Stop. Plan A for 24 Nov includes Background Assets; the owner expects to merge the candidate into main before submitting; if Apple rejects, unwind to the Hugging Face path. Still owed: a candidate build, signed and verified on TestFlight, since no build contains it.
+2. **D2. The `BN_BA_WHISPER=1` default. DECIDED 17 Nov 2026: yes.** `release.sh` sets it for the store lane, and the gate that fails when the extension is embedded and the adapter is not compiled in stays. Both are in the candidate, in no build yet; the gate has not been run on a signed release archive.
 3. **D3. The pack on the 24 Nov submission.** Attach pack version 1 to the first app version (status Ready for Review, not only Ready for Internal Testing); confirm the Xcode that built the pack (27.2 on 17 Nov) is a release and not a beta, and rebuild the pack if it is a beta. A pack not in the first submission is not delivered.
 4. **D4. A signed missing-pack test.** One internal TestFlight build requesting a pack id that does not exist, on a macOS 26.x Mac and on 27, to see the lookup-failure path with real signing. If it crashes or hangs, submit with Background Assets dark and add it in an update. Recommended before 24 Nov; it needs an upload.
 5. **D5. A recording that needs Whisper without a consent answer (Tree B).** Re-offer the size alert when a run is deferred for lack of an answer, and say on the row that the model is waiting for a download. Alternatives: leave the dead end; or on macOS 15 treat the first recording as the consent moment. New wording, so the R114 UX gate applies.
@@ -279,8 +281,8 @@ All Background Assets evidence is from internal TestFlight on one Mac (macOS 27.
 | Transcript from the pack equals the Hugging Face transcript | One 45 s English clip, dev-signed sandbox run (E2). **Not compared on the store build.** | E2 |
 | The `.dmg` has no extension and no Background Assets keys | **Verified** on an evidence build. | E3 |
 | The store package passes its gates with the extension | **Verified** on an evidence build (the one red row was Xcode's export build number). | E3 |
-| Tree B fixes | **Unit-tested only; in no build.** | E6 |
-| Default store archive uses Background Assets | **No.** Only with `BN_BA_WHISPER=1`. | `build-all.sh` |
+| Tree B (the candidate) fixes, release row and gate | **Unit-tested only; in no build.** No candidate build has been signed or run on TestFlight. | E6 |
+| Default store archive uses Background Assets | **No.** Only with `BN_BA_WHISPER=1`. The candidate's `release.sh` sets it (D2); not yet seen in a release archive. | `build-all.sh` |
 | macOS 26.x, any behaviour | **Not verified.** The development-signed toy is killed on an unprovisioned guest. | E1 |
 | macOS 15 store build | **Not verified.** Never installed there. | E1, E9 |
 | macOS 15 `.dmg`: download by button | Observed (E9). Size alert, pill, transcription: **not observed**. | E9 |

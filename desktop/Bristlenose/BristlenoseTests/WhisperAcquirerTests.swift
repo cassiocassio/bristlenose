@@ -602,6 +602,25 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(m2.stopNoteApplies == true)
     }
 
+    /// Download Now while the fallback fetch is running is a no-op, and must not hand the next
+    /// attempt back to Background Assets (single flight: the fetch in flight stays).
+    @Test func downloadNowDuringTheFallbackKeepsBackgroundAssetsOff() {
+        let ba = FakeAcquirer(); ba.kind = .backgroundAssets
+        let fetch = FakeAcquirer()
+        var usableAsked: [Bool] = []
+        var queue: [FakeAcquirer] = [ba, fetch]
+        let m = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { usable in
+            usableAsked.append(usable)
+            return queue.isEmpty ? FakeAcquirer() : queue.removeFirst()
+        })
+        m.downloadNow()                       // BA starts
+        ba.end(.failed(cause: nil))           // falls back: the fetch is running now
+        m.downloadNow()                       // single flight: a no-op
+        fetch.end(.failed(cause: .network))   // the fetch fails: idle again
+        _ = m.runEnvironment                  // asks the factory what it would pick now
+        #expect(usableAsked.last == false, "still this launch's fallback, not a fresh try")
+    }
+
     @Test func aSidecarFailureDoesNotFallBackToItself() {
         let fetch = FakeAcquirer()
         let m = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in fetch })
@@ -630,6 +649,51 @@ final class VerdictQueue: @unchecked Sendable {
         d.set(false, forKey: "whisperDownloadStoppedByUser")  // forget it, to see whether `.stopped` sets it again
         fetch.end(.stopped)
         #expect(d.bool(forKey: "whisperDownloadStoppedByUser") == false)
+    }
+}
+
+@Suite struct PickedKindTests {
+    private func defaults(model: String?) -> UserDefaults {
+        let suite = "bn-pk-\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        d.removePersistentDomain(forName: suite)
+        if let model { d.set(model, forKey: "whisperModel") }
+        return d
+    }
+
+    private func kind(model: String?, compiledIn: Bool = true, usable: Bool = true) -> WhisperAcquirerKind {
+        WhisperDownloadModel.pickedKind(
+            backgroundAssetsUsable: usable, compiledIn: compiledIn, osMajor: 26,
+            channel: .appStoreOrTestFlight, killSwitchOn: true, defaults: defaults(model: model))
+    }
+
+    /// The whole decision at the call site: Background Assets only for the pack's model, in a build
+    /// that has it, while it is usable.
+    @Test func onlyThePacksModelInABuildThatHasItGetsBackgroundAssets() {
+        #expect(kind(model: nil) == .backgroundAssets, "unset is the default turbo")
+        #expect(kind(model: "large-v3-turbo") == .backgroundAssets)
+        #expect(kind(model: "small") == .sidecarFetch, "another model is not the app's to deliver")
+        #expect(kind(model: "org/custom") == .sidecarFetch)
+        #expect(kind(model: nil, compiledIn: false) == .sidecarFetch, "this build has no adapter")
+        #expect(kind(model: nil, usable: false) == .sidecarFetch, "it failed in this launch")
+    }
+}
+
+@Suite struct EnsureRaceTests {
+    @Test func theFirstResultWinsAndALaterOneIsIgnored() async {
+        let race = EnsureRace()
+        #expect(race.finish(.failed) == true)
+        #expect(race.finish(.arrived) == false, "decided already")
+        #expect(await race.value() == .failed, "a late arrival cannot turn a give-up into success")
+    }
+
+    @Test func aWaiterBeforeTheResultIsReleasedByIt() async {
+        let race = EnsureRace()
+        async let waited = race.value()
+        try? await Task.sleep(for: .milliseconds(50))
+        race.finish(.cancelled)
+        race.finish(.arrived)
+        #expect(await waited == .cancelled)
     }
 }
 

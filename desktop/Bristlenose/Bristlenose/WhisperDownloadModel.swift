@@ -425,12 +425,20 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     private var idleCache: WhisperModelAcquirer?
     private var pickedKind: WhisperAcquirerKind { Self.pickedKind(backgroundAssetsUsable: backgroundAssetsUsable) }
 
-    private static func pickedKind(backgroundAssetsUsable: Bool) -> WhisperAcquirerKind {
+    /// Every input injectable, so the whole decision (including the chosen model and whether
+    /// this build has Background Assets at all) is tested without a store build.
+    nonisolated static func pickedKind(
+        backgroundAssetsUsable: Bool,
+        compiledIn: Bool = WhisperDownloadModel.backgroundAssetsCompiledIn,
+        osMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
+        channel: DistributionChannel = .current,
+        killSwitchOn: Bool = BristlenoseFlags.backgroundAssets,
+        defaults: UserDefaults = .standard
+    ) -> WhisperAcquirerKind {
         WhisperAcquirerPicker.pick(
-            osMajor: ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
-            channel: .current, killSwitchOn: BristlenoseFlags.backgroundAssets,
-            backgroundAssetsUsable: backgroundAssetsUsable && backgroundAssetsCompiledIn
-                && chosenModelIsPackModel())
+            osMajor: osMajor, channel: channel, killSwitchOn: killSwitchOn,
+            backgroundAssetsUsable: backgroundAssetsUsable && compiledIn
+                && chosenModelIsPackModel(defaults))
     }
 
     /// The app's one pack is `large-v3-turbo`. Another model chosen in Settings, or a

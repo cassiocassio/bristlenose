@@ -436,6 +436,27 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 6f. The Background Assets adapter is compiled into the host when an extension ships
+#
+# D2 (docs/design-whisper-delivery.md section 11): an archive that embeds the extension but
+# was built without BA_WHISPER is a dark build by accident. The extension is signed, the pack
+# is uploaded, and the app never asks for it. Derived from the BUILT host binary, not from a
+# comment or a build setting: the adapter's class name (`AssetPackManagerAdapter`, in the
+# Swift type metadata) is in the executable only when `BA_WHISPER` was set when it compiled.
+# Measured on a flag-on and a flag-off Release build of this app (17 Nov 2026).
+# ---------------------------------------------------------------------------
+if [ "${#EXTS[@]}" -eq 0 ]; then
+    ok "BA adapter" "no extension in this build, nothing to serve"
+else
+    ADAPTER_HITS=$(strings -a "$OUTER" 2>/dev/null | grep -c 'AssetPackManagerAdapter' || true)
+    if [ "${ADAPTER_HITS:-0}" -gt 0 ]; then
+        ok "BA adapter" "compiled into the host (BA_WHISPER was set)"
+    else
+        die "BA adapter" "an extension is embedded but the host has no Background Assets adapter: it was built without BA_WHISPER, so the app would never request the pack (archive with BN_BA_WHISPER=1)"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Framework identifiers — ASC rejection #3, 14 Jul 2026
 #
 # sign-sidecar.sh passes --identifier from each framework's CFBundleIdentifier.

@@ -73,7 +73,12 @@ build_app() {
     local app="$1/Bristlenose.app"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/bristlenose-sidecar"
     # A real Mach-O executable, so `file` classifies it as one.
-    printf 'int main(void){return 0;}' > "$WORK/m.c"
+    # FIXTURE_ADAPTER=1: the host carries the adapter's class name, as a flag-on build does.
+    if [ "${FIXTURE_ADAPTER:-0}" = 1 ]; then
+        printf 'const char marker[]="_TtC11Bristlenose23AssetPackManagerAdapter";\nint main(void){return marker[0]==0;}' > "$WORK/m.c"
+    else
+        printf 'int main(void){return 0;}' > "$WORK/m.c"
+    fi
     cc -o "$app/Contents/MacOS/Bristlenose" "$WORK/m.c" 2>/dev/null
     cp "$app/Contents/MacOS/Bristlenose" "$app/Contents/Resources/bristlenose-sidecar/bristlenose-sidecar"
     cat > "$app/Contents/Info.plist" <<PLIST
@@ -294,6 +299,13 @@ PLIST
     echo "$a"
 }
 
+# D2 gate: an extension with no adapter in the host is refused; with the adapter it passes.
+D=$WORK/ad0; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist")
+reject_case "extension embedded but the adapter not compiled in" "✗.*BA adapter.*without BA_WHISPER" "$D"
+D=$WORK/ad1; mkdir -p "$D"; A=$(FIXTURE_ADAPTER=1 build_ext_app "$D" "$WORK/ents-ext-ok.plist")
+if make_pkg "$A" "$D/t.pkg"; then AD_OUT=$("$GATE" "$D/t.pkg" 2>&1); else AD_OUT=""; fail "adapter fixture — pkgbuild failed"; fi
+if grep -qi '✓.*BA adapter.*compiled into the host' <<<"$AD_OUT"; then pass "extension with the adapter compiled in → BA adapter row passes"; else fail "extension with the adapter did not pass the BA adapter row"; sed 's/^/        /' <<<"$AD_OUT" | grep -iE 'BA adapter' >&2; fi
+
 D=$WORK/e0; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist")
 if make_pkg "$A" "$D/t.pkg"; then EXT_OUT=$("$GATE" "$D/t.pkg" 2>&1); else EXT_OUT=""; fail "intact extension fixture — pkgbuild failed"; fi
 if grep -qi '✓.*extensions.*1 .appex' <<<"$EXT_OUT"; then
@@ -361,6 +373,7 @@ expect_row_passes "hardened runtime on → row passes" "✓.*hardened runtime"
 expect_row_passes "cloud sign-in IDs present → row passes" "✓.*Teams + Meet + Zoom client IDs baked"
 expect_row_passes "no print entitlement → row passes" "✓.*host print.*absent"
 expect_row_passes "no extension in today's build → row passes" "✓.*extensions.*none in this build"
+expect_row_passes "no extension → BA adapter row passes" "✓.*BA adapter.*no extension"
 
 # --- 9. usage: not a pkg ------------------------------------------------------
 if "$GATE" "$WORK/nope.pkg" >/dev/null 2>&1; then

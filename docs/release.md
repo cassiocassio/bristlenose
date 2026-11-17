@@ -93,7 +93,7 @@ git commit -m "bump to X.Y.Z"
 git tag vX.Y.Z
 git rev-parse HEAD; git rev-parse vX.Y.Z^{}   # same SHA — confirm
 
-# 4. Push branch and tag — two commands, back to back (never one `--tags`)
+# 4. Push branch and tag — two separate commands (never one `--tags`). The tag goes LAST, after the Mac uploads and a strict CI verdict on main (below); `release.sh run` orders this for you
 git push origin main
 git push origin vX.Y.Z
 ```
@@ -148,7 +148,7 @@ its CI is still running, deleting it (`git push --delete origin vX.Y.Z && git ta
   release reaching PyPI — the pipeline has silently stalled before (v0.15.5→.9,
   ~6 days, unnoticed). **The clock starts at the tag push**, because nothing
   parks any more: `publish` runs as soon as `build` and `ci` are green. Budget
-  ~25 minutes (recent releases: 23–26 min); 0.23.0 took ~2 hours across three
+  ~25 minutes (earlier releases: 23–26 min; 0.44.0 took 40, and 0.46.0 needed a second release-workflow attempt); 0.23.0 took ~2 hours across three
   attempts, so budget generously when the release touches the test suite.
 
   > _Until 23 Aug 2026 this bullet was titled "Post-**APPROVAL**" and said the
@@ -250,7 +250,7 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
 | `SNAPCRAFT_STORE_CREDENTIALS` | bristlenose repo → Actions secrets | Snap Store login credentials for publishing to edge/stable channels. Generated with `snapcraft export-login --snaps=bristlenose --channels=edge,beta,candidate,stable` | Rotate periodically; expires based on Ubuntu One session |
 | PyPI OIDC | pypi.org trusted publisher | `release.yml` `publish` job uses `id-token: write` — no token stored anywhere | N/A (keyless) |
 | `GITHUB_TOKEN` | automatic per workflow run | `github-release` job uses it to create GitHub Releases | Automatic |
-| `COPR_LOGIN` / `COPR_TOKEN` | bristlenose repo → Actions secrets | `trigger-copr` authenticates to Fedora Copr to fire the rebuild (`release.yml:234-235`) | **Expires 23 Feb 2027** — a hard date; the answer at the alert is RENEW |
+| `COPR_LOGIN` / `COPR_TOKEN` | bristlenose repo → Actions secrets | `trigger-copr` authenticates to Fedora Copr to fire the rebuild (`release.yml:241-242`) | **Expires 23 Feb 2027** — a hard date; the answer at the alert is RENEW |
 
 ## CI gates
 
@@ -262,7 +262,7 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
 - **mypy**: soft — and *soft with a disposition*, not soft indefinitely. Its
   `continue-on-error` is registered in `docs/testing/soft-gates.json` as a
   **ratchet** on `mypy_errors`: the count may not rise. The ceiling is
-  **149** (`docs/testing/ratchet.json`), set from CI, and only
+  **0** (`docs/testing/ratchet.json`; it was 149 until Nov 2026), set from CI, and only
   `gh workflow run ratchet-tighten.yml` may lower it — a local run reports but
   cannot. "Third-party SDK type issues" was never the reason it is soft; the
   reason is that the count is a project rather than a commit, so it is held

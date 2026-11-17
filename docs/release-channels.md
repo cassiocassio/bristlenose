@@ -25,14 +25,14 @@ but the sidecar.
 | **PyPI** | **push the tag** | tag `v*` | sdist + wheel | permanent |
 | **GitHub Release** | *(nothing)* | same tag push | auto notes + assets | permanent |
 | **Homebrew** | *(nothing)* | same tag push, after PyPI | tap formula bump | permanent |
-| **Snap** | run the workflow by hand | `workflow_dispatch`; **the ref is the channel** — `--ref main` → edge, `--ref vX.Y.Z` → stable | `.snap` → edge/stable | permanent |
+| **Snap** | `release.sh run` dispatches edge, then stable (or run the workflow by hand) | `workflow_dispatch`; **the ref is the channel** — `--ref main` → edge, `--ref vX.Y.Z` → stable | `.snap` → edge/stable | permanent |
 | **Fedora Copr** | *(nothing)* | same tag push, **after `verify-pypi`** | RPM, `fedora-43-x86_64` | permanent |
 | **Website** | maintainer rsync | you, locally | changelog + docs | — |
 | **TestFlight** | `build-all.sh` → `upload-testflight.sh` | you, locally | `.pkg` → ASC | **90 days** |
 | **Developer-ID `.dmg`** | `build-dmg.sh` → `upload-dmg.sh` | you, locally | `.dmg` → bristlenose.app | **30 days from the *build*** |
 
 **winget is not a row: it is a *follower*.** The first version (0.36.0) was submitted by
-hand on 9 Oct 2026 and is waiting in Microsoft's moderator queue. `release.sh` does not run
+hand on 9 Oct 2026; Microsoft's moderator merged it on 11 Nov 2026 (microsoft/winget-pkgs#449372), so the 0.37.0+ submissions are unblocked. `release.sh` does not run
 it. `release.sh verify` probes it and reports it under *following*, with a `pending` state
 backed by the open PR, and keeps it out of the exit code (`CHANNELS_FOLLOW` in
 `scripts/project.conf`; `docs/design-channel-version-lag.md` §5.2). Procedure:
@@ -86,7 +86,7 @@ ci → build (sdist, wheel, SBOMs, attestation) → publish (PyPI)
 > _Trued 20 Sep 2026._ The heading and lede said **six**, and the diagram had no
 > `trigger-copr` row at all — while this doc's own front-matter said seven and
 > the prose named the job. The one job whose ordering is load-bearing was the
-> one missing from the picture a reader scans. `release.yml:230`.
+> one missing from the picture a reader scans. `release.yml:229`.
 
 So **PyPI, the GitHub Release, and Homebrew are one action, not three.** Homebrew
 is downstream of PyPI: the tap workflow polls `pypi.org` for the new version
@@ -122,7 +122,7 @@ certs, separate export plists, and **neither takes a flag**.
 | Export plist | `ExportOptions.plist` | `ExportOptions-DeveloperID.plist` |
 | Signed with | Apple Distribution | Developer ID Application |
 | Checked by | App Store Connect, server-side | Apple's notary, then Gatekeeper |
-| Notarised | **no** — notarytool rejects Apple Distribution | yes, twice (app + dmg) |
+| Notarised | **no** — notarytool rejects Apple Distribution | yes, once: the dmg (app-level notarisation retired 14 Aug 2026; `build-dmg.sh`) |
 
 `build-all.sh` produces nothing bristlenose.app can serve. `build-dmg.sh`
 produces nothing App Store Connect will accept.
@@ -157,7 +157,7 @@ release. Five versions silently failed to publish this way.
 curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/<X.Y.Z>/json
 ```
 
-`200` = published. Budget 25–30 minutes; some releases have taken two hours.
+`200` = published. Budget 25–40 minutes (0.44.0 took 40); some releases have taken two hours.
 
 **TestFlight:**
 

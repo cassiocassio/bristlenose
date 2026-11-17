@@ -1,5 +1,5 @@
 ---
-status: current — first run 8–9 Oct 2026 (0.36.0, microsoft/winget-pkgs#449372); second run 0.37.0, steps 1–3 done 12 Oct 2026, step 4 held behind #449372
+status: current — first run 8–9 Oct 2026 (0.36.0, microsoft/winget-pkgs#449372); second run 0.37.0, steps 1–3 done 12 Oct 2026, #449372 merged 11 Nov 2026, so step 4 (the held 0.37.0+ submission) is unblocked
 last-trued: 2026-10-12
 trued-against: HEAD@main on 2026-10-12
 ---
@@ -48,7 +48,7 @@ tag vX.Y.Z pushed
 ```
 
 Merging takes days for a new package. Later versions should be quicker, but that
-hasn't been measured. Until the PR merges, winget still serves the previous version.
+was not measured at the time; the first package took about 33 days (submitted 9 Oct, merged 11 Nov 2026). Until the PR merges, winget still serves the previous version.
 
 ## Steps
 

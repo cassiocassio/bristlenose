@@ -84,9 +84,9 @@ A tag push that reaches GitHub is NOT the same as a release that reaches PyPI. T
 ```sh
 for i in $(seq 1 20); do
   sleep 90
-  pypi=$(curl -s https://pypi.org/pypi/bristlenose/json | jq -r .info.version)
-  echo "[$i] PyPI: $pypi"
-  [ "$pypi" = "<X.Y.Z>" ] && break
+  code=$(curl -s -o /dev/null -w '%{http_code}' https://pypi.org/pypi/bristlenose/<X.Y.Z>/json)
+  echo "[$i] PyPI <X.Y.Z>: HTTP $code"
+  [ "$code" = 200 ] && break
 done
 ```
 

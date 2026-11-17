@@ -1,0 +1,180 @@
+#!/bin/bash
+# Negative fixtures for check-build-env.sh.
+#
+# The gate exists because five signed builds in a row failed minutes in on things it asks up
+# front (17 Nov 2026). A gate that cannot fail would let that happen again while reading "ok",
+# so each check is driven alone here: it must fail with ITS OWN message and not another's.
+#
+# Everything is a stub in a temp tree, and the gate runs with a PATH holding only `dirname`
+# and `bash` plus whichever of `node`/`npm` a case grants. So the result does not depend on
+# what the machine has installed, and it runs on the Linux CI that executes this file
+# (tests/test_gate_selftests.py).
+#
+# A foreign ROOT must never write into the checkout this file lives in: case 8 gives the
+# fixture its own generator and asserts THAT one ran.
+#
+# Usage: test-check-build-env.sh
+# Exit:  0 all cases behaved · 1 at least one gate failed to fail (or failed a clean fixture)
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+GATE="$SCRIPT_DIR/check-build-env.sh"
+[ -f "$GATE" ] || { echo "gate not found: $GATE" >&2; exit 2; }
+
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/bn-buildenv-test.XXXXXX")
+trap 'rm -rf "$TMP"' EXIT
+PASS=0; FAIL=0
+
+# Minimal PATH: the gate itself needs only dirname and bash. node/npm are added per case.
+BIN="$TMP/bin"; mkdir -p "$BIN"
+for t in dirname bash; do ln -s "$(command -v "$t")" "$BIN/$t"; done
+NODEBIN="$TMP/nodebin"; mkdir -p "$NODEBIN"
+printf '#!/bin/sh\nexit 0\n' > "$NODEBIN/node"; cp "$NODEBIN/node" "$NODEBIN/npm"
+chmod +x "$NODEBIN/node" "$NODEBIN/npm"
+
+# make_tree <dir>: a checkout that passes everything. The python stub answers the one
+# question the gate asks of it (is piplicenses importable) from STUB_PIPLICENSES.
+make_tree() {
+    local r="$1"
+    mkdir -p "$r/.venv/bin" "$r/frontend/node_modules" "$r/desktop/scripts" \
+             "$r/desktop/Bristlenose/Bristlenose"
+    cat > "$r/.venv/bin/python" <<'STUB'
+#!/bin/sh
+case "$*" in *piplicenses*) [ "${STUB_PIPLICENSES:-1}" = 1 ]; exit $? ;; esac
+exit 0
+STUB
+    chmod +x "$r/.venv/bin/python"
+    # The fixture's own generator, as the gate must call THIS root's, not the one beside it.
+    cat > "$r/desktop/scripts/generate-build-info.sh" <<'STUB'
+#!/bin/bash
+[ "${STUB_GEN_FAIL:-0}" = 1 ] && exit 1
+[ "${STUB_GEN_NOOP:-0}" = 1 ] && exit 0
+# Like the real generator, an inherited SRCROOT redirects the output.
+base="${SRCROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+: > "$base/Bristlenose/Bristlenose/GeneratedBuildInfo.swift" || exit 1
+: > "$(cd "$(dirname "$0")/.." && pwd)/generated-by-fixture"
+STUB
+}
+
+# run <name> <path-extra> <gate args...>: output (stdout+stderr) in $OUT, status in $RC.
+run() {
+    local p="$BIN"; [ -n "$2" ] && p="$2:$BIN"
+    OUT=$(env PATH="$p" "${ENVV[@]}" bash "$GATE" "${@:3}" 2>&1); RC=$?
+}
+ENVV=(STUB_PIPLICENSES=1)
+
+# expect <label> <rc> [must-contain...] ; every `!text` argument must be ABSENT.
+expect() {
+    local label="$1" want="$2"; shift 2
+    local ok=1
+    [ "$RC" -eq "$want" ] || ok=0
+    for m in "$@"; do
+        case "$m" in
+            !*) case "$OUT" in *"${m#!}"*) ok=0 ;; esac ;;
+            *)  case "$OUT" in *"$m"*) : ;; *) ok=0 ;; esac ;;
+        esac
+    done
+    if [ "$ok" = 1 ]; then PASS=$((PASS+1)); echo "  ok   $label"
+    else FAIL=$((FAIL+1)); echo "  FAIL $label (rc=$RC, wanted $want)"; echo "$OUT" | sed 's/^/       | /'; fi
+}
+
+W_PIP="pip-licenses is not installed"; W_NM="frontend/node_modules is missing"
+W_SP="contains whitespace"; W_GEN="could not be generated"
+
+# 1. clean tree, signed
+make_tree "$TMP/clean"
+run clean "$NODEBIN" --signed "$TMP/clean"
+expect "clean tree passes (signed)" 0 "build environment: ok" "!✗"
+
+# 2. whitespace in the path, signed: fails, and ONLY for that
+make_tree "$TMP/has space"
+run sp "$NODEBIN" --signed "$TMP/has space"
+expect "signed: a path with a space fails" 1 "$W_SP" "!$W_PIP" "!$W_NM" "!$W_GEN"
+
+# 3. the same path ad-hoc is fine (an ad-hoc build skips the inventory)
+run sp2 "$NODEBIN" "$TMP/has space"
+expect "ad-hoc: a path with a space passes" 0 "build environment: ok"
+
+# 4. no pip-licenses, signed
+ENVV=(STUB_PIPLICENSES=0)
+run nopip "$NODEBIN" --signed "$TMP/clean"
+expect "signed: missing pip-licenses fails" 1 "$W_PIP" "!$W_SP" "!$W_NM"
+# 5. ... and ad-hoc does not care
+run nopip2 "$NODEBIN" "$TMP/clean"
+expect "ad-hoc: missing pip-licenses passes" 0 "build environment: ok"
+ENVV=(STUB_PIPLICENSES=1)
+
+# 6. no node_modules (both modes)
+make_tree "$TMP/nonm"; rmdir "$TMP/nonm/frontend/node_modules"
+run nonm "$NODEBIN" --signed "$TMP/nonm"
+expect "missing frontend/node_modules fails" 1 "$W_NM" "npm ci" "!$W_PIP" "!$W_SP"
+run nonm2 "$NODEBIN" "$TMP/nonm"
+expect "missing frontend/node_modules fails ad-hoc too" 1 "$W_NM"
+
+# 7. node absent from PATH
+run nonode "" --signed "$TMP/clean"
+expect "node and npm absent from PATH fail" 1 "node is not on PATH" "npm is not on PATH" "!$W_NM"
+
+# 8. GeneratedBuildInfo absent: generated by THIS root's script, then passes
+make_tree "$TMP/nogen"
+run gen "$NODEBIN" --signed "$TMP/nogen"
+if [ -f "$TMP/nogen/desktop/Bristlenose/Bristlenose/GeneratedBuildInfo.swift" ] \
+   && [ -f "$TMP/nogen/desktop/generated-by-fixture" ]; then
+    expect "fresh tree: GeneratedBuildInfo is generated by the root's own script" 0 "GeneratedBuildInfo.swift generated"
+else
+    RC=99; expect "fresh tree: GeneratedBuildInfo is generated by the root's own script" 0
+fi
+
+# 9. the generator failing is a failure, not a pass
+make_tree "$TMP/genfail"
+ENVV=(STUB_PIPLICENSES=1 STUB_GEN_FAIL=1)
+run genfail "$NODEBIN" --signed "$TMP/genfail"
+expect "a failing generator fails the gate" 1 "$W_GEN"
+ENVV=(STUB_PIPLICENSES=1)
+
+# 10. several problems are all reported, not just the first
+make_tree "$TMP/multi"; rmdir "$TMP/multi/frontend/node_modules"
+ENVV=(STUB_PIPLICENSES=0)
+run multi "$NODEBIN" --signed "$TMP/multi"
+expect "every failing check is reported, not just the first" 1 "$W_PIP" "$W_NM" "2 check(s)" "!$W_SP"
+ENVV=(STUB_PIPLICENSES=1)
+
+# 11. a file already present is NOT regenerated (a rewrite per run races a concurrent Xcode build)
+make_tree "$TMP/haveinfo"; : > "$TMP/haveinfo/desktop/Bristlenose/Bristlenose/GeneratedBuildInfo.swift"
+run have "$NODEBIN" --signed "$TMP/haveinfo"
+if [ ! -f "$TMP/haveinfo/desktop/generated-by-fixture" ] && [ "$RC" -eq 0 ]; then PASS=$((PASS+1)); echo "  ok   an existing GeneratedBuildInfo.swift is left alone"
+else FAIL=$((FAIL+1)); echo "  FAIL an existing GeneratedBuildInfo.swift was regenerated or the gate failed (rc=$RC)"; fi
+
+# 11b. a generator that exits 0 and writes nothing is a failure
+make_tree "$TMP/noop"
+ENVV=(STUB_PIPLICENSES=1 STUB_GEN_NOOP=1)
+run noop "$NODEBIN" --signed "$TMP/noop"
+expect "a generator that writes nothing fails the gate" 1 "$W_GEN"
+ENVV=(STUB_PIPLICENSES=1)
+
+# 11c. an inherited SRCROOT must not redirect the generator
+make_tree "$TMP/srcroot"
+ENVV=(STUB_PIPLICENSES=1 SRCROOT=/nonexistent/elsewhere)
+run srcroot "$NODEBIN" --signed "$TMP/srcroot"
+expect "an inherited SRCROOT does not stop generation" 0 "generated"
+ENVV=(STUB_PIPLICENSES=1)
+
+# 11d. no .venv at all: the fix names venv creation, not a pip that does not exist
+make_tree "$TMP/novenv"; rm -rf "$TMP/novenv/.venv"
+run novenv "$NODEBIN" --signed "$TMP/novenv"
+expect "no .venv: the fix creates the venv" 1 "there is no" "venv .venv" "!pip install -e '.[release]'"
+
+# 11e. a misplaced flag is an error, not a silent ad-hoc run
+run flag "$NODEBIN" "$TMP/clean" --signed
+expect "a flag after the root is refused" 2 "usage"
+
+# 11f. an unknown flag in the flag position is refused, not taken for a directory
+run bogus "$NODEBIN" --sign
+expect "an unknown flag is refused" 2 "usage"
+
+# 12. a root that does not exist
+run nodir "$NODEBIN" --signed "$TMP/does-not-exist"
+expect "a missing root fails" 1 "no such directory"
+
+echo "$PASS passed, $FAIL failed"
+[ "$FAIL" -eq 0 ]

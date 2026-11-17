@@ -8,9 +8,7 @@ import SwiftUI
 ///
 /// The popover: what is happening, Foundation's own progress line (bytes, rate
 /// and time left, in the app's language, nothing invented before the rate is
-/// known), one sentence of why, and Stop Download — with the note that it
-/// starts again from the beginning, because there is no resume and a plain
-/// Cancel would hide that loss.
+/// known, the time left on its own line), one sentence of why, and Stop.
 struct WhisperDownloadPill: View {
     @ObservedObject var model: WhisperDownloadModel
     @EnvironmentObject var i18n: I18n
@@ -111,18 +109,11 @@ struct WhisperDownloadDetail: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Divider().padding(.top, 2)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    if model.stopNoteApplies {
-                        Text(i18n.t("desktop.modelDownload.stopNote"))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                HStack {
                     Spacer(minLength: 8)
                     Button(i18n.t("desktop.modelDownload.stop")) { model.stop() }
                         .controlSize(.small)
-                        // "Arrêter le téléchargement": the note wraps, the label doesn't.
-                        .fixedSize(horizontal: true, vertical: false)
+                        .fixedSize(horizontal: true, vertical: false)  // a button's label never truncates
                 }
             }
         }

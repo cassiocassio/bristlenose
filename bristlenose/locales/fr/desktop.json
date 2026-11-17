@@ -465,7 +465,8 @@
         "copy": "Copier les d\u00e9tails",
         "showLog": "Afficher le journal",
         "showLogTooltip": "Afficher le fichier journal de l'analyse",
-        "setUpProvider": "Configurer le fournisseur…"
+        "setUpProvider": "Configurer le fournisseur…",
+        "setUpTranscription": "Configurer la transcription…"
       },
       "tooltip": {
         "completed_partial": "Analyse termin\u00e9e avec des erreurs pour {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Puce Apple détectée",
     "whisperOnDisk": "Sur ce Mac · {{size}}",
     "whisperMissing": "Pas sur ce Mac",
+    "whisperLowDisk": "Moins de {{size}} d’espace libre",
+    "whisperMissingApple": "Le modèle vocal d’Apple est utilisé par défaut",
     "whisperFailed": "Le téléchargement n’a pas abouti.",
     "downloadNow": "Télécharger maintenant"
   },
@@ -1353,16 +1356,15 @@
     "title": "Téléchargement de Whisper",
     "failedTitle": "Whisper n’a pas été téléchargé",
     "why": "Pour vos prochains enregistrements. Whisper gère mieux un son médiocre, les personnes qui parlent en même temps et les groupes plus nombreux.",
-    "stop": "Arrêter le téléchargement",
-    "stopNote": "Reprendra depuis le début la prochaine fois.",
+    "stop": "Arrêter",
     "causeDisk": "Ce Mac n’a pas assez d’espace libre.",
     "causeNetwork": "La connexion a été coupée et n’est pas revenue.",
     "causeCertificate": "Le certificat de sécurité de ce réseau n’a pas été jugé fiable.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Télécharger le modèle vocal Whisper ?",
+    "askBody": "Environ {{size}}. Il aide avec un son de mauvaise qualité et quand les gens parlent en même temps. Vous pourrez le télécharger plus tard dans Réglages.",
+    "askDownload": "Télécharger",
+    "askNotNow": "Pas maintenant",
+    "askSize": "1,6 Go"
   },
   "studyStartup": {
     "foreignTitle": "Lancée sur un autre Mac",

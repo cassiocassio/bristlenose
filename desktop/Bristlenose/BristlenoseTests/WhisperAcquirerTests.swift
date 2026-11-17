@@ -649,17 +649,6 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(m.phase != .downloading)
     }
 
-    @Test func theStopNoteIsNotShownOnTheBackgroundAssetsPath() {
-        let ba = FakeAcquirer(); ba.kind = .backgroundAssets
-        let m = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in ba })
-        m.downloadNow()
-        #expect(m.stopNoteApplies == false)
-        let fetch = FakeAcquirer()
-        let m2 = WhisperDownloadModel(defaults: defaults(), makeAcquirer: { _ in fetch })
-        m2.downloadNow()
-        #expect(m2.stopNoteApplies == true)
-    }
-
     /// Download Now while the fallback fetch is running is a no-op, and must not hand the next
     /// attempt back to Background Assets (single flight: the fetch in flight stays).
     @Test func downloadNowDuringTheFallbackKeepsBackgroundAssetsOff() {

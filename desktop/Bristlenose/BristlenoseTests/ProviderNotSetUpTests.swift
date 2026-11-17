@@ -34,6 +34,15 @@ struct ProviderNotSetUpTests {
         #expect(runner.state[project.id]?.needsProvider == true)
     }
 
+    @Test("The popover offers Settings ▸ Transcription for a speech-model failure, and only that")
+    func transcriptionDoorIsOnlyForWhisper() {
+        let whisper: PipelineState = .failed(.passthrough("x"), category: .whisper)
+        let network: PipelineState = .failed(.passthrough("x"), category: .network)
+        #expect(whisper.needsTranscription)
+        #expect(!network.needsTranscription, "a network failure may be the AI provider's")
+        #expect(!whisper.needsProvider)
+    }
+
     @Test("A keyless provider (Ollama) is not refused")
     func keylessIsNotRefused() {
         #expect(PipelineRunner.providerRefusal(.keyless(provider: "local"), chosen: .ollama) == nil)

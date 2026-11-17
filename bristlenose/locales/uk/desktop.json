@@ -515,7 +515,8 @@
         "copy": "Скопіювати відомості",
         "showLog": "Показати журнал",
         "showLogTooltip": "Показати файл журналу аналізу",
-        "setUpProvider": "Налаштувати постачальника…"
+        "setUpProvider": "Налаштувати постачальника…",
+        "setUpTranscription": "Налаштувати транскрибування…"
       },
       "tooltip": {
         "completed_partial": "Аналіз завершився з помилками для {{project}}"
@@ -1050,6 +1051,8 @@
     "backendDetectedAppleSilicon": "Виявлено процесор Apple silicon",
     "whisperOnDisk": "На цьому Mac · {{size}}",
     "whisperMissing": "Немає на цьому Mac",
+    "whisperLowDisk": "Вільно менше ніж {{size}}",
+    "whisperMissingApple": "За замовчуванням використовується мовленнєва модель Apple",
     "whisperFailed": "Завантаження не завершилося.",
     "downloadNow": "Завантажити"
   },
@@ -1453,16 +1456,15 @@
     "title": "Завантаження Whisper",
     "failedTitle": "Whisper не завантажився",
     "why": "Для ваших наступних записів. Whisper краще справляється з поганим звуком, одночасним мовленням і більшими групами.",
-    "stop": "Зупинити завантаження",
-    "stopNote": "Наступного разу почнеться спочатку.",
+    "stop": "Зупинити",
     "causeDisk": "На цьому Mac недостатньо вільного місця.",
     "causeNetwork": "З'єднання перервалося й не відновилося.",
     "causeCertificate": "Сертифікат безпеки цієї мережі не визнано надійним.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Завантажити мовленнєву модель Whisper?",
+    "askBody": "Приблизно {{size}}. Вона допомагає при поганому звуку та коли люди говорять одночасно. Завантажити її можна пізніше в Параметрах.",
+    "askDownload": "Завантажити",
+    "askNotNow": "Не зараз",
+    "askSize": "1,6 ГБ"
   },
   "studyStartup": {
     "foreignTitle": "Запущено на іншому Mac",

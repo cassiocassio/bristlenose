@@ -440,7 +440,8 @@
         "copy": "拷貝詳細資訊",
         "showLog": "顯示記錄",
         "showLogTooltip": "顯示分析記錄檔案",
-        "setUpProvider": "設定供應商⋯"
+        "setUpProvider": "設定供應商⋯",
+        "setUpTranscription": "設定逐字稿轉錄⋯"
       },
       "tooltip": {
         "completed_partial": "{{project}} 的分析已完成，但有失敗"
@@ -966,6 +967,8 @@
     "backendDetectedAppleSilicon": "已偵測到 Apple 晶片",
     "whisperOnDisk": "在這台 Mac 上 · {{size}}",
     "whisperMissing": "不在這台 Mac 上",
+    "whisperLowDisk": "可用空間少於 {{size}}",
+    "whisperMissingApple": "預設使用 Apple 語音模型",
     "whisperFailed": "下載未完成。",
     "downloadNow": "立即下載"
   },
@@ -1303,16 +1306,15 @@
     "title": "正在下載 Whisper",
     "failedTitle": "Whisper 未能下載",
     "why": "供你之後的錄音使用。Whisper 更能應付音質不佳、多人同時說話和較大群組的錄音。",
-    "stop": "停止下載",
-    "stopNote": "下次會從頭開始。",
+    "stop": "停止",
     "causeDisk": "這部 Mac 的可用空間不足。",
     "causeNetwork": "連線中斷後沒有恢復。",
     "causeCertificate": "此網路的安全性憑證未受信任。",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "要下載 Whisper 語音模型嗎？",
+    "askBody": "約 {{size}}。它能改善音質不佳和多人同時說話的辨識。你之後也可以在「設定」中下載。",
+    "askDownload": "下載",
+    "askNotNow": "暫時不要",
+    "askSize": "1.6 GB"
   },
   "studyStartup": {
     "foreignTitle": "已在另一部 Mac 上開始",

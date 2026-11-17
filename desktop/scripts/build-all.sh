@@ -183,6 +183,23 @@ bn_step_start 1 Pre-flight "Pre-flight" \
     narrative="Fails fast before any expensive work — identities, profiles, hygiene."
 _bn_t1=$SECONDS
 
+# 1-pre. Build environment, run FIRST (1b below already needs .venv/bin/python, so a bare clone
+# would die there with a worse message). Asks whether the checkout can run this script at all:
+# no whitespace in the path and
+# pip-licenses present (signed only: step 2b needs both), frontend/node_modules, node/npm, and a
+# generated GeneratedBuildInfo.swift. Five signed builds in a row failed minutes in on exactly
+# these on 17 Nov 2026 (a /new-branch worktree path has a space; a fresh clone has neither
+# gitignored file). Seconds here, instead of after the Swift suite and the sidecar. Each failure
+# names its fix. Does NOT check THIRD-PARTY-BINARIES.md freshness (needs the sidecar venv, which
+# step 2 rebuilds): see desktop/scripts/check-build-env.sh.
+if [ "$SIGN_IDENTITY" != "-" ]; then _bn_env_mode="--signed"; else _bn_env_mode=""; fi
+if ! _bn_env_out=$("$SCRIPT_DIR/check-build-env.sh" $_bn_env_mode "$ROOT" 2>&1); then
+    echo "error: this checkout cannot run a build:" >&2
+    echo "$_bn_env_out" >&2
+    exit 1
+fi
+bn_check 1 ok "build environment" "path, deps and generated files ready${_bn_env_mode:+ (signed: + pip-licenses)}"
+
 # 1a. Source-level logging hygiene — catches credential-shaped interpolations
 # in Swift logger calls without a privacy marker. Complements the runtime
 # redactor in ServeManager.handleLine (Python-side leakage defence). Cheap;

@@ -562,6 +562,7 @@ Print a summary:
 - Venv: ready (or note if it failed)
 - BRANCHES.md: updated and committed
 - Handoff plan: copied from prior diagnostic to `.claude/plans/$0.md` (or note "no prior handoff — next session will need a brief from you")
+- **Signed / release builds: not from this worktree.** Its path contains a space (the licence inventory in `build-all.sh` step 2b cannot read it) and its venv has `[dev,serve]` only, not `[release]`. For a signed `build-all.sh` of this branch, follow the recipe in `desktop/gotchas.md` ("A signed build needs a space-free checkout…"); `desktop/scripts/check-build-env.sh --signed .` says in seconds what is missing. Say this in the handoff to any session that will build a signed archive.
 
 **From-cloud — report the verdict, not just "done".** The user needs to know how far from mergeable it is:
 - Imported: `<cloud ref>` (PR #N) → worktree `bristlenose_branch <clean-name>/`

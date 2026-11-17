@@ -465,7 +465,8 @@
         "copy": "Copia i dettagli",
         "showLog": "Mostra il log",
         "showLogTooltip": "Mostra il file di log dell'analisi",
-        "setUpProvider": "Configura provider…"
+        "setUpProvider": "Configura provider…",
+        "setUpTranscription": "Configura trascrizione…"
       },
       "tooltip": {
         "completed_partial": "L'analisi è terminata con errori per {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Chip Apple rilevato",
     "whisperOnDisk": "Su questo Mac · {{size}}",
     "whisperMissing": "Non su questo Mac",
+    "whisperLowDisk": "Meno di {{size}} liberi",
+    "whisperMissingApple": "Usa il modello vocale di Apple per impostazione predefinita",
     "whisperFailed": "Il download non è stato completato.",
     "downloadNow": "Scarica ora"
   },
@@ -1353,16 +1356,15 @@
     "title": "Download di Whisper",
     "failedTitle": "Whisper non è stato scaricato",
     "why": "Per le tue prossime registrazioni. Whisper se la cava meglio con audio scadente, persone che parlano insieme e gruppi più numerosi.",
-    "stop": "Interrompi il download",
-    "stopNote": "La prossima volta ricomincia dall’inizio.",
+    "stop": "Interrompi",
     "causeDisk": "Questo Mac non ha abbastanza spazio libero.",
     "causeNetwork": "La connessione è caduta e non è tornata.",
     "causeCertificate": "Il certificato di sicurezza di questa rete non è stato considerato attendibile.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Scaricare il modello vocale Whisper?",
+    "askBody": "Circa {{size}}. Aiuta con l’audio di scarsa qualità e quando le persone parlano sovrapponendosi. Puoi scaricarlo più tardi in Impostazioni.",
+    "askDownload": "Scarica",
+    "askNotNow": "Non ora",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Avviata su un altro Mac",

@@ -515,7 +515,8 @@
         "copy": "Скопировать сведения",
         "showLog": "Показать журнал",
         "showLogTooltip": "Показать файл журнала анализа",
-        "setUpProvider": "Настроить провайдера…"
+        "setUpProvider": "Настроить провайдера…",
+        "setUpTranscription": "Настроить транскрибирование…"
       },
       "tooltip": {
         "completed_partial": "Анализ завершён с ошибками для {{project}}"
@@ -1050,6 +1051,8 @@
     "backendDetectedAppleSilicon": "Обнаружен чип Apple",
     "whisperOnDisk": "На этом Mac · {{size}}",
     "whisperMissing": "Нет на этом Mac",
+    "whisperLowDisk": "Свободно менее {{size}}",
+    "whisperMissingApple": "По умолчанию используется речевая модель Apple",
     "whisperFailed": "Загрузка не завершилась.",
     "downloadNow": "Загрузить"
   },
@@ -1453,16 +1456,15 @@
     "title": "Загрузка Whisper",
     "failedTitle": "Whisper не загрузился",
     "why": "Для ваших следующих записей. Whisper лучше справляется с плохим звуком, одновременной речью и большими группами.",
-    "stop": "Остановить загрузку",
-    "stopNote": "В следующий раз начнётся сначала.",
+    "stop": "Остановить",
     "causeDisk": "На этом Mac недостаточно свободного места.",
     "causeNetwork": "Соединение прервалось и не восстановилось.",
     "causeCertificate": "Сертификат безопасности этой сети не был признан надёжным.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Загрузить речевую модель Whisper?",
+    "askBody": "Около {{size}}. Она помогает при плохом звуке и когда люди говорят одновременно. Загрузить её можно позже в Настройках.",
+    "askDownload": "Загрузить",
+    "askNotNow": "Не сейчас",
+    "askSize": "1,6 ГБ"
   },
   "studyStartup": {
     "foreignTitle": "Запущен на другом Mac",

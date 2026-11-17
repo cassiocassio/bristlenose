@@ -440,7 +440,8 @@
         "copy": "\uc138\ubd80\uc815\ubcf4 \ubcf5\uc0ac",
         "showLog": "\ub85c\uadf8 \ubcf4\uae30",
         "showLogTooltip": "\ubd84\uc11d \ub85c\uadf8 \ud30c\uc77c \ubcf4\uae30",
-        "setUpProvider": "제공업체 설정…"
+        "setUpProvider": "제공업체 설정…",
+        "setUpTranscription": "전사 설정…"
       },
       "tooltip": {
         "completed_partial": "{{project}} \ubd84\uc11d\uc774 \uc2e4\ud328\uc640 \ud568\uaed8 \uc644\ub8cc\ub428"
@@ -966,6 +967,8 @@
     "backendDetectedAppleSilicon": "Apple Silicon 감지됨",
     "whisperOnDisk": "이 Mac에 있음 · {{size}}",
     "whisperMissing": "이 Mac에 없음",
+    "whisperLowDisk": "여유 공간이 {{size}} 미만입니다",
+    "whisperMissingApple": "기본적으로 Apple 음성 모델 사용",
     "whisperFailed": "다운로드가 완료되지 않았습니다.",
     "downloadNow": "지금 다운로드"
   },
@@ -1303,16 +1306,15 @@
     "title": "Whisper 다운로드 중",
     "failedTitle": "Whisper를 다운로드하지 못했습니다",
     "why": "다음 녹음을 위해서입니다. Whisper는 음질이 나쁜 오디오, 여러 사람이 겹쳐 말하는 경우, 큰 그룹에 더 강합니다.",
-    "stop": "다운로드 중지",
-    "stopNote": "다음에는 처음부터 다시 시작합니다.",
+    "stop": "중지",
     "causeDisk": "이 Mac의 여유 공간이 부족합니다.",
     "causeNetwork": "연결이 끊어졌고 다시 연결되지 않았습니다.",
     "causeCertificate": "이 네트워크의 보안 인증서를 신뢰할 수 없습니다.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Whisper 음성 모델을 다운로드할까요?",
+    "askBody": "약 {{size}}입니다. 음질이 나쁜 오디오나 여러 사람이 겹쳐 말하는 경우에 도움이 됩니다. 나중에 설정에서 다운로드할 수도 있습니다.",
+    "askDownload": "다운로드",
+    "askNotNow": "나중에",
+    "askSize": "1.6 GB"
   },
   "studyStartup": {
     "foreignTitle": "다른 Mac에서 시작됨",

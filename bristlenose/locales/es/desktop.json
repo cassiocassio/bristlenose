@@ -465,7 +465,8 @@
         "copy": "Copiar detalles",
         "showLog": "Mostrar registro",
         "showLogTooltip": "Mostrar el archivo de registro del an\u00e1lisis",
-        "setUpProvider": "Configurar proveedor…"
+        "setUpProvider": "Configurar proveedor…",
+        "setUpTranscription": "Configurar transcripción…"
       },
       "tooltip": {
         "completed_partial": "El an\u00e1lisis termin\u00f3 con fallos en {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Chip de Apple detectado",
     "whisperOnDisk": "En este Mac · {{size}}",
     "whisperMissing": "No está en este Mac",
+    "whisperLowDisk": "Menos de {{size}} libres",
+    "whisperMissingApple": "Se usa el modelo de voz de Apple por omisión",
     "whisperFailed": "La descarga no ha terminado.",
     "downloadNow": "Descargar ahora"
   },
@@ -1353,16 +1356,15 @@
     "title": "Descargando Whisper",
     "failedTitle": "Whisper no se ha descargado",
     "why": "Para tus próximas grabaciones. Whisper se las arregla mejor con mal audio, gente que habla a la vez y grupos más grandes.",
-    "stop": "Detener la descarga",
-    "stopNote": "La próxima vez empieza de nuevo desde el principio.",
+    "stop": "Detener",
     "causeDisk": "Este Mac no tiene espacio libre suficiente.",
     "causeNetwork": "Se perdió la conexión y no volvió.",
     "causeCertificate": "El certificado de seguridad de esta red no se consideró de confianza.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "¿Descargar el modelo de voz Whisper?",
+    "askBody": "Unos {{size}}. Ayuda con el audio de mala calidad y cuando la gente habla a la vez. Puedes descargarlo más tarde en Ajustes.",
+    "askDownload": "Descargar",
+    "askNotNow": "Ahora no",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Iniciado en otro Mac",

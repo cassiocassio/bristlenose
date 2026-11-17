@@ -465,7 +465,8 @@
         "copy": "Kopieer details",
         "showLog": "Toon logboek",
         "showLogTooltip": "Toon het logbestand van de analyse",
-        "setUpProvider": "Stel provider in…"
+        "setUpProvider": "Stel provider in…",
+        "setUpTranscription": "Stel transcriptie in…"
       },
       "tooltip": {
         "completed_partial": "Analyse voltooid met fouten voor {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Apple silicon gedetecteerd",
     "whisperOnDisk": "Op deze Mac · {{size}}",
     "whisperMissing": "Niet op deze Mac",
+    "whisperLowDisk": "Minder dan {{size}} vrij",
+    "whisperMissingApple": "Standaard wordt het spraakmodel van Apple gebruikt",
     "whisperFailed": "De download is niet voltooid.",
     "downloadNow": "Nu downloaden"
   },
@@ -1353,16 +1356,15 @@
     "title": "Whisper downloaden",
     "failedTitle": "Whisper is niet gedownload",
     "why": "Voor je volgende opnamen. Whisper kan beter overweg met slechte audio, mensen die door elkaar praten en grotere groepen.",
-    "stop": "Download stoppen",
-    "stopNote": "Begint de volgende keer opnieuw vanaf het begin.",
+    "stop": "Stoppen",
     "causeDisk": "Deze Mac heeft niet genoeg vrije ruimte.",
     "causeNetwork": "De verbinding viel weg en kwam niet terug.",
     "causeCertificate": "Het beveiligingscertificaat van dit netwerk werd niet vertrouwd.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askTitle": "Het spraakmodel Whisper downloaden?",
+    "askBody": "Ongeveer {{size}}. Het helpt bij slecht geluid en als mensen door elkaar praten. Je kunt het later downloaden via Instellingen.",
     "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askNotNow": "Niet nu",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Gestart op een andere Mac",

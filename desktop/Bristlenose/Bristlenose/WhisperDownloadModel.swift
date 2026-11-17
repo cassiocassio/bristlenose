@@ -198,7 +198,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     var isPillVisible: Bool { phase == .downloading || phase == .failed }
 
     private static let logger = Logger(subsystem: "app.bristlenose", category: "whisper-download")
-    /// A deliberate Stop Download, remembered across launches: the app does
+    /// A deliberate Stop, remembered across launches: the app does
     /// not start the 1.6 GB again on its own until Download Now (the researcher
     /// may have stopped it on a metered connection).
     private static let stoppedKey = "whisperDownloadStoppedByUser"
@@ -275,9 +275,9 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
 
     // MARK: Foundation's progress line
 
-    /// "600.0 MB of 1.61 GB (10.0 MB/s) — About 2 minutes remaining", in the
-    /// app's language (§3 H; measured 18 Oct 2026). Bytes alone until the rate
-    /// window fills: no invented time.
+    /// "600.0 MB of 1.61 GB (10.0 MB/s)" then, on its own line, "About 2 minutes remaining", in
+    /// the app's language (§3 H; measured 18 Oct 2026). Bytes alone until the rate window fills:
+    /// no invented time.
     var progressLine: String {
         Self.progressLine(done: doneBytes, total: totalBytes,
                           bytesPerSecond: bytesPerSecond, minutesLeft: minutesLeft)
@@ -302,7 +302,18 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
             p.throughput = Int(bytesPerSecond)
             if let minutesLeft { p.estimatedTimeRemaining = TimeInterval(minutesLeft * 60) }
         }
-        return p.localizedAdditionalDescription ?? ""
+        return Self.timeLeftOnItsOwnLine(p.localizedAdditionalDescription ?? "")
+    }
+
+    /// Foundation joins the byte/rate part and the time left with a spaced dash
+    /// ("… (10.0 MB/s) — About 1 minute, 23 seconds remaining"). The popover wraps that badly and
+    /// the dash is not ours to ship, so the time left goes on its own line. Only a spaced em or
+    /// en dash is split; a language whose line has another separator is left as Foundation wrote it.
+    nonisolated static func timeLeftOnItsOwnLine(_ line: String) -> String {
+        for dash in [" \u{2014} ", " \u{2013} "] where line.contains(dash) {
+            return line.replacingOccurrences(of: dash, with: "\n")
+        }
+        return line
     }
 
     var fractionDone: Double? {
@@ -563,8 +574,9 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         }
     }
 
-    /// Stop Download. The note beside the button (`stopNoteApplies`) is about the Hugging Face
-    /// path only; on the other path the app says nothing about resuming.
+    /// Stop. The Hugging Face fetch has no resume (hf_xet starts again); the system's own
+    /// delivery says nothing either way, and the popover carries no note about it. SIGINT
+    /// first — `ensure_hf_model` aborts hf_xet within about 2 s — then SIGKILL if it hasn't gone.
     func stop() {
         guard let acquirer, acquirer.isRunning else { return }
         stoppedByUser = true
@@ -723,10 +735,6 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         phase = .unknown
         Task { @MainActor in await refresh() }
     }
-
-    /// Whether the "starts again from the beginning" note belongs beside Stop: it describes the
-    /// Hugging Face fetch. Nothing is said about what the system does on the other path.
-    var stopNoteApplies: Bool { acquirer?.kind != .backgroundAssets }
 
     // MARK: Events from the acquirer
 

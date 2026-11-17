@@ -465,7 +465,8 @@
         "copy": "Copia els detalls",
         "showLog": "Mostra el registre",
         "showLogTooltip": "Mostra el fitxer de registre de l'anàlisi",
-        "setUpProvider": "Configura el proveïdor…"
+        "setUpProvider": "Configura el proveïdor…",
+        "setUpTranscription": "Configura la transcripció…"
       },
       "tooltip": {
         "completed_partial": "L'anàlisi ha acabat amb errors per a {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Xip d’Apple detectat",
     "whisperOnDisk": "En aquest Mac · {{size}}",
     "whisperMissing": "No és en aquest Mac",
+    "whisperLowDisk": "Hi ha menys de {{size}} lliures",
+    "whisperMissingApple": "S’usa el model de veu d’Apple per defecte",
     "whisperFailed": "La baixada no s’ha completat.",
     "downloadNow": "Baixa ara"
   },
@@ -1353,16 +1356,15 @@
     "title": "S’està baixant Whisper",
     "failedTitle": "Whisper no s’ha baixat",
     "why": "Per a les properes gravacions. Whisper es defensa millor amb àudio dolent, gent que parla alhora i grups més grans.",
-    "stop": "Atura la baixada",
-    "stopNote": "La propera vegada torna a començar des del principi.",
+    "stop": "Atura",
     "causeDisk": "Aquest Mac no té prou espai lliure.",
     "causeNetwork": "La connexió s’ha perdut i no ha tornat.",
     "causeCertificate": "El certificat de seguretat d’aquesta xarxa no s’ha considerat de confiança.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Vols baixar el model de veu Whisper?",
+    "askBody": "Uns {{size}}. Ajuda amb l’àudio de mala qualitat i quan la gent es parla per sobre. Pots baixar-lo més tard a Configuració.",
+    "askDownload": "Baixa",
+    "askNotNow": "Ara no",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Iniciada en un altre Mac",

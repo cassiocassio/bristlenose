@@ -465,7 +465,8 @@
         "copy": "Ayrıntıları kopyala",
         "showLog": "Günlüğü Göster",
         "showLogTooltip": "Analiz günlüğü dosyasını göster",
-        "setUpProvider": "Sağlayıcıyı Ayarla…"
+        "setUpProvider": "Sağlayıcıyı Ayarla…",
+        "setUpTranscription": "Dökümü Ayarla…"
       },
       "tooltip": {
         "completed_partial": "{{project}} için analiz hatalarla tamamlandı"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Apple Silicon çip algılandı",
     "whisperOnDisk": "Bu Mac’te · {{size}}",
     "whisperMissing": "Bu Mac’te yok",
+    "whisperLowDisk": "{{size}} altında boş alan",
+    "whisperMissingApple": "Varsayılan olarak Apple konuşma modeli kullanılıyor",
     "whisperFailed": "İndirme tamamlanmadı.",
     "downloadNow": "Şimdi İndir"
   },
@@ -1353,16 +1356,15 @@
     "title": "Whisper indiriliyor",
     "failedTitle": "Whisper indirilemedi",
     "why": "Sonraki kayıtlarınız için. Whisper, kötü sesle, aynı anda konuşan kişilerle ve daha büyük gruplarla daha iyi başa çıkar.",
-    "stop": "İndirmeyi Durdur",
-    "stopNote": "Bir sonraki sefer baştan başlar.",
+    "stop": "Durdur",
     "causeDisk": "Bu Mac’te yeterli boş alan yok.",
     "causeNetwork": "Bağlantı koptu ve geri gelmedi.",
     "causeCertificate": "Bu ağın güvenlik sertifikasına güvenilmedi.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Whisper konuşma modeli indirilsin mi?",
+    "askBody": "Yaklaşık {{size}}. Kötü ses kalitesinde ve insanlar birbirinin sözünü keserek konuştuğunda yardımcı olur. Daha sonra Ayarlar’dan indirebilirsiniz.",
+    "askDownload": "İndir",
+    "askNotNow": "Şimdi Değil",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Başka bir Mac’te başlatıldı",

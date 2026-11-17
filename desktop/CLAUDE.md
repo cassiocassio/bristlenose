@@ -475,7 +475,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - A security-scoped extension follows a renamed folder, and nothing re-resolves bookmarks…
 - A count that gates a destructive act returns nil for *unreadable*, never zero
 
-**The sidecar: building, bundling and signing** (18) — [full entries](gotchas.md#the-sidecar-building-bundling-and-signing)
+**The sidecar: building, bundling and signing** (19) — [full entries](gotchas.md#the-sidecar-building-bundling-and-signing)
 
 - Build-script pretty output goes through `report.sh` + `build_report.py` — see…
 - mlx is bundled via `collect_all("mlx")`, not PyInstaller's default modulegraph walk
@@ -495,6 +495,7 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - `excludes=` in the spec drops one named module, not its transitive deps
 - `plutil -extract` splits the key path on dots, so it CANNOT read a reverse-DNS…
 - `codesign --force --entitlements <file>` without `--remove-signature` first is…
+- A signed `build-all.sh` needs a space-free checkout with `[release]` deps, `node_modules` and `GeneratedBuildInfo.swift`: a `/new-branch` worktree cannot run one, a hand-made clone's fresh venv stales the inventory; `check-build-env.sh` asks it up front (recipe in the entry)
 
 **Xcode, build settings and debugging** (10) — [full entries](gotchas.md#xcode-build-settings-and-debugging)
 

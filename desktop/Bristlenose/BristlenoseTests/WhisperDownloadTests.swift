@@ -123,6 +123,14 @@ import Testing
         #expect(!M.runMustDefer(whisperInBuild: false, stoppedByUser: true, hasAnswered: false))
     }
 
+    @Test func theTimeLeftGoesOnItsOwnLineWithoutTheDash() {
+        #expect(WhisperDownloadModel.timeLeftOnItsOwnLine(
+            "789.0 MB of 1.61 GB (10.0 MB/s) \u{2014} About 1 minute, 23 seconds remaining")
+            == "789.0 MB of 1.61 GB (10.0 MB/s)\nAbout 1 minute, 23 seconds remaining")
+        #expect(WhisperDownloadModel.timeLeftOnItsOwnLine("600.0 MB of 1.61 GB") == "600.0 MB of 1.61 GB",
+                "a line with no spaced dash is left as Foundation wrote it")
+    }
+
     @Test func noTotalFromTheServerStillCountsBytes() {
         let line = WhisperDownloadModel.progressLine(
             done: 600_000_000, total: 0, bytesPerSecond: nil, minutesLeft: nil)
@@ -398,16 +406,15 @@ import Testing
 }
 
 /// The size question's strings exist in English and the size reaches the body.
-/// English only until the owner approves the wording; the other 20 locales are
-/// deliberately pending (`check-locales.py --strict` lists them).
+/// The other 20 locales are translated (17 Nov 2026), not verified by native speakers.
 @Suite @MainActor struct WhisperAskStringsTests {
     @Test func theQuestionReadsInEnglish() throws {
         let i18n = I18n()
         i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
         i18n.setLocale("en")
         let size = i18n.t("desktop.modelDownload.askSize")
-        #expect(size == "1.5 GB")
-        #expect(i18n.t("desktop.modelDownload.askBody", ["size": size]).hasPrefix("About 1.5 GB."))
+        #expect(size == "1.6 GB")
+        #expect(i18n.t("desktop.modelDownload.askBody", ["size": size]).hasPrefix("About 1.6 GB."))
         for key in ["askTitle", "askDownload", "askNotNow"] {
             let full = "desktop.modelDownload.\(key)"
             #expect(i18n.t(full) != full, "\(key)")

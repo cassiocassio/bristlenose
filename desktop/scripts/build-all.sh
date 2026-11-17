@@ -657,7 +657,8 @@ fi
 # The extension's own profile, when the project embeds one: present, for ITS bundle id and the
 # same team. An extension signed with the host's profile, or none, is rejected at upload.
 if project_embeds_extension; then
-    EXT_APPEX="$EXPORTED_APP/Contents/PlugIns/BAExtension.appex"
+    # An ExtensionKit extension embeds in Contents/Extensions (the NSExtension form used PlugIns).
+    EXT_APPEX="$EXPORTED_APP/Contents/Extensions/BAExtension.appex"
     if [ ! -d "$EXT_APPEX" ]; then
         echo "error: the project embeds the Background Assets extension but $EXT_APPEX is not in the exported app." >&2
         exit 1

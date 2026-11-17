@@ -74,8 +74,11 @@ class TestTheExtensionFiles:
 
     def test_the_info_plist_is_the_downloader_extension_point_and_nothing_else(self) -> None:
         info = _load(_EXT / "Info.plist")
-        assert info["NSExtension"] == {
-            "NSExtensionPointIdentifier": "com.apple.background-asset-downloader-extension"
+        # The ExtensionKit form (Xcode 27.2's Background Download template; measured to work, and
+        # the NSExtension form is not what Apple's template produces): no NSExtension dict.
+        assert "NSExtension" not in info
+        assert info["EXAppExtensionAttributes"] == {
+            "EXExtensionPointIdentifier": "com.apple.background-asset-downloader-extension"
         }, "no principal class: StoreDownloaderExtension is the whole extension"
         assert info["CFBundlePackageType"] == "XPC!"
         # Version, build and floor come from build settings, so there is one place to bump them.
@@ -92,12 +95,19 @@ class TestTheExtensionFiles:
         assert manifest["NSPrivacyCollectedDataTypes"] == []
         assert manifest["NSPrivacyAccessedAPITypes"] == []
 
+    def test_the_target_is_an_extensionkit_extension(self) -> None:
+        text = _text()
+        assert 'productType = "com.apple.product-type.extensionkit-extension";' in text
+        assert "com.apple.product-type.app-extension" not in text
+        assert 'explicitFileType = "wrapper.extensionkit-extension"' in text
+
     def test_the_source_is_the_one_line_extension(self) -> None:
         src = (_EXT / "BAExtension.swift").read_text(encoding="utf-8")
         assert "StoreDownloaderExtension" in src, "Apple-hosted packs use the Store downloader"
         code = "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("//"))
         assert "ManagedDownloaderExtension" not in code, "self-hosted is the other class"
         assert "@main" in src
+        assert "import ExtensionFoundation" in src
 
 
 class TestTheTargetInTheProject:

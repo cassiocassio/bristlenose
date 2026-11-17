@@ -1,4 +1,5 @@
 import BackgroundAssets
+import ExtensionFoundation
 import StoreKit
 
 // The Background Assets download extension for the Mac App Store build

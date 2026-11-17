@@ -273,8 +273,8 @@ E
 # build_ext_app <dir> <ext-ents> [ext-version] [with-profile: 1|0] — a fixture
 # with one extension, signed inside-out (extension first, then the host).
 build_ext_app() {
-    local d="$1" eents="$2" ever="${3:-$TREE_VER}" prof="${4:-1}" a e
-    a=$(build_app "$d"); e="$a/Contents/PlugIns/BAExt.appex"
+    local d="$1" eents="$2" ever="${3:-$TREE_VER}" prof="${4:-1}" where="${5:-PlugIns}" a e
+    a=$(build_app "$d"); e="$a/Contents/$where/BAExt.appex"
     mkdir -p "$e/Contents/MacOS"
     cp "$a/Contents/MacOS/Bristlenose" "$e/Contents/MacOS/BAExt"
     cat > "$e/Contents/Info.plist" <<PLIST
@@ -301,6 +301,13 @@ if grep -qi '✓.*extensions.*1 .appex' <<<"$EXT_OUT"; then
 else
     fail "intact extension → extensions row did not pass"; sed 's/^/        /' <<<"$EXT_OUT" | grep -iE '✗|extensions' >&2
 fi
+
+# The real form is an ExtensionKit extension in Contents/Extensions: the same row must see it.
+D=$WORK/e0x; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "$TREE_VER" 1 Extensions)
+if make_pkg "$A" "$D/t.pkg"; then EXT_OUT=$("$GATE" "$D/t.pkg" 2>&1); else EXT_OUT=""; fi
+if grep -qi '✓.*extensions.*1 .appex' <<<"$EXT_OUT"; then pass "an extension in Contents/Extensions is seen and passes"; else fail "an extension in Contents/Extensions was not seen"; fi
+D=$WORK/e0y; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nosandbox.plist" "$TREE_VER" 1 Extensions)
+reject_case "an unsandboxed extension in Contents/Extensions is refused" "✗.*extensions.*BAExt.appex: no app-sandbox" "$D"
 
 D=$WORK/e1; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nosandbox.plist")
 reject_case "extension unsandboxed" "✗.*extensions.*BAExt.appex: no app-sandbox" "$D"

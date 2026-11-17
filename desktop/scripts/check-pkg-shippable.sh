@@ -358,7 +358,7 @@ fi
 # 6e. Background Assets download extension(s) — design: background-assets-whisper plan §7
 #
 # Today the store build carries NO extension, and that passes. Once one ships
-# (StoreDownloaderExtension in Contents/PlugIns/), each .appex must be its own signed
+# (StoreDownloaderExtension, an ExtensionKit extension: Contents/Extensions/, and PlugIns/ is searched too), each .appex must be its own signed
 # sandbox: app-sandbox + app groups the host holds, NEVER `inherit` (an extension is
 # not a child process: inherit makes launchd refuse it), its own embedded profile
 # (an extension with the host's profile, or none, is rejected at upload), and the

@@ -1,54 +1,66 @@
 ---
-status: the design for the first App Store submission (24 Nov 2026); built on unmerged branches, proven on one TestFlight evidence build; not yet reviewed by App Review
+status: design for the first App Store submission (24 Nov 2026); built on unmerged branches; one TestFlight evidence build exists; not reviewed by App Review; several decisions open (§11)
 date: 17 Nov 2026
-trued-against: branches `ba-whisper-build` and `ba-whisper-embed` (tip `1c3e5f027`; build 6532 was built from an earlier commit, `e9f3617ff`, in a clone), main at `a6b7895e2`, TestFlight 0.46.0 build 6532
+trued-against: see "Which tree this describes" below. Main was at `ddbe9b51a`.
 ---
 
 # How the Mac App Store build delivers and uses its Whisper speech model
 
-This document says what the Mac App Store build of Bristlenose does to get a Whisper speech model onto the Mac and to transcribe with it, and why. It is written for an App Review reader and for the maintainers who come after. Every claim carries an evidence code (E1 to E8, listed in §12) or is marked **not verified**. §11 is the honest list of what has not been tested.
+This document says what the Mac App Store build of Bristlenose does to get a Whisper speech model onto the Mac and to transcribe with it, and why. It is for App Review readers and for later maintainers. Each claim carries an evidence code (E1 to E9, §13) or is marked **not verified** or **by code reading**. §12 lists what has been tested and what has not. §11 lists the decisions that are open.
+
+## Which tree this describes
+
+Two source trees matter, and they behave differently. Every sentence below that depends on the difference names the tree.
+
+| Name | What it is | Where it exists | Built or observed |
+|---|---|---|---|
+| **Tree A** | Branch `ba-whisper-embed` at the commit that produced TestFlight build 6532 (`e9f3617ff`, built in a clone with `BN_BA_WHISPER=1`). The branch tip `1c3e5f027` has the same key files. | Local branch, not merged | TestFlight 0.46.0 build 6532, internal only, macOS 27, one Mac (E5). An evidence build, not a ship candidate: its dependencies differ from the main venv. |
+| **Tree B** | Tree A plus commit `bb60d1b0c` (system cancel is not a Stop; Hugging Face fetch pinned and hash-checked; a run honours Not Now; the "Zero KB" text fixed). | Branch `claude/ba-gap-closure-488c85`, not merged | **In no build.** Unit-tested only (Swift flag off and on, Python for the touched areas). |
+
+Main carries neither: it has the Hugging Face path, the size alert (`2fcbaaccc`) and Apple's engine, with the Background Assets adapter compiled out.
+
+**A default store archive does not use Background Assets.** `desktop/scripts/build-all.sh` defines the `BA_WHISPER` compile condition only when `BN_BA_WHISPER=1` is set (the script's own comment: "the committed default stays dark"), while the extension and the Background Assets keys are embedded regardless. An archive made without that variable carries the extension and keys with the adapter compiled out, so every user gets the Hugging Face route (build 6531 was built this way). Which tree ships, and how the switch is set for the release archive, is open decision D1 and D2 in §11. Nothing below should be read as describing a default archive.
 
 ## 1. Purpose and decision summary
 
-Bristlenose turns recordings of interviews into a report. Transcription quality decides the quality of everything after it: a wrong word becomes a wrong quote. The App Store build therefore transcribes with **Whisper large-v3-turbo**, a model of about 1.5 GB (a 1.5 GB download, 1.6 GB on disk), and not a smaller one.
-
-A 1.5 GB model should not sit inside an app bundle that every user downloads whether or not they transcribe. So the model arrives separately, as data, after the user has been told its size and has agreed.
+Bristlenose turns recordings of interviews into a report. Transcription quality decides the quality of everything after it: a wrong word becomes a wrong quote. The App Store build therefore uses **Whisper large-v3-turbo** (about 1.6 GB on disk), not a smaller model. A model that size should not be in the bundle every user downloads, so it arrives separately, as data.
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Model | Whisper large-v3-turbo (`mlx-community/whisper-large-v3-turbo`). The Background Assets pack was built from revision `a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb`; the Hugging Face route requests the repository by name and is not revision-pinned. | Transcription quality on poor audio and overlapping speech needs the large model (owner position, settled). |
-| Delivery on macOS 26 and later, store build | Apple Managed Background Assets, Apple-hosted | The platform's own mechanism for large data a store app needs after install; Apple hosts, resumes across app quits, and keeps the data out of the app bundle. |
-| Delivery on macOS 15, in the `.dmg`, and as fallback | Download from Hugging Face by the bundled sidecar | Background Assets needs macOS 26. The path already ships and works on every Mac the app supports. |
-| First study on macOS 26 and later | Apple's on-device speech model (`SpeechTranscriber`), in the languages it covers | A first recording does not wait for the 1.5 GB model. Whisper takes over once it is on the Mac. |
-| Deployment floor | macOS 15.0 | Support as many Macs as possible. The extension targets 26.0 and is not loaded on 15. |
-| Consent | Size shown and Download / Not Now asked before the app starts the download by itself | Guideline 4.2.3(ii). See §7. |
-| Copy on the Background Assets path | Never promises or denies that a download resumes | The app trusts the operating system's contract and does not describe behaviour it does not control. |
+| Model | Whisper large-v3-turbo (`mlx-community/whisper-large-v3-turbo`). The Background Assets pack was built from revision `a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb`. On Tree A the Hugging Face route requests the repository by name and is not revision-pinned. On Tree B a fresh fetch is pinned to that revision and hash-checked (§5). | Quality on poor audio and overlapping speech (owner position, settled). |
+| Delivery on macOS 26 and later, store build | Apple Managed Background Assets, Apple-hosted, requested on demand | The platform mechanism for large data a store app needs after install. Apple hosts it and keeps it out of the bundle. |
+| Delivery on macOS 15, in the `.dmg`, in the CLI, and as fallback | Download from Hugging Face by the bundled sidecar | Background Assets needs macOS 26. |
+| First study on macOS 26 and later | Apple's on-device speech model (`SpeechTranscriber`), in the languages it covers | A first recording need not wait for the model. Whisper is used once it is on the Mac. |
+| Deployment floor | macOS 15.0 | The extension targets 26.0. |
+| Consent | The app shows the size and asks (Download / Not Now) before it starts its own background download | Guideline 4.2.3(ii). See §7. |
+| Wording on the Background Assets path | Never promises or denies that a download resumes | The app does not describe behaviour of the system that it does not control. |
 
-Status. The owner's strategy (17 Nov 2026) is to submit on 24 Nov 2026 with Background Assets as the preferred delivery, Apple's speech model as the instant first study where macOS 26 provides it, and the app's own Hugging Face download wherever the OS is too old or Background Assets fails. The aim for every macOS version is the same four properties: the highest transcription quality (Whisper large-v3-turbo), an immediate start, a fast initial download, and the platform's native mechanism wherever one exists. The Background Assets code is on two unmerged branches (`ba-whisper-build`, `ba-whisper-embed`); main carries the Hugging Face path, the size prompt (`2fcbaaccc`) and Apple's engine. If App Review rejects the Background Assets design, the owner decides then what to ship; this document does not pre-decide it. §11 lists what is still open, and the open items in it are the work to close before submission.
+Owner strategy (17 Nov 2026): the 24 Nov submission uses Background Assets where macOS 26 or later provides it, Apple's speech model for the first study, and the app's own Hugging Face download where the OS is too old or Background Assets fails. If App Review rejects the Background Assets design, the owner decides then what to ship; this document does not pre-decide it.
 
 ## 2. The three engines and which runs when
 
-| Engine | Where it runs | Needs a download | Covers | When it is used |
+| Engine | Where it runs | Download | Covers | Used when |
 |---|---|---|---|---|
-| **Apple speech model** (`SpeechTranscriber`) | On the Mac, in a signed helper bundled with the app | Apple's per-language model, fetched by macOS on first use (E7). Not Bristlenose's download and not covered by our size prompt. | Nine languages: English, Spanish, French, German, Italian, Portuguese, Korean, Japanese, Chinese (the app maps the interface language to a locale; how each Chinese variant maps was not re-checked here) | macOS 26 or later, the Mac app only, while Whisper is not on disk, when the interface language maps to one of the nine. Not in the CLI. |
-| **Whisper large-v3-turbo, delivered by Background Assets** | On the Mac, in the sandboxed sidecar (MLX) | The 1.5 GB pack from Apple's hosting | Every language Whisper detects | Store build (App Store or TestFlight), macOS 26 or later, once the pack is verified on disk. |
-| **Whisper large-v3-turbo, delivered by Hugging Face** | Same | The same weights from `huggingface.co`, by `doctor --fetch` in the sidecar | Same | macOS 15; the Developer ID `.dmg` on every macOS; the CLI; and the store build when Background Assets is switched off, unavailable, or has just failed. |
+| **Apple speech model** (`SpeechTranscriber`) | On the Mac, in a signed helper bundled with the app | Apple's model for the language, which **our helper requests** (`AssetInventory.assetInstallationRequest(...).downloadAndInstall()`) if macOS does not hold it. No size is shown by us and no prompt precedes it. By code reading. | English, Spanish, French, German, Italian, Portuguese, Korean, Japanese, Chinese (how each Chinese variant maps was not checked) | macOS 26 or later; Mac app only; Whisper not on disk (default setting); language not pinned; interface language is the researcher's own and maps to one of the nine; kill switches on. Not in the CLI. |
+| **Whisper large-v3-turbo via Background Assets** | In the sandboxed sidecar (MLX) | The pack from Apple's hosting | Every language Whisper detects | Store build, macOS 26 or later (observed on 27.0 only), `BA_WHISPER` compiled in, kill switch on, a verified pack on disk. |
+| **Whisper large-v3-turbo via Hugging Face** | Same | The model repository from `huggingface.co`, fetched by the sidecar | Same | macOS 15; the Developer ID `.dmg` on every macOS; the CLI; the store build when Background Assets is off, unavailable or has failed. |
 
-The pack holds `config.json` (268 bytes) and `weights.safetensors` (1,613,977,612 bytes); the app pins a SHA-256 for each and checks them before use. **The Hugging Face route is not hash-checked by the app:** it fetches the repository snapshot by name (about 1.61 GB, the whole snapshot, not only these two files). On the build date the weights matched the pack in size and in a sampled checksum (sum of the first byte of every 4 KB page); a full SHA-256 of the Hugging Face copy was not computed (E1). A transcript from the sandboxed sidecar reading the pack matched the Hugging Face run on one 45 second English clip, text, case and punctuation compared with whitespace collapsed, timecodes compared as displayed to the second; the sidecar was ad hoc re-signed with the real entitlements, macOS 27.0 (E2).
+Both Whisper routes load `config.json` (268 bytes) and `weights.safetensors` (1,613,977,612 bytes). The app pins a SHA-256 for each and checks the pack against them. The Hugging Face route on Tree A fetches the whole snapshot (about 1.61 GB) and is not checked by the app. On the build date the Hugging Face weights matched the pack in size and in a sampled checksum (the first byte of every 4 KB page); a full SHA-256 of the Hugging Face copy was not computed (E1). A transcript from the sandboxed sidecar reading the pack matched the Hugging Face run on one 45 second English clip (text, case and punctuation compared with whitespace collapsed; timecodes compared as displayed to the second). The sidecar was ad hoc re-signed with the real entitlements, macOS 27.0 (E2).
 
-### Which runs, per recording
+### Which engine runs, per run
 
-Apple's engine is chosen once per run, in `choose_engine` (`bristlenose/apple_speech.py`). It is chosen only when all of these hold:
+Apple's engine is chosen once per run in `choose_engine` (`bristlenose/apple_speech.py`), and only when all of these hold:
 
-1. the Mac app, which bundles the helper (not the CLI);
+1. the Mac app, with its bundled helper and sidecar (not the CLI);
 2. the helper answers and reports Apple's model available (macOS 26 or later);
-3. Whisper is not on disk, under the default engine setting. The setting *Apple's speech model* skips this test;
-4. the transcription language is not pinned;
-5. the interface language is the researcher's own (picked in Settings, or among the Mac's preferred languages) and maps to one of Apple's nine.
+3. the Apple-speech kill switch is on;
+4. Whisper is not on disk, under the default engine setting (the setting *Apple's speech model* skips this test);
+5. the transcription language is not pinned;
+6. the interface language is the researcher's own (chosen in Settings or among the Mac's preferred languages) and maps to one of the nine.
 
-Apple needs a language before it starts, and Whisper detects it. So Apple's engine **assumes the recording is in the interface language** (owner decision, 18 Oct 2026). A wrong guess is caught by a per-session gate: mean word confidence under 0.5, or too few words per minute of speech, sends the session to Whisper. Measured on five recordings, a wrong language gave a few words at about 0.10 to 0.30 confidence (the code comment says 0.38) against 0.92 to 0.93 in the right language. Five files are too few to settle the threshold (existing design record: `docs/design-apple-first-transcription.md`).
+Apple needs the language before it starts, and Whisper detects it. So Apple's engine **assumes the recording is in the interface language** (owner decision, 18 Oct 2026). A per-session gate catches a wrong guess: mean word confidence under 0.5, or too few words per minute of speech, sends the session to Whisper. On five recordings a wrong language gave a few words at about 0.10 to 0.30 confidence against 0.92 to 0.93 in the right language (the code comment says 0.38); five files are too few to settle the threshold. The gate judges a whole file by its mean, so a recording in two languages can pass with one lost. A session Apple keeps stays Apple's, so a project can hold transcripts from both engines. The engine is recorded per session but shown only in the Diagnostics view. (Existing design record: `docs/design-apple-first-transcription.md`.)
 
-A session Apple defers waits ("Waiting for Whisper") and runs on Whisper when Whisper lands. A session Apple kept stays Apple's.
+A session Apple defers waits ("Waiting for Whisper"). Tree A and Tree B differ on how it then gets Whisper (§6, §7).
 
 ```mermaid
 flowchart TD
@@ -64,30 +76,34 @@ flowchart TD
     F -- no --> G{Whisper on disk now?}
     G -- yes --> W
     G -- no --> H[Session deferred:<br/>Waiting for Whisper]
-    W{Whisper on disk and<br/>verified?}
+    W{Whisper on disk<br/>and verified?}
     W -- yes --> X[Whisper transcribes from the model directory]
-    W -- no, the app owns the download --> H
-    W -- no, nothing owns it<br/>CLI, or no download in flight and no verified pack --> Y[Python downloads it itself from Hugging Face]
-    H -. Whisper lands: the app is designed to re-run the waiting sessions<br/>not observed end to end .-> X
+    W -- no, Background Assets owns the download --> H
+    W -- no, a sidecar fetch is in flight --> Z[Run waits for that fetch, then transcribes]
+    W -- no, nothing in flight --> N{Tree A or Tree B?}
+    N -- Tree A --> Y[Sidecar downloads from Hugging Face inside the run, no alert]
+    N -- Tree B --> H
+    H -. Whisper lands: designed to re-run the waiting sessions; not observed end to end .-> X
 ```
 
 ## 3. OS versions by channel
 
-"Store build" means the build distributed through the Mac App Store or TestFlight. The `.dmg` is the Developer ID build distributed from bristlenose.app. The `.dmg` contains no extension and no Background Assets keys; a release gate fails if it does (E3).
+"Store build" means the Mac App Store or TestFlight build. The `.dmg` is the Developer ID build from bristlenose.app. The `.dmg` contains no extension and no Background Assets keys; a release gate fails if it does (E3). The "user sees" column is derived from code and **has not been observed on any build** unless stated.
 
-| macOS | Channel | Whisper delivery | First study | What the user sees |
+| macOS | Channel | Whisper delivery | First study | What the user sees (by code) |
 |---|---|---|---|---|
-| 26 or later | Mac App Store, TestFlight | Background Assets; falls back to Hugging Face for that launch if it fails (§6) | Apple's model, in the nine languages | After the AI disclosure is acknowledged and with 10 GB free: an alert with the size ("about 1.5 GB"), Download or Not Now. A "Downloading Whisper" pill with progress. A Whisper row in Settings with Download Now. |
-| 15 | Mac App Store | Hugging Face. The extension is not loaded; the Background Assets code is behind an availability check for macOS 26. | None. Recordings wait for Whisper. Transcripts can be imported with no download. | The same alert, pill and Settings row. A recording is transcribed once the download finishes. |
+| 26 or later (observed on 27.0 only) | Store build, archive made with `BN_BA_WHISPER=1` | Background Assets; Hugging Face for that launch if it fails (§6) | Apple's model, nine languages | After the AI disclosure is acknowledged, with at least 10 GB free: an alert with the size, Download or Not Now. A "Downloading Whisper" pill. A Whisper row in Settings with Download Now. |
+| 26 or later | Store build, default archive | Hugging Face (adapter compiled out) | Apple's model | The same alert, pill and row. |
+| 15 | Store build | Hugging Face. The extension is meant not to load on 15 (a toy on 15.7.3 took the unavailable path, E1; the store build has never been installed on 15). | None | The same alert, pill and row. Nothing transcribes until the download is done. Transcripts can be imported with no download. |
 | 26 or later | `.dmg` | Hugging Face | Apple's model | The same alert and pill. |
 | 15 | `.dmg` | Hugging Face | None | The same alert and pill. |
-| any | CLI (`pip`, Homebrew, Snap, Copr) | Hugging Face cache, by the user's command (`bristlenose doctor --fetch`) or on first run | None (no helper) | Terminal progress. No alert: the person typed the command. |
+| any | CLI | Hugging Face cache, by `bristlenose doctor --fetch` or on first run | None (no helper) | Terminal progress; no alert. |
 
-macOS 15 evidence (E9) comes from the `.dmg` build, never the store build, so it says nothing about the store build or Background Assets there. On a macOS 15.7.7 guest the `.dmg` app launched and Settings > Transcription showed a Whisper row ("Not on this Mac") with a button and no Background Assets control. Pressing the button started `doctor --fetch` in the sidecar at once (a deliberate click, so no alert is expected); about 1.5 GB arrived from Hugging Face into the app's container in about 40 seconds, and the row then read "On this Mac · 1.61 GB". Not observed on 15: a size alert, the download pill, or a transcription in any language. Not verified: macOS 26.x with anything (E1 could not run there).
+macOS 15 evidence (E9) is from the `.dmg` build, not the store build, and says nothing about Background Assets there. On a 15.7.7 guest the `.dmg` app launched; Settings > Transcription showed a Whisper row "Not on this Mac" with a button and no Background Assets control. The button (a deliberate click) started the sidecar fetch at once; 1.1 GB had arrived by about 40 seconds and 1,543 MB at the end, in the app's container, and the row then read "On this Mac · 1.61 GB". **Not observed on 15:** a size alert, the pill, or a transcription in any language (a run stopped at the AI provider key check). The first-launch flow was not reached.
 
 ## 4. How the pack is downloaded and handed to the sandboxed sidecar
 
-The sidecar is a bundled Python program (PyInstaller) that runs the pipeline. It is sandboxed with `com.apple.security.inherit`, so it has the app's sandbox and no more.
+The sidecar is a bundled Python program (PyInstaller). It is sandboxed with `com.apple.security.inherit`, so it has the app's sandbox and no more.
 
 ```mermaid
 sequenceDiagram
@@ -99,11 +115,10 @@ sequenceDiagram
     R->>App: Acknowledges the AI disclosure
     App->>Side: doctor --whisper-status
     Side-->>App: missing
-    App->>R: Alert: about 1.5 GB. Download / Not Now
+    App->>R: Alert with the size. Download / Not Now
     R->>App: Download
     App->>BA: ensureLocalAvailability(whisper-large-v3-turbo), onDemand
     BA->>Ext: Extension in the bundle (no logic of ours)
-    BA->>BA: Downloads from Apple hosting, shows no UI of its own
     BA-->>App: Progress updates (bytes done / total)
     App->>R: Pill: Downloading Whisper
     BA-->>App: Finished
@@ -117,167 +132,197 @@ sequenceDiagram
     Side->>Side: Reads config.json and weights.safetensors, transcribes
 ```
 
-Facts the diagram depends on, each measured on a development-signed toy on macOS 27.0 against a local `ba-serve`, unless stated (E1):
+Facts the diagram depends on. Measured on a development-signed toy on macOS 27.0 against a local `ba-serve` unless stated (E1):
 
-- The pack does not land in the app group. `url(for:)` returns a path under `~/Library/Daemon Containers/<id>/Data/Library/Caches/<bundle>/Staging/Unlocalized/`, owned by the system. A `removeItem` from the sandboxed app failed with error 513; the app removes a bad pack only through the system's own `remove` call. Writing to it was not tested.
-- **The grant is per `url(for:)` request.** A child process read `weights.safetensors` but got ENOENT on `config.json` until the app had asked for the model *directory*. So the app asks every time before it spawns the sidecar. A unit test pins that the app asks its adapter for the directory on every spawn; the sandbox grant itself was measured on the toy and the store build, not by that test.
-- A profile carrying the team identifier is mandatory for the system to accept the extension. A profile-less build is rejected.
-- `url(for:)` never throws for a file that is absent. The app therefore never trusts it alone and checks names, sizes and the stored fingerprint.
-- The extension is a one-line `StoreDownloaderExtension` with no logic of ours, (the toy extension measured 5.3 MB footprint and 18 MB resident while a download ran; the shipping extension was not measured).
+- The pack does not land in the app group. `url(for:)` returns a path under `~/Library/Daemon Containers/<id>/Data/Library/Caches/<bundle>/Staging/Unlocalized/`, owned by the system. A `removeItem` from the sandboxed app failed with error 513. The app removes a bad pack only through the system's `remove` call. Writing to it was not tested.
+- **The grant is per `url(for:)` request**, on the toy only: a child process read `weights.safetensors` but got ENOENT on `config.json` until the app had asked for the model *directory*. The app therefore asks before every spawn. A unit test pins that `runEnvironment` asks the adapter for the directory; it does not pin the spawn site, and the grant itself was observed on the toy.
+- A provisioning profile carrying the team identifier is required for the system to accept the extension.
+- `url(for:)` does not throw for an absent file, so the app checks names, sizes and its stored fingerprint.
+- The extension is a `StoreDownloaderExtension` with no logic of ours. A footprint was measured only for the toy extension (5.3 MB, 18 MB resident).
 
-On the real store build (E5), TestFlight 0.46.0 build 6532 on macOS 27, on 17 Nov 2026:
+On the store build 6532 (Tree A, E5), macOS 27, 17 Nov 2026, internal TestFlight:
 
-- The pack arrived through Background Assets: started about 12:20:04, and at 12:22:29 the system helper reported to TestFlight "version 1 of asset pack whisper-large-v3-turbo for app.bristlenose was successfully downloaded", about 2.5 minutes. No Hugging Face process was seen and no Hugging Face folder appeared. The Mac was not clean: Whisper had been cached from Hugging Face earlier and was parked first, and the download was started with Download Now in Settings, not from the alert.
-- A three-session project was then re-run with Whisper. The log records session 1 (1,092 seconds) transcribed and merged and session 2 with 236 segments; the third session is not in the log I read. The log shows `preflight_whisper: mlx-community/whisper-large-v3-turbo delivered by the host app`, `backend=mlx model=large-v3-turbo`, the sidecar spawned with the model directory in the Daemon Containers area, and sessions transcribed.
-- The sidecar is given the model directory only for a pack the app has verified. That the run received the directory is evidence the SHA-256 check passed; the verification log line itself was not captured. The transcript was not compared with a Hugging Face run on this build.
+- The pack arrived through Background Assets: from about 12:20:04 to 12:22:29, when the system helper reported to TestFlight "version 1 of asset pack whisper-large-v3-turbo for app.bristlenose was successfully downloaded" (about 2.5 minutes). No Hugging Face process or folder appeared. The Mac was **not clean**: Whisper had been cached from Hugging Face before and was parked, and the download was started with Download Now in Settings, not from the alert. The size alert was not seen on that build (§12).
+- A project was then re-run by hand with Whisper. The log shows `preflight_whisper: ... delivered by the host app`, `backend=mlx model=large-v3-turbo`, the sidecar spawned with the model directory in the Daemon Containers area, session 1 (1,092 seconds) transcribed and merged, and session 2 with 236 segments.
+- That the sidecar received the model directory means the app's SHA-256 check passed. The log line for the check was not captured. The transcript was not compared with a Hugging Face run on this build.
+- TestFlight serves the latest processed pack without review. None of this shows what App Review or the public App Store will do.
 
 ## 5. What is in the pack, and why it is data and not code
 
 | Property | Fact | Evidence |
 |---|---|---|
-| Contents | Exactly two files in one directory: `config.json` (268 B) and `weights.safetensors` (1,613,977,612 B). The packer refuses to add anything else. | E4, `build-whisper-pack.sh` |
-| Format | `safetensors` holds tensors and nothing else. It cannot carry code. `config.json` is JSON. | Format specification |
-| Allowlist | The verifier rejects any other file in the directory, including a second copy of the weights or a script. | `WhisperPackVerifier.quickCheck`, unit-tested |
-| Integrity | The app pins a SHA-256 for each file, built from the real pack. A pack whose hash differs is not used. The Hugging Face route has no such check in the app. | E4, E6 |
-| How it is used | The sidecar passes the directory to `mlx_whisper` as a model path. The bytes are read as arrays. They are never imported, loaded as a library, or run. | `s05_transcribe.py` |
-| What Apple allows | Apple's Background Assets documentation lists machine-learning models as asset pack content and bars macOS executables from packs. | E7 |
-| The code that is delivered | The extension and the sidecar are inside the signed app bundle that App Review receives. Nothing the app executes arrives after review. | E3 |
+| Contents | Two files in one directory: `config.json` (268 B) and `weights.safetensors` (1,613,977,612 B). The packer refuses anything else. | E4, `build-whisper-pack.sh` |
+| Format | `safetensors` is a tensor container with no mechanism to execute anything. `config.json` is JSON. | Format specification |
+| Allowlist | The verifier rejects any other file in the directory (a second copy of the weights, a script). | `WhisperPackVerifier.quickCheck`, unit-tested |
+| Integrity of the pack | A SHA-256 per file is pinned in the app, built from the real pack. A pack that does not match is not used. | E4, E6 |
+| Integrity of the Hugging Face route | **Tree A:** none in the app. The repository is fetched by name, and `mlx_whisper` can load `weights.npz` if it is present in the snapshot. **Tree B:** a fresh sidecar fetch is pinned to the revision, allowed only `config.json` and `weights.safetensors`, and checked against the same pinned hashes. By unit test, not yet in a build. Not covered on Tree B: `mlx_whisper`'s own load-time `snapshot_download` on a run that was handed a repository name instead of a directory (D12). | E6, code reading |
+| How it is used | The sidecar passes the directory to `mlx_whisper` as a model path. The bytes are read as arrays. They are not imported, loaded as a library or run. | `s05_transcribe.py` |
+| What Apple documents | Apple's Background Assets documentation describes asset packs as holding assets such as machine-learning models. The statement that macOS executables are barred was not found on the pages reached. | E7 (second-hand, not byte-verified) |
+| Code that arrives after review | None. The extension and sidecar are in the signed bundle App Review receives. | E3 |
 
-The sidecar carries the `disable-library-validation` entitlement (for its bundled Python libraries). The pack is hash-checked even though Apple hosts it. On the Hugging Face route the app relies on the host and on TLS alone (open item 8).
+The sidecar carries `disable-library-validation`, `allow-jit` and `allow-unsigned-executable-memory` entitlements for its bundled Python libraries and MLX. A reviewer may ask why a process with those entitlements reads downloaded bytes; the answer is the pack checks above.
 
 ## 6. Failures and recovery
 
-Rules the code follows (owner, 16 Nov 2026): after a failed attempt the app tries again at the next opportunity (a run starting, a launch, Download Now). No recovery depends on how the system behaves after a failure. Nothing the app shows promises or denies resume.
+Rules the code follows (owner, 16 Nov 2026): after a failed attempt the app tries again at the next opportunity (a run starting, a launch, Download Now). No recovery depends on how the system behaves after a failure. Nothing shown promises or denies resume.
 
-"Tested" below says how far each row has been exercised. **Real-app network failure on a signed build has not been tested; it is designed and unit-tested only.**
+"Tested" says how far each row has been exercised. **Failure and recovery on a signed build on a real network has not been tested. It is designed, unit-tested and measured on a toy.** Rows that differ by tree say so.
 
 | Situation | What the app does | Tested how |
 |---|---|---|
-| **Network off before the download** | `AssetPackManager` throws (toy: "Could not connect to the server", `SwiftErrorProjection` code 1). The attempt ends as failed; this launch hands to the Hugging Face fetch, which also fails offline and reports a cause the researcher can act on (the connection dropped, disk full, or a certificate not trusted). The pill stays with Retry. Next launch or Download Now asks Apple again. | Error shape measured on the toy (E1). Acquirer and fallback unit-tested (E6). Not run end to end offline. |
-| **Network lost during the download** | Toy: the system fails the download with -1005 and does not retry by itself. A new request, observed 10 s and 30 s later, restarted from byte 0 (no Range header sent, though the server supported it). The app treats it as a failed attempt: fallback for this launch, Apple again next time. | Measured on the toy with a throttling TLS proxy (E1). Not on a real network or a signed build. |
-| **App quit mid-download** | The system keeps downloading without the app (system behaviour; the app promises nothing about it). Toy: it finished 2 minutes 13 seconds after the kill, and a relaunch re-attached and found it complete. | Measured on the toy (E1). Not on the real app. |
-| **Sleep and wake, reboot, battery throttling** | Left to the system. The app has no logic for these. | **Not measured.** |
-| **Low disk** | The app does not start a download by itself with under 10 GB free. Download Now in Settings is not held by this. If space runs out during a Hugging Face fetch the pill names disk as the cause. | Rule unit-tested. Background Assets with a full disk not tested. |
-| **Partial or corrupt pack** | After arrival the app checks names, sizes and SHA-256 off the main thread. A mismatch removes the pack and requests it once more. A second mismatch ends the attempt as failed (fallback). A pack that was not verified by the app (delivered by the system on its own, or left by a failed check) is never handed to the sidecar. | Unit-tested; the acquirer's mutation pass (13 mutants: 9 caught first time, 1 equivalent, 3 gaps fixed) covered the retry and fallback (E6). Not run against a really corrupted download. |
-| **The system cancels the request** | The acquirer reports a cancellation nobody here asked for as a stop, and the model remembers it as the researcher's Stop, so no automatic retry happens until Download Now (`WhisperDownloadModel`, `if case .stopped = outcome, !stopAsked`). This conflicts with the rule above and is an open item. | Read in code; not exercised. |
-| **Researcher presses Stop, then Download Now** | Stop cancels the request (the system reports -999) and is remembered, so the app does not restart the download on its own. Download Now clears the remembered Stop and asks Apple again. | Unit-tested. Cancellation behaviour measured on the toy (E1). |
-| **Background Assets fails, or goes silent for 60 seconds** | The attempt ends. For this launch the Hugging Face fetch takes over. The next launch, or Download Now, asks Apple again. If the attempt never reported a byte, the app asks the system to drop the unfinished pack and waits (up to 5 seconds) so a late arrival cannot be mixed with the fallback. A complete pack is never deleted. | Unit-tested (E6), reviewed twice for the double-download case (E8). |
-| **Pack removed by the system** | Before every run the app asks for the directory afresh and checks names and sizes. If the pack is not there, the sidecar is not told the app owns the model, and the run downloads it as it always has. | Reasoned and unit-tested. The toy could not simulate a system purge. |
-| **Kill switch** | The preference `BristlenoseBackgroundAssets` (default on) set to off means `AssetPackManager.shared` is never touched and every download goes through Hugging Face. Written for a tester who hits trouble. Developers report that a misconfigured `AssetPackManager` can crash rather than throw (E7, second-hand); we did not see it on macOS 27.0. | Code and unit tests. The `defaults write` command for a sandboxed build (written to the container's plist by path) is **untested on a signed build**. |
-| **A second fetcher while Apple downloads** | `_BRISTLENOSE_WHISPER_HOST_OWNS=1` makes Python refuse to fetch. With the model absent the session is deferred ("Waiting for Whisper") and the run completes. | Measured on the toy and the rebuilt sidecar: refuses, writes 0 KB; the control run fetches (E1, E2). |
+| **Network off before the download** | The pack manager throws (toy: "Could not connect to the server", `SwiftErrorProjection` code 1). The attempt ends as failed. For this launch the Hugging Face fetch takes over, which also fails offline, retrying up to five times with waits of up to 300 seconds each (by code reading), then reports a cause the researcher can act on. The pill stays with Retry. | Error shape measured on the toy (E1). Acquirer unit-tested (E6). Not run offline end to end. |
+| **Network lost during the download** | Toy: -1005, no retry by the system; a request 10 s and 30 s later restarted from byte 0. The app treats it as failed: Hugging Face for this launch. | Toy with a throttling proxy (E1). Not a real network or a signed build. |
+| **App quit mid-download** | The system continued the download without the app on the toy (2 min 13 s after the kill) and a relaunch found it complete. System behaviour; the app promises nothing about it. | Toy only. |
+| **Sleep and wake** | The app has a 60 second silence watchdog on a continuous clock. By code reading, a sleep over 60 seconds during a download can trip it and start a Hugging Face fetch from the start. Not run. | **Not tested.** |
+| **Reboot, battery throttling, system pause** | The adapter ignores a "paused" status. By code reading, a pause by macOS can look like silence. | **Not tested.** |
+| **Low disk** | The app does not start its own download with under 10 GB free, and says nothing. Download Now is not held by the rule. A Hugging Face fetch with a full disk reports disk as the cause (sidecar battery on 15.7.7, not through the app). | Rule unit-tested. Background Assets with a full disk not tested. |
+| **Partial or corrupt pack** | After arrival the app checks names, sizes and SHA-256 off the main thread. A mismatch removes the pack and requests it once more; a second mismatch ends the attempt as failed. The sidecar is handed only a pack the app has verified. | Unit-tested; the acquirer's mutation pass (13 mutants: 9 caught first time, 1 equivalent, 3 gaps fixed) did not cover the remove-and-retry path (E6). Not run against a really corrupted download. |
+| **The system cancels the request** | **Tree A:** remembered as the researcher's Stop, so no automatic retry until Download Now (conflicts with the rule above). **Tree B:** treated as a failure; the next opportunity retries. | Tree A read in code, pinned by a test that records the old behaviour. Tree B unit-tested, in no build. |
+| **Researcher presses Stop, then Download Now** | Stop cancels and is remembered; the app does not restart on its own. Download Now clears it and asks Apple again. | Stop unit-tested; Download Now clearing Stop has no test of its own. |
+| **Background Assets fails or reports no byte for 60 seconds** | The attempt ends and the Hugging Face fetch takes over for this launch. If the attempt never reported a byte, the app asks the system to drop the unfinished pack and waits up to 5 seconds. A complete pack is not deleted. "Reported a byte" means a progress callback arrived, so 0 of N counts. | Unit-tested with short timeouts (the 60 s and 5 s defaults are not pinned) (E6, E8). |
+| **Hugging Face fallback succeeds** | The model is then on disk, so Background Assets is not asked again; the install stays on the Hugging Face copy. A later pack arrival is not used if a verified copy exists elsewhere; both can sit on disk (up to about 3.2 GB), and the pack is preferred when both exist. By code reading. | Not tested. |
+| **Verified by the app but unusable by the sidecar** | The sidecar is told the app owns the model. If Python cannot read a valid MLX pack there, it refuses to fetch and defers every session. Settings reads "missing", the pill is hidden, and the only exit is the kill switch. This is the ENOENT mode seen on the toy. By code reading; macOS 26.x unverified. | Not tested. |
+| **Pack removed by the system** | Before each run the app asks for the directory afresh and checks names and sizes. If it is missing, the sidecar is not told the app owns the model. **Tree A:** the run then fetches from Hugging Face inside the run. **Tree B:** the run waits (§7). | Unit-tested. Purge not simulated. |
+| **Kill switch** | The preference `BristlenoseBackgroundAssets`, default on; off means `AssetPackManager.shared` is never touched and downloads use Hugging Face. It is read as a boolean, so the string `NO` reads as on. Developers report a misconfigured `AssetPackManager` can crash instead of throwing (E7, second-hand; not seen on 27.0). A reviewer cannot use it. | Unit tests. A write by path to the container's plist worked once in a Terminal (flag not named in the log); on a signed store build not tested. |
+| **A second fetcher while Apple downloads** | `_BRISTLENOSE_WHISPER_HOST_OWNS=1` makes Python refuse to fetch; the session is deferred and the run completes. | Measured on the toy and a rebuilt sidecar: refuses and writes 0 KB; the control fetches (E1, E2). |
+| **New weights under the same pack id** | Not designed (D10). The hashes are compiled in; Apple's hosting can update an installed pack in the background; every installed app would then reject it and fetch again. | By code reading. |
 
 ## 7. Size disclosure and consent
 
-The app does not start its own background Whisper download without the alert. It does so only when all of these hold (`WhisperDownloadModel.autoStart`):
-
-- the build has Whisper;
-- the researcher has acknowledged the AI disclosure that names the providers their transcripts go to (the app does nothing on its own before that);
-- no analysis is running and the model is missing or partial;
-- the researcher has not pressed Stop or Not Now earlier;
-- at least 10 GB is free (unknown free space counts as room).
-
-Then the app shows a standard alert once per install:
+**Launch-time rule** (`WhisperDownloadModel.autoStart`): the app starts a background Whisper download by itself only when the build has Whisper; the researcher has acknowledged the AI disclosure (which names the providers their transcript text goes to); no analysis is running; the model is missing or partial; the researcher has not answered Not Now or pressed Stop; and at least 10 GB is free (unknown free space counts as room). It then shows a standard alert and starts only on Download:
 
 > **Download the Whisper speech model?** About 1.5 GB. It helps with poor audio and people talking over each other. You can download it later in Settings. [Download] [Not Now]
 
-*(English wording as in the build; strings `desktop.modelDownload.askTitle`, `askBody`, `askSize`, `askDownload`, `askNotNow`, in 21 locales.)*
+(English wording as in the build; strings `desktop.modelDownload.askTitle`, `askBody`, `askSize`, `askDownload`, `askNotNow`, in 21 locales.) The figure is a fixed string, "1.5 GB"; the Hugging Face route downloads about 1.61 GB and the pill shows 1.61 GB. The alert is asked until it is answered, not once per install; the answer and any Stop are kept in the app's preferences and survive deleting the app. A Mac that carries a remembered Stop or an earlier answer will not show the alert, which may explain the missing alert at a relaunch of build 6532 (hypothesis, not checked). Not Now is stored as a Stop. The same alert and rules apply to both routes. The app does not ask Background Assets to download on its own: the pack's policy is `onDemand` and the app never calls `checkForUpdates()`.
 
-Not Now is remembered as a Stop, and the app leaves the model alone until the researcher uses Download Now in Settings. The same alert and rules apply on both delivery routes, because they sit above the choice of route. The app never asks Background Assets to start a download on its own (policy `onDemand`; it does not call `checkForUpdates()` cold, which would start one).
+**Other paths that start a download.** `startIfNeeded` can also start one after a run went to Apple's engine (with no disk floor and no run-live guard) and after a failure; the Background Assets to Hugging Face fallback starts without asking again. A prior Download answer is required in each.
 
-**Exception, an open item:** a run that needs Whisper when no download is in flight and no verified pack is present (after Not Now, with under 10 GB free, on macOS 15, with a pinned language or an interface language outside the nine) reaches the sidecar's own preflight, which fetches from Hugging Face without the alert. The alert guards the app's background download, not that path.
+**A run that needs Whisper when no download is in flight and no verified pack exists** (after Not Now, with under 10 GB free, on macOS 15, with a pinned language, with an interface language outside the nine, or after a system purge):
 
-Open items on this section (see §11): the English wording is not yet owner-approved and 20 locales carry it until they are translated; and Apple's own per-language speech model, which macOS downloads for the first study, is not covered by this alert.
+- **Tree A:** the sidecar's preflight fetches the model from Hugging Face inside the run. There is no size alert and Not Now does not stop it. This does not meet the stated rule.
+- **Tree B:** the run defers its sessions and the app does not fetch. By unit test, in no build. By code reading, a session that needs Whisper then waits with no pill and no download if the researcher has not answered the alert (under 10 GB free, or a run live at launch) or answered Not Now, and the message says the app downloads in the background when nothing is. Decision D5.
+
+Open items on this section: the alert wording is not owner-approved and 20 locales hold English (D8); Apple's own model download has no alert (D9).
 
 ## 8. Privacy: what leaves the Mac
 
-This section is exact about model delivery. It does not describe the analysis stage, where transcript text goes to the AI provider the researcher chose. That is a separate, existing disclosure, acknowledged before anything is sent (`docs/glossary.md`, `docs/methodology/consent-gradient.md`).
+This section is about model delivery. It does not cover the analysis stage, where transcript text goes to the AI provider the researcher chose; that is a separate disclosure acknowledged before anything is sent. Statements marked "by code" were not captured on the wire; a proxy run of the store build is owed.
 
-| Step | Who receives a request | What is sent | Study data included |
+| Step | Who receives a request | What is sent | Study data |
 |---|---|---|---|
-| Whisper via Background Assets | Apple (App Store / TestFlight delivery and Apple's hosting) | Apple's own download traffic for an installed app's asset pack, handled by macOS. Bristlenose sends no request of its own. | None. No audio, transcript or project name. |
-| Whisper via Hugging Face (fallback, macOS 15, `.dmg`, CLI) | `huggingface.co` and its content hosts | A normal HTTPS request for the model files: the Mac's IP address and the request headers of `huggingface_hub`. | None. |
-| Apple's first study | Apple, on first use of a language, if macOS does not yet hold Apple's model for it | A system download of Apple's model. Bristlenose passes no recording to Apple's servers; transcription runs on the Mac. | None. |
-| Transcription itself (either engine) | Nobody | Audio is read from the project folder and transcribed on the Mac. | Not applicable. |
+| Whisper via Background Assets | Apple | Apple's own traffic for the app's asset pack, handled by macOS. The app makes no request of its own. Apple's hosting may update an installed pack in the background. | None |
+| Whisper via Hugging Face | `huggingface.co` and its content hosts | A model metadata call, revision lookup and per-file requests; the Mac's IP address and `huggingface_hub`'s User-Agent (`hf_hub/1.33.0; python/3.12`); `HF_HUB_DISABLE_TELEMETRY` is not set (by code). On Tree A the transcription library also issues a Hugging Face request each time it loads the model by name. | None |
+| Apple's first study | Apple | The **app's helper** requests Apple's model for the language if macOS lacks it; macOS performs the download. No recording is sent. | None |
+| Transcription itself | On the Mac, except the model requests above | Audio is read from the project folder and transcribed on the Mac by both engines. | Not sent |
 
-Bristlenose does not describe itself as local-first or privacy-first, because the analysis is a call to a cloud model. What this section claims is narrower: **the model download carries no study data to anyone, and audio is transcribed on the Mac by both engines.** That the Hugging Face request carries nothing else beyond the headers above is from reading the code; the wire has not been captured for the store build (a proxy run is owed, §11).
+Bristlenose does not describe itself as local-first or privacy-first, because the analysis is a cloud call. The claim here is narrow: **the model requests carry no recording, transcript or project name, and audio is transcribed on the Mac.** The Hugging Face request does expose the Mac's IP address to a third party, which the privacy policy needs to name.
 
 ## 9. Guidelines
 
-Guideline text quoted as read on 16 Nov 2026; Apple's page carries no revision date.
+Guideline text as read on 16 Nov 2026; Apple's page carries no revision date.
 
 | Guideline | What it asks | How the design answers | Verified | Not verified |
 |---|---|---|---|---|
-| **2.4.5(iv)** (Mac App Store) | No downloading or installing "additional code, or resources to add functionality or significantly change the app from what we see during the review process" | The app a reviewer sees already transcribes with Whisper. The pack is that feature's model, as data, with the same weights as the Hugging Face copy, hash-pinned. On macOS 26 and later Apple's model transcribes before the pack arrives (macOS may fetch Apple's own model first). | Contents, format, hash pin; identical bytes; the Apple engine runs without the pack (E2, E4, E5). | Whether a reviewer reads the pack as "adding functionality": it adds every language outside Apple's nine, and on macOS 15 nothing transcribes without it. Reviewers have reported failing to fetch Apple-hosted packs in review (E7); the outcome for this app is unknown. |
-| **2.5.2** | Self-contained bundles; no reading or writing outside the container; no downloading, installing or executing code that changes features | The pack is data in the location the system manages, read through Apple's `url(for:)` API, read-only to the app. Nothing from it is executed. The extension and the sidecar are in the bundle. | Read access and read-only behaviour on the toy; the extension is signed in the store bundle and passes the package gate (E1, E3, E5). | That App Review accepts a sandboxed child process reading the system-owned area. The kernel sandbox-denial log was not re-read for the last runs. |
-| **4.2.3(ii)** | If the app must download resources to function on first launch, disclose the size and prompt first | The app does not need the download to function on macOS 26 and later (Apple's engine). On macOS 15 a recording needs Whisper, so the size alert and Not Now apply before the app starts anything itself. | The alert and its strings exist on main (`2fcbaaccc`); the rules in §7 are unit-tested. | The sequence disclosure, then alert, then download has not been observed on a clean Mac in the store build. A relaunch on build 6532 showed no alert and the cause is unknown (§11). |
-| **5.1.2(i)** | Say what user data is shared with third parties, and get permission | Model delivery shares no user data (§8). The disclosure that names Claude, ChatGPT, Gemini and Azure OpenAI as recipients of transcript text appears first and must be acknowledged before the Whisper download. | By code reading: the Whisper auto-start is gated on that acknowledgement. | Behaviour on a clean install in the store build; a captured network trace. |
+| **2.4.5(iv)** (Mac App Store) | No downloading or installing "additional code, or resources to add functionality or significantly change the app from what we see during the review process" | The reviewed app already transcribes with Whisper. The pack is that feature's model, as data, pinned by hash. On macOS 26 and later Apple's model transcribes before the pack arrives (macOS may first fetch Apple's model). | Pack contents, format and hash pin (E4); the pack arrives and is used on one Mac (E5). | Whether a reviewer reads the pack as adding functionality: it adds every language outside Apple's nine, and on macOS 15 nothing transcribes without it. That the Hugging Face copy equals the pack in every byte (size and a sample only). Reviewers have reported failing to fetch Apple-hosted packs (E7, second-hand). |
+| **2.5.2** | Self-contained bundles; no reading or writing outside the container; no downloading, installing or executing code that changes features | Data, in the system-managed location, read through Apple's `url(for:)` API. Nothing from it is executed. The extension and sidecar are in the bundle. | Delete refused on the toy; the extension is signed in the store bundle and passes the package gate (E1, E3). | That App Review accepts a sandboxed child process reading the system area; the grant on macOS 26.x; write access (not tested). |
+| **4.2.3(ii)** | If the app must download resources to function on first launch, disclose the size and prompt first | The launch-time alert (§7). On macOS 26 and later the app can transcribe before the download. On macOS 15 nothing transcribes without it. | The alert and strings exist on main (`2fcbaaccc`). | The alert has not been seen on any signed build. Tree A fetches without the alert on the paths in §7. The size in the alert is 1.5 GB against 1.61 GB on one route. |
+| **5.1.2(i)** | Say what user data is shared with third parties (including third-party AI) and get permission | Model delivery sends no recording, transcript or project name (§8). The AI disclosure naming the providers is acknowledged before the Whisper auto-start (by code reading). | By code reading only. | Behaviour on a clean install in the store build; a captured network trace. |
+| **2.1(a)** | Completeness; no crashes or obvious technical problems | The failure paths in §6. | Unit tests; toy measurements. | Any failure path on a signed build on a real network; macOS 26.x; a crash from `AssetPackManager` on an unobserved setup. |
+| **2.3.1(a)** | Describe features accurately; hidden features are not allowed | The notes describe the delivery, the fallback and the engines. The kill switch is a preference, not a hidden feature. | Not applicable. | Whether App Review reads the preference as a hidden switch. |
 
 ## 10. What App Review will and will not see
 
-Apple's documentation says sandbox accounts cannot download Apple-hosted packs, and developers have reported that App Review could not fetch them (E7, read 16 Nov 2026; second-hand). So a reviewer may never get the pack. The design works without it:
+What App Review's account does when the app asks for an Apple-hosted pack has not been observed. Apple's TestFlight documentation says sandbox accounts are unsupported for testers, and developers report that App Review could not fetch Apple-hosted packs, with pre-launch downloads disabled in review (E7, read 16 Nov 2026, second-hand). Whether the on-demand request throws, hangs or succeeds for a review account is unmeasured.
 
-- On macOS 26 or later, the first study runs on Apple's model with no pack.
-- If the reviewer chooses Download and Apple's hosting does not answer, Background Assets fails or reports no byte for 60 seconds, and the Hugging Face fetch takes over for that launch if the reviewer's network allows it. If it does not, the pill shows the failure and Retry.
-- If the reviewer chooses Not Now, the app starts no background download. A later run that needs Whisper still fetches it (§7 exception).
-- On macOS 15, Apple's engine does not exist, so a reviewer can use imported transcripts or wait for the Hugging Face download.
+By design, in each case:
 
-What a reviewer sees in each of these cases has been designed and unit-tested, not observed under review conditions.
+- On macOS 26 or later, if the researcher chooses Download and Background Assets does not begin within 60 seconds or fails, the app downloads from huggingface.co for that launch if the network allows it. Otherwise the pill shows the failure and Retry.
+- On macOS 26 or later, before the model is on the Mac, Apple's model transcribes the first recordings in its nine languages. A recording in another language, a pinned language, or one that fails the gate waits for Whisper.
+- If the researcher chooses Not Now: Tree A fetches inside a later run that needs Whisper; Tree B waits (§7).
+- On macOS 15 there is no Apple model. A recording needs Whisper, and imported transcripts need nothing.
+- A review account needs a provider key to reach any transcript or report; without one the run stops before transcription (E9). The sample recording, transcript file and key do not exist yet (D11).
+- The AI disclosure's other large download, "~2 GB" for a local model, appears in the same window as the Whisper alert on some paths; reconcile before submission (D8).
+- A notification permission prompt appears during a run.
 
-## 11. What is verified and what is not
+All of this is by design or code reading, not observed under review conditions.
+
+## 11. Owner decisions
+
+Open decisions, each with the recommendation first. None is settled in this document.
+
+1. **D1. Which tree ships.** Tree A plus `bb60d1b0c` (Tree B), rebuilt, re-run and re-verified, since Tree A alone fetches without the alert and records a system cancel as a Stop. Alternatives: Tree A as built; or Background Assets dark (Hugging Face only, with the pack not submitted).
+2. **D2. The `BN_BA_WHISPER=1` default.** Make the release archive set it in `release.sh` and add a gate that fails when the extension is embedded and the adapter is not compiled in. Alternatives: a manual export on release night; leave it dark.
+3. **D3. The pack on the 24 Nov submission.** Attach pack version 1 to the first app version (status Ready for Review, not only Ready for Internal Testing); confirm the Xcode that built the pack (27.2 on 17 Nov) is a release and not a beta, and rebuild the pack if it is a beta. A pack not in the first submission is not delivered.
+4. **D4. A signed missing-pack test.** One internal TestFlight build requesting a pack id that does not exist, on a macOS 26.x Mac and on 27, to see the lookup-failure path with real signing. If it crashes or hangs, submit with Background Assets dark and add it in an update. Recommended before 24 Nov; it needs an upload.
+5. **D5. A recording that needs Whisper without a consent answer (Tree B).** Re-offer the size alert when a run is deferred for lack of an answer, and say on the row that the model is waiting for a download. Alternatives: leave the dead end; or on macOS 15 treat the first recording as the consent moment. New wording, so the R114 UX gate applies.
+6. **D6. Settings engine control tells the truth.** Record the engine per session now (it cannot be backfilled); add a caption to the Settings row; the per-session line later. Alternatives: rename the options; accept as is.
+7. **D7. "Waiting for Whisper" hint by cause**, plus a route out on the row when nothing is downloading. Alternative: leave the single hint.
+8. **D8. Size alert.** One figure formatted from bytes, "About 1.6 GB", true on both routes; the macOS 15 body states that recording needs the model; approve the English and translate 20 locales; reconcile with the "~2 GB" local-model line.
+9. **D9. Apple's own model download.** One explanatory line where the first study begins. Alternatives: a size alert before our helper requests it; accept as is and say so in the notes.
+10. **D10. Pack-id immutability.** New weights get a new pack id; bytes under an id never change.
+11. **D11. Reviewer assets.** An English sample recording that falls inside Apple's nine and passes the gate, a transcript file for macOS 15, and a provider key with its path in the sign-in field. Without them no reviewer reaches a report.
+12. **D12. The load-time fetch in the transcription library.** Pass the library a directory on every route so it never requests the repository by name during a run.
+13. **D13. The store floor.** Keep macOS 15, and run the store build on a macOS 15 guest through TestFlight first. Alternative: raise the store floor to 26.
+14. **D14. System pause and sleep.** Do not run the 60 second watchdog while the system reports a pause, and test a sleep during a download. Recommended.
+15. **D15. Sessions Apple kept.** Do not redo them with Whisper for 24 Nov; record the engine per session (D6).
+
+## 12. What is verified and what is not
+
+All Background Assets evidence is from internal TestFlight on one Mac (macOS 27.0), a non-clean Mac, an evidence build from a clone, with the download started from Settings. The public App Store delivery path cannot be observed before approval.
 
 | Claim | Status | Evidence |
 |---|---|---|
-| App Store Connect accepts the ExtensionKit extension, the Background Assets keys and a 26.0-targeted extension inside a floor-15 app | **Verified.** Build 6531 processed VALID. (6530 failed ITMS-90360, a missing display name; fixed.) | E4 |
-| App Store Connect accepts and processes the 1.5 GB pack | **Verified.** `READY_FOR_TESTING`, 17 Nov 2026 11:37 GMT, 1,501,833,754 bytes, `0 errors, 0 warnings`. | E4 |
-| The pack arrives through Background Assets in the real app | **Verified** on one Mac: macOS 27, TestFlight build 6532, about 2.5 minutes. | E5 |
-| The sandboxed sidecar transcribes from the delivered pack in the real app | **Verified** for the sessions in the log (session 1 merged, session 2 transcribed) on build 6532. | E5 |
-| The waiting sessions re-run by themselves when Whisper lands | **Not observed**; the owner re-ran by hand on 6532. | E5 |
-| Pack text equals the Hugging Face transcript | Verified on a dev-signed sandbox run, one 45 s English clip. **Not compared on the store build.** | E2, E5 |
-| The `.dmg` carries no extension and no Background Assets keys | **Verified** on an evidence build: publish gate "Shippable". | E3 |
-| The store package passes all gates with the extension | **Verified** on an evidence build (the one red row, build number, was Xcode's export renumbering). | E3 |
-| macOS 26.x (any behaviour) | **Not verified.** The development-signed toy is killed on an unprovisioned guest; only TestFlight on a 26.x Mac can show it. | E1 |
-| macOS 15 with the real store app | **Not verified.** A toy took the no-Background-Assets path (E1); the `.dmg` app on 15.7.7 downloaded Whisper from Hugging Face by the Settings button (E9). No size alert, pill or transcription seen on 15. | E1, E9 |
-| Hugging Face download on macOS 15 through the sidecar (kill -9, SIGINT, 25 s drop, offline start, low disk, disk full) | Measured with the sidecar battery on a 15.7.7 guest, with a `.dmg` sidecar that predates the host-owns variable; **not through the app's interface**. 
-| E9 |
-| App Review's handling of the Apple-hosted pack | **Not verified.** First submission is unreviewed. | none |
-| Real-network failure and recovery on a signed build | **Not verified.** Designed and unit-tested; toy measurements on loopback or a local proxy only. | E1, E6 |
-| Sleep, wake, reboot, battery behaviour | **Not measured.** | none |
-| A really corrupted download is caught by SHA-256 | **Not verified.** Verification is unit-tested with broken fixtures. | E6 |
-| System purge of the pack | **Not simulated.** | E1 |
+| App Store Connect accepts the ExtensionKit extension, the Background Assets keys and a 26.0-targeted extension inside a floor-15 app | **Verified.** Build 6531 processed VALID (6530 failed ITMS-90360, a missing display name; fixed). | E4 |
+| App Store Connect processes the 1.5 GB pack | **Verified for internal TestFlight.** `READY_FOR_TESTING` (the console reads "Ready for Internal Testing"), 17 Nov 2026, 1,501,833,754 bytes, no errors or warnings. The pack is **not attached to an app version** and **has not been reviewed**. | E4 |
+| The pack arrives through Background Assets in the real app | **Verified** on one Mac: macOS 27, build 6532 (Tree A), about 2.5 minutes. | E5 |
+| The sandboxed sidecar transcribes from the delivered pack | **Verified** on build 6532 for the sessions in the log (session 1 merged; session 2 transcribed). | E5 |
+| Transcript from the pack equals the Hugging Face transcript | One 45 s English clip, dev-signed sandbox run (E2). **Not compared on the store build.** | E2 |
+| The `.dmg` has no extension and no Background Assets keys | **Verified** on an evidence build. | E3 |
+| The store package passes its gates with the extension | **Verified** on an evidence build (the one red row was Xcode's export build number). | E3 |
+| Tree B fixes | **Unit-tested only; in no build.** | E6 |
+| Default store archive uses Background Assets | **No.** Only with `BN_BA_WHISPER=1`. | `build-all.sh` |
+| macOS 26.x, any behaviour | **Not verified.** The development-signed toy is killed on an unprovisioned guest. | E1 |
+| macOS 15 store build | **Not verified.** Never installed there. | E1, E9 |
+| macOS 15 `.dmg`: download by button | Observed (E9). Size alert, pill, transcription: **not observed**. | E9 |
+| macOS 15 Hugging Face failure rows (kill -9, SIGINT, 25 s drop, offline start, low disk, disk full) | Measured with the main checkout's sidecar (0.46.0, built 16 Nov), unsandboxed, over ssh, **not through the app and not sandboxed**. | E9 |
+| App Review's handling of the Apple-hosted pack | **Not verified.** | none |
+| Failure and recovery on a signed build on a real network | **Not verified.** | E1, E6 |
+| Sleep, wake, reboot, system pause, full disk with Background Assets | **Not measured.** | none |
+| A really corrupted download is caught | **Not verified**; fixtures only. | E6 |
+| System purge | **Not simulated.** | E1 |
 | Kill switch on a signed build | **Not verified.** | none |
-| Apple's engine on the nine languages in the store build | Not re-verified for this document; earlier trial and 22 Oct unparking. | existing design record |
-| Network traffic of the store build matches the register | **Not verified.** Register built by reading code; no proxy run. | none |
-| The Apple-engine transcript carries word timings in every language | **Not measured**; Apple documents time ranges but not run granularity. | none |
-| The adapter compiles with the Xcode 26.3 that CI uses | **Not verified.** Compiled against SDK 27.2 only. | E8 |
+| Size alert on any signed build | **Not observed.** | none |
+| Waiting sessions re-run when Whisper lands | **Not observed**; re-run by hand on build 6532. | E5 |
+| Apple's engine on the nine languages in the store build | Not re-verified here. | `docs/design-apple-first-transcription.md` |
+| Network traffic matches the register | **Not verified.** | none |
+| Word timings in each language | **Not measured.** | none |
+| The adapter compiles with the Xcode 26.3 CI uses | **Not verified.** | E8 |
 
-Known gaps in the experience, recorded as open items and not fixed:
+Experience gaps, recorded as they stand on Tree A:
 
-1. **Selecting Whisper in Settings > Transcription runs Apple's engine until the model is on disk, with no explanation.** The setting says Whisper; the run says Apple. A run's log gives the reason ("first run"), the interface does not. Candidate fixes need owner decisions on wording and on whether selecting Whisper should offer the download.
-2. **The Settings byte text read "Zero KB"** while the bar moved, on build 6532. Cause not investigated.
-3. **No size alert appeared at a relaunch** on build 6532. The cause is unknown: a remembered answer, the consent gate, or timing.
-4. **"Language not supported" has no message.** A session Apple cannot take is deferred and the row shows "Waiting for Whisper" until Whisper lands; with Whisper absent and Background Assets failing, it waits indefinitely. Needs owner approval for new interface text.
-5. **Apple's per-language model download is not announced by us** and has no size alert. The system performs it.
-6. **The size alert wording** is the placeholder; 20 locales hold English until translated and approved.
-7. **A missing certificate bundle shows a raw message** (`[Errno 25] Inappropriate ioctl`) in the sidecar battery on macOS 15, not words a researcher can act on (E9).
-8. **The system-cancel case and the preflight fetch** in §6 and §7 contradict the stated rules and are not fixed.
-9. **The Hugging Face route has no app-side hash check.** Pinning a revision and a hash there would close it.
-10. **Merging the branches** stales every sidecar until `build-sidecar.sh` runs, and needs the test inventory regenerated (independent review, E8).
+1. Selecting Whisper in Settings runs Apple's engine until the model is on disk with no explanation (D6).
+2. The Settings byte text read "Zero KB" while the bar moved. Fixed on Tree B (unit-tested, in no build).
+3. No size alert appeared at one relaunch of build 6532; cause unproven (see §7).
+4. A session Apple cannot take shows "Waiting for Whisper" with a hint that assumes Apple heard it (D7). On macOS 15 the hint is also wrong, since Apple's engine does not exist there.
+5. Apple's per-language model download has no size alert (D9).
+6. The alert wording is the placeholder; 20 locales hold English (D8).
+7. A missing certificate bundle shows a raw `[Errno 25] Inappropriate ioctl` message (E9).
+8. Merging the branches makes every other session's sidecar stale until `build-sidecar.sh` runs, and needs the test inventory regenerated (E8).
 
-## 12. Evidence
+## 13. Evidence
 
-All times London unless stated. The working notes are private to the maintainer; the facts used here are restated above so this document stands alone.
+Times London unless stated. The working notes are private to the maintainer; the facts used here are restated above.
 
 | Code | What | Date | Conditions |
 |---|---|---|---|
-| E1 | Spike measurements: extension registers, pack downloads, per-request access rule, error shapes, interruptions, read-only pack, mlx wheels, macOS 15 toy | 16 to 17 Nov 2026 | macOS 27.0, Xcode 27.2, development-signed toy, local `ba-serve` and a throwaway CA. Nothing against Apple's hosting or a real network. |
+| E1 | Spike measurements: extension registers, pack downloads, per-request grant, error shapes, interruptions, delete refused, MLX wheels, macOS 15 toy | 16 to 17 Nov 2026 | macOS 27.0, Xcode 27.2, development-signed toy, local `ba-serve`, throwaway CA. Not Apple's hosting, not a real network. |
 | E2 | Rebuilt sidecar, ad hoc re-signed with the real entitlements, run from the pack in the sandbox, compared with the Hugging Face run | 17 Nov 2026, 00:03 to 00:08 | One 45 s English clip. |
-| E3 | Signed store archive, package gate, `.dmg` gate | 17 Nov 2026 | Evidence builds from a clean clone; dependencies differ from the main venv; not a ship candidate. |
-| E4 | App Store Connect: extension build 6531 VALID; pack uploaded (`READY_FOR_TESTING`); manifest hashes match the pinned values | 17 Nov 2026, 10:12 and 11:37 GMT | Owner-authorised uploads. |
-| E5 | TestFlight 0.46.0 build 6532 on this Mac: pack arrival and first Whisper run | 17 Nov 2026, 12:20 to 12:55 | macOS 27, one Mac, internal TestFlight. |
-| E6 | Unit tests: acquirer, picker, verifier, fallback, kill switch; mutation pass (13 mutants); Python resolver and guard | to 17 Nov 2026 | Counts were logged at different tips (Swift 87 of 87 flag off and on at 01:34; Python 686 selected at 23:05). No run is logged after the later fix commits and the tip. |
-| E7 | Apple documentation and forum reports on Background Assets, asset pack contents and App Review | read 16 Nov 2026 | Forum text is as relayed by a fetch tool, not byte-verified. |
-| E8 | Independent adversarial review of both branches | 17 Nov 2026, about 01:20 | Seven serious and several minor findings; the build session fixed them. |
+| E3 | Signed store archive and package gate; `.dmg` gate | 17 Nov 2026 | Evidence builds from a clone; not ship candidates. |
+| E4 | App Store Connect: extension build 6531 VALID; pack uploaded; manifest hashes match the pinned values | 17 Nov 2026 (build logged 10:11, pack 11:37 GMT) | Owner-authorised uploads. |
+| E5 | TestFlight 0.46.0 build 6532 (Tree A): pack arrival and first Whisper run | 17 Nov 2026, 12:20 to 12:55 | macOS 27.0, one Mac, internal TestFlight, not a clean Mac. |
+| E6 | Unit tests and a mutation pass of the acquirer; Python resolver and guard; Tree B tests | to 17 Nov 2026 | Counts were logged at different tips (Swift 87 of 87 at 01:34; Python 686 selected at 23:05); none logged after the later commits on Tree A. |
+| E7 | Apple documentation and forum reports: Background Assets, asset packs, App Review | read 16 Nov 2026 | Forum text as relayed by a fetch tool; not byte-verified. |
+| E8 | Independent adversarial review of both branches | 17 Nov 2026, about 01:12 | Seven serious findings; four fixed, three open (merge staleness, Xcode 26.3 compile, test inventory). |
+| E9 | macOS 15.7.7 guest: sidecar battery on the Hugging Face path; `.dmg` app driven over ssh | 17 Nov 2026 | `.dmg` evidence build (build 6528), not the store build; battery used the main checkout's sidecar; no screenshots; Swedish test not done. |
 
-| E9 | macOS 15.7.7 Tart guest: sidecar battery on the Hugging Face path; `.dmg` app driven over ssh and accessibility | 17 Nov 2026 | `.dmg` evidence build (CFBundleVersion 6528), not the store build; sidecar predates `_BRISTLENOSE_WHISPER_HOST_OWNS`; no screenshots; Swedish test not done. |
-
-Code: `desktop/Bristlenose/Bristlenose/` (`WhisperModelAcquirer.swift`, `BackgroundAssetsAcquirer.swift`, `AssetPackManagerAdapter.swift`, `WhisperPackVerifier.swift`, `WhisperDownloadModel.swift`), `desktop/BAExtension/`, `desktop/scripts/build-whisper-pack.sh`, `bristlenose/preflight/whisper.py`, `bristlenose/apple_speech.py`, `bristlenose/stages/s05_transcribe.py`.
+Code: `desktop/Bristlenose/Bristlenose/` (`WhisperModelAcquirer.swift`, `BackgroundAssetsAcquirer.swift`, `AssetPackManagerAdapter.swift`, `WhisperPackVerifier.swift`, `WhisperDownloadModel.swift`), `desktop/BAExtension/`, `desktop/scripts/build-whisper-pack.sh`, `desktop/scripts/build-all.sh`, `bristlenose/preflight/whisper.py`, `bristlenose/apple_speech.py`, `bristlenose/stages/s05_transcribe.py`.

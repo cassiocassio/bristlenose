@@ -179,10 +179,23 @@ final class FakeAcquirer: WhisperModelAcquirer {
     @Test func theRunEnvironmentIsTheAcquirersAndOnlyWhileItRuns() {
         let fake = FakeAcquirer(); fake.env = ["_X": "1"]
         let (m, _) = model(fake)
-        #expect(m.runEnvironment.isEmpty)
+        // Not asked yet: the run defers rather than fetching behind the size question.
+        #expect(m.runEnvironment == WhisperDownloadModel.hostOwnsEnvironment)
         m.downloadNow()
         #expect(m.runEnvironment == ["_X": "1"])
         fake.end(.failed(cause: nil))
+        #expect(m.runEnvironment.isEmpty)
+    }
+
+    /// After Not Now (a remembered Stop) a run that finds no model defers; it does not fetch.
+    /// Download Now lifts it.
+    @Test func aRunAfterNotNowDefersInsteadOfFetching() {
+        let fake = FakeAcquirer()
+        let (m, d) = model(fake)
+        d.set(true, forKey: "whisperDownloadAsked")
+        d.set(true, forKey: "whisperDownloadStoppedByUser")
+        #expect(m.runEnvironment == WhisperDownloadModel.hostOwnsEnvironment)
+        d.set(false, forKey: "whisperDownloadStoppedByUser")
         #expect(m.runEnvironment.isEmpty)
     }
 }
@@ -675,14 +688,19 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(fetch.startCalls == 1)
     }
 
-    /// The system cancelled it (nobody here asked): that is remembered as a stop.
-    @Test func aCancelThatWasNotOursIsRememberedAsAStop() {
+    /// The system cancelled it (nobody here asked): that is NOT the researcher's Stop, so it is
+    /// not remembered and the next opportunity (launch, run, Download Now) tries again.
+    @Test func aCancelThatWasNotOursIsNotRememberedAsAStop() {
         let ba = FakeAcquirer(); ba.kind = .backgroundAssets
         let d = defaults()
         let m = WhisperDownloadModel(defaults: d, makeAcquirer: { _ in ba })
         m.downloadNow()
         ba.end(.stopped)
-        #expect(d.bool(forKey: "whisperDownloadStoppedByUser") == true)
+        #expect(d.bool(forKey: "whisperDownloadStoppedByUser") == false)
+        // and the next opportunity is not held back by it
+        #expect(WhisperDownloadModel.autoStart(
+            phase: .missing, freeBytes: nil, stoppedByUser: d.bool(forKey: "whisperDownloadStoppedByUser"),
+            hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) == .start)
     }
 
     @Test func aStopWeAskedForIsNotDoubleCounted() {

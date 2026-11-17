@@ -289,6 +289,9 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         // Progress as nothing at all (measured 18 Oct 2026), so say the bytes
         // we have in its own byte format.
         guard total > 0 else {
+            // Nothing reported yet (no byte, no total): say nothing rather than "Zero KB" beside
+            // a bar that is already moving (build 6532). No invented figure.
+            if done <= 0 { return "" }
             return ByteCountFormatter.string(fromByteCount: max(done, 0), countStyle: .file)
         }
         let p = Progress(totalUnitCount: total)
@@ -411,7 +414,23 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     /// The environment a pipeline run is given about the model: the sidecar fetch's pid to wait
     /// on while it runs; the host-owns marker when the app, not Python, delivers the model.
     var runEnvironment: [String: String] {
-        (acquirer ?? idleAcquirer).runEnvironment
+        var env = (acquirer ?? idleAcquirer).runEnvironment
+        // Nothing is downloading and no verified pack is here, but the app would not start the
+        // download itself (the researcher said Not Now, or has not been asked the size question):
+        // the run must not fetch 1.5 GB behind that. The marker makes Python defer each session
+        // that needs Whisper ("Waiting for Whisper"); a model already in the cache is still used.
+        if env.isEmpty, Self.runMustDefer(whisperInBuild: Self.whisperInBuild,
+                                          stoppedByUser: stoppedByUser, hasAnswered: hasAnswered) {
+            env = Self.hostOwnsEnvironment
+        }
+        return env
+    }
+
+    /// A run that finds no Whisper model defers instead of fetching when the researcher has
+    /// declined the download (Not Now or Stop) or has not yet answered the size question.
+    /// Download Now, or Download in the alert, lifts it.
+    nonisolated static func runMustDefer(whisperInBuild: Bool, stoppedByUser: Bool, hasAnswered: Bool) -> Bool {
+        whisperInBuild && (stoppedByUser || !hasAnswered)
     }
 
     /// What answers for the environment when nothing is downloading: the acquirer the picker
@@ -741,8 +760,9 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
             start()
             return
         }
-        // A stop nobody here asked for (the system cancelled it): the researcher's, so remembered.
-        if case .stopped = outcome, !stopAsked { stoppedByUser = true }
+        // A stop nobody here asked for (the system cancelled it) is not the researcher's Stop:
+        // it is not remembered, so the next opportunity (launch, run, Download Now) tries again.
+        // `stop()` already remembered the researcher's own.
         switch outcome {
         case .succeeded, .stopped:
             // Off `.downloading` before asking, so a probe that fails leaves

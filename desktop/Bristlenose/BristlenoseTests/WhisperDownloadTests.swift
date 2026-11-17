@@ -108,6 +108,21 @@ import Testing
         #expect(full.count > bare.count)
     }
 
+    /// Build 6532: "Zero KB" read beside a bar that was already moving, before any byte or
+    /// total had been reported. Nothing known says nothing.
+    @Test func nothingReportedYetIsNotZeroKB() {
+        #expect(WhisperDownloadModel.progressLine(
+            done: 0, total: 0, bytesPerSecond: nil, minutesLeft: nil).isEmpty)
+    }
+
+    @Test func aRunDefersWhenTheDownloadWasDeclinedOrNotYetAsked() {
+        typealias M = WhisperDownloadModel
+        #expect(M.runMustDefer(whisperInBuild: true, stoppedByUser: true, hasAnswered: true))
+        #expect(M.runMustDefer(whisperInBuild: true, stoppedByUser: false, hasAnswered: false))
+        #expect(!M.runMustDefer(whisperInBuild: true, stoppedByUser: false, hasAnswered: true))
+        #expect(!M.runMustDefer(whisperInBuild: false, stoppedByUser: true, hasAnswered: false))
+    }
+
     @Test func noTotalFromTheServerStillCountsBytes() {
         let line = WhisperDownloadModel.progressLine(
             done: 600_000_000, total: 0, bytesPerSecond: nil, minutesLeft: nil)

@@ -83,7 +83,7 @@ flowchart TD
 | 15 | `.dmg` | Hugging Face | None | The same alert and pill. |
 | any | CLI (`pip`, Homebrew, Snap, Copr) | Hugging Face cache, by the user's command (`bristlenose doctor --fetch`) or on first run | None (no helper) | Terminal progress. No alert: the person typed the command. |
 
-Not verified: macOS 15 with the real store build (a toy on a macOS 15 guest took the no-Background-Assets path, E1); macOS 26.x with anything (E1 could not run there).
+macOS 15 evidence (E9) comes from the `.dmg` build, never the store build, so it says nothing about the store build or Background Assets there. On a macOS 15.7.7 guest the `.dmg` app launched and Settings > Transcription showed a Whisper row ("Not on this Mac") with a button and no Background Assets control. Pressing the button started `doctor --fetch` in the sidecar at once (a deliberate click, so no alert is expected); about 1.5 GB arrived from Hugging Face into the app's container in about 40 seconds, and the row then read "On this Mac · 1.61 GB". Not observed on 15: a size alert, the download pill, or a transcription in any language. Not verified: macOS 26.x with anything (E1 could not run there).
 
 ## 4. How the pack is downloaded and handed to the sandboxed sidecar
 
@@ -236,7 +236,9 @@ What a reviewer sees in each of these cases has been designed and unit-tested, n
 | The `.dmg` carries no extension and no Background Assets keys | **Verified** on an evidence build: publish gate "Shippable". | E3 |
 | The store package passes all gates with the extension | **Verified** on an evidence build (the one red row, build number, was Xcode's export renumbering). | E3 |
 | macOS 26.x (any behaviour) | **Not verified.** The development-signed toy is killed on an unprovisioned guest; only TestFlight on a 26.x Mac can show it. | E1 |
-| macOS 15 with the real store app | **Not verified.** Only a toy took the no-Background-Assets path. | E1 |
+| macOS 15 with the real store app | **Not verified.** A toy took the no-Background-Assets path (E1); the `.dmg` app on 15.7.7 downloaded Whisper from Hugging Face by the Settings button (E9). No size alert, pill or transcription seen on 15. | E1, E9 |
+| Hugging Face download on macOS 15 through the sidecar (kill -9, SIGINT, 25 s drop, offline start, low disk, disk full) | Measured with the sidecar battery on a 15.7.7 guest, with a `.dmg` sidecar that predates the host-owns variable; **not through the app's interface**. 
+| E9 |
 | App Review's handling of the Apple-hosted pack | **Not verified.** First submission is unreviewed. | none |
 | Real-network failure and recovery on a signed build | **Not verified.** Designed and unit-tested; toy measurements on loopback or a local proxy only. | E1, E6 |
 | Sleep, wake, reboot, battery behaviour | **Not measured.** | none |
@@ -256,9 +258,10 @@ Known gaps in the experience, recorded as open items and not fixed:
 4. **"Language not supported" has no message.** A session Apple cannot take is deferred and the row shows "Waiting for Whisper" until Whisper lands; with Whisper absent and Background Assets failing, it waits indefinitely. Needs owner approval for new interface text.
 5. **Apple's per-language model download is not announced by us** and has no size alert. The system performs it.
 6. **The size alert wording** is the placeholder; 20 locales hold English until translated and approved.
-7. **The system-cancel case and the preflight fetch** in §6 and §7 contradict the stated rules and are not fixed.
-8. **The Hugging Face route has no app-side hash check.** Pinning a revision and a hash there would close it.
-9. **Merging the branches** stales every sidecar until `build-sidecar.sh` runs, and needs the test inventory regenerated (independent review, E8).
+7. **A missing certificate bundle shows a raw message** (`[Errno 25] Inappropriate ioctl`) in the sidecar battery on macOS 15, not words a researcher can act on (E9).
+8. **The system-cancel case and the preflight fetch** in §6 and §7 contradict the stated rules and are not fixed.
+9. **The Hugging Face route has no app-side hash check.** Pinning a revision and a hash there would close it.
+10. **Merging the branches** stales every sidecar until `build-sidecar.sh` runs, and needs the test inventory regenerated (independent review, E8).
 
 ## 12. Evidence
 
@@ -274,5 +277,7 @@ All times London unless stated. The working notes are private to the maintainer;
 | E6 | Unit tests: acquirer, picker, verifier, fallback, kill switch; mutation pass (13 mutants); Python resolver and guard | to 17 Nov 2026 | Counts were logged at different tips (Swift 87 of 87 flag off and on at 01:34; Python 686 selected at 23:05). No run is logged after the later fix commits and the tip. |
 | E7 | Apple documentation and forum reports on Background Assets, asset pack contents and App Review | read 16 Nov 2026 | Forum text is as relayed by a fetch tool, not byte-verified. |
 | E8 | Independent adversarial review of both branches | 17 Nov 2026, about 01:20 | Seven serious and several minor findings; the build session fixed them. |
+
+| E9 | macOS 15.7.7 Tart guest: sidecar battery on the Hugging Face path; `.dmg` app driven over ssh and accessibility | 17 Nov 2026 | `.dmg` evidence build (CFBundleVersion 6528), not the store build; sidecar predates `_BRISTLENOSE_WHISPER_HOST_OWNS`; no screenshots; Swedish test not done. |
 
 Code: `desktop/Bristlenose/Bristlenose/` (`WhisperModelAcquirer.swift`, `BackgroundAssetsAcquirer.swift`, `AssetPackManagerAdapter.swift`, `WhisperPackVerifier.swift`, `WhisperDownloadModel.swift`), `desktop/BAExtension/`, `desktop/scripts/build-whisper-pack.sh`, `bristlenose/preflight/whisper.py`, `bristlenose/apple_speech.py`, `bristlenose/stages/s05_transcribe.py`.

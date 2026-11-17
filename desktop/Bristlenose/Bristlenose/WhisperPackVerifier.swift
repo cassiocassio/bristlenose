@@ -22,8 +22,9 @@ struct WhisperPackManifest: Equatable, Sendable {
     let files: [File]
 
     /// The one model the store build ships: mlx-community/whisper-large-v3-turbo at revision
-    /// a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb, packaged 16 Nov 2026. Re-pin from the real
-    /// build's `pack-manifest.json` before any upload; a different model is a different manifest.
+    /// a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb. Re-pinned 17 Nov 2026 against the real pack
+    /// build (`build-whisper-pack.sh`, Xcode 27.2; archive 1,501,833,754 B, sha256 2963f7d3…):
+    /// the file sizes and hashes below matched it exactly. A different model is a different manifest.
     static let largeV3Turbo = WhisperPackManifest(
         assetPackID: "whisper-large-v3-turbo",
         directory: "large-v3-turbo",

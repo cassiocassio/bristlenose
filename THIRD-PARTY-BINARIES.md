@@ -124,7 +124,7 @@ procurement; under-listing would be a compliance risk.
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
 | `google-auth` | 2.62.2 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
-| `google-genai` | 3.1.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `google-genai` | 3.2.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.8.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |

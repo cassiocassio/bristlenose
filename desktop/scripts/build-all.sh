@@ -149,7 +149,8 @@ EXT_PROFILE_NAME="Bristlenose BAExtension Mac App Store"
 EXT_PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_BAExtension_Mac_App_Store.provisionprofile"
 project_embeds_extension() {
     # The store lane archives the "Bristlenose Store" scheme (it lists BAExtension before the app)
-    # with BN_EMBED_BA=YES, and the app's Run Script phase embeds it (embed-ba-extension.sh).
+    # with BN_EMBED_BA=YES: Xcode's own "Embed ExtensionKit Extensions" phase embeds and signs it (no longer
+    # excluded), and embed-ba-extension.sh checks it is there and adds the host's Background Assets keys.
     grep -q 'BAExtension' "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj/xcshareddata/xcschemes/Bristlenose Store.xcscheme" 2>/dev/null
 }
 

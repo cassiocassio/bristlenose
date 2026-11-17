@@ -145,29 +145,41 @@ class TestTheTargetInTheProject:
 class TestTheEmbedIsGatedAndOnlyTheStoreSchemeBuildsIt:
     """The extension reaches an app only through the store lane.
 
-    No target dependency and no Xcode embed phase (either would make the .dmg lane and every IDE
-    build build and sign it, and its command-line CODE_SIGN_STYLE=Automatic could register an App
-    ID). Instead the "Bristlenose Store" scheme lists BAExtension before the app, and a Run Script
-    phase (embed-ba-extension.sh) copies it in when BN_EMBED_BA=YES, which only build-all.sh sets.
+    Xcode must embed and sign it (a hand-copied, re-signed extension was measured never to start), so
+    the app has a real Copy Files phase ("Embed ExtensionKit Extensions", into Contents/Extensions).
+    That phase is switched off by default through EXCLUDED_SOURCE_FILE_NAMES, which `build-all.sh`
+    lifts with BN_EMBED_BA=YES; and there is no target dependency, so only the "Bristlenose Store"
+    scheme builds the extension (measured: the plain scheme neither builds nor embeds it).
     """
 
     _SCHEMES = _DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "xcshareddata" / "xcschemes"
 
-    def test_the_app_neither_depends_on_nor_embeds_it_through_xcode(self) -> None:
+    def test_the_app_embeds_it_through_xcode_but_never_depends_on_it(self) -> None:
         text = _text()
-        assert not _EMBED_BUILD_FILE.search(text), "an Xcode embed phase would put it in every app"
+        assert _EMBED_BUILD_FILE.search(text), "the embed is a real Xcode phase, so Xcode signs it"
+        assert 'dstPath = "$(EXTENSIONS_FOLDER_PATH)";' in text and "dstSubfolderSpec = 16;" in text
         assert "remoteInfo = BAExtension;" not in text, "a target dependency would make every app build sign it"
 
-    def test_the_embed_script_is_wired_and_gated(self) -> None:
+    def test_the_embed_is_off_unless_the_store_lane_turns_it_on(self) -> None:
         text = _text()
-        assert "Embed Background Assets Extension" in text and "embed-ba-extension.sh" in text
+        # Two app configurations (Debug, Release) each exclude the product unless BN_EMBED_BA=YES.
+        assert text.count('EXCLUDED_SOURCE_FILE_NAMES = "$(BN_BA_EXCLUDE_$(BN_EMBED_BA))";') == 2
+        assert text.count("BN_EMBED_BA = NO;") == 2
+        assert text.count("BN_BA_EXCLUDE_NO = BAExtension.appex;") == 2
+        assert text.count('BN_BA_EXCLUDE_YES = "";') == 2
+
+    def test_the_host_keys_script_is_wired_and_gated(self) -> None:
+        text = _text()
+        assert "Background Assets Host Keys" in text and "embed-ba-extension.sh" in text
         script = (_DESKTOP / "scripts" / "embed-ba-extension.sh").read_text(encoding="utf-8")
-        # Gated first, before any work; refuses in a .dmg build; adds exactly the three host keys.
-        assert script.index('BN_EMBED_BA:-NO') < script.index("ditto")
+        # Gated first, refuses in a .dmg build, checks the extension really is embedded, and adds
+        # exactly the three host keys (the team-prefixed group needs a team).
+        assert script.index('BN_EMBED_BA:-NO') < script.index("Extensions/BAExtension.appex")
         assert "DEVELOPER_ID_BETA" in script
         for key in ("BAAppGroupID", "BAHasManagedAssetPacks", "BAUsesAppleHosting"):
             assert key in script
         assert "${DEVELOPMENT_TEAM:?" in script and ".app.bristlenose" in script
+        assert "ditto" not in script, "copying by hand is the thing that was measured not to work"
 
     def test_only_the_store_scheme_builds_the_extension(self) -> None:
         for scheme in self._SCHEMES.glob("*.xcscheme"):

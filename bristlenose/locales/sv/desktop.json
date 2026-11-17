@@ -465,7 +465,8 @@
         "copy": "Kopiera information",
         "showLog": "Visa logg",
         "showLogTooltip": "Visa analysens loggfil",
-        "setUpProvider": "Konfigurera leverantör…"
+        "setUpProvider": "Konfigurera leverantör…",
+        "setUpTranscription": "Konfigurera transkription…"
       },
       "tooltip": {
         "completed_partial": "Analysen slutfördes med fel för {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Apple Silicon upptäckt",
     "whisperOnDisk": "På den här Macen · {{size}}",
     "whisperMissing": "Inte på den här Macen",
+    "whisperLowDisk": "Mindre än {{size}} ledigt",
+    "whisperMissingApple": "Använder Apples talmodell som standard",
     "whisperFailed": "Nedladdningen slutfördes inte.",
     "downloadNow": "Ladda ned nu"
   },
@@ -1353,16 +1356,15 @@
     "title": "Laddar ned Whisper",
     "failedTitle": "Whisper laddades inte ned",
     "why": "För dina nästa inspelningar. Whisper klarar dåligt ljud, människor som pratar i munnen på varandra och större grupper bättre.",
-    "stop": "Stoppa nedladdningen",
-    "stopNote": "Börjar om från början nästa gång.",
+    "stop": "Stoppa",
     "causeDisk": "Den här Macen har inte tillräckligt med ledigt utrymme.",
     "causeNetwork": "Anslutningen bröts och kom inte tillbaka.",
     "causeCertificate": "Nätverkets säkerhetscertifikat godkändes inte.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Vill du hämta talmodellen Whisper?",
+    "askBody": "Cirka {{size}}. Den hjälper vid dåligt ljud och när folk pratar i mun på varandra. Du kan hämta den senare i Inställningar.",
+    "askDownload": "Hämta",
+    "askNotNow": "Inte nu",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Startad på en annan Mac",

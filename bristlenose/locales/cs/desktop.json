@@ -514,7 +514,8 @@
         "copy": "Kopírovat podrobnosti",
         "showLog": "Zobrazit protokol",
         "showLogTooltip": "Zobrazit soubor protokolu analýzy",
-        "setUpProvider": "Nastavit poskytovatele…"
+        "setUpProvider": "Nastavit poskytovatele…",
+        "setUpTranscription": "Nastavit přepis…"
       },
       "tooltip": {
         "completed_partial": "Analýza projektu {{project}} skončila s chybami"
@@ -1049,6 +1050,8 @@
     "backendDetectedAppleSilicon": "Zjištěn čip Apple",
     "whisperOnDisk": "Na tomto Macu · {{size}}",
     "whisperMissing": "Na tomto Macu není",
+    "whisperLowDisk": "Volné místo je menší než {{size}}",
+    "whisperMissingApple": "Ve výchozím nastavení se používá řečový model Apple",
     "whisperFailed": "Stahování se nedokončilo.",
     "downloadNow": "Stáhnout"
   },
@@ -1434,16 +1437,15 @@
     "title": "Stahuje se Whisper",
     "failedTitle": "Whisper se nestáhl",
     "why": "Pro vaše další nahrávky. Whisper si lépe poradí se špatným zvukem, se souběžnou řečí a s většími skupinami.",
-    "stop": "Zastavit stahování",
-    "stopNote": "Příště začne znovu od začátku.",
+    "stop": "Zastavit",
     "causeDisk": "Tento Mac nemá dost volného místa.",
     "causeNetwork": "Připojení se přerušilo a už se neobnovilo.",
     "causeCertificate": "Bezpečnostní certifikát této sítě nebyl považován za důvěryhodný.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Stáhnout řečový model Whisper?",
+    "askBody": "Zhruba {{size}}. Pomáhá při špatném zvuku a když lidé mluví jeden přes druhého. Můžete si ho stáhnout později v Nastavení.",
+    "askDownload": "Stáhnout",
+    "askNotNow": "Teď ne",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Spuštěno na jiném Macu",

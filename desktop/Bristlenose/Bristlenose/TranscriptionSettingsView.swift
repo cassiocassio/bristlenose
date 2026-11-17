@@ -248,7 +248,8 @@ private struct EngineSection<Dependents: View>: View {
                 if showsStatus {
                     WhisperStatusRow(
                         download: download,
-                        named: choice == TranscriptionEngineChoice.apple.rawValue)
+                        named: choice == TranscriptionEngineChoice.apple.rawValue,
+                        appleDefault: true)
                 }
             }
             Group { dependents() }
@@ -266,7 +267,7 @@ private struct EngineSection<Dependents: View>: View {
     }
 }
 
-/// Whisper: Download Now / progress with Stop Download / failed with Retry /
+/// Whisper: Download Now / progress with Stop / failed with Retry /
 /// On this Mac · 1.6 GB. The same `WhisperDownloadModel` as the toolbar pill,
 /// so the two can never disagree.
 ///
@@ -278,6 +279,8 @@ private struct WhisperStatusRow: View {
     @EnvironmentObject var i18n: I18n
     @ObservedObject var download: WhisperDownloadModel
     var named: Bool = true
+    /// Apple's engine runs the next study while Whisper is missing (macOS 26+, the engine row).
+    var appleDefault: Bool = false
 
     /// The row's height differs between its states, and in the engine row it is
     /// absent when Whisper is on disk; the Settings package re-fits only on a
@@ -285,12 +288,20 @@ private struct WhisperStatusRow: View {
     /// (`SettingsWindow.refitToContent`).
     static func heightSignature(of download: WhisperDownloadModel) -> Int {
         switch download.phase {
-        case .downloading: return 4
+        // The progress line grows a second line once the rate is known; the missing row grows a
+        // caption when disk is low. Each is its own signature so the pane re-fits.
+        case .downloading: return download.progressLine.contains("\n") ? 5 : 4
         case .failed: return 3
-        case .missing, .partial: return 2
+        case .missing, .partial: return isLowOnDisk ? 6 : 2
         case .unknown: return 1
         case .onDisk: return 0
         }
+    }
+
+    /// Less than the auto-start floor is free. The floor does not hold Download Now.
+    private static var isLowOnDisk: Bool {
+        guard let free = OllamaCatalog.freeDiskBytes() else { return false }
+        return free < WhisperDownloadModel.autoStartFloorBytes
     }
 
     var body: some View {
@@ -327,9 +338,27 @@ private struct WhisperStatusRow: View {
             .foregroundStyle(.secondary)
     }
 
+    /// "Not on this Mac", then up to two small grey lines saying why nothing has started:
+    /// less than the auto-start floor free (the number is the floor's own), and, where Apple's
+    /// engine is the other option, that it is what runs until Whisper arrives.
     private var missingText: some View {
-        Text(i18n.t("desktop.transcriptionSettings.whisperMissing"))
-            .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(i18n.t("desktop.transcriptionSettings.whisperMissing"))
+                .foregroundStyle(.secondary)
+            if Self.isLowOnDisk {
+                Text(i18n.t("desktop.transcriptionSettings.whisperLowDisk", [
+                    "size": ByteCountFormatter.string(
+                        fromByteCount: WhisperDownloadModel.autoStartFloorBytes, countStyle: .file),
+                ]))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            if appleDefault {
+                Text(i18n.t("desktop.transcriptionSettings.whisperMissingApple"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder

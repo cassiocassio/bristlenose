@@ -193,9 +193,9 @@ Rules the code follows (owner, 16 Nov 2026): after a failed attempt the app trie
 
 **Launch-time rule** (`WhisperDownloadModel.autoStart`): the app starts a background Whisper download by itself only when the build has Whisper; the researcher has acknowledged the AI disclosure (which names the providers their transcript text goes to); no analysis is running; the model is missing or partial; the researcher has not answered Not Now or pressed Stop; and at least 10 GB is free (unknown free space counts as room). It then shows a standard alert and starts only on Download:
 
-> **Download the Whisper speech model?** About 1.5 GB. It helps with poor audio and people talking over each other. You can download it later in Settings. [Download] [Not Now]
+> **Download the Whisper speech model?** About 1.6 GB. It helps with poor audio and people talking over each other. You can download it later in Settings. [Download] [Not Now]
 
-(English wording as in the build; strings `desktop.modelDownload.askTitle`, `askBody`, `askSize`, `askDownload`, `askNotNow`, in 21 locales.) The figure is a fixed string, "1.5 GB"; the Hugging Face route downloads about 1.61 GB and the pill shows 1.61 GB. The alert is asked until it is answered, not once per install; the answer and any Stop are kept in the app's preferences and survive deleting the app. A Mac that carries a remembered Stop or an earlier answer will not show the alert, which may explain the missing alert at a relaunch of build 6532 (hypothesis, not checked). Not Now is stored as a Stop. The same alert and rules apply to both routes. The app does not ask Background Assets to download on its own: the pack's policy is `onDemand` and the app never calls `checkForUpdates()`.
+(English wording as in the build; strings `desktop.modelDownload.askTitle`, `askBody`, `askSize`, `askDownload`, `askNotNow`, in 21 locales.) The figure is a fixed string, "1.6 GB" (owner, 17 Nov 2026; it was "1.5 GB"), an approximation true for both routes: the Hugging Face route downloads about 1.61 GB and the pill shows 1.61 GB. Re-check it at future releases. The alert is asked until it is answered, not once per install; the answer and any Stop are kept in the app's preferences and survive deleting the app. A Mac that carries a remembered Stop or an earlier answer will not show the alert, which may explain the missing alert at a relaunch of build 6532 (hypothesis, not checked). Not Now is stored as a Stop. The same alert and rules apply to both routes. The app does not ask Background Assets to download on its own: the pack's policy is `onDemand` and the app never calls `checkForUpdates()`.
 
 **Other paths that start a download.** `startIfNeeded` can also start one after a run went to Apple's engine (with no disk floor and no run-live guard) and after a failure; the Background Assets to Hugging Face fallback starts without asking again. A prior Download answer is required in each.
 
@@ -259,14 +259,46 @@ D1 and D2 were decided by the owner on 17 Nov 2026 and are recorded first. D3 to
 5. **D5. A recording that needs Whisper without a consent answer (Tree B).** Re-offer the size alert when a run is deferred for lack of an answer, and say on the row that the model is waiting for a download. Alternatives: leave the dead end; or on macOS 15 treat the first recording as the consent moment. New wording, so the R114 UX gate applies.
 6. **D6. Settings engine control tells the truth.** Record the engine per session now (it cannot be backfilled); add a caption to the Settings row; the per-session line later. Alternatives: rename the options; accept as is.
 7. **D7. "Waiting for Whisper" hint by cause**, plus a route out on the row when nothing is downloading. Alternative: leave the single hint.
-8. **D8. Size alert.** One figure formatted from bytes, "About 1.6 GB", true on both routes; the macOS 15 body states that recording needs the model; approve the English and translate 20 locales; reconcile with the "~2 GB" local-model line.
-9. **D9. Apple's own model download.** One explanatory line where the first study begins. Alternatives: a size alert before our helper requests it; accept as is and say so in the notes.
+8. **D8. Size alert.** The figure "About 1.6 GB" is DECIDED (owner, 17 Nov 2026: a fixed approximate string, not formatted from bytes) and the 20 locales are translated (machine translation, no native review). Still open: the macOS 15 body stating that recording needs the model; reconcile with the "~2 GB" local-model line.
+9. **D9. Apple's own model download.** CLOSED by the owner, 17 Nov 2026: it is OS behaviour and not ours to fix (a researcher who installs macOS in a language likely has that model); not for v1, not an App Review concern. Do not reopen without a measured wait.
 10. **D10. Pack-id immutability.** New weights get a new pack id; bytes under an id never change.
 11. **D11. Reviewer assets.** An English sample recording that falls inside Apple's nine and passes the gate, a transcript file for macOS 15, and a provider key with its path in the sign-in field. Without them no reviewer reaches a report.
 12. **D12. The load-time fetch in the transcription library.** Pass the library a directory on every route so it never requests the repository by name during a run.
 13. **D13. The store floor.** Keep macOS 15, and run the store build on a macOS 15 guest through TestFlight first. Alternative: raise the store floor to 26.
 14. **D14. System pause and sleep.** Do not run the 60 second watchdog while the system reports a pause, and test a sleep during a download. Recommended.
 15. **D15. Sessions Apple kept.** Do not redo them with Whisper for 24 Nov; record the engine per session (D6).
+
+### Owner decisions from the 17 Nov 2026 taste walk-through
+
+Source: an adversarial Mac-taste review of this UX and a gap-by-gap walk-through with the owner (notes `review-taste.md` and `plan-17nov-agreed-fixes.md` in the orchestrating session's notes folder; research report `Background Assets download latency.md`). **These are settled. Do not reopen them without new evidence.** Implementation is in the working tree, uncommitted; the Swift was parsed but not built or run.
+
+**Decided and built:**
+- Size alert "About 1.6 GB"; the alert's four strings translated in the 20 locales that carried English copies.
+- Popover: the time left on its own line with no dash (Foundation's spaced dash becomes a line break); the "Starts again from the beginning next time" note removed (the owner's ruling; the `stopNote` key is deleted); the button reads "Stop" (the Settings Stop button shares the key).
+- Settings Whisper row, "Not on this Mac": a small grey line "Defaulting to Apple speech model" where Apple's engine is the other option (macOS 26+ engine row; no language check; an unsupported language fails with the normal transcription failure in the popover, accepted for v1); and a small grey line "Less than 10 GB free" (the floor's own number) when free space is below the auto-start floor, in both the engine row and the macOS 15 row. The pill says nothing.
+- Project status popover: "Set Up Transcription…" opens Settings ▸ Transcription when the failure category is `.whisper`, and only in a build that has Whisper.
+
+**Decided, not built here:**
+- Blank until the first byte, and a system cancel retried at the next launch, run or Download Now: both are in `bb60d1b0c`.
+- The 10 GB floor stays: the app must not be a download that succeeds and then fills the Mac.
+- The Hugging Face fallback on macOS 26 and later, and the 60 second silence watchdog, stay as built for submission; the step-back is D1's unwind. Research found no time-to-first-update figure from Apple and only individual developer reports, so no new number is recommended; it is measured on the candidate build.
+- 100days: the "Waiting for Whisper" wording (it assumes the researcher still knows the name Whisper); one grammar for the toolbar pills (the sidebar ring and the provider pill each have their own hover ✕; the download pills have none).
+
+**Routes explored and dismissed:**
+- A hover ✕ on the Whisper pill: left out for 24 Nov; the pill gets no new function.
+- A low-disk message in the pill: the pill shows only while downloading or failed.
+- A Transcription door on `.network` failures: `.network` also covers a dropped connection to the AI provider.
+- A `FailureRemedy` case and button on the failed-run cover pane: the owner named the popover; the cover pane is not built.
+- Gap 9 (Apple's per-language model downloads without an announcement): closed, see D9.
+- macOS version differences: none (Background Assets and `SpeechTranscriber` both arrive with macOS 26); the raw `[Errno 25]` message and the other macOS 15 and `.dmg` items are parked.
+
+**Open:**
+- D7: how the "Waiting for Whisper" row reaches Settings (the owner liked a Settings door; that row has no popover), and whether a deferred run resumes by itself when the download finishes (nothing does today; a re-run picks the sessions up).
+- Whether Download Now should be disabled under low disk: undecided, the status quo (enabled; the floor never held it) is kept.
+- The door covers every `.whisper` failure, including native-library ones where Show Log is the better door; it takes Show Log's place in the header. Owner to confirm.
+- A diagnostic whose failures are all `.whisper` per session gets no door.
+- Owed on the candidate build: wifi off for a minute during a download; time from `ensureLocalAvailability` to the first status update; the `.paused` status; what a system cancel looks like; the Settings row's height when the caption appears; the progress line's separator in non-English languages; a native-speaker read of the translated alert.
+- Merging `bb60d1b0c`: it wraps the note in `stopNoteApplies` and uses the deleted `stopNote` key, so drop `stopNoteApplies` and its two tests; its `WhisperAskStringsTests` pins "1.5 GB"; the pill hunk and the test insertion conflict textually, and its `progressLine` guard is a separate hunk.
 
 ## 12. What is verified and what is not
 

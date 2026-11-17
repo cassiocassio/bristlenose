@@ -515,7 +515,8 @@
         "copy": "Kopiuj szczegóły",
         "showLog": "Pokaż dziennik",
         "showLogTooltip": "Pokaż plik dziennika analizy",
-        "setUpProvider": "Skonfiguruj dostawcę…"
+        "setUpProvider": "Skonfiguruj dostawcę…",
+        "setUpTranscription": "Skonfiguruj transkrypcję…"
       },
       "tooltip": {
         "completed_partial": "Analiza zakończona z niepowodzeniami dla {{project}}"
@@ -1050,6 +1051,8 @@
     "backendDetectedAppleSilicon": "Wykryto układ scalony Apple",
     "whisperOnDisk": "Na tym Macu · {{size}}",
     "whisperMissing": "Nie ma go na tym Macu",
+    "whisperLowDisk": "Mniej niż {{size}} wolnego miejsca",
+    "whisperMissingApple": "Domyślnie używany jest model mowy Apple",
     "whisperFailed": "Pobieranie nie zostało ukończone.",
     "downloadNow": "Pobierz teraz"
   },
@@ -1453,16 +1456,15 @@
     "title": "Pobieranie Whispera",
     "failedTitle": "Nie pobrano Whispera",
     "why": "Do Twoich kolejnych nagrań. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami i większymi grupami.",
-    "stop": "Zatrzymaj pobieranie",
-    "stopNote": "Następnym razem zacznie się od początku.",
+    "stop": "Zatrzymaj",
     "causeDisk": "Ten Mac nie ma dość wolnego miejsca.",
     "causeNetwork": "Połączenie zostało przerwane i nie wróciło.",
     "causeCertificate": "Certyfikat bezpieczeństwa tej sieci nie został uznany za zaufany.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Pobrać model mowy Whisper?",
+    "askBody": "Około {{size}}. Pomaga przy słabym dźwięku i gdy ludzie mówią jednocześnie. Możesz pobrać go później w Ustawieniach.",
+    "askDownload": "Pobierz",
+    "askNotNow": "Nie teraz",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Rozpoczęta na innym Macu",

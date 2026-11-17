@@ -465,7 +465,8 @@
         "copy": "Copiar detalhes",
         "showLog": "Mostrar registo",
         "showLogTooltip": "Mostrar o ficheiro de registo da análise",
-        "setUpProvider": "Configurar fornecedor…"
+        "setUpProvider": "Configurar fornecedor…",
+        "setUpTranscription": "Configurar transcrição…"
       },
       "tooltip": {
         "completed_partial": "A análise terminou com falhas para {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Apple Silicon detetado",
     "whisperOnDisk": "Neste Mac · {{size}}",
     "whisperMissing": "Não está neste Mac",
+    "whisperLowDisk": "Menos de {{size}} livres",
+    "whisperMissingApple": "A usar o modelo de fala da Apple por predefinição",
     "whisperFailed": "A transferência não foi concluída.",
     "downloadNow": "Transferir agora"
   },
@@ -1353,16 +1356,15 @@
     "title": "A transferir o Whisper",
     "failedTitle": "O Whisper não foi transferido",
     "why": "Para as suas próximas gravações. O Whisper lida melhor com áudio fraco, pessoas a falar ao mesmo tempo e grupos maiores.",
-    "stop": "Parar transferência",
-    "stopNote": "Da próxima vez, recomeça do início.",
+    "stop": "Parar",
     "causeDisk": "Este Mac não tem espaço livre suficiente.",
     "causeNetwork": "A ligação caiu e não voltou.",
     "causeCertificate": "O certificado de segurança desta rede não foi considerado fidedigno.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Transferir o modelo de fala Whisper?",
+    "askBody": "Cerca de {{size}}. Ajuda com áudio de fraca qualidade e quando as pessoas falam ao mesmo tempo. Pode transferi-lo mais tarde em Definições.",
+    "askDownload": "Transferir",
+    "askNotNow": "Agora não",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Iniciada noutro Mac",

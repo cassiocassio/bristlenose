@@ -113,6 +113,15 @@ struct ProjectDiagnosticPopover: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .fixedSize(horizontal: true, vertical: false)
+            } else if startupRefusal == nil, state.needsTranscription,
+                      WhisperDownloadModel.whisperInBuild {
+                Button(i18n.t("desktop.pipeline.diagnostic.action.setUpTranscription")) {
+                    closePopover?()
+                    SettingsWindow.shared.show(pane: .transcription)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .fixedSize(horizontal: true, vertical: false)
             } else if startupRefusal == nil, FileManager.default.fileExists(
                 atPath: PipelineRunner.logFileURL(for: project).path
             ) {

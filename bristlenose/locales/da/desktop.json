@@ -465,7 +465,8 @@
         "copy": "Kopiér detaljer",
         "showLog": "Vis log",
         "showLogTooltip": "Vis analyselogfilen",
-        "setUpProvider": "Opsæt udbyder…"
+        "setUpProvider": "Opsæt udbyder…",
+        "setUpTranscription": "Opsæt transskription…"
       },
       "tooltip": {
         "completed_partial": "Analysen blev færdig med fejl for {{project}}"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Apple Silicon registreret",
     "whisperOnDisk": "På denne Mac · {{size}}",
     "whisperMissing": "Ikke på denne Mac",
+    "whisperLowDisk": "Mindre end {{size}} ledig plads",
+    "whisperMissingApple": "Bruger som standard Apples talemodel",
     "whisperFailed": "Downloaden blev ikke færdig.",
     "downloadNow": "Hent nu"
   },
@@ -1353,16 +1356,15 @@
     "title": "Henter Whisper",
     "failedTitle": "Whisper blev ikke hentet",
     "why": "Til dine næste optagelser. Whisper klarer dårlig lyd, folk der taler i munden på hinanden, og større grupper bedre.",
-    "stop": "Stop download",
-    "stopNote": "Starter forfra næste gang.",
+    "stop": "Stop",
     "causeDisk": "Denne Mac har ikke nok ledig plads.",
     "causeNetwork": "Forbindelsen blev afbrudt og kom ikke tilbage.",
     "causeCertificate": "Netværkets sikkerhedscertifikat blev ikke godkendt.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
+    "askTitle": "Vil du downloade talemodellen Whisper?",
+    "askBody": "Cirka {{size}}. Den hjælper ved dårlig lyd og når folk taler i munden på hinanden. Du kan downloade den senere under Indstillinger.",
     "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askNotNow": "Ikke nu",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Startet på en anden Mac",

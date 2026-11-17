@@ -293,6 +293,14 @@ extension PipelineState {
         if case .failed(_, .providerNotSetUp) = self { return true }
         return false
     }
+
+    /// The study failed because the speech model did not load (`.whisper`). The popover
+    /// offers Settings ▸ Transcription, where Whisper's Download Now lives. Not `.network`:
+    /// that category also covers a dropped connection to the AI provider.
+    var needsTranscription: Bool {
+        if case .failed(_, .whisper) = self { return true }
+        return false
+    }
 }
 
 // MARK: - Progress parser protocol

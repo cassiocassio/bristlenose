@@ -505,7 +505,8 @@
         "copy": "\u8a73\u7d30\u3092\u30b3\u30d4\u30fc",
         "showLog": "\u30ed\u30b0\u3092\u8868\u793a",
         "showLogTooltip": "\u89e3\u6790\u30ed\u30b0\u30d5\u30a1\u30a4\u30eb\u3092\u8868\u793a",
-        "setUpProvider": "プロバイダを設定…"
+        "setUpProvider": "プロバイダを設定…",
+        "setUpTranscription": "文字起こしを設定…"
       },
       "tooltip": {
         "completed_partial": "{{project}} \u306e\u5206\u6790\u306f\u5931\u6557\u3092\u542b\u3093\u3067\u7d42\u4e86\u3057\u307e\u3057\u305f"
@@ -966,6 +967,8 @@
     "backendDetectedAppleSilicon": "Apple シリコンを検出",
     "whisperOnDisk": "この Mac 上 · {{size}}",
     "whisperMissing": "この Mac にはありません",
+    "whisperLowDisk": "空き容量が{{size}}未満です",
+    "whisperMissingApple": "既定では Apple の音声モデルを使用",
     "whisperFailed": "ダウンロードが完了しませんでした。",
     "downloadNow": "今すぐダウンロード"
   },
@@ -1303,16 +1306,15 @@
     "title": "Whisper をダウンロード中",
     "failedTitle": "Whisper をダウンロードできませんでした",
     "why": "次の録音のために。Whisper は、音質の悪い音声、話し声の重なり、大人数の会話にも強いモデルです。",
-    "stop": "ダウンロードを停止",
-    "stopNote": "次回は最初からやり直しになります。",
+    "stop": "停止",
     "causeDisk": "この Mac の空き容量が足りません。",
     "causeNetwork": "接続が切れ、戻りませんでした。",
     "causeCertificate": "このネットワークのセキュリティ証明書は信頼されませんでした。",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Whisper 音声モデルをダウンロードしますか？",
+    "askBody": "約{{size}}です。音質が悪い録音や、話し声が重なる場面で役立ちます。あとから「設定」でダウンロードすることもできます。",
+    "askDownload": "ダウンロード",
+    "askNotNow": "今はしない",
+    "askSize": "1.6 GB"
   },
   "studyStartup": {
     "foreignTitle": "別の Mac で開始されました",

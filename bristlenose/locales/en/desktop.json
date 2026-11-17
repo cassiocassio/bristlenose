@@ -466,7 +466,8 @@
         "copy": "Copy details",
         "showLog": "Show Log",
         "showLogTooltip": "Show the analysis log file",
-        "setUpProvider": "Set Up Provider…"
+        "setUpProvider": "Set Up Provider…",
+        "setUpTranscription": "Set Up Transcription…"
       },
       "tooltip": {
         "completed_partial": "Analysis finished with failures for {{project}}"
@@ -999,6 +1000,8 @@
     "backendDetectedAppleSilicon": "Apple silicon detected",
     "whisperOnDisk": "On this Mac · {{size}}",
     "whisperMissing": "Not on this Mac",
+    "whisperLowDisk": "Less than {{size}} free",
+    "whisperMissingApple": "Defaulting to Apple speech model",
     "whisperFailed": "The download didn’t finish.",
     "downloadNow": "Download Now"
   },
@@ -1358,8 +1361,7 @@
     "title": "Downloading Whisper",
     "failedTitle": "Whisper didn’t download",
     "why": "For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
-    "stop": "Stop Download",
-    "stopNote": "Starts again from the beginning next time.",
+    "stop": "Stop",
     "causeDisk": "This Mac doesn’t have enough free space for it.",
     "causeNetwork": "The connection dropped and didn’t come back.",
     "causeCertificate": "This network’s security certificate wasn’t trusted.",
@@ -1367,7 +1369,7 @@
     "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
     "askDownload": "Download",
     "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askSize": "1.6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Started on another Mac",

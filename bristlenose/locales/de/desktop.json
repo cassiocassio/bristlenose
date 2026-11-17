@@ -465,7 +465,8 @@
         "copy": "Details kopieren",
         "showLog": "Protokoll anzeigen",
         "showLogTooltip": "Analyseprotokolldatei anzeigen",
-        "setUpProvider": "Anbieter einrichten…"
+        "setUpProvider": "Anbieter einrichten…",
+        "setUpTranscription": "Transkription einrichten…"
       },
       "tooltip": {
         "completed_partial": "Analyse für {{project}} mit Fehlern beendet"
@@ -994,6 +995,8 @@
     "backendDetectedAppleSilicon": "Apple Chip erkannt",
     "whisperOnDisk": "Auf diesem Mac · {{size}}",
     "whisperMissing": "Nicht auf diesem Mac",
+    "whisperLowDisk": "Weniger als {{size}} frei",
+    "whisperMissingApple": "Standardmäßig wird das Sprachmodell von Apple verwendet",
     "whisperFailed": "Der Download wurde nicht abgeschlossen.",
     "downloadNow": "Jetzt laden"
   },
@@ -1353,16 +1356,15 @@
     "title": "Whisper wird geladen",
     "failedTitle": "Whisper wurde nicht geladen",
     "why": "Für Ihre nächsten Aufnahmen. Whisper kommt besser mit schlechtem Ton, durcheinander sprechenden Personen und größeren Gruppen zurecht.",
-    "stop": "Download stoppen",
-    "stopNote": "Beginnt beim nächsten Mal wieder von vorn.",
+    "stop": "Stoppen",
     "causeDisk": "Auf diesem Mac ist nicht genug Speicherplatz frei.",
     "causeNetwork": "Die Verbindung wurde unterbrochen und kam nicht zurück.",
     "causeCertificate": "Das Sicherheitszertifikat dieses Netzwerks wurde nicht als vertrauenswürdig eingestuft.",
-    "askTitle": "Download the Whisper speech model?",
-    "askBody": "About {{size}}. It helps with poor audio and people talking over each other. You can download it later in Settings.",
-    "askDownload": "Download",
-    "askNotNow": "Not Now",
-    "askSize": "1.5 GB"
+    "askTitle": "Sprachmodell Whisper herunterladen?",
+    "askBody": "Ca. {{size}}. Es hilft bei schlechtem Ton und wenn Personen durcheinandersprechen. Sie können es später in den Einstellungen herunterladen.",
+    "askDownload": "Herunterladen",
+    "askNotNow": "Jetzt nicht",
+    "askSize": "1,6 GB"
   },
   "studyStartup": {
     "foreignTitle": "Auf einem anderen Mac gestartet",

@@ -7,12 +7,13 @@ raises no design questions. **Part 2** is the structure the release chain
 settled on — where constants live, how a script decides, what its exit code
 means, and how a test proves any of it.
 
-**Status (Jul 2026): shipped.** `report.sh` (emitter helpers) + `build_report.py`
+**Status (Jul 2026, checked 17 Nov 2026): shipped.** `report.sh` (emitter helpers) + `build_report.py`
 (Rich renderer) are wired into `build-all.sh` (validated on a real signed build that
 delivered a TestFlight `.pkg`) and the standalone gates `check-release-binary` /
 `check-bundle-manifest` / `check-logging-hygiene`. Remaining siblings
 (`sign-sidecar.sh` — the bar showcase — `build-sidecar.sh`, `ensure-sidecar.sh`,
 `fetch-ffmpeg.sh`, `sign-ffmpeg.sh`) adopt the recipe below without redesign.
+(As of 17 Nov 2026 none of those five sources `report.sh`: not yet adopted. Also, the `file:line` anchors in Part 2 below date from 20 Sep 2026 and have drifted (`release.sh` has had 12 commits since): `probe_done` is now near `release.sh:634`, the four `exit 3` sites near `:2143`–`:2186`, `cmd_run`'s branch on it near `:2143`. Find them by function name, not the line numbers.)
 
 # Part 1 — how a script renders
 

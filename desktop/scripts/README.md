@@ -3,7 +3,7 @@
 Build, signing, verification and reset scripts for the macOS **Bristlenose.app**
 and its bundled PyInstaller `bristlenose serve` **sidecar**.
 
-Thirty-odd files, but you only ever type about eight of them. This README is
+About sixty files, but you only ever type about eight of them. This README is
 organised by **what you're trying to do**; the reference tables are at the
 bottom. The *why* lives in [`desktop/CLAUDE.md`](../CLAUDE.md) and the design
 docs.
@@ -173,7 +173,7 @@ instead of the rendered report.
 
 ## What you run vs what runs itself
 
-**You type these** — seven, realistically:
+**You type these** — eight, realistically:
 
 `build-all.sh` · `upload-testflight.sh` · `build-dmg.sh` · `upload-dmg.sh` ·
 `build-sidecar.sh` · `sign-sidecar.sh` · `reset-sandbox-state.sh` · `test-*.sh`
@@ -189,7 +189,7 @@ debugging a specific failure)
 
 | File | Why it exists |
 |---|---|
-| `report.sh` | Sourced by every build script; emits the events. **Must stay bash-3.2-safe** — the Xcode phase runs it under `/bin/bash` 3.2. |
+| `report.sh` | Sourced by `build-all.sh` and six of the gates (`check-bundle-manifest`, `check-logging-hygiene`, `check-release-binary`, `check-sidecar-appstore-strings`, `check-dmg-shippable`, `test-check-dmg-shippable`), not by `build-dmg.sh`, `ensure-sidecar.sh`, `sign-sidecar.sh` or the uploaders; emits the events. **Must stay bash-3.2-safe** — the Xcode phase runs it under `/bin/bash` 3.2. |
 | `build_report.py` | The Rich renderer that consumes those events. Invoked by `report.sh`. |
 | `sidecar-source-hash.sh` | Sourced; the fingerprint recipe driving incremental rebuilds. |
 | `check-sidecar-appstore-strings.py` | Implementation behind the `.sh` wrapper. **Always call the `.sh`** — it probes for PyInstaller and falls back `.venv-sidecar` → `.venv`; a raw `.py` call under a broken venv exits 1 from an uncaught `ImportError`, which looks exactly like a real detection. |
@@ -206,6 +206,11 @@ Who calls whom. Everything indented is invoked *for* you.
 
 ```
 build-all.sh ──────────────── App Store / TestFlight
+  ├─ check-build-env.sh [--signed]     (step 1, first: path has no space, pip-licenses, node_modules, GeneratedBuildInfo)
+  ├─ check-logging-hygiene.sh          (step 1)
+  ├─ check-appearance-seam.sh          (step 1)
+  ├─ check-window-surfaces.sh, check-menu-routing.sh, check-deployment-floors.sh   (step 1)
+  ├─ test-swift.sh                     (step 1c)
   ├─ check-bundle-manifest.sh          (before the slow build)
   ├─ ensure-sidecar.sh
   │    ├─ fetch-ffmpeg.sh
@@ -216,9 +221,8 @@ build-all.sh ──────────────── App Store / TestFl
   ├─ (step 2a: asserts .selftest-stamp matches the bundle — exit 1 if absent/stale)
   ├─ check-sidecar-appstore-strings.sh ─ …-strings.py
   ├─ build-mcpb.sh ─── check-mcpb.sh
-  ├─ check-release-binary.sh
-  ├─ check-logging-hygiene.sh
-  └─ check-appearance-seam.sh
+  ├─ ../../scripts/generate-third-party-binaries.py --check   (step 2b, signed only)
+  └─ check-release-binary.sh
 
 build-dmg.sh ──────────────── Developer-ID .dmg
   ├─ test-swift.sh --green-here        (skips the suite if build-all passed it on this tree, this run)
@@ -241,7 +245,7 @@ reset-app-state.sh ─── reset-sandbox-state.sh
 test-ensure-sidecar.sh ─── build-sidecar.sh --dry-run, sidecar-source-hash.sh
 test-upload-dmg.sh ─────── upload-dmg.sh (sourced), check-dmg-shippable.sh
 
-report.sh ─── build_report.py           (sourced by ~everything above)
+report.sh ─── build_report.py           (sourced by build-all.sh and six gates; see the table below)
 ```
 
 Two things this makes visible. **`ensure-sidecar.sh` is the shared trunk** —
@@ -276,8 +280,10 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | `check-release-binary.sh <archive\|app\|binary>` | No `BRISTLENOSE_DEV_*` escape-hatch literals survive in the Release Mach-O — they live under `#if DEBUG`. |
 | `check-logging-hygiene.sh [root]` | No Swift `Logger` interpolates a credential-shaped identifier without a `privacy:` marker; no `print()` dumps env. |
 | `check-appearance-seam.sh` | The light/dark mapping isn't re-derived outside `AppAppearance.swift`; panels call `adoptHostAppearance()`; `AppDelegate` still calls `beginApplying()`. |
+| `check-build-env.sh [--signed] [ROOT]` | First thing in `build-all.sh` step 1 (17 Nov 2026): fails in seconds on a checkout that cannot run a build. Signed mode adds no whitespace in the path and `pip-licenses` in `.venv`; always checks `frontend/node_modules`, `node`/`npm`, and generates `GeneratedBuildInfo.swift` only when absent. Each failure prints its fix; recipe in `desktop/gotchas.md`. Does not check `THIRD-PARTY-BINARIES.md` freshness (run `generate-third-party-binaries.py --check`). |
+| `test-check-build-env.sh` | Its 18-case negative self-test, run in plain pytest via `tests/test_gate_selftests.py`. |
 | `build-mcpb.sh` / `check-mcpb.sh` | Builds and gates the `.mcpb` agent extension bundled into the app. |
-| `check-pkg-shippable.sh <pkg>` | **Interrogates the `.app` inside the `.pkg`**, not the xcarchive copy the other gates read. Installer cert is specifically `3rd Party Mac Developer Installer`; payload holds exactly one app; version agrees with the working tree; the Teams/Meet sign-in IDs (`MicrosoftOAuthClientID`, `MicrosoftOAuthRedirectURI`, `GoogleOAuthClientID`) are baked and not a `__…__` placeholder, the same row as the `.dmg` gate; signature `--deep --strict`; `get-task-allow` absent; host + nested **executables** carry `app-sandbox` (ASC rejection #2); no auto-derived framework identifiers (rejection #3); Hardened Runtime; privacy manifests; `ITSAppUsesNonExemptEncryption` present; §2.5.2 PYZ scan re-run against the bundled sidecar; provisioning profile not expired (warns at T-30); then `altool --validate-app` last — skipped for ad-hoc, unconfigured, or `BN_SKIP_ASC_VALIDATE=1` (the uploader's announced skip; standalone runs keep it as the dry run). Check 3 fails closed since 14 Aug: an empty version extraction is fatal, version and build mismatches report separately, and the four pbxproj configs must agree. |
+| `check-pkg-shippable.sh <pkg>` | **Interrogates the `.app` inside the `.pkg`**, not the xcarchive copy the other gates read. Installer cert is specifically `3rd Party Mac Developer Installer`; payload holds exactly one app; version agrees with the working tree; the Teams/Meet sign-in IDs (`MicrosoftOAuthClientID`, `MicrosoftOAuthRedirectURI`, `GoogleOAuthClientID`) are baked and not a `__…__` placeholder, the same row as the `.dmg` gate; signature `--deep --strict`; `get-task-allow` absent; host + nested **executables** carry `app-sandbox` (ASC rejection #2); no auto-derived framework identifiers (rejection #3); Hardened Runtime; privacy manifests; `ITSAppUsesNonExemptEncryption` present; §2.5.2 PYZ scan re-run against the bundled sidecar; the MCP helper, Apple speech helper and sidecar MLX floor sub-gates (`check-mcp-helper.sh`, `check-speech-helper.sh`, `check-sidecar-mlx-floor.sh`); provisioning profile not expired (warns at T-30); then `altool --validate-app` last — skipped for ad-hoc, unconfigured, or `BN_SKIP_ASC_VALIDATE=1` (the uploader's announced skip; standalone runs keep it as the dry run). Check 3 fails closed since 14 Aug: an empty version extraction is fatal, version and build mismatches report separately, and the four pbxproj configs must agree. |
 | `upload-testflight.sh [<pkg>]` | Runs the gate as a precondition (no skip flag), names the app record explicitly so altool never infers it, uploads with `--wait`, parses `PROCESSINGSTATE` as an allowlist, then **independently** re-asks ASC via `--build-status` because a zero exit from altool is not proof the build landed. Prints the delivery UUID on every path including failure, Apple's errors verbatim, and Transporter as the documented fallback. Since 14 Aug: an **unparsed** delivery UUID is fatal (it silently disables the independent check), and an unconfirmed delivery prints an UNCONFIRMED banner and **exits 1 — which does not mean the upload failed**; the build number is spent, check ASC, never re-upload at that number. |
 | `test-check-pkg-shippable.sh` | Drives eight rows red via synthetic signed `.pkg`s (privacy manifests, export compliance, marketing version, build number, bundle identifier, nested app-sandbox, Hardened Runtime, cloud sign-in IDs), each matched on its own ✗ line, since every fixture is rejected and the ✓ line prints the label too, and passes an intact fixture through the same rows green, so a row that always fails is caught as well. Each case is proven red by mutating its row (22 Oct 2026; until then cases 1–6 could not fail). Not covered, since they need a real signed artefact: installer certificate, Team ID, the §2.5.2 scan, Apple's validator. Never calls Apple (`SIGN_IDENTITY=-`, `BN_SKIP_ASC_VALIDATE=1`). 16 cases, ~5s. |
 

@@ -61,7 +61,7 @@ given.
 ## Gates
 
 Each answers one question, deterministically, and is wired into the preflight or
-CI. Each has a suite below that proves it fires.
+CI (`check-whisper-sizes.py` is the exception: no workflow runs it; its own row says to run it at the quarterly dependency review). Each has a suite below that proves it fires, though the table below is not the complete set: `test-check-locales.py`, `test-check-tracked-vs-gitignore.sh`, `test-check-doctor-install.sh`, `test-bundle-budget.py` and `test-providers-live.py` also exist, and the fenced glob runs them. Gates wired since this table was last trued and not rowed here: `check-doctor-install.sh`, `check-mockup-register.py`, `check-store-listing.py`, `check-python-band.py`, `snap-store-status.py`, `gen-test-inventory.py` (17 Nov 2026 audit).
 
 | | |
 |---|---|
@@ -85,7 +85,7 @@ since 13 Sep** and nothing pointed a reader at them.
 | | |
 |---|---|
 | [`check-gate-policy.py`](check-gate-policy.py) | Every `continue-on-error` in a workflow must carry a declared disposition in [`../docs/testing/soft-gates.json`](../docs/testing/soft-gates.json) — `ratchet` (a number that may not rise), `expires` (a date by which someone decides again), or `conditional` (soft here, hard where it matters). Exists because `design-ci.md` once wrote *"informational initially — promote to blocking once stable"*, the promotion never came, and the Swift suite went unrun for three months. `ci.yml:63`. |
-| [`check-gate-proofs.py`](check-gate-proofs.py) | Sorts every `check-*` into proven / declared / unproven and feeds the `gates_without_proof` ratchet. **Read its own limit before trusting a green:** the automated bucket is derived from a *filename convention* — `paired_test()` matches `test-<stem>` existing on disk and never asks whether anything runs it. `scripts/test-bundle-budget.py` is counted proven and is invoked by no workflow; `ci.yml:351` names it in a **comment**. `ci.yml:65`, with `--stale 180`. |
+| [`check-gate-proofs.py`](check-gate-proofs.py) | Sorts every `check-*` into proven / declared / unproven and feeds the `gates_without_proof` ratchet. **Read its own limit before trusting a green:** the automated bucket is derived from a *filename convention* — `paired_test()` matches `test-<stem>` existing on disk and never asks whether anything runs it. `scripts/test-bundle-budget.py` is counted proven and is invoked by no workflow; `ci.yml:552` names it in a **comment** (the budget gate itself runs through `npm run size`, `ci.yml:553-555`). `ci.yml:65`, with `--stale 180`. |
 | [`check-ratchet.py`](check-ratchet.py) | The numbers that may not rise — `mypy_errors`, `gates_without_proof`, `pytest_skip_sites`, `pytest_slow_marked`, `e2e_allowlist_entries`, `swift_english_localizederror` — with their ceilings and the reason for every raise in [`../docs/testing/ratchet.json`](../docs/testing/ratchet.json). Read the ceilings there, not here: this line carried them as numbers until 29 Sep 2026, and two had drifted (skip sites 25 → 29, slow-marked 9 → 12). `--tighten` only ever *lowers* a ceiling; raising one is a deliberate edit in a commit that says why. `mypy_errors` is authored by CI, not by a dev box — `gh workflow run ratchet-tighten.yml`, because a fresh install resolves a different mypy. `ci.yml:67`. |
 
 ## Prove the gates

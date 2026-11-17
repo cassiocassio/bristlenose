@@ -148,9 +148,9 @@ EXT_BUNDLE_ID="app.bristlenose.BAExtension"
 EXT_PROFILE_NAME="Bristlenose BAExtension Mac App Store"
 EXT_PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_BAExtension_Mac_App_Store.provisionprofile"
 project_embeds_extension() {
-    # The extension's product file reference is only ever used as a build file by an embed
-    # phase (whatever Xcode names it); keyed on the id, not on a comment Xcode may reword.
-    grep -qE 'isa = PBXBuildFile; fileRef = BA0*5 ' "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj/project.pbxproj"
+    # The store lane archives the "Bristlenose Store" scheme (it lists BAExtension before the app)
+    # with BN_EMBED_BA=YES, and the app's Run Script phase embeds it (embed-ba-extension.sh).
+    grep -q 'BAExtension' "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj/xcshareddata/xcschemes/Bristlenose Store.xcscheme" 2>/dev/null
 }
 
 # ------------------------------------------------------------
@@ -527,10 +527,11 @@ bn_step_start 5 Build "Xcode archive" \
 _bn_t5=$SECONDS
 if ! xcodebuild \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    -scheme Bristlenose \
+    -scheme "Bristlenose Store" \
     -configuration Release \
     -destination "generic/platform=macOS" \
     -archivePath "$ARCHIVE_PATH" \
+    BN_EMBED_BA=YES \
     archive \
     > "$ARCHIVE_LOG" 2>&1; then
     bn_step_fail 5 detail="xcodebuild archive failed"

@@ -53,6 +53,8 @@ land in the .xcarchive; upload is C3's concern.
     <dict>
         <key>app.bristlenose</key>
         <string>Bristlenose Mac App Store</string>
+        <key>app.bristlenose.BAExtension</key>
+        <string>Bristlenose BAExtension Mac App Store</string>
     </dict>
     <key>destination</key>
     <string>export</string>

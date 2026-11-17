@@ -142,19 +142,43 @@ class TestTheTargetInTheProject:
         assert text.count("../BAExtension/BAExtension.entitlements") == 2  # its two configs only
 
 
-class TestTheExtensionIsStillDark:
-    """Edit these in the commit that embeds the extension, on purpose."""
+class TestTheEmbedIsGatedAndOnlyTheStoreSchemeBuildsIt:
+    """The extension reaches an app only through the store lane.
 
-    def test_the_app_neither_depends_on_nor_embeds_it(self) -> None:
+    No target dependency and no Xcode embed phase (either would make the .dmg lane and every IDE
+    build build and sign it, and its command-line CODE_SIGN_STYLE=Automatic could register an App
+    ID). Instead the "Bristlenose Store" scheme lists BAExtension before the app, and a Run Script
+    phase (embed-ba-extension.sh) copies it in when BN_EMBED_BA=YES, which only build-all.sh sets.
+    """
+
+    _SCHEMES = _DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "xcshareddata" / "xcschemes"
+
+    def test_the_app_neither_depends_on_nor_embeds_it_through_xcode(self) -> None:
         text = _text()
-        assert not _EMBED_BUILD_FILE.search(text), "an embed phase would put the extension in every app"
+        assert not _EMBED_BUILD_FILE.search(text), "an Xcode embed phase would put it in every app"
         assert "remoteInfo = BAExtension;" not in text, "a target dependency would make every app build sign it"
 
-    def test_no_shared_scheme_builds_it(self) -> None:
-        """The other route to an IDE build signing it: a scheme build entry."""
-        schemes = (_DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "xcshareddata" / "xcschemes")
-        for scheme in schemes.glob("*.xcscheme"):
-            assert "BAExtension" not in scheme.read_text(encoding="utf-8"), scheme.name
+    def test_the_embed_script_is_wired_and_gated(self) -> None:
+        text = _text()
+        assert "Embed Background Assets Extension" in text and "embed-ba-extension.sh" in text
+        script = (_DESKTOP / "scripts" / "embed-ba-extension.sh").read_text(encoding="utf-8")
+        # Gated first, before any work; refuses in a .dmg build; adds exactly the three host keys.
+        assert script.index('BN_EMBED_BA:-NO') < script.index("ditto")
+        assert "DEVELOPER_ID_BETA" in script
+        for key in ("BAAppGroupID", "BAHasManagedAssetPacks", "BAUsesAppleHosting"):
+            assert key in script
+        assert "${DEVELOPMENT_TEAM:?" in script and ".app.bristlenose" in script
+
+    def test_only_the_store_scheme_builds_the_extension(self) -> None:
+        for scheme in self._SCHEMES.glob("*.xcscheme"):
+            has = "BAExtension" in scheme.read_text(encoding="utf-8")
+            assert has == (scheme.name == "Bristlenose Store.xcscheme"), scheme.name
+
+    def test_the_store_lane_archives_that_scheme_with_the_flag(self) -> None:
+        text = _BUILD_ALL.read_text(encoding="utf-8")
+        assert '-scheme "Bristlenose Store"' in text and "BN_EMBED_BA=YES" in text
+        dmg = (_DESKTOP / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
+        assert "Bristlenose Store" not in dmg and "BN_EMBED_BA" not in dmg, "the .dmg lane never embeds"
 
     def test_the_compile_flag_is_defined_nowhere_in_the_project(self) -> None:
         """Owner, 16 Nov 2026: BA_WHISPER stays undefined until a TestFlight build has shown the
@@ -166,7 +190,14 @@ class TestTheLaneIsReadyForTheEmbed:
     """Dormant while the extension is not embedded; they bite the moment it is."""
 
     def _embedded(self) -> bool:
-        return bool(_EMBED_BUILD_FILE.search(_text()))
+        return "BAExtension" in (
+            self._SCHEMES_STORE.read_text(encoding="utf-8") if self._SCHEMES_STORE.is_file() else ""
+        )
+
+    _SCHEMES_STORE = (
+        _DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "xcshareddata" / "xcschemes"
+        / "Bristlenose Store.xcscheme"
+    )
 
     def test_export_options_map_the_extension_s_profile_once_it_is_embedded(self) -> None:
         # Read as text: ExportOptions.plist carries a long XML comment that plistlib rejects.
@@ -184,9 +215,9 @@ class TestTheLaneIsReadyForTheEmbed:
         text = _BUILD_ALL.read_text(encoding="utf-8")
         assert "EXT_PROFILE_PATH" in text and "project_embeds_extension" in text
         assert _EXT_ID in text
-        # The detector must key on the same id this file pins, or the guards never switch on.
-        assert _PRODUCT_REF.replace("BA0000000000000000000005", "BA0*5") in text
-        # ...and that id must really be the extension's product in the project.
+        # The detector must look at the scheme the store lane archives, or the guards never switch on.
+        assert "Bristlenose Store.xcscheme" in text
+        # ...and the extension's product must really be the extension's in the project.
         assert re.search(_PRODUCT_REF + r" /\* BAExtension.appex \*/ = \{isa = PBXFileReference", _text())
 
     def test_the_dmg_lane_never_passes_a_command_line_entitlements_file(self) -> None:

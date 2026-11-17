@@ -18,7 +18,17 @@
 set -euo pipefail
 
 if [ "${BN_EMBED_BA:-NO}" != "YES" ]; then
-    echo "embed-ba-extension: BN_EMBED_BA is not YES; nothing to embed"
+    # Not a store build. An earlier store build in the same derived data may have left the
+    # extension and the host's BA keys behind (an incremental build does not always rebuild
+    # Info.plist): remove them, so this build can never carry them by accident.
+    rm -rf "${TARGET_BUILD_DIR:-/nonexistent}/${CONTENTS_FOLDER_PATH:-x}/PlugIns/BAExtension.appex"
+    PLIST="${TARGET_BUILD_DIR:-}/${INFOPLIST_PATH:-}"
+    if [ -n "${TARGET_BUILD_DIR:-}" ] && [ -f "$PLIST" ]; then
+        for key in BAAppGroupID BAHasManagedAssetPacks BAUsesAppleHosting; do
+            /usr/libexec/PlistBuddy -c "Delete :$key" "$PLIST" >/dev/null 2>&1 || true
+        done
+    fi
+    echo "embed-ba-extension: BN_EMBED_BA is not YES; nothing embedded (stale extension and keys removed)"
     exit 0
 fi
 case " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " in

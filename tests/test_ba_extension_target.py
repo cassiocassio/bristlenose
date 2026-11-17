@@ -174,6 +174,13 @@ class TestTheEmbedIsGatedAndOnlyTheStoreSchemeBuildsIt:
             has = "BAExtension" in scheme.read_text(encoding="utf-8")
             assert has == (scheme.name == "Bristlenose Store.xcscheme"), scheme.name
 
+    def test_the_store_scheme_builds_the_extension_first_and_one_at_a_time(self) -> None:
+        """The embed script needs the extension's product to exist. With no target dependency, only
+        sequential building in the listed order guarantees that (parallel builds raced)."""
+        text = (self._SCHEMES / "Bristlenose Store.xcscheme").read_text(encoding="utf-8")
+        assert 'parallelizeBuildables = "NO"' in text
+        assert text.index("BAExtension.appex") < text.index("Bristlenose.app"), "extension listed first"
+
     def test_the_store_lane_archives_that_scheme_with_the_flag(self) -> None:
         text = _BUILD_ALL.read_text(encoding="utf-8")
         assert '-scheme "Bristlenose Store"' in text and "BN_EMBED_BA=YES" in text

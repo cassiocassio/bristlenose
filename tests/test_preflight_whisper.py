@@ -243,10 +243,19 @@ class TestUnknownModelRefusal:
         assert not isinstance(result.exception, WhisperPreflightAbortedError)
 
     def test_bundled_model_dir_passes(self, tmp_path, monkeypatch):
+        # A faster-whisper model directory always has model.bin.
         (tmp_path / "house-model").mkdir()
+        (tmp_path / "house-model" / "model.bin").write_bytes(b"x")
         monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
         with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("faster-whisper"):
             assert unknown_model_message(_settings(whisper_model="house-model")) is None
+
+    def test_a_bare_directory_is_not_a_bundled_model_under_faster_whisper(self, tmp_path, monkeypatch):
+        """The run ignores a directory without model.bin, so the name is an unknown one, not a pass."""
+        (tmp_path / "house-model").mkdir()
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("faster-whisper"):
+            assert unknown_model_message(_settings(whisper_model="house-model")) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -990,6 +999,30 @@ class TestHostOwnsDownload:
             s05_transcribe._init_faster_whisper_backend(settings, MagicMock())
         args, kwargs = model.call_args
         assert args[0] == str(d) and kwargs["local_files_only"] is True
+
+    def test_doctor_and_the_run_agree_an_mlx_directory_is_not_a_faster_whisper_model(
+        self, tmp_path, monkeypatch
+    ):
+        """doctor said "present" for any directory under faster-whisper while the run ignored an MLX-format
+        one and went to download: they must read the same thing."""
+        from bristlenose.doctor import CheckStatus, check_whisper_model
+        from bristlenose.preflight.whisper import unknown_model_message
+
+        d = tmp_path / "mymodel"
+        d.mkdir()
+        (d / "config.json").write_text("{}", encoding="utf-8")
+        (d / "weights.safetensors").write_bytes(b"x" * 16)
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
+        monkeypatch.delenv("_BRISTLENOSE_WHISPER_HOST_OWNS", raising=False)
+        settings = _settings(whisper_backend="faster-whisper", whisper_model="mymodel")
+        with _on_backend("faster-whisper"), patch("bristlenose.utils.hardware.detect_hardware"), patch(
+            "bristlenose.preflight.whisper.cache_state", return_value="missing"
+        ):
+            assert "bundled" not in str(check_whisper_model(settings).detail)
+            assert unknown_model_message(settings) is not None
+            (d / "model.bin").write_bytes(b"x")
+            assert check_whisper_model(settings).status == CheckStatus.OK
+            assert unknown_model_message(settings) is None
 
     def test_the_run_itself_refuses_when_the_pack_vanished_after_preflight(
         self, tmp_path, monkeypatch

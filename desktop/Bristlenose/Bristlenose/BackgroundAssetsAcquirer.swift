@@ -141,6 +141,12 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         return env
     }
 
+    /// All the files are there at the right sizes (verified or not). Asked of the system fresh.
+    private func packLooksComplete() -> Bool {
+        guard let dir = try? adapter.directory() else { return false }
+        return WhisperPackVerifier.quickCheck(directory: dir, manifest: manifest) == .ok
+    }
+
     /// The pack's directory when it is all there AND this app verified exactly these bytes.
     /// Asked of the system fresh each time (the grant is per `url(for:)` request).
     func presentDirectory() -> URL? {
@@ -250,12 +256,16 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         if outcome != .arrived {
             adapter.cancelEnsure()
             ensureTask.cancel()
-            // The call may never notice (before the first byte there is no Progress to cancel),
-            // so the system could be left fetching 1.6 GB beside the Hugging Face fallback. With
-            // no verified pack on disk, ask it to drop what it has: best effort, result ignored.
-            // A verified pack is never touched (a Stop during a re-check must not delete it).
-            if presentDirectory() == nil {
-                Task.detached { try? await adapter.remove() }
+            // An attempt that never reported a byte may still be fetching 1.6 GB beside the
+            // Hugging Face fallback (before the first byte there is no Progress to cancel). Only
+            // then, and only when no complete pack is on disk (a delivered pack, verified yet or not,
+            // is never deleted), ask the system to drop it, and WAIT for that (bounded), so a later
+            // attempt cannot be undone by this one arriving late.
+            if clock.neverReported, !packLooksComplete() {
+                let removed = EnsureRace()
+                Task.detached { try? await adapter.remove(); removed.finish(.arrived) }
+                Task.detached { try? await Task.sleep(for: .seconds(5)); removed.finish(.failed) }
+                _ = await removed.value()
             }
         }
         return outcome
@@ -272,6 +282,9 @@ final class SilenceClock: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         if done != bytes { bytes = done; last = .now }
     }
+
+    /// No byte was ever reported by this attempt.
+    var neverReported: Bool { lock.lock(); defer { lock.unlock() }; return bytes == -1 }
 
     func silent(for limit: Duration) -> Bool {
         lock.lock(); defer { lock.unlock() }

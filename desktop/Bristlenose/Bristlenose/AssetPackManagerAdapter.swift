@@ -20,37 +20,57 @@ final class AssetPackManagerAdapter: WhisperPackAdapter, @unchecked Sendable {
     init(manifest: WhisperPackManifest) { self.manifest = manifest }
 
     private func setProgress(_ p: Progress?) { lock.lock(); progress = p; lock.unlock() }
-    private func currentProgress() -> Progress? { lock.lock(); defer { lock.unlock() }; return progress }
+
+    /// One per `ensure` call: set when that call is cancelled, from either the task or `cancelEnsure()`.
+    private final class CancelToken: @unchecked Sendable {
+        private let lock = NSLock()
+        private var flag = false
+        var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return flag }
+        func cancel() { lock.lock(); flag = true; lock.unlock() }
+    }
+    private var token = CancelToken()
 
     func ensure(report: @escaping @Sendable (Int64, Int64) -> Void) async throws {
         let manager = AssetPackManager.shared
-        let pack = try await manager.assetPack(withID: manifest.assetPackID)
-        // A new subscription for each ensure: one does not carry on past a failure.
-        let updates = manager.statusUpdates(forAssetPackWithID: manifest.assetPackID)
-        let watcher = Task { [weak self] in
-            for await update in updates {
-                switch update {
-                case .downloading(_, let p):
-                    self?.setProgress(p)
-                    let total = p.totalUnitCount > 0 ? p.totalUnitCount : Int64(pack.downloadSize)
-                    report(p.completedUnitCount, total)
-                default:
-                    break
+        let mine = CancelToken()
+        lock.lock(); token = mine; lock.unlock()
+        try Task.checkCancellation()
+        // A cancel can arrive at any stage, and the system call may never notice one before its
+        // first byte, so every stage checks, and a Progress that shows up after a cancel is
+        // cancelled on arrival: otherwise the lookup finishing late would start the fetch after
+        // the app has moved on to the Hugging Face fallback.
+        try await withTaskCancellationHandler {
+            let pack = try await manager.assetPack(withID: manifest.assetPackID)
+            try Task.checkCancellation()
+            if mine.isCancelled { throw CancellationError() }
+            // A new subscription for each ensure: one does not carry on past a failure.
+            let updates = manager.statusUpdates(forAssetPackWithID: manifest.assetPackID)
+            let watcher = Task { [weak self] in
+                for await update in updates {
+                    switch update {
+                    case .downloading(_, let p):
+                        self?.setProgress(p)
+                        if mine.isCancelled { p.cancel() }
+                        let total = p.totalUnitCount > 0 ? p.totalUnitCount : Int64(pack.downloadSize)
+                        report(p.completedUnitCount, total)
+                    default:
+                        break
+                    }
                 }
             }
-        }
-        defer { watcher.cancel(); setProgress(nil) }
-        // Task cancellation reaches the system call's Progress when there is one; before the first
-        // byte there is none, and the acquirer then does not wait for this call (it asks for the
-        // pack to be removed instead, see `BackgroundAssetsAcquirer.ensureWithWatchdog`).
-        try await withTaskCancellationHandler {
+            defer { watcher.cancel(); setProgress(nil) }
             try await manager.ensureLocalAvailability(of: pack)
         } onCancel: { [weak self] in
+            mine.cancel()
             self?.cancelEnsure()
         }
     }
 
-    func cancelEnsure() { currentProgress()?.cancel() }
+    func cancelEnsure() {
+        lock.lock(); let current = token; let p = progress; lock.unlock()
+        current.cancel()
+        p?.cancel()
+    }
 
     func directory() throws -> URL {
         try AssetPackManager.shared.url(for: FilePath(manifest.directory))

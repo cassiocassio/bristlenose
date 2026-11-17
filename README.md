@@ -328,7 +328,7 @@ Via a `.env` file or environment variables (prefix `BRISTLENOSE_`). See `.env.ex
 
 Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU. The Mac app on macOS 26+ uses Apple's on-device speech while Whisper downloads.
 
-A model you have already downloaded can be used from a folder: set `BRISTLENOSE_WHISPER_MODEL_DIR` to its parent and, on Apple Silicon, put the MLX files in `<dir>/<model>/` (`config.json` and `weights.safetensors`); a complete folder is used instead of the Hugging Face cache. The desktop app sets this itself.
+A model you have already downloaded can be used from a folder, mostly by the desktop app (which sets it itself): set `BRISTLENOSE_WHISPER_MODEL_DIR` to the folder's parent. On Apple Silicon put the MLX files in `<dir>/<canonical model name>/`, for example `large-v3-turbo/` (also used for the `turbo` alias), holding `config.json` and `weights.safetensors` (or `weights.npz`; the weights file must be at least 1 MiB); a complete folder is used instead of the Hugging Face cache. The faster-whisper backend reads `<dir>/<model>/` only when it holds a `model.bin`.
 
 ---
 

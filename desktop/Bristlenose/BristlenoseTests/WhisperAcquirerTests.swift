@@ -259,13 +259,14 @@ final class FakeAcquirer: WhisperModelAcquirer {
 // MARK: - The Background Assets acquirer over a fake adapter
 
 final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
-    enum Behaviour { case succeed, throwError(Error), hang, hangIgnoringCancel }
+    enum Behaviour { case succeed, throwError(Error), hang, hangIgnoringCancel, reportThenThrow }
     private let lock = NSLock()
     private var behaviours: [Behaviour]
     private var cancelled = false
     private(set) var ensureCalls = 0
     private(set) var removeCalls = 0
     private(set) var directoryCalls = 0
+    private(set) var removesFinished = 0
     private var released = false
     var removeDelay: Duration = .zero
     var onRemove: (@Sendable () -> Void)?
@@ -282,6 +283,9 @@ final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
         switch behaviour {
         case .succeed: report(10, 100); report(100, 100)
         case .throwError(let e): throw e
+        case .reportThenThrow:
+            report(500, 1000)
+            throw NSError(domain: NSURLErrorDomain, code: -1005)
         case .hangIgnoringCancel:
             // A system call that never notices cancellation: only `release()` lets it go.
             while true {
@@ -304,6 +308,7 @@ final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
         lock.lock(); removeCalls += 1; let delay = removeDelay; let hook = onRemove; lock.unlock()
         hook?()
         if delay > .zero { try? await Task.sleep(for: delay) }
+        lock.lock(); removesFinished += 1; lock.unlock()
     }
 }
 
@@ -452,31 +457,41 @@ final class RecordingEvents: WhisperAcquisitionEvents {
 
     /// An attempt abandoned before any byte (Stop, or silence) while the system call ignores
     /// cancellation must not leave the system fetching 1.6 GB beside the Hugging Face fallback:
-    /// with no verified pack on disk the acquirer asks for it to be removed.
-    @Test func anAbandonedAttemptWithNoVerifiedPackAsksTheSystemToDropIt() async throws {
+    /// with no complete pack on disk the acquirer asks for it to be removed, and the attempt only
+    /// ENDS after that, so a later attempt cannot be undone by it arriving late.
+    @Test func anAbandonedAttemptThatNeverReportedAByteDropsTheUnfinishedPackBeforeItEnds() async throws {
         for stopped in [true, false] {
             let (a, adapter, ev) = try make([.hangIgnoringCancel], silence: .milliseconds(300),
                                             complete: false)
+            adapter.removeDelay = .milliseconds(400)  // slow enough that "not waited for" shows
             _ = a.start(events: ev)
             if stopped { try await Task.sleep(for: .milliseconds(100)); a.stop() }
             await ev.waitForEnd()
-            let deadline = ContinuousClock.now + .seconds(5)
-            while adapter.removeCalls == 0, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
+            #expect(adapter.removesFinished == 1, "stopped=\(stopped): the remove FINISHED before the end was reported")
             adapter.release()
-            #expect(adapter.removeCalls >= 1, "stopped=\(stopped): asked the system to drop the unfinished pack")
         }
     }
 
-    /// ...but a verified pack on disk is never removed by a Stop or a timeout (a re-check must
-    /// not delete a good pack).
-    @Test func anAbandonedRecheckNeverRemovesAVerifiedPack() async throws {
-        let (a, adapter, ev) = try make([.hangIgnoringCancel], complete: true, verified: true)
+    /// ...but never a complete pack, verified or not (the system may have delivered it itself).
+    @Test func anAbandonedAttemptNeverRemovesACompletePack() async throws {
+        for verified in [true, false] {
+            let (a, adapter, ev) = try make([.hangIgnoringCancel], complete: true, verified: verified)
+            _ = a.start(events: ev)
+            try await Task.sleep(for: .milliseconds(100))
+            a.stop()
+            await ev.waitForEnd()
+            adapter.release()
+            #expect(adapter.removeCalls == 0, "verified=\(verified)")
+        }
+    }
+
+    /// An attempt that DID report bytes has a Progress the system cancels: nothing is removed,
+    /// even when the call then fails or is given up on mid-download.
+    @Test func anAttemptThatReportedBytesIsNotRemoved() async throws {
+        let (a, adapter, ev) = try make([.reportThenThrow], complete: false)
         _ = a.start(events: ev)
-        try await Task.sleep(for: .milliseconds(100))
-        a.stop()
         await ev.waitForEnd()
-        try await Task.sleep(for: .milliseconds(300))
-        adapter.release()
+        #expect(ev.outcome == .failed(cause: nil))
         #expect(adapter.removeCalls == 0)
     }
 

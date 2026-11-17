@@ -188,7 +188,9 @@ def unknown_model_message(settings: BristlenoseSettings) -> str | None:
     if name in table or "/" in name or os.sep in name or os.path.isdir(name):
         return None
     bundled = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")
-    if bundled and os.path.isdir(os.path.join(bundled, name)):
+    if bundled and os.path.isdir(os.path.join(bundled, name)) and (
+        backend == "mlx" or os.path.isfile(os.path.join(bundled, name, "model.bin"))
+    ):
         return None
     parts = [t("preflight.whisper.unknown_model", model=name)]
     if close := difflib.get_close_matches(name, list(table), n=1):

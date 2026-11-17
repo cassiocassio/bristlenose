@@ -351,7 +351,10 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     # which `local_model_dir` already checked above), so only other backends trust it.
     if model_dir and _active_backend(settings) != "mlx":
         candidate = os.path.join(model_dir, model_name)
-        if os.path.isdir(candidate):
+        # faster-whisper loads a CTranslate2 directory, which always has model.bin: an MLX-format
+        # directory (config.json + weights.safetensors, as the Mac app delivers) is not usable here,
+        # and the run ignores it, so doctor must not call it present.
+        if os.path.isdir(candidate) and os.path.isfile(os.path.join(candidate, "model.bin")):
             # Count total size of the bundled model directory
             total_bytes = sum(
                 os.path.getsize(os.path.join(dirpath, f))

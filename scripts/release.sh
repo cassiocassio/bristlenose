@@ -799,7 +799,7 @@ inventory|refresh the inventory|plain|1m|||__INVENTORY__
 bump|bump + commit|plain|1m|||__BUMP__
 push-main|push main|plain|1m|||git push origin main
 strict-ci|dispatch strict CI on main|plain|1m|||__DISPATCH__
-build-all|build the app|plain|11m|||desktop/scripts/build-all.sh
+build-all|build the app|plain|11m|||BN_BA_WHISPER=1 desktop/scripts/build-all.sh
 build-dmg|build the dmg|plain|30m|||desktop/scripts/build-dmg.sh
 ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
 testflight|upload to TestFlight|soft|6m||SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh

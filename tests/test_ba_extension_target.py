@@ -209,6 +209,18 @@ class TestTheEmbedIsGatedAndOnlyTheStoreSchemeBuildsIt:
         dmg = (_DESKTOP / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
         assert "BA_WHISPER" not in dmg
 
+    def test_the_release_store_lane_turns_the_adapter_on_and_the_dmg_lane_cannot(self) -> None:
+        """D2 candidate (design-whisper-delivery.md section 11): the release machine's build-all row
+        passes BN_BA_WHISPER=1, so a release archive is never a dark build by accident; the
+        build-dmg row has no way to."""
+        rows = {
+            line.split("|")[0]: line
+            for line in (_DESKTOP.parent / "scripts" / "release.sh").read_text(encoding="utf-8").splitlines()
+            if line.count("|") >= 6
+        }
+        assert "BN_BA_WHISPER=1 desktop/scripts/build-all.sh" in rows["build-all"]
+        assert "BA_WHISPER" not in rows["build-dmg"]
+
     def test_the_compile_flag_is_defined_nowhere_in_the_project(self) -> None:
         """Owner, 16 Nov 2026: BA_WHISPER stays undefined until a TestFlight build has shown the
         pack arrive. Then a one-line change in the store configuration turns the adapter on."""

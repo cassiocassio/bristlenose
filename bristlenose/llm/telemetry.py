@@ -57,6 +57,9 @@ _run_dir: ContextVar[Path | None] = ContextVar("_run_dir", default=None)
 _stage_id: ContextVar[str | None] = ContextVar("_stage_id", default=None)
 _session_id: ContextVar[str | None] = ContextVar("_session_id", default=None)
 
+# Logged once per process: a call that reached record_call with no job bound.
+_unbound_warned = False
+
 
 class LLMCallEvent(BaseModel):
     """One terminal LLM call outcome — schema for ``llm-calls.jsonl`` rows.
@@ -156,16 +159,29 @@ def serve_run_context(project_dir: Path | None, run_id: str, kind: str) -> Itera
         return
     from bristlenose.output_paths import project_output_dir
 
+    with job_context(project_output_dir(project_dir) / ".bristlenose", run_id, kind):
+        yield
+
+
+@contextmanager
+def job_context(run_dir: Path, run_id: str, kind: str) -> Iterator[None]:
+    """Bind one LLM job to *run_dir* (a ``.bristlenose`` folder), count it, restore.
+
+    The run context makes its calls reach ``llm-calls.jsonl``; ``usage.begin``
+    makes its use readable while it runs; the exit, success or failure, writes
+    its row to the study's usage ledger. For a caller that holds the folder
+    itself (a project row's ``output_dir``); one holding a project root uses
+    :func:`serve_run_context`.
+    """
     from . import usage
 
-    target = project_output_dir(project_dir) / ".bristlenose"
-    tokens = set_run_context(run_id, target)
-    usage.begin(run_id, target, kind)
+    tokens = set_run_context(run_id, run_dir)
+    usage.begin(run_id, run_dir, kind)
     try:
         yield
     finally:
         reset_run_context(tokens)
-        usage.flush(target, run_id, kind)
+        usage.flush(run_dir, run_id, kind)
 
 
 @contextmanager
@@ -326,8 +342,10 @@ def record_call(
 
     ``cached_input_tokens_included`` is the cached share of ``input_tokens`` for
     providers that count it inside (OpenAI, Azure, Gemini). Only the usage
-    ledger reads it; this row keeps the provider's own meaning, which the
-    forecast's cohort medians are built on.
+    ledger reads it; this row keeps the provider's own input count, which the
+    forecast's cohort medians are built on. (Gemini's ``output_tokens`` here
+    include thinking since 17 Nov 2026, as OpenAI's always did: a Gemini cohort
+    built from rows on both sides of that date would mix two meanings.)
 
     The call is also counted in the study's usage ledger (``usage.note_call``)
     whenever a run is bound, BEFORE the kill switch and the stage check: the
@@ -335,7 +353,16 @@ def record_call(
     wrapper must not make a researcher's tokens disappear from their total.
     """
     rid = run_id if run_id is not None else _run_id.get()
-    if rid is not None:
+    if rid is None:
+        global _unbound_warned
+        if not _unbound_warned:
+            _unbound_warned = True
+            logger.info(
+                "llm call with no job bound (stage=%s): not counted in the study's usage; "
+                "bind it with telemetry.job_context or serve_run_context",
+                stage_override or _stage_id.get(),
+            )
+    else:
         from . import usage
 
         usage.note_call(

@@ -1,14 +1,16 @@
 {
-  "_doc": "LLM API prices, USD per million tokens. Read by bristlenose/llm/money.py; pricing.PRICING / estimate_cost are derived from it (docs/design-llm-usage.md, layer 2). Each model has a dated list of prices: an entry applies from its `from` date until the next entry's, and the earliest entry also covers every date before it (no earlier price is on record). Add a dated entry when a price changes; never edit an old one, so usage already counted is priced at what was in force on the day. `cache_read` / `cache_write` null means no rate is on record: cached input is then priced at the full input rate, and the price says so. Bump price_table_version (an ISO date) on any change. Only a provider's own API price belongs here: Azure deployment names and any-llm routes are never priced, and `free_providers` run on the researcher's machine.",
+  "_doc": "LLM API prices, USD per million tokens. Read by bristlenose/llm/money.py; pricing.PRICING / estimate_cost are derived from it (docs/design-llm-usage.md, layer 2). Each model has a dated list of prices: an entry applies from its `from` date until the next entry's, and the earliest entry also covers every date before it (no earlier price is on record). Add a dated entry when a price changes; never edit an old one, so usage already counted is priced at what was in force on the day. `until`, when present, is the last day a price is known to hold (a promotion): past it, with no later entry, the model is unpriced. `cache_read` / `cache_write` null means no rate is on record: cached input is then priced at the full input rate, and the price says so. Bump price_table_version (an ISO date) on any change. Only a provider's own API price belongs here: Azure deployment names and any-llm routes are never priced, and `free_providers` run on the researcher's machine.",
   "schema_version": 1,
   "price_table_version": "2026-11-17",
   "currency": "USD",
   "unit": "usd_per_million_tokens",
-  "free_providers": ["local"],
+  "free_providers": [
+    "local"
+  ],
   "sources": {
     "anthropic": "https://docs.anthropic.com/en/docs/about-claude/models; cache: reads 0.1x and 5-minute writes 1.25x the base input rate (Anthropic prompt caching)",
     "openai": "https://developers.openai.com/api/docs/models, verified 2026-09-04",
-    "google": "https://ai.google.dev/gemini-api/docs/pricing, verified 2026-09-04. The 3.x rows are promotional through 2026-12-31; the 2027 rates are not published per model yet, so no dated entry is guessed"
+    "google": "https://ai.google.dev/gemini-api/docs/pricing, verified 2026-09-04. The 3.x rows are promotional and carry `until` 2026-12-31: after it they read as unpriced until the 2027 rates are published and entered"
   },
   "models": {
     "claude-sonnet-5": {"provider": "anthropic", "prices": [{"from": "2026-09-04", "input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5}]},
@@ -26,10 +28,10 @@
     "gpt-4o-mini": {"provider": "openai", "prices": [{"from": "2026-09-04", "input": 0.15, "output": 0.6, "cache_read": 0.075, "cache_write": null}]},
     "gemini-2.5-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.3, "output": 2.5, "cache_read": null, "cache_write": null}]},
     "gemini-2.5-pro": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 1.25, "output": 10.0, "cache_read": null, "cache_write": null}]},
-    "gemini-3.8-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.75, "output": 3.75, "cache_read": null, "cache_write": null}]},
-    "gemini-3.7-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.75, "output": 3.75, "cache_read": null, "cache_write": null}]},
-    "gemini-3.6-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.75, "output": 3.75, "cache_read": null, "cache_write": null}]},
-    "gemini-3.5-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 1.5, "output": 9.0, "cache_read": null, "cache_write": null}]},
-    "gemini-3.5-flash-lite": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.3, "output": 2.5, "cache_read": null, "cache_write": null}]}
+    "gemini-3.8-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.75, "output": 3.75, "cache_read": null, "cache_write": null, "until": "2026-12-31"}]},
+    "gemini-3.7-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.75, "output": 3.75, "cache_read": null, "cache_write": null, "until": "2026-12-31"}]},
+    "gemini-3.6-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.75, "output": 3.75, "cache_read": null, "cache_write": null, "until": "2026-12-31"}]},
+    "gemini-3.5-flash": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 1.5, "output": 9.0, "cache_read": null, "cache_write": null, "until": "2026-12-31"}]},
+    "gemini-3.5-flash-lite": {"provider": "google", "prices": [{"from": "2026-09-04", "input": 0.3, "output": 2.5, "cache_read": null, "cache_write": null, "until": "2026-12-31"}]}
   }
 }

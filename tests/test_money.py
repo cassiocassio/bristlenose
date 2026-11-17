@@ -120,3 +120,16 @@ class TestTheBundledTables:
 
     def test_local_is_free(self) -> None:
         assert money.price_on("local", "llama3.2:3b", money.table_day()) == "free"
+
+
+class TestAPriceWithAnEnd:
+    def test_a_promotion_is_not_carried_past_its_end(self) -> None:
+        """The Gemini 3.x rows are promotional through 31 Dec 2026. Carried on,
+        a January row would read as priced at about half its cost (review,
+        17 Nov 2026)."""
+        for model, entry in money.price_table().models.items():
+            if model.startswith("gemini-3"):
+                assert entry.prices[-1].until is not None, model
+        assert money.price_on("google", "gemini-3.8-flash", date(2027, 1, 1)) == "unpriced"
+        last = money.price_on("google", "gemini-3.8-flash", date(2026, 12, 31))
+        assert isinstance(last, money.PriceEntry)

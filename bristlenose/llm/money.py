@@ -60,6 +60,11 @@ class PriceEntry(BaseModel):
     output: float = Field(ge=0, le=10_000)
     cache_read: float | None = Field(default=None, ge=0, le=10_000)
     cache_write: float | None = Field(default=None, ge=0, le=10_000)
+    #: The last day this price is known to hold, for a price published with an
+    #: end (a promotion). After it, with no later entry, the model is
+    #: ``unpriced``: a promotional rate is not carried past its end as if it
+    #: were the price.
+    until: date | None = None
 
 
 class ModelPrices(BaseModel):
@@ -152,6 +157,8 @@ def price_on(
     for e in entry.prices:
         if e.from_ <= on:
             in_force = e
+    if in_force.until is not None and on > in_force.until:
+        return "unpriced"
     return in_force
 
 

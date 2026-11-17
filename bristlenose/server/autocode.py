@@ -959,6 +959,44 @@ async def reapply_to_new_quotes(
     settings: BristlenoseSettings,
     track_status: bool = False,
 ) -> int:
+    """Re-apply a framework to the quotes it owes, as one counted job.
+
+    Binds the pass to its study's ``.bristlenose`` folder, read from the project
+    row, so its calls reach ``llm-calls.jsonl`` and the study's usage ledger.
+    Until 17 Nov 2026 the pass bound only ``telemetry.stage(...)``, and every
+    re-apply after a run and every catch-up went uncounted
+    (docs/design-llm-usage.md). The work is :func:`_reapply_to_new_quotes`.
+    """
+    from bristlenose.events import new_run_id
+    from bristlenose.llm import telemetry
+    from bristlenose.server.models import Project
+
+    db = db_factory()
+    try:
+        project = db.get(Project, project_id)
+        output_dir = project.output_dir if project is not None else None
+    finally:
+        db.close()
+    work = _reapply_to_new_quotes(
+        db_factory, project_id, framework_id, settings, track_status=track_status,
+    )
+    if not output_dir:
+        return await work
+    with telemetry.job_context(
+        Path(output_dir) / ".bristlenose",
+        f"autocode-reapply-{project_id}-{framework_id}-{new_run_id()}",
+        "autocode",
+    ):
+        return await work
+
+
+async def _reapply_to_new_quotes(
+    db_factory: Callable[[], SASession],
+    project_id: int,
+    framework_id: str,
+    settings: BristlenoseSettings,
+    track_status: bool = False,
+) -> int:
     """Re-apply an already-applied framework to the quotes it still owes.
 
     Codes ONLY the delta — the quotes that count and are not on the framework's

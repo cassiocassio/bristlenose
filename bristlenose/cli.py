@@ -1745,11 +1745,6 @@ def run(
             study_id = study_marker.read(output_dir)
             study_copied_from = study_marker.copied_from(output_dir)
             carried_starts = starts_by_content(output_dir)
-            # The study's token ledger crosses too: a Re-analyse is the most
-            # expensive act a study has, and its total must not restart at it.
-            from bristlenose.llm import usage
-
-            carried_usage = usage.carry_bytes(output_dir)
             output_stash = output_backup.stash(
                 output_dir, previous_backup_is_spent=_reclaim.report_is_back
             )
@@ -1770,10 +1765,16 @@ def run(
                     logging.getLogger("bristlenose").warning(
                         "could not carry the study id or start times into the new output: %s", exc
                     )
-                # Its own try: a failed ledger carry must not cost the study id,
-                # and the other way round.
+                # The study's token ledger crosses too, read from the stash after
+                # the rename so a serve job that wrote just before it is in it.
+                # This copy keeps the total right while the run goes; the
+                # settle's merge (`output_backup.carry_exports`) is what keeps
+                # it right after. Its own try: a failed ledger carry must not
+                # cost the study id, and the other way round.
+                from bristlenose.llm import usage
+
                 try:
-                    usage.write_carried(output_dir, carried_usage)
+                    usage.write_carried(output_dir, usage.carry_bytes(output_stash))
                 except OSError as exc:
                     import logging
 

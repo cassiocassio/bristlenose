@@ -597,3 +597,23 @@ def fresh_machine_identity_cache(monkeypatch):
     from bristlenose.utils import machine_identity
 
     monkeypatch.setattr(machine_identity, "_cached", None)
+
+
+@pytest.fixture(autouse=True)
+def no_usage_tally_left_behind():
+    """The usage ledger's tally (`bristlenose/llm/usage.py`) is process-wide.
+    Any test that binds a run with a constant id leaves a tally behind, and one
+    whose id is in `_flushed` makes a later test's call for that id write a
+    "late" row into the earlier test's folder. Every test starts and ends with
+    none (review, 17 Nov 2026)."""
+    from bristlenose.llm import usage
+
+    def _clear() -> None:
+        with usage._lock:
+            usage._tallies.clear()
+            usage._jobs.clear()
+            usage._flushed.clear()
+
+    _clear()
+    yield
+    _clear()

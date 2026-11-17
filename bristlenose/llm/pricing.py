@@ -40,14 +40,20 @@ PRICE_TABLE_VERSION = _TABLE.price_table_version
 CURRENCY = _TABLE.currency
 
 
-def _rates_on_table_day(model: str) -> tuple[float, float]:
-    entry = money.price_on(_TABLE.models[model].provider, model, _TABLE_DAY, _TABLE)
-    assert isinstance(entry, money.PriceEntry)
-    return entry.input, entry.output
+def _rates_on_table_day() -> dict[str, tuple[float, float]]:
+    rates: dict[str, tuple[float, float]] = {}
+    for model, entry in _TABLE.models.items():
+        price = money.price_on(entry.provider, model, _TABLE_DAY, _TABLE)
+        # "free" (a model under a free provider) or "unpriced" (past a price's
+        # end) is not a rate: left out, so estimate_cost says None for it, and
+        # the import never fails over a table edit.
+        if isinstance(price, money.PriceEntry):
+            rates[model] = (price.input, price.output)
+    return rates
 
 
 # Pricing per million tokens: (input_rate_usd, output_rate_usd).
-PRICING: dict[str, tuple[float, float]] = {m: _rates_on_table_day(m) for m in _TABLE.models}
+PRICING: dict[str, tuple[float, float]] = _rates_on_table_day()
 
 # Provider lookup for cohort key resolution.
 _MODEL_PROVIDER: dict[str, str] = {m: e.provider for m, e in _TABLE.models.items()}

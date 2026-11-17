@@ -22,11 +22,12 @@ per-call log, which can re-identify participants (session ids, prompt shas,
 timings). These rows carry none of that, and a researcher who switched the one
 off has not asked to lose the other.
 
-**Survives a Re-analyse.** ``run --clean`` sets the output folder aside, so the
-ledger is carried into the new one (``cli.py``), and a restored report gets a
-failed run's rows back through ``output_backup._APPEND_ONLY``. That append
-repeats the rows the carry copied, so :func:`read_rows` drops a row it has
-already seen byte for byte (see its docstring for the key).
+**Survives a Re-analyse.** ``run --clean`` sets the output folder aside; the
+ledger is copied into the new one at once (``cli.py``), so the study's total is
+right while the run is going, and whichever tree is thrown away at the end is
+merged into the one kept (:func:`merge_ledger`, from ``output_backup``'s export
+carry), by row id. The merge is what makes the total right, whatever the
+carry did.
 
 **What is not counted.** A process killed outright (SIGKILL, a power cut)
 never reaches its flush, so its tokens are lost; a counted run is never
@@ -138,6 +139,30 @@ _FLUSHED_KEPT = 256
 _lock = threading.Lock()
 
 
+_odd_count_warned = False
+
+
+def _count_or_none(value: object) -> int | None:
+    """A token count as an int, or None when it is not one.
+
+    An SDK object a test fakes with MagicMock, or a provider returning a
+    string, would otherwise turn the tally into something that adds wrong or
+    cannot be written. Not a count is treated as not reported (the call is
+    still counted, in ``calls_without_usage`` when nothing else was reported),
+    and said once per process at WARNING.
+    """
+    global _odd_count_warned
+    if value is None:
+        return None
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    if not _odd_count_warned:
+        _odd_count_warned = True
+        logger.warning("usage: a token count that is not a count (%r) was treated as "
+                       "not reported", type(value).__name__)
+    return None
+
+
 def _real(run_dir: Path) -> str:
     return os.path.realpath(run_dir)
 
@@ -176,6 +201,11 @@ def note_call(
     moves here from ``input_tokens`` to ``cache_read_input_tokens``.
     """
     try:
+        input_tokens = _count_or_none(input_tokens)
+        output_tokens = _count_or_none(output_tokens)
+        cache_read_input_tokens = _count_or_none(cache_read_input_tokens)
+        cache_creation_input_tokens = _count_or_none(cache_creation_input_tokens)
+        cached_input_tokens_included = _count_or_none(cached_input_tokens_included)
         reported = input_tokens is not None or output_tokens is not None
         cached = cached_input_tokens_included or 0
         if input_tokens is not None and cached:
@@ -224,16 +254,16 @@ def flush(run_dir: Path, run_id: str, kind: str) -> int:
             _flushed.popitem(last=False)
     if not taken:
         return 0
-    ts = _now_iso()
-    lines = [
-        UsageRow(
-            row_id=secrets.token_hex(8),
-            ts=ts, run_id=run_id, kind=kind, provider=provider, model=model,
-            **tally.model_dump(),
-        ).model_dump_json() + "\n"
-        for (_, provider, model), tally in taken
-    ]
     try:
+        ts = _now_iso()
+        lines = [
+            UsageRow(
+                row_id=secrets.token_hex(8),
+                ts=ts, run_id=run_id, kind=kind, provider=provider, model=model,
+                **tally.model_dump(),
+            ).model_dump_json() + "\n"
+            for (_, provider, model), tally in taken
+        ]
         run_dir.mkdir(parents=True, exist_ok=True)
         fd = open_private(run_dir / USAGE_FILENAME, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         try:
@@ -242,10 +272,16 @@ def flush(run_dir: Path, run_id: str, kind: str) -> int:
             os.write(fd, "".join(lines).encode("utf-8"))
         finally:
             os.close(fd)
-    except OSError:
+    except Exception:
+        # Never raises: it runs in `finally` blocks, where an escape would
+        # replace the job's own failure. What was lost is said, in numbers.
+        lost = {
+            f"{prov}/{model}": (t.calls, t.input_tokens, t.output_tokens)
+            for (_, prov, model), t in taken
+        }
         logger.warning(
-            "usage ledger not written run_id=%s kind=%s — this job's tokens are uncounted",
-            run_id, kind, exc_info=True,
+            "usage ledger not written run_id=%s kind=%s — uncounted (calls, in, out): %s",
+            run_id, kind, lost, exc_info=True,
         )
         return 0
     return len(lines)
@@ -288,39 +324,116 @@ def run_totals(run_id: str) -> _Tally | None:
 
 
 def read_rows(run_dir: Path) -> list[UsageRow]:
-    """The ledger's rows, oldest first, each once.
+    """The ledger's rows, oldest first, each once (see :func:`read_rows_counted`)."""
+    return read_rows_counted(run_dir)[0]
 
-    Tolerates a missing file, blank lines and rows it cannot read (skipped: a
-    torn line from a crash must not hide the rest of the study's use). A row
-    repeated by a restore's append is dropped, the first one kept.
 
-    The repeat is recognised by ``row_id`` alone: a restore copies bytes, id
+_unreadable_warned: set[str] = set()
+
+
+def _row_key(raw: dict[str, object], line: str) -> str:
+    """A row's identity: its ``row_id``, or for a row written before ids
+    existed (the first commit of the ledger), a hash of its own bytes, which a
+    restore's byte-for-byte repeat shares."""
+    rid = raw.get("row_id")
+    if isinstance(rid, str) and rid:
+        return rid
+    import hashlib
+
+    return "legacy-" + hashlib.sha256(line.strip().encode("utf-8")).hexdigest()[:16]
+
+
+def read_rows_counted(run_dir: Path) -> tuple[list[UsageRow], int]:
+    """The ledger's rows, oldest first, each once, and how many lines could
+    not be read.
+
+    Skips blank lines; a line it cannot read is counted, not hidden: a torn
+    line from a crash, or a row from a newer Bristlenose this one does not
+    know, would otherwise shrink a total with nothing said. Logged at WARNING
+    once per ledger per process. A row repeated (a restore appends what a
+    carry copied) is dropped by its ``row_id``: a restore copies bytes, id
     included, while every row written gets a fresh one, so two jobs sharing a
-    run id (AutoCode and elaboration mint theirs to the second) or a late call
-    flushed in the same millisecond as its job are both kept.
+    run id, or a late call flushed in the same millisecond as its job, are both
+    kept.
     """
     path = run_dir / USAGE_FILENAME
     try:
         raw_lines = path.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
-        return []
+        return [], 0
     except (OSError, UnicodeDecodeError):
         logger.warning("usage ledger unreadable at %s", path, exc_info=True)
-        return []
+        return [], 0
     rows: list[UsageRow] = []
     seen: set[str] = set()
+    unreadable = 0
     for line in raw_lines:
         if not line.strip():
             continue
         try:
-            row = UsageRow.model_validate(json.loads(line))
-        except (json.JSONDecodeError, ValidationError):
+            raw = json.loads(line)
+            if not isinstance(raw, dict):
+                raise ValueError("not an object")
+            key = _row_key(raw, line)
+            row = UsageRow.model_validate({**raw, "row_id": key})
+        except (ValueError, ValidationError):
+            unreadable += 1
             continue
-        if row.row_id in seen:
+        if key in seen:
             continue
-        seen.add(row.row_id)
+        seen.add(key)
         rows.append(row)
-    return rows
+    if unreadable and str(path) not in _unreadable_warned:
+        _unreadable_warned.add(str(path))
+        logger.warning("usage ledger %s: %d line(s) could not be read and are left out "
+                       "of the totals", path, unreadable)
+    return rows, unreadable
+
+
+def merge_ledger(from_output: Path, into_output: Path) -> int:
+    """Add the rows of one output folder's ledger that the other lacks.
+
+    Called wherever a tree is about to be thrown away (``output_backup``'s
+    export carry): a failed Re-analyse's tree into the restored report, a
+    replaced report's into the new one. By ``row_id``, so it is idempotent: a
+    row already carried is not added twice, and running it again adds nothing.
+    Returns the rows added; raises ``OSError`` for the caller to log.
+    """
+    src = from_output / ".bristlenose" / USAGE_FILENAME
+    if not src.is_file():
+        return 0
+    dest_dir = into_output / ".bristlenose"
+    have: set[str] = set()
+    dest = dest_dir / USAGE_FILENAME
+    if dest.is_file():
+        for line in dest.read_text(encoding="utf-8").splitlines():
+            try:
+                raw = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(raw, dict):
+                have.add(_row_key(raw, line))
+    new: list[str] = []
+    for line in src.read_text(encoding="utf-8").splitlines():
+        try:
+            raw = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(raw, dict):
+            continue
+        key = _row_key(raw, line)
+        if key not in have:
+            have.add(key)
+            new.append(line.strip() + "\n")
+    if not new:
+        return 0
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    fd = open_private(dest, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+    try:
+        os.write(fd, "".join(new).encode("utf-8"))
+    finally:
+        os.close(fd)
+    return len(new)
 
 
 def study_totals(rows: list[UsageRow]) -> list[UsageTotal]:
@@ -349,7 +462,8 @@ def study_totals(rows: list[UsageRow]) -> list[UsageTotal]:
 
 
 def carry_bytes(output_dir: Path) -> bytes | None:
-    """The ledger's bytes, read before a Re-analyse sets the output aside.
+    """The ledger's bytes, read from a Re-analyse's stash once it is set aside,
+    so a serve job that wrote just before the rename is in it.
 
     ``None`` when there is nothing to carry or it cannot be read; a carry is an
     improvement, never a reason to stop a run (the same rule as the study id's).

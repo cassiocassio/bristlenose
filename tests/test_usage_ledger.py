@@ -17,7 +17,6 @@ Layer 1 of three in docs/design-llm-usage.md. What these pin:
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -31,16 +30,6 @@ _CONTRACT = json.loads(
         encoding="utf-8"
     )
 )
-
-
-@pytest.fixture(autouse=True)
-def _no_tallies_left_over() -> Iterator[None]:
-    """The tally is process-wide; a test must neither inherit nor leave one."""
-    for state in (usage._tallies, usage._jobs, usage._flushed):
-        state.clear()
-    yield
-    for state in (usage._tallies, usage._jobs, usage._flushed):
-        state.clear()
 
 
 def _call(input_tokens: int | None = 1000, output_tokens: int | None = 200, **kw) -> None:
@@ -417,3 +406,74 @@ class TestJobsAreVisibleWhileTheyRun:
             (live,) = usage.peek(out / ".bristlenose")
             assert (live.run_id, live.kind) == ("live-job", "chat_lens")
         assert usage.peek(out / ".bristlenose") == []
+
+
+class TestFailuresAreSaidNotHidden:
+    """Review, 17 Nov 2026."""
+
+    def test_a_flush_that_cannot_write_says_what_was_lost_and_does_not_raise(
+        self, tmp_path: Path, caplog
+    ) -> None:
+        import logging
+
+        blocker = tmp_path / "file-not-dir"
+        blocker.write_text("x", encoding="utf-8")
+        usage.note_call(run_id="r", provider="anthropic", model="m",
+                        input_tokens=1234, output_tokens=56)
+        with caplog.at_level(logging.WARNING, logger="bristlenose.llm.usage"):
+            assert usage.flush(blocker / "sub", "r", "run") == 0
+        assert "1234" in caplog.text and "anthropic/m" in caplog.text
+
+    def test_a_count_that_is_not_a_count_is_not_reported_and_cannot_corrupt(
+        self, tmp_path: Path
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        usage.note_call(run_id="r", provider="p", model="m", input_tokens=10,
+                        output_tokens=2, cache_read_input_tokens=MagicMock())  # type: ignore[arg-type]
+        usage.note_call(run_id="r", provider="p", model="m",
+                        input_tokens="12", output_tokens=None)  # type: ignore[arg-type]
+        assert usage.flush(tmp_path, "r", "run") == 1
+        (row,) = usage.read_rows(tmp_path)
+        assert (row.calls, row.input_tokens, row.cache_read_input_tokens,
+                row.calls_without_usage) == (2, 10, 0, 1)
+
+    def test_a_row_written_before_row_ids_is_read_and_its_repeat_dropped(
+        self, tmp_path: Path
+    ) -> None:
+        old = ('{"schema_version":1,"ts":"2026-11-17T10:00:00.000Z","run_id":"r","kind":"run",'
+               '"provider":"anthropic","model":"m","calls":1,"input_tokens":5,"output_tokens":1,'
+               '"cache_read_input_tokens":0,"cache_creation_input_tokens":0,'
+               '"calls_without_usage":0}')
+        (tmp_path / usage.USAGE_FILENAME).write_text(old + "\n" + old + "\n", encoding="utf-8")
+        rows, unreadable = usage.read_rows_counted(tmp_path)
+        assert (len(rows), unreadable) == (1, 0)
+
+
+class TestMerge:
+    def _tree(self, root: Path, *row_ids: str) -> Path:
+        run_dir = root / ".bristlenose"
+        run_dir.mkdir(parents=True)
+        lines = [
+            usage.UsageRow(row_id=rid, ts="2026-11-17T10:00:00.000Z", run_id=rid, kind="run",
+                           provider="p", model="m", calls=1, input_tokens=1, output_tokens=1,
+                           cache_read_input_tokens=0, cache_creation_input_tokens=0,
+                           calls_without_usage=0).model_dump_json()
+            for rid in row_ids
+        ]
+        (run_dir / usage.USAGE_FILENAME).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return root
+
+    def test_adds_only_what_is_missing_and_again_adds_nothing(self, tmp_path: Path) -> None:
+        a = self._tree(tmp_path / "a", "1", "2", "3")
+        b = self._tree(tmp_path / "b", "1")
+        assert usage.merge_ledger(a, b) == 2
+        assert usage.merge_ledger(a, b) == 0
+        lines = (b / ".bristlenose" / usage.USAGE_FILENAME).read_text(
+            encoding="utf-8").splitlines()
+        assert len(lines) == 3, "the file holds each row once, not a repeat to be dropped"
+
+    def test_into_a_tree_with_no_ledger(self, tmp_path: Path) -> None:
+        a = self._tree(tmp_path / "a", "1")
+        (tmp_path / "b").mkdir()
+        assert usage.merge_ledger(a, tmp_path / "b") == 1

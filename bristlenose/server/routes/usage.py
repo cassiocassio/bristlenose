@@ -15,8 +15,9 @@ Three sources, because use is recorded in three places at three speeds:
   over models (so it has tokens and no price).
 
 Every figure is re-read per request, so a client polls; the ``ETag`` is a hash
-of the body, and ``If-None-Match`` answers 304, so a poll every few seconds
-costs a stat and a hash. Money is computed here from tokens at read time
+of the body, and ``If-None-Match`` answers 304. A 304 saves the transfer, not
+the work: each poll reads the ledger (tens of rows), prices it, and reads the
+events log's tail while a run is live. Money is computed here from tokens at read time
 (``money.py``): rows store no price, so a newer price table re-prices history
 and a price change never rewrites old spend. Rounding is the client's.
 
@@ -70,6 +71,8 @@ class Counts(BaseModel):
 
 
 class RowOut(Counts):
+    #: Stable per row: a client's list key.
+    row_id: str
     ts: str
     run_id: str
     kind: str
@@ -87,6 +90,10 @@ class TotalOut(Counts):
 
 class InFlightOut(BaseModel):
     source: Literal["this_server", "pipeline_run"]
+    #: When this use was last heard of: now for this server's jobs, the
+    #: progress line's own time for a pipeline run (lines come per stage and
+    #: per session, so a quiet stretch reads as an old time, not as live).
+    as_of: str
     run_id: str
     kind: str
     #: Null for a pipeline run: its progress line sums its models.
@@ -112,6 +119,9 @@ class UsageResponse(BaseModel):
     rows: list[RowOut]
     totals: list[TotalOut]
     in_flight: list[InFlightOut]
+    #: Ledger lines that could not be read (a torn line, a newer format): left
+    #: out of rows and totals, and counted here so a short total is not silent.
+    rows_unreadable: int = 0
 
 
 def _project(db: Session, project_id: int) -> Project:
@@ -142,21 +152,30 @@ def _price(
 
 
 def _row_day(ts: str) -> date:
+    """A row's UTC day. ``UsageRow`` is only built from rows that validated,
+    and every writer stamps an ISO time, so a bad one is a hand-edited file:
+    priced as of the price table's own day, never the wall clock's."""
     try:
         return date.fromisoformat(ts[:10])
     except ValueError:
-        return datetime.now(timezone.utc).date()
+        return money.table_day()
 
 
 def _live_pipeline_usage(output_dir: Path) -> InFlightOut | None:
-    """The in-flight run's use so far, from its newest progress line.
+    """The live run's use so far, from its newest progress line.
 
-    Walks the log's tail backwards: a terminus or a ``run_started`` reached
-    before any progress line means no use is on record for a live run yet.
+    Only the run that holds the PID file counts, and only its own lines: the
+    PID file is written before ``run_started``, so the log's newest line can be
+    a dead run's. Walks the tail backwards; reaching a lifecycle line of the
+    live run first means no use is on record yet. A line that will not parse
+    (a newer CLI's, a torn one) is skipped, never a 500 for the whole poll.
     """
-    from bristlenose.run_lifecycle import run_in_progress
+    from pydantic import ValidationError
 
-    if not run_in_progress(output_dir):
+    from bristlenose.run_lifecycle import live_run_id
+
+    live = live_run_id(output_dir)
+    if live is None:
         return None
     path = events_path(output_dir)
     try:
@@ -172,14 +191,18 @@ def _live_pipeline_usage(output_dir: Path) -> InFlightOut | None:
             raw = json.loads(line)
         except json.JSONDecodeError:
             continue
-        kind_of_line = raw.get("event") if isinstance(raw, dict) else None
-        if kind_of_line != "run_progress":
-            return None  # a lifecycle line first: nothing in flight on record
-        ev = RunProgressEvent.model_validate(raw)
+        if not isinstance(raw, dict) or raw.get("run_id") != live:
+            continue
+        if raw.get("event") != "run_progress":
+            return None  # the run's own lifecycle line first: nothing on record
+        try:
+            ev = RunProgressEvent.model_validate(raw)
+        except ValidationError:
+            continue
         if not ev.usage_calls:
             return None
         return InFlightOut(
-            source="pipeline_run", run_id=ev.run_id, kind=ev.kind.value,
+            source="pipeline_run", as_of=ev.ts, run_id=ev.run_id, kind=ev.kind.value,
             provider=None, model=None, calls=ev.usage_calls,
             input_tokens=ev.usage_input_tokens or 0,
             output_tokens=ev.usage_output_tokens or 0,
@@ -197,13 +220,16 @@ def build_usage(output_dir: Path, currency: str | None) -> UsageResponse:
     conv = money.conversion(asked)
     run_dir = output_dir / ".bristlenose"
 
+    # Read once: totals must add up to the rows they sit beside, and a job
+    # flushing between two reads would make them disagree.
+    ledger, unreadable = usage.read_rows_counted(run_dir)
     rows: list[RowOut] = []
-    for r in usage.read_rows(run_dir):
+    for r in ledger:
         rows.append(RowOut(**r.model_dump(exclude={"schema_version"}),
                            price=_price(r.provider, r.model, _row_day(r.ts), r, conv)))
 
     totals: list[TotalOut] = []
-    for t in usage.study_totals(usage.read_rows(run_dir)):
+    for t in usage.study_totals(ledger):
         mine = [r for r in rows if (r.provider, r.model) == (t.provider, t.model)]
         priced = [r.price for r in mine]
         status = priced[0].status if priced else "unpriced"
@@ -218,10 +244,11 @@ def build_usage(output_dir: Path, currency: str | None) -> UsageResponse:
             ),
         ))
 
-    today = datetime.now(timezone.utc).date()
+    now = datetime.now(timezone.utc)
+    today = now.date()
     in_flight: list[InFlightOut] = [
-        InFlightOut(source="this_server", **f.model_dump(),
-                    price=_price(f.provider, f.model, today, f, conv))
+        InFlightOut(source="this_server", as_of=now.isoformat(timespec="seconds"),
+                    **f.model_dump(), price=_price(f.provider, f.model, today, f, conv))
         for f in usage.peek(run_dir)
     ]
     live = _live_pipeline_usage(output_dir)
@@ -233,7 +260,7 @@ def build_usage(output_dir: Path, currency: str | None) -> UsageResponse:
         conversion=conv,
         currency_unavailable=None if conv else asked,
         price_table_version=money.price_table().price_table_version,
-        rows=rows, totals=totals, in_flight=in_flight,
+        rows=rows, totals=totals, in_flight=in_flight, rows_unreadable=unreadable,
     )
 
 

@@ -554,3 +554,28 @@ class TestTheUsageLedgerCrossesAReAnalyse:
 
         assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good"
         assert self._totals(out_dir) == (2, 401_000)
+
+    def test_repeated_failed_re_analyses_do_not_grow_the_ledger(
+        self, cli_to_pipeline, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Appending the run's whole copy on each restore doubled the file
+        every time (3, 7, 15, 31, 63 lines in review, 17 Nov 2026): a
+        researcher out of credit retries. Merged by row id, it holds each row
+        once."""
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "good")
+        self._seed_ledger(out_dir)
+
+        async def _boom(*a, **k):
+            self._spend()
+            raise RuntimeError("provider out of credit")
+
+        monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _boom)
+        for _ in range(4):
+            _run(cli_to_pipeline, input_dir)
+
+        ledger = out_dir / ".bristlenose" / "usage.jsonl"
+        lines = [ln for ln in ledger.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        assert len(lines) == 5, "the seeded row and one per failed run, each once"
+        assert self._totals(out_dir) == (5, 404_000)

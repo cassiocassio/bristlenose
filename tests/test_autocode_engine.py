@@ -1177,6 +1177,40 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def test_a_reapply_is_counted_in_the_studys_usage(
+        self, project_with_garrett, tmp_path
+    ) -> None:
+        """It runs after every completed run and on each catch-up, and until
+        17 Nov 2026 bound only `telemetry.stage(...)`: none of its spend was
+        counted (review). Bound to the project row's own output folder."""
+        from bristlenose.llm import telemetry, usage
+        from bristlenose.server.models import Project
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory)
+        self._add_quotes(db_factory, project_id, 3)
+        db = db_factory()
+        try:
+            db.get(Project, project_id).output_dir = str(tmp_path)
+            db.commit()
+        finally:
+            db.close()
+
+        async def _analyze(*a, **k):
+            telemetry.record_call(
+                provider="anthropic", request_model="test-model", response_model=None,
+                input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",
+                input_tokens=900, output_tokens=90,
+            )
+            return _make_batch_result(3, "user need", 0.85)
+
+        with _patch_llm(AsyncMock(side_effect=_analyze)):
+            asyncio.run(reapply_to_new_quotes(
+                db_factory, project_id, framework_id, _mock_settings()))
+        (row,) = usage.read_rows(tmp_path / ".bristlenose")
+        assert (row.kind, row.input_tokens) == ("autocode", 900)
+        assert row.run_id.startswith("autocode-reapply-")
+
     def test_untagged_existing_quotes_not_recoded(
         self, project_with_garrett
     ) -> None:

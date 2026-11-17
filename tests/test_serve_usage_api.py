@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import shutil
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -33,15 +32,6 @@ _CONTRACT = json.loads(
         encoding="utf-8"
     )
 )
-
-
-@pytest.fixture(autouse=True)
-def _clean_usage_state() -> Iterator[None]:
-    for state in (usage._tallies, usage._jobs, usage._flushed):
-        state.clear()
-    yield
-    for state in (usage._tallies, usage._jobs, usage._flushed):
-        state.clear()
 
 
 @pytest.fixture()
@@ -192,8 +182,9 @@ class TestLive:
             usage_calls=4, usage_input_tokens=9_000, usage_output_tokens=900,
             usage_cache_read_input_tokens=0, usage_cache_creation_input_tokens=0,
         ))
-        monkeypatch.setattr("bristlenose.run_lifecycle.run_in_progress", lambda _o: True)
+        monkeypatch.setattr("bristlenose.run_lifecycle.live_run_id", lambda _o: "live")
         (live,) = client.get("/api/projects/1/usage").json()["in_flight"]
+        assert live["as_of"] == now, "a pipeline's use is as of its last line, not now"
         assert (live["source"], live["run_id"], live["input_tokens"]) == (
             "pipeline_run", "live", 9_000,
         )
@@ -241,3 +232,52 @@ class TestPolling:
         assert client.get(
             "/api/projects/1/usage", headers={"If-None-Match": etag}
         ).status_code == 200
+
+
+class TestTheLiveRunIsTheOneThatHoldsTheStudy:
+    """Review, 17 Nov 2026: the PID file is written before `run_started`, a
+    dead run's lines stay in the log, and a line from a newer or older
+    Bristlenose may not parse."""
+
+    def _log(self, out: Path, *events) -> None:
+        ev_file = events_path(out)
+        ev_file.parent.mkdir(parents=True, exist_ok=True)
+        for ev in events:
+            append_event(ev_file, ev)
+
+    def _progress(self, run_id: str, calls: int) -> RunProgressEvent:
+        now = _now_iso()
+        return RunProgressEvent(ts=now, run_id=run_id, kind=KindEnum.RUN, started_at=now,
+                                usage_calls=calls, usage_input_tokens=calls * 100,
+                                usage_output_tokens=calls)
+
+    def test_a_dead_runs_last_line_is_not_the_live_runs(self, study, monkeypatch) -> None:
+        client, out = study
+        self._log(out, self._progress("dead", 9))
+        monkeypatch.setattr("bristlenose.run_lifecycle.live_run_id", lambda _o: "new")
+        assert client.get("/api/projects/1/usage").json()["in_flight"] == []
+
+    def test_a_line_that_will_not_parse_is_skipped_not_a_500(
+        self, study, monkeypatch
+    ) -> None:
+        client, out = study
+        self._log(out, self._progress("live", 2))
+        with events_path(out).open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"event": "run_progress", "run_id": "live",
+                                "kind": "a-kind-from-the-future"}) + "\n")
+        monkeypatch.setattr("bristlenose.run_lifecycle.live_run_id", lambda _o: "live")
+        r = client.get("/api/projects/1/usage")
+        assert r.status_code == 200
+        (live,) = r.json()["in_flight"]
+        assert live["calls"] == 2, "the newest readable line"
+
+    def test_unreadable_ledger_lines_are_counted_not_hidden(self, study) -> None:
+        client, out = study
+        _ledger(out, _row(), '{"schema_version": 1, "torn', '{"not": "a row"}')
+        body = client.get("/api/projects/1/usage").json()
+        assert (len(body["rows"]), body["rows_unreadable"]) == (1, 2)
+
+    def test_rows_carry_their_id(self, study) -> None:
+        client, out = study
+        _ledger(out, _row())
+        assert client.get("/api/projects/1/usage").json()["rows"][0]["row_id"]

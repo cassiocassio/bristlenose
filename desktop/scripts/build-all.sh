@@ -526,6 +526,15 @@ bn_step_start 5 Build "Xcode archive" \
     log="$ARCHIVE_LOG" \
     narrative="Compiles + signs the native app shell. Opaque subprocess — tail the log for the live stream."
 _bn_t5=$SECONDS
+# BA_WHISPER turns the Background Assets adapter on in THIS archive only (the app target and the
+# store configuration; never the .dmg lane, whose build-dmg.sh does not read this). Off unless the
+# owner asks for an evidence build with BN_BA_WHISPER=1: until a TestFlight build has shown the
+# pack arrive, the committed default stays dark.
+BA_FLAG_ARGS=()
+if [ "${BN_BA_WHISPER:-0}" = "1" ]; then
+    BA_FLAG_ARGS=('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) BA_WHISPER')
+    echo "note: BN_BA_WHISPER=1, so this archive compiles the Background Assets adapter in"
+fi
 if ! xcodebuild \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
     -scheme "Bristlenose Store" \
@@ -533,6 +542,7 @@ if ! xcodebuild \
     -destination "generic/platform=macOS" \
     -archivePath "$ARCHIVE_PATH" \
     BN_EMBED_BA=YES \
+    ${BA_FLAG_ARGS[@]+"${BA_FLAG_ARGS[@]}"} \
     archive \
     > "$ARCHIVE_LOG" 2>&1; then
     bn_step_fail 5 detail="xcodebuild archive failed"

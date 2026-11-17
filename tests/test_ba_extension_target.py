@@ -199,6 +199,16 @@ class TestTheEmbedIsGatedAndOnlyTheStoreSchemeBuildsIt:
         dmg = (_DESKTOP / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
         assert "Bristlenose Store" not in dmg and "BN_EMBED_BA" not in dmg, "the .dmg lane never embeds"
 
+    def test_the_store_archive_can_define_the_flag_but_only_on_request(self) -> None:
+        """17 Nov: an evidence build can turn the adapter on (BN_BA_WHISPER=1), the default stays dark,
+        and the .dmg lane has no way to."""
+        text = _BUILD_ALL.read_text(encoding="utf-8")
+        assert 'BN_BA_WHISPER:-0}" = "1"' in text, "off unless asked"
+        assert "SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) BA_WHISPER" in text
+        assert text.count("BA_WHISPER'") == 1, "defined once, in the store archive's argument list"
+        dmg = (_DESKTOP / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
+        assert "BA_WHISPER" not in dmg
+
     def test_the_compile_flag_is_defined_nowhere_in_the_project(self) -> None:
         """Owner, 16 Nov 2026: BA_WHISPER stays undefined until a TestFlight build has shown the
         pack arrive. Then a one-line change in the store configuration turns the adapter on."""

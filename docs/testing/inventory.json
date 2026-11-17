@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 10245
+        "tests": 10777
       },
       {
         "basis": "test files",
-        "files": 225,
+        "files": 226,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -30,19 +30,19 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 251,
+        "files": 269,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3038
+        "tests": 3312
       },
       {
         "basis": "spec files",
-        "files": 11,
+        "files": 12,
         "kind": "browser e2e",
         "runner": "playwright",
-        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
+        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
         "suite": "playwright",
         "tests": null
       }
@@ -258,7 +258,7 @@
         "basis": "spec files",
         "kind": "browser e2e",
         "runner": "playwright",
-        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
+        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
         "suite": "playwright"
       }
     ],
@@ -868,6 +868,13 @@
           {
             "calls": null,
             "id": "publish-stable",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "explain-failure",
             "job_colour": "hard",
             "notable_steps": [],
             "runs_on": "ubuntu-latest"

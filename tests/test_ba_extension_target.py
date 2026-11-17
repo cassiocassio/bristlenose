@@ -81,6 +81,9 @@ class TestTheExtensionFiles:
             "EXExtensionPointIdentifier": "com.apple.background-asset-downloader-extension"
         }, "no principal class: StoreDownloaderExtension is the whole extension"
         assert info["CFBundlePackageType"] == "XPC!"
+        # Apple's upload refuses an extension with no display name (ITMS-90360,
+        # found 17 Nov by the first real delivery).
+        assert info["CFBundleDisplayName"].strip()
         # Version, build and floor come from build settings, so there is one place to bump them.
         assert info["CFBundleShortVersionString"] == "$(MARKETING_VERSION)"
         assert info["CFBundleVersion"] == "$(CURRENT_PROJECT_VERSION)"

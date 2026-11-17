@@ -1,7 +1,6 @@
 ---
 status: current
-last-trued: 2026-09-20
-last-trued: 2026-10-11
+last-trued: 2026-11-17
 trued-against: release.sh's ten verbs incl. ready/stats/board/run/retry/recover; CHANNELS_FOLLOW followers and after-<channel> holds in verify; the RELEASE_STEPS_FILE credential seam; the pypi hold removed 23 Aug
 ---
 
@@ -107,7 +106,7 @@ independent ways, all reproduced during review:**
 
 **Conclusion: `report.sh` is a presentation protocol and should stay one.** It
 is good at its job (`PIPESTATUS[0]` is correct on precisely the hazard the
-release log records; the EXIT trap does not perturb the script's status). If
+release log records; the EXIT trap does not perturb the script's status — *true only since 9 Nov 2026*: until `6ce284cc6`, `bn_trap_fail` returned 1 under `set -e` and replaced exit 2 or 3 with 1; now `report.sh:173-180`, pinned by `desktop/scripts/test-report-exit-status.sh`). If
 Tier B is ever built, **the driver is the sole event producer** — it writes the
 log itself from what it observes, and never parses the `@bn` stream.
 
@@ -351,7 +350,7 @@ done"* for a release eight steps in.
 **Exit-code vocabulary**, because the first draft had `held` and `complete` both
 exiting 0, and `verify` exiting 1 on what it called a normal outcome:
 `0` complete · `75` held (`EX_TEMPFAIL`) · `1` failed · `2` lock held · `3`
-stranded. *Held is not an error* stays a **presentation** rule.
+stranded. *(17 Nov 2026: this draft list is superseded by §19, which is authoritative: `0` · `1` · `2` usage or lock held · `3` cannot safely proceed (irreversible guard) · `75` verify pending.)* *Held is not an error* stays a **presentation** rule.
 
 **Tamper-evidence is separable from signing.** Signing (in-toto proper) is
 correctly out of scope for a single-maintainer laptop and always will be. A
@@ -470,6 +469,8 @@ Five rules:
 **`run` = resume needs no defence beyond an internal one:** `bristlenose run
 <folder>` already resumes from its own event log. Same verb, same laptop, same
 semantics.
+
+> **Closed (17 Nov 2026 audit):** `cmd_retry` resets any step to pending (`release.sh`, `cmd_retry`) and `abandon` is in the dispatch; the ten verbs are listed at the top of this section. The two gaps below are the pre-Tier-B reading, kept as the baseline.
 
 **Gap to name or refuse:** if `run` always resumes and `retry` is scoped to
 stranded steps, there is no verb for *redo a step that already succeeded* — a
@@ -614,7 +615,7 @@ reaches that machine or the artefacts it signs.
 
 Say this first, because it changes which chains are worth an attacker's time.
 
-- **No self-hosted runners.** All **eleven** workflows are `ubuntu-latest` /
+- **No self-hosted runners.** All **thirteen** workflows (eleven when this was written; `mac-release-archive.yml` and `windows-installer.yml` came on 8 Oct) are `ubuntu-latest` /
   `macos-latest` / `macos-15` / `macos-26`. This closes the worst class outright
   — a fork PR cannot reach hardware. _(Was "all nine" and three runner labels;
   `mockup-register.yml` and `ratchet-tighten.yml` have since joined, and the Mac
@@ -623,7 +624,7 @@ Say this first, because it changes which chains are worth an attacker's time.
   job gates on `github.event_name == 'workflow_dispatch'`;
   `install-test.yml`'s key-bearing `full-run` gates on `schedule ||
   workflow_dispatch`. Both carry the reasoning inline.
-- **`contents: read` at top level on 11 of 11 workflows**, with per-job
+- **`contents: read` at top level on 13 of 13 workflows** (11 of 11 when written), with per-job
   escalation. _(Was "8 of 9"; the gap named below has been closed — every
   workflow now carries a column-0 `permissions:` block. Re-measured 20 Sep
   2026.)_
@@ -1183,6 +1184,15 @@ run leaves nothing — the harness lesson being that any test invoking an
 interactive path must close stdin or it is a hang waiting for its contract to
 change.
 
+
+### Guards added after this section was written (17 Nov 2026 audit)
+
+Four shipped guards share one framing, *refuse before or at the point of use*, and none was described here:
+
+- **`desktop/scripts/check-build-env.sh [--signed]`**: first thing in `build-all.sh` step 1 (`a6b7895e2`, 17 Nov). Five signed builds had failed minutes in on setup (no `[release]` extra, a spaced worktree path, no `GeneratedBuildInfo.swift`, no `node_modules`). A unit test cannot catch it because the fault is the checkout, not the code. **Known gap:** it runs inside `build-all.sh`, after `push-main` and `strict-ci` in `release.sh run`, and the release preflight's source-gate loop (`check-release-ready.sh`) does not include it. §9's own rule (resolve every capability above the typed confirmation) argues for adding it there: an owner decision, not yet made.
+- **`scripts/check-release-freeze.sh` / `BN_RELEASE_FREEZE_OK`**: a pre-commit hook that refuses commits to `main` while a `release.sh run` is live (6 Oct).
+- **`scripts/snap-store-status.py`**, wired into `probe_snap` in `verify-channels.sh` (11 Nov): a failed Snap build says whether the Store is down.
+- **`check-gate-proofs.py`, `tests/test_gate_selftests.py`, `docs/testing/gate-proofs.json`** (9 Nov): which gates have a proof they can fail.
 
 ## 20 · If this ever leaves this repo — notes for a future adopter
 

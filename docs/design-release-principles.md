@@ -195,7 +195,7 @@ noticing.*
 
 ## What to measure
 
-*The ledgers already carry most of this; almost none of it is currently read.*
+*The ledgers already carry most of this; almost none of it is currently read.* **(Since 24 Sep 2026 `release.sh stats`, `scripts/release-stats.py`, and the board's History tab read attempts per step, clean-run rate and failure class; see `design-release-board.md` §9. The sentence above is the 23 Sep position.)**
 
 - **Attempts per step per release** — the primary indicator, already tabulated
   per release in `docs/release-log.md`.

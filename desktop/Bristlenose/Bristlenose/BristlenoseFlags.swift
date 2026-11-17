@@ -116,7 +116,12 @@ enum BristlenoseFlags {
     /// which is never touched when this is off. Only means something in a build compiled with
     /// `BA_WHISPER`; the Developer-ID `.dmg` never has it.
     ///
-    /// Turn off with: `defaults write app.bristlenose BristlenoseBackgroundAssets -bool NO`
+    /// Turn off with the app QUIT, writing the container's plist by path (the sandboxed app reads
+    /// `~/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose.plist`):
+    /// `defaults write ~/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose BristlenoseBackgroundAssets -bool NO`.
+    /// The by-name form `defaults write app.bristlenose …` fails on a TestFlight build ("Could not
+    /// write domain"), and on macOS 27 the container itself may refuse Terminal until Terminal has
+    /// Full Disk Access or App Management. UNTESTED on a signed build (17 Nov 2026).
     static let backgroundAssetsKey = "BristlenoseBackgroundAssets"
     static var backgroundAssets: Bool { backgroundAssets(in: .standard) }
 

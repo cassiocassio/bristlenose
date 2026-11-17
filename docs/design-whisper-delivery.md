@@ -1,5 +1,5 @@
 ---
-status: built on unmerged branches, proven on one TestFlight evidence build; not yet reviewed by App Review
+status: the design for the first App Store submission (24 Nov 2026); built on unmerged branches, proven on one TestFlight evidence build; not yet reviewed by App Review
 date: 17 Nov 2026
 trued-against: branches `ba-whisper-build` and `ba-whisper-embed` (tip `1c3e5f027`; build 6532 was built from an earlier commit, `e9f3617ff`, in a clone), main at `a6b7895e2`, TestFlight 0.46.0 build 6532
 ---
@@ -24,7 +24,7 @@ A 1.5 GB model should not sit inside an app bundle that every user downloads whe
 | Consent | Size shown and Download / Not Now asked before the app starts the download by itself | Guideline 4.2.3(ii). See §7. |
 | Copy on the Background Assets path | Never promises or denies that a download resumes | The app trusts the operating system's contract and does not describe behaviour it does not control. |
 
-Status. The Background Assets code is on two unmerged branches (`ba-whisper-build`, `ba-whisper-embed`). Main carries the Hugging Face path, the size prompt (`2fcbaaccc`) and Apple's engine. Whether the first submission on 24 Nov 2026 includes Background Assets, or ships the Hugging Face path alone, is the owner's decision and is open. This document describes the Background Assets design as built.
+Status. The owner's strategy (17 Nov 2026) is to submit on 24 Nov 2026 with Background Assets as the preferred delivery, Apple's speech model as the instant first study where macOS 26 provides it, and the app's own Hugging Face download wherever the OS is too old or Background Assets fails. The aim for every macOS version is the same four properties: the highest transcription quality (Whisper large-v3-turbo), an immediate start, a fast initial download, and the platform's native mechanism wherever one exists. The Background Assets code is on two unmerged branches (`ba-whisper-build`, `ba-whisper-embed`); main carries the Hugging Face path, the size prompt (`2fcbaaccc`) and Apple's engine. If App Review rejects the Background Assets design, the owner decides then what to ship; this document does not pre-decide it. §11 lists what is still open, and the open items in it are the work to close before submission.
 
 ## 2. The three engines and which runs when
 

@@ -107,6 +107,9 @@ logger = logging.getLogger(__name__)
 _APPEND_ONLY = (
     Path(".bristlenose") / "pipeline-events.jsonl",
     Path(".bristlenose") / "bristlenose.log",
+    # The study's token ledger. The run's copy starts with the rows carried
+    # into it, so this append repeats them; `usage.read_rows` drops a repeat.
+    Path(".bristlenose") / "usage.jsonl",
 )
 
 #: Pipeline scratch, not part of the report. Dropped rather than stashed — see

@@ -14,6 +14,7 @@ its local-only reason).
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
@@ -204,6 +205,23 @@ def _load_settings_for(request: Request) -> object:
     return load_settings()
 
 
+def _builder_job(request: Request, project_id: int) -> AbstractContextManager[None]:
+    """One builder call as one job: bound so its calls are recorded and counted.
+
+    The engine binds only `telemetry.stage(...)`, which labels a row and gives
+    it nowhere to go; until this, no builder call reached llm-calls.jsonl or the
+    study's usage ledger (docs/design-llm-usage.md).
+    """
+    from bristlenose.events import new_run_id
+    from bristlenose.llm import telemetry
+
+    return telemetry.serve_run_context(
+        getattr(request.app.state, "project_dir", None),
+        f"codebook-builder-{project_id}-{new_run_id()}",
+        "codebook_builder",
+    )
+
+
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
@@ -262,7 +280,8 @@ async def synthesize(
         db.close()
 
     settings = _load_settings_for(request)
-    draft = await cb.synthesize_prompt(tag_name, examples, settings)  # type: ignore[arg-type]
+    with _builder_job(request, project_id):
+        draft = await cb.synthesize_prompt(tag_name, examples, settings)  # type: ignore[arg-type]
 
     db = _get_db(request)
     try:
@@ -366,10 +385,11 @@ async def find_candidates(
         db.close()
 
     settings = _load_settings_for(request)
-    scan = await cb.find_candidates(
-        tag_name, draft, pool, settings,  # type: ignore[arg-type]
-        min_confidence=body.min_confidence,
-    )
+    with _builder_job(request, project_id):
+        scan = await cb.find_candidates(
+            tag_name, draft, pool, settings,  # type: ignore[arg-type]
+            min_confidence=body.min_confidence,
+        )
     out = [
         CandidateOut(
             quote_id=dom_by_id.get(c.db_id, ""),
@@ -468,10 +488,11 @@ async def submit_decisions(
         db.close()
 
     settings = _load_settings_for(request)
-    draft = await cb.synthesize_prompt(
-        tag_name, examples, settings,  # type: ignore[arg-type]
-        current=current, accepted=accepted_fb, rejected=rejected_fb,
-    )
+    with _builder_job(request, project_id):
+        draft = await cb.synthesize_prompt(
+            tag_name, examples, settings,  # type: ignore[arg-type]
+            current=current, accepted=accepted_fb, rejected=rejected_fb,
+        )
 
     db = _get_db(request)
     try:

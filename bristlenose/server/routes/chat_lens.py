@@ -82,12 +82,23 @@ async def chat_lens_ask(request: Request, body: _AskRequest) -> dict[str, object
                 status_code=404, detail=f"Project {body.project_id} not found"
             )
         try:
+            from bristlenose.events import new_run_id
+            from bristlenose.llm import telemetry
             from bristlenose.server.grounding import delivery_coverage
 
-            result = await ask_question(
-                body.question, settings, db, body.project_id,
-                coverage=delivery_coverage(request.app.state),
-            )
+            # The question and its support check are one job. `ask_question`
+            # binds only `telemetry.stage(...)`, which labels a row and gives it
+            # nowhere to go: until this, every chat-lens call was missing from
+            # llm-calls.jsonl, and no question counted toward the study's usage.
+            with telemetry.serve_run_context(
+                getattr(request.app.state, "project_dir", None),
+                f"chat-{body.project_id}-{new_run_id()}",
+                "chat_lens",
+            ):
+                result = await ask_question(
+                    body.question, settings, db, body.project_id,
+                    coverage=delivery_coverage(request.app.state),
+                )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:

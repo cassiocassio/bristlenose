@@ -207,7 +207,7 @@ async def run_autocode_job(
     the duration of the job so per-call rows land in
     ``<output_dir>/.bristlenose/llm-calls.jsonl``.
     """
-    from bristlenose.llm import telemetry
+    from bristlenose.llm import telemetry, usage
     from bristlenose.llm.client import LLMClient
     from bristlenose.llm.prompts import get_prompt_template
     from bristlenose.llm.structured import AutoCodeBatchResult
@@ -622,6 +622,8 @@ async def run_autocode_job(
             except Exception:
                 logger.debug("telemetry trim failed", exc_info=True)
             telemetry.reset_run_context(telemetry_tokens)
+            # A cancelled or failed pass spent what it spent (docs/design-llm-usage.md).
+            usage.flush(run_dir, run_id, "autocode")
 
 
 # Default accept cutoff when a framework was applied without an explicit

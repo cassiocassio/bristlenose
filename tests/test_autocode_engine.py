@@ -2533,3 +2533,47 @@ class TestReconcileOrphanedJobs:
         db_session.refresh(j2)
         assert j1.status == "failed"
         assert j2.status == "running"  # other project untouched
+
+
+class TestAutoCodePassesAreCounted:
+    """Every pass's tokens reach the study's usage ledger, a failed pass's too
+    (docs/design-llm-usage.md). Pinned at the job, not the helper."""
+
+    def _spending(self, reply):
+        async def _analyze(*a, **k):
+            from bristlenose.llm import telemetry
+
+            telemetry.record_call(
+                provider="anthropic", request_model="test-model", response_model=None,
+                input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",
+                input_tokens=700, output_tokens=70,
+            )
+            if isinstance(reply, BaseException):
+                raise reply
+            return reply
+        return _analyze
+
+    def _rows(self, tmp_path):
+        from bristlenose.llm import usage
+
+        return usage.read_rows(tmp_path / "bristlenose-output" / ".bristlenose")
+
+    def test_a_completed_pass(self, project_with_garrett, tmp_path) -> None:
+        project_id, framework_id, db_factory = project_with_garrett
+        reply = _make_batch_result(10, "user need", 0.85)
+        with _patch_llm(AsyncMock(side_effect=self._spending(reply))):
+            asyncio.run(run_autocode_job(
+                db_factory, project_id, framework_id, _mock_settings(), project_dir=tmp_path,
+            ))
+        (row,) = self._rows(tmp_path)
+        assert row.kind == "autocode"
+        assert row.input_tokens == 700 * row.calls and row.calls >= 1
+
+    def test_a_pass_whose_every_batch_failed(self, project_with_garrett, tmp_path) -> None:
+        project_id, framework_id, db_factory = project_with_garrett
+        with _patch_llm(AsyncMock(side_effect=self._spending(RuntimeError("400 credit")))):
+            asyncio.run(run_autocode_job(
+                db_factory, project_id, framework_id, _mock_settings(), project_dir=tmp_path,
+            ))
+        (row,) = self._rows(tmp_path)
+        assert row.calls >= 1, "a failed pass still paid for its calls"

@@ -1745,6 +1745,11 @@ def run(
             study_id = study_marker.read(output_dir)
             study_copied_from = study_marker.copied_from(output_dir)
             carried_starts = starts_by_content(output_dir)
+            # The study's token ledger crosses too: a Re-analyse is the most
+            # expensive act a study has, and its total must not restart at it.
+            from bristlenose.llm import usage
+
+            carried_usage = usage.carry_bytes(output_dir)
             output_stash = output_backup.stash(
                 output_dir, previous_backup_is_spent=_reclaim.report_is_back
             )
@@ -1764,6 +1769,17 @@ def run(
 
                     logging.getLogger("bristlenose").warning(
                         "could not carry the study id or start times into the new output: %s", exc
+                    )
+                # Its own try: a failed ledger carry must not cost the study id,
+                # and the other way round.
+                try:
+                    usage.write_carried(output_dir, carried_usage)
+                except OSError as exc:
+                    import logging
+
+                    logging.getLogger("bristlenose").warning(
+                        "could not carry the usage ledger into the new output — "
+                        "earlier runs' tokens are missing from the study's total: %s", exc
                     )
             if output_stash is not None:
                 console.print(f"\n[dim]Cleaned {_text(output_dir)}[/dim]")

@@ -127,8 +127,8 @@ def reset_run_context(tokens: tuple[object, object]) -> None:
 
 
 @contextmanager
-def serve_run_context(project_dir: Path | None, run_id: str) -> Iterator[None]:
-    """Bind the run context for a SERVE-time LLM call, then restore it.
+def serve_run_context(project_dir: Path | None, run_id: str, kind: str) -> Iterator[None]:
+    """Bind the run context for a SERVE-time LLM job, then count it and restore.
 
     Serve mode has no pipeline run to inherit from, so anything that calls an
     LLM from a request has to bind its own — and if it does not, `record_call`
@@ -144,19 +144,27 @@ def serve_run_context(project_dir: Path | None, run_id: str) -> Iterator[None]:
     started with a project — and yields without binding, which restores the old
     silent-skip for that case alone.
 
+    On the way out, success or failure, the job's tokens go to the study's
+    usage ledger as one row per model (``usage.flush``), labelled *kind*. A
+    failed job spent what it spent.
+
     NB `server/autocode.py` still inlines this; it predates the helper and works.
-    A third serve-time LLM caller should use this rather than a third copy.
+    A new serve-time LLM caller should use this rather than another copy.
     """
     if project_dir is None:
         yield
         return
     from bristlenose.output_paths import project_output_dir
 
-    tokens = set_run_context(run_id, project_output_dir(project_dir) / ".bristlenose")
+    from . import usage
+
+    target = project_output_dir(project_dir) / ".bristlenose"
+    tokens = set_run_context(run_id, target)
     try:
         yield
     finally:
         reset_run_context(tokens)
+        usage.flush(target, run_id, kind)
 
 
 @contextmanager
@@ -313,7 +321,26 @@ def record_call(
     the model is unpriced (an Azure deployment name, a local Ollama tag) or
     when no baseline covers the cohort; the token counts are still worth
     recording, so that is not an error.
+
+    The call is also counted in the study's usage ledger (``usage.note_call``)
+    whenever a run is bound, BEFORE the kill switch and the stage check: the
+    ledger carries nothing that identifies anyone, and a missing ``stage(...)``
+    wrapper must not make a researcher's tokens disappear from their total.
     """
+    rid = run_id if run_id is not None else _run_id.get()
+    if rid is not None:
+        from . import usage
+
+        usage.note_call(
+            run_id=rid,
+            provider=provider,
+            model=request_model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
+        )
+
     if not _telemetry_enabled():
         return
 
@@ -322,7 +349,6 @@ def record_call(
         logger.debug("record_call: no _run_dir contextvar set, skipping")
         return
 
-    rid = run_id if run_id is not None else _run_id.get()
     if rid is None:
         logger.debug("record_call: no _run_id contextvar set, skipping")
         return

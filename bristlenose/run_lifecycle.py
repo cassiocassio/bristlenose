@@ -65,7 +65,7 @@ from bristlenose.events import (
     read_events,
 )
 from bristlenose.i18n import t_in
-from bristlenose.llm import telemetry
+from bristlenose.llm import telemetry, usage
 from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
 from bristlenose.utils.fs import open_private
 from bristlenose.utils.machine_identity import friendly_machine_name, machine_id
@@ -1369,3 +1369,8 @@ def run_lifecycle(
         # then no contextvar state to restore.
         if telemetry_tokens is not None:
             telemetry.reset_run_context(telemetry_tokens)
+            # Here, once, rather than beside each terminus: a failed or stopped
+            # run spent tokens too, and `handle.set_cost` is only called (in
+            # cli.py) for one that returned. Never raises
+            # (docs/design-llm-usage.md).
+            usage.flush(output_dir / ".bristlenose", run_id, kind.value)

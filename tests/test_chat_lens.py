@@ -684,3 +684,40 @@ def test_a_partial_delivery_puts_a_coverage_note_in_the_prompt() -> None:
             AuthTestClient(app).post("/api/dev/chat-lens/ask", json={"question": "q"})
         prompt = mock.await_args_list[0].kwargs["user_prompt"]
         assert ("Coverage note: this analysis is still running" in prompt) is expected
+
+
+class TestQuestionsAreCounted:
+    def test_a_question_reaches_the_call_log_and_the_usage_ledger(
+        self, tmp_path: Path
+    ) -> None:
+        """Until 17 Nov 2026 the route bound only `telemetry.stage(...)`, which
+        labels a row and gives it nowhere to go: every chat-lens call was missing
+        from llm-calls.jsonl, and no question counted toward the study's usage
+        (docs/design-llm-usage.md)."""
+        from bristlenose.llm import telemetry, usage
+
+        app = _make_app()
+        app.state.project_dir = tmp_path  # not the fixture folder: this writes
+        replies = iter([
+            _answer([{"text": "Navigation confused people.", "quote_indices": [2]}]),
+            _support([(0, True)]),
+        ])
+
+        async def _analyze(*a, **k):
+            # What the real client does after each call to the provider.
+            telemetry.record_call(
+                provider="anthropic", request_model="test-model", response_model=None,
+                input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",
+                input_tokens=500, output_tokens=50,
+            )
+            return next(replies)
+
+        with _patch_llm(AsyncMock(side_effect=_analyze)):
+            r = AuthTestClient(app).post(
+                "/api/dev/chat-lens/ask", json={"question": "What confused people?"}
+            )
+        assert r.status_code == 200, r.text
+        run_dir = tmp_path / "bristlenose-output" / ".bristlenose"
+        (row,) = usage.read_rows(run_dir)
+        assert (row.kind, row.calls, row.input_tokens) == ("chat_lens", 2, 1000)
+        assert (run_dir / telemetry.JSONL_FILENAME).exists()

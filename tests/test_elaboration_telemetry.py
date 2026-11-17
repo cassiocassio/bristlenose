@@ -48,7 +48,7 @@ class TestServeRunContext:
     def test_a_call_inside_it_lands_in_the_project_log(self, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"
         out.mkdir()
-        with telemetry.serve_run_context(tmp_path, "elaboration-1-norman-x"):
+        with telemetry.serve_run_context(tmp_path, "elaboration-1-norman-x", "elaboration"):
             _record_one()
 
         log = out / ".bristlenose" / "llm-calls.jsonl"
@@ -63,7 +63,7 @@ class TestServeRunContext:
         shareable output root — same rule as `pii_summary.txt`."""
         out = tmp_path / "bristlenose-output"
         out.mkdir()
-        with telemetry.serve_run_context(tmp_path, "r"):
+        with telemetry.serve_run_context(tmp_path, "r", "elaboration"):
             _record_one()
 
         assert (out / ".bristlenose" / "llm-calls.jsonl").exists()
@@ -78,21 +78,21 @@ class TestServeRunContext:
         a log (a bare folder is a project root whose output does not exist yet)."""
         out = tmp_path / "bristlenose-output"
         out.mkdir()
-        with telemetry.serve_run_context(out, "r"):
+        with telemetry.serve_run_context(out, "r", "elaboration"):
             _record_one()
         assert (out / ".bristlenose" / "llm-calls.jsonl").exists()
 
     def test_no_project_dir_is_not_an_error(self, tmp_path: Path) -> None:
         """The app can run without a project. That must not raise, and must not
         invent a location — it restores the old silent skip for that case only."""
-        with telemetry.serve_run_context(None, "r"):
+        with telemetry.serve_run_context(None, "r", "elaboration"):
             _record_one()
         assert list(tmp_path.rglob("llm-calls.jsonl")) == []
 
     def test_it_restores_the_previous_context(self, tmp_path: Path) -> None:
         """A leaked contextvar sends the NEXT surface's rows into this project."""
         assert telemetry._run_dir.get() is None
-        with telemetry.serve_run_context(tmp_path, "r"):
+        with telemetry.serve_run_context(tmp_path, "r", "elaboration"):
             assert telemetry._run_dir.get() is not None
         assert telemetry._run_dir.get() is None, "context leaked past the block"
 
@@ -116,7 +116,7 @@ class TestTheThreeGuards:
 
     def test_run_context_alone_records_nothing(self, tmp_path: Path) -> None:
         """The mirror image, and the trap in writing a test for the fix."""
-        with telemetry.serve_run_context(tmp_path, "r"):
+        with telemetry.serve_run_context(tmp_path, "r", "elaboration"):
             telemetry.record_call(
                 provider="anthropic", request_model="m", response_model=None,
                 input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",

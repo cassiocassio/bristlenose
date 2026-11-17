@@ -680,3 +680,30 @@ class TestCodebookLab:
 
         tags = AuthTestClient(app).get("/api/dev/codebook-lab/tags").json()["tags"]
         assert "unlinked-tag" in {t["name"] for t in tags}
+
+
+class TestBuilderCallsAreCounted:
+    def test_a_synthesis_reaches_the_usage_ledger(
+        self, client_with_coded_tag, tmp_path: Path
+    ) -> None:
+        """The engine binds only `telemetry.stage(...)`; until 17 Nov 2026 no
+        builder call reached llm-calls.jsonl or the study's usage
+        (docs/design-llm-usage.md)."""
+        from bristlenose.llm import telemetry, usage
+
+        client, tag_id = client_with_coded_tag
+        client.app.state.project_dir = tmp_path  # not the fixture folder: this writes
+
+        async def _analyze(*a, **k):
+            telemetry.record_call(
+                provider="anthropic", request_model="test-model", response_model=None,
+                input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",
+                input_tokens=300, output_tokens=30,
+            )
+            return _synth_result()
+
+        with _patch_llm(AsyncMock(side_effect=_analyze)):
+            resp = client.post(f"/api/projects/1/codebook/tags/{tag_id}/builder/synthesize")
+        assert resp.status_code == 200, resp.text
+        (row,) = usage.read_rows(tmp_path / "bristlenose-output" / ".bristlenose")
+        assert (row.kind, row.input_tokens) == ("codebook_builder", 300)

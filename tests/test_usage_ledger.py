@@ -36,9 +36,11 @@ _CONTRACT = json.loads(
 @pytest.fixture(autouse=True)
 def _no_tallies_left_over() -> Iterator[None]:
     """The tally is process-wide; a test must neither inherit nor leave one."""
-    usage._tallies.clear()
+    for state in (usage._tallies, usage._jobs, usage._flushed):
+        state.clear()
     yield
-    usage._tallies.clear()
+    for state in (usage._tallies, usage._jobs, usage._flushed):
+        state.clear()
 
 
 def _call(input_tokens: int | None = 1000, output_tokens: int | None = 200, **kw) -> None:
@@ -229,3 +231,189 @@ class TestServeJobsAreCounted:
                 raise ValueError("parse failed after the call was paid for")
         (row,) = usage.read_rows(out / ".bristlenose")
         assert (row.run_id, row.kind) == ("job-1", "elaboration")
+
+
+# ---------------------------------------------------------------------------
+# One meaning across providers (contract `field_meanings`)
+# ---------------------------------------------------------------------------
+
+
+class TestOneMeaningAcrossProviders:
+    def test_a_cached_share_counted_inside_the_prompt_moves_to_cache_read(
+        self, tmp_path: Path
+    ) -> None:
+        usage.note_call(run_id="r", provider="openai", model="gpt-4o",
+                        input_tokens=1000, output_tokens=10, cached_input_tokens_included=800)
+        usage.flush(tmp_path, "r", "run")
+        (row,) = usage.read_rows(tmp_path)
+        assert (row.input_tokens, row.cache_read_input_tokens) == (200, 800)
+
+    def test_a_cached_share_larger_than_the_prompt_cannot_go_negative(
+        self, tmp_path: Path
+    ) -> None:
+        usage.note_call(run_id="r", provider="google", model="m",
+                        input_tokens=100, output_tokens=1, cached_input_tokens_included=500)
+        usage.flush(tmp_path, "r", "run")
+        (row,) = usage.read_rows(tmp_path)
+        assert (row.input_tokens, row.cache_read_input_tokens) == (0, 100)
+
+    @pytest.mark.asyncio
+    async def test_gemini_thinking_is_billed_output_and_its_cache_is_read(
+        self, tmp_path: Path
+    ) -> None:
+        """Until 17 Nov 2026 `candidates_token_count` alone was the output:
+        Gemini bills thinking as output and reports it apart, so every Gemini
+        count and cost — the CLI's too — was short."""
+        from types import SimpleNamespace
+
+        from pydantic import BaseModel
+
+        from bristlenose.llm.client import LLMClient
+        from tests.test_gemini import _google_settings
+
+        class R(BaseModel):
+            answer: str
+
+        meta = SimpleNamespace(prompt_token_count=1000, candidates_token_count=100,
+                               thoughts_token_count=400, cached_content_token_count=600)
+        response = SimpleNamespace(text='{"answer": "x"}', usage_metadata=meta,
+                                   candidates=[], model_version="gemini-2.5-flash",
+                                   prompt_feedback=None)
+
+        async def _generate(*a, **k):
+            return response
+
+        client = LLMClient(_google_settings())
+        client._google_client = SimpleNamespace(
+            aio=SimpleNamespace(models=SimpleNamespace(generate_content=_generate))
+        )
+        tokens = telemetry.set_run_context("g1", tmp_path)
+        try:
+            with telemetry.stage("s"):
+                await client.analyze(system_prompt="s", user_prompt="u", response_model=R)
+        finally:
+            telemetry.reset_run_context(tokens)
+        assert client.tracker.output_tokens == 500, "the CLI line counts thinking too"
+        usage.flush(tmp_path, "g1", "run")
+        (row,) = usage.read_rows(tmp_path)
+        assert (row.input_tokens, row.cache_read_input_tokens, row.output_tokens) == (
+            400, 600, 500,
+        )
+
+    @pytest.mark.asyncio
+    async def test_openai_cached_share_reaches_the_ledger(self, tmp_path: Path) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        from pydantic import BaseModel
+
+        from bristlenose.config import BristlenoseSettings
+        from bristlenose.llm.client import LLMClient
+
+        class R(BaseModel):
+            answer: str
+
+        response = SimpleNamespace(
+            choices=[SimpleNamespace(
+                finish_reason="stop",
+                message=SimpleNamespace(content='{"answer": "x"}', refusal=None),
+            )],
+            usage=SimpleNamespace(
+                prompt_tokens=1000, completion_tokens=20,
+                prompt_tokens_details=SimpleNamespace(cached_tokens=900),
+            ),
+            model="gpt-4o",
+        )
+        client = LLMClient(BristlenoseSettings(
+            llm_provider="openai", openai_api_key="sk-test", llm_model="gpt-4o",
+            output_dir=tmp_path,
+        ))
+        sdk = AsyncMock()
+        sdk.chat.completions.create = AsyncMock(return_value=response)
+        client._openai_client = sdk
+        tokens = telemetry.set_run_context("o1", tmp_path)
+        try:
+            with telemetry.stage("s"):
+                await client.analyze(system_prompt="s", user_prompt="u", response_model=R)
+        finally:
+            telemetry.reset_run_context(tokens)
+        usage.flush(tmp_path, "o1", "run")
+        (row,) = usage.read_rows(tmp_path)
+        assert (row.input_tokens, row.cache_read_input_tokens) == (100, 900)
+        assert client.tracker.input_tokens == 1000, "the tracker keeps the provider's count"
+
+
+# ---------------------------------------------------------------------------
+# Live: in flight, late calls, progress lines
+# ---------------------------------------------------------------------------
+
+
+class TestInFlight:
+    def test_peek_shows_a_begun_job_for_its_own_study_only(self, tmp_path: Path) -> None:
+        mine, theirs = tmp_path / "a", tmp_path / "b"
+        usage.begin("j1", mine, "autocode")
+        usage.begin("j2", theirs, "autocode")
+        for rid in ("j1", "j2"):
+            usage.note_call(run_id=rid, provider="p", model="m", input_tokens=5, output_tokens=1)
+        assert [f.run_id for f in usage.peek(mine)] == ["j1"]
+
+    def test_a_flushed_job_leaves_flight(self, tmp_path: Path) -> None:
+        usage.begin("j", tmp_path, "chat_lens")
+        usage.note_call(run_id="j", provider="p", model="m", input_tokens=5, output_tokens=1)
+        usage.flush(tmp_path, "j", "chat_lens")
+        assert usage.peek(tmp_path) == []
+
+    def test_a_call_that_lands_after_its_job_ended_is_still_written(
+        self, tmp_path: Path
+    ) -> None:
+        """A cancelled task can finish its call after the job flushed. Kept in a
+        tally nothing flushes, its tokens would never be counted."""
+        usage.begin("j", tmp_path, "autocode")
+        usage.note_call(run_id="j", provider="p", model="m", input_tokens=5, output_tokens=1)
+        usage.flush(tmp_path, "j", "autocode")
+        usage.note_call(run_id="j", provider="p", model="m", input_tokens=7, output_tokens=1)
+        (total,) = usage.study_totals(usage.read_rows(tmp_path))
+        assert total.input_tokens == 12
+        assert usage._tallies == {}
+
+    def test_a_new_job_reusing_an_ended_ones_id_is_not_late(self, tmp_path: Path) -> None:
+        """AutoCode and elaboration mint run ids to the second."""
+        usage.begin("same", tmp_path, "autocode")
+        usage.note_call(run_id="same", provider="p", model="m", input_tokens=1, output_tokens=1)
+        usage.flush(tmp_path, "same", "autocode")
+        usage.begin("same", tmp_path, "autocode")
+        usage.note_call(run_id="same", provider="p", model="m", input_tokens=2, output_tokens=1)
+        assert len(usage.read_rows(tmp_path)) == 1, "not written per call"
+        assert usage.peek(tmp_path)[0].input_tokens == 2
+
+    def test_a_run_reports_its_use_so_far_on_each_progress_line(self, tmp_path: Path) -> None:
+        from bristlenose.events import RunProgressEvent, events_path, read_events
+
+        with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False) as handle:
+            handle.progress(stage="s08")
+            _call(input_tokens=300, output_tokens=30)
+            handle.progress(stage="s09")
+        progress = [e for e in read_events(events_path(tmp_path))
+                    if isinstance(e, RunProgressEvent)]
+        assert progress[0].usage_calls is None, "nothing before the first call"
+        assert (progress[1].usage_calls, progress[1].usage_input_tokens) == (1, 300)
+
+    def test_the_progress_fields_are_the_contracts(self) -> None:
+        from bristlenose.events import RunProgressEvent
+
+        for name in _CONTRACT["progress_fields"]["fields"]:
+            assert RunProgressEvent.model_fields[name].default is None
+
+
+class TestJobsAreVisibleWhileTheyRun:
+    """`begin` is what makes a running job readable; pinned at its callers."""
+
+    def test_a_serve_job_is_in_flight_inside_its_context(self, tmp_path: Path) -> None:
+        out = tmp_path / "bristlenose-output"
+        out.mkdir()
+        with telemetry.serve_run_context(tmp_path, "live-job", "chat_lens"):
+            with telemetry.stage("serve_chat_lens"):
+                _call()
+            (live,) = usage.peek(out / ".bristlenose")
+            assert (live.run_id, live.kind) == ("live-job", "chat_lens")
+        assert usage.peek(out / ".bristlenose") == []

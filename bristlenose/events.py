@@ -516,6 +516,17 @@ class RunProgressEvent(_EventBase):
     stage_base: float | None = None
     stage_span: float | None = None
     stage_expected_seconds: float | None = None
+    # The run's LLM use so far, from the usage ledger's tally
+    # (docs/design-llm-usage.md): what a live surface reads while a run is in
+    # its own process. Normalised like the ledger — input at the full rate,
+    # cache beside it, thinking in output — so deliberately NOT named
+    # `input_tokens`/`output_tokens`, which on a terminus carry the provider's
+    # own counts. Counts only (re-id rule above). None before the first call.
+    usage_calls: int | None = None
+    usage_input_tokens: int | None = None
+    usage_output_tokens: int | None = None
+    usage_cache_read_input_tokens: int | None = None
+    usage_cache_creation_input_tokens: int | None = None
 
     @field_validator(
         "stage_fraction",

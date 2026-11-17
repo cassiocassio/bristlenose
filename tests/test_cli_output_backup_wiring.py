@@ -486,6 +486,7 @@ class TestTheUsageLedgerCrossesAReAnalyse:
         from bristlenose.llm import usage
 
         row = usage.UsageRow(
+            row_id="0123456789abcdef",
             ts="2026-11-01T09:00:00.000Z", run_id="earlier", kind="run",
             provider="anthropic", model="claude-sonnet-4", calls=10,
             input_tokens=400_000, output_tokens=90_000, cache_read_input_tokens=0,

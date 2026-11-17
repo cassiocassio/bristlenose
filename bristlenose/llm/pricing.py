@@ -22,76 +22,35 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from . import money
 from .cohort_normalise import normalise_model
 from .telemetry import iter_rows
 
-# Bump when any rate changes — stamped onto every cost-bearing event so a
-# future reader can recompute against a newer table.
-PRICE_TABLE_VERSION = "2026-09-04"
-CURRENCY = "USD"
+# The rates live in the bundled ``pricing.json`` (dated, per model, read by
+# ``money.py``). These names are derived from it so every existing caller
+# keeps its shape: each model's price in force on the table's own version
+# date, never on the wall clock, so a long-lived serve and a test agree on a
+# rate until a release changes the file. Bump the version in the JSON.
+#
+# PRICE_TABLE_VERSION is stamped onto every cost-bearing event so a future
+# reader can recompute against a newer table.
+_TABLE = money.price_table()
+_TABLE_DAY = money.table_day(_TABLE)
+PRICE_TABLE_VERSION = _TABLE.price_table_version
+CURRENCY = _TABLE.currency
+
+
+def _rates_on_table_day(model: str) -> tuple[float, float]:
+    entry = money.price_on(_TABLE.models[model].provider, model, _TABLE_DAY, _TABLE)
+    assert isinstance(entry, money.PriceEntry)
+    return entry.input, entry.output
+
 
 # Pricing per million tokens: (input_rate_usd, output_rate_usd).
-PRICING: dict[str, tuple[float, float]] = {
-    # Anthropic (Claude)
-    "claude-sonnet-5": (2.0, 10.0),
-    "claude-opus-5": (5.0, 25.0),
-    "claude-haiku-4-5-20251001": (1.0, 5.0),
-    # Legacy — kept because a user pinned to one in Settings still needs a
-    # cost estimate. `estimate_cost` returns None for anything unlisted, so a
-    # missing row is a silently absent feature, not an error.
-    "claude-sonnet-4-6": (3.0, 15.0),
-    "claude-opus-4-8": (5.0, 25.0),
-    "claude-sonnet-4-20250514": (3.0, 15.0),
-    "claude-haiku-3-5-20241022": (0.80, 4.0),
-    # OpenAI (ChatGPT) — verified against developers.openai.com/api/docs/models
-    # on 2026-09-04.
-    "gpt-6-astra": (10.0, 50.0),
-    "gpt-5.6-sol": (4.0, 20.0),
-    "gpt-5.6-terra": (2.0, 12.0),
-    "gpt-5.6-luna": (0.20, 1.20),
-    # Legacy — still selectable, and still the Azure picker's list.
-    "gpt-4o": (2.50, 10.0),
-    "gpt-4o-mini": (0.15, 0.60),
-    # Google (Gemini). Verified against ai.google.dev/gemini-api/docs/pricing
-    # on 2026-09-04 — the 2.5-flash row was wrong in BOTH directions ($0.15/
-    # $3.50 recorded against an actual $0.30/$2.50), so every Gemini cost
-    # estimate has been understating input and overstating output.
-    #
-    # NOTE the 3.x rows are PROMOTIONAL through 2026-12-31 and roughly double
-    # on 2027-01-01 (3.8-flash goes to $1.50/$7.50). Re-check at the turn of
-    # the year rather than trusting these.
-    "gemini-2.5-flash": (0.30, 2.50),
-    "gemini-2.5-pro": (1.25, 10.0),
-    "gemini-3.8-flash": (0.75, 3.75),
-    "gemini-3.7-flash": (0.75, 3.75),
-    "gemini-3.6-flash": (0.75, 3.75),
-    "gemini-3.5-flash": (1.50, 9.00),
-    "gemini-3.5-flash-lite": (0.30, 2.50),
-}
+PRICING: dict[str, tuple[float, float]] = {m: _rates_on_table_day(m) for m in _TABLE.models}
 
-# Mirrors PRICING — provider lookup for cohort key resolution.
-_MODEL_PROVIDER: dict[str, str] = {
-    "claude-sonnet-5": "anthropic",
-    "claude-opus-5": "anthropic",
-    "claude-haiku-4-5-20251001": "anthropic",
-    "claude-sonnet-4-6": "anthropic",
-    "claude-opus-4-8": "anthropic",
-    "claude-sonnet-4-20250514": "anthropic",
-    "claude-haiku-3-5-20241022": "anthropic",
-    "gpt-6-astra": "openai",
-    "gpt-5.6-sol": "openai",
-    "gpt-5.6-terra": "openai",
-    "gpt-5.6-luna": "openai",
-    "gpt-4o": "openai",
-    "gpt-4o-mini": "openai",
-    "gemini-2.5-flash": "google",
-    "gemini-2.5-pro": "google",
-    "gemini-3.8-flash": "google",
-    "gemini-3.7-flash": "google",
-    "gemini-3.6-flash": "google",
-    "gemini-3.5-flash": "google",
-    "gemini-3.5-flash-lite": "google",
-}
+# Provider lookup for cohort key resolution.
+_MODEL_PROVIDER: dict[str, str] = {m: e.provider for m, e in _TABLE.models.items()}
 
 PRICING_URLS: dict[str, str] = {
     "anthropic": "https://docs.anthropic.com/en/docs/about-claude/models",

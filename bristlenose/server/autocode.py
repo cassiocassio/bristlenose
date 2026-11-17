@@ -229,6 +229,7 @@ async def run_autocode_job(
         run_dir = project_output_dir(project_dir) / ".bristlenose"
         run_id = f"autocode-{project_id}-{framework_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
         telemetry_tokens = telemetry.set_run_context(run_id, run_dir)
+        usage.begin(run_id, run_dir, "autocode")
 
     db = db_factory()
     try:

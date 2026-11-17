@@ -39,7 +39,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import secrets
 import threading
+from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -62,6 +64,10 @@ class UsageRow(BaseModel):
     """
 
     schema_version: int = SCHEMA_VERSION
+    #: Unique per row written. A restore's append repeats rows byte for byte,
+    #: id included, so a repeat is recognised by this and nothing else: a
+    #: timestamp cannot tell two rows written in one millisecond apart.
+    row_id: str
     ts: str
     run_id: str
     kind: str
@@ -98,11 +104,55 @@ class _Tally(BaseModel):
     calls_without_usage: int = 0
 
 
+class InFlight(BaseModel):
+    """A job's use so far, before its row is written: what a live surface reads."""
+
+    run_id: str
+    kind: str
+    provider: str
+    model: str
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    calls_without_usage: int
+
+
+class _Job(BaseModel):
+    run_dir: str  # realpath, so two spellings of one folder compare equal
+    kind: str
+
+
 # (run_id, provider, model) -> tally. A lock, not a contextvar: a pipeline
 # stage's calls run in asyncio tasks and a serve's jobs in threads, and they
 # all add to the same run's tally.
 _tallies: dict[tuple[str, str, str], _Tally] = {}
+# Jobs that have begun and not yet flushed: where they write, and what they are.
+_jobs: dict[str, _Job] = {}
+# Jobs already flushed, newest last, so a call that lands after its job ended
+# (a cancelled task finishing, a late thread) is written as a row of its own
+# instead of sitting in a tally nothing will flush.
+_flushed: OrderedDict[str, _Job] = OrderedDict()
+_FLUSHED_KEPT = 256
 _lock = threading.Lock()
+
+
+def _real(run_dir: Path) -> str:
+    return os.path.realpath(run_dir)
+
+
+def begin(run_id: str, run_dir: Path, kind: str) -> None:
+    """Register a job as it starts, so its use so far can be read (:func:`peek`).
+
+    Optional for correctness — :func:`flush` writes a tally whether or not it
+    began — but a job that never begins is invisible until it ends.
+    """
+    with _lock:
+        _jobs[run_id] = _Job(run_dir=_real(run_dir), kind=kind)
+        # A new job reusing a finished one's id (AutoCode and elaboration mint
+        # theirs to the second) is not a late call of the old one.
+        _flushed.pop(run_id, None)
 
 
 def note_call(
@@ -114,10 +164,24 @@ def note_call(
     output_tokens: int | None,
     cache_read_input_tokens: int | None = None,
     cache_creation_input_tokens: int | None = None,
+    cached_input_tokens_included: int | None = None,
 ) -> None:
-    """Add one LLM call to its run's tally. Never raises into the caller."""
+    """Add one LLM call to its run's tally. Never raises into the caller.
+
+    Normalises the providers to one meaning (the contract's
+    ``field_meanings``): ``input_tokens`` is input billed at the full rate.
+    Anthropic reports it that way, with cache reads and writes beside it.
+    OpenAI, Azure and Gemini count cached input INSIDE their prompt count;
+    the client passes that share as *cached_input_tokens_included*, and it
+    moves here from ``input_tokens`` to ``cache_read_input_tokens``.
+    """
     try:
         reported = input_tokens is not None or output_tokens is not None
+        cached = cached_input_tokens_included or 0
+        if input_tokens is not None and cached:
+            cached = min(cached, input_tokens)
+            input_tokens -= cached
+            cache_read_input_tokens = (cache_read_input_tokens or 0) + cached
         with _lock:
             tally = _tallies.setdefault((run_id, provider, model), _Tally())
             tally.calls += 1
@@ -127,6 +191,9 @@ def note_call(
             tally.output_tokens += output_tokens or 0
             tally.cache_read_input_tokens += cache_read_input_tokens or 0
             tally.cache_creation_input_tokens += cache_creation_input_tokens or 0
+            late = _flushed.get(run_id)
+        if late is not None:
+            flush(Path(late.run_dir), run_id, late.kind)
     except Exception:
         logger.debug("usage note_call failed", exc_info=True)
 
@@ -148,11 +215,19 @@ def flush(run_dir: Path, run_id: str, kind: str) -> int:
     with _lock:
         keys = [k for k in _tallies if k[0] == run_id]
         taken = [(k, _tallies.pop(k)) for k in keys]
+        # Under the same lock as the pop: a call landing after this moment
+        # finds the job flushed and writes itself (see note_call).
+        _jobs.pop(run_id, None)
+        _flushed[run_id] = _Job(run_dir=_real(run_dir), kind=kind)
+        _flushed.move_to_end(run_id)
+        while len(_flushed) > _FLUSHED_KEPT:
+            _flushed.popitem(last=False)
     if not taken:
         return 0
     ts = _now_iso()
     lines = [
         UsageRow(
+            row_id=secrets.token_hex(8),
             ts=ts, run_id=run_id, kind=kind, provider=provider, model=model,
             **tally.model_dump(),
         ).model_dump_json() + "\n"
@@ -182,19 +257,47 @@ def discard(run_id: str) -> None:
     with _lock:
         for key in [k for k in _tallies if k[0] == run_id]:
             del _tallies[key]
+        _jobs.pop(run_id, None)
+
+
+def peek(run_dir: Path) -> list[InFlight]:
+    """The use so far of this process's jobs writing to *run_dir* that have
+    begun and not ended. Another process's jobs are not visible here: a
+    pipeline run in its own process reports through its progress lines."""
+    want = _real(run_dir)
+    with _lock:
+        return [
+            InFlight(run_id=rid, kind=job.kind, provider=prov, model=model,
+                     **tally.model_dump())
+            for (rid, prov, model), tally in _tallies.items()
+            if (job := _jobs.get(rid)) is not None and job.run_dir == want
+        ]
+
+
+def run_totals(run_id: str) -> _Tally | None:
+    """*run_id*'s use so far, summed over models; None before its first call."""
+    with _lock:
+        parts = [t for (rid, _, _), t in _tallies.items() if rid == run_id]
+        if not parts:
+            return None
+        total = _Tally()
+        for t in parts:
+            for name in _Tally.model_fields:
+                setattr(total, name, getattr(total, name) + getattr(t, name))
+        return total
 
 
 def read_rows(run_dir: Path) -> list[UsageRow]:
-    """The ledger's rows, oldest first, one per (run id, provider, model).
+    """The ledger's rows, oldest first, each once.
 
     Tolerates a missing file, blank lines and rows it cannot read (skipped: a
     torn line from a crash must not hide the rest of the study's use). A row
     repeated by a restore's append is dropped, the first one kept.
 
-    The repeat is recognised by (run id, provider, model, ts): a restore copies
-    bytes, so its repeat is identical to the millisecond, while two jobs that
-    share a run id (AutoCode and elaboration mint theirs to the second) flush
-    at different moments and are both kept.
+    The repeat is recognised by ``row_id`` alone: a restore copies bytes, id
+    included, while every row written gets a fresh one, so two jobs sharing a
+    run id (AutoCode and elaboration mint theirs to the second) or a late call
+    flushed in the same millisecond as its job are both kept.
     """
     path = run_dir / USAGE_FILENAME
     try:
@@ -205,7 +308,7 @@ def read_rows(run_dir: Path) -> list[UsageRow]:
         logger.warning("usage ledger unreadable at %s", path, exc_info=True)
         return []
     rows: list[UsageRow] = []
-    seen: set[tuple[str, str, str, str]] = set()
+    seen: set[str] = set()
     for line in raw_lines:
         if not line.strip():
             continue
@@ -213,10 +316,9 @@ def read_rows(run_dir: Path) -> list[UsageRow]:
             row = UsageRow.model_validate(json.loads(line))
         except (json.JSONDecodeError, ValidationError):
             continue
-        key = (row.run_id, row.provider, row.model, row.ts)
-        if key in seen:
+        if row.row_id in seen:
             continue
-        seen.add(key)
+        seen.add(row.row_id)
         rows.append(row)
     return rows
 

@@ -188,6 +188,20 @@ a = Analysis(
             os.path.join(PROJECT_ROOT, "bristlenose", "llm", "cohort-baselines.json"),
             os.path.join("bristlenose", "llm"),
         ),
+        # The price table and exchange rates (docs/design-llm-usage.md, layer 2).
+        # bristlenose/llm/money.py reads both via `Path(__file__).parent`.
+        # Missing, every model reads as unpriced and conversion as unavailable:
+        # logged at ERROR, never a made-up figure, but the usage figures lose
+        # their money. `pricing.py` derives PRICING from the first, so the
+        # CLI's cost line and the forecast need it too.
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "llm", "pricing.json"),
+            os.path.join("bristlenose", "llm"),
+        ),
+        (
+            os.path.join(PROJECT_ROOT, "bristlenose", "llm", "fx-rates.json"),
+            os.path.join("bristlenose", "llm"),
+        ),
         # Alembic migrations (read at runtime by server/db.py).
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "alembic"),

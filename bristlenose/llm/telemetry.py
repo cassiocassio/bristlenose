@@ -160,6 +160,7 @@ def serve_run_context(project_dir: Path | None, run_id: str, kind: str) -> Itera
 
     target = project_output_dir(project_dir) / ".bristlenose"
     tokens = set_run_context(run_id, target)
+    usage.begin(run_id, target, kind)
     try:
         yield
     finally:
@@ -302,6 +303,7 @@ def record_call(
     run_id: str | None = None,
     stage_override: str | None = None,
     session_id_override: str | None = None,
+    cached_input_tokens_included: int | None = None,
 ) -> None:
     """Append one terminal LLM-call event to ``<run_dir>/llm-calls.jsonl``.
 
@@ -322,6 +324,11 @@ def record_call(
     when no baseline covers the cohort; the token counts are still worth
     recording, so that is not an error.
 
+    ``cached_input_tokens_included`` is the cached share of ``input_tokens`` for
+    providers that count it inside (OpenAI, Azure, Gemini). Only the usage
+    ledger reads it; this row keeps the provider's own meaning, which the
+    forecast's cohort medians are built on.
+
     The call is also counted in the study's usage ledger (``usage.note_call``)
     whenever a run is bound, BEFORE the kill switch and the stage check: the
     ledger carries nothing that identifies anyone, and a missing ``stage(...)``
@@ -339,6 +346,7 @@ def record_call(
             output_tokens=output_tokens,
             cache_read_input_tokens=cache_read_input_tokens,
             cache_creation_input_tokens=cache_creation_input_tokens,
+            cached_input_tokens_included=cached_input_tokens_included,
         )
 
     if not _telemetry_enabled():

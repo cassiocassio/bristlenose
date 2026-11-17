@@ -2569,6 +2569,27 @@ class TestAutoCodePassesAreCounted:
         assert row.kind == "autocode"
         assert row.input_tokens == 700 * row.calls and row.calls >= 1
 
+    def test_a_running_pass_is_visible_before_it_ends(
+        self, project_with_garrett, tmp_path
+    ) -> None:
+        from bristlenose.llm import usage
+
+        project_id, framework_id, db_factory = project_with_garrett
+        seen: list[list[str]] = []
+        spend = self._spending(_make_batch_result(10, "user need", 0.85))
+
+        async def _analyze(*a, **k):
+            result = await spend(*a, **k)
+            run_dir = tmp_path / "bristlenose-output" / ".bristlenose"
+            seen.append([f.kind for f in usage.peek(run_dir)])
+            return result
+
+        with _patch_llm(AsyncMock(side_effect=_analyze)):
+            asyncio.run(run_autocode_job(
+                db_factory, project_id, framework_id, _mock_settings(), project_dir=tmp_path,
+            ))
+        assert seen and seen[0] == ["autocode"], seen
+
     def test_a_pass_whose_every_batch_failed(self, project_with_garrett, tmp_path) -> None:
         project_id, framework_id, db_factory = project_with_garrett
         with _patch_llm(AsyncMock(side_effect=self._spending(RuntimeError("400 credit")))):

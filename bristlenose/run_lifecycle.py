@@ -958,6 +958,11 @@ class RunHandle:
         """
         if self._events_file is None:
             return
+        # The run's LLM use so far rides every progress line, so a reader in
+        # another process (the Mac app, a serve) sees it move during the run,
+        # not only at its end. Stamped here rather than passed by the
+        # pipeline: every call already reaches the ledger's tally.
+        used = usage.run_totals(self.run_id)
         event = RunProgressEvent(
             ts=_now_iso(),
             run_id=self.run_id,
@@ -976,6 +981,13 @@ class RunHandle:
             stage_base=stage_base,
             stage_span=stage_span,
             stage_expected_seconds=stage_expected_seconds,
+            usage_calls=used.calls if used else None,
+            usage_input_tokens=used.input_tokens if used else None,
+            usage_output_tokens=used.output_tokens if used else None,
+            usage_cache_read_input_tokens=used.cache_read_input_tokens if used else None,
+            usage_cache_creation_input_tokens=(
+                used.cache_creation_input_tokens if used else None
+            ),
         )
         try:
             append_event(self._events_file, event)
@@ -1279,6 +1291,7 @@ def run_lifecycle(
             telemetry_tokens = telemetry.set_run_context(
                 run_id, output_dir / ".bristlenose",
             )
+            usage.begin(run_id, output_dir / ".bristlenose", kind.value)
             yield handle
         except KeyboardInterrupt as exc:
             sig = _caught_signal or signal.SIGINT

@@ -1,9 +1,10 @@
 {
-  "_doc": "The study usage ledger, <output>/.bristlenose/usage.jsonl (bristlenose/llm/usage.py, docs/design-llm-usage.md). Written by Python; read by Python and, once a surface shows it, by the Mac app. Both readers must turn `lines` into exactly `expected_rows` rows and `expected_totals`: skip blank and unreadable lines, drop a row whose (run_id, provider, model, ts) was already seen (a restore appends rows the Re-analyse carry already copied), and sum the rest per (provider, model) in order of first appearance, `jobs` being the distinct run ids. Tokens only: nothing here is a price.",
+  "_doc": "The study usage ledger, <output>/.bristlenose/usage.jsonl (bristlenose/llm/usage.py, docs/design-llm-usage.md). Written by Python; read by Python and, once a surface shows it, by the Mac app. Both readers must turn `lines` into exactly `expected_rows` rows and `expected_totals`: skip blank and unreadable lines, drop a row whose row_id was already seen (a restore appends rows the Re-analyse carry already copied), and sum the rest per (provider, model) in order of first appearance, `jobs` being the distinct run ids. Tokens only: nothing here is a price.",
   "schema_version": 1,
   "filename": ".bristlenose/usage.jsonl",
   "row_fields": [
     "schema_version",
+    "row_id",
     "ts",
     "run_id",
     "kind",
@@ -16,16 +17,24 @@
     "cache_creation_input_tokens",
     "calls_without_usage"
   ],
-  "kinds": ["run", "analyze", "transcribe-only", "autocode", "elaboration", "chat_lens", "codebook_builder"],
+  "kinds": [
+    "run",
+    "analyze",
+    "transcribe-only",
+    "autocode",
+    "elaboration",
+    "chat_lens",
+    "codebook_builder"
+  ],
   "lines": [
-    "{\"schema_version\":1,\"ts\":\"2026-11-10T09:12:03.120Z\",\"run_id\":\"01JCRUN0000000000000000001\",\"kind\":\"run\",\"provider\":\"anthropic\",\"model\":\"claude-sonnet-4\",\"calls\":12,\"input_tokens\":410000,\"output_tokens\":96000,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
-    "{\"schema_version\":1,\"ts\":\"2026-11-10T09:12:03.120Z\",\"run_id\":\"01JCRUN0000000000000000001\",\"kind\":\"run\",\"provider\":\"anthropic\",\"model\":\"claude-haiku-4\",\"calls\":2,\"input_tokens\":3000,\"output_tokens\":500,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
-    "{\"schema_version\":1,\"ts\":\"2026-11-11T14:40:51.007Z\",\"run_id\":\"autocode-1-norman-20261111T143902Z\",\"kind\":\"autocode\",\"provider\":\"anthropic\",\"model\":\"claude-sonnet-4\",\"calls\":5,\"input_tokens\":70000,\"output_tokens\":9000,\"cache_read_input_tokens\":12000,\"cache_creation_input_tokens\":3000,\"calls_without_usage\":1}",
+    "{\"schema_version\":1,\"row_id\":\"a1a1a1a1a1a1a1a1\",\"ts\":\"2026-11-10T09:12:03.120Z\",\"run_id\":\"01JCRUN0000000000000000001\",\"kind\":\"run\",\"provider\":\"anthropic\",\"model\":\"claude-sonnet-4\",\"calls\":12,\"input_tokens\":410000,\"output_tokens\":96000,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
+    "{\"schema_version\":1,\"row_id\":\"b2b2b2b2b2b2b2b2\",\"ts\":\"2026-11-10T09:12:03.120Z\",\"run_id\":\"01JCRUN0000000000000000001\",\"kind\":\"run\",\"provider\":\"anthropic\",\"model\":\"claude-haiku-4\",\"calls\":2,\"input_tokens\":3000,\"output_tokens\":500,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
+    "{\"schema_version\":1,\"row_id\":\"c3c3c3c3c3c3c3c3\",\"ts\":\"2026-11-11T14:40:51.007Z\",\"run_id\":\"autocode-1-norman-20261111T143902Z\",\"kind\":\"autocode\",\"provider\":\"anthropic\",\"model\":\"claude-sonnet-4\",\"calls\":5,\"input_tokens\":70000,\"output_tokens\":9000,\"cache_read_input_tokens\":12000,\"cache_creation_input_tokens\":3000,\"calls_without_usage\":1}",
     "",
-    "{\"schema_version\":1,\"ts\":\"2026-11-10T09:12:03.120Z\",\"run_id\":\"01JCRUN0000000000000000001\",\"kind\":\"run\",\"provider\":\"anthropic\",\"model\":\"claude-sonnet-4\",\"calls\":12,\"input_tokens\":410000,\"output_tokens\":96000,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
+    "{\"schema_version\":1,\"row_id\":\"a1a1a1a1a1a1a1a1\",\"ts\":\"2026-11-10T09:12:03.120Z\",\"run_id\":\"01JCRUN0000000000000000001\",\"kind\":\"run\",\"provider\":\"anthropic\",\"model\":\"claude-sonnet-4\",\"calls\":12,\"input_tokens\":410000,\"output_tokens\":96000,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
     "{\"schema_version\":1,\"ts\":\"2026-11-12T08:",
-    "{\"schema_version\":1,\"ts\":\"2026-11-12T10:15:00.250Z\",\"run_id\":\"elaboration-1-norman-20261112T101500Z\",\"kind\":\"elaboration\",\"provider\":\"openai\",\"model\":\"gpt-4o\",\"calls\":1,\"input_tokens\":8000,\"output_tokens\":1200,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
-    "{\"schema_version\":1,\"ts\":\"2026-11-12T10:15:00.910Z\",\"run_id\":\"elaboration-1-norman-20261112T101500Z\",\"kind\":\"elaboration\",\"provider\":\"openai\",\"model\":\"gpt-4o\",\"calls\":1,\"input_tokens\":7500,\"output_tokens\":1100,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}"
+    "{\"schema_version\":1,\"row_id\":\"d4d4d4d4d4d4d4d4\",\"ts\":\"2026-11-12T10:15:00.250Z\",\"run_id\":\"elaboration-1-norman-20261112T101500Z\",\"kind\":\"elaboration\",\"provider\":\"openai\",\"model\":\"gpt-4o\",\"calls\":1,\"input_tokens\":8000,\"output_tokens\":1200,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}",
+    "{\"schema_version\":1,\"row_id\":\"e5e5e5e5e5e5e5e5\",\"ts\":\"2026-11-12T10:15:00.910Z\",\"run_id\":\"elaboration-1-norman-20261112T101500Z\",\"kind\":\"elaboration\",\"provider\":\"openai\",\"model\":\"gpt-4o\",\"calls\":1,\"input_tokens\":7500,\"output_tokens\":1100,\"cache_read_input_tokens\":0,\"cache_creation_input_tokens\":0,\"calls_without_usage\":0}"
   ],
   "expected_rows": 5,
   "expected_totals": [
@@ -62,5 +71,224 @@
       "cache_creation_input_tokens": 0,
       "calls_without_usage": 0
     }
-  ]
+  ],
+  "field_meanings": {
+    "input_tokens": "input billed at the full rate: cache reads and cache writes are NOT in it, whatever the provider reports (OpenAI, Azure and Gemini count cached input inside their prompt count; the ledger moves that share to cache_read_input_tokens)",
+    "output_tokens": "all billed output, thinking and reasoning included (Gemini reports thoughts apart; they are added in)",
+    "cache_read_input_tokens": "input served from a provider cache, billed at its cache-read rate",
+    "cache_creation_input_tokens": "input written to a provider cache, billed at its cache-write rate (Anthropic only)",
+    "calls_without_usage": "calls the provider reported no usage for: counted in calls, with no tokens",
+    "model": "the model the request named, exactly; never a response snapshot name",
+    "ts": "UTC, when the job ended and its row was written; the day a row is priced at"
+  },
+  "progress_fields": {
+    "_doc": "Optional fields on run_progress lines in pipeline-events.jsonl: a running pipeline run's use so far, summed over its models, with the ledger's field meanings. Distinct from a terminus's input_tokens/output_tokens, which are the provider's own counts. Absent before the run's first LLM call and from an older sidecar.",
+    "fields": [
+      "usage_calls",
+      "usage_input_tokens",
+      "usage_output_tokens",
+      "usage_cache_read_input_tokens",
+      "usage_cache_creation_input_tokens"
+    ]
+  },
+  "pricing_case": {
+    "_doc": "Given price_table and fx, each of rows prices to the matching entry of expected (USD at the price in force on the row's day, then converted). Exact model id under its own provider only; the earliest dated price also covers earlier days; a null cache rate prices cached tokens at the input rate and says so.",
+    "price_table": {
+      "schema_version": 1,
+      "price_table_version": "2026-07-01",
+      "currency": "USD",
+      "unit": "usd_per_million_tokens",
+      "free_providers": [
+        "local"
+      ],
+      "models": {
+        "m-a": {
+          "provider": "anthropic",
+          "prices": [
+            {
+              "from": "2026-01-01",
+              "input": 3.0,
+              "output": 15.0,
+              "cache_read": 0.3,
+              "cache_write": 3.75
+            },
+            {
+              "from": "2026-07-01",
+              "input": 1.5,
+              "output": 7.5,
+              "cache_read": 0.15,
+              "cache_write": 1.875
+            }
+          ]
+        },
+        "m-o": {
+          "provider": "openai",
+          "prices": [
+            {
+              "from": "2026-01-01",
+              "input": 2.0,
+              "output": 8.0,
+              "cache_read": null,
+              "cache_write": null
+            }
+          ]
+        },
+        "m-g": {
+          "provider": "google",
+          "prices": [
+            {
+              "from": "2026-01-01",
+              "input": 1.0,
+              "output": 4.0,
+              "cache_read": null,
+              "cache_write": null
+            }
+          ]
+        }
+      }
+    },
+    "fx": {
+      "schema_version": 1,
+      "base": "USD",
+      "as_of": "2026-07-01",
+      "source": "test",
+      "rates": {
+        "USD": 1.0,
+        "GBP": 0.8
+      }
+    },
+    "currency": "GBP",
+    "rows": [
+      {
+        "provider": "anthropic",
+        "model": "m-a",
+        "day": "2026-06-01",
+        "input_tokens": 1000000,
+        "output_tokens": 100000,
+        "cache_read_input_tokens": 2000000,
+        "cache_creation_input_tokens": 0
+      },
+      {
+        "provider": "anthropic",
+        "model": "m-a",
+        "day": "2026-08-01",
+        "input_tokens": 1000000,
+        "output_tokens": 100000,
+        "cache_read_input_tokens": 2000000,
+        "cache_creation_input_tokens": 0
+      },
+      {
+        "provider": "anthropic",
+        "model": "m-a",
+        "day": "2025-12-01",
+        "input_tokens": 1000000,
+        "output_tokens": 100000,
+        "cache_read_input_tokens": 2000000,
+        "cache_creation_input_tokens": 0
+      },
+      {
+        "provider": "openai",
+        "model": "m-o",
+        "day": "2026-06-01",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 1000000,
+        "cache_creation_input_tokens": 0
+      },
+      {
+        "provider": "azure",
+        "model": "m-o",
+        "day": "2026-06-01",
+        "input_tokens": 1000,
+        "output_tokens": 1000,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0
+      },
+      {
+        "provider": "local",
+        "model": "llama3.2:3b",
+        "day": "2026-06-01",
+        "input_tokens": 1000,
+        "output_tokens": 1000,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0
+      },
+      {
+        "provider": "google",
+        "model": "m-g-lite",
+        "day": "2026-06-01",
+        "input_tokens": 1000,
+        "output_tokens": 1000,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0
+      }
+    ],
+    "expected": [
+      {
+        "status": "priced",
+        "cost_usd": 5.1,
+        "cost": 4.08,
+        "cache_priced_at_input_rate": false
+      },
+      {
+        "status": "priced",
+        "cost_usd": 2.55,
+        "cost": 2.04,
+        "cache_priced_at_input_rate": false
+      },
+      {
+        "status": "priced",
+        "cost_usd": 5.1,
+        "cost": 4.08,
+        "cache_priced_at_input_rate": false
+      },
+      {
+        "status": "priced",
+        "cost_usd": 2.0,
+        "cost": 1.6,
+        "cache_priced_at_input_rate": true
+      },
+      {
+        "status": "unpriced",
+        "cost_usd": null,
+        "cost": null,
+        "cache_priced_at_input_rate": false
+      },
+      {
+        "status": "free",
+        "cost_usd": 0.0,
+        "cost": 0.0,
+        "cache_priced_at_input_rate": false
+      },
+      {
+        "status": "unpriced",
+        "cost_usd": null,
+        "cost": null,
+        "cache_priced_at_input_rate": false
+      }
+    ]
+  },
+  "api_fields": {
+    "_doc": "GET /api/projects/{project_id}/usage?currency=XXX (bristlenose/server/routes/usage.py). Top-level keys, and the keys of each rows/totals/in_flight item.",
+    "response": [
+      "schema_version",
+      "currency",
+      "conversion",
+      "currency_unavailable",
+      "price_table_version",
+      "rows",
+      "totals",
+      "in_flight"
+    ],
+    "price": [
+      "status",
+      "cost_usd",
+      "cost",
+      "cache_priced_at_input_rate"
+    ],
+    "in_flight_sources": [
+      "this_server",
+      "pipeline_run"
+    ]
+  }
 }

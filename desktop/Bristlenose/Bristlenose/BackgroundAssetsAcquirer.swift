@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 
@@ -245,6 +246,10 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
                 race.finish(whisperEnsureWasCancelled(error) ? .cancelled : .failed)
             }
         }
+        let wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: nil
+        ) { _ in clock.reset() }
+        defer { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         let watchdog = Task.detached {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(200))
@@ -275,7 +280,9 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
 /// When a byte last moved, readable from any thread.
 final class SilenceClock: @unchecked Sendable {
     private let lock = NSLock()
-    private var last = ContinuousClock.now
+    // SuspendingClock does not tick while the Mac sleeps: a closed lid is not silence. (ContinuousClock
+    // does, so a lunch break read as 60 s without a byte and failed the download on wake.)
+    private var last = SuspendingClock.now
     private var bytes: Int64 = -1
 
     func touch(_ done: Int64) {
@@ -288,6 +295,12 @@ final class SilenceClock: @unchecked Sendable {
 
     func silent(for limit: Duration) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        return ContinuousClock.now - last >= limit
+        return SuspendingClock.now - last >= limit
+    }
+
+    /// The Mac woke: give the network a full limit to come back before calling it silence.
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        last = .now
     }
 }

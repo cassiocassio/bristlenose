@@ -113,6 +113,27 @@ def test_bad_bytes_are_refused_and_removed(tmp_path, monkeypatch, what) -> None:
     assert not (snap.parent.parent / "refs" / "main").exists()
 
 
+def test_a_file_that_cannot_be_removed_is_not_called_discarded(tmp_path, monkeypatch) -> None:
+    files = {"config.json": b"{}", "weights.safetensors": b"w" * 50}
+    _fake_pin(monkeypatch, files)
+    served = dict(files)
+    served["weights.safetensors"] = b"x" * 50  # same size, other bytes
+    snap = _snapshot(tmp_path, served)
+    fake = MagicMock()
+    fake.snapshot_download.return_value = str(snap)
+
+    def _cannot_unlink(self, *args, **kwargs):
+        raise PermissionError("read-only volume")
+
+    monkeypatch.setattr(Path, "unlink", _cannot_unlink)
+    with patch.dict(sys.modules, {"huggingface_hub": fake}):
+        with pytest.raises(PackageInstallError) as caught:
+            ensure_hf_model(REPO)
+    assert "could not be removed" in str(caught.value)
+    assert "discarded" not in str(caught.value)
+    assert (snap / "weights.safetensors").exists()
+
+
 def test_an_older_main_is_overwritten_with_the_pin(tmp_path, monkeypatch) -> None:
     # An interrupted unpinned fetch left ``refs/main`` naming a snapshot with no weights.
     files = {"config.json": b"{}", "weights.safetensors": b"w" * 50}

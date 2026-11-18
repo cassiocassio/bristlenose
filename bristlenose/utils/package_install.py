@@ -225,16 +225,19 @@ def _verify_pinned_snapshot(pin: Any, snapshot: str) -> None:
             problem = "does not match its pinned SHA-256"
         if problem is None:
             continue
+        removed = True
         try:
             blob = target.resolve()
             target.unlink(missing_ok=True)
             if blob != target:
                 blob.unlink(missing_ok=True)
         except OSError:
-            pass
-        raise PackageInstallError(
-            f"{pin.repo_id} {pinned.name} {problem}; the download was discarded"
-        )
+            removed = False
+            logger.warning(
+                "ensure_hf_model: could not remove %s after it failed its check", pinned.name
+            )
+        outcome = "the download was discarded" if removed else "it could not be removed"
+        raise PackageInstallError(f"{pin.repo_id} {pinned.name} {problem}; {outcome}")
     try:
         ref = root.parent.parent / "refs" / "main"
         # Always the pin, even over an older value: a ``main`` left by an earlier unpinned

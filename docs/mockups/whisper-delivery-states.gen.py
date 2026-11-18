@@ -237,7 +237,7 @@ MOMENTS.append(moment(
 fail_pop = pop("Whisper didn’t download",
                "The connection dropped and didn’t come back.<br><br>For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
                buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
-fail_prop = pop("Whisper didn’t download",
+fail_prop = pop('<span class="inv-mark">Connection dropped</span>',
                 "The connection dropped and didn’t come back.",
                 buttons='<div style="text-align:right"><span class="inv-mark">' + BTN("Transcription Settings…", True) + "</span></div>")
 MOMENTS.append(moment(
@@ -245,7 +245,7 @@ MOMENTS.append(moment(
     TODAY + " · network cause", toolbar(pill("Whisper didn’t download", failed=True), fail_pop),
     PROP + " · says only what failed; one button, to Settings", toolbar(pill("Whisper didn’t download", failed=True), fail_prop),
     "<b>Offline:</b> macOS owns a Background Assets download; the observed failure on a dropped server was NSURLErrorDomain -1005 and the OS did not retry by itself, so Retry is right. "
-    "<b>Proposed (small):</b> drop the “Whisper copes better…” pitch from inside an error; the Mac review: a sales sentence does not belong in a failure. The cause line stays. "
+    "<b>Proposed:</b> drop the “Whisper copes better…” pitch from inside an error (a sales sentence does not belong in a failure), and title the popover with the cause (owner, 18 Nov: “Connection dropped”); the pill keeps “Whisper didn’t download”. The title repeats the body’s first words, so the body could shrink to the instruction once the cause has a title; owner to say. "
     "<b>Low disk:</b> the shipped cause line is “This Mac doesn’t have enough free space for it.” An earlier draft added “about 1.6 GB free”; dropped, because nobody has measured that 1.6 GB is enough for download plus staging, and a wrong number is worse than none. "
     "A lone Retry on a full disk is a dead end: the better fix is to name the fact to act on once it is measured (house rule). The app also does not auto-start below 10 GB free (owner, 30 Oct) and says nothing about that: gap G8. "
     "<b>Owner decision, 18 Nov:</b> Retry becomes one button, “Transcription Settings…”, in both pills (this one and moment 10); the extra click is accepted because Settings (moment 7) is the surface that can explain the cause and offer Download Now, Stop, engine and model. No two-button popovers. How other doors open Settings on this tab is not yet found; owed before build. "

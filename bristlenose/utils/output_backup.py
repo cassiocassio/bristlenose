@@ -107,10 +107,6 @@ logger = logging.getLogger(__name__)
 _APPEND_ONLY = (
     Path(".bristlenose") / "pipeline-events.jsonl",
     Path(".bristlenose") / "bristlenose.log",
-    # Not the usage ledger: a run's copy starts with the rows carried into it,
-    # so appending it here doubled the file on every failed Re-analyse (3, 7,
-    # 15, 31, 63 lines in review, 17 Nov 2026). `carry_exports` merges it by
-    # row id instead, on every path that throws a tree away.
 )
 
 #: Pipeline scratch, not part of the report. Dropped rather than stashed — see
@@ -820,18 +816,6 @@ def carry_exports(report: Path, output_dir: Path) -> bool:
 
     # Never raises: it runs inside the CLI's `finally`, and an escape there
     # would replace the run's own failure with a traceback no log holds.
-    #
-    # The study's token ledger goes first, by row id, whichever tree this is
-    # (a failed run's, a replaced report's, a crash's): spend is history, and
-    # a tree thrown away must not take any with it. Its failure is said, and
-    # does not keep the tree: the totals are short, no export is at stake.
-    try:
-        from bristlenose.llm import usage
-
-        usage.merge_ledger(report, output_dir)
-    except Exception as exc:
-        logger.warning("output_backup: could not carry the usage ledger from %s (%s); "
-                       "the study's token total is short by that tree's rows", report, exc)
     try:
         entries = sorted(report.iterdir(), key=lambda e: (e.name in _EXPORT_FOLDERS, e.name))
     except OSError as exc:

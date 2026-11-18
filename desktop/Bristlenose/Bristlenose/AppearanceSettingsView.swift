@@ -35,6 +35,10 @@ struct AppearanceSettingsView: View {
     @State private var language: String = I18n.resolvedLocale
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation: Bool = true
+    /// Read by `PipelineRunner.showRunUsage` when a run ends, through
+    /// `AnalysisUsageDisplay.current`; nothing to restart or notify.
+    @AppStorage(AnalysisUsageDisplay.defaultsKey)
+    private var analysisUsage: String = AnalysisUsageDisplay.defaultValue.rawValue
     /// Mirrors the Welcome window's footer checkbox — one setting, two views.
     @AppStorage(WelcomeWindow.showOnLaunchKey) private var showWelcomeOnLaunch: Bool = true
     @AppStorage(DiagnosticsPreference.key)
@@ -138,6 +142,26 @@ struct AppearanceSettingsView: View {
                     Text(i18n.t("settings.appearance.animationHelp"))
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section {
+                // What a run that just succeeded used, on its row for a few
+                // seconds (docs/design-llm-usage.md). Radios, as Appearance
+                // above: three fixed choices, all worth seeing at once. Help
+                // text in-cell, as the toggles here do.
+                Picker(selection: $analysisUsage) {
+                    Text(i18n.t("settings.appearance.usageTokens"))
+                        .tag(AnalysisUsageDisplay.tokens.rawValue)
+                    Text(i18n.t("settings.appearance.usageCost"))
+                        .tag(AnalysisUsageDisplay.cost.rawValue)
+                    Text(i18n.t("settings.appearance.usageOff"))
+                        .tag(AnalysisUsageDisplay.off.rawValue)
+                } label: {
+                    Text(i18n.t("settings.appearance.usageLegend"))
+                    Text(i18n.t("settings.appearance.usageHelp"))
+                        .foregroundStyle(.secondary)
+                }
+                .pickerStyle(.radioGroup)
             }
 
             Section {

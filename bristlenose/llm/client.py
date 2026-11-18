@@ -477,20 +477,9 @@ def _raise_if_declined(choice: object, name: str) -> None:
 
 
 def _count(value: object) -> int:
-    """A token count the SDK may leave unset: an int, or 0 for anything else."""
+    """A token count the SDK may leave unset: an int, or 0 for anything else
+    (None, or a MagicMock attribute in a test)."""
     return value if isinstance(value, int) and not isinstance(value, bool) else 0
-
-
-def _openai_cached_tokens(usage: object) -> int | None:
-    """The cached share of an OpenAI-shaped `prompt_tokens`, or None.
-
-    OpenAI and Azure count cached input INSIDE `prompt_tokens` and bill it at
-    a discount; the share is in `prompt_tokens_details.cached_tokens`. Only the
-    usage ledger reads it (`usage.note_call`), to price input correctly.
-    """
-    details = getattr(usage, "prompt_tokens_details", None)
-    cached = getattr(details, "cached_tokens", None)
-    return cached if isinstance(cached, int) and cached > 0 else None
 
 
 def _declined(choice: object, name: str) -> ContentBlockedError | None:
@@ -845,7 +834,6 @@ class LLMClient:
         retry_count: int = 0,
         finish_reason: str | None = None,
         usage_source: Literal["reported", "missing"] = "reported",
-        cached_input_tokens_included: int | None = None,
     ) -> None:
         """Thin wrapper around ``telemetry.record_call`` — never raises."""
         try:
@@ -864,7 +852,6 @@ class LLMClient:
                 retry_count=retry_count,
                 finish_reason=finish_reason,
                 usage_source=usage_source,
-                cached_input_tokens_included=cached_input_tokens_included,
                 prompt_id=prompt_template.id if prompt_template else None,
                 prompt_version=prompt_template.version if prompt_template else None,
                 prompt_path=(
@@ -1138,12 +1125,10 @@ class LLMClient:
 
         input_tokens: int | None = None
         output_tokens: int | None = None
-        cached_included: int | None = None
         usage_source: Literal["reported", "missing"] = "missing"
         if hasattr(response, "usage") and response.usage:
             input_tokens = response.usage.prompt_tokens
             output_tokens = response.usage.completion_tokens
-            cached_included = _openai_cached_tokens(response.usage)
             usage_source = "reported"
             self.tracker.record(input_tokens, output_tokens)
             logger.info(
@@ -1164,7 +1149,6 @@ class LLMClient:
                 input_chars=input_chars, elapsed_ms=elapsed_ms,
                 outcome="truncated", prompt_template=prompt_template,
                 input_tokens=input_tokens, output_tokens=output_tokens,
-                cached_input_tokens_included=cached_included,
                 finish_reason=finish_reason, usage_source=usage_source,
             )
             raise TruncatedResponseError(
@@ -1183,7 +1167,6 @@ class LLMClient:
             input_chars=input_chars, elapsed_ms=elapsed_ms,
             outcome="error" if declined is not None else "ok", prompt_template=prompt_template,
             input_tokens=input_tokens, output_tokens=output_tokens,
-            cached_input_tokens_included=cached_included,
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
@@ -1288,12 +1271,10 @@ class LLMClient:
 
         input_tokens: int | None = None
         output_tokens: int | None = None
-        cached_included: int | None = None
         usage_source: Literal["reported", "missing"] = "missing"
         if hasattr(response, "usage") and response.usage:
             input_tokens = response.usage.prompt_tokens
             output_tokens = response.usage.completion_tokens
-            cached_included = _openai_cached_tokens(response.usage)
             usage_source = "reported"
             self.tracker.record(input_tokens, output_tokens)
             logger.info(
@@ -1313,7 +1294,6 @@ class LLMClient:
                 input_chars=input_chars, elapsed_ms=elapsed_ms,
                 outcome="truncated", prompt_template=prompt_template,
                 input_tokens=input_tokens, output_tokens=output_tokens,
-                cached_input_tokens_included=cached_included,
                 finish_reason=finish_reason, usage_source=usage_source,
             )
             raise TruncatedResponseError(
@@ -1332,7 +1312,6 @@ class LLMClient:
             input_chars=input_chars, elapsed_ms=elapsed_ms,
             outcome="error" if declined is not None else "ok", prompt_template=prompt_template,
             input_tokens=input_tokens, output_tokens=output_tokens,
-            cached_input_tokens_included=cached_included,
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
@@ -1414,21 +1393,19 @@ class LLMClient:
 
         input_tokens: int | None = None
         output_tokens: int | None = None
-        cached_included: int | None = None
         usage_source: Literal["reported", "missing"] = "missing"
         if hasattr(response, "usage_metadata") and response.usage_metadata:
             meta = response.usage_metadata
             input_tokens = meta.prompt_token_count or 0
             # Thinking is billed as output, and `candidates_token_count` leaves
             # it out. Direct Gemini calls do not switch thinking off (2.5 and
-            # 3.x Flash think by default), so every Gemini output count, the
-            # CLI's cost line and the usage ledger were short of what the
-            # provider billed until 17 Nov 2026. OpenAI's `completion_tokens`
-            # already includes reasoning; this makes Gemini mean the same.
+            # 3.x Flash think by default), so every Gemini output count and the
+            # cost figures built on it were short of the bill until 17 Nov 2026.
+            # OpenAI's `completion_tokens` already includes reasoning; this
+            # makes Gemini mean the same.
             output_tokens = (meta.candidates_token_count or 0) + _count(
                 getattr(meta, "thoughts_token_count", None)
             )
-            cached_included = _count(getattr(meta, "cached_content_token_count", None)) or None
             usage_source = "reported"
             self.tracker.record(input_tokens, output_tokens)
             logger.info(
@@ -1461,7 +1438,6 @@ class LLMClient:
                 input_chars=input_chars, elapsed_ms=elapsed_ms,
                 outcome="truncated", prompt_template=prompt_template,
                 input_tokens=input_tokens, output_tokens=output_tokens,
-                cached_input_tokens_included=cached_included,
                 finish_reason=finish_reason, usage_source=usage_source,
             )
             raise TruncatedResponseError(
@@ -1484,7 +1460,6 @@ class LLMClient:
             input_chars=input_chars, elapsed_ms=elapsed_ms,
             outcome="error" if blocked else "ok", prompt_template=prompt_template,
             input_tokens=input_tokens, output_tokens=output_tokens,
-            cached_input_tokens_included=cached_included,
             finish_reason=finish_reason, usage_source=usage_source,
         )
 

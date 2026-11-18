@@ -74,6 +74,12 @@ enum EventLogReader {
         /// finished from cache carries neither.
         let inputTokens: Int?
         let outputTokens: Int?
+        /// The run's cost at the provider's list price, in US dollars, beside
+        /// those totals; nil when the model has no price on record (an Azure
+        /// deployment, an any-llm route, a local model). An estimate, never the
+        /// bill (`bristlenose/cost.py`). Read for the run-end usage line
+        /// (`RunUsageLine`).
+        let costUsdEstimate: Double?
 
         enum CodingKeys: String, CodingKey {
             case event, kind
@@ -95,6 +101,7 @@ enum EventLogReader {
             case stageExpectedSeconds = "stage_expected_seconds"
             case inputTokens = "input_tokens"
             case outputTokens = "output_tokens"
+            case costUsdEstimate = "cost_usd_estimate"
         }
     }
 

@@ -1765,23 +1765,6 @@ def run(
                     logging.getLogger("bristlenose").warning(
                         "could not carry the study id or start times into the new output: %s", exc
                     )
-                # The study's token ledger crosses too, read from the stash after
-                # the rename so a serve job that wrote just before it is in it.
-                # This copy keeps the total right while the run goes; the
-                # settle's merge (`output_backup.carry_exports`) is what keeps
-                # it right after. Its own try: a failed ledger carry must not
-                # cost the study id, and the other way round.
-                from bristlenose.llm import usage
-
-                try:
-                    usage.write_carried(output_dir, usage.carry_bytes(output_stash))
-                except OSError as exc:
-                    import logging
-
-                    logging.getLogger("bristlenose").warning(
-                        "could not carry the usage ledger into the new output — "
-                        "earlier runs' tokens are missing from the study's total: %s", exc
-                    )
             if output_stash is not None:
                 console.print(f"\n[dim]Cleaned {_text(output_dir)}[/dim]")
             else:

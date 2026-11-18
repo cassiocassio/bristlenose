@@ -686,15 +686,11 @@ def test_a_partial_delivery_puts_a_coverage_note_in_the_prompt() -> None:
         assert ("Coverage note: this analysis is still running" in prompt) is expected
 
 
-class TestQuestionsAreCounted:
-    def test_a_question_reaches_the_call_log_and_the_usage_ledger(
-        self, tmp_path: Path
-    ) -> None:
+class TestQuestionsAreRecorded:
+    def test_a_question_reaches_the_call_log(self, tmp_path: Path) -> None:
         """Until 17 Nov 2026 the route bound only `telemetry.stage(...)`, which
-        labels a row and gives it nowhere to go: every chat-lens call was missing
-        from llm-calls.jsonl, and no question counted toward the study's usage
-        (docs/design-llm-usage.md)."""
-        from bristlenose.llm import telemetry, usage
+        labels a row and gives it nowhere to go: no chat-lens call was recorded."""
+        from bristlenose.llm import telemetry
 
         app = _make_app()
         app.state.project_dir = tmp_path  # not the fixture folder: this writes
@@ -717,7 +713,6 @@ class TestQuestionsAreCounted:
                 "/api/dev/chat-lens/ask", json={"question": "What confused people?"}
             )
         assert r.status_code == 200, r.text
-        run_dir = tmp_path / "bristlenose-output" / ".bristlenose"
-        (row,) = usage.read_rows(run_dir)
-        assert (row.kind, row.calls, row.input_tokens) == ("chat_lens", 2, 1000)
-        assert (run_dir / telemetry.JSONL_FILENAME).exists()
+        rows = list(telemetry.iter_rows(tmp_path / "bristlenose-output" / ".bristlenose"))
+        assert [row["stage"] for row in rows] == ["serve_chat_lens", "serve_chat_lens_support"]
+        assert len({row["run_id"] for row in rows}) == 1, "one question, one run"

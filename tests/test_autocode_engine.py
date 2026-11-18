@@ -1177,21 +1177,21 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
-    def test_a_reapply_is_counted_in_the_studys_usage(
-        self, project_with_garrett, tmp_path
-    ) -> None:
+    def test_a_reapply_reaches_the_call_log(self, project_with_garrett, tmp_path) -> None:
         """It runs after every completed run and on each catch-up, and until
-        17 Nov 2026 bound only `telemetry.stage(...)`: none of its spend was
-        counted (review). Bound to the project row's own output folder."""
-        from bristlenose.llm import telemetry, usage
+        17 Nov 2026 bound only `telemetry.stage(...)`: none of its calls were
+        recorded. Bound to the project row's own output folder."""
+        from bristlenose.llm import telemetry
         from bristlenose.server.models import Project
 
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(project_id, framework_id, db_factory)
         self._add_quotes(db_factory, project_id, 3)
+        out = tmp_path / "bristlenose-output"
+        (out / ".bristlenose").mkdir(parents=True)
         db = db_factory()
         try:
-            db.get(Project, project_id).output_dir = str(tmp_path)
+            db.get(Project, project_id).output_dir = str(out)
             db.commit()
         finally:
             db.close()
@@ -1207,9 +1207,9 @@ class TestReapplyToNewQuotes:
         with _patch_llm(AsyncMock(side_effect=_analyze)):
             asyncio.run(reapply_to_new_quotes(
                 db_factory, project_id, framework_id, _mock_settings()))
-        (row,) = usage.read_rows(tmp_path / ".bristlenose")
-        assert (row.kind, row.input_tokens) == ("autocode", 900)
-        assert row.run_id.startswith("autocode-reapply-")
+        rows = list(telemetry.iter_rows(out / ".bristlenose"))
+        assert rows and all(r["stage"] == "serve_autocode_reapply" for r in rows)
+        assert rows[0]["run_id"].startswith("autocode-reapply-")
 
     def test_untagged_existing_quotes_not_recoded(
         self, project_with_garrett
@@ -2567,68 +2567,3 @@ class TestReconcileOrphanedJobs:
         db_session.refresh(j2)
         assert j1.status == "failed"
         assert j2.status == "running"  # other project untouched
-
-
-class TestAutoCodePassesAreCounted:
-    """Every pass's tokens reach the study's usage ledger, a failed pass's too
-    (docs/design-llm-usage.md). Pinned at the job, not the helper."""
-
-    def _spending(self, reply):
-        async def _analyze(*a, **k):
-            from bristlenose.llm import telemetry
-
-            telemetry.record_call(
-                provider="anthropic", request_model="test-model", response_model=None,
-                input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",
-                input_tokens=700, output_tokens=70,
-            )
-            if isinstance(reply, BaseException):
-                raise reply
-            return reply
-        return _analyze
-
-    def _rows(self, tmp_path):
-        from bristlenose.llm import usage
-
-        return usage.read_rows(tmp_path / "bristlenose-output" / ".bristlenose")
-
-    def test_a_completed_pass(self, project_with_garrett, tmp_path) -> None:
-        project_id, framework_id, db_factory = project_with_garrett
-        reply = _make_batch_result(10, "user need", 0.85)
-        with _patch_llm(AsyncMock(side_effect=self._spending(reply))):
-            asyncio.run(run_autocode_job(
-                db_factory, project_id, framework_id, _mock_settings(), project_dir=tmp_path,
-            ))
-        (row,) = self._rows(tmp_path)
-        assert row.kind == "autocode"
-        assert row.input_tokens == 700 * row.calls and row.calls >= 1
-
-    def test_a_running_pass_is_visible_before_it_ends(
-        self, project_with_garrett, tmp_path
-    ) -> None:
-        from bristlenose.llm import usage
-
-        project_id, framework_id, db_factory = project_with_garrett
-        seen: list[list[str]] = []
-        spend = self._spending(_make_batch_result(10, "user need", 0.85))
-
-        async def _analyze(*a, **k):
-            result = await spend(*a, **k)
-            run_dir = tmp_path / "bristlenose-output" / ".bristlenose"
-            seen.append([f.kind for f in usage.peek(run_dir)])
-            return result
-
-        with _patch_llm(AsyncMock(side_effect=_analyze)):
-            asyncio.run(run_autocode_job(
-                db_factory, project_id, framework_id, _mock_settings(), project_dir=tmp_path,
-            ))
-        assert seen and seen[0] == ["autocode"], seen
-
-    def test_a_pass_whose_every_batch_failed(self, project_with_garrett, tmp_path) -> None:
-        project_id, framework_id, db_factory = project_with_garrett
-        with _patch_llm(AsyncMock(side_effect=self._spending(RuntimeError("400 credit")))):
-            asyncio.run(run_autocode_job(
-                db_factory, project_id, framework_id, _mock_settings(), project_dir=tmp_path,
-            ))
-        (row,) = self._rows(tmp_path)
-        assert row.calls >= 1, "a failed pass still paid for its calls"

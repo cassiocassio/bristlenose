@@ -89,7 +89,6 @@ sidecar_source_hash() {
         find bristlenose/llm/prompts bristlenose/server/codebook bristlenose/data -type f \
             -not -name '.DS_Store' -not -name '._*' -print0
         find bristlenose/llm/cohort-baselines.json -type f -print0
-        find bristlenose/llm/pricing.json bristlenose/llm/fx-rates.json -type f -print0
         _frontend_inputs_print0
         find desktop/bristlenose-sidecar.spec -type f -print0
         find desktop/mcpb -type f \

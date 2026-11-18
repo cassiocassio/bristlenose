@@ -682,14 +682,13 @@ class TestCodebookLab:
         assert "unlinked-tag" in {t["name"] for t in tags}
 
 
-class TestBuilderCallsAreCounted:
-    def test_a_synthesis_reaches_the_usage_ledger(
+class TestBuilderCallsAreRecorded:
+    def test_a_synthesis_reaches_the_call_log(
         self, client_with_coded_tag, tmp_path: Path
     ) -> None:
         """The engine binds only `telemetry.stage(...)`; until 17 Nov 2026 no
-        builder call reached llm-calls.jsonl or the study's usage
-        (docs/design-llm-usage.md)."""
-        from bristlenose.llm import telemetry, usage
+        builder call was recorded."""
+        from bristlenose.llm import telemetry
 
         client, tag_id = client_with_coded_tag
         client.app.state.project_dir = tmp_path  # not the fixture folder: this writes
@@ -705,5 +704,5 @@ class TestBuilderCallsAreCounted:
         with _patch_llm(AsyncMock(side_effect=_analyze)):
             resp = client.post(f"/api/projects/1/codebook/tags/{tag_id}/builder/synthesize")
         assert resp.status_code == 200, resp.text
-        (row,) = usage.read_rows(tmp_path / "bristlenose-output" / ".bristlenose")
-        assert (row.kind, row.input_tokens) == ("codebook_builder", 300)
+        (row,) = telemetry.iter_rows(tmp_path / "bristlenose-output" / ".bristlenose")
+        assert row["stage"] == "serve_codebook_synthesize"

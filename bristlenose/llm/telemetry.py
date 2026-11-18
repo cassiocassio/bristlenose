@@ -57,9 +57,6 @@ _run_dir: ContextVar[Path | None] = ContextVar("_run_dir", default=None)
 _stage_id: ContextVar[str | None] = ContextVar("_stage_id", default=None)
 _session_id: ContextVar[str | None] = ContextVar("_session_id", default=None)
 
-# Logged once per process: a call that reached record_call with no job bound.
-_unbound_warned = False
-
 
 class LLMCallEvent(BaseModel):
     """One terminal LLM call outcome — schema for ``llm-calls.jsonl`` rows.
@@ -130,8 +127,8 @@ def reset_run_context(tokens: tuple[object, object]) -> None:
 
 
 @contextmanager
-def serve_run_context(project_dir: Path | None, run_id: str, kind: str) -> Iterator[None]:
-    """Bind the run context for a SERVE-time LLM job, then count it and restore.
+def serve_run_context(project_dir: Path | None, run_id: str) -> Iterator[None]:
+    """Bind the run context for a SERVE-time LLM call, then restore it.
 
     Serve mode has no pipeline run to inherit from, so anything that calls an
     LLM from a request has to bind its own — and if it does not, `record_call`
@@ -147,41 +144,19 @@ def serve_run_context(project_dir: Path | None, run_id: str, kind: str) -> Itera
     started with a project — and yields without binding, which restores the old
     silent-skip for that case alone.
 
-    On the way out, success or failure, the job's tokens go to the study's
-    usage ledger as one row per model (``usage.flush``), labelled *kind*. A
-    failed job spent what it spent.
-
     NB `server/autocode.py` still inlines this; it predates the helper and works.
-    A new serve-time LLM caller should use this rather than another copy.
+    A third serve-time LLM caller should use this rather than a third copy.
     """
     if project_dir is None:
         yield
         return
     from bristlenose.output_paths import project_output_dir
 
-    with job_context(project_output_dir(project_dir) / ".bristlenose", run_id, kind):
-        yield
-
-
-@contextmanager
-def job_context(run_dir: Path, run_id: str, kind: str) -> Iterator[None]:
-    """Bind one LLM job to *run_dir* (a ``.bristlenose`` folder), count it, restore.
-
-    The run context makes its calls reach ``llm-calls.jsonl``; ``usage.begin``
-    makes its use readable while it runs; the exit, success or failure, writes
-    its row to the study's usage ledger. For a caller that holds the folder
-    itself (a project row's ``output_dir``); one holding a project root uses
-    :func:`serve_run_context`.
-    """
-    from . import usage
-
-    tokens = set_run_context(run_id, run_dir)
-    usage.begin(run_id, run_dir, kind)
+    tokens = set_run_context(run_id, project_output_dir(project_dir) / ".bristlenose")
     try:
         yield
     finally:
         reset_run_context(tokens)
-        usage.flush(run_dir, run_id, kind)
 
 
 @contextmanager
@@ -319,7 +294,6 @@ def record_call(
     run_id: str | None = None,
     stage_override: str | None = None,
     session_id_override: str | None = None,
-    cached_input_tokens_included: int | None = None,
 ) -> None:
     """Append one terminal LLM-call event to ``<run_dir>/llm-calls.jsonl``.
 
@@ -339,43 +313,7 @@ def record_call(
     the model is unpriced (an Azure deployment name, a local Ollama tag) or
     when no baseline covers the cohort; the token counts are still worth
     recording, so that is not an error.
-
-    ``cached_input_tokens_included`` is the cached share of ``input_tokens`` for
-    providers that count it inside (OpenAI, Azure, Gemini). Only the usage
-    ledger reads it; this row keeps the provider's own input count, which the
-    forecast's cohort medians are built on. (Gemini's ``output_tokens`` here
-    include thinking since 17 Nov 2026, as OpenAI's always did: a Gemini cohort
-    built from rows on both sides of that date would mix two meanings.)
-
-    The call is also counted in the study's usage ledger (``usage.note_call``)
-    whenever a run is bound, BEFORE the kill switch and the stage check: the
-    ledger carries nothing that identifies anyone, and a missing ``stage(...)``
-    wrapper must not make a researcher's tokens disappear from their total.
     """
-    rid = run_id if run_id is not None else _run_id.get()
-    if rid is None:
-        global _unbound_warned
-        if not _unbound_warned:
-            _unbound_warned = True
-            logger.info(
-                "llm call with no job bound (stage=%s): not counted in the study's usage; "
-                "bind it with telemetry.job_context or serve_run_context",
-                stage_override or _stage_id.get(),
-            )
-    else:
-        from . import usage
-
-        usage.note_call(
-            run_id=rid,
-            provider=provider,
-            model=request_model,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cache_read_input_tokens=cache_read_input_tokens,
-            cache_creation_input_tokens=cache_creation_input_tokens,
-            cached_input_tokens_included=cached_input_tokens_included,
-        )
-
     if not _telemetry_enabled():
         return
 
@@ -384,6 +322,7 @@ def record_call(
         logger.debug("record_call: no _run_dir contextvar set, skipping")
         return
 
+    rid = run_id if run_id is not None else _run_id.get()
     if rid is None:
         logger.debug("record_call: no _run_id contextvar set, skipping")
         return

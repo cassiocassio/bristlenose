@@ -207,7 +207,7 @@ async def run_autocode_job(
     the duration of the job so per-call rows land in
     ``<output_dir>/.bristlenose/llm-calls.jsonl``.
     """
-    from bristlenose.llm import telemetry, usage
+    from bristlenose.llm import telemetry
     from bristlenose.llm.client import LLMClient
     from bristlenose.llm.prompts import get_prompt_template
     from bristlenose.llm.structured import AutoCodeBatchResult
@@ -229,7 +229,6 @@ async def run_autocode_job(
         run_dir = project_output_dir(project_dir) / ".bristlenose"
         run_id = f"autocode-{project_id}-{framework_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
         telemetry_tokens = telemetry.set_run_context(run_id, run_dir)
-        usage.begin(run_id, run_dir, "autocode")
 
     db = db_factory()
     try:
@@ -623,8 +622,6 @@ async def run_autocode_job(
             except Exception:
                 logger.debug("telemetry trim failed", exc_info=True)
             telemetry.reset_run_context(telemetry_tokens)
-            # A cancelled or failed pass spent what it spent (docs/design-llm-usage.md).
-            usage.flush(run_dir, run_id, "autocode")
 
 
 # Default accept cutoff when a framework was applied without an explicit
@@ -959,13 +956,12 @@ async def reapply_to_new_quotes(
     settings: BristlenoseSettings,
     track_status: bool = False,
 ) -> int:
-    """Re-apply a framework to the quotes it owes, as one counted job.
+    """Re-apply a framework to the quotes it owes, bound as a run.
 
-    Binds the pass to its study's ``.bristlenose`` folder, read from the project
-    row, so its calls reach ``llm-calls.jsonl`` and the study's usage ledger.
-    Until 17 Nov 2026 the pass bound only ``telemetry.stage(...)``, and every
-    re-apply after a run and every catch-up went uncounted
-    (docs/design-llm-usage.md). The work is :func:`_reapply_to_new_quotes`.
+    Binds the pass to the project's output folder (read from its row), so its
+    calls reach ``llm-calls.jsonl``. Until 17 Nov 2026 it bound only
+    ``telemetry.stage(...)``, and no re-apply after a run, and no catch-up, was
+    recorded. The work is :func:`_reapply_to_new_quotes`.
     """
     from bristlenose.events import new_run_id
     from bristlenose.llm import telemetry
@@ -980,12 +976,9 @@ async def reapply_to_new_quotes(
     work = _reapply_to_new_quotes(
         db_factory, project_id, framework_id, settings, track_status=track_status,
     )
-    if not output_dir:
-        return await work
-    with telemetry.job_context(
-        Path(output_dir) / ".bristlenose",
+    with telemetry.serve_run_context(
+        Path(output_dir) if output_dir else None,
         f"autocode-reapply-{project_id}-{framework_id}-{new_run_id()}",
-        "autocode",
     ):
         return await work
 

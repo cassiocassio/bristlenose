@@ -11,7 +11,6 @@ trued-against: HEAD@main (23d56af) on 2026-04-28
 
 ## Changelog
 
-- _2026-11-17_ — **the alpha step is done, in a different shape.** `PRICING` now lives in the bundled `bristlenose/llm/pricing.json`, but as dated prices per model with a provider and cache rates (`docs/design-llm-usage.md`, layer 2), not the flat `{model: [in, out]}` of §Data shape; `pricing.PRICING` is derived from it on the table's own version date. A fetched payload would need that shape. The fetch itself, the cache and the kill switch are still not built: they change what leaves the machine, which is the owner's decision.
 - _2026-04-28_ — confirmed still aspirational; Phase 1 Slice C shipped (`4401e41`) so the "after slice C" precondition is now met. Branch `cost-and-time-forecasts` closed (`23d56af`); `trued-against` re-anchored to main.
 - _2026-04-27_ — initial draft.
 

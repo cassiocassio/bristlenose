@@ -622,7 +622,7 @@ async def generate_elaborations(
         # is absent from llm-calls.jsonl, with nothing anywhere saying so. Found
         # by looking for the spend and finding 260 rows, none of them these.
         run_id = f"elaboration-{project_id}-{codebook_id}-{_utcstamp()}"
-        with telemetry.serve_run_context(project_dir, run_id, "elaboration"), telemetry.stage(
+        with telemetry.serve_run_context(project_dir, run_id), telemetry.stage(
             "serve_signal_elaboration"
         ):
             result = await client.analyze(

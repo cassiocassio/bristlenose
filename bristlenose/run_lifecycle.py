@@ -65,7 +65,7 @@ from bristlenose.events import (
     read_events,
 )
 from bristlenose.i18n import t_in
-from bristlenose.llm import telemetry, usage
+from bristlenose.llm import telemetry
 from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
 from bristlenose.utils.fs import open_private
 from bristlenose.utils.machine_identity import friendly_machine_name, machine_id
@@ -559,20 +559,6 @@ def run_in_progress(output_dir: Path) -> bool:
     return pid_file is not None and _is_alive_owned(pid_file)
 
 
-def live_run_id(output_dir: Path) -> str | None:
-    """The run id a live pipeline run holds this project under, or None.
-
-    For a reader that must tell the live run's lines from a dead one's: the
-    PID file is written before ``run_started``, so the newest line in the log
-    can belong to an earlier run that died.
-    """
-    pid_file = _read_pid_file(output_dir)
-    if pid_file is None or not _is_alive_owned(pid_file):
-        return None
-    rid = pid_file.get("run_id")
-    return rid if isinstance(rid, str) and rid else None
-
-
 # ---------------------------------------------------------------------------
 # Exception → Cause categoriser
 # ---------------------------------------------------------------------------
@@ -972,11 +958,6 @@ class RunHandle:
         """
         if self._events_file is None:
             return
-        # The run's LLM use so far rides every progress line, so a reader in
-        # another process (the Mac app, a serve) sees it move during the run,
-        # not only at its end. Stamped here rather than passed by the
-        # pipeline: every call already reaches the ledger's tally.
-        used = usage.run_totals(self.run_id)
         event = RunProgressEvent(
             ts=_now_iso(),
             run_id=self.run_id,
@@ -995,13 +976,6 @@ class RunHandle:
             stage_base=stage_base,
             stage_span=stage_span,
             stage_expected_seconds=stage_expected_seconds,
-            usage_calls=used.calls if used else None,
-            usage_input_tokens=used.input_tokens if used else None,
-            usage_output_tokens=used.output_tokens if used else None,
-            usage_cache_read_input_tokens=used.cache_read_input_tokens if used else None,
-            usage_cache_creation_input_tokens=(
-                used.cache_creation_input_tokens if used else None
-            ),
         )
         try:
             append_event(self._events_file, event)
@@ -1305,7 +1279,6 @@ def run_lifecycle(
             telemetry_tokens = telemetry.set_run_context(
                 run_id, output_dir / ".bristlenose",
             )
-            usage.begin(run_id, output_dir / ".bristlenose", kind.value)
             yield handle
         except KeyboardInterrupt as exc:
             sig = _caught_signal or signal.SIGINT
@@ -1380,14 +1353,6 @@ def run_lifecycle(
             log.info("run_completed run_id=%s", run_id)
             telemetry.trim_run_terminus()
     finally:
-        # The run's usage row, once, rather than beside each terminus: a failed
-        # or stopped run spent tokens too, and `handle.set_cost` is only called
-        # (in cli.py) for one that returned. BEFORE the PID file goes: a reader
-        # of live use (`routes/usage.py`) stops reading this run's progress
-        # lines when its PID file goes, so a flush after it left the run in
-        # neither place for that moment. Never raises (docs/design-llm-usage.md).
-        if telemetry_tokens is not None:
-            usage.flush(output_dir / ".bristlenose", run_id, kind.value)
         # Here, not in each handler: a terminus append that raises (a full disk
         # fails it as surely as run_started) skipped the handler's removal and
         # left run.pid naming a dead process. Guarded so a failed unlink neither

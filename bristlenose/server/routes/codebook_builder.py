@@ -205,12 +205,11 @@ def _load_settings_for(request: Request) -> object:
     return load_settings()
 
 
-def _builder_job(request: Request, project_id: int) -> AbstractContextManager[None]:
-    """One builder call as one job: bound so its calls are recorded and counted.
+def _builder_run(request: Request, project_id: int) -> AbstractContextManager[None]:
+    """One builder call bound as a run, so its calls reach llm-calls.jsonl.
 
     The engine binds only `telemetry.stage(...)`, which labels a row and gives
-    it nowhere to go; until this, no builder call reached llm-calls.jsonl or the
-    study's usage ledger (docs/design-llm-usage.md).
+    it nowhere to go; until 17 Nov 2026 no builder call was recorded.
     """
     from bristlenose.events import new_run_id
     from bristlenose.llm import telemetry
@@ -218,7 +217,6 @@ def _builder_job(request: Request, project_id: int) -> AbstractContextManager[No
     return telemetry.serve_run_context(
         getattr(request.app.state, "project_dir", None),
         f"codebook-builder-{project_id}-{new_run_id()}",
-        "codebook_builder",
     )
 
 
@@ -280,7 +278,7 @@ async def synthesize(
         db.close()
 
     settings = _load_settings_for(request)
-    with _builder_job(request, project_id):
+    with _builder_run(request, project_id):
         draft = await cb.synthesize_prompt(tag_name, examples, settings)  # type: ignore[arg-type]
 
     db = _get_db(request)
@@ -385,7 +383,7 @@ async def find_candidates(
         db.close()
 
     settings = _load_settings_for(request)
-    with _builder_job(request, project_id):
+    with _builder_run(request, project_id):
         scan = await cb.find_candidates(
             tag_name, draft, pool, settings,  # type: ignore[arg-type]
             min_confidence=body.min_confidence,
@@ -488,7 +486,7 @@ async def submit_decisions(
         db.close()
 
     settings = _load_settings_for(request)
-    with _builder_job(request, project_id):
+    with _builder_run(request, project_id):
         draft = await cb.synthesize_prompt(
             tag_name, examples, settings,  # type: ignore[arg-type]
             current=current, accepted=accepted_fb, rejected=rejected_fb,

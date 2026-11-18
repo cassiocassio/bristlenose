@@ -56,6 +56,8 @@ enum SidebarSubtitleText {
              .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
              .readingScreens, .copyCancelling, .waitingForWhisper:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
+        case .runUsage(let line):
+            return line.text(i18n: i18n)
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
         case .deltaOnly(let delta):
@@ -127,7 +129,7 @@ enum SidebarSubtitleText {
         case .waitingForWhisper:
             return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
         case .cantFind, .failed, .failedDiagnostic, .completedPartial, .reportError,
-             .ready, .deltaOnly, .placeholder:
+             .runUsage, .ready, .deltaOnly, .placeholder:
             return nil
         }
     }

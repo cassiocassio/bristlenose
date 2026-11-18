@@ -141,6 +141,15 @@ costs about $140 a month, a year's budget in a week.
   `v0.37.0`); never on `v0.46.0`. The `v0.46.0` GitHub Release has no
   `bristlenose-0.46.0-setup-x64.exe` asset. So `release-winget.md` steps 1–4 are
   all still to run.
+- **The 0.46.0 rehearsal build exists** (18 Nov 2026, dispatched from a cloud
+  session as a dry run for 0.47.0, the version going to the App Store and winget
+  together): `windows-installer.yml` run 44420596704 on `10f2a7568`, green in 7.5
+  min, all nine smoke checks and schema validation passed;
+  `bristlenose-0.46.0-setup-x64.exe`, 158 MB, SHA-256
+  `EDE0BDA4C4B4574896FDBA350892D6C957930A71F1B2B676F91D3ECB0BC82799`; artefact
+  14482097237, kept until 16 Feb 2027. Not attached to the Release, not
+  submitted. It is now *the* 0.46.0 installer: never dispatch `v0.46.0` again.
+  Every non-installer manifest URL returned 200.
 - Skip 0.37.0–0.45.0: winget needs no unbroken run of versions, and each extra PR
   is a moderator's time. 0.37.0's held artefact (expires 10 Jan 2027) can lapse.
 

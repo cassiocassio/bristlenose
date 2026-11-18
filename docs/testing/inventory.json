@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 10777
+        "tests": 10778
       },
       {
         "basis": "test files",
@@ -35,7 +35,7 @@
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3312
+        "tests": 3313
       },
       {
         "basis": "spec files",

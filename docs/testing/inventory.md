@@ -9,10 +9,10 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 10777 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 10778 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 226 files | test files | `frontend/src/**/*.test.*` |
 | `figjam-plugin` | figjam plugin unit | 3 files | test files | `figjam-plugin/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 3312 in 269 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `BristlenoseTests` | swift unit | 3313 in 269 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 12 files | spec files | `e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.

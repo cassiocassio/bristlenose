@@ -115,12 +115,34 @@ import Testing
             done: 0, total: 0, bytesPerSecond: nil, minutesLeft: nil).isEmpty)
     }
 
-    @Test func aRunDefersWhenTheDownloadWasDeclinedOrNotYetAsked() {
+    @Test func aRunDefersWhenTheDownloadWasDeclinedOrTheQuestionIsStillToCome() {
         typealias M = WhisperDownloadModel
-        #expect(M.runMustDefer(whisperInBuild: true, stoppedByUser: true, hasAnswered: true))
-        #expect(M.runMustDefer(whisperInBuild: true, stoppedByUser: false, hasAnswered: false))
-        #expect(!M.runMustDefer(whisperInBuild: true, stoppedByUser: false, hasAnswered: true))
-        #expect(!M.runMustDefer(whisperInBuild: false, stoppedByUser: true, hasAnswered: false))
+        func defer_(_ build: Bool = true, pack: Bool = true, stopped: Bool, answered: Bool,
+                    reachable: Bool) -> Bool {
+            M.runMustDefer(whisperInBuild: build, packModelChosen: pack, stoppedByUser: stopped,
+                           hasAnswered: answered, questionReachable: reachable)
+        }
+        #expect(defer_(stopped: true, answered: true, reachable: false))   // Not Now / Stop
+        #expect(defer_(stopped: false, answered: false, reachable: true))  // question to come
+        // The question can never be put (little disk, no sidecar): nothing waits for ever.
+        #expect(!defer_(stopped: false, answered: false, reachable: false))
+        #expect(!defer_(stopped: false, answered: true, reachable: true))  // said Download
+        #expect(!defer_(false, stopped: true, answered: false, reachable: true))  // no Whisper
+        // Another model is Python's to fetch, whatever was said about turbo.
+        #expect(!defer_(pack: false, stopped: true, answered: true, reachable: true))
+    }
+
+    @Test func theQuestionIsReachableOnlyWhenItCanBePut() {
+        typealias M = WhisperDownloadModel
+        func reach(ask: Bool = true, sidecar: Bool = true, consent: Bool = true,
+                   free: Int64? = nil) -> Bool {
+            M.questionReachable(askIsWired: ask, sidecarPresent: sidecar, hasConsent: consent,
+                                freeBytes: free)
+        }
+        #expect(reach())
+        #expect(reach(free: M.autoStartFloorBytes))
+        #expect(!reach(free: M.autoStartFloorBytes - 1))
+        #expect(!reach(ask: false) && !reach(sidecar: false) && !reach(consent: false))
     }
 
     @Test func theTimeLeftGoesOnItsOwnLineWithoutTheDash() {

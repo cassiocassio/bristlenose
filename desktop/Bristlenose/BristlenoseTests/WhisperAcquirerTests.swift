@@ -179,12 +179,24 @@ final class FakeAcquirer: WhisperModelAcquirer {
     @Test func theRunEnvironmentIsTheAcquirersAndOnlyWhileItRuns() {
         let fake = FakeAcquirer(); fake.env = ["_X": "1"]
         let (m, _) = model(fake)
-        // Not asked yet: the run defers rather than fetching behind the size question.
-        #expect(m.runEnvironment == WhisperDownloadModel.hostOwnsEnvironment)
+        // Nothing is wired to ask (a test host): the question can never be put, so the run is
+        // not held for it (`questionReachable`).
+        #expect(m.runEnvironment.isEmpty)
         m.downloadNow()
         #expect(m.runEnvironment == ["_X": "1"])
         fake.end(.failed(cause: nil))
         #expect(m.runEnvironment.isEmpty)
+    }
+
+    /// A run that started while the size question was open deferred; answering Download must
+    /// still start the download, with that run live.
+    @Test func downloadAnsweredWhileARunIsLiveStillStarts() async {
+        let fake = FakeAcquirer()
+        let (m, _) = model(fake)
+        m.runIsLive = { true }
+        m.askToDownload = { true }
+        await m.ask()
+        #expect(fake.startCalls == 1)
     }
 
     /// After Not Now (a remembered Stop) a run that finds no model defers; it does not fetch.

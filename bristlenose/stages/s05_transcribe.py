@@ -1397,9 +1397,14 @@ def _init_mlx_backend(
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
         from bristlenose.preflight.whisper import host_owned_and_absent, local_model_dir
+        from bristlenose.utils.package_install import pinned_snapshot_dir
 
         if (host_dir := local_model_dir(settings)) is not None:
             model_name = str(host_dir)  # delivered by the app (Background Assets)
+        elif (pinned_dir := pinned_snapshot_dir(model_name)) is not None:
+            # A pinned model loads from its verified snapshot, never by repo id: mlx-whisper
+            # resolves a repo id against the Hub's ``main`` and fetches whatever it finds.
+            model_name = pinned_dir
         elif host_owned_and_absent(settings):
             # The pack was there at preflight and is gone now (or the preflight was skipped),
             # and the model is not in the Hugging Face cache either: mlx-whisper would

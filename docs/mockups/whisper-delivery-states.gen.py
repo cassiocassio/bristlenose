@@ -284,10 +284,28 @@ MOMENTS.append(moment(
     "<b>Scope:</b> only a session that needs Whisper waits; runs that already have transcripts are unaffected and show no pill. "
     "<b>Bug 2 (open):</b> a run that starts while the size question is open: should the question manage itself, or is letting Download start with a run live (9b7dd24c7) enough? Owner to say."))
 
+# 11 --------------------------------------------------------------------------
+cert_today = pop("Whisper didn’t download",
+                 "This network’s security certificate wasn’t trusted.<br><br>For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
+                 buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
+cert_prop = pop('<span class="inv-mark">Network not trusted</span>',
+                "This network’s security certificate wasn’t trusted.<br><br>"
+                '<span class="inv-mark">Try another network, or ask whoever runs this one.</span>',
+                buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
+MOMENTS.append(moment(
+    11, "Failed: the network’s certificate isn’t trusted", [("ship", "cause line shipped"), ("inv", "title and hint = option")],
+    TODAY + " · certificate cause", toolbar(pill("Whisper didn’t download", failed=True), cert_today),
+    PROP + " · titled with the cause; says what can be done", toolbar(pill("Whisper didn’t download", failed=True), cert_prop),
+    "<b>What this is:</b> something between the Mac and the download server (a company proxy, a school or hotel network) is re-signing the connection, so macOS refuses it. The researcher cannot fix that from Bristlenose, so the useful sentence is where the fix is: another network, or whoever runs this one. "
+    "<b>The button:</b> Transcription Settings has nothing that fixes a certificate, so it would send them somewhere with no answer. Retry is the only button that can work, and only after they have changed network, so it stays. "
+    "<b>INVENTED:</b> the title and the hint line (2 strings × 21 locales); the cause line is shipped (<code>desktop.modelDownload.causeCertificate</code>). Plain words, no certificate jargon beyond the shipped line. "
+    "<b>Unverified:</b> that this is the cause in the field; the shipped cause line exists because the failure was observed, but the hint’s advice is untested."))
+
 STRINGS = [
     ("Apple’s speech model transcribes until Whisper is on this Mac.", "size alert (macOS 26+) and Settings status row: one string, two uses", "NEW"),
     ("Not enough space for Whisper / Not enough free space / Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.", "low-disk pill, popover title and body (moment 10)", "NEW"),
     ("Transcription Settings…", "low-disk popover only; network failure keeps Retry", "check existing key; else NEW"),
+    ("Network not trusted / Try another network, or ask whoever runs this one.", "certificate failure popover (moment 11)", "NEW"),
     ("Starting", "pill popover before the first byte", "reuse desktop.cloudImport.downloadStarting"),
     ("789 MB of 1.6 GB", "popover line", "Foundation, localised by the OS; only the number format changes"),
     ("Transcribed with Apple’s speech model / with Whisper", "session detail, not drawn here (2 strings, post-submission option)", "NEW, not drawn"),
@@ -304,7 +322,7 @@ html = ["<!DOCTYPE html><html lang=\"en-GB\" data-color-theme=\"default\"><head>
         '<button onclick="document.documentElement.dataset.force=\'light\'">Light</button>'
         '<button onclick="document.documentElement.dataset.force=\'dark\'">Dark</button></div>',
         "<h1>Whisper delivery: every state, today and proposed</h1>",
-        '<p class="lede">Ten moments from first run to failure, each drawn as today (left) and proposed (right) for the toolbar pill, '
+        '<p class="lede">Eleven moments from first run to failure, each drawn as today (left) and proposed (right) for the toolbar pill, '
         'the Settings row, the size alert and the run-deferral message. Evidence and sources: '
         '<code>docs/private/app-store-launch/ba-ux-research.md</code>.</p>',
         '<div class="key"><span><i class="swatch art"></i>Artefact: real pixels, shipped strings</span>'

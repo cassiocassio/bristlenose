@@ -130,6 +130,47 @@ costs about $140 a month, a year's budget in a week.
 - **Still owed from TODO**: the human SmartScreen click-through on a real desktop;
   the winget.exe-never-exits harness hang.
 
+**Checked on 18 Nov 2026, for the 0.46.0 submission:**
+
+- The `v0.46.0` tag (`10f2a7568`) already carries every fix from the first PR's
+  moderation: manifest schema 1.28.0 (`build.ps1` default), no `DisplayVersion`,
+  `PrivacyUrl`, `LicenseUrl` pinned to the tag, and the silent-uninstall refusal
+  (`InitializeUninstall` in `bristlenose.iss` skips the message box under
+  `UninstallSilent()`). No code change is needed to submit it.
+- `windows-installer.yml` has been dispatched on a tag only twice (`v0.36.0`,
+  `v0.37.0`); never on `v0.46.0`. The `v0.46.0` GitHub Release has no
+  `bristlenose-0.46.0-setup-x64.exe` asset. So `release-winget.md` steps 1–4 are
+  all still to run.
+- Skip 0.37.0–0.45.0: winget needs no unbroken run of versions, and each extra PR
+  is a moderator's time. 0.37.0's held artefact (expires 10 Jan 2027) can lapse.
+
+**Test list for the next submission** (aella Server 2025 for native x64, UTM
+Windows 11 for the client edition; the guest script of §6.1 should absorb this):
+
+1. `winget validate` on the filled manifests; every manifest URL returns 200
+   (installer URL after it is attached).
+2. `winget install --manifest <dir>` as a normal user: silent, PATH entry set,
+   `bristlenose --version`, `doctor --self-test`, one real transcription.
+3. **Uninstall while running**, the unproven fix: start `bristlenose serve`, then
+   `winget uninstall --id Bristlenose.Bristlenose -e`. Must return promptly with a
+   refusal (exit code mapped to winget's `packageInUse`), never wait on a hidden
+   dialog; stop serve, uninstall again, folder and PATH entry gone.
+4. Upgrade in place over the published 0.36.0 (`winget install` 0.36.0 from the
+   public source first), with `serve` running: Restart Manager closes it. Also open
+   a project in 0.36.0 after 0.46.0 migrated it: the downgrade traceback seen on
+   9 Nov (TODO item 5) is a known open problem, not a submission blocker.
+5. On UTM only: download the installer in Edge and double-click it (Mark of the
+   Web), recording what SmartScreen shows.
+6. After merge: `winget search`, `winget list --id`, `winget upgrade --id` from 0.36.0
+   on any Windows box (`release-winget.md` step 7).
+
+**Where each step runs.** Steps 1–2 of `release-winget.md` (dispatch the build,
+check the artefact) can be done from a cloud session through the GitHub tools;
+step 3 (attach to the Release) and step 4 (`komac submit` from the fork) need the
+Mac's `gh` and Komac. Any `after-winget/<version>` branch of user-facing docs is
+local to the Mac (none on `origin`); `release.sh verify` says whether it can land
+now that winget serves 0.36.0.
+
 ## 4. Linux
 
 ### 4.1 The environments

@@ -273,21 +273,21 @@ lowdisk_today = ('<div class="strip"><span class="ttl">Ikea interviews</span></d
                  '<div class="stage"><div class="sbrow"><div class="nm">p4.mp4</div>'
                  '<div class="sub">Waiting for Whisper</div></div></div>')
 lowdisk_pop = pop("Not enough free space",
-                  "This Mac doesn’t have enough free space for it.",
+                  '<span class="inv-mark">Bristlenose recommends 10 GB free space. The Whisper speech model needs 1.6 GB.</span>',
                   buttons='<div style="text-align:right">' + BTN("Transcription Settings…", True) + "</div>")
 MOMENTS.append(moment(
     10, "Low disk: the question is never asked", [("inv", "new pill state, owner approval needed")],
     TODAY + " · under 10 GB free", lowdisk_today,
     PROP + " · a warning pill says why", toolbar(warn_pill, lowdisk_pop),
     "<b>Today:</b> with under 10 GB free the app does not offer the download and says nothing (gap G8); a session that needs Whisper shows “Waiting for Whisper” with no pill and nothing saying why, and waits for ever (the runMustDefer defect). "
-    "<b>Proposed (INVENTED, R114 gate):</b> a new state of the existing pill, amber because nothing failed, the app simply did not start. Body reuses the shipped cause line (<code>desktop.modelDownload.causeDisk</code>); new strings: the pill label and the popover title, × 21 locales. The one button opens Settings (moment 7), where Download Now is not held by the 10 GB floor. "
-    "No promise that it will offer again, and no free-space figure: neither is measured. "
+    "<b>Proposed (INVENTED, R114 gate):</b> a new state of the existing pill, amber because nothing failed, the app simply did not start. Body is owner-written (18 Nov): “Bristlenose recommends 10 GB free space. The Whisper speech model needs 1.6 GB.” (10 GB is the app’s own auto-start floor; 1.6 GB the model’s size). New strings: the pill label, the popover title and the body, × 21 locales; the two sizes should be interpolated, not baked in. The one button opens Settings (moment 7), where Download Now is not held by the 10 GB floor. "
+    "No promise that it will offer again. "
     "<b>Scope:</b> only a session that needs Whisper waits; runs that already have transcripts are unaffected and show no pill. "
     "<b>Bug 2 (open):</b> a run that starts while the size question is open: should the question manage itself, or is letting Download start with a run live (9b7dd24c7) enough? Owner to say."))
 
 STRINGS = [
     ("Apple’s speech model transcribes until Whisper is on this Mac.", "size alert (macOS 26+) and Settings status row: one string, two uses", "NEW"),
-    ("Not enough space for Whisper / Not enough free space", "low-disk pill and popover title (moment 10)", "NEW"),
+    ("Not enough space for Whisper / Not enough free space / Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.", "low-disk pill, popover title and body (moment 10)", "NEW"),
     ("Transcription Settings…", "button in both Whisper pills, replaces Retry", "check existing key; else NEW"),
     ("Starting", "pill popover before the first byte", "reuse desktop.cloudImport.downloadStarting"),
     ("789 MB of 1.6 GB", "popover line", "Foundation, localised by the OS; only the number format changes"),

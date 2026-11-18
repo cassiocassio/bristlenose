@@ -428,7 +428,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         var env = (acquirer ?? idleAcquirer).runEnvironment
         // Nothing is downloading and no verified pack is here, but the app would not start the
         // download itself (the researcher said Not Now, or has not been asked the size question):
-        // the run must not fetch 1.5 GB behind that. The marker makes Python defer each session
+        // the run must not fetch 1.6 GB behind that. The marker makes Python defer each session
         // that needs Whisper ("Waiting for Whisper"); a model already in the cache is still used.
         if env.isEmpty, Self.runMustDefer(whisperInBuild: Self.whisperInBuild,
                                           stoppedByUser: stoppedByUser, hasAnswered: hasAnswered) {

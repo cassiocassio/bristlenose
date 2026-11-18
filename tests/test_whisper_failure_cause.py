@@ -54,7 +54,7 @@ def test_what_python_never_retries_is_not_called_a_network_failure_by_the_app() 
 
 def test_every_key_the_app_can_show_exists_in_the_english_locale() -> None:
     keys = set(re.findall(r'"(desktop\.modelDownload\.cause\w+)"', _SWIFT))
-    assert len(keys) == 3, keys
+    assert len(keys) == 5, keys  # three cause lines + two cause titles (18 Nov 2026)
     en = json.loads((_ROOT / "bristlenose/locales/en/desktop.json").read_text(encoding="utf-8"))
     for key in keys:
         assert key.split(".", 2)[2] in en["modelDownload"], key

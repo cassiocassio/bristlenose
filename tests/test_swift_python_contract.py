@@ -607,3 +607,29 @@ class TestLLMFailureKindContract:
             "limit or an outage must not (the verdict cache is sticky), so widening "
             "it is a decision, not a rename"
         )
+
+
+# ---------------------------------------------------------------------------
+# The run-end usage line reads the terminus's token totals and cost
+# ---------------------------------------------------------------------------
+
+_USAGE_TERMINUS_FIELDS = ("input_tokens", "output_tokens", "cost_usd_estimate")
+
+
+class TestRunUsageTerminusContract:
+    """The Mac's run-end usage line (`RunUsageLine.swift`, docs/design-llm-usage.md)
+    reads these from the run's `run_completed` line. Python writes them
+    (`events._TerminusEvent`, from `cost.compute_run_cost`); Swift decodes them
+    by name in `EventLogReader.Event`. A name wrong on one side decodes as nil
+    and the line silently never shows."""
+
+    def test_python_writes_the_fields_on_a_completion(self) -> None:
+        from bristlenose.events import RunCompletedEvent
+
+        for name in _USAGE_TERMINUS_FIELDS:
+            assert name in RunCompletedEvent.model_fields
+
+    def test_swift_decodes_the_fields_by_the_same_names(self) -> None:
+        text = _EVENT_LOG_READER_SWIFT.read_text(encoding="utf-8")
+        for name in _USAGE_TERMINUS_FIELDS:
+            assert re.search(rf'case \w+ = "{name}"', text), name

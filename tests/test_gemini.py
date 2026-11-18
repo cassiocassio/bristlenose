@@ -637,3 +637,33 @@ class TestValidateGoogleKeyHttpBranches:
         is_valid, error = self._validate(self._http_error(401))
         assert is_valid is False
         assert "401" in error
+
+
+class TestGeminiThinkingIsBilledOutput:
+    @pytest.mark.asyncio
+    async def test_thoughts_count_as_output(self) -> None:
+        """Gemini bills thinking as output and reports it apart from
+        `candidates_token_count`; until 17 Nov 2026 it was left out of every
+        Gemini output count and every cost built on it."""
+        from types import SimpleNamespace
+
+        from pydantic import BaseModel
+
+        class R(BaseModel):
+            answer: str
+
+        meta = SimpleNamespace(prompt_token_count=1000, candidates_token_count=100,
+                               thoughts_token_count=400)
+        response = SimpleNamespace(text='{"answer": "x"}', usage_metadata=meta,
+                                   candidates=[], model_version="gemini-2.5-flash",
+                                   prompt_feedback=None)
+
+        async def _generate(*a, **k):
+            return response
+
+        client = LLMClient(_google_settings())
+        client._google_client = SimpleNamespace(
+            aio=SimpleNamespace(models=SimpleNamespace(generate_content=_generate))
+        )
+        await client.analyze(system_prompt="s", user_prompt="u", response_model=R)
+        assert (client.tracker.input_tokens, client.tracker.output_tokens) == (1000, 500)

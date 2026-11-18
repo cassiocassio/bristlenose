@@ -91,6 +91,12 @@ enum SubtitleVariant: Equatable {
     /// exist), no glyph, no hint. Shimmers, behind the same preference as a
     /// run's line, because the build is the AI thinking.
     case preparingSignals
+    /// What a successful run used, for the few seconds after it ends
+    /// (`RunUsageLine`, Settings ▸ Appearance ▸ Show analysis usage): "Used
+    /// 412K tokens" or "Estimated cost $1.24", then the silence a success has
+    /// always ended in. Calm news, not a problem: no glyph, no door, no ring.
+    /// docs/design-llm-usage.md.
+    case runUsage(RunUsageLine)
     /// A drag-import copy is landing files in THIS project. Carries the 0…1
     /// byte fraction; the view renders "Copying · N%" + a determinate ring
     /// (with hover-cancel) in the trailing slot — the row's *only* copy surface
@@ -231,8 +237,9 @@ extension SubtitleVariant {
             // delta is the same disagreement with a date in front of it.
             return delta == nil ? .none : .files
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
-             .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper, .placeholder:
+             .addingInterviews, .exportingReport, .preparingSignals, .runUsage, .copying,
+             .importingBatch, .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper,
+             .placeholder:
             return .none
         }
     }
@@ -299,8 +306,9 @@ extension SubtitleVariant {
             // picture and how it amends the `info` ruling.
             return .info
         case .stopping, .running, .queued, .partial,
-             .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
-             .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper, .ready, .placeholder:
+             .addingInterviews, .exportingReport, .preparingSignals, .runUsage, .copying,
+             .importingBatch, .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper,
+             .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
             // nothing, because the act is not the test. They already know.
@@ -418,6 +426,7 @@ enum ProjectSubtitle {
         addingCount: Int?,
         exportingReport: Bool = false,
         preparingSignals: Bool = false,
+        runUsage: RunUsageLine? = nil,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
@@ -494,6 +503,7 @@ enum ProjectSubtitle {
                 addingCount: addingCount,
                 exportingReport: exportingReport,
                 preparingSignals: preparingSignals,
+                runUsage: runUsage,
                 copy: copy,
                 importBatch: importBatch,
                 screens: screens,
@@ -523,6 +533,7 @@ enum ProjectSubtitle {
         addingCount: Int?,
         exportingReport: Bool,
         preparingSignals: Bool,
+        runUsage: RunUsageLine?,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)?,
@@ -576,6 +587,14 @@ enum ProjectSubtitle {
         if let reportCrash {
             return .reportError(reportCrash)
         }
+        // What a successful run used, for its few seconds (owner, 18 Nov
+        // 2026). It takes only a moment that carries no news of its own: any
+        // delta (a warning, an info, an error) keeps its line, as a failure or
+        // a partial run does upstream ("failure, warning, info: unchanged").
+        // Above Signals and screen reading, which start as a run ends and can
+        // last minutes to hours, so the line is not lost behind them; they
+        // come back when it clears.
+        if let runUsage, delta == nil { return .runUsage(runUsage) }
         // Read off the delta's own glyph classification, so the two cannot
         // disagree about which deltas are distress.
         let deltaKind = delta.flatMap { SubtitleVariant.deltaOnly($0).glyphKind }

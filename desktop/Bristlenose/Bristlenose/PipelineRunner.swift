@@ -424,6 +424,16 @@ final class PipelineRunner: ObservableObject {
     /// yields to the stage ladder once a run reaches `.running`. Phase 2.
     @Published private(set) var addingInterviews: [UUID: Int] = [:]
 
+    /// What a successful run used, for its row to say for `RunUsageLine.shownFor`
+    /// as it ends ("Used 412K tokens" / "Estimated cost $1.24"), then silence.
+    /// Keyed by project; set by `showRunUsage` beside the credit check on every
+    /// witnessed success, cleared by its own timer. Read by
+    /// `ProjectSubtitle.resolve` at the sidebar call site. docs/design-llm-usage.md.
+    @Published private(set) var runUsage: [UUID: RunUsageLine] = [:]
+    /// Which showing is current, so an earlier run's timer cannot clear a
+    /// later run's line.
+    private var runUsageShowing: [UUID: UUID] = [:]
+
     /// How many of a running project's sessions have a readable transcript —
     /// a first analysis delivers them one by one, and the first one hands the
     /// pane from the shoal to the report (`DetailPaneKind.shoalTakesPane`).
@@ -451,6 +461,31 @@ final class PipelineRunner: ObservableObject {
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(floor))
             self?.addingInterviews[id] = nil
+        }
+    }
+
+    /// Show what a run that just succeeded used, for `RunUsageLine.shownFor`.
+    /// Silence when the preference, the provider or the terminus says so
+    /// (`RunUsageLine.resolve`).
+    func showRunUsage(
+        provider: LLMProvider?, project: Project?,
+        terminus: EventLogReader.Event?, priorRunId: String?,
+        display: AnalysisUsageDisplay = .current
+    ) {
+        guard let project,
+              let line = RunUsageLine.resolve(
+                terminus: terminus, priorRunId: priorRunId,
+                provider: provider, display: display)
+        else { return }
+        let id = project.id
+        let showing = UUID()
+        runUsage[id] = line
+        runUsageShowing[id] = showing
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: RunUsageLine.shownFor)
+            guard let self, self.runUsageShowing[id] == showing else { return }
+            self.runUsage[id] = nil
+            self.runUsageShowing[id] = nil
         }
     }
 
@@ -1591,6 +1626,10 @@ final class PipelineRunner: ObservableObject {
                 // stranded, never ready (`EventLogReader.deriveState`).
                 let terminus = EventLogReader.tailEvent(at: eventsURL)
                 await self.noteCreditIfTheRunUsedAnLLM(
+                    provider: provider, project: project,
+                    terminus: terminus, priorRunId: priorTerminus
+                )
+                await self.showRunUsage(
                     provider: provider, project: project,
                     terminus: terminus, priorRunId: priorTerminus
                 )
@@ -2868,6 +2907,11 @@ var args = ["run", project.path, "--no-serve"]
                     terminus: endTerminus,
                     priorRunId: priorRunIds[projectID]
                 )
+                showRunUsage(
+                    provider: provider, project: project,
+                    terminus: endTerminus,
+                    priorRunId: priorRunIds[projectID]
+                )
                 Self.logger.info(
                     """
                     run succeeded project=\(projectID.uuidString, privacy: .public) \
@@ -2986,6 +3030,11 @@ var args = ["run", project.path, "--no-serve"]
                     priorRunId: priorRunId, terminus: terminus)
                 if case .ready = resolved {
                     self.noteCreditIfTheRunUsedAnLLM(
+                        provider: provider, project: project,
+                        terminus: terminus,
+                        priorRunId: priorRunId
+                    )
+                    self.showRunUsage(
                         provider: provider, project: project,
                         terminus: terminus,
                         priorRunId: priorRunId

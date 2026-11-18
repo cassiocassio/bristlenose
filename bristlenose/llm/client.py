@@ -551,6 +551,12 @@ def _raise_if_declined(choice: object, name: str) -> None:
         raise ContentBlockedError(f"{name} declined this text (content filter or refusal).")
 
 
+def _count(value: object) -> int:
+    """A token count the SDK may leave unset: an int, or 0 for anything else
+    (None, or a MagicMock attribute in a test)."""
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
 def _declined(choice: object, name: str) -> ContentBlockedError | None:
     """:func:`_raise_if_declined` as a value, so the call is recorded before it is raised."""
     try:
@@ -1504,8 +1510,17 @@ class LLMClient:
         output_tokens: int | None = None
         usage_source: Literal["reported", "missing"] = "missing"
         if hasattr(response, "usage_metadata") and response.usage_metadata:
-            input_tokens = response.usage_metadata.prompt_token_count or 0
-            output_tokens = response.usage_metadata.candidates_token_count or 0
+            meta = response.usage_metadata
+            input_tokens = meta.prompt_token_count or 0
+            # Thinking is billed as output, and `candidates_token_count` leaves
+            # it out. Direct Gemini calls do not switch thinking off (2.5 and
+            # 3.x Flash think by default), so every Gemini output count and the
+            # cost figures built on it were short of the bill until 17 Nov 2026.
+            # OpenAI's `completion_tokens` already includes reasoning; this
+            # makes Gemini mean the same.
+            output_tokens = (meta.candidates_token_count or 0) + _count(
+                getattr(meta, "thoughts_token_count", None)
+            )
             usage_source = "reported"
             self.tracker.record(input_tokens, output_tokens)
             logger.info(

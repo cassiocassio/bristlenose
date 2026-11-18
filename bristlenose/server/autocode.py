@@ -962,6 +962,48 @@ async def reapply_to_new_quotes(
     settings: BristlenoseSettings,
     track_status: bool = False,
 ) -> int:
+    """Re-apply a framework to the quotes it owes, bound as a run.
+
+    Binds the pass to the project's output folder (read from its row), so its
+    calls reach ``llm-calls.jsonl``. Until 17 Nov 2026 it bound only
+    ``telemetry.stage(...)``, and no re-apply after a run, and no catch-up, was
+    recorded. The work is :func:`_reapply_to_new_quotes`.
+    """
+    from bristlenose.events import new_run_id
+    from bristlenose.llm import telemetry
+    from bristlenose.server.models import Project
+
+    db = db_factory()
+    try:
+        project = db.get(Project, project_id)
+        output_dir = project.output_dir if project is not None else None
+    finally:
+        db.close()
+    work = _reapply_to_new_quotes(
+        db_factory, project_id, framework_id, settings, track_status=track_status,
+    )
+    if not output_dir:
+        return await work
+    # The row's `output_dir` is already the output folder: bound directly, not
+    # through `serve_run_context`'s project-root resolution, which would look
+    # for a nested `bristlenose-output/` in a custom-named output folder.
+    tokens = telemetry.set_run_context(
+        f"autocode-reapply-{project_id}-{framework_id}-{new_run_id()}",
+        Path(output_dir) / ".bristlenose",
+    )
+    try:
+        return await work
+    finally:
+        telemetry.reset_run_context(tokens)
+
+
+async def _reapply_to_new_quotes(
+    db_factory: Callable[[], SASession],
+    project_id: int,
+    framework_id: str,
+    settings: BristlenoseSettings,
+    track_status: bool = False,
+) -> int:
     """Re-apply an already-applied framework to the quotes it still owes.
 
     Codes ONLY the delta — the quotes that count and are not on the framework's

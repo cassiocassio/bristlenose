@@ -303,6 +303,8 @@ struct ProjectRow: View {
             subtitleText(prefix: nil,
                          text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
                          style: .secondary)
+        case .runUsage(let line):
+            subtitleText(prefix: nil, text: line.text(i18n: i18n), style: .secondary)
         case .ready(let date, let delta):
             HStack(spacing: 4) {
                 Text(formatBareDate(date)).font(.caption).foregroundStyle(.secondary)
@@ -376,7 +378,7 @@ struct ProjectRow: View {
         case .waitingForWhisper:
             return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
         case .cantFind, .failed, .failedDiagnostic, .completedPartial, .reportError,
-             .ready, .deltaOnly, .placeholder:
+             .runUsage, .ready, .deltaOnly, .placeholder:
             return nil
         }
     }
@@ -745,6 +747,8 @@ struct ProjectRow: View {
             // Comma separator: VoiceOver reads commas as pauses
             // ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
             return pipelineActivityText(variant, separator: ", ")
+        case .runUsage(let line):
+            return line.text(i18n: i18n)
         case .cantFind, .ready, .deltaOnly, .placeholder:
             return nil
         }

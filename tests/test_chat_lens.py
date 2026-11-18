@@ -705,3 +705,35 @@ def test_a_partial_delivery_puts_a_coverage_note_in_the_prompt() -> None:
             AuthTestClient(app).post("/api/dev/chat-lens/ask", json={"question": "q"})
         prompt = mock.await_args_list[0].kwargs["user_prompt"]
         assert ("Coverage note: this analysis is still running" in prompt) is expected
+
+
+class TestQuestionsAreRecorded:
+    def test_a_question_reaches_the_call_log(self, tmp_path: Path) -> None:
+        """Until 17 Nov 2026 the route bound only `telemetry.stage(...)`, which
+        labels a row and gives it nowhere to go: no chat-lens call was recorded."""
+        from bristlenose.llm import telemetry
+
+        app = _make_app()
+        app.state.project_dir = tmp_path  # not the fixture folder: this writes
+        replies = iter([
+            _answer([{"text": "Navigation confused people.", "quote_indices": [2]}]),
+            _support([(0, True)]),
+        ])
+
+        async def _analyze(*a, **k):
+            # What the real client does after each call to the provider.
+            telemetry.record_call(
+                provider="anthropic", request_model="test-model", response_model=None,
+                input_chars=1, elapsed_ms=1, outcome="ok", price_table_version="t",
+                input_tokens=500, output_tokens=50,
+            )
+            return next(replies)
+
+        with _patch_llm(AsyncMock(side_effect=_analyze)):
+            r = AuthTestClient(app).post(
+                "/api/dev/chat-lens/ask", json={"question": "What confused people?"}
+            )
+        assert r.status_code == 200, r.text
+        rows = list(telemetry.iter_rows(tmp_path / "bristlenose-output" / ".bristlenose"))
+        assert [row["stage"] for row in rows] == ["serve_chat_lens", "serve_chat_lens_support"]
+        assert len({row["run_id"] for row in rows}) == 1, "one question, one run"

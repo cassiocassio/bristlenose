@@ -35,6 +35,10 @@ struct AppearanceSettingsView: View {
     @State private var language: String = I18n.resolvedLocale
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation: Bool = true
+    /// Read by `PipelineRunner.showRunUsage` when a run ends, through
+    /// `AnalysisUsageDisplay.current`; nothing to restart or notify.
+    @AppStorage(AnalysisUsageDisplay.defaultsKey)
+    private var analysisUsage: String = AnalysisUsageDisplay.defaultValue.rawValue
     /// Mirrors the Welcome window's footer checkbox — one setting, two views.
     @AppStorage(WelcomeWindow.showOnLaunchKey) private var showWelcomeOnLaunch: Bool = true
     @AppStorage(DiagnosticsPreference.key)
@@ -140,6 +144,25 @@ struct AppearanceSettingsView: View {
                     Text(i18n.t("settings.appearance.animationHelp"))
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section {
+                // What a run that just succeeded used, on its row for a few
+                // seconds (docs/design-llm-usage.md). Radios, as Appearance
+                // above: three fixed choices, all worth seeing at once. The
+                // help sentence is a group footnote, as Language's is: a long
+                // label beside a radio group would squeeze the radios.
+                Picker(i18n.t("settings.appearance.usageLegend"), selection: $analysisUsage) {
+                    Text(i18n.t("settings.appearance.usageTokens"))
+                        .tag(AnalysisUsageDisplay.tokens.rawValue)
+                    Text(i18n.t("settings.appearance.usageCost"))
+                        .tag(AnalysisUsageDisplay.cost.rawValue)
+                    Text(i18n.t("settings.appearance.usageOff"))
+                        .tag(AnalysisUsageDisplay.off.rawValue)
+                }
+                .pickerStyle(.radioGroup)
+            } footer: {
+                Text(i18n.t("settings.appearance.usageHelp"))
             }
 
             Section {

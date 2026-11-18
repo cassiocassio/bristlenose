@@ -719,15 +719,22 @@ added the first time someone looks; a call that looks complete does not.
 **Serve mode is where this bites, structurally.** A pipeline run binds the
 context in `run_lifecycle` and every stage inherits it. A request does not
 inherit anything, so each serve-time LLM caller must bind its own. There are
-two:
+five:
 
 | caller | binds | notes |
 |---|---|---|
-| `server/autocode.py` | inline | predates the helper, works, not churned |
+| `server/autocode.py` `run_autocode_job` | inline | predates the helper, works, not churned |
 | `server/elaboration.py` | `telemetry.serve_run_context(...)` | 20 Sep 2026 |
+| `server/routes/chat_lens.py` | `telemetry.serve_run_context(...)` | 17 Nov 2026; bound only `stage(...)` until then, so recorded nothing |
+| `server/routes/codebook_builder.py` | `telemetry.serve_run_context(...)` | 17 Nov 2026; the same gap |
+| `server/autocode.py` `reapply_to_new_quotes` | `telemetry.set_run_context(...)` on the project row's `output_dir`, directly | 17 Nov 2026; the same gap, after every run and each catch-up |
 
-A third should use `serve_run_context(project_dir, run_id)` rather than a
-third copy. It takes the project root *or* the output dir — callers hold one
+_This said "there are two" until 17 Nov 2026, when there were five: the table
+listed the callers that bound, not the callers. Found while counting a run's
+tokens (`docs/design-llm-usage.md`)._
+
+A new one should use `serve_run_context(project_dir, run_id)` rather than
+another copy. It takes the project root *or* the output dir — callers hold one
 or the other, and guessing wrong writes the file where nobody looks, which is
 the same outcome as not writing it.
 

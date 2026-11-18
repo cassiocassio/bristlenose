@@ -1187,7 +1187,9 @@ class TestReapplyToNewQuotes:
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(project_id, framework_id, db_factory)
         self._add_quotes(db_factory, project_id, 3)
-        out = tmp_path / "bristlenose-output"
+        # A custom-named output folder with no events log yet: bound to it
+        # directly, not re-resolved to a nested `bristlenose-output/`.
+        out = tmp_path / "my-analysis"
         (out / ".bristlenose").mkdir(parents=True)
         db = db_factory()
         try:

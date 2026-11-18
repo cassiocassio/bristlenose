@@ -81,8 +81,21 @@ import Testing
         #expect(line(terminus(runId: "01PRIOR"), priorRunId: "01PRIOR") == nil)
     }
 
-    @Test func aBadCostFallsBackToTokens() {
+    @Test func aBadOrZeroCostFallsBackToTokens() {
         #expect(line(terminus(cost: -1), display: .cost) == .tokens(412_000))
+        #expect(line(terminus(cost: 0), display: .cost) == .tokens(412_000))
+    }
+
+    @Test func aRunWithNoProviderOnRecordSaysNothing() {
+        // As the credit check does: it may have been local.
+        #expect(line(terminus(), provider: nil) == nil)
+    }
+
+    @Test func numbersAreWrittenTheLocalesWay() {
+        let us = Locale(identifier: "en_US")
+        #expect(RunUsageLine.compactTokens(412_000, locale: us) == "412K")
+        #expect(RunUsageLine.dollars(1.24, locale: us) == "$1.24")
+        #expect(RunUsageLine.dollars(0.01, locale: us) == "$0.01")
     }
 
     @Test func thePreferenceReadsItsStoredValue() {

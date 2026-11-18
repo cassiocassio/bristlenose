@@ -30,11 +30,14 @@ When a run succeeds, the project's row in the sidebar says, for five seconds:
 then the silence a successful run has always ended in.
 
 Silence, whatever the setting, for: Off; a local (Ollama) run, which costs
-nothing and whose usage some builds do not report; a run served entirely from
+nothing and whose usage some builds do not report; a run whose provider is not
+on record (it may have been local); a run served entirely from
 cache (no LLM call); and any failure, stop, partial run, warning, info or error,
 which keep their own lines (a failure usually ends early, so little was spent).
-Estimated cost with no price on record (an Azure deployment, an any-llm route)
-falls back to the token line, which is still true.
+Estimated cost with no price on record (an Azure deployment, an any-llm route),
+or a price of zero, falls back to the token line, which is still true. Numbers
+are written in the app's language, not the Mac's region, as the row's dates are.
+The row's tooltip carries the whole line, for the long locales that truncate.
 
 ### How it works
 

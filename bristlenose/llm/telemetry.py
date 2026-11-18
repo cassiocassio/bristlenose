@@ -144,8 +144,10 @@ def serve_run_context(project_dir: Path | None, run_id: str) -> Iterator[None]:
     started with a project — and yields without binding, which restores the old
     silent-skip for that case alone.
 
-    NB `server/autocode.py` still inlines this; it predates the helper and works.
-    A third serve-time LLM caller should use this rather than a third copy.
+    NB `server/autocode.py` binds its own: `run_autocode_job` predates the
+    helper, and `reapply_to_new_quotes` holds the output folder itself, which
+    this would re-resolve. A new serve-time LLM caller holding a project root
+    should use this rather than another copy.
     """
     if project_dir is None:
         yield

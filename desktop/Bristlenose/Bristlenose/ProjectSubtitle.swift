@@ -527,14 +527,6 @@ enum ProjectSubtitle {
         if let reportCrash {
             return .reportError(reportCrash)
         }
-        // The first Signals report is being built (the window's bridge says the
-        // lens is withheld and no run is in flight, or the native prior for the
-        // moment a first run ends). Above screen reading by the owner's call:
-        // it lasts seconds and the screen read can last hours, so the other
-        // order would hide it entirely. It yields to everything above (the
-        // acts the researcher started, an error-kind delta, the crash) and,
-        // being short, it outranks the warning and info deltas for its few
-        // seconds, which come back when it ends.
         // What a successful run used, for its few seconds (owner, 18 Nov
         // 2026). It takes only a moment that carries no news of its own: any
         // delta (a warning, an info, an error) keeps its line, as a failure or
@@ -543,6 +535,14 @@ enum ProjectSubtitle {
         // last minutes to hours, so the line is not lost behind them; they
         // come back when it clears.
         if let runUsage, delta == nil { return .runUsage(runUsage) }
+        // The first Signals report is being built (the window's bridge says the
+        // lens is withheld and no run is in flight, or the native prior for the
+        // moment a first run ends). Above screen reading by the owner's call:
+        // it lasts seconds and the screen read can last hours, so the other
+        // order would hide it entirely. It yields to everything above (the
+        // acts the researcher started, an error-kind delta, the crash) and,
+        // being short, it outranks the warning and info deltas for its few
+        // seconds, which come back when it ends.
         if preparingSignals { return .preparingSignals }
         // Screen reading is the quietest activity: a background job the
         // researcher did not start by a gesture and cannot stop, so every act

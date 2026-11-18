@@ -234,6 +234,11 @@ enum SidebarSubtitleText {
            let line = activityText(variant, progress: nil, separator: " · ", i18n: i18n) {
             parts.append(line)
         }
+        // A run's usage line in full: the German and Finnish cost lines, and
+        // "under US$0.01", are past the row's budget and truncate.
+        if case .runUsage(let line) = variant {
+            parts.append(line.text(i18n: i18n))
+        }
         // "Waiting for download" in full: the row's own line, said whole, as
         // the ladder above is — not a further condition.
         if case .waitingForWhisper = variant {

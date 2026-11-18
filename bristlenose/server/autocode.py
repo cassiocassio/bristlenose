@@ -976,11 +976,19 @@ async def reapply_to_new_quotes(
     work = _reapply_to_new_quotes(
         db_factory, project_id, framework_id, settings, track_status=track_status,
     )
-    with telemetry.serve_run_context(
-        Path(output_dir) if output_dir else None,
-        f"autocode-reapply-{project_id}-{framework_id}-{new_run_id()}",
-    ):
+    if not output_dir:
         return await work
+    # The row's `output_dir` is already the output folder: bound directly, not
+    # through `serve_run_context`'s project-root resolution, which would look
+    # for a nested `bristlenose-output/` in a custom-named output folder.
+    tokens = telemetry.set_run_context(
+        f"autocode-reapply-{project_id}-{framework_id}-{new_run_id()}",
+        Path(output_dir) / ".bristlenose",
+    )
+    try:
+        return await work
+    finally:
+        telemetry.reset_run_context(tokens)
 
 
 async def _reapply_to_new_quotes(

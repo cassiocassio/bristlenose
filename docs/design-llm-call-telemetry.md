@@ -727,7 +727,7 @@ five:
 | `server/elaboration.py` | `telemetry.serve_run_context(...)` | 20 Sep 2026 |
 | `server/routes/chat_lens.py` | `telemetry.serve_run_context(...)` | 17 Nov 2026; bound only `stage(...)` until then, so recorded nothing |
 | `server/routes/codebook_builder.py` | `telemetry.serve_run_context(...)` | 17 Nov 2026; the same gap |
-| `server/autocode.py` `reapply_to_new_quotes` | `telemetry.serve_run_context(...)` on the project row's `output_dir` | 17 Nov 2026; the same gap, after every run and each catch-up |
+| `server/autocode.py` `reapply_to_new_quotes` | `telemetry.set_run_context(...)` on the project row's `output_dir`, directly | 17 Nov 2026; the same gap, after every run and each catch-up |
 
 _This said "there are two" until 17 Nov 2026, when there were five: the table
 listed the callers that bound, not the callers. Found while counting a run's

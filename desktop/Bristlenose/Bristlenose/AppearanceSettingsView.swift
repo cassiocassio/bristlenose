@@ -147,21 +147,20 @@ struct AppearanceSettingsView: View {
             Section {
                 // What a run that just succeeded used, on its row for a few
                 // seconds (docs/design-llm-usage.md). Radios, as Appearance
-                // above: three fixed choices, all worth seeing at once. Help
-                // text in-cell, as the toggles here do.
-                Picker(selection: $analysisUsage) {
+                // above: three fixed choices, all worth seeing at once. The
+                // help sentence is a group footnote, as Language's is: a long
+                // label beside a radio group would squeeze the radios.
+                Picker(i18n.t("settings.appearance.usageLegend"), selection: $analysisUsage) {
                     Text(i18n.t("settings.appearance.usageTokens"))
                         .tag(AnalysisUsageDisplay.tokens.rawValue)
                     Text(i18n.t("settings.appearance.usageCost"))
                         .tag(AnalysisUsageDisplay.cost.rawValue)
                     Text(i18n.t("settings.appearance.usageOff"))
                         .tag(AnalysisUsageDisplay.off.rawValue)
-                } label: {
-                    Text(i18n.t("settings.appearance.usageLegend"))
-                    Text(i18n.t("settings.appearance.usageHelp"))
-                        .foregroundStyle(.secondary)
                 }
                 .pickerStyle(.radioGroup)
+            } footer: {
+                Text(i18n.t("settings.appearance.usageHelp"))
             }
 
             Section {

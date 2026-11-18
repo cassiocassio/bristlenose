@@ -50,33 +50,49 @@ enum RunUsageLine: Equatable {
         provider: LLMProvider?,
         display: AnalysisUsageDisplay
     ) -> RunUsageLine? {
-        guard display != .off, provider != .ollama else { return nil }
+        // No provider on record: silent, as the credit check is, rather than
+        // risk a count for a local run whose provider went unrecorded.
+        guard display != .off, let provider, provider != .ollama else { return nil }
         guard let terminus, terminus.event == "run_completed",
               terminus.runId != priorRunId else { return nil }
         let tokens = (terminus.inputTokens ?? 0) + (terminus.outputTokens ?? 0)
         guard tokens > 0 else { return nil }
-        if display == .cost, let usd = terminus.costUsdEstimate, usd.isFinite, usd >= 0 {
+        // A zero or bad price is not a cost worth saying ("under $0.01" would
+        // be wrong for it): the token count is.
+        if display == .cost, let usd = terminus.costUsdEstimate, usd.isFinite, usd > 0 {
             return .costUSD(usd)
         }
         return .tokens(tokens)
     }
 
-    /// The localised line. Numbers use the Mac's own formatters: tokens in
-    /// compact form ("412K"), dollars in the locale's way of writing US dollars
-    /// ("$1.24" in the US, "US$1.24" where "$" means another dollar).
+    /// The localised line, numbers written in the app's own language (the
+    /// house convention, as `SidebarSubtitleText`'s dates are): tokens in
+    /// compact form ("412K"), dollars the way that language writes US dollars
+    /// ("$1.24" in English, "US$" or "USD" where "$" would read as another).
     @MainActor
-    func text(i18n: I18n, locale: Locale = .current) -> String {
+    func text(i18n: I18n) -> String {
+        let locale = Locale(identifier: i18n.locale)
         switch self {
         case .tokens(let count):
-            let compact = count.formatted(.number.notation(.compactName).locale(locale))
-            return i18n.t("desktop.chrome.runUsageTokens", ["tokens": compact])
+            return i18n.t("desktop.chrome.runUsageTokens",
+                          ["tokens": Self.compactTokens(count, locale: locale)])
         case .costUSD(let usd):
-            let dollars = FloatingPointFormatStyle<Double>.Currency(code: "USD").locale(locale)
             if usd < 0.01 {
                 return i18n.t("desktop.chrome.runUsageCostUnderCent",
-                              ["amount": 0.01.formatted(dollars)])
+                              ["amount": Self.dollars(0.01, locale: locale)])
             }
-            return i18n.t("desktop.chrome.runUsageCost", ["amount": usd.formatted(dollars)])
+            return i18n.t("desktop.chrome.runUsageCost",
+                          ["amount": Self.dollars(usd, locale: locale)])
         }
+    }
+
+    /// "412K" in English; pure, so the formatting is testable without an `I18n`.
+    static func compactTokens(_ count: Int, locale: Locale) -> String {
+        count.formatted(.number.notation(.compactName).locale(locale))
+    }
+
+    /// US dollars, written the way *locale* writes them.
+    static func dollars(_ usd: Double, locale: Locale) -> String {
+        usd.formatted(FloatingPointFormatStyle<Double>.Currency(code: "USD").locale(locale))
     }
 }

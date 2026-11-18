@@ -347,6 +347,9 @@ measurements. Paste each host's readout into this doc as it is captured.
   went live; see [`design-fedora-packaging.md`](design-fedora-packaging.md) §7.
 - **`aella` amd64 boxes** — on-demand amd64 Linux, brought up and torn down per
   use.
+- **Windows and Linux hardware** (CPU paths, NVIDIA/CUDA, life after the
+  benbecula VMs) — proposed in
+  [`design-windows-linux-hardware-testing.md`](design-windows-linux-hardware-testing.md).
 
 ## 6. Open
 
@@ -366,6 +369,8 @@ measurements. Paste each host's readout into this doc as it is captured.
   rationale, and the review trigger
 - [`design-deployment-targets.md`](design-deployment-targets.md) — where the
   product is expected to run
+- [`design-windows-linux-hardware-testing.md`](design-windows-linux-hardware-testing.md) —
+  the Windows/Linux hardware-testing plan (proposed, 18 Nov 2026)
 - [`testing/README.md`](testing/README.md) — the three-tier model
 - [`design-native-colour-alignment.md`](design-native-colour-alignment.md)
   §Principles — why OS-owned values are bridged and not sampled; the same logic

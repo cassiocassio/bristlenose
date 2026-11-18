@@ -371,7 +371,8 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     /// The size question. Download starts it; Not Now is a remembered Stop, so
     /// the app leaves it alone until Download Now in Settings. Asked once: an
     /// answer either way is kept. A run that began while the question was up
-    /// wins (it fetches for itself), and the answer is kept for next time.
+    /// deferred its sessions that need Whisper (`runMustDefer`), so it is not
+    /// fetching, and Download starts the download even with that run live.
     /// The size question as a standard alert, a sheet on the front window
     /// (Download is the default; Not Now is Cancel, so Escape answers it).
     static func alertAsk(i18n: I18n) -> @MainActor () async -> Bool {
@@ -392,7 +393,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         }
     }
 
-    private func ask() async {
+    func ask() async {
         guard !isAsking, let askToDownload else { return }
         isAsking = true
         let download = await askToDownload()
@@ -402,7 +403,6 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
             stoppedByUser = true
             return
         }
-        guard !runIsLive() else { return }
         start()
     }
 
@@ -419,18 +419,42 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         // download itself (the researcher said Not Now, or has not been asked the size question):
         // the run must not fetch the model behind that. The marker makes Python defer each session
         // that needs Whisper ("Waiting for Whisper"); a model already in the cache is still used.
-        if env.isEmpty, Self.runMustDefer(whisperInBuild: Self.whisperInBuild,
-                                          stoppedByUser: stoppedByUser, hasAnswered: hasAnswered) {
+        if env.isEmpty, Self.runMustDefer(
+            whisperInBuild: Self.whisperInBuild, packModelChosen: Self.chosenModelIsPackModel(defaults),
+            stoppedByUser: stoppedByUser, hasAnswered: hasAnswered, questionReachable: questionReachable
+        ) {
             env = Self.hostOwnsEnvironment
         }
         return env
     }
 
+    /// Whether the size question is one the app can actually put: something to ask with, a
+    /// sidecar to download with, the AI disclosure acknowledged, and room for the model.
+    private var questionReachable: Bool {
+        Self.questionReachable(
+            askIsWired: askToDownload != nil, sidecarPresent: Self.sidecar() != nil,
+            hasConsent: PipelineRunner.hasAIConsent, freeBytes: OllamaCatalog.freeDiskBytes())
+    }
+
+    nonisolated static func questionReachable(
+        askIsWired: Bool, sidecarPresent: Bool, hasConsent: Bool, freeBytes: Int64?
+    ) -> Bool {
+        guard askIsWired, sidecarPresent, hasConsent else { return false }
+        if let freeBytes, freeBytes < autoStartFloorBytes { return false }
+        return true
+    }
+
     /// A run that finds no Whisper model defers instead of fetching when the researcher has
-    /// declined the download (Not Now or Stop) or has not yet answered the size question.
-    /// Download Now, or Download in the alert, lifts it.
-    nonisolated static func runMustDefer(whisperInBuild: Bool, stoppedByUser: Bool, hasAnswered: Bool) -> Bool {
-        whisperInBuild && (stoppedByUser || !hasAnswered)
+    /// declined the download (Not Now or Stop), or when the size question is still to be put and
+    /// can be (`questionReachable`). When it can never be put (little disk, no sidecar) the run
+    /// goes as it did before, so nothing waits for ever. Only the app's own model is held:
+    /// another model is Python's to fetch. Download Now, or Download in the alert, lifts it.
+    nonisolated static func runMustDefer(
+        whisperInBuild: Bool, packModelChosen: Bool, stoppedByUser: Bool, hasAnswered: Bool,
+        questionReachable: Bool
+    ) -> Bool {
+        guard whisperInBuild, packModelChosen else { return false }
+        return stoppedByUser || (!hasAnswered && questionReachable)
     }
 
     /// What answers for the environment when nothing is downloading: the acquirer the picker

@@ -237,11 +237,43 @@ def _verify_pinned_snapshot(pin: Any, snapshot: str) -> None:
         )
     try:
         ref = root.parent.parent / "refs" / "main"
-        if not ref.exists():
+        # Always the pin, even over an older value: a ``main`` left by an earlier unpinned
+        # fetch names a snapshot that may hold no weights, and the cache lookups follow it.
+        if not ref.is_file() or ref.read_text(encoding="utf-8").strip() != pin.revision:
             ref.parent.mkdir(parents=True, exist_ok=True)
             ref.write_text(pin.revision, encoding="utf-8")
     except OSError:
         logger.warning("ensure_hf_model: could not record %s as main", pin.revision)
+
+
+def pinned_snapshot_dir(repo_id: str) -> str | None:
+    """The verified snapshot directory of a pinned model, or ``None``.
+
+    ``None`` for a repo that is not pinned, and for a pinned one whose snapshot at the pinned
+    revision is not wholly in the cache (names and sizes; the hash was checked at the fetch).
+    Never touches the network. A caller that loads from this path never asks the Hub for
+    ``main``, so what runs is what was pinned.
+    """
+    from bristlenose.whisper_pins import PINNED_MODELS
+
+    pin = PINNED_MODELS.get(repo_id)
+    if pin is None:
+        return None
+    try:
+        from huggingface_hub import snapshot_download
+
+        found = snapshot_download(
+            repo_id, revision=pin.revision, allow_patterns=pin.allow_patterns,
+            local_files_only=True,
+        )
+    except Exception:
+        return None
+    root = Path(found)
+    for pinned in pin.files:
+        target = root / pinned.name
+        if not target.is_file() or target.stat().st_size != pinned.bytes:
+            return None
+    return str(root)
 
 
 class _DownloadCancelled(BaseException):

@@ -2621,6 +2621,7 @@ var args = ["run", project.path, "--no-serve"]
         proc.environment = BristlenoseShared.childEnvironment(for: resolvedMode)
         // While the app is downloading Whisper, the run waits on that download
         // rather than fetching a second copy (bristlenose/preflight/whisper.py).
+        WhisperDownloadModel.shared.updateLowDisk()  // the pill and the deferral read the same disk
         proc.environment?.merge(WhisperDownloadModel.shared.runEnvironment) { _, new in new }
 
         let pipe = Pipe()

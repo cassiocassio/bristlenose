@@ -1464,7 +1464,14 @@
     "askBody": "Около {{size}}. Она помогает при плохом звуке и когда люди говорят одновременно. Загрузить её можно позже в Настройках.",
     "askDownload": "Загрузить",
     "askNotNow": "Не сейчас",
-    "askSize": "1,6 ГБ"
+    "askSize": "1,6 ГБ",
+    "lowDiskPill": "Not enough space for Whisper",
+    "lowDiskTitle": "Not enough free space",
+    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "transcriptionSettings": "Transcription Settings…",
+    "causeNetworkTitle": "Connection dropped",
+    "causeCertificateTitle": "Network not trusted",
+    "causeCertificateHint": "Try another network, or ask whoever runs this one."
   },
   "studyStartup": {
     "foreignTitle": "Запущен на другом Mac",

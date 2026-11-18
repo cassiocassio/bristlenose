@@ -477,3 +477,204 @@ import Testing
         #expect(!PipelineRunner.owesWhisperRerun(whisperPhase: .onDisk, waiting: [], alreadyRerun: []))
     }
 }
+
+/// The transcription model as a state machine. States: the model's phase, plus what is
+/// remembered (answered, stopped) and what is read live (consent, free space, a run). Every
+/// decision the app makes about the model is a pure function of those, so the whole product is
+/// enumerated here and the invariants that must hold in every cell are asserted; the picture is
+/// in `docs/design-whisper-delivery.md` § State machine.
+@MainActor @Suite struct WhisperStateMachineTests {
+    typealias M = WhisperDownloadModel
+    static let phases: [M.Phase] = [.unknown, .missing, .partial, .downloading, .onDisk, .failed]
+    static let frees: [Int64?] = [nil, 1_000_000_000, 9_999_999_999, 10_000_000_000, 100_000_000_000]
+
+    /// Every cell of the product, with the three decisions made in it.
+    private func forEachCell(_ body: (_ phase: M.Phase, _ free: Int64?, _ stopped: Bool, _ consent: Bool,
+                                      _ run: Bool, _ answered: Bool, _ low: Bool, _ auto: M.AutoStart,
+                                      _ mustDefer: Bool) -> Void) {
+        for phase in Self.phases { for free in Self.frees { for stopped in [false, true] {
+            for consent in [false, true] { for run in [false, true] { for answered in [false, true] {
+                let low = M.lowDiskBlocked(phase: phase, freeBytes: free, stoppedByUser: stopped,
+                                           hasConsent: consent, whisperInBuild: true)
+                let auto = M.autoStart(phase: phase, freeBytes: free, stoppedByUser: stopped,
+                                       hasConsent: consent, runIsLive: run, hasAnswered: answered,
+                                       whisperInBuild: true)
+                let reachable = M.questionReachable(askIsWired: true, sidecarPresent: true,
+                                                    hasConsent: consent, freeBytes: free)
+                let mustDefer = M.runMustDefer(whisperInBuild: true, packModelChosen: true,
+                                               stoppedByUser: stopped, hasAnswered: answered,
+                                               questionReachable: reachable,
+                                               noRoomToFetch: M.noRoomToFetch(phase: phase, freeBytes: free, hasConsent: consent, whisperInBuild: true))
+                body(phase, free, stopped, consent, run, answered, low, auto, mustDefer)
+            } } } } } }
+    }
+
+    /// The warning exists exactly when room alone is what stops the app: never beside a start or
+    /// a question, never over the researcher's own Not Now or Stop, never before consent, never
+    /// for a model that is here, coming, or failed (the failure has its own pill).
+    @Test func theWarningIsTheCaseTheFloorAloneBlocks() {
+        forEachCell { phase, free, stopped, consent, run, _, low, auto, _ in
+            if low {
+                #expect(auto == .nothing, "never a warning beside an ask or a start: \(phase) \(String(describing: free))")
+                #expect(!stopped && consent, "a decline or a missing disclosure is not a warning")
+                #expect(phase == .missing || phase == .partial)
+            }
+            if consent && !stopped && !run && (phase == .missing || phase == .partial) {
+                #expect((auto == .nothing) == low, "nothing happens only because of the floor, and then it says so")
+            }
+        }
+    }
+
+    /// A run never fetches into a full disk (whatever the phase says: unknown while the launch
+    /// probe is out, or a failure left over), and never waits without a way out: whenever it defers
+    /// for any reason other than the researcher's own Stop, an exit exists that the researcher can
+    /// see (the warning pill, whose button opens Download Now; or the size question).
+    @Test func aRunWaitsOnlyWhenThereIsAWayOut() {
+        forEachCell { phase, free, stopped, consent, _, answered, low, _, mustDefer in
+            let noRoom = M.noRoomToFetch(phase: phase, freeBytes: free, hasConsent: consent, whisperInBuild: true)
+            if noRoom { #expect(mustDefer, "no fetch into a full disk: \(phase) \(String(describing: free))") }
+            if low { #expect(noRoom, "the warning always holds the run") }
+            if stopped { #expect(mustDefer) }
+            if mustDefer && !stopped && !noRoom {
+                #expect(!answered && consent && (free == nil || free! >= M.autoStartFloorBytes),
+                        "the only other wait is for a question that can be put")
+            }
+            // Nothing is held for a model that is here or on its way.
+            if phase == .onDisk || phase == .downloading { #expect(!noRoom) }
+        }
+    }
+
+    /// An unanswered or unfinished probe, or a leftover failure, is not licence to fetch into a
+    /// full disk behind the pill.
+    @Test func aRunOnAFullDiskDefersInEveryPhaseButHereAndComing() {
+        for phase in [M.Phase.unknown, .missing, .partial, .failed] {
+            let m = model(free: 1_000_000_000)
+            m.debugApply(phase)
+            #expect(m.runEnvironment == M.hostOwnsEnvironment, "\(phase)")
+        }
+        for phase in [M.Phase.onDisk, .downloading] {
+            let m = model(free: 1_000_000_000)
+            m.debugApply(phase)
+            #expect(m.runEnvironment != M.hostOwnsEnvironment, "\(phase)")
+        }
+    }
+
+    /// Only the app's own model is the app's to warn about; another is Python's to fetch.
+    @Test func noWarningForAnotherModel() {
+        let defaults = scratchDefaults()
+        let m = model(free: 1_000_000_000, defaults: defaults)
+        m.debugApply(.missing)
+        #expect(m.lowDisk)
+        defaults.set("small", forKey: "whisperModel")
+        m.updateLowDisk()
+        #expect(!m.lowDisk)
+    }
+
+    @Test func theFloorIsExactlyTenGigabytes() {
+        #expect(M.autoStartFloorBytes == 10_000_000_000)
+        #expect(M.lowDiskBlocked(phase: .missing, freeBytes: 9_999_999_999, stoppedByUser: false, hasConsent: true, whisperInBuild: true))
+        #expect(!M.lowDiskBlocked(phase: .missing, freeBytes: 10_000_000_000, stoppedByUser: false, hasConsent: true, whisperInBuild: true))
+        #expect(!M.lowDiskBlocked(phase: .missing, freeBytes: nil, stoppedByUser: false, hasConsent: true, whisperInBuild: true))
+        #expect(!M.lowDiskBlocked(phase: .missing, freeBytes: 0, stoppedByUser: false, hasConsent: true, whisperInBuild: false))
+    }
+
+    /// A full disk is not retried; every other cause is, and each has its own title.
+    @Test func eachCauseHasATitleAndOnlyADiskHasNoRetry() {
+        #expect(WhisperFailureCause.titleKey(for: .network) == "desktop.modelDownload.causeNetworkTitle")
+        #expect(WhisperFailureCause.titleKey(for: .certificate) == "desktop.modelDownload.causeCertificateTitle")
+        #expect(WhisperFailureCause.titleKey(for: .disk) == "desktop.modelDownload.lowDiskTitle")
+        #expect(WhisperFailureCause.titleKey(for: nil) == "desktop.modelDownload.failedTitle")
+        #expect(!WhisperFailureCause.disk.retryCanWork)
+        #expect(WhisperFailureCause.network.retryCanWork && WhisperFailureCause.certificate.retryCanWork)
+    }
+
+    private func scratchDefaults() -> UserDefaults {
+        let suite = "whisper-state-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        return defaults
+    }
+
+    private func model(free: Int64?, consent: Bool = true, defaults: UserDefaults? = nil,
+                       fake: FakeAcquirer? = nil) -> M {
+        let acquirer = fake ?? FakeAcquirer()
+        let m = M(defaults: defaults ?? scratchDefaults(), makeAcquirer: { _ in acquirer })
+        m.freeDiskBytes = { free }
+        m.hasAIConsent = { consent }
+        return m
+    }
+
+    @Test func theWarningFollowsTheDiskAndClearsWhenRoomAppears() {
+        var free: Int64? = 3_000_000_000
+        let m = model(free: free)
+        m.freeDiskBytes = { free }
+        m.debugApply(.missing)
+        #expect(m.lowDisk && m.isPillVisible)
+        free = 50_000_000_000
+        m.updateLowDisk()
+        #expect(!m.lowDisk && !m.isPillVisible)
+    }
+
+    @Test func noWarningBeforeConsentOrOnceTheModelIsHere() {
+        let noConsent = model(free: 1, consent: false)
+        noConsent.debugApply(.missing)
+        #expect(!noConsent.lowDisk)
+        let here = model(free: 1)
+        here.debugApply(.onDisk)
+        #expect(!here.lowDisk && !here.isPillVisible)
+        here.debugApply(.missing)
+        #expect(here.lowDisk)
+        here.debugApply(.downloading)
+        #expect(!here.lowDisk && here.isPillVisible)  // the progress pill, not the warning
+    }
+
+    @Test func aRunHeldByTheWarningIsToldToWait() {
+        let m = model(free: 1_000_000_000)
+        m.debugApply(.missing)
+        #expect(m.runEnvironment == M.hostOwnsEnvironment)
+    }
+
+    /// Room appears: the launch decision is made again, so the researcher who frees space is
+    /// asked, or the download they already agreed to begins, with no relaunch.
+    @Test func whatTheLaunchCheckWouldDoWithRoomIsDoneWhenRoomAppears() async {
+        let defaults = scratchDefaults()
+        let fake = FakeAcquirer()
+        var free: Int64? = 3_000_000_000
+        let m = model(free: free, defaults: defaults, fake: fake)
+        m.freeDiskBytes = { free }
+        defaults.set(true, forKey: "whisperDownloadAsked")
+        m.debugApply(.missing)
+        await m.applyAutoStart()
+        #expect(fake.startCalls == 0, "no room: nothing starts, the pill says why")
+        free = 50_000_000_000
+        await m.applyAutoStart()
+        #expect(fake.startCalls == 1, "room: the download the researcher agreed to begins")
+    }
+
+    @Test func noRoomIsNotAnAnswerSoTheQuestionWaitsForRoom() async {
+        var asked = 0
+        let m = model(free: 3_000_000_000)
+        m.askToDownload = { asked += 1; return false }
+        m.debugApply(.missing)
+        await m.applyAutoStart()
+        #expect(asked == 0)
+        m.freeDiskBytes = { 50_000_000_000 }
+        await m.applyAutoStart()
+        #expect(asked == 1)
+    }
+
+    /// An Apple-engine run is not a reason to start 1.6 GB into a full disk.
+    @Test func aRunDoesNotStartTheDownloadIntoAFullDisk() {
+        guard BristlenoseFlags.appleSpeechAvailable else { return }
+        let defaults = scratchDefaults()
+        defaults.set(true, forKey: "whisperDownloadAsked")
+        let fake = FakeAcquirer()
+        let m = model(free: 3_000_000_000, defaults: defaults, fake: fake)
+        m.debugApply(.partial)
+        m.startIfNeeded()
+        #expect(fake.startCalls == 0)
+        m.freeDiskBytes = { 50_000_000_000 }
+        m.startIfNeeded()
+        #expect(fake.startCalls == 1)
+    }
+}

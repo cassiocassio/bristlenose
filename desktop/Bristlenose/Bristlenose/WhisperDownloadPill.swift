@@ -15,15 +15,25 @@ struct WhisperDownloadPill: View {
     @State private var showingDetail = false
 
     private var failed: Bool { model.phase == .failed }
+    /// The warning, not a failure: nothing was tried (`WhisperDownloadModel.lowDisk`).
+    private var lowDisk: Bool { model.lowDisk }
 
     var body: some View {
         if model.isPillVisible {
             StatusPill(
                 isPresented: $showingDetail,
                 accessibilityLabel: i18n.t(failed ? "desktop.modelDownload.failedTitle"
+                                                  : lowDisk ? "desktop.modelDownload.lowDiskPill"
                                                   : "desktop.modelDownload.title")
             ) {
-                if failed {
+                if lowDisk {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .imageScale(.small)
+                        .foregroundStyle(.orange)
+                    Text(i18n.t("desktop.modelDownload.lowDiskPill"))
+                        .font(.system(.caption).weight(.medium))
+                        .fixedSize(horizontal: true, vertical: false)  // a pill's label never truncates
+                } else if failed {
                     Image(systemName: "xmark.circle.fill")
                         .imageScale(.small)
                         .foregroundStyle(.red)
@@ -56,10 +66,10 @@ struct WhisperDownloadPill: View {
                     }
                 }
             } detail: {
-                WhisperDownloadDetail(model: model)
+                WhisperDownloadDetail(model: model, close: { showingDetail = false })
                     .environmentObject(i18n)
             }
-            .accessibilityValue(failed ? "" : model.progressLine)
+            .accessibilityValue(failed || lowDisk ? "" : model.progressLine)
         }
     }
 }
@@ -68,20 +78,51 @@ struct WhisperDownloadPill: View {
 struct WhisperDownloadDetail: View {
     @ObservedObject var model: WhisperDownloadModel
     @EnvironmentObject var i18n: I18n
+    /// Closes the popover before another window is raised.
+    var close: () -> Void = {}
+
+    /// A full disk, whether it stopped the app from starting or stopped a download part-way:
+    /// Retry cannot help, Transcription Settings can (other models, Download Now once there is room).
+    private var diskProblem: Bool {
+        model.phase == .failed ? model.failureCause.map { !$0.retryCanWork } ?? false : model.lowDisk
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if model.phase == .failed {
-                Text(i18n.t("desktop.modelDownload.failedTitle"))
+            if diskProblem {
+                Text(i18n.t("desktop.modelDownload.lowDiskTitle"))
+                    .font(.system(.callout).weight(.semibold))
+                Text(i18n.t("desktop.modelDownload.lowDiskBody", [
+                    "floor": ByteCountFormatter.string(
+                        fromByteCount: WhisperDownloadModel.autoStartFloorBytes, countStyle: .file),
+                    "size": i18n.t("desktop.modelDownload.askSize"),
+                ]))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Spacer()
+                    Button(i18n.t("desktop.modelDownload.transcriptionSettings")) {
+                        close()
+                        SettingsWindow.shared.show(pane: .transcription)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .fixedSize(horizontal: true, vertical: false)  // a button's label never truncates
+                }
+                .padding(.top, 2)
+            } else if model.phase == .failed {
+                Text(i18n.t(WhisperFailureCause.titleKey(for: model.failureCause)))
                     .font(.system(.callout).weight(.semibold))
                 Text(i18n.t(WhisperFailureCause.lineKey(for: model.failureCause)))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(i18n.t("desktop.modelDownload.why"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if model.failureCause == .certificate {
+                    Text(i18n.t("desktop.modelDownload.causeCertificateHint"))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 HStack {
                     Spacer()
                     Button(i18n.t("common.buttons.retry")) { model.downloadNow() }

@@ -1314,7 +1314,14 @@
     "askBody": "약 {{size}}입니다. 음질이 나쁜 오디오나 여러 사람이 겹쳐 말하는 경우에 도움이 됩니다. 나중에 설정에서 다운로드할 수도 있습니다.",
     "askDownload": "다운로드",
     "askNotNow": "나중에",
-    "askSize": "1.6 GB"
+    "askSize": "1.6 GB",
+    "lowDiskPill": "Not enough space for Whisper",
+    "lowDiskTitle": "Not enough free space",
+    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "transcriptionSettings": "Transcription Settings…",
+    "causeNetworkTitle": "Connection dropped",
+    "causeCertificateTitle": "Network not trusted",
+    "causeCertificateHint": "Try another network, or ask whoever runs this one."
   },
   "studyStartup": {
     "foreignTitle": "다른 Mac에서 시작됨",

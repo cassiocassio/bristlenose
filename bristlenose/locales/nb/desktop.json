@@ -1364,7 +1364,14 @@
     "askBody": "Omtrent {{size}}. Den hjelper med dårlig lyd og når folk snakker i munnen på hverandre. Du kan laste den ned senere i Innstillinger.",
     "askDownload": "Last ned",
     "askNotNow": "Ikke nå",
-    "askSize": "1,6 GB"
+    "askSize": "1,6 GB",
+    "lowDiskPill": "Not enough space for Whisper",
+    "lowDiskTitle": "Not enough free space",
+    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "transcriptionSettings": "Transcription Settings…",
+    "causeNetworkTitle": "Connection dropped",
+    "causeCertificateTitle": "Network not trusted",
+    "causeCertificateHint": "Try another network, or ask whoever runs this one."
   },
   "studyStartup": {
     "foreignTitle": "Startet på en annen Mac",

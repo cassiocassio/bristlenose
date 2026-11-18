@@ -1314,7 +1314,14 @@
     "askBody": "約{{size}}です。音質が悪い録音や、話し声が重なる場面で役立ちます。あとから「設定」でダウンロードすることもできます。",
     "askDownload": "ダウンロード",
     "askNotNow": "今はしない",
-    "askSize": "1.6 GB"
+    "askSize": "1.6 GB",
+    "lowDiskPill": "Not enough space for Whisper",
+    "lowDiskTitle": "Not enough free space",
+    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "transcriptionSettings": "Transcription Settings…",
+    "causeNetworkTitle": "Connection dropped",
+    "causeCertificateTitle": "Network not trusted",
+    "causeCertificateHint": "Try another network, or ask whoever runs this one."
   },
   "studyStartup": {
     "foreignTitle": "別の Mac で開始されました",

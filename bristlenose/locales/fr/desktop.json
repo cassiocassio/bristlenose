@@ -1364,7 +1364,14 @@
     "askBody": "Environ {{size}}. Il aide avec un son de mauvaise qualité et quand les gens parlent en même temps. Vous pourrez le télécharger plus tard dans Réglages.",
     "askDownload": "Télécharger",
     "askNotNow": "Pas maintenant",
-    "askSize": "1,6 Go"
+    "askSize": "1,6 Go",
+    "lowDiskPill": "Not enough space for Whisper",
+    "lowDiskTitle": "Not enough free space",
+    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "transcriptionSettings": "Transcription Settings…",
+    "causeNetworkTitle": "Connection dropped",
+    "causeCertificateTitle": "Network not trusted",
+    "causeCertificateHint": "Try another network, or ask whoever runs this one."
   },
   "studyStartup": {
     "foreignTitle": "Lancée sur un autre Mac",

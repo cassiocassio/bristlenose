@@ -91,6 +91,21 @@ enum WhisperFailureCause: Equatable {
         }
     }
 
+    /// The popover's title: the cause, in two words, when it has one; else the plain statement.
+    /// A full disk is the low-disk popover's own title (one popover for both routes to it).
+    static func titleKey(for cause: WhisperFailureCause?) -> String {
+        switch cause {
+        case .disk?: return "desktop.modelDownload.lowDiskTitle"
+        case .network?: return "desktop.modelDownload.causeNetworkTitle"
+        case .certificate?: return "desktop.modelDownload.causeCertificateTitle"
+        case nil: return "desktop.modelDownload.failedTitle"
+        }
+    }
+
+    /// Whether Retry can work. It cannot for a full disk: the researcher has to look at
+    /// Transcription Settings (other models, Download Now once there is room), not retry.
+    var retryCanWork: Bool { self != .disk }
+
     /// The line a failed download shows: its cause when it has one, else the plain statement.
     static func lineKey(for cause: WhisperFailureCause?) -> String {
         cause?.key ?? "desktop.transcriptionSettings.whisperFailed"
@@ -182,7 +197,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         case failed
     }
 
-    @Published private(set) var phase: Phase = .unknown
+    @Published private(set) var phase: Phase = .unknown { didSet { updateLowDisk() } }
     @Published private(set) var doneBytes: Int64 = 0
     @Published private(set) var totalBytes: Int64 = 0
     @Published private(set) var bytesOnDisk: Int64 = 0
@@ -195,7 +210,19 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     /// "Waiting for Whisper" is never left with nothing anywhere saying why
     /// nothing is coming. Gone when Whisper is on disk, or after a deliberate
     /// Stop: the researcher chose that, and Settings still offers Download Now.
-    var isPillVisible: Bool { phase == .downloading || phase == .failed }
+    ///
+    /// Also shown, as a warning, when the model is missing and the app would have fetched it
+    /// but for the free-space floor (`lowDisk`): a Mac with no room is told why nothing starts.
+    var isPillVisible: Bool { phase == .downloading || phase == .failed || lowDisk }
+
+    /// The model is missing, the researcher has not declined it, and the only thing stopping the
+    /// app from asking or fetching is less than `autoStartFloorBytes` free. Drives the warning pill
+    /// and holds a run's Whisper sessions (`runMustDefer`) rather than fetching into a full disk.
+    @Published private(set) var lowDisk = false
+    /// Free bytes on the volume that holds the model; injectable so tests need no full disk.
+    var freeDiskBytes: () -> Int64? = { OllamaCatalog.freeDiskBytes() }
+    /// Whether the AI disclosure is acknowledged. Injectable for the same reason.
+    var hasAIConsent: () -> Bool = { PipelineRunner.hasAIConsent }
 
     private static let logger = Logger(subsystem: "app.bristlenose", category: "whisper-download")
     /// A deliberate Stop, remembered across launches: the app does
@@ -263,6 +290,11 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
             forName: .bristlenoseAppleSpeechRunStarted, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.startIfNeeded() }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.updateLowDisk() }
         }
         // A download the app quits on stops with it; the sidecar's own
         // parent-death watcher is the backstop for a crash.
@@ -353,6 +385,59 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         return hasAnswered ? .start : .ask
     }
 
+    /// Exactly the case `autoStart` gives up on for room alone: every other condition would have
+    /// let it ask or fetch. Unknown free space counts as room, as there. A researcher's Not Now
+    /// or Stop is theirs, so it is not a warning.
+    nonisolated static func lowDiskBlocked(
+        phase: Phase, freeBytes: Int64?, stoppedByUser: Bool, hasConsent: Bool, whisperInBuild: Bool,
+        packModelChosen: Bool = true
+    ) -> Bool {
+        guard whisperInBuild, hasConsent, !stoppedByUser, packModelChosen else { return false }
+        guard phase == .missing || phase == .partial else { return false }
+        return belowFloor(freeBytes)
+    }
+
+    /// Unknown free space counts as room, as everywhere here.
+    nonisolated static func belowFloor(_ freeBytes: Int64?) -> Bool {
+        guard let freeBytes else { return false }
+        return freeBytes < autoStartFloorBytes
+    }
+
+    /// Whether a RUN must not fetch the model for want of room. Wider than the warning: whatever
+    /// the phase says (the launch probe may be out, a failure may be left over), only a model
+    /// that is here or on its way is safe to leave alone. A cached model is still used under the
+    /// marker, so this holds only the sessions that would have fetched.
+    nonisolated static func noRoomToFetch(
+        phase: Phase, freeBytes: Int64?, hasConsent: Bool, whisperInBuild: Bool
+    ) -> Bool {
+        guard whisperInBuild, hasConsent, phase != .onDisk, phase != .downloading else { return false }
+        return belowFloor(freeBytes)
+    }
+
+    private func currentLowDiskBlocked() -> Bool {
+        Self.lowDiskBlocked(phase: phase, freeBytes: freeDiskBytes(), stoppedByUser: stoppedByUser,
+                            hasConsent: hasAIConsent(), whisperInBuild: Self.whisperInBuild,
+                            packModelChosen: Self.chosenModelIsPackModel(defaults))
+    }
+
+    private func currentNoRoomToFetch() -> Bool {
+        Self.noRoomToFetch(phase: phase, freeBytes: freeDiskBytes(), hasConsent: hasAIConsent(),
+                           whisperInBuild: Self.whisperInBuild)
+    }
+
+    /// Re-reads free space. Called whenever the phase or a remembered answer changes, and when the
+    /// app comes to the front (a researcher who has just cleared room sees the warning go).
+    func updateLowDisk() {
+        let now = currentLowDiskBlocked()
+        guard now != lowDisk else { return }
+        let wasBlocked = lowDisk
+        lowDisk = now
+        // Room appeared: do what the launch check would have done had there been room, so the
+        // researcher who frees space is asked, or the download they already agreed to begins,
+        // without a relaunch. Only once the launch check has run (consent, sidecar).
+        if wasBlocked, launched { Task { @MainActor in await applyAutoStart() } }
+    }
+
     /// At launch, and again when the AI disclosure is acknowledged: ask Python
     /// whether Whisper is on disk and, if not, start fetching it in the
     /// background, so the first analysis doesn't wait 1.6 GB after the key.
@@ -367,15 +452,20 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         guard Self.sidecar() != nil else { return }
         Task { @MainActor in
             await refresh()
-            switch Self.autoStart(
-                phase: phase, freeBytes: OllamaCatalog.freeDiskBytes(),
-                stoppedByUser: stoppedByUser, hasConsent: true, runIsLive: runIsLive(),
-                hasAnswered: hasAnswered, whisperInBuild: Self.whisperInBuild
-            ) {
-            case .nothing: break
-            case .start: start()
-            case .ask: await ask()
-            }
+            await applyAutoStart()
+        }
+    }
+
+    /// What the app does by itself, given the model's phase and the remembered answers.
+    func applyAutoStart() async {
+        switch Self.autoStart(
+            phase: phase, freeBytes: freeDiskBytes(),
+            stoppedByUser: stoppedByUser, hasConsent: hasAIConsent(), runIsLive: runIsLive(),
+            hasAnswered: hasAnswered, whisperInBuild: Self.whisperInBuild
+        ) {
+        case .nothing: break
+        case .start: start()
+        case .ask: await ask()
         }
     }
 
@@ -412,6 +502,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         hasAnswered = true
         guard download else {
             stoppedByUser = true
+            updateLowDisk()
             return
         }
         start()
@@ -432,7 +523,8 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         // that needs Whisper ("Waiting for Whisper"); a model already in the cache is still used.
         if env.isEmpty, Self.runMustDefer(
             whisperInBuild: Self.whisperInBuild, packModelChosen: Self.chosenModelIsPackModel(defaults),
-            stoppedByUser: stoppedByUser, hasAnswered: hasAnswered, questionReachable: questionReachable
+            stoppedByUser: stoppedByUser, hasAnswered: hasAnswered, questionReachable: questionReachable,
+            noRoomToFetch: currentNoRoomToFetch()
         ) {
             env = Self.hostOwnsEnvironment
         }
@@ -444,7 +536,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     private var questionReachable: Bool {
         Self.questionReachable(
             askIsWired: askToDownload != nil, sidecarPresent: Self.sidecar() != nil,
-            hasConsent: PipelineRunner.hasAIConsent, freeBytes: OllamaCatalog.freeDiskBytes())
+            hasConsent: hasAIConsent(), freeBytes: freeDiskBytes())
     }
 
     nonisolated static func questionReachable(
@@ -456,16 +548,18 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     }
 
     /// A run that finds no Whisper model defers instead of fetching when the researcher has
-    /// declined the download (Not Now or Stop), or when the size question is still to be put and
-    /// can be (`questionReachable`). When it can never be put (little disk, no sidecar) the run
-    /// goes as it did before, so nothing waits for ever. Only the app's own model is held:
+    /// declined the download (Not Now or Stop), when the size question is still to be put and
+    /// can be (`questionReachable`), or when there is too little room to fetch (`noRoomToFetch`:
+    /// the warning pill is showing, and Download Now in Settings is the way out, so the wait has an
+    /// exit). When the question can never be put for another reason (no sidecar) the run goes as
+    /// it did before, so nothing waits for ever. Only the app's own model is held:
     /// another model is Python's to fetch. Download Now, or Download in the alert, lifts it.
     nonisolated static func runMustDefer(
         whisperInBuild: Bool, packModelChosen: Bool, stoppedByUser: Bool, hasAnswered: Bool,
-        questionReachable: Bool
+        questionReachable: Bool, noRoomToFetch: Bool = false
     ) -> Bool {
         guard whisperInBuild, packModelChosen else { return false }
-        return stoppedByUser || (!hasAnswered && questionReachable)
+        return stoppedByUser || noRoomToFetch || (!hasAnswered && questionReachable)
     }
 
     /// What answers for the environment when nothing is downloading: the acquirer the picker
@@ -556,9 +650,12 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         case .unknown:
             Task { @MainActor in
                 await refresh()
-                if phase != .onDisk && phase != .downloading { start() }
+                if phase != .onDisk && phase != .downloading && !currentNoRoomToFetch() { start() }
             }
         case .missing, .partial, .failed:
+            // The floor holds here as it does at launch: a run is not a reason to start 1.6 GB
+            // into a nearly full disk. The warning pill says so; Download Now is the way past it.
+            guard !currentNoRoomToFetch() else { return }
             start()
         }
     }
@@ -568,6 +665,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     func downloadNow() {
         stoppedByUser = false
         hasAnswered = true
+        updateLowDisk()
         if acquirer == nil { backgroundAssetsUsable = true }  // a fallback fetch in flight stays
         start()
     }
@@ -605,6 +703,7 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
         guard let acquirer, acquirer.isRunning else { return }
         stoppedByUser = true
         stopAsked = true
+        updateLowDisk()
         acquirer.stop()
     }
 

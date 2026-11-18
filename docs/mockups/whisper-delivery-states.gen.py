@@ -239,17 +239,16 @@ fail_pop = pop("Whisper didn’t download",
                buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
 fail_prop = pop('<span class="inv-mark">Connection dropped</span>',
                 "The connection dropped and didn’t come back.",
-                buttons='<div style="text-align:right"><span class="inv-mark">' + BTN("Transcription Settings…", True) + "</span></div>")
+                buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
 MOMENTS.append(moment(
     8, "Failed, offline, low disk", [("ship", "causes shipped"), ("inv", "dropping the pitch = option")],
     TODAY + " · network cause", toolbar(pill("Whisper didn’t download", failed=True), fail_pop),
-    PROP + " · says only what failed; one button, to Settings", toolbar(pill("Whisper didn’t download", failed=True), fail_prop),
+    PROP + " · titled with the cause; Retry stays", toolbar(pill("Whisper didn’t download", failed=True), fail_prop),
     "<b>Offline:</b> macOS owns a Background Assets download; the observed failure on a dropped server was NSURLErrorDomain -1005 and the OS did not retry by itself, so Retry is right. "
     "<b>Proposed:</b> drop the “Whisper copes better…” pitch from inside an error (a sales sentence does not belong in a failure), and title the popover with the cause (owner, 18 Nov: “Connection dropped”); the pill keeps “Whisper didn’t download”. The title repeats the body’s first words, so the body could shrink to the instruction once the cause has a title; owner to say. "
     "<b>Low disk:</b> the shipped cause line is “This Mac doesn’t have enough free space for it.” An earlier draft added “about 1.6 GB free”; dropped, because nobody has measured that 1.6 GB is enough for download plus staging, and a wrong number is worse than none. "
     "A lone Retry on a full disk is a dead end: the better fix is to name the fact to act on once it is measured (house rule). The app also does not auto-start below 10 GB free (owner, 30 Oct) and says nothing about that: gap G8. "
-    "<b>Owner decision, 18 Nov:</b> Retry becomes one button, “Transcription Settings…”, in both pills (this one and moment 10); the extra click is accepted because Settings (moment 7) is the surface that can explain the cause and offer Download Now, Stop, engine and model. No two-button popovers. How other doors open Settings on this tab is not yet found; owed before build. "
-    "<b>Raw detail:</b> the house rule is interpretation first, raw behind a disclosure; the shipped popover has none (gap G10, not an invention)."))
+    "<b>Owner decision, 18 Nov:</b> a dropped connection keeps Retry (a retry can work). Low disk (moment 10) gets “Transcription Settings…” instead, because a retry cannot work there and Settings is where the researcher sees the other models and Download Now. One button per popover. How other doors open Settings on this tab is not yet found; owed before build. <b>Raw detail:</b> the house rule is interpretation first, raw behind a disclosure; the shipped popover has none (gap G10, not an invention)."))
 
 # 9 ---------------------------------------------------------------------------
 MOMENTS.append(moment(
@@ -280,7 +279,7 @@ MOMENTS.append(moment(
     TODAY + " · under 10 GB free", lowdisk_today,
     PROP + " · a warning pill says why", toolbar(warn_pill, lowdisk_pop),
     "<b>Today:</b> with under 10 GB free the app does not offer the download and says nothing (gap G8); a session that needs Whisper shows “Waiting for Whisper” with no pill and nothing saying why, and waits for ever (the runMustDefer defect). "
-    "<b>Proposed (INVENTED, R114 gate):</b> a new state of the existing pill, amber because nothing failed, the app simply did not start. Body is owner-written (18 Nov): “Bristlenose recommends 10 GB free space. The Whisper speech model needs 1.6 GB.” (10 GB is the app’s own auto-start floor; 1.6 GB the model’s size). New strings: the pill label, the popover title and the body, × 21 locales; the two sizes should be interpolated, not baked in. The one button opens Settings (moment 7), where Download Now is not held by the 10 GB floor. "
+    "<b>Proposed (INVENTED, R114 gate):</b> a new state of the existing pill, amber because nothing failed, the app simply did not start. Body is owner-written (18 Nov): “Bristlenose recommends 10 GB free space. The Whisper speech model needs 1.6 GB.” (10 GB is the app’s own auto-start floor; 1.6 GB the model’s size). New strings: the pill label, the popover title and the body, × 21 locales; the two sizes should be interpolated, not baked in. The one button opens Settings (moment 7: other models, Download Now), where Download Now is not held by the 10 GB floor. "
     "No promise that it will offer again. "
     "<b>Scope:</b> only a session that needs Whisper waits; runs that already have transcripts are unaffected and show no pill. "
     "<b>Bug 2 (open):</b> a run that starts while the size question is open: should the question manage itself, or is letting Download start with a run live (9b7dd24c7) enough? Owner to say."))
@@ -288,7 +287,7 @@ MOMENTS.append(moment(
 STRINGS = [
     ("Apple’s speech model transcribes until Whisper is on this Mac.", "size alert (macOS 26+) and Settings status row: one string, two uses", "NEW"),
     ("Not enough space for Whisper / Not enough free space / Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.", "low-disk pill, popover title and body (moment 10)", "NEW"),
-    ("Transcription Settings…", "button in both Whisper pills, replaces Retry", "check existing key; else NEW"),
+    ("Transcription Settings…", "low-disk popover only; network failure keeps Retry", "check existing key; else NEW"),
     ("Starting", "pill popover before the first byte", "reuse desktop.cloudImport.downloadStarting"),
     ("789 MB of 1.6 GB", "popover line", "Foundation, localised by the OS; only the number format changes"),
     ("Transcribed with Apple’s speech model / with Whisper", "session detail, not drawn here (2 strings, post-submission option)", "NEW, not drawn"),

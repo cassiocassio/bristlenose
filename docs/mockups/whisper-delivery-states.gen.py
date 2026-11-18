@@ -142,7 +142,7 @@ MOMENTS.append(moment(
     "whether the manifest already carries it before costing it. New strings: 2 (one per engine) × 21 locales."))
 
 # 2 ---------------------------------------------------------------------------
-ALERT_BODY = "About 1.5 GB. It helps with poor audio and people talking over each other. You can download it later in Settings."
+ALERT_BODY = "About 1.6 GB. It helps with poor audio and people talking over each other. You can download it later in Settings."
 MOMENTS.append(moment(
     2, "Offering Whisper: the size alert", [("ship", "4.2.3(ii) disclosure"), ("inv", "proposed text = option")],
     TODAY + " · NSAlert sheet, asked once per Mac",
@@ -239,15 +239,16 @@ fail_pop = pop("Whisper didn’t download",
                buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
 fail_prop = pop("Whisper didn’t download",
                 "The connection dropped and didn’t come back.",
-                buttons='<div style="text-align:right">' + BTN("Retry", True) + "</div>")
+                buttons='<div style="text-align:right"><span class="inv-mark">' + BTN("Transcription Settings…", True) + "</span></div>")
 MOMENTS.append(moment(
     8, "Failed, offline, low disk", [("ship", "causes shipped"), ("inv", "dropping the pitch = option")],
     TODAY + " · network cause", toolbar(pill("Whisper didn’t download", failed=True), fail_pop),
-    PROP + " · the failure says only what failed", toolbar(pill("Whisper didn’t download", failed=True), fail_prop),
+    PROP + " · says only what failed; one button, to Settings", toolbar(pill("Whisper didn’t download", failed=True), fail_prop),
     "<b>Offline:</b> macOS owns a Background Assets download; the observed failure on a dropped server was NSURLErrorDomain -1005 and the OS did not retry by itself, so Retry is right. "
     "<b>Proposed (small):</b> drop the “Whisper copes better…” pitch from inside an error; the Mac review: a sales sentence does not belong in a failure. The cause line stays. "
     "<b>Low disk:</b> the shipped cause line is “This Mac doesn’t have enough free space for it.” An earlier draft added “about 1.6 GB free”; dropped, because nobody has measured that 1.6 GB is enough for download plus staging, and a wrong number is worse than none. "
     "A lone Retry on a full disk is a dead end: the better fix is to name the fact to act on once it is measured (house rule). The app also does not auto-start below 10 GB free (owner, 30 Oct) and says nothing about that: gap G8. "
+    "<b>Owner decision, 18 Nov:</b> Retry becomes one button, “Transcription Settings…”, in both pills (this one and moment 10); the extra click is accepted because Settings (moment 7) is the surface that can explain the cause and offer Download Now, Stop, engine and model. No two-button popovers. How other doors open Settings on this tab is not yet found; owed before build. "
     "<b>Raw detail:</b> the house rule is interpretation first, raw behind a disclosure; the shipped popover has none (gap G10, not an invention)."))
 
 # 9 ---------------------------------------------------------------------------
@@ -264,8 +265,30 @@ MOMENTS.append(moment(
     "On macOS 15 there is no Apple engine, so a first run waits for Whisper; a different state that this page does not redraw. "
     "Locale cost of everything marked INVENTED: 1 string × 21 locales (the “meanwhile” sentence); the per-session engine line is not drawn."))
 
+# 10 --------------------------------------------------------------------------
+WARN = ('<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--orange)" stroke-width="1.6">'
+        '<path d="M8 2.2 14.4 13.4H1.6Z" stroke-linejoin="round"/><path d="M8 6.6v3.2M8 11.6v.1" stroke-linecap="round"/></svg>')
+warn_pill = '<span class="pill inv-mark">' + WARN + "<span>Not enough space for Whisper</span></span>"
+lowdisk_today = ('<div class="strip"><span class="ttl">Ikea interviews</span></div>'
+                 '<div class="stage"><div class="sbrow"><div class="nm">p4.mp4</div>'
+                 '<div class="sub">Waiting for Whisper</div></div></div>')
+lowdisk_pop = pop("Not enough free space",
+                  "This Mac doesn’t have enough free space for it.",
+                  buttons='<div style="text-align:right">' + BTN("Transcription Settings…", True) + "</div>")
+MOMENTS.append(moment(
+    10, "Low disk: the question is never asked", [("inv", "new pill state, owner approval needed")],
+    TODAY + " · under 10 GB free", lowdisk_today,
+    PROP + " · a warning pill says why", toolbar(warn_pill, lowdisk_pop),
+    "<b>Today:</b> with under 10 GB free the app does not offer the download and says nothing (gap G8); a session that needs Whisper shows “Waiting for Whisper” with no pill and nothing saying why, and waits for ever (the runMustDefer defect). "
+    "<b>Proposed (INVENTED, R114 gate):</b> a new state of the existing pill, amber because nothing failed, the app simply did not start. Body reuses the shipped cause line (<code>desktop.modelDownload.causeDisk</code>); new strings: the pill label and the popover title, × 21 locales. The one button opens Settings (moment 7), where Download Now is not held by the 10 GB floor. "
+    "No promise that it will offer again, and no free-space figure: neither is measured. "
+    "<b>Scope:</b> only a session that needs Whisper waits; runs that already have transcripts are unaffected and show no pill. "
+    "<b>Bug 2 (open):</b> a run that starts while the size question is open: should the question manage itself, or is letting Download start with a run live (9b7dd24c7) enough? Owner to say."))
+
 STRINGS = [
     ("Apple’s speech model transcribes until Whisper is on this Mac.", "size alert (macOS 26+) and Settings status row: one string, two uses", "NEW"),
+    ("Not enough space for Whisper / Not enough free space", "low-disk pill and popover title (moment 10)", "NEW"),
+    ("Transcription Settings…", "button in both Whisper pills, replaces Retry", "check existing key; else NEW"),
     ("Starting", "pill popover before the first byte", "reuse desktop.cloudImport.downloadStarting"),
     ("789 MB of 1.6 GB", "popover line", "Foundation, localised by the OS; only the number format changes"),
     ("Transcribed with Apple’s speech model / with Whisper", "session detail, not drawn here (2 strings, post-submission option)", "NEW, not drawn"),
@@ -282,7 +305,7 @@ html = ["<!DOCTYPE html><html lang=\"en-GB\" data-color-theme=\"default\"><head>
         '<button onclick="document.documentElement.dataset.force=\'light\'">Light</button>'
         '<button onclick="document.documentElement.dataset.force=\'dark\'">Dark</button></div>',
         "<h1>Whisper delivery: every state, today and proposed</h1>",
-        '<p class="lede">Nine moments from first run to failure, each drawn as today (left) and proposed (right) for the toolbar pill, '
+        '<p class="lede">Ten moments from first run to failure, each drawn as today (left) and proposed (right) for the toolbar pill, '
         'the Settings row, the size alert and the run-deferral message. Evidence and sources: '
         '<code>docs/private/app-store-launch/ba-ux-research.md</code>.</p>',
         '<div class="key"><span><i class="swatch art"></i>Artefact: real pixels, shipped strings</span>'

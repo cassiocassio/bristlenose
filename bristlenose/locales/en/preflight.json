@@ -11,6 +11,7 @@
     "network_back": "The network is back. Starting the download again.",
     "network_wait": "The network dropped. Waiting for it to come back, then starting the download again.",
     "aborted_no_fetch": "Whisper model {repo_id} is not in cache and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch.",
+    "aborted_host_owns": "The Whisper model isn't on this Mac yet. Bristlenose downloads it in the background; try again when the download has finished.",
     "unknown_model": "There is no Whisper model called `{model}`.",
     "did_you_mean": "Did you mean `{suggestion}`?",
     "choose_model": "Use one of {models}, or a Hugging Face repo id such as `org/name`."

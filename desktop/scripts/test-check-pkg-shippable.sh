@@ -73,7 +73,12 @@ build_app() {
     local app="$1/Bristlenose.app"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/bristlenose-sidecar"
     # A real Mach-O executable, so `file` classifies it as one.
-    printf 'int main(void){return 0;}' > "$WORK/m.c"
+    # FIXTURE_ADAPTER=1: the host carries the adapter's class name, as a flag-on build does.
+    if [ "${FIXTURE_ADAPTER:-0}" = 1 ]; then
+        printf 'const char marker[]="_TtC11Bristlenose23AssetPackManagerAdapter";\nint main(void){return marker[0]==0;}' > "$WORK/m.c"
+    else
+        printf 'int main(void){return 0;}' > "$WORK/m.c"
+    fi
     cc -o "$app/Contents/MacOS/Bristlenose" "$WORK/m.c" 2>/dev/null
     cp "$app/Contents/MacOS/Bristlenose" "$app/Contents/Resources/bristlenose-sidecar/bristlenose-sidecar"
     cat > "$app/Contents/Info.plist" <<PLIST
@@ -247,6 +252,108 @@ E
 D=$WORK/c8; mkdir -p "$D"; A=$(build_app "$D"); sign_app "$A" "$ENTS_PRINT"
 reject_case "host may print (post-v1)" "✗.*host print.*PRESENT" "$D"
 
+# --- 10. Background Assets extension rows -----------------------------------
+# Today's store build has no .appex and must keep passing (the positive control
+# below). Each case here gives a build one extension, wrong in exactly one way.
+ents_with() {   # ents_with <out> <extra-xml-keys>  — sandbox + whatever else
+    cat > "$1" <<E
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/>$2</dict></plist>
+E
+}
+GRP='<key>com.apple.security.application-groups</key><array><string>Z56GZVA2QB.app.bristlenose</string></array>'
+OTHER_GRP='<key>com.apple.security.application-groups</key><array><string>group.com.evil.other</string></array>'
+ents_with "$WORK/ents-host-grp.plist" "$GRP"
+ents_with "$WORK/ents-ext-ok.plist" "$GRP"
+ents_with "$WORK/ents-ext-nogrp.plist" ""
+ents_with "$WORK/ents-ext-othergrp.plist" "$OTHER_GRP"
+ents_with "$WORK/ents-ext-inherit.plist" "$GRP<key>com.apple.security.inherit</key><true/>"
+cat > "$WORK/ents-ext-nosandbox.plist" <<E
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>$GRP</dict></plist>
+E
+
+# build_ext_app <dir> <ext-ents> [ext-version] [with-profile: 1|0] — a fixture
+# with one extension, signed inside-out (extension first, then the host).
+build_ext_app() {
+    local d="$1" eents="$2" ever="${3:-$TREE_VER}" prof="${4:-1}" where="${5:-PlugIns}" a e
+    a=$(build_app "$d"); e="$a/Contents/$where/BAExt.appex"
+    mkdir -p "$e/Contents/MacOS"
+    cp "$a/Contents/MacOS/Bristlenose" "$e/Contents/MacOS/BAExt"
+    cat > "$e/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>app.bristlenose.BAExtension</string>
+  <key>CFBundleExecutable</key><string>BAExt</string>
+  <key>CFBundleShortVersionString</key><string>$ever</string>
+  <key>CFBundleVersion</key><string>$TREE_BUILD</string>
+</dict></plist>
+PLIST
+    [ "$prof" = 1 ] && printf 'profile' > "$e/Contents/embedded.provisionprofile"
+    codesign --force --options=runtime --entitlements "$eents" --sign - "$e/Contents/MacOS/BAExt" 2>/dev/null
+    codesign --force --options=runtime --entitlements "$eents" --sign - "$e" 2>/dev/null
+    sign_app "$a" "$WORK/ents-host-grp.plist"
+    echo "$a"
+}
+
+# D2 gate: an extension with no adapter in the host is refused; with the adapter it passes.
+D=$WORK/ad0; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist")
+reject_case "extension embedded but the adapter not compiled in" "✗.*BA adapter.*without BA_WHISPER" "$D"
+D=$WORK/ad1; mkdir -p "$D"; A=$(FIXTURE_ADAPTER=1 build_ext_app "$D" "$WORK/ents-ext-ok.plist")
+if make_pkg "$A" "$D/t.pkg"; then AD_OUT=$("$GATE" "$D/t.pkg" 2>&1); else AD_OUT=""; fail "adapter fixture — pkgbuild failed"; fi
+if grep -qi '✓.*BA adapter.*compiled into the host' <<<"$AD_OUT"; then pass "extension with the adapter compiled in → BA adapter row passes"; else fail "extension with the adapter did not pass the BA adapter row"; sed 's/^/        /' <<<"$AD_OUT" | grep -iE 'BA adapter' >&2; fi
+
+D=$WORK/e0; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist")
+if make_pkg "$A" "$D/t.pkg"; then EXT_OUT=$("$GATE" "$D/t.pkg" 2>&1); else EXT_OUT=""; fail "intact extension fixture — pkgbuild failed"; fi
+if grep -qi '✓.*extensions.*1 .appex' <<<"$EXT_OUT"; then
+    pass "intact extension → extensions row passes"
+else
+    fail "intact extension → extensions row did not pass"; sed 's/^/        /' <<<"$EXT_OUT" | grep -iE '✗|extensions' >&2
+fi
+
+# The real form is an ExtensionKit extension in Contents/Extensions: the same row must see it.
+D=$WORK/e0x; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "$TREE_VER" 1 Extensions)
+if make_pkg "$A" "$D/t.pkg"; then EXT_OUT=$("$GATE" "$D/t.pkg" 2>&1); else EXT_OUT=""; fi
+if grep -qi '✓.*extensions.*1 .appex' <<<"$EXT_OUT"; then pass "an extension in Contents/Extensions is seen and passes"; else fail "an extension in Contents/Extensions was not seen"; fi
+D=$WORK/e0y; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nosandbox.plist" "$TREE_VER" 1 Extensions)
+reject_case "an unsandboxed extension in Contents/Extensions is refused" "✗.*extensions.*BAExt.appex: no app-sandbox" "$D"
+
+D=$WORK/e1; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nosandbox.plist")
+reject_case "extension unsandboxed" "✗.*extensions.*BAExt.appex: no app-sandbox" "$D"
+D=$WORK/e2; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-inherit.plist")
+reject_case "extension carries inherit" "✗.*extensions.*BAExt.appex: carries inherit" "$D"
+D=$WORK/e3; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-nogrp.plist")
+reject_case "extension without the app group" "✗.*extensions.*BAExt.appex: no app group" "$D"
+D=$WORK/e4; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-othergrp.plist")
+reject_case "extension in a different group" "✗.*extensions.*BAExt.appex: app group group.com.evil.other is not one the host holds" "$D"
+D=$WORK/e5; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "$TREE_VER" 0)
+reject_case "extension without its own profile" "✗.*extensions.*BAExt.appex: no embedded provisioning profile" "$D"
+# a group the host does not hold is refused even beside one it does
+ents_with "$WORK/ents-ext-extra.plist" '<key>com.apple.security.application-groups</key><array><string>Z56GZVA2QB.app.bristlenose</string><string>group.com.evil.other</string></array>'
+D=$WORK/e4b; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-extra.plist")
+reject_case "extension holding the host's group plus another" "✗.*extensions.*BAExt.appex: app group group.com.evil.other is not one the host holds" "$D"
+# the real shape: the host holds two groups, the extension only the Background Assets one
+ents_with "$WORK/ents-host-two.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string><string>Z56GZVA2QB.app.bristlenose</string></array>'
+D=$WORK/e4d; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$WORK/ents-host-two.plist"
+if make_pkg "$A" "$D/t.pkg"; then OUT4D=$("$GATE" "$D/t.pkg" 2>&1); else OUT4D=""; fi
+if grep -qi '✓.*extensions.*1 .appex' <<<"$OUT4D"; then pass "extension with one of the host's two groups passes"; else fail "extension with one of the host's two groups did not pass"; sed 's/^/        /' <<<"$OUT4D" | grep -iE 'extensions' >&2; fi
+# ...but an extension holding only the host's OTHER group is refused: it needs the team-prefixed group itself
+ents_with "$WORK/ents-ext-team.plist" '<key>com.apple.security.application-groups</key><array><string>group.app.bristlenose</string></array>'
+D=$WORK/e4e; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-team.plist"); sign_app "$A" "$WORK/ents-host-two.plist"
+reject_case "extension without the Background Assets group" "✗.*extensions.*BAExt.appex: not in Z56GZVA2QB.app.bristlenose" "$D"
+# a host with no readable group cannot vouch for an extension's
+D=$WORK/e4c; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); sign_app "$A" "$ENTS"
+reject_case "host without an app group cannot vouch for an extension's" "✗.*extensions.*host has no readable app group" "$D"
+# an extension carrying a copy of the host's profile
+D=$WORK/e5b; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist"); printf 'hostprofile' > "$A/Contents/embedded.provisionprofile"; cp "$A/Contents/embedded.provisionprofile" "$A/Contents/PlugIns/BAExt.appex/Contents/embedded.provisionprofile"
+codesign --force --options=runtime --entitlements "$WORK/ents-ext-ok.plist" --sign - "$A/Contents/PlugIns/BAExt.appex" 2>/dev/null; sign_app "$A" "$WORK/ents-host-grp.plist"
+reject_case "extension with a copy of the host's profile" "✗.*extensions.*its profile is a copy of the host's" "$D"
+D=$WORK/e6; mkdir -p "$D"; A=$(build_ext_app "$D" "$WORK/ents-ext-ok.plist" "9.9.9")
+reject_case "extension version differs from the host" "✗.*extensions.*BAExt.appex: version 9.9.9" "$D"
+
 # --- positive controls: the intact fixture passes every row above ------------
 # Without these, a row that always fails passes its negative case. The output is
 # captured once and read with a herestring, not a pipe: under pipefail `grep -q`
@@ -265,6 +372,8 @@ expect_row_passes "nested executables sandboxed → row passes" "✓.*nested app
 expect_row_passes "hardened runtime on → row passes" "✓.*hardened runtime"
 expect_row_passes "cloud sign-in IDs present → row passes" "✓.*Teams + Meet + Zoom client IDs baked"
 expect_row_passes "no print entitlement → row passes" "✓.*host print.*absent"
+expect_row_passes "no extension in today's build → row passes" "✓.*extensions.*none in this build"
+expect_row_passes "no extension → BA adapter row passes" "✓.*BA adapter.*no extension"
 
 # --- 9. usage: not a pkg ------------------------------------------------------
 if "$GATE" "$WORK/nope.pkg" >/dev/null 2>&1; then

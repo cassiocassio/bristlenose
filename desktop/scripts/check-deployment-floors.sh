@@ -20,6 +20,16 @@
 #
 #   Bristlenose       (all 4 app schemes, Debug + Release)  15.0
 #   BristlenoseTests  (Debug + Release)                     15.0
+#   BAExtension       (Debug + Release; only once the target exists)  26.0
+#
+# THE EXTENSION'S FLOOR IS 26.0, ABOVE THE APP'S, ON PURPOSE
+# ----------------------------------------------------------
+# Background Assets' managed packs and `AssetPackManager` are macOS 26.0 API and the system
+# refuses to load an extension above its own version. A template target defaults to the SDK
+# (27.2 here), which would not load on macOS 26.x, so this pins it. The app's own floor stays
+# 15.0: on macOS 15 the extension is simply never launched (the app never asks for it). The
+# check is skipped while no BAExtension target exists, so it cannot fail before there is
+# anything to check.
 #
 # THE TWO FLOORS ARE EQUAL, AND THAT IS WHAT THIS GATE NOW PROTECTS
 # ----------------------------------------------------------------
@@ -39,12 +49,21 @@ PROJ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/Bristlenose/Bristlenose.x
 
 EXPECT_APP="15.0"
 EXPECT_TESTS="15.0"
+EXPECT_EXT="26.0"
 
 die() { printf 'check-deployment-floors: FAIL — %s\n' "$*" >&2; exit 1; }
 
 read_floor() {  # $1 = target, $2 = configuration
   xcodebuild -showBuildSettings -project "$PROJ" -target "$1" -configuration "$2" 2>/dev/null \
     | awk '/^[[:space:]]+MACOSX_DEPLOYMENT_TARGET /{print $3; exit}'
+}
+
+# Whether the extension target is in the project. BN_FLOORS_EXT=present|absent is for the
+# self-test; otherwise it is read from the project file (existence only: values are asked of
+# xcodebuild, as above).
+ext_target_exists() {
+  case "${BN_FLOORS_EXT:-}" in present) return 0 ;; absent) return 1 ;; esac
+  grep -q 'name = BAExtension;' "$PROJ/project.pbxproj"
 }
 
 fail=0
@@ -61,8 +80,19 @@ for cfg in Debug Release; do
   if [ "$tst" != "$EXPECT_TESTS" ]; then
     printf '  test %-8s expected %s, got %s\n' "$cfg" "$EXPECT_TESTS" "$tst" >&2; fail=1
   fi
+  if ext_target_exists; then
+    ext=$(read_floor BAExtension "$cfg")
+    [ -n "$ext" ] || die "could not read extension floor for $cfg"
+    if [ "$ext" != "$EXPECT_EXT" ]; then
+      printf '  ext  %-8s expected %s, got %s\n' "$cfg" "$EXPECT_EXT" "$ext" >&2; fail=1
+    fi
+  fi
 done
 
 [ "$fail" -eq 0 ] || die "deployment floor drifted. If deliberate, update EXPECT_* here and docs/design-platform-policy.md §Pillar 3 in the same commit."
 
-printf 'check-deployment-floors: app=%s tests=%s (both configs)\n' "$EXPECT_APP" "$EXPECT_TESTS"
+if ext_target_exists; then
+  printf 'check-deployment-floors: app=%s tests=%s ext=%s (both configs)\n' "$EXPECT_APP" "$EXPECT_TESTS" "$EXPECT_EXT"
+else
+  printf 'check-deployment-floors: app=%s tests=%s (both configs; no extension target yet)\n' "$EXPECT_APP" "$EXPECT_TESTS"
+fi

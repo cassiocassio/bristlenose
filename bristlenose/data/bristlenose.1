@@ -538,8 +538,13 @@ Log file verbosity (\fI<output-dir>/.bristlenose/bristlenose.log\fR). Default:
 \fBINFO\fR. The \fB\-v\fR flag controls terminal verbosity independently.
 .TP
 .B BRISTLENOSE_WHISPER_MODEL_DIR
-Directory containing pre-downloaded Whisper models, used by the desktop
-sidecar to bypass the runtime cache. Not needed for CLI use.
+Directory containing pre\-downloaded Whisper models, used by the desktop app
+to bypass the runtime cache; rarely needed for CLI use. On Apple Silicon (MLX) a
+complete model in \fI<dir>/<canonical model name>/\fR (for example
+\fIlarge\-v3\-turbo/\fR, also used for \fBturbo\fR), holding \fIconfig.json\fR
+and \fIweights.safetensors\fR (or \fIweights.npz\fR, at least 1 MiB), is used
+instead of the Hugging Face cache. The faster\-whisper backend reads
+\fI<dir>/<model>/\fR only when it holds a \fImodel.bin\fR.
 .TP
 .B BRISTLENOSE_VOICE_PASS
 Set to \fBfalse\fR to switch off the voice pass in speaker identification.

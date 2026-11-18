@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The Background Assets download extension. It is its own signed process: a sandbox of
+	     its own (NEVER `inherit`: an extension is launched by the system, not spawned by the
+	     app), the app group it shares with the host (the host's BAAppGroupID), and the two
+	     identifiers Xcode needs to embed a provisioning profile (without a team identifier the
+	     system refuses the connection: measured 16 Nov 2026). This file is only ever read by
+	     the BAExtension target; the app's entitlements come from BN_APP_ENTITLEMENTS, and a
+	     command-line CODE_SIGN_ENTITLEMENTS must never be passed (it would reach this target). -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
+	</array>
+	<key>com.apple.application-identifier</key>
+	<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>$(DEVELOPMENT_TEAM)</string>
+</dict>
+</plist>

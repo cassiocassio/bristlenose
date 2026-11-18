@@ -31,6 +31,7 @@ from bristlenose.events import (
     StageOutcome,
 )
 from bristlenose.models import InputSession, TranscriptSegment, Word
+from bristlenose.preflight import WhisperHostOwnsError
 from bristlenose.run_lifecycle import categorise_exception
 from bristlenose.utils.fs import ensure_materialised
 from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_hardware
@@ -778,6 +779,22 @@ def iter_transcribe_sessions(
                 )),
                 quality=_quality_record(session.session_id, [], sink),
             )
+        except WhisperHostOwnsError as waiting:
+            # The Mac app is delivering Whisper and it is not here yet. The same stated,
+            # retryable outcome as an Apple-model deferral: the run completes with this
+            # session waiting, and the app runs the study again when the model lands.
+            logger.info("%s: deferred to the app's Whisper download", session.session_id)
+            done = SessionTranscription(
+                session.session_id, [], None,
+                StageFailure(session_id=session.session_id, cause=Cause(
+                    category=CauseCategoryEnum.DEFERRED,
+                    code="host_downloading",
+                    message=str(waiting),
+                    stage="s05_transcribe",
+                    session_id=session.session_id,
+                )),
+                quality=_quality_record(session.session_id, [], sink),
+            )
         except Exception as exc:
             logger.error(
                 "%s: Transcription failed: %s",
@@ -1034,8 +1051,14 @@ def whisper_is_on_disk(settings: BristlenoseSettings) -> bool:
     that has always worked, and guessing "absent" would route around it.
     """
     try:
-        from bristlenose.preflight.whisper import _resolve_repo_id, cache_state
+        from bristlenose.preflight.whisper import (
+            _resolve_repo_id,
+            cache_state,
+            local_model_dir,
+        )
 
+        if local_model_dir(settings) is not None:
+            return True
         return cache_state(_resolve_repo_id(settings)) == "cached"
     except Exception:  # noqa: BLE001 — a probe must not cost the run
         logger.warning("Whisper cache probe failed; assuming it is on disk", exc_info=True)
@@ -1373,6 +1396,17 @@ def _init_mlx_backend(
         # heartbeat to surface (per-file progress still ticks in the caller).
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
+        from bristlenose.preflight.whisper import host_owned_and_absent, local_model_dir
+
+        if (host_dir := local_model_dir(settings)) is not None:
+            model_name = str(host_dir)  # delivered by the app (Background Assets)
+        elif host_owned_and_absent(settings):
+            # The pack was there at preflight and is gone now (or the preflight was skipped),
+            # and the model is not in the Hugging Face cache either: mlx-whisper would
+            # otherwise download the repo from Hugging Face behind the app.
+            from bristlenose.i18n import t
+
+            raise WhisperHostOwnsError(t("preflight.whisper.aborted_host_owns"))
 
         # Decode once, here, so the signal gate and Whisper read the same
         # samples. `transcribe` would otherwise run this same ffmpeg call on
@@ -1688,7 +1722,14 @@ def _init_faster_whisper_backend(
     local_only = False
     if model_dir:
         candidate = os.path.join(model_dir, settings.whisper_model)
-        if os.path.isdir(candidate):
+        if os.path.isdir(candidate) and not os.path.isfile(os.path.join(candidate, "model.bin")):
+            # An MLX-format model (config.json + weights.safetensors, as the Mac app delivers)
+            # is not a faster-whisper model: loading it would fail on the first file.
+            logger.warning(
+                "BRISTLENOSE_WHISPER_MODEL_DIR holds %s without a model.bin (not a "
+                "faster-whisper model); ignoring it", candidate,
+            )
+        elif os.path.isdir(candidate):
             model_id = candidate
             local_only = True
             logger.info("Using bundled Whisper model: %s", candidate)
@@ -1698,6 +1739,22 @@ def _init_faster_whisper_backend(
                 "falling back to download",
                 candidate,
             )
+
+    from bristlenose.preflight.whisper import host_owned_and_absent
+
+    if not local_only and host_owned_and_absent(settings):
+        # The app owns the model's delivery and it is not here: constructing `WhisperModel`
+        # below would download it from Hugging Face. Each session waits instead.
+        def waiting_for_the_app(
+            audio_path: Path,
+            settings: BristlenoseSettings,
+            on_segment: FileSegmentCallback | None = None,
+        ) -> tuple[list[TranscriptSegment], str | None]:
+            from bristlenose.i18n import t
+
+            raise WhisperHostOwnsError(t("preflight.whisper.aborted_host_owns"))
+
+        return waiting_for_the_app
 
     # faster-whisper's Silero VAD imports onnxruntime lazily, on the first
     # vad_filter=True call, mid-run. Importing it here, quietly, puts its

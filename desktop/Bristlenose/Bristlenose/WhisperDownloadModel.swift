@@ -162,7 +162,7 @@ struct DownloadRate: Equatable {
 // MARK: - The job
 
 @MainActor
-final class WhisperDownloadModel: ObservableObject {
+final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
     /// App-wide by nature: one download, one model on disk, every window. A
     /// singleton rather than an environment object so the Settings window,
     /// which AppKit builds lazily, reads the same instance with no injection to
@@ -173,7 +173,7 @@ final class WhisperDownloadModel: ObservableObject {
         /// Not asked yet, or being asked.
         case unknown
         case missing
-        /// A download was interrupted; it starts again from the beginning.
+        /// The Hugging Face cache holds part of it (an interrupted fetch).
         case partial
         case downloading
         case onDisk
@@ -206,7 +206,8 @@ final class WhisperDownloadModel: ObservableObject {
     /// is never asked again on this install (App Review 4.2.3: the size is
     /// shown, and the researcher agrees, before a large download starts).
     private static let askedKey = "whisperDownloadAsked"
-    private var process: Process?
+    /// The attempt in flight, if any (`WhisperModelAcquirer`).
+    private var acquirer: WhisperModelAcquirer?
     /// Bumped by every download start, so a status probe that began before one
     /// cannot overwrite what the download then did (a stale `.missing` over a
     /// `.failed`, say).
@@ -215,20 +216,18 @@ final class WhisperDownloadModel: ObservableObject {
     private var probeTask: Task<Bool, Never>?
     private var probeAskedAgain = false
     private var rate = DownloadRate()
-    private var stopRequested = false
-    private var stderrTail: [String] = []
     /// `checkAtLaunch()` runs once per process, though every window's
     /// `onAppear` calls it.
     private var launched = false
 
     private var stoppedByUser: Bool {
-        get { UserDefaults.standard.bool(forKey: Self.stoppedKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.stoppedKey) }
+        get { defaults.bool(forKey: Self.stoppedKey) }
+        set { defaults.set(newValue, forKey: Self.stoppedKey) }
     }
 
     private var hasAnswered: Bool {
-        get { UserDefaults.standard.bool(forKey: Self.askedKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.askedKey) }
+        get { defaults.bool(forKey: Self.askedKey) }
+        set { defaults.set(newValue, forKey: Self.askedKey) }
     }
 
     /// Whether this build ships Whisper at all. The one place a build with
@@ -243,7 +242,23 @@ final class WhisperDownloadModel: ObservableObject {
     /// app never asks and so never downloads on its own.
     var askToDownload: (@MainActor () async -> Bool)?
 
-    private init() {
+    private let defaults: UserDefaults
+    /// Builds the acquirer for an attempt. `backgroundAssetsUsable` is false once Background
+    /// Assets has failed in this process, so the same launch falls to the sidecar fetch.
+    private let makeAcquirer: @MainActor (_ backgroundAssetsUsable: Bool) -> WhisperModelAcquirer
+    /// Reset by every launch, and by Download Now: a failure sends THIS launch to the fallback,
+    /// and the next opportunity asks Background Assets again.
+    private var backgroundAssetsUsable = true
+    /// Whether the current Stop came from `stop()` (the researcher) or from the system.
+    private var stopAsked = false
+
+    /// `shared` is the app's one. Tests build their own with a fake acquirer and a scratch
+    /// defaults suite, so nothing they do reaches the real "stopped by user" memory.
+    init(defaults: UserDefaults = .standard,
+         makeAcquirer: @escaping @MainActor (_ backgroundAssetsUsable: Bool) -> WhisperModelAcquirer =
+             WhisperDownloadModel.defaultAcquirer) {
+        self.defaults = defaults
+        self.makeAcquirer = makeAcquirer
         NotificationCenter.default.addObserver(
             forName: .bristlenoseAppleSpeechRunStarted, object: nil, queue: .main
         ) { [weak self] _ in
@@ -254,7 +269,7 @@ final class WhisperDownloadModel: ObservableObject {
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.process?.interrupt() }
+            MainActor.assumeIsolated { self?.acquirer?.appWillTerminate() }
         }
     }
 
@@ -274,6 +289,9 @@ final class WhisperDownloadModel: ObservableObject {
         // Progress as nothing at all (measured 18 Oct 2026), so say the bytes
         // we have in its own byte format.
         guard total > 0 else {
+            // Nothing reported yet (no byte, no total): say nothing rather than "Zero KB" beside
+            // a bar that is already moving (build 6532). No invented figure.
+            if done <= 0 { return "" }
             return ByteCountFormatter.string(fromByteCount: max(done, 0), countStyle: .file)
         }
         let p = Progress(totalUnitCount: total)
@@ -404,12 +422,96 @@ final class WhisperDownloadModel: ObservableObject {
     /// that gap, and so fetched the model itself, is not joined by a second.
     var runIsLive: @MainActor () -> Bool = { false }
 
-    /// The download's process, while it runs: a run started meanwhile waits
-    /// on it instead of fetching a second copy (`whisperFetchEnvironment`).
-    var downloadPID: pid_t? {
-        guard phase == .downloading, let p = process, p.isRunning else { return nil }
-        return p.processIdentifier
+    /// The environment a pipeline run is given about the model: the sidecar fetch's pid to wait
+    /// on while it runs; the host-owns marker when the app, not Python, delivers the model.
+    var runEnvironment: [String: String] {
+        var env = (acquirer ?? idleAcquirer).runEnvironment
+        // Nothing is downloading and no verified pack is here, but the app would not start the
+        // download itself (the researcher said Not Now, or has not been asked the size question):
+        // the run must not fetch 1.5 GB behind that. The marker makes Python defer each session
+        // that needs Whisper ("Waiting for Whisper"); a model already in the cache is still used.
+        if env.isEmpty, Self.runMustDefer(whisperInBuild: Self.whisperInBuild,
+                                          stoppedByUser: stoppedByUser, hasAnswered: hasAnswered) {
+            env = Self.hostOwnsEnvironment
+        }
+        return env
     }
+
+    /// A run that finds no Whisper model defers instead of fetching when the researcher has
+    /// declined the download (Not Now or Stop) or has not yet answered the size question.
+    /// Download Now, or Download in the alert, lifts it.
+    nonisolated static func runMustDefer(whisperInBuild: Bool, stoppedByUser: Bool, hasAnswered: Bool) -> Bool {
+        whisperInBuild && (stoppedByUser || !hasAnswered)
+    }
+
+    /// What answers for the environment when nothing is downloading: the acquirer the picker
+    /// would choose now, kept so a delivered pack is found without a download in flight.
+    private var idleAcquirer: WhisperModelAcquirer {
+        if let kept = idleCache, kept.kind == pickedKind { return kept }
+        let made = makeAcquirer(backgroundAssetsUsable)
+        idleCache = made
+        return made
+    }
+    private var idleCache: WhisperModelAcquirer?
+    private var pickedKind: WhisperAcquirerKind { Self.pickedKind(backgroundAssetsUsable: backgroundAssetsUsable) }
+
+    /// Every input injectable, so the whole decision (including the chosen model and whether
+    /// this build has Background Assets at all) is tested without a store build.
+    nonisolated static func pickedKind(
+        backgroundAssetsUsable: Bool,
+        compiledIn: Bool = WhisperDownloadModel.backgroundAssetsCompiledIn,
+        osMajor: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion,
+        channel: DistributionChannel = .current,
+        killSwitchOn: Bool = BristlenoseFlags.backgroundAssets,
+        defaults: UserDefaults = .standard
+    ) -> WhisperAcquirerKind {
+        WhisperAcquirerPicker.pick(
+            osMajor: osMajor, channel: channel, killSwitchOn: killSwitchOn,
+            backgroundAssetsUsable: backgroundAssetsUsable && compiledIn
+                && chosenModelIsPackModel(defaults))
+    }
+
+    /// The app's one pack is `large-v3-turbo`. Another model chosen in Settings, or a
+    /// repo id, is not the app's to deliver (Python fetches it as it always has), so Background
+    /// Assets is neither used nor claimed for it. An unset preference is the default, turbo.
+    nonisolated static func chosenModelIsPackModel(_ defaults: UserDefaults = .standard) -> Bool {
+        let model = defaults.string(forKey: "whisperModel") ?? "large-v3-turbo"
+        return model == "large-v3-turbo" || model == "turbo"
+    }
+
+    /// Background Assets is built only into the store build with the flag on
+    /// (`BA_WHISPER`, never in the Developer-ID `.dmg`). Without it nothing here differs from
+    /// the sidecar fetch.
+    nonisolated static var backgroundAssetsCompiledIn: Bool {
+        #if BA_WHISPER && !DEVELOPER_ID_BETA
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// The picker's choice, built. Background Assets where the picker says so and this build has
+    /// it; the sidecar fetch everywhere else.
+    @MainActor
+    static func defaultAcquirer(backgroundAssetsUsable: Bool) -> WhisperModelAcquirer {
+        if pickedKind(backgroundAssetsUsable: backgroundAssetsUsable) == .backgroundAssets,
+           let acquirer = makeBackgroundAssetsAcquirer() { return acquirer }
+        return SidecarFetchAcquirer()
+    }
+
+    @MainActor
+    private static func makeBackgroundAssetsAcquirer() -> WhisperModelAcquirer? {
+        #if BA_WHISPER && !DEVELOPER_ID_BETA
+        if #available(macOS 26, *) {
+            return BackgroundAssetsAcquirer(adapter: AssetPackManagerAdapter(manifest: .largeV3Turbo))
+        }
+        #endif
+        return nil
+    }
+
+    /// The marker that tells Python the app owns the model: it never fetches, it uses the
+    /// directory the app sets or refuses (`bristlenose/preflight/whisper.py`).
+    nonisolated static let hostOwnsEnvironment = ["_BRISTLENOSE_WHISPER_HOST_OWNS": "1"]
 
     /// What a run needs to wait on the app's download rather than fetch its own.
     nonisolated static func whisperFetchEnvironment(pid: pid_t?) -> [String: String] {
@@ -442,71 +544,44 @@ final class WhisperDownloadModel: ObservableObject {
     func downloadNow() {
         stoppedByUser = false
         hasAnswered = true
+        if acquirer == nil { backgroundAssetsUsable = true }  // a fallback fetch in flight stays
         start()
     }
 
     private func start() {
-        guard process == nil else { return }
+        // A build without Whisper has no acquirer at all, whatever the picker would say.
+        guard Self.whisperInBuild, acquirer == nil else { return }
         downloadEpoch += 1
         probeAskedAgain = false  // a re-ask that predates this download is moot: its outcome stands
-        guard let (binary, mode) = Self.sidecar() else {
+        let next = makeAcquirer(backgroundAssetsUsable)
+        guard next.isAvailable else {
             Self.logger.error("whisper download: no sidecar to run (bundle or dev path missing)")
             phase = .failed
             return
         }
-        stopRequested = false
-        stderrTail = []
         failureCause = nil
+        stopAsked = false
         rate.reset()
         doneBytes = 0
         totalBytes = 0
         bytesPerSecond = nil
         minutesLeft = nil
         phase = .downloading
-
-        let proc = Process()
-        proc.executableURL = binary
-        proc.arguments = ["doctor", "--fetch", "--progress-lines"]
-        proc.environment = BristlenoseShared.childEnvironment(for: mode)
-        proc.standardInput = FileHandle.nullDevice
-        let out = Pipe()
-        let err = Pipe()
-        proc.standardOutput = out
-        proc.standardError = err
-        Self.readLines(out.fileHandleForReading) { [weak self] line in
-            Task { @MainActor in self?.consume(line) }
-        }
-        Self.readLines(err.fileHandleForReading) { [weak self] line in
-            Task { @MainActor in self?.keepTail(line) }
-        }
-        proc.terminationHandler = { [weak self] p in
-            let status = p.terminationStatus
-            Task { @MainActor in self?.finished(status: status) }
-        }
-        do {
-            try proc.run()
-            process = proc
-            Self.logger.info("whisper download started pid=\(proc.processIdentifier, privacy: .public)")
-        } catch {
-            Self.logger.error("whisper download failed to start: \(error.localizedDescription, privacy: .public)")
-            process = nil
+        acquirer = next
+        if !next.start(events: self) {
+            acquirer = nil
             phase = .failed
         }
     }
 
-    /// Stop. There is no resume (hf_xet starts again). SIGINT first — `ensure_hf_model` aborts
-    /// hf_xet within about 2 s — then SIGKILL if it hasn't gone.
+    /// Stop. The Hugging Face fetch has no resume (hf_xet starts again); the system's own
+    /// delivery says nothing either way, and the popover carries no note about it. SIGINT
+    /// first — `ensure_hf_model` aborts hf_xet within about 2 s — then SIGKILL if it hasn't gone.
     func stop() {
-        guard let proc = process, proc.isRunning else { return }
-        stopRequested = true
+        guard let acquirer, acquirer.isRunning else { return }
         stoppedByUser = true
-        proc.interrupt()
-        let pid = proc.processIdentifier
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(5))
-            guard let self, let p = self.process, p.processIdentifier == pid, p.isRunning else { return }
-            kill(pid, SIGKILL)
-        }
+        stopAsked = true
+        acquirer.stop()
     }
 
     /// Ask Python whether Whisper is on disk. Never computes the cache path
@@ -542,7 +617,7 @@ final class WhisperDownloadModel: ObservableObject {
     }
 
     private func probeOnce() async -> Bool {
-        guard process == nil else { return phase == .onDisk }
+        guard acquirer == nil else { return phase == .onDisk }
         guard let (binary, mode) = Self.sidecar() else {
             Self.logger.error("whisper status: no sidecar to ask")
             phase = .failed
@@ -550,10 +625,10 @@ final class WhisperDownloadModel: ObservableObject {
         }
         failureCause = nil  // a failed probe is not the last download's failure
         let epoch = downloadEpoch
-        let answer = await Self.askStatus(binary: binary, mode: mode)
+        let answer = await Self.askStatus(binary: binary, mode: mode, extra: runEnvironment)
         // A download started meanwhile, and may even have ended: its outcome
         // stands.
-        guard process == nil, epoch == downloadEpoch else { return false }
+        guard acquirer == nil, epoch == downloadEpoch else { return false }
         // Someone asked again while this ran, so this answer is already stale:
         // do not apply it, or announce Whisper ready for a model that is no
         // longer the one chosen. The loop in `refresh()` probes again.
@@ -587,8 +662,12 @@ final class WhisperDownloadModel: ObservableObject {
     }
 
     /// `doctor --whisper-status`, off the main thread, bounded to 60 s.
-    private nonisolated static func askStatus(binary: URL, mode: SidecarMode) async -> StatusAnswer {
-        let env = await MainActor.run { BristlenoseShared.childEnvironment(for: mode) }
+    private nonisolated static func askStatus(
+        binary: URL, mode: SidecarMode, extra: [String: String]
+    ) async -> StatusAnswer {
+        let env = await MainActor.run {
+            BristlenoseShared.childEnvironment(for: mode).merging(extra) { _, new in new }
+        }
         return await withCheckedContinuation { cont in
             DispatchQueue.global(qos: .utility).async {
                 let proc = Process()
@@ -633,7 +712,7 @@ final class WhisperDownloadModel: ObservableObject {
 
     /// Line-split a pipe on newline **bytes** before decoding, so a multi-byte
     /// character that straddles two reads is never dropped with its chunk.
-    private nonisolated static func readLines(_ handle: FileHandle,
+    nonisolated static func readLines(_ handle: FileHandle,
                                               _ each: @escaping @Sendable (String) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             var buffer = Data()
@@ -651,51 +730,61 @@ final class WhisperDownloadModel: ObservableObject {
         }
     }
 
-    private func consume(_ line: String) {
-        guard let parsed = WhisperDownloadLine.parse(line) else { return }
-        switch parsed {
-        case .start(_, let total):
-            totalBytes = total
-        case .progress(let done, let total):
-            doneBytes = done
-            if total > 0 { totalBytes = total }
-            rate.add(time: ProcessInfo.processInfo.systemUptime, bytes: done)
-            bytesPerSecond = rate.bytesPerSecond
-            minutesLeft = rate.minutesLeft(done: done, total: totalBytes)
-        case .done, .status:
-            break
+    /// The researcher's Stop ended a Background Assets attempt that also reported a failure.
+    private func acquisitionEndedAfterStop() {
+        phase = .unknown
+        Task { @MainActor in await refresh() }
+    }
+
+    // MARK: Events from the acquirer
+
+    func acquisitionTotal(_ bytes: Int64, from sender: WhisperModelAcquirer) {
+        guard sender === acquirer else { return }
+        totalBytes = bytes
+    }
+
+    func acquisitionProgress(done: Int64, total: Int64, from sender: WhisperModelAcquirer) {
+        guard sender === acquirer else { return }
+        doneBytes = done
+        if total > 0 { totalBytes = total }
+        rate.add(time: ProcessInfo.processInfo.systemUptime, bytes: done)
+        bytesPerSecond = rate.bytesPerSecond
+        minutesLeft = rate.minutesLeft(done: done, total: totalBytes)
+    }
+
+    func acquisitionEnded(_ outcome: WhisperAcquisitionOutcome, from sender: WhisperModelAcquirer) {
+        guard let ended = acquirer, sender === ended else { return }
+        acquirer = nil
+        // Background Assets failed: this launch goes to the sidecar fetch, now, so the researcher
+        // is not left with nothing. The next opportunity (a launch, Download Now) asks again.
+        if case .failed = outcome, ended.kind == .backgroundAssets, stopAsked {
+            // Stop landed together with a failure: the researcher's Stop wins, nothing starts.
+            acquisitionEndedAfterStop()
+            return
         }
-    }
-
-    private func keepTail(_ line: String) {
-        let clean = line.trimmingCharacters(in: .whitespaces)
-        guard !clean.isEmpty else { return }
-        stderrTail.append(BristlenoseShared.redactKeys(in: clean))
-        if stderrTail.count > 5 { stderrTail.removeFirst() }
-    }
-
-    private func finished(status: Int32) {
-        process = nil
-        if status == 0 {
-            Self.logger.info("whisper download finished")
+        if case .failed = outcome, ended.kind == .backgroundAssets {
+            Self.logger.error("background assets failed; falling back to the sidecar fetch for this launch")
+            backgroundAssetsUsable = false
+            start()
+            return
+        }
+        // A stop nobody here asked for (the system cancelled it) is not the researcher's Stop:
+        // it is not remembered, so the next opportunity (launch, run, Download Now) tries again.
+        // `stop()` already remembered the researcher's own.
+        switch outcome {
+        case .succeeded, .stopped:
             // Off `.downloading` before asking, so a probe that fails leaves
             // `.failed`, never a pill frozen on its last bytes.
             phase = .unknown
             Task { @MainActor in await refresh() }
-        } else if stopRequested {
-            Self.logger.info("whisper download stopped by the researcher")
-            phase = .unknown
-            Task { @MainActor in await refresh() }
-        } else {
-            Self.logger.error(
-                "whisper download exited \(status, privacy: .public): \(self.stderrTail.joined(separator: " | "), privacy: .public)")
-            failureCause = WhisperFailureCause.classify(stderrTail)
+        case .failed(let cause):
+            failureCause = cause
             phase = .failed
         }
     }
 
     /// The sidecar binary and mode, resolved exactly as a run resolves them.
-    private static func sidecar() -> (URL, SidecarMode)? {
+    static func sidecar() -> (URL, SidecarMode)? {
         #if DEBUG
         let externalPortRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_EXTERNAL_PORT"]
         let sidecarPathRaw = ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_SIDECAR_PATH"]

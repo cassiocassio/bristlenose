@@ -16,12 +16,14 @@ was speculative — the migration touches whichever function exists when it land
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import logging
 import os
 import subprocess
 import sys
 import threading
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -132,12 +134,21 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     cancelled = threading.Event()
     bar_class = _cancellable_bar_class(tqdm_class, cancelled)
 
+    from bristlenose.whisper_pins import PINNED_MODELS
+
+    pin = PINNED_MODELS.get(repo_id)
+    # A pinned model is fetched at its pinned revision, only the files the pin names, and checked
+    # against the pinned hashes afterwards. Any other repo is fetched as it always was.
+    pin_kwargs: dict[str, Any] = (
+        {"revision": pin.revision, "allow_patterns": pin.allow_patterns} if pin else {}
+    )
+
     def fetch() -> None:
         try:
             if bar_class is None:
-                paths.append(snapshot_download(repo_id))
+                paths.append(snapshot_download(repo_id, **pin_kwargs))
             else:
-                paths.append(snapshot_download(repo_id, tqdm_class=bar_class))
+                paths.append(snapshot_download(repo_id, tqdm_class=bar_class, **pin_kwargs))
         except BaseException as exc:  # handed back to the main thread below
             errors.append(exc)
         finally:
@@ -181,7 +192,56 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
                 f"huggingface_hub snapshot_download {repo_id!r} failed: {error}"
             ) from error
         raise error  # KeyboardInterrupt, SystemExit: unchanged
+    if pin is not None:
+        _verify_pinned_snapshot(pin, paths[0])
     return paths[0]
+
+
+def _sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _verify_pinned_snapshot(pin: Any, snapshot: str) -> None:
+    """Check a pinned model's files against the pinned sizes and SHA-256.
+
+    A mismatch removes the offending file (and the blob it points at) so the next attempt
+    fetches it again, and raises ``PackageInstallError``. On success ``refs/main`` is pointed at
+    the pinned revision when it has no value yet, so the cache lookups that ask for ``main``
+    (the preflight's cache check) find what was just fetched.
+    """
+    root = Path(snapshot)
+    for pinned in pin.files:
+        target = root / pinned.name
+        problem = None
+        if not target.is_file():
+            problem = "is missing"
+        elif target.stat().st_size != pinned.bytes:
+            problem = "has the wrong size"
+        elif _sha256_of(target) != pinned.sha256:
+            problem = "does not match its pinned SHA-256"
+        if problem is None:
+            continue
+        try:
+            blob = target.resolve()
+            target.unlink(missing_ok=True)
+            if blob != target:
+                blob.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise PackageInstallError(
+            f"{pin.repo_id} {pinned.name} {problem}; the download was discarded"
+        )
+    try:
+        ref = root.parent.parent / "refs" / "main"
+        if not ref.exists():
+            ref.parent.mkdir(parents=True, exist_ok=True)
+            ref.write_text(pin.revision, encoding="utf-8")
+    except OSError:
+        logger.warning("ensure_hf_model: could not record %s as main", pin.revision)
 
 
 class _DownloadCancelled(BaseException):

@@ -110,6 +110,25 @@ enum BristlenoseFlags {
         defaults.object(forKey: appleSpeechKey) as? Bool ?? true
     }
 
+    /// Deliver the Whisper model by **Apple Background Assets** in the store build on macOS 26+
+    /// (the Background Assets plan). On unless written off: the
+    /// kill switch for a tester who hits trouble, and a guard on `AssetPackManager.shared`,
+    /// which is never touched when this is off. Only means something in a build compiled with
+    /// `BA_WHISPER`; the Developer-ID `.dmg` never has it.
+    ///
+    /// Turn off with the app QUIT, writing the container's plist by path (the sandboxed app reads
+    /// `~/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose.plist`):
+    /// `defaults write ~/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose BristlenoseBackgroundAssets -bool NO`.
+    /// The by-name form `defaults write app.bristlenose …` fails on a TestFlight build ("Could not
+    /// write domain"), and on macOS 27 the container itself may refuse Terminal until Terminal has
+    /// Full Disk Access or App Management. UNTESTED on a signed build (17 Nov 2026).
+    static let backgroundAssetsKey = "BristlenoseBackgroundAssets"
+    static var backgroundAssets: Bool { backgroundAssets(in: .standard) }
+
+    static func backgroundAssets(in defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: backgroundAssetsKey) as? Bool ?? true
+    }
+
     /// The switch **and** the helper in this bundle: CI stubs the sidecar and a
     /// Dev Sidecar build may lack it, so nothing offers a choice that does
     /// nothing. Every Swift caller asks this, not `appleSpeech`.

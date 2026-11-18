@@ -31,6 +31,10 @@ _SELFTESTS = [
     "desktop/scripts/test-check-dmg-shippable.sh",
     "desktop/scripts/test-check-pkg-shippable.sh",
     "desktop/scripts/test-report-exit-status.sh",
+    # Not a gate (build-whisper-pack.sh is a manual build step) but its validation is one: a pack that
+    # fails its own checks must not be built, so the fixtures run with the rest.
+    "desktop/scripts/test-build-whisper-pack.sh",
+    "desktop/scripts/test-embed-ba-extension.sh",
 ]
 
 # The gates are bash scripts, so there is nothing to run on Windows: the list is empty there rather

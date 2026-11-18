@@ -1,7 +1,9 @@
 """The two Release entitlements files, and why they differ by exactly one group.
 
 Both channels build the `Release` configuration, so they would share one
-entitlements file if `build-dmg.sh` did not override `CODE_SIGN_ENTITLEMENTS`.
+entitlements file if `build-dmg.sh` did not override `BN_APP_ENTITLEMENTS` (the
+indirection the app target's `CODE_SIGN_ENTITLEMENTS` reads, so a Background Assets
+extension target is never given the app's entitlements).
 The Mac App Store build needs the `group.app.bristlenose` app group for
 Background Assets; the Developer-ID `.dmg` must NOT carry it — its profile does
 not authorise it, and the `.dmg` does not need one because it acquires the PII
@@ -99,8 +101,8 @@ class TestTheBuildActuallySelectsIt:
     def test_build_dmg_overrides_the_entitlements(self) -> None:
         """Without this line the split is inert and the .dmg gets the group."""
         text = _BUILD_DMG.read_text(encoding="utf-8")
-        assert "CODE_SIGN_ENTITLEMENTS=" in text, (
-            "build-dmg.sh must override CODE_SIGN_ENTITLEMENTS — both channels "
+        assert "BN_APP_ENTITLEMENTS=" in text, (
+            "build-dmg.sh must override BN_APP_ENTITLEMENTS — both channels "
             "build Release, so otherwise the .dmg uses the App Store file."
         )
         assert _DEV_ID.name in text, (
@@ -115,7 +117,7 @@ class TestTheBuildActuallySelectsIt:
         # short, which is how this test failed the first time it ran.
         body = text.split("xcodebuild", 1)[1]
         archive = body.split("\n    archive", 1)[0]
-        assert "CODE_SIGN_ENTITLEMENTS=" in archive, (
+        assert "BN_APP_ENTITLEMENTS=" in archive, (
             "the override drifted out of the archive invocation and is now inert"
         )
 
@@ -158,7 +160,11 @@ class TestTheBuildActuallySelectsIt:
             "the `archive` verb never reaches xcodebuild — the invocation is "
             f"truncated. Arguments that arrived: {out}"
         )
-        ent = [a for a in out if a.startswith("CODE_SIGN_ENTITLEMENTS=")]
+        assert not [a for a in out if a.startswith("CODE_SIGN_ENTITLEMENTS=")], (
+            "a command-line CODE_SIGN_ENTITLEMENTS reaches every target, the Background "
+            f"Assets extension included: use BN_APP_ENTITLEMENTS. Arguments: {out}"
+        )
+        ent = [a for a in out if a.startswith("BN_APP_ENTITLEMENTS=")]
         assert len(ent) == 1, f"entitlements override did not arrive: {out}"
         assert ent[0].endswith("BristlenoseDeveloperID.entitlements"), ent[0]
         assert "-allowProvisioningUpdates" in out, out
@@ -184,15 +190,52 @@ class TestTheBuildActuallySelectsIt:
         text = _BUILD_DMG.read_text(encoding="utf-8")
         line = next(
             ln for ln in text.splitlines()
-            if "CODE_SIGN_ENTITLEMENTS=" in ln and not ln.lstrip().startswith("#")
+            if "BN_APP_ENTITLEMENTS=" in ln and not ln.lstrip().startswith("#")
         )
-        value = line.split("CODE_SIGN_ENTITLEMENTS=", 1)[1].strip().rstrip("\\").strip().strip('"')
+        value = line.split("BN_APP_ENTITLEMENTS=", 1)[1].strip().rstrip("\\").strip().strip('"')
         assert value.startswith(("/", "$")), (
-            f"CODE_SIGN_ENTITLEMENTS is {value!r} — a bare relative path. It "
+            f"BN_APP_ENTITLEMENTS is {value!r} — a bare relative path. It "
             "resolves against each target's own SRCROOT, so the Settings "
             "package cannot find it and the archive fails before the app is "
             "ever signed. Use an absolute path."
         )
+
+
+class TestTheAppTargetReadsTheIndirection:
+    """The project side of the override: the app target's setting is `$(BN_APP_ENTITLEMENTS)`.
+
+    Without it the command-line `BN_APP_ENTITLEMENTS` in build-dmg.sh sets a variable
+    nothing reads, and the .dmg is signed with the store file (group and all). Read from
+    the pbxproj text because membership and build settings are not readable from the
+    .entitlements files (desktop/CLAUDE.md, "Ask xcodebuild -showBuildSettings").
+    """
+
+    _PBXPROJ = _DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "project.pbxproj"
+
+    def _settings(self) -> list[tuple[str, str]]:
+        text = self._PBXPROJ.read_text(encoding="utf-8")
+        return re.findall(
+            r"^\s*(BN_APP_ENTITLEMENTS|CODE_SIGN_ENTITLEMENTS) = (.+?);$", text, flags=re.M
+        )
+
+    def test_the_app_target_reads_the_indirection_in_both_configurations(self) -> None:
+        settings = self._settings()
+        assert settings.count(("CODE_SIGN_ENTITLEMENTS", '"$(BN_APP_ENTITLEMENTS)"')) == 2, settings
+        bn = [v for k, v in settings if k == "BN_APP_ENTITLEMENTS"]
+        assert sorted(bn) == [
+            "Bristlenose/Bristlenose.entitlements",
+            "Bristlenose/BristlenoseDebug.entitlements",
+        ], bn
+
+    def test_no_target_names_an_entitlements_file_directly(self) -> None:
+        """A target that did (the extension, say) would be signed with whatever it named,
+        and one that reads the indirection would take the app's. The extension target has its
+        own file, set in its own configurations: allow only a file named for it."""
+        direct = [
+            v for k, v in self._settings()
+            if k == "CODE_SIGN_ENTITLEMENTS" and v != '"$(BN_APP_ENTITLEMENTS)"'
+        ]
+        assert all("BAExtension" in v for v in direct), direct
 
 
 class TestTheEntitlementsAreActuallyCommitted:

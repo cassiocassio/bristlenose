@@ -2621,9 +2621,7 @@ var args = ["run", project.path, "--no-serve"]
         proc.environment = BristlenoseShared.childEnvironment(for: resolvedMode)
         // While the app is downloading Whisper, the run waits on that download
         // rather than fetching a second copy (bristlenose/preflight/whisper.py).
-        proc.environment?.merge(
-            WhisperDownloadModel.whisperFetchEnvironment(pid: WhisperDownloadModel.shared.downloadPID)
-        ) { _, new in new }
+        proc.environment?.merge(WhisperDownloadModel.shared.runEnvironment) { _, new in new }
 
         let pipe = Pipe()
         proc.standardOutput = pipe

@@ -82,6 +82,19 @@ if [ "$(uname)" = Darwin ] && file -b "$MACHO" | grep -q "Mach-O" && command -v 
     mkbin "$helper/Contents/Helpers/speech" "Review Gallery"
     expect "a leak in a bundled helper is found too" 1 "LEAK" "$helper"
 
+    ext="$TMP/Ext.app"; mkdir -p "$ext/Contents/MacOS" "$ext/Contents/PlugIns/BAExt.appex/Contents/MacOS"
+    mkbin "$ext/Contents/MacOS/Ext" "ordinary release strings"
+    mkbin "$ext/Contents/PlugIns/BAExt.appex/Contents/MacOS/BAExt" "BRISTLENOSE_DEV_SIDECAR_PATH"
+    expect "a leak in an app extension under PlugIns is found" 1 "LEAK" "$ext"
+    extk="$TMP/ExtK.app"; mkdir -p "$extk/Contents/MacOS" "$extk/Contents/Extensions/BAExt.appex/Contents/MacOS"
+    mkbin "$extk/Contents/MacOS/ExtK" "ordinary release strings"
+    mkbin "$extk/Contents/Extensions/BAExt.appex/Contents/MacOS/BAExt" "BRISTLENOSE_DEV_SIDECAR_PATH"
+    expect "a leak in an ExtensionKit extension under Extensions is found" 1 "LEAK" "$extk"
+    extok="$TMP/ExtOk.app"; mkdir -p "$extok/Contents/MacOS" "$extok/Contents/PlugIns/BAExt.appex/Contents/MacOS"
+    mkbin "$extok/Contents/MacOS/ExtOk" "ordinary release strings"
+    mkbin "$extok/Contents/PlugIns/BAExt.appex/Contents/MacOS/BAExt" "ordinary release strings"
+    expect "a clean app extension passes (and is counted)" 0 "Scanning 2 Mach-O" "$extok"
+
     empty="$TMP/Empty.app"; mkdir -p "$empty"
     expect "an .app with nothing to scan is a usage error, not a pass" 2 "" "$empty"
 

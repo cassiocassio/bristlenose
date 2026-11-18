@@ -355,6 +355,108 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 6e. Background Assets download extension(s) — design: background-assets-whisper plan §7
+#
+# Today the store build carries NO extension, and that passes. Once one ships
+# (StoreDownloaderExtension, an ExtensionKit extension: Contents/Extensions/, and PlugIns/ is searched too), each .appex must be its own signed
+# sandbox: app-sandbox + app groups the host holds, NEVER `inherit` (an extension is
+# not a child process: inherit makes launchd refuse it), its own embedded profile
+# (an extension with the host's profile, or none, is rejected at upload), and the
+# host's marketing version and build number (ITMS-90125-class mismatches). The generic
+# "nested app-sandbox" row above already counts the extension's executable; this row
+# is what is specific to an extension.
+# ---------------------------------------------------------------------------
+EXTS=()
+while IFS= read -r -d '' e; do EXTS+=("$e"); done \
+    < <(find "$APP/Contents/PlugIns" "$APP/Contents/Extensions" -maxdepth 1 -name '*.appex' -print0 2>/dev/null)
+if [ "${#EXTS[@]}" -eq 0 ]; then
+    ok "extensions" "none in this build"
+else
+    HOST_ENTS_FILE="$WORK/host-ents.plist"
+    codesign -d --entitlements :- "$OUTER" 2>/dev/null >"$HOST_ENTS_FILE" || true
+    # All the groups, sorted, space-separated: the extension's must be within the host's set.
+    groups_of() {
+        /usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups' "$1" 2>/dev/null \
+            | sed -e '/^Array {$/d' -e '/^}$/d' -e 's/^ *//' | sort | tr '\n' ' ' || true
+    }
+    HOST_GROUPS=$(groups_of "$HOST_ENTS_FILE")
+    EXT_PROBLEMS=()
+    [ -n "$HOST_GROUPS" ] || EXT_PROBLEMS+=("host has no readable app group, so an extension's cannot be compared")
+    for e in "${EXTS[@]}"; do
+        en="$(basename "$e")"
+        eplist="$e/Contents/Info.plist"
+        eexec=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$eplist" 2>/dev/null || echo "")
+        ebin="$e/Contents/MacOS/$eexec"
+        if [ -z "$eexec" ] || [ ! -f "$ebin" ]; then
+            EXT_PROBLEMS+=("$en: no executable"); continue
+        fi
+        eents="$WORK/ext-ents.plist"
+        codesign -d --entitlements :- "$ebin" 2>/dev/null >"$eents" || true
+        [ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$eents" 2>/dev/null || true)" = true ] \
+            || EXT_PROBLEMS+=("$en: no app-sandbox")
+        grep -q '<key>com.apple.security.inherit</key>' "$eents" \
+            && EXT_PROBLEMS+=("$en: carries inherit (an extension is not a child process)")
+        egroups=$(groups_of "$eents")
+        if [ -z "$egroups" ]; then
+            EXT_PROBLEMS+=("$en: no app group")
+        elif [ -n "$HOST_GROUPS" ]; then
+            # Every group the extension holds must be one the host holds (the host has the
+            # Background Assets group AND the team group; the extension needs only the first).
+            # A group the host lacks is a capability the host's profile does not authorise.
+            # The team-prefixed group is the one the host's BAAppGroupID names: it needs no portal
+            # registration, and the extension coordinates with the app through it.
+            case " $egroups " in
+                *" ${TEAM_ID}.app.bristlenose "*) : ;;
+                *) EXT_PROBLEMS+=("$en: not in ${TEAM_ID}.app.bristlenose, the app group Background Assets uses") ;;
+            esac
+            for g in $egroups; do
+                case " $HOST_GROUPS " in
+                    *" $g "*) : ;;
+                    *) EXT_PROBLEMS+=("$en: app group $g is not one the host holds ($HOST_GROUPS)") ;;
+                esac
+            done
+        fi
+        if [ ! -f "$e/Contents/embedded.provisionprofile" ]; then
+            EXT_PROBLEMS+=("$en: no embedded provisioning profile of its own")
+        elif cmp -s "$e/Contents/embedded.provisionprofile" "$APP/Contents/embedded.provisionprofile"; then
+            EXT_PROBLEMS+=("$en: its profile is a copy of the host's, not its own")
+        fi
+        ever=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$eplist" 2>/dev/null || echo "")
+        ebuild=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$eplist" 2>/dev/null || echo "")
+        [ -n "$ever" ] && [ -n "$ebuild" ] && [ "$ever" = "$GOT_VER" ] && [ "$ebuild" = "$GOT_BUILD" ] \
+            || EXT_PROBLEMS+=("$en: version $ever ($ebuild) is not the host's $GOT_VER ($GOT_BUILD)")
+    done
+    if [ "${#EXT_PROBLEMS[@]}" -eq 0 ]; then
+        ok "extensions" "${#EXTS[@]} .appex, sandboxed, host's group, own profile, host's version"
+    else
+        # All on the ✗ line itself: the self-test matches that line, so a row that stopped
+        # failing cannot be mistaken for one that still names its problem.
+        die "extensions" "$(IFS=';'; printf '%s' "${EXT_PROBLEMS[*]}")"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 6f. The Background Assets adapter is compiled into the host when an extension ships
+#
+# D2 (docs/design-whisper-delivery.md section 11): an archive that embeds the extension but
+# was built without BA_WHISPER is a dark build by accident. The extension is signed, the pack
+# is uploaded, and the app never asks for it. Derived from the BUILT host binary, not from a
+# comment or a build setting: the adapter's class name (`AssetPackManagerAdapter`, in the
+# Swift type metadata) is in the executable only when `BA_WHISPER` was set when it compiled.
+# Measured on a flag-on and a flag-off Release build of this app (17 Nov 2026).
+# ---------------------------------------------------------------------------
+if [ "${#EXTS[@]}" -eq 0 ]; then
+    ok "BA adapter" "no extension in this build, nothing to serve"
+else
+    ADAPTER_HITS=$(strings -a "$OUTER" 2>/dev/null | grep -c 'AssetPackManagerAdapter' || true)
+    if [ "${ADAPTER_HITS:-0}" -gt 0 ]; then
+        ok "BA adapter" "compiled into the host (BA_WHISPER was set)"
+    else
+        die "BA adapter" "an extension is embedded but the host has no Background Assets adapter: it was built without BA_WHISPER, so the app would never request the pack (archive with BN_BA_WHISPER=1)"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Framework identifiers — ASC rejection #3, 14 Jul 2026
 #
 # sign-sidecar.sh passes --identifier from each framework's CFBundleIdentifier.

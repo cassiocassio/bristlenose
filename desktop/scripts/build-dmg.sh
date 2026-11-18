@@ -358,12 +358,21 @@ fi
 ok "archiving from $(git -C "$ROOT" rev-parse --short HEAD) · tree $BUILD_TREE"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
-# CODE_SIGN_ENTITLEMENTS below is ABSOLUTE, deliberately, and the comment
+# BN_APP_ENTITLEMENTS below (the app target's CODE_SIGN_ENTITLEMENTS is
+# `$(BN_APP_ENTITLEMENTS)`; the project sets it per configuration) is ABSOLUTE,
+# deliberately, and the comment
 # saying so lives HERE rather than inside the invocation: a `#` line between
 # two backslash-continued lines ends the command at that point, so xcodebuild
 # ran with no override and no `archive` verb, reported BUILD SUCCEEDED, and
 # the next line was parsed as a command ("-allowProvisioningUpdates: command
 # not found"). `bash -n` passes it — it is valid, just truncated.
+#
+# Why an indirection and not CODE_SIGN_ENTITLEMENTS itself: the store build has a second
+# target, the Background Assets extension, and a command-line CODE_SIGN_ENTITLEMENTS
+# would sign it with the app's entitlements (keychain group, associated domains, team
+# group, inherit-free sandbox) and let -allowProvisioningUpdates register an App ID for
+# it. Nothing else reads BN_APP_ENTITLEMENTS, so only the app is affected (measured on the
+# toy, 16 Nov 2026). Never pass CODE_SIGN_ENTITLEMENTS here.
 #
 # Why absolute: a command-line build setting applies to EVERY target, and
 # Xcode resolves a relative CODE_SIGN_ENTITLEMENTS against each target's own
@@ -387,7 +396,7 @@ xcodebuild \
     PROVISIONING_PROFILE_SPECIFIER="" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     SWIFT_ACTIVE_COMPILATION_CONDITIONS="\$(inherited) DEVELOPER_ID_BETA" \
-    CODE_SIGN_ENTITLEMENTS="$PROJECT_DIR/Bristlenose/BristlenoseDeveloperID.entitlements" \
+    BN_APP_ENTITLEMENTS="$PROJECT_DIR/Bristlenose/BristlenoseDeveloperID.entitlements" \
     BRISTLENOSE_HELPER_CHANNEL=devid \
     -allowProvisioningUpdates \
     archive \

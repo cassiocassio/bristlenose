@@ -141,6 +141,18 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-bristlenose-notary}"
 TEAM_ID="${TEAM_ID:-Z56GZVA2QB}"
 PROFILE_NAME="Bristlenose Mac App Store"
 PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_Mac_App_Store.provisionprofile"
+# The Background Assets extension is its own App ID with its own profile (and its own expiry).
+# Required only once the project embeds it: until then this build has no extension, and
+# demanding a profile for one would stop a release that does not need it.
+EXT_BUNDLE_ID="app.bristlenose.BAExtension"
+EXT_PROFILE_NAME="Bristlenose BAExtension Mac App Store"
+EXT_PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_BAExtension_Mac_App_Store.provisionprofile"
+project_embeds_extension() {
+    # The store lane archives the "Bristlenose Store" scheme (it lists BAExtension before the app)
+    # with BN_EMBED_BA=YES: Xcode's own "Embed ExtensionKit Extensions" phase embeds and signs it (no longer
+    # excluded), and embed-ba-extension.sh checks it is there and adds the host's Background Assets keys.
+    grep -q 'BAExtension' "$DESKTOP_DIR/Bristlenose/Bristlenose.xcodeproj/xcshareddata/xcschemes/Bristlenose Store.xcscheme" 2>/dev/null
+}
 
 # ------------------------------------------------------------
 # Pretty report (see REPORT-STYLE.md)
@@ -259,6 +271,17 @@ if [ "$SIGN_IDENTITY" != "-" ]; then
         exit 1
     fi
     bn_check 1 ok "provisioning profile" "$PROFILE_NAME"
+
+    if project_embeds_extension; then
+        if [ ! -f "$EXT_PROFILE_PATH" ]; then
+            echo "error: the project embeds the Background Assets extension, but its provisioning profile is not at:" >&2
+            echo "  $EXT_PROFILE_PATH" >&2
+            echo "Create the '$EXT_PROFILE_NAME' profile for $EXT_BUNDLE_ID in the Apple" >&2
+            echo "Developer portal (Mac App Store, the Apple Distribution cert) and install it." >&2
+            exit 1
+        fi
+        bn_check 1 ok "extension profile" "$EXT_PROFILE_NAME"
+    fi
 
     # Notarytool keychain profile check is gated on commit 4 work.
     # Announce the expectation for now; sign-only runs don't need it.
@@ -520,12 +543,23 @@ bn_step_start 5 Build "Xcode archive" \
     log="$ARCHIVE_LOG" \
     narrative="Compiles + signs the native app shell. Opaque subprocess — tail the log for the live stream."
 _bn_t5=$SECONDS
+# BA_WHISPER turns the Background Assets adapter on in THIS archive only (the app target and the
+# store configuration; never the .dmg lane, whose build-dmg.sh does not read this). Off unless the
+# owner asks for an evidence build with BN_BA_WHISPER=1: until a TestFlight build has shown the
+# pack arrive, the committed default stays dark.
+BA_FLAG_ARGS=()
+if [ "${BN_BA_WHISPER:-0}" = "1" ]; then
+    BA_FLAG_ARGS=('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) BA_WHISPER')
+    echo "note: BN_BA_WHISPER=1, so this archive compiles the Background Assets adapter in"
+fi
 if ! xcodebuild \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    -scheme Bristlenose \
+    -scheme "Bristlenose Store" \
     -configuration Release \
     -destination "generic/platform=macOS" \
     -archivePath "$ARCHIVE_PATH" \
+    BN_EMBED_BA=YES \
+    ${BA_FLAG_ARGS[@]+"${BA_FLAG_ARGS[@]}"} \
     archive \
     > "$ARCHIVE_LOG" 2>&1; then
     bn_step_fail 5 detail="xcodebuild archive failed"
@@ -647,6 +681,34 @@ if [ "$PROFILE_TEAM_ID" != "$TEAM_ID" ]; then
     echo "  expected: $TEAM_ID" >&2
     echo "  found:    $PROFILE_TEAM_ID" >&2
     exit 1
+fi
+
+# The extension's own profile, when the project embeds one: present, for ITS bundle id and the
+# same team. An extension signed with the host's profile, or none, is rejected at upload.
+if project_embeds_extension; then
+    # An ExtensionKit extension embeds in Contents/Extensions (the NSExtension form used PlugIns).
+    EXT_APPEX="$EXPORTED_APP/Contents/Extensions/BAExtension.appex"
+    if [ ! -d "$EXT_APPEX" ]; then
+        echo "error: the project embeds the Background Assets extension but $EXT_APPEX is not in the exported app." >&2
+        exit 1
+    fi
+    EXT_EMBEDDED="$EXT_APPEX/Contents/embedded.provisionprofile"
+    if [ ! -f "$EXT_EMBEDDED" ]; then
+        echo "error: embedded.provisionprofile missing from the extension." >&2
+        echo "check ExportOptions.plist maps $EXT_BUNDLE_ID to \"$EXT_PROFILE_NAME\"." >&2
+        exit 1
+    fi
+    EXT_DECODED="$DESKTOP_DIR/build/embedded-ext-profile.plist"
+    security cms -D -i "$EXT_EMBEDDED" -o "$EXT_DECODED" 2>/dev/null
+    EXT_APP_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.application-identifier" "$EXT_DECODED")
+    EXT_TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.team-identifier" "$EXT_DECODED")
+    if [ "$EXT_APP_ID" != "${TEAM_ID}.${EXT_BUNDLE_ID}" ] || [ "$EXT_TEAM_ID" != "$TEAM_ID" ]; then
+        echo "error: the extension's embedded profile is for the wrong identity." >&2
+        echo "  expected: ${TEAM_ID}.${EXT_BUNDLE_ID} / $TEAM_ID" >&2
+        echo "  found:    $EXT_APP_ID / $EXT_TEAM_ID" >&2
+        exit 1
+    fi
+    PROFILE_APP_ID="$PROFILE_APP_ID + $EXT_APP_ID"
 fi
 bn_step_ok 8 elapsed=$((SECONDS-_bn_t8)) detail="$PROFILE_APP_ID / $PROFILE_TEAM_ID"
 

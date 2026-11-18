@@ -129,6 +129,7 @@ GOOD=$(tree good); manifest "$DMG" "$GOOD"
 echo "check-dmg-shippable negative fixtures"
 
 run "a tree where every check holds is shippable" 0 "signed · notarised" "$DMG" "$GOOD"
+run "an image with no extension and no BA keys passes that row" 0 "none (the .dmg downloads from Hugging Face)" "$DMG" "$GOOD"
 
 UNV="$TMP/Bristlenose.dmg"; : > "$UNV"
 run "an unversioned artefact is refused" 1 "refusing an unversioned artefact" "$UNV" "$GOOD"
@@ -180,6 +181,13 @@ run "no app group at all is refused" 1 "ABSENT" "$DMG" "$GOOD" STUB_ENTS_FILE="$
 run "the Mac App Store group in a Developer-ID image is refused" 1 "group.app.bristlenose PRESENT" "$DMG" "$GOOD" STUB_ENTS_FILE="$ENTS_MAS"
 run "a different team's group is refused" 1 "team group" "$DMG" "$GOOD" STUB_ENTS_FILE="$ENTS_OTHER"
 run "the print entitlement is refused (printing is post-v1)" 1 "PRESENT — printing is post-v1" "$DMG" "$GOOD" STUB_ENTS_FILE="$ENTS_PRINT"
+BAX=$(tree baext); mkdir -p "$BAX/Bristlenose.app/Contents/PlugIns/BAExt.appex"; manifest "$DMG" "$BAX"
+run "an extension in a Developer-ID image is refused" 1 "background assets" "$DMG" "$BAX"
+BAE=$(tree baextk); mkdir -p "$BAE/Bristlenose.app/Contents/Extensions/BAExt.appex"; manifest "$DMG" "$BAE"
+run "an ExtensionKit-style extension in a Developer-ID image is refused" 1 "background assets" "$DMG" "$BAE"
+BAK=$(tree bakey); sed -i '' 's|</dict></plist>|<key>BAUsesAppleHosting</key><true/></dict></plist>|' "$BAK/Bristlenose.app/Contents/Info.plist"; manifest "$DMG" "$BAK"
+run "a Background Assets key in a Developer-ID image is refused" 1 "keys BAUsesAppleHosting" "$DMG" "$BAK"
+manifest "$DMG" "$GOOD"
 run "entitlements that cannot be read only warn" 0 "signed · notarised" "$DMG" "$GOOD" STUB_ENTS_FILE=
 
 echo

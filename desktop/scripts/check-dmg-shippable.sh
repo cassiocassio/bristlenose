@@ -238,7 +238,7 @@ else
     fi
 
     # Entitlements. Both channels build `Release`, so the Developer-ID/MAS
-    # split lives ONLY in a `CODE_SIGN_ENTITLEMENTS` override inside
+    # split lives ONLY in a `BN_APP_ENTITLEMENTS` override inside
     # `build-dmg.sh`'s archive invocation — one typo there and this image
     # carries an app group Apple will not authorise outside the App Store.
     # Until 12 Sep 2026 this gate read no entitlements at all, so the typo
@@ -270,6 +270,20 @@ else
         else
             pass "print" "absent (printing is post-v1)"
         fi
+    fi
+
+    # No Background Assets on the Developer-ID channel. The Whisper model comes from
+    # Hugging Face here (Apple hosts packs only for App Store / TestFlight builds), and an
+    # extension would need a profile this channel does not have. So: no .appex in the
+    # image, and no BA* key in Info.plist (BAAppGroupID, BAHasManagedAssetPacks,
+    # BAUsesAppleHosting): a host that declares managed packs without an extension is a
+    # programmer error, and one with Apple hosting makes the OS look for a store it lacks.
+    BA_EXTS=$({ find "$INNER_APP/Contents/PlugIns" "$INNER_APP/Contents/Extensions" -maxdepth 1 -name '*.appex' 2>/dev/null || true; } | head -1)
+    BA_KEYS=$(plutil -p "$INNER_APP/Contents/Info.plist" 2>/dev/null | { grep -oE '"BA[A-Za-z]+"' || true; } | tr -d '"' | tr '\n' ' ')
+    if [ -n "$BA_EXTS" ] || [ -n "$BA_KEYS" ]; then
+        fail "background assets" "Developer-ID must not carry it:${BA_EXTS:+ extension $(basename "$BA_EXTS")}${BA_KEYS:+ keys ${BA_KEYS% }}"
+    else
+        pass "background assets" "none (the .dmg downloads from Hugging Face)"
     fi
 
     # Alpha life remaining. Reported, not gated — a short-lived sampler is a

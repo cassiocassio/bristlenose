@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "2630"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "NO"
+      buildImplicitDependencies = "YES"
+      buildArchitectures = "Automatic">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "NO"
+            buildForRunning = "YES"
+            buildForProfiling = "NO"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "BA000000000000000000000C"
+               BuildableName = "BAExtension.appex"
+               BlueprintName = "BAExtension"
+               ReferencedContainer = "container:Bristlenose.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DFF545032F466A4A00A539C4"
+               BuildableName = "Bristlenose.app"
+               BlueprintName = "Bristlenose"
+               ReferencedContainer = "container:Bristlenose.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DFA8ED0A2F9E7745004CF8AA"
+               BuildableName = "BristlenoseTests.xctest"
+               BlueprintName = "BristlenoseTests"
+               ReferencedContainer = "container:Bristlenose.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DFF545032F466A4A00A539C4"
+            BuildableName = "Bristlenose.app"
+            BlueprintName = "Bristlenose"
+            ReferencedContainer = "container:Bristlenose.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "-BristlenoseWelcomeTintCandidate YES"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_partial_dense"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_failed_auth_burst"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_failed_multi_category"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_truncated_varied"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_all_glyphs"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "isAllStatesContextMode"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_all_states"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "showcase_typical_partial"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"
+            value = "failed_no_summary"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_OLLAMA_TAG"
+            value = "qwen2.5:0.5b"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_OLLAMA_PHASE"
+            value = "choosing"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "BRISTLENOSE_DEBUG_ALPHA_DAYS"
+            value = "30"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DFF545032F466A4A00A539C4"
+            BuildableName = "Bristlenose.app"
+            BlueprintName = "Bristlenose"
+            ReferencedContainer = "container:Bristlenose.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>

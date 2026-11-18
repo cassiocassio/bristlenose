@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		DFEDF1F7301654C6008039BA /* Settings in Frameworks */ = {isa = PBXBuildFile; productRef = DFEDF1F6301654C6008039BA /* Settings */; };
+		BA0000000000000000000006 /* BAExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA0000000000000000000001 /* BAExtension.swift */; };
+		BA0000000000000000000007 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BA0000000000000000000004 /* PrivacyInfo.xcprivacy */; };
+		BA0000000000000000000011 /* BAExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = BA0000000000000000000005 /* BAExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,6 +26,11 @@
 /* Begin PBXFileReference section */
 		DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BristlenoseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFF545042F466A4A00A539C4 /* Bristlenose.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bristlenose.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA0000000000000000000001 /* BAExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BAExtension.swift; sourceTree = "<group>"; };
+		BA0000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BA0000000000000000000003 /* BAExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BAExtension.entitlements; sourceTree = "<group>"; };
+		BA0000000000000000000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		BA0000000000000000000005 /* BAExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = BAExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -58,6 +66,20 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		BA0000000000000000000012 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				BA0000000000000000000011 /* BAExtension.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		DFA8ED082F9E7745004CF8AA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -74,6 +96,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BA000000000000000000000A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -82,6 +111,7 @@
 			children = (
 				DFF545062F466A4A00A539C4 /* Bristlenose */,
 				DFA8ED0C2F9E7745004CF8AA /* BristlenoseTests */,
+				BA0000000000000000000008 /* BAExtension */,
 				DFF545052F466A4A00A539C4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -91,8 +121,21 @@
 			children = (
 				DFF545042F466A4A00A539C4 /* Bristlenose.app */,
 				DFA8ED0B2F9E7745004CF8AA /* BristlenoseTests.xctest */,
+				BA0000000000000000000005 /* BAExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BA0000000000000000000008 /* BAExtension */ = {
+			isa = PBXGroup;
+			children = (
+				BA0000000000000000000001 /* BAExtension.swift */,
+				BA0000000000000000000002 /* Info.plist */,
+				BA0000000000000000000003 /* BAExtension.entitlements */,
+				BA0000000000000000000004 /* PrivacyInfo.xcprivacy */,
+			);
+			name = BAExtension;
+			path = ../BAExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -131,6 +174,8 @@
 				DFF545022F466A4A00A539C4 /* Resources */,
 				499FD919EA7B4611AE10AE6A /* Ensure Sidecar Fresh */,
 				DFF545202F466A4A00A539C4 /* Copy Sidecar Resources */,
+				BA0000000000000000000012 /* Embed ExtensionKit Extensions */,
+				BA0000000000000000000010 /* Background Assets Host Keys */,
 			);
 			buildRules = (
 			);
@@ -146,6 +191,25 @@
 			productName = Bristlenose;
 			productReference = DFF545042F466A4A00A539C4 /* Bristlenose.app */;
 			productType = "com.apple.product-type.application";
+		};
+		BA000000000000000000000C /* BAExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA000000000000000000000D /* Build configuration list for PBXNativeTarget "BAExtension" */;
+			buildPhases = (
+				BA0000000000000000000009 /* Sources */,
+				BA000000000000000000000A /* Frameworks */,
+				BA000000000000000000000B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BAExtension;
+			packageProductDependencies = (
+			);
+			productName = BAExtension;
+			productReference = BA0000000000000000000005 /* BAExtension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -163,6 +227,9 @@
 					};
 					DFF545032F466A4A00A539C4 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					BA000000000000000000000C = {
+						CreatedOnToolsVersion = 27.2;
 					};
 				};
 			};
@@ -206,6 +273,7 @@
 			targets = (
 				DFF545032F466A4A00A539C4 /* Bristlenose */,
 				DFA8ED0A2F9E7745004CF8AA /* BristlenoseTests */,
+				BA000000000000000000000C /* BAExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -222,6 +290,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA000000000000000000000B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA0000000000000000000007 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -288,6 +364,21 @@
 			shellPath = /bin/bash;
 			shellScript = "# Fail loudly if the bundled sidecar is stale vs the Python source — the\n# app runs the bundle, not live Python, so a missed build-sidecar.sh ships\n# old code silently. Runs before the rsync so a stale bundle never copies in.\n\"${SRCROOT}/../scripts/check-sidecar-freshness.sh\" || exit 1\n\n# Copy pre-built sidecar, FFmpeg, Whisper model, and locales into the\n# app bundle. These are large binaries / data dirs built or maintained\n# outside the synced Bristlenose/ group; Xcode's file sync does not pick\n# them up automatically, so we copy them in a build phase.\n#\n# Incremental builds: the input/output paths above declare the sidecar\n# main binary and the en/common.json locale file as dependency anchors —\n# when either mtime changes, this phase re-runs. ffmpeg/ffprobe/models\n# stay as optional side-effects (the `if [ -x ]` / `if [ -d ]` guards\n# mean the build still works without them, e.g. when iterating on the\n# Python sidecar alone). If a future build needs ffmpeg/models tracked\n# too, add them to the input/output lists above.\n\nRESOURCES_SRC=\"${PROJECT_DIR}/Resources\"\nRESOURCES_DST=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nLOCALES_SRC=\"${PROJECT_DIR}/../../bristlenose/locales\"\n\n# Sidecar (PyInstaller --onedir output)\nif [ -d \"${RESOURCES_SRC}/bristlenose-sidecar\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/bristlenose-sidecar\" \"${RESOURCES_DST}/\"\n    echo \"Copied bristlenose-sidecar\"\nfi\n\n# FFmpeg + ffprobe\nfor bin in ffmpeg ffprobe; do\n    if [ -x \"${RESOURCES_SRC}/${bin}\" ]; then\n        cp -p \"${RESOURCES_SRC}/${bin}\" \"${RESOURCES_DST}/${bin}\"\n        echo \"Copied ${bin}\"\n    fi\ndone\n\n# Whisper model\nif [ -d \"${RESOURCES_SRC}/models\" ]; then\n    rsync -a --delete \"${RESOURCES_SRC}/models\" \"${RESOURCES_DST}/\"\n    echo \"Copied models\"\nfi\n\n# Agent extension (.mcpb) - packed + staged by desktop/scripts/build-mcpb.sh.\n# The app copies it from Resources into the container and opens THAT\n# (never a path inside the bundle - design-mcp-extension 3.4).\nif [ -f \"${RESOURCES_SRC}/Bristlenose.mcpb\" ]; then\n    cp -p \"${RESOURCES_SRC}/Bristlenose.mcpb\" \"${RESOURCES_DST}/Bristlenose.mcpb\"\n    echo \"Copied Bristlenose.mcpb\"\nfi\n\n# The pack's stamped <release>+<hash>, written beside it by build-mcpb.sh in\n# the same run. The app reads this to compare what it ships against what is\n# actually running inside Claude Desktop; without it the hash half is unknown\n# and the pane degrades to release-only.\nif [ -f \"${RESOURCES_SRC}/Bristlenose.mcpb.version\" ]; then\n    cp -p \"${RESOURCES_SRC}/Bristlenose.mcpb.version\" \"${RESOURCES_DST}/Bristlenose.mcpb.version\"\n    echo \"Copied Bristlenose.mcpb.version\"\nfi\n\n# ChatGPT plugin + native MCP helper (design-mcp-native-proxy 6.9 P2/P3).\n# Compiled and signed HERE, with the identity this app is being signed with,\n# so it can never be staler than the host (D2). The lane can pin the channel:\n# build-dmg.sh archives with Apple Development and passes\n# BRISTLENOSE_HELPER_CHANNEL=devid. An unsigned or ad-hoc build skips it:\n# such a helper cannot read the team group, and the ChatGPT tab then keeps\n# the pasted-config layout.\nif [ -n \"${EXPANDED_CODE_SIGN_IDENTITY_NAME:-}\" ] && [ \"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\" != \"-\" ]; then\n    SIGN_IDENTITY=\"${EXPANDED_CODE_SIGN_IDENTITY_NAME}\" \\\n    HELPER_CHANNEL=\"${BRISTLENOSE_HELPER_CHANNEL:-}\" \\\n    HELPER_VERSION=\"${MARKETING_VERSION}+${CURRENT_PROJECT_VERSION}\" \\\n    MARKETPLACE_OUT=\"${RESOURCES_DST}/chatgpt-marketplace\" \\\n    HELPERS_OUT=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Helpers\" \\\n        \"${SRCROOT}/../mcp-helper/build-helper.sh\" \"${TARGET_TEMP_DIR}/mcp-helper\" || exit 1\nelse\n    rm -rf \"${RESOURCES_DST}/chatgpt-marketplace\"\n    rm -f \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Helpers/bristlenose-mcp\"\n    echo \"ChatGPT plugin: skipped (no signing identity; an ad-hoc helper cannot read the team group)\"\nfi\n\n# Apple speech helper (docs/design-apple-first-transcription.md 3 A):\n# bristlenose-speech, launched by the sidecar, signed like ffmpeg (sandbox +\n# inherit only), so an ad-hoc build may carry it too. Every configuration\n# embeds it since Apple-first transcription graduated (22 Oct 2026); the\n# shippable gates (check-pkg-shippable.sh, check-dmg-shippable.sh) require it\n# and run check-speech-helper.sh on each copy.\nSIGN_IDENTITY=\"${EXPANDED_CODE_SIGN_IDENTITY_NAME:--}\" \\\nHELPER_VERSION=\"${MARKETING_VERSION}+${CURRENT_PROJECT_VERSION}\" \\\nHELPERS_OUT=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Helpers\" \\\n    \"${SRCROOT}/../speech-helper/build-helper.sh\" \"${TARGET_TEMP_DIR}/speech-helper\" || exit 1\n\n# i18n locales — canonical dir at bristlenose/locales/, shared with\n# Python and React. Copied into Resources/locales/ so I18n.swift can\n# load them via Bundle.main.resourcePath without depending on the\n# PyInstaller sidecar's _internal/ layout.\nif [ -d \"${LOCALES_SRC}\" ]; then\n    rsync -a --delete --include=\"*/\" --include=\"*.json\" --exclude=\"*\" \"${LOCALES_SRC}/\" \"${RESOURCES_DST}/locales/\"\n    echo \"Copied locales\"\nfi\n";
 		};
+		BA0000000000000000000010 /* Background Assets Host Keys */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Background Assets Host Keys";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$PROJECT_DIR/../scripts/embed-ba-extension.sh\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -302,6 +393,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA0000000000000000000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BA0000000000000000000006 /* BAExtension.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -486,7 +585,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = Bristlenose/BristlenoseDebug.entitlements;
+				BN_APP_ENTITLEMENTS = Bristlenose/BristlenoseDebug.entitlements;
+				BN_BA_EXCLUDE_NO = BAExtension.appex;
+				BN_BA_EXCLUDE_YES = "";
+				BN_EMBED_BA = NO;
+				CODE_SIGN_ENTITLEMENTS = "$(BN_APP_ENTITLEMENTS)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -505,6 +608,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
+				EXCLUDED_SOURCE_FILE_NAMES = "$(BN_BA_EXCLUDE_$(BN_EMBED_BA))";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Bristlenose-OAuth-Info.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -530,7 +634,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = Bristlenose/Bristlenose.entitlements;
+				BN_APP_ENTITLEMENTS = Bristlenose/Bristlenose.entitlements;
+				BN_BA_EXCLUDE_NO = BAExtension.appex;
+				BN_BA_EXCLUDE_YES = "";
+				BN_EMBED_BA = NO;
+				CODE_SIGN_ENTITLEMENTS = "$(BN_APP_ENTITLEMENTS)";
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -551,6 +659,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				EXCLUDED_ARCHS = x86_64;
+				EXCLUDED_SOURCE_FILE_NAMES = "$(BN_BA_EXCLUDE_$(BN_EMBED_BA))";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Bristlenose-OAuth-Info.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -568,6 +677,63 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		BA000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ../BAExtension/BAExtension.entitlements;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 6528;
+				DEVELOPMENT_TEAM = Z56GZVA2QB;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ../BAExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.46.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose.BAExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				CODE_SIGN_IDENTITY = "-";
+			};
+			name = Debug;
+		};
+		BA000000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ../BAExtension/BAExtension.entitlements;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 6528;
+				DEVELOPMENT_TEAM = Z56GZVA2QB;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ../BAExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.46.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose.BAExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				PROVISIONING_PROFILE_SPECIFIER = "Bristlenose BAExtension Mac App Store";
 			};
 			name = Release;
 		};
@@ -597,6 +763,15 @@
 			buildConfigurations = (
 				DFF545102F466A4B00A539C4 /* Debug */,
 				DFF545112F466A4B00A539C4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BA000000000000000000000D /* Build configuration list for PBXNativeTarget "BAExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA000000000000000000000E /* Debug */,
+				BA000000000000000000000F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

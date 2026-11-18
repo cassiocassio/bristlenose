@@ -545,8 +545,8 @@ bn_step_start 5 Build "Xcode archive" \
 _bn_t5=$SECONDS
 # BA_WHISPER turns the Background Assets adapter on in THIS archive only (the app target and the
 # store configuration; never the .dmg lane, whose build-dmg.sh does not read this). Off unless the
-# owner asks for an evidence build with BN_BA_WHISPER=1: until a TestFlight build has shown the
-# pack arrive, the committed default stays dark.
+# owner asks for an evidence build with BN_BA_WHISPER=1. A hand-run build-all.sh stays dark by
+# default; scripts/release.sh's store row sets BN_BA_WHISPER=1 (design-whisper-delivery.md, D2).
 BA_FLAG_ARGS=()
 if [ "${BN_BA_WHISPER:-0}" = "1" ]; then
     BA_FLAG_ARGS=('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) BA_WHISPER')

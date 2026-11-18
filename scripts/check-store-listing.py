@@ -257,7 +257,22 @@ def main():
         fail("2.3.1", "description must name the AI providers the app can use")
     if not re.search(r"\bon your Mac\b", d, re.I):
         warn("2.3.1", "description does not say what runs on the Mac")
+    if re.search(r"\bimport[^.\n]{0,60}\bzoom\b|\bzoom\b[^.\n]{0,30}\bimport", d, re.I):
+        fail(
+            "2.3.1", "description claims Zoom import; it is a beta-only feature, say 'transcripts'"
+        )
     notes = f.get("review_notes", "")
+    sizes = {
+        k: set(re.findall(r"(\d+(?:\.\d+)?)\s?GB(?!\s+(?:of\s+)?free)", f.get(k, "")))
+        for k in ("desc", "review_notes")
+    }
+    if sizes["desc"] and sizes["review_notes"] and sizes["desc"] != sizes["review_notes"]:
+        fail(
+            "2.3.1/4.2.3",
+            "download size differs between description "
+            f"({', '.join(sorted(sizes['desc']))} GB) and review notes "
+            f"({', '.join(sorted(sizes['review_notes']))} GB)",
+        )
     if (
         notes
         and not re.search(r"\bkey\b", notes, re.I)

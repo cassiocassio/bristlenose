@@ -304,7 +304,7 @@ MOMENTS.append(moment(
 STRINGS = [
     ("Apple’s speech model transcribes until Whisper is on this Mac.", "size alert (macOS 26+) and Settings status row: one string, two uses", "NEW"),
     ("Not enough space for Whisper / Not enough free space / Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.", "low-disk pill, popover title and body (moment 10)", "NEW"),
-    ("Transcription Settings…", "low-disk popover only; network failure keeps Retry", "door exists: SettingsWindow.shared.show(pane: .transcription). Label: reuse desktop.pipeline.diagnostic.action.setUpTranscription (“Set Up Transcription…”) or desktop.providerProblem.openSettings (“Open Settings…”); “Transcription Settings…” would be NEW"),
+    ("Transcription Settings…", "low-disk popover only; network failure keeps Retry", "NEW string (owner: do not reuse “Set Up Transcription…”). Door exists: SettingsWindow.shared.show(pane: .transcription)"),
     ("Network not trusted / Try another network, or ask whoever runs this one.", "certificate failure popover (moment 11)", "NEW"),
     ("Starting", "pill popover before the first byte", "reuse desktop.cloudImport.downloadStarting"),
     ("789 MB of 1.6 GB", "popover line", "Foundation, localised by the OS; only the number format changes"),

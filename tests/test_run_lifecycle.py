@@ -905,6 +905,29 @@ def _paused_body(sentinel: Path) -> str:
     """
 
 
+@pytest.fixture
+def sigint_by_os_kill() -> None:
+    """The four tests that cancel a run by sending it SIGINT ask for this: one skip,
+    not one per test (the `symlinks` fixture's shape, 7d32124a), so the skip-site
+    ratchet counts it once. They run on Linux and macOS, as the four per-test
+    decorators did. SIGTERM's skip is a different cause and stays on its test."""
+    if sys.platform == "win32":
+        pytest.skip(
+            "os.kill cannot deliver SIGINT on Windows; Ctrl-C reaches Python as "
+            "KeyboardInterrupt by a console event"
+        )
+
+
+@pytest.fixture
+def reparenting() -> None:
+    """The two tests whose stand-in parent exits mid-run ask for this: the run
+    learns its parent left by being reparented (its ppid changes), which Windows
+    does not do. One skip for both, as `sigint_by_os_kill`; they run on Linux
+    and macOS."""
+    if sys.platform == "win32":
+        pytest.skip("no reparenting on Windows")
+
+
 def _wait_for_ready(sentinel: Path, *, timeout: float = 30.0) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -916,7 +939,7 @@ def _wait_for_ready(sentinel: Path, *, timeout: float = 30.0) -> None:
     )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows; Ctrl-C reaches Python as KeyboardInterrupt by a console event")
+@pytest.mark.usefixtures("sigint_by_os_kill")
 def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
     """SIGINT to a paused run writes run_cancelled with the right signal.
 
@@ -957,7 +980,7 @@ def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
     )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows")
+@pytest.mark.usefixtures("sigint_by_os_kill")
 def test_subprocess_sigint_during_startup_is_cancelled(tmp_path: Path):
     """A signal arriving during lifecycle STARTUP still writes run_cancelled.
 
@@ -1017,7 +1040,7 @@ def test_subprocess_sigint_during_startup_is_cancelled(tmp_path: Path):
     )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows")
+@pytest.mark.usefixtures("sigint_by_os_kill")
 def test_subprocess_sigint_inside_append_event_is_cancelled(tmp_path: Path):
     """A signal arriving while `run_started` is still being written is cancelled.
 
@@ -1076,7 +1099,7 @@ def test_subprocess_sigint_inside_append_event_is_cancelled(tmp_path: Path):
     )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows")
+@pytest.mark.usefixtures("sigint_by_os_kill")
 def test_subprocess_hosted_second_signal_does_not_lose_the_cancel(tmp_path: Path):
     """Quitting the Mac app sends a run two signals: the app's SIGINT, then the
     parent-death watcher's SIGTERM once the app is gone (R19, 20 Oct 2026). A
@@ -1178,7 +1201,7 @@ def _run_whose_parent_leaves(tmp_path: Path, host_env: dict[str, str]):
     return terminus[0]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="no reparenting on Windows")
+@pytest.mark.usefixtures("reparenting")
 def test_subprocess_hosted_run_whose_app_left_is_cancelled_not_failed(tmp_path: Path):
     """The app that started the run exits, and the run then fails — a print to
     the dead pipe, inside the watcher's window (R19, 20 Oct 2026). It ended
@@ -1192,7 +1215,7 @@ def test_subprocess_hosted_run_whose_app_left_is_cancelled_not_failed(tmp_path: 
     assert "exited with code 1" in (terminus.cause.message or ""), "the original cause is kept"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="no reparenting on Windows")
+@pytest.mark.usefixtures("reparenting")
 def test_subprocess_cli_run_whose_parent_left_still_fails(tmp_path: Path):
     """Only a run the Mac app started is relabelled: a CLI run whose shell
     went away and then failed is a failure."""

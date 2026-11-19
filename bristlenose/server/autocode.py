@@ -1383,8 +1383,12 @@ async def _reapply_to_new_quotes(
         if track_status:
             # Named as run_autocode_job names it, so the chip can say which failure
             # this was (out of credit, rate limited…) and not only "Tagging failed."
+            # Never ``str(exc)``: it is stored and served by /status, and a provider's
+            # error is its whole body, which can carry the prompt and an echoed key.
+            from bristlenose.llm.client import failure_summary
+
             _set_job_status(
-                db, project_id, framework_id, "failed", str(exc)[:500],
+                db, project_id, framework_id, "failed", failure_summary(exc),
                 failure_kind=classify_exception(settings.llm_provider or None, exc).value,
             )
         return 0

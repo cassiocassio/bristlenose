@@ -1691,6 +1691,53 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def test_a_failed_catch_up_stores_no_key_and_no_echoed_prompt(
+        self, project_with_garrett, monkeypatch
+    ) -> None:
+        """The catch-up's ``error_message`` is stored in SQLite and served by
+        ``/status``: never the provider's whole text, as ``run_autocode_job`` already
+        guarantees (19 Nov 2026: this path still stored ``str(exc)[:500]``)."""
+        import bristlenose.server.autocode as ac
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+        key = "sk-proj-" + "Zz9_" * 13
+
+        # A provider-shaped error (status + body), as the run_autocode_job test uses.
+        exc = RuntimeError(f"echo {key} PARTICIPANT_WORDS")
+        exc.body = {  # type: ignore[attr-defined]
+            "error": {"message": f"blocked, key {key}"},
+            "metadata": {"flagged_input": "PARTICIPANT_WORDS"},
+        }
+        exc.status_code = 403  # type: ignore[attr-defined]
+
+        def _boom(*_a, **_k):
+            raise exc
+
+        monkeypatch.setattr(ac, "build_tag_taxonomy", _boom)
+        with _patch_llm(AsyncMock()):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "failed"
+            assert job.error_message
+            assert key not in job.error_message
+            assert "PARTICIPANT_WORDS" not in job.error_message
+        finally:
+            db.close()
+
     def test_a_failed_catch_up_names_its_failure(
         self, project_with_garrett
     ) -> None:

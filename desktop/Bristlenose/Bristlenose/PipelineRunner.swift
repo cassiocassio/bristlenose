@@ -3238,6 +3238,9 @@ var args = ["run", project.path, "--no-serve"]
             // The run's own provider, or nobody: a run started with none recorded
             // (the app's default was unset and Python chose its own) must not blame
             // whichever provider Settings holds when it exits.
+            // A nil identity (a reconnected run) never reaches here: `ownedAndTimed`
+            // excludes orphans above. Loosen that, and an orphan Azure run would record
+            // against whatever Settings holds at exit — the bug this check prevents.
             if let runProvider, runProvider == .azure, let spawnedAzureIdentity,
                spawnedAzureIdentity != runAzureIdentity() {
                 Self.logger.notice(

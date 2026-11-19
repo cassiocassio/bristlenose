@@ -359,6 +359,27 @@ struct LLMValidatorTests {
         body()
     }
 
+    /// What a run is started against and compared with when it ends (the runner's
+    /// S1 skip). The runner tests inject their own identity, so this pins the real one.
+    @Test("Azure: the saved identity moves with the endpoint, deployment and API version only")
+    func savedAzureIdentityFollowsTheSavedSettings() {
+        var a = "", b = "", slash = "", blankVersion = "", otherDeployment = ""
+        withSavedAzure(endpoint: "https://acme.openai.azure.com", deployment: "prod",
+                       apiVersion: "2024-10-21") { a = LLMValidator.savedAzureIdentity() }
+        withSavedAzure(endpoint: "https://acmee.openai.azure.com", deployment: "prod",
+                       apiVersion: "2024-10-21") { b = LLMValidator.savedAzureIdentity() }
+        withSavedAzure(endpoint: "https://acme.openai.azure.com/", deployment: "prod",
+                       apiVersion: "2024-10-21") { slash = LLMValidator.savedAzureIdentity() }
+        withSavedAzure(endpoint: "https://acme.openai.azure.com", deployment: "prod",
+                       apiVersion: "") { blankVersion = LLMValidator.savedAzureIdentity() }
+        withSavedAzure(endpoint: "https://acme.openai.azure.com", deployment: "staging",
+                       apiVersion: "2024-10-21") { otherDeployment = LLMValidator.savedAzureIdentity() }
+        #expect(a != b, "a corrected endpoint must read as changed")
+        #expect(a != otherDeployment, "a corrected deployment must read as changed")
+        #expect(a == slash, "a trailing slash is not a change")
+        #expect(a == blankVersion, "an empty API version is the default, not a change")
+    }
+
     @Test("Azure: a verdict recorded with a config is read back with none, from the saved settings")
     func azureNilConfigFallsBackToSaved() {
         withIsolatedStore {

@@ -154,20 +154,29 @@ costs about $140 a month, a year's budget in a week.
   is a moderator's time. 0.37.0's held artefact (expires 10 Jan 2027) can lapse.
 
 **Test list for the next submission** (aella Server 2025 for native x64, UTM
-Windows 11 for the client edition; the guest script of §6.1 should absorb this):
+Windows 11 for the client edition). Items 2–4 are scripted:
+`packaging/windows/winget-accept.ps1 -Installer <setup.exe> -ExpectedSha256 <hash>`,
+run inside the guest from a desktop session as the normal user (19 Nov 2026; not
+yet run anywhere, so its first run tests the script too).
 
 1. `winget validate` on the filled manifests; every manifest URL returns 200
    (installer URL after it is attached).
-2. `winget install --manifest <dir>` as a normal user: silent, PATH entry set,
-   `bristlenose --version`, `doctor --self-test`, one real transcription.
+2. Upgrade over the published 0.36.0: `winget install --id Bristlenose.Bristlenose -e
+   --version 0.36.0`, then the new installer silently with winget's switches
+   (`/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART`): `--version`, PATH entry,
+   `winget list` reports the new version, `doctor --self-test`, one real
+   transcription. With `serve` running, the installer must instead refuse with exit
+   7, which the manifest maps to winget's `packageInUse`, and leave 0.36.0 working
+   (the refusal replaced Restart Manager after the 8 Oct review).
 3. **Uninstall while running**, the unproven fix: start `bristlenose serve`, then
-   `winget uninstall --id Bristlenose.Bristlenose -e`. Must return promptly with a
-   refusal (exit code mapped to winget's `packageInUse`), never wait on a hidden
-   dialog; stop serve, uninstall again, folder and PATH entry gone.
-4. Upgrade in place over the published 0.36.0 (`winget install` 0.36.0 from the
-   public source first), with `serve` running: Restart Manager closes it. Also open
-   a project in 0.36.0 after 0.46.0 migrated it: the downgrade traceback seen on
-   9 Nov (TODO item 5) is a known open problem, not a submission blocker.
+   `winget uninstall --id Bristlenose.Bristlenose -e`. Must return promptly, leave
+   the install intact, and leave no uninstaller process (`_iu*.tmp`, `unins*`)
+   waiting on a hidden dialog. The uninstall refusal has no mapped exit code; the
+   outcome is what is checked.
+4. Uninstall with nothing running: folder, PATH entry and Apps & Features entry gone.
+   Separately, by hand: open a project in 0.36.0 after 0.46.0 migrated it; the
+   downgrade traceback seen on 9 Nov (TODO item 5) is a known open problem, not a
+   submission blocker.
 5. On UTM only: download the installer in Edge and double-click it (Mark of the
    Web), recording what SmartScreen shows.
 6. After merge: `winget search`, `winget list --id`, `winget upgrade --id` from 0.36.0
@@ -198,7 +207,7 @@ release rather than waiting for a third.
 | 1 | Tag `v0.47.0` as usual | Mac | `release.sh`; winget never gates it |
 | 2 | Dispatch `windows-installer.yml` on `v0.47.0`, **once** | cloud session or Mac | ~7.5 min; log must read "All smoke checks passed." and "Manifest schema validation passed."; record run id, artefact id, installer SHA-256 here |
 | 3 | Download the artefact; installer hash equals the manifest's `InstallerSha256`; every non-installer URL 200 | Mac (cloud sessions cannot reach the artefact store) | `release-winget.md` step 2 |
-| 4 | Run the §3.3 test list against the downloaded installer and manifest | aella Server 2025, UTM Windows 11 | `winget install --manifest <dir>` works before the installer is attached. Uninstall-while-running is the step that must not be skipped |
+| 4 | Run `winget-accept.ps1` (the §3.3 list) against the downloaded installer | aella Server 2025, UTM Windows 11 | From a desktop session (`aella rdp`, the UTM window), as the normal user. Not `winget install --manifest`: winget downloads from `InstallerUrl`, which 404s until step 5. Uninstall-while-running is the step that must not be skipped |
 | 5 | Attach the `.exe` to the `v0.47.0` Release; download it publicly and re-hash | Mac (`gh release upload`) | `release-winget.md` step 3 |
 | 6 | `komac submit --dry-run`, then `komac submit` | Mac | `release-winget.md` step 4; same day as the App Store submission, so whichever review passes first, the other follows within days |
 | 7 | Watch the PR's labels; answer any moderator | Mac | `release-winget.md` step 6; time it from submit to merge: the first measured update |
@@ -283,11 +292,17 @@ Tests can recreate "GPU counted, library missing" on any OS by stubbing, the way
 
 Lift the checks out of `vbox-test.sh` into a PowerShell script that runs *inside*
 Windows (install, `--version`, doctor, transcription with its words checked, PATH,
-uninstall, the path report from §5.4). aella-AWS, a future aella-Azure, UTM and any
+uninstall, the path report from §5.4). Started 19 Nov 2026 as
+`packaging/windows/winget-accept.ps1`, which covers the winget acceptance list
+(§3.3) including install and doctor and transcription; the forced CPU paths
+(§6.2) and the path report (§5.4) are still to add. aella-AWS, a future aella-Azure, UTM and any
 real machine then differ only in how the script gets there and runs, and pass/fail
 lives in one place. Run it over SSH as the test user (the route that works on
 aella, `design-winget.md` §"What was measured"); never as SYSTEM (`utmctl exec`, Azure
-run-command), which is the wrong user for a per-user installer. A shell twin for
+run-command), which is the wrong user for a per-user installer. The exception is
+`winget-accept.ps1`: its baseline `winget install` of the unsigned 0.36.0 raises
+SmartScreen, which is invisible over SSH, so it runs from a desktop session until
+the installer is signed. A shell twin for
 Linux follows the same shape.
 
 ### 6.2 Forced CPU paths on aella

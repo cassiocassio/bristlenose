@@ -233,3 +233,27 @@ def test_hf_xet_is_bundled_with_its_metadata() -> None:
     assert 'copy_metadata("hf-xet")' in spec
     assert "hf-xet==" in (WIN / "constraints.txt").read_text(encoding="utf-8")
 
+
+
+def test_the_acceptance_script_names_the_installers_app_id() -> None:
+    """winget-accept.ps1 finds the install by its Apps & Features key, which is
+    bristlenose.iss's AppId plus Inno's _is1, the manifest's ProductCode."""
+    import re
+
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    app_id = re.search(r"^AppId=\{(\{[0-9A-F-]+\})$", iss, re.M)
+    assert app_id, "AppId line not found in bristlenose.iss"
+    product_code = f"{app_id.group(1)}_is1"
+    manifest = (WIN / "winget" / "Bristlenose.Bristlenose.installer.yaml").read_text(encoding="utf-8")
+    assert f"ProductCode: '{product_code}'" in manifest
+    script = (WIN / "winget-accept.ps1").read_text(encoding="utf-8")
+    assert f'$AppId = "{product_code}"' in script
+
+
+def test_the_windows_scripts_are_ascii() -> None:
+    """Windows PowerShell 5.1 reads a .ps1 without a byte-order mark as the ANSI
+    code page, so a UTF-8 dash or section sign turns into stray characters, and
+    one of them is a quotation mark to the parser."""
+    for script in WIN.glob("*.ps1"):
+        text = script.read_bytes()
+        assert text.isascii(), (script.name, [i for i, b in enumerate(text) if b > 127][:5])

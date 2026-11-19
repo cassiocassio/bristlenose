@@ -301,6 +301,14 @@ setting, and on Windows looks for the DLL files rather than loading them.
    backend and instruction set actually in use (CTranslate2 reports these under
    `CT2_VERBOSE=1`, to be confirmed). A user's report then names their path, and
    each test machine records the path it covered instead of us inferring §2's table.
+   *Method found 19 Nov 2026, not built:* CTranslate2 prints nothing until a model
+   loads, but a two-token encoder built in place with `ctranslate2.specs` (random
+   weights, no download, about 0.1 s) is enough. Loaded in a child process with
+   `CT2_VERBOSE=1` it prints `CPU: GenuineIntel (SSE4.1=…, AVX2=…, AVX512=…)`,
+   `Selected ISA: …` and `Use Intel MKL: …`; `MKL_VERBOSE=1` adds MKL's own
+   instruction set. `tests/test_windows_packaging.py` builds exactly this model.
+   Owner's call before building: a child process in `doctor` only, or in every
+   run's preflight too (about a second each time).
 5. **`BRISTLENOSE_WHISPER_DEVICE` was read by nothing** (found 19 Nov 2026). The man
    page and `--help` document `cpu | cuda | auto`, `config.py` defines it, and no
    code read it. **Fixed:** it chooses the device; `cuda` overrides the check for a

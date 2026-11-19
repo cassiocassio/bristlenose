@@ -294,6 +294,10 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | Python itself | Decided — floor moves to 3.12 on 1 Nov 2026; band 3.12–3.14 (`docs/design-python-floor.md`) | `scripts/check-python-band.py` measures the band from wheel tags; ceiling waits on presidio `<3.15` |
 | protobuf (transitive) | Low — CVE-2026-0994 (DoS); we don't parse untrusted protobuf | Resolves when patched |
 
+### Watching (not evaluating)
+
+- [ ] **Phonon-2 / Phonon-2.5** (Fermion Research, 28 Sep 2026) — a ~2.1-bit quantised copy of NVIDIA parakeet-tdt-0.6b-v3 (164 MB), MLX/Core ML runtimes, CC-BY-4.0 weights, Apache-2.0 code. **Phonon-2 is English-only, so it does not fit; ruled out as a Whisper replacement on 19 Nov 2026.** The 25-language Phonon-2.5 is the only candidate. Accuracy and speed figures (5.21% average WER, AMI meetings 9.37%, "1 hour in ~20 s" on an M5 Air) are the maker's own: no independent benchmark found, and nothing on accented, noisy or medical speech or on dropout. Revisit if independent multilingual numbers for Phonon-2.5 appear; if it ever gets a hands-on trial, run it against Whisper on our own interview audio. Research summary: this session, 19 Nov 2026 (https://huggingface.co/FermionResearch/Phonon-2).
+
 ---
 
 ## Key files to know

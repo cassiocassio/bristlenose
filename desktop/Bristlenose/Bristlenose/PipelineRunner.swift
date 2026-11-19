@@ -682,6 +682,7 @@ final class PipelineRunner: ObservableObject {
     private let noteNetworkRefusal: @MainActor (LLMProvider) -> Void
     /// The fingerprint of the key a run is about to be started with.
     private let runKeyFingerprint: @MainActor (LLMProvider) -> String?
+    private let runAzureIdentity: @MainActor () -> String?
     private let sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)?
     private let outputDrainLimit: Duration
     private let foreignRunPollInterval: Duration
@@ -725,6 +726,11 @@ final class PipelineRunner: ObservableObject {
     /// The key each owned run was started with, as a fingerprint. A refusal that
     /// arrives after the key was replaced is not about the new key.
     private var runKeyFingerprints: [UUID: String] = [:]
+    /// The Azure endpoint, deployment and API version an Azure run was started with
+    /// (`LLMValidator.savedAzureIdentity`). A refusal that arrives after they were
+    /// changed is about the old settings, and recording it would mark the new,
+    /// possibly good, ones "Invalid key" (19 Nov 2026).
+    private var runAzureIdentities: [UUID: String] = [:]
     /// For an attached run: the terminus already newest in its events log when
     /// it was attached, i.e. a previous run's. Its tokens are not this run's.
     private var orphanPriorTerminus: [UUID: String] = [:]
@@ -815,6 +821,9 @@ final class PipelineRunner: ObservableObject {
         runKeyFingerprint: @escaping @MainActor (LLMProvider) -> String? = {
             ProviderProblemModel.liveKeyFingerprint($0)
         },
+        runAzureIdentity: @escaping @MainActor () -> String? = {
+            LLMValidator.savedAzureIdentity()
+        },
         sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
         outputDrainLimit: Duration = .seconds(2),
         foreignRunPollInterval: Duration = .seconds(2),
@@ -849,6 +858,7 @@ final class PipelineRunner: ObservableObject {
         self.recordRefusal = recordRefusal
         self.noteNetworkRefusal = noteNetworkRefusal
         self.runKeyFingerprint = runKeyFingerprint
+        self.runAzureIdentity = runAzureIdentity
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
         // first-run model, the wrong language, or a run that reached Whisper
@@ -2495,6 +2505,7 @@ final class PipelineRunner: ObservableObject {
         let provider = activeProvider()
         runProviders[project.id] = provider
         runKeyFingerprints[project.id] = provider.flatMap(runKeyFingerprint)
+        runAzureIdentities[project.id] = provider == .azure ? runAzureIdentity() : nil
         beginSpawnedRun(project)
         startProgressPoll(for: project, generation: gen)
 
@@ -2545,6 +2556,7 @@ final class PipelineRunner: ObservableObject {
             progressPollTasks[projectID] = nil
             runProviders[projectID] = nil
             runKeyFingerprints[projectID] = nil
+            runAzureIdentities[projectID] = nil
             state[projectID] = .failed(
                 // `localizedDescription` is Foundation's, already in the user's
                 // language — it passes through as a variable rather than being
@@ -2779,6 +2791,7 @@ var args = ["run", project.path, "--no-serve"]
         }
         let provider = runProviders.removeValue(forKey: projectID)
         let keyFingerprint = runKeyFingerprints.removeValue(forKey: projectID)
+        let azureIdentity = runAzureIdentities.removeValue(forKey: projectID)
         currentRun = nil
         // Not cancelled: a failed run's verdict waits below for its last lines
         // (R25), and anything later still reaches the popover's output.
@@ -2924,7 +2937,8 @@ var args = ["run", project.path, "--no-serve"]
             state[projectID] = deriveFailureState(
                 projectID: projectID, project: project,
                 outcome: outcome, lines: lines,
-                runProvider: provider, runKeyFingerprint: keyFingerprint
+                runProvider: provider, runKeyFingerprint: keyFingerprint,
+                spawnedAzureIdentity: azureIdentity
             )
             announceEnd(
                 of: project, state: state[projectID] ?? .idle,
@@ -3130,7 +3144,8 @@ var args = ["run", project.path, "--no-serve"]
     private func deriveFailureState(
         projectID: UUID, project: Project?,
         outcome: ProcessOutcome, lines: [String],
-        runProvider: LLMProvider? = nil, runKeyFingerprint: String? = nil
+        runProvider: LLMProvider? = nil, runKeyFingerprint: String? = nil,
+        spawnedAzureIdentity: String? = nil
     ) -> PipelineState {
         // Same number every branch here has always used; `outcome` carries the
         // extra fact of whether it is an exit code or a signal, for the logs.
@@ -3223,7 +3238,12 @@ var args = ["run", project.path, "--no-serve"]
             // The run's own provider, or nobody: a run started with none recorded
             // (the app's default was unset and Python chose its own) must not blame
             // whichever provider Settings holds when it exits.
-            if let runProvider {
+            if let runProvider, runProvider == .azure, let spawnedAzureIdentity,
+               spawnedAzureIdentity != runAzureIdentity() {
+                Self.logger.notice(
+                    "run refused (\(condition.rawValue, privacy: .public)) but the Azure settings changed after it started — not recorded against the new ones project=\(projectID.uuidString, privacy: .public)"
+                )
+            } else if let runProvider {
                 recordRefusal(condition, runProvider, runKeyFingerprint)
             } else {
                 Self.logger.notice(

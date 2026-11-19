@@ -74,5 +74,10 @@ def test_no_serve_skips_the_server_even_with_a_terminal(monkeypatch, tail) -> No
 
 
 def test_no_serve_is_listed_in_run_help() -> None:
+    import click
+
     result = CliRunner().invoke(app, ["run", "--help"], env={"COLUMNS": "200"})
-    assert "--no-serve" in result.output
+    # Unstyled: on GitHub Actions Rich forces colour (it reads GITHUB_ACTIONS), and
+    # its escape codes split "--no-serve", so the plain-text check failed only in
+    # CI (19 Nov 2026).
+    assert "--no-serve" in click.unstyle(result.output)

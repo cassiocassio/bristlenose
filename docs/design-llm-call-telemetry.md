@@ -1,12 +1,22 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-20
+last-trued: 2026-11-19 (--topic llm-usage: status block and a known-drift list only; the body is not trued)
+trued-against: HEAD@main on 2026-11-19
 ---
 
 # LLM call telemetry & self-correcting cost estimates
 
+> **Truing status, 19 Nov 2026.** By phase: Phase 1 shipped (`telemetry.py`, `cohort-baselines.json`); Phases 2 and 3 are not built (no `runtime.py`, no P75 logic, and `timing.py` keeps its own history); Phase 4 shipped; Phase 5 is research. The user-facing spend surface is now ruled by `docs/design-llm-usage.md` (owner, 17–18 Nov: a sense of scale, not a budget), not §The brief below. Known places where the body says what was planned rather than what shipped, not yet edited:
+> - **One file, not per run.** It is a single growing `llm-calls.jsonl` (`telemetry.py` `JSONL_FILENAME`), not `llm-calls-<run_id>.jsonl`.
+> - **The schema.** `hardware_signature`, `estimated_*_tokens` and `estimate_source` were never added to `LLMCallEvent`. `schema_version`, `model_family` and `model_major` were added and are not listed.
+> - **The cohort key.** The baseline and local lookups key on `(stage, family, major)` and ignore `prompt_version` (`pricing.py`). This matters now: all 15 baselines were made at prompt 0.1.1, and quote extraction and speaker splitting are at 0.2.0, so the medians in use are stale and nothing says so.
+> - **The forecast.** It is `estimate_pipeline_cost(model, n_sessions, run_dir) -> float | None`, not `RunForecast` ranges. `_TOKENS_PER_SESSION` was kept as `_LEGACY_TOKENS_PER_SESSION` behind the kill switch, not deleted.
+> - **Context binding.** It shipped as Pattern A (contextvars) plus an optional `prompt_template` argument. §Where the write happens and the later "Pattern B over Pattern A" line disagree with each other.
+> - **Prompt versioning.** There is no `prompts.lock` and no drift test.
+
 ## Changelog
+
+- _2026-11-19_ — **Status block added (`--topic llm-usage`).** The doc said "Draft (Apr 2026)" over a Phase 1 and Phase 4 that shipped. The block above lists the body's known drifts instead of rewriting them. The §As built table was updated on 17 Nov (all five serve callers bind a run; `chat_lens` and `codebook_builder` since commit "v1 analysis usage: a run-end line on the mac row, strip the ledger") without a changelog line. Owner question raised: key the baselines on `prompt_version`, or record that it is dropped on purpose and re-run `scripts/regenerate-cohort-baselines.py` after each prompt bump.
 
 - _2026-09-20_ — added the as-built section on the three contextvars, after
   signal elaboration was found to have bound one of them and recorded nothing
@@ -15,7 +25,7 @@ trued-against: HEAD@main on 2026-09-20
   not a record. Anchors: `bristlenose/llm/telemetry.py` `serve_run_context`,
   `bristlenose/server/elaboration.py`; commit `801fb083`.
 
-**Status:** Draft (Apr 2026)
+**Status:** Draft (Apr 2026), partly shipped since: see the truing status at the top
 **Owner:** Martin
 **Related:** `docs/design-pipeline-resilience.md` (events log), `docs/design-perf-fossda-baseline.md` (latency log line), `bristlenose/llm/pricing.py` (current forecast), `bristlenose/cost.py` (post-run accounting), `docs/methodology/tag-rejections-are-great.md` (downstream consumer)
 

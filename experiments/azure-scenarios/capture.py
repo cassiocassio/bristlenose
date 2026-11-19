@@ -94,6 +94,10 @@ class Fake:
         self.endpoint = f"http://127.0.0.1:{self.server.server_address[1]}"
 
     def set(self, *script: tuple[int, Any, dict[str, str]]) -> None:
+        # Each scenario is a fresh researcher: no ceiling learned by the one before.
+        from bristlenose.llm import client
+
+        client._azure_ceilings.clear()
         self.script = list(script)
         self.hits = 0
 
@@ -141,10 +145,10 @@ def _invoke(args: list[str], env: dict[str, str], input_text: str | None = None)
 
     full = {"COLUMNS": "80", "TERM": "xterm-256color", "FORCE_COLOR": "1", "NO_COLOR": "", **env}
     result = CliRunner().invoke(app, args, env=full, input=input_text, catch_exceptions=True)
-    out = result.output
     if result.exception and not isinstance(result.exception, SystemExit):
-        out += f"\n[harness: exception {type(result.exception).__name__}]"
-    return out, result.exit_code
+        # A crashed command must not render as a plausible frame.
+        raise RuntimeError(f"scenario {args!r} crashed: {type(result.exception).__name__}")
+    return result.output, result.exit_code
 
 
 def cli_scenarios(fake: Fake, work: Path) -> list[dict[str, Any]]:
@@ -169,8 +173,10 @@ def cli_scenarios(fake: Fake, work: Path) -> list[dict[str, Any]]:
     for sid, trigger, script in doctor:
         fake.set(*script)
         text, code = _invoke(["doctor"], base_env)
+        if fake.hits == 0:
+            raise RuntimeError(f"{sid}: doctor never reached the fake Azure")
         out.append({"id": sid, "surface": "cli", "command": "bristlenose doctor", "trigger": trigger,
-                    "text": _clean(text, fake, home), "exit": code})
+                    "text": _clean(text, fake, home), "exit": code, "fake_hits": fake.hits})
 
     # Network failure: an endpoint nothing listens on.
     dead = {**base_env, "BRISTLENOSE_AZURE_ENDPOINT": "http://127.0.0.1:9"}

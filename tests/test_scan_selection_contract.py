@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -60,10 +59,13 @@ def test_the_contract_states_run_s_depth() -> None:
 
 @pytest.mark.parametrize("layout", _layouts(), ids=lambda layout: layout["name"])
 def test_run_selects_what_the_contract_says(
-    layout: dict[str, Any], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    layout: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
 ) -> None:
-    if layout.get("posix_links") and sys.platform == "win32":
-        pytest.skip("symlinks need privileges on Windows")
+    if layout.get("posix_links"):
+        request.getfixturevalue("symlinks")  # skips on Windows (tests/conftest.py)
     root = _build(tmp_path, layout)
     home = layout.get("home")
     if home is not None:
@@ -83,7 +85,10 @@ def test_run_selects_what_the_contract_says(
     assert readable == sorted(layout["readable"])
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="the roots are macOS paths")
+# The roots are macOS paths, but `_refuse_reason` has no platform branch: it
+# compares resolved POSIX paths, so Linux runs the same check. Windows resolves
+# "/Library" under a drive letter, so there it would test a different question.
+@pytest.mark.skipif(os.name != "posix", reason="the roots are POSIX paths; Windows puts them under a drive")
 @pytest.mark.parametrize(
     "case", _contract()["refusals"], ids=lambda case: case["path"]
 )

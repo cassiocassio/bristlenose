@@ -631,3 +631,56 @@ def ffmpeg() -> None:
 
     if shutil.which("ffmpeg") is None:
         pytest.skip("ffmpeg not on PATH")
+
+
+# ---------------------------------------------------------------------------
+# POSIX file-system properties a platform may lack (skip-site class: posix-fs)
+#
+# One fixture per platform property, each asked for by every test that needs
+# it, so the skip-site ratchet (scripts/check-ratchet.py) counts the property
+# once rather than once per test (the shape of 7d32124a's `symlinks` and
+# d708247c's `node`). Each keeps exactly the platforms its per-test guards
+# skipped on; different properties stay in different fixtures.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def posix_mode_bits() -> None:
+    """The test asserts or withholds a POSIX permission bit (0o600, the exec bit).
+
+    Windows has none: chmod there only toggles read-only, so there is nothing to
+    assert. Runs on every Linux and macOS cell."""
+    if os.name != "posix":
+        pytest.skip("no POSIX mode bits on Windows: chmod there only toggles read-only")
+
+
+@pytest.fixture
+def o_nofollow() -> None:
+    """The test proves a write refuses a symlink, which is O_NOFOLLOW.
+
+    Windows has no O_NOFOLLOW, so there is no refusal there to assert. Runs on
+    every Linux and macOS cell."""
+    if os.name != "posix":
+        pytest.skip("symlink refusal is O_NOFOLLOW, which Windows lacks")
+
+
+@pytest.fixture
+def symlinks() -> None:
+    """The test makes a symlink. Windows needs a privilege to create one, so
+    these skip there and run on every Linux and macOS cell."""
+    import sys
+
+    if sys.platform == "win32":
+        pytest.skip("symlinks need privileges on Windows")
+
+
+@pytest.fixture
+def chmod_can_deny() -> None:
+    """The test needs a file or folder this user cannot read or write, made with chmod.
+
+    Root bypasses permission bits and Windows has none to clear, so on either
+    chmod denies nothing and the test has no refusal to observe."""
+    import sys
+
+    if sys.platform == "win32" or os.geteuid() == 0:
+        pytest.skip("chmod denies this user nothing (Windows, or running as root)")

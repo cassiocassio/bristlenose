@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import os
 import subprocess
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -134,7 +132,6 @@ class TestGetCredentialStore:
             assert isinstance(store, FileCredentialStore)
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="macOS only")
 class TestMacOSCredentialStore:
     """Tests for MacOSCredentialStore using mocked subprocess."""
 
@@ -287,7 +284,6 @@ class TestMacOSCredentialStore:
             store.delete("anthropic")
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Linux only")
 class TestLinuxCredentialStore:
     """Tests for LinuxCredentialStore using mocked subprocess."""
 
@@ -469,7 +465,7 @@ class TestFileCredentialStore:
         store.set("openai", "sk-oa-1")
         assert store.path.read_text(encoding="utf-8") == "BRISTLENOSE_OPENAI_API_KEY=sk-oa-1\n"
 
-    @pytest.mark.skipif(os.name != "posix", reason="no POSIX mode bits on Windows: chmod 0o600 there only clears read-only")
+    @pytest.mark.usefixtures("posix_mode_bits")
     def test_file_is_owner_only(self, store) -> None:
         import stat
 

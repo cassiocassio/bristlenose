@@ -11,7 +11,6 @@ as a second folder, so every session in it appeared twice.
 from __future__ import annotations
 
 import os
-import sys
 import unicodedata
 from pathlib import Path
 
@@ -20,16 +19,6 @@ import pytest
 from bristlenose.stages.s01_ingest import discover_files, group_into_sessions, session_key
 
 _VTT = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello\n"
-
-
-@pytest.fixture
-def symlinks() -> None:
-    """Every test that makes a link asks for this: one skip, not one per test.
-
-    Windows needs a privilege to create a symlink, so these skip there and run
-    on every Linux and macOS cell, as the seven per-test decorators did."""
-    if sys.platform == "win32":
-        pytest.skip("symlinks need privileges on Windows")
 
 
 def _write(path: Path, data: bytes = b"\0" * 64) -> None:

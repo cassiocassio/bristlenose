@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-11-15
-trued-against: HEAD@main (6c19cf072) on 2026-11-15
+last-trued: 2026-11-19
+trued-against: HEAD@main (11514084f) on 2026-11-19 (§1 pane/row parity and §9 code anchors only)
 ---
 
 > **Trued 15 Nov 2026 (§"The glyph rule" and §10).** The sidebar row now names the cause of a
@@ -23,6 +23,7 @@ trued-against: HEAD@main (6c19cf072) on 2026-11-15
 
 ## Changelog
 
+- _2026-11-19_ — **Trued against the native run panes (46c17ad30) and the failed-pane provider naming (6dfa00333).** §1's claim that the pane shows the serve's status page mid-run is struck and replaced: since 24 Oct 2026 (`46c17ad30`) the pane draws the row's own words natively, and §9's code anchors name `ProviderProblemPill.swift` in place of the removed `OutOfCreditPill.swift`.
 - _2026-10-29_ — **Status truth truing.** A status line is now explicitly a
   projection of the most specific, best-supported fact for its project and
   attempt — never a reflection of selection, focus or sidecar lifecycle.
@@ -387,9 +388,16 @@ A project has *status* — what it's doing, what's wrong, what's waiting. It sur
 - **Sidebar row** (compact): one subtitle line + one trailing slot + a leading glyph. The glance.
 - **Detail pane** (spacious): the content area when there's no report to show. Room to explain.
 
-Both draw from the *same* underlying state, at different resolutions. Two facts about today:
-- They don't render the same subset — e.g. the during-run verb ladder shows on the **row** but the
-  **pane** still shows the serve's "Nothing to see here, yet." page mid-run.
+Both draw from the *same* underlying state, at different resolutions. Where they stand today:
+- Since 24 Oct 2026 the pane matches the row whenever the serve would show its status page. The run
+  is queued, analysing, stopped, interrupted, waiting for a provider, or failed, and the pane draws
+  it natively in the row's own words (`DetailPaneKind.runCover`, `RunCoverPane`). A failed pane uses
+  `FailureMessage.sentence(for:from:)`, from the same `FailureMessage` record the row popover renders,
+  which names the provider since 15 Nov. The serve's no-run page ("No interviews to analyse yet.",
+  `server.statusPage.noRunDesktopShort`) shows only when no run cover applies. _Trued 19 Nov 2026
+  (`46c17ad30`, `6dfa00333`); it previously read:_ ~~They don't render the same subset — e.g. the
+  during-run verb ladder shows on the **row** but the **pane** still shows the serve's "Nothing to
+  see here, yet." page mid-run.~~
 - There's no shared model behind them; each surface reaches into the sources independently (§6).
 
 ## 2. Two streams feed the status
@@ -629,7 +637,8 @@ two fidelities. As of 19 Jun the subtitle's arbitration is no longer trapped in 
   SwiftUI one, see `design-desktop-sidebar-appkit.md`), `SidebarSubtitleText.swift`,
   `SidebarActivityRing.swift`, `ProjectRowActivityIndicator.swift`, `CloudImportStore.swift`
   (`BatchProgress`), `CompletionRescan.swift` (the `lastPipelineRunAt` write path), `StatusPill.swift`,
-  `OutOfCreditPill.swift` (the last two flagged in the 15 Jul entry and unactioned until now).
+  `ProviderProblemPill.swift` (which replaced `OutOfCreditPill.swift` on 2 Nov 2026; the last two
+  flagged in the 15 Jul entry).
 - **Handoffs (internal):** `cached-run-progress-emit` (bucket-2 coverage, ready), `warm-sidecar-pool`
   (Phase A2 fast switching), `progress-text-detail-pane` (the demoted during-run pane item, folded
   into the detail-pane-set design).

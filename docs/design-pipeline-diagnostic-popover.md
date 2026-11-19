@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-11-15
-trued-against: HEAD@main (6c19cf072) on 2026-11-15
+last-trued: 2026-11-19
+trued-against: HEAD@main (11514084f) on 2026-11-19, scope: the failed-pane provider naming (6dfa00333), the popover header's buttons and `.failed`'s body
 ---
 
 > **Trued 27 Aug 2026.** Two rows in the state table below had drifted in
@@ -84,6 +84,7 @@ trued-against: HEAD@main (6c19cf072) on 2026-11-15
 
 ## Changelog
 
+- _2026-11-19_ — **Trued against the failed-pane provider naming (6dfa00333), the popover header's buttons and `.failed`'s two-line body.** Since 15 Nov the detail pane names the provider (`FailureMessage.sentence(for:from:)`) and the event-log reader reads `cause.provider` back, so a relaunch keeps "Gemini key rejected": the Registers subsection's banner, "Why now", the detail-pane row of the surfaces table and migration steps (2) and (4) are marked in place, originals kept or dated; the popover is unchanged and its order is still the owner's call. Also trued: the "Not a settings surface" bullet (the popover has no Retry or Change provider; its header carries Locate…, Set Up Provider…, Set Up Transcription… or Show Log before Copy) and `.failed`'s `degradedBody`, which is two lines, not three.
 - _2026-11-15_ — **Registers and the reading ladder (proposal); the row's words trued.** The sidebar row now names the cause rather than "Run failed" (`f319cedb1`, `6c19cf072`, from `docs/mockups/sidebar-failure-labels.html`), and the glyph is chosen by category: info for "Already analysed", none for a stop filed as a failure, warning for an interrupted run. Trued in place, originals kept: the top banner (interrupted stops), the state catalog's `.failed` and `.stopped` rows, the "What goes where" sessions row, the standing pattern's examples, the implementation-references row for the subtitle, the popover-header claim of one surface for every failure (the report server failing to start has no popover), and dated riders on the two Proposed subsections whose premise moved. New subsection under the standing pattern, **"Registers and the reading ladder"**: the owner's 15 Nov discussion of compact / normal / verbose / payload registers chosen per surface, the reading ladder the standing pattern's three levels sit on, and "a register may drop words, never the fact the reader acts on". Proposal; nothing in it is built.
 - _2026-11-11_ — **The standing pattern for a status line and its popover: state, nature, cause.** Settled with the owner on the "Done with warnings" rows (`docs/mockups/done-with-warnings-mac-row.html`): the row says the state, the popover header the nature of the failure, and the body rows the cause in plain words, never a bare "Not built". No bottom action row; no retry offered unless a retry could plausibly succeed; an expected absence (no screens, a monologue, no guide) is not a warning. New section "The standing pattern", below.
 - _2026-11-06_ — **Stray files stop being refusals; the popover gains a quiet footer.** A study folder's scripts and logs (`unsupported_format`) were counted as refusals and turned a run with two good interviews into "Partial completion". Files in a format we never offered are now *left alone*: `StageOutcome.left_alone` (an optional count on the wire, `leftAlone: Int?` in Swift, absent from an older sidecar), never a row. Where the popover is already open for a real failure it ends with a footer, "Other files left alone: N · Supported formats" (`desktop.pipeline.diagnostic.leftAlone`, `.supportedFormats`; a label form so there is one key per locale, not CLDR plural forms). The link goes to `bristlenose.app/docs/supported-files.html`. A clean run has no popover and so no footer: that is the owner's call (6 Nov), not an omission. New reason `no_transcript` ("No transcript in this document.") for a `.docx` that holds no timed or speaker-turn text. The copied plaintext diagnostic gains one English line, `Left alone (formats Bristlenose does not read): N`. Mockup: `docs/mockups/ingest-unreadable-files-states.html`. `unsupported_format` stays in the enum and the locales: `analyze` still uses it for an untimed `.txt`.
@@ -192,9 +193,15 @@ own glyph or colour.
   catalog below names every state including the running sub-states, and the
   deferred "Future direction — in-flight progress as rolling logs" appendix
   revisits whether the in-flight surface should carry more than a status line.
-- **Not a settings surface.** The only operational button is `Retry`
+- ~~**Not a settings surface.** The only operational button is `Retry`
   (and conditionally `Change provider` on `.auth`). Everything else is
-  share-affordances.
+  share-affordances.~~ _(Trued 19 Nov 2026.)_
+- **Not a settings surface.** No Retry, no Change provider, no Re-analyse… in the popover:
+  those live in the project's run affordance (sidebar context menu, toolbar Run) and in
+  Settings. The header carries one state-chosen button before Copy: Locate… when folder
+  access is lost, Set Up Provider… or Set Up Transcription… when that setup is missing
+  (each opens its Settings pane), otherwise Show Log when the log file exists. Everything
+  else is share-affordances.
 
 ## Message-kind taxonomy (5 kinds)
 
@@ -771,11 +778,17 @@ Body content branches on the state:
 - `.failedWithDiagnostic` / `.completedPartial` → `bucketsBody`:
   per-bucket Grid with SF Symbol + session id + message rows. Unchanged
   from `pipeline-diagnostic-popover-swift`.
-- `.failed` → `degradedBody`: three lines — the `EventLogReader`-emitted
+- ~~`.failed` → `degradedBody`: three lines — the `EventLogReader`-emitted
   reader string (e.g. `Analysis stopped unexpectedly.` for the orphan
   path; `cause.message` for older sidecars), the localised
   `desktop.pipeline.diagnostic.noStructuredCause` hint
-  ("Detailed cause not captured."), and `Category: <humanCategoryLabel>`.
+  ("Detailed cause not captured."), and `Category: <humanCategoryLabel>`.~~
+  _(Trued 19 Nov 2026: two lines, not three.)_
+- `.failed` → `degradedBody`: two lines. First, the `EventLogReader`-emitted
+  reader string (e.g. `Analysis stopped unexpectedly.` for the orphan path;
+  `cause.message` for older sidecars), or, only when that resolves empty, the
+  localised `desktop.pipeline.diagnostic.noStructuredCause` hint ("Detailed
+  cause not captured.") in caption/secondary. Then `Category: <humanCategoryLabel>`.
   No stdout tail in the visible body — stdout (when populated) flows
   into the Copy plaintext + the on-disk log reachable via the Log button.
 
@@ -1003,11 +1016,11 @@ Rules that come with it:
 
 ### Registers and the reading ladder (proposal, owner, 15 Nov 2026)
 
-> **Proposal. Nothing in this subsection is built.** It extends the standing pattern above from one popover to every surface and every language, after the sidebar labels shipped (`6c19cf072`) and showed the surfaces disagreeing.
+> ~~**Proposal. Nothing in this subsection is built.**~~ **Proposal. Apart from migration steps (1) and (2), nothing in this subsection is built.** _(Trued 19 Nov 2026.)_ It extends the standing pattern above from one popover to every surface and every language, after the sidebar labels shipped (`6c19cf072`) and showed the surfaces disagreeing.
 
 **The principle (owner):** *can we use the writing to support the human fixing the problem?* Bristlenose is the translation layer between the pipeline's raw output and the researcher, and a rendering is judged by usefulness, not length: compact, in plain words rather than CLI text, and specific enough to act on.
 
-**Why now.** A rejected Gemini key, as shipped: the row says "Gemini key rejected"; the pane "The analysis didn’t finish / Your API key was rejected." (`desktop.chrome.failedTitle` + `desktop.pipeline.failure.authGeneric`, the provider dropped); the popover leads with Python's raw English, the category label as a caption; after a relaunch the row says "API key rejected" (the event-log reader doesn't read the provider back). The owner had left Gemini selected instead of Claude: the one word "Gemini" told them the fix, and the pane's sentence would have sent them to re-paste a Claude key that was fine. The cause is structural: keys are named after a place (`header`, `row`), so each surface writes or borrows its own string. Six categories borrow the popover's `desktop.pipeline.category.*` label for the row, so a row reword also rewords the `Category:` line and the run banner.
+**Why now.** A rejected Gemini key, as shipped until 15 Nov 2026 (before `6dfa00333`): the row says "Gemini key rejected"; the pane "The analysis didn’t finish / Your API key was rejected." (`desktop.chrome.failedTitle` + `desktop.pipeline.failure.authGeneric`, the provider dropped); the popover leads with Python's raw English, the category label as a caption; after a relaunch the row says "API key rejected" (the event-log reader doesn't read the provider back). The owner had left Gemini selected instead of Claude: the one word "Gemini" told them the fix, and the pane's sentence would have sent them to re-paste a Claude key that was fine. The cause is structural: keys are named after a place (`header`, `row`), so each surface writes or borrows its own string. Six categories borrow the popover's `desktop.pipeline.category.*` label for the row, so a row reword also rewords the `Category:` line and the run banner. _(Since `6dfa00333` (15 Nov 2026) the pane says "Your Gemini key was rejected." and the row still says "Gemini key rejected" after a relaunch (`EventLogReader` reads `cause.provider` back; `FailureMessage.sentence(for:from:)` picks the pane's sentence). The popover is unchanged and still leads with the raw English, pending the owner's ruling on its order.)_
 
 **The reading ladder.** The standing pattern's three levels sit on five rungs, each the reader's next question: (1) is something wrong? the glyph; (2) what kind? the category; (3) which thing? the fact, such as Gemini, "Interviews SSD", two files; (4) which exact cause? credit, permission or a malformed key, because the fixes differ; (5) show me: the raw record. Bristlenose owns rungs 1–4. **A rendering is useful when its first visible rung reaches the action**, and each deeper level adds a rung, never the same rung louder, never raw before interpreted. When causes can't be told apart, the writing still supports the fix: say what is known in fixable terms; never pick one cause and send them the wrong way. (Example: `failure_classifier.py:142-149` maps a 403 `PERMISSION_DENIED` and a malformed key to one `invalid_key`. For Gemini a new key fixes both; for a provider whose 403 means "no access to this deployment", "key rejected" would mislead. Probe per provider before splitting.)
 
@@ -1035,7 +1048,7 @@ Rules: verbose is two facts, not a longer sentence (the title belongs to the out
 | Toast | normal + glyph | AutoCode toast normal (`codebook.autocodeFailure.*`) |
 | VoiceOver | normal | raw English or compact, by surface |
 | Popover | verbose + payload disclosure | leads with raw: the ladder upside down |
-| Detail pane | verbose + remedy + payload disclosure | right shape, drops the fact |
+| Detail pane | verbose + remedy + payload disclosure | ~~right shape, drops the fact~~ right shape; names the provider when the failure carries it (`6dfa00333`, kept across a relaunch), but not yet on the diagnostic-summary path (`failedWithDiagnostic`) _(19 Nov 2026)_ |
 | Status page (`/report/*`, failed CLI run) | verbose + payload disclosure | `StatusInfo` is already `kind`, `short`, `long`, `details` |
 | CLI banner | normal + CLI remedy, English | its own inline copy, English by design (`design-i18n.md`) |
 
@@ -1043,7 +1056,7 @@ Rules: verbose is two facts, not a longer sentence (the title belongs to the out
 
 **Where it would live.** Words in the locale files, keyed by register rather than surface (a migration, not a prerequisite). Structure in one `tests/fixtures/*-contract.json` (root `CLAUDE.md` §"Seams"): per category and moment, its kind, remedy, needed facts and registers, read by or tested against in Python, Swift and TypeScript. No code generation. It makes four things testable that nothing tests today: the category list matches across languages; every category has its declared registers in every locale; **every register of a fact-needing category carries the placeholder** (`{{provider}}`, `{{name}}`, `{{count}}`) except the generic fallback, the "specific enough to act" rule made mechanical; a surface's kind is the contract's kind. The human half stays a review question: after reading only this surface, what would the researcher do next?
 
-**Migration, each step shippable alone.** (1) Pin the category seam with a parity test (~~in progress, 15 Nov 2026, its own session~~ done 15 Nov 2026, `tests/test_failure_category_parity.py`, commit "pin the failure category list across python, swift and typescript"). (2) Store the provider with the failure and read it back on relaunch; the pane names it when known (owner, 15 Nov). (3) Moments become cases. (4) One function picks the sentence for pane, popover and status page. (5) The contract file and its tests, starting with the 18 failure categories. (6) Keys renamed by register as surfaces adopt them; the six borrowing categories get their own compact. (7) The popover turned the right way up, if the owner agrees.
+**Migration, each step shippable alone.** (1) Pin the category seam with a parity test (~~in progress, 15 Nov 2026, its own session~~ done 15 Nov 2026, `tests/test_failure_category_parity.py`, commit "pin the failure category list across python, swift and typescript"). (2) ~~Store the provider with the failure and read it back on relaunch; the pane names it when known (owner, 15 Nov).~~ done 15 Nov 2026, `6dfa00333` (`Cause.provider` decoded by `EventLogReader.swift`; the pane prefers the logged provider). (3) Moments become cases. (4) One function picks the sentence for pane, popover and status page (started 15 Nov 2026: `FailureMessage.sentence(for:from:)` serves the pane; the popover and status page don't use it yet, and the popover's order is still an open owner question). (5) The contract file and its tests, starting with the 18 failure categories. (6) Keys renamed by register as surfaces adopt them; the six borrowing categories get their own compact. (7) The popover turned the right way up, if the owner agrees.
 
 **Open (owner's).** Severity of a rate limit, an unreachable provider and an outage (warning or error; the web report and the Mac disagree today). Popover order (interpreted first, raw behind Show Details?). Tab title and window subtitle carrying the compact line. The local provider's name ("Ollama", "Local" or "Local (Ollama)"; Python spells it three ways). Splitting `invalid_key` where a 403 means missing access.
 

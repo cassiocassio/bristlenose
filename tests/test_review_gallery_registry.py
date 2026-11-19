@@ -8,8 +8,12 @@ unreviewable without anyone noticing. The Swift suite checks the shape
 (`ReviewGalleryRegistryTests`); only git can say a hash is real, so this reads
 the Swift source as text and asks git.
 
-Skipped where there is nothing to ask: no desktop tree, no `.git`, or a shallow
-clone (CI's default checkout), where older commits are legitimately absent.
+The registry file is asserted, not skipped for: the sdist excludes tests/, so
+no checkout holds these tests without desktop/. The commit lookup is skipped
+only where git has nothing to ask: no `.git`, or a shallow clone (CI's default
+checkout) that lacks a named commit, where older commits are legitimately
+absent. Every hash the shallow history does hold is still looked up, and every
+hash is checked for shape wherever the tests run.
 """
 
 from __future__ import annotations
@@ -31,8 +35,7 @@ _HASH_RE = re.compile(r'"([^"]*)"')
 
 
 def _source() -> str:
-    if not _REGISTRY.exists():
-        pytest.skip("no desktop tree here")
+    assert _REGISTRY.exists(), f"{_REGISTRY} is gone"
     return _REGISTRY.read_text(encoding="utf-8")
 
 
@@ -65,16 +68,18 @@ def test_ids_are_unique() -> None:
     assert not duplicates, f"duplicate Review Gallery ids: {duplicates}"
 
 
+def test_every_commit_is_a_hash() -> None:
+    """Needs no git, so it runs where the lookup below cannot (a shallow CI clone)."""
+    hashes = sorted(set(_hashes(_source())))
+    assert hashes, "no commit hashes found"
+    malformed = [h for h in hashes if not re.fullmatch(r"[0-9a-f]{7,40}", h)]
+    assert not malformed, f"Review Gallery names commits that are not hashes: {malformed}"
+
+
 def test_every_commit_resolves() -> None:
     text = _source()
     if not (_REPO_ROOT / ".git").exists():
         pytest.skip("not a git checkout")
-    shallow = subprocess.run(
-        ["git", "-C", str(_REPO_ROOT), "rev-parse", "--is-shallow-repository"],
-        capture_output=True, text=True, check=False,
-    ).stdout.strip()
-    if shallow == "true":
-        pytest.skip("shallow clone: older commits are absent by design")
 
     hashes = sorted(set(_hashes(text)))
     assert hashes, "no commit hashes found"
@@ -86,4 +91,14 @@ def test_every_commit_resolves() -> None:
             capture_output=True, check=False,
         ).returncode != 0
     ]
+    if missing:
+        shallow = subprocess.run(
+            ["git", "-C", str(_REPO_ROOT), "rev-parse", "--is-shallow-repository"],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip()
+        if shallow == "true":
+            pytest.skip(
+                f"shallow clone: {len(missing)} of {len(hashes)} commits may be older "
+                f"than its history, so cannot be judged: {missing}"
+            )
     assert not missing, f"Review Gallery names commits git cannot find: {missing}"

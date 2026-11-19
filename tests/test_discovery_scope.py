@@ -16,6 +16,7 @@ there is no ffmpeg.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -73,12 +74,21 @@ class TestDepth:
         assert all(len(s.files) == 2 for s in sessions)
 
 
+_MACOS_ROOTS = ("/Applications", "/System", "/Library")
+
+
 class TestRefusal:
-    @pytest.mark.parametrize("target", ["/", "~", "/Applications", "/System", "/Library"])
+    @pytest.mark.parametrize("target", ["/", "~", *_MACOS_ROOTS])
     def test_roots_are_refused_by_name(self, target: str) -> None:
+        # By name: `_refuse_reason` compares the resolved path with a set of
+        # names and needs no folder to exist, so the macOS roots are refused on
+        # Linux too, where they are absent. Until 19 Nov 2026 this skipped wherever the
+        # folder was absent, which kept three cases off every Linux cell. Only
+        # Windows is out: there `/Applications` resolves to `C:\Applications`,
+        # which is not the macOS folder the set names.
         path = Path.home() if target == "~" else Path(target)
-        if not path.exists():
-            pytest.skip(f"{target} not present on this platform")
+        if sys.platform == "win32" and target in _MACOS_ROOTS:
+            pytest.skip(f"{target} is a macOS root; a Windows path never resolves to it")
         with pytest.raises(UnsuitableInputDirError) as exc:
             discover_files(path)
         assert "can't be analysed" in str(exc.value)

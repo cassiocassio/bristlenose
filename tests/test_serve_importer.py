@@ -304,20 +304,28 @@ class TestImportPathCanonicalisation:
         """On a case-insensitive volume (macOS/Windows) a case-variant spelling
         is the *same* directory and must not fork a second project.
 
-        Skips on case-sensitive filesystems (Linux CI), where the variant is a
-        genuinely different path and staying distinct is the correct behaviour.
+        On a case-sensitive filesystem (Linux CI) the variant is a genuinely
+        different directory, and staying distinct is the correct behaviour, so
+        there the test makes it one and asserts that instead (it skipped there
+        until 19 Nov 2026): matching on a case-folded spelling would merge two
+        studies.
         """
-        proj = _write_pipeline_output(tmp_path, self._clusters(), [])
-        variant = proj.with_name(proj.name.swapcase())
-        if variant.name == proj.name or not (
-            variant.exists() and os.path.samefile(proj, variant)
-        ):
-            pytest.skip("case-sensitive filesystem (or name has no case to swap)")
-
+        study = tmp_path / "Study"
+        study.mkdir()
+        proj = _write_pipeline_output(study, self._clusters(), [])
+        variant = proj.with_name("sTUDY")
         p1 = import_project(db, proj)
-        p2 = import_project(db, variant)
-        assert p1.id == p2.id
-        assert db.query(Project).count() == 1
+
+        if variant.exists() and os.path.samefile(proj, variant):
+            p2 = import_project(db, variant)
+            assert p1.id == p2.id
+            assert db.query(Project).count() == 1
+        else:
+            variant.mkdir()
+            _write_pipeline_output(variant, self._clusters(), [])
+            p2 = import_project(db, variant)
+            assert p1.id != p2.id
+            assert db.query(Project).count() == 2
 
     def test_legacy_noncanonical_row_is_matched_and_healed(
         self, db: Session, tmp_path: Path,

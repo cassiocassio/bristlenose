@@ -30,12 +30,24 @@ onnxruntime.InferenceSession(
     base64.b64decode(_ORT_IDENTITY_MODEL), providers=["CPUExecutionProvider"])
 """
 
+# onnxruntime turns its own telemetry off when any of these is set, so on a CI
+# runner the probe proved nothing either way: the session test passed with the
+# opt-out deleted, and the control had to be skipped. Read from the strings in
+# libonnxruntime 1.32.0 and checked one by one on 19 Nov 2026 (`CI` is too
+# short for `strings` to show; setting it alone suppresses the queue). The
+# probe runs without them, so both tests mean the same thing on CI as on a Mac.
+_ORT_CI_MARKERS = (
+    "CI", "TF_BUILD", "GITHUB_ACTIONS", "GITLAB_CI", "CIRCLECI", "TRAVIS",
+    "JENKINS_URL", "CODEBUILD_BUILD_ID", "BUILDKITE", "TEAMCITY_VERSION",
+    "APPVEYOR", "BITBUCKET_BUILD_NUMBER", "ORT_RUNNING_UNIT_TESTS",
+)
+
 
 def _run(tmp_path: Path, first_import: str) -> list[Path]:
     home = tmp_path / first_import
     home.mkdir()
     env = {k: v for k, v in os.environ.items()
-           if k not in ("ORT_DISABLE_TELEMETRY", "XDG_CACHE_HOME")}
+           if k not in ("ORT_DISABLE_TELEMETRY", "XDG_CACHE_HOME", *_ORT_CI_MARKERS)}
     env["HOME"] = str(home)
     # The probe imports bristlenose.doctor either way, so the control has to
     # get there without the package's opt-out: run it with the var forced off.
@@ -56,8 +68,6 @@ def test_a_session_writes_no_telemetry_queue(tmp_path: Path) -> None:
     assert _run(tmp_path, "bristlenose") == []
 
 
-@pytest.mark.skipif(bool(os.environ.get("CI")),
-                    reason="onnxruntime suppresses its own telemetry under CI")
 def test_control_without_the_opt_out_does_write_one(tmp_path: Path) -> None:
     """Proves the test above can fail: with the opt-out off, the queue appears."""
     if not _run(tmp_path, "control"):

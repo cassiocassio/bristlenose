@@ -63,11 +63,11 @@ class TestProviderDefaultContract:
     """
 
     def test_swift_constant_matches_python_default(self) -> None:
-        if not _SHARED_SWIFT.exists():
-            pytest.skip(
-                "desktop/ tree not present (sdist-only checkout); "
-                "cross-language contract only checkable from a full repo checkout"
-            )
+        # An assertion, not a skip (19 Nov 2026): the sdist excludes tests/, so
+        # no checkout holds this file without desktop/, and a missing Swift file
+        # is a rename that leaves the contract unchecked, as the PII pack's
+        # test below already says.
+        assert _SHARED_SWIFT.exists(), f"{_SHARED_SWIFT} is gone"
         swift_value = _swift_python_default_provider()
         python_default = BristlenoseSettings.model_fields["llm_provider"].default
         assert swift_value == python_default, (
@@ -436,6 +436,7 @@ _SOURCE_FILES_READER = (
 
 
 def _swift_recoded_session_sql() -> str:
+    assert _SOURCE_FILES_READER.exists(), f"{_SOURCE_FILES_READER} is gone"
     text = _SOURCE_FILES_READER.read_text(encoding="utf-8")
     match = re.search(
         r"// BEGIN recoded-session-sql\n\s*static let recodedSessionSQL = \"\"\"\n(.*?)\n\s*\"\"\"\n"
@@ -464,7 +465,6 @@ class TestRecodedSessionSqlContract:
         roles = [*_ROLE_PREFIX, "unknown", ""]
         return [(code, role) for code in ("p1", "m1", "o1", "P1") for role in roles]
 
-    @pytest.mark.skipif(not _SOURCE_FILES_READER.exists(), reason="desktop/ not in this checkout")
     def test_the_swift_count_is_needs_reanalysis(self) -> None:
         import sqlite3
         from types import SimpleNamespace
@@ -486,7 +486,6 @@ class TestRecodedSessionSqlContract:
             python = needs_reanalysis(SimpleNamespace(slot_code=code, row=row))
             assert swift == int(python), f"{code}/{role!r}: Swift {swift}, Python {python}"
 
-    @pytest.mark.skipif(not _SOURCE_FILES_READER.exists(), reason="desktop/ not in this checkout")
     def test_the_swift_count_names_real_columns(self) -> None:
         from bristlenose.server.models import Session, SessionSpeaker
 

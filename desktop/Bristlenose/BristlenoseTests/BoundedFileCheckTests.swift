@@ -39,15 +39,20 @@ struct BoundedFileCheckTests {
 
     @Test("A stat that never returns does not block the caller, and says no")
     func aHungStatDoesNotBlock() {
+        // Pinned by order, not by a clock: the stat cannot return until the caller has, so a caller
+        // that waited for it would come back with the stat finished. The bound was "under 1 s", and a
+        // loaded CI runner took 1.69 s with the code right (19 Nov 2026). The probe gives up after 30 s
+        // so a regression fails instead of hanging the suite.
         let release = DispatchSemaphore(value: 0)
         defer { release.signal() }
-        let start = Date()
+        let returned = Counter()
         let result = BoundedFileCheck.exists(atPath: volumePath(), timeout: 0.1, probe: { _ in
-            release.wait()
+            _ = release.wait(timeout: .now() + 30)
+            returned.bump()
             return true
         })
         #expect(!result)
-        #expect(Date().timeIntervalSince(start) < 1.0, "the caller waited for the stat instead of the timeout")
+        #expect(returned.count == 0, "the caller waited for the stat instead of the timeout")
     }
 
     @Test("A stalled path is answered at once afterwards, with no second probe parked")

@@ -328,7 +328,9 @@ The same transcription, same audio, words compared, under:
 - `CT2_FORCE_CPU_ISA=GENERIC`: old or odd CPUs.
 
 This tests dispatch and each path's code, which is where such bugs live; it does
-not reproduce one chip's quirks, and nor did one 2014 laptop. On UTM, Prism's
+not reproduce one chip's quirks, and nor did one 2014 laptop. Scripted on 19 Nov
+2026 as `winget-accept.ps1 -CpuPaths` (Windows; not yet run), which also records
+each path's time. On UTM, Prism's
 "Hide newer emulated CPU features" gives the no-AVX path.
 
 ### 6.3 A GPU option for aella

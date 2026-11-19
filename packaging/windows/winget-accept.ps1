@@ -18,6 +18,7 @@
        `winget list` reports it, the user PATH has the app folder.
     4. `doctor --self-test`, then (unless -SkipTranscribe) a real transcription
        of a spoken WAV, words checked. The first one downloads a 1.6 GB model.
+       With -CpuPaths, the same transcription again under each forced CPU path.
     5. Uninstall while `serve` runs: `winget uninstall` must return within the
        timeout, the app must still be there, and no uninstaller process may be
        left waiting on a dialog nobody can see.
@@ -52,6 +53,10 @@ param(
     # makes one if it can; Server editions may have no voice.
     [string]$Wav = "",
     [switch]$SkipTranscribe,
+    # Also transcribe under forced CPU code paths (design doc section 6.2): the
+    # typical Intel laptop (AVX2, no AVX-512), the non-MKL backend AMD CPUs get,
+    # and the generic fallback. Same audio, words checked, time recorded.
+    [switch]$CpuPaths,
     # Uninstall an existing Bristlenose first instead of refusing to start.
     [switch]$Reset,
     [int]$Port = 8158,
@@ -335,6 +340,45 @@ try {
                     Get-Content -Raw) -join "`n"
                 if ($txt -notmatch $Words) { throw "no '$Words' in the transcript: $(Tail $txt)" }
                 "transcript has '$Words'"
+            }
+            if ($CpuPaths) {
+                # CTranslate2 picks its backend by CPU vendor (MKL only on Intel) and its
+                # kernels by instruction set; these steer both. Never force an instruction
+                # set the CPU lacks: AVX-512 is not in the list for that reason.
+                $paths = @(
+                    @{ Name = "intel-avx2"; Env = @{ CT2_FORCE_CPU_ISA = "AVX2"; MKL_CBWR = "AVX2" } },
+                    @{ Name = "non-mkl"; Env = @{ CT2_USE_MKL = "0" } },
+                    @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE" } }
+                )
+                foreach ($path in $paths) {
+                    # Not $name: variable names ignore case, and inside Check's body
+                    # $name would be Check's own $Name parameter, the label.
+                    $pathName = $path.Name
+                    $vars = $path.Env
+                    Check "transcribe, CPU path $pathName" {
+                        $dir = Join-Path $WorkDir "cpu-$pathName"
+                        New-Item -ItemType Directory -Force $dir | Out-Null
+                        Copy-Item (Join-Path $study "hello.wav") $dir
+                        $saved = @{}
+                        foreach ($k in $vars.Keys) {
+                            $saved[$k] = [Environment]::GetEnvironmentVariable($k, "Process")
+                            [Environment]::SetEnvironmentVariable($k, $vars[$k], "Process")
+                        }
+                        try {
+                            $clock = [Diagnostics.Stopwatch]::StartNew()
+                            $r = Invoke-Timed $Exe "transcribe `"$dir`"" 2400
+                            $secs = [int]$clock.Elapsed.TotalSeconds
+                        } finally {
+                            foreach ($k in $vars.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k], "Process") }
+                        }
+                        if ($r.TimedOut -or $r.ExitCode -ne 0) { throw "exit $($r.ExitCode): $(Tail $r.Text)" }
+                        $txt = (Get-ChildItem -Recurse -Filter *.txt (Join-Path $dir "bristlenose-output") -ErrorAction SilentlyContinue |
+                            Get-Content -Raw) -join "`n"
+                        if ($txt -notmatch $Words) { throw "no '$Words' in the transcript: $(Tail $txt)" }
+                        $set = ($vars.Keys | Sort-Object | ForEach-Object { "$_=$($vars[$_])" }) -join " "
+                        "'$Words' found in $secs s ($set)"
+                    }
+                }
             }
         }
     }

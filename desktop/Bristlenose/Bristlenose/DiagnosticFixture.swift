@@ -86,6 +86,11 @@ enum DiagnosticFixture {
             logger.info("injecting simple state \(name, privacy: .public)")
             return .simpleState(simple)
         }
+        if let azure = AzureRunScenario(rawValue: name) {
+            logger.info("injecting azure run scenario \(name, privacy: .public)")
+            // Menu actions and the launch-time read both run on the main thread.
+            return .simpleState(MainActor.assumeIsolated { azure.state })
+        }
 
         guard let scenario = scenarios[name] else {
             logger.warning(

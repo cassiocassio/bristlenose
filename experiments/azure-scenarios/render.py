@@ -77,6 +77,45 @@ STATUS = {"doctor-429": "429", "doctor-5xx": "503", "doctor-redirect": "302", "d
 MAC_ONLY = [("Relaunch after a rejected check", "relaunch-invalid"), ("Offline while checking", "offline"),
             ("Check timed out", "timeout"), ("Endpoint without https://", "no-scheme"),
             ("An http:// endpoint", "http-endpoint")]
+# Native renders (desktop/Bristlenose/BristlenoseTests/AzureScenarioRenderTests.swift):
+# the real SwiftUI pane and AppKit sidebar/popover, from AzureScenarioFixture/AzureRunScenario.
+NATIVE = HERE / "native"
+NATIVE_SETTINGS = {"online": "online", "key-rejected": "keyRejected", "not-found": None,
+                   "rate": "throttled", "unreachable": "unreachable", "no-endpoint": "noEndpoint",
+                   "no-deployment": "noDeployment", "relaunch-invalid": "relaunchAfterRejection",
+                   "offline": "offlineWithGoodCheck", "timeout": "timedOut", "no-scheme": "noScheme",
+                   "http-endpoint": "httpEndpoint"}
+# Rows whose settings cell is ambiguous by cell name alone, keyed by CLI capture id.
+NATIVE_SETTINGS_BY_ROW = {"doctor-deployment-not-found": "deploymentNotFound", "doctor-other-404": "wrongURLPasted",
+                          "doctor-5xx": "outage", "doctor-redirect": "redirect", "doctor-no-key": "noKey"}
+NATIVE_RUN_BY_ROW = {"doctor-bad-key": "azure_run_refused_bad_key", "run-refused-bad-key": "azure_run_refused_bad_key",
+                     "doctor-deployment-not-found": "azure_run_refused_deployment",
+                     "run-refused-deployment": "azure_run_refused_deployment",
+                     "run-key-revoked-mid-run": "azure_run_key_revoked_mid_run"}
+
+
+def _pic(light: str, dark: str, cls: str) -> str:
+    """The light render, swapped for the dark one when the reader's system is dark."""
+    base = "../../experiments/azure-scenarios/native/"
+    return (f'<picture><source srcset="{base}{dark}.png" media="(prefers-color-scheme: dark)">'
+            f'<img class="{cls}" src="{base}{light}.png" alt="{html.escape(light)}"></picture>')
+
+
+def native_frames(settings: str | None, run: str | None) -> str:
+    out = []
+    if settings and (NATIVE / f"settings-{settings}-light.png").exists():
+        out.append('<figure class="frame native"><figcaption><span class="dots"></span>Settings ▸ LLM Provider (Mac)'
+                   f'<span class="drawn">native render · AzureScenarioFixture.{settings}</span></figcaption>'
+                   + _pic(f"settings-{settings}-light", f"settings-{settings}-dark", "pane") + "</figure>")
+    if run and (NATIVE / f"{run}-light-sidebar.png").exists():
+        out.append('<figure class="frame native"><figcaption><span class="dots"></span>Sidebar row and its popover (Mac)'
+                   f'<span class="drawn">native render · {run}</span></figcaption>'
+                   + _pic(f"{run}-light-sidebar", f"{run}-dark-sidebar", "row")
+                   + _pic(f"{run}-light-popover", f"{run}-dark-popover", "pop")
+                   + "</figure>")
+    return "".join(out)
+
+
 HELP = ["help-run", "help-analyze", "help-doctor", "help-configure", "help-use"]
 
 
@@ -181,7 +220,12 @@ def main() -> None:
             frames.append(term(c, '<span class="tag after">after</span>'))
         else:
             frames.append(term(c))
-        frames.append(mac_frame(strings, cell, run, STATUS.get(cid, "401")))
+        nat_s = NATIVE_SETTINGS_BY_ROW.get(cid) or NATIVE_SETTINGS.get(cell or "")
+        nat_r = NATIVE_RUN_BY_ROW.get(cid)
+        native = native_frames(nat_s, nat_r)
+        # A drawn frame stays only for what has no native render yet.
+        frames.append(native + mac_frame(strings, None if nat_s else cell, None if nat_r else run,
+                                         STATUS.get(cid, "401")))
         if sid:
             frames.append(server_frame(srv[sid]))
         body.append(f'<section id="{anchor}"><h2>{i}. {html.escape(title)}</h2>'
@@ -191,7 +235,7 @@ def main() -> None:
     for j, (title, cell) in enumerate(MAC_ONLY, n + 1):
         toc.append(f'<li><a href="#s{j}">{html.escape(title)} (Mac only)</a></li>')
         body.append(f'<section id="s{j}"><h2>{j}. {html.escape(title)}</h2><p class="trigger">Mac only: the CLI has no equivalent state.</p>'
-                    f'<div class="row">{mac_frame(strings, cell, None)}</div></section>')
+                    f'<div class="row">{native_frames(NATIVE_SETTINGS.get(cell), None) or mac_frame(strings, cell, None)}</div></section>')
     k = n + len(MAC_ONLY) + 1
     toc.append(f'<li><a href="#s{k}">Help text</a></li>')
     body.append(f'<section id="s{k}"><h2>{k}. Help text</h2><div class="row">' + "".join(term(cli[h]) for h in HELP) + "</div></section>")
@@ -231,6 +275,9 @@ h2 {{ font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); m
 .frame {{ margin:0; border:1px solid var(--bn-colour-border); border-radius:10px; overflow:hidden; background:var(--bn-colour-bg); box-shadow:0 1px 3px var(--bn-colour-shadow); }}
 .frame figcaption {{ display:flex; gap:8px; align-items:center; padding:6px 10px; font-size:12px; background:var(--bn-colour-hover); border-bottom:1px solid var(--bn-colour-border); }}
 .dots {{ width:34px; height:10px; background:radial-gradient(circle at 5px 5px,#ff5f57 4px,transparent 5px),radial-gradient(circle at 17px 5px,#febc2e 4px,transparent 5px),radial-gradient(circle at 29px 5px,#28c840 4px,transparent 5px); }}
+.native img.pane {{ width:440px; display:block; }} .native img.row {{ width:290px; display:block; }}
+.native img.pop {{ width:360px; display:block; border-top:1px solid var(--bn-colour-border); }}
+@media (max-width: 700px) {{ .native img.pane, .native img.row, .native img.pop {{ width:100%; }} }}
 .exit, .drawn, .tag {{ margin-left:auto; font-family:var(--bn-font-mono); font-size:11px; color:var(--bn-colour-muted); }}
 .tag.before {{ color:#b25000; }} .tag.after {{ color:#1a7f37; }}
 .term .screen {{ background:#1e1e1e; color:#e6e6e6; padding:10px 12px; width:80ch; max-width:calc(100vw - 80px); overflow-x:auto; }}
@@ -257,7 +304,7 @@ ol.toc {{ columns:2; }}
 </style></head><body>
 <header><h1>Azure scenarios: what a researcher sees</h1>
 <p class="key">Captured from the running code at {html.escape(cur["sha"])}{" (before: " + html.escape(before["sha"]) + ")" if before else ""}. Key: framed boxes are the product; hatched boxes are commentary. {html.escape(shot_note)}</p></header>
-<div class="commentary"><p>CLI frames are the CLI's own output (Rich colours kept) against a fake Azure on this machine that answers with bodies Azure really sent. The fake's address is shown as a placeholder resource URL and the home folder as ~. Mac frames place the shipped strings (by locale key) in the state the Swift code picks; the file and line under each frame says where. Web frames are the refusal the server raises and the sentence the SPA shows for its reason.</p></div>
+<div class="commentary"><p>CLI frames are the CLI's own output (Rich colours kept) against a fake Azure on this machine that answers with bodies Azure really sent. The fake's address is shown as a placeholder resource URL and the home folder as ~. Mac frames marked <b>native render</b> are the app's own views (the real Settings pane, the real AppKit sidebar row and diagnostic popover) drawn off-screen by <code>AzureScenarioRenderTests</code>: the pane shows a fake configuration and the verdict the real validator gave against a recorded Azure body, and each run row is the recorded run output passed through the Mac's own failure path. They follow your light or dark setting. The sidebar row is drawn unselected, because a view bitmap cannot draw the selection material. Frames marked <b>drawn from source</b> remain only where no native render exists yet; they place the shipped strings by locale key. Web frames are the refusal the server raises and the sentence the SPA shows for its reason.</p></div>
 {shots_html}
 <nav><ol class="toc">{"".join(toc)}</ol></nav>
 {"".join(body)}

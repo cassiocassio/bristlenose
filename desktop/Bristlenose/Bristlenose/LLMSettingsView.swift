@@ -58,10 +58,11 @@ struct LLMSettingsView: View {
     /// True only under `init(measuring:)`.
     private let measuring: Bool
 
-    /// A Diagnostics ▸ Azure Settings fixture, overlaid at read time. Never
-    /// written by validation, so a check landing mid-visit cannot clobber it.
-    /// Dropped on leaving Azure and when the package re-adds the pane.
-    @State private var fixture: AzureSettingsFixture?
+    /// A Diagnostics ▸ Azure Settings (or, in Debug, Azure Scenarios) fixture,
+    /// overlaid at read time. Never written by validation, so a check landing
+    /// mid-visit cannot clobber it. Dropped on leaving Azure and when the
+    /// package re-adds the pane.
+    @State private var fixture: AzurePaneFixture?
 
     init() { measuring = false }
 
@@ -72,9 +73,11 @@ struct LLMSettingsView: View {
     /// `List`, and the on-appear pass reads the real Keychain and can fire a
     /// billed validation round-trip — neither belongs in a test. Production
     /// always uses `init()`.
-    init(measuring provider: LLMProvider, fixture: AzureSettingsFixture? = nil) {
+    init(measuring provider: LLMProvider, fixture: AzureSettingsFixture? = nil,
+         scenario: AzureScenarioVerdict? = nil) {
         _selectedProvider = State(initialValue: provider)
-        _fixture = State(initialValue: fixture)
+        _fixture = State(initialValue: scenario.map(AzurePaneFixture.shipped)
+                         ?? fixture.map(AzurePaneFixture.proposed))
         measuring = true
     }
 
@@ -103,7 +106,10 @@ struct LLMSettingsView: View {
             // collected FIRST, before the Keychain sweep below can stall past its
             // three-second lifetime (an ad-hoc debug build waits on a prompt).
             fixture = nil
-            let requestedFixture = AzureSettingsFixture.takePending()
+            var requestedFixture = AzureSettingsFixture.takePending().map(AzurePaneFixture.proposed)
+            #if DEBUG
+            if let scenario = AzureScenarioFixture.takePending() { requestedFixture = .shipped(scenario) }
+            #endif
             // Quit has no exit of its own here, so it asks for the drafts (R38).
             // Never cleared: the pane outlives its tab and window, so a paste
             // whose save failed on close is still there for quit to try again,
@@ -176,7 +182,10 @@ struct LLMSettingsView: View {
         // copy-rows is a bigger shape change than most switches.
         .onChange(of: heightSignature) { _, _ in refit(exact: fixture != nil) }
         .onReceive(NotificationCenter.default.publisher(for: .azureSettingsFixture)) { note in
-            if let requested = note.object as? AzureSettingsFixture { apply(requested) }
+            if let requested = note.object as? AzureSettingsFixture { apply(.proposed(requested)) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .azureScenarioFixture)) { note in
+            if let verdict = note.object as? AzureScenarioVerdict { apply(.shipped(verdict)) }
         }
         // Refresh "Last verified" relative-time labels every 30s so they
         // don't go stale (e.g. "1 minute ago" forever).
@@ -196,7 +205,7 @@ struct LLMSettingsView: View {
         [selectedProvider.rawValue,
          String(describing: statusFor(selectedProvider)),
          failure(for: selectedProvider)?.resolved(i18n) ?? "",
-         fixture?.rawValue ?? "",
+         fixture?.id ?? "",
          keyDrafts.failed.contains(selectedProvider) ? "keyNotSaved" : "",
          useCustomModel ? "custom" : "listed"].joined(separator: "|")
     }
@@ -439,7 +448,7 @@ struct LLMSettingsView: View {
                       ? i18n.t("desktop.llmSettings.hideApiKey")
                       : i18n.t("desktop.llmSettings.showApiKey"))
 
-                if !keyDrafts.text(selectedProvider).isEmpty {
+                if !apiKeyBinding(for: selectedProvider).wrappedValue.isEmpty {
                     // macOS inline-clear convention: xmark.circle.fill
                     // glyph, borderless. Matches Spotlight, Safari URL bar,
                     // every NSSearchField in System Settings.
@@ -484,7 +493,10 @@ struct LLMSettingsView: View {
     /// write that lands after a row change goes to the row it was typed in, not
     /// to whichever row is selected by then.
     private func apiKeyBinding(for provider: LLMProvider) -> Binding<String> {
-        Binding(
+        if provider == .azure, let shown = fixture?.shownConfig {
+            return .constant(shown.hasKey ? String(repeating: "x", count: 32) : "")
+        }
+        return Binding(
             get: { keyDrafts.text(provider) },
             set: { keyDrafts.edit(provider, $0) }
         )
@@ -712,17 +724,26 @@ struct LLMSettingsView: View {
     @FocusState private var azureDeploymentFocused: Bool
     @FocusState private var azureAPIVersionFocused: Bool
 
+    /// The saved value, or a shipped scenario's while one is shown (read-only,
+    /// so a screenshot never carries the real configuration).
+    private func azureField(
+        _ saved: Binding<String>, _ path: KeyPath<AzureScenarioVerdict, String>
+    ) -> Binding<String> {
+        guard let shown = fixture?.shownConfig else { return saved }
+        return .constant(shown[keyPath: path])
+    }
+
     private var azureSection: some View {
         Section(i18n.t("desktop.llmSettings.azureSection")) {
-            TextField(i18n.t("desktop.llmSettings.azureEndpoint"), text: $azureEndpoint)
+            TextField(i18n.t("desktop.llmSettings.azureEndpoint"), text: azureField($azureEndpoint, \.endpoint))
                 .textFieldStyle(.roundedBorder)
                 .focused($azureEndpointFocused)
                 .onSubmit { commitAzure() }
-            TextField(i18n.t("desktop.llmSettings.azureDeployment"), text: $azureDeployment)
+            TextField(i18n.t("desktop.llmSettings.azureDeployment"), text: azureField($azureDeployment, \.deployment))
                 .textFieldStyle(.roundedBorder)
                 .focused($azureDeploymentFocused)
                 .onSubmit { commitAzure() }
-            TextField(i18n.t("desktop.llmSettings.azureAPIVersion"), text: $azureAPIVersion)
+            TextField(i18n.t("desktop.llmSettings.azureAPIVersion"), text: azureField($azureAPIVersion, \.apiVersion))
                 .textFieldStyle(.roundedBorder)
                 .focused($azureAPIVersionFocused)
                 .onSubmit { commitAzure() }
@@ -819,7 +840,7 @@ struct LLMSettingsView: View {
     // MARK: - Status helpers
 
     private func statusFor(_ provider: LLMProvider) -> ProviderStatus {
-        if provider == .azure, fixture != nil { return .invalid }
+        if provider == .azure, let fixture { return fixture.status }
         return statuses[provider, default: .notSetUp]
     }
 
@@ -830,7 +851,7 @@ struct LLMSettingsView: View {
         return statusErrors[provider]
     }
 
-    private func apply(_ requested: AzureSettingsFixture) {
+    private func apply(_ requested: AzurePaneFixture) {
         selectedProvider = .azure
         fixture = requested
     }

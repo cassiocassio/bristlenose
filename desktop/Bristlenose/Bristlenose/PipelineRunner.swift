@@ -3193,10 +3193,7 @@ var args = ["run", project.path, "--no-serve"]
             // The run's provider rides along (unused by `resolved`) so the
             // sidebar row can say "Gemini key rejected" without re-deriving
             // it at display time, when the user may have switched.
-            summary = msg.map {
-                FailureMessage(vars: namedProvider.map { ["provider": $0.displayName] } ?? [:],
-                               english: $0)
-            } ?? FailureMessage.failure(for: cat, provider: namedProvider)
+            summary = Self.failureSummary(category: cat, message: msg, provider: namedProvider)
         } else {
             category = Self.categoriseFailure(
                 lines: lines, exitStatus: status, projectName: project?.name,
@@ -3563,6 +3560,17 @@ var args = ["run", project.path, "--no-serve"]
     /// or `nil` when the events log is missing, the most recent event isn't
     /// `run_failed`, the line can't be decoded, or the terminus predates this
     /// attempt (see `terminusIsCurrentAttempt`).
+    /// The sentence a failed run shows, from the cause its events log recorded.
+    /// One function so a Diagnostics fixture built from a recorded cause shows
+    /// exactly what a real run's would (`AzureScenarioFixture`).
+    static func failureSummary(
+        category: PipelineFailureCategory, message: String?, provider: LLMProvider?
+    ) -> FailureMessage {
+        message.map {
+            FailureMessage(vars: provider.map { ["provider": $0.displayName] } ?? [:], english: $0)
+        } ?? FailureMessage.failure(for: category, provider: provider)
+    }
+
     private static func deriveFailureFromEvents(
         project: Project, spawnedAt: Date?, attachedFromOrphan: Bool
     ) -> (PipelineFailureCategory, String?, LLMProvider?)? {

@@ -641,10 +641,6 @@ def ffmpeg() -> None:
 # once rather than once per test (the shape of 7d32124a's `symlinks` and
 # d708247c's `node`). Each keeps exactly the platforms its per-test guards
 # skipped on; different properties stay in different fixtures.
-
-
-# ---------------------------------------------------------------------------
-# open-files: Windows will not move, rename or delete a file that is held open
 # ---------------------------------------------------------------------------
 
 
@@ -761,6 +757,11 @@ def run_paid_autocode(
 
 
 # ---------------------------------------------------------------------------
+# open-files: Windows will not move, rename or delete a file that is held open
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
 def open_files_movable() -> None:
     """Skip where a file held open cannot be moved, renamed or deleted: Windows.
 

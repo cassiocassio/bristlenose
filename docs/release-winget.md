@@ -108,7 +108,9 @@ user, run `packaging/windows/winget-accept.ps1 -Installer <setup.exe>
 winget serves, checks the refusal while `serve` runs, upgrades, runs doctor and a
 real transcription, checks that uninstalling while `serve` runs returns promptly
 with nothing left waiting, and uninstalls (add `-CpuPaths` for the forced CPU
-paths). Every step has a timeout and the log is kept. Written 19 Nov 2026 and not
+paths). Every step has a timeout and the log is kept. Only PASSED (exit 0) clears
+the step: INCOMPLETE (exit 2) means a check did not run (no winget on the guest,
+no hash given, no voice to make the test audio) and lists which. Written 19 Nov 2026 and not
 yet run when written; the test list and its reasoning are in
 `docs/design-windows-linux-hardware-testing.md` §3.3. `winget install --manifest`
 is not a substitute before step 3: winget downloads from `InstallerUrl`.

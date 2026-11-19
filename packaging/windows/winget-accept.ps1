@@ -20,10 +20,16 @@
        of a spoken WAV, words checked. The first one downloads a 1.6 GB model.
        With -CpuPaths, the same transcription again under each forced CPU path.
     5. Uninstall while `serve` runs: `winget uninstall` must return within the
-       timeout, the app must still be there, and no uninstaller process may be
-       left waiting on a dialog nobody can see.
+       timeout having reached the uninstaller and had it refuse (a non-zero exit,
+       not "no package found"), the app must still be there, and no uninstaller
+       process may be left waiting on a dialog nobody can see.
     6. Uninstall with nothing running: the folder, the PATH entry and the
        Apps & Features entry all go.
+
+  The verdict is PASSED (exit 0) only when every check ran and passed; any
+  FAIL is FAILED (exit 1); otherwise a skipped check makes it INCOMPLETE
+  (exit 2), with the skipped checks listed. Without winget, steps 1, 2 and 5
+  are skipped, so a guest without winget can never pass.
 
   What it cannot do: the SmartScreen check (download the installer in Edge and
   double-click it) needs a person; the run prints that reminder at the end.
@@ -35,8 +41,9 @@
   appears. Every external command here has a timeout, so a hang is a FAIL with
   its output kept, never a stuck run.
 
-  Written 19 Nov 2026 in a session with no Windows machine: it had not run
-  anywhere when it was committed. Treat its first run as a test of the script
+  Written 19 Nov 2026 in a session with no Windows machine, then revised after
+  an independent review for checks that could pass without testing anything:
+  it had not run anywhere when it was committed. Treat its first run as a test of the script
   as much as of the installer, and fix it in place.
 
 .EXAMPLE
@@ -121,7 +128,7 @@ function Tail([string]$Text, [int]$Chars = 300) {
 
 function Installed() { Test-Path $ArpKey }
 function InstalledVersion() {
-    if (-not (Test-Path $Exe)) { return $null }
+    if (-not (Test-Path $Exe)) { throw "bristlenose.exe is missing at $Exe" }
     $r = Invoke-Timed $Exe "--version" 60
     if ($r.TimedOut -or $r.ExitCode -ne 0) { throw "--version: exit $($r.ExitCode) $(Tail $r.Text)" }
     if ($r.Text -match "bristlenose\s+(\S+)") { return $Matches[1] }
@@ -132,8 +139,14 @@ function UserPathHasApp() {
     return ($p -split ";" | Where-Object { $_.TrimEnd("\") -ieq $App.TrimEnd("\") }).Count -gt 0
 }
 function UninstallerProcesses() {
-    # Inno's uninstaller copies itself to %TEMP% as _iuXXXX.tmp and runs that.
-    Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like "_iu*" -or $_.ProcessName -like "unins*" }
+    # Inno's uninstaller copies itself to %TEMP% as _iuXXXX.tmp and runs that. The
+    # name pattern is unverified for Inno 7, so a .tmp image under TEMP counts too.
+    $temp = [IO.Path]::GetTempPath().TrimEnd("\")
+    Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        if ($_.ProcessName -like "_iu*" -or $_.ProcessName -like "unins*") { return $true }
+        try { $image = $_.Path } catch { $image = $null }
+        [bool]($image -and $image -like "$temp\*" -and $image -like "*.tmp")
+    }
 }
 function WaitFor([scriptblock]$Condition, [int]$Seconds) {
     for ($i = 0; $i -lt $Seconds; $i++) { if (& $Condition) { return $true }; Start-Sleep 1 }
@@ -141,36 +154,72 @@ function WaitFor([scriptblock]$Condition, [int]$Seconds) {
 }
 
 $script:serve = $null
+function PortAnswers() {
+    $c = New-Object System.Net.Sockets.TcpClient
+    try { $c.Connect("127.0.0.1", $Port); return $true } catch { return $false } finally { $c.Close() }
+}
+function ServeAlive() { return [bool]($script:serve -and -not $script:serve.HasExited) }
 function Start-Serve() {
-    if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) {
-        throw "port $Port is already in use"
-    }
+    # Asked by connecting, not Get-NetTCPConnection, whose failure reads as "free".
+    if (PortAnswers) { throw "port $Port is already in use" }
     $project = Join-Path $WorkDir "serve-project"
     New-Item -ItemType Directory -Force $project | Out-Null
     $log = Join-Path $WorkDir ("serve-{0}" -f (Get-Date -Format "HHmmss"))
     $script:serve = Start-Process -PassThru -WindowStyle Hidden -FilePath $Exe `
         -ArgumentList "serve `"$project`" --port $Port --no-open" `
         -RedirectStandardOutput "$log.out" -RedirectStandardError "$log.err"
-    $up = WaitFor {
-        if ($script:serve.HasExited) { return $true }
-        $c = New-Object System.Net.Sockets.TcpClient
-        try { $c.Connect("127.0.0.1", $Port); return $true } catch { return $false } finally { $c.Close() }
-    } 90
+    $up = WaitFor { if ($script:serve.HasExited) { return $true }; PortAnswers } 90
     if ($script:serve.HasExited -or -not $up) {
         $err = Get-Content "$log.err" -Raw -ErrorAction SilentlyContinue
-        Stop-Serve
+        try { $null = Stop-Serve } catch { }
         throw "serve did not start on port ${Port}: $(Tail $err)"
     }
     "serve pid $($script:serve.Id) on port $Port"
 }
 function Stop-Serve() {
     if ($script:serve -and -not $script:serve.HasExited) {
-        Stop-Tree $script:serve.Id
-        $null = WaitFor { $script:serve.HasExited } 30
+        $id = $script:serve.Id
+        Stop-Tree $id
+        if (-not (WaitFor { $script:serve.HasExited } 30)) { throw "serve (pid $id) still running after taskkill" }
     }
     $script:serve = $null
     # Windows releases the image lock a moment after the process goes.
-    $null = WaitFor { -not (Get-Process -Name bristlenose -ErrorAction SilentlyContinue) } 30
+    if (-not (WaitFor { -not (Get-Process -Name bristlenose -ErrorAction SilentlyContinue) } 30)) {
+        throw "a bristlenose.exe is still running after serve was stopped"
+    }
+    "stopped"
+}
+
+function ListedVersion([string]$Version) {
+    $r = Invoke-Timed $winget "list --id $PackageId -e --accept-source-agreements --disable-interactivity" 120
+    $row = '(?m)' + [regex]::Escape($PackageId) + '\s+' + [regex]::Escape($Version) + '(\s|$)'  # single quotes: no $ expansion
+    if ($r.TimedOut -or $r.Text -notmatch $row) { throw "no $PackageId $Version row: $(Tail $r.Text)" }
+    "listed"
+}
+
+# Transcribe the WAV in a fresh folder and find the words in what this run wrote
+# (transcripts-raw only, as smoke.ps1 reads it), with extra environment for the run.
+function Transcribe([string]$Dir, [hashtable]$Vars) {
+    if (Test-Path (Join-Path $Dir "bristlenose-output")) { throw "$Dir already has output; use a fresh -WorkDir" }
+    $saved = @{}
+    foreach ($k in $Vars.Keys) {
+        $saved[$k] = [Environment]::GetEnvironmentVariable($k, "Process")
+        [Environment]::SetEnvironmentVariable($k, $Vars[$k], "Process")
+    }
+    try {
+        $clock = [Diagnostics.Stopwatch]::StartNew()
+        $r = Invoke-Timed $Exe "transcribe `"$Dir`"" 2400
+        $secs = [int]$clock.Elapsed.TotalSeconds
+    } finally {
+        foreach ($k in $Vars.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k], "Process") }
+    }
+    if ($r.TimedOut -or $r.ExitCode -ne 0) { throw "exit $($r.ExitCode): $(Tail $r.Text)" }
+    $raw = Join-Path $Dir "bristlenose-output\transcripts-raw"
+    # Joined into one string: -match on an array filters it instead of testing it.
+    $txt = (Get-ChildItem -Filter *.txt $raw -ErrorAction SilentlyContinue |
+        ForEach-Object { Get-Content -Raw -Encoding UTF8 $_.FullName }) -join "`n"
+    if ($txt -notmatch $Words) { throw "no '$Words' in $raw : $(Tail $txt)" }
+    [pscustomobject]@{ Seconds = $secs; Text = $r.Text }
 }
 
 function Run-Installer([string]$Label) {
@@ -215,13 +264,18 @@ try {
             if ($hash -ine $ExpectedSha256) { throw "expected $ExpectedSha256, got $hash" }
             "matches"
         }
+    } else {
+        Skip "installer hash matches" "no -ExpectedSha256: nothing ties these bytes to the ones submitted"
     }
     if (-not $NewVersion) { throw "cannot read a version from the installer's file name" }
+    if ([version]$NewVersion -le [version]$Baseline) {
+        throw "the installer ($NewVersion) is not newer than -Baseline $Baseline, so nothing would be upgraded"
+    }
 
     if (Installed) {
         if (-not $Reset) { throw "Bristlenose is already installed for this user; pass -Reset to remove it first" }
         Write-Host "   -Reset: removing the installed Bristlenose first"
-        Stop-Serve
+        $null = Stop-Serve
         Get-Process -Name bristlenose -ErrorAction SilentlyContinue | Stop-Process -Force
         $un = (Get-ItemProperty $ArpKey).UninstallString -replace '"', ''
         $null = Invoke-Timed $un "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" 300
@@ -244,11 +298,7 @@ try {
         }
         $haveBaseline = $script:haveBaseline
         if ($haveBaseline) {
-            Check "winget list finds $Baseline" {
-                $r = Invoke-Timed $winget "list --id $PackageId -e --accept-source-agreements --disable-interactivity" 120
-                if ($r.TimedOut -or $r.Text -notmatch [regex]::Escape($Baseline)) { throw (Tail $r.Text) }
-                "listed"
-            }
+            Check "winget list finds $Baseline" { ListedVersion $Baseline }
         }
     } else {
         Skip "winget install $Baseline" "no winget"
@@ -262,19 +312,27 @@ try {
         $serving = $script:serving
         if ($serving) {
             Check "installer refuses while running (exit 7)" {
+                if (-not (ServeAlive)) { throw "serve had exited before the installer ran; nothing was tested" }
                 $r = Run-Installer "while-running"
                 if ($r.TimedOut) { throw "no exit in 10 min: waiting on a dialog?" }
+                if (-not (ServeAlive)) { throw "serve exited while the installer ran (exit $($r.ExitCode))" }
                 if ($r.ExitCode -ne 7) { throw "exit $($r.ExitCode), expected 7" }
-                "exit 7"
+                # bristlenose.iss logs this when its lock probe refuses.
+                $log = Get-Content -Raw (Join-Path $WorkDir "setup-while-running.log") -ErrorAction SilentlyContinue
+                if ($log -notmatch "bristlenose\.exe is in use") { throw "exit 7, but the setup log shows no running-check refusal" }
+                "exit 7, refused by the running check"
             }
             Check "$Baseline still works after the refusal" {
                 if (-not (Test-Path (Join-Path $App "_internal"))) { throw "_internal is gone" }
                 $got = InstalledVersion
                 if ($got -ne $Baseline) { throw "--version reads $got" }
-                "bristlenose $got"
+                # --version returns before any native library loads (smoke.ps1).
+                $d = Invoke-Timed $Exe "doctor --self-test" 300
+                if ($d.TimedOut -or $d.ExitCode -ne 0) { throw "doctor --self-test: exit $($d.ExitCode): $(Tail $d.Text)" }
+                "bristlenose $got, self-test passes"
             }
         }
-        Stop-Serve
+        Check "serve stopped" { Stop-Serve }
     } else {
         Skip "upgrade refusal while running" "no baseline install"
     }
@@ -294,12 +352,16 @@ try {
         "bristlenose $got"
     }
     Check "user PATH has the app folder" { if (-not (UserPathHasApp)) { throw "not in HKCU\Environment Path" }; $App }
+    Check "Apps & Features reads $NewVersion" {
+        if (-not (Installed)) { throw "no $ArpKey" }
+        $shown = (Get-ItemProperty $ArpKey).DisplayVersion
+        if ($shown -ne $NewVersion) { throw "DisplayVersion is '$shown'" }
+        "DisplayVersion $shown"
+    }
     if ($winget) {
-        Check "winget list reports $NewVersion" {
-            $r = Invoke-Timed $winget "list --id $PackageId -e --accept-source-agreements --disable-interactivity" 120
-            if ($r.TimedOut -or $r.Text -notmatch [regex]::Escape($NewVersion)) { throw (Tail $r.Text) }
-            "listed"
-        }
+        Check "winget list reports $NewVersion" { ListedVersion $NewVersion }
+    } else {
+        Skip "winget list reports $NewVersion" "no winget"
     }
 
     # ---- 4. The product works ---------------------------------------------
@@ -333,51 +395,46 @@ try {
         }
         if ($haveWav) {
             Check "transcribe a spoken WAV" {
-                $r = Invoke-Timed $Exe "transcribe `"$study`"" 2400
-                if ($r.TimedOut -or $r.ExitCode -ne 0) { throw "exit $($r.ExitCode): $(Tail $r.Text)" }
-                # Joined into one string: -match on an array filters it instead of testing it.
-                $txt = (Get-ChildItem -Recurse -Filter *.txt (Join-Path $study "bristlenose-output") -ErrorAction SilentlyContinue |
-                    Get-Content -Raw) -join "`n"
-                if ($txt -notmatch $Words) { throw "no '$Words' in the transcript: $(Tail $txt)" }
-                "transcript has '$Words'"
+                $t = Transcribe $study @{}
+                "transcript has '$Words' ($($t.Seconds) s)"
             }
-            if ($CpuPaths) {
-                # CTranslate2 picks its backend by CPU vendor (MKL only on Intel) and its
-                # kernels by instruction set; these steer both. Never force an instruction
-                # set the CPU lacks: AVX-512 is not in the list for that reason.
-                $paths = @(
-                    @{ Name = "intel-avx2"; Env = @{ CT2_FORCE_CPU_ISA = "AVX2"; MKL_CBWR = "AVX2" } },
-                    @{ Name = "non-mkl"; Env = @{ CT2_USE_MKL = "0" } },
-                    @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE" } }
-                )
-                foreach ($path in $paths) {
-                    # Not $name: variable names ignore case, and inside Check's body
-                    # $name would be Check's own $Name parameter, the label.
-                    $pathName = $path.Name
-                    $vars = $path.Env
-                    Check "transcribe, CPU path $pathName" {
-                        $dir = Join-Path $WorkDir "cpu-$pathName"
-                        New-Item -ItemType Directory -Force $dir | Out-Null
-                        Copy-Item (Join-Path $study "hello.wav") $dir
-                        $saved = @{}
-                        foreach ($k in $vars.Keys) {
-                            $saved[$k] = [Environment]::GetEnvironmentVariable($k, "Process")
-                            [Environment]::SetEnvironmentVariable($k, $vars[$k], "Process")
+        }
+        if ($CpuPaths -and -not $haveWav) { Skip "transcribe, forced CPU paths" "no spoken WAV" }
+        if ($CpuPaths -and $haveWav) {
+            # CTranslate2 picks its backend by CPU vendor (MKL only on Intel) and its
+            # kernels by instruction set; these steer both. Never force an instruction
+            # set the CPU lacks: AVX-512 is not in the list for that reason. MKL is
+            # forced on for the Intel path so an AMD guest runs it too. CT2_VERBOSE
+            # makes CTranslate2 print what it chose, and a path it did not take fails:
+            # without that, three runs of the default path would pass under three names.
+            # The exact wording of those lines is unverified: if the check fails on a
+            # first run with the lines shown, fix the patterns here, not the product.
+            $paths = @(
+                @{ Name = "intel-avx2"; Env = @{ CT2_FORCE_CPU_ISA = "AVX2"; MKL_CBWR = "AVX2"; CT2_USE_MKL = "1" };
+                   Expect = @("(?i)isa\W.*\bAVX2\b", "(?i)mkl\W.*\b(true|1|yes)\b") },
+                @{ Name = "non-mkl"; Env = @{ CT2_USE_MKL = "0" };
+                   Expect = @("(?i)mkl\W.*\b(false|0|no)\b") },
+                @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE" };
+                   Expect = @("(?i)isa\W.*\bGENERIC\b") }
+            )
+            foreach ($path in $paths) {
+                # Not $name: variable names ignore case, and inside Check's body
+                # $name would be Check's own $Name parameter, the label.
+                $pathName = $path.Name
+                $vars = $path.Env + @{ CT2_VERBOSE = "1" }
+                $expect = $path.Expect
+                Check "transcribe, CPU path $pathName" {
+                    $dir = Join-Path $WorkDir "cpu-$pathName"
+                    New-Item -ItemType Directory -Force $dir | Out-Null
+                    Copy-Item (Join-Path $study "hello.wav") $dir
+                    $t = Transcribe $dir $vars
+                    $chosen = ($t.Text -split "`r?`n" | Where-Object { $_ -match "(?i)\b(isa|mkl)\b" }) -join " | "
+                    foreach ($pattern in $expect) {
+                        if ($t.Text -notmatch $pattern) {
+                            throw "forced path not confirmed ($pattern); CTranslate2 said: $(Tail $chosen 200)"
                         }
-                        try {
-                            $clock = [Diagnostics.Stopwatch]::StartNew()
-                            $r = Invoke-Timed $Exe "transcribe `"$dir`"" 2400
-                            $secs = [int]$clock.Elapsed.TotalSeconds
-                        } finally {
-                            foreach ($k in $vars.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k], "Process") }
-                        }
-                        if ($r.TimedOut -or $r.ExitCode -ne 0) { throw "exit $($r.ExitCode): $(Tail $r.Text)" }
-                        $txt = (Get-ChildItem -Recurse -Filter *.txt (Join-Path $dir "bristlenose-output") -ErrorAction SilentlyContinue |
-                            Get-Content -Raw) -join "`n"
-                        if ($txt -notmatch $Words) { throw "no '$Words' in the transcript: $(Tail $txt)" }
-                        $set = ($vars.Keys | Sort-Object | ForEach-Object { "$_=$($vars[$_])" }) -join " "
-                        "'$Words' found in $secs s ($set)"
                     }
+                    "'$Words' in $($t.Seconds) s; $(Tail $chosen 160)"
                 }
             }
         }
@@ -391,10 +448,21 @@ try {
         Check "serve ($NewVersion) running" { $r = Start-Serve; $script:serving = $true; $r }
         $serving = $script:serving
         if ($serving) {
-            Check "winget uninstall returns promptly" {
-                $r = Invoke-Timed $winget "uninstall --id $PackageId -e --silent --accept-source-agreements --disable-interactivity" 180
+            Check "winget uninstall refuses promptly" {
+                if (-not (ServeAlive)) { throw "serve had exited before the uninstall ran; nothing was tested" }
+                $wlog = Join-Path $WorkDir "winget-uninstall-running.log"
+                $r = Invoke-Timed $winget ("uninstall --id $PackageId -e --silent --accept-source-agreements " +
+                    "--disable-interactivity --log `"$wlog`"") 180
                 if ($r.TimedOut) { throw "no exit in 3 min: the hidden-dialog wait is back. $(Tail $r.Text)" }
-                "exit $($r.ExitCode): $(Tail $r.Text 160)"
+                # Promptly is only half of it: winget must have reached the uninstaller and
+                # had it refuse. A winget that failed before running anything also returns
+                # promptly and also leaves the app in place.
+                if ($r.Text -match "(?i)No installed package found|Failed when searching|argument") {
+                    throw "the uninstaller never ran: $(Tail $r.Text)"
+                }
+                if ($r.ExitCode -eq 0) { throw "winget reported success, but nothing should have been removed: $(Tail $r.Text)" }
+                if (-not (ServeAlive)) { throw "serve exited during the uninstall (exit $($r.ExitCode))" }
+                "refused, exit $($r.ExitCode): $(Tail $r.Text 160)"
             }
             Check "no uninstaller left waiting" {
                 Start-Sleep 15
@@ -409,7 +477,7 @@ try {
                 "intact"
             }
         }
-        Stop-Serve
+        Check "serve stopped" { Stop-Serve }
         UninstallerProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
     } else {
         Skip "uninstall refusal while running" "no winget"
@@ -433,6 +501,12 @@ try {
     }
     Check "Apps & Features entry gone" { if (Installed) { throw "$ArpKey remains" }; "gone" }
     Check "PATH entry gone" { if (UserPathHasApp) { throw "still in HKCU\Environment Path" }; "gone" }
+    Check "no uninstaller left running" {
+        if (-not (WaitFor { -not (UninstallerProcesses) } 30)) {
+            throw "still running: $((UninstallerProcesses | ForEach-Object { "$($_.ProcessName) ($($_.Id))" }) -join ', ')"
+        }
+        "none"
+    }
     $cfg = Join-Path $env:USERPROFILE ".config\bristlenose"
     Write-Host ("   user config folder after uninstall: {0}" -f $(if (Test-Path $cfg) { "kept ($cfg)" } else { "none" }))
 }
@@ -440,14 +514,19 @@ catch {
     Record "FAIL" "run stopped" $_.Exception.Message
 }
 finally {
-    Stop-Serve
+    try { $null = Stop-Serve } catch { Record "FAIL" "serve stopped at the end" $_.Exception.Message }
     $fails = @($results | Where-Object { $_.Status -eq "FAIL" }).Count
     $notRun = @($results | Where-Object { $_.Status -eq "not run" }).Count
+    # A skipped step is not a passed one: the uninstall-while-running check, the
+    # point of the run, is among the steps that need winget.
+    $verdict = if ($fails) { "FAILED" } elseif ($notRun) { "INCOMPLETE" } else { "PASSED" }
     Write-Host ""
     Write-Host ("== {0}: {1} ok, {2} FAIL, {3} not run. Log and outputs: {4}" -f
-        $(if ($fails) { "FAILED" } else { "PASSED" }),
-        @($results | Where-Object { $_.Status -eq "ok" }).Count, $fails, $notRun, $WorkDir)
+        $verdict, @($results | Where-Object { $_.Status -eq "ok" }).Count, $fails, $notRun, $WorkDir)
+    foreach ($skipped in @($results | Where-Object { $_.Status -eq "not run" })) {
+        Write-Host ("   not run: {0} ({1})" -f $skipped.Name, $skipped.Detail) -ForegroundColor Yellow
+    }
     Write-Host "   Still a person's job: download the installer in Edge, double-click it, and note what SmartScreen shows."
     Stop-Transcript | Out-Null
 }
-if ($fails) { exit 1 } else { exit 0 }
+if ($fails) { exit 1 } elseif ($notRun) { exit 2 } else { exit 0 }

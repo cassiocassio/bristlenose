@@ -496,7 +496,10 @@ class TestCudaNeedsItsLibraries:
         pip_wheel.mkdir(parents=True)
         (pip_wheel / "libcublas.so.12").write_bytes(b"")
         assert hardware._library_loads("libcublas.so.12", None, set()) is False  # not on a path
-        monkeypatch.setenv("LD_LIBRARY_PATH", f"/nowhere:{pip_wheel}")
+        # Relative to the working folder: LD_LIBRARY_PATH is colon-separated, and on
+        # the Windows CI cell an absolute tmp path starts with a drive letter and colon.
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("LD_LIBRARY_PATH", "/nowhere:nvidia/cublas/lib")
         assert hardware._library_loads("libcublas.so.12", None, set()) is True
 
         monkeypatch.setenv("LD_LIBRARY_PATH", "")

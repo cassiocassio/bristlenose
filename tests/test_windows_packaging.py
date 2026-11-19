@@ -257,3 +257,80 @@ def test_the_windows_scripts_are_ascii() -> None:
     for script in WIN.glob("*.ps1"):
         text = script.read_bytes()
         assert text.isascii(), (script.name, [i for i, b in enumerate(text) if b > 127][:5])
+
+
+def test_the_cpu_path_patterns_match_what_ctranslate2_prints(tmp_path: Path) -> None:
+    """winget-accept.ps1 -CpuPaths fails a path unless CTranslate2 reports taking
+    it. The patterns are checked here against a real CTranslate2 run on a
+    two-token model built in place (no download), so a changed log line fails
+    this test instead of every path on a Windows guest. Each path's patterns
+    must match its own run and not the default run, or they prove nothing."""
+    import os
+    import re
+    import subprocess
+    import sys
+
+    import pytest
+
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("ctranslate2")
+    from ctranslate2 import specs
+
+    if not sys.platform.startswith("linux"):
+        pytest.skip("CTranslate2's MKL build is the x86-64 one; CI's Linux job has it")
+
+    d, ff, vocab = 8, 16, 10
+    rng = np.random.default_rng(0)
+
+    def weights(*shape: int) -> object:
+        return rng.random(shape, dtype=np.float32) - 0.5
+
+    enc = specs.TransformerEncoderSpec(1, 1)
+    enc.embeddings[0].weight = weights(vocab, d)
+    layer = enc.layer[0]
+    for norm in (layer.ffn.layer_norm, layer.self_attention.layer_norm, enc.layer_norm):
+        norm.gamma = np.ones(d, np.float32)
+        norm.beta = np.zeros(d, np.float32)
+    layer.ffn.linear_0.weight = weights(ff, d)
+    layer.ffn.linear_1.weight = weights(d, ff)
+    layer.self_attention.linear[0].weight = weights(3 * d, d)
+    layer.self_attention.linear[1].weight = weights(d, d)
+    model = specs.TransformerEncoderModelSpec(enc)
+    model.register_vocabulary([f"t{i}" for i in range(vocab)])
+    model.validate()
+    model.optimize(quantization=None)
+    model_dir = tmp_path / "tiny"
+    model_dir.mkdir()
+    model.save(str(model_dir))
+
+    script = (WIN / "winget-accept.ps1").read_text(encoding="utf-8")
+    entries = re.findall(
+        r'Name = "([\w-]+)"; Env = @\{([^}]*)\};\s*Expect = @\(([^)]*)\)', script,
+    )
+    assert {name for name, _, _ in entries} == {"intel-avx2", "non-mkl", "generic"}, entries
+
+    probe = (
+        "import sys, ctranslate2\n"
+        "ctranslate2.Encoder(sys.argv[1], device='cpu').forward_batch([['t1', 't2']])\n"
+    )
+
+    def run(extra: dict[str, str]) -> str:
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("CT2_", "MKL_"))}
+        env.update(extra, CT2_VERBOSE="1")
+        done = subprocess.run(
+            [sys.executable, "-c", probe, str(model_dir)],
+            capture_output=True, text=True, encoding="utf-8", env=env, timeout=120,
+        )
+        assert done.returncode == 0, done.stderr[-500:]
+        return done.stdout + done.stderr
+
+    default = run({})
+    assert "Selected ISA:" in default, default[-500:]
+    for name, env_block, expect_block in entries:
+        extra = dict(re.findall(r'(\w+) = "([^"]*)"', env_block))
+        patterns = re.findall(r'"([^"]+)"', expect_block)
+        output = run(extra)
+        for pattern in patterns:
+            assert re.search(pattern, output), (name, pattern, output[-600:])
+        assert not all(re.search(p, default) for p in patterns), (
+            f"{name}'s patterns also match the default run, so they prove nothing", patterns)

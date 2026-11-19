@@ -402,20 +402,26 @@ try {
         if ($CpuPaths -and -not $haveWav) { Skip "transcribe, forced CPU paths" "no spoken WAV" }
         if ($CpuPaths -and $haveWav) {
             # CTranslate2 picks its backend by CPU vendor (MKL only on Intel) and its
-            # kernels by instruction set; these steer both. Never force an instruction
-            # set the CPU lacks: AVX-512 is not in the list for that reason. MKL is
-            # forced on for the Intel path so an AMD guest runs it too. CT2_VERBOSE
-            # makes CTranslate2 print what it chose, and a path it did not take fails:
-            # without that, three runs of the default path would pass under three names.
-            # The exact wording of those lines is unverified: if the check fails on a
-            # first run with the lines shown, fix the patterns here, not the product.
+            # kernels by instruction set; these steer both. It picks AVX2 for its own
+            # kernels even on an AVX-512 CPU (measured, 4.9.0), but MKL dispatches
+            # for itself, so MKL_CBWR pins MKL to what a typical Intel laptop runs.
+            # Never force an instruction set the CPU lacks. MKL is forced on for the
+            # Intel path so an AMD guest runs it too. CT2_VERBOSE makes CTranslate2
+            # print what it chose ("- Selected ISA: AVX2", "- Use Intel MKL: true",
+            # read from 4.9.0 on 19 Nov 2026) and MKL_VERBOSE makes MKL print the
+            # instruction set it was held to ("CNR:AVX2"); a path not taken fails.
+            # On an Intel CPU the CTranslate2 lines of the Intel path match the
+            # default run, so only CNR:AVX2 tells it apart. Without these, three runs
+            # of the default path would pass under three names.
+            # tests/test_windows_packaging.py runs CTranslate2 and checks every
+            # pattern against what it prints, and against the default run.
             $paths = @(
-                @{ Name = "intel-avx2"; Env = @{ CT2_FORCE_CPU_ISA = "AVX2"; MKL_CBWR = "AVX2"; CT2_USE_MKL = "1" };
-                   Expect = @("(?i)isa\W.*\bAVX2\b", "(?i)mkl\W.*\b(true|1|yes)\b") },
+                @{ Name = "intel-avx2"; Env = @{ CT2_FORCE_CPU_ISA = "AVX2"; MKL_CBWR = "AVX2"; CT2_USE_MKL = "1"; MKL_VERBOSE = "1" };
+                   Expect = @("Selected ISA: AVX2\b", "Use Intel MKL: true\b", "CNR:AVX2\b") },
                 @{ Name = "non-mkl"; Env = @{ CT2_USE_MKL = "0" };
-                   Expect = @("(?i)mkl\W.*\b(false|0|no)\b") },
-                @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE" };
-                   Expect = @("(?i)isa\W.*\bGENERIC\b") }
+                   Expect = @("Use Intel MKL: false\b") },
+                @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE"; MKL_VERBOSE = "1" };
+                   Expect = @("Selected ISA: GENERIC\b", "CNR:COMPATIBLE\b") }
             )
             foreach ($path in $paths) {
                 # Not $name: variable names ignore case, and inside Check's body

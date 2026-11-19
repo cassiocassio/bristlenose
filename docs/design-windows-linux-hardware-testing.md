@@ -41,8 +41,10 @@ What it covered, read honestly:
   `winget validate` and `winget install --manifest` ran there by hand (Win10 ships
   no winget).
 - **Without anyone deciding it, the typical-Intel-laptop CPU path**: a native Intel
-  CPU with AVX2 and no AVX-512, which is what most Intel laptops are. No other
-  machine we have takes that path (§2).
+  CPU with AVX2 and no AVX-512, which is what most Intel laptops are. *Corrected
+  19 Nov 2026:* less unique than first written. CTranslate2 picks AVX2 for its own
+  kernels on an AVX-512 Xeon too, so only MKL's own dispatch differs on aella, and
+  `MKL_CBWR=AVX2` pins that (§2, §6.2).
 
 What it never covered: SmartScreen or Smart App Control (files copied in carry no
 Mark of the Web), an AMD CPU, any GPU, realistic speed.
@@ -59,7 +61,11 @@ decides at runtime:
 - **Backend by CPU vendor**: Intel MKL only on a genuine Intel CPU; other vendors
   get a different backend. `CT2_USE_MKL` overrides.
 - **Code path by instruction set**: AVX-512, AVX2, AVX or generic. `CT2_FORCE_CPU_ISA`
-  overrides CTranslate2's own kernels; MKL has its own (`MKL_CBWR`).
+  overrides CTranslate2's own kernels; MKL has its own (`MKL_CBWR`). Measured on
+  19 Nov 2026 with CTranslate2 4.9.0 on an AVX-512 Xeon, with `CT2_VERBOSE=1` and a
+  model built in place: CTranslate2 reports `Selected ISA: AVX2` and
+  `Use Intel MKL: true` by default, while `MKL_VERBOSE=1` shows MKL itself running
+  AVX-512 (with AMX). `CT2_USE_MKL=0` switches the GEMMs to oneDNN.
 - **Device**: CUDA if it counts an NVIDIA GPU, which it does whenever a driver is
   present, whether or not the cuBLAS and cuDNN libraries it then needs are there.
 
@@ -67,10 +73,10 @@ Which path each machine takes:
 
 | Machine | Path | Stands in for |
 |---|---|---|
-| aella Server / Fedora (Xeon Platinum 8488C) | Intel, MKL, AVX-512 | servers, few laptops |
+| aella Server / Fedora (Xeon Platinum 8488C) | Intel, MKL; CTranslate2's kernels AVX2, MKL's AVX-512 (measured on a similar Xeon) | a typical Intel laptop, except inside MKL |
 | GitHub `windows-latest` / `ubuntu-latest` | depends on the CPU allocated: not checked | unknown |
 | Windows 11 on Arm, UTM (Prism) | emulated AVX2 (24H2+); vendor as Prism reports it: not checked | Snapdragon laptop users running the x64 build |
-| benbecula (Haswell), until retired | Intel, MKL, AVX2 | **a typical Intel laptop** |
+| benbecula (Haswell), until retired | Intel, MKL, AVX2 throughout | a typical Intel laptop, MKL included |
 | an AMD laptop | non-MKL backend | nothing, ever |
 | any NVIDIA GPU | CUDA, `float16` | nothing, ever |
 

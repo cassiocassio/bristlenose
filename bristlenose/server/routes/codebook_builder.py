@@ -419,11 +419,9 @@ async def submit_decisions(
     ``refine`` is set, the accept/reject reasons are folded back into the prompt
     via one LLM call and the sharper prompt is returned.
     """
-    # Asked before anything is written: a refusal after the commit below would answer
-    # "failed" for decisions that were in fact recorded and tags that were applied.
+    # The readiness check below runs before anything is written: a refusal after the
+    # commit would answer "failed" for decisions that were recorded and tags applied.
     settings = _load_settings_for(request)
-    if body.refine:
-        require_provider_callable(settings)
     db = _get_db(request)
     accepted_fb: list[cb.DecisionFeedback] = []
     rejected_fb: list[cb.DecisionFeedback] = []
@@ -434,6 +432,10 @@ async def submit_decisions(
         _check_project(db, project_id)
         td = _get_tag(db, tag_id)
         row = db.query(TagPrompt).filter_by(tag_definition_id=tag_id).first()
+        if body.refine and row is not None:
+            # Only when the refine will call the model; with no prompt yet it returns
+            # before any call, and an unready provider must not block the decisions.
+            require_provider_callable(settings)
         version = row.version if row else ""
         now = datetime.now(timezone.utc)
 

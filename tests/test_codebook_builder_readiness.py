@@ -125,3 +125,36 @@ def test_every_route_that_awaits_the_engine_is_guarded() -> None:
         )
         assert guarded, f"{fn.name} awaits the builder engine without require_provider_callable"
     assert len(awaiting) == 3, awaiting
+
+
+def test_decisions_with_no_prompt_yet_are_not_refused(client_with_coded_tag) -> None:  # noqa: F811
+    # refine defaults to true, but with no prompt row the route returns before any
+    # model call, so an unready provider must not block recording the decisions
+    # (code review, 19 Nov 2026).
+    client, tag_id = client_with_coded_tag
+    client.app.state.settings = BristlenoseSettings(**_AZURE_NO_ENDPOINT)
+    resp = client.post(
+        f"/api/projects/1/codebook/tags/{tag_id}/builder/decisions", json={"decisions": []},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+def test_two_keys_and_no_choice_is_refused_not_billed_to_a_default(client_with_coded_tag, monkeypatch) -> None:  # noqa: F811
+    # With two providers keyed and none chosen, the field default ("anthropic") would be
+    # billed for a vendor nobody picked; AutoCode refuses this with 409 and so does the
+    # builder (silent-failure review, 19 Nov 2026).
+    from bristlenose.config import ProviderResolution
+
+    client, tag_id = client_with_coded_tag
+    client.app.state.settings = BristlenoseSettings(
+        llm_provider="anthropic", anthropic_api_key="k1", openai_api_key="k2")
+    monkeypatch.setattr(
+        "bristlenose.config.provider_resolution_for",
+        lambda _s: ProviderResolution(status="ambiguous", provider="anthropic", configured=("anthropic", "openai"), source=""),
+    )
+    llm = AsyncMock(return_value=_synth_result())
+    with _patch_llm(llm):
+        resp = client.post(f"/api/projects/1/codebook/tags/{tag_id}/builder/synthesize")
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["reason"] == "provider_ambiguous"
+    llm.assert_not_called()

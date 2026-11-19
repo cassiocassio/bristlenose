@@ -439,7 +439,7 @@ class TestCheckBackend:
         assert result.status == CheckStatus.OK
 
     def test_nvidia_gpu_with_cuda(self) -> None:
-        """Linux x86_64 with NVIDIA GPU and working CUDA → OK."""
+        """Linux x86_64 with NVIDIA GPU and the CUDA libraries → OK."""
         mock_fw = MagicMock(__version__="1.2.1")
         mock_ct2 = MagicMock(__version__="4.6.3")
         mock_ct2.get_cuda_device_count.return_value = 1
@@ -452,6 +452,7 @@ class TestCheckBackend:
             patch("platform.system", return_value="Linux"),
             patch("platform.machine", return_value="x86_64"),
             patch("shutil.which", return_value=None),
+            patch("bristlenose.utils.hardware.cuda_libraries_missing", return_value=[]),
         ):
             result = check_backend()
         assert result.status == CheckStatus.OK
@@ -478,6 +479,168 @@ class TestCheckBackend:
         assert result.status == CheckStatus.WARN
         assert result.fix_key == "cuda_not_available"
         assert "NVIDIA GPU detected" in result.detail
+
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_nvidia_gpu_without_cublas(self) -> None:
+        """A driver without cuBLAS: ctranslate2 counts the GPU, transcription
+        cannot use it. doctor said "(CUDA)" here until 19 Nov 2026."""
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 1
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value="/usr/bin/nvidia-smi"),
+            patch(
+                "bristlenose.utils.hardware.cuda_libraries_missing",
+                return_value=["libcublas.so.12"],
+            ),
+        ):
+            result = check_backend()
+        assert result.status == CheckStatus.WARN
+        assert result.fix_key == "cuda_not_available"
+        assert "libcublas.so.12 not found" in result.detail
+        assert "(CUDA)" not in result.detail
+
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_a_windows_gpu_check_never_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On the Windows runner, the library check read a mocked ctranslate2's
+        __file__ and raised out of check_backend (found in review, 19 Nov 2026)."""
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 1
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setenv("PATH", "")
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Windows"),
+            patch("platform.machine", return_value="AMD64"),
+            patch("shutil.which", return_value="C:\\Windows\\System32\\nvidia-smi.exe"),
+        ):
+            result = check_backend()
+        assert result.status == CheckStatus.WARN
+        assert "cublas64_12.dll" in result.detail
+
+    @pytest.mark.parametrize(("chosen", "shown"), [("cpu", "(CPU, as set)"), ("cuda", "(CUDA, as set)")])
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_the_device_setting_is_what_doctor_reports(
+        self, chosen: str, shown: str, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """BRISTLENOSE_WHISPER_DEVICE decides the run, so doctor reports it, and a
+        chosen device on a working GPU draws no warning."""
+        import types
+
+        monkeypatch.setattr(sys, "platform", "linux")
+
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 1
+        settings = types.SimpleNamespace(whisper_device=chosen)
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value="/usr/bin/nvidia-smi"),
+            patch("bristlenose.utils.hardware.cuda_libraries_missing", return_value=[]),
+        ):
+            result = check_backend(settings)  # type: ignore[arg-type]
+        assert result.status == CheckStatus.OK
+        assert shown in result.detail
+
+    @pytest.mark.parametrize(
+        ("gpus", "missing", "status"),
+        [(0, [], CheckStatus.FAIL), (1, ["libcublas.so.12"], CheckStatus.WARN)],
+    )
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_a_forced_gpu_that_cannot_work_is_flagged(
+        self, gpus: int, missing: list[str], status: CheckStatus, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """BRISTLENOSE_WHISPER_DEVICE=cuda with no GPU got a green tick and a run
+        that would fail. With no GPU that is certain (FAIL); with a GPU whose
+        libraries the check cannot find it is only a warning, because the
+        setting exists for a setup the check misjudges."""
+        import types
+
+        monkeypatch.setattr(sys, "platform", "linux")
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = gpus
+        settings = types.SimpleNamespace(whisper_device="cuda")
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value=None),
+            patch("bristlenose.utils.hardware.cuda_libraries_missing", return_value=missing),
+        ):
+            result = check_backend(settings)  # type: ignore[arg-type]
+        assert result.status == status
+        assert result.fix_key == "cuda_forced_unavailable"
+        assert get_fix("cuda_forced_unavailable", "pip").startswith("BRISTLENOSE_WHISPER_DEVICE is set to cuda")
+
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_a_forced_gpu_on_a_mac_does_not_block_the_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On a Mac, cuda is ignored and the run uses the CPU, so a .env shared with a
+        Linux GPU box must not fail doctor (and with it the run's preflight)."""
+        import types
+
+        monkeypatch.setattr(sys, "platform", "darwin")
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 0
+        with (
+            patch.dict(sys.modules, {"faster_whisper": mock_fw, "ctranslate2": mock_ct2}),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value=None),
+        ):
+            result = check_backend(types.SimpleNamespace(whisper_device="cuda"))  # type: ignore[arg-type]
+        assert result.status == CheckStatus.OK
+        assert "(CPU)" in result.detail
+
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_the_winget_build_with_an_nvidia_gpu_says_cpu(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The frozen Windows build is CPU-only by design; doctor counted the GPU
+        anyway and said "(CUDA)" for a run that would use the CPU."""
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.8.2")
+        mock_ct2.get_cuda_device_count.return_value = 1
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Windows"),
+            patch("platform.machine", return_value="AMD64"),
+            patch("shutil.which", return_value="C:\\Windows\\System32\\nvidia-smi.exe"),
+        ):
+            result = check_backend()
+        assert result.status == CheckStatus.WARN
+        assert "(CUDA)" not in result.detail
+        assert "Windows installer build has no CUDA libraries" in result.detail
 
     def test_linux_cpu_only(self) -> None:
         """Linux x86_64, no GPU at all → OK with CPU."""
@@ -1988,10 +2151,27 @@ class TestGetFixGrid:
     # -- cuda_not_available: same for all methods --
 
     @pytest.mark.parametrize("method", ["snap", "brew", "pip"])
-    def test_cuda_not_available(self, method: str) -> None:
+    def test_cuda_not_available(self, method: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "platform", "linux")
         fix = get_fix("cuda_not_available", method)
         assert "CUDA" in fix
         assert "LD_LIBRARY_PATH" in fix
+        assert "BRISTLENOSE_WHISPER_DEVICE=cuda" in fix
+
+    def test_cuda_not_available_on_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A Windows user was told to `export LD_LIBRARY_PATH` (until 19 Nov 2026)."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        fix = get_fix("cuda_not_available", "pip")
+        assert "cublas64_12.dll" in fix and "PATH" in fix
+        assert "LD_LIBRARY_PATH" not in fix and "export" not in fix
+
+    def test_cuda_not_available_in_the_winget_build(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The installer's build is CPU-only by design: say so, and send nobody to
+        install a CUDA Toolkit the build cannot use."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        fix = get_fix("cuda_not_available", "winget")
+        assert "CPU" in fix
+        assert "Toolkit" not in fix and "LD_LIBRARY_PATH" not in fix
 
     # -- low_disk_space: same for all methods --
 

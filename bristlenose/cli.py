@@ -949,7 +949,13 @@ def _print_header(settings: BristlenoseSettings, *, show_provider: bool = True, 
         ).display_name
         parts.append(provider_name)
     if show_hardware:
+        from bristlenose.utils.hardware import HardwareInfo, effective_accelerator
+
         hw = detect_hardware()
+        used = effective_accelerator(hw, settings)
+        if used is not hw.accelerator:
+            # BRISTLENOSE_WHISPER_DEVICE overrides the hardware: name what runs.
+            hw = HardwareInfo(accelerator=used, cuda_available=used.value == "cuda")
         parts.append(hw.label)
     console.print(f"\nBristlenose [dim]{' · '.join(parts)}[/dim]\n")
     if show_provider and settings.llm_provider == "anyllm" and settings.anyllm_model:

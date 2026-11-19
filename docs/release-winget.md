@@ -101,6 +101,20 @@ Then `curl -sL` the public URL
 and hash the download. It must match the manifest. That URL is the one the manifest
 names, and winget refuses an installer whose hash differs.
 
+**3a. Acceptance run, before submitting.** In a Windows guest (aella Server for
+native x64, the UTM VM for a client edition), from a desktop session and as a normal
+user, run `packaging/windows/winget-accept.ps1 -Installer <setup.exe>
+-ExpectedSha256 <hash>` against the downloaded artefact. It installs the version
+winget serves, checks the refusal while `serve` runs, upgrades, runs doctor and a
+real transcription, checks that uninstalling while `serve` runs returns promptly
+with nothing left waiting, and uninstalls (add `-CpuPaths` for the forced CPU
+paths). Every step has a timeout and the log is kept. Only PASSED (exit 0) clears
+the step: INCOMPLETE (exit 2) means a check did not run (no winget on the guest,
+no hash given, no voice to make the test audio) and lists which. Written 19 Nov 2026 and not
+yet run when written; the test list and its reasoning are in
+`docs/design-windows-linux-hardware-testing.md` §3.3. `winget install --manifest`
+is not a substitute before step 3: winget downloads from `InstallerUrl`.
+
 **4. Dry run, then submit.** You need Komac (`HOMEBREW_NO_ASK=1 brew install komac`;
 2.16 on 8 Oct 2026) and a fork of winget-pkgs under the account (see Gotchas).
 
@@ -268,6 +282,11 @@ Each of these cost a cycle at least once.
   `docs/design-channel-version-lag.md`.
 
 **Testing the installer before submitting**
+
+- **`winget install --manifest` downloads from `InstallerUrl`**, so it cannot test an
+  installer before step 3 attaches it (the URL is a 404 until then). Before that, run
+  the installer itself with winget's switches for Inno (`/SP- /VERYSILENT
+  /SUPPRESSMSGBOXES /NORESTART`), which is what `winget-accept.ps1` does.
 
 - **GitHub's Windows runner can't install winget.** `Add-AppxPackage` fails with "does
   not have an appropriate application package for x64". CI therefore checks the

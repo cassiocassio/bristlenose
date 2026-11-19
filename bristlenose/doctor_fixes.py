@@ -516,26 +516,47 @@ def _fix_mlx_not_installed(method: str) -> str:
     )
 
 
-def _fix_cuda_not_available(_method: str) -> str:
+def _fix_cuda_not_available(method: str) -> str:
+    if method == "winget":
+        return (
+            "NVIDIA GPU found, but the Windows installer's build doesn't include\n"
+            "NVIDIA's CUDA libraries, so it transcribes on the CPU.\n"
+            "Transcription works; it is slower than it would be on the GPU."
+        )
+    override = (
+        "\nIf CUDA 12 is installed and this still shows, force the GPU with\n"
+        "BRISTLENOSE_WHISPER_DEVICE=cuda."
+    )
     if sys.platform == "win32":
         # No LD_LIBRARY_PATH on Windows: the CUDA DLLs are found through PATH, and the
         # toolkit installer normally adds its bin folder. Not run on a Windows GPU machine.
         return (
-            "NVIDIA GPU found but CUDA libraries aren't accessible.\n"
-            "Transcription will work on CPU but will be slower.\n\n"
-            "To enable GPU acceleration:\n"
-            "  1. Install CUDA 12.x: nvidia.com/cuda-downloads\n"
-            "  2. Check that the CUDA bin folder is on your PATH (the installer "
-            "normally adds it),\n"
-            "     for example C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.x\\bin\n\n"
-            + _new_terminal_note().rstrip()
+            "NVIDIA GPU found but the CUDA libraries Bristlenose uses\n"
+            "(cuBLAS 12) aren't installed. Transcription works on the CPU,\n"
+            "but slower.\n\n"
+            "To use the GPU:\n"
+            "  1. Install NVIDIA's CUDA Toolkit 12: developer.nvidia.com/cuda-downloads\n"
+            "  2. Check that its bin folder, which holds cublas64_12.dll, is on your\n"
+            "     PATH (the installer normally adds it), for example\n"
+            "     C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.x\\bin\n\n"
+            + _new_terminal_note()
+            + override.lstrip("\n")
         )
     return (
         "NVIDIA GPU found but CUDA libraries aren't accessible.\n"
         "Transcription will work on CPU but will be slower.\n\n"
         "To enable GPU acceleration:\n"
         "  1. Install CUDA 12.x: nvidia.com/cuda-downloads\n"
-        "  2. Set: export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+        "  2. Set: export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH\n"
+        + override
+    )
+
+
+def _fix_cuda_forced_unavailable(_method: str) -> str:
+    return (
+        "BRISTLENOSE_WHISPER_DEVICE is set to cuda, which makes Bristlenose\n"
+        "transcribe on an NVIDIA GPU even where it cannot find one ready to use.\n"
+        "Set it to auto (or remove it) to let Bristlenose choose, or to cpu."
     )
 
 
@@ -727,6 +748,7 @@ _FIX_TABLE: dict[str, Callable[[str], str]] = {
     "presidio_missing": _fix_presidio_missing,
     "mlx_not_installed": _fix_mlx_not_installed,
     "cuda_not_available": _fix_cuda_not_available,
+    "cuda_forced_unavailable": _fix_cuda_forced_unavailable,
     "low_disk_space": _fix_low_disk_space,
     "ollama_not_running": _fix_ollama_not_running,
     "ollama_not_installed": _fix_ollama_not_installed,

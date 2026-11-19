@@ -381,13 +381,50 @@ try:
 except (ImportError, OSError):
     _HAS_PRESIDIO = False
 
-_skip_no_presidio = pytest.mark.skipif(
+
+class TestExpectedYamlMatchesTranscript:
+    """The audit YAML agrees with the horror transcript. Free: no Presidio needed.
+
+    Until 19 Nov 2026 the one item with ``segment_time: null`` (the source filename,
+    in the transcript header) skipped on every slow run, and a timecode that named no
+    segment was only caught when someone ran ``-m slow`` with Presidio installed.
+    """
+
+    def test_every_timecode_names_a_segment(self) -> None:
+        timecodes = {tc for tc, _ in _parse_transcript_segments()}
+        missing = [
+            (item["segment_time"], item["text"])
+            for item in _load_expected()
+            if item.get("segment_time") is not None
+            and item["segment_time"] not in timecodes
+        ]
+        assert not missing, f"segment_time names no transcript segment: {missing}"
+
+    def test_null_segment_items_sit_outside_every_segment(self) -> None:
+        """PII outside every segment is never shown to Presidio: an expected miss."""
+        segments = [seg for _, seg in _parse_transcript_segments()]
+        transcript = TRANSCRIPT_PATH.read_text(encoding="utf-8")
+        null_items = [i for i in _load_expected() if i.get("segment_time") is None]
+        assert null_items, "the YAML has no segment_time: null item to check"
+        for item in null_items:
+            text = item["text"]
+            assert not item["should_catch"], (
+                f"{text!r} has segment_time null, so Presidio never sees it; "
+                f"should_catch must be false"
+            )
+            assert all(text not in seg for seg in segments), (
+                f"{text!r} (category {item['category']}) has segment_time null but "
+                f"sits in a segment, which Presidio is shown. Give it its segment_time."
+            )
+            assert text in transcript, f"{text!r} is not in the horror transcript at all"
+
+
+# Written out at the class, not assigned to a name: the skip-site ratchet counts the
+# skipif decorator and could not see this one while it was ``_skip_no_presidio``.
+@pytest.mark.skipif(
     not _HAS_PRESIDIO,
     reason="Requires presidio-analyzer + spacy en_core_web_lg model",
 )
-
-
-@_skip_no_presidio
 @pytest.mark.slow
 class TestPresidioDetection:
     """Run Presidio against the horror transcript and check each planted item.
@@ -430,7 +467,12 @@ class TestPresidioDetection:
                 return True
         return False
 
-    @pytest.fixture(params=_load_expected() if EXPECTED_PATH.exists() else [])
+    @pytest.fixture(
+        params=[
+            item for item in (_load_expected() if EXPECTED_PATH.exists() else [])
+            if item.get("segment_time") is not None
+        ]
+    )
     def pii_item(self, request: pytest.FixtureRequest) -> dict:
         return request.param
 
@@ -444,10 +486,11 @@ class TestPresidioDetection:
 
         segment_text = self._find_segment_text(timecode)
 
-        if segment_text is None:
-            if not should_catch:
-                pytest.skip(f"No segment for {text!r} (category {category})")
-            pytest.fail(f"Could not find segment at {timecode} for {text!r}")
+        # Items with ``segment_time: null`` are not parametrised here (Presidio is never
+        # shown them); TestExpectedYamlMatchesTranscript checks them in the free suite.
+        assert segment_text is not None, (
+            f"Could not find segment at {timecode} for {text!r} (category {category})"
+        )
 
         found = self._presidio_finds(segment_text, text)
 

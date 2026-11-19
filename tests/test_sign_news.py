@@ -215,11 +215,12 @@ def test_verify_refuses_an_expired_file():
         sn.verify_envelope(envelope, _test_key().public_key(), now=later)
 
 
-def test_verify_with_an_unset_production_kid_fails_loudly(tmp_path, capsys):
+def test_verify_with_an_unset_production_kid_fails_loudly(tmp_path, capsys, monkeypatch):
     envelope = sn.sign_bytes(_test_key(), "k1", _bytes(_payload()), now=NOW)
     (tmp_path / "e.json").write_text(json.dumps(envelope), encoding="utf-8")
-    if sn.PUBLIC_KEYS["k1"]:
-        pytest.skip("production key is set")
+    # Unset it here rather than skip once the real key is committed, which
+    # would have retired this test on the day the key landed.
+    monkeypatch.setitem(sn.PUBLIC_KEYS, "k1", "")
     assert sn.main(["verify", "--kid", "k1", "--in", str(tmp_path / "e.json")]) == 1
     assert "is it set" in capsys.readouterr().err
 

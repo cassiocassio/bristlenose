@@ -597,3 +597,185 @@ def fresh_machine_identity_cache(monkeypatch):
     from bristlenose.utils import machine_identity
 
     monkeypatch.setattr(machine_identity, "_cached", None)
+
+
+# ---------------------------------------------------------------------------
+# External tools a test runs: one skip per missing tool, not one per test.
+# The shape of the `symlinks` (7d32124a) and `node` (d708247c) folds: the skip-site
+# ratchet counts each fixture once, and the same tests skip, on the same machines, as
+# the per-test decorators they replace. Session-scoped, so a class-scoped fixture that
+# itself runs the tool (TestFeedbackFormExecutes.outcomes) is set up after the check,
+# never before it. One fixture per tool: a missing node and a missing ffmpeg are
+# different causes and are not folded together. Not yet everywhere: the pytestmark
+# skipifs in test_mcpb_proxy_bearer and test_mcpb_proxy_messages, and the named
+# `_needs_ffmpeg` in test_screen_text and test_serve_screens, still guard on their own
+# (each also checks ffprobe, win32 or root, so each needs its own look).
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def node() -> None:
+    """Tests that run JavaScript under Node: the palette workbench and the status page's
+    rendered scripts. They run wherever ``node`` is on PATH."""
+    import shutil
+
+    if shutil.which("node") is None:
+        pytest.skip("node not on PATH")
+
+
+@pytest.fixture(scope="session")
+def ffmpeg() -> None:
+    """Tests that run the real ``ffmpeg`` binary: scene colours, scene strips, the
+    format-ingest round trips and clip subtitles. They run wherever it is on PATH."""
+    import shutil
+
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("ffmpeg not on PATH")
+
+
+# ---------------------------------------------------------------------------
+# POSIX file-system properties a platform may lack (skip-site class: posix-fs)
+#
+# One fixture per platform property, each asked for by every test that needs
+# it, so the skip-site ratchet (scripts/check-ratchet.py) counts the property
+# once rather than once per test (the shape of 7d32124a's `symlinks` and
+# d708247c's `node`). Each keeps exactly the platforms its per-test guards
+# skipped on; different properties stay in different fixtures.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def posix_mode_bits() -> None:
+    """The test asserts or withholds a POSIX permission bit (0o600, the exec bit).
+
+    Windows has none: chmod there only toggles read-only, so there is nothing to
+    assert. Runs on every Linux and macOS cell."""
+    if os.name != "posix":
+        pytest.skip("no POSIX mode bits on Windows: chmod there only toggles read-only")
+
+
+@pytest.fixture
+def o_nofollow() -> None:
+    """The test proves a write refuses a symlink, which is O_NOFOLLOW.
+
+    Windows has no O_NOFOLLOW, so there is no refusal there to assert. Runs on
+    every Linux and macOS cell."""
+    if os.name != "posix":
+        pytest.skip("symlink refusal is O_NOFOLLOW, which Windows lacks")
+
+
+@pytest.fixture
+def symlinks() -> None:
+    """The test makes a symlink. Windows needs a privilege to create one, so
+    these skip there and run on every Linux and macOS cell."""
+    import sys
+
+    if sys.platform == "win32":
+        pytest.skip("symlinks need privileges on Windows")
+
+
+@pytest.fixture
+def chmod_can_deny() -> None:
+    """The test needs a file or folder this user cannot read or write, made with chmod.
+
+    Root bypasses permission bits and Windows has none to clear, so on either
+    chmod denies nothing and the test has no refusal to observe."""
+    import sys
+
+    if sys.platform == "win32" or os.geteuid() == 0:
+        pytest.skip("chmod denies this user nothing (Windows, or running as root)")
+
+
+# ---------------------------------------------------------------------------
+# The paid AutoCode harnesses' one runner (skip-site fold, 19 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# tests/test_autocode_discrimination.py, tests/test_codebook_registers.py and
+# tests/test_norman_codebook.py each carried the same two skips around their live
+# (``-m slow``, paid) call: one for a local provider, which AutoCode cannot use, and
+# one for a provider that could not run the call at all. Two causes, so two skips,
+# here once instead of six times (the shape 7d32124a and d708247c gave the symlink
+# and node skips). The same tests skip under the same conditions as before.
+
+from collections.abc import Coroutine  # noqa: E402
+from typing import TypeVar  # noqa: E402
+
+from bristlenose.config import BristlenoseSettings  # noqa: E402
+from bristlenose.llm.failure_classifier import LLMFailureKind  # noqa: E402
+
+_PaidResult = TypeVar("_PaidResult")
+
+# Failure kinds that mean "the environment could not run the test", as opposed to
+# "the model answered badly". BAD_REQUEST and UNKNOWN deliberately stay fatal: a
+# malformed prompt or an unparseable schema is exactly the defect these harnesses
+# exist to catch.
+PAID_LLM_ENVIRONMENTAL_FAILURES = frozenset(
+    {
+        LLMFailureKind.OUT_OF_CREDIT,  # billing exhausted — terminal until top-up
+        LLMFailureKind.INVALID_KEY,  # key missing/revoked
+        LLMFailureKind.NETWORK,  # provider unreachable
+        LLMFailureKind.RATE_LIMITED,  # transient; retry later
+        LLMFailureKind.SERVER_ERROR,  # provider 5xx
+    }
+)
+
+
+def run_paid_autocode(
+    build: Callable[[BristlenoseSettings], Coroutine[Any, Any, _PaidResult]],
+) -> _PaidResult:
+    """Run one paid AutoCode harness's calls, skipping only for the environment.
+
+    ``build`` gets the loaded settings and returns the coroutine that makes the
+    calls; it runs only once the provider is known to be a cloud one.
+    """
+    import asyncio
+
+    from bristlenose.config import load_settings
+    from bristlenose.llm.failure_classifier import classify_exception
+
+    settings = load_settings()
+    if settings.llm_provider == "local":
+        pytest.skip("AutoCode requires a cloud provider (not Ollama)")
+    call = build(settings)
+    try:
+        return asyncio.run(call)
+    except Exception as exc:
+        # An unfunded, revoked or unreachable account is an ENVIRONMENT condition,
+        # not a coding-quality failure: it must not report as an error on a
+        # deliberate `pytest -m slow`. Which kinds are environmental is decided by
+        # the shared classifier, never by matching on the message here: Anthropic
+        # serves out-of-credit as a 400, so a status-code test would call it a bug
+        # in our prompt (see bristlenose/llm/failure_classifier.py).
+        kind = classify_exception(settings.llm_provider, exc)
+        if kind in PAID_LLM_ENVIRONMENTAL_FAILURES:
+            pytest.skip(
+                f"SKIPPED, NOT PASSED — {settings.llm_provider} returned "
+                f"{kind.value}: this harness never ran. Fix the account/key/network "
+                f"and re-run `pytest -m slow`. Raw error: {exc}"
+            )
+        raise
+
+
+# ---------------------------------------------------------------------------
+# open-files: Windows will not move, rename or delete a file that is held open
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def open_files_movable() -> None:
+    """Skip where a file held open cannot be moved, renamed or deleted: Windows.
+
+    One platform property behind every test that requests this: a live serve's
+    pooled database connections, or the log handler, hold files under the output
+    folder open, and the test moves that folder (``run --clean``'s stash, a
+    restore) or deletes the database under the open connection. POSIX allows
+    both; Windows refuses, so the sequence the test reproduces cannot happen
+    there. Each requesting site says which file and which move in a comment.
+    Folded from nine identical decorators (four ``sys.platform == "win32"``
+    files, ``os.name == "nt"`` in test_logging, the same platform), the shape
+    of the ``symlinks`` (7d32124a) and ``node`` (d708247c) fixtures.
+    """
+    import sys
+
+    if sys.platform == "win32":
+        pytest.skip("Windows will not move, rename or delete a file or folder that is held open")

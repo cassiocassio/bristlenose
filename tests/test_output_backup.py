@@ -20,6 +20,14 @@ from bristlenose.utils.output_backup import RestoreOutcome
 _MARKER = "bristlenose-report.html"
 
 
+@pytest.fixture
+def flock() -> None:
+    """The settle lock is fcntl.flock, which Windows lacks: the tests that take
+    or refuse it ask for this, one skip for both, and run on Linux and macOS."""
+    if sys.platform == "win32":
+        pytest.skip("no fcntl.flock on Windows")
+
+
 def _make_report(root: Path, *, marker: str, events: str) -> Path:
     """A plausible output directory: a deliverable plus the run-state dir."""
     root.mkdir(parents=True, exist_ok=True)
@@ -305,7 +313,7 @@ class TestTheErrorBranches:
         assert output_backup.stash(out) is None, "refuses rather than destroys"
         assert (stranded / _MARKER).read_text(encoding="utf-8") == "IRREPLACEABLE"
 
-    @pytest.mark.skipif(os.name != "posix", reason="symlink refusal is O_NOFOLLOW, which Windows lacks")
+    @pytest.mark.usefixtures("o_nofollow")
     def test_the_history_append_does_not_follow_a_symlink(self, tmp_path: Path) -> None:
         """`open("ab")` follows symlinks — an append-to-arbitrary-file primitive.
 
@@ -468,9 +476,6 @@ class TestSettle:
         assert output_backup.failed_path_for(out).is_dir()
 
 
-_CAN_CHMOD = sys.platform != "win32" and os.geteuid() != 0
-
-
 class TestTheFreshEyesFindings:
     """The coordinator's Fable check of 33a6e01cb, 23 Oct 2026."""
 
@@ -527,7 +532,7 @@ class TestTheFreshEyesFindings:
         carried = list(out.rglob("stale.mp4"))
         assert len(carried) == 1, "the reused-pid tree's clip was deleted, not carried"
 
-    @pytest.mark.skipif(not _CAN_CHMOD, reason="needs a folder this user cannot write")
+    @pytest.mark.usefixtures("chmod_can_deny")
     def test_a_tree_whose_export_will_not_move_is_kept_by_a_put_back(
         self, tmp_path: Path
     ) -> None:
@@ -580,7 +585,7 @@ class TestTheFreshEyesFindings:
 
         assert not cut.exists()
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="flock")
+    @pytest.mark.usefixtures("flock")
     def test_two_reclaims_take_turns(self, tmp_path: Path) -> None:
         """The serve's reclaim at launch and a queue-restored run's can both
         find a crash's backup before any PID file exists (finding 3)."""
@@ -610,7 +615,7 @@ class TestTheFreshEyesFindings:
 class TestTheVerificationFollowUps:
     """The coordinator's verification of 050a6491c, 23 Oct 2026."""
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="flock")
+    @pytest.mark.usefixtures("flock")
     def test_a_folder_that_will_not_lock_is_said(self, tmp_path: Path, monkeypatch, caplog) -> None:
         """SMB, AFP or FUSE refuse flock (ENOTSUP): the race guard is gone, so
         the settle runs unlocked and the log says why."""

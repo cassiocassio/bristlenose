@@ -242,20 +242,31 @@ def test_signal_minutes_counts_active_windows() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _shebang_script(path: Path, body: str) -> Path:
+    """Write ``body`` as an executable ``#!`` script run by this Python.
+
+    Every fake helper a test needs to run is one, and Windows cannot execute a ``#!``
+    script (the real helper is a macOS binary only the Mac app ships), so such a test
+    skips there, here, once. Every pure-function test in the module still runs on
+    Windows, as does the nonsense-probe test, which writes its own script on purpose.
+    """
+    if sys.platform == "win32":
+        pytest.skip("a fake helper is a #! script, which Windows cannot run; the real one is a macOS binary")
+    path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
+
+
 def _fake_helper(tmp_path: Path, *, out: dict[str, Any] | None = None, exit_code: int = 0,
                  probe: dict[str, Any] | None = None) -> Path:
     """A script honouring the helper's command line and output contract."""
-    if sys.platform == "win32":
-        pytest.skip("the fake helper is a #! script, which Windows cannot run; the real one is a macOS binary")
     data = tmp_path / "fake-output.json"
     data.write_text(json.dumps(out if out is not None else payload()), encoding="utf-8")
     probe_line = json.dumps(probe if probe is not None else {
         "schema": 1, "available": True, "reason": None, "os_version": "Version 27.0",
         "supported": list(SUPPORTED), "installed": ["en-GB"],
     })
-    script = tmp_path / "bristlenose-speech"
-    script.write_text(f"""#!{sys.executable}
-import shutil, sys
+    return _shebang_script(tmp_path / "bristlenose-speech", f"""import shutil, sys
 args = sys.argv[1:]
 if args == ["probe"]:
     print({probe_line!r}); sys.exit(0)
@@ -265,9 +276,7 @@ if args and args[0] == "transcribe":
         sys.stderr.write("analysis failed: boom\\n"); sys.exit({exit_code})
     shutil.copy({str(data)!r}, args[3]); sys.exit(0)
 sys.exit(2)
-""", encoding="utf-8")
-    script.chmod(script.stat().st_mode | stat.S_IXUSR)
-    return script
+""")
 
 
 def test_probe_reads_the_helper(tmp_path: Path) -> None:
@@ -276,6 +285,8 @@ def test_probe_reads_the_helper(tmp_path: Path) -> None:
 
 
 def test_a_probe_that_prints_nonsense_reads_as_absent(tmp_path: Path) -> None:
+    # Not through _shebang_script on purpose: on Windows the script cannot execute,
+    # which probe_helper must also read as absent, so this test runs there too.
     script = tmp_path / "bristlenose-speech"
     script.write_text(f"#!{sys.executable}\nprint('hello')\n", encoding="utf-8")
     script.chmod(0o755)
@@ -431,11 +442,8 @@ def test_after_an_engine_level_exit_later_sessions_skip_the_helper(tmp_path: Pat
     assert [d.failure.cause.code for d in done] == ["helper_exit_3", "helper_unavailable"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="the slow helper is a #! script, which Windows cannot run")
 def test_a_helper_that_runs_too_long_is_killed_and_named(tmp_path: Path) -> None:
-    script = tmp_path / "slow-helper"
-    script.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(30)\n", encoding="utf-8")
-    script.chmod(0o755)
+    script = _shebang_script(tmp_path / "slow-helper", "import time\ntime.sleep(30)\n")
     with pytest.raises(HelperError, match="timed out") as err:
         apple_speech.run_helper(script, tmp_path / "a.wav", "en-GB", tmp_path / "o.json",
                                 timeout=0.5)

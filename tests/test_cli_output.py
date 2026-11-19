@@ -597,3 +597,23 @@ def test_a_deferral_overflow_on_the_wire_still_ends_plain_done() -> None:
     summary = RunCompletedEvent.model_validate(
         contract["scenarios"]["run_completed_deferred_overflow"]).summary
     assert _partial_sessions(summary) == ""
+
+
+def test_the_header_names_the_device_the_setting_chooses(monkeypatch) -> None:
+    """With BRISTLENOSE_WHISPER_DEVICE=cpu on a CUDA machine, the header said
+    "RTX 4090 · CUDA" for a CPU run."""
+    from bristlenose import cli
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.utils import hardware
+
+    gpu = HardwareInfo(accelerator=AcceleratorType.CUDA, chip_name="NVIDIA RTX 4090", cuda_available=True)
+    monkeypatch.setattr(hardware, "detect_hardware", lambda: gpu)
+    monkeypatch.setattr(sys, "platform", "linux")  # a Mac never runs CUDA
+    printed: list[str] = []
+    monkeypatch.setattr(cli.console, "print", lambda *a, **k: printed.append(" ".join(map(str, a))))
+
+    cli._print_header(BristlenoseSettings(whisper_device="cpu"), show_provider=False)
+    assert "CPU" in printed[0] and "CUDA" not in printed[0]
+    printed.clear()
+    cli._print_header(BristlenoseSettings(whisper_device="auto"), show_provider=False)
+    assert "NVIDIA RTX 4090 · CUDA" in printed[0]

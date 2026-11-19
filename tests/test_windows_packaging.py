@@ -7,7 +7,13 @@ library), so its lock script is loaded by path.
 from __future__ import annotations
 
 import importlib.util
+import platform
+import re
+import sys
+from collections.abc import Callable
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WIN = ROOT / "packaging" / "windows"
@@ -233,3 +239,152 @@ def test_hf_xet_is_bundled_with_its_metadata() -> None:
     assert 'copy_metadata("hf-xet")' in spec
     assert "hf-xet==" in (WIN / "constraints.txt").read_text(encoding="utf-8")
 
+
+
+def test_the_acceptance_script_names_the_installers_app_id() -> None:
+    """winget-accept.ps1 finds the install by its Apps & Features key, which is
+    bristlenose.iss's AppId plus Inno's _is1, the manifest's ProductCode."""
+    import re
+
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    app_id = re.search(r"^AppId=\{(\{[0-9A-F-]+\})$", iss, re.M)
+    assert app_id, "AppId line not found in bristlenose.iss"
+    product_code = f"{app_id.group(1)}_is1"
+    manifest = (WIN / "winget" / "Bristlenose.Bristlenose.installer.yaml").read_text(encoding="utf-8")
+    assert f"ProductCode: '{product_code}'" in manifest
+    script = (WIN / "winget-accept.ps1").read_text(encoding="utf-8")
+    assert f'$AppId = "{product_code}"' in script
+
+
+def test_the_windows_scripts_are_ascii() -> None:
+    """Windows PowerShell 5.1 reads a .ps1 without a byte-order mark as the ANSI
+    code page, so a UTF-8 dash or section sign turns into stray characters, and
+    one of them is a quotation mark to the parser."""
+    for script in WIN.glob("*.ps1"):
+        text = script.read_bytes()
+        assert text.isascii(), (script.name, [i for i, b in enumerate(text) if b > 127][:5])
+
+
+_CPU_PATH_ENTRY = re.compile(
+    r'Name = "([\w-]+)"; Env = @\{([^}]*)\};\s*Expect = @\(([^)]*)\)(; IntelOnly = \$true)?'
+)
+
+
+def _cpu_paths() -> dict[str, tuple[dict[str, str], list[str], bool]]:
+    """winget-accept.ps1's -CpuPaths table: name -> (env, expected patterns, Intel only)."""
+    script = (WIN / "winget-accept.ps1").read_text(encoding="utf-8")
+    return {
+        name: (dict(re.findall(r'(\w+) = "([^"]*)"', env)), re.findall(r'"([^"]+)"', expect),
+               bool(intel_only))
+        for name, env, expect, intel_only in _CPU_PATH_ENTRY.findall(script)
+    }
+
+
+def test_the_cpu_path_table_names_three_paths_and_one_is_intel_only() -> None:
+    """The script skips the Intel path on another vendor's CPU, and the test below
+    checks it only on an Intel one: the two must agree on which path that is."""
+    paths = _cpu_paths()
+    assert set(paths) == {"intel-avx2", "non-mkl", "generic"}, paths
+    assert [name for name, (_, _, intel_only) in paths.items() if intel_only] == ["intel-avx2"]
+
+
+def _cpu_vendor() -> str:
+    for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+        if line.startswith("vendor_id"):
+            return line.split(":", 1)[1].strip()
+    return "unknown"
+
+
+@pytest.fixture(scope="module")
+def ct2_run(tmp_path_factory: pytest.TempPathFactory) -> Callable[[dict[str, str]], str]:
+    """Runs a real CTranslate2 on a two-token model built in place (no download)
+    under the given environment, and returns everything it printed."""
+    import os
+    import subprocess
+
+    import numpy as np
+    from ctranslate2 import specs
+
+    d, ff, vocab = 8, 16, 10
+    rng = np.random.default_rng(0)
+
+    def weights(*shape: int) -> object:
+        return rng.random(shape, dtype=np.float32) - 0.5
+
+    enc = specs.TransformerEncoderSpec(1, 1)
+    enc.embeddings[0].weight = weights(vocab, d)
+    layer = enc.layer[0]
+    for norm in (layer.ffn.layer_norm, layer.self_attention.layer_norm, enc.layer_norm):
+        norm.gamma = np.ones(d, np.float32)
+        norm.beta = np.zeros(d, np.float32)
+    layer.ffn.linear_0.weight = weights(ff, d)
+    layer.ffn.linear_1.weight = weights(d, ff)
+    layer.self_attention.linear[0].weight = weights(3 * d, d)
+    layer.self_attention.linear[1].weight = weights(d, d)
+    model = specs.TransformerEncoderModelSpec(enc)
+    model.register_vocabulary([f"t{i}" for i in range(vocab)])
+    model.validate()
+    model.optimize(quantization=None)
+    model_dir = tmp_path_factory.mktemp("tiny-ct2")
+    model.save(str(model_dir))
+
+    probe = (
+        "import sys, ctranslate2\n"
+        "ctranslate2.Encoder(sys.argv[1], device='cpu').forward_batch([['t1', 't2']])\n"
+    )
+
+    def run(extra: dict[str, str]) -> str:
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("CT2_", "MKL_"))}
+        env.update(extra, CT2_VERBOSE="1")
+        done = subprocess.run(
+            [sys.executable, "-c", probe, str(model_dir)],
+            capture_output=True, text=True, encoding="utf-8", env=env, timeout=120,
+        )
+        assert done.returncode == 0, done.stderr[-500:]
+        return done.stdout + done.stderr
+
+    return run
+
+
+def _what_it_chose(output: str) -> str:
+    """Every line naming an instruction set, MKL or its CNR mode, in full: a
+    failure must show what was printed, not the tail pytest keeps."""
+    return "\n".join(
+        line for line in output.splitlines() if re.search(r"(?i)\b(isa|mkl|cnr)\b|CNR:", line)
+    )
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux") or platform.machine() not in ("x86_64", "AMD64"),
+    reason="runs CTranslate2's x86-64 Linux build, which carries MKL",
+)
+@pytest.mark.parametrize("name", ["intel-avx2", "non-mkl", "generic"])
+def test_the_cpu_path_patterns_match_what_ctranslate2_prints(
+    name: str, ct2_run: Callable[[dict[str, str]], str]
+) -> None:
+    """winget-accept.ps1 -CpuPaths fails a path unless CTranslate2 reports taking
+    it. The patterns are checked here against what a real CTranslate2 prints, so
+    a changed log line fails this test instead of every path on a Windows guest.
+    Each path's patterns must match its own run and not a reference run, or they
+    prove nothing. The reference forces MKL on, the default on Intel.
+
+    The Intel path is checked only on an Intel CPU, as the script runs it: on
+    CI's runners MKL printed no ``CNR:AVX2`` under ``MKL_CBWR=AVX2`` (19 Nov
+    2026), and without it the path's CTranslate2 lines match the default run."""
+    env, patterns, intel_only = _cpu_paths()[name]
+    vendor = _cpu_vendor()
+    if intel_only and vendor != "GenuineIntel":
+        pytest.skip(f"{name} is an Intel path, as in the script; this CPU is {vendor!r}")
+    reference = ct2_run({"CT2_USE_MKL": "1"})
+    assert "Selected ISA:" in reference and "Use Intel MKL: true" in reference, (
+        vendor, _what_it_chose(reference))
+    output = ct2_run(env)
+    # pytest.fail, not an assert message: pytest -q shortens a long assert message,
+    # and the lines CTranslate2 and MKL printed are the evidence a fix needs.
+    for pattern in patterns:
+        if not re.search(pattern, output):
+            pytest.fail(f"{name} on {vendor}: {pattern!r} not printed. It printed:\n"
+                        f"{_what_it_chose(output)}")
+    if all(re.search(p, reference) for p in patterns):
+        pytest.fail(f"{name}'s patterns {patterns} also match the reference run on {vendor}, "
+                    f"so they prove nothing. The reference printed:\n{_what_it_chose(reference)}")

@@ -30,7 +30,6 @@ were measured on macOS 15, 26 and 27 (docs/design-mcp-native-proxy.md §6.7).
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import socket
@@ -300,6 +299,7 @@ def test_a_garbage_handshake_reads_as_closed_and_never_crashes(serve: _Serve, hs
     assert h.proc.poll() is None, "the helper survived"
 
 
+@pytest.mark.usefixtures("chmod_can_deny")  # root reads anything
 def test_an_unreadable_handshake_says_permission_not_closed(serve: _Serve, hs_path: Path, run) -> None:
     _write(hs_path, [serve.entry()])
     hs_path.chmod(0)
@@ -307,8 +307,6 @@ def test_an_unreadable_handshake_says_permission_not_closed(serve: _Serve, hs_pa
         text = run().call("get_project_overview")
     finally:
         hs_path.chmod(0o600)
-    if os.geteuid() == 0:  # pragma: no cover - root reads anything
-        pytest.skip("running as root")
     assert "can't reach Bristlenose's data" in text
     assert "Files & Folders" not in text
 

@@ -1708,18 +1708,34 @@ def _init_faster_whisper_backend(
         A function(audio_path, settings) -> list[TranscriptSegment]
     """
     import os
+    import sys
 
     from faster_whisper import WhisperModel
 
-    # Choose device and compute type based on hardware
-    if hw.cuda_available:
+    # Choose device and compute type. BRISTLENOSE_WHISPER_DEVICE (settings.whisper_device)
+    # was documented in the man page and `--help` but read by nothing until 19 Nov 2026.
+    # "auto" follows the hardware check, which counts a GPU only when the CUDA libraries
+    # load; "cuda" overrides that check for a setup it misjudges; "cpu" never uses the GPU.
+    from bristlenose.utils.hardware import (
+        WHISPER_DEVICES,
+        effective_whisper_device,
+        requested_whisper_device,
+    )
+
+    raw = str(getattr(settings, "whisper_device", "auto") or "auto").strip().lower()
+    if raw not in WHISPER_DEVICES:
+        logger.warning("BRISTLENOSE_WHISPER_DEVICE=%r is not cpu, cuda or auto; using auto", raw)
+    elif raw == "cuda" and sys.platform == "darwin":
+        logger.warning("BRISTLENOSE_WHISPER_DEVICE=cuda has no effect on macOS; using the CPU")
+    requested = requested_whisper_device(settings)
+    if effective_whisper_device(settings, hw.cuda_available) == "cuda":
         device = "cuda"
         compute_type = "float16"
-        logger.info("faster-whisper: using CUDA (GPU)")
+        logger.info("faster-whisper: using CUDA (GPU)%s", ", as set" if requested == "cuda" else "")
     else:
         device = "cpu"
         compute_type = settings.whisper_compute_type  # default: int8
-        logger.info("faster-whisper: using CPU (%s)", compute_type)
+        logger.info("faster-whisper: using CPU (%s)%s", compute_type, ", as set" if requested == "cpu" else "")
 
     # Support bundled model directory (desktop app sets BRISTLENOSE_WHISPER_MODEL_DIR)
     model_dir = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")

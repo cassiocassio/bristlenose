@@ -15,7 +15,6 @@ never prompt.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -170,7 +169,7 @@ class TestCurrentProviderStore:
         content = config_home.read_text(encoding="utf-8")
         assert content.count("BRISTLENOSE_LLM_PROVIDER") == 1
 
-    @pytest.mark.skipif(os.name != "posix", reason="no POSIX mode bits on Windows: chmod 0o600 there only clears read-only")
+    @pytest.mark.usefixtures("posix_mode_bits")
     def test_the_file_is_owner_only(self, config_home: Path) -> None:
         from bristlenose.credentials import write_user_config_var
 

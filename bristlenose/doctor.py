@@ -152,7 +152,7 @@ def check_ffprobe() -> CheckResult:
     return CheckResult(status=CheckStatus.OK, label="FFprobe", detail=path)
 
 
-def check_backend() -> CheckResult:
+def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
     """Check whether a transcription backend is importable.
 
     Apple Silicon ships with mlx-whisper (native, Metal/ANE, smaller
@@ -239,11 +239,23 @@ def check_backend() -> CheckResult:
         import ctranslate2
 
         ct2_version = getattr(ctranslate2, "__version__", "")
-        try:
-            if ctranslate2.get_cuda_device_count() > 0:
-                accel = "CUDA"
-        except Exception:
-            pass
+        # The question transcription asks, not a bare GPU count: ctranslate2
+        # counts an NVIDIA GPU whenever a driver is present, but transcription
+        # uses it only when the CUDA libraries load (and never in the frozen
+        # Windows build), so a count alone said "CUDA" for a CPU run.
+        from bristlenose.utils.hardware import _check_cuda_available, requested_whisper_device
+
+        cuda_ok = _check_cuda_available()
+        if cuda_ok:
+            accel = "CUDA"
+        # BRISTLENOSE_WHISPER_DEVICE overrides the check for the run, so it does here.
+        chosen = requested_whisper_device(settings) if settings is not None else "auto"
+        if chosen == "cuda" and sys.platform == "darwin":
+            chosen = "auto"  # no CUDA on a Mac: the stage runs on the CPU (effective_whisper_device)
+        if chosen == "cuda":
+            accel = "CUDA, as set"
+        elif chosen == "cpu":
+            accel = "CPU, as set"
     except ImportError:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -301,18 +313,58 @@ def check_backend() -> CheckResult:
             fix_key="mlx_not_installed",
         )
 
+    # A GPU forced with BRISTLENOSE_WHISPER_DEVICE=cuda that cannot work. With no GPU,
+    # or in the CPU-only Windows build, the run is certain to fail: say so before it
+    # starts. With a GPU whose libraries the check could not find, only warn: the
+    # setting exists for a setup the check misjudges.
+    if accel == "CUDA, as set" and not cuda_ok:
+        import sys as _sys
+
+        from bristlenose.utils.hardware import cuda_libraries_missing
+
+        try:
+            gpus = int(ctranslate2.get_cuda_device_count())
+        except Exception:  # noqa: BLE001 - no answer is no GPU
+            gpus = 0
+        if _sys.platform == "win32" and getattr(_sys, "frozen", False):
+            status, why = CheckStatus.FAIL, "the Windows installer build has no CUDA libraries"
+        elif gpus <= 0:
+            status, why = CheckStatus.FAIL, "no NVIDIA GPU was found"
+        else:
+            missing = cuda_libraries_missing()
+            status = CheckStatus.WARN
+            why = f"{', '.join(missing) if missing else 'the CUDA runtime'} not found"
+        return CheckResult(
+            status=status,
+            label="Transcription",
+            detail=f"{detail.rstrip(')')}: {why})",
+            fix_key="cuda_forced_unavailable",
+        )
+
     # Warn if NVIDIA GPU detected but CUDA not available
     if accel == "CPU":
         from bristlenose.utils.safe_which import safe_which
 
         nvidia_detected = safe_which("nvidia-smi") is not None
         if nvidia_detected:
+            import sys as _sys
+
+            from bristlenose.utils.hardware import cuda_libraries_missing
+
+            if _sys.platform == "win32" and getattr(_sys, "frozen", False):
+                why = "the Windows installer build has no CUDA libraries"
+            else:
+                missing = cuda_libraries_missing()
+                why = (
+                    f"{', '.join(missing)} not found" if missing
+                    else "CUDA runtime not available"
+                )
             return CheckResult(
                 status=CheckStatus.WARN,
                 label="Transcription",
                 detail=(
                     f"{detail.rstrip(')')}, NVIDIA GPU detected "
-                    "but CUDA runtime not available — using CPU)"
+                    f"but {why} — using CPU)"
                 ),
                 fix_key="cuda_not_available",
             )
@@ -1956,7 +2008,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
     return DoctorReport(results=[
         check_ffmpeg(),
         check_ffprobe(),
-        check_backend(),
+        check_backend(settings),
         check_whisper_model(settings),
         check_api_key(settings),
         check_network(settings),
@@ -1990,7 +2042,7 @@ def run_local_checks(settings: BristlenoseSettings) -> DoctorReport:
     """
     return DoctorReport(results=[
         check_ffmpeg(),
-        check_backend(),
+        check_backend(settings),
         check_whisper_model(settings),
         check_pii(settings),
         check_voice(settings),
@@ -2018,7 +2070,7 @@ def run_preflight(
     _check_fns: dict[str, object] = {
         "ffmpeg": lambda: check_ffmpeg(),
         "ffprobe": lambda: check_ffprobe(),
-        "backend": lambda: check_backend(),
+        "backend": lambda: check_backend(settings),
         "whisper_model": lambda: check_whisper_model(settings),
         "api_key": lambda: check_api_key(settings),
         "network": lambda: check_network(settings),

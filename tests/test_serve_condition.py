@@ -15,7 +15,6 @@ from __future__ import annotations
 import errno
 import functools
 import shutil
-import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -139,7 +138,9 @@ def test_failure_while_serve_is_up_reaches_the_page(tmp_path: Path, fast_watcher
         assert client.get("/api/projects/1/last-run").json()["run_id"] == "A"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so this rerun cannot happen there")
+# Windows will not move a folder whose database serve holds open, so this rerun
+# cannot happen there.
+@pytest.mark.usefixtures("open_files_movable")
 def test_clean_rerun_replacing_the_log_is_seen(tmp_path: Path, fast_watcher) -> None:
     out = tmp_path / "bristlenose-output"
     for i in range(6):  # a long history for the old line-count baseline
@@ -290,7 +291,9 @@ def test_run_seen_before_its_pid_file_recovers(tmp_path: Path, fast_watcher) -> 
         assert _latest(client)["state"] == "in_progress"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so this restore cannot happen there")
+# Windows will not move a folder whose database serve holds open, so this restore
+# cannot happen there.
+@pytest.mark.usefixtures("open_files_movable")
 def test_restore_without_a_new_run_is_noticed(tmp_path: Path, fast_watcher) -> None:
     """A failed --clean run is restored onto the old tree: the file changes but
     no new run id appears. The report must come back (review finding)."""

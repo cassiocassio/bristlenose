@@ -24,7 +24,6 @@ See docs/testing/coverage-inventory.md §1.
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -94,18 +93,14 @@ def test_advertised_count_is_twenty_seven() -> None:
 # 2. ffmpeg can produce + decode every media container (the real codec path)
 # ---------------------------------------------------------------------------
 
-_FFMPEG = shutil.which("ffmpeg")
-_needs_ffmpeg = pytest.mark.skipif(_FFMPEG is None, reason="ffmpeg not on PATH")
-
 # Sorted for stable test ordering / ids.
 _AUDIO = sorted(AUDIO_EXTENSIONS)
 _VIDEO = sorted(VIDEO_EXTENSIONS)
 
 
 def _ffmpeg(*args: str) -> subprocess.CompletedProcess[str]:
-    assert _FFMPEG is not None
     return subprocess.run(
-        [_FFMPEG, "-hide_banner", "-y", *args],
+        ["ffmpeg", "-hide_banner", "-y", *args],
         capture_output=True,
         text=True,
         timeout=60,
@@ -160,13 +155,13 @@ def _assert_produce_and_decode(ext: str, tmp_path: Path, *, video: bool) -> None
     assert decode.returncode == 0, f"ffmpeg failed to decode {ext}: {decode.stderr.strip()}"
 
 
-@_needs_ffmpeg
+@pytest.mark.usefixtures("ffmpeg")  # tests/conftest.py
 @pytest.mark.parametrize("ext", _AUDIO, ids=_AUDIO)
 def test_audio_container_produces_and_decodes(ext: str, tmp_path: Path) -> None:
     _assert_produce_and_decode(ext, tmp_path, video=False)
 
 
-@_needs_ffmpeg
+@pytest.mark.usefixtures("ffmpeg")  # tests/conftest.py
 @pytest.mark.parametrize("ext", _VIDEO, ids=_VIDEO)
 def test_video_container_produces_and_decodes(ext: str, tmp_path: Path) -> None:
     _assert_produce_and_decode(ext, tmp_path, video=True)

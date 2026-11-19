@@ -506,7 +506,12 @@ Model size. Default: \fBlarge-v3-turbo\fR.
 Whisper language code, or \fBauto\fR to detect per file. Default: \fBauto\fR.
 .TP
 .B BRISTLENOSE_WHISPER_DEVICE
-Device for faster-whisper: \fBcpu\fR, \fBcuda\fR, or \fBauto\fR. Default: \fBauto\fR.
+Device for faster-whisper: \fBcpu\fR, \fBcuda\fR, or \fBauto\fR.
+\fBauto\fR uses an NVIDIA GPU only when the CUDA libraries the installed
+ctranslate2 needs are found (cuBLAS 12, and cuDNN before ctranslate2 4.7);
+\fBcuda\fR uses the GPU even when they are not, and \fBbristlenose doctor\fR
+stops a run that cannot work (no GPU, or the Windows installer build).
+Ignored on macOS. Default: \fBauto\fR.
 .TP
 .B BRISTLENOSE_WHISPER_COMPUTE_TYPE
 Compute type for faster-whisper: \fBint8\fR, \fBfloat16\fR, or \fBfloat32\fR. Default: \fBint8\fR.

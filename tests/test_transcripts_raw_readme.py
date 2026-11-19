@@ -11,6 +11,7 @@ Real ``Pipeline`` methods over the stubbed stages of ``test_pipeline_command_cac
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from bristlenose.pipeline import load_transcripts_from_dir, prune_stale_session_files
@@ -73,13 +74,24 @@ def test_the_importer_finds_two_sessions_not_three(tmp_path: Path) -> None:
     assert sorted(_parse_transcript_headers(_raw(tmp_path))) == ["s1", "s2"]
 
 
-def test_a_locked_readme_never_fails_the_run(tmp_path: Path, caplog) -> None:
+def test_a_locked_readme_never_fails_the_run(tmp_path: Path, caplog, monkeypatch) -> None:
     # Told not to edit these files, a researcher may lock the readme in Finder.
     raw = tmp_path / "transcripts-raw"
     raw.mkdir()
     readme = raw / RAW_README_NAME
     readme.write_text("locked\n", encoding="utf-8")
     readme.chmod(0o444)
+    if getattr(os, "geteuid", lambda: -1)() == 0:
+        # Root writes through mode bits (a CI or cloud container), so the lock
+        # is made to refuse the way it refuses the researcher.
+        real_write_text = Path.write_text
+
+        def refuse(self: Path, *args: object, **kwargs: object) -> int:
+            if self == readme:
+                raise PermissionError(13, "Permission denied", str(self))
+            return real_write_text(self, *args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(Path, "write_text", refuse)
     try:
         with caplog.at_level("WARNING", logger="bristlenose.stages.s06_merge_transcript"):
             paths = write_raw_transcripts([_make_transcript()], raw)

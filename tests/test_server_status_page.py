@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -862,7 +861,7 @@ def _run_node(script: str) -> subprocess.CompletedProcess[str]:
         )
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+@pytest.mark.usefixtures("node")
 class TestIdentityScriptExecutes:
     """Run the real rendered `<script>` under Node with a stubbed WebKit bridge.
 
@@ -1025,7 +1024,7 @@ async function scenario({ answer, copyOk, closeEarly, editAfter }) {
 """
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+@pytest.mark.usefixtures("node")
 class TestFeedbackFormExecutes:
     """A failed send on the status-page form says so in the form (R80).
 

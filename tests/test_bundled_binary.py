@@ -78,7 +78,8 @@ class TestBundleRelativeBranch:
              patch("shutil.which", return_value="/which/ffmpeg"):
             assert bundled_binary_path("ffmpeg") == "/which/ffmpeg"
 
-    @pytest.mark.skipif(os.name != "posix", reason="Windows has no exec bit to withhold; the bundle-relative branch is the macOS app's")
+    # Windows has no exec bit to withhold; the bundle-relative branch is the macOS app's.
+    @pytest.mark.usefixtures("posix_mode_bits")
     def test_bundle_relative_falls_through_when_not_executable(self, monkeypatch, tmp_path):
         monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
         monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")

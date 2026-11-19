@@ -17,10 +17,16 @@ import pytest
 from bristlenose.server.clip_backend import FFmpegBackend
 from bristlenose.server.clip_subtitles import Token, build_cues, to_srt
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
-    reason="ffmpeg/ffprobe not installed",
-)
+
+@pytest.fixture(scope="session")
+def ffprobe() -> None:
+    """Every test here reads its result back with ``ffprobe`` (and the burn path runs it
+    too), so it needs that binary as well as ``ffmpeg`` (tests/conftest.py)."""
+    if shutil.which("ffprobe") is None:
+        pytest.skip("ffprobe not on PATH")
+
+
+pytestmark = pytest.mark.usefixtures("ffmpeg", "ffprobe")
 
 _FPS = 25
 

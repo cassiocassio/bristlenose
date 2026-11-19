@@ -597,3 +597,34 @@ def fresh_machine_identity_cache(monkeypatch):
     from bristlenose.utils import machine_identity
 
     monkeypatch.setattr(machine_identity, "_cached", None)
+
+
+# ---------------------------------------------------------------------------
+# External tools a test runs: one skip per missing tool, not one per test.
+# The shape of the `symlinks` (7d32124a) and `node` (d708247c) folds: the skip-site
+# ratchet counts each fixture once, and the same tests skip, on the same machines, as
+# the per-test decorators they replace. Session-scoped, so a class-scoped fixture that
+# itself runs the tool (TestFeedbackFormExecutes.outcomes) is set up after the check,
+# never before it. One fixture per tool: a missing node and a missing ffmpeg are
+# different causes and are not folded together.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def node() -> None:
+    """Tests that run JavaScript under Node: the palette workbench and the status page's
+    rendered scripts. They run wherever ``node`` is on PATH."""
+    import shutil
+
+    if shutil.which("node") is None:
+        pytest.skip("node not on PATH")
+
+
+@pytest.fixture(scope="session")
+def ffmpeg() -> None:
+    """Tests that run the real ``ffmpeg`` binary: scene colours, scene strips, the
+    format-ingest round trips and clip subtitles. They run wherever it is on PATH."""
+    import shutil
+
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("ffmpeg not on PATH")

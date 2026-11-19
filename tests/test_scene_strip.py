@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import shutil
 import struct
 import subprocess
 import zlib
@@ -165,7 +164,7 @@ class TestExtract:
         assert ss.extract_scene_strips({"s1": tmp_path / "gone.mp4"}, tmp_path / "strips") == {}
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+@pytest.mark.usefixtures("ffmpeg")
 def test_real_video_round_trip(tmp_path):
     """Blue for 2 s then orange, letterboxed: 16 samples at 4 fps, blue then orange, one notch at 2 s."""
     video = tmp_path / "clip.mp4"

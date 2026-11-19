@@ -8,7 +8,6 @@ picked, and the result is lifted out of the dark range. Plus the cache, so a re-
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -183,7 +182,7 @@ class TestCache:
         assert not (out / "s1.json").exists()
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+@pytest.mark.usefixtures("ffmpeg")
 def test_real_video_round_trip(tmp_path):
     """A letterboxed clip: blue for 2 s then orange, with black bars. The bars must not darken it."""
     video = tmp_path / "clip.mp4"

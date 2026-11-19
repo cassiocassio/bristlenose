@@ -8,7 +8,6 @@ nothing (so a nudge moves only what you moved).
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -20,15 +19,8 @@ _COLORS = Path(__file__).resolve().parent.parent / "bristlenose" / "theme" / "co
 sys.path.insert(0, str(_BP))
 import table as palette_table  # noqa: E402
 
-
-@pytest.fixture
-def node() -> None:
-    """Every test that runs the workbench's JavaScript asks for this: one skip, not
-    one per test (the shape of the `symlinks` fixture, 7d32124a), so the skip-site
-    ratchet counts it once. They run wherever node is on PATH, as the six per-test
-    decorators did."""
-    if shutil.which("node") is None:
-        pytest.skip("node not installed")
+# Every test that runs the workbench's JavaScript asks for the `node` fixture
+# (tests/conftest.py, shared with test_server_status_page.py): one skip, not one per test.
 
 
 @pytest.mark.parametrize("path", sorted(_COLORS.glob("palette-*.css")), ids=lambda p: p.stem)

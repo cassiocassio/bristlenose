@@ -667,7 +667,7 @@ class TestAskEdges:
         assert "RuntimeError" in r.json()["detail"]
         assert "provider exploded" in r.json()["detail"]
 
-    def test_a_reply_that_fails_to_parse_is_the_models_failure(self) -> None:
+    def test_a_reply_that_fails_to_parse_is_the_models_failure(self, caplog) -> None:
         # pydantic's ValidationError and json's JSONDecodeError are ValueErrors, and
         # were answered 400 ("bad question") with str(exc), whose input_value quotes
         # the model's reply, so the corpus (19 Nov 2026).
@@ -684,6 +684,9 @@ class TestAskEdges:
             )
         assert r.status_code == 502
         assert "PARTICIPANT_WORDS" not in r.json()["detail"]
+        # Nor in the log: the traceback of a ValidationError ends in its str,
+        # input_value and all (security review, 19 Nov 2026).
+        assert "PARTICIPANT_WORDS" not in caplog.text
 
     def test_llm_failure_detail_carries_no_key_and_no_echoed_prompt(self) -> None:
         # A provider's error str is its whole body; OpenRouter's moderation 403

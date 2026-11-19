@@ -102,7 +102,7 @@ async def chat_lens_ask(request: Request, body: _AskRequest) -> dict[str, object
             # Both subclass ValueError, so they come first: a reply that fails to parse
             # is the model's failure, not a bad question, and its str quotes the reply,
             # so the corpus (19 Nov 2026: answered 400 with those fragments).
-            raise _provider_failure(exc) from exc
+            raise _provider_failure(exc, traceback=False) from exc
         except ValueError as exc:
             from bristlenose.utils.key_redaction import redact_keys
 
@@ -382,11 +382,19 @@ $("question").addEventListener("keydown", e => {
 """
 
 
-def _provider_failure(exc: Exception) -> HTTPException:
-    """The 502 for a failed model call, logged where it happened."""
+def _provider_failure(exc: Exception, *, traceback: bool = True) -> HTTPException:
+    """The 502 for a failed model call, logged where it happened.
+
+    ``traceback=False`` for a reply that failed to parse: its traceback ends in the
+    exception's str, which quotes the reply (the corpus), so it is logged as the
+    one-line summary instead. The other path keeps its traceback, an open question.
+    """
     from bristlenose.llm.client import failure_summary
 
-    logger.exception("chat_lens_ask_failed")
+    if traceback:
+        logger.exception("chat_lens_ask_failed")
+    else:
+        logger.error("chat_lens_ask_failed | %s: %s", type(exc).__name__, failure_summary(exc))
     # ``failure_summary``, never ``str(exc)``: a provider's error is its whole body,
     # which can carry the prompt (the transcript) back.
     return HTTPException(

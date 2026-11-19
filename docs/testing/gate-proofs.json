@@ -6,6 +6,11 @@
         "how": "mutating verdict_shippable and verdict_main_ci in scripts/check-release-ready.sh, then running scripts/test-preflight-substance.sh (test-release-e2e.sh covers verdict_complete)",
         "observed": "2026-11-09"
     },
+    "check-store-listing": {
+      "evidence": "with the size-agreement rule disabled (`False and ...` in front of the desc-vs-review-notes comparison), 1 of 6 fails, test_size_figure_must_agree_between_desc_and_notes; restored by reverse patch, file byte-identical to the saved copy, 6 passed. The other rules (Zoom-import claim, TODO in a field, free-space figure not read as a download size, Miro allowed only in captions) each have a test that fails on a listing that breaks them; only the size rule was mutated here",
+      "how": "tests/test_check_store_listing.py, which writes a listing to a temp file and runs the script at both verdicts; the size rule was mutated locally under PYTHONDONTWRITEBYTECODE=1, then restored",
+      "observed": "2026-11-19"
+    },
     "check-sidecar-mlx-floor": {
       "evidence": "with newer() mutated to always answer false, 5 of 19 fail (the host-built macosx_26_0 tag, a newer binary under a floor tag, a newer tag over a floor binary, the stale dist-info, and the floor-without-a-minor case); restored by reverse patch, 19 passed. Not covered: the gate's own caller line in build-sidecar.sh is pinned by text, not by running the build",
       "how": "tests/test_sidecar_mlx_floor.py, which builds synthetic bundles holding real Mach-O files (cc -mmacosx-version-min) and drives the script at both verdicts and exit 2; the compare was mutated locally, then restored",

@@ -235,7 +235,7 @@ mechanism, not re-implemented here.
 | Asset | Origin | Verification | Default |
 |---|---|---|---|
 | Voice model (TitaNet-small, `nemo_en_titanet_small.onnx`, 40 MB) | https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/ (redirects to release-assets.githubusercontent.com) | SHA-256 pinned in `bristlenose/stages/s05b_voice.py` (`ad4a1802…789e`), checked on download and at the start of each run; lands in the app container's `Library/Caches/bristlenose/models/` (purgeable, not backed up), not Application Support | Apache-2.0 (NVIDIA NeMo) |
-| Whisper model | https://huggingface.co/mlx-community/whisper-* | HuggingFace Hub built-in SHA verification (`hf_hub_download` checks file hashes against the repo manifest) | `large-v3-turbo` (override via `BRISTLENOSE_WHISPER_MODEL`) |
+| Whisper model | Mac App Store app on macOS 26 or later: Apple's Background Assets hosting (the app's asset pack, downloaded by macOS). Otherwise, and as the fallback: https://huggingface.co/mlx-community/whisper-* | `large-v3-turbo` (MLX): revision, file sizes and SHA-256 pinned in `bristlenose/whisper_pins.py` and in the app's `WhisperPackManifest` (kept equal by `tests/test_whisper_pins.py`), checked for the pack and the Hugging Face download. Other models: HuggingFace Hub built-in SHA verification (`hf_hub_download` checks file hashes against the repo manifest) | `large-v3-turbo` (override via `BRISTLENOSE_WHISPER_MODEL`) |
 
 If alpha bundles a model directly into the `.app` per
 `desktop/CLAUDE.md`'s "alpha bundles the `small.en` model directly"

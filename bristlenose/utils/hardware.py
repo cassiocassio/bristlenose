@@ -346,7 +346,8 @@ def probe_mlx_starts(timeout: float = 60.0) -> MlxProbe:
 # cudnn64_9.dll the Windows wheel ships is not loaded by it). The driver brings
 # nvcuda.dll / libcuda.so.1; cuBLAS comes only with NVIDIA's CUDA Toolkit or
 # its pip wheels. So a gaming or creator laptop has the GPU and the driver,
-# ctranslate2 counts the GPU, and the first transcription fails on cuBLAS.
+# ctranslate2 counts the GPU, and the first transcription would then fail to
+# load cuBLAS (the failure ctranslate2 reports; not yet seen on our own GPU).
 # tests/test_hardware.py pins the Linux name against the installed wheel, so a
 # ctranslate2 that moves to CUDA 13 fails a test instead of a user's run.
 _CUDA_LIBRARIES: dict[str, tuple[str, ...]] = {

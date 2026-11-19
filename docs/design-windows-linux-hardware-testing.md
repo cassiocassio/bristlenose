@@ -252,15 +252,20 @@ Rules that do not bend:
 
 - **pip / pipx / uv, Homebrew on Linux, Fedora Copr**: not frozen, so no guard. A
   machine with the NVIDIA driver (on Fedora usually RPM Fusion's `akmod-nvidia`)
-  but without cuBLAS 12 / cuDNN 9 is counted as CUDA and will likely fail its
-  first transcription (§5.1). Copr vendors no CUDA libraries.
+  but without cuBLAS 12 was counted as CUDA and would likely have failed its
+  first transcription (§5.1, fixed 19 Nov 2026). Copr vendors no CUDA libraries.
 - **Snap**: strict confinement with no GPU plug (`home`, `network`,
   `network-bind`, `removable-media` only), so CTranslate2 should see no device
   and fall back to CPU. Probably fails closed; unverified.
 
 ## 5. Defects found by reading the CUDA path (no hardware needed to fix)
 
-None of these has been run on a GPU. Line numbers as of 18f479b.
+None of these has been run on a GPU. Line numbers as of 18f479b. Items 1–3 and a
+fifth found while fixing them were fixed on 19 Nov 2026 (`ddac8d3`, branch
+`claude/clever-volta-j3fvkb`), each pinned by a test that fails when its fix is
+reverted; item 4 is open. Reading the wheels corrected the plan: ctranslate2 4.8.2
+and 4.9.0 (Windows and Linux) load cuBLAS 12 and nothing of cuDNN, so the check is
+for cuBLAS 12 only, and a test reads the installed Linux wheel to keep it so.
 
 1. **No CPU fallback when CUDA cannot load.** On every non-frozen channel,
    `_check_cuda_available` (`bristlenose/utils/hardware.py:343`) trusts
@@ -269,19 +274,27 @@ None of these has been run on a GPU. Line numbers as of 18f479b.
    A driver without cuBLAS 12 / cuDNN 9 (the common case on a gaming or creator
    laptop) should fail on a missing library, possibly as a hard crash rather than a
    Python exception. Wanted: a load-or-first-inference probe that falls back to CPU
-   with one clear line, on Windows and Linux.
+   with one clear line, on Windows and Linux. **Fixed:** a counted GPU is used only
+   when cuBLAS 12 loads where ctranslate2 looks (`cuda_libraries_missing()` in
+   `hardware.py`); otherwise the run uses the CPU and logs which library is missing.
 2. **`doctor` reports CUDA when transcription will use the CPU.** `doctor.py:243`
    calls `get_cuda_device_count()` directly instead of the shared guard, so on the
    frozen Windows build (CPU-only by design, `hardware.py:353`) with an NVIDIA GPU
    it says "CUDA", and the "GPU found but not used" warning at `doctor.py:305` can
-   never fire there.
+   never fire there. **Fixed:** doctor uses the same check, and the warning names
+   the missing library, or says the Windows installer build has no CUDA libraries.
 3. **The fix text is Linux-only.** `_fix_cuda_not_available`
    (`bristlenose/doctor_fixes.py:507`) tells Windows users to
-   `export LD_LIBRARY_PATH`.
+   `export LD_LIBRARY_PATH`. **Fixed:** Windows gets the CUDA Toolkit 12 route,
+   the winget build says it is CPU-only by design, Linux keeps its text.
 4. **Nothing says which path ran.** `doctor --self-test` should print the device,
    backend and instruction set actually in use (CTranslate2 reports these under
    `CT2_VERBOSE=1`, to be confirmed). A user's report then names their path, and
    each test machine records the path it covered instead of us inferring §2's table.
+5. **`BRISTLENOSE_WHISPER_DEVICE` was read by nothing** (found 19 Nov 2026). The man
+   page and `--help` document `cpu | cuda | auto`, `config.py` defines it, and no
+   code read it. **Fixed:** it chooses the device; `cuda` overrides the check for a
+   setup it misjudges, and the fix text points to it.
 
 Tests can recreate "GPU counted, library missing" on any OS by stubbing, the way
 `tests/test_windows_portability.py` recreates the frozen Windows build.

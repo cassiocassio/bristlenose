@@ -621,9 +621,10 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
                 status=CheckStatus.FAIL,
                 label="API key",
                 detail=f"Azure OpenAI rejected ({err})",
-                # A refused request is no credential fault: the provider's words
-                # in the detail are the fix, and "check your key" would mislead.
-                fix_key="" if err.startswith(_AZURE_REFUSED) else "api_key_invalid_azure",
+                # A refused request, or a 404 that is not DeploymentNotFound, is no
+                # credential fault: the provider's words in the detail are the fix, and
+                # "check your key" would mislead.
+                fix_key="" if err.startswith((_AZURE_REFUSED, _AZURE_NOT_FOUND)) else "api_key_invalid_azure",
             )
         if valid is None:
             return CheckResult(
@@ -2224,7 +2225,17 @@ def _validate_azure_key(
             if exc.code == 403:
                 return (False, "403 Forbidden")
             if exc.code == 404:
-                return (False, f"Deployment '{deployment}' not found")
+                # Only Azure's DeploymentNotFound means the deployment name. A portal or
+                # classic URL pasted as the endpoint, an http:// endpoint and any wrong
+                # path answer a generic 404 "Resource not found" (measured 19 Nov 2026);
+                # calling those a missing deployment sent researchers to a name that was
+                # right. They are said in Azure's words, as a refused 400 is.
+                code, message = _azure_error_code_and_message(exc)
+                if code == "DeploymentNotFound":
+                    return (False, f"Deployment '{deployment}' not found")
+                if message:
+                    return (False, _without_key(f"{_AZURE_NOT_FOUND}: {message}", key))
+                return (False, _AZURE_NOT_FOUND)
             if exc.code == 400:
                 # The run's own request, refused: an output cap above the model's
                 # ceiling, a parameter the deployment's model does not take. The run
@@ -2251,6 +2262,23 @@ def _validate_azure_key(
 
 
 _AZURE_REFUSED = "HTTP 400"
+_AZURE_NOT_FOUND = "HTTP 404"
+
+
+def _azure_error_code_and_message(exc: Any) -> tuple[str | None, str | None]:
+    """Azure's ``error.code`` and ``error.message`` from an error body, read once; ``None``
+    for either when the body is unreadable or the field is not a string."""
+    try:
+        error = json.loads(exc.read().decode("utf-8", "replace"))["error"]
+    except Exception:
+        logger.debug("Azure error with no readable body", exc_info=True)
+        return (None, None)
+    code = error.get("code") if isinstance(error, dict) else None
+    message = error.get("message") if isinstance(error, dict) else None
+    return (
+        code if isinstance(code, str) else None,
+        message if isinstance(message, str) else None,
+    )
 
 
 def _azure_refusal_parts(exc: Any) -> tuple[str, str | None]:

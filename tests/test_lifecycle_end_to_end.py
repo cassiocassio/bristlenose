@@ -9,6 +9,7 @@ path on 15 Oct 2026 (``docs/design-project-identity.md``, phase 2).
 from __future__ import annotations
 
 import gc
+import sys
 from pathlib import Path
 
 import pytest
@@ -99,21 +100,32 @@ def test_a_folder_moved_while_closed_is_not_transcribed_again(
     assert study_marker.read(study.folder / "bristlenose-output") == minted
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows refuses to move a folder holding an open file, and the stopped in-process "
+    "server can still hold bristlenose.db: a connection left in an orphaned pool and, in some "
+    "runs, one checked in to the live pool after the stop's dispose. The test lets go of both "
+    "before the move but has not been run on Windows yet (TODO.md, 19 Nov 2026)",
+)
 def test_a_folder_moved_while_closed_keeps_its_curation(tmp_path: Path, fast_watcher) -> None:
     study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
     with study.serve() as client:
         study.run()
         star = study.quote_ids(client)[0]
         study.star(client, star)
-    # The in-process server's leftover holder of bristlenose.db (TODO.md, 16 Oct
-    # 2026), found 19 Nov 2026: a connection a request opened is left in the
-    # queue of a pool nothing references any more (the run's re-import replaces
-    # the pool through ``ensure_schema``'s dispose), and the connection and its
-    # pool record sit in a reference cycle, so the files stay open after the
-    # server stops until the cycle collector runs. Measured on Linux through
-    # /proc/self/fd over ten runs of this sequence: five handles on the .db,
-    # -wal and -shm in seven of them, none after gc.collect() in all ten. A real
-    # serve process lets go when it exits; collect here so the move sees the same.
+    # The stopped in-process server can still hold bristlenose.db, -wal and -shm
+    # open (docs/todo-archive.md, 16 Oct 2026). Two holders, measured on Linux
+    # through /proc/self/fd, 19 Nov 2026:
+    # - a connection left in the queue of a pool nothing references any more (the
+    #   run's re-import replaces the pool through ``ensure_schema``'s dispose), in
+    #   a reference cycle, so only the cycle collector closes it;
+    # - rarer (a review measured about one run in ten; 1 in 128 here under load),
+    #   a connection checked in to the live pool after the stop's own dispose,
+    #   still reachable from ``client.app``, so ``gc.collect()`` does not close it.
+    # A real serve process lets go of both when it exits. Dispose the stopped
+    # app's engine again and collect, so the move sees the same: with both, no
+    # handle was left in 160 of 160 runs; with the collect alone, 1 of 128 kept 5.
+    client.app.state.db_factory.kw["bind"].dispose()
     gc.collect()
     study.move_to(tmp_path / "Archive" / "2026" / "Talismanic")
     with study.serve() as client:

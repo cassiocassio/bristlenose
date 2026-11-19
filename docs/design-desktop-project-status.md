@@ -271,8 +271,16 @@ When several conditions are true, the row shows one winner (never composed), mos
 stopped / partial › adding-interviews › importing-batch › copying › ~~downloading-from-iCloud~~ _(never built; rejected 22 Oct 2026, `design-cloud-files.md`)_ ›
 database-forked › files-missing › unanalysed › starting › ready`
 
-**`SubtitleVariant` is the single source of truth and currently has 17 cases**
-(`ProjectSubtitle.swift:11-96`) — more than this chain names. The chain is the *architecture*, and
+> **Out of date as of 19 Nov 2026; the code is the order.** The chain above and the idle-tier
+> line below predate exportingReport, reportError, runUsage, codingQuotes, preparingSignals,
+> readingScreens, waitingForWhisper, completedPartial, startupRefusal and serveFailedToStart, and
+> since Schema E a clean idle row ends in silence (`.placeholder`), not `ready`. The idle tier as
+> shipped (`ProjectSubtitle.resolveIdle`): adding › exporting › importing batch › copying › an
+> error-kind delta › reportError › runUsage (only with no delta) › codingQuotes › preparingSignals ›
+> readingScreens › delta › placeholder. Both are kept below as the original ordering argument.
+
+**`SubtitleVariant` is the single source of truth and had 17 cases when this was written**
+(24 on 19 Nov 2026) — more than this chain names. The chain is the *architecture*, and
 deliberately skips the mechanical companions (`.copyCancelling`, `.stopping`, `.queued(position:)`,
 `.failedDiagnostic`, `.unreachable`, `.deltaOnly`, `.placeholder`), each of which sits immediately
 beside the state it qualifies. Read the enum for the full list; read this for the ordering argument.

@@ -10,8 +10,6 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from bristlenose.utils.hardware import (
     _CACHE_TTL_SECONDS,
     AcceleratorType,
@@ -563,25 +561,39 @@ class TestCudaNeedsItsLibraries:
         monkeypatch.setattr(sys, "platform", "darwin")
         assert effective_accelerator(cpu_hw, setting("cuda")) is AcceleratorType.CPU
 
-    @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="reads the Linux wheel's shared library")
     def test_the_names_match_the_installed_ctranslate2(self) -> None:
-        """Read from the wheel, not remembered: a ctranslate2 that moves to CUDA 13,
-        or loads cuDNN where the table says it does not, fails here rather than on
-        a user's GPU. Linux only: CI installs the Linux wheel. ctranslate2 is a core
-        dependency, so its absence is a failure here, not a skip."""
+        """Read from the installed library, not remembered: a ctranslate2 that moves
+        to CUDA 13, or loads cuDNN where the table says it does not, fails here rather
+        than on a user's GPU. Runs on every platform, each reading its own build:
+        libctranslate2 .so on Linux, ctranslate2.dll on Windows, the .dylib on a Mac
+        (a CPU-only build, which must mention no CUDA library at all). ctranslate2 is
+        a core dependency, so its absence is a failure here, not a skip."""
+        import platform
         import re
 
         import ctranslate2
 
         from bristlenose.utils.hardware import cuda_libraries_for
 
-        libs = Path(ctranslate2.__file__).parent.parent / "ctranslate2.libs"
-        binaries = sorted(libs.glob("libctranslate2*.so*"))
-        assert binaries, f"no libctranslate2 shared library in {libs}"
+        package = Path(ctranslate2.__file__).parent
+        binaries = [
+            *sorted((package.parent / "ctranslate2.libs").glob("libctranslate2*.so*")),
+            *sorted((package / ".dylibs").glob("libctranslate2*.dylib")),
+            *[dll for dll in (package / "ctranslate2.dll",) if dll.is_file()],
+        ]
+        assert len(binaries) == 1, f"expected one libctranslate2 beside {package}: {binaries}"
         data = binaries[0].read_bytes()
-        expected = cuda_libraries_for(ctranslate2.__version__, "linux")
-        majors = set(re.findall(rb"libcublas\.so\.(\d+)", data))
-        assert majors == {b"12"} and "libcublas.so.12" in expected, majors
+        expected = cuda_libraries_for(ctranslate2.__version__, sys.platform)
+        majors = set(re.findall(rb"cublas(?:64_(\d+)\.dll|\.so\.(\d+))", data))
+        majors_seen = {m for pair in majors for m in pair if m}
+        if not majors_seen:
+            # A CPU-only build: macOS, or a non-x86 Linux wheel. Nothing to load.
+            assert sys.platform == "darwin" or platform.machine() not in ("x86_64", "AMD64"), (
+                f"{binaries[0].name} names no cuBLAS on a platform whose wheel has CUDA")
+            assert b"cudnn" not in data.lower()
+            return
+        assert majors_seen == {b"12"}, majors_seen
+        assert any("cublas" in name and "12" in name for name in expected), expected
         loads_cudnn = b"cudnn" in data.lower()
         assert loads_cudnn == any("cudnn" in name for name in expected), (
             ctranslate2.__version__, loads_cudnn, expected)

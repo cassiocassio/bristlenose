@@ -398,17 +398,55 @@ def _windows_dll_dirs(ct2_dir: Path | None) -> list[Path]:
     return dirs
 
 
-def _library_loads(name: str, ct2_dir: Path | None = None) -> bool:
-    """Whether *name* is where ctranslate2 would load it from. On Windows, a file
-    in the loader's search folders; elsewhere, the dynamic loader itself
-    (``dlopen`` does not search the current folder)."""
+def _linux_library_dirs(ct2_dir: Path | None) -> list[Path]:
+    """Where ``dlopen`` looks for a library libctranslate2 names, cache aside: the
+    library's own RPATH (``$ORIGIN``, the ``ctranslate2.libs`` folder beside the
+    package), ``LD_LIBRARY_PATH``, then the default folders."""
+    import os
+
+    dirs: list[Path] = []
+    if ct2_dir is not None:
+        dirs.append(ct2_dir.parent / "ctranslate2.libs")
+    dirs.extend(Path(entry) for entry in os.environ.get("LD_LIBRARY_PATH", "").split(":") if entry)
+    dirs.extend(Path(p) for p in ("/lib", "/usr/lib", "/lib64", "/usr/lib64"))
+    return dirs
+
+
+_LDCONFIG_PATHS = ("/sbin/ldconfig", "/usr/sbin/ldconfig")
+
+
+def _ld_cache_names() -> set[str]:
+    """The sonames in the dynamic loader's cache (``ldconfig -p``), or none."""
+    import os
+
+    ldconfig = next((p for p in _LDCONFIG_PATHS if os.path.exists(p)), None)
+    if ldconfig is None:
+        return set()
+    try:
+        out = subprocess.run(
+            [ldconfig, "-p"], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=5,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    return {line.split()[0] for line in out.splitlines()[1:] if line.strip()}
+
+
+def _library_loads(
+    name: str, ct2_dir: Path | None = None, ld_cache: set[str] | None = None,
+) -> bool:
+    """Whether *name* is where ctranslate2 would load it from: a file in the
+    loader's search folders, never a load. Loading cuBLAS to answer the question
+    mapped about 150 MB into every process that asked (measured 19 Nov 2026 with
+    NVIDIA's cuBLAS 12.9 wheel), including a long-lived ``serve`` that never
+    transcribes, and on Windows it would run third-party code. A file that is
+    present but broken passes here and fails at transcription, as before."""
     try:
         if sys.platform == "win32":
             return any((folder / name).is_file() for folder in _windows_dll_dirs(ct2_dir))
-        import ctypes
-
-        ctypes.CDLL(name)
-        return True
+        if any((folder / name).is_file() for folder in _linux_library_dirs(ct2_dir)):
+            return True
+        return name in (ld_cache if ld_cache is not None else _ld_cache_names())
     except Exception:  # noqa: BLE001 - a probe answers "not here", it never raises
         return False
 
@@ -424,7 +462,10 @@ def cuda_libraries_missing() -> list[str]:
     except Exception:  # noqa: BLE001 - no ctranslate2, no CUDA question to answer
         return []
     names = cuda_libraries_for(version, sys.platform)
-    return [name for name in names if not _library_loads(name, ct2_dir)]
+    if not names:
+        return []
+    ld_cache = _ld_cache_names() if sys.platform.startswith("linux") else set()
+    return [name for name in names if not _library_loads(name, ct2_dir, ld_cache)]
 
 
 def _check_cuda_available() -> bool:

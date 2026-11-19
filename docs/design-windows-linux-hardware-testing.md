@@ -275,7 +275,15 @@ reverted; item 4 is open. Reading the wheels corrected the plan: every ctranslat
 that table against the installed Linux wheel. An independent review the same night
 found the first version could raise and was not itself pinned; fixed in `4185bee`,
 which also makes doctor, the CLI header and the timing key follow the device
-setting, and on Windows looks for the DLL files rather than loading them.
+setting, and on Windows looks for the DLL files rather than loading them. Linux
+followed (measured 19 Nov 2026 with NVIDIA's cuBLAS 12.9 pip wheel, no GPU needed):
+loading cuBLAS to answer the question cost about 60 ms and 150 MB resident (0.9 GB
+virtual) in every process that asked, a long-lived `serve` building the pipeline
+view included; looking for the file where `dlopen` would (ctranslate2's library
+folder, `LD_LIBRARY_PATH`, `ldconfig -p`, the default folders) costs 3–10 ms and
+nothing resident. The same measurement confirmed that a pip-installed cuBLAS not
+on any of those paths reads as missing, so that user gets the CPU and a doctor
+warning rather than a failed run.
 
 1. **No CPU fallback when CUDA cannot load.** On every non-frozen channel,
    `_check_cuda_available` (`bristlenose/utils/hardware.py:343`) trusts

@@ -399,19 +399,19 @@ class TestCudaNeedsItsLibraries:
 
     def test_a_counted_gpu_without_cublas_is_not_used(self, monkeypatch) -> None:
         hardware = self._gpu(monkeypatch, 1)
-        monkeypatch.setattr(hardware, "_library_loads", lambda name, ct2_dir=None: False)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name, *rest: False)
         assert hardware._check_cuda_available() is False
         assert hardware.cuda_libraries_missing() == ["libcublas.so.12", "libcublasLt.so.12"]
 
     def test_a_counted_gpu_with_cublas_is_used(self, monkeypatch) -> None:
         hardware = self._gpu(monkeypatch, 1)
-        monkeypatch.setattr(hardware, "_library_loads", lambda name, ct2_dir=None: True)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name, *rest: True)
         assert hardware._check_cuda_available() is True
 
     def test_no_gpu_loads_nothing(self, monkeypatch) -> None:
         hardware = self._gpu(monkeypatch, 0)
 
-        def boom(name: str, ct2_dir: object = None) -> bool:
+        def boom(name: str, *rest: object) -> bool:
             raise AssertionError(f"probed {name} with no GPU")
 
         monkeypatch.setattr(hardware, "_library_loads", boom)
@@ -421,7 +421,7 @@ class TestCudaNeedsItsLibraries:
         """4.5 and 4.6 load cuDNN 9: a toolkit without it must not pass."""
         hardware = self._gpu(monkeypatch, 1, version="4.6.0")
         present = {"libcublas.so.12", "libcublasLt.so.12"}
-        monkeypatch.setattr(hardware, "_library_loads", lambda name, ct2_dir=None: name in present)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name, *rest: name in present)
         assert hardware._check_cuda_available() is False
         assert hardware.cuda_libraries_missing() == ["libcudnn_ops.so.9", "libcudnn_cnn.so.9"]
 
@@ -473,23 +473,54 @@ class TestCudaNeedsItsLibraries:
         assert hardware._library_loads("cublasLt64_12.dll", ct2_dir=tmp_path) is True
         assert hardware._library_loads("cublasLt64_12.dll", ct2_dir=None) is False
 
-    def test_linux_asks_the_dynamic_loader(self, monkeypatch) -> None:
+    def test_linux_looks_where_dlopen_would_without_loading(self, monkeypatch, tmp_path: Path) -> None:
+        """Loading cuBLAS to answer the question mapped about 150 MB into every
+        process that asked, a long-lived serve included (measured 19 Nov 2026).
+        The check looks for the file where dlopen would: ctranslate2's own
+        library folder, LD_LIBRARY_PATH, the loader cache."""
         import ctypes
 
         from bristlenose.utils import hardware
 
+        def never(*a: object, **k: object) -> object:
+            raise AssertionError("the check loaded a library")
+
+        monkeypatch.setattr(ctypes, "CDLL", never)
         monkeypatch.setattr(sys, "platform", "linux")
-        asked: list[str] = []
+        monkeypatch.setenv("LD_LIBRARY_PATH", "")
+        assert hardware._library_loads("libcublas.so.12", None, set()) is False
 
-        def refuse(name: str, *a: object, **k: object) -> object:
-            asked.append(name)
-            raise OSError(f"{name}: cannot open shared object file")
+        pip_wheel = tmp_path / "nvidia" / "cublas" / "lib"
+        pip_wheel.mkdir(parents=True)
+        (pip_wheel / "libcublas.so.12").write_bytes(b"")
+        assert hardware._library_loads("libcublas.so.12", None, set()) is False  # not on a path
+        monkeypatch.setenv("LD_LIBRARY_PATH", f"/nowhere:{pip_wheel}")
+        assert hardware._library_loads("libcublas.so.12", None, set()) is True
 
-        monkeypatch.setattr(ctypes, "CDLL", refuse)
-        assert hardware._library_loads("libcublas.so.12") is False
-        assert asked == ["libcublas.so.12"]
-        monkeypatch.setattr(ctypes, "CDLL", lambda name, *a, **k: object())
-        assert hardware._library_loads("libcublas.so.12") is True
+        monkeypatch.setenv("LD_LIBRARY_PATH", "")
+        assert hardware._library_loads("libcublas.so.12", None, {"libcublas.so.12"}) is True
+
+        site = tmp_path / "site-packages"
+        (site / "ctranslate2.libs").mkdir(parents=True)
+        (site / "ctranslate2.libs" / "libcublasLt.so.12").write_bytes(b"")
+        assert hardware._library_loads("libcublasLt.so.12", site / "ctranslate2", set()) is True
+
+    def test_the_loader_cache_is_read_from_ldconfig(self, monkeypatch, tmp_path: Path) -> None:
+        import subprocess as sp
+
+        from bristlenose.utils import hardware
+
+        ldconfig = tmp_path / "ldconfig"
+        ldconfig.write_bytes(b"")
+        monkeypatch.setattr(hardware, "_LDCONFIG_PATHS", (str(ldconfig),))
+
+        listing = (
+            "3 libs found in cache `/etc/ld.so.cache'\n"
+            "\tlibcublas.so.12 (libc6,x86-64) => /usr/local/cuda/lib64/libcublas.so.12\n"
+            "\tlibc.so.6 (libc6,x86-64) => /lib/x86_64-linux-gnu/libc.so.6\n"
+        )
+        monkeypatch.setattr(sp, "run", lambda *a, **k: sp.CompletedProcess(a, 0, stdout=listing))
+        assert hardware._ld_cache_names() == {"libcublas.so.12", "libc.so.6"}
 
     def test_the_probe_never_raises(self, monkeypatch) -> None:
         """A ctranslate2 without a usable __file__ or __version__ (a mock, a

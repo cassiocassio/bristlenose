@@ -24,7 +24,6 @@ See docs/testing/coverage-inventory.md §1.
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -94,17 +93,14 @@ def test_advertised_count_is_twenty_seven() -> None:
 # 2. ffmpeg can produce + decode every media container (the real codec path)
 # ---------------------------------------------------------------------------
 
-_FFMPEG = shutil.which("ffmpeg")
-
 # Sorted for stable test ordering / ids.
 _AUDIO = sorted(AUDIO_EXTENSIONS)
 _VIDEO = sorted(VIDEO_EXTENSIONS)
 
 
 def _ffmpeg(*args: str) -> subprocess.CompletedProcess[str]:
-    assert _FFMPEG is not None
     return subprocess.run(
-        [_FFMPEG, "-hide_banner", "-y", *args],
+        ["ffmpeg", "-hide_banner", "-y", *args],
         capture_output=True,
         text=True,
         timeout=60,

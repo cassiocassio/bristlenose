@@ -606,7 +606,10 @@ def fresh_machine_identity_cache(monkeypatch):
 # the per-test decorators they replace. Session-scoped, so a class-scoped fixture that
 # itself runs the tool (TestFeedbackFormExecutes.outcomes) is set up after the check,
 # never before it. One fixture per tool: a missing node and a missing ffmpeg are
-# different causes and are not folded together.
+# different causes and are not folded together. Not yet everywhere: the pytestmark
+# skipifs in test_mcpb_proxy_bearer and test_mcpb_proxy_messages, and the named
+# `_needs_ffmpeg` in test_screen_text and test_serve_screens, still guard on their own
+# (each also checks ffprobe, win32 or root, so each needs its own look).
 # ---------------------------------------------------------------------------
 
 

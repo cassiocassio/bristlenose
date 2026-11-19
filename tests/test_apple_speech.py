@@ -245,9 +245,10 @@ def test_signal_minutes_counts_active_windows() -> None:
 def _shebang_script(path: Path, body: str) -> Path:
     """Write ``body`` as an executable ``#!`` script run by this Python.
 
-    Every fake helper is one, and Windows cannot execute a ``#!`` script (the real
-    helper is a macOS binary only the Mac app ships), so a test that needs one skips
-    there, here, once. Every pure-function test in the module still runs on Windows.
+    Every fake helper a test needs to run is one, and Windows cannot execute a ``#!``
+    script (the real helper is a macOS binary only the Mac app ships), so such a test
+    skips there, here, once. Every pure-function test in the module still runs on
+    Windows, as does the nonsense-probe test, which writes its own script on purpose.
     """
     if sys.platform == "win32":
         pytest.skip("a fake helper is a #! script, which Windows cannot run; the real one is a macOS binary")
@@ -284,6 +285,8 @@ def test_probe_reads_the_helper(tmp_path: Path) -> None:
 
 
 def test_a_probe_that_prints_nonsense_reads_as_absent(tmp_path: Path) -> None:
+    # Not through _shebang_script on purpose: on Windows the script cannot execute,
+    # which probe_helper must also read as absent, so this test runs there too.
     script = tmp_path / "bristlenose-speech"
     script.write_text(f"#!{sys.executable}\nprint('hello')\n", encoding="utf-8")
     script.chmod(0o755)

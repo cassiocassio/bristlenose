@@ -1942,7 +1942,7 @@ longer exists.
 | Section | Shipped string | Contains | v2 |
 |---|---|---|---|
 | floor | `yourTags` — **"Manual tags"** | the project's own | kept |
-| built-in | `builtIn` — **"Default"** | `sentiment`, `uxr`, `cli-ux` | kept |
+| built-in | `builtIn` — **"Default auto-tags"** (was "Default", 19 Nov 2026: a user test participant could not tell it from Manual tags, and the section is what auto-tagging found) | `sentiment`, `uxr`, `cli-ux` | kept |
 | authored | `frameworks` — ~~"Library"~~ | garrett, morville, nielsen, norman, plato, yablonski | **"Frameworks"** |
 
 **Only one string changes, and for a reason v2 created.** "Library" meant

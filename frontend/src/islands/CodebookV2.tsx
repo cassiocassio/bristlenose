@@ -45,7 +45,8 @@ import type {
 // (`components/CodebookV2Sidebar`), which `AppLayout` renders as a sibling —
 // so the selection can no longer be component state. Both sides read the store.
 import {
-  resetCodebookV2Selection,
+  resolveSelectedId,
+  scopeCodebookV2,
   selectCodebookV2,
   useCodebookV2Store,
 } from "../contexts/CodebookV2Store";
@@ -151,7 +152,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // codebook it can read rather than failing.
   const [templates, setTemplates] = useState<TemplateListResponse | null>(null);
   const [states, setStates] = useState<Record<string, boolean>>({});
-  const { selectedId: selected } = useCodebookV2Store();
+  const { selectedId: storedSelection } = useCodebookV2Store();
   const setSelected = selectCodebookV2;
   // Two views, no third. D22: a codebook is reached by a rail row or by a card,
   // and Browse Library is the only route to the catalogue — no next/previous,
@@ -187,9 +188,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     },
     [setSearchParams],
   );
-  // Module-level state outlives the component; reset it so a later visit starts
-  // on the floor rather than on whichever framework was last inspected.
-  useEffect(() => resetCodebookV2Selection, []);
+  // Module-level state outlives the component ON PURPOSE: leaving for another lens
+  // and coming back returns to the codebook you were on. A different project
+  // clears it (the pick is a framework id, meaningless in the next study).
+  useEffect(() => scopeCodebookV2(projectId), [projectId]);
 
   // Selecting in the navigator leaves the catalogue. The rail used to do this
   // itself, in the same handler as the selection; with the two split across a
@@ -214,7 +216,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     // choose to return to.
     setView("page", { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
+  }, [storedSelection]);
 
   // Uninstall is confirmed, never immediate. D20 option A made it destroy the
   // AutoCode run as well as the tags, so the sheet has more to say than the
@@ -333,6 +335,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     }
     return { rows };
   }, [codebook, templates, states, projectName, t]);
+
+  // The pick, or where an unpicked visit lands (the Default section's first row).
+  const selected = resolveSelectedId(storedSelection, books);
 
   /**
    * Tell everyone the codebook moved.

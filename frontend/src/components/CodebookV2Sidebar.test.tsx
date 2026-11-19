@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { CodebookV2Sidebar, buildBooks, type V2NavBook } from "./CodebookV2Sidebar";
 import {
   resetCodebookV2Selection,
+  scopeCodebookV2,
   selectCodebookV2,
 } from "../contexts/CodebookV2Store";
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
@@ -181,19 +182,88 @@ describe("the enable switch rides on the row", () => {
 
   it("toggling does not also select the row", async () => {
     // The switch is a control ON a navigation row; a click that both enabled a
-    // codebook and navigated to it would make one gesture do two things.
+    // codebook and navigated to it would make one gesture do two things. Nielsen,
+    // not sentiment: sentiment is where an unpicked visit lands, so it is active
+    // before any click and could not show the difference.
     renderSidebar();
-    await screen.findByTestId("bn-v2-nav-row-sentiment");
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
 
     const sw = screen
-      .getByTestId("bn-v2-nav-row-sentiment")
+      .getByTestId("bn-v2-nav-row-nielsen")
       .querySelector('[role="switch"], input[type="checkbox"]')!;
     fireEvent.click(sw);
 
     await waitFor(() => {
-      const api = screen.getByTestId("bn-v2-nav-row-sentiment");
-      expect(api.className).not.toContain("active");
+      const row = screen.getByTestId("bn-v2-nav-row-nielsen");
+      expect(row.className).not.toContain("active");
     });
+  });
+
+  it("lists Default auto-tags above Manual tags, and lands on Default's first row", async () => {
+    // 19 Nov 2026 (owner): people open Codebook to see what auto-tagging found,
+    // and applying manual tags is the slower, deliberate act. The floor was first
+    // and the landing, so a researcher with no manual tags yet met a blank page.
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-sentiment");
+
+    const headings = Array.from(document.querySelectorAll(".toc-heading")).map(
+      (h) => h.textContent,
+    );
+    expect(headings.indexOf("Default auto-tags")).toBe(0);
+    expect(headings.indexOf("Default auto-tags")).toBeLessThan(headings.indexOf("Manual tags"));
+    expect(headings.indexOf("Manual tags")).toBeLessThan(headings.indexOf("Frameworks"));
+
+    expect(screen.getByTestId("bn-v2-nav-row-sentiment").className).toContain("active");
+    expect(screen.getByTestId("bn-v2-nav-row-floor").className).not.toContain("active");
+
+    // Picking the floor is still one click, and sticks.
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-floor"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-v2-nav-row-floor").className).toContain("active"),
+    );
+  });
+
+  it("lands on the UXR codebook when it is installed (the study shows screens)", async () => {
+    // The house default installs it only for a study with screens, so its presence
+    // is the signal; without it, sentiment (above) is the landing.
+    const uxrGroup = group({ id: 9, name: "Navigation", framework_id: "uxr", tags: [] });
+    const uxrTemplate = { id: "uxr", title: "Bristlenose UXR Codebook", author: "", description: "", author_bio: "", author_links: [], groups: [], enabled: true, imported: true } as never;
+    (codebook.groups as unknown[]).push(uxrGroup);
+    (templates.templates as unknown[]).push(uxrTemplate);
+    try {
+      renderSidebar();
+      await screen.findByTestId("bn-v2-nav-row-uxr");
+      expect(screen.getByTestId("bn-v2-nav-row-uxr").className).toContain("active");
+      expect(screen.getByTestId("bn-v2-nav-row-sentiment").className).not.toContain("active");
+    } finally {
+      (codebook.groups as unknown[]).pop();
+      (templates.templates as unknown[]).pop();
+    }
+  });
+
+  it("remembers the pick when the lens is left and returned to, but not across projects", async () => {
+    // Owner, 19 Nov 2026: moving to another lens and back should bring you to the
+    // codebook you were on. The pick belongs to a project, though: a framework id
+    // from one study means nothing in the next.
+    scopeCodebookV2("1");
+    const first = renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-v2-nav-row-nielsen").className).toContain("active"),
+    );
+    first.unmount();
+
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    expect(screen.getByTestId("bn-v2-nav-row-nielsen").className).toContain("active");
+
+    // Another project: back to the landing.
+    cleanup();
+    scopeCodebookV2("2");
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-sentiment");
+    expect(screen.getByTestId("bn-v2-nav-row-sentiment").className).toContain("active");
   });
 
   it("hides the switch in an exported report", async () => {
@@ -514,7 +584,7 @@ describe("buildBooks", () => {
   const byId = (rows: V2NavBook[], id: string) => rows.find((r) => r.id === id)!;
 
   it("names the floor after the project", () => {
-    expect(byId(build(), "").title).toBe("Ikea tags");
+    expect(byId(build(), "").title).toBe("Project ‘Ikea’ tags");
   });
 
   it("lists only what is installed (D17)", () => {

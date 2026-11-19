@@ -21,6 +21,7 @@
  * by the frozen vanilla renderer (`theme/js/codebook.js`), never by React.
  */
 
+import { resetCodebookV2Selection } from "../contexts/CodebookV2Store";
 import {
   fireEvent,
   render as rtlRender,
@@ -193,6 +194,8 @@ const LENSES: Lens[] = [
     name: "v2 (CodebookV2)",
     floor: async () => {
       render(<><CodebookV2Sidebar /><CodebookV2 projectId="1" /></>);
+      // An unpicked visit lands on a codebook (19 Nov 2026), so go to the floor on purpose.
+      await userEvent.click(await screen.findByTestId("bn-v2-nav-row-floor"));
       await screen.findByText("Friction");
     },
     framework: async () => {
@@ -254,6 +257,7 @@ function sent(calls: Calls, fragment: string, method: string) {
 }
 
 beforeEach(() => {
+  resetCodebookV2Selection(); // the lens now remembers its pick across mounts
   resetSidebarStore();
   resetActivityStore();
   mockFetch();

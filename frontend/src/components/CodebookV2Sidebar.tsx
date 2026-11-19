@@ -18,7 +18,7 @@
  *   - the 6-column grid, so the lens's content never actually narrowed
  *
  * None of that is reimplementable per-lens, and none of it should be. The IA
- * this presents is unchanged — Manual tags / Default / Frameworks, one row per
+ * this presents is unchanged — Default / Manual tags / Frameworks, one row per
  * codebook, provenance under the title. The container, the typography and the
  * behaviours are now the house ones.
  *
@@ -58,7 +58,7 @@ import {
   putFrameworkStates,
 } from "../utils/api";
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
-import { selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
+import { resolveSelectedId, selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
 import { adoptFrameworkDisabled } from "../contexts/SidebarStore";
 import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
 import { isExportMode } from "../utils/exportData";
@@ -235,7 +235,7 @@ export function CodebookV2Sidebar() {
   // and `projectTagsHeading` are v1's, already translated in 21 locales, and
   // v2 inherits them along with the name and the icon.
   const { t } = useTranslation();
-  const { selectedId } = useCodebookV2Store();
+  const { selectedId: storedId } = useCodebookV2Store();
   const [books, setBooks] = useState<V2NavBook[] | null>(null);
   const readOnly = isExportMode();
   const [, setSearchParams] = useSearchParams();
@@ -351,6 +351,7 @@ export function CodebookV2Sidebar() {
 
   if (books === null) return null;
 
+  const selectedId = resolveSelectedId(storedId, books);
   const floor = books.filter((b) => b.floor);
   const builtIn = books.filter((b) => !b.floor && b.builtIn);
   const frameworks = books.filter((b) => !b.floor && !b.builtIn);
@@ -376,8 +377,8 @@ export function CodebookV2Sidebar() {
 
   return (
     <nav className="v2-nav" aria-label={t("nav.codebook")} data-testid="bn-v2-nav">
-      {section(t("codebook.yourTags"), floor)}
       {section(t("codebook.builtIn"), builtIn)}
+      {section(t("codebook.yourTags"), floor)}
       {section(t("codebook.frameworksSection"), frameworks)}
       {/* The rail is installed-only (D17), so the codebooks a researcher has
           NOT taken are reachable from here by no other route — v1's rail listed

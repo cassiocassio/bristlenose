@@ -136,7 +136,7 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
 
     const rail = screen.getByTestId("bn-v2-nav");
     const order = Array.from(rail.children).map((c) => c.textContent ?? "");
-    const iDefault = order.findIndex((t) => t === "Default");
+    const iDefault = order.findIndex((t) => t === "Default auto-tags");
     const iFrameworks = order.findIndex((t) => t === "Frameworks");
     const iSentiment = order.findIndex((t) => t.includes("Sentiment"));
     const iNielsen = order.findIndex((t) => t.includes("Usability"));
@@ -193,7 +193,7 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
     // title — so scope to the rail rather than loosening the query.
     render(<Lens projectId="1" projectName="Ikea" />);
     await waitFor(() => screen.getByTestId("bn-v2-nav-row-floor"));
-    expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Ikea tags");
+    expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Project ‘Ikea’ tags");
   });
 
   // BR-10: the title was a template literal, "{project} tags" in English in every language.
@@ -203,8 +203,8 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
     try {
       render(<Lens projectId="1" projectName="Ikea" />);
       await waitFor(() => screen.getByTestId("bn-v2-nav-row-floor"));
-      expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Tags von Ikea");
-      expect(screen.getByTestId("bn-v2-nav-row-floor")).not.toHaveTextContent("Ikea tags");
+      expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Tags des Projekts ‚Ikea‘");
+      expect(screen.getByTestId("bn-v2-nav-row-floor")).not.toHaveTextContent("Project ‘Ikea’ tags");
     } finally {
       await act(async () => { await i18n.changeLanguage("en"); });
     }
@@ -261,6 +261,18 @@ describe("D22 — Browse Library is the navigation", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       /^Codebooks$/,
     );
+  });
+
+  it("opens on an installed codebook, UXR first, not the researcher's own (empty) tags", async () => {
+    // 19 Nov 2026 (owner): the first thing a researcher wants is what
+    // auto-tagging found; manual tags are the slower, deliberate act, and a
+    // study with none yet showed a blank page on arrival. This fixture has the
+    // UXR codebook installed (as the house default does for a study with
+    // screens), so that is where it lands; the sidebar test covers sentiment.
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+    expect(screen.getByTestId("bn-v2-page").textContent).toContain("Bristlenose UXR");
+    expect(screen.getByTestId("bn-v2-page").textContent).not.toContain("Project ‘Ikea’ tags");
   });
 
   it("keeps ONE zone title across both views", async () => {

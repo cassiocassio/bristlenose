@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from bristlenose.stages.s05_transcribe import collapse_adjacent_repeats
 
 
@@ -1449,3 +1451,51 @@ class TestWhisperDecodesFetchFirst:
         assert outcome.succeeded == 1
         assert [f.cause.session_id for f in outcome.failed] == ["s1"]
         assert outcome.failed[0].cause.category == CauseCategoryEnum.CLOUD_FETCH
+
+
+class TestWhisperDeviceSetting:
+    """BRISTLENOSE_WHISPER_DEVICE was documented (man page, `--help`) and read by
+    nothing until 19 Nov 2026. "auto" follows the hardware check; "cuda" and
+    "cpu" override it."""
+
+    def _device(self, monkeypatch, requested: str, cuda_available: bool) -> str:
+        import sys
+        import types
+
+        from bristlenose.stages import s05_transcribe
+        from bristlenose.utils import onnxruntime_import
+
+        seen: dict[str, object] = {}
+
+        class _Model:
+            def __init__(self, *a: object, **kw: object) -> None:
+                seen.update(kw)
+
+        fake = types.ModuleType("faster_whisper")
+        fake.WhisperModel = _Model  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "faster_whisper", fake)
+        monkeypatch.setattr(onnxruntime_import, "import_onnxruntime", lambda: None)
+        monkeypatch.delenv("BRISTLENOSE_WHISPER_MODEL_DIR", raising=False)
+        settings = types.SimpleNamespace(
+            whisper_model="tiny", whisper_compute_type="int8", whisper_device=requested,
+        )
+        hw = types.SimpleNamespace(cuda_available=cuda_available)
+        s05_transcribe._init_faster_whisper_backend(settings, hw)
+        return f"{seen['device']}/{seen['compute_type']}"
+
+    @pytest.mark.parametrize(
+        ("requested", "cuda_available", "expected"),
+        [
+            ("auto", True, "cuda/float16"),
+            ("auto", False, "cpu/int8"),
+            ("cpu", True, "cpu/int8"),
+            ("cuda", False, "cuda/float16"),
+            ("CUDA ", False, "cuda/float16"),
+            ("gpu", False, "cpu/int8"),
+            ("gpu", True, "cuda/float16"),
+        ],
+    )
+    def test_the_setting_chooses_the_device(
+        self, monkeypatch, requested: str, cuda_available: bool, expected: str,
+    ) -> None:
+        assert self._device(monkeypatch, requested, cuda_available) == expected

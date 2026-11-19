@@ -371,3 +371,73 @@ class TestProbeMlxStarts:
         )
         assert done.returncode != 0
         assert "@mlx-probe ok" not in done.stdout
+
+
+# ---------------------------------------------------------------------------
+# CUDA is used only when the libraries ctranslate2 loads are there
+# (docs/design-windows-linux-hardware-testing.md §5)
+# ---------------------------------------------------------------------------
+
+
+class TestCudaNeedsItsLibraries:
+    """ctranslate2 counts an NVIDIA GPU whenever a driver is present; cuBLAS
+    comes only with NVIDIA's toolkit. A laptop with the driver alone was sent to
+    CUDA and failed its first transcription."""
+
+    def _gpu(self, monkeypatch, count: int):
+        import types
+
+        from bristlenose.utils import hardware
+
+        fake = types.ModuleType("ctranslate2")
+        fake.get_cuda_device_count = lambda: count  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "ctranslate2", fake)
+        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        return hardware
+
+    def test_a_counted_gpu_without_cublas_is_not_used(self, monkeypatch) -> None:
+        hardware = self._gpu(monkeypatch, 1)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name: False)
+        assert hardware._check_cuda_available() is False
+        assert hardware.cuda_libraries_missing() == ["libcublas.so.12", "libcublasLt.so.12"]
+
+    def test_a_counted_gpu_with_cublas_is_used(self, monkeypatch) -> None:
+        hardware = self._gpu(monkeypatch, 1)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name: True)
+        assert hardware._check_cuda_available() is True
+
+    def test_no_gpu_loads_nothing(self, monkeypatch) -> None:
+        hardware = self._gpu(monkeypatch, 0)
+
+        def boom(name: str) -> bool:
+            raise AssertionError(f"probed {name} with no GPU")
+
+        monkeypatch.setattr(hardware, "_library_loads", boom)
+        assert hardware._check_cuda_available() is False
+
+    def test_the_names_match_the_installed_ctranslate2(self) -> None:
+        """Read from the wheel, not remembered: a ctranslate2 that moves to CUDA 13,
+        or starts loading cuDNN again, fails here rather than on a user's GPU."""
+        import re
+
+        import pytest
+
+        from bristlenose.utils.hardware import _CUDA_LIBRARIES
+
+        if not sys.platform.startswith("linux"):
+            pytest.skip("reads the Linux wheel's shared library")
+        try:
+            import ctranslate2
+        except ImportError:
+            pytest.skip("ctranslate2 not installed")
+        libs = Path(ctranslate2.__file__).parent.parent / "ctranslate2.libs"
+        binaries = sorted(libs.glob("libctranslate2*.so*"))
+        if not binaries:
+            pytest.skip("no libctranslate2 shared library beside the package")
+        data = binaries[0].read_bytes()
+        majors = set(re.findall(rb"libcublas\.so\.(\d+)", data))
+        assert majors == {b"12"}, majors
+        assert all(name.endswith(".so.12") for name in _CUDA_LIBRARIES["linux"])
+        assert all(name.endswith("64_12.dll") for name in _CUDA_LIBRARIES["win32"])
+        assert b"cudnn" not in data.lower(), "ctranslate2 loads cuDNN again: add it to _CUDA_LIBRARIES"

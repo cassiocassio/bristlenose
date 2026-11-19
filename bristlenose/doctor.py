@@ -239,11 +239,14 @@ def check_backend() -> CheckResult:
         import ctranslate2
 
         ct2_version = getattr(ctranslate2, "__version__", "")
-        try:
-            if ctranslate2.get_cuda_device_count() > 0:
-                accel = "CUDA"
-        except Exception:
-            pass
+        # The question transcription asks, not a bare GPU count: ctranslate2
+        # counts an NVIDIA GPU whenever a driver is present, but transcription
+        # uses it only when the CUDA libraries load (and never in the frozen
+        # Windows build), so a count alone said "CUDA" for a CPU run.
+        from bristlenose.utils.hardware import _check_cuda_available
+
+        if _check_cuda_available():
+            accel = "CUDA"
     except ImportError:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -307,12 +310,24 @@ def check_backend() -> CheckResult:
 
         nvidia_detected = safe_which("nvidia-smi") is not None
         if nvidia_detected:
+            import sys as _sys
+
+            from bristlenose.utils.hardware import cuda_libraries_missing
+
+            if _sys.platform == "win32" and getattr(_sys, "frozen", False):
+                why = "the Windows installer build has no CUDA libraries"
+            else:
+                missing = cuda_libraries_missing()
+                why = (
+                    f"{', '.join(missing)} not found" if missing
+                    else "CUDA runtime not available"
+                )
             return CheckResult(
                 status=CheckStatus.WARN,
                 label="Transcription",
                 detail=(
                     f"{detail.rstrip(')')}, NVIDIA GPU detected "
-                    "but CUDA runtime not available — using CPU)"
+                    f"but {why} — using CPU)"
                 ),
                 fix_key="cuda_not_available",
             )

@@ -340,6 +340,48 @@ def probe_mlx_starts(timeout: float = 60.0) -> MlxProbe:
     tail = (proc.stderr or "").strip().splitlines()[-1:] or [f"exit {proc.returncode}"]
     return MlxProbe(ok=False, detail=tail[0][:200])
 
+# The CUDA libraries ctranslate2 loads at run time, read from its wheels on
+# 19 Nov 2026 (4.8.2 and 4.9.0 for Windows, 4.9.0 for Linux): ctranslate2.dll and
+# libctranslate2.so name cuBLAS 12 and the driver, and nothing of cuDNN (the
+# cudnn64_9.dll the Windows wheel ships is not loaded by it). The driver brings
+# nvcuda.dll / libcuda.so.1; cuBLAS comes only with NVIDIA's CUDA Toolkit or
+# its pip wheels. So a gaming or creator laptop has the GPU and the driver,
+# ctranslate2 counts the GPU, and the first transcription fails on cuBLAS.
+# tests/test_hardware.py pins the Linux name against the installed wheel, so a
+# ctranslate2 that moves to CUDA 13 fails a test instead of a user's run.
+_CUDA_LIBRARIES: dict[str, tuple[str, ...]] = {
+    "win32": ("cublas64_12.dll", "cublasLt64_12.dll"),
+    "linux": ("libcublas.so.12", "libcublasLt.so.12"),
+}
+
+
+def _library_loads(name: str) -> bool:
+    """Whether the dynamic loader finds *name* where ctranslate2 would look."""
+    import ctypes
+
+    try:
+        if sys.platform == "win32":
+            import ctranslate2
+
+            # ctranslate2 preloads every DLL in its own folder, so one placed
+            # there counts.
+            if (Path(ctranslate2.__file__).parent / name).is_file():
+                return True
+            # winmode=0 is Windows' standard search order, PATH included, which
+            # is where ctranslate2 finds cuBLAS; Python's default leaves PATH out.
+            ctypes.WinDLL(name, winmode=0)
+        else:
+            ctypes.CDLL(name)
+    except (OSError, ImportError):
+        return False
+    return True
+
+
+def cuda_libraries_missing() -> list[str]:
+    """The CUDA libraries ctranslate2 needs that cannot be loaded here."""
+    return [name for name in _CUDA_LIBRARIES.get(sys.platform, ()) if not _library_loads(name)]
+
+
 def _check_cuda_available() -> bool:
     """Check if CUDA is available via ctranslate2.
 
@@ -347,6 +389,11 @@ def _check_cuda_available() -> bool:
     cuDNN DLLs ctranslate2 loads for CUDA, yet ctranslate2 still counts an NVIDIA
     GPU when a driver is present — so the first transcription would fail on a
     missing DLL (docs/design-winget.md).
+
+    Elsewhere, a counted GPU is used only if the CUDA libraries ctranslate2 loads
+    are there too (:data:`_CUDA_LIBRARIES`): a driver alone is the common case on
+    a laptop with an NVIDIA GPU, and it would fail the same way
+    (docs/design-windows-linux-hardware-testing.md §5).
     """
     import sys
 
@@ -355,9 +402,18 @@ def _check_cuda_available() -> bool:
     try:
         import ctranslate2
         count: int = ctranslate2.get_cuda_device_count()
-        return count > 0
     except (ImportError, Exception):
         return False
+    if count <= 0:
+        return False
+    missing = cuda_libraries_missing()
+    if missing:
+        logger.info(
+            "NVIDIA GPU found but %s cannot be loaded: transcribing on the CPU",
+            ", ".join(missing),
+        )
+        return False
+    return True
 
 
 def _get_cuda_device_name() -> str | None:

@@ -461,6 +461,7 @@ def test_the_frozen_windows_build_never_claims_cuda(monkeypatch: pytest.MonkeyPa
     monkeypatch.setitem(sys.modules, "ctranslate2", fake)
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(hardware, "cuda_libraries_missing", list)
     assert hardware._check_cuda_available() is False
     monkeypatch.setattr(sys, "frozen", False)
     assert hardware._check_cuda_available() is True

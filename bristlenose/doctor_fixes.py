@@ -504,13 +504,33 @@ def _fix_mlx_not_installed(method: str) -> str:
     )
 
 
-def _fix_cuda_not_available(_method: str) -> str:
+def _fix_cuda_not_available(method: str) -> str:
+    if method == "winget":
+        return (
+            "NVIDIA GPU found, but the Windows installer's build doesn't include\n"
+            "NVIDIA's CUDA libraries, so it transcribes on the CPU.\n"
+            "Transcription works; it is slower than it would be on the GPU."
+        )
+    override = (
+        "\nIf CUDA 12 is installed and this still shows, force the GPU with\n"
+        "BRISTLENOSE_WHISPER_DEVICE=cuda."
+    )
+    if sys.platform == "win32":
+        return (
+            "NVIDIA GPU found but the CUDA libraries Bristlenose uses\n"
+            "(cuBLAS 12) aren't installed. Transcription works on the CPU,\n"
+            "but slower.\n\n"
+            "To use the GPU, install NVIDIA's CUDA Toolkit 12\n"
+            "(developer.nvidia.com/cuda-downloads), which puts cublas64_12.dll\n"
+            "on your PATH, then open a new terminal.\n" + override
+        )
     return (
         "NVIDIA GPU found but CUDA libraries aren't accessible.\n"
         "Transcription will work on CPU but will be slower.\n\n"
         "To enable GPU acceleration:\n"
         "  1. Install CUDA 12.x: nvidia.com/cuda-downloads\n"
-        "  2. Set: export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+        "  2. Set: export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH\n"
+        + override
     )
 
 

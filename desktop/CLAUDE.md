@@ -527,10 +527,11 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - Consent version bumping
 - A Claude Desktop extension's id includes `author.name`: changing it installs a second copy (13 Nov 2026); "Unknown developer" on its Plugins row is not fixable by us (14 Nov 2026)
 
-**Tests, harnesses and verification** (13) — [full entries](gotchas.md#tests-harnesses-and-verification)
+**Tests, harnesses and verification** (14) — [full entries](gotchas.md#tests-harnesses-and-verification)
 
 - Changing `check-dmg-shippable.sh` or `check-pkg-shippable.sh`? Run its `test-check-*.sh` self-test in the same commit; a new required key needs a fixture value and a missing-key case.
 - A whole-suite red where every failure took 0.000s may be the test HOST exiting, and the…
+- The same 0.000s red with `EXC_BAD_ACCESS` after a struct change can be a stale test bundle `build-for-testing` never rebuilt: check the `.xctest` timestamp, delete its intermediates
 - A Swift test that waits for an AppKit animation fails while the display is asleep or…
 - The GitHub macOS runners give the test process a 1024×768 @1x screen, and `orderFront`…
 - `-only-testing` needs the trailing `()` for a Swift Testing test

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -79,13 +80,34 @@ MAC_ONLY = [("Relaunch after a rejected check", "relaunch-invalid"), ("Offline w
 HELP = ["help-run", "help-analyze", "help-doctor", "help-configure", "help-use"]
 
 
+_ANSI = r"(?:\x1b\[[0-9;]*m)*"
+_FAKE_HOST = re.compile(r"(?:http://)?" + _ANSI + r"127" + _ANSI + r"\." + _ANSI + r"0" + _ANSI + r"\." + _ANSI
+                        + r"0" + _ANSI + r"\." + _ANSI + r"1" + _ANSI + r":" + _ANSI + r"\d+")
+
+
+def display(text: str) -> str:
+    """The fake server's address as the placeholder resource: Rich colours an IP, so the
+    capture's plain-text swap misses it when the colour codes sit inside the address."""
+    return _FAKE_HOST.sub("contoso-research.openai.azure.com", text)
+
+
+def meaningful(text: str) -> str:
+    """What a before/after comparison should see: no colour, no sha, ports, timings,
+    disk space or spinner frames, which change on every capture."""
+    t = re.sub(r"\x1b\[[0-9;]*[mK]", "", display(text))
+    t = re.sub(r"[0-9a-f]{9}(-dirty)?", "<sha>", t)
+    t = re.sub(r"\(\d+ms\)|\d+ GB free|\d+(\.\d+)?s\b", "<n>", t)
+    lines = [ln for ln in t.splitlines() if not re.match(r"^\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]", ln) and "llm_call_failed" not in ln]
+    return "\n".join(ln.rstrip() for ln in lines if ln.strip())
+
+
 def new(text: str) -> str:
     return f'<mark class="new">NEW: {html.escape(text)}</mark>'
 
 
 def ansi_html(text: str) -> str:
     c = Console(record=True, width=80, file=open("/dev/null", "w"), color_system="truecolor")
-    c.print(Text.from_ansi(text), soft_wrap=True)
+    c.print(Text.from_ansi(display(text)), soft_wrap=True)
     return "<pre>" + c.export_html(inline_styles=True, code_format="{code}") + "</pre>"
 
 
@@ -154,7 +176,7 @@ def main() -> None:
         toc.append(f'<li><a href="#{anchor}">{html.escape(title)}</a></li>')
         c = cli[cid]
         frames = []
-        if before and cid in cli0 and cli0[cid]["text"] != c["text"]:
+        if before and cid in cli0 and meaningful(cli0[cid]["text"]) != meaningful(c["text"]):
             frames.append(term(cli0[cid], '<span class="tag before">before</span>'))
             frames.append(term(c, '<span class="tag after">after</span>'))
         else:
@@ -174,6 +196,18 @@ def main() -> None:
     toc.append(f'<li><a href="#s{k}">Help text</a></li>')
     body.append(f'<section id="s{k}"><h2>{k}. Help text</h2><div class="row">' + "".join(term(cli[h]) for h in HELP) + "</div></section>")
 
+    pngs = sorted(shots.glob("*.png")) if shots.exists() else []
+    shots_html = ""
+    if pngs:
+        figs = "".join(
+            f'<figure class="frame shot"><figcaption><span class="dots"></span>{html.escape(p.stem)}'
+            f'<span class="drawn">screenshot · shipped 0.46.0 in a macOS 27 guest</span></figcaption>'
+            f'<img src="../../experiments/azure-scenarios/screenshots/{html.escape(p.name)}" alt="{html.escape(p.stem)}"></figure>'
+            for p in pngs)
+        shots_html = ('<section id="real"><h2>Real pixels: the shipped Azure pane (0.46.0)</h2>'
+                      '<p class="trigger">Taken in a throwaway macOS 27 guest from the 0.46.0 release app, no key entered. '
+                      'Tonight\'s build could not be staged (the staging build notarises), so these show 0.46.0, not this sha.</p>'
+                      f'<div class="row">{figs}</div></section>')
     shot_note = (f"Guest screenshots present: {len(list(shots.glob('*.png')))}." if shots.exists()
                  else "No guest screenshots: every Mac frame here is drawn from the source strings.")
     page = f"""<!doctype html>
@@ -214,6 +248,7 @@ h2 {{ font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); m
 .runfail {{ border-top:1px solid var(--bn-colour-border); }}
 .glyph {{ color:#e6a700; margin-right:6px; }}
 .src {{ font-family:var(--bn-font-mono); font-size:10.5px; color:var(--bn-colour-muted); margin:6px 0 0; }}
+.shot img {{ display:block; width:520px; max-width:calc(100vw - 64px); height:auto; }}
 .web {{ width:340px; }} .web > *:not(figcaption) {{ margin:10px 12px; }}
 .msg.err {{ border-left:3px solid #d1242f; padding:6px 10px; background:color-mix(in srgb, #d1242f 8%, transparent); }}
 mark.new {{ background:#ffe08a; }}
@@ -223,6 +258,7 @@ ol.toc {{ columns:2; }}
 <header><h1>Azure scenarios: what a researcher sees</h1>
 <p class="key">Captured from the running code at {html.escape(cur["sha"])}{" (before: " + html.escape(before["sha"]) + ")" if before else ""}. Key: framed boxes are the product; hatched boxes are commentary. {html.escape(shot_note)}</p></header>
 <div class="commentary"><p>CLI frames are the CLI's own output (Rich colours kept) against a fake Azure on this machine that answers with bodies Azure really sent. The fake's address is shown as a placeholder resource URL and the home folder as ~. Mac frames place the shipped strings (by locale key) in the state the Swift code picks; the file and line under each frame says where. Web frames are the refusal the server raises and the sentence the SPA shows for its reason.</p></div>
+{shots_html}
 <nav><ol class="toc">{"".join(toc)}</ol></nav>
 {"".join(body)}
 </body></html>"""

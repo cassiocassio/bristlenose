@@ -152,7 +152,7 @@ def check_ffprobe() -> CheckResult:
     return CheckResult(status=CheckStatus.OK, label="FFprobe", detail=path)
 
 
-def check_backend() -> CheckResult:
+def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
     """Check whether a transcription backend is importable.
 
     Apple Silicon ships with mlx-whisper (native, Metal/ANE, smaller
@@ -243,10 +243,16 @@ def check_backend() -> CheckResult:
         # counts an NVIDIA GPU whenever a driver is present, but transcription
         # uses it only when the CUDA libraries load (and never in the frozen
         # Windows build), so a count alone said "CUDA" for a CPU run.
-        from bristlenose.utils.hardware import _check_cuda_available
+        from bristlenose.utils.hardware import _check_cuda_available, requested_whisper_device
 
         if _check_cuda_available():
             accel = "CUDA"
+        # BRISTLENOSE_WHISPER_DEVICE overrides the check for the run, so it does here.
+        chosen = requested_whisper_device(settings) if settings is not None else "auto"
+        if chosen == "cuda":
+            accel = "CUDA, as set"
+        elif chosen == "cpu":
+            accel = "CPU, as set"
     except ImportError:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -1970,7 +1976,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
     return DoctorReport(results=[
         check_ffmpeg(),
         check_ffprobe(),
-        check_backend(),
+        check_backend(settings),
         check_whisper_model(settings),
         check_api_key(settings),
         check_network(settings),
@@ -2004,7 +2010,7 @@ def run_local_checks(settings: BristlenoseSettings) -> DoctorReport:
     """
     return DoctorReport(results=[
         check_ffmpeg(),
-        check_backend(),
+        check_backend(settings),
         check_whisper_model(settings),
         check_pii(settings),
         check_voice(settings),
@@ -2032,7 +2038,7 @@ def run_preflight(
     _check_fns: dict[str, object] = {
         "ffmpeg": lambda: check_ffmpeg(),
         "ffprobe": lambda: check_ffprobe(),
-        "backend": lambda: check_backend(),
+        "backend": lambda: check_backend(settings),
         "whisper_model": lambda: check_whisper_model(settings),
         "api_key": lambda: check_api_key(settings),
         "network": lambda: check_network(settings),

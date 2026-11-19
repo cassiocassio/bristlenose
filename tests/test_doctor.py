@@ -508,6 +508,59 @@ class TestCheckBackend:
         assert "(CUDA)" not in result.detail
 
     @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_a_windows_gpu_check_never_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On the Windows runner, the library check read a mocked ctranslate2's
+        __file__ and raised out of check_backend (found in review, 19 Nov 2026)."""
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 1
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setenv("PATH", "")
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Windows"),
+            patch("platform.machine", return_value="AMD64"),
+            patch("shutil.which", return_value="C:\\Windows\\System32\\nvidia-smi.exe"),
+        ):
+            result = check_backend()
+        assert result.status == CheckStatus.WARN
+        assert "cublas64_12.dll" in result.detail
+
+    @pytest.mark.parametrize(("chosen", "shown"), [("cpu", "(CPU, as set)"), ("cuda", "(CUDA, as set)")])
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_the_device_setting_is_what_doctor_reports(self, chosen: str, shown: str) -> None:
+        """BRISTLENOSE_WHISPER_DEVICE decides the run, so doctor reports it, and a
+        chosen device draws no "GPU not used" warning."""
+        import types
+
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 1
+        settings = types.SimpleNamespace(whisper_device=chosen)
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value="/usr/bin/nvidia-smi"),
+            patch(
+                "bristlenose.utils.hardware.cuda_libraries_missing",
+                return_value=["libcublas.so.12"],
+            ),
+        ):
+            result = check_backend(settings)  # type: ignore[arg-type]
+        assert result.status == CheckStatus.OK
+        assert shown in result.detail
+
+    @pytest.mark.usefixtures("which_is_shutil_which")
     def test_the_winget_build_with_an_nvidia_gpu_says_cpu(
         self, monkeypatch: pytest.MonkeyPatch,
     ) -> None:

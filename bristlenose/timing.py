@@ -189,10 +189,15 @@ def build_hardware_key(settings: BristlenoseSettings) -> str:
 
     Estimates are only meaningful for the same hardware+config combo.
     """
-    from bristlenose.utils.hardware import detect_hardware
+    from bristlenose.utils.hardware import detect_hardware, effective_accelerator
 
     hw = detect_hardware()
     chip = hw.chip_name or hw.accelerator.value
+    used = effective_accelerator(hw, settings)
+    if used is not hw.accelerator:
+        # BRISTLENOSE_WHISPER_DEVICE overrides the hardware; a CPU run timed into
+        # the GPU's profile (or the reverse) would teach each the other's pace.
+        chip = used.value
     backend = settings.whisper_backend
     if backend == "auto":
         backend = hw.recommended_whisper_backend

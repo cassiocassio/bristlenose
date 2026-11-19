@@ -380,17 +380,18 @@ class TestProbeMlxStarts:
 
 
 class TestCudaNeedsItsLibraries:
-    """ctranslate2 counts an NVIDIA GPU whenever a driver is present; cuBLAS
-    comes only with NVIDIA's toolkit. A laptop with the driver alone was sent to
-    CUDA and failed its first transcription."""
+    """ctranslate2 counts an NVIDIA GPU whenever a driver is present; cuBLAS (and,
+    before ctranslate2 4.7, cuDNN) come only with NVIDIA's toolkits. A laptop with
+    the driver alone was sent to CUDA and would fail its first transcription."""
 
-    def _gpu(self, monkeypatch, count: int):
+    def _gpu(self, monkeypatch, count: int, version: str = "4.9.0"):
         import types
 
         from bristlenose.utils import hardware
 
         fake = types.ModuleType("ctranslate2")
         fake.get_cuda_device_count = lambda: count  # type: ignore[attr-defined]
+        fake.__version__ = version  # type: ignore[attr-defined]
         monkeypatch.setitem(sys.modules, "ctranslate2", fake)
         monkeypatch.setattr(sys, "platform", "linux")
         monkeypatch.setattr(sys, "frozen", False, raising=False)
@@ -398,32 +399,138 @@ class TestCudaNeedsItsLibraries:
 
     def test_a_counted_gpu_without_cublas_is_not_used(self, monkeypatch) -> None:
         hardware = self._gpu(monkeypatch, 1)
-        monkeypatch.setattr(hardware, "_library_loads", lambda name: False)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name, ct2_dir=None: False)
         assert hardware._check_cuda_available() is False
         assert hardware.cuda_libraries_missing() == ["libcublas.so.12", "libcublasLt.so.12"]
 
     def test_a_counted_gpu_with_cublas_is_used(self, monkeypatch) -> None:
         hardware = self._gpu(monkeypatch, 1)
-        monkeypatch.setattr(hardware, "_library_loads", lambda name: True)
+        monkeypatch.setattr(hardware, "_library_loads", lambda name, ct2_dir=None: True)
         assert hardware._check_cuda_available() is True
 
     def test_no_gpu_loads_nothing(self, monkeypatch) -> None:
         hardware = self._gpu(monkeypatch, 0)
 
-        def boom(name: str) -> bool:
+        def boom(name: str, ct2_dir: object = None) -> bool:
             raise AssertionError(f"probed {name} with no GPU")
 
         monkeypatch.setattr(hardware, "_library_loads", boom)
         assert hardware._check_cuda_available() is False
 
+    def test_an_older_ctranslate2_also_needs_cudnn(self, monkeypatch) -> None:
+        """4.5 and 4.6 load cuDNN 9: a toolkit without it must not pass."""
+        hardware = self._gpu(monkeypatch, 1, version="4.6.0")
+        present = {"libcublas.so.12", "libcublasLt.so.12"}
+        monkeypatch.setattr(hardware, "_library_loads", lambda name, ct2_dir=None: name in present)
+        assert hardware._check_cuda_available() is False
+        assert hardware.cuda_libraries_missing() == ["libcudnn_ops.so.9", "libcudnn_cnn.so.9"]
+
+    def test_the_libraries_follow_the_ctranslate2_version(self) -> None:
+        """Read from the 4.0.0-4.9.0 wheels on 19 Nov 2026."""
+        from bristlenose.utils.hardware import cuda_libraries_for
+
+        cublas = ("cublas64_12.dll", "cublasLt64_12.dll")
+        assert cuda_libraries_for("4.4.0", "win32") == cublas + (
+            "cudnn_ops_infer64_8.dll", "cudnn_cnn_infer64_8.dll")
+        assert cuda_libraries_for("4.5.0", "win32") == cublas + ("cudnn_ops64_9.dll", "cudnn_cnn64_9.dll")
+        assert cuda_libraries_for("4.6.0", "win32") == cublas + ("cudnn_ops64_9.dll", "cudnn_cnn64_9.dll")
+        assert cuda_libraries_for("4.7.0", "win32") == cublas
+        assert cuda_libraries_for("4.9.0", "linux") == ("libcublas.so.12", "libcublasLt.so.12")
+        assert cuda_libraries_for("", "linux") == ("libcublas.so.12", "libcublasLt.so.12")
+        assert cuda_libraries_for("4.9.0", "darwin") == ()
+
+    def test_windows_finds_a_dll_on_path_and_ignores_the_current_folder(
+        self, monkeypatch, tmp_path: Path,
+    ) -> None:
+        """Windows' loader searches PATH; Python's ctypes default does not, so a
+        CUDA Toolkit install would have been missed. The current folder is left
+        out so a DLL planted beside recordings never counts."""
+        from bristlenose.utils import hardware
+
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.delenv("SystemRoot", raising=False)
+        here = tmp_path / "recordings"
+        here.mkdir()
+        (here / "cublas64_12.dll").write_bytes(b"")
+        monkeypatch.chdir(here)
+        monkeypatch.setenv("PATH", "")
+        assert hardware._library_loads("cublas64_12.dll") is False
+
+        toolkit = tmp_path / "CUDA" / "v12.6" / "bin"
+        toolkit.mkdir(parents=True)
+        (toolkit / "cublas64_12.dll").write_bytes(b"")
+        monkeypatch.setenv("PATH", str(toolkit))
+        assert hardware._library_loads("cublas64_12.dll") is True
+
+    def test_windows_counts_a_dll_in_the_ctranslate2_folder(self, monkeypatch, tmp_path: Path) -> None:
+        """ctranslate2 preloads every DLL in its own folder."""
+        from bristlenose.utils import hardware
+
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.delenv("SystemRoot", raising=False)
+        monkeypatch.setenv("PATH", "")
+        (tmp_path / "cublasLt64_12.dll").write_bytes(b"")
+        assert hardware._library_loads("cublasLt64_12.dll", ct2_dir=tmp_path) is True
+        assert hardware._library_loads("cublasLt64_12.dll", ct2_dir=None) is False
+
+    def test_linux_asks_the_dynamic_loader(self, monkeypatch) -> None:
+        import ctypes
+
+        from bristlenose.utils import hardware
+
+        monkeypatch.setattr(sys, "platform", "linux")
+        asked: list[str] = []
+
+        def refuse(name: str, *a: object, **k: object) -> object:
+            asked.append(name)
+            raise OSError(f"{name}: cannot open shared object file")
+
+        monkeypatch.setattr(ctypes, "CDLL", refuse)
+        assert hardware._library_loads("libcublas.so.12") is False
+        assert asked == ["libcublas.so.12"]
+        monkeypatch.setattr(ctypes, "CDLL", lambda name, *a, **k: object())
+        assert hardware._library_loads("libcublas.so.12") is True
+
+    def test_the_probe_never_raises(self, monkeypatch) -> None:
+        """A ctranslate2 without a usable __file__ or __version__ (a mock, a
+        namespace package) must answer, not raise: detect_hardware runs in the
+        header, preflight and the timing key."""
+        from unittest.mock import MagicMock
+
+        from bristlenose.utils import hardware
+
+        monkeypatch.setitem(sys.modules, "ctranslate2", MagicMock())
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setenv("PATH", "")
+        assert isinstance(hardware.cuda_libraries_missing(), list)
+
+    def test_the_setting_decides_what_is_used(self) -> None:
+        import types
+
+        from bristlenose.utils.hardware import effective_accelerator
+
+        cuda_hw = HardwareInfo(accelerator=AcceleratorType.CUDA, cuda_available=True)
+        cpu_hw = HardwareInfo(accelerator=AcceleratorType.CPU)
+        apple_hw = HardwareInfo(accelerator=AcceleratorType.APPLE_SILICON, mlx_available=True)
+
+        def setting(value: str) -> object:
+            return types.SimpleNamespace(whisper_device=value)
+
+        assert effective_accelerator(cuda_hw, setting("auto")) is AcceleratorType.CUDA
+        assert effective_accelerator(cuda_hw, setting("cpu")) is AcceleratorType.CPU
+        assert effective_accelerator(cpu_hw, setting("cuda")) is AcceleratorType.CUDA
+        assert effective_accelerator(cpu_hw, setting("gpu")) is AcceleratorType.CPU
+        assert effective_accelerator(apple_hw, setting("cuda")) is AcceleratorType.APPLE_SILICON
+
     def test_the_names_match_the_installed_ctranslate2(self) -> None:
         """Read from the wheel, not remembered: a ctranslate2 that moves to CUDA 13,
-        or starts loading cuDNN again, fails here rather than on a user's GPU."""
+        or loads cuDNN where the table says it does not, fails here rather than on
+        a user's GPU. Linux only: CI installs the Linux wheel."""
         import re
 
         import pytest
 
-        from bristlenose.utils.hardware import _CUDA_LIBRARIES
+        from bristlenose.utils.hardware import cuda_libraries_for
 
         if not sys.platform.startswith("linux"):
             pytest.skip("reads the Linux wheel's shared library")
@@ -436,8 +543,9 @@ class TestCudaNeedsItsLibraries:
         if not binaries:
             pytest.skip("no libctranslate2 shared library beside the package")
         data = binaries[0].read_bytes()
+        expected = cuda_libraries_for(ctranslate2.__version__, "linux")
         majors = set(re.findall(rb"libcublas\.so\.(\d+)", data))
-        assert majors == {b"12"}, majors
-        assert all(name.endswith(".so.12") for name in _CUDA_LIBRARIES["linux"])
-        assert all(name.endswith("64_12.dll") for name in _CUDA_LIBRARIES["win32"])
-        assert b"cudnn" not in data.lower(), "ctranslate2 loads cuDNN again: add it to _CUDA_LIBRARIES"
+        assert majors == {b"12"} and "libcublas.so.12" in expected, majors
+        loads_cudnn = b"cudnn" in data.lower()
+        assert loads_cudnn == any("cudnn" in name for name in expected), (
+            ctranslate2.__version__, loads_cudnn, expected)

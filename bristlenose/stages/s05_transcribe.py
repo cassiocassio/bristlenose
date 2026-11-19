@@ -1715,11 +1715,17 @@ def _init_faster_whisper_backend(
     # was documented in the man page and `--help` but read by nothing until 19 Nov 2026.
     # "auto" follows the hardware check, which counts a GPU only when the CUDA libraries
     # load; "cuda" overrides that check for a setup it misjudges; "cpu" never uses the GPU.
-    requested = str(getattr(settings, "whisper_device", "auto") or "auto").strip().lower()
-    if requested not in ("auto", "cpu", "cuda"):
-        logger.warning("BRISTLENOSE_WHISPER_DEVICE=%r is not cpu, cuda or auto; using auto", requested)
-        requested = "auto"
-    if requested == "cuda" or (requested == "auto" and hw.cuda_available):
+    from bristlenose.utils.hardware import (
+        WHISPER_DEVICES,
+        effective_whisper_device,
+        requested_whisper_device,
+    )
+
+    raw = str(getattr(settings, "whisper_device", "auto") or "auto").strip().lower()
+    if raw not in WHISPER_DEVICES:
+        logger.warning("BRISTLENOSE_WHISPER_DEVICE=%r is not cpu, cuda or auto; using auto", raw)
+    requested = requested_whisper_device(settings)
+    if effective_whisper_device(settings, hw.cuda_available) == "cuda":
         device = "cuda"
         compute_type = "float16"
         logger.info("faster-whisper: using CUDA (GPU)%s", ", as set" if requested == "cuda" else "")

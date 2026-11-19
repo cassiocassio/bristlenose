@@ -341,59 +341,103 @@ def probe_mlx_starts(timeout: float = 60.0) -> MlxProbe:
     return MlxProbe(ok=False, detail=tail[0][:200])
 
 # The CUDA libraries ctranslate2 loads at run time, read from its wheels on
-# 19 Nov 2026 (4.8.2 and 4.9.0 for Windows, 4.9.0 for Linux): ctranslate2.dll and
-# libctranslate2.so name cuBLAS 12 and the driver, and nothing of cuDNN (the
-# cudnn64_9.dll the Windows wheel ships is not loaded by it). The driver brings
-# nvcuda.dll / libcuda.so.1; cuBLAS comes only with NVIDIA's CUDA Toolkit or
-# its pip wheels. So a gaming or creator laptop has the GPU and the driver,
-# ctranslate2 counts the GPU, and the first transcription would then fail to
-# load cuBLAS (the failure ctranslate2 reports; not yet seen on our own GPU).
-# tests/test_hardware.py pins the Linux name against the installed wheel, so a
-# ctranslate2 that moves to CUDA 13 fails a test instead of a user's run.
-_CUDA_LIBRARIES: dict[str, tuple[str, ...]] = {
+# 19 Nov 2026 (Windows 4.0.0-4.9.0, Linux 4.0.0-4.9.0): cuBLAS 12 throughout 4.x;
+# cuDNN 8 up to 4.4, cuDNN 9 in 4.5 and 4.6, and no cuDNN from 4.7.0. faster-whisper
+# allows any 4.x, so the list follows the installed version. The driver brings
+# nvcuda.dll / libcuda.so.1; cuBLAS (and cuDNN) come only with NVIDIA's toolkits or
+# pip wheels. So a laptop with the GPU and the driver alone has a GPU ctranslate2
+# counts and a first transcription that would fail to load them. cuBLASLt is a
+# dependency of cuBLAS rather than a name ctranslate2 loads; it is listed because a
+# cuBLAS without it does not load. tests/test_hardware.py pins the Linux cuBLAS name
+# against the installed wheel.
+_CUBLAS: dict[str, tuple[str, ...]] = {
     "win32": ("cublas64_12.dll", "cublasLt64_12.dll"),
     "linux": ("libcublas.so.12", "libcublasLt.so.12"),
 }
+_CUDNN_9: dict[str, tuple[str, ...]] = {
+    "win32": ("cudnn_ops64_9.dll", "cudnn_cnn64_9.dll"),
+    "linux": ("libcudnn_ops.so.9", "libcudnn_cnn.so.9"),
+}
+_CUDNN_8: dict[str, tuple[str, ...]] = {
+    "win32": ("cudnn_ops_infer64_8.dll", "cudnn_cnn_infer64_8.dll"),
+    "linux": ("libcudnn_ops_infer.so.8", "libcudnn_cnn_infer.so.8"),
+}
 
 
-def _library_loads(name: str) -> bool:
-    """Whether the dynamic loader finds *name* where ctranslate2 would look."""
-    import ctypes
+def cuda_libraries_for(ct2_version: str, platform_key: str) -> tuple[str, ...]:
+    """The CUDA libraries ctranslate2 *ct2_version* loads on *platform_key*
+    (``sys.platform``); unknown versions are treated as the newest."""
+    import re
 
+    match = re.match(r"(\d+)\.(\d+)", ct2_version or "")
+    major, minor = (int(match.group(1)), int(match.group(2))) if match else (99, 0)
+    names = _CUBLAS.get(platform_key, ())
+    if major == 4 and minor < 5:
+        names += _CUDNN_8.get(platform_key, ())
+    elif major == 4 and minor < 7:
+        names += _CUDNN_9.get(platform_key, ())
+    return names
+
+
+def _windows_dll_dirs(ct2_dir: Path | None) -> list[Path]:
+    """Where Windows' loader would find a DLL ctranslate2 loads by name: its own
+    folder (it preloads every DLL there), Python's folder, System32, then PATH. The
+    current folder is left out on purpose: a DLL planted beside a user's recordings
+    must not count, and nothing here loads what it finds (``safe_which`` reasons the
+    same way for executables)."""
+    import os
+
+    dirs: list[Path] = []
+    if ct2_dir is not None:
+        dirs.append(ct2_dir)
+    dirs.append(Path(sys.executable).parent)
+    system_root = os.environ.get("SystemRoot")
+    if system_root:
+        dirs.append(Path(system_root) / "System32")
+    dirs.extend(Path(entry) for entry in os.environ.get("PATH", "").split(os.pathsep) if entry)
+    return dirs
+
+
+def _library_loads(name: str, ct2_dir: Path | None = None) -> bool:
+    """Whether *name* is where ctranslate2 would load it from. On Windows, a file
+    in the loader's search folders; elsewhere, the dynamic loader itself
+    (``dlopen`` does not search the current folder)."""
     try:
         if sys.platform == "win32":
-            import ctranslate2
+            return any((folder / name).is_file() for folder in _windows_dll_dirs(ct2_dir))
+        import ctypes
 
-            # ctranslate2 preloads every DLL in its own folder, so one placed
-            # there counts.
-            if (Path(ctranslate2.__file__).parent / name).is_file():
-                return True
-            # winmode=0 is Windows' standard search order, PATH included, which
-            # is where ctranslate2 finds cuBLAS; Python's default leaves PATH out.
-            ctypes.WinDLL(name, winmode=0)
-        else:
-            ctypes.CDLL(name)
-    except (OSError, ImportError):
+        ctypes.CDLL(name)
+        return True
+    except Exception:  # noqa: BLE001 - a probe answers "not here", it never raises
         return False
-    return True
 
 
 def cuda_libraries_missing() -> list[str]:
-    """The CUDA libraries ctranslate2 needs that cannot be loaded here."""
-    return [name for name in _CUDA_LIBRARIES.get(sys.platform, ()) if not _library_loads(name)]
+    """The CUDA libraries the installed ctranslate2 needs that are not here."""
+    try:
+        import ctranslate2
+
+        version = str(getattr(ctranslate2, "__version__", ""))
+        location = getattr(ctranslate2, "__file__", None)
+        ct2_dir = Path(location).parent if isinstance(location, str) else None
+    except Exception:  # noqa: BLE001 - no ctranslate2, no CUDA question to answer
+        return []
+    names = cuda_libraries_for(version, sys.platform)
+    return [name for name in names if not _library_loads(name, ct2_dir)]
 
 
 def _check_cuda_available() -> bool:
     """Check if CUDA is available via ctranslate2.
 
-    Never on the frozen Windows build: it ships CPU-only, without the cuBLAS and
-    cuDNN DLLs ctranslate2 loads for CUDA, yet ctranslate2 still counts an NVIDIA
-    GPU when a driver is present — so the first transcription would fail on a
+    Never on the frozen Windows build: it ships CPU-only, without the CUDA
+    libraries ctranslate2 loads for it, yet ctranslate2 still counts an NVIDIA
+    GPU when a driver is present, so the first transcription would fail on a
     missing DLL (docs/design-winget.md).
 
-    Elsewhere, a counted GPU is used only if the CUDA libraries ctranslate2 loads
-    are there too (:data:`_CUDA_LIBRARIES`): a driver alone is the common case on
-    a laptop with an NVIDIA GPU, and it would fail the same way
+    Elsewhere, a counted GPU is used only if the CUDA libraries the installed
+    ctranslate2 loads are there too (:func:`cuda_libraries_for`): a driver alone is
+    the common case on a laptop with an NVIDIA GPU, and it would fail the same way
     (docs/design-windows-linux-hardware-testing.md §5).
     """
     import sys
@@ -415,6 +459,35 @@ def _check_cuda_available() -> bool:
         )
         return False
     return True
+
+
+WHISPER_DEVICES = ("auto", "cpu", "cuda")
+
+
+def requested_whisper_device(settings: object) -> str:
+    """``BRISTLENOSE_WHISPER_DEVICE`` as asked for: cpu, cuda or auto (anything
+    else reads as auto; the stage that transcribes says so in the log)."""
+    requested = str(getattr(settings, "whisper_device", "auto") or "auto").strip().lower()
+    return requested if requested in WHISPER_DEVICES else "auto"
+
+
+def effective_whisper_device(settings: object, cuda_available: bool) -> str:
+    """"cuda" or "cpu": what faster-whisper runs on, given the setting and whether
+    the hardware check found a usable GPU."""
+    requested = requested_whisper_device(settings)
+    return "cuda" if requested == "cuda" or (requested == "auto" and cuda_available) else "cpu"
+
+
+def effective_accelerator(hw: HardwareInfo, settings: object) -> AcceleratorType:
+    """The accelerator transcription will actually use: the hardware's, unless
+    ``BRISTLENOSE_WHISPER_DEVICE`` overrides it (faster-whisper only, so never on
+    Apple silicon). The one answer for the stage, doctor, the header and the
+    timing key, so none of them says CUDA for a CPU run."""
+    if hw.accelerator is AcceleratorType.APPLE_SILICON:
+        return hw.accelerator
+    if effective_whisper_device(settings, hw.cuda_available) == "cuda":
+        return AcceleratorType.CUDA
+    return AcceleratorType.CPU
 
 
 def _get_cuda_device_name() -> str | None:

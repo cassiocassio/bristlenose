@@ -123,6 +123,10 @@ def _flatten_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
 _MODEL_MAX_OUTPUT_TOKENS: dict[str, int] = {
     "gpt-4o": 16384,
     "gpt-4o-mini": 16384,
+    # The dated snapshots `_OPENAI_LEGACY_PARAMS` sends `max_tokens` to: absent here,
+    # they were asked for 64000 and refused, and the ChatGPT path has no ceiling learning.
+    "gpt-4o-2024-08-06": 16384,
+    "gpt-4o-mini-2024-07-18": 16384,
 }
 
 

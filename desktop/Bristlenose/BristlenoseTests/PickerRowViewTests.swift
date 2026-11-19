@@ -49,13 +49,13 @@ struct PickerRowViewTests {
     @Test func renderWholePickerForReview() throws {
         let request = PersonPickerRequest(
             sessionId: "s1",
-            slot: .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: false),
-            names: ["Martin B Storey", "Kerri Ng"], anchor: .zero,
+            slot: .init(code: "m1", role: .moderator, name: "Marcus Bell", confirmed: false),
+            names: ["Marcus Bell", "Kerri Ng"], anchor: .zero,
             labels: .init(roles: [.moderator: "Moderator", .participant: "Participant", .observer: "Observer"],
                           roleGroup: "Role", newPrompt: "New moderator",
                           thatsMe: "That’s Me ({{name}})", menu: "Edit name for m1"))
         for dark in [false, true] {
-            let model = PersonPickerModel(request: request, meName: "Martin Storey",
+            let model = PersonPickerModel(request: request, meName: "Marcus Bell",
                                           onChoose: { _ in }, onClose: {})
             let host = NSHostingView(rootView: PersonPickerView(model: model))
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 260, height: 220),

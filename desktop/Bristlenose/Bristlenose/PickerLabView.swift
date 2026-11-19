@@ -126,9 +126,9 @@ final class PickerLabModel: ObservableObject {
     typealias Role = PersonPickerRequest.Role
 
     @Published var slot = PersonPickerRequest.Slot(code: "m1", role: .moderator,
-                                                   name: "Martin B Storey", confirmed: false)
+                                                   name: "Marcus Bell", confirmed: false)
     @Published var known: [Role: [String]] = [
-        .moderator: ["Martin B Storey", "Kerri Ng"],
+        .moderator: ["Marcus Bell", "Kerri Ng"],
         .participant: ["Sarah Chen", "Dr Amara Nwosu", "Mary Adeyemi"],
         .observer: ["Jane Smith"],
     ]
@@ -142,13 +142,13 @@ final class PickerLabModel: ObservableObject {
     func apply(scenario: String) {
         switch scenario {
         case "confirmed":
-            slot = .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: true)
+            slot = .init(code: "m1", role: .moderator, name: "Marcus Bell", confirmed: true)
         case "unknown":
             slot = .init(code: "m1", role: .moderator, name: "", confirmed: false)
         case "participant":
             slot = .init(code: "p3", role: .participant, name: "Mary Adeyemi", confirmed: false)
         default:
-            slot = .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: false)
+            slot = .init(code: "m1", role: .moderator, name: "Marcus Bell", confirmed: false)
         }
         isOpen = true
         rebuild()

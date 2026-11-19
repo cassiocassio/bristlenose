@@ -73,7 +73,7 @@ th{color:var(--muted);font-weight:490;font-size:12px;text-transform:uppercase;le
 <div class="hero">
   <h4>Windows</h4>
   <div class="cta">
-    <span class="cmd"><span class="p">&gt;</span>winget install Bristlenose.Bristlenose <span class="copy">Copy</span></span>
+    <span class="cmd"><span class="p">&gt;</span>winget install --id Bristlenose.Bristlenose -e --source winget <span class="copy">Copy</span></span>
     <a class="btn">Setup guide</a>
   </div>
   <p class="note">Free and open source, in beta · Windows 10 or 11 · Paste it into Terminal. No admin rights needed</p>
@@ -85,12 +85,12 @@ th{color:var(--muted);font-weight:490;font-size:12px;text-transform:uppercase;le
     <div class="win"><div class="bar">Start ▸ type "terminal"</div><div class="body">Windows Terminal or PowerShell.</div></div>
     <div class="fric">The researcher has to know how to open one.</div></div>
   <div class="step"><b>2 · Paste, Enter</b>
-    <div class="ps">&gt; winget install Bristlenose.Bristlenose
+    <div class="ps">&gt; winget install --id Bristlenose.Bristlenose -e --source winget
 Found Bristlenose [Bristlenose.Bristlenose]
 <span class="y">This application is licensed to you by its owner.</span>
 Downloading ...
 Successfully installed</div>
-    <div class="good">No SmartScreen dialog: winget installs from Microsoft's catalogue.</div></div>
+    <div class="good">No SmartScreen dialog expected: winget installs from Microsoft's catalogue (not yet seen on a client edition).</div></div>
   <div class="step"><b>3 · Open a NEW terminal</b>
     <div class="ps">Path environment variable modified;
 restart your shell to use the new value.</div>
@@ -103,7 +103,7 @@ restart your shell to use the new value.</div>
 
 <div class="comment"><strong>Commentary.</strong>
 <ul>
-<li><strong>Trust:</strong> the strongest of the three. Microsoft scans the installer and the package id is Microsoft's, so there is no unsigned-publisher warning and no "run a script from a website" step. That is exactly what <code>irm | iex</code> lacks.</li>
+<li><strong>Trust:</strong> the strongest of the three. Microsoft's catalogue scans the installer before it lists it, so an unsigned-publisher warning is not expected there (untested on a client edition), and there is no "run a script from a website" step. That is exactly what <code>irm | iex</code> lacks.</li>
 <li><strong>Staleness:</strong> winget serves <strong>0.36.0</strong> today, ten versions behind. Moderation took about 33 days for the first package. The page must not go live with this until the new version has merged, or Windows users get a much older build than the Mac gets.</li>
 <li><strong>Audience fit:</strong> it is still a pasted command in a terminal, so it removes the script risk, not the terminal. A researcher who has never opened PowerShell stumbles at step 1.</li>
 <li><strong>winget may be missing</strong> on older Windows 10 (App Installer) and on Windows Server before a desktop logon. A fallback link to the setup guide covers it.</li>
@@ -119,9 +119,9 @@ restart your shell to use the new value.</div>
   <div class="cta">
     <a class="btn primary">Download for Windows</a>
     <span class="or">or</span>
-    <span class="cmd"><span class="p">&gt;</span>winget install Bristlenose.Bristlenose <span class="copy">Copy</span></span>
+    <span class="cmd"><span class="p">&gt;</span>winget install --id Bristlenose.Bristlenose -e --source winget <span class="copy">Copy</span></span>
   </div>
-  <p class="note">bristlenose-0.46.1-setup-x64.exe · 90 MB · free and open source, in beta · Windows 10 or 11 · no admin rights needed<br>
+  <p class="note">bristlenose-0.46.1-setup-x64.exe · 157 MB · free and open source, in beta · Windows 10 or 11 · no admin rights needed<br>
   Windows will say it doesn't recognise the app. <a href="#" style="color:var(--accent)">What you will see</a></p>
 </div>
 

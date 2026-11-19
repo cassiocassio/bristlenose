@@ -1,11 +1,18 @@
 ---
 status: current
-last-trued: 2026-10-12
-trued-against: HEAD@main on 2026-10-12
+last-trued: 2026-11-19
+trued-against: HEAD@main on 2026-11-19
 ---
 
 ## Changelog
 
+- _2026-11-19_ — ran the CLI and the winget path on real Windows Server 2025 desktops (aella):
+  the uv one-line install, the ffmpeg hint and install table, `setx` vs `$env:` vs `.env`
+  semantics, the doctor Windows hints, the credential file store, and live
+  `winget install --id Bristlenose.Bristlenose -e --source winget` (0.36.0) through to a
+  first `transcribe` run (exit 0). Moved those out of "never exercised"; recorded the
+  bare-`winget install` msstore failure, the headless winget recipe, and that winget
+  serves 0.36.0 only. Anchors: `9ae159692` "windows cli hints", website `af39143`.
 - _2026-10-12_ — trued up: restamped the status heading (winget is a follower channel,
   still no Windows release step); added the current-directory lookup family as fixed
   item 11 with its gate; pointed the Windows skip count at `docs/testing/ratchet.json`
@@ -58,6 +65,22 @@ then Ctrl-C; OneDrive or network-share project folders; long paths; the voice-mo
 download; Windows 11 on x64 hardware (the winget installer has since run on Windows 11
 26H2 and Windows 10 22H2 x64 in VirtualBox, virtualised rather than bare metal; the
 pipx/uv route and the one-liner have not); the GUI clicks of python.org's install manager.
+
+**Exercised on real Windows on 19 Nov 2026** (Windows Server 2025 on AWS, an RDP desktop, not
+a client edition): the uv one-line install and `uv tool` route; the missing-ffmpeg banner and
+install table (a winget row, then a "open a new terminal" line); environment-variable
+semantics (`setx` reaches only new windows, `$env:` only its own window, a bare `KEY=value`
+`.env` line works, an `export` prefix is not needed); `bristlenose doctor`'s proxy,
+auth-token and ffmpeg hints (the CUDA hint's wording is tested, but no GPU box was used); the credential store as a protected file under
+`%USERPROFILE%\.config\bristlenose`; and the live winget package (0.36.0): same window does
+not see `bristlenose`, a new one does, `doctor` is clean with the bundled FFmpeg, and a first
+`bristlenose transcribe` of a spoken WAV exits 0 in about 77 seconds after the 1.6 GB model download.
+Findings: bare `winget install Bristlenose.Bristlenose` also queries the msstore source and
+failed here (`0x8a15005e`; on a client edition it is expected to prompt for Store terms, not exercised), so every page uses `--id ... -e --source winget`; winget works over ssh
+only after registering App Installer and its `source.msix`; 0.36.0's first run prints
+Hugging Face and Xet warnings that 0.37.0's changelog says are silenced (not re-run on Windows). **Still not exercised:** a client
+edition (SmartScreen under `winget install --manifest`, the Start-menu absence), Windows on
+Arm, and a bare-metal machine.
 
 ### What was broken, and is fixed
 

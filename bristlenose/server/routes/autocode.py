@@ -250,6 +250,16 @@ def require_provider_ready(settings: Any) -> None:
             "taxonomy in their context window.",
         )
 
+    require_provider_callable(settings)
+
+
+def require_provider_callable(settings: Any) -> None:
+    """Refuse (``RefusalError``) unless the provider has what a call needs: a key, plus an
+    endpoint and a deployment for Azure, or a ready any-llm. The keyed half of
+    ``require_provider_ready``, shared with the codebook builder, which (unlike AutoCode)
+    does not refuse a local model."""
+    if settings.llm_provider == "local":
+        return
     no_key = RefusalError(
         503,
         RefusalReason.NO_API_KEY,

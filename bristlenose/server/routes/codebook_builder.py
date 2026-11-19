@@ -32,6 +32,7 @@ from bristlenose.server.models import (
     TagPrompt,
     TagPromptDecision,
 )
+from bristlenose.server.routes.autocode import require_provider_callable
 from bristlenose.server.routes.data import _quote_dom_id, _resolve_quote
 
 router = APIRouter(prefix="/api")
@@ -278,6 +279,7 @@ async def synthesize(
         db.close()
 
     settings = _load_settings_for(request)
+    require_provider_callable(settings)
     with _builder_run(request, project_id):
         draft = await cb.synthesize_prompt(tag_name, examples, settings)  # type: ignore[arg-type]
 
@@ -383,6 +385,7 @@ async def find_candidates(
         db.close()
 
     settings = _load_settings_for(request)
+    require_provider_callable(settings)
     with _builder_run(request, project_id):
         scan = await cb.find_candidates(
             tag_name, draft, pool, settings,  # type: ignore[arg-type]
@@ -416,6 +419,11 @@ async def submit_decisions(
     ``refine`` is set, the accept/reject reasons are folded back into the prompt
     via one LLM call and the sharper prompt is returned.
     """
+    # Asked before anything is written: a refusal after the commit below would answer
+    # "failed" for decisions that were in fact recorded and tags that were applied.
+    settings = _load_settings_for(request)
+    if body.refine:
+        require_provider_callable(settings)
     db = _get_db(request)
     accepted_fb: list[cb.DecisionFeedback] = []
     rejected_fb: list[cb.DecisionFeedback] = []
@@ -485,7 +493,6 @@ async def submit_decisions(
     finally:
         db.close()
 
-    settings = _load_settings_for(request)
     with _builder_run(request, project_id):
         draft = await cb.synthesize_prompt(
             tag_name, examples, settings,  # type: ignore[arg-type]

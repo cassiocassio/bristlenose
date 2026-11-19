@@ -534,6 +534,14 @@ def _fix_cuda_not_available(method: str) -> str:
     )
 
 
+def _fix_cuda_forced_unavailable(_method: str) -> str:
+    return (
+        "BRISTLENOSE_WHISPER_DEVICE is set to cuda, which makes Bristlenose\n"
+        "transcribe on an NVIDIA GPU even where it cannot find one ready to use.\n"
+        "Set it to auto (or remove it) to let Bristlenose choose, or to cpu."
+    )
+
+
 def _fix_low_disk_space(_method: str) -> str:
     return (
         "bristlenose needs approximately 2 GB for the Whisper model download\n"
@@ -709,6 +717,7 @@ _FIX_TABLE: dict[str, Callable[[str], str]] = {
     "presidio_missing": _fix_presidio_missing,
     "mlx_not_installed": _fix_mlx_not_installed,
     "cuda_not_available": _fix_cuda_not_available,
+    "cuda_forced_unavailable": _fix_cuda_forced_unavailable,
     "low_disk_space": _fix_low_disk_space,
     "ollama_not_running": _fix_ollama_not_running,
     "ollama_not_installed": _fix_ollama_not_installed,

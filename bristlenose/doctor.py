@@ -245,7 +245,8 @@ def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
         # Windows build), so a count alone said "CUDA" for a CPU run.
         from bristlenose.utils.hardware import _check_cuda_available, requested_whisper_device
 
-        if _check_cuda_available():
+        cuda_ok = _check_cuda_available()
+        if cuda_ok:
             accel = "CUDA"
         # BRISTLENOSE_WHISPER_DEVICE overrides the check for the run, so it does here.
         chosen = requested_whisper_device(settings) if settings is not None else "auto"
@@ -308,6 +309,34 @@ def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
             label="Transcription",
             detail=f"{detail.rstrip(')')}, Apple Silicon, CPU mode)",
             fix_key="mlx_not_installed",
+        )
+
+    # A GPU forced with BRISTLENOSE_WHISPER_DEVICE=cuda that cannot work. With no GPU,
+    # or in the CPU-only Windows build, the run is certain to fail: say so before it
+    # starts. With a GPU whose libraries the check could not find, only warn: the
+    # setting exists for a setup the check misjudges.
+    if accel == "CUDA, as set" and not cuda_ok:
+        import sys as _sys
+
+        from bristlenose.utils.hardware import cuda_libraries_missing
+
+        try:
+            gpus = int(ctranslate2.get_cuda_device_count())
+        except Exception:  # noqa: BLE001 - no answer is no GPU
+            gpus = 0
+        if _sys.platform == "win32" and getattr(_sys, "frozen", False):
+            status, why = CheckStatus.FAIL, "the Windows installer build has no CUDA libraries"
+        elif gpus <= 0:
+            status, why = CheckStatus.FAIL, "no NVIDIA GPU was found"
+        else:
+            missing = cuda_libraries_missing()
+            status = CheckStatus.WARN
+            why = f"{', '.join(missing) if missing else 'the CUDA runtime'} not found"
+        return CheckResult(
+            status=status,
+            label="Transcription",
+            detail=f"{detail.rstrip(')')}: {why})",
+            fix_key="cuda_forced_unavailable",
         )
 
     # Warn if NVIDIA GPU detected but CUDA not available

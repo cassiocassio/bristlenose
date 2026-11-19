@@ -535,7 +535,7 @@ class TestCheckBackend:
     @pytest.mark.usefixtures("which_is_shutil_which")
     def test_the_device_setting_is_what_doctor_reports(self, chosen: str, shown: str) -> None:
         """BRISTLENOSE_WHISPER_DEVICE decides the run, so doctor reports it, and a
-        chosen device draws no "GPU not used" warning."""
+        chosen device on a working GPU draws no warning."""
         import types
 
         mock_fw = MagicMock(__version__="1.2.1")
@@ -551,14 +551,45 @@ class TestCheckBackend:
             patch("platform.system", return_value="Linux"),
             patch("platform.machine", return_value="x86_64"),
             patch("shutil.which", return_value="/usr/bin/nvidia-smi"),
-            patch(
-                "bristlenose.utils.hardware.cuda_libraries_missing",
-                return_value=["libcublas.so.12"],
-            ),
+            patch("bristlenose.utils.hardware.cuda_libraries_missing", return_value=[]),
         ):
             result = check_backend(settings)  # type: ignore[arg-type]
         assert result.status == CheckStatus.OK
         assert shown in result.detail
+
+    @pytest.mark.parametrize(
+        ("gpus", "missing", "status"),
+        [(0, [], CheckStatus.FAIL), (1, ["libcublas.so.12"], CheckStatus.WARN)],
+    )
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_a_forced_gpu_that_cannot_work_is_flagged(
+        self, gpus: int, missing: list[str], status: CheckStatus,
+    ) -> None:
+        """BRISTLENOSE_WHISPER_DEVICE=cuda with no GPU got a green tick and a run
+        that would fail. With no GPU that is certain (FAIL); with a GPU whose
+        libraries the check cannot find it is only a warning, because the
+        setting exists for a setup the check misjudges."""
+        import types
+
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = gpus
+        settings = types.SimpleNamespace(whisper_device="cuda")
+
+        with (
+            patch.dict(sys.modules, {
+                "faster_whisper": mock_fw,
+                "ctranslate2": mock_ct2,
+            }),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value=None),
+            patch("bristlenose.utils.hardware.cuda_libraries_missing", return_value=missing),
+        ):
+            result = check_backend(settings)  # type: ignore[arg-type]
+        assert result.status == status
+        assert result.fix_key == "cuda_forced_unavailable"
+        assert get_fix("cuda_forced_unavailable", "pip").startswith("BRISTLENOSE_WHISPER_DEVICE is set to cuda")
 
     @pytest.mark.usefixtures("which_is_shutil_which")
     def test_the_winget_build_with_an_nvidia_gpu_says_cpu(

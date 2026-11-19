@@ -1,6 +1,7 @@
 ---
-status: v1-built
-last-trued: 2026-11-18
+status: current
+last-trued: 2026-11-19 (--topic llm-usage: body matches the code; the removed ledger's anchor moved from a deleted branch to commits on main)
+trued-against: HEAD@main on 2026-11-19
 ---
 
 # Analysis usage: a sense of scale, not a budget
@@ -103,8 +104,9 @@ ledger (`.bristlenose/usage.jsonl`) carried across Re-analyse, a dated price
 table with exchange rates (ECB, bundled), `GET /api/projects/{id}/usage` with
 live in-flight counts, and `usage_*` fields on progress lines. It was reviewed
 (Fable, code review, silent-failure hunt) and fixed, then removed as complexity
-v1 does not need. It is in the history of branch `claude/eager-dijkstra-jl95bx`:
-commits `274da70`, `8e7a47c`, `c832861`. What it taught, kept here:
+v1 does not need. It is in the history of `main` (the branch it was built on is
+deleted): commits `274da70`, `8e7a47c`, `c832861`, removed by `27a7801`. What it
+taught, kept here:
 
 - Providers disagree on what their counts mean: Anthropic reports cache reads
   and writes beside `input_tokens`; OpenAI, Azure and Gemini count cached input

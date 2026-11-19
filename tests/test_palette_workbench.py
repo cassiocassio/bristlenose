@@ -21,6 +21,16 @@ sys.path.insert(0, str(_BP))
 import table as palette_table  # noqa: E402
 
 
+@pytest.fixture
+def node() -> None:
+    """Every test that runs the workbench's JavaScript asks for this: one skip, not
+    one per test (the shape of the `symlinks` fixture, 7d32124a), so the skip-site
+    ratchet counts it once. They run wherever node is on PATH, as the six per-test
+    decorators did."""
+    if shutil.which("node") is None:
+        pytest.skip("node not installed")
+
+
 @pytest.mark.parametrize("path", sorted(_COLORS.glob("palette-*.css")), ids=lambda p: p.stem)
 def test_shipped_palette_round_trips(path: Path, tmp_path: Path) -> None:
     key = path.stem.removeprefix("palette-")
@@ -31,7 +41,7 @@ def test_shipped_palette_round_trips(path: Path, tmp_path: Path) -> None:
     assert first.diff(palette_table.Table.from_css(out, key)) == []
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+@pytest.mark.usefixtures("node")
 def test_neutral_knobs_leave_the_palette_alone(tmp_path: Path) -> None:
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")
     (tmp_path / "b.json").write_text(
@@ -47,7 +57,7 @@ def test_neutral_knobs_leave_the_palette_alone(tmp_path: Path) -> None:
     assert moved == []
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+@pytest.mark.usefixtures("node")
 def test_a_single_token_override_beats_the_sliders(tmp_path: Path) -> None:
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")
     (tmp_path / "b.json").write_text(
@@ -75,7 +85,7 @@ def _apply(tmp_path: Path, knobs: dict, overrides: dict) -> tuple[dict, dict]:
     return raw, json.loads(r.stdout)["table"]
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+@pytest.mark.usefixtures("node")
 def test_accent_lightness_leaves_the_selection_wash_pale(tmp_path: Path) -> None:
     raw, out = _apply(tmp_path, {"light": {"accentLight": 0.08}}, {})
     assert out["--bn-colour-accent"]["light"] != raw["--bn-colour-accent"]["light"]   # the accent moved
@@ -83,7 +93,7 @@ def test_accent_lightness_leaves_the_selection_wash_pale(tmp_path: Path) -> None
     assert out["--bn-colour-suggestion-bg"]["light"] == raw["--bn-colour-suggestion-bg"]["light"]
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+@pytest.mark.usefixtures("node")
 def test_an_accent_override_carries_its_family(tmp_path: Path) -> None:
     raw, out = _apply(tmp_path, {}, {"--bn-colour-accent": {"light": "#4191e2"}})
     assert out["--bn-colour-accent"]["light"] == "#4191e2"
@@ -94,7 +104,7 @@ def test_an_accent_override_carries_its_family(tmp_path: Path) -> None:
     assert out["--bn-colour-accent"]["dark"] == raw["--bn-colour-accent"]["dark"]  # the other appearance untouched
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+@pytest.mark.usefixtures("node")
 def test_an_explicit_override_still_beats_the_family(tmp_path: Path) -> None:
     _, out = _apply(tmp_path, {}, {"--bn-colour-accent": {"light": "#4191e2"},
                                    "--bn-selection-border": {"light": "#123456"}})
@@ -140,7 +150,7 @@ def test_register_and_unregister_round_trip_on_the_real_sites(tmp_path: Path, mo
     assert {p: p.read_text(encoding="utf-8") for p in before} == before   # byte-identical
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+@pytest.mark.usefixtures("node")
 def test_the_guard_leaves_an_inherited_failure_alone(tmp_path: Path) -> None:
     """A base that already fails a pair on purpose (a bright accent) must not be 'fixed' by a later nudge."""
     base = palette_table.Table.from_css(_COLORS / "palette-edo.css", "edo")

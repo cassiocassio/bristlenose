@@ -25,7 +25,7 @@ def flock() -> None:
     """The settle lock is fcntl.flock, which Windows lacks: the tests that take
     or refuse it ask for this, one skip for both, and run on Linux and macOS."""
     if sys.platform == "win32":
-        pytest.skip("flock")
+        pytest.skip("no fcntl.flock on Windows")
 
 
 def _make_report(root: Path, *, marker: str, events: str) -> Path:
@@ -474,8 +474,6 @@ class TestSettle:
         output_backup.reclaim_stale(out)
 
         assert output_backup.failed_path_for(out).is_dir()
-
-
 
 
 class TestTheFreshEyesFindings:

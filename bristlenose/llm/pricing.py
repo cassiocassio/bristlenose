@@ -34,8 +34,9 @@ CURRENCY = "USD"
 PRICING: dict[str, tuple[float, float]] = {
     # Anthropic (Claude). The three 5.5 rows (added 16 Nov 2026) are from the
     # Claude API skill's model table, cached 3 Nov 2026 (input / output per MTok:
-    # Fable 5.2 $8/$40, Opus 5.5 $4/$20, Sonnet 5.5 $2/$10). Not yet checked
-    # against the pricing page itself. Haiku 5.5 is deliberately absent: its price
+    # Fable 5.2 $8/$40, Opus 5.5 $4/$20, Sonnet 5.5 $2/$10). Checked against
+    # Anthropic's published pricing page on 19 Nov 2026: all three match.
+    # Haiku 5.5 is deliberately absent: its price
     # is tiered on prompt size ($0.10/$0.50 up to 100K tokens, $0.50/$2.50 beyond),
     # which a flat pair would misstate for long prompts.
     "claude-fable-5-2": (8.0, 40.0),

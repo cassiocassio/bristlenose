@@ -263,9 +263,13 @@ Rules that do not bend:
 None of these has been run on a GPU. Line numbers as of 18f479b. Items 1–3 and a
 fifth found while fixing them were fixed on 19 Nov 2026 (`ddac8d3`, branch
 `claude/clever-volta-j3fvkb`), each pinned by a test that fails when its fix is
-reverted; item 4 is open. Reading the wheels corrected the plan: ctranslate2 4.8.2
-and 4.9.0 (Windows and Linux) load cuBLAS 12 and nothing of cuDNN, so the check is
-for cuBLAS 12 only, and a test reads the installed Linux wheel to keep it so.
+reverted; item 4 is open. Reading the wheels corrected the plan: every ctranslate2
+4.x loads cuBLAS 12; 4.0–4.4 also load cuDNN 8, 4.5–4.6 cuDNN 9, and none from
+4.7.0. So the libraries checked follow the installed version, and a test checks
+that table against the installed Linux wheel. An independent review the same night
+found the first version could raise and was not itself pinned; fixed in `4185bee`,
+which also makes doctor, the CLI header and the timing key follow the device
+setting, and on Windows looks for the DLL files rather than loading them.
 
 1. **No CPU fallback when CUDA cannot load.** On every non-frozen channel,
    `_check_cuda_available` (`bristlenose/utils/hardware.py:343`) trusts

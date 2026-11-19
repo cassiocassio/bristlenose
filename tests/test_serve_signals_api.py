@@ -245,8 +245,7 @@ class TestGetTagAnalysis:
         """Filtering by specific group IDs restricts columns."""
         # First get all columns to find group IDs
         data_all = tagged_client.get("/api/projects/1/signals/tags").json()
-        if not data_all["columns"]:
-            pytest.skip("No columns available")
+        assert data_all["columns"], "tagged_client tags quotes; the matrix has no columns"
 
         # Get the DB to find group IDs
         db = tagged_client.app.state.db_factory()  # type: ignore[union-attr]

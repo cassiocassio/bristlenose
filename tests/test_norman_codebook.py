@@ -19,11 +19,12 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Coroutine
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from bristlenose.llm.failure_classifier import LLMFailureKind, classify_exception
 from bristlenose.server.autocode import (
     BATCH_SIZE,
     QuoteBatchItem,
@@ -31,6 +32,7 @@ from bristlenose.server.autocode import (
     build_tag_taxonomy,
 )
 from bristlenose.server.codebook import get_template
+from tests.conftest import run_paid_autocode
 
 REPO = Path(__file__).resolve().parent.parent
 FIXTURE = REPO / "tests" / "fixtures" / "codebook-golden" / "norman.json"
@@ -174,60 +176,51 @@ class TestRegisterIntegrity:
 # Live
 # ---------------------------------------------------------------------------
 
-_ENVIRONMENTAL = frozenset({
-    LLMFailureKind.OUT_OF_CREDIT, LLMFailureKind.INVALID_KEY,
-    LLMFailureKind.NETWORK, LLMFailureKind.RATE_LIMITED, LLMFailureKind.SERVER_ERROR,
-})
-
-
 def _run_live() -> dict[str, tuple[str, float]]:
-    """Every fixture quote through the real prompt; id → (tag, confidence)."""
-    import asyncio
+    """Every fixture quote through the real prompt; id → (tag, confidence).
 
-    from bristlenose.config import load_settings
+    The two skips (a local provider; an account, key or network that could not
+    run the call) are ``run_paid_autocode``'s, in ``tests/conftest.py``.
+    """
+    from bristlenose.config import BristlenoseSettings
     from bristlenose.llm.client import LLMClient
     from bristlenose.llm.prompts import get_prompt
     from bristlenose.llm.structured import AutoCodeBatchResult
 
-    settings = load_settings()
-    if settings.llm_provider == "local":
-        pytest.skip("AutoCode requires a cloud provider (not Ollama)")
-    template = get_template("norman")
-    assert template is not None
-    taxonomy = build_tag_taxonomy(template)
-    prompt_pair = get_prompt("autocode")
-    client = LLMClient(settings)
-    quotes = _fixture()["quotes"]
+    def build(settings: BristlenoseSettings) -> Coroutine[Any, Any, dict[str, tuple[str, float]]]:
+        template = get_template("norman")
+        assert template is not None
+        taxonomy = build_tag_taxonomy(template)
+        prompt_pair = get_prompt("autocode")
+        client = LLMClient(settings)
+        quotes = _fixture()["quotes"]
 
-    async def batch(items: list[dict]) -> dict[str, tuple[str, float]]:
-        qs = [QuoteBatchItem(db_id=i, text=q["text"], session_id="s1", participant_id="p1",
-                             topic_label="", sentiment="") for i, q in enumerate(items)]
-        user_prompt = prompt_pair.user.format(
-            codebook_title=template.title, codebook_preamble=template.preamble,
-            formatted_tag_taxonomy=taxonomy, formatted_quotes=build_quote_batch(qs),
-        )
-        res: AutoCodeBatchResult = await client.analyze(
-            system_prompt=prompt_pair.system, user_prompt=user_prompt,
-            response_model=AutoCodeBatchResult,
-        )
-        amap = {a.quote_index: a for a in res.assignments}
-        return {
-            q["id"]: ((amap[i].tag_name.lower().strip(), amap[i].confidence) if i in amap else ("", 0.0))
-            for i, q in enumerate(items)
-        }
+        async def batch(items: list[dict]) -> dict[str, tuple[str, float]]:
+            qs = [QuoteBatchItem(db_id=i, text=q["text"], session_id="s1", participant_id="p1",
+                                 topic_label="", sentiment="") for i, q in enumerate(items)]
+            user_prompt = prompt_pair.user.format(
+                codebook_title=template.title, codebook_preamble=template.preamble,
+                formatted_tag_taxonomy=taxonomy, formatted_quotes=build_quote_batch(qs),
+            )
+            res: AutoCodeBatchResult = await client.analyze(
+                system_prompt=prompt_pair.system, user_prompt=user_prompt,
+                response_model=AutoCodeBatchResult,
+            )
+            amap = {a.quote_index: a for a in res.assignments}
+            return {
+                q["id"]: ((amap[i].tag_name.lower().strip(), amap[i].confidence) if i in amap else ("", 0.0))
+                for i, q in enumerate(items)
+            }
 
-    async def go() -> dict[str, tuple[str, float]]:
-        out: dict[str, tuple[str, float]] = {}
-        for i in range(0, len(quotes), BATCH_SIZE):
-            out.update(await batch(quotes[i:i + BATCH_SIZE]))
-        return out
+        async def go() -> dict[str, tuple[str, float]]:
+            out: dict[str, tuple[str, float]] = {}
+            for i in range(0, len(quotes), BATCH_SIZE):
+                out.update(await batch(quotes[i:i + BATCH_SIZE]))
+            return out
 
-    try:
-        return asyncio.run(go())
-    except Exception as exc:
-        if classify_exception(settings.llm_provider, exc) in _ENVIRONMENTAL:
-            pytest.skip(f"SKIPPED, NOT PASSED — {settings.llm_provider}: {exc}")
-        raise
+        return go()
+
+    return run_paid_autocode(build)
 
 
 _BY_KIND: dict[str, list[dict]] = {}

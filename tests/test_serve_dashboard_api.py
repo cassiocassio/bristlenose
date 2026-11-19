@@ -454,16 +454,14 @@ class TestDashboardCoverage:
     def test_coverage_has_all_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
         cov = data["coverage"]
-        if cov is None:
-            pytest.skip("No transcript segments in fixture")
+        assert cov is not None, "the smoke fixture has transcript segments; coverage went missing"
         expected = {"pct_in_report", "pct_moderator", "pct_omitted", "omitted_by_session"}
         assert set(cov.keys()) == expected
 
     def test_coverage_percentages_are_integers(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
         cov = data["coverage"]
-        if cov is None:
-            pytest.skip("No transcript segments in fixture")
+        assert cov is not None, "the smoke fixture has transcript segments; coverage went missing"
         assert isinstance(cov["pct_in_report"], int)
         assert isinstance(cov["pct_moderator"], int)
         assert isinstance(cov["pct_omitted"], int)
@@ -471,8 +469,7 @@ class TestDashboardCoverage:
     def test_coverage_percentages_sum_roughly_to_100(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
         cov = data["coverage"]
-        if cov is None:
-            pytest.skip("No transcript segments in fixture")
+        assert cov is not None, "the smoke fixture has transcript segments; coverage went missing"
         total = cov["pct_in_report"] + cov["pct_moderator"] + cov["pct_omitted"]
         # Rounding can cause ±1 deviation.
         assert 98 <= total <= 102
@@ -480,24 +477,49 @@ class TestDashboardCoverage:
     def test_coverage_omitted_sessions_are_list(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
         cov = data["coverage"]
-        if cov is None:
-            pytest.skip("No transcript segments in fixture")
+        assert cov is not None, "the smoke fixture has transcript segments; coverage went missing"
         assert isinstance(cov["omitted_by_session"], list)
 
-    def test_omitted_session_has_all_fields(self, client: TestClient) -> None:
-        data = client.get("/api/projects/1/dashboard").json()
+    @pytest.fixture()
+    def client_with_omitted(self, client: TestClient, app_fx) -> TestClient:
+        """The smoke fixture quotes every participant segment, so it omits nothing.
+
+        Until 19 Nov 2026 the two omitted-session tests read it as it is: one
+        skipped every run ("No omitted sessions in fixture") and the other looped
+        over an empty list. One participant segment no quote covers, long enough
+        to be a full segment rather than a fragment, gives them something to read.
+        """
+        from bristlenose.server.models import Session as SessionModel
+        from bristlenose.server.models import TranscriptSegment
+
+        db = app_fx.state.db_factory()
+        try:
+            sess = db.query(SessionModel).filter_by(session_id="s1").one()
+            db.add(TranscriptSegment(
+                session_id=sess.id, speaker_code="p1", start_time=90.0, end_time=99.0,
+                text="And then I gave up and rang the helpline instead of using the app.",
+            ))
+            db.commit()
+        finally:
+            db.close()
+        return client
+
+    def test_omitted_session_has_all_fields(self, client_with_omitted: TestClient) -> None:
+        data = client_with_omitted.get("/api/projects/1/dashboard").json()
         cov = data["coverage"]
-        if cov is None or not cov["omitted_by_session"]:
-            pytest.skip("No omitted sessions in fixture")
+        assert cov is not None, "the smoke fixture has transcript segments; coverage went missing"
+        assert cov["omitted_by_session"], "an uncovered participant segment was not omitted"
         sess = cov["omitted_by_session"][0]
         expected = {"session_number", "session_id", "full_segments", "fragments_html"}
         assert set(sess.keys()) == expected
 
-    def test_omitted_segment_has_all_fields(self, client: TestClient) -> None:
-        data = client.get("/api/projects/1/dashboard").json()
+    def test_omitted_segment_has_all_fields(self, client_with_omitted: TestClient) -> None:
+        data = client_with_omitted.get("/api/projects/1/dashboard").json()
         cov = data["coverage"]
-        if cov is None:
-            pytest.skip("No transcript segments in fixture")
+        assert cov is not None, "the smoke fixture has transcript segments; coverage went missing"
+        assert any(sess["full_segments"] for sess in cov["omitted_by_session"]), (
+            "an uncovered fourteen-word participant segment is not a full omitted segment"
+        )
         for sess in cov["omitted_by_session"]:
             for seg in sess["full_segments"]:
                 expected = {"speaker_code", "start_time", "text", "session_id"}

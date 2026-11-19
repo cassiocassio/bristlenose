@@ -22,13 +22,16 @@ enough signal to discriminate.
 
 from __future__ import annotations
 
+from collections.abc import Coroutine
 from dataclasses import dataclass
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
-from bristlenose.llm.failure_classifier import LLMFailureKind, classify_exception
 from bristlenose.server.autocode import QuoteBatchItem, build_quote_batch, build_tag_taxonomy
 from bristlenose.server.codebook import TemplateTag, get_template
+from tests.conftest import run_paid_autocode
 
 # ---------------------------------------------------------------------------
 # Golden dataset
@@ -352,83 +355,109 @@ class TestPromptStructure:
 # ---------------------------------------------------------------------------
 
 
-# Failure kinds that mean "the environment could not run the test", as opposed to
-# "the model answered badly". Kept as a module constant so the reasoning is reviewable
-# in one place rather than inline in an except block.
-_ENVIRONMENTAL_FAILURES = frozenset(
-    {
-        LLMFailureKind.OUT_OF_CREDIT,  # billing exhausted — terminal until top-up
-        LLMFailureKind.INVALID_KEY,  # key missing/revoked
-        LLMFailureKind.NETWORK,  # provider unreachable
-        LLMFailureKind.RATE_LIMITED,  # transient; retry later
-        LLMFailureKind.SERVER_ERROR,  # provider 5xx
-    }
-)
+class _ProviderError(Exception):
+    """An SDK-shaped error: a status and a message, as the classifier reads them."""
+
+    def __init__(self, status: int, message: str) -> None:
+        super().__init__(message)
+        self.status_code = status
+
+
+class TestPaidRunnerSkipsOnlyForTheEnvironment:
+    """``run_paid_autocode`` (tests/conftest.py) holds the paid harnesses' two skips.
+
+    Free: every call here is a stub, nothing reaches a provider. Pinned because the
+    three live harnesses that share it never run outside a deliberate ``-m slow``.
+    """
+
+    @staticmethod
+    def _provider(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+        from bristlenose import config
+
+        monkeypatch.setattr(config, "load_settings", lambda: SimpleNamespace(llm_provider=name))
+
+    def test_a_local_provider_skips_before_building_the_call(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._provider(monkeypatch, "local")
+
+        def build(settings: Any) -> Coroutine[Any, Any, None]:
+            raise AssertionError("built a paid call for a local provider")
+
+        with pytest.raises(pytest.skip.Exception, match="cloud provider"):
+            run_paid_autocode(build)
+
+    def test_an_unfunded_account_skips_and_says_not_passed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._provider(monkeypatch, "anthropic")
+
+        async def call() -> None:
+            raise _ProviderError(400, "Your credit balance is too low to access the API.")
+
+        with pytest.raises(pytest.skip.Exception, match="SKIPPED, NOT PASSED — anthropic"):
+            run_paid_autocode(lambda settings: call())
+
+    def test_a_bad_request_still_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._provider(monkeypatch, "anthropic")
+
+        async def call() -> None:
+            raise _ProviderError(400, "messages: field required")
+
+        with pytest.raises(_ProviderError):
+            run_paid_autocode(lambda settings: call())
+
+    def test_a_cloud_call_returns_its_result(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._provider(monkeypatch, "anthropic")
+
+        async def call() -> str:
+            return "coded"
+
+        assert run_paid_autocode(lambda settings: call()) == "coded"
 
 
 def _run_llm_discrimination() -> list[tuple[GoldenQuote, str, float]]:
-    """Run AutoCode on all golden quotes (called once, cached on class)."""
-    import asyncio
+    """Run AutoCode on all golden quotes (called once, cached on class).
 
-    from bristlenose.config import load_settings
+    The two skips (a local provider; an account, key or network that could not
+    run the call) are ``run_paid_autocode``'s, shared with the other paid
+    AutoCode harnesses in ``tests/conftest.py``.
+    """
+    from bristlenose.config import BristlenoseSettings
     from bristlenose.llm.client import LLMClient
     from bristlenose.llm.prompts import get_prompt
     from bristlenose.llm.structured import AutoCodeBatchResult
 
-    settings = load_settings()
-    if settings.llm_provider == "local":
-        pytest.skip("AutoCode requires a cloud provider (not Ollama)")
+    def build(settings: BristlenoseSettings) -> Coroutine[Any, Any, AutoCodeBatchResult]:
+        template = get_template("garrett")
+        assert template is not None
+        taxonomy = build_tag_taxonomy(template)
+        prompt_pair = get_prompt("autocode")
 
-    template = get_template("garrett")
-    assert template is not None
-    taxonomy = build_tag_taxonomy(template)
-    prompt_pair = get_prompt("autocode")
+        items = [
+            QuoteBatchItem(
+                db_id=i, text=gq.text, session_id="s1", participant_id="p1",
+                topic_label="", sentiment="",
+            )
+            for i, gq in enumerate(GOLDEN_QUOTES)
+        ]
+        quote_text = build_quote_batch(items)
 
-    items = [
-        QuoteBatchItem(
-            db_id=i, text=gq.text, session_id="s1", participant_id="p1",
-            topic_label="", sentiment="",
+        user_prompt = prompt_pair.user.format(
+            codebook_title=template.title,
+            codebook_preamble=template.preamble,
+            formatted_tag_taxonomy=taxonomy,
+            formatted_quotes=quote_text,
         )
-        for i, gq in enumerate(GOLDEN_QUOTES)
-    ]
-    quote_text = build_quote_batch(items)
 
-    user_prompt = prompt_pair.user.format(
-        codebook_title=template.title,
-        codebook_preamble=template.preamble,
-        formatted_tag_taxonomy=taxonomy,
-        formatted_quotes=quote_text,
-    )
-
-    client = LLMClient(settings)
-
-    async def _call() -> AutoCodeBatchResult:
-        return await client.analyze(
+        client = LLMClient(settings)
+        return client.analyze(
             system_prompt=prompt_pair.system,
             user_prompt=user_prompt,
             response_model=AutoCodeBatchResult,
         )
 
-    try:
-        result = asyncio.run(_call())
-    except Exception as exc:
-        # An unfunded, revoked or unreachable account is an ENVIRONMENT condition,
-        # not a discrimination-quality failure — it must not report as an error on
-        # a deliberate `pytest -m slow`. Which kinds are environmental is decided by
-        # the shared classifier, never by matching on the message here: Anthropic
-        # serves out-of-credit as a 400, so a status-code test would call it a bug
-        # in our prompt (see bristlenose/llm/failure_classifier.py).
-        #
-        # BAD_REQUEST and UNKNOWN deliberately stay fatal: a malformed prompt or an
-        # unparseable schema is exactly the defect this harness exists to catch.
-        kind = classify_exception(settings.llm_provider, exc)
-        if kind in _ENVIRONMENTAL_FAILURES:
-            pytest.skip(
-                f"SKIPPED, NOT PASSED — {settings.llm_provider} returned "
-                f"{kind.value}: this harness never ran. Fix the account/key/network "
-                f"and re-run `pytest -m slow`. Raw error: {exc}"
-            )
-        raise
+    result = run_paid_autocode(build)
 
     results: list[tuple[GoldenQuote, str, float]] = []
     assignment_map = {a.quote_index: a for a in result.assignments}
@@ -472,8 +501,14 @@ class TestLiveLLMDiscrimination:
         high_conf = [
             (gq, tag, conf) for gq, tag, conf in llm_results if conf >= 0.7
         ]
-        if not high_conf:
-            pytest.skip("No high-confidence assignments")
+        # Not a skip: the golden quotes are written to their tags' wording, so a run
+        # in which nothing reaches the accept line is AutoCode proposing nothing a
+        # researcher would take, and test_no_high_confidence_wrong_plane would pass
+        # it vacuously.
+        assert high_conf, (
+            "No assignment reached 0.7 confidence on the golden quotes: AutoCode "
+            "proposed nothing above the accept line"
+        )
         correct = sum(1 for gq, tag, _ in high_conf if tag == gq.correct_tag)
         accuracy = correct / len(high_conf)
         assert accuracy >= 0.8, (

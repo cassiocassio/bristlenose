@@ -381,13 +381,13 @@ try:
 except (ImportError, OSError):
     _HAS_PRESIDIO = False
 
-_skip_no_presidio = pytest.mark.skipif(
+
+# Written out at the class, not assigned to a name: the skip-site ratchet counts
+# ``@pytest.mark.skipif`` and could not see this one while it was ``_skip_no_presidio``.
+@pytest.mark.skipif(
     not _HAS_PRESIDIO,
     reason="Requires presidio-analyzer + spacy en_core_web_lg model",
 )
-
-
-@_skip_no_presidio
 @pytest.mark.slow
 class TestPresidioDetection:
     """Run Presidio against the horror transcript and check each planted item.
@@ -445,9 +445,22 @@ class TestPresidioDetection:
         segment_text = self._find_segment_text(timecode)
 
         if segment_text is None:
-            if not should_catch:
-                pytest.skip(f"No segment for {text!r} (category {category})")
-            pytest.fail(f"Could not find segment at {timecode} for {text!r}")
+            # An item with no segment (``segment_time: null``) is PII outside every
+            # segment, in the transcript header. Its expected gap is that Presidio is
+            # never shown it, so that is what is checked: until 19 Nov 2026 the item
+            # (the source filename) skipped on every run. A timecode that names no
+            # segment is a typo in the YAML and fails, whichever way it should go.
+            assert timecode is None and not should_catch, (
+                f"Could not find segment at {timecode} for {text!r}"
+            )
+            assert all(text not in seg for _, seg in self.segments), (
+                f"{text!r} (category {category}) has segment_time null but sits in a "
+                f"segment, which Presidio is shown. Give it its segment_time."
+            )
+            assert text in TRANSCRIPT_PATH.read_text(encoding="utf-8"), (
+                f"{text!r} is not in the horror transcript at all"
+            )
+            return
 
         found = self._presidio_finds(segment_text, text)
 

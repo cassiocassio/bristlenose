@@ -684,3 +684,73 @@ def chmod_can_deny() -> None:
 
     if sys.platform == "win32" or os.geteuid() == 0:
         pytest.skip("chmod denies this user nothing (Windows, or running as root)")
+
+
+# ---------------------------------------------------------------------------
+# The paid AutoCode harnesses' one runner (skip-site fold, 19 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# tests/test_autocode_discrimination.py, tests/test_codebook_registers.py and
+# tests/test_norman_codebook.py each carried the same two skips around their live
+# (``-m slow``, paid) call: one for a local provider, which AutoCode cannot use, and
+# one for a provider that could not run the call at all. Two causes, so two skips,
+# here once instead of six times (the shape 7d32124a and d708247c gave the symlink
+# and node skips). The same tests skip under the same conditions as before.
+
+from collections.abc import Coroutine  # noqa: E402
+from typing import TypeVar  # noqa: E402
+
+from bristlenose.config import BristlenoseSettings  # noqa: E402
+from bristlenose.llm.failure_classifier import LLMFailureKind  # noqa: E402
+
+_PaidResult = TypeVar("_PaidResult")
+
+# Failure kinds that mean "the environment could not run the test", as opposed to
+# "the model answered badly". BAD_REQUEST and UNKNOWN deliberately stay fatal: a
+# malformed prompt or an unparseable schema is exactly the defect these harnesses
+# exist to catch.
+PAID_LLM_ENVIRONMENTAL_FAILURES = frozenset(
+    {
+        LLMFailureKind.OUT_OF_CREDIT,  # billing exhausted — terminal until top-up
+        LLMFailureKind.INVALID_KEY,  # key missing/revoked
+        LLMFailureKind.NETWORK,  # provider unreachable
+        LLMFailureKind.RATE_LIMITED,  # transient; retry later
+        LLMFailureKind.SERVER_ERROR,  # provider 5xx
+    }
+)
+
+
+def run_paid_autocode(
+    build: Callable[[BristlenoseSettings], Coroutine[Any, Any, _PaidResult]],
+) -> _PaidResult:
+    """Run one paid AutoCode harness's calls, skipping only for the environment.
+
+    ``build`` gets the loaded settings and returns the coroutine that makes the
+    calls; it runs only once the provider is known to be a cloud one.
+    """
+    import asyncio
+
+    from bristlenose.config import load_settings
+    from bristlenose.llm.failure_classifier import classify_exception
+
+    settings = load_settings()
+    if settings.llm_provider == "local":
+        pytest.skip("AutoCode requires a cloud provider (not Ollama)")
+    call = build(settings)
+    try:
+        return asyncio.run(call)
+    except Exception as exc:
+        # An unfunded, revoked or unreachable account is an ENVIRONMENT condition,
+        # not a coding-quality failure: it must not report as an error on a
+        # deliberate `pytest -m slow`. Which kinds are environmental is decided by
+        # the shared classifier, never by matching on the message here: Anthropic
+        # serves out-of-credit as a 400, so a status-code test would call it a bug
+        # in our prompt (see bristlenose/llm/failure_classifier.py).
+        kind = classify_exception(settings.llm_provider, exc)
+        if kind in PAID_LLM_ENVIRONMENTAL_FAILURES:
+            pytest.skip(
+                f"SKIPPED, NOT PASSED — {settings.llm_provider} returned "
+                f"{kind.value}: this harness never ran. Fix the account/key/network "
+                f"and re-run `pytest -m slow`. Raw error: {exc}"
+            )
+        raise

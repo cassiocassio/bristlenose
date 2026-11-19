@@ -55,8 +55,13 @@ def test_the_base_declares_a_background():
 def test_a_filled_variant_keeps_its_fill_on_hover(variant):
     css = load_default_css()
     base_hover = _decls(css, ".bn-btn:hover")
-    if not _declares(base_hover, "background"):
-        pytest.skip("base has no hover background; the specificity trap cannot arise")
+    # The shipped CSS gives the base a hover background, which is what sets the
+    # trap. Asserted, not skipped on: if the base's hover tint is ever taken out,
+    # this test should be reconsidered with it, not report as skipped forever.
+    assert _declares(base_hover, "background"), (
+        "`.bn-btn:hover` no longer declares a background, so the specificity trap "
+        "this test guards cannot arise. If that is deliberate, retire this test."
+    )
 
     hover = _decls(css, f".{variant}:hover")
     assert _declares(hover, "background"), (

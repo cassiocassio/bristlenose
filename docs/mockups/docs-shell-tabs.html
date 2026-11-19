@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Docs shell tabs mockup</title>
+<style>
+/* Tokens copied from bristlenose-website assets/site.css (:root). Light/dark follows the OS. */
+:root{
+  color-scheme:light dark;
+  --ink:light-dark(#1a1a1a,#e6e7e9); --muted:light-dark(#6b7280,#9ca3af); --faint:light-dark(#9aa3ad,#6b7280);
+  --line:light-dark(#e5e7eb,#2a2a2c); --bg:light-dark(#ffffff,#121214); --bg-alt:light-dark(#f8f8f8,#1a1a1d);
+  --accent:light-dark(#2563eb,#6ba2f5); --code-bg:light-dark(#f3f4f6,#1c1c20); --ok:light-dark(#3a8a55,#5fb87e);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --w-strong:700; --r:6px;
+}
+html{background:var(--bg)}
+body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+main{max-width:720px;margin:0 auto;padding:28px 16px 80px}
+h1{font-size:30px;letter-spacing:-.02em;margin:0 0 10px;line-height:1.15}
+h2{font-size:20px;margin:34px 0 10px}
+p{margin:0 0 14px}
+code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);border-radius:4px;padding:1.5px 5px}
+
+/* ---- MOCKUP-ONLY control: pretend to be another OS. Not part of the pattern. ---- */
+.mock{border:1px dashed var(--faint);border-radius:var(--r);padding:10px 14px;margin:0 0 26px;font-size:13px;color:var(--muted);
+      display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;background:var(--bg-alt)}
+.mock b{color:var(--ink)}
+.mock label{cursor:pointer;color:var(--ink)}
+.mock .now{margin-left:auto}
+
+/* ---- existing: copy button, pre, channel fork (as shipped) ---- */
+pre{position:relative;margin:0 0 16px;background:var(--code-bg);border:1px solid var(--line);border-radius:var(--r);
+    padding:13px 44px 13px 15px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.55}
+pre code{background:none;padding:0;font-size:13px}
+.copybtn{position:absolute;top:6px;right:8px;display:inline-flex;align-items:center;justify-content:center;
+  font:inherit;font-size:14px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+  border-radius:6px;width:28px;height:28px;padding:0;cursor:pointer;opacity:.75;transition:opacity .12s,color .12s,border-color .12s}
+.copybtn:hover{opacity:1;color:var(--ink)} .copybtn.done{opacity:1;color:var(--ok);border-color:var(--ok)}
+.copybtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.fork{margin:0 0 16px}
+details.ch{border-bottom:1px solid var(--line);border-top:1px solid var(--line);margin-top:-1px}
+details.ch>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:10px 0;color:var(--muted);font-size:15px}
+details.ch>summary::-webkit-details-marker{display:none}
+details.ch>summary:hover{color:var(--ink)}
+details.ch>summary .chev{display:inline-block;transition:transform .12s;color:var(--faint)}
+details.ch[open]>summary .chev{transform:rotate(90deg)}
+details.ch .body{padding:0 0 6px 22px}
+
+/* ---- NEW: shell tabs. Small text tabs sitting on the block's top edge. ---- */
+.shelltabs{margin:0 0 16px}
+.shelltabs pre{margin:0}
+.shelltabs pre[hidden]{display:none}
+.shelltabs-bar{display:flex;gap:2px;margin:0 0 -1px 10px;position:relative;z-index:1}
+.shelltab{font:inherit;font-size:12px;line-height:1;padding:6px 10px 7px;color:var(--muted);cursor:pointer;
+  background:none;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;transition:color .12s}
+.shelltab:hover{color:var(--ink)}
+.shelltab[aria-selected="true"]{color:var(--ink);background:var(--code-bg);border-color:var(--line);font-weight:var(--w-strong)}
+.shelltab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+</style>
+</head>
+<body>
+<main>
+
+<div class="mock" id="mock">
+  <b>Mockup only</b>
+  <span>Pretend this browser is:</span>
+  <label><input type="radio" name="os" value="" checked> Auto</label>
+  <label><input type="radio" name="os" value="win"> Windows</label>
+  <label><input type="radio" name="os" value="mac"> Mac</label>
+  <label><input type="radio" name="os" value="linux"> Linux</label>
+  <span class="now" id="now"></span>
+</div>
+
+<h1>Set up Azure OpenAI</h1>
+<p>A stand-in for <code>set-up-azure.html</code>. The tabs only appear where a command differs by shell.</p>
+
+<h2>Connect Azure OpenAI</h2>
+
+<div class="fork">
+<details class="ch" data-channel="app" open><summary><span class="chev">›</span> macOS app</summary>
+<div class="body"><ol>
+<li>Open <b>Settings</b> (⌘,) and go to the <b>LLM</b> tab.</li>
+<li>Select <b>Azure OpenAI</b> and paste your key into the <b>API Key</b> field.</li>
+<li>In the <b>Azure Settings</b> section, fill in the <b>Endpoint</b>, <b>Deployment name</b>, and <b>API version</b>.</li>
+</ol></div></details>
+
+<details class="ch" data-channel="cli" open><summary><span class="chev">›</span> Command line</summary>
+<div class="body">
+<p>Set the endpoint and deployment as environment variables, then store the key:</p>
+
+<!-- Authored as two adjacent fences. With no JS they simply stack. -->
+<pre><code class="language-bash">export BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
+export BRISTLENOSE_AZURE_DEPLOYMENT=my-deployment-name
+bristlenose configure azure</code></pre>
+<pre><code class="language-powershell">$env:BRISTLENOSE_AZURE_ENDPOINT = "https://my-resource.openai.azure.com/"
+$env:BRISTLENOSE_AZURE_DEPLOYMENT = "my-deployment-name"
+bristlenose configure azure</code></pre>
+
+<p>The optional <code>BRISTLENOSE_AZURE_API_VERSION</code> defaults to <code>2024-10-21</code>.</p>
+<p>In PowerShell a <code>$env:</code> variable lasts for that window only. To keep it, put the lines in a <code>.env</code> file.</p>
+</div></details>
+</div>
+
+<h2>A second command on the same page</h2>
+<p>Choosing a shell above switches every block on the page, and is remembered on other pages.</p>
+
+<pre><code class="language-bash">export BRISTLENOSE_COLOR_SCHEME=dark
+bristlenose serve</code></pre>
+<pre><code class="language-powershell">$env:BRISTLENOSE_COLOR_SCHEME = "dark"
+bristlenose serve</code></pre>
+
+<h2>A command that is the same everywhere</h2>
+<p>No tabs. A single plain block, exactly as today.</p>
+<pre><code>bristlenose doctor</code></pre>
+
+<h2>When Windows needs more than a paragraph</h2>
+<p>Same page, other pattern. Here the Windows steps differ enough (a different installer, a restart, a persistence step) that tabs would hide too much. The fork gains a third section, and the Unix one is renamed <b>macOS / Linux</b>. Sample copy, not final wording.</p>
+
+<div class="fork" data-win>
+<details class="ch" data-channel="app" open><summary><span class="chev">›</span> macOS app</summary>
+<div class="body"><p>Open <b>Settings</b> (⌘,), go to the <b>LLM</b> tab and choose <b>Local (Ollama)</b>. The app offers to install Ollama if it is missing.</p></div></details>
+
+<details class="ch" data-channel="unix" open><summary><span class="chev">›</span> macOS / Linux</summary>
+<div class="body">
+<p>Install Ollama, pull a model, and point Bristlenose at it:</p>
+<pre><code>brew install ollama
+ollama pull gemma4:e4b
+export BRISTLENOSE_LLM_PROVIDER=local
+export BRISTLENOSE_LOCAL_MODEL=gemma4:e4b</code></pre>
+<p>On Linux, use Ollama's install script in place of <code>brew</code>.</p>
+</div></details>
+
+<details class="ch" data-channel="win" open><summary><span class="chev">›</span> Windows PowerShell</summary>
+<div class="body">
+<ol>
+<li>Install Ollama, then <b>open a new PowerShell window</b>. The installer changes your PATH, and a window that was already open won't see it.
+<pre><code>winget install Ollama.Ollama</code></pre></li>
+<li>Check that the Ollama icon is in the system tray. It runs the server in the background, so there is nothing to start by hand.</li>
+<li>Pull a model:
+<pre><code>ollama pull gemma4:e4b</code></pre></li>
+<li>Point Bristlenose at it. <code>setx</code> keeps the values for every new window, unlike <code>$env:</code>, which lasts for one:
+<pre><code>setx BRISTLENOSE_LLM_PROVIDER local
+setx BRISTLENOSE_LOCAL_MODEL gemma4:e4b</code></pre>
+Close and reopen PowerShell before running <code>bristlenose</code>.</li>
+</ol>
+<p>If you would rather not touch environment variables, put the same two lines in a <code>.env</code> file in your project folder instead.</p>
+</div></details>
+</div>
+
+</main>
+
+<script>
+/* The pattern. Same code that would go into bristlenose-website assets/site.js. */
+const SH_KEY='bn-docs-shell-mock';
+const SH_LABEL={bash:'macOS / Linux',powershell:'PowerShell'};
+let fakeOS='';                                   // mockup-only override
+const realWin=/win/i.test((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'');
+const isWin=()=>fakeOS?fakeOS==='win':realWin;
+const ICON='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H3.5A1.5 1.5 0 0 0 2 3v5.5A1.5 1.5 0 0 0 3.5 10h.5"/></svg>';
+const CHECK='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>';
+
+function wireCopy(){document.querySelectorAll('pre').forEach(block=>{
+  const code=block.querySelector('code'); if(!code)return;
+  const btn=document.createElement('button'); btn.className='copybtn'; btn.innerHTML=ICON; btn.setAttribute('aria-label','Copy');
+  btn.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(code.textContent.trim());
+    btn.innerHTML=CHECK;btn.classList.add('done');btn.setAttribute('aria-label','Copied');
+    setTimeout(()=>{btn.innerHTML=ICON;btn.classList.remove('done');btn.setAttribute('aria-label','Copy');},1400);});
+  block.appendChild(btn);});}
+
+const views=[]; let cur='bash'; let userPicked=false;
+function pick(){let s=null;try{s=localStorage.getItem(SH_KEY);}catch(e){}
+  return SH_LABEL[s]?s:(isWin()?'powershell':'bash');}
+function apply(){views.forEach(v=>v(cur));
+  document.getElementById('now').textContent='showing: '+SH_LABEL[cur]+(userPicked?' (your choice)':' (auto)');}
+
+function wireShellTabs(){
+  const lang=pre=>{const c=pre.querySelector('code[class*="language-"]');
+    const m=c&&c.className.match(/language-(bash|powershell)\b/);return m?m[1]:null;};
+  const groups=[];
+  document.querySelectorAll('pre').forEach(pre=>{
+    if(pre.closest('.shelltabs')||!lang(pre))return;
+    const run=[pre]; let n=pre.nextElementSibling;
+    while(n&&n.tagName==='PRE'&&lang(n)){run.push(n);n=n.nextElementSibling;}
+    if(run.length>1&&new Set(run.map(lang)).size===run.length)groups.push(run);});
+  groups.forEach(run=>{
+    const wrap=document.createElement('div'); wrap.className='shelltabs';
+    const bar=document.createElement('div'); bar.className='shelltabs-bar'; bar.setAttribute('role','tablist'); bar.setAttribute('aria-label','Shell');
+    run[0].before(wrap); wrap.appendChild(bar);
+    const tabs={};
+    run.forEach(pre=>{
+      const l=lang(pre); wrap.appendChild(pre); pre.setAttribute('role','tabpanel');
+      const t=document.createElement('button'); t.type='button'; t.className='shelltab';
+      t.setAttribute('role','tab'); t.textContent=SH_LABEL[l]; tabs[l]=t; bar.appendChild(t);
+      t.addEventListener('click',()=>{cur=l;userPicked=true;try{localStorage.setItem(SH_KEY,l);}catch(e){}apply();});
+      t.addEventListener('keydown',e=>{
+        if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;
+        const ks=Object.keys(tabs),i=ks.indexOf(l),nx=ks[(i+(e.key==='ArrowRight'?1:ks.length-1))%ks.length];
+        e.preventDefault(); tabs[nx].click(); tabs[nx].focus();});});
+    views.push(v=>{const show=tabs[v]?v:lang(run[0]);
+      run.forEach(pre=>{const on=lang(pre)===show;pre.hidden=!on;
+        const t=tabs[lang(pre)];t.setAttribute('aria-selected',on?'true':'false');t.tabIndex=on?0:-1;});});});
+  cur=pick(); try{userPicked=!!SH_LABEL[localStorage.getItem(SH_KEY)];}catch(e){} apply();
+}
+wireCopy(); wireShellTabs();
+
+/* Fork defaults per OS. A fork WITH a win section: Windows opens win only, Mac opens the app only,
+   Linux opens macOS / Linux only. A fork WITHOUT one keeps today's rule (Mac: app; else: Command line).
+   Remembering a manual choice across pages is not mocked here (see note under "Decisions"). */
+function osKind(){return fakeOS||(realWin?'win':(/mac/i.test((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'')?'mac':'linux'));}
+function applyForks(){const k=osKind();
+  document.querySelectorAll('.fork').forEach(f=>{
+    const hasWin=f.hasAttribute('data-win');
+    f.querySelectorAll('details.ch[data-channel]').forEach(d=>{const c=d.dataset.channel;
+      d.open=hasWin?(k==='win'?c==='win':k==='mac'?c==='app':c==='unix'):(k==='mac'?c==='app':c==='cli');});});}
+applyForks();
+
+/* mockup-only: changing the pretend OS forgets any saved choice so you can see the default */
+document.querySelectorAll('input[name=os]').forEach(r=>r.addEventListener('change',()=>{
+  fakeOS=r.value; try{localStorage.removeItem(SH_KEY);}catch(e){} userPicked=false; cur=pick(); apply(); applyForks();}));
+</script>
+</body>
+</html>

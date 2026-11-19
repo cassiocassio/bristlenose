@@ -10,6 +10,8 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from bristlenose.utils.hardware import (
     _CACHE_TTL_SECONDS,
     AcceleratorType,
@@ -558,26 +560,21 @@ class TestCudaNeedsItsLibraries:
         monkeypatch.setattr(sys, "platform", "darwin")
         assert effective_accelerator(cpu_hw, setting("cuda")) is AcceleratorType.CPU
 
+    @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="reads the Linux wheel's shared library")
     def test_the_names_match_the_installed_ctranslate2(self) -> None:
         """Read from the wheel, not remembered: a ctranslate2 that moves to CUDA 13,
         or loads cuDNN where the table says it does not, fails here rather than on
-        a user's GPU. Linux only: CI installs the Linux wheel."""
+        a user's GPU. Linux only: CI installs the Linux wheel. ctranslate2 is a core
+        dependency, so its absence is a failure here, not a skip."""
         import re
 
-        import pytest
+        import ctranslate2
 
         from bristlenose.utils.hardware import cuda_libraries_for
 
-        if not sys.platform.startswith("linux"):
-            pytest.skip("reads the Linux wheel's shared library")
-        try:
-            import ctranslate2
-        except ImportError:
-            pytest.skip("ctranslate2 not installed")
         libs = Path(ctranslate2.__file__).parent.parent / "ctranslate2.libs"
         binaries = sorted(libs.glob("libctranslate2*.so*"))
-        if not binaries:
-            pytest.skip("no libctranslate2 shared library beside the package")
+        assert binaries, f"no libctranslate2 shared library in {libs}"
         data = binaries[0].read_bytes()
         expected = cuda_libraries_for(ctranslate2.__version__, "linux")
         majors = set(re.findall(rb"libcublas\.so\.(\d+)", data))

@@ -7,7 +7,11 @@ library), so its lock script is loaded by path.
 from __future__ import annotations
 
 import importlib.util
+import platform
+import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WIN = ROOT / "packaging" / "windows"
@@ -259,26 +263,24 @@ def test_the_windows_scripts_are_ascii() -> None:
         assert text.isascii(), (script.name, [i for i, b in enumerate(text) if b > 127][:5])
 
 
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux") or platform.machine() not in ("x86_64", "AMD64"),
+    reason="runs CTranslate2's x86-64 Linux build, which carries MKL",
+)
 def test_the_cpu_path_patterns_match_what_ctranslate2_prints(tmp_path: Path) -> None:
     """winget-accept.ps1 -CpuPaths fails a path unless CTranslate2 reports taking
     it. The patterns are checked here against a real CTranslate2 run on a
     two-token model built in place (no download), so a changed log line fails
     this test instead of every path on a Windows guest. Each path's patterns
-    must match its own run and not the default run, or they prove nothing."""
+    must match its own run and not a reference run, or they prove nothing. The
+    reference forces MKL on, which is the default on Intel and makes AMD runners
+    meaningful too (there the default is already the non-MKL path)."""
     import os
-    import platform
     import re
     import subprocess
-    import sys
 
-    import pytest
-
-    np = pytest.importorskip("numpy")
-    pytest.importorskip("ctranslate2")
+    import numpy as np
     from ctranslate2 import specs
-
-    if not sys.platform.startswith("linux") or platform.machine() not in ("x86_64", "AMD64"):
-        pytest.skip("reads CTranslate2's x86-64 Linux build, which carries MKL")
 
     d, ff, vocab = 8, 16, 10
     rng = np.random.default_rng(0)
@@ -325,18 +327,13 @@ def test_the_cpu_path_patterns_match_what_ctranslate2_prints(tmp_path: Path) -> 
         assert done.returncode == 0, done.stderr[-500:]
         return done.stdout + done.stderr
 
-    default = run({})
-    assert "Selected ISA:" in default, default[-500:]
-    if "Use Intel MKL: true" not in default:
-        # CTranslate2 uses MKL by default only on an Intel CPU. On AMD the default
-        # run is already the non-MKL path, so "the patterns miss the default run"
-        # cannot hold for it; an Intel machine is where this test means something.
-        pytest.skip("not an Intel CPU: the default run is already the non-MKL path")
+    reference = run({"CT2_USE_MKL": "1"})
+    assert "Selected ISA:" in reference and "Use Intel MKL: true" in reference, reference[-500:]
     for name, env_block, expect_block in entries:
         extra = dict(re.findall(r'(\w+) = "([^"]*)"', env_block))
         patterns = re.findall(r'"([^"]+)"', expect_block)
         output = run(extra)
         for pattern in patterns:
             assert re.search(pattern, output), (name, pattern, output[-600:])
-        assert not all(re.search(p, default) for p in patterns), (
-            f"{name}'s patterns also match the default run, so they prove nothing", patterns)
+        assert not all(re.search(p, reference) for p in patterns), (
+            f"{name}'s patterns also match the reference run, so they prove nothing", patterns)

@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 14 Nov 2026
-trued-against: HEAD@main (30717e7be) on 14 Nov 2026
+last-trued: 19 Nov 2026
+trued-against: HEAD@main (8f685f7be) on 19 Nov 2026
 ---
 
 # Azure: what every surface says in every state
@@ -68,12 +68,12 @@ Severity: **A** = a researcher is told something false or sent the wrong way; **
 2. **A, 403 gets three diagnoses.** The Mac, doctor and run call it a bad key and send the researcher to `configure`; preflight shows Azure's own body (the only one that can tell a firewall from a key) under "credit-balance" advice.
 3. **A, "credit-balance" advice for non-credit failures.** Preflight's generic text is shown for 403, 5xx and 400 (offline and DNS were fixed on 14 Nov and now say network).
 4. **Fixed 14 Nov: doctor reported 429 and 5xx as a good key, silently.** It still shows green (it cannot prove the key is bad) but now adds the dim "could not validate: HTTP <code>" detail, as it already did for a 502.
-5. **A, 404 is "deployment not found" in doctor for every 404.** A pasted portal URL (state 15) is misreported as a missing deployment.
+5. **A, 404 is "deployment not found" in doctor for every 404.** A pasted portal URL (state 15) is misreported as a missing deployment. Measured live 19 Nov: a portal URL, a full classic URL, an `http://` endpoint and any wrong path all answer a generic 404 `{"error":{"code":"404","message":"Resource not found"}}`; only a missing deployment answers `DeploymentNotFound`. Doctor runs first on every `run`, so its misreading pre-empts the preflight, which already tells the two apart.
 6. **A, offline sentence claims "Your key was fine"** even when no key was ever validated (Mac).
 7. **A, the 'choose another model' remedies point at an inert picker.** The run's model-unavailable and truncation sentences tell the researcher to choose a model; Azure takes a deployment name and the Model row does nothing.
 8. **Fixed 14 Nov for doctor and preflight: redirects passed silently.** Doctor no longer follows a redirect and preflight no longer takes a non-completion reply for a pass or caches it. A redirect during the run itself still ends as "unknown" (not changed).
 9. **B, the Mac check and the run disagree about what Azure accepts.** The check sends `max_tokens: 1`; a deployment with a low cap passes green and fails the run, and a reasoning deployment that rejects `max_tokens` could fail the check while the run is fine (UNKNOWN). The commit that added it says "as Python's doctor does"; the doctor stopped sending that shape on 20 Oct.
-10. **B, the Mac validation cache is keyed on the key alone.** Editing the endpoint or deployment does not invalidate it; a cached green can show Online over a cleared endpoint. (Fixed on a branch, not merged.)
+10. **Fixed (merged, `21ee1d213`): the Mac validation cache was keyed on the key alone.** It is now keyed on key + endpoint (trimmed) + deployment + API version (`LLMValidator.swift` `identity`), so editing any of them invalidates a cached verdict. One hole remains, §5 below (S1): a run's refusal is written against the config saved when the run *ends*, not the one it ran with.
 11. **B, missing endpoint and missing deployment behave oppositely** in the Mac pane (orange and activatable, versus grey and blocked).
 12. **B, the popover and the cover pane offer different remedies** for the same failure (Show Log versus Set Up Provider).
 13. **B, `http://` is accepted** while every message says https is required.
@@ -85,8 +85,36 @@ Severity: **A** = a researcher is told something false or sent the wrong way; **
 2. **One verdict per state.** Items 1 to 8 above are one problem: five surfaces, three code paths, no shared table. The finder (design §5) and one client builder (D13) are the fix; the matrix is the test that it worked.
 3. **Doctor and preflight must agree** on 429, 5xx, offline, DNS and 3xx before the finder lands, or the finder's step 1 inherits the same split.
 4. **Launch-sized fixes hidden in here** (each small, none a feature). **Done on 14 Nov:** preflight classifies network failures as network; doctor no longer reports 429 and 5xx silently as a good key; redirects are no longer a pass (and no longer cached). **Still open:** the "Invalid key" label on a 404 (D4, a UX string) and the Mac cache key (built on a branch, not merged). All are reliability, not UX.
-5. **A real Azure body is needed for** the 403 private endpoint, the portal URL, a classic URL and any 3xx. These are cheap probes on the existing resource; you run them.
+5. **Real Azure bodies, recorded 19 Nov:** portal URL, classic URL, wrong path and `http://` all give the generic 404 above (Azure does **not** redirect http to https, so the redirect refusal never fires against Azure itself); a bad key with a bad deployment is **401** (Azure checks the key first, so "invalid key" is right for that pair); the 64000 cap refusal wording is as recorded on 12 Nov. **Still needed:** the 403 bodies (key-based auth off, private endpoint), which need a change on the resource.
 
-## 5. Not covered here
+## 5. Transition model (19 Nov 2026)
+
+States alone miss the bugs that live between them, so each surface was also modelled as states x events, read from the code at `9be56fe6f` (three read-only passes: Python checks, the run, the Mac). Regions, not a flat product: **configuration** (key, endpoint, deployment, API version: present, absent, malformed), **credential** (absent, present, unreadable), **verdict + cache**, **run**, **learned output ceiling**, **network**. Events: an edit while a check runs; a result arriving after the settings changed; a run started while checking; a key revoked mid-run; 401, 403, 404 (two kinds), 429, 5xx, 3xx, timeout and DNS failure at each stage; the cap refusal and its retry; quit and relaunch with a cached verdict; a sidecar older than the app; provider switched away and back; the CLI and Mac sharing one Keychain item.
+
+**Holds** (each checked against the code): the cap retry happens at most once per call and never applies one deployment's ceiling to another; the preflight cache fingerprint covers key, endpoint, deployment, API version and request parameters; a Mac check whose config changed mid-flight is cancelled and its result dropped; every Mac check has a 5 s timeout; provider text reaching the UI goes through the redactor.
+
+**Odd transitions found** (bug candidates, ranked by harm; *string* = needs new wording, an owner call):
+
+| # | Sequence | What happens | Fix |
+|---|---|---|---|
+| S1 | Run on endpoint A, fix it to B (B checks green), run A ends with 401 | The refusal is recorded against B: correct config shows "Invalid key", radio disabled, no re-check for 60 s (`ProviderProblemModel.swift` `recordRefusal` passes no config) | capture the run's config at spawn |
+| P1 | Any non-DeploymentNotFound 404 (§3 item 5) | doctor says "Deployment not found" and stops the run | read the body |
+| P2 | Endpoint or proxy accepts the connection and never answers | preflight waits 600 s x 3 attempts with nothing on screen | explicit timeout, fewer retries |
+| R1 | Chat lens: the model's reply fails validation | `ValidationError` is a `ValueError`, so it is answered 400 "bad question" with fragments of the reply in the detail | route parse failures to the 502 path |
+| R2 | AutoCode re-apply fails | the raw provider text (`str(exc)`) is stored in the job's `error_message` and served by `/status` | `failure_summary` as its siblings do |
+| R3 | Terminal warnings from speaker, quote and theme stages | printed through `_short_reason` without key redaction | redact there |
+| S3 | Relaunch with a cached rejection, or offline | "re-checking…" is shown though no check is started | paint it only when a check starts |
+| S4 | New key or config entered offline | "Your key was fine" for a key never checked | use the network sentence when nothing was cached |
+| S8 | Azure key pasted before the endpoint | "Unavailable" can be activated and auto-adopted | treat a missing endpoint as not set up |
+| P4 | Locked or unreadable Keychain (CLI) | reads as "no key" and the Keychain read has no timeout | timeout; naming it is a *string* |
+| P5 | Azure 403 (firewall, private endpoint, RBAC) | doctor, run and Mac all call it a bad key | *string* |
+| R4 | `llm-calls.jsonl` | a reply that later fails to parse is recorded `ok` | record after parsing |
+| — | Codebook builder with an unready provider | bare 500 | fixed 19 Nov: refuses like AutoCode |
+
+**Totality gaps** (a catch-all that hides a cell): `LLMValidator.swift` URLError `default:` hides ATS (http), unsupported URL, TLS interception and proxy failures as one "Network error"; its HTTP `default:` puts every 400 (cap, parameter, API version) and 3xx in one bucket that a cached green can mask; doctor's broad `except` turns a scheme-less endpoint into a green "could not validate"; the Keychain read's broad `except` makes unreadable look like absent.
+
+**Live, 19 Nov (CLI on the dev venv):** a run on a deployment with a 32768 ceiling succeeded; the preflight learned the ceiling first, so the run's own `azure_output_cap_learned` line never appeared, and the preflight's second attempt failed with `SSL: UNEXPECTED_EOF_WHILE_READING` while still printing a tick. Seen once; cause not known.
+
+## 6. Not covered here
 
 The CLI `configure azure` asks for the key only and validates nothing (design §7); the website docs; non-OpenAI Foundry models (100-days item); Microsoft Entra ID sign-in. The chat-lens route is behind a dev flag, so it is listed but not judged.

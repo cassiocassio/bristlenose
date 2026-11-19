@@ -406,8 +406,8 @@ try {
             # kernels even on an AVX-512 CPU (measured, 4.9.0), but MKL dispatches
             # for itself, so MKL_CBWR pins MKL to what a typical Intel laptop runs.
             # Never force an instruction set the CPU lacks. MKL is forced on for the
-            # Intel and generic paths so an AMD guest runs them too (without MKL there
-            # is no MKL line to confirm the pin; measured 19 Nov 2026). CT2_VERBOSE makes CTranslate2
+            # Intel and generic paths (without MKL there is no MKL line to confirm the
+            # pin; measured 19 Nov 2026, on Intel). CT2_VERBOSE makes CTranslate2
             # print what it chose ("- Selected ISA: AVX2", "- Use Intel MKL: true",
             # read from 4.9.0 on 19 Nov 2026) and MKL_VERBOSE makes MKL print the
             # instruction set it was held to ("CNR:AVX2"); a path not taken fails.
@@ -418,16 +418,24 @@ try {
             # pattern against what it prints, and against the default run.
             $paths = @(
                 @{ Name = "intel-avx2"; Env = @{ CT2_FORCE_CPU_ISA = "AVX2"; MKL_CBWR = "AVX2"; CT2_USE_MKL = "1"; MKL_VERBOSE = "1" };
-                   Expect = @("Selected ISA: AVX2\b", "Use Intel MKL: true\b", "CNR:AVX2\b") },
+                   Expect = @("Selected ISA: AVX2\b", "Use Intel MKL: true\b", "CNR:AVX2\b"); IntelOnly = $true },
                 @{ Name = "non-mkl"; Env = @{ CT2_USE_MKL = "0" };
                    Expect = @("Use Intel MKL: false\b") },
                 @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE"; CT2_USE_MKL = "1"; MKL_VERBOSE = "1" };
                    Expect = @("Selected ISA: GENERIC\b", "CNR:COMPATIBLE\b") }
             )
+            # The Intel path is an Intel laptop's path: on another vendor's CPU MKL
+            # does not report the AVX2 pin (CI's runners, 19 Nov 2026), and the
+            # CTranslate2 lines match the default run, so nothing would tell it apart.
+            $vendor = [string](Get-CimInstance Win32_Processor | Select-Object -First 1).Manufacturer
             foreach ($path in $paths) {
                 # Not $name: variable names ignore case, and inside Check's body
                 # $name would be Check's own $Name parameter, the label.
                 $pathName = $path.Name
+                if ($path.IntelOnly -and $vendor -ne "GenuineIntel") {
+                    Skip "transcribe, CPU path $pathName" "an Intel path; this CPU is '$vendor'"
+                    continue
+                }
                 $vars = $path.Env + @{ CT2_VERBOSE = "1" }
                 $expect = $path.Expect
                 Check "transcribe, CPU path $pathName" {

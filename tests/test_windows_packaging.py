@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import importlib.util
 import platform
+import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -263,20 +265,41 @@ def test_the_windows_scripts_are_ascii() -> None:
         assert text.isascii(), (script.name, [i for i, b in enumerate(text) if b > 127][:5])
 
 
-@pytest.mark.skipif(
-    not sys.platform.startswith("linux") or platform.machine() not in ("x86_64", "AMD64"),
-    reason="runs CTranslate2's x86-64 Linux build, which carries MKL",
+_CPU_PATH_ENTRY = re.compile(
+    r'Name = "([\w-]+)"; Env = @\{([^}]*)\};\s*Expect = @\(([^)]*)\)(; IntelOnly = \$true)?'
 )
-def test_the_cpu_path_patterns_match_what_ctranslate2_prints(tmp_path: Path) -> None:
-    """winget-accept.ps1 -CpuPaths fails a path unless CTranslate2 reports taking
-    it. The patterns are checked here against a real CTranslate2 run on a
-    two-token model built in place (no download), so a changed log line fails
-    this test instead of every path on a Windows guest. Each path's patterns
-    must match its own run and not a reference run, or they prove nothing. The
-    reference forces MKL on, which is the default on Intel and makes AMD runners
-    meaningful too (there the default is already the non-MKL path)."""
+
+
+def _cpu_paths() -> dict[str, tuple[dict[str, str], list[str], bool]]:
+    """winget-accept.ps1's -CpuPaths table: name -> (env, expected patterns, Intel only)."""
+    script = (WIN / "winget-accept.ps1").read_text(encoding="utf-8")
+    return {
+        name: (dict(re.findall(r'(\w+) = "([^"]*)"', env)), re.findall(r'"([^"]+)"', expect),
+               bool(intel_only))
+        for name, env, expect, intel_only in _CPU_PATH_ENTRY.findall(script)
+    }
+
+
+def test_the_cpu_path_table_names_three_paths_and_one_is_intel_only() -> None:
+    """The script skips the Intel path on another vendor's CPU, and the test below
+    checks it only on an Intel one: the two must agree on which path that is."""
+    paths = _cpu_paths()
+    assert set(paths) == {"intel-avx2", "non-mkl", "generic"}, paths
+    assert [name for name, (_, _, intel_only) in paths.items() if intel_only] == ["intel-avx2"]
+
+
+def _cpu_vendor() -> str:
+    for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+        if line.startswith("vendor_id"):
+            return line.split(":", 1)[1].strip()
+    return "unknown"
+
+
+@pytest.fixture(scope="module")
+def ct2_run(tmp_path_factory: pytest.TempPathFactory) -> Callable[[dict[str, str]], str]:
+    """Runs a real CTranslate2 on a two-token model built in place (no download)
+    under the given environment, and returns everything it printed."""
     import os
-    import re
     import subprocess
 
     import numpy as np
@@ -302,15 +325,8 @@ def test_the_cpu_path_patterns_match_what_ctranslate2_prints(tmp_path: Path) -> 
     model.register_vocabulary([f"t{i}" for i in range(vocab)])
     model.validate()
     model.optimize(quantization=None)
-    model_dir = tmp_path / "tiny"
-    model_dir.mkdir()
+    model_dir = tmp_path_factory.mktemp("tiny-ct2")
     model.save(str(model_dir))
-
-    script = (WIN / "winget-accept.ps1").read_text(encoding="utf-8")
-    entries = re.findall(
-        r'Name = "([\w-]+)"; Env = @\{([^}]*)\};\s*Expect = @\(([^)]*)\)', script,
-    )
-    assert {name for name, _, _ in entries} == {"intel-avx2", "non-mkl", "generic"}, entries
 
     probe = (
         "import sys, ctranslate2\n"
@@ -327,13 +343,48 @@ def test_the_cpu_path_patterns_match_what_ctranslate2_prints(tmp_path: Path) -> 
         assert done.returncode == 0, done.stderr[-500:]
         return done.stdout + done.stderr
 
-    reference = run({"CT2_USE_MKL": "1"})
-    assert "Selected ISA:" in reference and "Use Intel MKL: true" in reference, reference[-500:]
-    for name, env_block, expect_block in entries:
-        extra = dict(re.findall(r'(\w+) = "([^"]*)"', env_block))
-        patterns = re.findall(r'"([^"]+)"', expect_block)
-        output = run(extra)
-        for pattern in patterns:
-            assert re.search(pattern, output), (name, pattern, output[-600:])
-        assert not all(re.search(p, reference) for p in patterns), (
-            f"{name}'s patterns also match the reference run, so they prove nothing", patterns)
+    return run
+
+
+def _what_it_chose(output: str) -> str:
+    """Every line naming an instruction set, MKL or its CNR mode, in full: a
+    failure must show what was printed, not the tail pytest keeps."""
+    return "\n".join(
+        line for line in output.splitlines() if re.search(r"(?i)\b(isa|mkl|cnr)\b|CNR:", line)
+    )
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux") or platform.machine() not in ("x86_64", "AMD64"),
+    reason="runs CTranslate2's x86-64 Linux build, which carries MKL",
+)
+@pytest.mark.parametrize("name", ["intel-avx2", "non-mkl", "generic"])
+def test_the_cpu_path_patterns_match_what_ctranslate2_prints(
+    name: str, ct2_run: Callable[[dict[str, str]], str]
+) -> None:
+    """winget-accept.ps1 -CpuPaths fails a path unless CTranslate2 reports taking
+    it. The patterns are checked here against what a real CTranslate2 prints, so
+    a changed log line fails this test instead of every path on a Windows guest.
+    Each path's patterns must match its own run and not a reference run, or they
+    prove nothing. The reference forces MKL on, the default on Intel.
+
+    The Intel path is checked only on an Intel CPU, as the script runs it: on
+    CI's runners MKL printed no ``CNR:AVX2`` under ``MKL_CBWR=AVX2`` (19 Nov
+    2026), and without it the path's CTranslate2 lines match the default run."""
+    env, patterns, intel_only = _cpu_paths()[name]
+    vendor = _cpu_vendor()
+    if intel_only and vendor != "GenuineIntel":
+        pytest.skip(f"{name} is an Intel path, as in the script; this CPU is {vendor!r}")
+    reference = ct2_run({"CT2_USE_MKL": "1"})
+    assert "Selected ISA:" in reference and "Use Intel MKL: true" in reference, (
+        vendor, _what_it_chose(reference))
+    output = ct2_run(env)
+    # pytest.fail, not an assert message: pytest -q shortens a long assert message,
+    # and the lines CTranslate2 and MKL printed are the evidence a fix needs.
+    for pattern in patterns:
+        if not re.search(pattern, output):
+            pytest.fail(f"{name} on {vendor}: {pattern!r} not printed. It printed:\n"
+                        f"{_what_it_chose(output)}")
+    if all(re.search(p, reference) for p in patterns):
+        pytest.fail(f"{name}'s patterns {patterns} also match the reference run on {vendor}, "
+                    f"so they prove nothing. The reference printed:\n{_what_it_chose(reference)}")

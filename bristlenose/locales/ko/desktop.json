@@ -1324,7 +1324,7 @@
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "Try another network, or ask whoever runs this one."
+    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
   },
   "studyStartup": {
     "foreignTitle": "다른 Mac에서 시작됨",

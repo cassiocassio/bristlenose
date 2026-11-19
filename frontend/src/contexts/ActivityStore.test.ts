@@ -530,7 +530,10 @@ describe("a window's chips across a reload", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await rehydrateActivityJobs("1");
     addJob("screens:1", { type: "screens", frameworkId: "", frameworkTitle: "", total: 2, copyWhenDone: true, jobId: "s1" });
-    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("full"); });
+    // The test setup's in-memory Storage (jsdom ships none) keeps setItem on the instance, not on
+    // Storage.prototype, so a prototype spy would never see the write: spy where it actually lives.
+    const owner = Object.prototype.hasOwnProperty.call(sessionStorage, "setItem") ? sessionStorage : Storage.prototype;
+    const set = vi.spyOn(owner, "setItem").mockImplementation(() => { throw new Error("full"); });
     try {
       settleJob("screens:1", done);
       removeJob("screens:1");

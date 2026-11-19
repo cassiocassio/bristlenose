@@ -28,19 +28,17 @@ were not exercised. The design is in `docs/design-windows-port.md` and
 | winget (live, **0.36.0**) installs from the catalogue | `Successfully installed` | **fails with the bare line**, succeeds with `--id … -e --source winget` | `0x8a15005e` on msstore, then success |
 | After install, the same window finds `bristlenose` | no (stale PATH) | no | `Get-Command` in the same session |
 | After install, a new window finds it | yes | yes, `bristlenose 0.36.0`, FFmpeg 9.0.2 bundled | `doctor` clean |
-| First run on a spoken WAV | exit 0 | exit 0, **1m 17s** after the 1.6 GB model | RDP Terminal screenshot |
-| First-run output is clean | no warnings | **Hugging Face and Xet warnings** on 0.36.0 | screenshot; fixed since 0.37.0 |
-| Website, Windows browser (headless UA), both modes | Windows panel default, right command, one variant, PowerShell tab, tab remembered, no page error, no horizontal scroll at 375 px | as expected (20 of 20; one assertion of mine was wrong, not the page) | `wincheck.cjs` |
+| `bristlenose transcribe` on a spoken WAV | exit 0 | exit 0, **1m 17s** after the 1.6 GB model | RDP Terminal screenshot |
+| First-run output is clean | no warnings | **Hugging Face and Xet warnings** on 0.36.0 | screenshot; 0.37.0's changelog says they are silenced, not re-run |
+| Website, Windows browser (headless UA), both modes | Windows panel default, right command, one variant, PowerShell tab, tab remembered, no page error, no horizontal scroll at 375 px | 20 of 20 pass after one wrong test assertion was corrected; the page was not at fault | `wincheck.cjs` |
 | Website, Edge on the box (script mode, live; winget mode via a tunnel) | PowerShell default, `$env:` sentence reads right | as expected | screenshots |
 
 ## Defects found, and where they went
 
 1. **The bare `winget install Bristlenose.Bristlenose` is the wrong line.** It queries
-   the Microsoft Store source too; here that failed, on a client it prompts for Store
-   terms. Every page now uses `winget install --id Bristlenose.Bristlenose -e --source
+   the Microsoft Store source too; here that failed, here that failed; on a client edition it is expected to prompt for Store terms (not exercised). Every page now uses `winget install --id Bristlenose.Bristlenose -e --source
    winget` (website `af39143`). Fixed.
-2. **0.36.0's first run prints Hugging Face and Xet warnings.** Fixed in 0.37.0 and
-   later; winget still serves 0.36.0. Resolved by shipping a newer version to winget
+2. **0.36.0's first run prints Hugging Face and Xet warnings.** Silenced in 0.37.0 per its changelog (not re-run on Windows); winget still serves 0.36.0. Resolved by shipping a newer version to winget
    (`docs/release-winget.md`).
 3. **winget is absent in a fresh Server ssh session.** A test-harness finding, not a
    product defect: `Add-AppxPackage -RegisterByFamilyName -MainPackage

@@ -7,7 +7,7 @@ trued-against: HEAD@main on 2026-11-19
 ## Changelog
 
 - _2026-11-19_ — ran the CLI and the winget path on real Windows Server 2025 desktops (aella):
-  the uv/pipx install, the ffmpeg hint and install table, `setx` vs `$env:` vs `.env`
+  the uv one-line install, the ffmpeg hint and install table, `setx` vs `$env:` vs `.env`
   semantics, the doctor Windows hints, the credential file store, and live
   `winget install --id Bristlenose.Bristlenose -e --source winget` (0.36.0) through to a
   first `transcribe` run (exit 0). Moved those out of "never exercised"; recorded the
@@ -71,14 +71,14 @@ a client edition): the uv one-line install and `uv tool` route; the missing-ffmp
 install table (a winget row, then a "open a new terminal" line); environment-variable
 semantics (`setx` reaches only new windows, `$env:` only its own window, a bare `KEY=value`
 `.env` line works, an `export` prefix is not needed); `bristlenose doctor`'s proxy,
-auth-token, CUDA and ffmpeg hints; the credential store as a protected file under
+auth-token and ffmpeg hints (the CUDA hint's wording is tested, but no GPU box was used); the credential store as a protected file under
 `%USERPROFILE%\.config\bristlenose`; and the live winget package (0.36.0): same window does
 not see `bristlenose`, a new one does, `doctor` is clean with the bundled FFmpeg, and a first
-`transcribe` of a spoken WAV exits 0 in about 77 seconds after the 1.6 GB model download.
+`bristlenose transcribe` of a spoken WAV exits 0 in about 77 seconds after the 1.6 GB model download.
 Findings: bare `winget install Bristlenose.Bristlenose` also queries the msstore source and
-fails or prompts, so every page uses `--id ... -e --source winget`; winget works over ssh
+failed here (`0x8a15005e`; on a client edition it is expected to prompt for Store terms, not exercised), so every page uses `--id ... -e --source winget`; winget works over ssh
 only after registering App Installer and its `source.msix`; 0.36.0's first run prints
-Hugging Face and Xet warnings that later releases silence. **Still not exercised:** a client
+Hugging Face and Xet warnings that 0.37.0's changelog says are silenced (not re-run on Windows). **Still not exercised:** a client
 edition (SmartScreen under `winget install --manifest`, the Start-menu absence), Windows on
 Arm, and a bare-metal machine.
 

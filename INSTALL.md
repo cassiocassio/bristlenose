@@ -315,7 +315,7 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
    This validates your key and saves it to your system's secure credential store:
    - **macOS** — saved to your **login keychain** (viewable in the Keychain Access app, search for "Bristlenose")
    - **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet)
-   - **Windows** — saved to a config file in your user folder, `C:\Users\<you>\.config\bristlenose\.env`. Windows Credential Manager isn't supported yet
+   - **Windows** — saved to a config file in your user folder, `C:\Users\<you>\.config\bristlenose\.env`. Bristlenose doesn't use Windows Credential Manager
 
 > **Important:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need to add a payment method in the API console.
 

@@ -48,10 +48,9 @@ enum AccountService: Hashable, Identifiable, Sendable {
     /// no UI can reach it. Check that again before parking a service that has
     /// ever stored a sign-in.
     ///
-    /// Zoom, a Diagnostics beta since 17 Oct 2026, is the first parked platform
-    /// that *can* hold a grant: sign in with Diagnostics on, turn it off, and
-    /// the grant stays with no row. Turning Diagnostics back on shows the row
-    /// again, which is where Disconnect lives.
+    /// Zoom was the first parked platform that *could* hold a grant (signed in
+    /// as a Diagnostics beta, then hidden again, the grant stayed with no row).
+    /// Since 19 Nov 2026 nothing is parked, so every grant has its row.
     static var all: [AccountService] { all(offering: CloudPlatform.shipping) }
 
     /// The rule `all` applies, pure so a test does not depend on this Mac's

@@ -218,10 +218,7 @@ private struct DiagnosticsMenuContent: View {
                 // is itself the refusal path worth watching. The address uses
                 // `.invalid` (RFC 2606) so it can never collide with a real
                 // account, and Forget is offered beside it so the item can
-                // always be undone from here — including with
-                // `BristlenoseCloudImportZoom` off, where Settings ▸ Accounts
-                // shows no Zoom row and would otherwise leave this
-                // unremovable.
+                // always be undone from here.
                 Button("Store a Test Zoom Sign-In") {
                     CloudGrantStore.saveZoom(
                         ZoomGrant(

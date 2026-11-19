@@ -27,33 +27,6 @@ enum BristlenoseFlags {
         UserDefaults.standard.bool(forKey: welcomeTintCandidateKey)
     }
 
-    /// Offer **Zoom** in `File ▸ Import` regardless of the Diagnostics menu.
-    /// Parked 16 Aug 2026 so Teams and Meet could reach releasable quality
-    /// first; since 17 Oct 2026 Zoom is a Diagnostics beta, shown whenever the
-    /// Diagnostics menu is on (`CloudPlatform.zoomOffered`), and this is the
-    /// override.
-    ///
-    /// This parks the *menu item only*. The Zoom adapter, its OAuth client, its
-    /// transfer policy and its tests all still build and run, and Zoom keeps
-    /// its row in the Diagnostics ▸ Cloud Import fixture menu (which reads
-    /// `allCases`, deliberately) so its states stay inspectable while parked.
-    /// Nothing about ingesting Zoom *files* is affected — that is Python-side
-    /// filename and folder-pattern recognition in `s01_ingest.py`, reached by
-    /// drag-and-drop, and it never touches this flag.
-    ///
-    /// Registration, the `webcredentials` entitlement (store and Debug), the
-    /// deployed `apple-app-site-association` file and token persistence are
-    /// all done, and a first live sign-in worked on 17 Oct 2026. What remains
-    /// is Zoom's Marketplace review, after which a Production client ID ships
-    /// in the bundle and this flag can go — see
-    /// `docs/design-cloud-import-transcripts.md` §1b.
-    ///
-    /// Flip with: `defaults write app.bristlenose BristlenoseCloudImportZoom -bool YES`
-    static let cloudImportZoomKey = "BristlenoseCloudImportZoom"
-    static var cloudImportZoom: Bool {
-        UserDefaults.standard.bool(forKey: cloudImportZoomKey)
-    }
-
     /// Offer **Send to FigJam…** in the Quotes menu and the export popover.
     /// **Default off** — parked 17 Oct 2026 until the Bristlenose plugin
     /// is published in Figma Community: a row whose last step is "run a plugin

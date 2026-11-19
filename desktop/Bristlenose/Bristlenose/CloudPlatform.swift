@@ -42,29 +42,22 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// Diagnostics fixture menu, where seeing a parked platform's states is
     /// the entire point.
     ///
-    /// **Zoom is parked here as of 16 Aug 2026** (`BristlenoseFlags.cloudImportZoom`,
-    /// default off) so Teams and Meet can reach releasable quality first. The
-    /// adapter is complete and still compiled, tested and fixture-driveable;
-    /// only the menu item is withheld. Any future import surface — the project
-    /// context-menu twin, a Settings ▸ Accounts pane — should read `shipping`
-    /// and inherit the parking rather than re-deriving it.
+    /// **All three platforms are offered, Zoom included, from 19 Nov 2026.**
     ///
-    /// **Since 17 Oct 2026 Zoom is a Diagnostics beta**: it also appears
-    /// whenever the Diagnostics menu is on. Its Marketplace app has only
-    /// Development credentials until Zoom's review clears, so a sign-in works
-    /// for the owner's own account and may fail for anyone else, and that
-    /// is accepted for a surface people opt into. Zoom stays out of the docs,
-    /// the About page and release notes until review; then the Production
-    /// client ID goes into the bundle and the Diagnostics condition comes off.
+    /// Zoom was parked behind `BristlenoseFlags.cloudImportZoom` on 16 Aug 2026
+    /// so Teams and Meet could reach releasable quality first, then became a
+    /// Diagnostics beta on 17 Oct while its Marketplace app held Development
+    /// credentials only. The Production public client ID has been in the bundle
+    /// since 9 Nov 2026 (`Bristlenose-OAuth-Info.plist`), the whole path ran
+    /// end to end on a Pro account on 18 Oct, and the owner ruled on 19 Nov that
+    /// Zoom ships on, so the flag and the Diagnostics condition are gone.
+    /// `offered(zoomEnabled:)` stays as the pure parking rule, which the tests
+    /// use to pin what a parked platform withholds; nothing parks Zoom now.
+    ///
+    /// Any import surface — the project context-menu twin, Settings ▸ Accounts —
+    /// should read `shipping` rather than re-deriving it.
     static var shipping: [CloudPlatform] {
-        offered(zoomEnabled: zoomOffered(flag: BristlenoseFlags.cloudImportZoom,
-                                         diagnostics: DiagnosticsPreference.isEnabled()))
-    }
-
-    /// The Zoom gate, pure so it is testable: the defaults override, or the
-    /// Diagnostics menu.
-    static func zoomOffered(flag: Bool, diagnostics: Bool) -> Bool {
-        flag || diagnostics
+        offered(zoomEnabled: true)
     }
 
     // MARK: Naming

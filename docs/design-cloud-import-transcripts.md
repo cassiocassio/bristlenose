@@ -596,7 +596,7 @@ run through the parser and read back by `s03`). What it changed:
 
 **What is built** (≈1,900 lines, `ZoomOAuth.swift`, `ZoomSource.swift`, `ZoomRecordingModel.swift`;
 `ZoomImportTests` 37 + `ZoomGrantTests` 5; fixture states in **Diagnostics ▸ Cloud Import ▸ Zoom**,
-plus **Store a Test Zoom Sign-In**). It sits behind `BristlenoseFlags.cloudImportZoom`, off by default.
+plus **Store a Test Zoom Sign-In**). _It sat behind `BristlenoseFlags.cloudImportZoom`, off by default; **since 19 Nov 2026 the flag and the Diagnostics condition are deleted and Zoom is offered to everyone** (owner), with the Production client ID in the bundle since 9 Nov._
 *17 Oct 2026: 2,487 lines, `ZoomImportTests` 61 + `ZoomGrantTests` 8. Zoom is now a Diagnostics beta: offered when the Diagnostics menu is on **or** the `BristlenoseCloudImportZoom` override is set (`CloudPlatform.zoomOffered(flag:diagnostics:)`, `CloudPlatform.swift:52–68`, `3f91d03c`), and kept out of the docs, About and release notes until Zoom's Marketplace review clears.*
 Background: the parking brief in the maintainer's private handoffs, and `docs/design-cloud-import.md`'s
 4 Sep note.
@@ -713,7 +713,7 @@ serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlen
    - Re-enable Associated Domains on the App ID and regenerate the **Manual** Mac App Store profile, or
      the next release archive fails to sign. Debug signing re-mints automatically.
    - `swcutil reset` if a failed lookup is cached.
-4. **Done 17 Oct 2026.** The flag write is now optional: turning on the Diagnostics menu offers Zoom by itself (`CloudPlatform.zoomOffered`, `3f91d03c`). **Wire the client:** `defaults write app.bristlenose ZoomOAuthPublicClientID "<id>"`,
+4. **Done 17 Oct 2026; overtaken 19 Nov 2026 (the flag is deleted and Zoom is on for everyone; the `defaults write … BristlenoseCloudImportZoom` line below no longer does anything).** The flag write is now optional: turning on the Diagnostics menu offers Zoom by itself (`CloudPlatform.zoomOffered`, `3f91d03c`). **Wire the client:** `defaults write app.bristlenose ZoomOAuthPublicClientID "<id>"`,
    `defaults write app.bristlenose ZoomOAuthRedirectURI "https://bristlenose.app/auth/zoom"`, and
    `defaults write app.bristlenose BristlenoseCloudImportZoom -bool YES`.
 5. *(Open: needs the Pro seat.)* **Record two short test calls, one in a language other than English**, and wait (roughly twice the

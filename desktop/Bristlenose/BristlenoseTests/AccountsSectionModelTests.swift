@@ -61,8 +61,8 @@ struct AccountsSectionModelTests {
         // the pane doing it. `AccountService.all` reads `CloudPlatform.shipping`
         // now, so a parked platform is simply absent — safe only because a
         // parked platform cannot hold a grant.
-        // Through the pure rule, not the live settings: a developer Mac with
-        // Diagnostics or the Zoom override on would otherwise fail this.
+        // Through the pure rule, not the live shipping list: nothing parks Zoom
+        // since 19 Nov 2026, so this pins what a parked platform looks like.
         let parked = AccountService.all(offering: CloudPlatform.offered(zoomEnabled: false))
         #expect(!parked.map(\.id).contains("zoom"),
                 "Zoom is parked and must not be offered a row")

@@ -26,6 +26,8 @@ trued-against: HEAD@main 2878f68e
 > flattens the two together. §5's "strongest artifact position" is corrected;
 > §6 carries the Google specimens.
 >
+> **Superseded 19 Nov 2026 (owner's ruling): Zoom ships on, for everyone.** The Diagnostics condition and `BristlenoseFlags.cloudImportZoom` are deleted, `CloudPlatform.shipping` is all three platforms, and Settings ▸ Accounts always shows the Zoom row. The "parked" and "Diagnostics beta" passages below describe how it stood on 16 Aug and 17 Oct and are kept as history. Zoom's Production public client ID has been in the bundle since 9 Nov 2026 (publishable URL, 100 installs, expiry extended by request); the Development-credentials statements below are out of date. The whole path ran end to end on a Pro account on 18 Oct (list, download, Zoom's VTT with named speakers, analysis).
+>
 > **Zoom is parked, 16 Aug 2026 — a scheduling decision, not a design one.**
 > `File ▸ Import ▸ Zoom` is withheld behind `BristlenoseFlags.cloudImportZoom`
 > (default off) so Teams and Meet can reach releasable quality first. Everything

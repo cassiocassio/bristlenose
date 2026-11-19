@@ -172,26 +172,19 @@ struct ShippingPlatformTests {
         #expect(Set(CloudPlatform.built) == Set(CloudPlatform.allCases))
     }
 
-    /// Zoom was parked 16 Aug 2026 so Teams and Meet could reach releasable
-    /// quality first. These pin the *outcome a user would see* — which items
-    /// the File menu offers — not the mechanism, so they still mean something
-    /// if the filter is reimplemented.
-    @Test("Parked: the File menu offers Teams and Meet, and withholds Zoom")
-    func zoomParkedByDefault() {
+    /// Zoom was parked 16 Aug 2026 and a Diagnostics beta from 17 Oct; the owner
+    /// ruled on 19 Nov 2026 that it ships on. These pin the *outcome a user would
+    /// see*: which items the File menu offers.
+    @Test("Zoom ships: the File menu offers Teams, Meet and Zoom, whatever Diagnostics says")
+    func zoomShips() {
+        #expect(CloudPlatform.shipping == [.teams, .meet, .zoom])
+    }
+
+    @Test("The parking rule still withholds Zoom when asked to (what a parked platform looks like)")
+    func parkingRuleStillWorks() {
         let offered = CloudPlatform.offered(zoomEnabled: false)
         #expect(offered == [.teams, .meet])
         #expect(!offered.contains(.zoom))
-    }
-
-    @Test("Zoom is a Diagnostics beta: either switch shows it, neither hides it")
-    func zoomFollowsDiagnostics() {
-        #expect(CloudPlatform.zoomOffered(flag: false, diagnostics: true))
-        #expect(CloudPlatform.zoomOffered(flag: true, diagnostics: false))
-        #expect(!CloudPlatform.zoomOffered(flag: false, diagnostics: false))
-    }
-
-    @Test("Unparked: the flag restores Zoom, in sequence order")
-    func zoomReturnsWhenEnabled() {
         #expect(CloudPlatform.offered(zoomEnabled: true) == [.teams, .meet, .zoom])
     }
 

@@ -308,8 +308,10 @@ has the shape. **A parked feature that Diagnostics users also get** combines the
 flag and `DiagnosticsPreference` in one pure rule the menu reads, so the gate is
 testable without either store: `CloudPlatform.zoomOffered(flag:diagnostics:)`
 (`CloudPlatform.swift:52–68`, `3f91d03c`, 17 Oct 2026), which made Zoom import a
-Diagnostics beta. The flag is still deleted when the feature ships — here, after
-Zoom's Marketplace review.
+Diagnostics beta. The flag is deleted when the feature ships, and it was: **Zoom
+shipped on 19 Nov 2026 (owner's ruling), `zoomOffered` and `cloudImportZoom` are
+gone, and `CloudPlatform.shipping` offers all three platforms.** The paragraph
+above is the pattern, kept as the worked example.
 
 ## 7. Decision table
 
@@ -318,7 +320,7 @@ Zoom's Marketplace review.
 | ship a build with a feature switched off until the design is fixed | § 1 parked flag (SPA) or its § 6 sibling | `#if DEBUG`, an env var, commenting out |
 | keep a debug surface out of App Store review, provably | § 2 `DistributionChannel` / `#if DEBUG` | a runtime preference, a receipt check |
 | let TestFlight testers reach a diagnostic | § 5 preference (Tier U) | `#if DEBUG` (they can't build it) |
-| offer a parked feature to Diagnostics users too | a pure rule combining the § 6 flag and the § 5 preference (`CloudPlatform.zoomOffered(flag:diagnostics:)`); delete the flag when it ships (here: after Zoom review) | reading `DiagnosticsPreference` at the call site, or flipping the flag's default |
+| offer a parked feature to Diagnostics users too | a pure rule combining the § 6 flag and the § 5 preference (`CloudPlatform.zoomOffered(flag:diagnostics:)`); delete the flag when it ships (done for Zoom on 19 Nov 2026) | reading `DiagnosticsPreference` at the call site, or flipping the flag's default |
 | hide chrome the native shell already provides | § 3 `isEmbedded()` | a parked flag |
 | hide controls in an exported report | § 3 `isExportMode()` + `export.css` | a parked flag |
 | reproduce a failure state on my machine | § 4 debug seed | a permanent code path |

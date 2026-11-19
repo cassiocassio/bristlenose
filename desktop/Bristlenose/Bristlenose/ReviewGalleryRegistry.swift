@@ -418,7 +418,7 @@ enum ReviewGalleryRegistry {
                    what: "A parked platform's row in Settings ▸ Accounts uses the fuller \"still stored\" sentence whenever a sign-in key is stored, even with no readable address.",
                    commits: ["8a072d88"],
                    landed: "2026-10-21",
-                   recipe: "`defaults write app.bristlenose BristlenoseCloudImportZoom -bool NO`, Diagnostics ▸ Cloud Import ▸ Store a Test Zoom Sign-In, open Settings ▸ Accounts; Forget afterwards. (Fixture has an address, so the no-address variant isn't reached.)",
+                   recipe: "Diagnostics ▸ Cloud Import ▸ Store a Test Zoom Sign-In, open Settings ▸ Accounts; Forget afterwards. (Fixture has an address, so the no-address variant isn't reached.)",
                    open: { SettingsWindow.shared.show(pane: .accounts) }),
         navigation(id: "B01", title: "Activity chips survive a reload",
                    what: "Reloading mid-AutoCode or mid clips/screens export puts the chip back (still polling, or with its Done/failed outcome and View Report/Reveal); a dismissed chip stays gone; a restored chip's View Report opens the Codebook review; Cancel on an older export just removes that chip.",

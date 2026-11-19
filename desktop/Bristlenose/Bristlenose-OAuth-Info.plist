@@ -17,8 +17,8 @@
   can sign in, up to 100 installs while the publishable URL lasts (to 7 Dec,
   two 4-week extensions). Its redirect is the HTTPS one in Zoom's allow list,
   backed by bristlenose.app's apple-app-site-association and the
-  webcredentials entitlement. Zoom import still shows only with the
-  Diagnostics menu on (CloudPlatform.zoomOffered).
+  webcredentials entitlement. Zoom import is offered to everyone from
+  19 Nov 2026 (owner's ruling): the Diagnostics condition is gone.
   Pinned by BristlenoseTests/OAuthBundledClientIDTests.swift and by both
   artefact gates, desktop/scripts/check-dmg-shippable.sh (the .dmg) and
   desktop/scripts/check-pkg-shippable.sh (the TestFlight .pkg).

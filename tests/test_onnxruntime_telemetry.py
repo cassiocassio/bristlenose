@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("onnxruntime")
+onnxruntime_version: str = pytest.importorskip("onnxruntime").__version__
 
 _PROBE = """
 import base64, sys
@@ -43,7 +43,7 @@ _ORT_CI_MARKERS = (
 )
 
 
-def _run(tmp_path: Path, first_import: str) -> list[Path]:
+def _run(tmp_path: Path, first_import: str) -> tuple[int, list[Path]]:
     home = tmp_path / first_import
     home.mkdir()
     env = {k: v for k, v in os.environ.items()
@@ -53,9 +53,9 @@ def _run(tmp_path: Path, first_import: str) -> list[Path]:
     # get there without the package's opt-out: run it with the var forced off.
     if first_import == "control":
         env["ORT_DISABLE_TELEMETRY"] = "0"
-    subprocess.run([sys.executable, "-c", _PROBE, first_import],
-                   env=env, check=True, timeout=120)
-    return list(home.rglob(".onnxruntime"))
+    proc = subprocess.run([sys.executable, "-c", _PROBE, first_import],
+                          env=env, check=False, timeout=120)
+    return proc.returncode, list(home.rglob(".onnxruntime"))
 
 
 def test_importing_bristlenose_sets_the_opt_out() -> None:
@@ -65,10 +65,34 @@ def test_importing_bristlenose_sets_the_opt_out() -> None:
 
 
 def test_a_session_writes_no_telemetry_queue(tmp_path: Path) -> None:
-    assert _run(tmp_path, "bristlenose") == []
+    returncode, queue = _run(tmp_path, "bristlenose")
+    assert returncode == 0
+    assert queue == []
+
+
+# The 1DS uploader exists only on macOS and Linux builds from 1.29.
+_ORT_HAS_1DS = sys.platform != "win32" and tuple(
+    int(part) for part in onnxruntime_version.split(".")[:2]) >= (1, 29)
 
 
 def test_control_without_the_opt_out_does_write_one(tmp_path: Path) -> None:
-    """Proves the test above can fail: with the opt-out off, the queue appears."""
-    if not _run(tmp_path, "control"):
-        pytest.skip("this onnxruntime build carries no telemetry")
+    """Proves the test above can fail: with the opt-out off, the queue appears.
+
+    The control runs the live uploader, which can abort Python at exit
+    (std::system_error from recursive_mutex::lock, seen on macOS; see
+    ``bristlenose/__init__.py``). A death by signal is therefore not a failure
+    here: the queue on disk is the evidence. A Python error (positive exit
+    code) still fails. On a CI runner this arm makes a real upload attempt to
+    Microsoft, because the probe strips the CI variables that would suppress
+    it; that is the price of the control meaning the same thing on CI.
+    """
+    if not _ORT_HAS_1DS:
+        pytest.skip("this onnxruntime build carries no 1DS telemetry (Windows, or before 1.29)")
+    returncode, queue = _run(tmp_path, "control")
+    assert returncode <= 0, f"the control probe failed with exit code {returncode}"
+    # Empty here with a telemetry build means onnxruntime suppressed itself,
+    # most likely under a CI variable missing from _ORT_CI_MARKERS.
+    assert queue, (
+        f"onnxruntime {onnxruntime_version} wrote no telemetry queue with the opt-out off "
+        f"(exit code {returncode}); is a suppressing variable missing from _ORT_CI_MARKERS?"
+    )

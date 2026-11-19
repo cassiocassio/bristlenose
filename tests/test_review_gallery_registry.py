@@ -99,6 +99,7 @@ def test_every_commit_resolves() -> None:
         if shallow == "true":
             pytest.skip(
                 f"shallow clone: {len(missing)} of {len(hashes)} commits may be older "
-                f"than its history, so cannot be judged: {missing}"
+                f"than its history, so cannot be judged: {missing[:5]}"
+                f"{' …' if len(missing) > 5 else ''}"
             )
     assert not missing, f"Review Gallery names commits git cannot find: {missing}"

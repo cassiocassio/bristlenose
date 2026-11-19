@@ -298,7 +298,7 @@ class TestImportPathCanonicalisation:
         state = db.query(QuoteState).filter_by(quote_id=quote.id).first()
         assert state is not None and state.is_starred is True
 
-    def test_case_variant_spelling_matches_on_case_insensitive_fs(
+    def test_case_variant_spelling_follows_the_volume(
         self, db: Session, tmp_path: Path,
     ) -> None:
         """On a case-insensitive volume (macOS/Windows) a case-variant spelling

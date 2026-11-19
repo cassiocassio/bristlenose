@@ -473,15 +473,19 @@ def requested_whisper_device(settings: object) -> str:
 
 def effective_whisper_device(settings: object, cuda_available: bool) -> str:
     """"cuda" or "cpu": what faster-whisper runs on, given the setting and whether
-    the hardware check found a usable GPU."""
+    the hardware check found a usable GPU. Never "cuda" on macOS: ctranslate2's Mac
+    build has no CUDA, and faster-whisper still runs there when MLX is absent or
+    the backend is pinned, so a .env shared with a Linux GPU box must not fail it."""
+    if sys.platform == "darwin":
+        return "cpu"
     requested = requested_whisper_device(settings)
     return "cuda" if requested == "cuda" or (requested == "auto" and cuda_available) else "cpu"
 
 
 def effective_accelerator(hw: HardwareInfo, settings: object) -> AcceleratorType:
     """The accelerator transcription will actually use: the hardware's, unless
-    ``BRISTLENOSE_WHISPER_DEVICE`` overrides it (faster-whisper only, so never on
-    Apple silicon). The one answer for the stage, doctor, the header and the
+    ``BRISTLENOSE_WHISPER_DEVICE`` overrides it (faster-whisper only, and never to
+    CUDA on macOS). The one answer for the stage, doctor, the header and the
     timing key, so none of them says CUDA for a CPU run."""
     if hw.accelerator is AcceleratorType.APPLE_SILICON:
         return hw.accelerator

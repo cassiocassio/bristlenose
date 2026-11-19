@@ -608,6 +608,7 @@ def test_the_header_names_the_device_the_setting_chooses(monkeypatch) -> None:
 
     gpu = HardwareInfo(accelerator=AcceleratorType.CUDA, chip_name="NVIDIA RTX 4090", cuda_available=True)
     monkeypatch.setattr(hardware, "detect_hardware", lambda: gpu)
+    monkeypatch.setattr(sys, "platform", "linux")  # a Mac never runs CUDA
     printed: list[str] = []
     monkeypatch.setattr(cli.console, "print", lambda *a, **k: printed.append(" ".join(map(str, a))))
 

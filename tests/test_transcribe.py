@@ -1498,4 +1498,16 @@ class TestWhisperDeviceSetting:
     def test_the_setting_chooses_the_device(
         self, monkeypatch, requested: str, cuda_available: bool, expected: str,
     ) -> None:
+        import sys
+
+        monkeypatch.setattr(sys, "platform", "linux")
         assert self._device(monkeypatch, requested, cuda_available) == expected
+
+    def test_cuda_never_reaches_ctranslate2_on_a_mac(self, monkeypatch) -> None:
+        """faster-whisper still runs on a Mac without MLX; its ctranslate2 has no
+        CUDA, so a .env shared with a Linux GPU box failed the run (found in
+        review, 19 Nov 2026)."""
+        import sys
+
+        monkeypatch.setattr(sys, "platform", "darwin")
+        assert self._device(monkeypatch, "cuda", False) == "cpu/int8"

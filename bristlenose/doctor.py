@@ -250,6 +250,8 @@ def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
             accel = "CUDA"
         # BRISTLENOSE_WHISPER_DEVICE overrides the check for the run, so it does here.
         chosen = requested_whisper_device(settings) if settings is not None else "auto"
+        if chosen == "cuda" and sys.platform == "darwin":
+            chosen = "auto"  # no CUDA on a Mac: the stage runs on the CPU (effective_whisper_device)
         if chosen == "cuda":
             accel = "CUDA, as set"
         elif chosen == "cpu":

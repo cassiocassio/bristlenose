@@ -598,10 +598,13 @@ def test_a_forced_cpu_run_is_not_timed_into_the_gpu_profile(monkeypatch: pytest.
     """BRISTLENOSE_WHISPER_DEVICE=cpu on a CUDA machine runs on the CPU; keyed by
     the GPU's name, its timings would teach the GPU profile a CPU's pace. Without
     the setting the key is what it always was."""
+    import sys
+
     from bristlenose.config import BristlenoseSettings
     from bristlenose.timing import build_hardware_key
     from bristlenose.utils import hardware
 
+    monkeypatch.setattr(sys, "platform", "linux")  # a Mac never runs CUDA
     gpu = hardware.HardwareInfo(
         accelerator=hardware.AcceleratorType.CUDA, chip_name="NVIDIA RTX 4090", cuda_available=True,
     )

@@ -533,10 +533,14 @@ class TestCheckBackend:
 
     @pytest.mark.parametrize(("chosen", "shown"), [("cpu", "(CPU, as set)"), ("cuda", "(CUDA, as set)")])
     @pytest.mark.usefixtures("which_is_shutil_which")
-    def test_the_device_setting_is_what_doctor_reports(self, chosen: str, shown: str) -> None:
+    def test_the_device_setting_is_what_doctor_reports(
+        self, chosen: str, shown: str, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """BRISTLENOSE_WHISPER_DEVICE decides the run, so doctor reports it, and a
         chosen device on a working GPU draws no warning."""
         import types
+
+        monkeypatch.setattr(sys, "platform", "linux")
 
         mock_fw = MagicMock(__version__="1.2.1")
         mock_ct2 = MagicMock(__version__="4.9.0")
@@ -563,7 +567,7 @@ class TestCheckBackend:
     )
     @pytest.mark.usefixtures("which_is_shutil_which")
     def test_a_forced_gpu_that_cannot_work_is_flagged(
-        self, gpus: int, missing: list[str], status: CheckStatus,
+        self, gpus: int, missing: list[str], status: CheckStatus, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """BRISTLENOSE_WHISPER_DEVICE=cuda with no GPU got a green tick and a run
         that would fail. With no GPU that is certain (FAIL); with a GPU whose
@@ -571,6 +575,7 @@ class TestCheckBackend:
         setting exists for a setup the check misjudges."""
         import types
 
+        monkeypatch.setattr(sys, "platform", "linux")
         mock_fw = MagicMock(__version__="1.2.1")
         mock_ct2 = MagicMock(__version__="4.9.0")
         mock_ct2.get_cuda_device_count.return_value = gpus
@@ -590,6 +595,26 @@ class TestCheckBackend:
         assert result.status == status
         assert result.fix_key == "cuda_forced_unavailable"
         assert get_fix("cuda_forced_unavailable", "pip").startswith("BRISTLENOSE_WHISPER_DEVICE is set to cuda")
+
+    @pytest.mark.usefixtures("which_is_shutil_which")
+    def test_a_forced_gpu_on_a_mac_does_not_block_the_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """On a Mac, cuda is ignored and the run uses the CPU, so a .env shared with a
+        Linux GPU box must not fail doctor (and with it the run's preflight)."""
+        import types
+
+        monkeypatch.setattr(sys, "platform", "darwin")
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.9.0")
+        mock_ct2.get_cuda_device_count.return_value = 0
+        with (
+            patch.dict(sys.modules, {"faster_whisper": mock_fw, "ctranslate2": mock_ct2}),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="x86_64"),
+            patch("shutil.which", return_value=None),
+        ):
+            result = check_backend(types.SimpleNamespace(whisper_device="cuda"))  # type: ignore[arg-type]
+        assert result.status == CheckStatus.OK
+        assert "(CPU)" in result.detail
 
     @pytest.mark.usefixtures("which_is_shutil_which")
     def test_the_winget_build_with_an_nvidia_gpu_says_cpu(

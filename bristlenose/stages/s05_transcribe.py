@@ -1708,6 +1708,7 @@ def _init_faster_whisper_backend(
         A function(audio_path, settings) -> list[TranscriptSegment]
     """
     import os
+    import sys
 
     from faster_whisper import WhisperModel
 
@@ -1724,6 +1725,8 @@ def _init_faster_whisper_backend(
     raw = str(getattr(settings, "whisper_device", "auto") or "auto").strip().lower()
     if raw not in WHISPER_DEVICES:
         logger.warning("BRISTLENOSE_WHISPER_DEVICE=%r is not cpu, cuda or auto; using auto", raw)
+    elif raw == "cuda" and sys.platform == "darwin":
+        logger.warning("BRISTLENOSE_WHISPER_DEVICE=cuda has no effect on macOS; using the CPU")
     requested = requested_whisper_device(settings)
     if effective_whisper_device(settings, hw.cuda_available) == "cuda":
         device = "cuda"

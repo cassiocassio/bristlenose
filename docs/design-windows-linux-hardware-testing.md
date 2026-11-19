@@ -325,8 +325,8 @@ Lift the checks out of `vbox-test.sh` into a PowerShell script that runs *inside
 Windows (install, `--version`, doctor, transcription with its words checked, PATH,
 uninstall, the path report from §5.4). Started 19 Nov 2026 as
 `packaging/windows/winget-accept.ps1`, which covers the winget acceptance list
-(§3.3) including install and doctor and transcription; the forced CPU paths
-(§6.2) and the path report (§5.4) are still to add. aella-AWS, a future aella-Azure, UTM and any
+(§3.3) including install and doctor and transcription, and the forced CPU
+paths (§6.2, `-CpuPaths`); the path report (§5.4) is still to add. aella-AWS, a future aella-Azure, UTM and any
 real machine then differ only in how the script gets there and runs, and pass/fail
 lives in one place. Run it over SSH as the test user (the route that works on
 aella, `design-winget.md` §"What was measured"); never as SYSTEM (`utmctl exec`, Azure

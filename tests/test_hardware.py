@@ -504,8 +504,10 @@ class TestCudaNeedsItsLibraries:
         monkeypatch.setenv("PATH", "")
         assert isinstance(hardware.cuda_libraries_missing(), list)
 
-    def test_the_setting_decides_what_is_used(self) -> None:
+    def test_the_setting_decides_what_is_used(self, monkeypatch) -> None:
         import types
+
+        monkeypatch.setattr(sys, "platform", "linux")
 
         from bristlenose.utils.hardware import effective_accelerator
 
@@ -521,6 +523,9 @@ class TestCudaNeedsItsLibraries:
         assert effective_accelerator(cpu_hw, setting("cuda")) is AcceleratorType.CUDA
         assert effective_accelerator(cpu_hw, setting("gpu")) is AcceleratorType.CPU
         assert effective_accelerator(apple_hw, setting("cuda")) is AcceleratorType.APPLE_SILICON
+        # An Intel Mac (or faster-whisper on Apple silicon) has no CUDA to force.
+        monkeypatch.setattr(sys, "platform", "darwin")
+        assert effective_accelerator(cpu_hw, setting("cuda")) is AcceleratorType.CPU
 
     def test_the_names_match_the_installed_ctranslate2(self) -> None:
         """Read from the wheel, not remembered: a ctranslate2 that moves to CUDA 13,

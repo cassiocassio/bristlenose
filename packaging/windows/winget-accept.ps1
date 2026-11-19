@@ -406,7 +406,8 @@ try {
             # kernels even on an AVX-512 CPU (measured, 4.9.0), but MKL dispatches
             # for itself, so MKL_CBWR pins MKL to what a typical Intel laptop runs.
             # Never force an instruction set the CPU lacks. MKL is forced on for the
-            # Intel path so an AMD guest runs it too. CT2_VERBOSE makes CTranslate2
+            # Intel and generic paths so an AMD guest runs them too (without MKL there
+            # is no MKL line to confirm the pin; measured 19 Nov 2026). CT2_VERBOSE makes CTranslate2
             # print what it chose ("- Selected ISA: AVX2", "- Use Intel MKL: true",
             # read from 4.9.0 on 19 Nov 2026) and MKL_VERBOSE makes MKL print the
             # instruction set it was held to ("CNR:AVX2"); a path not taken fails.
@@ -420,7 +421,7 @@ try {
                    Expect = @("Selected ISA: AVX2\b", "Use Intel MKL: true\b", "CNR:AVX2\b") },
                 @{ Name = "non-mkl"; Env = @{ CT2_USE_MKL = "0" };
                    Expect = @("Use Intel MKL: false\b") },
-                @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE"; MKL_VERBOSE = "1" };
+                @{ Name = "generic"; Env = @{ CT2_FORCE_CPU_ISA = "GENERIC"; MKL_CBWR = "COMPATIBLE"; CT2_USE_MKL = "1"; MKL_VERBOSE = "1" };
                    Expect = @("Selected ISA: GENERIC\b", "CNR:COMPATIBLE\b") }
             )
             foreach ($path in $paths) {

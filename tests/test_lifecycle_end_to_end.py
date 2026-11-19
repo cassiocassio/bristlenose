@@ -8,7 +8,7 @@ path on 15 Oct 2026 (``docs/design-project-identity.md``, phase 2).
 
 from __future__ import annotations
 
-import sys
+import gc
 from pathlib import Path
 
 import pytest
@@ -45,12 +45,10 @@ def test_an_added_interview_keeps_curation_and_transcribes_only_itself(
     assert study.transcribed[1] == ["Interview 3.wav"]
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="Re-analyse under a live server moves the output folder the server holds open; "
-    "Windows refuses the move, so the run reuses the folder and curation stays (the same "
-    "limit test_lifecycle_scenarios skips for reanalyse-succeeds-live-serve)",
-)
+# Re-analyse under a live server moves the output folder the server holds open;
+# Windows refuses the move, so the run reuses the folder and curation stays (the
+# same limit test_lifecycle_scenarios skips for reanalyse-succeeds-live-serve).
+@pytest.mark.usefixtures("open_files_movable")
 def test_re_analyse_is_a_deliberate_reset_and_the_report_comes_back(
     tmp_path: Path, fast_watcher,
 ) -> None:
@@ -101,18 +99,22 @@ def test_a_folder_moved_while_closed_is_not_transcribed_again(
     assert study_marker.read(study.folder / "bristlenose-output") == minted
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="Windows CI still finds bristlenose.db open after the in-process server stops, so it "
-    "refuses the move; a real CLI process lets go when it exits. The holder is not yet found "
-    "(TODO.md, 16 Oct 2026)",
-)
 def test_a_folder_moved_while_closed_keeps_its_curation(tmp_path: Path, fast_watcher) -> None:
     study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
     with study.serve() as client:
         study.run()
         star = study.quote_ids(client)[0]
         study.star(client, star)
+    # The in-process server's leftover holder of bristlenose.db (TODO.md, 16 Oct
+    # 2026), found 19 Nov 2026: a connection a request opened is left in the
+    # queue of a pool nothing references any more (the run's re-import replaces
+    # the pool through ``ensure_schema``'s dispose), and the connection and its
+    # pool record sit in a reference cycle, so the files stay open after the
+    # server stops until the cycle collector runs. Measured on Linux through
+    # /proc/self/fd over ten runs of this sequence: five handles on the .db,
+    # -wal and -shm in seven of them, none after gc.collect() in all ten. A real
+    # serve process lets go when it exits; collect here so the move sees the same.
+    gc.collect()
     study.move_to(tmp_path / "Archive" / "2026" / "Talismanic")
     with study.serve() as client:
         study.run()
@@ -200,11 +202,9 @@ def test_re_analyse_after_a_rename_keeps_when_the_interview_happened(
     assert after["s1"] == before["s1"], "a Re-analyse after a rename lost the interview's date"
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="Re-analyse under a live server moves the output folder the server holds open; "
-    "Windows refuses the move (as for test_re_analyse_is_a_deliberate_reset…)",
-)
+# Re-analyse under a live server moves the output folder the server holds open;
+# Windows refuses the move (as for test_re_analyse_is_a_deliberate_reset…).
+@pytest.mark.usefixtures("open_files_movable")
 def test_a_partial_re_analyse_replaces_the_report_and_analyse_finishes_it(
     tmp_path: Path, fast_watcher,
 ) -> None:

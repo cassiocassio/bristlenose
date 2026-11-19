@@ -14,7 +14,6 @@ import asyncio
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 
 import pytest
@@ -77,7 +76,9 @@ def _starred_on_disk(db_file: Path) -> bool:
         con.close()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so neither the stash nor the restore can happen there")
+# Windows will not move a folder whose database serve holds open, so neither the
+# stash nor the restore can happen there.
+@pytest.mark.usefixtures("open_files_movable")
 class TestTheStashCycle:
     """A serve that straddles ``--clean``'s stash and a failed run's restore
     ends up reading the report that is on disk, in one project row."""

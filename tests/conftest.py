@@ -641,6 +641,10 @@ def ffmpeg() -> None:
 # once rather than once per test (the shape of 7d32124a's `symlinks` and
 # d708247c's `node`). Each keeps exactly the platforms its per-test guards
 # skipped on; different properties stay in different fixtures.
+
+
+# ---------------------------------------------------------------------------
+# open-files: Windows will not move, rename or delete a file that is held open
 # ---------------------------------------------------------------------------
 
 
@@ -754,3 +758,23 @@ def run_paid_autocode(
                 f"and re-run `pytest -m slow`. Raw error: {exc}"
             )
         raise
+
+
+# ---------------------------------------------------------------------------
+def open_files_movable() -> None:
+    """Skip where a file held open cannot be moved, renamed or deleted: Windows.
+
+    One platform property behind every test that requests this: a live serve's
+    pooled database connections, or the log handler, hold files under the output
+    folder open, and the test moves that folder (``run --clean``'s stash, a
+    restore) or deletes the database under the open connection. POSIX allows
+    both; Windows refuses, so the sequence the test reproduces cannot happen
+    there. Each requesting site says which file and which move in a comment.
+    Folded from nine identical decorators (four ``sys.platform == "win32"``
+    files, ``os.name == "nt"`` in test_logging, the same platform), the shape
+    of the ``symlinks`` (7d32124a) and ``node`` (d708247c) fixtures.
+    """
+    import sys
+
+    if sys.platform == "win32":
+        pytest.skip("Windows will not move, rename or delete a file or folder that is held open")

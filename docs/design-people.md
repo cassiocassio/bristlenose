@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-11-15
-trued-against: HEAD@main (f599d8b1c) on 2026-11-15
+last-trued: 2026-11-19
+trued-against: HEAD@main on 2026-11-19
 ---
 
 # People — who is in a study, and how the researcher fixes it
@@ -21,6 +21,7 @@ predate all of it — `get_people` / `put_people` in `server/routes/data.py`,
 
 ## Changelog
 
+- _2026-11-19_ — **§K6 trued against the picker as it ships.** The 14 Nov incident was two recodes that left a session's roles exchanged, not the parked swap act; §K6 said "read as a swap" and is corrected in place. Also in §K6 since 15 Nov: a paragraph's badge opens on Paragraph every time (`70612b161`), on the other speaker in a two-person session (`f4f445eef`), and the ruling that a discounted quote stays visible greyed (not built). The importer no longer writes the run's name for a moderator's tag onto a participant it now holds (`a2586e50b`).
 - _2026-11-15_ — **Trued against the 11 Nov ruling and N130.** Dated pointers, original text kept, at §0 (the `full_name` row and the `people.yaml` row), §C1 (the `cleared` rows), §C2 ("retired as a store"), §C5 and §H1. (1) **Hand-editing `people.yaml` is no longer a supported path** (owner, 11 Nov 2026): names are made and edited in the Sessions grid and the report's rename box; the CLI-era merge rules that assume a human edits the file (the importer's "empty fields only, browser edits win", `auto_populate_names`' "never overwrites user edits") are legacy assumptions. (2) A typed name is a **confirmed** slot and the pipeline writes only `proposed`; only confirmed names count as the researcher's work (N130, `curation_counts.py` `RENAMED_SPEAKERS_SQL`), so a Re-analyse that re-reads the same Zoom or Teams labels loses nothing. (3) A participant rename in the report writes `short_name` only, so `full_name` can be empty after a researcher names someone; either field counts.
 - _2026-10-08_ — **Trued to 0.35.0 and the work after it.** The intro, §I's status, §J7's
   banner (the swap row is parked behind `speakerSwap`, not offered), and the points that
@@ -3585,9 +3586,14 @@ reads which paragraphs a quote overlaps, but only in sessions where a paragraph 
   unknown speaker. A
   paragraph's badge **opens on Paragraph, every time** (owner, 14 Nov 2026, reversing the
   6 Oct default of Session with a sticky switch): in a transcript the act is "this one was
-  the other speaker" (§B3), and a whole-speaker act, the swap among them, is a deliberate
+  the other speaker" (§B3), and a whole-speaker act, a recode among them, is a deliberate
   switch to Session that does not stick. The sticky default cost a session its quotes on
-  14 Nov, when one misattributed line was fixed under Session and read as a swap. Paragraph
+  14 Nov, when one misattributed line was fixed under Session: that recoded the whole
+  speaker, and the session ended with its two roles exchanged. *(Corrected 19 Nov 2026:
+  this read "read as a swap". It was not the swap act, whose row is parked behind
+  `speakerSwap` and was not on offer; both slots hold `confirmed` / `pick`, which is what
+  two picks leave and a swap does not. The way back is the same two recodes, in either
+  order, tried on copies of the project.)* Paragraph
   **opens on the other speaker** when the session has exactly one participant and one
   moderator (observers do not count): that row's role is showing and it is selected, so the
   commonest fix, "that was the other one", is one Return. Any other session opens on the

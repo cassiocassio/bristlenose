@@ -152,7 +152,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 
 - **Rich's `console.print()` eats `[name]`** (`markup=False` or `escape()`); `Console(width=min(80, Console().width))` is intended; export filenames use `safe_filename()`, not `slugify()`.
 - **Logging**: `-v` drives the terminal, `BRISTLENOSE_LOG_LEVEL` the file at `<output>/.bristlenose/bristlenose.log`; a message is always one line (pass tracebacks as `exc_info=`); every LLM call logs one `llm_request` line; `BRISTLENOSE_FAKE_THUMBNAILS=1` is for layout tests.
-- **Small facts**: `PipelineResult.model_rebuild()` follows `PeopleFile`; `format_finder_date()` imports datetime locally; `doctor.py` imports `platform`/`urllib` in functions (patch at stdlib level); `check_backend()` catches `Exception`. Before deleting a CLI flag or command, grep `desktop/` and `.github/workflows/`.
+- **Small facts**: `PipelineResult.model_rebuild()` follows `PeopleFile`; `format_finder_date()` imports datetime locally; `doctor.py` imports `platform`/`urllib` in functions (patch at stdlib level); `check_backend()` catches `Exception`. Importing `bristlenose.cli` inserts `run` into `sys.argv` when the first argument is a folder: a scratch script reads its arguments before its imports. Before deleting a CLI flag or command, grep `desktop/` and `.github/workflows/`.
 
 **Pipeline, data and participant privacy** — [full entries](.claude/gotchas.md#pipeline-data-and-participant-privacy)
 

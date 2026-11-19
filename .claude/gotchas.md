@@ -787,6 +787,10 @@ use the runner's return code.
 - **A log message is always one line.** Both handlers use `_OneLineFormatter` (`bristlenose/logging.py`), which escapes newlines and control characters in the message as visible `\n`, `\x1b` and so on, so a request value cannot start a forged record. A message built with embedded `\n` (a banner, a traceback passed as `%s`) prints as one run-on line: log one record per line, and pass a traceback as `exc_info=`, which `format()` appends over its own lines (`dfb935cf`, 19 Oct 2026).
 - **LLM request latency**: every `LLMClient.analyze()` call emits one INFO line `llm_request | provider=X | model=Y | elapsed_ms=N | schema=Z` (added Apr 2026 for perf baselining). Greppable for median/p95 analysis — see `docs/design-perf-fossda-baseline.md` step 6. New providers get this automatically (wrapping is in the dispatcher, not per-provider)
 
+### Importing `bristlenose.cli` rewrites `sys.argv` when the first argument is a folder
+
+`cli.py` calls `_maybe_inject_run()` at import (the `bristlenose <folder>` shorthand), and it does not check who is running. A scratch script that takes a project folder as its first argument and then imports anything that reaches the CLI (`tests.conftest` does) finds `sys.argv[1] == "run"`. On 16 Nov 2026 a one-off script did `create_app(project_dir=Path(sys.argv[1]))` after such an import, and serve created an empty study at `./run/` in the repo and reported on that instead of the project. Read your arguments before the imports, or take the folder from `sys.argv[-1]`. The tell is a log line naming `<cwd>/run`.
+
 ## Pipeline, data and participant privacy
 
 ### `attempted == succeeded + failed` is a TAUTOLOGY in most rollups — it cannot catch a silent drop

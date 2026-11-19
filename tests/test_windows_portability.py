@@ -152,11 +152,29 @@ class TestWindowsFixText:
         monkeypatch.setattr(sys, "platform", "win32")
         monkeypatch.setattr(platform, "system", lambda: "Windows")
 
+    def test_cuda_and_auth_token_hints_have_no_posix_shell(self) -> None:
+        from bristlenose.doctor_fixes import get_fix
+
+        cuda = get_fix("cuda_not_available", "pip")
+        assert "LD_LIBRARY_PATH" not in cuda and "export " not in cuda
+        assert "PATH" in cuda and "new terminal" in cuda
+        token = get_fix("auth_token_env_set", "pip")
+        assert "unset " not in token and ".zshrc" not in token
+        assert "Remove-Item Env:_BRISTLENOSE_AUTH_TOKEN" in token
+
     def test_ffmpeg_offers_winget(self) -> None:
         from bristlenose.doctor_fixes import get_fix
 
         text = get_fix("ffmpeg_missing", "pip")
         assert "winget install --id Gyan.FFmpeg -e --source winget" in text
+        assert "new terminal" in text
+
+    def test_a_broken_ffmpeg_is_reinstalled_with_winget_not_brew(self) -> None:
+        from bristlenose.doctor_fixes import get_fix
+
+        text = get_fix("ffmpeg_will_not_run", "pip")
+        assert "winget install --id Gyan.FFmpeg" in text
+        assert "brew" not in text and "apt" not in text
         assert "new terminal" in text
 
     def test_azure_and_proxy_use_setx_not_export(self) -> None:
@@ -166,6 +184,7 @@ class TestWindowsFixText:
             text = get_fix(key, "pip")
             assert "setx " in text, key
             assert "export " not in text, key
+            assert "new terminal" in text, key  # setx does not reach the open window
 
     def test_key_hint_names_the_real_file(self) -> None:
         from bristlenose.credentials import user_config_env_path
@@ -433,17 +452,83 @@ def test_every_urlopen_brings_its_own_trust() -> None:
     assert offenders == [], f"pass context=https_context() to: {offenders}"
 
 
+# A hint that tells the reader to type `export NAME=...` is wrong in PowerShell and cmd.
+# The one place that renders "set an environment variable" for the reader's own shell is
+# doctor_fixes._set_env_line (setx on Windows, export elsewhere, plus the new-terminal
+# note), and `cli.py` used to print `export` lines of its own (audit, 19 Nov 2026).
+# A variable name here always has an underscore (BRISTLENOSE_X, HTTPS_PROXY), which keeps
+# the English words "export"/"unset" in prose from matching. `\Z` catches an f-string
+# whose constant part ends at the name (`f"export BRISTLENOSE_{var}={key}"`).
+_POSIX_SHELL_LINE = re.compile(
+    r"\bexport\s+[A-Z0-9]*_[A-Z0-9_]*(?:=|\Z)|\bsetx\s+[A-Z0-9]*_\S*|\bunset\s+[A-Z0-9]*_[A-Z0-9_]+"
+)
+
+# Known POSIX-only advice, listed by exact (file, matched text) so a new one cannot hide
+# behind a filename. Each is a Linux/macOS-only fix that has no Windows twin yet:
+# CUDA's LD_LIBRARY_PATH (Linux) and the shell-profile auth-token hint.
+_KNOWN_POSIX_ONLY: set[tuple[str, str]] = {
+    ("doctor_fixes.py", "export LD_LIBRARY_PATH="),
+    ("doctor_fixes.py", "unset _BRISTLENOSE_AUTH_TOKEN"),
+}
+
+
+def _posix_shell_lines(source: str) -> list[tuple[int, str]]:
+    import ast
+
+    hits = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            for m in _POSIX_SHELL_LINE.finditer(node.value):
+                hits.append((node.lineno, m.group(0)))
+    return hits
+
+
+def test_no_hint_prints_a_posix_only_shell_line() -> None:
+    offenders = []
+    for path in _PKG.rglob("*.py"):
+        rel = path.relative_to(_PKG).as_posix()
+        for lineno, matched in _posix_shell_lines(path.read_text(encoding="utf-8")):
+            if (rel, matched) not in _KNOWN_POSIX_ONLY:
+                offenders.append(f"{rel}:{lineno}: {matched!r}")
+    assert offenders == [], (
+        "a user-facing hint types a POSIX-only shell line; build it with "
+        f"doctor_fixes._set_env_line, or name it in _KNOWN_POSIX_ONLY: {offenders}"
+    )
+
+
+def test_the_shell_line_gate_can_fail() -> None:
+    assert _posix_shell_lines('print("  export BRISTLENOSE_FOO=bar")')
+    assert _posix_shell_lines('x = "unset _BRISTLENOSE_AUTH_TOKEN"')
+    assert not _posix_shell_lines('x = f"  export {var}={value}"')  # the renderer's own template
+
+
 def test_a_saved_key_path_reads_whole_on_windows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """`configure` printed "Saved to ~/.config\\bristlenose\\.env" on Windows:
     a `~` cmd.exe cannot expand, glued to backslashes."""
-    import bristlenose.cli as cli
+    from bristlenose.utils.fs import display_path
 
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     path = tmp_path / ".config" / "bristlenose" / ".env"
     monkeypatch.setattr(sys, "platform", "win32")
-    assert cli._display_config_path(path) == str(path)
+    assert display_path(path) == str(path)
     monkeypatch.setattr(sys, "platform", "darwin")
-    assert cli._display_config_path(path) == "~/.config/bristlenose/.env"
+    assert display_path(path) == "~/.config/bristlenose/.env"
+
+
+def test_the_model_download_banner_names_the_cache_whole_on_windows(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The whisper banner printed ``~\\.cache\\huggingface\\hub`` on Windows: a `~` cmd.exe
+    cannot expand, glued to backslashes (the same bug `configure` had on 5 Oct 2026)."""
+    from bristlenose.preflight import whisper
+
+    cache = tmp_path / ".cache" / "huggingface" / "hub"
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(whisper, "_hf_cache_root", lambda: cache)
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert whisper._cache_root_display() == str(cache)
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert whisper._cache_root_display() == "~/.cache/huggingface/hub"
 
 
 def test_the_frozen_windows_build_never_claims_cuda(monkeypatch: pytest.MonkeyPatch) -> None:

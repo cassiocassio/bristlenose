@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING, Any
 from bristlenose.i18n import t
 from bristlenose.preflight import PreflightAbortedError, WhisperHostOwnsError
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.fs import display_path
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -387,11 +388,7 @@ _CACHE_PATH_CALLOUT_MB = 500
 
 def _cache_root_display() -> str:
     """The HF cache root as a researcher would type it: ``~/.cache/huggingface/hub``."""
-    root = _hf_cache_root()
-    try:
-        return os.path.join("~", root.relative_to(Path.home()))
-    except ValueError:
-        return str(root)
+    return display_path(_hf_cache_root())
 
 
 def _stderr_is_tty() -> bool:

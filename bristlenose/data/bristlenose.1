@@ -85,7 +85,7 @@ stage executes. Each check fires only when needed:
 own progress natively. Use \fB\-\-no\-fetch\fR to abort instead, or run
 \fBbristlenose doctor \-\-fetch\fR up front.
 .IP \(bu 4
-\fBffmpeg\fR \(em if not on PATH, prints a per-distro install table. On
+\fBffmpeg\fR \(em if not on PATH, prints a per-OS install table. On
 macOS with Homebrew installed and its prefix writable, offers to run
 \fBbrew install ffmpeg\fR (default: \fBn\fR; an explicit \fBy\fR is required
 before any system mutation).
@@ -155,7 +155,10 @@ and as a pre-flight check before pipeline commands.
 .TP
 .B configure \fIprovider\fR [\fB\-k\fR \fIKEY\fR]
 Store API credentials securely in the system credential store (macOS Keychain
-or Linux Secret Service). Provider can be \fBclaude\fR (or \fBanthropic\fR),
+or Linux Secret Service). On Windows, and on Linux with no keyring, the key is
+kept in a protected config file instead (\fI~/.config/bristlenose/.env\fR; in
+your user folder on Windows). Provider can be
+\fBclaude\fR (or \fBanthropic\fR),
 \fBchatgpt\fR (or \fBopenai\fR, \fBgpt\fR), \fBazure\fR (or
 \fBazure-openai\fR), \fBgemini\fR (or \fBgoogle\fR), \fBlocal\fR (or
 \fBollama\fR), \fBany-llm\fR, or \fBmiro\fR.
@@ -425,7 +428,8 @@ CLI flags
 API keys have special priority: system credential store \(-> environment variable \(->
 \fI.env\fR file. Use \fBbristlenose configure claude\fR, \fBbristlenose configure chatgpt\fR,
 \fBbristlenose configure azure\fR, or \fBbristlenose configure gemini\fR to store keys
-securely in the system credential store (macOS Keychain, Linux Secret Service).
+securely in the system credential store (macOS Keychain, Linux Secret Service;
+on Windows, a config file).
 .SS API keys
 .TP
 .B BRISTLENOSE_ANTHROPIC_API_KEY
@@ -480,8 +484,9 @@ The key is the provider's own (\fBMISTRAL_API_KEY\fR, \fBOPENROUTER_API_KEY\fR,
 doesn't estimate costs for these providers.
 .SS Local LLM settings (Ollama)
 If you choose Local and Ollama isn't installed, bristlenose offers to install it
-automatically (Homebrew on macOS, snap on Linux, curl script fallback). If
-Ollama is installed but not running, bristlenose will start it for you.
+automatically (Homebrew on macOS, winget on Windows, snap on Linux, curl
+script fallback). If Ollama is installed but not running, bristlenose will
+start it for you.
 .TP
 .B BRISTLENOSE_LOCAL_URL
 Ollama API endpoint. Default: \fBhttp://localhost:11434/v1\fR.
@@ -649,6 +654,18 @@ Use Azure OpenAI (enterprise):
 .nf
 export BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
 export BRISTLENOSE_AZURE_DEPLOYMENT=gpt-4o-research
+bristlenose configure azure
+bristlenose run interviews --llm azure
+.fi
+.RE
+.PP
+The same on Windows (PowerShell). \fB$env:\fR lasts for this window only;
+\fBsetx\fR keeps a value for terminals opened afterwards:
+.PP
+.RS
+.nf
+$env:BRISTLENOSE_AZURE_ENDPOINT = "https://my-resource.openai.azure.com/"
+$env:BRISTLENOSE_AZURE_DEPLOYMENT = "gpt-4o-research"
 bristlenose configure azure
 bristlenose run interviews --llm azure
 .fi

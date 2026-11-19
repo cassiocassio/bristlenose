@@ -180,6 +180,52 @@ Mac's `gh` and Komac. Any `after-winget/<version>` branch of user-facing docs is
 local to the Mac (none on `origin`); `release.sh verify` says whether it can land
 now that winget serves 0.36.0.
 
+### 3.4 The 0.47.0 sequence: winget and the App Store together
+
+**Decided 18 Nov 2026 (owner):** 0.47.0 is the version that goes to the Mac App
+Store, and the same version goes to winget, so the two big platforms offer an easy
+install of equal versions. 0.46.0 is a rehearsal only (§3.3), never submitted.
+winget stays a follower channel: none of this holds the release.
+
+The aim is parity by process, not by coinciding dates. Apple's review and winget's
+moderators are two clocks nobody controls; if Apple rejects the 0.47.0 build and
+0.47.1 ships to the App Store, 0.47.1 goes to winget too. That is cheap only once
+the submission is automated (step 6), which is why the automation follows this
+release rather than waiting for a third.
+
+| # | Step | Where | Notes |
+|---|---|---|---|
+| 1 | Tag `v0.47.0` as usual | Mac | `release.sh`; winget never gates it |
+| 2 | Dispatch `windows-installer.yml` on `v0.47.0`, **once** | cloud session or Mac | ~7.5 min; log must read "All smoke checks passed." and "Manifest schema validation passed."; record run id, artefact id, installer SHA-256 here |
+| 3 | Download the artefact; installer hash equals the manifest's `InstallerSha256`; every non-installer URL 200 | Mac (cloud sessions cannot reach the artefact store) | `release-winget.md` step 2 |
+| 4 | Run the §3.3 test list against the downloaded installer and manifest | aella Server 2025, UTM Windows 11 | `winget install --manifest <dir>` works before the installer is attached. Uninstall-while-running is the step that must not be skipped |
+| 5 | Attach the `.exe` to the `v0.47.0` Release; download it publicly and re-hash | Mac (`gh release upload`) | `release-winget.md` step 3 |
+| 6 | `komac submit --dry-run`, then `komac submit` | Mac | `release-winget.md` step 4; same day as the App Store submission, so whichever review passes first, the other follows within days |
+| 7 | Watch the PR's labels; answer any moderator | Mac | `release-winget.md` step 6; time it from submit to merge: the first measured update |
+| 8 | Retarget the parked docs: rename `after-winget/0.36.0` to `after-winget/0.47.0` in this repo and the website repo; refresh 0.36-era wording | Mac | `release.sh verify` then reads them `wait` until winget serves 0.47.0 |
+| 9 | When winget serves 0.47.0 **and** the App Store listing is public: land both `after-winget` branches, and drop the README's "the PowerShell line above is the interim" in the same change | Mac | One website change: "Mac: App Store. Windows: winget." Say plainly that Windows is the command line plus the report in a browser (`bristlenose serve`), not a desktop app |
+| 10 | After merge: `winget search`, `winget upgrade --id Bristlenose.Bristlenose -e` from 0.36.0, `winget list`, `winget uninstall` | any Windows box | `release-winget.md` step 7 |
+
+Rules that do not bend:
+
+- **Build once, on the tag.** winget pins the installer's hash; a rebuild changes
+  it. Never build a "test" 0.47.0 before the tag and rebuild after; never dispatch
+  `v0.47.0` a second time.
+- **Do not touch the release chain before 0.47.0 ships.** The automation below
+  waits until 0.47.0 is on winget (and `release.sh run` freezes `main` anyway).
+
+**Then automate (the plan's step 5, `design-winget.md`), after 0.47.0 merges:**
+
+- *Build and attach:* the release workflow calls `windows-installer.yml` (it already
+  takes `workflow_call`) on the tag and attaches the `.exe` to the Release. Update
+  the workflow's header, which still says it is "not yet a release gate".
+- *Submit:* `winget-releaser` in a workflow, with a classic token
+  (`public_repo` + `workflow`) as a repository secret and the existing winget-pkgs
+  fork, behind a GitHub environment that needs the owner's approval click, at least
+  until uninstall-while-running has been proven once on a published version.
+- From then on every release goes to winget, so whichever version Apple passes,
+  winget has it or is days from it.
+
 ## 4. Linux
 
 ### 4.1 The environments
@@ -285,7 +331,8 @@ runner, which GitHub says it keeps until fall 2027, closes that for free.
 ## 8. Order of work
 
 1. §5 fixes with tests (any time; no hardware).
-2. Next winget submission with the newest release (§3.3).
+2. winget 0.47.0 alongside the App Store submission, then the submission
+   automation (§3.4).
 3. §6.1 guest script; §6.2 forced paths on aella.
 4. §6.3 GPU runs, Windows and Linux.
 5. §6.4 Intel Mac CLI job; Linux arm64 runner (§4.1).

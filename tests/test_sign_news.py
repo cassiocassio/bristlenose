@@ -42,6 +42,17 @@ def _load_script():
     return module
 
 
+# Before the load, which reads ZoneInfo("Europe/London") at import: Windows has
+# the IANA zone database only with the tzdata package. The script is the
+# maintainer's Mac release tool, and the seam's other half is proved by the Swift
+# suite and the Linux and macOS jobs (windows-latest, 19 Nov 2026).
+if sys.platform == "win32":
+    pytest.skip(
+        "scripts/sign-news.py is a Mac release tool; Windows has no Europe/London zone "
+        "without the tzdata package",
+        allow_module_level=True,
+    )
+
 sn = _load_script()
 
 # A TEST key, public on purpose: it signs only the contract fixture. It is never

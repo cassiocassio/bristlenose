@@ -109,6 +109,7 @@ state is still evidenced, the day is not.
 | `dashboard-autolayout.html` | 14 Jul 2026 | PROPOSED 14 Jul 2026 · **PARKED** — “Vision (parked, **do NOT build now**)”; the dashboard responsive redesign is post-TestFlight |
 | `dashboard-coverage-box.html` | 22 Feb 2026 | PROPOSED 22 Feb 2026 · IMPLEMENTED — coverage renders on the Dashboard |
 | `dashboard-heatmap-encoding-collision.html` | 17 Jul 2026 | SANDPIT — the demonstration behind a ruling: “**full evidence in** `dashboard-heatmap-encoding-collision.html`”. It shows an encoding failing, so it stays useful whether or not the grid is ever built |
+| `dashboard-phase1-review.html` | 16 Nov 2026 | *unreviewed* — added by `47b489ed8`; not yet classified against the code |
 | `dashboard-signal-grid-sizing.html` | 19 Jul 2026 | SANDPIT — called a “**size sandbox**” by its own design doc; the sizing instrument behind the parked signal grid |
 | `dashboard-signal-grid.html` | 17 Jul 2026 | PROPOSED 17 Jul 2026 · **PARKED** — “**the widget**” of the signal-grid design. Not shipped: no signal grid in `frontend/src`, none on the Dashboard, and its design doc records the effort as parked alongside `dashboard-autolayout.html` |
 | `dashboard-theme-list-stress-test.html` | 17 Jul 2026 | SANDPIT — a stress test, not a design |
@@ -126,6 +127,7 @@ state is still evidenced, the day is not.
 | `edo-colour-palette.html` | 2 Jul 2026 | IMPLEMENTED — `theme/colors/palette-edo.css` ships |
 | `edo-theme-studio.html` | 2 Jul 2026 | SANDPIT — the Edo palette tuner; `colors/palette-edo.css` ships |
 | `edo-website-palettes.html` | 26 Sep 2026 | *unreviewed* |
+| `edo2-lab.html` | 15 Nov 2026 | *unreviewed* — added by `b00bb664c`; not yet classified against the code |
 
 ## export
 
@@ -170,6 +172,7 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `background-runs-view-switch-storyboard.html` | 16 Jun 2026 | PROPOSED 16 Jun 2026 · IMPLEMENTED — the storyboard that forced out the view-switch race; `ServeManager.swift` carries the guard (`drainParked`, `restartIfRunning`) |
 | `bracket-colour-explore.html` | 24 Feb 2026 | SANDPIT — the colour exploration behind the live-edit signal; “colour explored in …”, per `CSS-REFERENCE.md` |
 | `button-catalogue.html` | 31 Aug 2026 | SANDPIT — the button range at a glance; `atoms/button.css` ships |
+| `caution-candidates.html` | 16 Nov 2026 | *unreviewed* — added by `47b489ed8`; not yet classified against the code |
 | `colour-lab.html` | 11 Nov 2026 | SANDPIT 11 Nov 2026 — the surface colour lab: six surfaces in light and dark on a replica of the three-column window, live sliders, presets sampled from Codex, Claude Code, Finder and Mail, and a screenshot pixel sampler; the dark values it produced shipped in `2cada10ea` |
 | `confirm-flash-options.html` | 7 Nov 2026 | PROPOSED 7 Nov 2026 — overnight options set for the owner's pick; not approved, nothing built. Options A–D for turning `badge-accept-flash` into a shared confirm atom (class only, class + `useConfirmFlash` hook, fold into motion tokens, leave it), with the call-site migration list; recommends B in two commits |
 | `control-surface-parity.html` | 2 Jul 2026 | IMPLEMENTED — **approved Jul 2026**; the canonical cross-surface × cross-locale terms |
@@ -184,6 +187,7 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `editable-themes-prototype.html` | 1 Aug 2026 | SANDPIT — theme-editing prototype |
 | `focus-mode-lab.html` | 4 Aug 2026 | SANDPIT — “Sandpit: real quote-card markup”; Focus Mode itself shipped in 0.24.0 |
 | `font-weight-tuner.html` | 22 Feb 2026 | SANDPIT — quote-pop vs UI-chrome weight tuner |
+| `form-layout-four-fixes.html` | 16 Nov 2026 | *unreviewed* — added by `47b489ed8`; not yet classified against the code |
 | `grid-lanes-quotes.html` | 17 Jun 2026 | PROPOSED 17 Jun 2026 · IMPLEMENTED — the masonry bake-off. **It calls itself a throwaway and that is now wrong**: `display: grid-lanes` ships as progressive enhancement in `theme/organisms/responsive-grid.css`. *Its one linked stylesheet is a dead path (`/report/assets/…`), so it renders bare* |
 | `guest-walk-diff.html` | 20 Oct 2026 | SANDPIT — generated morning-page specimen for the working `experiments/guest-walk/` spike; productionisation and the wider QA journey remain proposed. |
 | `half-done-study-options.html` | 7 Nov 2026 | PROPOSED 7 Nov 2026 — overnight options set for the owner's pick; not approved, nothing built. A stopped or failed study at HEAD: what the row says (keep the count vs bare Stopped) and whether a separate fresh-start verb is needed (no new verb / widen Re-analyse… / Start Fresh) |
@@ -274,6 +278,7 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `tentative-bars.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — the two-tone `MicroBar` ships (`tag-micro-bar-tentative`), pale tentative + solid accepted, with “N tentative + M accepted” on hover |
 | `tooltip-gallery.html` | 22 Feb 2026 | SANDPIT — “6 variants (A–F) with interactive comparison and dark mode toggle”; **variant D was chosen**, per CLAUDE.md |
 | `transcription-diagnostics.html` | 15 Oct 2026 | *unreviewed* — added by `16650c90`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `transcription-settings-states.html` | 13 Nov 2026 | *unreviewed* — added by `7147cf989`; not yet classified against the code |
 | `typography-comparison.html` | 15 Feb 2026 | PROPOSED 15 Feb 2026 · IMPLEMENTED · SUPERSEDED — as above |
 | `app-icon-directions.html` | 26 Sep 2026 | *unreviewed* |
 | `edit-affordance-states.html` | 22 Sep 2026 | *unreviewed* |
@@ -286,7 +291,9 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `quotes-display-options.html` | 3 Nov 2026 | PROPOSED 3 Nov 2026 — the Display popover (layout, density, break long paragraphs, focus) on 31 real Talismanic quotes, beside a line-break lab (placement, thought-length slider, blind labelling, compare and scoring). The lab half is a SANDPIT; the design of record is `design-display-preferences.md`. |
 | `display-popover-variants.html` | 3 Nov 2026 | SANDPIT — the Display popover's Layout, Density, Break and Focus Mode rows as five Mac variants (Battery-style icon rows, segmented with icons, plain menu rows, tiles, a density slider) and a web menu with icons, light and dark. A range to choose from, not a design. The owner picked: Layout as Battery-style icon rows, Density as a slider with a small A and a big A at its ends and the three words underneath, Break and Focus Mode as plain rows with a tick on the left; that is what `DisplayPopover.swift` draws. The design of record is `design-display-preferences.md`. |
 | `ux-picks-7-nov-review.html` | 7 Nov 2026 | PROPOSED 7 Nov 2026 — the morning review aid for the overnight options set: one card per open question (state at HEAD, options, recommendation, the owner's calls) linking the ten `*-options.html` mockups, plus the items already settled. A review aid, not a spec |
+| `whisper-delivery-states.html` | 18 Nov 2026 | *unreviewed* — added by `ddbe9b51a`; not yet classified against the code |
 | `whisper-first-wait-options.html` | 7 Nov 2026 | PROPOSED 7 Nov 2026 — overnight options set for the owner's pick; not approved, nothing built. What is left of the first-run Whisper wait after the early background download (`fc2fea73f`) and Apple-first transcription: honest progress on the cover pane, a sample study, a Welcome link; recommends A and closing the row |
+| `zoom-per-person-tracks-popover.html` | 16 Nov 2026 | *unreviewed* — added by `47b489ed8`; not yet classified against the code |
 
 ## out-of-credit
 
@@ -355,11 +362,13 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `project-get-info.html` | 16 Nov 2026 | *unreviewed* — added by `fd603f9ac`; not yet classified against the code |
 | `sidebar-activity-indicators.html` | 22 Oct 2026 | PROPOSED 14 Jun 2026 · IMPLEMENTED — `ProjectRowActivityIndicator.swift` ships; its “In iCloud” row and cloud legend entry are **not** (removed 22 Oct 2026, `docs/design-cloud-files.md`) |
 | `sidebar-all-tabs-v1.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v2.html` — first iteration |
 | `sidebar-all-tabs-v2.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v3.html` — second iteration |
 | `sidebar-all-tabs-v3.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 19 Mar 2026 by `sidebar-all-tabs-v4.html` — third iteration |
 | `sidebar-all-tabs-v4.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — last of four iterations. *Linked theme CSS repaired 3 Sep 2026* |
+| `sidebar-failure-labels.html` | 15 Nov 2026 | *unreviewed* — added by `5d44247ec`; not yet classified against the code |
 | `sidebar-seam-window-edge.html` | 2 Sep 2026 | IMPLEMENTED — cited from `SeamLabView.swift`’s own source comment; the seam lab ships |
 | `sidebar-status-roll.html` | 30 Oct 2026 | PROPOSED 30 Oct 2026 — one subtitle line that rolls or crossfades between two concurrent idle jobs (Screens + Signals), with a prior-art table and costs; owner 30 Oct 2026: leans to the roll (5 s dwell, pause on hover, shimmer kept), **no count** ("+1" rejected: a second job with nothing to open). My recommendation was the fixed order; iteration 3 (30 Oct 2026) specifies the owner's rules: every state is flagged holds or rolls (errors, acknowledgements and the run hold; warnings, info, Screens and Signals roll), nine rules R1-R9, a hold-or-roll table per state, eight scripted scenarios, tooltip lists everything running, 3-line cap, 2 s floor, shimmer after settle, silent finish (the count variant was dropped); the build plan is `docs/design-sidebar-status-roll.md` (W0 spike first; not approved to build); the roll is not decided or built, and would amend `design-desktop-project-status.md` §5 |
 | `sidebar-status-vocabulary.html` | 27 Aug 2026 | IMPLEMENTED — `ProjectCellSpec` / `ProjectSubtitle` carry this vocabulary |
@@ -403,9 +412,11 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `docs-shell-tabs.html` | 19 Nov 2026 | *unreviewed* — added by `cd1190988`; not yet classified against the code |
 | `website-bento-welcome.html` | 22 Aug 2026 | IMPLEMENTED — the website bento welcome shipped (separate deploy repo) |
 | `website-hero-platform-cta.html` | 27 Aug 2026 | IMPLEMENTED — the website hero CTA shipped |
 | `highlighter-playground.html` | 25 Sep 2026 | *unreviewed* |
+| `windows-install-cta.html` | 19 Nov 2026 | *unreviewed* — added by `c7859c8e4`; not yet classified against the code |
 
 ## welcome
 

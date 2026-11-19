@@ -665,18 +665,29 @@ class TestBannerContext:
     def test_large_download_names_the_cache_and_ctrl_c(self, capsys, tmp_path, monkeypatch):
         monkeypatch.delenv("HF_HUB_CACHE", raising=False)
         monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
-        # On Windows the temp folder is under the home folder, which the banner
-        # rightly writes as ~; here the cache must read as a full path.
+        # Home moved away, so the cache is not under it and reads as a full path
+        # on every platform (on Windows it always does: `display_path`).
         monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path / "elsewhere")
         out = self._banner(capsys, "mlx-community/whisper-large-v3-turbo")
         assert f"It downloads once, to {tmp_path / 'hf' / 'hub'}." in out
         assert "Ctrl+C is safe" in out
 
     def test_cache_under_home_is_shown_with_a_tilde(self, capsys, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "linux")
         monkeypatch.delenv("HF_HUB_CACHE", raising=False)
         monkeypatch.delenv("HF_HOME", raising=False)
         out = self._banner(capsys, "mlx-community/whisper-large-v3-turbo")
         assert "to ~/.cache/huggingface/hub." in out.replace("\\", "/")
+
+    def test_the_cache_is_shown_in_full_on_windows(self, capsys, monkeypatch):
+        """cmd.exe has no ~, so a pasteable path is the whole one (`display_path`,
+        19 Nov 2026)."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+        monkeypatch.delenv("HF_HOME", raising=False)
+        out = self._banner(capsys, "mlx-community/whisper-large-v3-turbo")
+        assert "to ~" not in out
+        assert "huggingface" in out
 
     def test_small_download_skips_the_cache_line_but_keeps_ctrl_c(self, capsys):
         out = self._banner(capsys, "mlx-community/whisper-tiny-mlx")

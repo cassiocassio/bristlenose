@@ -13,7 +13,9 @@ This document says what the Mac App Store build of Bristlenose does to get a Whi
 
 ## Which tree this describes
 
-Two source trees matter, and they behave differently. Every sentence below that depends on the difference names the tree.
+> **Tree A and Tree B are a historical distinction, settled on 18 Nov 2026.** They name two source states as they stood on 17 Nov, while the Background Assets work lived on branches. Tree B was merged into `main` on 18 Nov (`61e96dc29`, then the review fixes `1c4b7a1a0`), so **"Tree B" now simply means `main`**. Nothing is left to merge, and the next signed build is made from `main`. **Tree A is not a branch and will not be merged**: it is only the record of what TestFlight build 6532 contained (the one piece of signed-build evidence, E5). Read every "Tree A" below as "build 6532 as shipped to TestFlight" and every "Tree B" as "`main` today"; the branch names, commit ids and "not merged" wording in this section are kept as written on 17 Nov for the record. No signed build contains the merged tree yet.
+
+Two source trees mattered on 17 Nov, and they behave differently. Every sentence below that depends on the difference names the tree.
 
 | Name | What it is | Where it exists | Built or observed |
 |---|---|---|---|
@@ -299,6 +301,8 @@ By design, in each case:
 - A notification permission prompt appears during a run.
 
 All of this is by design or code reading, not observed under review conditions.
+
+**Owner ruling, 19 Nov 2026: ship Background Assets in the 24 Nov submission and accept the review risk above.** The branch work is merged to main and its quality is judged good enough. The fallback in §1 (unwind to the Hugging Face path if App Review rejects) is unchanged.
 
 ## 11. Owner decisions
 

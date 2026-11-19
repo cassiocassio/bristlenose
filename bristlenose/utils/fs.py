@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from bristlenose.utils.text import count_noun
 
@@ -39,6 +40,21 @@ MATERIALISE_TIMEOUT_SECONDS = 30 * 60
 # run. Other providers keep the full bound. Only a run sets the budget
 # (`cloud_fetch_budget`); serve's reads always get the full bound.
 MATERIALISE_TRIPPED_TIMEOUT_SECONDS = 2 * 60
+
+
+def display_path(path: PurePath) -> str:
+    """A path the reader can paste: ``~/...`` on macOS and Linux, in full on Windows.
+
+    cmd.exe has no ``~``, and gluing ``~/`` to a Windows relative path printed
+    ``~/.config\\bristlenose\\.env`` (Windows 11 VM, 5 Oct 2026). The HF cache banner
+    in ``preflight/whisper.py`` had the same bug with ``os.path.join("~", ...)``.
+    """
+    if sys.platform == "win32":
+        return str(path)
+    try:
+        return "~/" + path.relative_to(Path.home()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def open_private(path: Path, flags: int) -> int:

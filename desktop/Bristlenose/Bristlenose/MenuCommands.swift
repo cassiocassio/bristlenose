@@ -358,6 +358,21 @@ private struct DebugMenuContent: View {
             Button(DiagnosticFixture.noSummaryScenarioName) {
                 postFixture(DiagnosticFixture.noSummaryScenarioName)
             }
+            Divider()
+            // An Azure run's failure, from the run's recorded output
+            // (`AzureRunScenario`); the shipped wording, not a proposal.
+            ForEach(AzureRunScenario.allCases, id: \.self) { scenario in
+                Button(scenario.rawValue) { postFixture(scenario.rawValue) }
+            }
+        }
+
+        // Settings ▸ LLM Provider ▸ Azure in each scenario on the Azure scenario
+        // page, with the SHIPPED wording: a fake configuration, answered by the
+        // real validator from a recorded Azure body (`AzureScenarioFixture`).
+        Menu("Azure Scenarios") {
+            ForEach(AzureScenarioFixture.allCases) { fixture in
+                Button(fixture.menuTitle) { AzureScenarioFixture.present(fixture) }
+            }
         }
 
         Divider()

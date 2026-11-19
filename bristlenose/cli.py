@@ -23,6 +23,7 @@ from bristlenose.preflight import PreflightAbortedError
 from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.fs import display_path
 from bristlenose.utils.text import count_noun
 
 startup_trace.mark("cli-imported")
@@ -784,7 +785,7 @@ def _setup_local_provider() -> str | None:
     console.print()
     _say(MessageKind.SUCCESS, f"Using local AI ({model})")
     console.print("[dim]This is slower than cloud APIs but completely free and private.[/dim]")
-    console.print("[dim]For production quality: export BRISTLENOSE_ANTHROPIC_API_KEY=...[/dim]")
+    console.print("[dim]For production quality: bristlenose configure claude (or chatgpt, gemini)[/dim]")
     console.print()
 
     return "local"
@@ -2950,20 +2951,6 @@ def _print_project_status(
 # ---------------------------------------------------------------------------
 
 
-def _display_config_path(path: Path) -> str:
-    """A path the reader can paste: ``~/...`` on macOS and Linux, in full on Windows.
-
-    cmd.exe has no ``~``, and gluing ``~/`` to a Windows relative path printed
-    ``~/.config\\bristlenose\\.env`` (Windows 11 VM, 5 Oct 2026).
-    """
-    if sys.platform == "win32":
-        return str(path)
-    try:
-        return "~/" + path.relative_to(Path.home()).as_posix()
-    except ValueError:
-        return str(path)
-
-
 def _set_current_provider(canonical: str) -> None:
     """Record ``canonical`` as the current analysis provider (user-level config).
 
@@ -3285,7 +3272,7 @@ def _configure_anyllm(key: str | None) -> None:
             )
             raise typer.Exit(1)
         if isinstance(store, FileCredentialStore):
-            _say(MessageKind.SUCCESS, f"Saved to {escape(_display_config_path(store.path))}")
+            _say(MessageKind.SUCCESS, f"Saved to {escape(display_path(store.path))}")
         elif not isinstance(store, EnvCredentialStore):
             _say(
                 MessageKind.SUCCESS,
@@ -3334,9 +3321,10 @@ def configure(
     """Set up API credentials for an LLM provider.
 
     Validates the key with a test API call, then stores it securely in your
-    system credential store (macOS Keychain or Linux Secret Service). When no
-    keyring is available (e.g. a headless server), it persists the key to a
-    protected config file instead — so the command always leaves you configured.
+    system credential store (macOS Keychain or Linux Secret Service). Where
+    there is none (Windows, or a Linux machine with no keyring), it persists
+    the key to a protected config file instead — so the command always leaves
+    you configured.
     """
     from bristlenose.credentials import (
         EnvCredentialStore,
@@ -3456,9 +3444,15 @@ def configure(
         # last-resort manual path rather than losing the validated key silently.
         console.print()
         _say(MessageKind.WARNING, "No writable credential store available.")
-        console.print("Add this to your .env file or shell profile:")
+        from rich.markup import escape
+
+        from bristlenose.credentials import user_config_env_path
+
+        # A bare KEY=value line, not an `export`/`setx` command: a .env file takes
+        # neither, and `setx` would write the key into the Windows registry.
+        console.print(f"Add this line to {escape(display_path(user_config_env_path()))}:")
         console.print()
-        console.print(f"  export BRISTLENOSE_{env_var}={key}", markup=False)
+        console.print(f"  BRISTLENOSE_{env_var}={key}", markup=False)
         console.print()
         console.print("[dim](The key is not stored anywhere — save it yourself)[/dim]")
         raise typer.Exit(0) from None
@@ -3484,7 +3478,7 @@ def configure(
         # Persisted to the config .env — name the file so it's not a black box.
         from rich.markup import escape
 
-        _say(MessageKind.SUCCESS, f"Saved to {escape(_display_config_path(store.path))}")
+        _say(MessageKind.SUCCESS, f"Saved to {escape(display_path(store.path))}")
     elif not isinstance(store, EnvCredentialStore):
         store_label = get_credential_store_label()
         _say(MessageKind.SUCCESS, f'Stored in {store_label} as "{service_name}"')

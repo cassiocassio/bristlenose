@@ -41,6 +41,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# The one place this command is written. The exact package from the community source: a
+# bare `winget install FFmpeg` also asks the msstore source, which on Windows Server 2025
+# failed outright (0x8a15005e) instead of falling back (5 Oct 2026). `doctor_fixes` imports it.
+FFMPEG_WINGET_CMD = "winget install --id Gyan.FFmpeg -e --source winget"
+
 # Back-compat alias — see preflight/whisper.py for the unification rationale.
 FfmpegPreflightAbortedError = PreflightAbortedError
 
@@ -51,9 +56,11 @@ FfmpegPreflightAbortedError = PreflightAbortedError
 
 
 def _detect_distro() -> str:
-    """Return a coarse distro label: ``macos`` / ``ubuntu`` / ``fedora`` / ``arch`` / ``other``."""
+    """Return a coarse label: ``macos`` / ``windows`` / ``ubuntu`` / ``fedora`` / ``arch`` / ``other``."""
     if sys.platform == "darwin":
         return "macos"
+    if sys.platform == "win32":
+        return "windows"
     try:
         release = Path("/etc/os-release").read_text(encoding="utf-8")
     except OSError:
@@ -111,6 +118,7 @@ def _install_table(distro: str) -> str:
     """
     rows = [
         ("macos", t("preflight.ffmpeg.label_macos"), t("preflight.ffmpeg.cmd_macos")),
+        ("windows", t("preflight.ffmpeg.label_windows"), FFMPEG_WINGET_CMD),
         ("ubuntu", t("preflight.ffmpeg.label_ubuntu"), t("preflight.ffmpeg.cmd_ubuntu")),
         ("fedora", t("preflight.ffmpeg.label_fedora"), t("preflight.ffmpeg.cmd_fedora")),
         ("arch", t("preflight.ffmpeg.label_arch"), t("preflight.ffmpeg.cmd_arch")),
@@ -136,6 +144,10 @@ def _print_missing_banner(console: Console, distro: str) -> None:
     console.print()
     console.print(_install_table(distro))
     console.print()
+    if distro == "windows":
+        # winget changes PATH for new windows only, so the same window would fail the re-run.
+        console.print("  " + t("preflight.ffmpeg.windows_new_terminal"))
+        console.print()
 
 
 def _confirm_brew_install(console: Console) -> bool:

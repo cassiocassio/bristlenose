@@ -798,3 +798,24 @@ final class VerdictQueue: @unchecked Sendable {
         #endif
     }
 }
+
+@Suite struct SilenceClockTests {
+    @Test func aFreshClockIsNotSilent() {
+        #expect(!SilenceClock().silent(for: .seconds(60)))
+    }
+
+    @Test func silenceAccruesThenAWakeGivesTheNetworkAFullLimit() async throws {
+        let clock = SilenceClock()
+        try await Task.sleep(for: .milliseconds(60))
+        #expect(clock.silent(for: .milliseconds(30)))
+        clock.reset()
+        #expect(!clock.silent(for: .milliseconds(30)))
+    }
+
+    @Test func aMovingByteCountKeepsItAlive() async throws {
+        let clock = SilenceClock()
+        try await Task.sleep(for: .milliseconds(60))
+        clock.touch(1)
+        #expect(!clock.silent(for: .milliseconds(30)))
+    }
+}

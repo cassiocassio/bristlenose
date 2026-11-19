@@ -132,6 +132,16 @@ def _pii_model_in_user_cache() -> str:
 
 
 def _fix_ffmpeg_will_not_run(method: str) -> str:
+    if sys.platform == "win32":
+        from bristlenose.preflight.ffmpeg import FFMPEG_WINGET_CMD
+
+        return (
+            "FFmpeg is installed but fails to start, often after an update to the\n"
+            "libraries it needs. If you installed it with winget, reinstall it:\n\n"
+            "  winget uninstall --id Gyan.FFmpeg\n"
+            f"  {FFMPEG_WINGET_CMD}\n\n"
+            + _new_terminal_note().rstrip()
+        )
     return (
         "FFmpeg is installed but fails to start, often after an update to the\n"
         "libraries it needs. Reinstall it:\n\n"
@@ -181,10 +191,10 @@ def _fix_ffmpeg_missing(method: str) -> str:
     elif platform.system() == "Darwin":
         lines.append("  brew install ffmpeg")
     elif platform.system() == "Windows":
-        # The exact package from the community source. A bare `winget install
-        # FFmpeg` also asks the msstore source, which on Windows Server 2025
-        # failed outright (0x8a15005e) instead of falling back (5 Oct 2026).
-        lines.append("  winget install --id Gyan.FFmpeg -e --source winget")
+        # The command lives in preflight/ffmpeg.py, with the reason it is spelled this way.
+        from bristlenose.preflight.ffmpeg import FFMPEG_WINGET_CMD
+
+        lines.append(f"  {FFMPEG_WINGET_CMD}")
         lines.append("\nThen open a new terminal, so the updated PATH is picked up.")
         lines.append("Without winget: https://ffmpeg.org/download.html")
     else:
@@ -362,9 +372,11 @@ def _fix_api_key_invalid_azure(_method: str) -> str:
 
 
 def _fix_network_unreachable(_method: str) -> str:
+    note = _new_terminal_note().rstrip()
     return (
         "Check your internet connection. If you're behind a proxy:\n"
         + _set_env_line("HTTPS_PROXY", "http://proxy:port")
+        + (f"\n\n{note}" if note else "")
     )
 
 
@@ -516,13 +528,19 @@ def _fix_cuda_not_available(method: str) -> str:
         "BRISTLENOSE_WHISPER_DEVICE=cuda."
     )
     if sys.platform == "win32":
+        # No LD_LIBRARY_PATH on Windows: the CUDA DLLs are found through PATH, and the
+        # toolkit installer normally adds its bin folder. Not run on a Windows GPU machine.
         return (
             "NVIDIA GPU found but the CUDA libraries Bristlenose uses\n"
             "(cuBLAS 12) aren't installed. Transcription works on the CPU,\n"
             "but slower.\n\n"
-            "To use the GPU, install NVIDIA's CUDA Toolkit 12\n"
-            "(developer.nvidia.com/cuda-downloads), which puts cublas64_12.dll\n"
-            "on your PATH, then open a new terminal.\n" + override
+            "To use the GPU:\n"
+            "  1. Install NVIDIA's CUDA Toolkit 12: developer.nvidia.com/cuda-downloads\n"
+            "  2. Check that its bin folder, which holds cublas64_12.dll, is on your\n"
+            "     PATH (the installer normally adds it), for example\n"
+            "     C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.x\\bin\n\n"
+            + _new_terminal_note()
+            + override.lstrip("\n")
         )
     return (
         "NVIDIA GPU found but CUDA libraries aren't accessible.\n"
@@ -669,6 +687,19 @@ def _fix_brew_tap_untrusted(method: str) -> str:
 
 
 def _fix_auth_token_env_set(_method: str) -> str:
+    if sys.platform == "win32":
+        return (
+            "_BRISTLENOSE_AUTH_TOKEN is set in your environment. `bristlenose serve` "
+            "will use this value as the auth token instead of generating a fresh "
+            "random one, which is usually not what you want outside CI.\n\n"
+            "Clear it for this window (PowerShell):\n\n"
+            "  Remove-Item Env:_BRISTLENOSE_AUTH_TOKEN\n\n"
+            "If it was set permanently (with setx or System Properties), remove it "
+            "from your user environment variables too:\n\n"
+            '  [Environment]::SetEnvironmentVariable("_BRISTLENOSE_AUTH_TOKEN", $null, "User")\n\n'
+            "If this is a CI or test shell, you can ignore this warning.\n\n"
+            + _new_terminal_note().rstrip()
+        )
     return (
         "_BRISTLENOSE_AUTH_TOKEN is set in your shell. `bristlenose serve` "
         "will use this value as the auth token instead of generating a fresh "

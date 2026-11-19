@@ -1,0 +1,78 @@
+AXWindow/AXDialog "LLM Provider"
+  AXGroup/AXHostingView
+    AXScrollArea
+      AXOutline
+        AXRow/AXOutlineRow
+          AXCell
+            AXButton "Selected" #checkmark.circle.fill
+            AXImage "provider-anthropic"
+            AXStaticText "Claude"
+            AXStaticText "Not set up"
+        AXRow/AXOutlineRow
+          AXCell
+            AXButton "Circle" #circle [disabled]
+            AXImage "provider-openai"
+            AXStaticText "ChatGPT"
+            AXStaticText "Not set up"
+        AXRow/AXOutlineRow
+          AXCell
+            AXButton "Circle" #circle [disabled]
+            AXImage "provider-google"
+            AXStaticText "Gemini"
+            AXStaticText "Not set up"
+        AXRow/AXOutlineRow
+          AXCell
+            AXButton "Circle" #circle [disabled]
+            AXImage "provider-azure"
+            AXStaticText "Azure OpenAI"
+            AXStaticText "Not set up"
+        AXRow/AXOutlineRow
+          AXCell
+            AXButton "Circle" #circle [disabled]
+            AXImage "provider-ollama"
+            AXStaticText "Ollama"
+            AXStaticText "Not set up"
+        AXColumn #ListColumn
+    AXScrollArea
+      AXHeading "Status"
+      AXGroup
+        AXStaticText "Use this provider" [disabled]
+        AXCheckBox/AXSwitch [disabled]
+        AXLink "azure.microsoft.com"
+        AXLink "Pricing"
+        AXLink "Portal"
+        AXStaticText "Not set up"
+      AXHeading "API Key"
+      AXGroup
+        AXTextField/AXSecureTextField "•••"
+        AXButton "Show"
+      AXHeading "Model"
+      AXGroup
+        AXStaticText "Model"
+        AXPopUpButton "gpt-4o"
+      AXGroup
+        AXStaticText "Concurrency"
+        AXStaticText "3"
+        AXSlider
+          AXValueIndicator
+        AXStaticText "Parallel LLM calls"
+      AXHeading "Azure Settings"
+      AXGroup
+        AXStaticText "Endpoint URL"
+        AXTextField
+        AXStaticText "Deployment name"
+        AXTextField
+        AXStaticText "API version"
+        AXTextField "2024-10-21"
+  AXToolbar
+    AXButton "General"
+    AXButton "Appearance"
+    AXButton "LLM Provider"
+    AXButton "Transcription"
+    AXButton "Accounts"
+    AXButton "MCP Agents"
+  AXButton/AXCloseButton
+  AXButton/AXZoomButton [disabled]
+    AXGroup
+  AXButton/AXMinimizeButton [disabled]
+  AXStaticText "LLM Provider"

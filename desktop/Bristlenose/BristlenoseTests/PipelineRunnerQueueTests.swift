@@ -79,6 +79,8 @@ struct PipelineRunnerQueueTests {
         var networkNoted: [LLMProvider] = []
         /// The fingerprint of the key a run would be started with now.
         var fingerprintNow: String? = "fp-a"
+        /// The saved Azure endpoint + deployment + API version, as the runner sees it.
+        var azureIdentityNow: String? = "az-a"
         let root: URL
         let index: ProjectIndex
         var runner: PipelineRunner!
@@ -137,6 +139,7 @@ struct PipelineRunnerQueueTests {
                 recordRefusal: { [weak self] c, p, f in self?.refusals.append((c, p, f)) },
                 noteNetworkRefusal: { [weak self] in self?.networkNoted.append($0) },
                 runKeyFingerprint: { [weak self] _ in self?.fingerprintNow },
+                runAzureIdentity: { [weak self] in self?.azureIdentityNow },
                 sidecarLookup: lookup,
                 outputDrainLimit: drainLimit,
                 foreignRunPollInterval: foreignPoll,
@@ -615,6 +618,38 @@ struct PipelineRunnerQueueTests {
         #expect(rig.refusals.first?.condition == .keyRejected)
         #expect(rig.refusals.first?.provider == .claude, "blamed the provider active now, not the run's")
         #expect(rig.refusals.first?.fingerprint == "fp-a", "carried the key now held, not the run's")
+    }
+
+    /// An Azure run started against one endpoint, then the endpoint was corrected
+    /// and the run ended refused: the refusal is about the old settings. Recorded,
+    /// it marked the corrected ones "Invalid key" and disabled their radio (19 Nov
+    /// 2026, the transition model's S1).
+    @Test func anAzureRefusalAfterTheSettingsChangedIsNotRecordedAgainstTheNewOnes() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        rig.providerNow = .azure
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.azureIdentityNow = "az-b"
+        try writeFailedRun(in: a, category: "auth")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.isEmpty, "a refusal for the old Azure settings was recorded against the new ones")
+    }
+
+    @Test func anAzureRefusalWithUnchangedSettingsIsStillRecorded() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        rig.providerNow = .azure
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "auth")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.map(\.condition) == [.keyRejected])
+        #expect(rig.refusals.first?.provider == .azure)
     }
 
     /// The failure names the provider the log records, the same one a relaunch

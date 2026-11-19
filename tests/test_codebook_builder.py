@@ -134,6 +134,8 @@ def _mock_settings() -> MagicMock:
     s = MagicMock()
     s.llm_concurrency = 2
     s.llm_provider = "anthropic"
+    # A string, so the readiness check (require_provider_callable) sees a key.
+    s.anthropic_api_key = "test-key"
     s.llm_model = "test-model"
     s.llm_max_tokens = 1000
     return s

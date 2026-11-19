@@ -233,6 +233,8 @@ describe("SettingsModal", () => {
     expect(Array.from(paletteSelect().options).map((o) => o.textContent)).toEqual([
       "Default",
       "Edo",
+      "Edo 3",
+      "Edo 4",
       "Catppuccin",
       "Gruvbox",
       "Rosé Pine",

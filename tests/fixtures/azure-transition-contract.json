@@ -1,0 +1,21 @@
+{
+  "about": "Python-side cells of the Azure transition model (docs/design-azure-state-matrix.md section 5): what Azure answers at the settings-check stage, and what doctor and the preflight each conclude. Every body is Azure's own, with its source. Read by tests/test_azure_transition_contract.py.",
+  "bodies": {
+    "ok_chat": {"source": "shape of a chat completion (the fields the client reads)", "body": {"choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "ok"}}], "id": "chatcmpl-fake", "object": "chat.completion", "model": "gpt-4.1-mini", "usage": {"prompt_tokens": 5, "completion_tokens": 1, "total_tokens": 6}}},
+    "unauthorized": {"source": "live probe 19 Nov 2026 (bad key, both good and bad deployment)", "body": {"error": {"code": "401", "message": "Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource."}}},
+    "deployment_not_found": {"source": "live probe 19 Nov 2026 (good key, deployment that does not exist)", "body": {"error": {"type": "invalid_request_error", "code": "DeploymentNotFound", "message": "The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."}}},
+    "generic_404": {"source": "live probe 19 Nov 2026 (portal URL, classic URL, http endpoint, wrong path: all identical)", "body": {"error": {"code": "404", "message": "Resource not found"}}},
+    "cap_refusal": {"source": "live probes 12 and 19 Nov 2026 (gpt-4.1-mini deployment, max_tokens 64000)", "body": {"error": {"message": "max_tokens is too large: 64000. This model supports at most 32768 completion tokens, whereas you provided 64000.", "type": "invalid_request_error", "param": "max_tokens", "code": "invalid_value"}}},
+    "throttled": {"source": "Azure's documented 429 shape (not probed: throttling cannot be provoked cheaply)", "body": {"error": {"code": "429", "message": "Rate limit is exceeded."}}},
+    "outage": {"source": "generic 503 (not probed: an outage cannot be provoked)", "body": {"error": {"code": "503", "message": "Service unavailable"}}}
+  },
+  "cells": [
+    {"event": "200", "replies": [[200, "ok_chat"]], "doctor": [true, ""], "preflight": [true, null]},
+    {"event": "401", "replies": [[401, "unauthorized"]], "doctor": [false, "401 Unauthorized"], "preflight": [false, "invalid_key"]},
+    {"event": "404 DeploymentNotFound", "replies": [[404, "deployment_not_found"]], "doctor": [false, "Deployment 'research-deployment' not found"], "preflight": [false, "model_unavailable"]},
+    {"event": "404 generic (wrong URL)", "replies": [[404, "generic_404"]], "doctor": [false, "HTTP 404: Resource not found"], "preflight": [false, null]},
+    {"event": "400 cap, then 200 at the ceiling", "replies": [[400, "cap_refusal"], [200, "ok_chat"]], "doctor": [true, ""], "preflight": [true, null]},
+    {"event": "429", "replies": [[429, "throttled"]], "doctor": [null, "HTTP 429"], "preflight": [false, "rate_limit"]},
+    {"event": "503", "replies": [[503, "outage"]], "doctor": [null, "HTTP 503"], "preflight": [false, null]}
+  ]
+}

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Windows install CTA: winget line vs download button</title>
+<style>
+:root{
+  --ink:#1a1a1a; --muted:#6b7280; --faint:#9aa3ad; --line:#e5e7eb; --bg:#fff; --bg-alt:#f8f8f8;
+  --accent:#2563eb; --code-bg:#f3f4f6; --warn:#c2410c; --ok:#3a8a55; --soft:#fcfcfd;
+  --font:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --r:6px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --ink:#e6e7e9; --muted:#9ca3af; --faint:#6b7280; --line:#2a2a2c; --bg:#121214; --bg-alt:#1a1a1d;
+  --accent:#6ba2f5; --code-bg:#1c1c20; --warn:#fb923c; --ok:#5fb87e; --soft:#181a1d;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:420 15px/1.55 var(--font)}
+main{max-width:980px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:24px;margin:0 0 4px} h2{font-size:18px;margin:48px 0 4px} h3{font-size:14px;margin:0 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--muted);margin:0 0 24px}
+.opt{border-top:2px solid var(--line);margin-top:40px;padding-top:8px}
+.tag{display:inline-block;font-size:12px;background:var(--code-bg);padding:1px 8px;border-radius:99px;color:var(--muted)}
+/* the artefact: a homepage hero panel */
+.hero{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:28px 24px;margin:14px 0}
+.hero h4{margin:0 0 14px;font-size:20px}
+.cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{display:inline-block;padding:9px 16px;border-radius:var(--r);font-weight:490;text-decoration:none;border:1px solid var(--line);color:var(--ink);background:var(--bg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.cmd{display:inline-flex;align-items:center;gap:10px;background:var(--code-bg);padding:8px 12px;border-radius:var(--r);font:13px var(--mono)}
+.cmd .p{color:var(--faint)} .copy{font:12px var(--font);border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:4px;padding:2px 8px}
+.note{color:var(--muted);font-size:13px;margin:12px 0 0}
+.or{color:var(--faint);font-size:13px}
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0}
+.step{border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:12px;font-size:13px}
+.step b{display:block;font-size:12px;color:var(--faint);margin-bottom:6px}
+.win{border:1px solid var(--line);border-radius:6px;background:var(--bg);overflow:hidden;margin:6px 0}
+.win .bar{background:var(--code-bg);padding:4px 8px;font-size:11px;color:var(--muted)}
+.win .body{padding:8px;font-size:12px}
+.ps{background:#0c0c0c;color:#ddd;font:11.5px/1.5 var(--mono);padding:8px;border-radius:4px;white-space:pre-wrap}
+.ps .g{color:#7ec699}.ps .y{color:#e5c07b}
+.sm{border:1px solid #0067c0;background:#fff;color:#111;padding:10px;border-radius:4px;font:12px var(--font)}
+.sm b{display:inline;color:#111;font-size:13px}
+.sm .lnk{color:#0067c0;text-decoration:underline}
+.sm .b{display:inline-block;margin-top:6px;border:1px solid #999;padding:2px 10px;border-radius:3px;background:#f3f3f3;font-size:11px;color:#111}
+.hot{outline:2px solid var(--warn);outline-offset:1px}
+.fric{color:var(--warn);font-size:12px;margin-top:6px}
+.good{color:var(--ok);font-size:12px;margin-top:6px}
+.comment{background:var(--bg-alt);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 var(--r) var(--r) 0;margin:16px 0;font-size:14px}
+.comment ul{margin:6px 0 0;padding-left:18px}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:490;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<main>
+<h1>Windows on the homepage: two ways to drop <code>irm | iex</code></h1>
+<p class="sub">Mockup for approval, 19 Nov 2026. The panels are drawn at the real hero-panel size and tokens. The flow under each shows what a researcher sees next, with the friction marked in orange. Facts about the installer are read from <code>packaging/windows/bristlenose.iss</code>: per-user, no admin, x64 (Arm runs it under emulation), adds itself to the user PATH, <strong>no Start menu entry and no launch at the end</strong>.</p>
+
+<div class="hero" style="opacity:.55">
+  <h3>Today (for reference)</h3>
+  <h4>Windows</h4>
+  <div class="cta"><span class="cmd"><span class="p">&gt;</span>irm https://bristlenose.app/install.ps1 | iex <span class="copy">Copy</span></span><a class="btn">Setup guide</a></div>
+  <p class="note">Paste it into Terminal. It installs Python, FFmpeg and Bristlenose, no admin rights needed</p>
+</div>
+
+<!-- ================= OPTION A ================= -->
+<section class="opt">
+<span class="tag">Option A</span>
+<h2>The winget line</h2>
+<div class="hero">
+  <h4>Windows</h4>
+  <div class="cta">
+    <span class="cmd"><span class="p">&gt;</span>winget install Bristlenose.Bristlenose <span class="copy">Copy</span></span>
+    <a class="btn">Setup guide</a>
+  </div>
+  <p class="note">Free and open source, in beta · Windows 10 or 11 · Paste it into Terminal. No admin rights needed</p>
+</div>
+
+<h3>What happens next</h3>
+<div class="flow">
+  <div class="step"><b>1 · Open a terminal</b>
+    <div class="win"><div class="bar">Start ▸ type "terminal"</div><div class="body">Windows Terminal or PowerShell.</div></div>
+    <div class="fric">The researcher has to know how to open one.</div></div>
+  <div class="step"><b>2 · Paste, Enter</b>
+    <div class="ps">&gt; winget install Bristlenose.Bristlenose
+Found Bristlenose [Bristlenose.Bristlenose]
+<span class="y">This application is licensed to you by its owner.</span>
+Downloading ...
+Successfully installed</div>
+    <div class="good">No SmartScreen dialog: winget installs from Microsoft's catalogue.</div></div>
+  <div class="step"><b>3 · Open a NEW terminal</b>
+    <div class="ps">Path environment variable modified;
+restart your shell to use the new value.</div>
+    <div class="fric hot">The window they just used does not know <code>bristlenose</code> yet (measured on 19 Nov). Our page must say it.</div></div>
+  <div class="step"><b>4 · Run it</b>
+    <div class="ps">&gt; bristlenose configure claude
+&gt; bristlenose C:\interviews</div>
+    <div class="good">Same commands as the guide.</div></div>
+</div>
+
+<div class="comment"><strong>Commentary.</strong>
+<ul>
+<li><strong>Trust:</strong> the strongest of the three. Microsoft scans the installer and the package id is Microsoft's, so there is no unsigned-publisher warning and no "run a script from a website" step. That is exactly what <code>irm | iex</code> lacks.</li>
+<li><strong>Staleness:</strong> winget serves <strong>0.36.0</strong> today, ten versions behind. Moderation took about 33 days for the first package. The page must not go live with this until the new version has merged, or Windows users get a much older build than the Mac gets.</li>
+<li><strong>Audience fit:</strong> it is still a pasted command in a terminal, so it removes the script risk, not the terminal. A researcher who has never opened PowerShell stumbles at step 1.</li>
+<li><strong>winget may be missing</strong> on older Windows 10 (App Installer) and on Windows Server before a desktop logon. A fallback link to the setup guide covers it.</li>
+</ul></div>
+</section>
+
+<!-- ================= OPTION B ================= -->
+<section class="opt">
+<span class="tag">Option B</span>
+<h2>The download button</h2>
+<div class="hero">
+  <h4>Windows</h4>
+  <div class="cta">
+    <a class="btn primary">Download for Windows</a>
+    <span class="or">or</span>
+    <span class="cmd"><span class="p">&gt;</span>winget install Bristlenose.Bristlenose <span class="copy">Copy</span></span>
+  </div>
+  <p class="note">bristlenose-0.46.1-setup-x64.exe · 90 MB · free and open source, in beta · Windows 10 or 11 · no admin rights needed<br>
+  Windows will say it doesn't recognise the app. <a href="#" style="color:var(--accent)">What you will see</a></p>
+</div>
+
+<h3>What happens next</h3>
+<div class="flow">
+  <div class="step"><b>1 · Click</b>
+    <div class="win"><div class="bar">Edge · Downloads</div><div class="body">bristlenose-…-setup-x64.exe<br><span style="color:var(--warn)">"isn't commonly downloaded. Make sure you trust it"</span> ⋯ Keep</div></div>
+    <div class="fric hot">Edge or Chrome may hold it back first and ask them to press Keep.</div></div>
+  <div class="step"><b>2 · SmartScreen</b>
+    <div class="sm"><b>Windows protected your PC</b><br>Microsoft Defender SmartScreen prevented an unrecognised app from starting.<br><span class="lnk">More info</span><br><span class="b">Don't run</span></div>
+    <div class="fric hot">The installer is unsigned. "Run anyway" only appears after "More info". Our note under the button prepares them, but this is the worst moment on either path.</div></div>
+  <div class="step"><b>3 · The installer</b>
+    <div class="win"><div class="bar">Setup — Bristlenose</div><div class="body">Install ▸ Next ▸ Finish<br><span style="color:var(--faint)">no admin prompt, no options</span></div></div>
+    <div class="good">Familiar. Per-user, no UAC.</div></div>
+  <div class="step"><b>4 · Then… nothing</b>
+    <div class="win"><div class="bar">Start menu</div><div class="body">No Bristlenose entry. Finish closes the wizard.</div></div>
+    <div class="fric hot">They must still open a terminal and type <code>bristlenose</code>. The button saved the install step, not the terminal.</div></div>
+</div>
+
+<div class="comment"><strong>Commentary.</strong>
+<ul>
+<li><strong>Approachability:</strong> best first impression for someone who has never used a terminal: it looks like every other Windows app.</li>
+<li><strong>The SmartScreen wall:</strong> unsigned means "Windows protected your PC" with the safe-looking button on top. A nervous researcher on a client laptop may well stop there. Signing would fix it, but certificates cost money and an unknown publisher still scores low for weeks.</li>
+<li><strong>The promise is only half kept:</strong> Bristlenose is a command-line tool on Windows. After Finish the researcher still has no icon and no window. Without a Start menu shortcut or a "Open a terminal here" finish step, this button feels broken. That is a product gap, not a page-copy gap.</li>
+<li><strong>Hosting:</strong> the file would link to the GitHub Release asset, so the filename carries the version and the button's link must be bumped each release (or point at a stable <code>/download/windows</code> redirect on our site).</li>
+<li><strong>Corporate machines:</strong> unsigned downloads are often blocked outright by IT policy, where winget (policy-allowed source) sometimes is not. Neither is guaranteed.</li>
+</ul></div>
+</section>
+
+<section class="opt">
+<h2>Side by side</h2>
+<table>
+<tr><th></th><th>A · winget line</th><th>B · download button (+ winget line)</th></tr>
+<tr><td>Warnings the user meets</td><td>None</td><td>Browser hold, then SmartScreen</td></tr>
+<tr><td>Needs a terminal to install</td><td>Yes</td><td>No</td></tr>
+<tr><td>Needs a terminal to <em>use</em></td><td>Yes</td><td>Yes (no Start menu entry)</td></tr>
+<tr><td>Version served today</td><td>0.36.0 until the new bump merges</td><td>The new release, once the installer is attached</td></tr>
+<tr><td>Work to ship</td><td>Copy change, plus the winget bump</td><td>Copy, link, SmartScreen explainer, and ideally a Start menu entry</td></tr>
+<tr><td>Replaces <code>irm | iex</code></td><td>Yes</td><td>Yes</td></tr>
+</table>
+<div class="comment"><strong>Recommendation.</strong> Ship A first as the primary on the Windows panel the day the bumped version merges, with the setup guide as the fallback link. Hold B until the installer gets a Start menu entry that opens a terminal (or the app ships a window), because the button promises an app and the installer delivers a command. If you want B sooner, lead with the download button but keep the winget line next to it, as drawn, so there is a path with no warning.
+The interim (before the bump merges) is the awkward bit: the install page keeps <code>irm | iex</code> in the guide, but the homepage can show the download button alone, since the Release asset can be current while winget is not.</div>
+</section>
+</main>
+</body>
+</html>

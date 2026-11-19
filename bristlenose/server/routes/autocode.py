@@ -221,10 +221,9 @@ def current_settings() -> Any:
     return load_settings()
 
 
-def require_provider_ready(settings: Any) -> None:
-    """Refuse (``RefusalError``) unless the chosen provider can run AutoCode: one chosen,
-    a cloud one, and a key (or a ready any-llm). The start route and the house default share
-    it, so the default never installs a codebook it cannot then run."""
+def refuse_an_unchosen_provider(settings: Any) -> None:
+    """Refuse (409 ``PROVIDER_AMBIGUOUS``) when two or more providers have keys and none
+    was ever chosen, rather than letting the field default silently pick a vendor."""
     # A server can't prompt: if 2+ providers have keys and none was ever
     # chosen (no --llm/env/current-provider), refuse rather than letting
     # the field default silently pick a vendor. Recomputed statelessly —
@@ -241,6 +240,13 @@ def require_provider_ready(settings: Any) -> None:
             "BRISTLENOSE_LLM_PROVIDER), then retry.",
         )
 
+
+def require_provider_ready(settings: Any) -> None:
+    """Refuse (``RefusalError``) unless the chosen provider can run AutoCode: one chosen,
+    a cloud one, and a key (or a ready any-llm). The start route and the house default share
+    it, so the default never installs a codebook it cannot then run."""
+    refuse_an_unchosen_provider(settings)
+
     if settings.llm_provider == "local":
         raise RefusalError(
             503,
@@ -250,6 +256,17 @@ def require_provider_ready(settings: Any) -> None:
             "taxonomy in their context window.",
         )
 
+    require_provider_callable(settings)
+
+
+def require_provider_callable(settings: Any) -> None:
+    """Refuse (``RefusalError``) unless the provider has what a call needs: a key, plus an
+    endpoint and a deployment for Azure, or a ready any-llm. The keyed half of
+    ``require_provider_ready``, shared with the codebook builder, which (unlike AutoCode)
+    does not refuse a local model."""
+    refuse_an_unchosen_provider(settings)
+    if settings.llm_provider == "local":
+        return
     no_key = RefusalError(
         503,
         RefusalReason.NO_API_KEY,

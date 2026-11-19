@@ -1633,6 +1633,11 @@ def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
     # One line: the CLI prints this after an em dash, and a multi-line exception
     # (pydantic's are) was cut mid-word on its second line.
     msg = msg.strip().split("\n", 1)[0]
+    # A gateway that echoes the request's headers puts the key in the error; masked
+    # before the length cut, so the cut cannot leave half a key behind.
+    from bristlenose.utils.key_redaction import redact_keys
+
+    msg = redact_keys(msg)
     # Detect billing issues and provide a direct link
     if "credit balance" in msg.lower() and provider in _BILLING_URLS:
         link = _BILLING_URLS[provider]

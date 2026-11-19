@@ -58,6 +58,7 @@ Deliberately small. In the app's atomic vocabulary:
 **Molecules (new)**
 - `.code` — fenced block + copy button.
 - `.fork` + `details.ch[data-channel]` — the **app↔CLI channel disclosure** (native, independent, OS-default, per-page memory; see the channel-fork thread).
+- `.shelltabs` — **shell tabs** on a code block ("macOS / Linux" | "PowerShell"): small text tabs on the block's top edge, one choice per page, remembered, OS-default. Authored as adjacent ```` ```bash ```` / ```` ```powershell ```` fences; the browser groups them, so with no JS both show stacked. See B7.
 - `.sharedline` — "✓ same in app and browser" marker for non-forked guides.
 - `.card` — front-page quadrant card.
 - `.prevnext` — sequential footer nav.
@@ -138,7 +139,8 @@ don't turn reference chatty.
 - **Sentence-case headings.** "Set up Claude", not "Set Up Claude".
 - **`code` for everything literal** — commands, paths, env vars, values, filenames. Never translate or alter code (`bristlenose configure claude` stays exact in every locale).
 - **Callouts are rationed.** `info` = a useful aside; `warn` = data/privacy risk or a real footgun; `tip` = a shortcut. If every paragraph is a callout, none is. No new callout types.
-- **Channel fork** authored as the two `<details>` (`macOS` / `CLI`) — quiet labels, app-first on Mac (see channel-fork thread).
+- **Channel fork** authored as `::: fork` with `###` sections — two (*macOS app* / *Command line*), or three where Windows needs its own (*macOS app* / *macOS / Linux* / *Windows PowerShell*, B7). Quiet labels, app-first on Mac (see channel-fork thread).
+- **A shell command that differs by OS** is a tab pair (B7), never a bare `export` line.
 - **Links — three roles, applied by the generator.** *Internal* (another docs page): accent + underline, same tab, no icon. *External* (off `bristlenose.app`): accent + underline + a trailing `external-link` glyph, new tab (`rel="noopener noreferrer"`). The generator adds external treatment automatically by host, so authors write plain markdown links. **`code` is for literals you type or read** (commands, flags, paths, env vars) — **never a URL you're meant to visit**: a settings URL is a link, not a code chip. When a treatment is unclear, match **Stripe** — calm, confident, unmistakable links are the bar.
 - **Code/commands out of prose** — a command that sits inside a sentence gets reflowed, line-broken and smart-quoted by every renderer that touches it. (This used to say "so the future translation pipeline never mangles a command". There is no future docs translation pipeline — public-facing docs are English by design, `docs/design-i18n.md` §"Which surfaces are targets". The practice is right; the reason given for it was not.)
 
@@ -162,6 +164,42 @@ The reader is on the macOS app *or* the command line, and is never asked to work
 - **Shared banner** (`::: shared`): in-report SPA actions identical in app and browser — star, tag, hide, export, codebooks, Miro, search. One "✓ same in app and browser" line, no fork.
 - **Single-channel disclosure**: a CLI-only (PII redaction, transcribe-only) or app-only feature still carries the disclosure header naming its channel, so the reader knows whether it's for them.
 - **No marker**: conceptual / reference pages with no platform-specific action.
+
+### B7. Windows and shell syntax — tabs, or a section? (approved 19 Nov 2026)
+
+The command line is not one shell. `export NAME=value` is Unix-only; Windows readers need PowerShell (`$env:NAME = "value"`). Mockup: `docs/mockups/docs-shell-tabs.html`. **Two patterns, chosen by the tests below, lightest first.**
+
+**Pattern 1 — shell tabs (the default).** Two adjacent fences on the same command:
+
+````
+```bash
+export BRISTLENOSE_LOCAL_MODEL=gemma4:e4b
+```
+```powershell
+$env:BRISTLENOSE_LOCAL_MODEL = "gemma4:e4b"
+```
+````
+
+They render as one block with two small tabs, **macOS / Linux** and **PowerShell**. A Windows browser opens PowerShell; anything else opens macOS / Linux. One choice per page, remembered across pages. Windows-only prose is allowed as **one short paragraph** under the block (for example, that `$env:` lasts for the window only and a `.env` file keeps it).
+
+**Pattern 2 — a Windows disclosure.** Inside the `::: fork`, three sections with these exact labels: `### macOS app`, `### macOS / Linux`, `### Windows PowerShell`. A Windows browser opens only the Windows section; a Mac opens the app; Linux opens macOS / Linux. Use it only where the difference is big enough to warrant a section.
+
+**The tests, in order, applied while authoring.** Stop at the first that fires.
+
+1. **Is the command the same in every shell?** (`bristlenose run interviews`, `ollama pull x`, `bristlenose doctor`.) One plain fence, no tabs. Most commands are this.
+2. **Does it differ only in syntax?** (setting an environment variable, a path separator, quoting, line continuation.) Pattern 1, with at most one short Windows paragraph.
+3. **Does Windows need more than one short paragraph?** Different installer or prerequisite, a restart, extra steps, a different outcome, or a persistence step that is itself several lines. Pattern 2. If you are writing a second Windows paragraph, you are here.
+4. **Do macOS and Linux differ from each other?** Then "macOS / Linux" is a false claim. Split them, or put the install on the install page, which already has an OS section for each.
+5. **Is the step app-only, or a report feature identical in the browser?** Neither pattern applies; B6 postures stand.
+
+Rules that hold in both patterns:
+
+- **Windows means PowerShell.** `cmd.exe` is not covered; say so once on the install page, not on every page.
+- **A tab is a shell, not an OS.** The label "macOS / Linux" asserts the two are identical (test 4); do not use it for a command that only works on one.
+- **Never leave a bare `export NAME=` line.** The generator fails the build on one (`lint_shells` in `build.py`): an `export` block must be tagged `bash` and followed by its `powershell` twin; a `powershell` fence must follow a `bash` fence; a fork with a Windows section must carry exactly the three labels above. The lint checks structure and labels. Tests 3 and 4 are judgement and stay the author's job; a reviewer checks them.
+- **Lone `bash` fences are fine** for Unix-only install steps (`sudo dnf`, `brew`, `snap`), which sit under their own OS heading on the install page.
+
+Channel mechanics (`assets/site.js`): `app`, `cli` (a fork with no Windows section), `unix` (*macOS / Linux*) and `win` (*Windows PowerShell*) are four independent remembered toggles; defaults per OS as above. The shell tabs use their own remembered choice (`bn-docs-shell`).
 
 ## Part C — Doc surfaces & the sync map
 

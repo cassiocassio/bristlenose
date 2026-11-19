@@ -1,0 +1,350 @@
+{
+ "label": "final",
+ "sha": "2fc7dded7",
+ "cli": [
+  {
+   "id": "doctor-ok",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Azure answers the check with 200",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m9ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\n\u001b[2;32mAll clear.\u001b[0m\n\n",
+   "exit": 0,
+   "fake_hits": 2
+  },
+  {
+   "id": "doctor-bad-key",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Azure answers 401 (key wrong, or wrong regional endpoint)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mAzure OpenAI rejected \u001b[0m\u001b[1;2m(\u001b[0m\u001b[1;2;36m401\u001b[0m\u001b[2m Unauthorized\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m9ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nYour Azure OpenAI credentials were rejected. Check:\n\n  \u001b[1;36m1\u001b[0m. API key is correct \u001b[1m(\u001b[0mAzure portal > your OpenAI resource > Keys\u001b[1m)\u001b[0m\n  \u001b[1;36m2\u001b[0m. Endpoint URL matches your resource \u001b[1m(\u001b[0m\u001b[4;94mhttps://NAME.openai.azure.com/\u001b[0m\u001b[4;94m)\u001b[0m\n  \u001b[1;36m3\u001b[0m. Deployment name exists in your resource\n\nThen re-run: bristlenose configure azure\n\n\n",
+   "exit": 1,
+   "fake_hits": 2
+  },
+  {
+   "id": "doctor-deployment-not-found",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Azure answers 404 DeploymentNotFound (deployment name wrong)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mAzure OpenAI rejected \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mDeployment \u001b[0m\u001b[2;32m'research-gpt41mini'\u001b[0m\u001b[2m not \u001b[0m\n\u001b[2mfound\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m9ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nYour Azure OpenAI credentials were rejected. Check:\n\n  \u001b[1;36m1\u001b[0m. API key is correct \u001b[1m(\u001b[0mAzure portal > your OpenAI resource > Keys\u001b[1m)\u001b[0m\n  \u001b[1;36m2\u001b[0m. Endpoint URL matches your resource \u001b[1m(\u001b[0m\u001b[4;94mhttps://NAME.openai.azure.com/\u001b[0m\u001b[4;94m)\u001b[0m\n  \u001b[1;36m3\u001b[0m. Deployment name exists in your resource\n\nThen re-run: bristlenose configure azure\n\n\n",
+   "exit": 1,
+   "fake_hits": 2
+  },
+  {
+   "id": "doctor-other-404",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Azure answers a generic 404 (wrong path: a portal or classic URL pasted as the endpoint)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mAzure OpenAI rejected \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mHTTP \u001b[0m\u001b[1;2;36m404\u001b[0m\u001b[2m: Resource not found\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\n\n",
+   "exit": 1,
+   "fake_hits": 2
+  },
+  {
+   "id": "doctor-cap",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Deployment's output limit is lower than 64000: 400, then 200 at the named limit",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\n\u001b[2;32mAll clear.\u001b[0m\n\n",
+   "exit": 0,
+   "fake_hits": 3
+  },
+  {
+   "id": "doctor-429",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Azure is throttling (429)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mcould not validate: HTTP \u001b[0m\u001b[1;2;36m429\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\n\u001b[2;32mAll clear.\u001b[0m\n\n",
+   "exit": 0,
+   "fake_hits": 2
+  },
+  {
+   "id": "doctor-5xx",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Azure has an outage (503)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mcould not validate: HTTP \u001b[0m\u001b[1;2;36m503\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\n\u001b[2;32mAll clear.\u001b[0m\n\n",
+   "exit": 0,
+   "fake_hits": 2
+  },
+  {
+   "id": "doctor-redirect",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "The endpoint redirects (302)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mcould not validate: HTTP \u001b[0m\u001b[1;2;36m302\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m Network         \u001b[2mCan't reach \u001b[0m\u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nCheck your internet connection. If you're behind a proxy:\n  export \u001b[33mHTTPS_PROXY\u001b[0m=\u001b[4;94mhttp\u001b[0m\u001b[4;94m://proxy:port\u001b[0m\n\n\n",
+   "exit": 1,
+   "fake_hits": 3
+  },
+  {
+   "id": "doctor-network",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Nothing answers at the endpoint (offline, or a mistyped resource name)",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mcould not validate: \u001b[0m\u001b[1;2m[\u001b[0m\u001b[2mErrno \u001b[0m\u001b[1;2;36m61\u001b[0m\u001b[1;2m]\u001b[0m\u001b[2m \u001b[0m\n\u001b[2mConnection refused\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m Network         \u001b[2mCan't reach \u001b[0m\u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m9\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nCheck your internet connection. If you're behind a proxy:\n  export \u001b[33mHTTPS_PROXY\u001b[0m=\u001b[4;94mhttp\u001b[0m\u001b[4;94m://proxy:port\u001b[0m\n\n\n",
+   "exit": 1
+  },
+  {
+   "id": "doctor-no-endpoint",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Key saved, endpoint not set",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mNo Azure OpenAI endpoint\u001b[0m\n \u001b[2m—\u001b[0m Network         \u001b[2mazure endpoint not configured\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nbristlenose needs Azure OpenAI credentials to analyse transcripts.\nFrom your Azure portal, set these environment variables:\n\n  export \u001b[33mBRISTLENOSE_AZURE_ENDPOINT\u001b[0m=\u001b[4;94mhttps\u001b[0m\u001b[4;94m://your-resource.openai.azure.com/\u001b[0m\n  export \u001b[33mBRISTLENOSE_AZURE_API_KEY\u001b[0m=\u001b[35myour\u001b[0m-key-here\n  export \u001b[33mBRISTLENOSE_AZURE_DEPLOYMENT\u001b[0m=\u001b[35myour\u001b[0m-deployment-name\n\nOr add them to a .env file. To store the key in your Keychain:\n\n  bristlenose configure azure\n\nTo use Claude instead:  bristlenose run \u001b[1m<\u001b[0m\u001b[1;95minput\u001b[0m\u001b[39m> --llm claude\u001b[0m\n\u001b[39mTo only transcribe:     bristlenose transcribe <input\u001b[0m\u001b[1m>\u001b[0m\n\n\n",
+   "exit": 1
+  },
+  {
+   "id": "doctor-no-deployment",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Key and endpoint saved, deployment not set",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mNo Azure OpenAI deployment name\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nbristlenose needs Azure OpenAI credentials to analyse transcripts.\nFrom your Azure portal, set these environment variables:\n\n  export \u001b[33mBRISTLENOSE_AZURE_ENDPOINT\u001b[0m=\u001b[4;94mhttps\u001b[0m\u001b[4;94m://your-resource.openai.azure.com/\u001b[0m\n  export \u001b[33mBRISTLENOSE_AZURE_API_KEY\u001b[0m=\u001b[35myour\u001b[0m-key-here\n  export \u001b[33mBRISTLENOSE_AZURE_DEPLOYMENT\u001b[0m=\u001b[35myour\u001b[0m-deployment-name\n\nOr add them to a .env file. To store the key in your Keychain:\n\n  bristlenose configure azure\n\nTo use Claude instead:  bristlenose run \u001b[1m<\u001b[0m\u001b[1;95minput\u001b[0m\u001b[39m> --llm claude\u001b[0m\n\u001b[39mTo only transcribe:     bristlenose transcribe <input\u001b[0m\u001b[1m>\u001b[0m\n\n\n",
+   "exit": 1
+  },
+  {
+   "id": "doctor-no-key",
+   "surface": "cli",
+   "command": "bristlenose doctor",
+   "trigger": "Endpoint and deployment set, no key",
+   "text": "\nbristlenose \u001b[1;36m0.46\u001b[0m.\u001b[1;36m0\u001b[0m\n\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mNo Azure OpenAI API key\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Voice pass      \u001b[2mswitched off \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mBRISTLENOSE_VOICE_PASS\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m any-llm         \u001b[1;2;36m1.44\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m0\u001b[0m\u001b[2m · Mistral, OpenRouter, DeepSeek\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n \u001b[32m✓\u001b[0m Auth token      \u001b[2mrandom \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mgenerated at serve startup\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Homebrew        \u001b[2mnot a Homebrew formula install\u001b[0m\n\nbristlenose needs Azure OpenAI credentials to analyse transcripts.\nFrom your Azure portal, set these environment variables:\n\n  export \u001b[33mBRISTLENOSE_AZURE_ENDPOINT\u001b[0m=\u001b[4;94mhttps\u001b[0m\u001b[4;94m://your-resource.openai.azure.com/\u001b[0m\n  export \u001b[33mBRISTLENOSE_AZURE_API_KEY\u001b[0m=\u001b[35myour\u001b[0m-key-here\n  export \u001b[33mBRISTLENOSE_AZURE_DEPLOYMENT\u001b[0m=\u001b[35myour\u001b[0m-deployment-name\n\nOr add them to a .env file. To store the key in your Keychain:\n\n  bristlenose configure azure\n\nTo use Claude instead:  bristlenose run \u001b[1m<\u001b[0m\u001b[1;95minput\u001b[0m\u001b[39m> --llm claude\u001b[0m\n\u001b[39mTo only transcribe:     bristlenose transcribe <input\u001b[0m\u001b[1m>\u001b[0m\n\n\n",
+   "exit": 1
+  },
+  {
+   "id": "run-refused-bad-key",
+   "surface": "cli",
+   "command": "bristlenose run <project>/input",
+   "trigger": "Run started with a rejected key: the setup check stops it before any work",
+   "text": "\nBristlenose \u001b[2mv0.\u001b[0m\u001b[1;2;36m46.0\u001b[0m\u001b[2m · 2fc7dded7-dirty · Azure OpenAI · Apple M2 Max · MLX\u001b[0m\n\n\u001b[2mChecking your setup\u001b[0m\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mAzure OpenAI rejected \u001b[0m\u001b[1;2m(\u001b[0m\u001b[1;2;36m401\u001b[0m\u001b[2m Unauthorized\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m10ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n\nYour Azure OpenAI credentials were rejected. Check:\n\n  \u001b[1;36m1\u001b[0m. API key is correct \u001b[1m(\u001b[0mAzure portal > your OpenAI resource > Keys\u001b[1m)\u001b[0m\n  \u001b[1;36m2\u001b[0m. Endpoint URL matches your resource \u001b[1m(\u001b[0m\u001b[4;94mhttps://NAME.openai.azure.com/\u001b[0m\u001b[4;94m)\u001b[0m\n  \u001b[1;36m3\u001b[0m. Deployment name exists in your resource\n\nThen re-run: bristlenose configure azure\n\n\n",
+   "exit": 1
+  },
+  {
+   "id": "run-refused-deployment",
+   "surface": "cli",
+   "command": "bristlenose run <project>/input",
+   "trigger": "Run started with a deployment name that doesn't exist",
+   "text": "\nBristlenose \u001b[2mv0.\u001b[0m\u001b[1;2;36m46.0\u001b[0m\u001b[2m · 2fc7dded7-dirty · Azure OpenAI · Apple M2 Max · MLX\u001b[0m\n\n\u001b[2mChecking your setup\u001b[0m\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[31m✗\u001b[0m API key         \u001b[2mAzure OpenAI rejected \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mDeployment \u001b[0m\u001b[2;32m'research-gpt41mini'\u001b[0m\u001b[2m not \u001b[0m\n\u001b[2mfound\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m9ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n\nYour Azure OpenAI credentials were rejected. Check:\n\n  \u001b[1;36m1\u001b[0m. API key is correct \u001b[1m(\u001b[0mAzure portal > your OpenAI resource > Keys\u001b[1m)\u001b[0m\n  \u001b[1;36m2\u001b[0m. Endpoint URL matches your resource \u001b[1m(\u001b[0m\u001b[4;94mhttps://NAME.openai.azure.com/\u001b[0m\u001b[4;94m)\u001b[0m\n  \u001b[1;36m3\u001b[0m. Deployment name exists in your resource\n\nThen re-run: bristlenose configure azure\n\n\n",
+   "exit": 1
+  },
+  {
+   "id": "run-key-revoked-mid-run",
+   "surface": "cli",
+   "command": "bristlenose run <project>/input",
+   "trigger": "Setup check passes, then every analysis call is refused 401 (key revoked mid-run)",
+   "text": "\nBristlenose \u001b[2mv0.\u001b[0m\u001b[1;2;36m46.0\u001b[0m\u001b[2m · 2fc7dded7-dirty · Azure OpenAI · Apple M2 Max · MLX\u001b[0m\n\n\u001b[2mChecking your setup\u001b[0m\n \u001b[32m✓\u001b[0m FFmpeg          \u001b[1;2;36m8.1\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m1\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffmpeg\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m FFprobe         \u001b[2;35m/opt/homebrew/bin/\u001b[0m\u001b[2;95mffprobe\u001b[0m\n \u001b[32m✓\u001b[0m Transcription   \u001b[2mmlx-whisper \u001b[0m\u001b[1;2;36m0.4\u001b[0m\u001b[2m.\u001b[0m\u001b[1;2;36m3\u001b[0m\u001b[2m \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2mMLX\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m Whisper model   \u001b[2mlarge-v3-turbo not cached \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m~\u001b[0m\u001b[1;2;36m1.6\u001b[0m\u001b[2m GB download on first run\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m API key         \u001b[2mAzure OpenAI \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2;33m...\u001b[0m\u001b[1;2;36m000\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Network         \u001b[1;2;92m127.0.0.1\u001b[0m\u001b[2m:\u001b[0m\u001b[1;2;36m51924\u001b[0m\u001b[2m reachable \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2m9ms\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[2m—\u001b[0m PII redaction   \u001b[2moff \u001b[0m\u001b[1;2m(\u001b[0m\u001b[2muse --redact-pii to enable\u001b[0m\u001b[1;2m)\u001b[0m\n \u001b[32m✓\u001b[0m Disk space      \u001b[1;2;36m48\u001b[0m\u001b[2m GB free\u001b[0m\n \u001b[32m✓\u001b[0m Serve mode      \u001b[1;2;36m6\u001b[0m\u001b[2m deps installed\u001b[0m\n  \u001b[1;2;36m1\u001b[0m\u001b[2m session in input/\u001b[0m\n\n \u001b[32m✓\u001b[0m Ingested \u001b[1;36m1\u001b[0m session \u001b[1m(\u001b[0m\u001b[1;36m1\u001b[0m subtitle_vtt\u001b[1m)\u001b[0m                       \u001b[1;2;36m0.\u001b[0m\u001b[2m0s\u001b[0m\n\u001b[?25l\n\u001b[32m ⠋\u001b[0m\r\u001b[2K  No more questions. Ctrl+C anytime.\n\u001b[32m ⠋\u001b[0m\r\u001b[2K\n\u001b[32m ⠋\u001b[0mWARNING | bristlenose.llm.client | llm_call_failed | provider=azure | request_model=research-gpt41mini | schema=SpeakerRoleAssignment | error_type=AuthenticationError | error=status=401 | message=Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.\n\r\u001b[2K\u001b[32m ⠙\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠹\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠸\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠼\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠴\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠦\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠧\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠇\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K\u001b[32m ⠋\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K \u001b[32m✓\u001b[0m Read \u001b[1;36m1\u001b[0m session \u001b[1m(\u001b[0m\u001b[1;36m8\u001b[0m segments\u001b[1m)\u001b[0m                               \u001b[1;2;36m0.\u001b[0m\u001b[2m8s\u001b[0m\n\u001b[32m ⠋\u001b[0m \u001b[2mTranscribing...\u001b[0m\r\u001b[2K \u001b[32m✓\u001b[0m Identified speakers                                       \u001b[1;2;36m0.\u001b[0m\u001b[2m1s\u001b[0m\n\u001b[32m ⠋\u001b[0m \u001b[2mIdentifying speakers... (1/1 session)\u001b[0m\r\u001b[2K   \u001b[33m⚠\u001b[0m \u001b[2;33mAccess denied due to invalid subscription key or wrong API endpoint. Make…\u001b[0m\n\u001b[32m ⠋\u001b[0m \u001b[2mIdentifying speakers... (1/1 session)\u001b[0m\r\u001b[2K \u001b[32m✓\u001b[0m Merged transcripts                                        \u001b[1;2;36m0.\u001b[0m\u001b[2m0s\u001b[0m\n\u001b[32m ⠋\u001b[0m \u001b[2mMerging transcripts...\u001b[0mWARNING | bristlenose.llm.client | llm_call_failed | provider=azure | request_model=research-gpt41mini | schema=TopicSegmentationResult | error_type=AuthenticationError | error=status=401 | message=Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.\nWARNING | bristlenose.llm.client | llm_call_failed | provider=azure | request_model=research-gpt41mini | schema=TopicSegmentationResult | error_type=AuthenticationError | error=status=401 | message=Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.\n\r\u001b[2K \u001b[31m✗\u001b[0m Segmented \u001b[1;36m0\u001b[0m topic boundaries                              \u001b[1;2;36m0.\u001b[0m\u001b[2m8s\u001b[0m\n\u001b[32m ⠙\u001b[0m \u001b[2mSegmenting topics... (1/1 session)\u001b[0m\r\u001b[2K\u001b[32m ⠙\u001b[0m \u001b[2mSegmenting topics... (1/1 session)\u001b[0m\n\u001b[?25h\r\u001b[1A\u001b[2K\n\u001b[31m✗\u001b[0m Azure OpenAI rejected your API key \u001b[1m(\u001b[0m…\u001b[1;36m000\u001b[0m\u001b[1m)\u001b[0m.\n  Run  \u001b[1mbristlenose configure\u001b[0m  to set a new key.\n",
+   "exit": 1
+  },
+  {
+   "id": "configure-azure",
+   "surface": "cli",
+   "command": "bristlenose configure azure",
+   "trigger": "Researcher stores an Azure key (typed at the prompt)",
+   "text": "\nEnter your Azure OpenAI API key: \nValidating\u001b[33m...\u001b[0m \u001b[33m⚠\u001b[0m Could not validate: needs endpoint and deployment to validate\nStoring anyway\u001b[33m...\u001b[0m\n\u001b[32m✓\u001b[0m Stored in Keychain as \u001b[32m\"Bristlenose Azure API Key\"\u001b[0m\n\n\u001b[2mAzure OpenAI also needs endpoint and deployment name.\u001b[0m\n\u001b[2mAdd to .env or environment:\u001b[0m\n\n  \u001b[33mBRISTLENOSE_AZURE_ENDPOINT\u001b[0m=\u001b[4;94mhttps\u001b[0m\u001b[4;94m://your-resource.openai.azure.com/\u001b[0m\n  \u001b[33mBRISTLENOSE_AZURE_DEPLOYMENT\u001b[0m=\u001b[35myour\u001b[0m-deployment-name\n\nAzure OpenAI is now your provider for analysis.\nYou can now run: \u001b[1mbristlenose run interviews\u001b[0m\n",
+   "exit": 0
+  },
+  {
+   "id": "help-run",
+   "surface": "cli",
+   "command": "bristlenose run --help",
+   "trigger": "Help text",
+   "text": "\u001b[1m                                                                                \u001b[0m\n\u001b[1m \u001b[0m\u001b[1;33mUsage: \u001b[0m\u001b[1mbristlenose run [OPTIONS] {input_dir}\u001b[0m\u001b[1m                                  \u001b[0m\u001b[1m \u001b[0m\n\u001b[1m                                                                                \u001b[0m\n Analyse a folder of interviews and open the report in your browser.            \n                                                                                \n\u001b[2m╭─\u001b[0m\u001b[2m Arguments \u001b[0m\u001b[2m─────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[31m*\u001b[0m    input_dir      \u001b[1;2;33m<\u001b[0m\u001b[1;33mdirectory\u001b[0m\u001b[1;2;33m>\u001b[0m  Directory containing audio, video,          \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                  subtitle, or docx files.                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                  \u001b[2;31m[required]                                 \u001b[0m \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\u001b[2m╭─\u001b[0m\u001b[2m Options \u001b[0m\u001b[2m───────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-output\u001b[0m              \u001b[1;32m-o\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mpath\u001b[0m\u001b[1;2;33m>\u001b[0m  Output directory (default:             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       bristlenose-output/ inside input       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       folder).                               \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-project\u001b[0m             \u001b[1;32m-p\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Name of the research project (defaults \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       to input folder name).                 \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-whisper\u001b[0m\u001b[1;36m-backend\u001b[0m     \u001b[1;32m-b\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Transcription backend: auto (detect    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       hardware), mlx (Apple Silicon GPU),    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       faster-whisper (CUDA/CPU).             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-whisper\u001b[0m\u001b[1;36m-model\u001b[0m       \u001b[1;32m-w\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Whisper model size: tiny, base, small, \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       medium, large-v3, large-v3-turbo.      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-whisper\u001b[0m\u001b[1;36m-language\u001b[0m            \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Spoken language of the recordings as a \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       Whisper code (es, ne, yue…), or auto   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       to detect per file.                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-llm\u001b[0m                 \u001b[1;32m-l\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  LLM provider: claude, chatgpt, azure,  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       gemini, local, any-llm.                \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-codebook\u001b[0m                    \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Codebook framework for AutoCode (run   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       `bristlenose codebooks` to list).      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-skip\u001b[0m\u001b[1;36m-transcription\u001b[0m          \u001b[1;33m      \u001b[0m  Skip audio transcription.              \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-redact\u001b[0m\u001b[1;36m-pii\u001b[0m                  \u001b[1;33m      \u001b[0m  Redact personally identifying          \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       information from transcripts.          \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-retain\u001b[0m\u001b[1;36m-pii\u001b[0m                  \u001b[1;33m      \u001b[0m  Retain PII in transcripts (default     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       behaviour).                            \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-no\u001b[0m\u001b[1;36m-serve\u001b[0m                    \u001b[1;33m      \u001b[0m  Don't start the local report server    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       when the pipeline finishes: print the  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       summary and exit. Runs without a       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       terminal (cron, pipes, CI) never start \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       it.                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-clean\u001b[0m                       \u001b[1;33m      \u001b[0m  Start afresh. The previous report is   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       replaced once the fresh analysis has   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       produced a session.                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-yes\u001b[0m                 \u001b[1;32m-y\u001b[0m      \u001b[1;33m      \u001b[0m  With \u001b[1;36m-\u001b[0m\u001b[1;36m-clean\u001b[0m, don't ask before         \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       discarding the previous report's       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       stars, tags and edits.                 \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-dev\u001b[0m                         \u001b[1;33m      \u001b[0m  Development mode: enable responsive    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       playground in served report.           \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-verbose\u001b[0m             \u001b[1;32m-v\u001b[0m      \u001b[1;33m      \u001b[0m  Enable verbose logging.                \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-no\u001b[0m\u001b[1;36m-fetch\u001b[0m                    \u001b[1;33m      \u001b[0m  Abort instead of downloading missing   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       models (Whisper, spaCy). Run           \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       `bristlenose doctor \u001b[1;36m-\u001b[0m\u001b[1;36m-fetch\u001b[0m` first to  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                       pre-warm the cache.                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-help\u001b[0m                        \u001b[1;33m      \u001b[0m  Show this message and exit.            \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n",
+   "exit": 0
+  },
+  {
+   "id": "help-analyze",
+   "surface": "cli",
+   "command": "bristlenose analyze --help",
+   "trigger": "Help text",
+   "text": "\u001b[1m                                                                                \u001b[0m\n\u001b[1m \u001b[0m\u001b[1;33mUsage: \u001b[0m\u001b[1mbristlenose analyze [OPTIONS] {transcripts_dir}\u001b[0m\u001b[1m                        \u001b[0m\u001b[1m \u001b[0m\n\u001b[1m                                                                                \u001b[0m\n Run LLM analysis on existing transcripts (skip ingestion and transcription).   \n                                                                                \n\u001b[2m╭─\u001b[0m\u001b[2m Arguments \u001b[0m\u001b[2m─────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[31m*\u001b[0m    transcripts_dir      \u001b[1;2;33m<\u001b[0m\u001b[1;33mdirectory\u001b[0m\u001b[1;2;33m>\u001b[0m  Directory of existing transcript .txt \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                        files to analyze.                     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                                        \u001b[2;31m[required]                           \u001b[0m \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\u001b[2m╭─\u001b[0m\u001b[2m Options \u001b[0m\u001b[2m───────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-output\u001b[0m    \u001b[1;32m-o\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mpath\u001b[0m\u001b[1;2;33m>\u001b[0m  Output directory (default: parent of             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             transcripts_dir, or bristlenose-output/ if       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             transcripts_dir is named transcripts-raw).       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-project\u001b[0m   \u001b[1;32m-p\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Name of the research project (defaults to input  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             folder name).                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-llm\u001b[0m       \u001b[1;32m-l\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  LLM provider: claude, chatgpt, azure, gemini,    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             local, any-llm.                                  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-codebook\u001b[0m          \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m\u001b[1;33m \u001b[0m  Codebook framework for AutoCode (run             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             `bristlenose codebooks` to list).                \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-verbose\u001b[0m   \u001b[1;32m-v\u001b[0m      \u001b[1;33m      \u001b[0m  Enable verbose logging.                          \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-no\u001b[0m\u001b[1;36m-fetch\u001b[0m          \u001b[1;33m      \u001b[0m  Abort instead of downloading missing models. Run \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             `bristlenose doctor \u001b[1;36m-\u001b[0m\u001b[1;36m-fetch\u001b[0m` first to pre-warm   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                             the cache.                                       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-help\u001b[0m              \u001b[1;33m      \u001b[0m  Show this message and exit.                      \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n",
+   "exit": 0
+  },
+  {
+   "id": "help-doctor",
+   "surface": "cli",
+   "command": "bristlenose doctor --help",
+   "trigger": "Help text",
+   "text": "\u001b[1m                                                                                \u001b[0m\n\u001b[1m \u001b[0m\u001b[1;33mUsage: \u001b[0m\u001b[1mbristlenose doctor [OPTIONS]\u001b[0m\u001b[1m                                           \u001b[0m\u001b[1m \u001b[0m\n\u001b[1m                                                                                \u001b[0m\n Check dependencies, API keys, and system configuration.                        \n                                                                                \n \u001b[2mWith \u001b[0m\u001b[1;2;36m-\u001b[0m\u001b[1;2;36m-self\u001b[0m\u001b[1;2;36m-test\u001b[0m\u001b[2m, runs only the bundle-integrity checks — asserts every\u001b[0m        \n \u001b[2mruntime-data file the code will look for (React SPA, codebook YAMLs,\u001b[0m           \n \u001b[2mLLM prompts, locales, theme, Alembic) is present and non-trivial.\u001b[0m              \n \u001b[2mExits 1 when any check fails (warnings and notes exit 0). \u001b[0m\u001b[1;2;36m-\u001b[0m\u001b[1;2;36m-self\u001b[0m\u001b[1;2;36m-test\u001b[0m          \n \u001b[2mexits non-zero on any failure too, and is used by desktop/scripts/build-all.sh\u001b[0m \n \u001b[2mstep 7a to catch BUG-3/4/5-class packaging bugs at build time.\u001b[0m                 \n                                                                                \n\u001b[2m╭─\u001b[0m\u001b[2m Options \u001b[0m\u001b[2m───────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-self\u001b[0m\u001b[1;36m-test\u001b[0m          Run bundle-integrity checks only (for build-all.sh      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                      pre-archive).                                           \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-fetch\u001b[0m              Pre-download the Whisper transcription model (~1.6 GB), \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                      and the voice model (40 MB) when the voice extra is     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                      installed, so a run works offline or with \u001b[1;36m-\u001b[0m\u001b[1;36m-no\u001b[0m\u001b[1;36m-fetch\u001b[0m.   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-help\u001b[0m               Show this message and exit.                             \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n",
+   "exit": 0
+  },
+  {
+   "id": "help-configure",
+   "surface": "cli",
+   "command": "bristlenose configure --help",
+   "trigger": "Help text",
+   "text": "\u001b[1m                                                                                \u001b[0m\n\u001b[1m \u001b[0m\u001b[1;33mUsage: \u001b[0m\u001b[1mbristlenose configure [OPTIONS] {provider}\u001b[0m\u001b[1m                             \u001b[0m\u001b[1m \u001b[0m\n\u001b[1m                                                                                \u001b[0m\n Set up API credentials for an LLM provider.                                    \n                                                                                \n \u001b[2mValidates the key with a test API call, then stores it securely in your\u001b[0m        \n \u001b[2msystem credential store (macOS Keychain or Linux Secret Service). When no\u001b[0m      \n \u001b[2mkeyring is available (e.g. a headless server), it persists the key to a\u001b[0m        \n \u001b[2mprotected config file instead — so the command always leaves you configured.\u001b[0m   \n                                                                                \n\u001b[2m╭─\u001b[0m\u001b[2m Arguments \u001b[0m\u001b[2m─────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[31m*\u001b[0m    provider      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m  Provider to configure: claude, chatgpt, gemini,    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                           azure, local, any-llm, or miro.                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                           \u001b[2;31m[required]                                        \u001b[0m \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\u001b[2m╭─\u001b[0m\u001b[2m Options \u001b[0m\u001b[2m───────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-key\u001b[0m   \u001b[1;32m-k\u001b[0m      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m  API key (if not provided, prompts interactively).     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-help\u001b[0m          \u001b[1;33m     \u001b[0m  Show this message and exit.                           \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n",
+   "exit": 0
+  },
+  {
+   "id": "help-use",
+   "surface": "cli",
+   "command": "bristlenose use --help",
+   "trigger": "Help text",
+   "text": "\u001b[1m                                                                                \u001b[0m\n\u001b[1m \u001b[0m\u001b[1;33mUsage: \u001b[0m\u001b[1mbristlenose use [OPTIONS] {provider}\u001b[0m\u001b[1m                                   \u001b[0m\u001b[1m \u001b[0m\n\u001b[1m                                                                                \u001b[0m\n Choose which AI provider runs the analysis.                                    \n                                                                                \n \u001b[2mPersists the choice in your user-level config — the CLI equivalent of the\u001b[0m      \n \u001b[2mmacOS app keeping the provider you last set. Keys stay stored; switch any\u001b[0m      \n \u001b[2mtime. \u001b[0m\u001b[1;2;36m-\u001b[0m\u001b[1;2;36m-llm\u001b[0m\u001b[2m and BRISTLENOSE_LLM_PROVIDER still override per run.\u001b[0m               \n                                                                                \n\u001b[2m╭─\u001b[0m\u001b[2m Arguments \u001b[0m\u001b[2m─────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[31m*\u001b[0m    provider      \u001b[1;2;33m<\u001b[0m\u001b[1;33mstr\u001b[0m\u001b[1;2;33m>\u001b[0m  Provider to use for analysis: claude, chatgpt,     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                           gemini, azure, local, any-llm, or an any-llm model \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                           as provider:model.                                 \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m                           \u001b[2;31m[required]                                        \u001b[0m \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\u001b[2m╭─\u001b[0m\u001b[2m Options \u001b[0m\u001b[2m───────────────────────────────────────────────────────────────────\u001b[0m\u001b[2m─╮\u001b[0m\n\u001b[2m│\u001b[0m \u001b[1;36m-\u001b[0m\u001b[1;36m-help\u001b[0m          Show this message and exit.                                  \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n",
+   "exit": 0
+  }
+ ],
+ "server": [
+  {
+   "id": "server-no-key",
+   "surface": "server",
+   "trigger": "Azure configured: no key",
+   "autocode": {
+    "status": 503,
+    "reason": "no_api_key",
+    "detail": "No API key configured for the current LLM provider (azure). Set the appropriate key in your .env file.",
+    "spa_key": "codebook.autocodeRefusal.noApiKey",
+    "spa_text": "Add an API key in Settings first."
+   },
+   "chat_lens": {
+    "detail": "No API key configured for provider 'azure'"
+   }
+  },
+  {
+   "id": "server-key-no-endpoint",
+   "surface": "server",
+   "trigger": "Azure configured: key, no endpoint",
+   "autocode": {
+    "status": 503,
+    "reason": "provider_ambiguous",
+    "detail": "No Azure OpenAI endpoint configured",
+    "spa_key": "codebook.autocodeRefusal.providerAmbiguous",
+    "spa_text": "Choose an AI provider in Settings."
+   },
+   "chat_lens": {
+    "detail": "No Azure OpenAI endpoint configured"
+   }
+  },
+  {
+   "id": "server-key-and-endpoint-no-deployment",
+   "surface": "server",
+   "trigger": "Azure configured: key and endpoint, no deployment",
+   "autocode": {
+    "status": 503,
+    "reason": "provider_ambiguous",
+    "detail": "No Azure OpenAI deployment configured",
+    "spa_key": "codebook.autocodeRefusal.providerAmbiguous",
+    "spa_text": "Choose an AI provider in Settings."
+   },
+   "chat_lens": {
+    "detail": "No Azure OpenAI deployment configured"
+   }
+  },
+  {
+   "id": "server-complete",
+   "surface": "server",
+   "trigger": "Azure configured: complete",
+   "autocode": {
+    "status": "starts"
+   },
+   "chat_lens": {
+    "detail": "(ready)"
+   }
+  }
+ ],
+ "mac": [
+  {
+   "key": "desktop.llmSettings.azureSection",
+   "value": "Azure Settings"
+  },
+  {
+   "key": "desktop.llmSettings.azureEndpoint",
+   "value": "Endpoint URL"
+  },
+  {
+   "key": "desktop.llmSettings.azureDeployment",
+   "value": "Deployment name"
+  },
+  {
+   "key": "desktop.llmSettings.azureAPIVersion",
+   "value": "API version"
+  },
+  {
+   "key": "desktop.llmSettings.lastVerified",
+   "value": "Last verified %@"
+  },
+  {
+   "key": "desktop.llmSettings.revalidating",
+   "value": "Last validation was rejected — re-checking…"
+  },
+  {
+   "key": "desktop.llmSettings.status.online",
+   "value": "Online"
+  },
+  {
+   "key": "desktop.llmSettings.status.notSetUp",
+   "value": "Not set up"
+  },
+  {
+   "key": "desktop.llmSettings.status.invalid",
+   "value": "Invalid key"
+  },
+  {
+   "key": "desktop.llmSettings.status.unavailable",
+   "value": "Unavailable"
+  },
+  {
+   "key": "desktop.llmSettings.status.checking",
+   "value": "Checking…"
+  },
+  {
+   "key": "desktop.llmSettings.validation.azureEndpointMissing",
+   "value": "Add the Azure endpoint URL to finish setting this up."
+  },
+  {
+   "key": "desktop.llmSettings.validation.azureEndpointScheme",
+   "value": "The Azure endpoint must start with https:// — got “{{endpoint}}”."
+  },
+  {
+   "key": "desktop.llmSettings.validation.azureNotFound",
+   "value": "Azure endpoint or deployment not found (404). The key is fine — check the endpoint URL and deployment name."
+  },
+  {
+   "key": "desktop.llmSettings.validation.keyRejected",
+   "value": "{{provider}} rejected this key ({{status}}). It may have been deleted, rotated, or never had access — generate a new key in your provider dashboard."
+  },
+  {
+   "key": "desktop.llmSettings.validation.rateLimited",
+   "value": "{{provider}} is rate-limited right now (429). Your key is fine — try again in a minute."
+  },
+  {
+   "key": "desktop.llmSettings.validation.httpStatus",
+   "value": "{{provider}} returned HTTP {{status}}."
+  },
+  {
+   "key": "desktop.llmSettings.validation.timedOut",
+   "value": "Request timed out — {{provider}} didn’t respond in 5s."
+  },
+  {
+   "key": "desktop.llmSettings.validation.offline",
+   "value": "No network connection. Your key was fine — we just can’t check it right now."
+  },
+  {
+   "key": "desktop.llmSettings.validation.unreachable",
+   "value": "Couldn't reach {{provider}}. Check your connection."
+  },
+  {
+   "key": "desktop.llmSettings.validation.networkError",
+   "value": "Network error reaching {{provider}}."
+  },
+  {
+   "key": "desktop.pipeline.failure.auth",
+   "value": "Your {{provider}} key was rejected."
+  },
+  {
+   "key": "desktop.pipeline.failure.apiRequest",
+   "value": "{{provider}} rejected the request."
+  },
+  {
+   "key": "desktop.pipeline.failure.modelUnavailable",
+   "value": "{{provider}} doesn't offer the chosen model. Choose another in Settings ▸ LLM Provider, then analyse again."
+  },
+  {
+   "key": "desktop.pipeline.failure.providerNotSetUp",
+   "value": "{{provider}} isn't set up yet."
+  },
+  {
+   "key": "desktop.providerProblem.keyRejected.pill",
+   "value": "{{provider}} · key rejected"
+  },
+  {
+   "key": "desktop.providerProblem.keyRejected.body",
+   "value": "Add a new key in Settings."
+  }
+ ]
+}

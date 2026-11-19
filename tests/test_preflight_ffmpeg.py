@@ -8,6 +8,7 @@ import pytest
 from rich.console import Console
 
 from bristlenose.preflight.ffmpeg import (
+    FFMPEG_WINGET_CMD,
     FfmpegPreflightAbortedError,
     _detect_distro,
     _install_table,
@@ -63,6 +64,13 @@ class TestDetectDistro:
                 path_cls.return_value = release
                 assert _detect_distro() == "arch"
 
+    def test_windows_is_its_own_answer_not_other(self):
+        # Windows used to fall to "other" via the missing /etc/os-release.
+        with patch("bristlenose.preflight.ffmpeg.sys.platform", "win32"):
+            with patch("bristlenose.preflight.ffmpeg.Path") as path_cls:
+                path_cls.return_value.read_text.side_effect = AssertionError("read os-release")
+                assert _detect_distro() == "windows"
+
     def test_missing_os_release_falls_back_to_other(self):
         with patch("bristlenose.preflight.ffmpeg.sys.platform", "linux"):
             with patch("bristlenose.preflight.ffmpeg.Path") as path_cls:
@@ -80,6 +88,15 @@ class TestInstallTable:
         table = _install_table("fedora")
         lines = [line for line in table.splitlines() if line.strip()]
         assert "Fedora" in lines[0]
+
+    def test_windows_row_is_first_and_carries_the_winget_command(self):
+        table = _install_table("windows")
+        lines = [line for line in table.splitlines() if line.strip()]
+        assert "Windows" in lines[0]
+        assert FFMPEG_WINGET_CMD in lines[0]
+
+    def test_windows_is_listed_for_everyone_else_too(self):
+        assert FFMPEG_WINGET_CMD in _install_table("ubuntu")
 
     def test_other_distros_still_listed(self):
         table = _install_table("ubuntu")
@@ -116,6 +133,29 @@ class TestPreflightFfmpeg:
         out = capsys.readouterr().out
         assert "ffmpeg is required" in out
         assert "apt install ffmpeg" in out
+
+    def test_missing_on_windows_says_to_open_a_new_terminal(self, capsys):
+        # winget changes PATH for new windows only; re-running in this one fails again.
+        console = _silent_console()
+        with patch("bristlenose.preflight.ffmpeg.shutil.which", return_value=None):
+            with patch(
+                "bristlenose.preflight.ffmpeg._detect_distro", return_value="windows"
+            ):
+                with pytest.raises(FfmpegPreflightAbortedError):
+                    preflight_ffmpeg(console=console, status=None, allow_install=True)
+        out = capsys.readouterr().out
+        assert FFMPEG_WINGET_CMD in out
+        assert "new terminal" in out
+
+    def test_missing_elsewhere_does_not_mention_a_new_terminal(self, capsys):
+        console = _silent_console()
+        with patch("bristlenose.preflight.ffmpeg.shutil.which", return_value=None):
+            with patch(
+                "bristlenose.preflight.ffmpeg._detect_distro", return_value="ubuntu"
+            ):
+                with pytest.raises(FfmpegPreflightAbortedError):
+                    preflight_ffmpeg(console=console, status=None, allow_install=True)
+        assert "new terminal" not in capsys.readouterr().out
 
     def test_macos_with_brew_writable_and_yes_runs_brew(self, capsys):
         console = _silent_console()

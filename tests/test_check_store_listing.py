@@ -65,3 +65,11 @@ def test_todo_in_a_field_fails(tmp_path):
 def test_free_space_figure_is_not_a_download_size(tmp_path):
     code, out = run(tmp_path, review_notes="Use the test key. The app downloads a 1.5 GB model.")
     assert code == 0, out
+
+
+def test_miro_allowed_in_captions_but_not_in_subtitle(tmp_path):
+    code, out = run(tmp_path, captions="One\nSend quotes to a Miro board\nThree")
+    assert code == 0, out
+    code, out = run(tmp_path, subtitle="Miro research analysis")
+    assert code == 1
+    assert "third-party names" in out

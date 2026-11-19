@@ -623,6 +623,12 @@ enum LLMValidator {
         return hash([trimmedKey, endpoint, deployment, version].joined(separator: "\u{1F}"))
     }
 
+    /// The saved Azure endpoint, deployment and API version as one opaque value, key
+    /// left out: what a run is started against, compared again when it ends.
+    static func savedAzureIdentity() -> String {
+        identity(.azure, "", nil)
+    }
+
     /// The Azure settings Settings has saved (the same `@AppStorage` keys).
     private static func savedAzureConfig() -> AzureConfig {
         let d = UserDefaults.standard

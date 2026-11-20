@@ -2,6 +2,42 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.47.0** — _20 Nov 2026_
+
+Zoom import is on for everyone, a study now shows what its analysis cost, and a failed run says in the sidebar what went wrong. Agents asking questions of a study get more careful answers, and a headless run no longer starts a server.
+
+**New**
+
+- **Zoom import is on for everyone,** no longer hidden behind Diagnostics.
+- **A study's AI use is counted and priced.** A ledger that outlives runs and re-analyses records tokens, with dated prices and exchange rates, and the Mac shows a run-end usage line. AutoCode re-applies are counted; a failed re-analysis no longer counts twice.
+- **Deleting a sidebar folder can be undone** with Edit ▸ Undo Delete Folder, and no longer asks first.
+- **A study with screens gets the UX codebook applied once,** after its first run, and a first AutoCode apply shows on the project row as "AutoCode · N of M".
+- **Two new palettes, Edo 3 and Edo 4,** and a Palette Lab menu item that opens the colour workbench.
+- **The Mac app can check bristlenose.app for news** and asks once whether to send anonymous daily counts; nothing is counted without a yes. Both are switches in Settings, and the counts switch dims while news is off.
+- **The Mac store build can fetch the Whisper model in the background through Apple,** with the size said and a question asked before the first download starts on its own. A low-disk or certificate failure gets its own title and the right button.
+
+**Improved**
+
+- **A failed run says why in the sidebar,** for example "Gemini key rejected" or "out of credit", and the failed run's pane names the provider and keeps it after a relaunch. A run that finished but is missing something says so, and why.
+- **Agents answer more carefully.** MCP search can be asked by codebook group, says what "best" means, reports where a quote ends and how many quotes a recode set aside, and warns when a quote's speaker is not in its session. An unknown participant code is an error, not an empty result.
+- **Azure is checked properly.** A bad endpoint, a redirect, or a silent 429 or 5xx is no longer passed off as a good key, and a refused output cap is retried once at the ceiling Azure names. Provider keys are masked in anything that leaves Python.
+- **Re-analyse counts only names a researcher confirmed,** and asks even when nothing is counted. A Re-analyse that already holds a session resumes as a plain Analyse after a quit or crash.
+- **A cached Discussion lens with no clear moderator warns on every run,** and a lens the model could not read any session for ends "Done with warnings".
+- **The Codebook opens on what auto-tagging found** and remembers your pick.
+- **Speaker handling is steadier.** A re-run no longer writes the moderator's name onto the participant after a swap or recode, and a two-person session's picker opens on the other speaker.
+- **CLI messages are honest.** `status` and `serve` refuse a missing folder and say "can't be read" for an unreadable one, an empty subtitle file or undecodable audio is a refusal, and a certificate failure says it is an untrusted certificate (a firewall or a Wi-Fi sign-in page) and what to do.
+- **Plugin wording follows each vendor's own word,** per language, on the Claude and ChatGPT tabs.
+
+**Fixed**
+
+- **A headless `run` no longer starts the report server** and waits forever. `--no-serve` is listed in the help.
+- **A transcript badge changed the whole session.** It now opens on the paragraph.
+- **A session with no transcript, or a failed one, no longer clutters the Sessions sidebar;** a muted row says why.
+- **The report header overflowed a phone,** and long titles were clipped in some languages.
+- **The Windows hints named the wrong things:** ffmpeg now has a winget line, export lines are gone, and the credential store is named correctly.
+- **The Zoom sign-in no longer tells you to copy a link it does not show.**
+- **A Whisper download that stalled while the Mac slept** no longer counts the sleep as silence.
+
 **0.46.0** — _11 Nov 2026_
 
 Reopening the Mac app takes you back to the quote, code row or paragraph you were on, and a Bristlenose board can now be drawn inside Miro with no sign-in. Dark mode is calmer, and speaker identification reads who is hosting the session.

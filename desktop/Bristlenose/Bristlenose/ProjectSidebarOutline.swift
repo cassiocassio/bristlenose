@@ -270,6 +270,40 @@ final class SidebarOutlineView: NSOutlineView {
                 MainActor.assumeIsolated { self?.onLiveResize?(live) }
             })
         }
+        // A divider drag moves this column without a window live resize, so the hold above
+        // never engages and every frame reloaded every row (traced 20 Nov 2026: ~3 s of a
+        // 9 s drag). The split view announces each step; while the left button is down and
+        // the window is not itself live-resizing, hold the same way.
+        liveResizeObservers.append(NotificationCenter.default.addObserver(
+            forName: NSSplitView.willResizeSubviewsNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self, let split = note.object as? NSSplitView,
+                      self.isDescendant(of: split) else { return }
+                self.beginDividerHoldIfDragging()
+            }
+        })
+    }
+
+    /// Whether this view is holding for a divider drag, and the timer that watches for the
+    /// button coming up (the split view posts no "drag ended").
+    private var dividerHoldTimer: Timer?
+
+    private func beginDividerHoldIfDragging() {
+        guard dividerHoldTimer == nil, window?.inLiveResize == false,
+              NSEvent.pressedMouseButtons & 1 != 0 else { return }
+        onLiveResize?(true)
+        dividerHoldTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] t in
+            MainActor.assumeIsolated {
+                guard let self else { t.invalidate(); return }
+                // Released, or the window left (the failsafe: never hold past a gone view).
+                if NSEvent.pressedMouseButtons & 1 == 0 || self.window == nil {
+                    t.invalidate()
+                    self.dividerHoldTimer = nil
+                    self.onLiveResize?(false)
+                }
+            }
+        }
     }
 
     override func keyDown(with event: NSEvent) {

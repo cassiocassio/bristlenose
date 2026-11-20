@@ -395,7 +395,9 @@ status lines and the website's `cli.md` all still owed; the maintainer had to as
 ./scripts/check-release-closeout.sh <X.Y.Z>
 ```
 
-It is read-only and exits 1 until every row is true:
+It is read-only and exits 1 until every row is true. `release.sh verify <X.Y.Z>` runs it
+after the channel table and folds it into its exit code, so a plain `verify` is 0 only
+when the release is complete:
 
 | Row | What closes it |
 |---|---|

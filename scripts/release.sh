@@ -45,6 +45,8 @@
 #                                     version that was never given); a resume
 #                                     needs neither (the run dir remembers)
 #   release.sh verify [<X.Y.Z>] [--abandoned <X.Y.Z>]
+#                                     channel probes, then the close-out rows
+#                                     (check-release-closeout.sh); 0 = complete
 #                                     bare = the tree's version
 #   release.sh status
 #   release.sh board [<X.Y.Z>] [--stop|--restart]
@@ -1060,6 +1062,15 @@ cmd_verify() {
     # nothing else announces.
     [ -n "$_res" ] && print_holds "$_res"
     [ -n "$_res" ] && rm -f "$_res"
+    # "Published" is not "done" (0.47.0 was tagged with the release log, the
+    # CLAUDE.md status lines and the website's cli.md all still owed). The
+    # close-out rows follow the channel table and are part of the exit code:
+    # verify is 0 only when the release is complete. Skipped without an X.Y.Z
+    # (a bare --abandoned probe has no version to close out).
+    case "$_v" in
+        [0-9]*.[0-9]*.[0-9]*)
+            "$ROOT/scripts/check-release-closeout.sh" "$_v" || { [ "$_rc" -eq 0 ] && _rc=1; } ;;
+    esac
     return "$_rc"
 }
 

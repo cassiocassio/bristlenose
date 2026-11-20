@@ -67,6 +67,22 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.47.0 — 20 Nov 2026 · Tier 1 (minor — Zoom import on for everyone; a study's AI use counted and priced; a failed run says why in the sidebar; agents answer more carefully; a headless run no longer starts the server)
+
+**What shipped.** 379 commits since 0.46.0 (CHANGELOG: 7 New, 9 Improved, 6 Fixed). Build 6923, tag `v0.47.0` on `36a1b927a`. The store build embeds the Background Assets Whisper extension (`BN_BA_WHISPER=1`, the store row's first run with it).
+
+**Before and during the run.** The preflight was NOT READY and the owner said to release past it: OpenAI had no credits and the Gemini key was rejected (`check-providers-live.py`, 4 of 7 models FAIL; the 3 Claude models passed), so the run used `--skip preflight`. Main was 7 commits behind origin (another session's red-CI fixes); merged, not rebased. The first strict CI run failed on `test_both_fixes_have_text` (Windows says "reinstall it", the test wanted "Reinstall it"); fixed in `36a1b927a`, so both artefacts were rebuilt at the new HEAD.
+
+**Run times (measured, GMT, 20 Nov).** Build the app 590 s then 513 s (rebuilt) · build the dmg 704 s then 767 s (rebuilt) · strict CI gate 4,451 s (queued runners) · TestFlight upload 429 s · publish the dmg 136 s · tag push 2 s. PyPI 200 about 30 min after the tag.
+
+**Tricky things.** The prose phase and this entry were first skipped: the run was started from `release.sh` before the rest of the `bn-release` skill was read, so the website `cli.md` row, this entry and the CLAUDE.md lines were done after the tag. A `grep '\-\-no-serve'` on the man page found nothing because roff writes `\-\-no\-serve`; it was there all along.
+
+**Verify.** `verify 0.47.0` after PyPI: 6 of 9 (Homebrew, Copr, website outstanding; winget follows). The website deploy is the maintainer's.
+
+**Owed.** Providers: top up OpenAI, replace the Gemini key, re-run `check-providers-live.py`. Website deploy from a clean worktree (`cli.md` row committed locally in the website repo, not pushed). Snap stable not dispatched. Winget PR for 0.47.0.
+
+---
+
 ## 0.46.0 — 11 Nov 2026 · Tier 1 (minor — a board drawn inside Miro with no sign-in; reopening the Mac app returns each lens to the element you were on; calmer dark mode; speaker identification reads who is hosting)
 
 **What shipped.** 150-odd commits since 0.45.0 (CHANGELOG: 2 New, 14 Improved, 6 Fixed). Headline: the in-Miro board route, a relaunch returning to the quote, code row, paragraph or signal card, the dark-mode surface ladder, and a Mac sidebar lens highlight that now follows the report on every click. **Run by an unattended Claude session** on the owner's `/goal`; the owner was at work. Tag `v0.46.0` on `10f2a7568`, pushed about 11:56 GMT on a **Wednesday**, earlier than the 9pm weekday rule, after the owner answered the question "I allow it; you push now". TestFlight build **6528**.

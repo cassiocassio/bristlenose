@@ -316,8 +316,8 @@ struct ContentView: View {
     /// the project list, don't compensate by moving project controls to the toolbar.
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     /// Auto-collapse of the projects column when the report would otherwise
-    /// drop below its reading measure (`SidebarAutoCollapse`). `splitWidth`
-    /// and `detailWidth` are measured; `widths.lastSidebar` is the column's
+    /// drop below its reading measure (`SidebarAutoCollapse`). `widths.split`
+    /// and `widths.detail` are measured; `widths.lastSidebar` is the column's
     /// width the last time it showed; `sidebarAutoCollapsed` marks a collapse
     /// as ours, so a column the researcher hid is never given back unasked.
     @State private var widths = WidthReadings()
@@ -828,8 +828,9 @@ struct ContentView: View {
                         detailWidth: width,
                         sidebarVisible: SidebarToggle.isVisible(columnVisibility)
                     )
-                    // These two are written on every frame of a window drag, and a
-                    // @State write re-evaluates this body even for the same value.
+                    // `widths.lastSidebar` is a reference box (no body re-evaluation per
+                    // frame); a @State write re-evaluates this body even for the same value,
+                    // so `sidebarAutoCollapsed` below is only written when it changes.
                     if let resting, resting != widths.lastSidebar { widths.lastSidebar = resting }
                     let collapsed = SidebarAutoCollapse.autoCollapsed(
                         afterReading: resting, was: sidebarAutoCollapsed)

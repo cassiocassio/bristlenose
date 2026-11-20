@@ -252,8 +252,8 @@ final class SidebarOutlineView: NSOutlineView {
     /// Returns true if the key was handled (rename began); false to fall through.
     var onCommandReturn: (() -> Bool)?
 
-    /// This window's live resize, start (`true`) and end (`false`). Scoped to the
-    /// window the view is in, so another window's drag never holds this sidebar.
+    /// This window's live resize or a divider drag, start (`true`) and end (`false`).
+    /// Scoped to the window the view is in, so another window's drag never holds this sidebar.
     var onLiveResize: ((Bool) -> Void)?
     private var liveResizeObservers: [NSObjectProtocol] = []
 
@@ -285,8 +285,8 @@ final class SidebarOutlineView: NSOutlineView {
         })
     }
 
-    /// Whether this view is holding for a divider drag, and the timer that watches for the
-    /// button coming up (the split view posts no "drag ended").
+    /// The timer that holds the outline during a divider drag (non-nil while holding) and
+    /// watches for the button coming up (the split view posts no "drag ended").
     private var dividerHoldTimer: Timer?
 
     private func beginDividerHoldIfDragging() {
@@ -416,8 +416,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// animation that makes a reorder feel native. `update()` still *stores* the fresh
     /// tree while suppressed; `reloadReleaseWork` reloads against it once the slide ends.
     private var reloadSuppressed = false
-    /// The window is being resized right now (`SidebarOutlineView.onLiveResize`),
-    /// and whether `update()` skipped a reload meanwhile.
+    /// The window is being resized, or the divider dragged, right now
+    /// (`SidebarOutlineView.onLiveResize`), and whether `update()` skipped a reload meanwhile.
     private var liveResizing = false
     private var reloadOwedAfterResize = false
 
@@ -692,9 +692,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // order is ahead of the tree. The release work item reloads against whatever
         // tree landed while suppressed.
         guard !reloadSuppressed else { return }
-        // A window drag republishes this view on every frame (ContentView re-reads
-        // the split widths), and a reload rebuilds every visible row's cell. Hold
-        // still while the window is being resized and reload once when it stops
+        // A window or divider drag republishes this view on every frame (ContentView
+        // re-reads the split widths), and a reload rebuilds every visible row's cell. Hold
+        // still while the window is being resized or the divider dragged and reload once when it stops
         // (`liveResizeChanged`). The tree and selection are stored above, and the
         // cells read the rest live, so that one reload shows everything.
         guard !liveResizing else {
@@ -761,7 +761,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
     #endif
 
-    /// The window's live resize started or ended. On the end, pay the one reload
+    /// The window's live resize, or a divider drag, started or ended. On the end, pay the one reload
     /// `update()` held back, unless a rename or a drop slide has the table (each
     /// of those reloads on its own release).
     private func liveResizeChanged(_ live: Bool) {

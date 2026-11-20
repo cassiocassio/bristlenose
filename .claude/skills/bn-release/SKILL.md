@@ -206,14 +206,15 @@ one, the CI gate preceding all three, and the HARD line last. Both were proven
 to fail on injection — moving the gate after an irreversible act is the 0.25.2
 shape, and it is caught.
 
-**`release.sh` has no `run`, deliberately.** It is the read-only half: `plan`,
-`verify`, `status`, `abandon`. Executing the release is still yours and this
-skill's, because the driver is gated on evidence
-(`docs/design-release-machine.md` §12). What follows is the reasoning the table
-cannot carry.
-
-                          release, from probed numbers not memory
-```
+**`release.sh run` exists and is the driver** (`release.sh run <X.Y.Z> --bump minor|patch [--yes] [--skip <step>]`,
+resumable: a failed gate is fixed, then the same command resumes where it stopped). This
+paragraph used to say it had no `run`; the 0.47.0 session read that, then ran the script
+anyway and skipped everything after the tag. The table in `release.sh plan` stops at
+"snap edge" — **it is the Mac and PyPI half only. Phases 6 to 8 below are part of the
+release and are not in it.** `--skip preflight` exists for an owner who has seen a
+failing row and said to release past it; it skips *every* preflight row, so say which
+row was waived (0.47.0: providers live) and run the others by hand. A strict-CI failure
+after the builds means a fix commit, and the run then rebuilds at the new HEAD.
 
 **Step 1 owns bump, commit and tag as one unit.** `bump-version.py` no longer
 tags at all (it can't be right — the commit the tag belongs on doesn't exist when
@@ -259,11 +260,12 @@ only if you win the race; assume you will not. `./scripts/release.sh abandon
 <X.Y.Z>` prints the recipe **and** the website consequence, which is the part
 that was previously remembered rather than printed.
 
-**The website deploys last.** Its changelog page renders live from `CHANGELOG.md`,
-so deploying before PyPI accepts the upload publishes a page announcing a version
-nobody can install. Deploy is manual (rsync, SSH agent) — the maintainer runs it;
-you prepare the content. And `build.py` does not copy `assets/`, so
-`rsync -a assets/ build/site/assets/` before previewing a CSS or JS change.
+**The website deploys last, and the deploy is part of the release — Phase 8 does it,
+it is not left for the maintainer to remember.** Its changelog page renders live from
+`CHANGELOG.md`, so deploying before PyPI accepts the upload publishes a page announcing a
+version nobody can install: Phase 8 starts only after Phase 6 shows PyPI 200. And
+`build.py` does not copy `assets/`, so `rsync -a assets/ build/site/assets/` before
+previewing a CSS or JS change.
 
 If a step fails, say which command failed and where its log is. **You are a
 conductor, not a wrapper** — every step must remain runnable by hand.
@@ -382,6 +384,49 @@ being a trap and become a missing gate. A release log that only ever agrees with
 the skill is one nobody is reading.
 
 ---
+
+## Phase 8 · Close out — automatic, and the release is not done until it exits 0
+
+Phases 1 to 7 publish. This phase finishes. It is not a nudge and not a "want me to?":
+run it straight after Phase 6 verifies PyPI. (0.47.0 was tagged with the log, the CLAUDE.md
+status lines and the website's `cli.md` all still owed; the maintainer had to ask.)
+
+```bash
+./scripts/check-release-closeout.sh <X.Y.Z>
+```
+
+It is read-only and exits 1 until every row is true:
+
+| Row | What closes it |
+|---|---|
+| release log | Phase 7's entry, `## X.Y.Z` in `docs/release-log.md` |
+| CLAUDE.md status | the two lines only (`shipping build`, `Latest release`) — never a new paragraph |
+| website cli.md | every `run` option in `bristlenose run --help` has a row in the website's `docs-src/cli.md` (the third doc surface, beside README and the man page) |
+| website pushed | the website repo's `main` has nothing unpushed |
+| website changelog | the live `bristlenose.app/docs/changelog.html` names X.Y.Z, i.e. the deploy ran after the entry existed |
+
+**The website deploy, step by step.** `deploy.sh` publishes the whole tree at HEAD, so
+the commits it carries are published whether or not this release wrote them.
+
+1. `git -C ../bristlenose-website log origin/main..HEAD --oneline` — **read every
+   commit.** Other sessions leave work here: a page held until a channel ships
+   (`after-<channel>/<version>` branches and "held until" commit messages), copy that
+   claims something not yet true. A held change comes out (revert it or deploy from a
+   branch without it) before anything deploys.
+2. Deploy from a clean `git worktree add --detach` of that HEAD, never the working
+   tree, and never stash or commit another session's edits. During a release run, point
+   `build.py` at the last released tag with `BRISTLENOSE_PUBLIC_REPO=<dir>` only if the
+   changelog must not name a version PyPI lacks — by Phase 8 PyPI has it, so it need not.
+3. `./deploy.sh --yes` (needs the SSH agent), then push the website `main`.
+4. Re-run the close-out script. The `website changelog` row is the proof: it greps the
+   live page, so it cannot pass on a deploy that did not happen.
+
+**Ask only when a commit in step 1 is held or unreviewed content you cannot judge.** A
+clean range (this release's `cli.md` rows, link fixes) is deployed without asking. A
+range carrying unrelated pages from other sessions is the one question in this phase.
+
+Then append to the release log what Phase 8 found, so the next release's Phase 8 starts
+from evidence: what was owed, and whether it was owed because a step was skipped.
 
 ## Rules
 

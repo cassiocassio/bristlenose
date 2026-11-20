@@ -227,6 +227,9 @@ struct LocateErrorState: Identifiable {
 private final class WidthReadings {
     var split: CGFloat = 0
     var detail: CGFloat = 0
+    /// The projects column's width the last time it showed. Here, not `@State`, for the
+    /// same reason: a divider drag changes it every frame and only handlers read it.
+    var lastSidebar: CGFloat = SidebarAutoCollapse.columnIdeal
 }
 
 struct ContentView: View {
@@ -314,11 +317,10 @@ struct ContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     /// Auto-collapse of the projects column when the report would otherwise
     /// drop below its reading measure (`SidebarAutoCollapse`). `splitWidth`
-    /// and `detailWidth` are measured; `lastSidebarWidth` is the column's
+    /// and `detailWidth` are measured; `widths.lastSidebar` is the column's
     /// width the last time it showed; `sidebarAutoCollapsed` marks a collapse
     /// as ours, so a column the researcher hid is never given back unasked.
     @State private var widths = WidthReadings()
-    @State private var lastSidebarWidth: CGFloat = SidebarAutoCollapse.columnIdeal
     @State private var sidebarAutoCollapsed = false
     /// When the logic last wrote the column's visibility (system uptime): a
     /// hide landing soon after is a late report of it, not the researcher.
@@ -731,7 +733,7 @@ struct ContentView: View {
     private func applySidebarAutoCollapse() {
         let action = SidebarAutoCollapse.decide(
             windowWidth: widths.split,
-            sidebarWidth: lastSidebarWidth,
+            sidebarWidth: widths.lastSidebar,
             minWidth: DetailFloor.resolve(
                 webMinWidth: bridgeHandler.detailMinWidth,
                 showingReport: detailPaneKind == .report
@@ -740,7 +742,7 @@ struct ContentView: View {
             autoCollapsed: sidebarAutoCollapsed
         )
         if action != .none { SidebarFitTrace.note(
-            "decide → \(action)", split: widths.split, detail: widths.detail, lastSidebar: lastSidebarWidth,
+            "decide → \(action)", split: widths.split, detail: widths.detail, lastSidebar: widths.lastSidebar,
             floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                        showingReport: detailPaneKind == .report),
             visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed) }
@@ -828,12 +830,12 @@ struct ContentView: View {
                     )
                     // These two are written on every frame of a window drag, and a
                     // @State write re-evaluates this body even for the same value.
-                    if let resting, resting != lastSidebarWidth { lastSidebarWidth = resting }
+                    if let resting, resting != widths.lastSidebar { widths.lastSidebar = resting }
                     let collapsed = SidebarAutoCollapse.autoCollapsed(
                         afterReading: resting, was: sidebarAutoCollapsed)
                     if collapsed != sidebarAutoCollapsed { sidebarAutoCollapsed = collapsed }
                     SidebarFitTrace.note(
-                        "detail geometry", split: widths.split, detail: widths.detail, lastSidebar: lastSidebarWidth,
+                        "detail geometry", split: widths.split, detail: widths.detail, lastSidebar: widths.lastSidebar,
                         floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                                    showingReport: detailPaneKind == .report),
                         visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
@@ -876,7 +878,7 @@ struct ContentView: View {
             widths.split = width
             applySidebarAutoCollapse()
             SidebarFitTrace.note(
-                "split geometry", split: widths.split, detail: widths.detail, lastSidebar: lastSidebarWidth,
+                "split geometry", split: widths.split, detail: widths.detail, lastSidebar: widths.lastSidebar,
                 floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                            showingReport: detailPaneKind == .report),
                 visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
@@ -894,11 +896,11 @@ struct ContentView: View {
                 detailWidth: widths.detail,
                 sidebarVisible: SidebarToggle.isVisible(now)
             )
-            if let resting { lastSidebarWidth = resting }
+            if let resting { widths.lastSidebar = resting }
             sidebarAutoCollapsed = SidebarAutoCollapse.autoCollapsed(
                 afterReading: resting, was: sidebarAutoCollapsed)
             SidebarFitTrace.note(
-                "visibility changed", split: widths.split, detail: widths.detail, lastSidebar: lastSidebarWidth,
+                "visibility changed", split: widths.split, detail: widths.detail, lastSidebar: widths.lastSidebar,
                 floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                            showingReport: detailPaneKind == .report),
                 visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
@@ -992,7 +994,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
             bridgeHandler.syncToolbarInset()
             SidebarFitTrace.note(
-                "didEnterFullScreen", split: widths.split, detail: widths.detail, lastSidebar: lastSidebarWidth,
+                "didEnterFullScreen", split: widths.split, detail: widths.detail, lastSidebar: widths.lastSidebar,
                 floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                            showingReport: detailPaneKind == .report),
                 visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
@@ -1000,7 +1002,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
             bridgeHandler.syncToolbarInset()
             SidebarFitTrace.note(
-                "didExitFullScreen", split: widths.split, detail: widths.detail, lastSidebar: lastSidebarWidth,
+                "didExitFullScreen", split: widths.split, detail: widths.detail, lastSidebar: widths.lastSidebar,
                 floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                            showingReport: detailPaneKind == .report),
                 visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)

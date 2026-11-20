@@ -79,7 +79,7 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 **Verify.** `verify 0.47.0`: 6 of 9 right after PyPI, **9 of 9** once Homebrew and Copr caught up and the website was deployed (the deploy itself waited on the owner's yes to the unrelated community page in its range; deployed from a clean worktree, website main pushed). `check-release-closeout.sh 0.47.0` exits 0. Winget follows on a reviewer's clock.
 
-**Owed.** Providers: top up OpenAI, replace the Gemini key, re-run `check-providers-live.py`. Snap stable not dispatched. Winget PR for 0.47.0.
+**Owed.** Providers: top up OpenAI, replace the Gemini key, re-run `check-providers-live.py`. Snap stable not dispatched. No winget PR for 0.47.0 by the owner's call (20 Nov): the winget PR is made from the version also submitted to the App Store.
 
 ---
 

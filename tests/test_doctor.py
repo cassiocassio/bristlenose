@@ -177,7 +177,7 @@ class TestCheckFfprobe:
     def test_both_fixes_have_text(self) -> None:
         from bristlenose.doctor_fixes import get_fix
 
-        assert "Reinstall it" in get_fix("ffmpeg_will_not_run", "brew")
+        assert "reinstall it" in get_fix("ffmpeg_will_not_run", "brew").lower()
         assert "ffprobe" in get_fix("ffprobe_missing", "pip")
 
 

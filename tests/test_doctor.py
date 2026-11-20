@@ -2184,10 +2184,20 @@ class TestGetFixGrid:
     # -- auth_token_env_set: same for all methods --
 
     @pytest.mark.parametrize("method", ["snap", "brew", "pip"])
-    def test_auth_token_env_set(self, method: str) -> None:
+    def test_auth_token_env_set(self, method: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "platform", "linux")
         fix = get_fix("auth_token_env_set", method)
         assert "_BRISTLENOSE_AUTH_TOKEN" in fix
         assert "unset _BRISTLENOSE_AUTH_TOKEN" in fix
+
+    def test_auth_token_env_set_on_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Windows has no `unset`: PowerShell's own commands, for this window and
+        for a value set permanently."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        fix = get_fix("auth_token_env_set", "pip")
+        assert "Remove-Item Env:_BRISTLENOSE_AUTH_TOKEN" in fix
+        assert "SetEnvironmentVariable" in fix
+        assert "unset " not in fix
 
     # -- serve_deps_missing: varies by method, pip branch also varies on pipx --
 

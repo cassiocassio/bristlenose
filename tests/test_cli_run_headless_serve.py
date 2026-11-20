@@ -7,7 +7,6 @@ returns; an interactive run still serves, and `--no-serve` opts out of that.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -75,7 +74,10 @@ def test_no_serve_skips_the_server_even_with_a_terminal(monkeypatch, tail) -> No
 
 
 def test_no_serve_is_listed_in_run_help() -> None:
-    # CI forces colour and Rich styles the option name in pieces ("-" "-no" "-serve").
-    result = CliRunner().invoke(app, ["run", "--help"], env={"COLUMNS": "200", "FORCE_COLOR": "1"})
-    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
-    assert "--no-serve" in plain
+    import click
+
+    result = CliRunner().invoke(app, ["run", "--help"], env={"COLUMNS": "200"})
+    # Unstyled: on GitHub Actions Rich forces colour (it reads GITHUB_ACTIONS), and
+    # its escape codes split "--no-serve", so the plain-text check failed only in
+    # CI (19 Nov 2026).
+    assert "--no-serve" in click.unstyle(result.output)

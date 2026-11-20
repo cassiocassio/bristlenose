@@ -15,9 +15,14 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+
+# walk.sh drives Tart guests from a Mac host; the fakes here are bash scripts,
+# which Windows cannot execute (FileNotFoundError on windows-latest, 19 Nov 2026).
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the fake tools are shell scripts")
 
 ROOT = Path(__file__).resolve().parents[1]
 WALK_DIR = ROOT / "desktop" / "scripts" / "guest-walk"

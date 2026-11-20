@@ -98,6 +98,7 @@ So the proposal follows that pattern, and reverses my first draft (outcome in th
 - **The reason for a failure:** a failed run carries a structured cause category (the full list is in the next section). It is named for every category with a plain-words phrase.
 - **Not in the end event:** quote counts and theme counts. The summary's "themes" figure counts calls, not themes. A quote or theme count would need a separate read and is **not proposed**.
 - **Available but not proposed:** the token counts and the cost estimate are in the end event. Putting a cost in a banner is a different kind of statement (it is an estimate, and it is money); it is the owner's call, and I have left it out.
+  _19 Nov 2026: the owner's call landed elsewhere. Since 18 Nov the sidebar row, not the banner, carries the run's tokens or estimated cost for 5 s (Settings ▸ Appearance ▸ Show analysis usage; `docs/design-llm-usage.md`). The banner still leaves it out._
 
 **The duration is kept, for a reason beyond the triage (owner, 6 Nov 2026):** it makes the run more real and sets expectations. Over time researchers learn how long to budget: whether this study needs a lunchtime, whether to start one before leaving for the day. It is a true fact the app already has (start and end times). It also quietly shows how the time the app predicted compared with what happened. Format it with the app's shared duration format (the Swift `DurationFormat.human`, one stem per format across Python, TypeScript and Swift, `docs/design-shared-formats.md`), not a new helper.
 

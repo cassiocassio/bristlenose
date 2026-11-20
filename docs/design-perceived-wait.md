@@ -2,6 +2,8 @@
 
 Status: discovery, 4 Nov 2026. Nothing here is built, and nothing here is a spec. The owner picks.
 
+> _Post-script, 19 Nov 2026: two things this audit discusses have since shipped, and the audit text below is left as written. The run-finished banner (candidate A) shipped 6 Nov (`docs/design-run-banner.md`). A successful run's sidebar row now says what it used for 5 s (18 Nov, `docs/design-llm-usage.md`). That reverses the "After the run" row of §4.1 for those seconds and corrects the "tokens exist only in `llm-calls.jsonl`" line: run totals are in the `run_completed` event._
+
 This is the companion to `docs/design-perf-ledger.md`. The ledger measures how long moments take. This document asks how a wait feels, including the waits that cannot be shortened (cloud LLM calls, transcription). It reads the code and docs read-only; it changes no product file.
 
 Every claim is labelled. **Verified** means a second, independent reader opened the primary text. **Search-level** means only a search summary or an abstract page was seen. **Memory** means nobody checked. **Audit** means read from our own code at HEAD `c2f81f4a5` plus a dirty tree, not observed in a running app.

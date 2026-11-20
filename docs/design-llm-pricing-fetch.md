@@ -11,6 +11,7 @@ trued-against: HEAD@main (23d56af) on 2026-04-28
 
 ## Changelog
 
+- _2026-11-19_ — **Still not built; the alpha step was built and then removed.** On 17 Nov the "lift `PRICING` into a bundled file" step was built in a different shape: a dated `pricing.json` with cache rates and promotional end dates, plus exchange rates (commit "price a study's llm use: dated prices, exchange rates, a usage api, live counts"). It was removed on 18 Nov when the owner ruled usage a sense of scale, not a budget (commit "v1 analysis usage: a run-end line on the mac row, strip the ledger"). What that build taught (dated promotions, cache-count normalisation across providers) is in `docs/design-llm-usage.md`. Under that ruling, list prices as stale as the release are a known limit, which weakens §Problem's motivation. **Owner question:** does this stay `pending`, or move to the archive as reference? Also drifted, not edited: `PRICE_TABLE_VERSION` is `2026-11-16`, and the §Data shape example models are a generation old.
 - _2026-04-28_ — confirmed still aspirational; Phase 1 Slice C shipped (`4401e41`) so the "after slice C" precondition is now met. Branch `cost-and-time-forecasts` closed (`23d56af`); `trued-against` re-anchored to main.
 - _2026-04-27_ — initial draft.
 
@@ -188,7 +189,7 @@ This phasing also defers the only piece that touches App Review (the network-dis
 - **Signed payloads.** Today's hard-coded dict is unsigned too; if the threat model ever needs supply-chain integrity for the price table, it needs it for the wheel itself first. Sign the wheel via PyPI's attestations work, then revisit.
 - **Multi-currency.** All rates in USD. Per-locale conversion belongs in display logic, not the rate sheet.
 - **Per-region pricing.** Azure pricing varies by region; we currently don't model this and the bundled fallback returns `None` for Azure cost. Same behaviour after this change.
-- **Tiered / batch / cache-token pricing.** Anthropic's batch API is half price; cached input tokens are 10% of input rate. The forecast under-counts these savings today. Captured separately under [design-llm-call-telemetry.md](design-llm-call-telemetry.md) Phase 4.
+- **Tiered / batch / cache-token pricing.** Anthropic's batch API is half price; cached input tokens are 10% of input rate. The forecast under-counts these savings today. Not covered by any telemetry phase (this pointed at [design-llm-call-telemetry.md](design-llm-call-telemetry.md) Phase 4, which is the Shoal revival); the cache-rate lessons from the 17 Nov build are in [design-llm-usage.md](design-llm-usage.md).
 - **Historical rate archive.** A user might want "what did this cost on the day I ran it." That information is already in the per-row telemetry (`price_table_version` stamp). Recomputing against an archive of old rate sheets is a maintainer-side analysis tool, not a user feature.
 
 ## Open questions parked for decision

@@ -44,6 +44,19 @@ struct AppearanceSettingsView: View {
     @AppStorage(DiagnosticsPreference.key)
     private var showDiagnosticsMenu: Bool = DiagnosticsPreference.defaultValue
 
+    /// "Help translate Bristlenose into your language on Weblate", the link inside
+    /// ONE `Text`. An `HStack` of a `Text` and a `Link` drew the link at body size
+    /// beside footnote-sized text (the footer styles only a `Text`), and an
+    /// `HStack` does not wrap, so a long translation truncated. One run of text
+    /// takes the footer's style throughout and wraps.
+    private var helpTranslateFooter: AttributedString {
+        var text = AttributedString(i18n.t("settings.language.helpTranslate") + " ")
+        var link = AttributedString("Weblate")
+        link.link = URL(string: "https://hosted.weblate.org/projects/bristlenose/")
+        text.append(link)
+        return text
+    }
+
     var body: some View {
         Form {
             Section {
@@ -120,10 +133,7 @@ struct AppearanceSettingsView: View {
             } footer: {
                 // A group footnote (below the box, no in-cell keyline) — an
                 // invitation to contribute, not a description of the picker.
-                HStack(spacing: 4) {
-                    Text(i18n.t("settings.language.helpTranslate"))
-                    Link("Weblate", destination: URL(string: "https://hosted.weblate.org/projects/bristlenose/")!)
-                }
+                Text(helpTranslateFooter)
             }
 
             Section {

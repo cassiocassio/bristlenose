@@ -304,6 +304,10 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 
 ---
 
+## Sidebar divider-drag performance (20 Nov 2026)
+
+Two commits on `main`, unpushed: `40f74d9d3`, `2a4dfc989` (11 to about 45 fps). Record and method: `docs/design-perf-divider-drag.md`. Owed, not started: a test for the hold, measure fix 2 alone, a literal Release build, Mail/Finder comparison, then (after submission) the toolbar relayout and an `update()` short-circuit. Release-note candidate: dragging the sidebar divider is much smoother.
+
 ## Key files to know
 
 | File | What it does |

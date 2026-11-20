@@ -371,8 +371,9 @@ Three shared Xcode schemes: **Bristlenose** (default; the bundled sidecar, what 
 - `ServeManager.start()` MUST reset `authToken` (and `serverVersion`) — `handleLine`'s…
 - Zombie cleanup is delegated to the sidecar (Apr 2026, A6 redesign)
 
-**Sidebar, toolbar and window layout** (29) — [full entries](gotchas.md#sidebar-toolbar-and-window-layout)
+**Sidebar, toolbar and window layout** (30) — [full entries](gotchas.md#sidebar-toolbar-and-window-layout)
 
+- A divider drag raises no live-resize notifications, so a hold keyed on them never engages: hold on `NSSplitView.willResizeSubviewsNotification` with the button down, and keep drag-frame readings out of `@State`; 11 → about 45 fps, method in `docs/design-perf-divider-drag.md`.
 - A window drag is a per-frame load test: `@State` written per frame re-runs the whole `ContentView` body (use a reference box), and the outline reload per republish is held until the live resize ends; 10 → 58 window updates a second (`docs/design-client-performance.md`).
 - `NavigationSplitView`'s `columnVisibility` binding is not only your writes — AppKit…
 - Driving the Mac app from outside needs care, and the first-build window needs a recipe…

@@ -26,6 +26,12 @@ It moves the real pointer for the length of the drag and needs Accessibility tru
 when nobody is at the Mac, one run at a time. Debug numbers are inflated (SwiftUI and
 AttributeGraph most of all): compare Debug with Debug, Release with Release.
 
+## Divider drags
+
+A divider drag is a different load from a window drag (no live-resize notifications) and has
+its own harness and record: `docs/design-perf-divider-drag.md` (11 to about 45 fps in two
+commits; method, controls, pitfalls) and `experiments/divider-drag/`.
+
 ## What the numbers mean
 
 - **window updates / s** and the **gap** rows are the one to believe: how often the window

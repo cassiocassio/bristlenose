@@ -77,9 +77,9 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 **Tricky things.** The prose phase and this entry were first skipped: the run was started from `release.sh` before the rest of the `bn-release` skill was read, so the website `cli.md` row, this entry and the CLAUDE.md lines were done after the tag. A `grep '\-\-no-serve'` on the man page found nothing because roff writes `\-\-no\-serve`; it was there all along.
 
-**Verify.** `verify 0.47.0` after PyPI: 6 of 9 (Homebrew, Copr, website outstanding; winget follows). The website deploy is the maintainer's.
+**Verify.** `verify 0.47.0`: 6 of 9 right after PyPI, **9 of 9** once Homebrew and Copr caught up and the website was deployed (the deploy itself waited on the owner's yes to the unrelated community page in its range; deployed from a clean worktree, website main pushed). `check-release-closeout.sh 0.47.0` exits 0. Winget follows on a reviewer's clock.
 
-**Owed.** Providers: top up OpenAI, replace the Gemini key, re-run `check-providers-live.py`. Website deploy from a clean worktree (`cli.md` row committed locally in the website repo, not pushed). Snap stable not dispatched. Winget PR for 0.47.0.
+**Owed.** Providers: top up OpenAI, replace the Gemini key, re-run `check-providers-live.py`. Snap stable not dispatched. Winget PR for 0.47.0. `release.sh verify` does not call `check-release-closeout.sh` yet.
 
 ---
 

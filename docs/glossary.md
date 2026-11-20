@@ -83,6 +83,37 @@ Fixed taxonomy. Do not add new categories without research justification.
 
 ---
 
+## Platforms, vendors and architectures
+
+**Spell each name the way its owner spells it, in prose.** The data is [`docs/platform-terms.json`](platform-terms.json), `scripts/check-docs-terms.py` reads it to flag the forbidden spellings in docs (prose only; code, links and URLs are never touched), and `tests/test_check_docs_terms.py` pins every canonical below to this table. Evidence and the date checked are in the JSON. Settled 20 Nov 2026 after "ARM" and "Arm" shared one install page: **do not re-research a row, use it**, and edit the JSON and this table together if a vendor renames itself.
+
+| Canonical (prose) | Forbidden (in prose) | Fine as written in code, paths and file names | Why |
+|---|---|---|---|
+| **Arm** (Windows on Arm, Arm-based, an Arm computer) | ARM | `arm64`, `aarch64`, `ARM64` | Arm Ltd's own spelling since the 2017 rebrand; Microsoft writes "Windows on Arm". Architecture identifiers keep the case the system gives them. |
+| **macOS** | MacOS, Mac OS, OSX, OS X | — | Apple's spelling. |
+| **Apple silicon** | Apple Silicon | — | Apple writes a lowercase *s* in running text. |
+| **Raspberry Pi OS** | Raspbian | a package or repository named `raspbian` | Renamed in 2020. |
+| **Pop!\_OS** | PopOS, Pop OS, Pop!OS, Pop\_OS | — | System76's spelling. |
+| **openSUSE** | OpenSUSE, Opensuse, OpenSuse | — | Lowercase *o*, also at the start of a sentence. |
+| **elementary OS** | Elementary OS | — | Lowercase *e*. |
+| **Red Hat** | RedHat, Redhat | `redhat` in a path or package name | Red Hat's prose spelling. |
+| **AlmaLinux** | Alma Linux, Almalinux | — | One word, as the project writes it. |
+| **FFmpeg** | FFMPEG, ffmpeg, Ffmpeg | `ffmpeg` (the command), `ffmpeg-free` (the Fedora package) | The project's spelling in prose. |
+| **Homebrew** | homebrew, HomeBrew | `brew`, the tap name `homebrew-bristlenose` | brew.sh's spelling. |
+| **PowerShell** | Powershell, powershell | `powershell` as a command or path | Microsoft's spelling. |
+| **GitHub** | Github | — | GitHub's spelling. |
+| **PyPI** | Pypi, PyPi | `pypi` in a URL | The index's spelling. |
+| **Snap Store** (and "the Snap" for our package) | SnapStore, snap store | `snap` as the command | Canonical's spelling; `snap` is the command, so it goes in code. |
+| **x64** (Windows prose) / **x86\_64** (Linux prose) | — | `amd64` where Debian or the Snap names it | A usage rule, not a spelling. For a lay reader, "64-bit Intel and AMD". |
+| **winget** | — (neither "winget" nor "WinGet" is banned) | `winget` the command | Microsoft's own pages mix the two; we write the command's spelling. |
+| **Copr** | — | `copr` the command | Fedora's build service, capital *C* in prose. Not machine-checked. |
+
+Names we write exactly as their owners do, with no row of their own: Ubuntu, Debian, Fedora, Linux Mint, Arch Linux, Rocky Linux, CentOS Stream, NixOS, CachyOS, Manjaro, Windows 11, Windows on Arm, Snapdragon, Surface, Intel, AMD, pipx and uv (lowercase, as their makers write them, which is why neither is checked at the start of a sentence).
+
+**Exceptions.** A line that must quote a forbidden spelling, such as a changelog entry about the old name, carries the marker `terms:ignore` and is skipped.
+
+---
+
 ## Display settings (appearance · palette · typography)
 
 Three orthogonal display axes. Same internal/external split as provider names above: internal identifiers keep "theme"; **user-facing surfaces never say "theme"** — it means research findings (the Themes tab). One public word per axis, identical across CLI flag, env var, and the SPA/Mac pulldown label. Approved Jul 2026 — see `docs/mockups/control-surface-parity.html` for the cross-surface × cross-locale mockup.

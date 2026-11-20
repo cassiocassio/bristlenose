@@ -50,10 +50,11 @@ def test_size_figure_must_agree_between_desc_and_notes(tmp_path):
     assert "download size differs" in out
 
 
-def test_zoom_import_claim_fails(tmp_path):
+def test_zoom_import_claim_is_allowed(tmp_path):
+    # Zoom import shipped on for everyone on 19 Nov 2026; the old rule that
+    # failed any description naming it (a Diagnostics beta then) is gone.
     code, out = run(tmp_path, desc=FIELDS["desc"] + " Import recordings from Zoom.")
-    assert code == 1
-    assert "Zoom import" in out
+    assert "Zoom import" not in out
 
 
 def test_todo_in_a_field_fails(tmp_path):

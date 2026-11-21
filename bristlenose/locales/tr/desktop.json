@@ -1411,8 +1411,8 @@
   "subscription": {
     "trialTitle": "Bristlenose’u 7 gün ücretsiz deneyin",
     "trialBody": "Deneme süresince bu çalışmayı ve istediğiniz kadar başkasını analiz edin. Abone olsanız da olmasanız da projeleriniz okunabilir kalır.",
-    "lapsedTitle": "Bu çalışmayı analiz etmek için abone olun",
-    "lapsedBody": "Aboneliğiniz sona erdi. Analiz edilmiş projelerinizin hepsi duruyor; bunları okuyabilir, düzenleyebilir ve dışa aktarabilirsiniz.",
+    "lapsedTitle": "Çalışmalarınızı analiz etmeyi sürdürmek için abone olun",
+    "lapsedBody": "Analiz edilmiş projelerinizin hepsi duruyor; bunları okuyabilir, düzenleyebilir ve dışa aktarabilirsiniz.",
     "notNow": "Şimdi Değil",
     "startTrial": "Ücretsiz Denemeyi Başlat",
     "subscribe": "Abone Ol",

@@ -1360,8 +1360,8 @@
   "subscription": {
     "trialTitle": "免費試用 Bristlenose 7 天",
     "trialBody": "試用期間可分析這項研究，以及你想分析的任何其他研究。無論是否訂閱，你的專案都能繼續閱讀。",
-    "lapsedTitle": "訂閱以分析這項研究",
-    "lapsedBody": "你的訂閱已結束。已分析的專案都還在，你可以閱讀、編輯和匯出。",
+    "lapsedTitle": "訂閱以繼續分析你的研究",
+    "lapsedBody": "已分析的專案都還在，你可以閱讀、編輯和匯出。",
     "notNow": "暫時不要",
     "startTrial": "開始免費試用",
     "subscribe": "訂閱",

@@ -1411,8 +1411,8 @@
   "subscription": {
     "trialTitle": "Bristlenose 7 Tage kostenlos testen",
     "trialBody": "Analysiere diese Studie und während der Testphase so viele weitere, wie du möchtest. Deine Projekte bleiben lesbar, ob du abonnierst oder nicht.",
-    "lapsedTitle": "Abonnieren, um diese Studie zu analysieren",
-    "lapsedBody": "Dein Abonnement ist abgelaufen. Deine analysierten Projekte sind alle noch da – du kannst sie lesen, bearbeiten und exportieren.",
+    "lapsedTitle": "Abonniere, um weiter Studien zu analysieren",
+    "lapsedBody": "Deine analysierten Projekte sind alle noch da – du kannst sie lesen, bearbeiten und exportieren.",
     "notNow": "Nicht jetzt",
     "startTrial": "Kostenlos testen",
     "subscribe": "Abonnieren",

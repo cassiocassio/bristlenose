@@ -1493,8 +1493,8 @@
   "subscription": {
     "trialTitle": "Vyzkoušejte Bristlenose 7 dní zdarma",
     "trialBody": "Analyzujte tuto studii i tolik dalších, kolik chcete, po dobu zkušební lhůty. Vaše projekty zůstanou čitelné, ať už se přihlásíte k odběru, nebo ne.",
-    "lapsedTitle": "Přihlaste se k odběru a analyzujte tuto studii",
-    "lapsedBody": "Vaše předplatné skončilo. Všechny už analyzované projekty tu zůstávají a můžete je číst, upravovat i exportovat.",
+    "lapsedTitle": "Předplaťte si, abyste mohli dál analyzovat své studie",
+    "lapsedBody": "Všechny už analyzované projekty tu zůstávají a můžete je číst, upravovat i exportovat.",
     "notNow": "Teď ne",
     "startTrial": "Zahájit bezplatnou zkušební dobu",
     "subscribe": "Předplatit",

@@ -1416,8 +1416,8 @@
   "subscription": {
     "trialTitle": "Try Bristlenose free for 7 days",
     "trialBody": "Analyse this study, and as many as you like during the trial. Your projects stay readable whether or not you subscribe.",
-    "lapsedTitle": "Subscribe to analyse this study",
-    "lapsedBody": "Your subscription has ended. Your analysed projects are all still here, and you can read, edit and export them.",
+    "lapsedTitle": "Subscribe to keep analysing your studies",
+    "lapsedBody": "Your analysed projects are all still here, and you can read, edit and export them.",
     "notNow": "Not Now",
     "startTrial": "Start Free Trial",
     "subscribe": "Subscribe",

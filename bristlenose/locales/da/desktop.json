@@ -1411,8 +1411,8 @@
   "subscription": {
     "trialTitle": "Prøv Bristlenose gratis i 7 dage",
     "trialBody": "Analysér dette studie og så mange du vil i prøveperioden. Dine projekter kan stadig læses, uanset om du abonnerer eller ej.",
-    "lapsedTitle": "Abonnér for at analysere dette studie",
-    "lapsedBody": "Dit abonnement er udløbet. Dine analyserede projekter er her stadig, og du kan læse, redigere og eksportere dem.",
+    "lapsedTitle": "Abonnér for at fortsætte med at analysere dine studier",
+    "lapsedBody": "Dine analyserede projekter er her stadig, og du kan læse, redigere og eksportere dem.",
     "notNow": "Ikke nu",
     "startTrial": "Start gratis prøveperiode",
     "subscribe": "Abonnér",

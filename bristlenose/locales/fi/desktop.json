@@ -1411,8 +1411,8 @@
   "subscription": {
     "trialTitle": "Kokeile Bristlenosea ilmaiseksi 7 päivää",
     "trialBody": "Analysoi tämä tutkimus ja niin monta muuta kuin haluat kokeilun aikana. Projektisi pysyvät luettavina, tilasit tai et.",
-    "lapsedTitle": "Tilaa analysoidaksesi tämän tutkimuksen",
-    "lapsedBody": "Tilauksesi on päättynyt. Analysoidut projektisi ovat edelleen tallessa, ja voit lukea, muokata ja viedä niitä.",
+    "lapsedTitle": "Tilaa jatkaaksesi tutkimustesi analysointia",
+    "lapsedBody": "Analysoidut projektisi ovat edelleen tallessa, ja voit lukea, muokata ja viedä niitä.",
     "notNow": "Ei nyt",
     "startTrial": "Aloita ilmainen kokeilu",
     "subscribe": "Tilaa",

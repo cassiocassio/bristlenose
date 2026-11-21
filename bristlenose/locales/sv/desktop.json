@@ -1411,8 +1411,8 @@
   "subscription": {
     "trialTitle": "Prova Bristlenose gratis i 7 dagar",
     "trialBody": "Analysera den här studien, och så många du vill under provperioden. Dina projekt går att läsa oavsett om du prenumererar eller inte.",
-    "lapsedTitle": "Prenumerera för att analysera den här studien",
-    "lapsedBody": "Din prenumeration har avslutats. Dina analyserade projekt finns kvar, och du kan läsa, redigera och exportera dem.",
+    "lapsedTitle": "Prenumerera för att fortsätta analysera dina studier",
+    "lapsedBody": "Dina analyserade projekt finns kvar, och du kan läsa, redigera och exportera dem.",
     "notNow": "Inte nu",
     "startTrial": "Starta gratis provperiod",
     "subscribe": "Prenumerera",

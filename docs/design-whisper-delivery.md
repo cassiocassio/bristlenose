@@ -297,7 +297,7 @@ By design, in each case:
 - If the researcher chooses Not Now: Tree A fetches inside a later run that needs Whisper; Tree B waits (§7).
 - On macOS 15 there is no Apple model. A recording needs Whisper, and imported transcripts need nothing.
 - A review account needs a provider key to reach any transcript or report; without one the run stops before transcription (E9). The sample recording, transcript file and key do not exist yet (D11).
-- The AI disclosure's other large download, "~2 GB" for a local model, appears in the same window as the Whisper alert on some paths; reconcile before submission (D8).
+- The "~2 GB" local-model figure is not in the shipped app (only in the Ollama design spec); nothing to reconcile with "About 1.6 GB" (owner, 21 Nov 2026: the known size is the accurate one).
 - A notification permission prompt appears during a run.
 
 All of this is by design or code reading, not observed under review conditions.
@@ -315,7 +315,7 @@ D1 and D2 were decided by the owner on 17 Nov 2026 and are recorded first. D8 (f
 5. **D5. A recording that needs Whisper without a consent answer (Tree B).** Re-offer the size alert when a run is deferred for lack of an answer, and say on the row that the model is waiting for a download. Alternatives: leave the dead end; or on macOS 15 treat the first recording as the consent moment. New wording, so the R114 UX gate applies. **CLOSED 18 Nov 2026 (owner): leave it (same as Bug 2); the row, the pill and Settings already make this good enough for v1.**
 6. **D6. Settings engine control tells the truth.** Record the engine per session now (it cannot be backfilled); add a caption to the Settings row (built 17 Nov: "Defaulting to Apple speech model" under "Not on this Mac", §11); the per-session line later. Alternatives: rename the options; accept as is. **DECIDED 18 Nov 2026 (owner): yes, record the engine per session now.** The caption is the grey line under "Not on this Mac" in the Settings Whisper row, macOS 26+ only.
 7. **D7. "Waiting for Whisper" hint by cause**, plus a route out on the row when nothing is downloading. Alternative: leave the single hint. **CLOSED 18 Nov 2026 (owner): as the mockup and the shipped row already have it; nothing new.**
-8. **D8. Size alert.** The figure "About 1.6 GB" is DECIDED (owner, 17 Nov 2026: a fixed approximate string, not formatted from bytes) and the 20 locales are translated (machine translation, no native review). Still open: the macOS 15 body stating that recording needs the model; reconcile with the "~2 GB" local-model line.
+8. **D8. Size alert.** The figure "About 1.6 GB" is DECIDED (owner, 17 Nov 2026: a fixed approximate string, not formatted from bytes) and the 20 locales are translated (machine translation, no native review). **CLOSED 21 Nov 2026 (owner):** the macOS 15 body stays shared (the macOS 15 path already fetches the model and has its own pill, messages and errors for a run without it); "About 1.6 GB" stands, since we know the size and "~2 GB" is too far out (and is not a shipped string). Only the native-speaker read remains, the owner's own backlog.
 9. **D9. Apple's own model download.** CLOSED by the owner, 17 Nov 2026: the helper requests the install and macOS performs it (`desktop/speech-helper/main.swift:203-213`); a researcher whose macOS is in that language likely holds the model already; not for v1, not an App Review concern. Do not reopen without a measured wait.
 10. **D10. Pack-id immutability.** New weights get a new pack id; bytes under an id never change. **CLOSED 18 Nov 2026 (owner): bytes are hashed in the app, so a new pack means a new release and a new fetch; no further design.**
 11. **D11. Reviewer assets.** An English sample recording that falls inside Apple's nine and passes the gate, a transcript file for macOS 15, and a provider key with its path in the sign-in field. Without them no reviewer reaches a report.
@@ -350,9 +350,9 @@ Source: an adversarial Mac-taste review of this UX and a gap-by-gap walk-through
 
 **Open:**
 - D7: how the "Waiting for Whisper" row reaches Settings (the owner liked a Settings door; that row has no popover), and whether a deferred run resumes by itself when the download finishes (the design does: Whisper becoming ready posts `bristlenoseWhisperReady` and `PipelineRunner` re-runs waiting projects; not observed end to end, E5; a run that already failed with a Whisper failure is not a waiting project).
-- Whether Download Now should be disabled under low disk: undecided, the status quo (enabled; the floor never held it) is kept.
-- The door covers every `.whisper` failure, including native-library ones where Show Log is the better door; it takes Show Log's place in the header. Owner to confirm.
-- A diagnostic whose failures are all `.whisper` per session gets no door.
+- Download Now under low disk: **CLOSED 21 Nov 2026 (owner): stays enabled.** Do not reopen.
+- The door covers every `.whisper` failure, including native-library ones where Show Log is the better door; it takes Show Log's place in the header. **CLOSED 21 Nov 2026 (owner): keep as built; no more redesign here.**
+- A diagnostic whose failures are all `.whisper` per session gets no door. **CLOSED 21 Nov 2026 (owner): leave it for now;** the flow already gets, checks for and re-fetches Whisper elsewhere.
 - Owed on the candidate build: wifi off for a minute during a download; time from `ensureLocalAvailability` to the first status update; the `.paused` status; what a system cancel looks like; the Settings row's height when the caption appears; the progress line's separator in non-English languages; a native-speaker read of the translated alert.
 - Merging `bb60d1b0c` (done in `ec45070fd`; kept as the record of what the merge had to resolve): it wraps the note in `stopNoteApplies` and uses the deleted `stopNote` key, so drop `stopNoteApplies` and its two tests; the candidate's `en/desktop.json` (`askSize`, `stop`, `stopNote`) and its 20 locale files conflict with the 17 Nov locale edits too; its `WhisperAskStringsTests` pins "1.5 GB"; the pill hunk and the test insertion conflict textually, and its `progressLine` guard is a separate hunk.
 

@@ -74,35 +74,43 @@ Download **[Bristlenose.dmg](https://bristlenose.app/dmg/Bristlenose.dmg)**, dra
 
 First launch: because it's downloaded from the internet, macOS shows a "are you sure you want to open it?" confirmation — click **Open**. One time only. (The app is signed and notarised, so there's no "unidentified developer" block to work around.)
 
-Requires macOS 15 Sequoia, Apple Silicon (M1+). The `.dmg` is a preview that stops working 30 days after it was built; it doesn't update itself.
+Requires macOS 15 Sequoia, Apple silicon (M1+). The `.dmg` is a preview that stops working 30 days after it was built; it doesn't update itself.
 
-### macOS (Homebrew), Linux, Windows
+### macOS (Homebrew), Windows, Linux
 
 Requires Python 3.10 or newer (3.11 or newer for [any-llm](#option-f-other-providers-through-any-llm)).
 
 ```bash
-# macOS (Homebrew) -- handles ffmpeg + Python for you
+# macOS (Homebrew) -- handles FFmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
 brew trust --formula cassiocassio/bristlenose/bristlenose
-
-# Ubuntu / Debian and most other distros (Snap) -- bundles Python + FFmpeg
-sudo snap install bristlenose --edge
-
-# Fedora (Copr) -- bundles Python, pulls FFmpeg from Fedora's own repos
-sudo dnf copr enable cassiocassio/bristlenose
-sudo dnf install bristlenose
 
 # Windows (PowerShell) -- installs uv, FFmpeg and Bristlenose, no administrator needed
 irm https://bristlenose.app/install.ps1 | iex
 
-# Linux / macOS / Windows (pipx or uv)
+# Ubuntu (Snap) -- bundles Python + FFmpeg
+sudo snap install bristlenose --edge
+
+# Fedora 43 (Copr) -- bundles Python, pulls FFmpeg from Fedora's own repos
+sudo dnf copr enable cassiocassio/bristlenose
+sudo dnf install bristlenose
+
+# Debian, Raspberry Pi OS, Linux Mint (pipx)
+sudo apt install ffmpeg pipx
+pipx install bristlenose
+
+# Arch (pipx)
+sudo pacman -S ffmpeg python-pipx
+pipx install bristlenose
+
+# Anything else, any processor (pipx or uv) -- install FFmpeg first
 pipx install bristlenose
 uv tool install bristlenose    # alternative
 ```
 
 The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.
 
-The Snap and the Fedora package are both **amd64/x86_64 only** — on Arm Linux, use pipx.
+The Snap and the Fedora package are **x86_64 only**, and the Fedora package is built for release 43. On Arm, or on another Fedora release, use pipx (on Fedora, `sudo dnf install ffmpeg-free pipx` first).
 
 The `[voice]` extra is optional: `pipx install "bristlenose[voice]"` (add `--force` if Bristlenose is already installed) adds a voice pass to speaker identification, which tells two speakers apart by how they sound when the transcript doesn't already say who is speaking. It downloads a 40 MB model on first use (or with `bristlenose doctor --fetch`), runs on your machine, and is skipped without the extra. Set `BRISTLENOSE_VOICE_PASS=false` to turn it off. It isn't available on Windows with Python 3.14 yet; use 3.13 or earlier. (Quote the spec: `zsh` reads bare brackets as a glob, and only double quotes work in every shell, Windows `cmd` included.)
 
@@ -274,7 +282,7 @@ Then open a new terminal window (or run `source ~/.zshrc` / `source ~/.bashrc`).
 bristlenose interviews
 ```
 
-Once a provider is configured, that's it. Point it at a folder containing your recordings and it will produce the report inside that folder. Expect roughly 2--5 minutes per participant on Apple Silicon, longer on CPU.
+Once a provider is configured, that's it. Point it at a folder containing your recordings and it will produce the report inside that folder. Expect roughly 2--5 minutes per participant on Apple silicon, longer on CPU.
 
 Open `interviews/bristlenose-output/bristlenose-interviews-report.html` in your browser.
 
@@ -335,9 +343,9 @@ Via a `.env` file or environment variables (prefix `BRISTLENOSE_`). See `.env.ex
 
 ### Hardware
 
-Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU. The Mac app on macOS 26+ uses Apple's on-device speech while Whisper downloads.
+Transcription hardware is auto-detected. Apple silicon uses MLX on Metal GPU. NVIDIA uses faster-whisper with CUDA. Everything else falls back to CPU. The Mac app on macOS 26+ uses Apple's on-device speech while Whisper downloads.
 
-A model you have already downloaded can be used from a folder, mostly by the desktop app (which sets it itself): set `BRISTLENOSE_WHISPER_MODEL_DIR` to the folder's parent. On Apple Silicon put the MLX files in `<dir>/<canonical model name>/`, for example `large-v3-turbo/` (also used for the `turbo` alias), holding `config.json` and `weights.safetensors` (or `weights.npz`; the weights file must be at least 1 MiB); a complete folder is used instead of the Hugging Face cache. The faster-whisper backend reads `<dir>/<model>/` only when it holds a `model.bin`.
+A model you have already downloaded can be used from a folder, mostly by the desktop app (which sets it itself): set `BRISTLENOSE_WHISPER_MODEL_DIR` to the folder's parent. On Apple silicon put the MLX files in `<dir>/<canonical model name>/`, for example `large-v3-turbo/` (also used for the `turbo` alias), holding `config.json` and `weights.safetensors` (or `weights.npz`; the weights file must be at least 1 MiB); a complete folder is used instead of the Hugging Face cache. The faster-whisper backend reads `<dir>/<model>/` only when it holds a `model.bin`.
 
 ---
 
@@ -387,7 +395,7 @@ git clone https://github.com/cassiocassio/bristlenose.git
 cd bristlenose
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,serve,apple]"            # serve extra adds FastAPI/SQLAlchemy/uvicorn; apple adds MLX for Apple Silicon GPU acceleration (omit on other platforms)
+pip install -e ".[dev,serve,apple]"            # serve extra adds FastAPI/SQLAlchemy/uvicorn; apple adds MLX for Apple silicon GPU acceleration (omit on other platforms)
 cp .env.example .env                          # add your API key
 ```
 
@@ -1265,7 +1273,7 @@ A recording with no sound no longer comes back as an interview of "Thank you.", 
 
 **Fixed**
 
-- **A recording with no sound was transcribed as "Thank you." every thirty seconds, and analysed as an interview.** On the Mac, and at the command line on Apple Silicon, Whisper answers silence with an invented "Thank you." for each thirty-second stretch rather than with nothing, so a 29-minute video whose audio track was silent produced some sixty lines that were then read as a participant's session. Whisper's own no-speech check never fires on the model Bristlenose uses. The audio is now measured before it is transcribed: a recording with nothing in it is reported as "No speech found" and left out, and lines invented over long silences inside a real interview are dropped. Quiet speech is kept — the cut-off sits far below the quietest speaker measured. Speech invented over room tone or music is not caught yet. Projects already transcribed keep their old transcripts until those sessions are transcribed again.
+- **A recording with no sound was transcribed as "Thank you." every thirty seconds, and analysed as an interview.** On the Mac, and at the command line on Apple silicon, Whisper answers silence with an invented "Thank you." for each thirty-second stretch rather than with nothing, so a 29-minute video whose audio track was silent produced some sixty lines that were then read as a participant's session. Whisper's own no-speech check never fires on the model Bristlenose uses. The audio is now measured before it is transcribed: a recording with nothing in it is reported as "No speech found" and left out, and lines invented over long silences inside a real interview are dropped. Quiet speech is kept — the cut-off sits far below the quietest speaker measured. Speech invented over room tone or music is not caught yet. Projects already transcribed keep their old transcripts until those sessions are transcribed again.
 - **Most of a transcript could vanish behind a few words from its first minutes.** Word-level timings were matched to transcript paragraphs by position instead of by time, and the transcript page shows those words in place of the paragraph. So an interview whose lines were merged by speaker displayed its opening minutes spread across the whole timeline. Existing projects correct themselves the next time they open; nothing needs re-running.
 - **Playback highlighting went out early on the last paragraph of a transcript.** It now lasts until the recording's final words.
 - **A project whose folder permission was lost had no way back.** The Mac app showed "Can't be read", and Show Log failed with a permission error. The project now offers Locate…, which opens on the folder, so one click grants access again.
@@ -1629,7 +1637,7 @@ A large release — codebooks you can switch on and off, a shareable offline rep
 - **Desktop: provider-switching hardened end-to-end** — Change-provider flow now activates the new provider across Keychain, sidecar env, and UI; Ollama choice persists before consent log; sidecar key injection scoped to the active provider only; LLM Settings lazy-loads Keychain per row
 - **Prompt-injection sentinel-tag boundary (Phase A)** — defence-in-depth boundary that lets the LLM structurally distinguish transcript content from prompt instructions
 - **Sidecar bundle trim (S1+S2+S3)** — `mlx_whisper.torch_whisper` excluded, dedicated build venv, `torch` + `onnxruntime` evicted, mlx-whisper assets shipped via `collect_all`. Significantly smaller sidecar
-- **Doctor**: recognises `mlx-whisper` as a complete backend on Apple Silicon
+- **Doctor**: recognises `mlx-whisper` as a complete backend on Apple silicon
 - **Desktop**: trusts log tail on sidecar exit-1-after-success; sandbox-on Debug builds load locales + resize correctly on macOS Tahoe
 
 **0.15.2** — _2 May 2026_
@@ -1753,7 +1761,7 @@ A large release — codebooks you can switch on and off, a shareable offline rep
 - Hidden-group tag UX — eye-closed icon in autocomplete, auto-unhide on accept
 - Quick-repeat tag shortcut (`r`) — re-apply the last-used tag on a focused quote
 - Fix: context expansion crash (infinite re-render loop on up chevron)
-- Doctor offers interactive MLX install on Apple Silicon for GPU-accelerated transcription
+- Doctor offers interactive MLX install on Apple silicon for GPU-accelerated transcription
 - Sidebar accessibility improvements (focus management, ARIA, reduced-motion support)
 - Dashboard stat cards now open in new tab on Cmd+click
 
@@ -1908,7 +1916,7 @@ A large release — codebooks you can switch on and off, a shareable offline rep
 
 - File-level transcription progress — spinner now shows "(2/4 sessions)" during transcription
 - Improved Ollama start command detection — uses `brew services start ollama` for Homebrew installs, `open -a Ollama` for macOS app, platform-appropriate commands for snap/systemd
-- Doctor displays "(MLX)" accelerator — when mlx-whisper is installed on Apple Silicon, doctor now shows "(MLX)" instead of "(CPU)"
+- Doctor displays "(MLX)" accelerator — when mlx-whisper is installed on Apple silicon, doctor now shows "(MLX)" instead of "(CPU)"
 - Provider header fix — pipeline header now shows "Local (Ollama)" instead of "ChatGPT" when using local provider
 
 [Older versions →](CHANGELOG.md)

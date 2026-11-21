@@ -22,7 +22,7 @@ Discovered during the FOSSDA demo dataset stress test (Apr 2026): 10 oral histor
 
 | Layer | Where | Lower bound | Upper bound |
 |-------|-------|-------------|-------------|
-| LLM prompt | `llm/prompts/quote-extraction.md` rule 7 | — | "1-5 sentences" (advisory) |
+| LLM prompt | `llm/prompts/quote-extraction.md` rule 7 | — | "1-5 sentences" (advisory) until 0.3.0; since 21 Nov 2026, one passage on one point, "most quotes between 20 and 120 words", split where the reasoning turns (`experiments/quote-cohesion/`) |
 | Post-extraction filter | `stages/s09_quote_extraction.py:231` | 5 words (hard drop) | **none** |
 | Data model | `models.py:271` (ExtractedQuote.text) | — | **none** |
 | LLM schema | `llm/structured.py:84` | — | **none** |

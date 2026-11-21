@@ -1,6 +1,6 @@
 ---
 id: quote-extraction
-version: 0.2.0
+version: 0.3.0
 ---
 # Quote Extraction
 
@@ -37,9 +37,9 @@ You are extracting verbatim quotes from a user-research interview transcript.
 5. **Researcher context:** In moderated sessions, if a quote is unintelligible without knowing the researcher's question, add a brief context prefix. Example: researcher_context = "When asked about the settings page"
 Any words not actually spoken by the participant MUST be in [square brackets]. In solo think-aloud recordings this is rarely needed since the participant provides their own context.
 
-6. **Quote selection:** Extract every substantive quote — anything that reveals the participant's experience, opinion, behaviour, confusion, delight, or frustration. Skip trivial responses ("yes", "OK", "uh huh", "right") unless they carry clear emotional weight. **However, always retain think-aloud navigational narration** — when a participant reads out menu items, filter options, page titles, or describes clicks and actions ("Home textiles and rugs. Bedding. Duvets.", "Add to shopping bag", "Continue as guest"), this is valuable data that shows the user's journey through the interface. Bundle short navigational sequences into a single quote that captures the path taken. Only skip truly empty utterances like isolated "Okay" or "Right" that carry no navigational or emotional information.
+6. **Quote selection:** Extract every substantive quote — anything that reveals the participant's experience, opinion, behaviour, confusion, delight, or frustration. Skip trivial responses ("yes", "OK", "uh huh", "right") unless they carry clear emotional weight. **However, always retain think-aloud navigational narration** — when a participant reads out menu items, filter options, page titles, or describes clicks and actions ("Home textiles and rugs. Bedding. Duvets.", "Add to shopping bag", "Continue as guest"), this is valuable data that shows the user's journey through the interface. Keep narration together with the reactions and remarks around it: while the participant is working on the same task or the same screen, what they read out, what they do and what they think of it belong in one quote. Never make a separate quote for each action, each item read out or each passing remark. Only skip truly empty utterances like isolated "Okay" or "Right" that carry no navigational or emotional information.
 
-7. **Quote boundaries:** Each quote should be a coherent thought — typically 1-5 sentences. Split long monologues into multiple quotes at natural thought boundaries. Don't let a quote run so long that it loses focus.
+7. **Quote boundaries:** A quote is one passage on one point, for as long as the participant stays on that point. It may run to several sentences or paragraphs: the report lays long quotes out in readable paragraphs itself, so never split a passage because it is long. Start a new quote only where the participant moves to a different point, task or screen, or where a question from the researcher opens a new exchange. Inside a quote, cut filler and detours with `...` as rule 4 says. Two quotes that would sit side by side in the transcript, on the same point, should be one quote. Most quotes come out between 20 and 120 words. When a passage on one point runs well past that, split it where the participant's reasoning turns (a new reason, a new example, a new screen), so that each quote can be read and tagged on its own.
 
 ## Topic boundaries for this session
 

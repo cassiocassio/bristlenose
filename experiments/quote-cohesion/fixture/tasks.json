@@ -1,0 +1,11 @@
+{
+  "note": "Each task is one passage on one screen, in seconds. A well-cut extraction gives each task 1 to 3 quotes, never one quote spanning two tasks, and leaves no task unquoted.",
+  "session_id": "s1",
+  "tasks": [
+    {"label": "Search for a kettle", "start": 0, "end": 70},
+    {"label": "Filtering results", "start": 70, "end": 140},
+    {"label": "Product page", "start": 140, "end": 210},
+    {"label": "Checkout", "start": 210, "end": 300}
+  ],
+  "max_quotes_per_task": 3
+}

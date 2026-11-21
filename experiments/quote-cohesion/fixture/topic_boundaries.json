@@ -1,0 +1,5 @@
+[{"session_id": "s1", "participant_id": "p1", "boundaries": [
+ {"timecode_seconds": 0.0, "topic_label": "Search for a kettle", "transition_type": "task_change", "confidence": 0.9},
+ {"timecode_seconds": 70.0, "topic_label": "Filtering results", "transition_type": "task_change", "confidence": 0.9},
+ {"timecode_seconds": 140.0, "topic_label": "Product page", "transition_type": "screen_change", "confidence": 0.9},
+ {"timecode_seconds": 210.0, "topic_label": "Checkout", "transition_type": "task_change", "confidence": 0.9}]}]

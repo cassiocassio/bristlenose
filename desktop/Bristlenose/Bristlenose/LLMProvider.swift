@@ -154,11 +154,11 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .claude:
             return ProviderLinks(
-                homepage: URL(string: "https://anthropic.com")!,
+                homepage: URL(string: "https://www.anthropic.com")!,
                 homepageLabel: "anthropic.com",
-                pricing: URL(string: "https://anthropic.com/pricing"),
-                console: URL(string: "https://console.anthropic.com"),
-                billing: URL(string: "https://console.anthropic.com/settings/billing"),
+                pricing: URL(string: "https://platform.claude.com/docs/en/about-claude/pricing"),
+                console: URL(string: "https://platform.claude.com/settings/keys"),
+                billing: URL(string: "https://platform.claude.com/settings/billing"),
                 consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .chatGPT:
@@ -172,10 +172,10 @@ enum LLMProvider: String, CaseIterable, Identifiable {
             )
         case .gemini:
             return ProviderLinks(
-                homepage: URL(string: "https://ai.google.dev")!,
-                homepageLabel: "ai.google.dev",
-                pricing: URL(string: "https://ai.google.dev/pricing"),
-                console: URL(string: "https://aistudio.google.com/app/apikey"),
+                homepage: URL(string: "https://aistudio.google.com")!,
+                homepageLabel: "aistudio.google.com",
+                pricing: URL(string: "https://aistudio.google.com/docs/pricing"),
+                console: URL(string: "https://aistudio.google.com/apikey"),
                 // Gemini bills through Google Cloud, not a single add-funds page.
                 billing: nil,
                 consoleLabel: "desktop.llmSettings.console.keys"
@@ -185,11 +185,11 @@ enum LLMProvider: String, CaseIterable, Identifiable {
             // their own deployment — there's no single "get a key" page.
             return ProviderLinks(
                 homepage: URL(
-                    string: "https://azure.microsoft.com/en-us/products/ai-services/openai-service")!,
+                    string: "https://azure.microsoft.com/en-us/products/ai-foundry/models/openai/")!,
                 homepageLabel: "azure.microsoft.com",
                 pricing: URL(
                     string:
-                        "https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/"
+                        "https://azure.microsoft.com/en-us/pricing/details/azure-openai/"
                 ),
                 console: URL(string: "https://portal.azure.com"),
                 // Azure billing lives inside the org's own portal/subscription.

@@ -3,33 +3,65 @@
  *
  * Three modes:
  *   idle   — plain text, no interactivity
- *   hybrid — contenteditable + bracket handles (mode 2)
+ *   hybrid — the words are editable, with bracket handles (mode 2)
  *   crop   — individual word spans, handles snap to words (mode 3)
+ *
+ * The edit modes draw the quote as the same paragraphs it shows at rest,
+ * frozen until commit (utils/quoteEditSurface.ts draws them). Shift-Return
+ * starts a paragraph at the caret; Backspace at a paragraph's start and Delete
+ * at its end join. A commit says what changed: the words (a QuoteEdit) only if
+ * the words changed, and the researcher's own paragraphs (the quote_breaks
+ * overlay) only if they were placed or removed by hand, or the words under
+ * them changed.
  *
  * See docs/design-quote-editing.md for the full behaviour spec.
  */
 
 import { useState, useRef, useCallback } from "react";
 import { sameWords } from "../utils/sameWords";
+import {
+  autoBreaks,
+  blockRanges,
+  caretPlace,
+  draw,
+  firstTyped,
+  placeCaret,
+  read,
+  sameBreaks,
+  type EditModel,
+} from "../utils/quoteEditSurface";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
 export type CropMode = "idle" | "hybrid" | "crop";
+
+/** A change to the researcher's own paragraphs: `value` null hands them back to the automatic placing. */
+export interface BreaksChange {
+  value: number[] | null;
+}
 
 export interface UseCropEditOptions {
   /** Current display text (may already be edited). */
   currentText: string;
   /** Original pipeline text (for undo comparison). */
   originalText: string;
-  /** Called when an edit/crop is committed. Receives the trimmed text (no ellipsis). */
-  onCommit: (text: string) => void;
-  /** Called when the user cancels (Escape). */
+  /** The researcher's own breaks for this quote, or null (placed automatically). */
+  researcherBreaks?: number[] | null;
+  /** The breaks drawn at rest right now: what the edit modes freeze. */
+  shownBreaks?: number[];
+  /**
+   * Called when an edit/crop is committed with something to write. `text` is
+   * the trimmed text (no ellipsis), or null when only the paragraphs changed;
+   * `breaks` is present only when the paragraphs are written.
+   */
+  onCommit: (text: string | null, breaks?: BreaksChange) => void;
+  /** Called when the user cancels (Escape), or commits nothing. */
   onCancel: () => void;
 }
 
 export interface UseCropEditReturn {
   mode: CropMode;
-  /** Full word array (included + excluded). Only meaningful in hybrid/crop modes. */
+  /** Full word array (included + excluded) at the start of the edit, or after a drag. */
   words: string[];
   /** Index of first included word. */
   cropStart: number;
@@ -50,15 +82,27 @@ export interface UseCropEditReturn {
   /** Bracket pointerdown handler. Initiates drag. */
   handleBracketPointerDown: (
     side: "start" | "end",
-    e: React.PointerEvent,
+    e: React.PointerEvent | PointerEvent,
     textSpanEl: HTMLElement,
   ) => void;
-  /** Commit the current edit/crop. */
-  commitEdit: (editableEl?: HTMLElement | null) => void;
+  /** Commit the current edit/crop. In text mode, pass the edit surface to read it back. */
+  commitEdit: (host?: HTMLElement | null) => void;
   /** Cancel and revert to pre-edit state. */
   cancelEdit: () => void;
   /** Switch from crop mode back to hybrid (click on included word). */
   reenterTextEdit: () => void;
+  /** Drop any pending blur commit and ignore the next blur: a commit is being made now. */
+  holdBlur: () => void;
+  /** Draw the edit surface into `host` for the current mode. */
+  drawSurface: (host: HTMLElement, bracketsVisible: boolean) => void;
+  /** Shift-Return: a paragraph at the caret. True if one was made. */
+  splitAtCaret: (host: HTMLElement, bracketsVisible: boolean) => boolean;
+  /**
+   * Backspace at a paragraph's start (-1) or Delete at its end (+1): join.
+   * "joined", "edge" (at the quote's own start or end: nothing to do, and the
+   * key must not reach the browser) or null (not at a paragraph edge).
+   */
+  joinAtCaret: (host: HTMLElement, dir: -1 | 1, bracketsVisible: boolean) => "joined" | "edge" | null;
 }
 
 // Minimum pointer movement (px) before a bracket click becomes a drag.
@@ -69,12 +113,22 @@ const MIN_DRAG = 5;
 export function useCropEdit({
   currentText,
   originalText: _originalText,
+  researcherBreaks = null,
+  shownBreaks,
   onCommit,
   onCancel,
 }: UseCropEditOptions): UseCropEditReturn {
   // _originalText reserved for future re-expansion; undo is handled by QuoteCard
   void _originalText;
-  const [mode, setMode] = useState<CropMode>("idle");
+  const [mode, setModeState] = useState<CropMode>("idle");
+  // The mode as of now, not as of the last render: a blur timer or a click
+  // that fires after a commit holds a render-old `mode` and would commit the
+  // same edit twice (two writes, two undo entries; Tab, 21 Nov 2026).
+  const modeNow = useRef<CropMode>("idle");
+  const setMode = useCallback((m: CropMode) => {
+    modeNow.current = m;
+    setModeState(m);
+  }, []);
   const [words, setWords] = useState<string[]>([]);
   const [cropStart, setCropStart] = useState(0);
   const [cropEnd, setCropEnd] = useState(0);
@@ -84,6 +138,13 @@ export function useCropEdit({
   const suppressBlurRef = useRef(false);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // The edit as the model holds it. In text mode the surface holds the truth
+  // and is read back into this on every structural key and on commit; in trim
+  // mode this is the truth and the surface is drawn from it.
+  const model = useRef<EditModel>({ words: [], breaks: [], cropStart: 0, cropEnd: 0 });
+  // Whether a paragraph was placed or removed by hand in this edit.
+  const touched = useRef(false);
+
   // Snapshot of text at time of entering edit mode (for cancel).
   const preEditTextRef = useRef(currentText);
 
@@ -92,62 +153,80 @@ export function useCropEdit({
   const enterEditMode = useCallback(() => {
     if (mode !== "idle") return;
     preEditTextRef.current = currentText;
+    touched.current = false;
     const w = currentText.split(/\s+/).filter(Boolean);
+    model.current = { words: w, breaks: [...(shownBreaks ?? [])], cropStart: 0, cropEnd: w.length };
     setWords(w);
     setCropStart(0);
     setCropEnd(w.length);
     setMode("hybrid");
-  }, [mode, currentText]);
+  }, [mode, currentText, shownBreaks, setMode]);
 
   // ── Re-enter hybrid from crop mode ──────────────────────────────────
 
   const reenterTextEdit = useCallback(() => {
     setMode("hybrid");
-  }, []);
+  }, [setMode]);
 
   // ── Commit ──────────────────────────────────────────────────────────
 
   const commitEdit = useCallback(
-    (editableEl?: HTMLElement | null) => {
-      if (mode === "idle") return;
-
-      let newText: string;
-      let leftCrop: boolean;
-      let rightCrop: boolean;
-
-      if (mode === "crop") {
-        // In word-span mode — use word boundaries
-        const kept = words.slice(cropStart, cropEnd);
-        newText = kept.join(" ");
-        leftCrop = cropStart > 0;
-        rightCrop = cropEnd < words.length;
-      } else {
-        // In hybrid mode — read from contenteditable
-        const raw = editableEl?.textContent?.trim() ?? currentText;
-        newText = raw;
-        leftCrop = cropStart > 0;
-        rightCrop = cropEnd < words.length;
+    (host?: HTMLElement | null) => {
+      if (mode === "idle" || modeNow.current === "idle") return;
+      if (mode === "hybrid" && host) model.current = read(host);
+      else if (mode === "hybrid") {
+        // No surface to read (it is already gone): what was there on entry.
+        const w = currentText.split(/\s+/).filter(Boolean);
+        model.current = { ...model.current, words: w, cropStart: 0, cropEnd: w.length };
       }
+      const m = model.current;
+      const kept = m.words.slice(m.cropStart, m.cropEnd);
+      const keptBreaks = m.breaks
+        .filter((b) => b >= m.cropStart && b < m.cropEnd - 1)
+        .map((b) => b - m.cropStart);
+      const newText = kept.join(" ");
 
-      setHasLeftCrop(leftCrop);
-      setHasRightCrop(rightCrop);
+      setHasLeftCrop((v) => v || m.cropStart > 0);
+      setHasRightCrop((v) => v || m.cropEnd < m.words.length);
       setMode("idle");
       suppressBlurRef.current = false;
 
+      if (newText.length === 0) {
+        onCancel();
+        return;
+      }
       // An edit opened and left as it was (clicked into, then blurred, clicked
       // outside or Enter) is not an edit: it writes nothing and adds no Undo.
       // The card's unmount path commits through here too (QuoteCard, R88).
       // Compared with the text before the edit, not `words`: a bracket drag
       // re-bases `words` on what was typed, which would read as unchanged.
       // A change only in spacing is no edit either way (decision #30).
-      if (newText.length > 0 && !sameWords(newText, preEditTextRef.current)) {
-        onCommit(newText);
-      } else {
-        onCancel();
-      }
+      const textChanged = !sameWords(newText, preEditTextRef.current);
+      // The paragraphs: placed by hand in this edit, they are the
+      // researcher's own (unless they came out exactly as the automatic
+      // ones); already the researcher's, they are carried through the edit;
+      // otherwise they stay automatic and are placed again from the words.
+      let next: number[] | null;
+      if (touched.current) next = sameBreaks(keptBreaks, autoBreaks(newText)) ? null : keptBreaks;
+      else if (researcherBreaks !== null) next = keptBreaks;
+      else next = null;
+      // Their own breaks are written again whenever the words under them change:
+      // the server keeps them against the wording they were placed in.
+      const breaksChanged = !sameBreaks(next, researcherBreaks) || (textChanged && next !== null);
+      if (!textChanged && !breaksChanged) onCancel();
+      else if (!breaksChanged) onCommit(newText);
+      else onCommit(textChanged ? newText : null, { value: next });
     },
-    [mode, words, cropStart, cropEnd, currentText, onCommit, onCancel],
+    [mode, currentText, researcherBreaks, onCommit, onCancel, setMode],
   );
+
+  const holdBlur = useCallback(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    suppressBlurRef.current = true;
+  }, []);
 
   // ── Cancel ──────────────────────────────────────────────────────────
 
@@ -157,12 +236,61 @@ export function useCropEdit({
     setHasLeftCrop(false);
     setHasRightCrop(false);
     onCancel();
-  }, [onCancel]);
+  }, [onCancel, setMode]);
+
+  // ── The surface ─────────────────────────────────────────────────────
+
+  const drawSurface = useCallback(
+    (host: HTMLElement, bracketsVisible: boolean) => {
+      if (mode === "idle") return;
+      const m = mode === "crop" ? { ...model.current, cropStart, cropEnd } : model.current;
+      draw(host, m, { mode, leftEllipsis: hasLeftCrop, rightEllipsis: hasRightCrop, bracketsVisible });
+    },
+    [mode, cropStart, cropEnd, hasLeftCrop, hasRightCrop],
+  );
+
+  const splitAtCaret = useCallback(
+    (host: HTMLElement, bracketsVisible: boolean): boolean => {
+      const at = caretPlace(host);
+      if (!at) return false;
+      const m = read(host);
+      const [s, e] = blockRanges(m.words.length, m.breaks)[at.block];
+      const g = firstTyped(m, at.block) + at.word;
+      if (g <= s || g >= e) return false; // already a paragraph's edge
+      m.breaks = [...m.breaks, g - 1].sort((a, b) => a - b);
+      model.current = m;
+      touched.current = true;
+      draw(host, m, { mode: "hybrid", leftEllipsis: hasLeftCrop, rightEllipsis: hasRightCrop, bracketsVisible });
+      placeCaret(host, m, g);
+      return true;
+    },
+    [hasLeftCrop, hasRightCrop],
+  );
+
+  const joinAtCaret = useCallback(
+    (host: HTMLElement, dir: -1 | 1, bracketsVisible: boolean): "joined" | "edge" | null => {
+      const at = caretPlace(host);
+      if (!at || (dir === -1 ? !at.atStart : !at.atEnd)) return null;
+      const m = read(host);
+      const ranges = blockRanges(m.words.length, m.breaks);
+      if (dir === -1 && (at.excludedBefore || at.block === 0)) return "edge";
+      if (dir === 1 && (at.excludedAfter || at.block === ranges.length - 1)) return "edge";
+      const gone = dir === -1 ? ranges[at.block][0] - 1 : ranges[at.block][1] - 1;
+      m.breaks = m.breaks.filter((b) => b !== gone);
+      model.current = m;
+      touched.current = true;
+      draw(host, m, { mode: "hybrid", leftEllipsis: hasLeftCrop, rightEllipsis: hasRightCrop, bracketsVisible });
+      if (dir === -1) placeCaret(host, m, gone + 1);
+      else placeCaret(host, m, gone, true);
+      return "joined";
+    },
+    [hasLeftCrop, hasRightCrop],
+  );
 
   // ── Bracket drag ────────────────────────────────────────────────────
 
   const handleBracketPointerDown = useCallback(
-    (side: "start" | "end", e: React.PointerEvent, textSpanEl: HTMLElement) => {
+    (side: "start" | "end", e: React.PointerEvent | PointerEvent, textSpanEl: HTMLElement) => {
       if (mode === "idle") return;
       e.preventDefault();
       e.stopPropagation();
@@ -174,42 +302,22 @@ export function useCropEdit({
         blurTimeoutRef.current = null;
       }
 
-      // Snapshot contenteditable text before switching to crop mode.
-      // The user may have typed edits that need to be preserved.
-      const editableSpan = textSpanEl.querySelector(".crop-editable");
-      let snapshotWords = [...words];
-      let snapshotStart = cropStart;
-      let snapshotEnd = cropEnd;
-
-      if (editableSpan && mode === "hybrid") {
-        const editedText = (editableSpan.textContent ?? "").trim();
-        const editedWords = editedText.split(/\s+/).filter(Boolean);
-
-        if (snapshotStart > 0 || snapshotEnd < snapshotWords.length) {
-          // Re-entering crop from hybrid with existing boundaries
-          const before = snapshotWords.slice(0, snapshotStart);
-          const after = snapshotWords.slice(snapshotEnd);
-          snapshotWords = [...before, ...editedWords, ...after];
-          snapshotEnd = snapshotStart + editedWords.length;
-        } else {
-          // First crop from fresh edit
-          snapshotWords = editedWords;
-          snapshotStart = 0;
-          snapshotEnd = editedWords.length;
-        }
-      }
+      // Snapshot the surface before switching to crop mode: the researcher
+      // may have typed edits, and placed paragraphs, that must be kept.
+      const snap: EditModel = mode === "hybrid" ? read(textSpanEl) : { ...model.current };
 
       const dragStartX = e.clientX;
       let dragConfirmed = false;
-      let localStart = snapshotStart;
-      let localEnd = snapshotEnd;
+      let localStart = snap.cropStart;
+      let localEnd = snap.cropEnd;
 
       const onMove = (ev: PointerEvent) => {
         if (!dragConfirmed) {
           if (Math.abs(ev.clientX - dragStartX) < MIN_DRAG) return;
           dragConfirmed = true;
           // Commit the snapshot and switch to crop mode
-          setWords(snapshotWords);
+          model.current = snap;
+          setWords(snap.words);
           setCropStart(localStart);
           setCropEnd(localEnd);
           setMode("crop");
@@ -257,15 +365,17 @@ export function useCropEdit({
           const newStart = Math.max(0, Math.min(closestIdx, localEnd - 1));
           if (newStart !== localStart) {
             localStart = newStart;
+            model.current = { ...model.current, cropStart: newStart };
             setCropStart(newStart);
           }
         } else {
           const newEnd = Math.min(
-            snapshotWords.length,
+            snap.words.length,
             Math.max(closestIdx + 1, localStart + 1),
           );
           if (newEnd !== localEnd) {
             localEnd = newEnd;
+            model.current = { ...model.current, cropEnd: newEnd };
             setCropEnd(newEnd);
           }
         }
@@ -294,7 +404,7 @@ export function useCropEdit({
       document.addEventListener("pointermove", onMove);
       document.addEventListener("pointerup", onUp);
     },
-    [mode, words, cropStart, cropEnd],
+    [mode, setMode],
   );
 
   return {
@@ -311,5 +421,9 @@ export function useCropEdit({
     commitEdit,
     cancelEdit,
     reenterTextEdit,
+    holdBlur,
+    drawSurface,
+    splitAtCaret,
+    joinAtCaret,
   };
 }

@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import type { BreaksChange } from "../hooks/useCropEdit";
 import { QuoteCard } from "./QuoteCard";
 import { ANCHOR_SELECTORS } from "../hooks/useAnchorReporter";
 import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
@@ -473,7 +474,7 @@ function renderEditableCard(
   overrides: Partial<QuoteResponse> = {},
   extra: {
     isEdited?: boolean;
-    onEditCommit?: (domId: string, newText: string) => void;
+    onEditCommit?: (domId: string, newText: string | null, breaks?: BreaksChange) => void;
   } = {},
 ) {
   const quote = makeQuote(overrides);
@@ -569,7 +570,7 @@ describe("QuoteCard — editing (trim handles)", () => {
 // 150 ms later from an editor that was gone, writing the old text back.
 describe("QuoteCard — an edit in progress survives the card going away", () => {
   const TYPED = "The navigation was hidden";
-  type Commit = (domId: string, newText: string) => void;
+  type Commit = (domId: string, newText: string | null, breaks?: BreaksChange) => void;
   function startEditing(onEditCommit: Commit) {
     const view = renderEditableCard({}, { onEditCommit });
     fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-text"));

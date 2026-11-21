@@ -7,8 +7,10 @@
  *
  * Quote text editing uses a unified click-to-edit interaction:
  * click → yellow bg + gold bracket handles → type to edit AND/OR
- * drag brackets to crop → Enter to commit. See useCropEdit hook
- * and docs/design-quote-editing.md for full behaviour spec.
+ * drag brackets to crop → Enter to commit. A long quote keeps its paragraphs
+ * while it is edited; Shift-Return starts one, Backspace at a paragraph's
+ * start joins it. See useCropEdit, utils/quoteEditSurface.ts and
+ * docs/design-quote-editing.md for full behaviour spec.
  *
  * All state mutations are delegated to the parent (QuoteGroup)
  * via callbacks.
@@ -33,10 +35,10 @@ import { isExportMode } from "../utils/exportData";
 import { reportHref } from "../utils/reportHref";
 import { featureFlags } from "../utils/featureFlags";
 import { highlightTerms } from "../utils/highlight";
-import { breakIntoBlocks } from "../utils/breakParagraphs";
+import { autoBreaks, blockRanges, caretAtPoint, setBracketsVisible as showBrackets } from "../utils/quoteEditSurface";
 import { useDisplayBreaks } from "../contexts/DisplayPrefsStore";
 import type { SearchTerm } from "../utils/searchMatch";
-import { useCropEdit } from "../hooks/useCropEdit";
+import { useCropEdit, type BreaksChange } from "../hooks/useCropEdit";
 import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
 import { Icon } from "../components/Icon";
 import { momentPlace } from "../utils/contextPlace";
@@ -54,9 +56,6 @@ function splitFirstSentence(text: string): { first: string; rest: string } {
   return { first: match[1], rest: match[2] };
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 // ── Props ───────────────────────────────────────────────────────────────
 
@@ -113,7 +112,13 @@ interface QuoteCardProps {
 
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
-  onEditCommit: (domId: string, newText: string) => void;
+  /**
+   * A committed edit: the new words (null when only the paragraphs changed),
+   * and, when the researcher's own paragraphs changed, `breaks`.
+   */
+  onEditCommit: (domId: string, newText: string | null, breaks?: BreaksChange) => void;
+  /** The researcher's own paragraph breaks (word positions), or null: placed automatically. */
+  researcherBreaks?: number[] | null;
   /** `pick` is the tag chosen from the list, as the row it is (two tags can share a name). */
   onTagAdd: (domId: string, tagName: string, pick?: TagPick) => void;
   /** `tagId` is the tag the × points at; a removal that carries it takes only that tag. */
@@ -156,6 +161,7 @@ export function QuoteCard({
   onToggleStar,
   onToggleHide,
   onEditCommit,
+  researcherBreaks = null,
   onTagAdd,
   onTagRemove,
   onBadgeDelete,
@@ -215,21 +221,19 @@ export function QuoteCard({
     featureFlags.moderatorQuestionPill && hasModerator && quote.segment_index > 0;
   const textSpanRef = useRef<HTMLSpanElement>(null);
 
-  // Focus the editable span when it mounts. Stable, so React calls it only on
-  // mount and unmount: an inline arrow is a new ref every render, re-run each
-  // time, and the bracket-reveal re-render 250 ms into an edit pulled focus
-  // back from anything the researcher had moved to — the tag input included.
-  const focusEditableOnMount = useCallback((el: HTMLSpanElement | null) => {
-    if (el && document.activeElement !== el) {
-      el.focus();
-    }
-  }, []);
+  // The edit surface: React renders it empty and utils/quoteEditSurface.ts
+  // draws into it, so a re-render never reconciles over what was typed.
+  const editHostRef = useRef<HTMLSpanElement>(null);
+  // Where the click that opened the edit landed: the layout does not move, so
+  // the caret goes to the same word.
+  const clickPoint = useRef<{ x: number; y: number } | null>(null);
 
   // ── Crop edit hook ──────────────────────────────────────────────────
 
   const handleCropCommit = useCallback(
-    (newText: string) => {
-      onEditCommit(domId, newText);
+    (newText: string | null, breaks?: BreaksChange) => {
+      if (breaks) onEditCommit(domId, newText, breaks);
+      else if (newText !== null) onEditCommit(domId, newText);
     },
     [domId, onEditCommit],
   );
@@ -238,22 +242,32 @@ export function QuoteCard({
     // No-op — just exit edit mode.
   }, []);
 
+  // ── Paragraphs (Break long paragraphs, and the researcher's own) ────
+  // Shown at rest: the researcher's own breaks if there are any (whatever the
+  // Display setting: owner, 21 Nov 2026), else the automatic ones when Break
+  // long paragraphs is on. The edit modes freeze exactly these; nothing is
+  // re-placed until commit. The automatic ones are computed from the text each
+  // time, never stored.
+  const breaksOn = useDisplayBreaks() === "on";
+  const shownBreaks = useMemo(
+    () => researcherBreaks ?? (breaksOn ? autoBreaks(displayText) : []),
+    [researcherBreaks, breaksOn, displayText],
+  );
+  const blocks = useMemo(() => {
+    if (shownBreaks.length === 0) return [displayText];
+    const words = displayText.split(/\s+/).filter(Boolean);
+    return blockRanges(words.length, shownBreaks).map(([s, e]) => words.slice(s, e).join(" "));
+  }, [shownBreaks, displayText]);
+  const broken = blocks.length > 1;
+
   const crop = useCropEdit({
     currentText: displayText,
     originalText: quote.text,
+    researcherBreaks,
+    shownBreaks,
     onCommit: handleCropCommit,
     onCancel: handleCropCancel,
   });
-
-  // ── Break long paragraphs (Display menu) ────────────────────────────
-  // Idle display only: the edit modes always show the text unbroken. The
-  // blocks are computed from the text each time, never stored.
-  const breaksOn = useDisplayBreaks() === "on";
-  const blocks = useMemo(
-    () => (breaksOn && crop.mode === "idle" ? breakIntoBlocks(displayText) : [displayText]),
-    [breaksOn, crop.mode, displayText],
-  );
-  const broken = blocks.length > 1;
 
   // ── Bracket delayed entrance ────────────────────────────────────────
 
@@ -270,38 +284,57 @@ export function QuoteCard({
     }
   }, [crop.mode]);
 
-  // ── Attach drag handlers to crop-mode brackets ────────────────────
-  // In crop mode (mode 3), brackets are rendered via dangerouslySetInnerHTML
-  // so they have no React event handlers. We attach pointerdown listeners
-  // imperatively after each render. This mirrors the mockup's
-  // attachHandleDrag() pattern (called after every innerHTML= rebuild).
+  // ── Draw the edit surface: text mode once on entry, trim on each move ──
 
+  const { drawSurface } = crop;
+  useLayoutEffect(() => {
+    const host = editHostRef.current;
+    if (!host || crop.mode === "idle") return;
+    drawSurface(host, crop.mode === "crop");
+    if (crop.mode !== "hybrid") return;
+    if (document.activeElement !== host) host.focus();
+    const pt = clickPoint.current;
+    clickPoint.current = null;
+    if (!pt || !caretAtPoint(host, pt.x, pt.y)) {
+      const r = document.createRange();
+      r.selectNodeContents(host.querySelector(".crop-editable") ?? host);
+      r.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(r);
+    }
+    // Drawn again only when the mode or the trim changes: a re-render for any
+    // other reason must not redraw over what was typed.
+  }, [crop.mode, crop.cropStart, crop.cropEnd, drawSurface]);
+
+  // The brackets' fade-in touches only the brackets, never the typed text.
   useEffect(() => {
-    if (crop.mode !== "crop" || !textSpanRef.current) return;
-    const handles = textSpanRef.current.querySelectorAll(".crop-handle");
-    const listeners: Array<[Element, (e: Event) => void]> = [];
-    handles.forEach((handle) => {
-      const side = handle.getAttribute("data-handle") as "start" | "end";
-      const listener = (e: Event) => {
-        crop.handleBracketPointerDown(side, e as unknown as React.PointerEvent, textSpanRef.current!);
-      };
-      handle.addEventListener("pointerdown", listener);
-      listeners.push([handle, listener]);
-    });
-    return () => {
-      listeners.forEach(([el, fn]) => el.removeEventListener("pointerdown", fn));
+    const host = editHostRef.current;
+    if (host && crop.mode !== "idle") showBrackets(host, bracketsVisible || crop.mode === "crop");
+  }, [bracketsVisible, crop.mode]);
+
+  // ── Bracket drag: the brackets are drawn by the surface, so are their listeners ──
+
+  const { handleBracketPointerDown } = crop;
+  useEffect(() => {
+    const host = editHostRef.current;
+    if (crop.mode === "idle" || !host) return;
+    const listener = (e: PointerEvent) => {
+      const handle = (e.target as HTMLElement).closest<HTMLElement>(".crop-handle");
+      if (!handle || !host.contains(handle)) return;
+      handleBracketPointerDown(handle.dataset.handle as "start" | "end", e, host);
     };
-  }, [crop.mode, crop.cropStart, crop.cropEnd, crop.handleBracketPointerDown]);
+    host.addEventListener("pointerdown", listener);
+    return () => host.removeEventListener("pointerdown", listener);
+  }, [crop.mode, handleBracketPointerDown]);
 
   // ── Click-outside → commit ──────────────────────────────────────────
 
   useEffect(() => {
     if (crop.mode === "idle") return;
     const onPointerDown = (e: PointerEvent) => {
-      const card = textSpanRef.current?.closest("blockquote");
+      const card = editHostRef.current?.closest("blockquote");
       if (card && !card.contains(e.target as Node)) {
-        const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
-        crop.commitEdit(editableEl);
+        crop.commitEdit(editHostRef.current);
       }
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -328,10 +361,33 @@ export function QuoteCard({
               clearTimeout(crop.blurTimeoutRef.current);
               crop.blurTimeoutRef.current = null;
             }
-            crop.commitEdit(textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null);
+            crop.commitEdit(editHostRef.current);
           };
   });
   useLayoutEffect(() => () => commitOnLeave.current?.(), []);
+
+  // ── Tab: commit, and stay on the card (owner, 21 Nov 2026) ──────────
+  // In both modes. Until then Tab blurred the text, which committed 150 ms
+  // later and moved focus to the speaker's name; in trim mode nothing listened
+  // for it, so focus left and the card stayed mid-edit.
+
+  const commitAndStay = useCallback(
+    (e: React.KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const card = editHostRef.current?.closest("blockquote");
+      crop.commitEdit(editHostRef.current);
+      // After the commit, which clears the hold: moving focus to the card
+      // blurs the text, and that blur must not commit again.
+      crop.holdBlur();
+      if (card instanceof HTMLElement) {
+        card.setAttribute("tabindex", "-1");
+        card.focus({ preventScroll: true });
+      }
+      setFocus(domId, { scroll: false });
+    },
+    [crop, domId, setFocus],
+  );
 
   // ── Card-level keydown for crop mode ────────────────────────────────
 
@@ -346,9 +402,11 @@ export function QuoteCard({
         e.preventDefault();
         e.stopPropagation();
         crop.cancelEdit();
+      } else if (e.key === "Tab") {
+        commitAndStay(e);
       }
     },
-    [crop],
+    [crop, commitAndStay],
   );
 
   // ── Edit mode entry (click on quote text in idle) ───────────────────
@@ -361,14 +419,16 @@ export function QuoteCard({
       // Don't enter edit mode when modifier keys are held (focus/selection)
       if (e.metaKey || e.ctrlKey || e.shiftKey) return;
       if (crop.mode === "idle") {
+        clickPoint.current = { x: e.clientX, y: e.clientY };
         crop.enterEditMode();
       } else if (crop.mode === "crop") {
         // Click on included word → back to hybrid (text editing)
         const target = e.target as HTMLElement;
         const isIncluded =
           (target.classList.contains("crop-word") && target.classList.contains("included")) ||
-          target.classList.contains("crop-included-region");
+          !!target.closest(".crop-included-region");
         if (isIncluded) {
+          clickPoint.current = { x: e.clientX, y: e.clientY };
           crop.reenterTextEdit();
         }
       }
@@ -376,23 +436,47 @@ export function QuoteCard({
     [crop],
   );
 
-  // ── Hybrid mode: keyboard + blur on contenteditable ─────────────────
+  // ── Hybrid mode: keyboard, paste and blur on the edit surface ───────
 
   const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      const host = editHostRef.current;
+      // An IME's Enter confirms its composition.
+      if (!host || e.nativeEvent.isComposing) return;
+      if (e.key === "Enter" && e.shiftKey) {
+        // A new paragraph at the caret (the transcript's Return; here Return commits).
         e.preventDefault();
         e.stopPropagation();
-        const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
-        crop.commitEdit(editableEl);
+        crop.splitAtCaret(host, bracketsVisible);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        crop.commitEdit(host);
       } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
         crop.cancelEdit();
+      } else if (e.key === "Tab") {
+        commitAndStay(e);
+      } else if ((e.key === "Backspace" || e.key === "Delete") && !e.metaKey && !e.altKey && !e.ctrlKey) {
+        // At a paragraph's start (Backspace) or end (Delete): join. At the
+        // quote's own start or end: nothing, rather than delete a quote mark.
+        if (crop.joinAtCaret(host, e.key === "Backspace" ? -1 : 1, bracketsVisible) !== null) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }
     },
-    [crop],
+    [crop, bracketsVisible, commitAndStay],
   );
+
+  // A paste is plain text, on one line: pasted markup would bring another
+  // page's paragraphs and styling into the quote.
+  const handleEditPaste = useCallback((e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData("text/plain").replace(/\s+/g, " ");
+    if (text && typeof document.execCommand === "function") document.execCommand("insertText", false, text);
+  }, []);
 
   const handleEditBlur = useCallback(() => {
     crop.blurTimeoutRef.current = setTimeout(() => {
@@ -401,8 +485,7 @@ export function QuoteCard({
         return;
       }
       if (crop.mode === "hybrid") {
-        const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
-        crop.commitEdit(editableEl);
+        crop.commitEdit(editHostRef.current);
       }
     }, 150);
   }, [crop]);
@@ -412,9 +495,11 @@ export function QuoteCard({
   const handleUndo = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onEditCommit(domId, quote.text);
+      // Back to the pipeline's words, and to automatic paragraphs.
+      if (researcherBreaks !== null) onEditCommit(domId, quote.text, { value: null });
+      else onEditCommit(domId, quote.text);
     },
-    [domId, quote.text, onEditCommit],
+    [domId, quote.text, researcherBreaks, onEditCommit],
   );
 
   // ── Click-to-focus handler ──────────────────────────────────────────
@@ -522,105 +607,32 @@ export function QuoteCard({
       : allTagNames;
   const timecodeStr = formatTimecode(quote.start_timecode);
   const isActive = crop.mode !== "idle";
-  const bracketCls = bracketsVisible ? "crop-handle bracket-visible" : "crop-handle bracket-delayed";
 
   // ── Render quote text area ──────────────────────────────────────────
 
   function renderQuoteText() {
-    if (crop.mode === "hybrid") {
-      // Mode 2: contenteditable with optional excluded word spans
-      const includedText = crop.words.slice(crop.cropStart, crop.cropEnd).join(" ");
+    if (crop.mode !== "idle") {
+      // Both edit modes draw into one surface, as the same paragraphs as at
+      // rest, with the quote marks kept in place and the brackets laid over
+      // them (utils/quoteEditSurface.ts). React gives it no children and its
+      // own key, so it never reconciles over what was typed.
       return (
+        // Card-level keyboard handling for trim mode lives on the <blockquote>.
         <span
+          key="edit-surface"
           className="quote-text"
-          ref={textSpanRef}
+          ref={editHostRef}
           data-testid={`bn-quote-${domId}-text`}
           data-edit-key={`${domId}:text`}
-        >
-          {/* Leading excluded words */}
-          {crop.cropStart > 0 && crop.words.slice(0, crop.cropStart).map((w, i) => (
-            <span key={`ex-${i}`} className="crop-word excluded" data-i={i}>
-              {w}{" "}
-            </span>
-          ))}
-          {/* [ bracket */}
-          <span
-            className={bracketCls}
-            data-handle="start"
-            onPointerDown={(e) => crop.handleBracketPointerDown("start", e, textSpanRef.current!)}
-          >
-            [
-          </span>
-          {/* Contenteditable included text */}
-          <span
-            className="crop-editable"
-            role="textbox"
-            aria-multiline="false"
-            tabIndex={0}
-            contentEditable
-            suppressContentEditableWarning
-            onKeyDown={handleEditKeyDown}
-            onBlur={handleEditBlur}
-            ref={focusEditableOnMount}
-          >
-            {includedText}
-          </span>
-          {/* ] bracket */}
-          <span
-            className={bracketCls}
-            data-handle="end"
-            onPointerDown={(e) => crop.handleBracketPointerDown("end", e, textSpanRef.current!)}
-          >
-            ]
-          </span>
-          {/* Trailing excluded words */}
-          {crop.cropEnd < crop.words.length && crop.words.slice(crop.cropEnd).map((w, i) => (
-            <span key={`ex-end-${i}`} className="crop-word excluded" data-i={crop.cropEnd + i}>
-              {" "}{w}
-            </span>
-          ))}
-        </span>
-      );
-    }
-
-    if (crop.mode === "crop") {
-      // Mode 3: word spans for drag hit detection
-      const html: string[] = [];
-      let inIncluded = false;
-      for (let i = 0; i < crop.words.length; i++) {
-        const isExcluded = i < crop.cropStart || i >= crop.cropEnd;
-
-        if (i === crop.cropStart) {
-          html.push(`<span class="crop-handle bracket-visible" data-handle="start">[</span>`);
-          html.push(`<span class="crop-included-region">`);
-          inIncluded = true;
-        }
-
-        const cls = `crop-word ${isExcluded ? "excluded" : "included"}`;
-        html.push(
-          `<span class="${cls}" data-i="${i}">${escapeHtml(crop.words[i])}</span>`,
-        );
-
-        if (i === crop.cropEnd - 1 && inIncluded) {
-          html.push(`</span>`); // close .crop-included-region
-          inIncluded = false;
-          html.push(`<span class="crop-handle bracket-visible" data-handle="end">]</span>`);
-        }
-
-        if (i < crop.words.length - 1) html.push(" ");
-      }
-
-      return (
-        // Click-to-edit quote text; card-level keyboard activation lives on
-        // the parent <blockquote> (handleCardKeyDown).
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-        <span
-          className="quote-text"
-          ref={textSpanRef}
-          data-testid={`bn-quote-${domId}-text`}
-          data-edit-key={`${domId}:text`}
+          role={crop.mode === "hybrid" ? "textbox" : undefined}
+          aria-multiline={crop.mode === "hybrid" ? true : undefined}
+          tabIndex={crop.mode === "hybrid" ? 0 : undefined}
+          contentEditable={crop.mode === "hybrid"}
+          suppressContentEditableWarning
+          onKeyDown={crop.mode === "hybrid" ? handleEditKeyDown : undefined}
+          onPaste={crop.mode === "hybrid" ? handleEditPaste : undefined}
+          onBlur={crop.mode === "hybrid" ? handleEditBlur : undefined}
           onClick={handleQuoteTextClick}
-          dangerouslySetInnerHTML={{ __html: html.join("") }}
         />
       );
     }
@@ -796,9 +808,9 @@ export function QuoteCard({
             />
           )}
           <span className="quote-text-wrapper">
-            {!broken && <span className="smart-quote">{"\u201c"}</span>}
+            {!broken && !isActive && <span className="smart-quote">{"\u201c"}</span>}
             {renderQuoteText()}
-            {!broken && <span className="smart-quote">{"\u201d"}</span>}
+            {!broken && !isActive && <span className="smart-quote">{"\u201d"}</span>}
           </span>
           {" "}
           <span className="speaker">

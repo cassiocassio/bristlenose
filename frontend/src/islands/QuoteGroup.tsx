@@ -26,6 +26,7 @@ import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { deriveTagVisibility, isBadgeHidden } from "../utils/tagVisibility";
 import { NewBadge } from "../components/NewBadge";
 import { QuoteCard } from "./QuoteCard";
+import type { BreaksChange } from "../hooks/useCropEdit";
 import { useFocus } from "../contexts/FocusContext";
 import {
   useQuotesStore,
@@ -564,8 +565,8 @@ export function QuoteGroup({
   }, []);
 
   const handleEditCommit = useCallback(
-    (domId: string, newText: string) => {
-      commitEdit(domId, newText);
+    (domId: string, newText: string | null, breaks?: BreaksChange) => {
+      commitEdit(domId, newText, breaks);
     },
     [],
   );
@@ -977,7 +978,8 @@ export function QuoteGroup({
               hiddenTagNames={hiddenTagNames}
               disabledTagNames={disabledTagNames}
               deletedBadges={deletedBadgesList}
-              isEdited={editedText != null && editedText !== q.text}
+              isEdited={(editedText != null && editedText !== q.text) || store.breaks[q.dom_id] != null}
+              researcherBreaks={store.breaks[q.dom_id] ?? null}
               tagVocabulary={tagVocabulary}
               groupedVocabulary={groupedVocabulary}
               sessionId={q.session_id}

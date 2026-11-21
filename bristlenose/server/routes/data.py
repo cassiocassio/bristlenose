@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
+from bristlenose.server import quote_breaks
 from bristlenose.server.autocode import _REAPPLY_IN_FLIGHT, live_reapply, register_reapply
 from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
@@ -36,6 +37,7 @@ from bristlenose.server.models import (
     Project,
     ProjectFrameworkState,
     Quote,
+    QuoteBreak,
     QuoteEdit,
     QuoteState,
     QuoteTag,
@@ -54,6 +56,13 @@ router = APIRouter(prefix="/api")
 # ---------------------------------------------------------------------------
 # Request / response models
 # ---------------------------------------------------------------------------
+
+
+class QuoteBreaksWrite(BaseModel):
+    """A quote's own paragraph breaks, and the wording they were placed in."""
+
+    breaks: list[int]
+    text: str
 
 
 class PersonData(BaseModel):
@@ -1031,6 +1040,47 @@ def patch_edits(
                             edited_at=_now(),
                         )
                     )
+        db.commit()
+        return {"status": "ok", "unresolved": unresolved}
+    finally:
+        db.close()
+
+
+@router.patch("/projects/{project_id}/quote-breaks")
+def patch_quote_breaks(
+    project_id: int,
+    request: Request,
+    data: dict[str, QuoteBreaksWrite | None],
+) -> dict[str, Any]:
+    """Set (or with ``null``, clear) the researcher's own paragraph breaks of the quotes named.
+
+    The breaks are word positions in ``text``, the wording the researcher was
+    looking at; the row keeps that wording's hash, so it stops showing if the
+    wording changes later (``quote_breaks``). An empty list is a choice too: the
+    researcher took every automatic break out. Answers ``unresolved`` as the
+    other curation PATCHes do.
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        unresolved: list[str] = []
+        for key, write in data.items():
+            if write is not None and not quote_breaks.valid(write.breaks, write.text):
+                raise HTTPException(status_code=422, detail="Breaks must fall between words")
+            quote = _resolve_quote(db, project_id, key)
+            if not quote:
+                unresolved.append(key)
+                continue
+            db.query(QuoteBreak).filter_by(quote_id=quote.id).delete(synchronize_session=False)
+            if write is not None:
+                db.add(QuoteBreak(
+                    quote_id=quote.id,
+                    breaks=quote_breaks.encode(write.breaks),
+                    source="researcher",
+                    verify=quote_breaks.verify_of(write.text),
+                    created_at=_now(),
+                ))
         db.commit()
         return {"status": "ok", "unresolved": unresolved}
     finally:

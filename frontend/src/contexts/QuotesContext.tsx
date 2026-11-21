@@ -39,6 +39,7 @@ import {
   patchHidden,
   patchStarred,
   patchEdits,
+  patchQuoteBreaks,
   patchTags,
   patchDeletedBadges,
   acceptProposal,
@@ -70,6 +71,9 @@ export interface QuotesState {
   hiding: Set<string>;
   starred: Record<string, boolean>;
   edits: Record<string, string>;
+  /** The researcher's own paragraph breaks per quote (word positions); a quote
+   *  that is absent has its paragraphs placed automatically. */
+  breaks: Record<string, number[]>;
   tags: Record<string, TagResponse[]>;
   deletedBadges: Record<string, string[]>;
   proposedTags: Record<string, ProposedTagBrief[]>;
@@ -95,6 +99,7 @@ function emptyState(): QuotesState {
     hiding: new Set(),
     starred: {},
     edits: {},
+    breaks: {},
     tags: {},
     deletedBadges: {},
     proposedTags: {},
@@ -243,6 +248,7 @@ export function initFromQuotes(
     const hidden = { ...base.hidden };
     const starred = { ...base.starred };
     const edits = { ...base.edits };
+    const breaks = { ...base.breaks };
     const tags = { ...base.tags };
     const deletedBadges = { ...base.deletedBadges };
     const proposedTags = { ...base.proposedTags };
@@ -272,6 +278,9 @@ export function initFromQuotes(
       else if (q.is_starred) starred[q.dom_id] = true;
       if (unsettled.has(`edits:${q.dom_id}`)) keep(edits, prev.edits, q.dom_id);
       else if (q.edited_text) edits[q.dom_id] = q.edited_text;
+      if (unsettled.has(`breaks:${q.dom_id}`)) keep(breaks, prev.breaks, q.dom_id);
+      else if (q.researcher_breaks != null) breaks[q.dom_id] = [...q.researcher_breaks];
+      else delete breaks[q.dom_id];
       const reviewing = reviewsInFlight.has(q.dom_id);
       if (tagWriteUnanswered(q.dom_id) || reviewing) {
         // The response may predate it: keep what the screen shows.
@@ -299,6 +308,7 @@ export function initFromQuotes(
       hidden,
       starred,
       edits,
+      breaks,
       tags,
       deletedBadges,
       proposedTags,
@@ -864,9 +874,84 @@ function setEdit(key: string, text: string | undefined, record: boolean): Promis
   return written;
 }
 
-/** Commit a quote's text — an edit, or the card's revert to the original. */
-export function commitEdit(domId: string, newText: string): void {
-  void setEdit(domId, newText, true);
+function withBreaks(id: string, breaks: number[] | undefined): Updater {
+  return (s) => {
+    if (s.breaks[id] === breaks) return s;
+    const map = { ...s.breaks };
+    if (breaks === undefined) delete map[id];
+    else map[id] = breaks;
+    return { ...s, breaks: map };
+  };
+}
+
+/** The pipeline's words for a quote (what it reads as with no edit). */
+function pipelineText(domId: string): string {
+  const q = state.quotes.find((x) => x.dom_id === domId) ?? state.uncategorised.find((x) => x.dom_id === domId);
+  return q?.text ?? "";
+}
+
+/**
+ * A quote's words and its own paragraph breaks, as ONE gesture: one state
+ * write, one undo entry, the edit and the breaks each PATCHed to their own
+ * endpoint. The breaks go with the wording they were placed in, so the server
+ * stops showing them if the words change later (server/quote_breaks.py).
+ * `breaks` undefined clears them (the paragraphs go back to automatic).
+ */
+function setQuote(
+  domId: string,
+  text: string | undefined,
+  breaks: number[] | undefined,
+  writeText: boolean,
+  record: boolean,
+): Promise<Landed> {
+  if (isExportMode()) return LANDED;
+  const beforeText = state.edits[domId];
+  const beforeBreaks = state.breaks[domId];
+  const doText = writeText && beforeText !== text;
+  const wording = (doText ? text : beforeText) ?? pipelineText(domId);
+  const after: Updater = (s) => withBreaks(domId, breaks)(doText ? withEdit(domId, text)(s) : s);
+  setState(after);
+  const writes: Promise<void>[] = [];
+  const changes: Change[] = [];
+  if (doText) {
+    writes.push(patchEdits({ [domId]: text ?? null }));
+    changes.push({ key: `edits:${domId}`, id: domId, before: withEdit(domId, beforeText), after: withEdit(domId, text) });
+  }
+  writes.push(patchQuoteBreaks({ [domId]: breaks === undefined ? null : { breaks, text: wording } }));
+  changes.push({
+    key: `breaks:${domId}`,
+    id: domId,
+    before: withBreaks(domId, beforeBreaks),
+    after: withBreaks(domId, breaks),
+  });
+  const written = send(Promise.all(writes).then(() => undefined), changes);
+  if (record) {
+    recordGesture(
+      "editQuote",
+      written,
+      () => setQuote(domId, beforeText, beforeBreaks, doText, false),
+      () => setQuote(domId, text, breaks, doText, false),
+    );
+  }
+  return written;
+}
+
+/**
+ * Commit a quote: its words (an edit, or the card's revert to the original),
+ * its own paragraph breaks, or both, as one gesture. `newText` null leaves the
+ * words as they are; `breaks` absent leaves the paragraphs as they are, and
+ * `{ value: null }` hands them back to the automatic placing.
+ */
+export function commitEdit(
+  domId: string,
+  newText: string | null,
+  breaks?: { value: number[] | null },
+): void {
+  if (breaks === undefined) {
+    if (newText !== null) void setEdit(domId, newText, true);
+    return;
+  }
+  void setQuote(domId, newText ?? state.edits[domId], breaks.value ?? undefined, newText !== null, true);
 }
 
 /**

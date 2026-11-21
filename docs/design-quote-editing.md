@@ -177,9 +177,34 @@ Escape reverts everything — text edits AND crop — to the pre-click state. Al
 
 ### 12. Tab behaviour
 
-Tab does its normal browser thing: moves focus to the next focusable element. This triggers blur on the contenteditable, which is treated as commit (same as Enter). We do NOT override Tab with custom semantics.
+**Tab and Shift-Tab commit and leave focus on the card** (owner, 21 Nov 2026), in text editing and in trimming alike. The card takes keyboard focus (`tabindex="-1"`, the same as after a bracket drag) and the quote focus (`setFocus`), so `j`/`k`, `s`, `t` and the rest carry on from the quote just edited.
 
-**Rationale:** Tab is a navigation key. Overriding it breaks keyboard users' expectations. The blur-as-commit behaviour is consistent with how contenteditable works everywhere (Google Docs, Notion, etc.).
+_Superseded, 21 Nov 2026:_ Tab did its normal browser thing — focus moved to the next control (the speaker's name), the contenteditable blurred, and the blur committed 150 ms later. In trimming nothing listened for the card losing focus, so Tab moved focus away and left the card mid-edit with its brackets showing: the "Tab sometimes finishes an edit" the owner reported. Committing on Tab in both modes, and keeping the researcher where they were, replaced it.
+
+### 12a. Paragraphs (21 Nov 2026)
+
+A long quote is drawn as paragraphs at rest (Break long paragraphs, `docs/design-display-preferences.md` §4). **The edit modes keep exactly those paragraphs**: entering an edit freezes the breaks on screen, and nothing is placed again until commit, so clicking into a quote moves nothing. Before, both edit modes drew the quote as one run and the card jumped (measured in Chromium on a 105-word quote at 620 px: 42 px shorter, words moving by up to 325 px). The live comparison, shipped against proposed, is `docs/mockups/quote-edit-breaks.html`.
+
+How it is drawn: in both edit modes React renders `.quote-text` empty and `utils/quoteEditSurface.ts` draws into it, so a re-render never reconciles over what the browser typed. One editable host holds every paragraph (`.bn-block`), so a selection can cross them, as in the transcript. The quote marks stay in place with their glyphs hidden (`.bn-mark`), and the brackets are laid over them. A bracket moved into the text in trimming sits in the gap between two words and takes no room (`.bn-anchor`), so dragging it changes only the colour of the words. Every structural key reads the host back into words plus break positions, changes that, and draws it again.
+
+| Key | Text editing | Trimming |
+|---|---|---|
+| Return | Commits | Commits |
+| Shift-Return | Starts a paragraph at the caret. Inside a word, before the word (the transcript's rule, `utils/paragraphEdits.ts` `caretWords`). At a paragraph's edge, nothing | — |
+| Option-Return | Commits, as Return. Only Shift-Return makes a paragraph (owner, 21 Nov 2026: researchers know Shift-Return) | Commits |
+| Backspace at a paragraph's start | Joins it to the one above, as in the transcript. At the quote's very start, nothing (never deletes a quote mark) | — |
+| Delete at a paragraph's end | Joins the paragraph below to it | — |
+| Escape | Cancels: the words and the paragraphs go back as they were | Cancels |
+| Tab, Shift-Tab | Commits; focus stays on the card (§12) | Commits; focus stays on the card |
+| Paste | Plain text, on one line | — |
+
+Return still commits because a quote is a field, as every inline edit in the report is; in the transcript Return splits, because a transcript is a document with nothing to commit. The meaning differs too: a paragraph break in the transcript is a quote boundary (it forks the quote, with time); a break in a quote is presentation only.
+
+**What a commit writes.** The words go to `QuoteEdit` only if they changed (spacing alone is no change, decision #30). The paragraphs go to the `quote_breaks` overlay (`server/quote_breaks.py`, migration 026, `PATCH …/quote-breaks`) only when the researcher placed or removed one by hand in this edit, or when the words under the researcher's own paragraphs changed (they are kept against the wording they were placed in). Paragraphs placed by hand that come out exactly as the automatic ones are not saved: the quote stays automatic. An empty list is saved: every automatic break taken out is a choice. Both writes are one gesture with one ⌘Z. Nothing goes to the transcript.
+
+**What is shown after.** The researcher's own paragraphs, if any — even with Break long paragraphs off (owner, 21 Nov 2026) — else the automatic ones, placed again from the new words. When the wording changes later without new breaks (a re-analysis rewords the quote), the stored breaks stop showing and the automatic ones return, without a message (`design-quote-anchor.md` §3.4). Revert (the undo arrow) goes back to the pipeline's words and the automatic paragraphs.
+
+Not yet: the Signals evidence and the Uncategorised floor still place their own automatic breaks and do not read the researcher's.
 
 ### 13. Undo
 
@@ -363,6 +388,14 @@ These are documented here because the same patterns will recur in the production
 **Fix:** Add `e.stopPropagation()` alongside `e.preventDefault()` in both handlers. This stops the keydown event at the blockquote boundary, preventing Enter from reaching the TimecodeLink and synthesizing a click.
 
 ---
+
+### 10. Tab committed the same edit twice (21 Nov 2026)
+
+**Symptom (found driving the built app):** after Tab, the paragraphs were written two or three times, and ⌘Z seemed to do nothing.
+
+**Cause:** Tab moves focus to the card, which blurs the text; the blur's commit runs 150 ms later from a render-old closure whose `mode` is still `"hybrid"`, and `commitEdit` had just cleared the hold that should have stopped it. The second commit was a second gesture on the undo stack, so ⌘Z undid only the copy and wrote the same breaks back.
+
+**Fix:** the hold is set after the commit, and `commitEdit` checks the mode as of now (`modeNow`, a ref set with the state), so no late blur or click can commit an edit that has ended. Pinned by "Tab commits once and leaves focus on the card" (red with both removed; each alone prevents it).
 
 ## Timecode identity
 

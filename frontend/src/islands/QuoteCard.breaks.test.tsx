@@ -1,9 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuoteCard } from "./QuoteCard";
 import { _resetDisplayPrefs, setDisplayPref } from "../contexts/DisplayPrefsStore";
 import { parseQuery } from "../utils/searchMatch";
 import type { QuoteResponse } from "../utils/types";
+import type { BreaksChange } from "../hooks/useCropEdit";
 
 // The break algorithm belongs to another session and its output will keep
 // changing, so this file never asserts what it returns: it hands the card
@@ -141,13 +142,221 @@ describe("QuoteCard — Break long paragraphs", () => {
     expect(blockEls()[1].contains(marks[0])).toBe(true);
   });
 
-  it("always shows the text unbroken while it is being edited", () => {
+  it("keeps the paragraphs while it is being edited, so nothing moves", () => {
     setDisplayPref("breaks", "on");
     renderCard();
     fireEvent.click(textEl());
-    expect(blockEls()).toHaveLength(0);
-    expect(textEl().textContent).toContain("one two three four");
-    // The card's own quote marks are back round the text, not dropped.
-    expect(textEl().parentElement!.querySelectorAll(":scope > .smart-quote")).toHaveLength(2);
+    expect(blockEls().map((b) => b.textContent)).toEqual(["\u201c[one two", "three four\u201d]"]);
+    // The quote marks keep their places inside the paragraphs, the brackets laid over them,
+    // and none is drawn outside the text as well.
+    expect(blockEls()[0].querySelector(".bn-mark .smart-quote")).toHaveTextContent("\u201c");
+    expect(textEl().parentElement!.querySelectorAll(":scope > .smart-quote")).toHaveLength(0);
+  });
+});
+
+// ── Paragraphs typed while editing (docs/design-quote-editing.md §"Paragraphs") ──
+
+type Commit = (domId: string, newText: string | null, breaks?: BreaksChange) => void;
+
+function renderEditing(opts: { researcherBreaks?: number[] | null; onEditCommit?: Commit } = {}) {
+  const quote = makeQuote();
+  render(
+    <QuoteCard
+      quote={quote}
+      displayText={quote.text}
+      isStarred={false}
+      isHidden={false}
+      userTags={[]}
+      allTagNames={[]}
+      deletedBadges={[]}
+      isEdited={false}
+      tagVocabulary={[]}
+      sessionId="s1"
+      hasMedia={false}
+      hasModerator={false}
+      proposedTags={[]}
+      flashingTags={new Set()}
+      moderatorQuestion={null}
+      isQuestionOpen={false}
+      isPillVisible={false}
+      researcherBreaks={opts.researcherBreaks ?? null}
+      onToggleStar={NOOP}
+      onToggleHide={NOOP}
+      onEditCommit={opts.onEditCommit ?? NOOP}
+      onTagAdd={NOOP}
+      onTagRemove={NOOP}
+      onBadgeDelete={NOOP}
+      onBadgeRestore={NOOP}
+      onProposedAccept={NOOP}
+      onProposedDeny={NOOP}
+      onToggleQuestion={NOOP}
+      onQuoteHoverEnter={NOOP}
+      onQuoteHoverLeave={NOOP}
+      onPillHoverEnter={NOOP}
+      onPillHoverLeave={NOOP}
+    />,
+  );
+  fireEvent.click(textEl());
+}
+
+/** Put the caret in paragraph `block`'s typed text, at `offset` characters in. */
+function caretIn(block: number, offset: number) {
+  const run = blockEls()[block].querySelector(".crop-editable")!;
+  const r = document.createRange();
+  r.setStart(run.firstChild!, offset);
+  r.collapse(true);
+  window.getSelection()!.removeAllRanges();
+  window.getSelection()!.addRange(r);
+}
+
+const key = (k: string, mods: Partial<KeyboardEventInit> = {}) => fireEvent.keyDown(textEl(), { key: k, ...mods });
+
+describe("QuoteCard — paragraphs typed while editing", () => {
+  beforeEach(() => setDisplayPref("breaks", "on"));
+
+  it("Shift-Return starts a paragraph at the caret, and Return saves them as the researcher's own", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    caretIn(1, "three ".length);
+    key("Enter", { shiftKey: true });
+    expect(blockEls().map((b) => b.textContent)).toEqual(["\u201c[one two", "three", "four\u201d]"]);
+    key("Enter");
+    // The words did not change: only the paragraphs are written.
+    expect(onEditCommit).toHaveBeenCalledExactlyOnceWith("q-p1-26", null, { value: [1, 2] });
+  });
+
+  it("inside a word, the new paragraph starts before the word (the transcript's rule)", () => {
+    renderEditing();
+    caretIn(1, "three fo".length);
+    key("Enter", { shiftKey: true });
+    expect(blockEls().map((b) => b.textContent)).toEqual(["\u201c[one two", "three", "four\u201d]"]);
+  });
+
+  it("Backspace at a paragraph's start joins it to the one above", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    caretIn(1, 0);
+    key("Backspace");
+    expect(blockEls().map((b) => b.textContent)).toEqual(["\u201c[one two three four\u201d]"]);
+    key("Enter");
+    // Every automatic break taken out is a choice too: an empty list, not "automatic".
+    expect(onEditCommit).toHaveBeenCalledExactlyOnceWith("q-p1-26", null, { value: [] });
+  });
+
+  it("Delete at a paragraph's end joins the one below", () => {
+    renderEditing();
+    caretIn(0, "one two".length);
+    key("Delete");
+    expect(blockEls()).toHaveLength(1);
+  });
+
+  it("Backspace at the quote's very start does nothing, rather than delete the quote mark", () => {
+    renderEditing();
+    caretIn(0, 0);
+    const ev = key("Backspace");
+    expect(ev).toBe(false); // default prevented
+    expect(blockEls()).toHaveLength(2);
+  });
+
+  it("Option-Return commits, as Return does: only Shift-Return makes a paragraph", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    caretIn(1, "three ".length);
+    key("Enter", { altKey: true });
+    expect(document.querySelector(".quote-card.editing")).toBeNull();
+    expect(onEditCommit).not.toHaveBeenCalled(); // nothing changed
+  });
+
+  it("Escape puts the paragraphs back as they were", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    caretIn(1, "three ".length);
+    key("Enter", { shiftKey: true });
+    key("Escape");
+    expect(blockEls().map((b) => b.textContent)).toEqual(["\u201cone two", "three four\u201d"]);
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
+  it("paragraphs that come out as the automatic ones are not saved as the researcher's", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    caretIn(1, "three ".length);
+    key("Enter", { shiftKey: true });
+    caretIn(2, 0);
+    key("Backspace");
+    key("Enter");
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
+  it("Tab commits once and leaves focus on the card", () => {
+    vi.useFakeTimers();
+    try {
+      const onEditCommit = vi.fn<Commit>();
+      renderEditing({ onEditCommit });
+      caretIn(1, "three ".length);
+      key("Enter", { shiftKey: true });
+      key("Tab");
+      // Moving focus to the card blurs the text; that blur's deferred commit
+      // must not commit the same edit again (a second write and a second
+      // undo entry, so ⌘Z undid only the copy: found live, 21 Nov 2026).
+      act(() => { vi.advanceTimersByTime(500); });
+      expect(document.querySelector(".quote-card.editing")).toBeNull();
+      expect(onEditCommit).toHaveBeenCalledOnce();
+      expect(document.activeElement).toBe(document.getElementById("q-p1-26"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the researcher's own paragraphs show even with Break long paragraphs off", () => {
+    setDisplayPref("breaks", "off");
+    const quote = makeQuote();
+    render(
+      <QuoteCard
+        quote={quote}
+        displayText={quote.text}
+        isStarred={false}
+        isHidden={false}
+        userTags={[]}
+        allTagNames={[]}
+        deletedBadges={[]}
+        isEdited
+        tagVocabulary={[]}
+        sessionId="s1"
+        hasMedia={false}
+        hasModerator={false}
+        proposedTags={[]}
+        flashingTags={new Set()}
+        moderatorQuestion={null}
+        isQuestionOpen={false}
+        isPillVisible={false}
+        researcherBreaks={[0, 2]}
+        onToggleStar={NOOP}
+        onToggleHide={NOOP}
+        onEditCommit={NOOP}
+        onTagAdd={NOOP}
+        onTagRemove={NOOP}
+        onBadgeDelete={NOOP}
+        onBadgeRestore={NOOP}
+        onProposedAccept={NOOP}
+        onProposedDeny={NOOP}
+        onToggleQuestion={NOOP}
+        onQuoteHoverEnter={NOOP}
+        onQuoteHoverLeave={NOOP}
+        onPillHoverEnter={NOOP}
+        onPillHoverLeave={NOOP}
+      />,
+    );
+    expect(blockEls().map((b) => b.textContent)).toEqual(["\u201cone", "two three", "four\u201d"]);
+  });
+
+  it("an edit to the words carries the researcher's own paragraphs with it", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ researcherBreaks: [0], onEditCommit });
+    const run = blockEls()[1].querySelector(".crop-editable")!;
+    run.textContent = "two three five";
+    key("Enter");
+    // Sent again with the new words, which the server keeps them against.
+    expect(onEditCommit).toHaveBeenCalledExactlyOnceWith("q-p1-26", "one two three five", { value: [0] });
   });
 });

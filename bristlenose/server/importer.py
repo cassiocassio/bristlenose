@@ -45,6 +45,7 @@ from bristlenose.server.models import (
     ProjectCodebookGroup,
     ProposedTag,
     Quote,
+    QuoteBreak,
     QuoteEdit,
     QuoteState,
     QuoteTag,
@@ -2920,6 +2921,9 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
         db.query(QuoteEdit).filter(
             QuoteEdit.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
+        db.query(QuoteBreak).filter(
+            QuoteBreak.quote_id.in_(stale_quote_ids)
         ).delete(synchronize_session="fetch")
         db.query(DeletedBadge).filter(
             DeletedBadge.quote_id.in_(stale_quote_ids)

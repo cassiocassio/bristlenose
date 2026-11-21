@@ -32,18 +32,20 @@ vi.mock("../utils/api", () => ({
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),
   patchEdits: vi.fn(() => Promise.resolve()),
+  patchQuoteBreaks: vi.fn(() => Promise.resolve()),
   patchTags: vi.fn(() => Promise.resolve()),
   patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { patchDeletedBadges, patchEdits, patchHidden, patchStarred, patchTags } from "../utils/api";
+import { patchDeletedBadges, patchEdits, patchHidden, patchQuoteBreaks, patchStarred, patchTags } from "../utils/api";
 
 const patchStarredMock = vi.mocked(patchStarred);
 const patchHiddenMock = vi.mocked(patchHidden);
 const patchTagsMock = vi.mocked(patchTags);
 const patchEditsMock = vi.mocked(patchEdits);
+const patchBreaksMock = vi.mocked(patchQuoteBreaks);
 const patchBadgesMock = vi.mocked(patchDeletedBadges);
 
 function quote(dom_id: string, tags: TagResponse[] = []): QuoteResponse {
@@ -269,6 +271,48 @@ describe("sentiment badges", () => {
     expect(await undo()).toBe(true);
     expect(patchBadgesMock).not.toHaveBeenCalled();
     expect(deleted()).toBeUndefined();
+  });
+});
+
+describe("a quote's own paragraphs", () => {
+  const snap = () => getQuotesSnapshot();
+
+  it("paragraphs alone are one gesture that writes the breaks with the words they were placed in", async () => {
+    commitEdit("q1", null, { value: [0] });
+    expect(snap().breaks.q1).toEqual([0]);
+    expect(patchEditsMock).not.toHaveBeenCalled();
+    expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: { breaks: [0], text: "x" } });
+    expect(getUndoState().undoAction).toBe("editQuote");
+    await undo();
+    expect("q1" in snap().breaks).toBe(false);
+    expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: null });
+  });
+
+  it("new words and paragraphs together are ONE undo, and the breaks go with the new words", async () => {
+    commitEdit("q1", "a b c", { value: [1] });
+    expect(snap().edits.q1).toBe("a b c");
+    expect(patchEditsMock).toHaveBeenLastCalledWith({ q1: "a b c" });
+    expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: { breaks: [1], text: "a b c" } });
+    await undo();
+    expect("q1" in snap().edits).toBe(false);
+    expect("q1" in snap().breaks).toBe(false);
+    expect(getUndoState().undoAction).toBeNull();
+  });
+
+  it("the card's revert hands the paragraphs back to the automatic placing", async () => {
+    commitEdit("q1", "a b c", { value: [1] });
+    commitEdit("q1", "x", { value: null });
+    expect(snap().edits.q1).toBe("x");
+    expect("q1" in snap().breaks).toBe(false);
+    await undo();
+    expect(snap().breaks.q1).toEqual([1]);
+  });
+
+  it("a refetch reads the researcher's breaks from the quote", () => {
+    initFromQuotes([{ ...quote("q1"), researcher_breaks: [2] }], true);
+    expect(snap().breaks.q1).toEqual([2]);
+    initFromQuotes([{ ...quote("q1"), researcher_breaks: null }], true);
+    expect("q1" in snap().breaks).toBe(false);
   });
 });
 

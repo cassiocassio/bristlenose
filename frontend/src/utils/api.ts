@@ -400,6 +400,13 @@ export function patchEdits(data: Record<string, string | null>): Promise<void> {
   return queuedPatch("/edits", data);
 }
 
+/** A quote's own paragraph breaks, with the wording they were placed in; `null` clears them. */
+export function patchQuoteBreaks(
+  data: Record<string, { breaks: number[]; text: string } | null>,
+): Promise<void> {
+  return queuedPatch("/quote-breaks", data);
+}
+
 export function patchTags(data: Record<string, CurationDelta>): Promise<void> {
   return queuedPatch("/tags", data);
 }

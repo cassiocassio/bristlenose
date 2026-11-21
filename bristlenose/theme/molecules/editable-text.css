@@ -91,6 +91,45 @@
     display: none;
 }
 
+/* The React card's edit surface (frontend/src/utils/quoteEditSurface.ts) keeps
+   each quote mark's box while editing, so the first and last lines do not
+   move, and lays the bracket over it. A bracket away from the quote marks, in
+   trimming, sits in the gap between two words and takes no room, so dragging
+   it changes only the colour of the words, never the line breaks. */
+.quote-card.editing .bn-mark .smart-quote {
+    display: inline;
+    visibility: hidden;
+}
+
+.bn-mark,
+.bn-anchor {
+    position: relative;
+}
+
+.bn-mark > .crop-handle {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+}
+
+.bn-anchor > .crop-handle {
+    position: absolute;
+    bottom: 0;
+}
+
+.bn-anchor-start > .crop-handle {
+    right: -0.12em;
+}
+
+.bn-anchor-end > .crop-handle {
+    left: -0.12em;
+}
+
+.quote-text[contenteditable="true"] {
+    outline: none;
+}
+
 .crop-handle:hover {
     color: var(--bn-crop-handle-hover);
 }

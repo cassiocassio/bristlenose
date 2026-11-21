@@ -250,7 +250,7 @@ Each row is a scenario, what the model does, the invariant that decides it, and 
 
 1. **A researcher cuts the middle out of a quote and writes no ellipsis** (row 5). Nudge, insert, or allow?
 2. **Two kinds of omission, one mark?** `...` today means "filler removed". A cut of substance is the editorial convention `[...]`. Do `D` and `N` show differently?
-3. ~~Line breaks: characters in the text, or an overlay?~~ **Settled 3 Nov 2026 (owner's presentation-versus-source cut): an overlay, §3.4 and §8.** Still open inside it: how a hand-typed break in the card is separated from the words on commit, and whether the overlay is also shown in the Signals evidence bullet, where a half-line gap may not fit.
+3. ~~Line breaks: characters in the text, or an overlay?~~ **Settled 3 Nov 2026 (owner's presentation-versus-source cut): an overlay, §3.4 and §8.** Still open inside it: how a hand-typed break in the card is separated from the words on commit, and whether the overlay is also shown in the Signals evidence bullet, where a half-line gap may not fit. _21 Nov 2026 (owner):_ a researcher's own breaks still show with Break long paragraphs off; only the automatic ones follow the setting. The proposal for typing and committing breaks is the live mockup `docs/mockups/quote-edit-breaks.html`.
 4. **θ for rebase and for an aligned excerpt** (§4.1, §4.3), and the `D`/`N` length threshold, are measured, not guessed (§9).
 5. **Does a quote the model omits keep its row** when it is curated? (§4.2 assumes yes; the importer's stale-quote rule decides.)
 

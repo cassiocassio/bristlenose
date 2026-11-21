@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from bristlenose.server import speaker_slots
+from bristlenose.server import quote_breaks, speaker_slots
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
@@ -84,6 +84,9 @@ class QuoteResponse(BaseModel):
     is_starred: bool
     is_hidden: bool
     edited_text: str | None
+    #: The researcher's own paragraph breaks (word positions in the resolved
+    #: wording), or None when the paragraphs are placed automatically.
+    researcher_breaks: list[int] | None = None
     tags: list[TagResponse]
     deleted_badges: list[str]
     proposed_tags: list[ProposedTagBrief]
@@ -378,6 +381,7 @@ def _build_quote_response(
     badges_map: dict[int, list[str]],
     proposed_map: dict[int, list[ProposedTagBrief]],
     speaker_map: dict[tuple[str, str], str],
+    breaks_map: dict[int, list[int]] | None = None,
 ) -> QuoteResponse:
     """Build a QuoteResponse from a Quote row and pre-loaded state maps."""
     state = state_map.get(quote.id)
@@ -400,6 +404,7 @@ def _build_quote_response(
         is_starred=state.is_starred if state else False,
         is_hidden=state.is_hidden if state else False,
         edited_text=edit_map.get(quote.id),
+        researcher_breaks=(breaks_map or {}).get(quote.id),
         tags=tags_map.get(quote.id, []),
         deleted_badges=badges_map.get(quote.id, []),
         proposed_tags=proposed_map.get(quote.id, []),
@@ -448,6 +453,7 @@ def get_quotes(
         state_map, edit_map, tags_map, badges_map, proposed_map = (
             _load_researcher_state(db, project_id, quote_ids)
         )
+        breaks_map = quote_breaks.resolved(db, quote_by_id, edit_map)
 
         # Resolve speaker names
         speaker_map = _resolve_speaker_names(db, project_id)
@@ -482,7 +488,7 @@ def get_quotes(
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
-                        proposed_map, speaker_map,
+                        proposed_map, speaker_map, breaks_map,
                     )
                     for q in quotes
                 ],
@@ -507,7 +513,7 @@ def get_quotes(
                 quotes=[
                     _build_quote_response(
                         q, state_map, edit_map, tags_map, badges_map,
-                        proposed_map, speaker_map,
+                        proposed_map, speaker_map, breaks_map,
                     )
                     for q in quotes
                 ],
@@ -530,7 +536,7 @@ def get_quotes(
         uncategorised = [
             _build_quote_response(
                 q, state_map, edit_map, tags_map, badges_map,
-                proposed_map, speaker_map,
+                proposed_map, speaker_map, breaks_map,
             )
             for q in uncat_quotes
         ]
@@ -540,7 +546,7 @@ def get_quotes(
         unjoined = [
             _build_quote_response(
                 q, state_map, edit_map, tags_map, badges_map,
-                proposed_map, speaker_map,
+                proposed_map, speaker_map, breaks_map,
             )
             for q in loose
         ]

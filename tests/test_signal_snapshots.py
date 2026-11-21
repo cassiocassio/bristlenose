@@ -29,6 +29,7 @@ from bristlenose.server.signal_snapshots import (
     store_completed_snapshot,
 )
 from tests.conftest import AuthTestClient
+from tests.test_migrations import MIGRATION_HEAD
 
 
 def test_snapshot_payload_survives_a_fresh_database_initialisation() -> None:
@@ -67,9 +68,10 @@ def test_migrations_023_and_024_upgrade_an_existing_database() -> None:
 
     assert "signal_snapshots" in inspect(engine).get_table_names()
     with engine.connect() as conn:
-        # 025 is the AutoCode sent-quote register (ruling 4); this test pins that the
-        # chain from 022 runs, not which revision is the head.
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "025"
+        # This test pins that the chain from 022 runs, not which revision is the
+        # head: the head is read from the migration scripts (it was a literal,
+        # and reddened on every new migration).
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == MIGRATION_HEAD
 
 
 def test_migration_024_adds_evidence_assertions_to_a_pre_024_cache_table() -> None:

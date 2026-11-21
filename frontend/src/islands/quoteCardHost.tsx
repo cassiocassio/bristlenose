@@ -245,7 +245,8 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         hiddenTagNames={vis.decoratedTagNames}
         disabledTagNames={vis.suppressedTagNames}
         deletedBadges={store.deletedBadges[id] ?? []}
-        isEdited={edited != null && edited !== q.text}
+        isEdited={(edited != null && edited !== q.text) || store.breaks[id] != null}
+        researcherBreaks={store.breaks[id] ?? null}
         tagVocabulary={vocabulary}
         groupedVocabulary={groupedVocabulary}
         sessionId={q.session_id}

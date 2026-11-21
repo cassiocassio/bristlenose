@@ -644,6 +644,28 @@ class QuoteEdit(Base):
     edited_at: Mapped[datetime] = mapped_column(default=func.now())
 
 
+class QuoteBreak(Base):
+    """A researcher's own paragraph breaks in a quote (migration 026).
+
+    Presentation, not wording: stored apart from the words, never as a newline
+    in ``Quote.text`` or a ``QuoteEdit`` (owner, 3 Nov 2026;
+    docs/design-quote-anchor.md §3.4). ``breaks`` is JSON
+    ``[[after_word_index, level], ...]`` counted in the quote's resolved wording
+    (the researcher's edit if there is one, else the pipeline's), and ``verify``
+    is that wording's hash: when the wording changes, the row is not shown.
+    Not curation, so it does not pin the quote; it goes with its quote.
+    """
+
+    __tablename__ = "quote_breaks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id"), unique=True)
+    breaks: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(String(16), default="researcher")
+    verify: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+
+
 class HeadingEdit(Base):
     """Researcher-renamed section or theme title/description.
 

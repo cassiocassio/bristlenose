@@ -132,6 +132,9 @@ export interface QuoteResponse {
   is_starred: boolean;
   is_hidden: boolean;
   edited_text: string | null;
+  /** The researcher's own paragraph breaks, as word positions in the resolved
+   *  wording (a break falls after word i); absent or null = placed automatically. */
+  researcher_breaks?: number[] | null;
   tags: TagResponse[];
   deleted_badges: string[];
   proposed_tags: ProposedTagBrief[];

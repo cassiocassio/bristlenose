@@ -161,6 +161,7 @@ class TestQuoteFields:
             "session_id", "speaker_name", "start_timecode", "end_timecode",
             "sentiment", "intensity", "researcher_context", "quote_type",
             "topic_label", "is_starred", "is_hidden", "edited_text",
+            "researcher_breaks",
             "tags", "deleted_badges", "proposed_tags", "segment_index",
         }
         assert set(q.keys()) == expected

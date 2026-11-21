@@ -89,6 +89,7 @@ class TestTableCreation:
         "quote_tags",
         "quote_states",
         "quote_edits",
+        "quote_breaks",
         "heading_edits",
         "deleted_badges",
         "dismissed_signals",

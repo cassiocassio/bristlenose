@@ -41,9 +41,9 @@ class ProviderBilling:
 _BILLING: dict[str, ProviderBilling] = {
     "anthropic": ProviderBilling(
         display_name="Claude",
-        console_url="https://console.anthropic.com/",
-        keys_url="https://console.anthropic.com/settings/keys",
-        billing_url="https://console.anthropic.com/settings/billing",
+        console_url="https://platform.claude.com/",
+        keys_url="https://platform.claude.com/settings/keys",
+        billing_url="https://platform.claude.com/settings/billing",
         minimum_usd=5.0,
         minimum_note=(
             "$5 minimum credit purchase. A separate Claude.ai Pro/Max "
@@ -55,7 +55,7 @@ _BILLING: dict[str, ProviderBilling] = {
         display_name="ChatGPT",
         console_url="https://platform.openai.com/",
         keys_url="https://platform.openai.com/api-keys",
-        billing_url="https://platform.openai.com/account/billing",
+        billing_url="https://platform.openai.com/settings/organization/billing/overview",
         minimum_usd=5.0,
         minimum_note=(
             "$5 minimum credit purchase. A ChatGPT Plus/Pro subscription "

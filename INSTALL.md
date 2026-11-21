@@ -304,7 +304,7 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
 
 ### Cloud providers (Claude, ChatGPT, or Gemini)
 
-1. Create an account and API key at [console.anthropic.com](https://console.anthropic.com/settings/keys) (Claude), [platform.openai.com](https://platform.openai.com/api-keys) (ChatGPT), or [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (Gemini)
+1. Create an account and API key at [platform.claude.com](https://platform.claude.com/settings/keys) (Claude), [platform.openai.com](https://platform.openai.com/api-keys) (ChatGPT), or [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (Gemini)
 2. Store the key securely:
 
    ```bash

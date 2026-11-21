@@ -132,7 +132,7 @@ You need one key:
 
 ### Option A: Claude (by Anthropic)
 
-1. Go to [console.anthropic.com](https://console.anthropic.com/settings/keys) and sign up or log in
+1. Go to [platform.claude.com](https://platform.claude.com/settings/keys) and sign up or log in
 2. Click **Create Key**, give it a name (e.g. "bristlenose"), and copy the key
 3. Store it securely:
 
@@ -238,7 +238,7 @@ Use whichever provider you already have an API key for. The provider you configu
 
 **Keys.** A key given with `--key` is saved in your shell history. Omit `--key` and Bristlenose asks for it, with what you type hidden. Where your provider lets you set a spend limit on a key, set one.
 
-> **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
+> **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [platform.claude.com](https://platform.claude.com) or [platform.openai.com](https://platform.openai.com).
 
 ### Making your key permanent
 

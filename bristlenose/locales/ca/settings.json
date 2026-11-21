@@ -239,7 +239,7 @@
         "faster_whisper_cpu_baseline": "base sòlida en CPU; no cal GPU"
       },
       "actions": {
-        "obtain_anthropic_key": "obtén una clau API a console.anthropic.com i defineix ANTHROPIC_API_KEY o enganxa-la a Configuració → Claus",
+        "obtain_anthropic_key": "obtén una clau API a platform.claude.com i defineix ANTHROPIC_API_KEY o enganxa-la a Configuració → Claus",
         "obtain_openai_key": "obtén una clau API a platform.openai.com i defineix OPENAI_API_KEY o enganxa-la a Configuració → Claus",
         "obtain_google_key": "obtén una clau API a aistudio.google.com i defineix GOOGLE_API_KEY o enganxa-la a Configuració → Claus",
         "configure_azure": "defineix la clau, el punt final i el desplegament d'Azure a Configuració → Claus",

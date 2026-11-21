@@ -239,7 +239,7 @@
       "faster_whisper_cpu_baseline": "vankka CPU-perustaso; GPU:ta ei vaadita"
     },
     "actions": {
-      "obtain_anthropic_key": "hanki API-avain osoitteesta console.anthropic.com ja aseta ANTHROPIC_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
+      "obtain_anthropic_key": "hanki API-avain osoitteesta platform.claude.com ja aseta ANTHROPIC_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
       "obtain_openai_key": "hanki API-avain osoitteesta platform.openai.com ja aseta OPENAI_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
       "obtain_google_key": "hanki API-avain osoitteesta aistudio.google.com ja aseta GOOGLE_API_KEY tai liitä se kohtaan Asetukset → Avaimet",
       "configure_azure": "aseta Azure-avain, -päätepiste ja -käyttöönotto kohdassa Asetukset → Avaimet",

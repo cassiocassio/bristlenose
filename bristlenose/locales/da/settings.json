@@ -239,7 +239,7 @@
         "faster_whisper_cpu_baseline": "solidt CPU-udgangspunkt; ingen GPU påkrævet"
       },
       "actions": {
-        "obtain_anthropic_key": "hent en API-nøgle på console.anthropic.com og angiv ANTHROPIC_API_KEY, eller indsæt den under Indstillinger → Nøgler",
+        "obtain_anthropic_key": "hent en API-nøgle på platform.claude.com og angiv ANTHROPIC_API_KEY, eller indsæt den under Indstillinger → Nøgler",
         "obtain_openai_key": "hent en API-nøgle på platform.openai.com og angiv OPENAI_API_KEY, eller indsæt den under Indstillinger → Nøgler",
         "obtain_google_key": "hent en API-nøgle på aistudio.google.com og angiv GOOGLE_API_KEY, eller indsæt den under Indstillinger → Nøgler",
         "configure_azure": "angiv Azure-nøgle, -endpoint og -udrulning under Indstillinger → Nøgler",

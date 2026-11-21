@@ -631,7 +631,7 @@ def _print_provider_guidance() -> None:
     )
     console.print()
     for name, url in (
-        ("Claude", "https://console.anthropic.com/settings/keys"),
+        ("Claude", "https://platform.claude.com/settings/keys"),
         ("ChatGPT", "https://platform.openai.com/api-keys"),
         ("Gemini", "https://aistudio.google.com/apikey"),
         ("Azure", "https://portal.azure.com"),
@@ -3823,7 +3823,7 @@ def _help_config() -> None:
     console.print()
     console.print("[bold]Environment variables[/bold]\n")
     console.print("  [bold]API keys[/bold] (you only need one)")
-    console.print("  BRISTLENOSE_ANTHROPIC_API_KEY    Claude API key (from console.anthropic.com)")
+    console.print("  BRISTLENOSE_ANTHROPIC_API_KEY    Claude API key (from platform.claude.com)")
     console.print("  BRISTLENOSE_OPENAI_API_KEY       ChatGPT API key (from platform.openai.com)")
     console.print("  BRISTLENOSE_AZURE_API_KEY        Azure OpenAI API key (from Azure portal)")
     console.print("  BRISTLENOSE_AZURE_ENDPOINT       Azure OpenAI endpoint URL")

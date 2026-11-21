@@ -16,9 +16,9 @@ class TestBillingFor:
         facts = billing_for("anthropic")
         assert facts is not None
         assert facts.display_name == "Claude"
-        assert "console.anthropic.com" in facts.console_url
-        assert "console.anthropic.com" in facts.keys_url
-        assert "console.anthropic.com" in facts.billing_url
+        assert "platform.claude.com" in facts.console_url
+        assert "platform.claude.com" in facts.keys_url
+        assert "platform.claude.com" in facts.billing_url
         assert facts.minimum_usd == 5.0
         assert "subscription" in facts.minimum_note.lower()
 

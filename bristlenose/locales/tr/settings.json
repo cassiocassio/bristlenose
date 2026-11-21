@@ -239,7 +239,7 @@
         "faster_whisper_cpu_baseline": "sağlam CPU temeli; GPU gerekmez"
       },
       "actions": {
-        "obtain_anthropic_key": "console.anthropic.com adresinden bir API anahtarı edinin ve ANTHROPIC_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
+        "obtain_anthropic_key": "platform.claude.com adresinden bir API anahtarı edinin ve ANTHROPIC_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
         "obtain_openai_key": "platform.openai.com adresinden bir API anahtarı edinin ve OPENAI_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
         "obtain_google_key": "aistudio.google.com adresinden bir API anahtarı edinin ve GOOGLE_API_KEY olarak ayarlayın veya Ayarlar → Anahtarlar bölümüne yapıştırın",
         "configure_azure": "Azure anahtarını, uç noktasını ve dağıtımını Ayarlar → Anahtarlar bölümünde ayarlayın",

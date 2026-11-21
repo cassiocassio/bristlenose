@@ -2065,7 +2065,7 @@ class TestGetFixGrid:
     def test_api_key_missing_anthropic(self, method: str) -> None:
         fix = get_fix("api_key_missing_anthropic", method)
         assert "bristlenose configure claude" in fix
-        assert "console.anthropic.com" in fix
+        assert "platform.claude.com" in fix
         assert "--llm chatgpt" in fix  # alternative suggestion
 
     # -- api_key_missing_openai: same for all methods --
@@ -2081,7 +2081,7 @@ class TestGetFixGrid:
     @pytest.mark.parametrize("method", ["snap", "brew", "pip"])
     def test_api_key_invalid_anthropic(self, method: str) -> None:
         fix = get_fix("api_key_invalid_anthropic", method)
-        assert "console.anthropic.com" in fix
+        assert "platform.claude.com" in fix
 
     # -- api_key_invalid_openai: same for all methods --
 

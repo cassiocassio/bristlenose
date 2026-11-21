@@ -71,7 +71,7 @@ class TestNewUserNoConfig:
         # Verify the fix message is helpful
         fix = get_fix(result.fix_key)
         assert "bristlenose configure claude" in fix
-        assert "console.anthropic.com" in fix
+        assert "platform.claude.com" in fix
         assert "--llm chatgpt" in fix  # Shows alternative
 
     def test_preflight_fails_for_run_command(self) -> None:
@@ -91,7 +91,7 @@ class TestNewUserNoConfig:
         Set one up once — bristlenose configure <provider> validates your
         key and stores it securely (Keychain):
 
-          Claude   https://console.anthropic.com/settings/keys
+          Claude   https://platform.claude.com/settings/keys
           ChatGPT  https://platform.openai.com/api-keys
           Gemini   https://aistudio.google.com/apikey
           Azure    https://portal.azure.com
@@ -153,7 +153,7 @@ class TestProviderGuidance:
         assert "bristlenose configure <provider>" in out
         assert "configure local" in out
         # Where-to-get-a-key links for the cloud providers
-        assert "console.anthropic.com/settings/keys" in out
+        assert "platform.claude.com/settings/keys" in out
         assert "platform.openai.com/api-keys" in out
         assert "aistudio.google.com/apikey" in out
         # Store label is resolved live (one of the three), never hardcoded
@@ -283,7 +283,7 @@ class TestWrongProviderSelected:
             No Anthropic API key
 
             bristlenose needs an API key to analyse transcripts.
-            Get a Claude API key from console.anthropic.com, then:
+            Get a Claude API key from platform.claude.com, then:
 
               bristlenose configure claude
 
@@ -348,7 +348,7 @@ class TestInvalidApiKeys:
         They'll see:
             Anthropic key rejected (401 Unauthorized)
 
-            Your Claude API key was rejected. Check it at console.anthropic.com/settings/keys.
+            Your Claude API key was rejected. Check it at platform.claude.com/settings/keys.
         """
         settings = _settings(
             llm_provider="anthropic",
@@ -363,7 +363,7 @@ class TestInvalidApiKeys:
         assert result.status == CheckStatus.FAIL
         assert "rejected" in result.detail
         fix = get_fix(result.fix_key)
-        assert "console.anthropic.com" in fix
+        assert "platform.claude.com" in fix
 
     def test_openai_key_401_unauthorized(self) -> None:
         """
@@ -718,7 +718,7 @@ class TestReturningUserStaleConfig:
         They'll see:
             Anthropic key rejected (401 Unauthorized)
 
-            Your Claude API key was rejected. Check it at console.anthropic.com/settings/keys.
+            Your Claude API key was rejected. Check it at platform.claude.com/settings/keys.
         """
         settings = _settings(
             llm_provider="anthropic",
@@ -866,7 +866,7 @@ class TestMixedKeyStates:
         They'll see:
             Anthropic key rejected (401 Unauthorized)
 
-            Your Claude API key was rejected. Check it at console.anthropic.com/settings/keys.
+            Your Claude API key was rejected. Check it at platform.claude.com/settings/keys.
 
         (We don't auto-switch to OpenAI — that would be confusing)
         """

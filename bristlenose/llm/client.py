@@ -687,7 +687,7 @@ class LLMClient:
             raise ValueError(
                 "Claude API key not set. "
                 "Set BRISTLENOSE_ANTHROPIC_API_KEY in your .env file or environment. "
-                "Get a key from console.anthropic.com"
+                "Get a key from platform.claude.com"
             )
         if self.provider == "openai" and not self.settings.openai_api_key:
             raise ValueError(

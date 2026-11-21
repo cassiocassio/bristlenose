@@ -106,10 +106,10 @@ _MODEL_PROVIDER: dict[str, str] = {
 }
 
 PRICING_URLS: dict[str, str] = {
-    "anthropic": "https://docs.anthropic.com/en/docs/about-claude/models",
-    "openai": "https://platform.openai.com/docs/pricing",
-    "azure": "https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
-    "google": "https://ai.google.dev/gemini-api/docs/pricing",
+    "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "openai": "https://developers.openai.com/api/docs/pricing",
+    "azure": "https://azure.microsoft.com/en-us/pricing/details/azure-openai/",
+    "google": "https://aistudio.google.com/docs/pricing",
     # Local provider has no pricing — models are free
 }
 

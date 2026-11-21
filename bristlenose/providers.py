@@ -58,7 +58,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
         # before promoting it; see tests/test_llm_sampling_params.py.
         default_model="claude-sonnet-4-6",
         sdk_module="anthropic",
-        pricing_url="https://docs.anthropic.com/en/docs/about-claude/models",
+        pricing_url="https://platform.claude.com/docs/en/about-claude/pricing",
     ),
     "openai": ProviderSpec(
         name="openai",
@@ -73,7 +73,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
         ],
         default_model="gpt-5.6-terra",
         sdk_module="openai",
-        pricing_url="https://platform.openai.com/docs/pricing",
+        pricing_url="https://developers.openai.com/api/docs/pricing",
     ),
     "azure": ProviderSpec(
         name="azure",
@@ -108,7 +108,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
         ],
         default_model="",  # Azure uses deployment names, not model names
         sdk_module="openai",  # Same SDK, different client class
-        pricing_url="https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
+        pricing_url="https://azure.microsoft.com/en-us/pricing/details/azure-openai/",
     ),
     "google": ProviderSpec(
         name="google",
@@ -131,7 +131,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
         # rule asks for. All three passed live on 4 Sep.
         default_model="gemini-3.8-flash",
         sdk_module="google.genai",
-        pricing_url="https://ai.google.dev/gemini-api/docs/pricing",
+        pricing_url="https://aistudio.google.com/docs/pricing",
     ),
     "local": ProviderSpec(
         name="local",

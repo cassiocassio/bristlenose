@@ -239,7 +239,7 @@
         "faster_whisper_cpu_baseline": "надёжный базовый уровень на ЦП; графический процессор не требуется"
       },
       "actions": {
-        "obtain_anthropic_key": "получите ключ API на console.anthropic.com и задайте ANTHROPIC_API_KEY или вставьте в Настройки → Ключи",
+        "obtain_anthropic_key": "получите ключ API на platform.claude.com и задайте ANTHROPIC_API_KEY или вставьте в Настройки → Ключи",
         "obtain_openai_key": "получите ключ API на platform.openai.com и задайте OPENAI_API_KEY или вставьте в Настройки → Ключи",
         "obtain_google_key": "получите ключ API на aistudio.google.com и задайте GOOGLE_API_KEY или вставьте в Настройки → Ключи",
         "configure_azure": "задайте ключ, конечную точку и развёртывание Azure в Настройки → Ключи",

@@ -588,7 +588,7 @@ class TestDoctorFixesOllama:
         assert "Start Ollama" in fix
         assert "ollama serve" in fix
         # Cloud fallback hint should be present (varies based on available keys)
-        assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
+        assert "cloud" in fix.lower() or "claude" in fix.lower() or "platform.claude.com" in fix
 
     def test_fix_ollama_not_installed(self) -> None:
         from bristlenose.doctor_fixes import get_fix
@@ -601,7 +601,7 @@ class TestDoctorFixesOllama:
         # command before Ollama is installed)
         assert "bristlenose will start it automatically" in fix
         # Cloud fallback hint should be present
-        assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
+        assert "cloud" in fix.lower() or "claude" in fix.lower() or "platform.claude.com" in fix
 
     def test_fix_ollama_not_installed_windows(self) -> None:
         from bristlenose.doctor_fixes import get_fix
@@ -618,7 +618,7 @@ class TestDoctorFixesOllama:
         fix = get_fix("ollama_model_missing", "pip")
         assert "ollama pull" in fix
         # Cloud fallback hint should be present
-        assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
+        assert "cloud" in fix.lower() or "claude" in fix.lower() or "platform.claude.com" in fix
 
     def test_cloud_fallback_with_anthropic_key(self) -> None:
         """When user has Anthropic key, suggest --llm claude."""

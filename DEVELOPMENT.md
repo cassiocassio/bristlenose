@@ -73,7 +73,7 @@ Copy `.env.example` to `.env`. You only need one LLM provider key:
 | Variable | What |
 |----------|------|
 | `BRISTLENOSE_LLM_PROVIDER` | `anthropic`, `openai`, `azure`, `google`, `local` or `anyllm` (the CLI normally gets this from `bristlenose configure` / `use`) |
-| `BRISTLENOSE_ANTHROPIC_API_KEY` | Claude key (from console.anthropic.com) |
+| `BRISTLENOSE_ANTHROPIC_API_KEY` | Claude key (from platform.claude.com) |
 | `BRISTLENOSE_OPENAI_API_KEY` | ChatGPT key (from platform.openai.com) |
 | `BRISTLENOSE_GOOGLE_API_KEY` | Gemini key (from aistudio.google.com) |
 | `BRISTLENOSE_ANYLLM_MODEL` | any-llm model as `provider:model`, e.g. `mistral:mistral-large-latest` (needs the `any-llm` extra) |

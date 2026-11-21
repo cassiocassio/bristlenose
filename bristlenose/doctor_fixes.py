@@ -273,7 +273,7 @@ def _credential_store_label() -> str:
 def _fix_api_key_missing_anthropic(_method: str) -> str:
     return (
         "bristlenose needs an API key to analyse transcripts.\n"
-        "Get a Claude API key from console.anthropic.com, then:\n\n"
+        "Get a Claude API key from platform.claude.com, then:\n\n"
         "  bristlenose configure claude\n\n"
         f"{_credential_store_hint()}\n\n"
         "To use ChatGPT instead:  bristlenose run <input> --llm chatgpt\n"
@@ -295,7 +295,7 @@ def _fix_api_key_missing_openai(_method: str) -> str:
 def _fix_api_key_invalid_anthropic(_method: str) -> str:
     return (
         "Your Claude API key was rejected. Get a new key from\n"
-        "console.anthropic.com/settings/keys, then:\n\n"
+        "platform.claude.com/settings/keys, then:\n\n"
         "  bristlenose configure claude"
     )
 

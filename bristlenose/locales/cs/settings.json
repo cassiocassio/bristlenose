@@ -239,7 +239,7 @@
       "faster_whisper_cpu_baseline": "solidní základ na CPU; GPU není potřeba"
     },
     "actions": {
-      "obtain_anthropic_key": "získejte API klíč na console.anthropic.com a nastavte ANTHROPIC_API_KEY nebo jej vložte v Nastavení → Klíče",
+      "obtain_anthropic_key": "získejte API klíč na platform.claude.com a nastavte ANTHROPIC_API_KEY nebo jej vložte v Nastavení → Klíče",
       "obtain_openai_key": "získejte API klíč na platform.openai.com a nastavte OPENAI_API_KEY nebo jej vložte v Nastavení → Klíče",
       "obtain_google_key": "získejte API klíč na aistudio.google.com a nastavte GOOGLE_API_KEY nebo jej vložte v Nastavení → Klíče",
       "configure_azure": "nastavte klíč, koncový bod a nasazení Azure v Nastavení → Klíče",

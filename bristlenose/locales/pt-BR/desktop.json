@@ -1424,6 +1424,9 @@
     "manage": "Gerenciar Assinatura…",
     "notFound": "Nenhuma assinatura encontrada para este ID Apple.",
     "pending": "Aguardando aprovação. A análise começa assim que for aprovada.",
-    "failed": "A compra não foi concluída. Tente novamente em instantes."
+    "failed": "A compra não foi concluída. Tente novamente em instantes.",
+    "unavailable": "A App Store não está disponível no momento. Tente novamente em instantes.",
+    "tryAgain": "Tentar Novamente",
+    "aiBilling": "A análise usa sua própria conta de IA (Claude, ChatGPT, Gemini ou Azure OpenAI), que seu provedor cobra separadamente."
   }
 }

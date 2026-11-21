@@ -19,10 +19,18 @@ struct SubscriptionAccessTests {
         #expect(s == .notSubscribed)
     }
 
-    @Test("no entitlement when the product did not load proves nothing")
+    @Test("no entitlement and no product: the store is unavailable, and Analyse is held")
     func storeDidNotAnswer() {
         let s = SubscriptionAccess.state(entitledProductIDs: [], expirations: [:], productLoaded: false)
-        #expect(s == .unknown)
+        #expect(s == .storeUnavailable)
+        #expect(!SubscriptionAccess.canStartAnalysis(s, channel: .appStoreOrTestFlight))
+        #expect(SubscriptionAccess.canStartAnalysis(s, channel: .developerID))
+    }
+
+    @Test("a paid person is subscribed even when the product did not load")
+    func paidButOffline() {
+        let s = SubscriptionAccess.state(entitledProductIDs: [id], expirations: [id: future], productLoaded: false)
+        #expect(s == .subscribed(expires: future))
         #expect(SubscriptionAccess.canStartAnalysis(s, channel: .appStoreOrTestFlight))
     }
 

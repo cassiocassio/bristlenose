@@ -14,16 +14,21 @@ import Foundation
 enum SubscriptionAccess {
 
     /// The product identifier in App Store Connect. It must match exactly, or
-    /// the store returns no product and the state stays `.unknown` (allowed).
+    /// the store returns no product and, for someone with no entitlement,
+    /// the state is `.storeUnavailable` (the paywall's "try again" state).
     static let monthlyProductID = "app.bristlenose.subscription.monthly"
 
     enum State: Equatable {
-        /// Not asked yet, or the store has not positively answered (the
-        /// product did not load). Treated as *allowed* by `canStartAnalysis`
-        /// so a slow or offline store, or a build whose product is not yet
-        /// live, never locks a paying researcher out or shows a paywall with
-        /// nothing to buy.
+        /// Not asked yet (launch, before the first `refresh()` finishes).
+        /// Treated as *allowed*, so a slow start never locks anyone out.
         case unknown
+        /// The store was asked and the product did not load (offline, a proxy,
+        /// or a product that is not live), and no entitlement is on record.
+        /// Blocks a start and shows the paywall's "try again" state. Anyone
+        /// with an entitlement is `.subscribed` instead, so a paid researcher
+        /// is never in this state: the entitlement is read from StoreKit's
+        /// local record, not from the network.
+        case storeUnavailable
         case notSubscribed
         /// `expires` is for display only. Access is decided by StoreKit's
         /// `currentEntitlements` alone, which already includes billing grace
@@ -36,8 +41,8 @@ enum SubscriptionAccess {
     }
 
     /// - Parameter productLoaded: whether the store returned our product. If
-    ///   it did not, an empty entitlement set proves nothing, so the state is
-    ///   `.unknown` rather than `.notSubscribed`.
+    ///   it did not, an empty entitlement set proves nothing about the person,
+    ///   so the state is `.storeUnavailable` rather than `.notSubscribed`.
     static func state(entitledProductIDs: Set<String>,
                       expirations: [String: Date],
                       trialProductIDs: Set<String> = [],
@@ -46,7 +51,7 @@ enum SubscriptionAccess {
             return .subscribed(expires: expirations[monthlyProductID],
                                inTrial: trialProductIDs.contains(monthlyProductID))
         }
-        return productLoaded ? .notSubscribed : .unknown
+        return productLoaded ? .notSubscribed : .storeUnavailable
     }
 
     /// Starting an analysis (a paid LLM run on new recordings).
@@ -54,7 +59,7 @@ enum SubscriptionAccess {
         guard channel == .appStoreOrTestFlight else { return true }
         switch state {
         case .unknown, .subscribed: return true
-        case .notSubscribed: return false
+        case .notSubscribed, .storeUnavailable: return false
         }
     }
 

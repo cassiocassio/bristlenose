@@ -1424,6 +1424,9 @@
     "manage": "Gestionar suscripción…",
     "notFound": "No se ha encontrado ninguna suscripción para esta cuenta de Apple.",
     "pending": "Esperando aprobación. El análisis empezará cuando se apruebe.",
-    "failed": "No se pudo completar la compra. Inténtalo de nuevo en un momento."
+    "failed": "No se pudo completar la compra. Inténtalo de nuevo en un momento.",
+    "unavailable": "La App Store no está disponible ahora mismo. Inténtalo de nuevo en un momento.",
+    "tryAgain": "Reintentar",
+    "aiBilling": "El análisis usa tu propia cuenta de IA (Claude, ChatGPT, Gemini o Azure OpenAI), que tu proveedor te factura aparte."
   }
 }

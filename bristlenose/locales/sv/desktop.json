@@ -1424,6 +1424,9 @@
     "manage": "Hantera prenumeration…",
     "notFound": "Ingen prenumeration hittades för det här Apple-kontot.",
     "pending": "Väntar på godkännande. Analysen startar när köpet har godkänts.",
-    "failed": "Köpet gick inte igenom. Försök igen om en stund."
+    "failed": "Köpet gick inte igenom. Försök igen om en stund.",
+    "unavailable": "App Store är inte tillgänglig just nu. Försök igen om en stund.",
+    "tryAgain": "Försök igen",
+    "aiBilling": "Analysen använder ditt eget AI-konto (Claude, ChatGPT, Gemini eller Azure OpenAI), som din leverantör fakturerar dig för separat."
   }
 }

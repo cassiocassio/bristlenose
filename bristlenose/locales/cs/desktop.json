@@ -1506,6 +1506,9 @@
     "manage": "Spravovat předplatné…",
     "notFound": "Pro tento účet Apple nebylo nalezeno žádné předplatné.",
     "pending": "Čeká se na schválení. Analýza začne, jakmile bude schváleno.",
-    "failed": "Nákup se nepodařilo dokončit. Zkuste to za chvíli znovu."
+    "failed": "Nákup se nepodařilo dokončit. Zkuste to za chvíli znovu.",
+    "unavailable": "App Store teď není dostupný. Zkuste to za chvíli znovu.",
+    "tryAgain": "Zkusit znovu",
+    "aiBilling": "Analýza používá váš vlastní účet AI (Claude, ChatGPT, Gemini nebo Azure OpenAI), který vám poskytovatel účtuje zvlášť."
   }
 }

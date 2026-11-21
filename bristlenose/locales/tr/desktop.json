@@ -1424,6 +1424,9 @@
     "manage": "Aboneliği Yönet…",
     "notFound": "Bu Apple Hesabı için abonelik bulunamadı.",
     "pending": "Onay bekleniyor. Satın alma onaylanır onaylanmaz analiz başlar.",
-    "failed": "Satın alma tamamlanamadı. Biraz sonra yeniden deneyin."
+    "failed": "Satın alma tamamlanamadı. Biraz sonra yeniden deneyin.",
+    "unavailable": "App Store şu anda kullanılamıyor. Biraz sonra yeniden deneyin.",
+    "tryAgain": "Yeniden Dene",
+    "aiBilling": "Analiz kendi yapay zekâ hesabınızı (Claude, ChatGPT, Gemini veya Azure OpenAI) kullanır; sağlayıcınız bunu ayrıca faturalandırır."
   }
 }

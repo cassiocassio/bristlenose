@@ -1424,6 +1424,9 @@
     "manage": "Gestiona la subscripció…",
     "notFound": "No s’ha trobat cap subscripció per a aquest compte d’Apple.",
     "pending": "Esperant l’aprovació. L’anàlisi començarà quan s’aprovi.",
-    "failed": "La compra no s’ha completat. Torna-ho a provar d’aquí a un moment."
+    "failed": "La compra no s’ha completat. Torna-ho a provar d’aquí a un moment.",
+    "unavailable": "L’App Store no està disponible ara mateix. Torna-ho a provar d’aquí a un moment.",
+    "tryAgain": "Torna-ho a provar",
+    "aiBilling": "L’anàlisi fa servir el teu propi compte d’IA (Claude, ChatGPT, Gemini o Azure OpenAI), que el teu proveïdor et factura a part."
   }
 }

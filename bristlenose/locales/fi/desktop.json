@@ -1424,6 +1424,9 @@
     "manage": "Hallitse tilausta…",
     "notFound": "Tälle Apple-tilille ei löytynyt tilausta.",
     "pending": "Odotetaan hyväksyntää. Analyysi alkaa, kun osto on hyväksytty.",
-    "failed": "Ostoa ei saatu läpi. Yritä hetken kuluttua uudelleen."
+    "failed": "Ostoa ei saatu läpi. Yritä hetken kuluttua uudelleen.",
+    "unavailable": "App Store ei ole juuri nyt käytettävissä. Yritä hetken kuluttua uudelleen.",
+    "tryAgain": "Yritä uudelleen",
+    "aiBilling": "Analyysi käyttää omaa tekoälytiliäsi (Claude, ChatGPT, Gemini tai Azure OpenAI), jonka palveluntarjoaja laskuttaa sinua erikseen."
   }
 }

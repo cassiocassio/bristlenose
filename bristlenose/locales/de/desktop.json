@@ -1424,6 +1424,9 @@
     "manage": "Abonnement verwalten…",
     "notFound": "Für diese Apple-ID wurde kein Abonnement gefunden.",
     "pending": "Warte auf Genehmigung. Die Analyse startet, sobald der Kauf genehmigt ist.",
-    "failed": "Der Kauf ist nicht zustande gekommen. Versuche es gleich noch einmal."
+    "failed": "Der Kauf ist nicht zustande gekommen. Versuche es gleich noch einmal.",
+    "unavailable": "Der App Store ist gerade nicht verfügbar. Versuche es gleich noch einmal.",
+    "tryAgain": "Erneut versuchen",
+    "aiBilling": "Die Analyse nutzt dein eigenes KI-Konto (Claude, ChatGPT, Gemini oder Azure OpenAI), das dein Anbieter dir separat berechnet."
   }
 }

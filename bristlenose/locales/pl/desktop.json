@@ -1526,6 +1526,9 @@
     "manage": "Zarządzaj subskrypcją…",
     "notFound": "Nie znaleziono subskrypcji dla tego konta Apple.",
     "pending": "Oczekiwanie na zatwierdzenie. Analiza ruszy po zatwierdzeniu zakupu.",
-    "failed": "Nie udało się sfinalizować zakupu. Spróbuj ponownie za chwilę."
+    "failed": "Nie udało się sfinalizować zakupu. Spróbuj ponownie za chwilę.",
+    "unavailable": "App Store jest teraz niedostępny. Spróbuj ponownie za chwilę.",
+    "tryAgain": "Spróbuj ponownie",
+    "aiBilling": "Analiza korzysta z Twojego własnego konta AI (Claude, ChatGPT, Gemini lub Azure OpenAI), za które dostawca rozlicza się z Tobą osobno."
   }
 }

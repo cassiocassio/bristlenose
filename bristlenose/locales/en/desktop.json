@@ -1429,6 +1429,9 @@
     "manage": "Manage Subscription…",
     "notFound": "No subscription found for this Apple Account.",
     "pending": "Waiting for approval. Analysis starts once it is approved.",
-    "failed": "The purchase didn’t go through. Try again in a moment."
+    "failed": "The purchase didn’t go through. Try again in a moment.",
+    "unavailable": "The App Store isn’t available right now. Try again in a moment.",
+    "tryAgain": "Try Again",
+    "aiBilling": "Analysis uses your own AI account (Claude, ChatGPT, Gemini or Azure OpenAI), which your provider bills you for separately."
   }
 }

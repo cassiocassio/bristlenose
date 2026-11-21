@@ -1424,6 +1424,9 @@
     "manage": "Gérer l’abonnement…",
     "notFound": "Aucun abonnement trouvé pour ce compte Apple.",
     "pending": "En attente d’approbation. L’analyse démarrera dès qu’elle sera approuvée.",
-    "failed": "L’achat n’a pas abouti. Réessayez dans un instant."
+    "failed": "L’achat n’a pas abouti. Réessayez dans un instant.",
+    "unavailable": "L’App Store n’est pas disponible pour le moment. Réessayez dans un instant.",
+    "tryAgain": "Réessayer",
+    "aiBilling": "L’analyse utilise votre propre compte d’IA (Claude, ChatGPT, Gemini ou Azure OpenAI), que votre fournisseur vous facture séparément."
   }
 }

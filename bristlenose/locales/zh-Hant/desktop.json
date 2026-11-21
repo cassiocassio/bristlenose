@@ -1373,6 +1373,9 @@
     "manage": "管理訂閱…",
     "notFound": "找不到此 Apple 帳號的訂閱。",
     "pending": "正在等待核准。核准後分析便會開始。",
-    "failed": "購買未能完成。請稍後再試。"
+    "failed": "購買未能完成。請稍後再試。",
+    "unavailable": "目前無法使用 App Store。請稍後再試。",
+    "tryAgain": "再試一次",
+    "aiBilling": "分析會使用你自己的 AI 帳號（Claude、ChatGPT、Gemini 或 Azure OpenAI），費用由你的供應商另外向你收取。"
   }
 }

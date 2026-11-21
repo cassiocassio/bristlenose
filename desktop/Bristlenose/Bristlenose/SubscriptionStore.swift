@@ -53,8 +53,9 @@ final class SubscriptionStore: ObservableObject {
     deinit { updates?.cancel() }
 
     /// Ask the store for the product and the current entitlement. If the
-    /// product did not load, the store has not positively answered, and the
-    /// state is `.unknown` (allowed), not `.notSubscribed`.
+    /// product did not load and there is no entitlement, the state is
+    /// `.storeUnavailable`, not `.notSubscribed`. An entitlement wins either
+    /// way: `currentEntitlements` is read from StoreKit's on-device record.
     func refresh() async {
         if product == nil {
             do {

@@ -1424,6 +1424,9 @@
     "manage": "Gestisci abbonamento…",
     "notFound": "Nessun abbonamento trovato per questo ID Apple.",
     "pending": "In attesa di approvazione. L’analisi inizierà appena sarà approvato.",
-    "failed": "L’acquisto non è andato a buon fine. Riprova tra un momento."
+    "failed": "L’acquisto non è andato a buon fine. Riprova tra un momento.",
+    "unavailable": "L’App Store non è disponibile al momento. Riprova tra un momento.",
+    "tryAgain": "Riprova",
+    "aiBilling": "L’analisi usa il tuo account di IA (Claude, ChatGPT, Gemini o Azure OpenAI), che il tuo fornitore ti fattura a parte."
   }
 }

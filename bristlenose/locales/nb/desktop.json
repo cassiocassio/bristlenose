@@ -1424,6 +1424,9 @@
     "manage": "Administrer abonnement…",
     "notFound": "Fant ikke noe abonnement for denne Apple-kontoen.",
     "pending": "Venter på godkjenning. Analysen starter når kjøpet er godkjent.",
-    "failed": "Kjøpet gikk ikke gjennom. Prøv igjen om litt."
+    "failed": "Kjøpet gikk ikke gjennom. Prøv igjen om litt.",
+    "unavailable": "App Store er ikke tilgjengelig akkurat nå. Prøv igjen om litt.",
+    "tryAgain": "Prøv igjen",
+    "aiBilling": "Analysen bruker din egen KI-konto (Claude, ChatGPT, Gemini eller Azure OpenAI), som leverandøren din fakturerer deg for separat."
   }
 }

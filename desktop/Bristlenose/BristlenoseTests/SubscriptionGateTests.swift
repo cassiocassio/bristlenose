@@ -38,6 +38,13 @@ struct SubscriptionGateTests {
         #expect(g.pending?.clean == true)
     }
 
+    @Test("store unreachable and never subscribed: the paywall opens in its try-again state")
+    func unavailableRaisesPaywall() {
+        let g = SubscriptionGate(channel: .appStoreOrTestFlight, store: SubscriptionStore(frozenAt: .storeUnavailable))
+        #expect(!g.allowsStart(project: project(), clean: false, researcherAsked: true))
+        #expect(g.pending != nil)
+    }
+
     @Test("an automatic start is held quietly, with no sheet")
     func automaticStartShowsNothing() {
         let g = SubscriptionGate(channel: .appStoreOrTestFlight, store: SubscriptionStore(frozenAt: .notSubscribed))

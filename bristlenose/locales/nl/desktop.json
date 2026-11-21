@@ -1424,6 +1424,9 @@
     "manage": "Abonnement beheren…",
     "notFound": "Geen abonnement gevonden voor dit Apple-account.",
     "pending": "Wachten op goedkeuring. De analyse start zodra de aankoop is goedgekeurd.",
-    "failed": "De aankoop is niet gelukt. Probeer het zo nog eens."
+    "failed": "De aankoop is niet gelukt. Probeer het zo nog eens.",
+    "unavailable": "De App Store is nu niet beschikbaar. Probeer het zo nog eens.",
+    "tryAgain": "Opnieuw proberen",
+    "aiBilling": "De analyse gebruikt je eigen AI-account (Claude, ChatGPT, Gemini of Azure OpenAI), dat je aanbieder apart bij je in rekening brengt."
   }
 }

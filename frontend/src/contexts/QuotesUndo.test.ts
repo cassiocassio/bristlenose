@@ -281,7 +281,7 @@ describe("a quote's own paragraphs", () => {
     commitEdit("q1", null, { value: [0] });
     expect(snap().breaks.q1).toEqual([0]);
     expect(patchEditsMock).not.toHaveBeenCalled();
-    expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: { breaks: [0], text: "x" } });
+    await vi.waitFor(() => expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: { breaks: [0], text: "x" } }));
     expect(getUndoState().undoAction).toBe("editQuote");
     await undo();
     expect("q1" in snap().breaks).toBe(false);
@@ -292,7 +292,9 @@ describe("a quote's own paragraphs", () => {
     commitEdit("q1", "a b c", { value: [1] });
     expect(snap().edits.q1).toBe("a b c");
     expect(patchEditsMock).toHaveBeenLastCalledWith({ q1: "a b c" });
-    expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: { breaks: [1], text: "a b c" } });
+    await vi.waitFor(() =>
+      expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: { breaks: [1], text: "a b c" } }),
+    );
     await undo();
     expect("q1" in snap().edits).toBe(false);
     expect("q1" in snap().breaks).toBe(false);
@@ -306,6 +308,31 @@ describe("a quote's own paragraphs", () => {
     expect("q1" in snap().breaks).toBe(false);
     await undo();
     expect(snap().breaks.q1).toEqual([1]);
+  });
+
+  it("reverting a quote whose only change is its paragraphs writes no edit, so it does not pin it", async () => {
+    commitEdit("q1", null, { value: [0] });
+    commitEdit("q1", "x", { value: null });
+    await vi.waitFor(() => expect(patchBreaksMock).toHaveBeenLastCalledWith({ q1: null }));
+    expect(patchEditsMock).not.toHaveBeenCalled();
+    expect("q1" in snap().edits).toBe(false);
+  });
+
+  it("the words saving and the paragraphs failing keeps the words, and the undo", async () => {
+    patchBreaksMock.mockRejectedValueOnce(new Error("PATCH /quote-breaks → 500"));
+    commitEdit("q1", "a b c", { value: [1] });
+    await vi.waitFor(() => expect("q1" in snap().breaks).toBe(false));
+    expect(snap().edits.q1).toBe("a b c");
+    expect(getUndoState().undoAction).toBe("editQuote");
+  });
+
+  it("the words failing sends no paragraphs, rolls both back and withdraws the undo", async () => {
+    patchEditsMock.mockRejectedValueOnce(new Error("PATCH /edits → 500"));
+    commitEdit("q1", "a b c", { value: [1] });
+    await vi.waitFor(() => expect("q1" in snap().edits).toBe(false));
+    expect("q1" in snap().breaks).toBe(false);
+    expect(patchBreaksMock).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(getUndoState().undoAction).toBeNull());
   });
 
   it("a refetch reads the researcher's breaks from the quote", () => {

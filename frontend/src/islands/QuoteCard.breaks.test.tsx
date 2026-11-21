@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent } from "@testing-library/react";
+import { act, cleanup, render, screen, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuoteCard } from "./QuoteCard";
 import { _resetDisplayPrefs, setDisplayPref } from "../contexts/DisplayPrefsStore";
@@ -288,6 +288,47 @@ describe("QuoteCard — paragraphs typed while editing", () => {
     expect(onEditCommit).not.toHaveBeenCalled();
   });
 
+  it("Return and Escape leave focus on the card, as Tab does", () => {
+    for (const k of ["Enter", "Escape"]) {
+      renderEditing();
+      key(k);
+      expect(document.querySelector(".quote-card.editing")).toBeNull();
+      expect(document.activeElement).toBe(document.getElementById("q-p1-26"));
+      cleanup();
+    }
+  });
+
+  it("the Enter that confirms an input method's word is not a commit (WebKit: keyCode 229)", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    key("Enter", { keyCode: 229 });
+    expect(document.querySelector(".quote-card.editing")).not.toBeNull();
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
+  it("with Break long paragraphs off, a paragraph placed where the automatic one would go is kept", () => {
+    setDisplayPref("breaks", "off");
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    expect(blockEls()).toHaveLength(1);
+    caretIn(0, "one two ".length);
+    key("Enter", { shiftKey: true });
+    key("Enter");
+    expect(onEditCommit).toHaveBeenCalledExactlyOnceWith("q-p1-26", null, { value: [1] });
+  });
+
+  it("with Break long paragraphs off, a paragraph made and taken out again is no change", () => {
+    setDisplayPref("breaks", "off");
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    caretIn(0, "one two ".length);
+    key("Enter", { shiftKey: true });
+    caretIn(1, 0);
+    key("Backspace");
+    key("Enter");
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
   it("Tab commits once and leaves focus on the card", () => {
     vi.useFakeTimers();
     try {
@@ -299,7 +340,7 @@ describe("QuoteCard — paragraphs typed while editing", () => {
       // Moving focus to the card blurs the text; that blur's deferred commit
       // must not commit the same edit again (a second write and a second
       // undo entry, so ⌘Z undid only the copy: found live, 21 Nov 2026).
-      act(() => { vi.advanceTimersByTime(500); });
+      act(() => { vi.runOnlyPendingTimers(); });
       expect(document.querySelector(".quote-card.editing")).toBeNull();
       expect(onEditCommit).toHaveBeenCalledOnce();
       expect(document.activeElement).toBe(document.getElementById("q-p1-26"));

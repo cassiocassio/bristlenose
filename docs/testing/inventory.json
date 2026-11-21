@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 10778
+        "tests": 10945
       },
       {
         "basis": "test files",
-        "files": 226,
+        "files": 227,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -30,19 +30,19 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 269,
+        "files": 271,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3313
+        "tests": 3352
       },
       {
         "basis": "spec files",
-        "files": 12,
+        "files": 13,
         "kind": "browser e2e",
         "runner": "playwright",
-        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
+        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, quote-paragraphs.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
         "suite": "playwright",
         "tests": null
       }
@@ -258,7 +258,7 @@
         "basis": "spec files",
         "kind": "browser e2e",
         "runner": "playwright",
-        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
+        "source": "e2e/tests/ (button-labels.spec.ts, console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, no-horizontal-overflow.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, quote-paragraphs.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
         "suite": "playwright"
       }
     ],

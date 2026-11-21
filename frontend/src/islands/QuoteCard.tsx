@@ -35,7 +35,14 @@ import { isExportMode } from "../utils/exportData";
 import { reportHref } from "../utils/reportHref";
 import { featureFlags } from "../utils/featureFlags";
 import { highlightTerms } from "../utils/highlight";
-import { autoBreaks, blockRanges, caretAtPoint, setBracketsVisible as showBrackets } from "../utils/quoteEditSurface";
+import {
+  autoBreaks,
+  blockRanges,
+  caretAtPoint,
+  clampCaret,
+  judgeInput,
+  setBracketsVisible as showBrackets,
+} from "../utils/quoteEditSurface";
 import { useDisplayBreaks } from "../contexts/DisplayPrefsStore";
 import type { SearchTerm } from "../utils/searchMatch";
 import { useCropEdit, type BreaksChange } from "../hooks/useCropEdit";
@@ -265,6 +272,7 @@ export function QuoteCard({
     originalText: quote.text,
     researcherBreaks,
     shownBreaks,
+    autoBreaksOn: breaksOn,
     onCommit: handleCropCommit,
     onCancel: handleCropCancel,
   });
@@ -327,6 +335,34 @@ export function QuoteCard({
     return () => host.removeEventListener("pointerdown", listener);
   }, [crop.mode, handleBracketPointerDown]);
 
+  // ── Text mode: the surface stays whole (review 21 Nov, findings 1 and 3) ──
+  // Native listeners: React's onBeforeInput misses deletes and line breaks.
+  // The caret is kept inside the typed text, and an input that would delete a
+  // quote mark or a trimmed word, or run two paragraphs together, is refused.
+
+  useEffect(() => {
+    const host = editHostRef.current;
+    if (crop.mode !== "hybrid" || !host) return;
+    const onBeforeInput = (e: InputEvent) => {
+      const verdict = judgeInput(host, e);
+      if (verdict === "allow") return;
+      e.preventDefault();
+      if (verdict === "retype" && e.data && typeof document.execCommand === "function") {
+        clampCaret(host);
+        document.execCommand("insertText", false, e.data);
+      }
+    };
+    const onSelectionChange = () => {
+      if (document.activeElement === host) clampCaret(host);
+    };
+    host.addEventListener("beforeinput", onBeforeInput);
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      host.removeEventListener("beforeinput", onBeforeInput);
+      document.removeEventListener("selectionchange", onSelectionChange);
+    };
+  }, [crop.mode]);
+
   // ── Click-outside → commit ──────────────────────────────────────────
 
   useEffect(() => {
@@ -371,15 +407,15 @@ export function QuoteCard({
   // later and moved focus to the speaker's name; in trim mode nothing listened
   // for it, so focus left and the card stayed mid-edit.
 
-  const commitAndStay = useCallback(
-    (e: React.KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const card = editHostRef.current?.closest("blockquote");
-      crop.commitEdit(editHostRef.current);
-      // After the commit, which clears the hold: moving focus to the card
-      // blurs the text, and that blur must not commit again.
-      crop.holdBlur();
+  // Return and Escape keep the researcher on the card too: the edit surface is
+  // replaced as the card goes back to rest, and focus would fall to the top of
+  // the page (review 21 Nov, finding 8). Called after the commit or cancel,
+  // which clears the hold: moving focus to the card blurs the text, and that
+  // blur must not commit again. In trimming the card has focus already, and a
+  // hold no blur comes for would swallow the next edit's (finding 10).
+  const stayOnCard = useCallback(
+    (card: Element | null | undefined) => {
+      if (editHostRef.current?.contains(document.activeElement)) crop.holdBlur();
       if (card instanceof HTMLElement) {
         card.setAttribute("tabindex", "-1");
         card.focus({ preventScroll: true });
@@ -387,6 +423,17 @@ export function QuoteCard({
       setFocus(domId, { scroll: false });
     },
     [crop, domId, setFocus],
+  );
+
+  const commitAndStay = useCallback(
+    (e: React.KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const card = editHostRef.current?.closest("blockquote");
+      crop.commitEdit(editHostRef.current);
+      stayOnCard(card);
+    },
+    [crop, stayOnCard],
   );
 
   // ── Card-level keydown for crop mode ────────────────────────────────
@@ -441,8 +488,10 @@ export function QuoteCard({
   const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const host = editHostRef.current;
-      // An IME's Enter confirms its composition.
-      if (!host || e.nativeEvent.isComposing) return;
+      // An IME's Enter confirms its composition. WebKit (Safari, the Mac app)
+      // sends that Enter after compositionend with isComposing false and
+      // keyCode 229, so both are checked (review 21 Nov, finding 7).
+      if (!host || e.nativeEvent.isComposing || e.keyCode === 229) return;
       if (e.key === "Enter" && e.shiftKey) {
         // A new paragraph at the caret (the transcript's Return; here Return commits).
         e.preventDefault();
@@ -451,13 +500,32 @@ export function QuoteCard({
       } else if (e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
+        const card = host.closest("blockquote");
         crop.commitEdit(host);
+        stayOnCard(card);
       } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        const card = host.closest("blockquote");
         crop.cancelEdit();
+        stayOnCard(card);
       } else if (e.key === "Tab") {
         commitAndStay(e);
+      } else if (e.key.toLowerCase() === "a" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+        // Select All takes the paragraph's typed text: a selection across the
+        // quote marks, trimmed words or paragraphs cannot be typed over.
+        const sel = window.getSelection();
+        const node = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).startContainer : null;
+        const el = node instanceof Element ? node : node?.parentElement;
+        const run = el?.closest(".bn-block")?.querySelector(".crop-editable");
+        if (run) {
+          e.preventDefault();
+          e.stopPropagation();
+          const r = document.createRange();
+          r.selectNodeContents(run);
+          sel?.removeAllRanges();
+          sel?.addRange(r);
+        }
       } else if ((e.key === "Backspace" || e.key === "Delete") && !e.metaKey && !e.altKey && !e.ctrlKey) {
         // At a paragraph's start (Backspace) or end (Delete): join. At the
         // quote's own start or end: nothing, rather than delete a quote mark.
@@ -467,7 +535,7 @@ export function QuoteCard({
         }
       }
     },
-    [crop, bracketsVisible, commitAndStay],
+    [crop, bracketsVisible, commitAndStay, stayOnCard],
   );
 
   // A paste is plain text, on one line: pasted markup would bring another

@@ -907,24 +907,34 @@ function setQuote(
   if (isExportMode()) return LANDED;
   const beforeText = state.edits[domId];
   const beforeBreaks = state.breaks[domId];
-  const doText = writeText && beforeText !== text;
+  // Words the quote already reads as are no write: a revert of a quote whose
+  // only change is its paragraphs would otherwise store the pipeline's words
+  // as an edit, and an edit pins the quote against re-runs (finding 6).
+  const readsAs = (t: string | undefined) => t ?? pipelineText(domId);
+  const doText = writeText && readsAs(beforeText) !== readsAs(text);
   const wording = (doText ? text : beforeText) ?? pipelineText(domId);
   const after: Updater = (s) => withBreaks(domId, breaks)(doText ? withEdit(domId, text)(s) : s);
   setState(after);
-  const writes: Promise<void>[] = [];
-  const changes: Change[] = [];
-  if (doText) {
-    writes.push(patchEdits({ [domId]: text ?? null }));
-    changes.push({ key: `edits:${domId}`, id: domId, before: withEdit(domId, beforeText), after: withEdit(domId, text) });
-  }
-  writes.push(patchQuoteBreaks({ [domId]: breaks === undefined ? null : { breaks, text: wording } }));
-  changes.push({
-    key: `breaks:${domId}`,
-    id: domId,
-    before: withBreaks(domId, beforeBreaks),
-    after: withBreaks(domId, breaks),
-  });
-  const written = send(Promise.all(writes).then(() => undefined), changes);
+  // The words go first and the breaks only once they have landed, each settled
+  // on its own: the breaks name the wording they were placed in, so breaks
+  // saved against words that failed would never show, and one request failing
+  // must not roll back the other that saved (review 21 Nov, findings 2 and 9).
+  // Words that fail take the breaks back with them, unsent.
+  const textWrite = doText ? patchEdits({ [domId]: text ?? null }) : null;
+  const textLanded = textWrite
+    ? send(textWrite, [
+        { key: `edits:${domId}`, id: domId, before: withEdit(domId, beforeText), after: withEdit(domId, text) },
+      ])
+    : LANDED;
+  const breaksLanded = send(
+    (textWrite ?? Promise.resolve()).then(() =>
+      patchQuoteBreaks({ [domId]: breaks === undefined ? null : { breaks, text: wording } }),
+    ),
+    [{ key: `breaks:${domId}`, id: domId, before: withBreaks(domId, beforeBreaks), after: withBreaks(domId, breaks) }],
+  );
+  const written = Promise.all([textLanded, breaksLanded]).then(([t, b]): Landed =>
+    t === b ? t : "some",
+  );
   if (record) {
     recordGesture(
       "editQuote",

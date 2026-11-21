@@ -8,7 +8,9 @@ the quote's paragraphs their own, and those are stored here (``QuoteBreak``).
 
 A break is a position, "after word i", counted in the quote's resolved wording:
 the researcher's edit if there is one, else the pipeline's text. Words are what
-``str.split()`` gives, the same split as the browser's ``split(/\\s+/)``. The row
+``str.split()`` gives. The browser splits on ``/\\s+/``, which differs from it on a
+few rare characters (U+FEFF; U+0085 and U+001C–U+001F): a quote carrying one can
+have its breaks refused or shown one word off (review 21 Nov, finding 11). The row
 carries a hash of the wording it was made against; when the wording changes
 (a re-analysis rewords the quote, an edit lands without new breaks) the row is
 not shown, and the quote falls back to automatic paragraphs without a message
@@ -19,11 +21,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Mapping
 
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import Quote, QuoteBreak
+
+logger = logging.getLogger(__name__)
 
 #: The one level used today: a thought (a paragraph). Level 1 (a phrase) is
 #: reserved for the line-level breaks still in the lab.
@@ -61,14 +66,28 @@ def resolved(
     if not quotes:
         return {}
     out: dict[int, list[int]] = {}
+    # Kept off the screen on purpose, but never off the record: a researcher
+    # whose paragraphs vanished can be told why (review 21 Nov, finding 15).
+    dropped: dict[str, list[int]] = {}
     for row in db.query(QuoteBreak).filter(QuoteBreak.quote_id.in_(list(quotes))).all():
         quote = quotes.get(row.quote_id)
         if quote is None:
             continue
         wording = edit_map.get(row.quote_id) or quote.text
         if row.verify != verify_of(wording):
+            dropped.setdefault("wording_changed", []).append(row.quote_id)
             continue
         breaks = decode(row.breaks)
-        if breaks is not None and valid(breaks, wording):
+        if breaks is None:
+            dropped.setdefault("unreadable", []).append(row.quote_id)
+        elif not valid(breaks, wording):
+            dropped.setdefault("invalid", []).append(row.quote_id)
+        else:
             out[row.quote_id] = breaks
+    if dropped:
+        # Ids only, never the words: this goes to the project log.
+        logger.info(
+            "quote_breaks_not_shown | %s",
+            " ".join(f"{why}={len(ids)} (quote ids {ids[:10]})" for why, ids in sorted(dropped.items())),
+        )
     return out

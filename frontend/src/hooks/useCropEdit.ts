@@ -50,6 +50,13 @@ export interface UseCropEditOptions {
   /** The breaks drawn at rest right now: what the edit modes freeze. */
   shownBreaks?: number[];
   /**
+   * Whether the Display setting places paragraphs automatically. The
+   * researcher's paragraphs are compared with what rest would show without
+   * them under this setting: with it off that is none, so any paragraph they
+   * place is theirs (owner, 21 Nov 2026; review finding 4).
+   */
+  autoBreaksOn?: boolean;
+  /**
    * Called when an edit/crop is committed with something to write. `text` is
    * the trimmed text (no ellipsis), or null when only the paragraphs changed;
    * `breaks` is present only when the paragraphs are written.
@@ -115,6 +122,7 @@ export function useCropEdit({
   originalText: _originalText,
   researcherBreaks = null,
   shownBreaks,
+  autoBreaksOn = true,
   onCommit,
   onCancel,
 }: UseCropEditOptions): UseCropEditReturn {
@@ -137,6 +145,11 @@ export function useCropEdit({
 
   const suppressBlurRef = useRef(false);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearBlurHold = useCallback(() => {
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    blurTimeoutRef.current = null;
+    suppressBlurRef.current = false;
+  }, []);
 
   // The edit as the model holds it. In text mode the surface holds the truth
   // and is read back into this on every structural key and on commit; in trim
@@ -154,19 +167,23 @@ export function useCropEdit({
     if (mode !== "idle") return;
     preEditTextRef.current = currentText;
     touched.current = false;
+    // A hold or a blur timer left by the last edit belongs to it, not to this
+    // one: Tab in trimming holds a blur that never comes (finding 10).
+    clearBlurHold();
     const w = currentText.split(/\s+/).filter(Boolean);
     model.current = { words: w, breaks: [...(shownBreaks ?? [])], cropStart: 0, cropEnd: w.length };
     setWords(w);
     setCropStart(0);
     setCropEnd(w.length);
     setMode("hybrid");
-  }, [mode, currentText, shownBreaks, setMode]);
+  }, [mode, currentText, shownBreaks, setMode, clearBlurHold]);
 
   // ── Re-enter hybrid from crop mode ──────────────────────────────────
 
   const reenterTextEdit = useCallback(() => {
+    clearBlurHold();
     setMode("hybrid");
-  }, [setMode]);
+  }, [setMode, clearBlurHold]);
 
   // ── Commit ──────────────────────────────────────────────────────────
 
@@ -207,7 +224,8 @@ export function useCropEdit({
       // ones); already the researcher's, they are carried through the edit;
       // otherwise they stay automatic and are placed again from the words.
       let next: number[] | null;
-      if (touched.current) next = sameBreaks(keptBreaks, autoBreaks(newText)) ? null : keptBreaks;
+      const automatic = autoBreaksOn ? autoBreaks(newText) : [];
+      if (touched.current) next = sameBreaks(keptBreaks, automatic) ? null : keptBreaks;
       else if (researcherBreaks !== null) next = keptBreaks;
       else next = null;
       // Their own breaks are written again whenever the words under them change:
@@ -217,7 +235,7 @@ export function useCropEdit({
       else if (!breaksChanged) onCommit(newText);
       else onCommit(textChanged ? newText : null, { value: next });
     },
-    [mode, currentText, researcherBreaks, onCommit, onCancel, setMode],
+    [mode, currentText, researcherBreaks, autoBreaksOn, onCommit, onCancel, setMode],
   );
 
   const holdBlur = useCallback(() => {
@@ -252,9 +270,11 @@ export function useCropEdit({
   const splitAtCaret = useCallback(
     (host: HTMLElement, bracketsVisible: boolean): boolean => {
       const at = caretPlace(host);
-      if (!at) return false;
+      if (!at || at.empty) return false; // an emptied paragraph has nothing to split
       const m = read(host);
-      const [s, e] = blockRanges(m.words.length, m.breaks)[at.block];
+      const range = blockRanges(m.words.length, m.breaks)[at.block];
+      if (!range) return false;
+      const [s, e] = range;
       const g = firstTyped(m, at.block) + at.word;
       if (g <= s || g >= e) return false; // already a paragraph's edge
       m.breaks = [...m.breaks, g - 1].sort((a, b) => a - b);
@@ -273,6 +293,22 @@ export function useCropEdit({
       if (!at || (dir === -1 ? !at.atStart : !at.atEnd)) return null;
       const m = read(host);
       const ranges = blockRanges(m.words.length, m.breaks);
+      const draw2 = () =>
+        draw(host, m, { mode: "hybrid", leftEllipsis: hasLeftCrop, rightEllipsis: hasRightCrop, bracketsVisible });
+      if (at.empty) {
+        // A paragraph emptied of its words: the key takes it away, and the
+        // caret goes to where the join would put it (review 21 Nov, finding 5).
+        model.current = m;
+        touched.current = true;
+        draw2();
+        const prev = ranges[at.block - 1];
+        const next = ranges[at.block];
+        if (dir === -1 && prev) placeCaret(host, m, prev[1] - 1, true);
+        else if (next) placeCaret(host, m, next[0]);
+        else if (prev) placeCaret(host, m, prev[1] - 1, true);
+        return "joined";
+      }
+      if (!ranges[at.block]) return null;
       if (dir === -1 && (at.excludedBefore || at.block === 0)) return "edge";
       if (dir === 1 && (at.excludedAfter || at.block === ranges.length - 1)) return "edge";
       const gone = dir === -1 ? ranges[at.block][0] - 1 : ranges[at.block][1] - 1;

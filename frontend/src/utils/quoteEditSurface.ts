@@ -147,6 +147,12 @@ export function draw(host: HTMLElement, m: EditModel, o: DrawOptions): void {
     }
     host.append(block);
   });
+  // In text editing the field's value is the words being kept: the quote
+  // marks, brackets, ellipses and trimmed words are kept out of what a screen
+  // reader reads as the quote (review 21 Nov, finding 12).
+  if (o.mode === "hybrid") {
+    host.querySelectorAll('[contenteditable="false"]').forEach((n) => n.setAttribute("aria-hidden", "true"));
+  }
 }
 
 export function setBracketsVisible(host: HTMLElement, visible: boolean): void {
@@ -160,6 +166,11 @@ export function setBracketsVisible(host: HTMLElement, visible: boolean): void {
 
 const isIsland = (n: Node): n is HTMLElement =>
   n instanceof HTMLElement && n.getAttribute("contenteditable") === "false";
+
+const BLOCK_TAGS = new Set([
+  "BR", "DIV", "P", "LI", "UL", "OL", "BLOCKQUOTE", "PRE", "TABLE", "TR", "TD", "TH",
+  "H1", "H2", "H3", "H4", "H5", "H6",
+]);
 
 /** The words of one block, the typed ones and the excluded ones, in order. */
 function blockTokens(block: Node): Array<{ word: string; excluded: boolean }> {
@@ -181,10 +192,12 @@ function blockTokens(block: Node): Array<{ word: string; excluded: boolean }> {
       buf += n.textContent ?? "";
       return;
     }
-    // A <br> or a block the browser made counts as a space between words.
-    if (n instanceof HTMLElement && (n.tagName === "BR" || n.tagName === "DIV")) buf += " ";
+    // A <br> or a block element the browser made (or a drop brought) is a
+    // space between words, never a joint: "end of</p><p>next" is two words.
+    const isBlock = n instanceof HTMLElement && BLOCK_TAGS.has(n.tagName);
+    if (isBlock) buf += " ";
     n.childNodes.forEach(walk);
-    if (n instanceof HTMLElement && n.tagName === "DIV") buf += " ";
+    if (isBlock) buf += " ";
   };
   block.childNodes.forEach(walk);
   flush();
@@ -231,7 +244,15 @@ function plainText(r: Range): string {
 }
 
 export interface CaretPlace {
+  /**
+   * The paragraph, numbered as `read()` numbers them: only blocks that hold
+   * words count, so a paragraph the researcher emptied does not shift the
+   * ones after it (review 21 Nov, finding 5). In an emptied block it is the
+   * index of the paragraph that follows.
+   */
   block: number;
+  /** The caret is in a block with no words left in it. */
+  empty: boolean;
   /** Words of this block's typed text before the caret, by the transcript's rule. */
   word: number;
   atStart: boolean;
@@ -249,7 +270,12 @@ export function caretPlace(host: HTMLElement): CaretPlace | null {
   const startEl = caret.startContainer instanceof Element ? caret.startContainer : caret.startContainer.parentElement;
   const block = startEl?.closest(".bn-block");
   if (!block || !host.contains(block)) return null;
-  const blocks = Array.from(host.querySelectorAll(":scope > .bn-block"));
+  const holdsWords = (b: Element) => blockTokens(b).length > 0;
+  let index = 0;
+  for (const b of Array.from(host.querySelectorAll(":scope > .bn-block"))) {
+    if (b === block) break;
+    if (holdsWords(b)) index += 1;
+  }
   const before = document.createRange();
   before.selectNodeContents(block);
   before.setEnd(caret.startContainer, caret.startOffset);
@@ -271,7 +297,8 @@ export function caretPlace(host: HTMLElement): CaretPlace | null {
     return h.querySelector(".excluded") !== null;
   };
   return {
-    block: blocks.indexOf(block),
+    block: index,
+    empty: !holdsWords(block),
     word,
     atStart: textBefore.trim().length === 0,
     atEnd: textAfter.trim().length === 0,
@@ -336,4 +363,92 @@ export function caretAtPoint(host: HTMLElement, x: number, y: number): boolean {
 export function firstTyped(m: EditModel, bi: number): number {
   const [s] = blockRanges(m.words.length, m.breaks)[bi];
   return Math.max(s, m.cropStart);
+}
+
+// ── Keeping the surface whole ───────────────────────────────────────────
+
+/** The caret's run, or null when it sits outside the typed text. */
+function runAt(node: Node): Element | null {
+  return (node instanceof Element ? node : node.parentElement)?.closest(".crop-editable") ?? null;
+}
+
+/**
+ * Keep a collapsed caret inside the typed text. Home, ⌘← or an arrow can put
+ * it before a quote mark or between two trimmed words, and text typed there
+ * lands outside the words being kept: `read()` then counts it among the
+ * trimmed ones and saves words the researcher never wrote (review 21 Nov,
+ * findings 1 and 19). It goes to the nearer end of its own paragraph's run,
+ * or to the nearest run when its paragraph has none.
+ */
+export function clampCaret(host: HTMLElement): void {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+  const caret = sel.getRangeAt(0);
+  if (!host.contains(caret.startContainer) || runAt(caret.startContainer)) return;
+  const runs = Array.from(host.querySelectorAll(".crop-editable"));
+  if (runs.length === 0) return;
+  const startEl = caret.startContainer instanceof Element ? caret.startContainer : caret.startContainer.parentElement;
+  const block = startEl?.closest(".bn-block");
+  const own = block?.querySelector(".crop-editable") ?? null;
+  const edge = (run: Element, atEnd: boolean) => {
+    const r = document.createRange();
+    r.selectNodeContents(run);
+    r.collapse(!atEnd);
+    return r;
+  };
+  let target: Range;
+  if (own) {
+    const start = edge(own, false);
+    target = caret.compareBoundaryPoints(Range.START_TO_START, start) <= 0 ? start : edge(own, true);
+  } else {
+    const after = runs.find((r) => {
+      const at = edge(r, false);
+      return caret.compareBoundaryPoints(Range.START_TO_START, at) <= 0;
+    });
+    target = after ? edge(after, false) : edge(runs[runs.length - 1], true);
+  }
+  sel.removeAllRanges();
+  sel.addRange(target);
+}
+
+/** An input the browser would make outside the model: refuse it. */
+export type InputVerdict = "allow" | "refuse" | "retype";
+
+/**
+ * Judge an input before the browser makes it (a native `beforeinput`; React's
+ * onBeforeInput misses deletes and line breaks, as TranscriptPage found).
+ * Return, Shift-Return and the paragraph-edge Backspace and Delete are handled
+ * on keydown and never reach here. Everything else that would delete a quote
+ * mark or a trimmed word, run two paragraphs together, add a line break the
+ * read-back would turn into a space, bring in dropped markup or format the
+ * text is refused (review 21 Nov, finding 3): Option-/⌘-Backspace, Ctrl-H,
+ * Ctrl-K, Ctrl-O, Edit ▸ Delete, a drop, ⌘B. Text typed where the caret sits
+ * outside the typed run is moved into it ("retype"). An input method's
+ * composition always goes through: refusing it loses the conversion.
+ */
+export function judgeInput(host: HTMLElement, e: InputEvent): InputVerdict {
+  const t = e.inputType;
+  if (e.isComposing || t.includes("Composition")) return "allow";
+  if (t === "insertParagraph" || t === "insertLineBreak") return "refuse";
+  if (t.startsWith("insertFrom") && t !== "insertFromPaste") return "refuse"; // drop, yank, quotation
+  if (t.startsWith("format")) return "refuse";
+  if (t.startsWith("history")) return "allow";
+  const ranges: AbstractRange[] = e.getTargetRanges?.() ?? [];
+  const sel = window.getSelection();
+  if (ranges.length === 0 && sel && sel.rangeCount > 0) ranges.push(sel.getRangeAt(0));
+  for (const sr of ranges) {
+    const r = document.createRange();
+    r.setStart(sr.startContainer, sr.startOffset);
+    r.setEnd(sr.endContainer, sr.endOffset);
+    const blockOf = (n: Node) => (n instanceof Element ? n : n.parentElement)?.closest(".bn-block") ?? null;
+    if (blockOf(r.startContainer) !== blockOf(r.endContainer)) return "refuse";
+    if (!r.collapsed) {
+      for (const island of Array.from(host.querySelectorAll('[contenteditable="false"]'))) {
+        if (r.intersectsNode(island)) return "refuse";
+      }
+    } else if (t.startsWith("insert") && !runAt(r.startContainer)) {
+      return "retype";
+    }
+  }
+  return "allow";
 }

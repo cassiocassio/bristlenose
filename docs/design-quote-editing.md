@@ -189,20 +189,29 @@ How it is drawn: in both edit modes React renders `.quote-text` empty and `utils
 
 | Key | Text editing | Trimming |
 |---|---|---|
-| Return | Commits | Commits |
-| Shift-Return | Starts a paragraph at the caret. Inside a word, before the word (the transcript's rule, `utils/paragraphEdits.ts` `caretWords`). At a paragraph's edge, nothing | — |
+| Return | Commits; focus stays on the card | Commits |
+| Shift-Return | Starts a paragraph at the caret. Inside a word, before the word (the transcript's rule, `utils/paragraphEdits.ts` `caretWords`). At a paragraph's edge, nothing | Commits, as Return |
 | Option-Return | Commits, as Return. Only Shift-Return makes a paragraph (owner, 21 Nov 2026: researchers know Shift-Return) | Commits |
 | Backspace at a paragraph's start | Joins it to the one above, as in the transcript. At the quote's very start, nothing (never deletes a quote mark) | — |
 | Delete at a paragraph's end | Joins the paragraph below to it | — |
-| Escape | Cancels: the words and the paragraphs go back as they were | Cancels |
+| Backspace or Delete in a paragraph emptied of its words | Takes the empty paragraph away | — |
+| Escape | Cancels: the words and the paragraphs go back as they were; focus stays on the card | Cancels |
 | Tab, Shift-Tab | Commits; focus stays on the card (§12) | Commits; focus stays on the card |
 | Paste | Plain text, on one line | — |
+| ⌘A | Selects the paragraph's typed text | — |
+| Return confirming an input method's word (Japanese, Chinese) | Confirms the word; does not commit | — |
+
+**What is refused** (review, 21 Nov 2026). The editable host holds the quote marks and the trimmed words as islands, so anything the keys above do not cover, and that would delete an island or run two paragraphs together, is refused before the browser makes it, on a native `beforeinput` (the transcript's precedent): Option- and ⌘-Backspace or -Delete across an island or a paragraph edge, Ctrl-H, -D, -K and -O, Edit ▸ Delete over a selection that crosses an island or a paragraph, typing over such a selection, a drop, and formatting (⌘B, ⌘I). An input method's composition is never refused. The caret is kept inside the typed text, so Home, ⌘← or an arrow cannot leave it before a quote mark or between two trimmed words, where typed text would be saved among the trimmed words. A refused key does nothing and says nothing.
 
 Return still commits because a quote is a field, as every inline edit in the report is; in the transcript Return splits, because a transcript is a document with nothing to commit. The meaning differs too: a paragraph break in the transcript is a quote boundary (it forks the quote, with time); a break in a quote is presentation only.
 
-**What a commit writes.** The words go to `QuoteEdit` only if they changed (spacing alone is no change, decision #30). The paragraphs go to the `quote_breaks` overlay (`server/quote_breaks.py`, migration 026, `PATCH …/quote-breaks`) only when the researcher placed or removed one by hand in this edit, or when the words under the researcher's own paragraphs changed (they are kept against the wording they were placed in). Paragraphs placed by hand that come out exactly as the automatic ones are not saved: the quote stays automatic. An empty list is saved: every automatic break taken out is a choice. Both writes are one gesture with one ⌘Z. Nothing goes to the transcript.
+**What a commit writes.** The words go to `QuoteEdit` only if they changed (spacing alone is no change, decision #30). The paragraphs go to the `quote_breaks` overlay (`server/quote_breaks.py`, migration 026, `PATCH …/quote-breaks`) only when the researcher placed or removed one by hand in this edit, or when the words under the researcher's own paragraphs changed (they are kept against the wording they were placed in). **The baseline is what the researcher sees** (owner, 21 Nov 2026): paragraphs that come out exactly as rest would show them without the researcher's own, under the current Break long paragraphs setting, are not saved and the quote stays automatic. With the setting on that is the automatic placing; with it off it is none, so every paragraph placed by hand is kept. Once the researcher adds or removes one, the whole set in that quote is theirs, the automatic ones they left alone included, and the algorithm never moves it again: removing an automatic paragraph overrides it. An empty list is saved: every automatic break taken out is a choice. Both writes are one gesture with one ⌘Z; the words are sent first and the paragraphs only once the words have saved, each rolled back on its own if it fails (review, 21 Nov 2026). Nothing goes to the transcript.
 
-**What is shown after.** The researcher's own paragraphs, if any — even with Break long paragraphs off (owner, 21 Nov 2026) — else the automatic ones, placed again from the new words. When the wording changes later without new breaks (a re-analysis rewords the quote), the stored breaks stop showing and the automatic ones return, without a message (`design-quote-anchor.md` §3.4). Revert (the undo arrow) goes back to the pipeline's words and the automatic paragraphs.
+**What is shown after.** The researcher's own paragraphs, if any — even with Break long paragraphs off (owner, 21 Nov 2026) — else the automatic ones, placed again from the new words. When the wording changes later without new breaks (a re-analysis rewords the quote), the stored breaks stop showing and the automatic ones return, without a message (`design-quote-anchor.md` §3.4). Revert (the undo arrow) goes back to the pipeline's words and the automatic paragraphs; on a quote whose only change is its paragraphs it writes no edit, so it does not pin the quote. A researcher's paragraphs change only when they edit or trim that quote (a paragraph goes with its words; a trim drops the paragraphs it cuts off and keeps the rest where they were), use Revert or undo, or a re-analysis rewords the quote. The window width, the setting, a retuned algorithm and other quotes leave them alone. A dropped row is logged (`quote_breaks_not_shown`, ids only).
+
+**v1, to revisit** (owner, 21 Nov 2026; 100days "Revisit: a quote's own paragraphs"): with the setting off the Quotes lens looks mixed, the setting seems to do nothing on an adjusted quote, and the only way back to automatic paragraphs is Revert, which also undoes word edits.
+
+Known limits: a quote in a language written without spaces (Chinese, Japanese) is one "word" to the break model, so Shift-Return inside it does nothing. Breaks are word positions counted by `str.split()` on the server and `/\s+/` in the browser; the two differ on a few rare characters (U+FEFF; U+0085, U+001C–U+001F), and a quote carrying one can have its paragraphs refused or shown one word off.
 
 Not yet: the Signals evidence and the Uncategorised floor still place their own automatic breaks and do not read the researcher's.
 

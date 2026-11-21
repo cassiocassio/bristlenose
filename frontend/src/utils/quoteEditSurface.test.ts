@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { autoBreaks, blockRanges, draw, read, sameBreaks, type EditModel } from "./quoteEditSurface";
+import {
+  autoBreaks,
+  blockRanges,
+  caretPlace,
+  clampCaret,
+  draw,
+  judgeInput,
+  read,
+  sameBreaks,
+  type EditModel,
+} from "./quoteEditSurface";
 import { breakIntoBlocks } from "./breakParagraphs";
 
 const words = (t: string) => t.split(/\s+/).filter(Boolean);
@@ -53,5 +63,86 @@ describe("quoteEditSurface", () => {
     expect(sameBreaks([1, 2], [1, 2])).toBe(true);
     expect(sameBreaks([], null)).toBe(false);
     expect(sameBreaks(null, null)).toBe(true);
+  });
+
+  it("a drop's paragraphs are spaces between words, never a joint", () => {
+    const host = drawn({ words: words("a b"), breaks: [], cropStart: 0, cropEnd: 2 });
+    host.querySelector(".crop-editable")!.innerHTML = "end of<p>next</p>";
+    expect(read(host).words).toEqual(["end", "of", "next"]);
+  });
+});
+
+function caretAt(node: Node, offset: number) {
+  const r = document.createRange();
+  r.setStart(node, offset);
+  r.collapse(true);
+  window.getSelection()!.removeAllRanges();
+  window.getSelection()!.addRange(r);
+}
+
+function select(start: Node, so: number, end: Node, eo: number) {
+  const r = document.createRange();
+  r.setStart(start, so);
+  r.setEnd(end, eo);
+  window.getSelection()!.removeAllRanges();
+  window.getSelection()!.addRange(r);
+}
+
+const input = (inputType: string, init: InputEventInit = {}) =>
+  new InputEvent("beforeinput", { inputType, cancelable: true, ...init });
+
+describe("keeping the surface whole (review 21 Nov)", () => {
+  const twoBlocks = () => {
+    const host = drawn({ words: words("a b c d"), breaks: [1], cropStart: 0, cropEnd: 4 });
+    document.body.append(host);
+    return host;
+  };
+  const runs = (host: HTMLElement) => Array.from(host.querySelectorAll(".crop-editable"));
+
+  it("refuses line breaks, drops and formatting; lets an input method compose", () => {
+    const host = twoBlocks();
+    caretAt(runs(host)[0].firstChild!, 1);
+    expect(judgeInput(host, input("insertParagraph"))).toBe("refuse");
+    expect(judgeInput(host, input("insertLineBreak"))).toBe("refuse");
+    expect(judgeInput(host, input("insertFromDrop"))).toBe("refuse");
+    expect(judgeInput(host, input("formatBold"))).toBe("refuse");
+    expect(judgeInput(host, input("insertCompositionText", { isComposing: true }))).toBe("allow");
+    expect(judgeInput(host, input("insertText", { data: "x" }))).toBe("allow");
+  });
+
+  it("refuses a delete that would take a quote mark, or run two paragraphs together", () => {
+    const host = twoBlocks();
+    const [first, second] = runs(host);
+    select(host.querySelector(".bn-block")!, 0, first.firstChild!, 1); // over the opening mark
+    expect(judgeInput(host, input("deleteWordBackward"))).toBe("refuse");
+    select(first.firstChild!, 2, second.firstChild!, 1); // across the paragraph break
+    expect(judgeInput(host, input("deleteContentBackward"))).toBe("refuse");
+    select(first.firstChild!, 0, first.firstChild!, 1); // inside the typed text
+    expect(judgeInput(host, input("deleteContentBackward"))).toBe("allow");
+  });
+
+  it("text typed outside the typed run is moved into it, and the caret is kept there", () => {
+    const host = drawn({ words: words("a b c d e"), breaks: [], cropStart: 2, cropEnd: 4 });
+    document.body.append(host);
+    const block = host.querySelector(".bn-block")!;
+    const between = Array.from(block.childNodes).indexOf(block.querySelectorAll(".excluded")[1]);
+    caretAt(block, between); // between the two trimmed words
+    expect(judgeInput(host, input("insertText", { data: "X" }))).toBe("retype");
+    clampCaret(host);
+    const at = window.getSelection()!.getRangeAt(0).startContainer;
+    const el = at instanceof Element ? at : at.parentElement;
+    expect(el?.closest(".crop-editable")).toBe(runs(host)[0]);
+  });
+
+  it("numbers paragraphs as read() does when one has been emptied", () => {
+    const host = drawn({ words: words("a b c d e f"), breaks: [1, 3], cropStart: 0, cropEnd: 6 });
+    document.body.append(host);
+    const [, middle, last] = runs(host);
+    middle.textContent = "";
+    caretAt(last.firstChild!, 0);
+    expect(caretPlace(host)).toMatchObject({ block: 1, empty: false, atStart: true });
+    caretAt(middle, 0);
+    expect(caretPlace(host)).toMatchObject({ block: 1, empty: true });
+    expect(read(host).breaks).toEqual([1]);
   });
 });

@@ -30,6 +30,23 @@ describe("useCropEdit", () => {
     expect(result.current.cropEnd).toBe(5);
   });
 
+  it("a blur hold left by the last edit does not swallow this one's (Tab in trimming)", () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = makeHook();
+      const stale = vi.fn();
+      // Tab in trimming holds a blur that never comes, and may leave a timer.
+      result.current.suppressBlurRef.current = true;
+      result.current.blurTimeoutRef.current = setTimeout(stale, 150);
+      act(() => result.current.enterEditMode());
+      expect(result.current.suppressBlurRef.current).toBe(false);
+      vi.runAllTimers();
+      expect(stale).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does nothing if enterEditMode called when not idle", () => {
     const { result } = makeHook();
     act(() => result.current.enterEditMode());

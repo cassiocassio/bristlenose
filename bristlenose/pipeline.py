@@ -1544,7 +1544,7 @@ _MAX_WARN_LEN = 74  # 80 col - 3 indent - small margin
 
 _BILLING_URLS: dict[str, str] = {
     "anthropic": "https://platform.claude.com/settings/billing",
-    "openai": "https://platform.openai.com/settings/organization/billing",
+    "openai": "https://platform.openai.com/settings/organization/billing/overview",
     "azure": "https://portal.azure.com/#view/Microsoft_Azure_Billing",
 }
 

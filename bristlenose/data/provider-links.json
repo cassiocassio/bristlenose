@@ -1,0 +1,834 @@
+{
+ "_comment": "Source of truth for every provider link we send people to, and every claim that rests on a provider's page. scripts/check-provider-links.py reads it; tests/test_provider_links.py is the offline gate (every provider URL in the tree is listed here, every listed mirror still carries it, retired URLs appear nowhere). To change a link: edit its url and every mirror, then run the script with --live. Procedure: docs/design-provider-links.md.",
+ "checked": "2026-11-21",
+ "providers": {
+  "claude": {
+   "label": "Claude",
+   "links": [
+    {
+     "id": "claude.home",
+     "purpose": "the maker's home page, shown as a link in Settings ▸ LLM Provider",
+     "url": "https://www.anthropic.com",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "claude.console",
+     "purpose": "the console, where an account is created",
+     "url": "https://platform.claude.com/",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      ".env.example",
+      "DEVELOPMENT.md",
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/llm/client.py",
+      "bristlenose/llm/pricing.py",
+      {
+       "file": "bristlenose/locales/*/settings.json",
+       "except": [
+        "zh-Hant-HK"
+       ]
+      },
+      "bristlenose/pipeline.py",
+      "bristlenose/providers.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-claude.md"
+     ]
+    },
+    {
+     "id": "claude.keys",
+     "purpose": "create an API key",
+     "url": "https://platform.claude.com/settings/keys",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-claude.md"
+     ]
+    },
+    {
+     "id": "claude.billing",
+     "purpose": "buy API credit (the out-of-credit \"Add funds\" target)",
+     "url": "https://platform.claude.com/settings/billing",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/pipeline.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-claude.md"
+     ]
+    },
+    {
+     "id": "claude.spend-limits",
+     "purpose": "set a monthly spend limit",
+     "url": "https://platform.claude.com/settings/spend-limits",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-claude.md"
+     ]
+    },
+    {
+     "id": "claude.pricing",
+     "purpose": "API pricing page",
+     "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/llm/pricing.py",
+      "bristlenose/providers.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "claude.billing-help",
+     "purpose": "how API usage is billed (source for the credit and Max-credits claims)",
+     "url": "https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-claude-api-usage",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-claude.md"
+     ]
+    },
+    {
+     "id": "claude.app-download",
+     "purpose": "download the Claude desktop app (Connect an Agent)",
+     "url": "https://claude.ai/download",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "desktop/Bristlenose/Bristlenose/MCPAgentsSettingsView.swift"
+     ]
+    },
+    {
+     "id": "claude.rate-limits",
+     "purpose": "rate limits and spend limits documentation",
+     "url": "https://platform.claude.com/docs/en/api/rate-limits",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/set-up-claude.md"
+     ]
+    }
+   ]
+  },
+  "chatgpt": {
+   "label": "ChatGPT",
+   "links": [
+    {
+     "id": "chatgpt.home",
+     "purpose": "the maker's home page, shown as a link in Settings ▸ LLM Provider",
+     "url": "https://openai.com",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "chatgpt.console",
+     "purpose": "the platform, where an account is created",
+     "url": "https://platform.openai.com/",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      ".env.example",
+      "DEVELOPMENT.md",
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/llm/client.py",
+      {
+       "file": "bristlenose/locales/*/settings.json",
+       "except": [
+        "zh-Hant-HK"
+       ]
+      },
+      "bristlenose/pipeline.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-chatgpt.md"
+     ]
+    },
+    {
+     "id": "chatgpt.keys",
+     "purpose": "create an API key",
+     "url": "https://platform.openai.com/api-keys",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-chatgpt.md"
+     ]
+    },
+    {
+     "id": "chatgpt.billing",
+     "purpose": "buy API credit (the out-of-credit \"Add funds\" target)",
+     "url": "https://platform.openai.com/settings/organization/billing/overview",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/pipeline.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-chatgpt.md"
+     ]
+    },
+    {
+     "id": "chatgpt.limits",
+     "purpose": "spend alerts and hard limits",
+     "url": "https://platform.openai.com/settings/organization/limits",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-chatgpt.md"
+     ]
+    },
+    {
+     "id": "chatgpt.pricing",
+     "purpose": "API pricing page",
+     "url": "https://developers.openai.com/api/docs/pricing",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/llm/pricing.py",
+      "bristlenose/providers.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "chatgpt.models",
+     "purpose": "model list",
+     "url": "https://developers.openai.com/api/docs/models",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/llm/pricing.py"
+     ]
+    },
+    {
+     "id": "chatgpt.spend-limits-guide",
+     "purpose": "how hard spend limits behave",
+     "url": "https://developers.openai.com/api/docs/guides/spend-limits",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/set-up-chatgpt.md"
+     ]
+    },
+    {
+     "id": "chatgpt.billing-help",
+     "purpose": "prepaid billing help (source for the US$5 minimum)",
+     "url": "https://help.openai.com/en/articles/8264644-setting-up-and-managing-prepaid-api-billing",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/set-up-chatgpt.md"
+     ]
+    },
+    {
+     "id": "chatgpt.app-download",
+     "purpose": "download the ChatGPT desktop app (Connect an Agent)",
+     "url": "https://chatgpt.com/download",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "desktop/Bristlenose/Bristlenose/MCPAgentsSettingsView.swift"
+     ]
+    }
+   ]
+  },
+  "gemini": {
+   "label": "Gemini",
+   "links": [
+    {
+     "id": "gemini.home",
+     "purpose": "AI Studio, shown as a link in Settings ▸ LLM Provider",
+     "url": "https://aistudio.google.com",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      ".env.example",
+      "DEVELOPMENT.md",
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/llm/client.py",
+      "bristlenose/llm/pricing.py",
+      {
+       "file": "bristlenose/locales/*/settings.json",
+       "except": [
+        "zh-Hant-HK"
+       ]
+      },
+      "bristlenose/providers.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-gemini.md"
+     ]
+    },
+    {
+     "id": "gemini.keys",
+     "purpose": "create an API key",
+     "url": "https://aistudio.google.com/apikey",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      ".env.example",
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/llm/client.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-gemini.md"
+     ]
+    },
+    {
+     "id": "gemini.billing",
+     "purpose": "buy prepaid credit (the out-of-credit \"Add funds\" target)",
+     "url": "https://aistudio.google.com/billing",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "bristlenose/llm/billing_hints.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-gemini.md"
+     ]
+    },
+    {
+     "id": "gemini.spend",
+     "purpose": "monthly spend caps",
+     "url": "https://aistudio.google.com/spend",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-gemini.md"
+     ]
+    },
+    {
+     "id": "gemini.pricing",
+     "purpose": "API pricing page",
+     "url": "https://aistudio.google.com/docs/pricing",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/llm/pricing.py",
+      "bristlenose/providers.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "gemini.billing-docs",
+     "purpose": "how Gemini API billing works (source for the US$5 minimum)",
+     "url": "https://aistudio.google.com/docs/billing",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "README.md",
+      "bristlenose/llm/billing_hints.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-gemini.md"
+     ]
+    },
+    {
+     "id": "gemini.terms",
+     "purpose": "Gemini API terms (source for the free-tier data-use claim)",
+     "url": "https://aistudio.google.com/docs/terms",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-gemini.md"
+     ]
+    },
+    {
+     "id": "gemini.cloud-console",
+     "purpose": "Google Cloud console, named in the recovery copy for older monthly-billed accounts",
+     "url": "https://console.cloud.google.com/",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "bristlenose/llm/billing_hints.py"
+     ]
+    }
+   ]
+  },
+  "azure": {
+   "label": "Azure OpenAI",
+   "links": [
+    {
+     "id": "azure.home",
+     "purpose": "Azure OpenAI product page, shown as a link in Settings ▸ LLM Provider",
+     "url": "https://azure.microsoft.com/en-us/products/ai-foundry/models/openai/",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "azure.pricing",
+     "purpose": "Azure OpenAI pricing page",
+     "url": "https://azure.microsoft.com/en-us/pricing/details/azure-openai/",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/llm/pricing.py",
+      "bristlenose/providers.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
+     ]
+    },
+    {
+     "id": "azure.portal",
+     "purpose": "the Azure portal, where the endpoint, key and deployment are found",
+     "url": "https://portal.azure.com",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/llm/billing_hints.py",
+      "bristlenose/pipeline.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "website:docs-src/set-up-azure.md"
+     ]
+    },
+    {
+     "id": "azure.portal-billing",
+     "purpose": "the Azure portal billing view named in the out-of-credit copy",
+     "url": "https://portal.azure.com/#view/Microsoft_Azure_Billing",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "bristlenose/pipeline.py"
+     ]
+    },
+    {
+     "id": "azure.create-resource",
+     "purpose": "Microsoft's guide to creating a resource and deploying a model",
+     "url": "https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-azure.md"
+     ]
+    },
+    {
+     "id": "azure.foundry-portal",
+     "purpose": "Microsoft Foundry portal, where deployments are listed",
+     "url": "https://ai.azure.com",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "website:docs-src/set-up-azure.md"
+     ]
+    }
+   ]
+  },
+  "ollama": {
+   "label": "Ollama",
+   "links": [
+    {
+     "id": "ollama.home",
+     "purpose": "the Ollama site",
+     "url": "https://ollama.com",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "DEVELOPMENT.md",
+      "INSTALL.md",
+      "README.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      "bristlenose/llm/billing_hints.py",
+      {
+       "file": "bristlenose/locales/*/desktop.json",
+       "except": [
+        "zh-Hant-HK"
+       ]
+      },
+      "bristlenose/ollama.py",
+      "desktop/Bristlenose/Bristlenose/LLMProvider.swift",
+      "desktop/Bristlenose/Bristlenose/OllamaDownloadModel.swift",
+      "website:docs-src/set-up-ollama.md"
+     ]
+    },
+    {
+     "id": "ollama.download",
+     "purpose": "download Ollama",
+     "url": "https://ollama.com/download",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "INSTALL.md",
+      "bristlenose/cli.py",
+      "bristlenose/doctor_fixes.py",
+      {
+       "file": "bristlenose/locales/*/desktop.json",
+       "except": [
+        "zh-Hant-HK"
+       ]
+      },
+      "desktop/Bristlenose/Bristlenose/OllamaDownloadModel.swift"
+     ]
+    },
+    {
+     "id": "ollama.download-windows",
+     "purpose": "download Ollama for Windows",
+     "url": "https://ollama.com/download/windows",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/doctor_fixes.py"
+     ]
+    },
+    {
+     "id": "ollama.install-script",
+     "purpose": "the Linux install script",
+     "url": "https://ollama.com/install.sh",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "bristlenose/cli.py",
+      "bristlenose/ollama.py"
+     ]
+    }
+   ]
+  },
+  "other": {
+   "label": "Other providers (command line only)",
+   "links": [
+    {
+     "id": "mistral.console",
+     "purpose": "Mistral console (CLI-only provider, README and docs)",
+     "url": "https://console.mistral.ai",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-other-providers.md"
+     ]
+    },
+    {
+     "id": "deepseek.console",
+     "purpose": "DeepSeek platform (CLI-only provider, README)",
+     "url": "https://platform.deepseek.com",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-other-providers.md"
+     ]
+    },
+    {
+     "id": "openrouter.models",
+     "purpose": "OpenRouter model list (CLI-only provider, README)",
+     "url": "https://openrouter.ai/models",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-other-providers.md"
+     ]
+    },
+    {
+     "id": "openrouter.keys",
+     "purpose": "OpenRouter keys (CLI-only provider, README)",
+     "url": "https://openrouter.ai/settings/keys",
+     "verified": "2026-11-21",
+     "login": true,
+     "mirrors": [
+      "README.md",
+      "website:docs-src/set-up-other-providers.md"
+     ]
+    },
+    {
+     "id": "mistral.docs",
+     "purpose": "Mistral model list",
+     "url": "https://docs.mistral.ai/getting-started/models",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/set-up-other-providers.md"
+     ]
+    }
+   ]
+  },
+  "teams": {
+   "label": "Microsoft Teams",
+   "links": [
+    {
+     "id": "teams.recording-change",
+     "purpose": "Microsoft on where Teams meeting recordings are stored",
+     "url": "https://learn.microsoft.com/en-us/microsoftteams/tmr-meeting-recording-change",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/recording-permissions.md"
+     ]
+    },
+    {
+     "id": "teams.recording-help",
+     "purpose": "how to play, share and download a Teams recording",
+     "url": "https://support.microsoft.com/en-us/teams/meetings/play-share-and-download-meeting-recordings-in-microsoft-teams",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/recording-permissions.md"
+     ]
+    }
+   ]
+  },
+  "miro": {
+   "label": "Miro",
+   "links": [
+    {
+     "id": "miro.free-plan",
+     "purpose": "what Miro's free plan allows",
+     "url": "https://help.miro.com/hc/en-us/articles/360017730373-Free-Plan",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/send-to-miro.md"
+     ]
+    },
+    {
+     "id": "miro.hello-world",
+     "purpose": "create a Miro app and token",
+     "url": "https://developers.miro.com/docs/rest-api-build-your-first-hello-world-app",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/send-to-miro.md"
+     ]
+    },
+    {
+     "id": "miro.oauth",
+     "purpose": "Miro OAuth guide",
+     "url": "https://developers.miro.com/docs/getting-started-with-oauth",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/send-to-miro.md"
+     ]
+    },
+    {
+     "id": "miro.rate-limits",
+     "purpose": "Miro rate limits",
+     "url": "https://developers.miro.com/reference/rate-limiting",
+     "verified": "2026-11-21",
+     "login": false,
+     "mirrors": [
+      "website:docs-src/send-to-miro.md"
+     ]
+    }
+   ]
+  }
+ },
+ "claims": [
+  {
+   "id": "openai.min-purchase",
+   "provider": "chatgpt",
+   "claim": "The minimum credit purchase is US$5.",
+   "source": "https://help.openai.com/en/articles/8264644-setting-up-and-managing-prepaid-api-billing",
+   "verified": "2026-11-21",
+   "mirrors": [
+    {
+     "file": "bristlenose/llm/billing_hints.py",
+     "contains": "$5 minimum credit purchase"
+    },
+    {
+     "file": "website:docs-src/set-up-chatgpt.md",
+     "contains": "minimum purchase is US$5"
+    }
+   ]
+  },
+  {
+   "id": "gemini.min-purchase",
+   "provider": "gemini",
+   "claim": "New paid accounts prepay credits, minimum US$5.",
+   "source": "https://aistudio.google.com/docs/billing",
+   "verified": "2026-11-21",
+   "mirrors": [
+    {
+     "file": "bristlenose/llm/billing_hints.py",
+     "contains": "($5 minimum)"
+    },
+    {
+     "file": "README.md",
+     "contains": "US$5 minimum"
+    },
+    {
+     "file": "website:docs-src/set-up-gemini.md",
+     "contains": "minimum purchase of US$5"
+    }
+   ]
+  },
+  {
+   "id": "claude.no-minimum-stated",
+   "provider": "claude",
+   "claim": "Anthropic's billing page states no minimum purchase (so we claim none).",
+   "source": "https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-claude-api-usage",
+   "verified": "2026-11-21",
+   "mirrors": [
+    {
+     "file": "bristlenose/llm/billing_hints.py",
+     "contains": "states no minimum"
+    },
+    {
+     "file": "website:docs-src/set-up-claude.md",
+     "contains": "states no minimum purchase"
+    }
+   ]
+  },
+  {
+   "id": "claude.max-api-credits",
+   "provider": "claude",
+   "claim": "Max, Ultra and Team plans include monthly API credits, claimed by linking a Console organisation.",
+   "source": "https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-claude-api-usage",
+   "verified": "2026-11-21",
+   "mirrors": [
+    {
+     "file": "README.md",
+     "contains": "include monthly API credits"
+    },
+    {
+     "file": "website:docs-src/set-up-claude.md",
+     "contains": "include monthly API credits"
+    }
+   ]
+  },
+  {
+   "id": "gemini.free-tier-data",
+   "provider": "gemini",
+   "claim": "Unpaid services (including the free tier) may be used to improve Google's products; paid services are not.",
+   "source": "https://aistudio.google.com/docs/terms",
+   "verified": "2026-11-21",
+   "mirrors": [
+    {
+     "file": "README.md",
+     "contains": "improve its products"
+    },
+    {
+     "file": "website:docs-src/set-up-gemini.md",
+     "contains": "improve its products"
+    }
+   ]
+  },
+  {
+   "id": "gemini.prepaid-default",
+   "provider": "gemini",
+   "claim": "New users default to prepaid credits; some older accounts are billed monthly.",
+   "source": "https://aistudio.google.com/docs/billing",
+   "verified": "2026-11-21",
+   "mirrors": [
+    {
+     "file": "bristlenose/llm/billing_hints.py",
+     "contains": "bought in advance"
+    },
+    {
+     "file": "website:docs-src/set-up-gemini.md",
+     "contains": "default to prepaid credits"
+    }
+   ]
+  },
+  {
+   "id": "prices.token-rates",
+   "provider": "all",
+   "claim": "The per-token rates in PRICING (estimates only). Bump PRICE_TABLE_VERSION only if a rate changes.",
+   "source": "the four pricing pages: claude.pricing, chatgpt.pricing, gemini.pricing, azure.pricing",
+   "verified": "2026-11-19",
+   "mirrors": [
+    {
+     "file": "bristlenose/llm/pricing.py",
+     "contains": "PRICE_TABLE_VERSION"
+    }
+   ]
+  }
+ ],
+ "retired": [
+  {
+   "pattern": "^console\\.anthropic\\.com",
+   "use": "use platform.claude.com (renamed)"
+  },
+  {
+   "pattern": "^docs\\.anthropic\\.com",
+   "use": "use platform.claude.com/docs"
+  },
+  {
+   "pattern": "^ai\\.google\\.dev",
+   "use": "use aistudio.google.com (ai.google.dev now lands on a generic Google AI page)"
+  },
+  {
+   "pattern": "^aistudio\\.google\\.com/app/apikey",
+   "use": "use aistudio.google.com/apikey"
+  },
+  {
+   "pattern": "^platform\\.openai\\.com/account/billing",
+   "use": "use platform.openai.com/settings/organization/billing/overview"
+  },
+  {
+   "pattern": "^platform\\.openai\\.com/settings/organization/billing$",
+   "use": "use .../billing/overview"
+  },
+  {
+   "pattern": "^platform\\.openai\\.com/docs/pricing",
+   "use": "use developers.openai.com/api/docs/pricing"
+  },
+  {
+   "pattern": "^openai\\.com/api/pricing",
+   "use": "use developers.openai.com/api/docs/pricing"
+  },
+  {
+   "pattern": "cognitive-services/openai-service",
+   "use": "use azure.microsoft.com/en-us/pricing/details/azure-openai/"
+  },
+  {
+   "pattern": "ai-services/openai-service",
+   "use": "use azure.microsoft.com/en-us/products/ai-foundry/models/openai/"
+  }
+ ],
+ "ignore_patterns": [
+  "^api\\.(anthropic|openai|miro)\\.com(/|$)",
+  "^api\\.zoom\\.us(/|$)",
+  "(^|\\.)googleapis\\.com(/|$)",
+  "^graph\\.microsoft\\.com(/|$)",
+  "^mobile\\.events\\.data\\.microsoft\\.com$",
+  "^(devforum\\.)?zoom\\.us(/oauth|$)",
+  "^miro\\.com/(oauth|app)",
+  "(^|\\.)openai\\.azure\\.com(/|$)"
+ ],
+ "ignore_note": "Protocol constants, not links a person is sent to: API and OAuth endpoints, Azure endpoint placeholders and fixtures, font hosts. Zoom, Teams, Meet and Miro have no setup URLs baked in beyond these.",
+ "mirror_note": "A mirror is a file (or glob) that carries the link. {\"file\", \"except\"} skips paths containing an except string (zh-Hant-HK is a thin override locale that borrows from zh-Hant). {\"file\", \"contains\"} looks for that text instead of the URL. A \"website:\" prefix means the website repo (BN_WEBSITE_REPO, default ~/Code/bristlenose-website); those mirrors are skipped when it is absent."
+}

@@ -61,7 +61,7 @@ PRICING: dict[str, tuple[float, float]] = {
     # Legacy — still selectable, and still the Azure picker's list.
     "gpt-4o": (2.50, 10.0),
     "gpt-4o-mini": (0.15, 0.60),
-    # Google (Gemini). Verified against ai.google.dev/gemini-api/docs/pricing
+    # Google (Gemini). Verified against aistudio.google.com/docs/pricing
     # on 2026-09-04 — the 2.5-flash row was wrong in BOTH directions ($0.15/
     # $3.50 recorded against an actual $0.30/$2.50), so every Gemini cost
     # estimate has been understating input and overstating output.

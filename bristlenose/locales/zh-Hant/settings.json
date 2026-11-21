@@ -239,10 +239,10 @@
         "faster_whisper_cpu_baseline": "穩固的 CPU 基準；不需 GPU"
       },
       "actions": {
-        "obtain_anthropic_key": "於 platform.claude.com 取得 API 金鑰，並設定 ANTHROPIC_API_KEY 或貼入「設定 → 金鑰」",
-        "obtain_openai_key": "於 platform.openai.com 取得 API 金鑰，並設定 OPENAI_API_KEY 或貼入「設定 → 金鑰」",
-        "obtain_google_key": "於 aistudio.google.com 取得 API 金鑰，並設定 GOOGLE_API_KEY 或貼入「設定 → 金鑰」",
-        "configure_azure": "在「設定 → 金鑰」中設定 Azure 金鑰、端點與部署",
+        "obtain_anthropic_key": "於 platform.claude.com 取得 API 金鑰，並設定 ANTHROPIC_API_KEY 或貼入「設定 → LLM 供應商」",
+        "obtain_openai_key": "於 platform.openai.com 取得 API 金鑰，並設定 OPENAI_API_KEY 或貼入「設定 → LLM 供應商」",
+        "obtain_google_key": "於 aistudio.google.com 取得 API 金鑰，並設定 GOOGLE_API_KEY 或貼入「設定 → LLM 供應商」",
+        "configure_azure": "在「設定 → LLM 供應商」中設定 Azure 金鑰、端點與部署",
         "start_ollama": "啟動 Ollama 服務（ollama serve）",
         "install_mlx_whisper": "pip install mlx-whisper（需要 Apple 晶片）",
         "install_ctranslate2": "pip install ctranslate2",

@@ -19,7 +19,7 @@ class TestBillingFor:
         assert "platform.claude.com" in facts.console_url
         assert "platform.claude.com" in facts.keys_url
         assert "platform.claude.com" in facts.billing_url
-        assert facts.minimum_usd == 5.0
+        assert facts.minimum_usd == 0.0  # no published minimum
         assert "subscription" in facts.minimum_note.lower()
 
     def test_openai_facts_present(self):

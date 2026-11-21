@@ -176,13 +176,14 @@ bristlenose configure azure
 bristlenose run interviews --llm azure
 ```
 
-You'll need your endpoint URL, API key, and deployment name from the [Azure portal](https://portal.azure.com).
+You'll need your endpoint URL, API key, and deployment name. The endpoint and key are on your Azure OpenAI resource's **Keys and Endpoint** page in the [Azure portal](https://portal.azure.com); the deployment name is the one you gave the model when you deployed it (not the model's own name). Microsoft has been moving these pages into Foundry, so labels may differ: see its [guide to creating a resource and deploying a model](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/create-resource). Azure OpenAI is billed through your Azure subscription.
 
 ### Option D: Gemini (by Google)
 
 1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and sign up or log in
 2. Click **Create API key**, give it a name, and copy the key
-3. Store it securely:
+3. For interview material, use a paid-tier key: Google's [terms](https://aistudio.google.com/docs/terms) say it uses content sent through unpaid services, including the free tier, to improve its products, and not content sent through paid ones. Paid use means [prepaid credits](https://aistudio.google.com/docs/billing) (US$5 minimum) bought on the [AI Studio billing page](https://aistudio.google.com/billing)
+4. Store it securely:
 
 ```bash
 bristlenose configure gemini    # validates the key and stores it in your system credential store
@@ -238,7 +239,7 @@ Use whichever provider you already have an API key for. The provider you configu
 
 **Keys.** A key given with `--key` is saved in your shell history. Omit `--key` and Bristlenose asks for it, with what you type hidden. Where your provider lets you set a spend limit on a key, set one.
 
-> **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [platform.claude.com](https://platform.claude.com) or [platform.openai.com](https://platform.openai.com).
+> **Note:** A ChatGPT or Claude chat subscription does not pay for API use. Each provider bills its API separately, so you need an API key and credit with the provider you choose: [Claude](https://platform.claude.com/settings/billing), [ChatGPT](https://platform.openai.com/settings/organization/billing/overview), [Gemini](https://aistudio.google.com/billing) or, for Azure OpenAI, your Azure subscription. Anthropic says its Max, Ultra and Team plans include monthly API credits you claim by linking a Console organisation; its [billing page](https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-claude-api-usage) says what they cover. Set a spend limit where the provider offers one: [Claude](https://platform.claude.com/settings/spend-limits), [ChatGPT](https://platform.openai.com/settings/organization/limits), [Gemini](https://aistudio.google.com/spend).
 
 ### Making your key permanent
 

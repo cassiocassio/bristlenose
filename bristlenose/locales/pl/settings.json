@@ -239,10 +239,10 @@
         "faster_whisper_cpu_baseline": "solidna podstawa na CPU; nie wymaga GPU"
       },
       "actions": {
-        "obtain_anthropic_key": "uzyskaj klucz API na platform.claude.com i ustaw ANTHROPIC_API_KEY lub wklej w Ustawienia → Klucze",
-        "obtain_openai_key": "uzyskaj klucz API na platform.openai.com i ustaw OPENAI_API_KEY lub wklej w Ustawienia → Klucze",
-        "obtain_google_key": "uzyskaj klucz API na aistudio.google.com i ustaw GOOGLE_API_KEY lub wklej w Ustawienia → Klucze",
-        "configure_azure": "ustaw klucz, punkt końcowy i wdrożenie Azure w Ustawienia → Klucze",
+        "obtain_anthropic_key": "uzyskaj klucz API na platform.claude.com i ustaw ANTHROPIC_API_KEY lub wklej w Ustawienia → Dostawca LLM",
+        "obtain_openai_key": "uzyskaj klucz API na platform.openai.com i ustaw OPENAI_API_KEY lub wklej w Ustawienia → Dostawca LLM",
+        "obtain_google_key": "uzyskaj klucz API na aistudio.google.com i ustaw GOOGLE_API_KEY lub wklej w Ustawienia → Dostawca LLM",
+        "configure_azure": "ustaw klucz, punkt końcowy i wdrożenie Azure w Ustawienia → Dostawca LLM",
         "start_ollama": "uruchom usługę Ollama (ollama serve)",
         "install_mlx_whisper": "pip install mlx-whisper (wymaga Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",

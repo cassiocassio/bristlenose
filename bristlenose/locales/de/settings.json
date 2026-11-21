@@ -239,10 +239,10 @@
         "faster_whisper_cpu_baseline": "solide CPU-Basis; keine GPU erforderlich"
       },
       "actions": {
-        "obtain_anthropic_key": "API-Schl\u00fcssel auf platform.claude.com beziehen und ANTHROPIC_API_KEY setzen oder in Einstellungen \u2192 Schl\u00fcssel einf\u00fcgen",
-        "obtain_openai_key": "API-Schl\u00fcssel auf platform.openai.com beziehen und OPENAI_API_KEY setzen oder in Einstellungen \u2192 Schl\u00fcssel einf\u00fcgen",
-        "obtain_google_key": "API-Schl\u00fcssel auf aistudio.google.com beziehen und GOOGLE_API_KEY setzen oder in Einstellungen \u2192 Schl\u00fcssel einf\u00fcgen",
-        "configure_azure": "Azure-Schl\u00fcssel, Endpunkt und Bereitstellung in Einstellungen \u2192 Schl\u00fcssel festlegen",
+        "obtain_anthropic_key": "API-Schl\u00fcssel auf platform.claude.com beziehen und ANTHROPIC_API_KEY setzen oder in Einstellungen \u2192 LLM-Anbieter einf\u00fcgen",
+        "obtain_openai_key": "API-Schl\u00fcssel auf platform.openai.com beziehen und OPENAI_API_KEY setzen oder in Einstellungen \u2192 LLM-Anbieter einf\u00fcgen",
+        "obtain_google_key": "API-Schl\u00fcssel auf aistudio.google.com beziehen und GOOGLE_API_KEY setzen oder in Einstellungen \u2192 LLM-Anbieter einf\u00fcgen",
+        "configure_azure": "Azure-Schl\u00fcssel, Endpunkt und Bereitstellung in Einstellungen \u2192 LLM-Anbieter festlegen",
         "start_ollama": "den Ollama-Dienst starten (ollama serve)",
         "install_mlx_whisper": "pip install mlx-whisper (erfordert Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",

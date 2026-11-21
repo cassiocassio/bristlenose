@@ -44,11 +44,12 @@ _BILLING: dict[str, ProviderBilling] = {
         console_url="https://platform.claude.com/",
         keys_url="https://platform.claude.com/settings/keys",
         billing_url="https://platform.claude.com/settings/billing",
-        minimum_usd=5.0,
+        # Anthropic's billing help page (support.claude.com, "How do I pay for
+        # my Claude API usage?", checked 21 Nov 2026) states no minimum purchase.
+        minimum_usd=0.0,
         minimum_note=(
-            "$5 minimum credit purchase. A separate Claude.ai Pro/Max "
-            "subscription does NOT fund API usage — the API has its own "
-            "credit balance, refilled at Settings → Billing."
+            "A Claude Pro subscription does not fund API usage. The API has "
+            "its own credit balance, bought at Billing → Buy credits."
         ),
     ),
     "openai": ProviderBilling(
@@ -56,11 +57,13 @@ _BILLING: dict[str, ProviderBilling] = {
         console_url="https://platform.openai.com/",
         keys_url="https://platform.openai.com/api-keys",
         billing_url="https://platform.openai.com/settings/organization/billing/overview",
+        # help.openai.com "Setting up and managing prepaid API billing":
+        # "The minimum purchase is $5" (checked 21 Nov 2026).
         minimum_usd=5.0,
         minimum_note=(
             "$5 minimum credit purchase. A ChatGPT Plus/Pro subscription "
-            "does NOT fund API usage — the API has its own credit balance, "
-            "refilled at Billing → Add to credit balance."
+            "does not fund API usage. The API has its own credit balance, "
+            "bought at Billing → Buy credits."
         ),
     ),
     "azure": ProviderBilling(
@@ -78,11 +81,15 @@ _BILLING: dict[str, ProviderBilling] = {
         display_name="Gemini",
         console_url="https://console.cloud.google.com/",
         keys_url="https://aistudio.google.com/apikey",
-        billing_url="https://console.cloud.google.com/billing",
-        minimum_usd=0.0,
+        billing_url="https://aistudio.google.com/billing",
+        # aistudio.google.com/docs/billing: new paid accounts default to
+        # prepaid credits, "The minimum purchase is $5" (checked 21 Nov 2026);
+        # some older accounts are still on monthly billing.
+        minimum_usd=5.0,
         minimum_note=(
-            "Gemini is billed through Google Cloud (post-paid), not a "
-            "credit balance. Manage billing in the Google Cloud Console."
+            "Gemini API credits are bought in advance at Billing → Buy "
+            "credits ($5 minimum). Some older accounts are billed monthly "
+            "through Google Cloud instead."
         ),
     ),
     "local": ProviderBilling(

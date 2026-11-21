@@ -239,10 +239,10 @@
         "faster_whisper_cpu_baseline": "надійна база на ЦП; GPU не потрібен"
       },
       "actions": {
-        "obtain_anthropic_key": "отримайте ключ API на platform.claude.com і задайте ANTHROPIC_API_KEY або вставте у Параметри → Ключі",
-        "obtain_openai_key": "отримайте ключ API на platform.openai.com і задайте OPENAI_API_KEY або вставте у Параметри → Ключі",
-        "obtain_google_key": "отримайте ключ API на aistudio.google.com і задайте GOOGLE_API_KEY або вставте у Параметри → Ключі",
-        "configure_azure": "задайте ключ, кінцеву точку та розгортання Azure у Параметри → Ключі",
+        "obtain_anthropic_key": "отримайте ключ API на platform.claude.com і задайте ANTHROPIC_API_KEY або вставте у Параметри → Провайдер LLM",
+        "obtain_openai_key": "отримайте ключ API на platform.openai.com і задайте OPENAI_API_KEY або вставте у Параметри → Провайдер LLM",
+        "obtain_google_key": "отримайте ключ API на aistudio.google.com і задайте GOOGLE_API_KEY або вставте у Параметри → Провайдер LLM",
+        "configure_azure": "задайте ключ, кінцеву точку та розгортання Azure у Параметри → Провайдер LLM",
         "start_ollama": "запустіть службу Ollama (ollama serve)",
         "install_mlx_whisper": "pip install mlx-whisper (потрібен Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",

@@ -317,7 +317,7 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
    - **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet)
    - **Windows** — saved to a config file in your user folder, `C:\Users\<you>\.config\bristlenose\.env`. Bristlenose doesn't use Windows Credential Manager
 
-> **Important:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need to add a payment method in the API console.
+> **Important:** A ChatGPT or Claude chat subscription does not pay for API use. Each provider bills its API separately, so you need credit or a payment method with the provider you choose (see the note in the README under [Getting an API key](README.md#getting-an-api-key)).
 
 ### Local AI (Ollama) — free, no signup
 

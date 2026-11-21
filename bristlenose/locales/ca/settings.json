@@ -239,10 +239,10 @@
         "faster_whisper_cpu_baseline": "base sòlida en CPU; no cal GPU"
       },
       "actions": {
-        "obtain_anthropic_key": "obtén una clau API a platform.claude.com i defineix ANTHROPIC_API_KEY o enganxa-la a Configuració → Claus",
-        "obtain_openai_key": "obtén una clau API a platform.openai.com i defineix OPENAI_API_KEY o enganxa-la a Configuració → Claus",
-        "obtain_google_key": "obtén una clau API a aistudio.google.com i defineix GOOGLE_API_KEY o enganxa-la a Configuració → Claus",
-        "configure_azure": "defineix la clau, el punt final i el desplegament d'Azure a Configuració → Claus",
+        "obtain_anthropic_key": "obtén una clau API a platform.claude.com i defineix ANTHROPIC_API_KEY o enganxa-la a Configuració → Proveïdor d'LLM",
+        "obtain_openai_key": "obtén una clau API a platform.openai.com i defineix OPENAI_API_KEY o enganxa-la a Configuració → Proveïdor d'LLM",
+        "obtain_google_key": "obtén una clau API a aistudio.google.com i defineix GOOGLE_API_KEY o enganxa-la a Configuració → Proveïdor d'LLM",
+        "configure_azure": "defineix la clau, el punt final i el desplegament d'Azure a Configuració → Proveïdor d'LLM",
         "start_ollama": "inicia el servei Ollama (ollama serve)",
         "install_mlx_whisper": "pip install mlx-whisper (requereix Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",

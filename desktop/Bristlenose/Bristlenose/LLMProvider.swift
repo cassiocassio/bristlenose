@@ -165,7 +165,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
             return ProviderLinks(
                 homepage: URL(string: "https://openai.com")!,
                 homepageLabel: "openai.com",
-                pricing: URL(string: "https://openai.com/api/pricing"),
+                pricing: URL(string: "https://developers.openai.com/api/docs/pricing"),
                 console: URL(string: "https://platform.openai.com/api-keys"),
                 billing: URL(string: "https://platform.openai.com/settings/organization/billing/overview"),
                 consoleLabel: "desktop.llmSettings.console.keys"
@@ -176,8 +176,9 @@ enum LLMProvider: String, CaseIterable, Identifiable {
                 homepageLabel: "aistudio.google.com",
                 pricing: URL(string: "https://aistudio.google.com/docs/pricing"),
                 console: URL(string: "https://aistudio.google.com/apikey"),
-                // Gemini bills through Google Cloud, not a single add-funds page.
-                billing: nil,
+                // New Gemini accounts prepay credits on AI Studio's billing page
+                // (aistudio.google.com/docs/billing, checked 21 Nov 2026).
+                billing: URL(string: "https://aistudio.google.com/billing"),
                 consoleLabel: "desktop.llmSettings.console.keys"
             )
         case .azure:

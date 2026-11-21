@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose-ohje",
       "keyboardShortcuts": "Pikanäppäimet",
+      "privacyPolicy": "Tietosuojakäytäntö",
+      "termsOfUse": "Käyttöehdot",
       "releaseNotes": "Julkaisutiedot",
       "sendFeedback": "Lähetä palautetta…",
       "blog": "Bristlenose Substackissa",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Kerran päivässä: versio, App Store vai lataus, ensimmäinen tarkistus ikinä tai tässä kuussa sekä tervetuloikkunan avauskerrat. Ei tunnistetta. Ei mitään projekteistasi.",
       "managed": "Organisaatiosi hallinnoima"
     }
+  },
+  "subscription": {
+    "trialTitle": "Kokeile Bristlenosea ilmaiseksi 7 päivää",
+    "trialBody": "Analysoi tämä tutkimus ja niin monta muuta kuin haluat kokeilun aikana. Projektisi pysyvät luettavina, tilasit tai et.",
+    "lapsedTitle": "Tilaa analysoidaksesi tämän tutkimuksen",
+    "lapsedBody": "Tilauksesi on päättynyt. Analysoidut projektisi ovat edelleen tallessa, ja voit lukea, muokata ja viedä niitä.",
+    "notNow": "Ei nyt",
+    "startTrial": "Aloita ilmainen kokeilu",
+    "subscribe": "Tilaa",
+    "trialTerms": "Ilmainen 7 päivää, sen jälkeen {{price}} kuukaudessa, kunnes peruutat. Voit peruuttaa milloin tahansa App Storen asetuksista, viimeistään päivää ennen kokeilun päättymistä, jotta sinua ei veloiteta. Tekoälypalvelun tarjoaja laskuttaa analyysin käytöstä erikseen.",
+    "renewTerms": "{{price}} kuukaudessa, kunnes peruutat. Voit peruuttaa milloin tahansa App Storen asetuksista. Tekoälypalvelun tarjoaja laskuttaa analyysin käytöstä erikseen.",
+    "terms": "Käyttöehdot",
+    "privacy": "Tietosuojakäytäntö",
+    "restore": "Palauta ostokset",
+    "manage": "Hallitse tilausta…",
+    "notFound": "Tälle Apple-tilille ei löytynyt tilausta.",
+    "pending": "Odotetaan hyväksyntää. Analyysi alkaa, kun osto on hyväksytty.",
+    "failed": "Ostoa ei saatu läpi. Yritä hetken kuluttua uudelleen."
   }
 }

@@ -267,6 +267,7 @@ struct ContentView: View {
     #endif
     @EnvironmentObject var projectIndex: ProjectIndex
     @EnvironmentObject var pipelineRunner: PipelineRunner
+    @EnvironmentObject var subscriptionGate: SubscriptionGate
     /// This window's toasts. Each window owns its store and draws only it: there was
     /// one for the app, so a drop refused in one window put its toast in every
     /// window (R90). Every `toast.show` here is this window's own act.
@@ -1286,6 +1287,20 @@ struct ContentView: View {
             knownProjects: { Set(projectIndex.projects.map(\.id)) },
             windowIsFront: { windowIsKey }
         ))
+        // The paywall, in the key window only so two windows never stack two.
+        .sheet(item: Binding(
+            get: { windowIsKey ? subscriptionGate.pending : nil },
+            set: { if $0 == nil { subscriptionGate.dismissPaywall() } }
+        )) { _ in
+            if let store = subscriptionGate.store {
+                PaywallView(
+                    store: store,
+                    onNotNow: { subscriptionGate.dismissPaywall() },
+                    onSubscribed: { subscriptionGate.resumePending() }
+                )
+                .environmentObject(i18n)
+            }
+        }
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
                 isReviewMode: aiConsentReviewMode,

@@ -191,6 +191,8 @@
     "help": {
       "bristlenoseHelp": "Pomoc Bristlenose",
       "keyboardShortcuts": "Skróty klawiszowe",
+      "privacyPolicy": "Polityka prywatności",
+      "termsOfUse": "Warunki korzystania",
       "releaseNotes": "Informacje o wersji",
       "sendFeedback": "Wyślij opinię…",
       "blog": "Bristlenose na Substacku",
@@ -1507,5 +1509,23 @@
       "countsExplain": "Raz dziennie: wersja, App Store lub pobranie, pierwsze sprawdzenie w ogóle lub w tym miesiącu oraz otwarcia okna powitalnego. Bez identyfikatora. Nic z Twoich projektów.",
       "managed": "Zarządzane przez Twoją organizację"
     }
+  },
+  "subscription": {
+    "trialTitle": "Wypróbuj Bristlenose za darmo przez 7 dni",
+    "trialBody": "Analizuj to badanie i tyle innych, ile chcesz, w okresie próbnym. Twoje projekty pozostaną czytelne niezależnie od tego, czy wykupisz subskrypcję.",
+    "lapsedTitle": "Wykup subskrypcję, aby przeanalizować to badanie",
+    "lapsedBody": "Twoja subskrypcja wygasła. Przeanalizowane projekty nadal tu są i możesz je czytać, edytować oraz eksportować.",
+    "notNow": "Nie teraz",
+    "startTrial": "Rozpocznij bezpłatny okres próbny",
+    "subscribe": "Subskrybuj",
+    "trialTerms": "Za darmo przez 7 dni, potem {{price}} miesięcznie do czasu anulowania. Możesz anulować w dowolnym momencie w ustawieniach App Store, najpóźniej na dzień przed końcem okresu próbnego, aby uniknąć opłaty. Dostawca AI rozlicza z Tobą osobno to, co zużyje analiza.",
+    "renewTerms": "{{price}} miesięcznie do czasu anulowania. Możesz anulować w dowolnym momencie w ustawieniach App Store. Dostawca AI rozlicza z Tobą osobno to, co zużyje analiza.",
+    "terms": "Warunki korzystania",
+    "privacy": "Polityka prywatności",
+    "restore": "Przywróć zakupy",
+    "manage": "Zarządzaj subskrypcją…",
+    "notFound": "Nie znaleziono subskrypcji dla tego konta Apple.",
+    "pending": "Oczekiwanie na zatwierdzenie. Analiza ruszy po zatwierdzeniu zakupu.",
+    "failed": "Nie udało się sfinalizować zakupu. Spróbuj ponownie za chwilę."
   }
 }

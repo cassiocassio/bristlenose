@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Ajuda del Bristlenose",
       "keyboardShortcuts": "Dreceres de teclat",
+      "privacyPolicy": "Política de privadesa",
+      "termsOfUse": "Condicions d’ús",
       "releaseNotes": "Notes de la versió",
       "sendFeedback": "Envia comentaris…",
       "blog": "El Bristlenose a Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Un cop al dia: versió, App Store o baixada, primera comprovació de sempre o del mes i obertures de la finestra de benvinguda. Cap identificador. Res dels teus projectes.",
       "managed": "Gestionat per la teva organització"
     }
+  },
+  "subscription": {
+    "trialTitle": "Prova Bristlenose gratis durant 7 dies",
+    "trialBody": "Analitza aquest estudi, i tants com vulguis durant la prova. Els teus projectes continuen sent llegibles tant si et subscrius com si no.",
+    "lapsedTitle": "Subscriu-te per analitzar aquest estudi",
+    "lapsedBody": "La teva subscripció ha acabat. Els projectes ja analitzats continuen aquí, i els pots llegir, editar i exportar.",
+    "notNow": "Ara no",
+    "startTrial": "Comença la prova gratuïta",
+    "subscribe": "Subscriu-m’hi",
+    "trialTerms": "Gratis durant 7 dies; després, {{price}} al mes fins que la cancel·lis. Cancel·la-la quan vulguis des dels ajustos de l’App Store, almenys un dia abans que acabi la prova per evitar que et cobrin. El teu proveïdor d’IA et factura a part per l’ús que en fa l’anàlisi.",
+    "renewTerms": "{{price}} al mes fins que la cancel·lis. Cancel·la-la quan vulguis des dels ajustos de l’App Store. El teu proveïdor d’IA et factura a part per l’ús que en fa l’anàlisi.",
+    "terms": "Condicions d’ús",
+    "privacy": "Política de privadesa",
+    "restore": "Restaura les compres",
+    "manage": "Gestiona la subscripció…",
+    "notFound": "No s’ha trobat cap subscripció per a aquest compte d’Apple.",
+    "pending": "Esperant l’aprovació. L’anàlisi començarà quan s’aprovi.",
+    "failed": "La compra no s’ha completat. Torna-ho a provar d’aquí a un moment."
   }
 }

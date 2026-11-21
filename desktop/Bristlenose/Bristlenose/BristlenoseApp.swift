@@ -140,6 +140,8 @@ struct BristlenoseApp: App {
     /// would race for the same destination with two tick sets.
     @StateObject private var cloudImport = CloudImportCoordinator()
     @StateObject private var pipelineRunner = PipelineRunner()
+    /// The subscription (App Store channel only; holds no store elsewhere).
+    @StateObject private var subscriptionGate = SubscriptionGate()
     /// The run-finished banner's decision-maker. Held here so the runner's weak
     /// reference stays valid; built once the app's `i18n` exists (see `.task`).
     @State private var runBannerCoordinator: RunBannerCoordinator?
@@ -193,6 +195,7 @@ struct BristlenoseApp: App {
                 .environmentObject(serveFleet)
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)
+                .environmentObject(subscriptionGate)
                 .environmentObject(removalStore)
                 .environmentObject(copyMachinery)
                 // The main window reads this so a sidebar row can show a cloud
@@ -335,6 +338,17 @@ struct BristlenoseApp: App {
                         }
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
+                    if pipelineRunner.subscriptionGate == nil {
+                        pipelineRunner.subscriptionGate = subscriptionGate
+                        subscriptionGate.resume = { [weak pipelineRunner] project, clean in
+                            pipelineRunner?.start(project: project, clean: clean)
+                        }
+                        NotificationCenter.default.addObserver(
+                            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+                        ) { _ in
+                            Task { @MainActor in subscriptionGate.refreshOnActivation() }
+                        }
+                    }
                     if runBannerCoordinator == nil {
                         let screen = screenState
                         let coordinator = RunBannerCoordinator(

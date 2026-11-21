@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose-Hilfe",
       "keyboardShortcuts": "Tastaturkurzbefehle",
+      "privacyPolicy": "Datenschutzerklärung",
+      "termsOfUse": "Nutzungsbedingungen",
       "releaseNotes": "Versionshinweise",
       "sendFeedback": "Feedback senden…",
       "blog": "Bristlenose auf Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Einmal täglich: Version, App Store oder Download, erste Prüfung überhaupt oder in diesem Monat und Öffnungen des Willkommensfensters. Keine Kennung. Nichts aus Ihren Projekten.",
       "managed": "Von Ihrer Organisation verwaltet"
     }
+  },
+  "subscription": {
+    "trialTitle": "Bristlenose 7 Tage kostenlos testen",
+    "trialBody": "Analysiere diese Studie und während der Testphase so viele weitere, wie du möchtest. Deine Projekte bleiben lesbar, ob du abonnierst oder nicht.",
+    "lapsedTitle": "Abonnieren, um diese Studie zu analysieren",
+    "lapsedBody": "Dein Abonnement ist abgelaufen. Deine analysierten Projekte sind alle noch da – du kannst sie lesen, bearbeiten und exportieren.",
+    "notNow": "Nicht jetzt",
+    "startTrial": "Kostenlos testen",
+    "subscribe": "Abonnieren",
+    "trialTerms": "7 Tage kostenlos, danach {{price}} pro Monat, bis du kündigst. Kündige jederzeit in den App-Store-Einstellungen, spätestens einen Tag vor Ende der Testphase, damit dir nichts berechnet wird. Dein KI-Anbieter berechnet dir den Verbrauch der Analyse separat.",
+    "renewTerms": "{{price}} pro Monat, bis du kündigst. Kündige jederzeit in den App-Store-Einstellungen. Dein KI-Anbieter berechnet dir den Verbrauch der Analyse separat.",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutzerklärung",
+    "restore": "Käufe wiederherstellen",
+    "manage": "Abonnement verwalten…",
+    "notFound": "Für diese Apple-ID wurde kein Abonnement gefunden.",
+    "pending": "Warte auf Genehmigung. Die Analyse startet, sobald der Kauf genehmigt ist.",
+    "failed": "Der Kauf ist nicht zustande gekommen. Versuche es gleich noch einmal."
   }
 }

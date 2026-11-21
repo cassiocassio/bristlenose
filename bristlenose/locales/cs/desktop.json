@@ -191,6 +191,8 @@
     "help": {
       "bristlenoseHelp": "Nápověda Bristlenose",
       "keyboardShortcuts": "Klávesové zkratky",
+      "privacyPolicy": "Zásady ochrany osobních údajů",
+      "termsOfUse": "Podmínky použití",
       "releaseNotes": "Poznámky k verzi",
       "sendFeedback": "Odeslat zpětnou vazbu…",
       "blog": "Bristlenose na Substacku",
@@ -1487,5 +1489,23 @@
       "countsExplain": "Jednou denně: verze, App Store nebo stažení, první kontrola vůbec nebo v tomto měsíci a otevření uvítacího okna. Žádný identifikátor. Nic z vašich projektů.",
       "managed": "Spravováno vaší organizací"
     }
+  },
+  "subscription": {
+    "trialTitle": "Vyzkoušejte Bristlenose 7 dní zdarma",
+    "trialBody": "Analyzujte tuto studii i tolik dalších, kolik chcete, po dobu zkušební lhůty. Vaše projekty zůstanou čitelné, ať už se přihlásíte k odběru, nebo ne.",
+    "lapsedTitle": "Přihlaste se k odběru a analyzujte tuto studii",
+    "lapsedBody": "Vaše předplatné skončilo. Všechny už analyzované projekty tu zůstávají a můžete je číst, upravovat i exportovat.",
+    "notNow": "Teď ne",
+    "startTrial": "Zahájit bezplatnou zkušební dobu",
+    "subscribe": "Předplatit",
+    "trialTerms": "7 dní zdarma, poté {{price}} měsíčně, dokud předplatné nezrušíte. Zrušit ho můžete kdykoli v nastavení App Store, nejpozději den před koncem zkušební doby, aby vám nebylo nic účtováno. Poskytovatel AI vám účtuje zvlášť to, co analýza spotřebuje.",
+    "renewTerms": "{{price}} měsíčně, dokud předplatné nezrušíte. Zrušit ho můžete kdykoli v nastavení App Store. Poskytovatel AI vám účtuje zvlášť to, co analýza spotřebuje.",
+    "terms": "Podmínky použití",
+    "privacy": "Zásady ochrany osobních údajů",
+    "restore": "Obnovit nákupy",
+    "manage": "Spravovat předplatné…",
+    "notFound": "Pro tento účet Apple nebylo nalezeno žádné předplatné.",
+    "pending": "Čeká se na schválení. Analýza začne, jakmile bude schváleno.",
+    "failed": "Nákup se nepodařilo dokončit. Zkuste to za chvíli znovu."
   }
 }

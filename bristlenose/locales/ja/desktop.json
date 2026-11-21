@@ -185,6 +185,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose ヘルプ",
       "keyboardShortcuts": "キーボードショートカット",
+      "privacyPolicy": "プライバシーポリシー",
+      "termsOfUse": "利用規約",
       "releaseNotes": "リリースノート",
       "sendFeedback": "フィードバックを送信…",
       "blog": "Bristlenose の Substack",
@@ -1354,5 +1356,23 @@
       "countsExplain": "1 日 1 回：バージョン、App Store かダウンロードか、初回または今月初めての確認か、ようこそウインドウを開いた回数。識別子なし。プロジェクトの内容は含みません。",
       "managed": "組織によって管理されています"
     }
+  },
+  "subscription": {
+    "trialTitle": "Bristlenose を7日間無料でお試し",
+    "trialBody": "試用期間中は、この調査もほかの調査もいくつでも分析できます。購読するかどうかにかかわらず、プロジェクトは引き続き読めます。",
+    "lapsedTitle": "購読してこの調査を分析する",
+    "lapsedBody": "購読期間が終了しました。分析済みのプロジェクトはそのまま残っており、閲覧・編集・書き出しができます。",
+    "notNow": "今はしない",
+    "startTrial": "無料トライアルを開始",
+    "subscribe": "購読する",
+    "trialTerms": "7日間無料、その後は解約するまで月額{{price}}です。課金を避けるには、トライアル終了の少なくとも1日前までに App Store の設定でいつでも解約できます。分析で使用した分の AI プロバイダの料金は、別途ご請求されます。",
+    "renewTerms": "解約するまで月額{{price}}です。App Store の設定でいつでも解約できます。分析で使用した分の AI プロバイダの料金は、別途ご請求されます。",
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "restore": "購入を復元",
+    "manage": "購読を管理…",
+    "notFound": "この Apple アカウントでは購読が見つかりませんでした。",
+    "pending": "承認待ちです。承認されると分析が始まります。",
+    "failed": "購入を完了できませんでした。しばらくしてからもう一度お試しください。"
   }
 }

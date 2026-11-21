@@ -6,12 +6,12 @@ import os
 /// current entitlement, listens for renewals and refunds, buys and restores.
 /// Every decision about what the state *allows* lives in `SubscriptionAccess`.
 ///
-/// **Not wired into the app yet.** When it is: own it at app level (like
-/// `ServeFleet`) so renewals, refunds and Ask to Buy approvals are observed
-/// from launch, create it ONLY when `DistributionChannel.current ==
-/// .appStoreOrTestFlight` (a `.dmg` must never call StoreKit: Restore can
-/// prompt an Apple ID sign-in), and call `refresh()` again on app activation
-/// so a subscription that lapses while the app stays open is noticed.
+/// **Wired** through `SubscriptionGate` (`PaywallGate.swift`), which the app owns
+/// like `ServeFleet`, so renewals, refunds and Ask to Buy approvals are observed
+/// from launch and `refresh()` runs again on app activation. It is created ONLY
+/// through `make(channel:)`, which returns nil unless the channel is
+/// `.appStoreOrTestFlight`: a `.dmg` must never call StoreKit (Restore can
+/// prompt an Apple ID sign-in).
 ///
 /// Any introductory-price or scheduled-price arrangement is configured in App
 /// Store Connect on this one product; this code reads entitlements, not prices.
@@ -20,11 +20,25 @@ final class SubscriptionStore: ObservableObject {
 
     @Published private(set) var state: SubscriptionAccess.State = .unknown
     @Published private(set) var product: Product?
+    /// Whether this Apple Account can still take the free trial (Apple allows
+    /// one per account). Decides which wording the paywall uses.
+    @Published private(set) var introEligible = false
 
     private var updates: Task<Void, Never>?
     private let log = Logger(subsystem: "app.bristlenose", category: "subscription")
 
-    init() {
+    /// The only way the app makes a store. nil off the App Store channel, so a
+    /// `.dmg`, a debug build and the command line never reach StoreKit.
+    static func make(channel: DistributionChannel) -> SubscriptionStore? {
+        channel == .appStoreOrTestFlight ? SubscriptionStore() : nil
+    }
+
+    /// A store frozen in a given state, with no StoreKit listener. For tests.
+    init(frozenAt state: SubscriptionAccess.State) {
+        self.state = state
+    }
+
+    private init() {
         updates = Task { [weak self] in
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result {
@@ -51,6 +65,10 @@ final class SubscriptionStore: ObservableObject {
             } catch {
                 log.error("product load failed: \(error.localizedDescription, privacy: .public)")
             }
+        }
+
+        if let sub = product?.subscription {
+            introEligible = await sub.isEligibleForIntroOffer
         }
 
         var ids: Set<String> = []

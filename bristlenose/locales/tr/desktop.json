@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose Yardımı",
       "keyboardShortcuts": "Klavye Kısayolları",
+      "privacyPolicy": "Gizlilik Politikası",
+      "termsOfUse": "Kullanım Koşulları",
       "releaseNotes": "Sürüm Notları",
       "sendFeedback": "Geri Bildirim Gönder…",
       "blog": "Substack’te Bristlenose",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Günde bir kez: sürüm, App Store veya indirme, ilk denetim (hiç ya da bu ay) ve karşılama penceresinin açılışları. Kimlik yok. Projelerinizden hiçbir şey yok.",
       "managed": "Kuruluşunuz tarafından yönetiliyor"
     }
+  },
+  "subscription": {
+    "trialTitle": "Bristlenose’u 7 gün ücretsiz deneyin",
+    "trialBody": "Deneme süresince bu çalışmayı ve istediğiniz kadar başkasını analiz edin. Abone olsanız da olmasanız da projeleriniz okunabilir kalır.",
+    "lapsedTitle": "Bu çalışmayı analiz etmek için abone olun",
+    "lapsedBody": "Aboneliğiniz sona erdi. Analiz edilmiş projelerinizin hepsi duruyor; bunları okuyabilir, düzenleyebilir ve dışa aktarabilirsiniz.",
+    "notNow": "Şimdi Değil",
+    "startTrial": "Ücretsiz Denemeyi Başlat",
+    "subscribe": "Abone Ol",
+    "trialTerms": "7 gün ücretsiz, ardından iptal edene kadar ayda {{price}}. Ücretlendirilmemek için deneme bitmeden en az bir gün önce App Store ayarlarından istediğiniz zaman iptal edin. Analizin kullandığı miktarı yapay zekâ sağlayıcınız ayrıca faturalandırır.",
+    "renewTerms": "İptal edene kadar ayda {{price}}. App Store ayarlarından istediğiniz zaman iptal edin. Analizin kullandığı miktarı yapay zekâ sağlayıcınız ayrıca faturalandırır.",
+    "terms": "Kullanım Koşulları",
+    "privacy": "Gizlilik Politikası",
+    "restore": "Satın Alımları Geri Yükle",
+    "manage": "Aboneliği Yönet…",
+    "notFound": "Bu Apple Hesabı için abonelik bulunamadı.",
+    "pending": "Onay bekleniyor. Satın alma onaylanır onaylanmaz analiz başlar.",
+    "failed": "Satın alma tamamlanamadı. Biraz sonra yeniden deneyin."
   }
 }

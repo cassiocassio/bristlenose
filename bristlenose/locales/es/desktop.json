@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Ayuda de Bristlenose",
       "keyboardShortcuts": "Atajos de teclado",
+      "privacyPolicy": "Política de privacidad",
+      "termsOfUse": "Términos de uso",
       "releaseNotes": "Notas de la versión",
       "sendFeedback": "Enviar comentarios…",
       "blog": "Bristlenose en Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Una vez al día: versión, App Store o descarga, primera comprobación de siempre o del mes y aperturas de la ventana de bienvenida. Sin identificador. Nada de los proyectos.",
       "managed": "Gestionado por su organización"
     }
+  },
+  "subscription": {
+    "trialTitle": "Prueba Bristlenose gratis durante 7 días",
+    "trialBody": "Analiza este estudio y todos los que quieras durante la prueba. Tus proyectos seguirán siendo legibles te suscribas o no.",
+    "lapsedTitle": "Suscríbete para analizar este estudio",
+    "lapsedBody": "Tu suscripción ha terminado. Tus proyectos ya analizados siguen aquí y puedes leerlos, editarlos y exportarlos.",
+    "notNow": "Ahora no",
+    "startTrial": "Empezar prueba gratuita",
+    "subscribe": "Suscribirme",
+    "trialTerms": "Gratis durante 7 días y después {{price}} al mes hasta que canceles. Cancela cuando quieras en los ajustes de la App Store, al menos un día antes de que termine la prueba para evitar el cargo. Tu proveedor de IA te factura aparte lo que consuma el análisis.",
+    "renewTerms": "{{price}} al mes hasta que canceles. Cancela cuando quieras en los ajustes de la App Store. Tu proveedor de IA te factura aparte lo que consuma el análisis.",
+    "terms": "Términos de uso",
+    "privacy": "Política de privacidad",
+    "restore": "Restaurar compras",
+    "manage": "Gestionar suscripción…",
+    "notFound": "No se ha encontrado ninguna suscripción para esta cuenta de Apple.",
+    "pending": "Esperando aprobación. El análisis empezará cuando se apruebe.",
+    "failed": "No se pudo completar la compra. Inténtalo de nuevo en un momento."
   }
 }

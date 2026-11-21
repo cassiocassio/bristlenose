@@ -2082,6 +2082,10 @@ final class PipelineRunner: ObservableObject {
 
     // MARK: - Public API
 
+    /// The subscription gate (App Store channel). nil on the `.dmg`, in debug
+    /// and under tests that do not set one: no gate, runs start as before.
+    weak var subscriptionGate: SubscriptionGate?
+
     /// Request a pipeline run for `project`. If nothing is running, spawns
     /// immediately; otherwise enqueues.
     ///
@@ -2147,6 +2151,17 @@ final class PipelineRunner: ObservableObject {
                 "start refused — no API key for the active provider (project=\(project.id.uuidString, privacy: .public))"
             )
             state[project.id] = refusal
+            return
+        }
+
+        // The subscription wall: after the key check (a key comes before the
+        // price, `purchase-journey.html` step 7), before anything is queued or
+        // started. Every analysis, including drops, passes through here.
+        if let gate = subscriptionGate,
+           !gate.allowsStart(project: project, clean: clean, researcherAsked: origin == .researcher) {
+            Self.logger.notice(
+                "start held — no subscription (project=\(project.id.uuidString, privacy: .public))"
+            )
             return
         }
 

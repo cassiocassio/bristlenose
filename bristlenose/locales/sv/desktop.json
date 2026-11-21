@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose Hjälp",
       "keyboardShortcuts": "Tangentbordsgenvägar",
+      "privacyPolicy": "Integritetspolicy",
+      "termsOfUse": "Användarvillkor",
       "releaseNotes": "Versionsinformation",
       "sendFeedback": "Skicka feedback…",
       "blog": "Bristlenose på Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "En gång om dagen: version, App Store eller nedladdning, första kontrollen någonsin eller denna månad och öppningar av välkomstfönstret. Inget id. Inget från dina projekt.",
       "managed": "Hanteras av din organisation"
     }
+  },
+  "subscription": {
+    "trialTitle": "Prova Bristlenose gratis i 7 dagar",
+    "trialBody": "Analysera den här studien, och så många du vill under provperioden. Dina projekt går att läsa oavsett om du prenumererar eller inte.",
+    "lapsedTitle": "Prenumerera för att analysera den här studien",
+    "lapsedBody": "Din prenumeration har avslutats. Dina analyserade projekt finns kvar, och du kan läsa, redigera och exportera dem.",
+    "notNow": "Inte nu",
+    "startTrial": "Starta gratis provperiod",
+    "subscribe": "Prenumerera",
+    "trialTerms": "Gratis i 7 dagar, därefter {{price}} i månaden tills du säger upp. Säg upp när som helst i App Store-inställningarna, senast en dag innan provperioden slutar, för att slippa debitering. Din AI-leverantör fakturerar dig separat för det analysen använder.",
+    "renewTerms": "{{price}} i månaden tills du säger upp. Säg upp när som helst i App Store-inställningarna. Din AI-leverantör fakturerar dig separat för det analysen använder.",
+    "terms": "Användarvillkor",
+    "privacy": "Integritetspolicy",
+    "restore": "Återställ köp",
+    "manage": "Hantera prenumeration…",
+    "notFound": "Ingen prenumeration hittades för det här Apple-kontot.",
+    "pending": "Väntar på godkännande. Analysen startar när köpet har godkänts.",
+    "failed": "Köpet gick inte igenom. Försök igen om en stund."
   }
 }

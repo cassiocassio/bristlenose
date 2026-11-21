@@ -185,6 +185,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose 도움말",
       "keyboardShortcuts": "키보드 단축키",
+      "privacyPolicy": "개인정보 처리방침",
+      "termsOfUse": "이용 약관",
       "releaseNotes": "릴리스 노트",
       "sendFeedback": "피드백 보내기…",
       "blog": "Substack의 Bristlenose",
@@ -1354,5 +1356,23 @@
       "countsExplain": "하루 한 번: 버전, App Store 또는 다운로드, 처음 또는 이번 달 첫 확인 여부, 환영 윈도우를 연 횟수. 식별자 없음. 프로젝트 내용은 포함되지 않습니다.",
       "managed": "조직에서 관리함"
     }
+  },
+  "subscription": {
+    "trialTitle": "Bristlenose를 7일 동안 무료로 사용해 보세요",
+    "trialBody": "체험 기간 동안 이 연구와 원하는 만큼의 연구를 분석할 수 있습니다. 구독 여부와 관계없이 프로젝트는 계속 읽을 수 있습니다.",
+    "lapsedTitle": "구독하고 이 연구 분석하기",
+    "lapsedBody": "구독이 종료되었습니다. 이미 분석한 프로젝트는 그대로 남아 있으며 읽고, 편집하고, 내보낼 수 있습니다.",
+    "notNow": "나중에",
+    "startTrial": "무료 체험 시작",
+    "subscribe": "구독",
+    "trialTerms": "7일 무료, 이후 해지할 때까지 월 {{price}}입니다. 요금이 청구되지 않으려면 체험이 끝나기 최소 하루 전까지 App Store 설정에서 언제든지 해지하세요. 분석에 사용된 AI 제공업체 요금은 별도로 청구됩니다.",
+    "renewTerms": "해지할 때까지 월 {{price}}입니다. App Store 설정에서 언제든지 해지할 수 있습니다. 분석에 사용된 AI 제공업체 요금은 별도로 청구됩니다.",
+    "terms": "이용 약관",
+    "privacy": "개인정보 처리방침",
+    "restore": "구입 복원",
+    "manage": "구독 관리…",
+    "notFound": "이 Apple 계정에서 구독을 찾을 수 없습니다.",
+    "pending": "승인을 기다리는 중입니다. 승인되면 분석이 시작됩니다.",
+    "failed": "구입을 완료하지 못했습니다. 잠시 후 다시 시도하세요."
   }
 }

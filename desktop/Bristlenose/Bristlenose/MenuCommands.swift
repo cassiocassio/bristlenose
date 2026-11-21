@@ -2105,6 +2105,15 @@ private struct HelpMenuContent: View {
 
         Divider()
 
+        // Always shown, in every build: Guideline 5.1.1(i) wants the privacy
+        // policy reachable in the app, and the Terms go with it.
+        Button(i18n.t("desktop.menu.help.privacyPolicy")) {
+            Self.open("https://bristlenose.app/privacy.html")
+        }
+        Button(i18n.t("desktop.menu.help.termsOfUse")) {
+            Self.open("https://bristlenose.app/terms.html")
+        }
+
         Button(i18n.t("desktop.menu.help.releaseNotes")) {
             Self.open("https://bristlenose.app/docs/changelog.html")
         }

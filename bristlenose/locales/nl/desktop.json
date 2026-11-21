@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Bristlenose Help",
       "keyboardShortcuts": "Sneltoetsen",
+      "privacyPolicy": "Privacybeleid",
+      "termsOfUse": "Gebruiksvoorwaarden",
       "releaseNotes": "Releaseopmerkingen",
       "sendFeedback": "Stuur feedback…",
       "blog": "Bristlenose op Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Eens per dag: versie, App Store of download, eerste controle ooit of deze maand, en openingen van het welkomstvenster. Geen ID. Niets uit je projecten.",
       "managed": "Beheerd door je organisatie"
     }
+  },
+  "subscription": {
+    "trialTitle": "Probeer Bristlenose 7 dagen gratis",
+    "trialBody": "Analyseer deze studie, en zoveel andere als je wilt tijdens de proefperiode. Je projecten blijven leesbaar, of je je nu abonneert of niet.",
+    "lapsedTitle": "Abonneer om deze studie te analyseren",
+    "lapsedBody": "Je abonnement is afgelopen. Je geanalyseerde projecten staan er nog en je kunt ze lezen, bewerken en exporteren.",
+    "notNow": "Niet nu",
+    "startTrial": "Start gratis proefperiode",
+    "subscribe": "Abonneer",
+    "trialTerms": "7 dagen gratis, daarna {{price}} per maand tot je opzegt. Zeg op elk moment op in de App Store-instellingen, uiterlijk een dag voordat de proefperiode eindigt, om kosten te voorkomen. Je AI-aanbieder brengt het verbruik van de analyse apart in rekening.",
+    "renewTerms": "{{price}} per maand tot je opzegt. Zeg op elk moment op in de App Store-instellingen. Je AI-aanbieder brengt het verbruik van de analyse apart in rekening.",
+    "terms": "Gebruiksvoorwaarden",
+    "privacy": "Privacybeleid",
+    "restore": "Aankopen herstellen",
+    "manage": "Abonnement beheren…",
+    "notFound": "Geen abonnement gevonden voor dit Apple-account.",
+    "pending": "Wachten op goedkeuring. De analyse start zodra de aankoop is goedgekeurd.",
+    "failed": "De aankoop is niet gelukt. Probeer het zo nog eens."
   }
 }

@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Aiuto Bristlenose",
       "keyboardShortcuts": "Abbreviazioni da tastiera",
+      "privacyPolicy": "Informativa sulla privacy",
+      "termsOfUse": "Termini di utilizzo",
       "releaseNotes": "Note di versione",
       "sendFeedback": "Invia un feedback…",
       "blog": "Bristlenose su Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Una volta al giorno: versione, App Store o download, primo controllo in assoluto o del mese e aperture della finestra di benvenuto. Nessun identificativo. Niente dai progetti.",
       "managed": "Gestito dalla tua organizzazione"
     }
+  },
+  "subscription": {
+    "trialTitle": "Prova Bristlenose gratis per 7 giorni",
+    "trialBody": "Analizza questo studio e tutti quelli che vuoi durante la prova. I tuoi progetti restano leggibili, che tu ti abboni o no.",
+    "lapsedTitle": "Abbonati per analizzare questo studio",
+    "lapsedBody": "Il tuo abbonamento è terminato. I progetti già analizzati sono ancora qui e puoi leggerli, modificarli ed esportarli.",
+    "notNow": "Non ora",
+    "startTrial": "Inizia la prova gratuita",
+    "subscribe": "Abbonati",
+    "trialTerms": "Gratis per 7 giorni, poi {{price}} al mese finché non disdici. Disdici quando vuoi dalle impostazioni dell’App Store, almeno un giorno prima della fine della prova per evitare l’addebito. Il tuo fornitore di IA ti fattura a parte quanto consuma l’analisi.",
+    "renewTerms": "{{price}} al mese finché non disdici. Disdici quando vuoi dalle impostazioni dell’App Store. Il tuo fornitore di IA ti fattura a parte quanto consuma l’analisi.",
+    "terms": "Termini di utilizzo",
+    "privacy": "Informativa sulla privacy",
+    "restore": "Ripristina acquisti",
+    "manage": "Gestisci abbonamento…",
+    "notFound": "Nessun abbonamento trovato per questo ID Apple.",
+    "pending": "In attesa di approvazione. L’analisi inizierà appena sarà approvato.",
+    "failed": "L’acquisto non è andato a buon fine. Riprova tra un momento."
   }
 }

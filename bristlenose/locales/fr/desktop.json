@@ -187,6 +187,8 @@
     "help": {
       "bristlenoseHelp": "Aide Bristlenose",
       "keyboardShortcuts": "Raccourcis clavier",
+      "privacyPolicy": "Politique de confidentialité",
+      "termsOfUse": "Conditions d’utilisation",
       "releaseNotes": "Notes de version",
       "sendFeedback": "Envoyer des commentaires…",
       "blog": "Bristlenose sur Substack",
@@ -1405,5 +1407,23 @@
       "countsExplain": "Une fois par jour : version, App Store ou téléchargement, premier contrôle jamais fait ou du mois, et ouvertures de la fenêtre de bienvenue. Aucun identifiant. Rien de vos projets.",
       "managed": "Géré par votre organisation"
     }
+  },
+  "subscription": {
+    "trialTitle": "Essayez Bristlenose gratuitement pendant 7 jours",
+    "trialBody": "Analysez cette étude, et autant d’autres que vous voulez pendant l’essai. Vos projets restent lisibles, que vous vous abonniez ou non.",
+    "lapsedTitle": "Abonnez-vous pour analyser cette étude",
+    "lapsedBody": "Votre abonnement a pris fin. Vos projets déjà analysés sont toujours là : vous pouvez les lire, les modifier et les exporter.",
+    "notNow": "Pas maintenant",
+    "startTrial": "Commencer l’essai gratuit",
+    "subscribe": "S’abonner",
+    "trialTerms": "Gratuit pendant 7 jours, puis {{price}} par mois jusqu’à résiliation. Résiliez à tout moment dans les réglages de l’App Store, au moins un jour avant la fin de l’essai pour ne pas être facturé. Votre fournisseur d’IA vous facture séparément ce que consomme l’analyse.",
+    "renewTerms": "{{price}} par mois jusqu’à résiliation. Résiliez à tout moment dans les réglages de l’App Store. Votre fournisseur d’IA vous facture séparément ce que consomme l’analyse.",
+    "terms": "Conditions d’utilisation",
+    "privacy": "Politique de confidentialité",
+    "restore": "Restaurer les achats",
+    "manage": "Gérer l’abonnement…",
+    "notFound": "Aucun abonnement trouvé pour ce compte Apple.",
+    "pending": "En attente d’approbation. L’analyse démarrera dès qu’elle sera approuvée.",
+    "failed": "L’achat n’a pas abouti. Réessayez dans un instant."
   }
 }

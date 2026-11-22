@@ -1169,7 +1169,7 @@
     "installedOlder": "Installed copy is older: {{version}}",
     "installedNewer": "Installed copy is newer: {{version}}",
     "recentActivity": "An agent has asked about this project recently",
-    "downloadClaudeDesktop": "Claude Desktop isn't installed \u2014 download it from claude.ai",
+    "downloadClaudeDesktop": "Claude Desktop isn't installed \u2014 download it from claude.com",
     "claudeDesktopHint": "Adds Bristlenose to Claude Desktop as a plugin. Claude Desktop will ask you to confirm.",
     "claudeDesktopPromptNote": "The first time you ask a question, macOS asks once whether Claude may access data from other apps. Click Allow. That permission is how the plugin finds Bristlenose.",
     "filesFoldersNote": "The first time you ask a question, macOS blocks {{app}} from reading Bristlenose, without asking. To allow it, open System Settings \u25b8 Privacy & Security \u25b8 Files & Folders, expand {{app}} and turn on Bristlenose \u2014 then ask again.",

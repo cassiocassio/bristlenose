@@ -1164,7 +1164,7 @@
     "installedOlder": "Asennettu kopio on vanhempi: {{version}}",
     "installedNewer": "Asennettu kopio on uudempi: {{version}}",
     "recentActivity": "Agentti kysyi \u00e4skett\u00e4in t\u00e4st\u00e4 projektista",
-    "downloadClaudeDesktop": "Claude Desktopia ei ole asennettu \u2014 lataa se osoitteesta claude.ai",
+    "downloadClaudeDesktop": "Claude Desktopia ei ole asennettu \u2014 lataa se osoitteesta claude.com",
     "claudeDesktopHint": "Lis\u00e4\u00e4 Bristlenosen Claude Desktopiin pluginina. Claude Desktop pyyt\u00e4\u00e4 vahvistuksen.",
     "claudeDesktopPromptNote": "Kun esit\u00e4t ensimm\u00e4isen kysymyksen, macOS kysyy kerran, saako Claude k\u00e4ytt\u00e4\u00e4 muiden appien tietoja. Osoita \u201cSalli\u201d. N\u00e4in plugin l\u00f6yt\u00e4\u00e4 Bristlenosen.",
     "filesFoldersNote": "Kun esit\u00e4t ensimm\u00e4isen kysymyksen, macOS est\u00e4\u00e4 kysym\u00e4tt\u00e4 sovellusta {{app}} lukemasta Bristlenosea. Salli se avaamalla J\u00e4rjestelm\u00e4asetukset \u25b8 Tietosuoja ja suojaus \u25b8 Tiedostot ja kansiot, laajentamalla kohta {{app}} ja laittamalla Bristlenose p\u00e4\u00e4lle. Kysy sitten uudelleen.",

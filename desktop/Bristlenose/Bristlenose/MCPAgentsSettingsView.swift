@@ -911,7 +911,7 @@ struct MCPAgentsSettingsView: View {
                 // "no application set to open the document" dialog, which
                 // reads as our bug; offer the download instead (§3.4).
                 Link(i18n.t("desktop.mcpAgents.downloadClaudeDesktop"),
-                     destination: URL(string: "https://claude.ai/download")!)
+                     destination: URL(string: "https://claude.com/download")!)
                     .font(.callout)
             }
         }

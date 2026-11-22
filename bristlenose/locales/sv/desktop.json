@@ -1164,7 +1164,7 @@
     "installedOlder": "Den installerade kopian \u00e4r \u00e4ldre: {{version}}",
     "installedNewer": "Den installerade kopian \u00e4r nyare: {{version}}",
     "recentActivity": "En agent har nyligen fr\u00e5gat om det h\u00e4r projektet",
-    "downloadClaudeDesktop": "Claude Desktop \u00e4r inte installerat \u2014 h\u00e4mta det p\u00e5 claude.ai",
+    "downloadClaudeDesktop": "Claude Desktop \u00e4r inte installerat \u2014 h\u00e4mta det p\u00e5 claude.com",
     "claudeDesktopHint": "L\u00e4gger till Bristlenose i Claude Desktop som ett plugin. Claude Desktop ber om bekr\u00e4ftelse.",
     "claudeDesktopPromptNote": "F\u00f6rsta g\u00e5ngen du st\u00e4ller en fr\u00e5ga fr\u00e5gar macOS en g\u00e5ng om Claude f\u00e5r komma \u00e5t data fr\u00e5n andra appar. Klicka p\u00e5 \u201dTill\u00e5t\u201d. S\u00e5 hittar pluginet Bristlenose.",
     "filesFoldersNote": "F\u00f6rsta g\u00e5ngen du st\u00e4ller en fr\u00e5ga blockerar macOS {{app}} fr\u00e5n att l\u00e4sa Bristlenose, utan att fr\u00e5ga. Du till\u00e5ter det genom att \u00f6ppna Systeminst\u00e4llningar \u25b8 Integritet och s\u00e4kerhet \u25b8 Filer och mappar, expandera {{app}} och sl\u00e5 p\u00e5 Bristlenose \u2014 st\u00e4ll sedan fr\u00e5gan igen.",

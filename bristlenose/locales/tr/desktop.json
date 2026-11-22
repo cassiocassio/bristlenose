@@ -1164,7 +1164,7 @@
     "installedOlder": "Y\u00fckl\u00fc kopya daha eski: {{version}}",
     "installedNewer": "Y\u00fckl\u00fc kopya daha yeni: {{version}}",
     "recentActivity": "Bir arac\u0131 yak\u0131n zamanda bu projeyi sordu",
-    "downloadClaudeDesktop": "Claude Desktop y\u00fckl\u00fc de\u011fil \u2014 claude.ai adresinden indirin",
+    "downloadClaudeDesktop": "Claude Desktop y\u00fckl\u00fc de\u011fil \u2014 claude.com adresinden indirin",
     "claudeDesktopHint": "Bristlenose'u Claude Desktop'a plugin olarak ekler. Claude Desktop onay ister.",
     "claudeDesktopPromptNote": "\u0130lk soruyu sordu\u011funuzda macOS, Claude\u2019un di\u011fer uygulamalardaki verilere eri\u015fip eri\u015femeyece\u011fini bir kez sorar. \u201c\u0130zin Ver\u201de t\u0131klay\u0131n. Plugin, Bristlenose\u2019u b\u00f6yle bulur.",
     "filesFoldersNote": "\u0130lk soruyu sordu\u011funuzda macOS, sormadan {{app}} uygulamas\u0131n\u0131n Bristlenose\u2019u okumas\u0131n\u0131 engeller. \u0130zin vermek i\u00e7in Sistem Ayarlar\u0131 \u25b8 Gizlilik ve G\u00fcvenlik \u25b8 Dosyalar ve Klas\u00f6rler\u2019i a\u00e7\u0131n, {{app}} \u00f6\u011fesini geni\u015fletin ve Bristlenose\u2019u etkinle\u015ftirin; ard\u0131ndan soruyu yeniden sorun.",

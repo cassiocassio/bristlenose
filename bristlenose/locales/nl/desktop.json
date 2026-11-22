@@ -1164,7 +1164,7 @@
     "installedOlder": "Ge\u00efnstalleerde kopie is ouder: {{version}}",
     "installedNewer": "Ge\u00efnstalleerde kopie is nieuwer: {{version}}",
     "recentActivity": "Een agent heeft onlangs naar dit project gevraagd",
-    "downloadClaudeDesktop": "Claude Desktop is niet ge\u00efnstalleerd \u2014 download het via claude.ai",
+    "downloadClaudeDesktop": "Claude Desktop is niet ge\u00efnstalleerd \u2014 download het via claude.com",
     "claudeDesktopHint": "Voegt Bristlenose als plugin toe aan Claude Desktop. Claude Desktop vraagt om bevestiging.",
     "claudeDesktopPromptNote": "De eerste keer dat je een vraag stelt, vraagt macOS eenmalig of Claude toegang mag krijgen tot gegevens uit andere apps. Klik op \u2018Sta toe\u2019. Zo vindt de plugin Bristlenose.",
     "filesFoldersNote": "De eerste keer dat je een vraag stelt, voorkomt macOS zonder te vragen dat {{app}} Bristlenose leest. Om dat toe te staan, open je Systeeminstellingen \u25b8 Privacy en beveiliging \u25b8 Bestanden en mappen, klap je {{app}} uit en schakel je Bristlenose in. Stel daarna je vraag opnieuw.",

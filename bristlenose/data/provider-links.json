@@ -110,7 +110,7 @@
     {
      "id": "claude.app-download",
      "purpose": "download the Claude desktop app (Connect an Agent)",
-     "url": "https://claude.ai/download",
+     "url": "https://claude.com/download",
      "verified": "2026-11-21",
      "login": false,
      "mirrors": [
@@ -820,6 +820,7 @@
   }
  ],
  "ignore_patterns": [
+  "^(claude\\.ai|chatgpt\\.com)$",
   "^api\\.(anthropic|openai|miro)\\.com(/|$)",
   "^api\\.zoom\\.us(/|$)",
   "(^|\\.)googleapis\\.com(/|$)",

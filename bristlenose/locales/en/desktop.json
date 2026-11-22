@@ -916,8 +916,8 @@
     "useOllama": "Use Ollama model on-device",
     "ollamaDownloadSize": "~%@ download",
     "done": "Done",
-    "countsChoice": "Send anonymous daily counts to help improve Bristlenose",
-    "countsExplain": "Once a day: version, store or download, first check ever or this month, and Welcome window opens. No identifier. Nothing from your projects. Change it in Settings."
+    "countsChoice": "Anonymous analytics",
+    "countsExplain": "Send version information, and how often you open Bristlenose. No identifier. Nothing from your projects. Change it in Settings."
   },
   "llmSettings": {
     "validation": {
@@ -1405,11 +1405,12 @@
   },
   "news": {
     "privacy": "Privacy",
+    "whatsSent": "What’s sent?",
     "settings": {
       "checkLabel": "Check bristlenose.app for news",
-      "checkExplain": "At most once a day. News and community events appear in the Welcome window.",
-      "countsLabel": "Send anonymous daily counts",
-      "countsExplain": "Once a day: version, store or download, first check ever or this month, and Welcome window opens. No identifier. Nothing from your projects.",
+      "checkExplain": "Once a day. News and community events appear in Welcome.",
+      "countsLabel": "Anonymous analytics",
+      "countsExplain": "Send version information, and how often you open Bristlenose. No identifier. Nothing from your projects.",
       "managed": "Managed by your organisation"
     }
   },

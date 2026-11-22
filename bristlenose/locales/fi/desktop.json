@@ -911,8 +911,8 @@
     "useOllama": "Käytä Ollama-mallia laitteella",
     "ollamaDownloadSize": "~%@ lataus",
     "done": "Valmis",
-    "countsChoice": "Lähetä nimettömiä päivittäisiä laskureita Bristlenosen parantamiseksi",
-    "countsExplain": "Kerran päivässä: versio, App Store vai lataus, ensimmäinen tarkistus ikinä tai tässä kuussa sekä tervetuloikkunan avauskerrat. Ei tunnistetta. Ei mitään projekteistasi. Muuta asetuksissa."
+    "countsChoice": "Anonyymi analytiikka",
+    "countsExplain": "Lähettää versiotiedot ja sen, kuinka usein avaat Bristlenosen. Ei tunnistetta. Ei mitään projekteistasi. Muuta asetuksissa."
   },
   "llmSettings": {
     "validation": {
@@ -1400,11 +1400,12 @@
   },
   "news": {
     "privacy": "Yksityisyys",
+    "whatsSent": "Mitä lähetetään?",
     "settings": {
       "checkLabel": "Tarkista uutiset bristlenose.appista",
-      "checkExplain": "Enintään kerran päivässä. Uutiset ja yhteisön tapahtumat näkyvät tervetuloikkunassa.",
-      "countsLabel": "Lähetä nimettömiä päivittäisiä laskureita",
-      "countsExplain": "Kerran päivässä: versio, App Store vai lataus, ensimmäinen tarkistus ikinä tai tässä kuussa sekä tervetuloikkunan avauskerrat. Ei tunnistetta. Ei mitään projekteistasi.",
+      "checkExplain": "Kerran päivässä. Uutiset ja yhteisön tapahtumat näkyvät tervetuloikkunassa.",
+      "countsLabel": "Anonyymi analytiikka",
+      "countsExplain": "Lähettää versiotiedot ja sen, kuinka usein avaat Bristlenosen. Ei tunnistetta. Ei mitään projekteistasi.",
       "managed": "Organisaatiosi hallinnoima"
     }
   },

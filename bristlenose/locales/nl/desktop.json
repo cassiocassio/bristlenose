@@ -911,8 +911,8 @@
     "useOllama": "Gebruik Ollama-model op apparaat",
     "ollamaDownloadSize": "~%@ download",
     "done": "Klaar",
-    "countsChoice": "Stuur anonieme dagelijkse tellingen om Bristlenose te helpen verbeteren",
-    "countsExplain": "Eens per dag: versie, App Store of download, eerste controle ooit of deze maand, en openingen van het welkomstvenster. Geen ID. Niets uit je projecten. Wijzig dit in Instellingen."
+    "countsChoice": "Anonieme analysegegevens",
+    "countsExplain": "Stuurt versie-informatie en hoe vaak je Bristlenose opent. Geen ID. Niets uit je projecten. Wijzig dit in Instellingen."
   },
   "llmSettings": {
     "validation": {
@@ -1400,11 +1400,12 @@
   },
   "news": {
     "privacy": "Privacy",
+    "whatsSent": "Wat wordt er verstuurd?",
     "settings": {
       "checkLabel": "Zoek naar nieuws op bristlenose.app",
-      "checkExplain": "Hooguit één keer per dag. Nieuws en communityevenementen verschijnen in het welkomstvenster.",
-      "countsLabel": "Stuur anonieme dagelijkse tellingen",
-      "countsExplain": "Eens per dag: versie, App Store of download, eerste controle ooit of deze maand, en openingen van het welkomstvenster. Geen ID. Niets uit je projecten.",
+      "checkExplain": "Eén keer per dag. Nieuws en communityevenementen verschijnen in het welkomstvenster.",
+      "countsLabel": "Anonieme analysegegevens",
+      "countsExplain": "Stuurt versie-informatie en hoe vaak je Bristlenose opent. Geen ID. Niets uit je projecten.",
       "managed": "Beheerd door je organisatie"
     }
   },

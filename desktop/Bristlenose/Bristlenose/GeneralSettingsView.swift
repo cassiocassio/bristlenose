@@ -110,6 +110,8 @@ struct GeneralSettingsView: View {
                     newsSwitch(
                         label: i18n.t("desktop.news.settings.checkLabel"),
                         explanation: i18n.t("desktop.news.settings.checkExplain"),
+                        link: i18n.t("desktop.news.privacy"),
+                        destination: NewsPreferences.privacyURL,
                         row: NewsPreferences.newsRow(in: .standard, isForced: NewsPreferences.isManaged),
                         set: { on in
                             newsStored = on
@@ -118,6 +120,8 @@ struct GeneralSettingsView: View {
                     newsSwitch(
                         label: i18n.t("desktop.news.settings.countsLabel"),
                         explanation: i18n.t("desktop.news.settings.countsExplain"),
+                        link: i18n.t("desktop.news.whatsSent"),
+                        destination: NewsPreferences.analyticsURL,
                         // Dimmed while news is off: counts ride on the news check,
                         // so with news off nothing is sent either way.
                         row: NewsPreferences.countsRow(
@@ -153,15 +157,17 @@ struct GeneralSettingsView: View {
 
     // MARK: - News
 
-    /// A switch row whose secondary line ends in a "Privacy" link. Locked by a
-    /// profile, it shows the value in force, dimmed, with "Managed by your
-    /// organisation" in place of nothing to do.
+    /// A switch row whose secondary line ends in a link: "Privacy" for news,
+    /// "What's sent?" for the analytics. Locked by a profile, it shows the value
+    /// in force, dimmed, with "Managed by your organisation" in place of
+    /// nothing to do.
     private func newsSwitch(label: String, explanation: String,
+                            link: String, destination: URL,
                             row: NewsPreferences.Row,
                             set: @escaping (Bool) -> Void) -> some View {
         Toggle(isOn: Binding(get: { row.isOn }, set: set)) {
             Text(label)
-            Text(Self.explanation(explanation, privacy: i18n.t("desktop.news.privacy")))
+            Text(Self.explanation(explanation, link: link, destination: destination))
                 .foregroundStyle(.secondary)
             if row.isLocked {
                 Text(i18n.t("desktop.news.settings.managed"))
@@ -171,14 +177,14 @@ struct GeneralSettingsView: View {
         .disabled(row.isLocked || row.waitsForNews)
     }
 
-    /// The explanation, a space, and the word "Privacy" as a real link. Built
-    /// as an `AttributedString` with a `.link` run rather than through
-    /// Markdown, so nothing a translator writes can become a link.
-    static func explanation(_ text: String, privacy: String) -> AttributedString {
+    /// The explanation, a space, and the link text as a real link. Built as an
+    /// `AttributedString` with a `.link` run rather than through Markdown, so
+    /// nothing a translator writes can become a link.
+    static func explanation(_ text: String, link: String, destination: URL) -> AttributedString {
         var out = AttributedString(text + " ")
-        var link = AttributedString(privacy)
-        link.link = NewsPreferences.privacyURL
-        out.append(link)
+        var run = AttributedString(link)
+        run.link = destination
+        out.append(run)
         return out
     }
 

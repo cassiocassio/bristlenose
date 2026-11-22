@@ -883,8 +883,8 @@
     "useOllama": "在裝置上使用 Ollama 模型",
     "ollamaDownloadSize": "約 %@ 下載量",
     "done": "完成",
-    "countsChoice": "傳送匿名每日計數以協助改進 Bristlenose",
-    "countsExplain": "每天一次：版本、App Store 或下載、是否為首次或本月首次檢查、歡迎視窗開啟次數。沒有識別碼。不含你的專案內容。可在「設定」中更改。"
+    "countsChoice": "匿名分析資料",
+    "countsExplain": "傳送版本資訊，以及你開啟 Bristlenose 的頻率。沒有識別碼。不含你的專案內容。可在「設定」中更改。"
   },
   "llmSettings": {
     "validation": {
@@ -1349,11 +1349,12 @@
   },
   "news": {
     "privacy": "隱私權",
+    "whatsSent": "傳送哪些內容？",
     "settings": {
       "checkLabel": "在 bristlenose.app 檢查最新消息",
-      "checkExplain": "每天最多一次。最新消息與社群活動會顯示在歡迎視窗中。",
-      "countsLabel": "傳送匿名每日計數",
-      "countsExplain": "每天一次：版本、App Store 或下載、是否為首次或本月首次檢查、歡迎視窗開啟次數。沒有識別碼。不含你的專案內容。",
+      "checkExplain": "每天一次。最新消息與社群活動會顯示在歡迎視窗中。",
+      "countsLabel": "匿名分析資料",
+      "countsExplain": "傳送版本資訊，以及你開啟 Bristlenose 的頻率。沒有識別碼。不含你的專案內容。",
       "managed": "由你的組織管理"
     }
   },

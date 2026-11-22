@@ -242,8 +242,11 @@ enum NewsPreferences {
             waitsForNews: !newsOn)
     }
 
-    /// Where both rows and the first-run line send someone who wants the detail.
+    /// Where the news row sends someone who wants the detail.
     static let privacyURL = URL(string: "https://bristlenose.app/privacy.html")!
+    /// "What's sent?" on the analytics row and the first-run checkbox: the page
+    /// that lists the exact request, field by field.
+    static let analyticsURL = URL(string: "https://bristlenose.app/docs/anonymous-analytics.html")!
 
     /// `CFPreferencesAppValueIsForced`: true when a configuration profile
     /// manages the key, whatever value it set.

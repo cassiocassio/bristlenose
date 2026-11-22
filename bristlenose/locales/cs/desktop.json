@@ -966,8 +966,8 @@
     "useOllama": "Použít model Ollama v zařízení",
     "ollamaDownloadSize": "~%@ ke stažení",
     "done": "Hotovo",
-    "countsChoice": "Odesílat anonymní denní počty a pomoci tak vylepšit Bristlenose",
-    "countsExplain": "Jednou denně: verze, App Store nebo stažení, první kontrola vůbec nebo v tomto měsíci a otevření uvítacího okna. Žádný identifikátor. Nic z vašich projektů. Lze změnit v Nastavení."
+    "countsChoice": "Anonymní analytické údaje",
+    "countsExplain": "Odesílá informace o verzi a o tom, jak často otevíráte Bristlenose. Žádný identifikátor. Nic z vašich projektů. Lze změnit v Nastavení."
   },
   "llmSettings": {
     "validation": {
@@ -1482,11 +1482,12 @@
   },
   "news": {
     "privacy": "Soukromí",
+    "whatsSent": "Co se odesílá?",
     "settings": {
       "checkLabel": "Kontrolovat novinky na bristlenose.app",
-      "checkExplain": "Nejvýše jednou denně. Novinky a komunitní akce se zobrazí v uvítacím okně.",
-      "countsLabel": "Odesílat anonymní denní počty",
-      "countsExplain": "Jednou denně: verze, App Store nebo stažení, první kontrola vůbec nebo v tomto měsíci a otevření uvítacího okna. Žádný identifikátor. Nic z vašich projektů.",
+      "checkExplain": "Jednou denně. Novinky a komunitní akce se zobrazí v uvítacím okně.",
+      "countsLabel": "Anonymní analytické údaje",
+      "countsExplain": "Odesílá informace o verzi a o tom, jak často otevíráte Bristlenose. Žádný identifikátor. Nic z vašich projektů.",
       "managed": "Spravováno vaší organizací"
     }
   },

@@ -911,8 +911,8 @@
     "useOllama": "Bruk Ollama-modell på enheten",
     "ollamaDownloadSize": "~%@ nedlasting",
     "done": "Ferdig",
-    "countsChoice": "Send anonyme daglige tellinger for å hjelpe med å forbedre Bristlenose",
-    "countsExplain": "Én gang om dagen: versjon, App Store eller nedlasting, første sjekk noensinne eller denne måneden og åpninger av velkomstvinduet. Ingen ID. Ingenting fra prosjektene dine. Kan endres i Innstillinger."
+    "countsChoice": "Anonyme analysedata",
+    "countsExplain": "Sender versjonsinformasjon og hvor ofte du åpner Bristlenose. Ingen ID. Ingenting fra prosjektene dine. Kan endres i Innstillinger."
   },
   "llmSettings": {
     "validation": {
@@ -1400,11 +1400,12 @@
   },
   "news": {
     "privacy": "Personvern",
+    "whatsSent": "Hva sendes?",
     "settings": {
       "checkLabel": "Se etter nyheter på bristlenose.app",
-      "checkExplain": "Høyst én gang om dagen. Nyheter og fellesskapsarrangementer vises i velkomstvinduet.",
-      "countsLabel": "Send anonyme daglige tellinger",
-      "countsExplain": "Én gang om dagen: versjon, App Store eller nedlasting, første sjekk noensinne eller denne måneden og åpninger av velkomstvinduet. Ingen ID. Ingenting fra prosjektene dine.",
+      "checkExplain": "Én gang om dagen. Nyheter og fellesskapsarrangementer vises i velkomstvinduet.",
+      "countsLabel": "Anonyme analysedata",
+      "countsExplain": "Sender versjonsinformasjon og hvor ofte du åpner Bristlenose. Ingen ID. Ingenting fra prosjektene dine.",
       "managed": "Administreres av organisasjonen din"
     }
   },

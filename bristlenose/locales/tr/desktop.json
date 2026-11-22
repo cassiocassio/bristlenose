@@ -911,8 +911,8 @@
     "useOllama": "Aygıtta Ollama modelini kullan",
     "ollamaDownloadSize": "~%@ indirme",
     "done": "Bitti",
-    "countsChoice": "Bristlenose’un geliştirilmesine yardımcı olmak için anonim günlük sayımlar gönder",
-    "countsExplain": "Günde bir kez: sürüm, App Store veya indirme, ilk denetim (hiç ya da bu ay) ve karşılama penceresinin açılışları. Kimlik yok. Projelerinizden hiçbir şey yok. Ayarlar'dan değiştirilebilir."
+    "countsChoice": "Anonim analiz verileri",
+    "countsExplain": "Sürüm bilgilerini ve Bristlenose'u ne sıklıkla açtığınızı gönderir. Kimlik yok. Projelerinizden hiçbir şey yok. Ayarlar'dan değiştirilebilir."
   },
   "llmSettings": {
     "validation": {
@@ -1400,11 +1400,12 @@
   },
   "news": {
     "privacy": "Gizlilik",
+    "whatsSent": "Neler gönderiliyor?",
     "settings": {
       "checkLabel": "Haberler için bristlenose.app’i denetle",
-      "checkExplain": "En fazla günde bir kez. Haberler ve topluluk etkinlikleri hoş geldiniz penceresinde görünür.",
-      "countsLabel": "Anonim günlük sayımlar gönder",
-      "countsExplain": "Günde bir kez: sürüm, App Store veya indirme, ilk denetim (hiç ya da bu ay) ve karşılama penceresinin açılışları. Kimlik yok. Projelerinizden hiçbir şey yok.",
+      "checkExplain": "Günde bir kez. Haberler ve topluluk etkinlikleri hoş geldiniz penceresinde görünür.",
+      "countsLabel": "Anonim analiz verileri",
+      "countsExplain": "Sürüm bilgilerini ve Bristlenose'u ne sıklıkla açtığınızı gönderir. Kimlik yok. Projelerinizden hiçbir şey yok.",
       "managed": "Kuruluşunuz tarafından yönetiliyor"
     }
   },

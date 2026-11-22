@@ -967,8 +967,8 @@
     "useOllama": "Użyj modelu Ollama na urządzeniu",
     "ollamaDownloadSize": "~%@ do pobrania",
     "done": "Gotowe",
-    "countsChoice": "Wysyłaj anonimowe dzienne liczniki, aby pomóc ulepszać Bristlenose",
-    "countsExplain": "Raz dziennie: wersja, App Store lub pobranie, pierwsze sprawdzenie w ogóle lub w tym miesiącu oraz otwarcia okna powitalnego. Bez identyfikatora. Nic z Twoich projektów. Możesz to zmienić w Ustawieniach."
+    "countsChoice": "Anonimowe dane analityczne",
+    "countsExplain": "Wysyła informacje o wersji i o tym, jak często otwierasz Bristlenose. Bez identyfikatora. Nic z Twoich projektów. Możesz to zmienić w Ustawieniach."
   },
   "llmSettings": {
     "validation": {
@@ -1502,11 +1502,12 @@
   },
   "news": {
     "privacy": "Prywatność",
+    "whatsSent": "Co jest wysyłane?",
     "settings": {
       "checkLabel": "Sprawdzaj aktualności w bristlenose.app",
-      "checkExplain": "Najwyżej raz dziennie. Aktualności i wydarzenia społeczności pojawiają się w oknie powitalnym.",
-      "countsLabel": "Wysyłaj anonimowe dzienne liczniki",
-      "countsExplain": "Raz dziennie: wersja, App Store lub pobranie, pierwsze sprawdzenie w ogóle lub w tym miesiącu oraz otwarcia okna powitalnego. Bez identyfikatora. Nic z Twoich projektów.",
+      "checkExplain": "Raz dziennie. Aktualności i wydarzenia społeczności pojawiają się w oknie powitalnym.",
+      "countsLabel": "Anonimowe dane analityczne",
+      "countsExplain": "Wysyła informacje o wersji i o tym, jak często otwierasz Bristlenose. Bez identyfikatora. Nic z Twoich projektów.",
       "managed": "Zarządzane przez Twoją organizację"
     }
   },

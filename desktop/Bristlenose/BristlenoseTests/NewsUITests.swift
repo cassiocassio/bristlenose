@@ -106,12 +106,14 @@ struct NewsUITests {
         #expect(NewsPreferences.newsEnabled(in: defaults, isForced: forced, ownValue: ownValue))
     }
 
-    @Test("The Settings explanation carries one link, the privacy page, whatever the text says")
+    @Test("The Settings explanation carries one link, the one given, whatever the text says")
     func settingsExplanationLink() {
-        let text = GeneralSettingsView.explanation("See [x](https://e.com) here.", privacy: "Privacy")
+        let text = GeneralSettingsView.explanation("See [x](https://e.com) here.",
+                                                   link: "What’s sent?",
+                                                   destination: NewsPreferences.analyticsURL)
         let links = text.runs.compactMap(\.link)
-        #expect(links == [NewsPreferences.privacyURL])
-        #expect(String(text.characters) == "See [x](https://e.com) here. Privacy")
+        #expect(links == [NewsPreferences.analyticsURL])
+        #expect(String(text.characters) == "See [x](https://e.com) here. What’s sent?")
     }
 
     // MARK: The card

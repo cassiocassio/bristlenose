@@ -911,8 +911,8 @@
     "useOllama": "Utilitza un model d'Ollama al dispositiu",
     "ollamaDownloadSize": "~%@ de baixada",
     "done": "Fet",
-    "countsChoice": "Envia recomptes diaris anònims per ajudar a millorar el Bristlenose",
-    "countsExplain": "Un cop al dia: versió, App Store o baixada, primera comprovació de sempre o del mes i obertures de la finestra de benvinguda. Cap identificador. Res dels teus projectes. Es pot canviar a Configuració."
+    "countsChoice": "Anàlisi anònima",
+    "countsExplain": "Envia la informació de la versió i amb quina freqüència obres Bristlenose. Cap identificador. Res dels teus projectes. Es pot canviar a Configuració."
   },
   "llmSettings": {
     "validation": {
@@ -1400,11 +1400,12 @@
   },
   "news": {
     "privacy": "Privadesa",
+    "whatsSent": "Què s’envia?",
     "settings": {
       "checkLabel": "Comprova si hi ha novetats a bristlenose.app",
-      "checkExplain": "Com a màxim un cop al dia. Les novetats i els esdeveniments de la comunitat apareixen a la finestra de benvinguda.",
-      "countsLabel": "Envia recomptes diaris anònims",
-      "countsExplain": "Un cop al dia: versió, App Store o baixada, primera comprovació de sempre o del mes i obertures de la finestra de benvinguda. Cap identificador. Res dels teus projectes.",
+      "checkExplain": "Un cop al dia. Les novetats i els esdeveniments de la comunitat apareixen a la finestra de benvinguda.",
+      "countsLabel": "Anàlisi anònima",
+      "countsExplain": "Envia la informació de la versió i amb quina freqüència obres Bristlenose. Cap identificador. Res dels teus projectes.",
       "managed": "Gestionat per la teva organització"
     }
   },

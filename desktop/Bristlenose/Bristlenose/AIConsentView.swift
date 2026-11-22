@@ -203,7 +203,7 @@ struct AIConsentView: View {
                 .font(.caption)
             .foregroundStyle(.secondary)
             .padding(.leading, 20)   // under the label, not the box
-            Link(i18n.t("desktop.news.privacy"), destination: NewsPreferences.privacyURL)
+            Link(i18n.t("desktop.news.whatsSent"), destination: NewsPreferences.analyticsURL)
                 .font(.caption)
                 .padding(.leading, 20)
         }

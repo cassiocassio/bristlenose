@@ -911,8 +911,8 @@
     "useOllama": "Brug Ollama-model på enheden",
     "ollamaDownloadSize": "~%@ download",
     "done": "Færdig",
-    "countsChoice": "Send anonyme daglige optællinger for at hjælpe med at forbedre Bristlenose",
-    "countsExplain": "Én gang om dagen: version, App Store eller download, første tjek nogensinde eller i denne måned og åbninger af velkomstvinduet. Intet id. Intet fra dine projekter. Kan ændres i Indstillinger."
+    "countsChoice": "Anonyme analysedata",
+    "countsExplain": "Sender versionsoplysninger, og hvor ofte du åbner Bristlenose. Intet id. Intet fra dine projekter. Kan ændres i Indstillinger."
   },
   "llmSettings": {
     "validation": {
@@ -1400,11 +1400,12 @@
   },
   "news": {
     "privacy": "Anonymitet",
+    "whatsSent": "Hvad sendes?",
     "settings": {
       "checkLabel": "Tjek bristlenose.app for nyheder",
-      "checkExplain": "Højst én gang om dagen. Nyheder og fællesskabsbegivenheder vises i velkomstvinduet.",
-      "countsLabel": "Send anonyme daglige optællinger",
-      "countsExplain": "Én gang om dagen: version, App Store eller download, første tjek nogensinde eller i denne måned og åbninger af velkomstvinduet. Intet id. Intet fra dine projekter.",
+      "checkExplain": "Én gang om dagen. Nyheder og fællesskabsbegivenheder vises i velkomstvinduet.",
+      "countsLabel": "Anonyme analysedata",
+      "countsExplain": "Sender versionsoplysninger, og hvor ofte du åbner Bristlenose. Intet id. Intet fra dine projekter.",
       "managed": "Administreres af din organisation"
     }
   },

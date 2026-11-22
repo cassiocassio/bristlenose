@@ -16,6 +16,15 @@ enum SubscriptionAccess {
     /// The product identifier in App Store Connect. It must match exactly, or
     /// the store returns no product and, for someone with no entitlement,
     /// the state is `.storeUnavailable` (the paywall's "try again" state).
+    ///
+    /// **One product, for early adopters and everyone after them.** The launch
+    /// price is kept for existing subscribers by Apple's own price preservation:
+    /// when the price rises, App Store Connect is told to "keep the current
+    /// price for existing subscribers". Do NOT add a second "early" product to
+    /// retire later: "Remove from Sale" stops renewals as well as sign-ups, so it
+    /// would cancel every early adopter (Apple's App Store Connect help, "Set
+    /// availability for an auto-renewable subscription"; tried and withdrawn
+    /// 21 Nov 2026). The decision record is private to the maintainer.
     static let monthlyProductID = "app.bristlenose.subscription.monthly"
 
     enum State: Equatable {

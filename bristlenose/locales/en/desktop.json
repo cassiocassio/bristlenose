@@ -916,7 +916,7 @@
     "useOllama": "Use Ollama model on-device",
     "ollamaDownloadSize": "~%@ download",
     "done": "Done",
-    "countsChoice": "Anonymous analytics",
+    "countsChoice": "Send anonymous analytics",
     "countsExplain": "Send version information, and how often you open Bristlenose. No identifier. Nothing from your projects. Change it in Settings."
   },
   "llmSettings": {
@@ -1409,7 +1409,7 @@
     "settings": {
       "checkLabel": "Check bristlenose.app for news",
       "checkExplain": "Once a day. News and community events appear in Welcome.",
-      "countsLabel": "Anonymous analytics",
+      "countsLabel": "Send anonymous analytics",
       "countsExplain": "Send version information, and how often you open Bristlenose. No identifier. Nothing from your projects.",
       "managed": "Managed by your organisation"
     }

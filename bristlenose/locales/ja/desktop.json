@@ -404,7 +404,7 @@
     "useOllama": "デバイス上で Ollama モデルを使用",
     "ollamaDownloadSize": "~%@ をダウンロード",
     "done": "完了",
-    "countsChoice": "匿名の解析データ",
+    "countsChoice": "匿名の解析データを送信",
     "countsExplain": "バージョン情報と、Bristlenose を開く頻度を送信します。識別子なし。プロジェクトの内容は含みません。設定で変更できます。"
   },
   "player": {
@@ -1353,7 +1353,7 @@
     "settings": {
       "checkLabel": "bristlenose.app でニュースを確認",
       "checkExplain": "1 日 1 回。ニュースやコミュニティのイベントがようこそウインドウに表示されます。",
-      "countsLabel": "匿名の解析データ",
+      "countsLabel": "匿名の解析データを送信",
       "countsExplain": "バージョン情報と、Bristlenose を開く頻度を送信します。識別子なし。プロジェクトの内容は含みません。",
       "managed": "組織によって管理されています"
     }

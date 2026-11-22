@@ -911,7 +911,7 @@
     "useOllama": "Bruk Ollama-modell på enheten",
     "ollamaDownloadSize": "~%@ nedlasting",
     "done": "Ferdig",
-    "countsChoice": "Anonyme analysedata",
+    "countsChoice": "Send anonyme analysedata",
     "countsExplain": "Sender versjonsinformasjon og hvor ofte du åpner Bristlenose. Ingen ID. Ingenting fra prosjektene dine. Kan endres i Innstillinger."
   },
   "llmSettings": {
@@ -1404,7 +1404,7 @@
     "settings": {
       "checkLabel": "Se etter nyheter på bristlenose.app",
       "checkExplain": "Én gang om dagen. Nyheter og fellesskapsarrangementer vises i velkomstvinduet.",
-      "countsLabel": "Anonyme analysedata",
+      "countsLabel": "Send anonyme analysedata",
       "countsExplain": "Sender versjonsinformasjon og hvor ofte du åpner Bristlenose. Ingen ID. Ingenting fra prosjektene dine.",
       "managed": "Administreres av organisasjonen din"
     }

@@ -911,7 +911,7 @@
     "useOllama": "Ollama-Modell auf dem Gerät verwenden",
     "ollamaDownloadSize": "~%@ Download",
     "done": "Fertig",
-    "countsChoice": "Anonyme Analysedaten",
+    "countsChoice": "Anonyme Analysedaten senden",
     "countsExplain": "Sendet Versionsinformationen und wie oft Sie Bristlenose öffnen. Keine Kennung. Nichts aus Ihren Projekten. Änderbar in den Einstellungen."
   },
   "llmSettings": {
@@ -1404,7 +1404,7 @@
     "settings": {
       "checkLabel": "Auf bristlenose.app nach Neuigkeiten suchen",
       "checkExplain": "Einmal täglich. Neuigkeiten und Community-Termine erscheinen im Willkommensfenster.",
-      "countsLabel": "Anonyme Analysedaten",
+      "countsLabel": "Anonyme Analysedaten senden",
       "countsExplain": "Sendet Versionsinformationen und wie oft Sie Bristlenose öffnen. Keine Kennung. Nichts aus Ihren Projekten.",
       "managed": "Von Ihrer Organisation verwaltet"
     }

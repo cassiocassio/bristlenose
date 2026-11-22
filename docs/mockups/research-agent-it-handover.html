@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research agent: IT</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --page: light-dark(#f6f6f4, #1b1b1d);
+  --ink: light-dark(#1d1d1f, #ececee);
+  --muted: light-dark(#6b6b70, #9a9aa0);
+  --rule: light-dark(#dcdcd8, #3a3a3e);
+  --card: light-dark(#ffffff, #242427);
+  --sunk: light-dark(#f0f0ed, #2c2c30);
+  --accent: light-dark(#2563eb, #6b9bff);
+  --ok: light-dark(#15803d, #4ade80);
+  --warn: light-dark(#b45309, #fbbf24);
+  --bad: light-dark(#b91c1c, #f87171);
+  --hatch: light-dark(#e3e0d6, #34343a);
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 16px; margin: 40px 0 10px; font-weight: 600; }
+code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+.lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 12px 0 8px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.sw-art { width: 18px; height: 12px; border: 1px solid var(--rule); background: var(--card); }
+.sw-com { width: 18px; height: 12px; border-left: 3px solid var(--muted);
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); }
+
+/* artefact frame */
+.frame { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--sunk);
+  border-bottom: 1px solid var(--rule); font: 12px var(--mono); color: var(--muted); }
+.bar .dots { display: flex; gap: 5px; }
+.bar .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); display: block; }
+.bar .tag { margin-left: auto; }
+.inner { padding: 20px 24px; }
+
+/* commentary */
+.com { margin: 10px 0 0; padding: 10px 14px; font-size: 13px; color: var(--ink);
+  border: 7px solid transparent; border-left: 3px solid var(--muted);
+  background: linear-gradient(var(--page), var(--page)) padding-box,
+              repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box; }
+.com b.lbl { font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+.com p { margin: 4px 0; }
+.ids { font: 12px var(--mono); color: var(--muted); }
+
+/* product pieces */
+.btn { display: inline-block; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--rule);
+  background: var(--card); color: var(--ink); font: 500 13px var(--body); text-decoration: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; background: var(--card); }
+.card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.card ul { margin: 0; padding-left: 18px; }
+.card li { margin: 2px 0; }
+.muted { color: var(--muted); }
+.ask { font-size: 20px; line-height: 1.35; font-weight: 600; margin: 4px 0 14px; max-width: 34ch; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 500 11.5px var(--body);
+  background: var(--sunk); color: var(--muted); border: 1px solid var(--rule); }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px; padding: 10px 12px; overflow-x: auto; margin: 6px 0 12px; white-space: pre; }
+.mail-h { display: grid; grid-template-columns: 70px 1fr; gap: 2px 10px; font-size: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.mail-h .k { color: var(--muted); }
+.attach { display: inline-flex; gap: 10px; align-items: center; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px; margin-top: 10px; background: var(--sunk); }
+.attach .ic { width: 28px; height: 34px; border-radius: 4px; background: var(--accent); opacity: .85; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.tabs span { padding: 6px 12px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; }
+.tabs span.on { color: var(--ink); border-bottom-color: var(--accent); }
+.term { background: #111214; color: #d6d6d6; border-radius: 7px; padding: 12px 14px; font: 12.5px/1.55 var(--mono); white-space: pre; overflow-x: auto; }
+.term .e { color: #f87171; } .term .d { color: #8b8b93; }
+.opt { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--rule); border-radius:8px; padding:10px 12px; margin:6px 0; }
+.opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.opt .rd { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted); margin-top:3px; flex:none; }
+.opt.on .rd { border:4px solid var(--accent); }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:var(--sunk); border:1px solid var(--rule); font-size:12.5px; margin:2px 4px 2px 0; }
+.chip .x { color: var(--muted); }
+.step { font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing:.04em; margin: 16px 0 4px; }
+.post { border:1px solid var(--rule); border-radius:8px; padding:12px 14px; background:var(--sunk); }
+.sheet { max-width: 460px; margin: 0 auto; border:1px solid var(--rule); border-radius:12px; padding:18px 20px; box-shadow: 0 8px 28px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.5)); background: var(--card); }
+@media (max-width: 640px) { .inner { padding: 16px; } .ask { font-size: 18px; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Research agent: IT's experience</h1>
+<p class="lede">Companion to <code>docs/design-research-agent.md</code>. A quick sketch (Tier 1): hand-rolled styles, and every word is proposed copy nobody has reviewed. It draws the IT admin's jobs as a flow, one frame per scenario; the ids (I1, P7…) match the PRD's §7. How each step is built is parked (PRD Appendix A).</p>
+<p class="lede">The cast is invented: <b>Sam Okafor</b>, a freelance researcher; <b>Priya Shah</b>, an in-house researcher; <b>Halden</b>, the client; <b>Product X</b>, its product.</p>
+<div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario</span></div>
+
+<!-- ============ 1 ============ -->
+<h2>1. A request arrives</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Mail, any client<span class="tag">P2 · I1</span></div>
+  <div class="inner">
+    <div class="mail-h">
+      <span class="k">From</span><span>Sam Okafor (contractor)</span>
+      <span class="k">To</span><span>IT requests</span>
+      <span class="k">Subject</span><span>Request: somewhere to run the Product X research that only Halden sign-in can reach</span>
+    </div>
+    <p>Hi,</p>
+    <p>My engagement on Product X ends on Friday. I'd like to leave the research behind as something the team can ask from Teams, Slack and Figma Make, instead of a file on SharePoint.</p>
+    <p>All I need is somewhere to run it that only people signed in with Halden accounts can reach. The attached file opens to one page written for you: what it is, what's in it, and how to remove it.</p>
+    <p>Priya Shah on the research team has agreed to own it after I leave.</p>
+    <p>Thanks, Sam</p>
+    <div class="attach"><span class="ic"></span><span><b>What we know about Product X</b><br><span class="muted">Research to host · 3 studies</span></span></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>Bristlenose drafts this email at publish time, because "what do I even ask IT for?" is where this dies (P2). Sam doesn't need to know the technical words; the email uses words IT knows, and the ask is the PRD's one sentence (principle 6).</p>
+  <p>It names who owns it after Sam leaves, because a tool nobody owns is IT's biggest worry (§3.2).</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2>2. One page to decide on</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>What we know about Product X · for IT<span class="tag">I1 · I2</span></div>
+  <div class="inner">
+    <p class="muted" style="margin:0">Research prepared by Sam Okafor on 14 Mar 2027</p>
+    <p class="ask">Sam Okafor asks you for somewhere to run this that only people signed in with your accounts can reach.</p>
+    <div class="row" style="margin-bottom:18px">
+      <a class="btn primary" href="#">Set it up</a>
+      <a class="btn" href="#">Security details</a>
+      <a class="btn" href="#">Ask Sam a question</a>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>What it is</h3>
+        <p style="margin:0">Three user-research studies about Product X that your colleagues can ask questions of, from Teams, Slack, Figma Make, Claude or ChatGPT. It answers with quotes from the research and can't change anything.</p></div>
+      <div class="card"><h3>What's in it</h3>
+        <ul><li>3 studies: onboarding, pricing, admin console</li>
+        <li>412 quotes chosen by the researcher, from 36 participants</li>
+        <li>Participants appear as codes (p1, p2…), never by name</li>
+        <li>No video, no audio, no full transcripts</li>
+        <li>Stops answering on 31 Mar 2028</li></ul></div>
+      <div class="card"><h3>Who's involved</h3>
+        <ul><li>It runs on your infrastructure, behind your sign-in</li>
+        <li>You choose who can ask, from your existing groups</li>
+        <li>No one outside Halden holds the data, including the makers of Bristlenose</li></ul></div>
+      <div class="card"><h3>How to remove it</h3>
+        <p style="margin:0">One action removes it and everything in it. No copy is kept anywhere else.</p></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>I1 and I2: the page leads with the ask, then answers what a reviewer decides on, in that order. "How to remove it" is on the first screen on purpose: it's the question that gets things approved.</p>
+  <p>"Security details" holds the checklist (signature, software list, network, logs) for whoever reviews it. That's real content, but implementation detail, so it's parked in the PRD's Appendix A and not drawn here.</p>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2>3. Set it up: where, and who</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Set up “What we know about Product X”<span class="tag">I3 · I4</span></div>
+  <div class="inner">
+    <div class="step">1 · Where should it run?</div>
+    <div class="opt on"><span class="rd"></span><span><b>Microsoft</b><br><span class="muted">Your Azure subscription, signed in with your Microsoft 365 accounts</span></span></div>
+    <div class="opt"><span class="rd"></span><span><b>Google</b><br><span class="muted">Your Google Cloud project, signed in with your Google Workspace accounts</span></span></div>
+    <div class="opt"><span class="rd"></span><span><b>A platform you already use</b><br><span class="muted">Anywhere that runs a container behind your sign-in</span></span></div>
+
+    <div class="step">2 · Who can ask it?</div>
+    <div><span class="chip">Product X team <span class="x">×</span></span><span class="chip">Design &amp; Research <span class="x">×</span></span><span class="chip muted">+ Add a group</span></div>
+    <p class="muted" style="margin:4px 0 0;font-size:12.5px">Groups from Microsoft 365. Anyone you add to them later can ask too.</p>
+
+    <div class="step">3 · Who can add research to it?</div>
+    <div><span class="chip">Sam Okafor (guest) · until 31 Mar 2027 <span class="x">×</span></span><span class="chip">Priya Shah <span class="x">×</span></span><span class="chip muted">+ Add a person or group</span></div>
+
+    <div class="row" style="margin-top:18px;justify-content:flex-end"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Set Up</a></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>I3: two decisions IT is good at, where it runs and who gets in, and nothing else. I4: offering it to everyone in a role is adding the role's group under "Who can ask"; offering it to one team is adding that team. Membership stays where IT already manages it, Microsoft 365 or Google Workspace, so there's no second user list.</p>
+  <p>Asking and adding research are separate on purpose: a guest freelancer can be allowed to publish until a date without being able to see anyone else's collections.</p>
+  <p>Whether "Set Up" can really be one guided step on each platform is an implementation question (Appendix A). The experience goal is that IT never needs a developer.</p>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4. It's ready: tell the team</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Set up “What we know about Product X”<span class="tag">I5 · A11</span></div>
+  <div class="inner">
+    <p class="ask" style="max-width:none">@UXR-ProductX is ready for the Product X team and Design &amp; Research.</p>
+    <p class="muted" style="margin:-6px 0 14px">Post this in the team's channel so people know it's there:</p>
+    <div class="post">
+      <p style="margin:0 0 6px"><b>Meet @UXR-ProductX</b>: everything Sam Okafor's research found about Product X, from 3 studies with 36 participants (Oct 2026 to Mar 2027).</p>
+      <p style="margin:0 0 6px">Mention it here, or add it in Figma Make, Claude or ChatGPT, and ask things like <i>“what frustrated people about onboarding?”</i> It answers with quotes from the research and says when the research doesn't cover something.</p>
+      <p style="margin:0">Questions about the research: Priya Shah.</p>
+    </div>
+    <div class="row" style="margin-top:12px"><a class="btn primary" href="#">Copy</a><a class="btn" href="#">Post to Teams…</a><a class="btn" href="#">How to add it in Figma Make, Claude or ChatGPT</a></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>I5 and A11: an agent nobody knows about is wasted. IT ends setup holding a post they can paste, which says what it knows, where to use it, one example question, and who to ask. The same text reaches the asker as the first thing they see (team mockup, frame 1).</p>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2>5. Day to day</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Halden research · signed in as IT admin<span class="tag">I6 · I4</span></div>
+  <div class="inner">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <div><b>Halden research</b> <span class="pill ok">working</span> <span class="muted">· nothing needs you</span></div>
+      <a class="btn" href="#">Set up another collection</a>
+    </div>
+    <table>
+      <tr><th>Collection</th><th>Studies</th><th>Who can ask</th><th>Who can add research</th><th>This month</th></tr>
+      <tr><td><b>What we know about Product X</b><br><span class="muted">@UXR-ProductX</span></td><td>3 · updated 14 Mar 2027</td><td>Product X team<br>Design &amp; Research</td><td>Sam Okafor (guest, until 31 Mar)<br>Priya Shah</td><td>214 questions from 38 people</td></tr>
+      <tr><td><b>Checkout research</b><br><span class="muted">@UXR-Checkout</span></td><td>2 · updated 2 Feb 2027</td><td>Design &amp; Research</td><td>Priya Shah</td><td>41 questions from 9 people</td></tr>
+    </table>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>I6: a quiet page. "Working, nothing needs you" is the normal state, and it shouldn't page anyone. Several collections live side by side, each with its own audience (I4).</p>
+  <p>"This month" counts questions and people, never what was asked: IT needs to know it's used, and the questions are the asker's business. Whether to show people counts at all is an owner call.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2>6. Sam comes back; Priya adds research at the same time</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Halden research · What we know about Product X<span class="tag">P7 · P6 · I7 · I8</span></div>
+  <div class="inner">
+    <div class="card" style="border-color:var(--warn);margin-bottom:14px">
+      <b>Sam Okafor would like to add 2 studies to this collection.</b>
+      <p style="margin:4px 0 10px">Their permission to add research ended on 31 Mar 2027. They asked again on 18 Aug 2027.</p>
+      <div class="row"><a class="btn primary" href="#">Allow Until…</a><a class="btn" href="#">Not Now</a></div>
+    </div>
+    <table>
+      <tr><th style="width:24%">When</th><th>What happened</th></tr>
+      <tr><td>18 Aug 2027, 14:12</td><td><b>Sam Okafor</b> added 2 studies: <i>Permissions</i>, <i>Team invites</i>. The collection now has 6.</td></tr>
+      <tr><td>18 Aug 2027, 14:11</td><td><b>Priya Shah</b> updated her study <i>Admin console follow-up</i>. The other studies are unchanged.</td></tr>
+      <tr><td>18 Aug 2027, 09:40</td><td>You allowed Sam Okafor to add research until 31 Dec 2027.</td></tr>
+      <tr><td>2 May 2027, 11:05</td><td><b>Priya Shah</b> added 1 study: <i>Admin console follow-up</i>.</td></tr>
+      <tr><td>14 Mar 2027, 17:02</td><td><b>Sam Okafor</b> added 3 studies: <i>Onboarding</i>, <i>Pricing</i>, <i>Admin console</i>.</td></tr>
+    </table>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>The banner shows the moment before 09:40, the activity shows the day as it went; both are on one frame to save space.</p>
+  <p>P7 and I7: Sam returns five months later. The only thing IT does is renew one permission: no re-install, no new name for the team. Sam's earlier three studies stay as they were, and Sam doesn't need them back.</p>
+  <p>P6 and I8: Priya works on her own Mac and publishes a minute before Sam. Both land; neither touches the other's studies. There is nothing for IT to resolve.</p>
+  <p>The banner is the only thing that asks IT to act, and it names who, what, since when, and the one action.</p>
+</div>
+
+<!-- ============ 7 ============ -->
+<h2>7. End of life</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Halden research · Checkout research<span class="tag">I9 · A10</span></div>
+  <div class="inner">
+    <table style="margin-bottom:18px">
+      <tr><th>Study</th><th>State</th></tr>
+      <tr><td>Checkout diary study, 2025</td><td><span class="pill bad">stopped answering on 1 Apr 2028</span><br><span class="muted">People who ask are told it has expired and to ask Priya Shah.</span></td></tr>
+    </table>
+    <div class="sheet">
+      <b>Remove “Checkout research”?</b>
+      <p style="margin:6px 0">This removes the collection and its 2 studies. People will no longer be able to ask @UXR-Checkout. No copy is kept anywhere.</p>
+      <p class="muted" style="margin:6px 0 14px">Priya Shah, who adds research to it, will be told.</p>
+      <div class="row" style="justify-content:flex-end"><a class="btn primary" href="#">Cancel</a><a class="btn" href="#" style="color:var(--bad)">Remove</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>I9: two endings. A study's end date passes and it stops answering on its own, telling askers who to ask instead (A10). Or IT removes a collection: one confirmation naming exactly what goes, that it can't be undone, and who will be told. Cancel is the default button, because this is a real loss.</p>
+</div>
+
+</main>
+</body>
+</html>

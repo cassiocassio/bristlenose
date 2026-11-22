@@ -347,6 +347,14 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `release-train-board.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 · IMPLEMENTED 5 Sep 2026 as `scripts/release-board.template.html` + `scripts/release-board.py` (the channel count is read from `project.conf`, not written anywhere) — sketch B: one fixed 16" screen (1728×1117), build stack left, nine channel cards right, irreversible line between, event log + activity strip along the bottom. Grid of grids, no scrolling |
 | `release-train-scroll.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch C: long scrolling page, time down to scale (1 px = 6 s), swimlanes by architecture chunk, every bar anchored to the event line that emitted it; gaps are waiting |
 
+## research-agent
+
+| Mockup | Last edit | Lifecycle |
+|---|---|---|
+| `research-agent-publisher.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch for `docs/design-research-agent.md`: the researcher's flow from the curated view to Publish, the hand-off to IT or an agent builder, returning with more studies, correcting one, and the no-sign-in stop (scenarios P1–P10). Unreviewed copy; the curated tab's name is a placeholder. |
+| `research-agent-it-handover.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch for `docs/design-research-agent.md`: the IT admin's flow, from a researcher's request to end of life (scenarios I1–I9, P6, P7). Unreviewed copy; implementation parked. |
+| `research-agent-team-member.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch for `docs/design-research-agent.md`: the asker's experience in Teams-, Slack-, Figma Make- and Claude-like stand-ins (scenarios A1–A11), plus agent pack vs research agent. Unreviewed copy. |
+
 ## sessions
 
 | Mockup | Last edit | Lifecycle |

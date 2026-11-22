@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research agent: publishing</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --page: light-dark(#f6f6f4, #1b1b1d);
+  --ink: light-dark(#1d1d1f, #ececee);
+  --muted: light-dark(#6b6b70, #9a9aa0);
+  --rule: light-dark(#dcdcd8, #3a3a3e);
+  --card: light-dark(#ffffff, #242427);
+  --sunk: light-dark(#f0f0ed, #2c2c30);
+  --accent: light-dark(#2563eb, #6b9bff);
+  --ok: light-dark(#15803d, #4ade80);
+  --warn: light-dark(#b45309, #fbbf24);
+  --bad: light-dark(#b91c1c, #f87171);
+  --hatch: light-dark(#e3e0d6, #34343a);
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 16px; margin: 40px 0 10px; font-weight: 600; }
+code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+.lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 12px 0 8px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.sw-art { width: 18px; height: 12px; border: 1px solid var(--rule); background: var(--card); }
+.sw-com { width: 18px; height: 12px; border-left: 3px solid var(--muted);
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); }
+
+/* artefact frame */
+.frame { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--sunk);
+  border-bottom: 1px solid var(--rule); font: 12px var(--mono); color: var(--muted); }
+.bar .dots { display: flex; gap: 5px; }
+.bar .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); display: block; }
+.bar .tag { margin-left: auto; }
+.inner { padding: 20px 24px; }
+
+/* commentary */
+.com { margin: 10px 0 0; padding: 10px 14px; font-size: 13px; color: var(--ink);
+  border: 7px solid transparent; border-left: 3px solid var(--muted);
+  background: linear-gradient(var(--page), var(--page)) padding-box,
+              repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box; }
+.com b.lbl { font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+.com p { margin: 4px 0; }
+.ids { font: 12px var(--mono); color: var(--muted); }
+
+/* product pieces */
+.btn { display: inline-block; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--rule);
+  background: var(--card); color: var(--ink); font: 500 13px var(--body); text-decoration: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; background: var(--card); }
+.card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.card ul { margin: 0; padding-left: 18px; }
+.card li { margin: 2px 0; }
+.muted { color: var(--muted); }
+.ask { font-size: 20px; line-height: 1.35; font-weight: 600; margin: 4px 0 14px; max-width: 34ch; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 500 11.5px var(--body);
+  background: var(--sunk); color: var(--muted); border: 1px solid var(--rule); }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px; padding: 10px 12px; overflow-x: auto; margin: 6px 0 12px; white-space: pre; }
+.mail-h { display: grid; grid-template-columns: 70px 1fr; gap: 2px 10px; font-size: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.mail-h .k { color: var(--muted); }
+.attach { display: inline-flex; gap: 10px; align-items: center; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px; margin-top: 10px; background: var(--sunk); }
+.attach .ic { width: 28px; height: 34px; border-radius: 4px; background: var(--accent); opacity: .85; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.tabs span { padding: 6px 12px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; }
+.tabs span.on { color: var(--ink); border-bottom-color: var(--accent); }
+.term { background: #111214; color: #d6d6d6; border-radius: 7px; padding: 12px 14px; font: 12.5px/1.55 var(--mono); white-space: pre; overflow-x: auto; }
+.term .e { color: #f87171; } .term .d { color: #8b8b93; }
+.opt { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--rule); border-radius:8px; padding:10px 12px; margin:6px 0; }
+.opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.opt .rd { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted); margin-top:3px; flex:none; }
+.opt.on .rd { border:4px solid var(--accent); }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:var(--sunk); border:1px solid var(--rule); font-size:12.5px; margin:2px 4px 2px 0; }
+.chip .x { color: var(--muted); }
+.step { font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing:.04em; margin: 16px 0 4px; }
+.post { border:1px solid var(--rule); border-radius:8px; padding:12px 14px; background:var(--sunk); }
+.sheet { max-width: 460px; margin: 0 auto; border:1px solid var(--rule); border-radius:12px; padding:18px 20px; box-shadow: 0 8px 28px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.5)); background: var(--card); }
+.chat { display:flex; flex-direction:column; gap:14px; }
+.msg { display:flex; gap:10px; align-items:flex-start; }
+.av { width:32px; height:32px; border-radius:7px; flex:none; display:grid; place-items:center; font:600 12px var(--body); color:#fff; background:#8b8b93; }
+.av.bot { background: var(--accent); }
+.who { font-weight:600; font-size:13px; }
+.who .agent { font: 500 10.5px var(--body); color: var(--muted); border:1px solid var(--rule); border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px; }
+.who .t { font-weight:400; color: var(--muted); font-size:12px; margin-left:6px; }
+.body p { margin: 2px 0 6px; }
+.q { border-left:3px solid var(--accent); padding:4px 10px; margin:6px 0; background: var(--sunk); border-radius: 0 6px 6px 0; }
+.q .txt { margin:0; }
+.q .cite { font: 11.5px var(--mono); color: var(--muted); }
+.foot { font-size:12px; color: var(--muted); border-top:1px solid var(--rule); padding-top:6px; margin-top:8px; }
+.mention { color: var(--accent); font-weight:500; }
+.split { display:grid; grid-template-columns: minmax(260px, 360px) 1fr; gap:0; }
+.split > div { padding: 16px 18px; }
+.split > div + div { border-left:1px solid var(--rule); background: var(--sunk); }
+.phone { width: 220px; margin: 0 auto; border:1px solid var(--rule); border-radius: 22px; background: var(--card); padding: 18px 14px; min-height: 380px; }
+.wf { height:10px; border-radius:4px; background: var(--rule); margin:8px 0; }
+.wf.s { width:60%; } .wf.m { width:80%; }
+.wfbtn { height:34px; border-radius:8px; background: var(--accent); opacity:.85; margin-top:18px; }
+.used { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.small { font-size:12.5px; }
+.compose { border:1px solid var(--rule); border-radius:8px; padding:8px 10px; color: var(--muted); font-size:13px; margin-top:12px; }
+@media (max-width: 720px) { .split { grid-template-columns: 1fr; } .split > div + div { border-left:0; border-top:1px solid var(--rule); } }
+.app { display:grid; grid-template-columns: 210px 1fr; min-height: 360px; }
+.side { background: var(--sunk); border-right:1px solid var(--rule); padding: 12px 8px; font-size: 13px; }
+.side .grp { font: 600 11px var(--body); color: var(--muted); margin: 10px 8px 4px; }
+.side .it { display:flex; gap:8px; align-items:center; padding: 5px 8px; border-radius: 6px; }
+.side .it.sel { background: var(--accent); color: #fff; }
+.side .it .cb { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid currentColor; opacity: .8; flex:none; }
+.side .it.sel .cb { background: #fff; }
+.pane { padding: 0; }
+.scrim { min-height: 100%; background: light-dark(rgba(0,0,0,.08), rgba(0,0,0,.35)); display:flex; justify-content:center; align-items:flex-start; padding: 24px 16px; }
+.sheet.wide { max-width: 520px; width: 100%; }
+.sheet h4 { margin: 0 0 8px; font-size: 14px; }
+.btns { display:flex; gap:8px; justify-content:flex-end; margin-top: 16px; }
+.btn.dis { opacity: .45; }
+.sec-h { font: 600 12px var(--body); color: var(--muted); margin: 14px 0 6px; text-transform: none; }
+.clip { display:flex; gap:10px; align-items:center; border:1px solid var(--rule); border-radius:8px; padding:6px; margin:4px 0; }
+.clip .th { width: 64px; height: 38px; border-radius: 4px; background: var(--rule); flex:none; }
+.flag { display:flex; gap:10px; align-items:flex-start; border-top: 1px solid var(--rule); padding: 8px 0; font-size: 13px; }
+.flag .q { flex:1; margin:0; }
+.seg { display:inline-flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden; font-size:12px; flex:none; }
+.seg span { padding: 3px 8px; } .seg span.on { background: var(--accent); color:#fff; }
+.num { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background: var(--accent); color:#fff; font: 600 11px var(--body); margin-right: 8px; flex:none; }
+.stepl { display:flex; align-items:flex-start; margin: 8px 0; }
+@media (max-width: 720px) { .app { grid-template-columns: 1fr; } .side { border-right:0; border-bottom:1px solid var(--rule); } }
+@media (max-width: 640px) { .inner { padding: 16px; } .ask { font-size: 18px; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Research agent: the researcher publishing</h1>
+<p class="lede">Companion to <code>docs/design-research-agent.md</code>. A quick sketch (Tier 1): hand-rolled styles that only approximate the Mac app, and every word is proposed copy nobody has reviewed. It draws the publisher's jobs (PRD §3.1) as a flow, one frame per scenario; the ids (P1…P10) match the PRD's §7.1.</p>
+<p class="lede">The cast is invented: <b>Sam Okafor</b>, a freelance researcher; <b>Priya Shah</b>, an in-house researcher; <b>Halden</b>, the client; <b>Product X</b>, its product.</p>
+<div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario</span></div>
+
+<!-- ============ 1 ============ -->
+<h2>1. The curated view the agent is made from</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Product X onboarding · Highlights<span class="tag">P1 · prerequisite</span></div>
+  <div class="inner">
+    <div class="row" style="justify-content:space-between">
+      <div><b style="font-size:16px">Highlights</b> <span class="muted">· what you'd tell the team</span></div>
+      <a class="btn primary" href="#">Publish…</a>
+    </div>
+    <div class="sec-h">Strongest signals</div>
+    <div class="card" style="padding:10px 14px"><b>Confusion during onboarding</b> <span class="muted">· 9 of 14 participants</span></div>
+    <div class="card" style="padding:10px 14px;margin-top:6px"><b>Asked to invite the team too early</b> <span class="muted">· 3 of 14 participants</span></div>
+    <div class="sec-h">Starred quotes · 38</div>
+    <div class="q"><p class="txt">“I didn't know what a ‘workspace’ was, so I just clicked whatever was blue.”</p><span class="cite">p4 · 14 Nov 2026 · 12:41</span></div>
+    <div class="q"><p class="txt">“I gave up on the import step and came back two days later.”</p><span class="cite">p2 · 12 Nov 2026 · 31:02</span></div>
+    <div class="sec-h">If you only watch these · 4 clips</div>
+    <div class="clip"><span class="th"></span><span class="small">p4 hunts for the right button · 0:38</span></div>
+    <div class="clip"><span class="th"></span><span class="small">p9 on being asked to invite people · 0:52</span></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>The future Report lens, which the PRD makes a prerequisite (§5). It is the researcher's argument: the signals they stand behind, the quotes they starred, the clips worth watching. Publish lives here and nowhere else, so what gets published is always what the researcher chose (principle 4).</p>
+  <p><b>Naming:</b> "Highlights" is a placeholder. Researchers don't say "lens" (they say "go into Quotes"), so the tab needs a real name, and "Report" already means the whole thing. Owner call.</p>
+  <p>Clips appear here but aren't published in the first version (PRD §5); frame 4 says so at the moment it matters.</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2>2. Nothing chosen yet</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Product X pricing<span class="tag">P3</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet">
+      <h4>There's nothing to publish yet</h4>
+      <p style="margin:0">Publishing shares what you've chosen in Highlights. Star the quotes and signals you'd tell the team about, then publish.</p>
+      <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Open Highlights</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P3: there's no "publish everything" default, and no way round this sheet. The title states the fact; the body says what to do. The primary button takes them straight to the place where the fix happens.</p>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2>3. Sam publishes three studies together</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose<span class="tag">P2</span></div>
+  <div class="app">
+    <div class="side">
+      <div class="grp">Halden · Product X</div>
+      <div class="it sel"><span class="cb"></span>Onboarding</div>
+      <div class="it sel"><span class="cb"></span>Pricing</div>
+      <div class="it sel"><span class="cb"></span>Admin console</div>
+      <div class="grp">Other clients</div>
+      <div class="it"><span class="cb"></span>Meridian checkout</div>
+    </div>
+    <div class="pane">
+      <div class="scrim">
+        <div class="sheet wide">
+          <h4>Publish 3 Studies</h4>
+          <div class="sec-h">Name</div>
+          <div class="compose" style="margin-top:0;color:var(--ink)">What we know about Product X</div>
+          <p class="muted small" style="margin:4px 0 0">People will ask it as @UXR-ProductX</p>
+          <div class="sec-h">How should your team get it?</div>
+          <div class="opt on"><span class="rd"></span><span><b>Somewhere they can ask from Teams, Slack and Figma Make</b><br><span class="muted">Halden's IT sets it up once. You'll get a request to send them.</span></span></div>
+          <div class="opt"><span class="rd"></span><span><b>Files for an agent they make themselves</b><br><span class="muted">For Copilot, Gemini, ChatGPT or Claude. No IT needed.</span></span></div>
+          <div class="opt"><span class="rd"></span><span><b>A report file</b><br><span class="muted">One file people open in a browser.</span></span></div>
+          <div class="sec-h">Stop answering after</div>
+          <div class="row"><div class="compose" style="margin:0;color:var(--ink)">31 Mar 2028</div><span class="muted small">Optional. Check your contract with Halden.</span></div>
+          <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Continue</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P2: select the three projects in the sidebar, choose Publish, and the sheet asks three things only: what to call it, how the team should get it, and when it should stop. Sam never meets the words "container", "SSO" or "MCP": the options are described by where the team will use them and whether IT is involved.</p>
+  <p>The three options are the PRD's three tiers (§6). The end date is optional, with a nudge towards the contract, because freelance engagements often set how long research may be kept.</p>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4. Check what will leave</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Studies<span class="tag">P1 · P4</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide">
+      <h4>What we know about Product X will include</h4>
+      <ul style="margin:0 0 8px;padding-left:18px">
+        <li>3 studies: Onboarding, Pricing, Admin console</li>
+        <li>412 starred quotes and 9 signals, from 36 participants</li>
+        <li>Participants as codes (p1, p2…). Their names stay on this Mac</li>
+      </ul>
+      <p class="muted small" style="margin:0 0 4px">Not included: hidden quotes, full transcripts, and the 11 clips (video can't be published yet).</p>
+      <div class="sec-h" style="color:var(--warn)">2 quotes may identify someone</div>
+      <div class="flag"><p class="q">“…since I moved from the Leeds office to run the <mark>finance team at Halden</mark>…”</p><span class="seg"><span>Keep</span><span class="on">Leave Out</span></span></div>
+      <div class="flag"><p class="q">“My manager, <mark>Rob</mark>, set the whole thing up for us.”</p><span class="seg"><span>Keep</span><span>Leave Out</span></span></div>
+      <div class="btns"><a class="btn" href="#">Back</a><a class="btn primary dis" href="#">Publish</a></div>
+      <p class="muted small" style="margin:6px 0 0;text-align:right">Decide on 1 more quote to publish.</p>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P1: the one confirmation worth having, because publishing is a real disclosure. It says exactly what goes, and in a separate line what doesn't, so nobody assumes the clips went too.</p>
+  <p>P4: quotes the redaction pass flagged are decided one by one before anything leaves. Publish stays unavailable until each has an answer, and the line under it counts what's left. Finding out after it's live is the outcome this frame exists to prevent.</p>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2>5. Ready to send to IT</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Studies<span class="tag">P2 · P5</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide">
+      <h4>Ready to send to Halden's IT</h4>
+      <p style="margin:0 0 10px">“What we know about Product X” is saved in Downloads. Send it to IT with this request; it opens to a page written for them.</p>
+      <div class="post small">
+        <p style="margin:0 0 4px"><b>Request: somewhere to run the Product X research that only Halden sign-in can reach</b></p>
+        <p style="margin:0">My engagement on Product X ends on Friday. I'd like to leave the research behind as something the team can ask from Teams, Slack and Figma Make…</p>
+      </div>
+      <div class="row" style="margin-top:10px"><a class="btn" href="#">Copy Request</a><a class="btn" href="#">Open in Mail</a><a class="btn" href="#">Show in Finder</a></div>
+      <p class="muted small" style="margin:12px 0 0">If IT can't host it, you can publish the same studies as files for an agent instead. Nothing needs redoing.</p>
+      <div class="btns"><a class="btn primary" href="#">Done</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P2: the end of Sam's part. A file, and a request already written in words IT knows (the IT mockup's frame 1 is what arrives). Sam can copy it, open it in Mail, or find the file.</p>
+  <p>P5 is answered before it happens: if IT says no, the same choices publish as files for an agent instead, with nothing redone.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2>6. Or: files for an agent the team makes</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Studies<span class="tag">P10</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide">
+      <h4>Where does your team keep shared files?</h4>
+      <div class="opt on"><span class="rd"></span><span><b>OneDrive</b> <span class="muted">· OneDrive - Halden, on this Mac</span></span></div>
+      <div class="opt"><span class="rd"></span><span><b>Google Drive</b> <span class="muted">· not on this Mac</span></span></div>
+      <div class="opt"><span class="rd"></span><span><b>Another folder…</b></span></div>
+      <div class="tabs" style="margin-top:16px"><span class="on">Copilot</span><span>Gemini</span><span>ChatGPT</span><span>Claude</span></div>
+      <div class="stepl"><span class="num">1</span><span>Saved to <b>OneDrive - Halden › Research › What we know about Product X</b>.</span></div>
+      <div class="stepl"><span class="num">2</span><span>In Microsoft 365 Copilot, create an agent and add that folder as its knowledge.</span></div>
+      <div class="stepl"><span class="num">3</span><span>Paste these instructions into the agent. <a class="btn" href="#" style="padding:2px 10px;margin-left:4px">Copy Instructions</a></span></div>
+      <div class="stepl"><span class="num">4</span><span>Share the agent and the folder with the Product X team.</span></div>
+      <div class="btns"><a class="btn" href="#">Open Copilot</a><a class="btn primary" href="#">Done</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P10, the zero-sign-in route: Bristlenose saves the pack into the cloud folder already on the Mac, then walks the researcher through the last steps, which only they can do in the builder. No sign-in screen, no "needs admin approval".</p>
+  <p>"Not on this Mac" is stated as a fact, not hidden: Google Drive still works through "Another folder…" or a later sign-in route (PRD §9 Q7). The tabs show the same four steps in each builder's own words.</p>
+  <p>Step 3's instructions carry the rules the research agent enforces itself: answer with quotes, say when the research doesn't cover something, don't count beyond the numbers given (asker mockup, frame 8).</p>
+</div>
+
+<!-- ============ 7 ============ -->
+<h2>7. Sam comes back with two more studies</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 2 Studies<span class="tag">P7 · P6</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide">
+      <h4>Publish 2 Studies</h4>
+      <div class="opt"><span class="rd"></span><span><b>As something new</b></span></div>
+      <div class="opt on"><span class="rd"></span><span><b>Add to What we know about Product X</b><br><span class="muted">Halden · @UXR-ProductX · you published it on 14 Mar 2027</span></span></div>
+      <div class="sec-h">After publishing it will have 6 studies</div>
+      <table class="small">
+        <tr><td><b>Permissions</b>, <b>Team invites</b></td><td>New, from you</td></tr>
+        <tr><td>Onboarding, Pricing, Admin console</td><td>Yours, published 14 Mar 2027. Unchanged</td></tr>
+        <tr><td>Admin console follow-up</td><td>Priya Shah's. Unchanged</td></tr>
+      </table>
+      <div class="card" style="border-color:var(--warn);margin-top:12px">
+        <b>Halden needs to allow you to add research again</b>
+        <p style="margin:4px 0 0">Your permission ended on 31 Mar 2027. Bristlenose will ask Halden's IT, and publish as soon as they say yes.</p>
+      </div>
+      <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Ask and Publish</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P7: five months later. Sam adds to the existing collection by picking it, not by finding old files: the three earlier studies are listed as unchanged and Sam doesn't need their sources. The team's @UXR-ProductX stays the same.</p>
+  <p>P6: Priya's study is in the list, marked as hers and unchanged. Two researchers on two Macs each publish their own studies; nobody coordinates, nobody overwrites.</p>
+  <p>The expired permission is turned into one button that asks IT and finishes the job once they agree (the IT mockup's frame 6 is the other end of it). Sam doesn't have to email anyone.</p>
+</div>
+
+<!-- ============ 8 ============ -->
+<h2>8. Correcting a published study</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Admin console follow-up<span class="tag">P9</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet">
+      <h4>Update “Admin console follow-up”?</h4>
+      <p style="margin:0">People asking @UXR-ProductX will get answers from this version, dated today. The version published on 2 May 2027 is removed.</p>
+      <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Update</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P9: Priya corrects her study. The sheet says what askers will see (the new date) and what happens to the old version (removed, not archived), because "the old version lingering somewhere" is the outcome to rule out. Only her own study is touched.</p>
+</div>
+
+<!-- ============ 9 ============ -->
+<h2>9. Publishing to a self-serve platform with no sign-in</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 1 Study<span class="tag">P8</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet">
+      <h4>Anyone with the address could read this</h4>
+      <p style="margin:0 0 6px">experiments.halden.example answered without asking who you are. Publishing there would put participants' words where anyone with the link can read them.</p>
+      <p style="margin:0">Ask whoever runs that platform to put Halden sign-in in front of it, then publish again.</p>
+      <div class="btns"><a class="btn primary" href="#">OK</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P8: the researcher with a Netlify-style experiments platform. There's no "publish anyway": quotes on the open internet aren't a trade-off a researcher can make on participants' behalf. The title states the consequence in plain words; the body says what was checked and the one way forward. A single OK, because there's nothing to choose.</p>
+  <p>How Bristlenose tells that an address "answered without asking who you are" is implementation, parked (PRD Appendix A). The experience is what's drawn.</p>
+</div>
+
+</main>
+</body>
+</html>

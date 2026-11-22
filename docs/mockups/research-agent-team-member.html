@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research agent: askers</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --page: light-dark(#f6f6f4, #1b1b1d);
+  --ink: light-dark(#1d1d1f, #ececee);
+  --muted: light-dark(#6b6b70, #9a9aa0);
+  --rule: light-dark(#dcdcd8, #3a3a3e);
+  --card: light-dark(#ffffff, #242427);
+  --sunk: light-dark(#f0f0ed, #2c2c30);
+  --accent: light-dark(#2563eb, #6b9bff);
+  --ok: light-dark(#15803d, #4ade80);
+  --warn: light-dark(#b45309, #fbbf24);
+  --bad: light-dark(#b91c1c, #f87171);
+  --hatch: light-dark(#e3e0d6, #34343a);
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 16px; margin: 40px 0 10px; font-weight: 600; }
+code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+.lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 12px 0 8px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.sw-art { width: 18px; height: 12px; border: 1px solid var(--rule); background: var(--card); }
+.sw-com { width: 18px; height: 12px; border-left: 3px solid var(--muted);
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); }
+
+/* artefact frame */
+.frame { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--sunk);
+  border-bottom: 1px solid var(--rule); font: 12px var(--mono); color: var(--muted); }
+.bar .dots { display: flex; gap: 5px; }
+.bar .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); display: block; }
+.bar .tag { margin-left: auto; }
+.inner { padding: 20px 24px; }
+
+/* commentary */
+.com { margin: 10px 0 0; padding: 10px 14px; font-size: 13px; color: var(--ink);
+  border: 7px solid transparent; border-left: 3px solid var(--muted);
+  background: linear-gradient(var(--page), var(--page)) padding-box,
+              repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box; }
+.com b.lbl { font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+.com p { margin: 4px 0; }
+.ids { font: 12px var(--mono); color: var(--muted); }
+
+/* product pieces */
+.btn { display: inline-block; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--rule);
+  background: var(--card); color: var(--ink); font: 500 13px var(--body); text-decoration: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; background: var(--card); }
+.card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.card ul { margin: 0; padding-left: 18px; }
+.card li { margin: 2px 0; }
+.muted { color: var(--muted); }
+.ask { font-size: 20px; line-height: 1.35; font-weight: 600; margin: 4px 0 14px; max-width: 34ch; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 500 11.5px var(--body);
+  background: var(--sunk); color: var(--muted); border: 1px solid var(--rule); }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px; padding: 10px 12px; overflow-x: auto; margin: 6px 0 12px; white-space: pre; }
+.mail-h { display: grid; grid-template-columns: 70px 1fr; gap: 2px 10px; font-size: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.mail-h .k { color: var(--muted); }
+.attach { display: inline-flex; gap: 10px; align-items: center; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px; margin-top: 10px; background: var(--sunk); }
+.attach .ic { width: 28px; height: 34px; border-radius: 4px; background: var(--accent); opacity: .85; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.tabs span { padding: 6px 12px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; }
+.tabs span.on { color: var(--ink); border-bottom-color: var(--accent); }
+.term { background: #111214; color: #d6d6d6; border-radius: 7px; padding: 12px 14px; font: 12.5px/1.55 var(--mono); white-space: pre; overflow-x: auto; }
+.term .e { color: #f87171; } .term .d { color: #8b8b93; }
+.opt { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--rule); border-radius:8px; padding:10px 12px; margin:6px 0; }
+.opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.opt .rd { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted); margin-top:3px; flex:none; }
+.opt.on .rd { border:4px solid var(--accent); }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:var(--sunk); border:1px solid var(--rule); font-size:12.5px; margin:2px 4px 2px 0; }
+.chip .x { color: var(--muted); }
+.step { font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing:.04em; margin: 16px 0 4px; }
+.post { border:1px solid var(--rule); border-radius:8px; padding:12px 14px; background:var(--sunk); }
+.sheet { max-width: 460px; margin: 0 auto; border:1px solid var(--rule); border-radius:12px; padding:18px 20px; box-shadow: 0 8px 28px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.5)); background: var(--card); }
+.chat { display:flex; flex-direction:column; gap:14px; }
+.msg { display:flex; gap:10px; align-items:flex-start; }
+.av { width:32px; height:32px; border-radius:7px; flex:none; display:grid; place-items:center; font:600 12px var(--body); color:#fff; background:#8b8b93; }
+.av.bot { background: var(--accent); }
+.who { font-weight:600; font-size:13px; }
+.who .agent { font: 500 10.5px var(--body); color: var(--muted); border:1px solid var(--rule); border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px; }
+.who .t { font-weight:400; color: var(--muted); font-size:12px; margin-left:6px; }
+.body p { margin: 2px 0 6px; }
+.q { border-left:3px solid var(--accent); padding:4px 10px; margin:6px 0; background: var(--sunk); border-radius: 0 6px 6px 0; }
+.q .txt { margin:0; }
+.q .cite { font: 11.5px var(--mono); color: var(--muted); }
+.foot { font-size:12px; color: var(--muted); border-top:1px solid var(--rule); padding-top:6px; margin-top:8px; }
+.mention { color: var(--accent); font-weight:500; }
+.split { display:grid; grid-template-columns: minmax(260px, 360px) 1fr; gap:0; }
+.split > div { padding: 16px 18px; }
+.split > div + div { border-left:1px solid var(--rule); background: var(--sunk); }
+.phone { width: 220px; margin: 0 auto; border:1px solid var(--rule); border-radius: 22px; background: var(--card); padding: 18px 14px; min-height: 380px; }
+.wf { height:10px; border-radius:4px; background: var(--rule); margin:8px 0; }
+.wf.s { width:60%; } .wf.m { width:80%; }
+.wfbtn { height:34px; border-radius:8px; background: var(--accent); opacity:.85; margin-top:18px; }
+.used { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.small { font-size:12.5px; }
+.compose { border:1px solid var(--rule); border-radius:8px; padding:8px 10px; color: var(--muted); font-size:13px; margin-top:12px; }
+@media (max-width: 720px) { .split { grid-template-columns: 1fr; } .split > div + div { border-left:0; border-top:1px solid var(--rule); } }
+@media (max-width: 640px) { .inner { padding: 16px; } .ask { font-size: 18px; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Research agent: the asker's experience</h1>
+<p class="lede">Companion to <code>docs/design-research-agent.md</code>. A quick sketch (Tier 1): hand-rolled styles, and every word is proposed copy nobody has reviewed. It draws what a PM, designer or engineer on the Product X team experiences, one frame per scenario; the ids (A1…) match the PRD's §7.</p>
+<p class="lede">The chat surfaces are generic stand-ins for Teams, Slack, Figma Make and Claude, drawn only to show where the answer lands. They copy no one's interface. The quotes are invented.</p>
+<div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario</span></div>
+
+<!-- ============ 1 ============ -->
+<h2>1. Finding out it exists</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Team chat (Teams-like) · #product-x<span class="tag">A11</span></div>
+  <div class="inner chat">
+    <div class="msg"><span class="av">HR</span><div class="body">
+      <div class="who">Halden IT<span class="t">Mon 15 Mar, 09:12</span></div>
+      <p><b>Meet <span class="mention">@UXR-ProductX</span></b>: everything Sam Okafor's research found about Product X, from 3 studies with 36 participants (Oct 2026 to Mar 2027).</p>
+      <p>Mention it here, or add it in Figma Make, Claude or ChatGPT, and ask things like <i>“what frustrated people about onboarding?”</i> It answers with quotes from the research and says when the research doesn't cover something.</p>
+      <p>Questions about the research: Priya Shah.</p>
+    </div></div>
+    <div class="msg"><span class="av" style="background:#a16207">JL</span><div class="body">
+      <div class="who">Jo Lindqvist<span class="t">09:20</span></div>
+      <p>oh nice, does it know about the pricing study too?</p>
+    </div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>A11: the announcement IT copied at the end of setup (IT mockup, frame 4). It answers the three questions a colleague has before trying something: what does it know, where do I use it, what do I ask. Jo's reply is the natural next move, which frame 2 answers.</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2>2. Asking in Teams</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Team chat (Teams-like) · #product-x<span class="tag">A1</span></div>
+  <div class="inner chat">
+    <div class="msg"><span class="av" style="background:#0f766e">MK</span><div class="body">
+      <div class="who">Maya Kowalski<span class="t">Tue 16 Mar, 11:03</span></div>
+      <p><span class="mention">@UXR-ProductX</span> what frustrated people about onboarding?</p>
+    </div></div>
+    <div class="msg"><span class="av bot">UX</span><div class="body">
+      <div class="who">UXR-ProductX<span class="agent">Agent</span><span class="t">11:03</span></div>
+      <p>Confusion during onboarding was the strongest signal in the onboarding study: <b>9 of 14 participants</b>. Three examples:</p>
+      <div class="q"><p class="txt">“I didn't know what a ‘workspace’ was, so I just clicked whatever was blue.”</p><span class="cite">p4 · Onboarding study · 14 Nov 2026 · 12:41</span></div>
+      <div class="q"><p class="txt">“It asked me to invite my team before I'd even seen what it does.”</p><span class="cite">p9 · Onboarding study · 20 Nov 2026 · 08:15</span></div>
+      <div class="q"><p class="txt">“I gave up on the import step and came back two days later.”</p><span class="cite">p2 · Onboarding study · 12 Nov 2026 · 31:02</span></div>
+      <div class="foot">From What we know about Product X · 3 studies, Oct 2026 to Mar 2027 · <a href="#">Open the report</a></div>
+    </div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>A1: the answer is quotes, not a summary. The one sentence of interpretation is a number Bristlenose already worked out (the signal), with its denominator. Each quote carries the participant code, the study, the date it was recorded and the moment in the session, so it can be checked and pasted.</p>
+  <p>The footer is how staleness is shown without a warning (principle 7): every answer says what it's from and when.</p>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2>3. Settling an argument in Slack</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Team chat (Slack-like) · thread in #eng-admin<span class="tag">A2</span></div>
+  <div class="inner chat">
+    <div class="msg"><span class="av" style="background:#7c3aed">DB</span><div class="body">
+      <div class="who">Dev Bhatt<span class="t">14:20</span></div>
+      <p>I really don't think admins care about granular permissions, it's an edge case</p>
+    </div></div>
+    <div class="msg"><span class="av" style="background:#0f766e">MK</span><div class="body">
+      <div class="who">Maya Kowalski<span class="t">14:22</span></div>
+      <p><span class="mention">@UXR-ProductX</span> how many of the admin console participants talked about permissions?</p>
+    </div></div>
+    <div class="msg"><span class="av bot">UX</span><div class="body">
+      <div class="who">UXR-ProductX<span class="agent">Agent</span><span class="t">14:22</span></div>
+      <p><b>7 of the 12 participants</b> in the admin console study talked about permissions or roles (study recorded in February 2027). That counts people, not quotes. Two of them:</p>
+      <div class="q"><p class="txt">“I need to know who can delete things before I hand this to forty people.”</p><span class="cite">p3 · Admin console study · 9 Feb 2027 · 22:10</span></div>
+      <div class="q"><p class="txt">“The roles all sound the same: ‘manager’, ‘admin’, ‘owner’.”</p><span class="cite">p11 · Admin console study · 16 Feb 2027 · 17:48</span></div>
+      <div class="foot">From What we know about Product X · <a href="#">See all 7</a></div>
+    </div></div>
+    <div class="msg"><span class="av" style="background:#7c3aed">DB</span><div class="body">
+      <div class="who">Dev Bhatt<span class="t">14:25</span></div>
+      <p>ok fair</p>
+    </div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>A2: the counting question is where agents built from files go wrong, so it's where this one has to be right. An exact count, its denominator, its study and date, and "that counts people, not quotes", because that's the misreading that happens in a thread.</p>
+  <p>"See all 7" opens the report filtered to those quotes, so nobody has to take the number on trust.</p>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4. A designer prompting Figma Make</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Prototyping tool (Figma Make-like) · Admin onboarding<span class="tag">A3</span></div>
+  <div class="split">
+    <div class="chat">
+      <div class="card small" style="background:var(--sunk)"><b>Connected:</b> What we know about Product X<br><span class="muted">Signed in as Lena Ortiz (Halden)</span></div>
+      <div class="msg"><span class="av" style="background:#be123c">LO</span><div class="body">
+        <div class="who">Lena Ortiz</div>
+        <p>Make a first-run flow for a new admin setting up their team. Use the Product X research for what confused people, and avoid it.</p>
+      </div></div>
+      <div class="msg"><span class="av" style="background:#475569">AI</span><div class="body">
+        <div class="who">Assistant</div>
+        <p>I asked What we know about Product X. People were confused by unexplained terms like “workspace”, being asked to invite their team too early, and roles that sound alike. So the flow explains the workspace in one line, lets you look around before inviting anyone, and describes each role by what it can do.</p>
+        <p class="small muted" style="margin-bottom:2px">Used 4 quotes from the research:</p>
+        <div class="used"><span class="chip">p4 · Onboarding</span><span class="chip">p9 · Onboarding</span><span class="chip">p11 · Admin console</span><span class="chip">p3 · Admin console</span></div>
+      </div></div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="wf m"></div><div class="wf s"></div>
+        <div class="wf" style="height:60px;margin-top:16px"></div>
+        <div class="wf m"></div><div class="wf"></div><div class="wf s"></div>
+        <div class="wfbtn"></div>
+        <div class="wf s" style="margin:10px auto 0;width:40%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>A3: the research becomes context for the prototype, and the designer can see exactly which quotes shaped it. The chips are the trace: clicking one would show the quote. Whether the tool shows that trace is the tool's choice, not ours ("know the protocol, never the client"). What Bristlenose can do is make every answer it gives carry its sources, so a tool that wants to show them can.</p>
+  <p>Connecting is one sign-in with the designer's Halden account, because IT already decided who can ask (IT mockup, frame 3).</p>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2>5. A PM writing a PRD in Claude</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Assistant (Claude-like) · PRD: team invites<span class="tag">A4</span></div>
+  <div class="inner chat">
+    <div class="msg"><span class="av" style="background:#0f766e">MK</span><div class="body">
+      <div class="who">Maya Kowalski</div>
+      <p>I'm writing the problem statement for a PRD on team invites. What does our research say about inviting teammates? Give me quotes I can paste with their sources.</p>
+    </div></div>
+    <div class="msg"><span class="av" style="background:#475569">AI</span><div class="body">
+      <div class="who">Assistant <span class="agent">using What we know about Product X</span></div>
+      <p>The research touches on invites in the onboarding study only: being asked to invite the team before seeing the product. Ready to paste:</p>
+<pre>&gt; “It asked me to invite my team before I'd even seen what it does.”
+&gt; (p9, Onboarding study, Halden user research, recorded 20 Nov 2026)
+
+Invites came up with 3 of 14 onboarding participants. The research
+has no study of the invite flow itself.</pre>
+      <p>If invites are the focus of this PRD, that's a gap worth naming in the PRD itself.</p>
+    </div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>A4: what a PM writing a PRD, an opportunity analysis or a strategy doc needs is citations that survive a paste, so the answer offers a block with its source written out.</p>
+  <p>It also says what the research doesn't cover ("no study of the invite flow itself"). That sentence is the most useful thing in the answer, and frame 7 shows it change after Sam's return.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2>6. The edges</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Four replies, any of the tools above<span class="tag">A5 · A6 · A7 · A10</span></div>
+  <div class="inner grid2">
+    <div class="card"><div class="ids" style="margin-bottom:6px">A5 · not covered</div>
+      <p style="margin:0 0 4px"><i>“What do people think of our mobile app?”</i></p>
+      <p style="margin:0">The research doesn't cover the mobile app. It covers onboarding, pricing and the admin console on the web, from Oct 2026 to Mar 2027. Priya Shah can tell you whether there's other research.</p></div>
+    <div class="card"><div class="ids" style="margin-bottom:6px">A6 · who is this?</div>
+      <p style="margin:0 0 4px"><i>“Who is p3? I'd like to talk to them.”</i></p>
+      <p style="margin:0">Participants are identified only by code, to protect them. If you'd like to talk to participants, ask Priya Shah, who can arrange it with their consent.</p></div>
+    <div class="card"><div class="ids" style="margin-bottom:6px">A7 · no access</div>
+      <p style="margin:0">You don't have access to What we know about Product X. It's available to the Product X team and Design &amp; Research. Ask Halden IT if you need it.</p></div>
+    <div class="card"><div class="ids" style="margin-bottom:6px">A10 · expired</div>
+      <p style="margin:0">The checkout diary study stopped answering on 1 Apr 2028, as its researcher asked. Priya Shah can tell you what has replaced it.</p></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>Every edge ends with a person to ask, never a dead end. A5 lists what the research does cover so the asker knows its shape. A6 refuses politely and offers the legitimate route. A7 names who has access and who to ask, not why the rule exists. A10 is staleness made explicit.</p>
+  <p>Family check: all four state a fact and then name a person. Read side by side, they agree with each other.</p>
+</div>
+
+<!-- ============ 7 ============ -->
+<h2>7. After Sam comes back</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Assistant (Claude-like) · PRD: team invites, five months later<span class="tag">A9</span></div>
+  <div class="inner chat">
+    <div class="msg"><span class="av" style="background:#0f766e">MK</span><div class="body">
+      <div class="who">Maya Kowalski</div>
+      <p>Same question as in March: what does our research say about inviting teammates?</p>
+    </div></div>
+    <div class="msg"><span class="av" style="background:#475569">AI</span><div class="body">
+      <div class="who">Assistant <span class="agent">using What we know about Product X</span></div>
+      <p>There's now a study of team invites (recorded August 2027), as well as the earlier onboarding study. In the team invites study, <b>8 of 10 participants</b> weren't sure whether an invite had arrived.</p>
+      <div class="q"><p class="txt">“I sent the invite and had no idea whether anyone got it.”</p><span class="cite">p5 · Team invites study · 3 Aug 2027 · 06:30</span></div>
+      <div class="q"><p class="txt">“Half my team uses their personal email, so the invite went nowhere.”</p><span class="cite">p8 · Team invites study · 6 Aug 2027 · 19:12</span></div>
+      <div class="q"><p class="txt">“It asked me to invite my team before I'd even seen what it does.”</p><span class="cite">p9 · Onboarding study · 20 Nov 2026 · 08:15</span></div>
+      <div class="foot">What we know about Product X now has 6 studies, Oct 2026 to Aug 2027</div>
+    </div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>A9: the same question, after P7. The gap named in frame 5 is now filled, and the answer says so. Older and newer evidence sit together, each with its study and date, so nobody has to wonder whether it's up to date. Nothing changed for Maya: same name, same connection, nothing to re-add.</p>
+  <p>Counts from different studies aren't added together; each keeps its own denominator.</p>
+</div>
+
+<!-- ============ 8 ============ -->
+<h2>8. The same question to an agent made from files</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Two answers to frame 3's question<span class="tag">§6 · agent pack vs research agent</span></div>
+  <div class="inner grid2">
+    <div class="card"><div class="ids" style="margin-bottom:6px">Agent pack, in the company's agent builder</div>
+      <p style="margin:0">The research pack says permissions came up with 7 of 12 admin console participants. For other counts, open the full report: I can only repeat the numbers the pack states.</p>
+      <div class="foot">From files: Product X research pack, published 14 Mar 2027</div></div>
+    <div class="card"><div class="ids" style="margin-bottom:6px">Research agent</div>
+      <p style="margin:0"><b>7 of the 12 participants</b> in the admin console study talked about permissions or roles (study recorded in February 2027). That counts people, not quotes. <a href="#">See all 7</a></p>
+      <div class="foot">From What we know about Product X</div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>The tier difference from the asker's side (PRD §6). The agent pack answers well where the researcher pre-stated the number, and its suggested instructions tell it to admit the limit rather than guess. Ask a count the pack didn't state ("how many mentioned price and permissions?") and only the research agent can answer it. That's the step up the agent pack leads to.</p>
+  <p>Whether a company's agent builder actually follows "don't compute your own counts" is the first thing to test on a real tenant.</p>
+</div>
+
+</main>
+</body>
+</html>

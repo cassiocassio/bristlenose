@@ -71,49 +71,108 @@ struct SubscriptionAccessTests {
     // MARK: Early adopters (owner, 22 Nov 2026)
 
     private let subscribed = SubscriptionAccess.State.subscribed(expires: nil)
+    private let day: TimeInterval = 24 * 60 * 60
+    /// 1 Jan 2027 and the deal's end, 20 Apr 2027, as the owner's example.
+    private let jan = Date(timeIntervalSince1970: 1_798_761_600)
+    private var dealEnds: Date { jan.addingTimeInterval(109 * day) }
 
-    @Test("the launch deal has not ended in this build")
-    func dealStillOn() {
-        // Flipping this is the act that ends the deal; it should be a
+    /// Monthly periods from `from`, back to back.
+    private func months(_ n: Int, from: Date) -> [SubscriptionAccess.Period] {
+        (0..<n).map { i in
+            let start = from.addingTimeInterval(Double(i) * 30 * day)
+            return .init(start: start, end: start.addingTimeInterval(30 * day))
+        }
+    }
+
+    private func since(_ history: [SubscriptionAccess.Period],
+                       state: SubscriptionAccess.State? = nil) -> Date? {
+        SubscriptionAccess.earlyAdopterSince(state: state ?? subscribed, history: history,
+                                             dealEnds: dealEnds)
+    }
+
+    @Test("no end date is chosen in this build")
+    func noEndDateYet() {
+        // Setting this is the act that ends the deal; it should be a
         // deliberate edit that also updates this test.
-        #expect(SubscriptionAccess.earlyDealHasEnded == false)
+        #expect(SubscriptionAccess.earlyDealEnds == nil)
     }
 
-    @Test("before the price rise, every active subscriber is an early adopter, trial included")
-    func everySubscriberBeforeTheRise() {
-        #expect(SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: nil,
-                                                  currentPrice: nil, dealHasEnded: false))
-        #expect(SubscriptionAccess.isEarlyAdopter(state: .subscribed(expires: future, inTrial: true),
-                                                  renewalPrice: nil, currentPrice: nil, dealHasEnded: false))
+    @Test("with no end date, every subscriber is an early adopter, trial included")
+    func noDateEveryone() {
+        let h = months(1, from: jan.addingTimeInterval(400 * day))
+        #expect(SubscriptionAccess.earlyAdopterSince(state: .subscribed(expires: nil, inTrial: true),
+                                                     history: h, dealEnds: nil) == h[0].start)
     }
 
-    @Test("someone not subscribed is never an early adopter",
+    @Test("before the end date, every subscriber is an early adopter")
+    func beforeTheDate() {
+        let h = months(2, from: jan.addingTimeInterval(60 * day))
+        #expect(since(h) == h[0].start)
+    }
+
+    @Test("after the end date, a run that began before it keeps the star, dated from its start")
+    func continuousEarlyAdopter() {
+        let h = months(12, from: jan)
+        #expect(since(h) == jan)
+    }
+
+    @Test("after the end date, a newcomer gets no star")
+    func newcomer() {
+        let h = months(2, from: dealEnds)
+        #expect(since(h) == nil)
+    }
+
+    @Test("a lapse of up to 60 days does not break the run, as Apple keeps the price")
+    func shortLapse() {
+        let early = months(3, from: jan)                     // ends 30 Mar
+        let back = months(2, from: early.last!.end!.addingTimeInterval(59 * day))
+        #expect(since(early + back) == jan)
+    }
+
+    @Test("a lapse of more than 60 days breaks the run: they came back at the new price")
+    func longLapse() {
+        let early = months(3, from: jan)
+        let back = months(2, from: early.last!.end!.addingTimeInterval(61 * day))
+        #expect(since(early + back) == nil)
+    }
+
+    @Test("overlapping periods: the run reaches as far as the furthest expiry, not the last one sorted")
+    func overlappingPeriods() {
+        // A long period, a short one inside it (a renewal charged early, a
+        // replaced transaction), then a return 30 days after the long one.
+        let h: [SubscriptionAccess.Period] = [
+            .init(start: jan, end: jan.addingTimeInterval(100 * day)),
+            .init(start: jan.addingTimeInterval(10 * day), end: jan.addingTimeInterval(20 * day)),
+            .init(start: jan.addingTimeInterval(130 * day), end: jan.addingTimeInterval(160 * day)),
+        ]
+        #expect(since(h) == jan)
+    }
+
+    @Test("a period with no expiry counts as a moment, not as forever")
+    func noExpiry() {
+        let h: [SubscriptionAccess.Period] = [
+            .init(start: jan, end: nil),
+            .init(start: jan.addingTimeInterval(115 * day), end: jan.addingTimeInterval(145 * day)),
+        ]
+        #expect(since(h) == nil)
+    }
+
+    @Test("history order does not matter")
+    func unsortedHistory() {
+        let h = months(6, from: jan)
+        #expect(since(h.reversed()) == jan)
+    }
+
+    @Test("someone not subscribed is never an early adopter, however long their history",
           arguments: [SubscriptionAccess.State.unknown, .notSubscribed, .storeUnavailable])
     func notSubscribedIsNotEarly(state: SubscriptionAccess.State) {
-        #expect(!SubscriptionAccess.isEarlyAdopter(state: state, renewalPrice: 1, currentPrice: 2,
-                                                   dealHasEnded: false))
-        #expect(!SubscriptionAccess.isEarlyAdopter(state: state, renewalPrice: 1, currentPrice: 2,
-                                                   dealHasEnded: true))
+        let h = months(12, from: jan)
+        #expect(since(h, state: state) == nil)
     }
 
-    @Test("after the rise, a preserved (lower) renewal price keeps the star")
-    func preservedPriceAfterTheRise() {
-        #expect(SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: Decimal(string: "9.99"),
-                                                  currentPrice: Decimal(string: "14.99"), dealHasEnded: true))
-    }
-
-    @Test("after the rise, a subscriber paying the current price gets no star")
-    func currentPriceAfterTheRise() {
-        #expect(!SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: Decimal(string: "14.99"),
-                                                   currentPrice: Decimal(string: "14.99"), dealHasEnded: true))
-    }
-
-    @Test("after the rise, an unknown price shows no star rather than a guess")
-    func unknownPriceAfterTheRise() {
-        #expect(!SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: nil,
-                                                   currentPrice: 14.99, dealHasEnded: true))
-        #expect(!SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: 9.99,
-                                                   currentPrice: nil, dealHasEnded: true))
+    @Test("a subscriber with no history on record gets no date rather than a guess")
+    func emptyHistory() {
+        #expect(since([]) == nil)
     }
 
     @Test("on the App Store a lapsed subscriber cannot start an analysis")

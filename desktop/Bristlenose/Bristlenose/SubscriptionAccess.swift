@@ -80,31 +80,69 @@ enum SubscriptionAccess {
 
     // MARK: - Early adopters
 
-    /// Whether the launch deal has ended. **Set to `true` in the app update
-    /// that ships with the price rise** (owner, 22 Nov 2026). Until then every
-    /// active subscriber is an early adopter; after it, only those Apple still
-    /// renews below the current price (see `monthlyProductID` for how the
-    /// price is kept). Installs that haven't updated keep the old rule.
-    static let earlyDealHasEnded = false
+    /// When the launch deal ends, or nil while no date is chosen (owner,
+    /// 22 Nov 2026). Before it, every active subscriber is an early adopter;
+    /// from it, only someone whose unbroken run of subscription began before
+    /// it (see `monthlyProductID` for how Apple keeps their price).
+    ///
+    /// **Why the app is told a date:** before the deal ends and after it, a
+    /// newcomer looks the same to the store; only the date tells them apart.
+    /// A date (not a switch) can ship in any release before it, so the update
+    /// and the price rise in App Store Connect never need to land together.
+    /// An install that never updates gives every subscriber the star, and
+    /// never takes one from an early adopter.
+    ///
+    /// **Why not compare prices:** a later price cut, a tax or exchange-rate
+    /// adjustment, or a move of storefront would all change who "pays less";
+    /// dates in the store's own history do not move (owner, 22 Nov 2026).
+    static let earlyDealEnds: Date? = nil
 
-    /// Whether this person is an early adopter, and so gets the star.
+    /// How long someone may be lapsed and still count as continuously
+    /// subscribed: Apple's own window for returning at a preserved price
+    /// ("within 60 days of expiration", App Store Connect Help, "Manage
+    /// pricing for auto-renewable subscriptions", read 21 Nov 2026), so price
+    /// and star agree (owner, 22 Nov 2026). If Apple changes that window,
+    /// change this with it.
+    static let lapseAllowance: TimeInterval = 60 * 24 * 60 * 60
+
+    /// One paid or trial period from the store's history: a transaction's
+    /// purchase date and expiration date.
+    struct Period: Equatable {
+        let start: Date
+        let end: Date?
+    }
+
+    /// When the run of subscription that reaches the latest period began. A
+    /// run breaks where a period starts more than `allowance` after everything
+    /// before it had expired. nil for an empty history.
+    static func runStart(of history: [Period], allowance: TimeInterval = lapseAllowance) -> Date? {
+        let periods = history.sorted { $0.start < $1.start }
+        guard let first = periods.first else { return nil }
+        var start = first.start
+        var reach = first.end ?? first.start
+        for period in periods.dropFirst() {
+            if period.start > reach.addingTimeInterval(allowance) { start = period.start }
+            reach = max(reach, period.end ?? period.start)
+        }
+        return start
+    }
+
+    /// When this person became an early adopter (the start of their current
+    /// run), or nil if they are not one. Only `.subscribed` qualifies, so a
+    /// cancelled subscription keeps the star until its paid period ends.
     ///
     /// - Parameters:
-    ///   - state: the subscription state; only `.subscribed` can qualify, so a
-    ///     cancelled subscription keeps the star until its paid period ends.
-    ///   - renewalPrice: what StoreKit says the subscription next renews at.
-    ///   - currentPrice: the product's price in the same storefront.
-    ///   - dealHasEnded: `earlyDealHasEnded`, injectable for tests.
-    static func isEarlyAdopter(state: State,
-                               renewalPrice: Decimal?,
-                               currentPrice: Decimal?,
-                               dealHasEnded: Bool = earlyDealHasEnded) -> Bool {
-        guard case .subscribed = state else { return false }
-        guard dealHasEnded else { return true }
-        // After the rise, only a preserved (lower) renewal price counts. If
-        // either price is unknown (offline, product not loaded), show nothing
-        // rather than guess.
-        guard let renewalPrice, let currentPrice else { return false }
-        return renewalPrice < currentPrice
+    ///   - history: every period of this product in the store's history
+    ///     (`Transaction.all` includes all renewals), refunds left out.
+    ///   - dealEnds: `earlyDealEnds`, injectable for tests.
+    ///
+    /// No clock is read: before the end date every run began before it, so
+    /// comparing the run's start with the date is the whole rule.
+    static func earlyAdopterSince(state: State,
+                                  history: [Period],
+                                  dealEnds: Date? = earlyDealEnds) -> Date? {
+        guard case .subscribed = state, let start = runStart(of: history) else { return nil }
+        guard let dealEnds else { return start }
+        return start < dealEnds ? start : nil
     }
 }

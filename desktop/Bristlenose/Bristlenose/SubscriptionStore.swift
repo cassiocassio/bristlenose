@@ -23,9 +23,9 @@ final class SubscriptionStore: ObservableObject {
     /// Whether this Apple Account can still take the free trial (Apple allows
     /// one per account). Decides which wording the paywall uses.
     @Published private(set) var introEligible = false
-    /// When this person became an early adopter (their subscription's original
-    /// purchase), or nil if they are not one. Drives the early-adopter star;
-    /// the rule is `SubscriptionAccess.isEarlyAdopter`.
+    /// When this person became an early adopter (the start of their unbroken
+    /// run of subscription), or nil if they are not one. Drives the
+    /// early-adopter star; the rule is `SubscriptionAccess.earlyAdopterSince`.
     @Published private(set) var earlyAdopterSince: Date?
 
     private var updates: Task<Void, Never>?
@@ -80,44 +80,48 @@ final class SubscriptionStore: ObservableObject {
         var ids: Set<String> = []
         var expirations: [String: Date] = [:]
         var trials: Set<String> = []
-        var since: Date?
+        var entitled: [SubscriptionAccess.Period] = []
         for await result in Transaction.currentEntitlements {
             guard case .verified(let t) = result, t.revocationDate == nil else { continue }
             ids.insert(t.productID)
             if let end = t.expirationDate { expirations[t.productID] = end }
             if t.offer?.type == .introductory { trials.insert(t.productID) }
-            if t.productID == SubscriptionAccess.monthlyProductID { since = t.originalPurchaseDate }
+            if t.productID == SubscriptionAccess.monthlyProductID {
+                entitled.append(.init(start: t.purchaseDate, end: t.expirationDate))
+            }
         }
-        state = SubscriptionAccess.state(entitledProductIDs: ids,
-                                         expirations: expirations,
-                                         trialProductIDs: trials,
-                                         productLoaded: product != nil)
-
-        // Read the renewal price only once the deal has ended: before that,
-        // every subscriber is an early adopter and the price is not needed.
-        var renewalPrice: Decimal?
-        if SubscriptionAccess.earlyDealHasEnded, case .subscribed = state {
-            renewalPrice = await self.renewalPrice()
+        let newState = SubscriptionAccess.state(entitledProductIDs: ids,
+                                                expirations: expirations,
+                                                trialProductIDs: trials,
+                                                productLoaded: product != nil)
+        // Work the star out before publishing anything, then publish the state
+        // and the star together: two refreshes can overlap (launch, activation,
+        // `Transaction.updates`), and publishing in two steps let a slower one
+        // put a date back after a faster one had cleared it, or blink the star
+        // off for a frame. The current entitlement is added to the history so
+        // an active subscriber always has a run, even if the history read
+        // comes back empty.
+        var since: Date?
+        if case .subscribed = newState {
+            since = SubscriptionAccess.earlyAdopterSince(state: newState,
+                                                         history: await Self.history() + entitled)
         }
-        earlyAdopterSince = SubscriptionAccess.isEarlyAdopter(state: state,
-                                                              renewalPrice: renewalPrice,
-                                                              currentPrice: product?.price) ? since : nil
+        state = newState
+        earlyAdopterSince = since
     }
 
-    /// The price this person's subscription next renews at, from Apple's
-    /// verified renewal info, or nil if the store did not say.
-    private func renewalPrice() async -> Decimal? {
-        do {
-            let statuses = try await product?.subscription?.status ?? []
-            for status in statuses {
-                guard case .verified(let info) = status.renewalInfo,
-                      info.currentProductID == SubscriptionAccess.monthlyProductID else { continue }
-                return info.renewalPrice
-            }
-        } catch {
-            log.error("renewal status failed: \(error.localizedDescription, privacy: .public)")
+    /// Every period of the subscription in the store's history, from
+    /// `Transaction.all` ("auto-renewable subscriptions, including all
+    /// renewals"). Refunded periods are left out. Internal (not private) so the
+    /// StoreKitTest suite can read what the store really returns.
+    static func history() async -> [SubscriptionAccess.Period] {
+        var periods: [SubscriptionAccess.Period] = []
+        for await result in Transaction.all {
+            guard case .verified(let t) = result, t.revocationDate == nil,
+                  t.productID == SubscriptionAccess.monthlyProductID else { continue }
+            periods.append(.init(start: t.purchaseDate, end: t.expirationDate))
         }
-        return nil
+        return periods
     }
 
     enum PurchaseOutcome: Equatable { case subscribed, cancelled, pending, failed }

@@ -23,6 +23,10 @@ final class SubscriptionStore: ObservableObject {
     /// Whether this Apple Account can still take the free trial (Apple allows
     /// one per account). Decides which wording the paywall uses.
     @Published private(set) var introEligible = false
+    /// When this person became an early adopter (their subscription's original
+    /// purchase), or nil if they are not one. Drives the early-adopter star;
+    /// the rule is `SubscriptionAccess.isEarlyAdopter`.
+    @Published private(set) var earlyAdopterSince: Date?
 
     private var updates: Task<Void, Never>?
     private let log = Logger(subsystem: "app.bristlenose", category: "subscription")
@@ -34,8 +38,9 @@ final class SubscriptionStore: ObservableObject {
     }
 
     /// A store frozen in a given state, with no StoreKit listener. For tests.
-    init(frozenAt state: SubscriptionAccess.State) {
+    init(frozenAt state: SubscriptionAccess.State, earlyAdopterSince: Date? = nil) {
         self.state = state
+        self.earlyAdopterSince = earlyAdopterSince
     }
 
     private init() {
@@ -75,16 +80,44 @@ final class SubscriptionStore: ObservableObject {
         var ids: Set<String> = []
         var expirations: [String: Date] = [:]
         var trials: Set<String> = []
+        var since: Date?
         for await result in Transaction.currentEntitlements {
             guard case .verified(let t) = result, t.revocationDate == nil else { continue }
             ids.insert(t.productID)
             if let end = t.expirationDate { expirations[t.productID] = end }
             if t.offer?.type == .introductory { trials.insert(t.productID) }
+            if t.productID == SubscriptionAccess.monthlyProductID { since = t.originalPurchaseDate }
         }
         state = SubscriptionAccess.state(entitledProductIDs: ids,
                                          expirations: expirations,
                                          trialProductIDs: trials,
                                          productLoaded: product != nil)
+
+        // Read the renewal price only once the deal has ended: before that,
+        // every subscriber is an early adopter and the price is not needed.
+        var renewalPrice: Decimal?
+        if SubscriptionAccess.earlyDealHasEnded, case .subscribed = state {
+            renewalPrice = await self.renewalPrice()
+        }
+        earlyAdopterSince = SubscriptionAccess.isEarlyAdopter(state: state,
+                                                              renewalPrice: renewalPrice,
+                                                              currentPrice: product?.price) ? since : nil
+    }
+
+    /// The price this person's subscription next renews at, from Apple's
+    /// verified renewal info, or nil if the store did not say.
+    private func renewalPrice() async -> Decimal? {
+        do {
+            let statuses = try await product?.subscription?.status ?? []
+            for status in statuses {
+                guard case .verified(let info) = status.renewalInfo,
+                      info.currentProductID == SubscriptionAccess.monthlyProductID else { continue }
+                return info.renewalPrice
+            }
+        } catch {
+            log.error("renewal status failed: \(error.localizedDescription, privacy: .public)")
+        }
+        return nil
     }
 
     enum PurchaseOutcome: Equatable { case subscribed, cancelled, pending, failed }

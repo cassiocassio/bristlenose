@@ -77,4 +77,34 @@ enum SubscriptionAccess {
     static func canOpenProjects(_ state: State, channel: DistributionChannel) -> Bool {
         true
     }
+
+    // MARK: - Early adopters
+
+    /// Whether the launch deal has ended. **Set to `true` in the app update
+    /// that ships with the price rise** (owner, 22 Nov 2026). Until then every
+    /// active subscriber is an early adopter; after it, only those Apple still
+    /// renews below the current price (see `monthlyProductID` for how the
+    /// price is kept). Installs that haven't updated keep the old rule.
+    static let earlyDealHasEnded = false
+
+    /// Whether this person is an early adopter, and so gets the star.
+    ///
+    /// - Parameters:
+    ///   - state: the subscription state; only `.subscribed` can qualify, so a
+    ///     cancelled subscription keeps the star until its paid period ends.
+    ///   - renewalPrice: what StoreKit says the subscription next renews at.
+    ///   - currentPrice: the product's price in the same storefront.
+    ///   - dealHasEnded: `earlyDealHasEnded`, injectable for tests.
+    static func isEarlyAdopter(state: State,
+                               renewalPrice: Decimal?,
+                               currentPrice: Decimal?,
+                               dealHasEnded: Bool = earlyDealHasEnded) -> Bool {
+        guard case .subscribed = state else { return false }
+        guard dealHasEnded else { return true }
+        // After the rise, only a preserved (lower) renewal price counts. If
+        // either price is unknown (offline, product not loaded), show nothing
+        // rather than guess.
+        guard let renewalPrice, let currentPrice else { return false }
+        return renewalPrice < currentPrice
+    }
 }

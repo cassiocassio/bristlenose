@@ -68,6 +68,54 @@ struct SubscriptionAccessTests {
         #expect(s == .notSubscribed)
     }
 
+    // MARK: Early adopters (owner, 22 Nov 2026)
+
+    private let subscribed = SubscriptionAccess.State.subscribed(expires: nil)
+
+    @Test("the launch deal has not ended in this build")
+    func dealStillOn() {
+        // Flipping this is the act that ends the deal; it should be a
+        // deliberate edit that also updates this test.
+        #expect(SubscriptionAccess.earlyDealHasEnded == false)
+    }
+
+    @Test("before the price rise, every active subscriber is an early adopter, trial included")
+    func everySubscriberBeforeTheRise() {
+        #expect(SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: nil,
+                                                  currentPrice: nil, dealHasEnded: false))
+        #expect(SubscriptionAccess.isEarlyAdopter(state: .subscribed(expires: future, inTrial: true),
+                                                  renewalPrice: nil, currentPrice: nil, dealHasEnded: false))
+    }
+
+    @Test("someone not subscribed is never an early adopter",
+          arguments: [SubscriptionAccess.State.unknown, .notSubscribed, .storeUnavailable])
+    func notSubscribedIsNotEarly(state: SubscriptionAccess.State) {
+        #expect(!SubscriptionAccess.isEarlyAdopter(state: state, renewalPrice: 1, currentPrice: 2,
+                                                   dealHasEnded: false))
+        #expect(!SubscriptionAccess.isEarlyAdopter(state: state, renewalPrice: 1, currentPrice: 2,
+                                                   dealHasEnded: true))
+    }
+
+    @Test("after the rise, a preserved (lower) renewal price keeps the star")
+    func preservedPriceAfterTheRise() {
+        #expect(SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: Decimal(string: "9.99"),
+                                                  currentPrice: Decimal(string: "14.99"), dealHasEnded: true))
+    }
+
+    @Test("after the rise, a subscriber paying the current price gets no star")
+    func currentPriceAfterTheRise() {
+        #expect(!SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: Decimal(string: "14.99"),
+                                                   currentPrice: Decimal(string: "14.99"), dealHasEnded: true))
+    }
+
+    @Test("after the rise, an unknown price shows no star rather than a guess")
+    func unknownPriceAfterTheRise() {
+        #expect(!SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: nil,
+                                                   currentPrice: 14.99, dealHasEnded: true))
+        #expect(!SubscriptionAccess.isEarlyAdopter(state: subscribed, renewalPrice: 9.99,
+                                                   currentPrice: nil, dealHasEnded: true))
+    }
+
     @Test("on the App Store a lapsed subscriber cannot start an analysis")
     func lapsedBlocked() {
         #expect(!SubscriptionAccess.canStartAnalysis(.notSubscribed, channel: .appStoreOrTestFlight))

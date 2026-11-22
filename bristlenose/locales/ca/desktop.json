@@ -912,7 +912,7 @@
     "ollamaDownloadSize": "~%@ de baixada",
     "done": "Fet",
     "countsChoice": "Envia anàlisis anònimes",
-    "countsExplain": "Envia la informació de la versió i amb quina freqüència obres Bristlenose. Cap identificador. Res dels teus projectes. Es pot canviar a Configuració."
+    "countsExplain": "La informació de la versió i amb quina freqüència obres Bristlenose. Cap identificador. Res dels teus projectes. Es pot canviar a Configuració."
   },
   "llmSettings": {
     "validation": {
@@ -1405,7 +1405,7 @@
       "checkLabel": "Comprova si hi ha novetats a bristlenose.app",
       "checkExplain": "Un cop al dia. Les novetats i els esdeveniments de la comunitat apareixen a la finestra de benvinguda.",
       "countsLabel": "Envia anàlisis anònimes",
-      "countsExplain": "Envia la informació de la versió i amb quina freqüència obres Bristlenose. Cap identificador. Res dels teus projectes.",
+      "countsExplain": "La informació de la versió i amb quina freqüència obres Bristlenose. Cap identificador. Res dels teus projectes.",
       "managed": "Gestionat per la teva organització"
     }
   },

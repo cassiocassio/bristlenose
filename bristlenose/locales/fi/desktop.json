@@ -912,7 +912,7 @@
     "ollamaDownloadSize": "~%@ lataus",
     "done": "Valmis",
     "countsChoice": "Lähetä anonyymiä analytiikkaa",
-    "countsExplain": "Lähettää versiotiedot ja sen, kuinka usein avaat Bristlenosen. Ei tunnistetta. Ei mitään projekteistasi. Muuta asetuksissa."
+    "countsExplain": "Versiotiedot ja se, kuinka usein avaat Bristlenosen. Ei tunnistetta. Ei mitään projekteistasi. Muuta asetuksissa."
   },
   "llmSettings": {
     "validation": {
@@ -1405,7 +1405,7 @@
       "checkLabel": "Tarkista uutiset bristlenose.appista",
       "checkExplain": "Kerran päivässä. Uutiset ja yhteisön tapahtumat näkyvät tervetuloikkunassa.",
       "countsLabel": "Lähetä anonyymiä analytiikkaa",
-      "countsExplain": "Lähettää versiotiedot ja sen, kuinka usein avaat Bristlenosen. Ei tunnistetta. Ei mitään projekteistasi.",
+      "countsExplain": "Versiotiedot ja se, kuinka usein avaat Bristlenosen. Ei tunnistetta. Ei mitään projekteistasi.",
       "managed": "Organisaatiosi hallinnoima"
     }
   },

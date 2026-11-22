@@ -884,7 +884,7 @@
     "ollamaDownloadSize": "約 %@ 下載量",
     "done": "完成",
     "countsChoice": "傳送匿名分析資料",
-    "countsExplain": "傳送版本資訊，以及你開啟 Bristlenose 的頻率。沒有識別碼。不含你的專案內容。可在「設定」中更改。"
+    "countsExplain": "版本資訊，以及你開啟 Bristlenose 的頻率。沒有識別碼。不含你的專案內容。可在「設定」中更改。"
   },
   "llmSettings": {
     "validation": {
@@ -1354,7 +1354,7 @@
       "checkLabel": "在 bristlenose.app 檢查最新消息",
       "checkExplain": "每天一次。最新消息與社群活動會顯示在歡迎視窗中。",
       "countsLabel": "傳送匿名分析資料",
-      "countsExplain": "傳送版本資訊，以及你開啟 Bristlenose 的頻率。沒有識別碼。不含你的專案內容。",
+      "countsExplain": "版本資訊，以及你開啟 Bristlenose 的頻率。沒有識別碼。不含你的專案內容。",
       "managed": "由你的組織管理"
     }
   },

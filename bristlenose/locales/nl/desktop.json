@@ -912,7 +912,7 @@
     "ollamaDownloadSize": "~%@ download",
     "done": "Klaar",
     "countsChoice": "Anonieme analysegegevens versturen",
-    "countsExplain": "Stuurt versie-informatie en hoe vaak je Bristlenose opent. Geen ID. Niets uit je projecten. Wijzig dit in Instellingen."
+    "countsExplain": "Versie-informatie en hoe vaak je Bristlenose opent. Geen ID. Niets uit je projecten. Wijzig dit in Instellingen."
   },
   "llmSettings": {
     "validation": {
@@ -1405,7 +1405,7 @@
       "checkLabel": "Zoek naar nieuws op bristlenose.app",
       "checkExplain": "Eén keer per dag. Nieuws en communityevenementen verschijnen in het welkomstvenster.",
       "countsLabel": "Anonieme analysegegevens versturen",
-      "countsExplain": "Stuurt versie-informatie en hoe vaak je Bristlenose opent. Geen ID. Niets uit je projecten.",
+      "countsExplain": "Versie-informatie en hoe vaak je Bristlenose opent. Geen ID. Niets uit je projecten.",
       "managed": "Beheerd door je organisatie"
     }
   },

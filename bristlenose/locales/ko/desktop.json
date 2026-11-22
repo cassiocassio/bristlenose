@@ -884,7 +884,7 @@
     "ollamaDownloadSize": "~%@ 다운로드",
     "done": "완료",
     "countsChoice": "익명 분석 데이터 보내기",
-    "countsExplain": "버전 정보와 Bristlenose를 여는 빈도를 보냅니다. 식별자 없음. 프로젝트 내용은 포함되지 않습니다. 설정에서 변경할 수 있습니다."
+    "countsExplain": "버전 정보와 Bristlenose를 여는 빈도. 식별자 없음. 프로젝트 내용은 포함되지 않습니다. 설정에서 변경할 수 있습니다."
   },
   "llmSettings": {
     "validation": {
@@ -1354,7 +1354,7 @@
       "checkLabel": "bristlenose.app에서 소식 확인",
       "checkExplain": "하루에 한 번. 소식과 커뮤니티 이벤트가 환영 윈도우에 표시됩니다.",
       "countsLabel": "익명 분석 데이터 보내기",
-      "countsExplain": "버전 정보와 Bristlenose를 여는 빈도를 보냅니다. 식별자 없음. 프로젝트 내용은 포함되지 않습니다.",
+      "countsExplain": "버전 정보와 Bristlenose를 여는 빈도. 식별자 없음. 프로젝트 내용은 포함되지 않습니다.",
       "managed": "조직에서 관리함"
     }
   },

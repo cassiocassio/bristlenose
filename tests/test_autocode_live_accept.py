@@ -3,7 +3,7 @@
 A first apply sends its quotes in stored order (D25), in batches of 5, then 10, then 25
 (D24); a catch-up keeps 25. As each batch is saved it accepts, in the same transaction,
 the run's pending proposals at or above a live line (D6): the hybrid's own line over
-the proposals so far, not below 0.80 until 25 have landed, and never falling during the
+the proposals so far, not below 0.75 until 25 have landed, and never falling during the
 run (lead's refinement, 23 Nov 2026). An accepted tag is never taken back, so the end's
 cut stores a line no higher than the lowest live acceptance, and the top-up then leaves
 no pending proposal above it (D46). A researcher's decision is never overwritten (D2).
@@ -30,6 +30,7 @@ from sqlalchemy.orm import sessionmaker
 from bristlenose.server import autocode
 from bristlenose.server.autocode import (
     BATCH_SIZE,
+    LIVE_EARLY_FLOOR,
     QuoteBatchItem,
     accept_live,
     cut_first_apply,
@@ -231,9 +232,10 @@ def test_a_catch_up_keeps_batches_of_25_in_stored_order(tmp_path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_the_live_line_is_the_hybrids_held_at_080_until_25_have_landed() -> None:
-    assert live_accept_line([0.75] * 24, None) == 0.80
-    assert live_accept_line([0.75] * 25, None) == 0.75
+def test_the_live_line_is_the_hybrids_held_at_075_until_25_have_landed() -> None:
+    assert LIVE_EARLY_FLOOR == 0.75  # owner, 23 Nov 2026 (was 0.80)
+    assert live_accept_line([0.70] * 24, None) == 0.75
+    assert live_accept_line([0.70] * 25, None) == 0.70
     assert live_accept_line([0.5] * 40, None) == 0.70  # never below the hybrid's floor
     assert live_accept_line([0.95] * 3, None) == 0.95
     # Never falls: the line used before stands against a lower estimate.
@@ -241,17 +243,17 @@ def test_the_live_line_is_the_hybrids_held_at_080_until_25_have_landed() -> None
     assert live_accept_line([0.95] * 40, 0.85) == 0.95
 
 
-def test_the_first_proposals_are_accepted_live_only_at_080_or_above() -> None:
+def test_the_first_proposals_are_accepted_live_only_at_075_or_above() -> None:
     session_cls, job_id, tag_id, quotes = _study(30)
-    assert _land(session_cls, job_id, tag_id, quotes[:5], [0.75] * 4 + [0.82]) == 1
-    assert _job(session_cls, job_id).live_accept_line == 0.80
+    assert _land(session_cls, job_id, tag_id, quotes[:5], [0.70] * 4 + [0.76]) == 1
+    assert _job(session_cls, job_id).live_accept_line == 0.75
     assert [s for _, s, _ in _rows(session_cls, job_id)] == ["pending"] * 4 + ["accepted"]
 
 
 def test_twenty_five_landed_at_once_are_cut_at_their_own_line() -> None:
     session_cls, job_id, tag_id, quotes = _study(25)
-    assert _land(session_cls, job_id, tag_id, quotes, [0.75] * 25) == 25
-    assert _job(session_cls, job_id).live_accept_line == 0.75
+    assert _land(session_cls, job_id, tag_id, quotes, [0.70] * 25) == 25
+    assert _job(session_cls, job_id).live_accept_line == 0.70
 
 
 def test_live_acceptance_never_excludes() -> None:
@@ -273,9 +275,9 @@ def test_the_line_never_falls_and_a_resumed_run_continues_from_it() -> None:
 
 def test_a_run_with_stored_lines_accepts_at_its_stored_line() -> None:
     """A stop's settle (D27) or a review stored the lines: a resumed run accepts at the
-    stored accept line, below the 0.80 floor and below a live line used earlier."""
-    session_cls, job_id, tag_id, quotes = _study(10, upper=0.75)
-    assert _land(session_cls, job_id, tag_id, quotes[:3], [0.76, 0.74, 0.75]) == 2
+    stored accept line, below the 0.75 floor and below a live line used earlier."""
+    session_cls, job_id, tag_id, quotes = _study(10, upper=0.70)
+    assert _land(session_cls, job_id, tag_id, quotes[:3], [0.71, 0.69, 0.70]) == 2
     assert _job(session_cls, job_id).live_accept_line is None
 
 
@@ -458,7 +460,7 @@ def test_any_run_in_any_arrival_order_keeps_every_rule(
     batches: list[list[float]], order: Any, stopped: bool,
 ) -> None:
     """Whatever the confidences and whatever order the batches answer in: the live line
-    never falls, never sits below 0.70, and not below 0.80 until 25 have landed; nothing
+    never falls, never sits below 0.70, and not below 0.75 until 25 have landed; nothing
     accepted is taken back; the end stores a line on the grid, no higher than the exact
     cut; no accepted proposal sits below it and no pending one above it; the run takes at
     least what the exact cut takes; every acceptance has its tag."""
@@ -477,7 +479,7 @@ def test_any_run_in_any_arrival_order_keeps_every_rule(
         line = _job(session_cls, job_id).live_accept_line
         assert line is not None and line >= 0.70
         if landed < 25:
-            assert line >= 0.80
+            assert line >= LIVE_EARLY_FLOOR
         assert not lines or line >= lines[-1]
         lines.append(line)
         rows = _rows(session_cls, job_id)
@@ -590,7 +592,7 @@ def _accept_live_now(client: Any) -> None:
 def test_a_running_runs_live_acceptances_show_only_on_the_live_read(seeded, status) -> None:  # noqa: F811
     client, ids, _ = seeded  # four pending proposals at 0.5, 0.6, 0.7, 0.8
     _unfinish(client, status)
-    _accept_live_now(client)  # the live line is 0.80: the 0.8 one is accepted
+    _accept_live_now(client)  # the live line is 0.75: the 0.8 one is accepted
 
     url = f"{BASE}/autocode/garrett/proposals?min_confidence=0"
     live = client.get(f"{url}&live=true").json()

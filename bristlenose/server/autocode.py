@@ -1004,9 +1004,11 @@ def grid_line_at_or_below(confidence: float) -> float:
 #: Live acceptance (docs/design-autocode-landing-plan.md D6): until this many proposals of
 #: the run have landed, the running estimate of the cut is held at or above
 #: ``LIVE_EARLY_FLOOR``. A handful of proposals says little about the run's top 30%, and a
-#: tag accepted is never taken back.
+#: tag accepted is never taken back. 0.75 (owner, 23 Nov 2026; was 0.80): on the real trial
+#: runs 44% of a run's accepted tags then land live rather than 16%, with no overshoot of the
+#: end's cut on any of them.
 LIVE_EARLY_PROPOSALS = 25
-LIVE_EARLY_FLOOR = 0.80
+LIVE_EARLY_FLOOR = 0.75
 
 
 def live_accept_line(confidences: list[float], previous: float | None) -> float:

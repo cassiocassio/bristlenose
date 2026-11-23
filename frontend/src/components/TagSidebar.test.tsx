@@ -358,3 +358,89 @@ describe("TagSidebar", () => {
     rows.forEach((row) => expect(row.querySelector(".tag-bar-area > .tag-bar-track")).toBeTruthy());
   });
 });
+
+// ── The summary line, pinned before the AutoCode overview changes it ──────
+// Phase 6 of docs/design-autocode-landing-plan.md rewrites this line (D17, D22).
+// The audit's rule: pin what ships first, so every change to it is a named one
+// and the parts no decision names (search, Used, solo, the search box) stay.
+
+function quoteTagged(domId: string, name: string) {
+  return {
+    dom_id: domId,
+    text: "hello",
+    participant_id: "p1",
+    speaker_name: "p1",
+    start_timecode: 10,
+    session_id: "s1",
+    deleted_badges: [],
+    proposed_tags: [],
+    tags: [{ name, codebook_group: "Uncategorised", colour_set: "", colour_index: 0, source: "human" }],
+  };
+}
+
+describe("TagSidebar summary line (as shipped)", () => {
+  const NINE = ["Trust", "Pricing", "Delivery", "Returns", "Stock", "Support", "Range", "Quality", "Price"];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    resetSidebarStore();
+    vi.mocked(getHiddenTagGroups).mockResolvedValue([]);
+    vi.mocked(getFrameworkStates).mockResolvedValue({});
+    vi.mocked(apiGet).mockResolvedValue({ project_name: "ikea3" });
+  });
+
+  const line = () => document.querySelector(".tag-sidebar-subtitle")?.textContent ?? "";
+
+  it("under search, counts the tags that match and the codebooks they are in", async () => {
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(NINE.map(tag)));
+    render(<TagSidebar />);
+    const box = await waitFor(() => {
+      const el = document.querySelector<HTMLInputElement>(".tag-search-input");
+      expect(el).toBeTruthy();
+      return el!;
+    });
+    fireEvent.change(box, { target: { value: "pric" } });
+    expect(line()).toBe("2 tags across 1 frameworks");
+    fireEvent.change(box, { target: { value: "sentiment" } });
+    expect(line()).toBe("1 tags across 1 frameworks");
+  });
+
+  it("under Used, counts the tags on quotes", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initFromQuotes([quoteTagged("q-p1-10", "Trust")] as any);
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(["Trust", "Pricing"].map(tag)));
+    render(<TagSidebar />);
+    await waitFor(() => expect(screen.getByText("Pricing")).toBeTruthy());
+    fireEvent.click(screen.getByText("Used"));
+    expect(line()).toBe("1 tags across 1 frameworks");
+  });
+
+  it("is dimmed, not hidden, in solo mode", async () => {
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(["Trust", "Pricing"].map(tag)));
+    requestSoloTag("Trust");
+    const { container } = render(<TagSidebar />);
+    await waitFor(() => expect(container.querySelector(".tag-solo-active")).toBeTruthy());
+    expect(container.querySelector(".tag-solo-active .tag-sidebar-subtitle")).toBeTruthy();
+  });
+
+  it("shows the search box only above 8 tags, counted over every tag", async () => {
+    // Seven of the floor's own plus Sentiment's one: 8, no box.
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(NINE.slice(0, 7).map(tag)));
+    const first = render(<TagSidebar />);
+    await waitFor(() => expect(screen.getByText("Trust")).toBeTruthy());
+    expect(document.querySelector(".tag-search-input")).toBeNull();
+    first.unmount();
+    // One more: 9, the box.
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(NINE.slice(0, 8).map(tag)));
+    render(<TagSidebar />);
+    await waitFor(() => expect(document.querySelector(".tag-search-input")).toBeTruthy());
+  });
+
+  it("with no filter, counts every tag and codebook in the sidebar, Sentiment too", async () => {
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(["Trust", "Pricing"].map(tag)));
+    render(<TagSidebar />);
+    await waitFor(() => expect(screen.getByText("Pricing")).toBeTruthy());
+    expect(line()).toBe("3 tags across 2 frameworks");
+  });
+});

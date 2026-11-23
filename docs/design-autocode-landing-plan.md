@@ -59,7 +59,7 @@ mockup (noted per phase).
 | D25 | Quotes go to the model in stored order, never shuffled (Phase 0c): mixing sessions changes the answers more than the model's own run-to-run noise. |
 | D26 | A re-cut moves only proposals whose zone changes against the stored lines: Apply with the lines unmoved changes nothing, whatever the live acceptance did (review finding 2). |
 | D27 | A first run stopped partway settles its cut at once: the exact cut over what was coded, and the top-up. Resuming continues with the same lines. |
-| D28 | The HTML export carries accepted tags only. Tentative tags are work in progress and stay out of a deliverable, as the overview does. |
+| D28 | The HTML export carries accepted tags only. Tentative tags are work in progress and stay out of a deliverable, as the overview does. **Under reconsideration (owner, 23 Nov, after Phase 1 built it):** a probable regression, since tentative tags feed the Signals maths and the solid-and-pale bars; tracked in 100days §2. Its three export changes revert on their own. |
 
 Already shipped in this session: the count column and sentiment bar colours in the tag sidebar
 and Codebook lens (`ee2472c52`).
@@ -127,7 +127,7 @@ automatically before the dialog can undo it (review 4).
 - **Read what's new**: a cursor on the proposals route ("proposals since id N"), and the counts by confidence on the status read, so the sidebar needs no extra request.
 - **The jobs list includes stopped and failed runs** until they are acknowledged, so the Mac can draw their lines (Phase 5; review 10).
 - **The Mac's busy hold** follows D16 as refined: held while the counters move, with a ceiling on no progress (`busy.py`, `ServeReaping.swift`; review 11).
-- **Signals** is rebuilt once when the last of several concurrent runs ends (D21), after a stopped run that has accepted tags, and after a re-cut (review 9).
+- **Signals** is rebuilt once when the last of several concurrent runs ends (D21), after a stopped run that has accepted tags, and after a re-cut (review 9). Owner, 23 Nov: right; let the study settle before spending tokens on Signals' write-ups.
 - **Fix:** the failure pop-up's double full stop ("…out of credit.."): `activity.failed` adds a full stop after an `autocodeFailure` sentence that already ends with one.
 
 Tests: a batch's proposals and register entries commit together; a writer holding the lock does not lose a batch; a crash between batches loses only batches in flight and the sweep keeps the counts; provenance from each path, and "unknown" after the migration; a tag removed on a card survives a re-cut; `/quotes` shows a running first apply's tentative tags; the export carries no pending proposals.

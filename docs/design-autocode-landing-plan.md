@@ -33,11 +33,11 @@ mockup (noted per phase).
 | # | Decision |
 |---|---|
 | D1 | The review dialog shows the whole run, and its lines can be moved again later. |
-| D2 | A new cut moves only decisions a threshold made; the researcher's own accepts and excludes stay pinned. Needs a record of how each decision was made. |
+| D2 | A decision a researcher makes on a tag is pinned, whenever it is made: in the review dialog, on a quote card later, or on a tentative tag while the run is still landing. No re-cut and no end-of-run top-up overrides it: the meaning of a quote, as a person reads it, is a much stronger signal than the arithmetic of a cut-off. Needs a record of how each decision was made. |
 | D3 | No warning when raising the accept line removes tags: re-cutting again brings them back. |
 | D4 | A threshold exclusion is not a rejection in the telemetry; only a researcher's own is (`docs/methodology/tag-rejections-are-great.md`: a rejection is a judgement a person makes). |
-| D5 | Default cut after a run, then the researcher judges the result. Fixed lines or percentages: **measure first** (Phase 0). |
-| D6 | When the server accepts: **follow the measurement**. Fixed lines win: accept batch by batch, as the catch-up passes already do. Percentages win: accept once at the end. |
+| D5 | Default cut after a run, then the researcher judges the result: **the hybrid**. Accept the most confident 30% of the run's proposals, never below 0.70; exclude below 0.30 (closed with Phase 0a, below). |
+| D6 | Tags are accepted **live, batch by batch, on the server**, against a running estimate of the 30% cut: as each batch is saved the cut is re-estimated from every proposal so far (never below 0.70, and not below 0.80 until 25 proposals have landed). When the run ends the exact cut is known and a small top-up accepts what the estimate missed. An accepted tag is never taken back. The page only plays back what the server decided. |
 | D7 | Live landing: tags land on the quote cards, the tag sidebar and the Codebook lens as batches arrive; accepted tags flash, tentative ones appear quietly; the histograms grow. |
 | D8 | Tentative tags pulse during a run and for one minute after, then calm to a still dashed outline over 30 s. No pulse under reduced motion. |
 | D9 | The researcher stays where they are when AutoCode starts. |
@@ -50,18 +50,37 @@ mockup (noted per phase).
 | D16 | The Mac keeps a study's server alive for as long as AutoCode works, however long. |
 | D17 | Tag sidebar overview, as drawn in the mockup: one codebook reads "34 tags \| Review"; several read "96 tags from **3 codebooks**", the count a link that splits one merged chart into one per codebook; the merged chart has no ticks and no Review; each split chart has its own cut and Review; zone colours; tally in chart order with coloured numbers; Review present but inactive during a run. The line counts only reviewable codebooks: never Sentiment, never the researcher's own tags. |
 | D18 | The green shared by Satisfaction and Accepted stays: context tells them apart. |
+| D19 | Split view during a run: the finished charts hold their scale; everything rescales once, smoothly, when the run ends. |
+| D20 | Catch-up passes land with the same playback, and Review stays live while they run. |
+| D21 | When several codebooks run at once, Signals is rebuilt once, when the last one finishes. |
+| D22 | Before any run, the top line counts every tag except Sentiment. |
+| D23 | The Mac line's words: stopped → "Stopped" (no glyph); out of credit → "Out of credit" and key rejected → "Provider key issue" (error glyph); finished with some batches failed → "Partial run" (warning glyph). |
 
 Already shipped in this session: the count column and sentiment bar colours in the tag sidebar
 and Codebook lens (`ee2472c52`).
 
-## Open (suggested default in brackets)
+## Closed questions
 
-- **Split view during a run:** the still charts shrink as the running one grows, or hold their scale until the run ends [hold, rescale once at the end].
-- **Catch-up passes:** land with the same playback; Review live or inactive while one runs [same playback, Review live].
-- **Two codebooks at once:** rebuild Signals once, when the last finishes [yes].
-- **Before any run:** does the top line's count include Sentiment [no, as the overview's rule].
-- **D13's mapping**, to confirm in the states mockup: stopped → "Stopped"; out of credit → "Out of credit"; key rejected → "Provider key issue"; some batches failed → "Run had failures".
-- **After Phase 0:** fixed lines or percentages, and the X% / Z% if percentages.
+All six questions left open on 23 Nov were closed the same day against
+`docs/mockups/autocode-open-questions.html` (decisions D5, D6, D19 to D23 above).
+
+### Phase 0a result: the default cut (measured 23 Nov 2026)
+
+Every AutoCode run in the trial studies, 15 runs, under three rules (share of proposals accepted):
+
+| Runs | Fixed (≥ 0.70) | Percentages (top 30%) | Hybrid (top 30%, never < 0.70) |
+|---|---|---|---|
+| UXR, 8 runs | 0 to 53%, most near 50% | 31 to 41% | 0 to 40%, most 31 to 35% |
+| Poorly fitting codebooks (Norman, Nielsen, Yablonski, CLI UX), 7 runs | 0 to 3%, excluding up to 100% | 31 to **100%** | 0 to 3%, excluding up to 100% |
+
+Percentages are ruled out: three poorly fitting runs have every proposal at 0.10, so "the strongest
+30%" accepts all of them. Fixed lines accept half of a typical UXR run, which is the overwhelm.
+The hybrid takes about a third of a codebook that fits and almost nothing from one that does not.
+
+Live acceptance (D6), simulated on the same runs: on runs of 37 to 159 proposals the running
+estimate lands within a few tags of the exact cut (+2 to −7), with flashes throughout the run;
+the end-of-run top-up adds 1 to 7 tags. A run of 25 or fewer is one batch, so it lands at once
+whatever the rule. Stored and shuffled order give similar totals.
 
 ## Phases
 
@@ -75,7 +94,7 @@ and Codebook lens (`ee2472c52`).
 
 ### Phase 0: Measure (no product change)
 
-- **0a. Confidence spreads.** Across the trial runs' databases, what 0.70 / 0.30 accept and exclude, set against percentile cuts. Free; no LLM calls. Settles D5, and so D6.
+- ~~**0a. Confidence spreads.**~~ Done 23 Nov 2026; result above (§ Closed questions).
 - **0b. First-batch size.** One paired run on Talismanic: batches of 5 against 25, time to the first answer. Settles whether the first batches are 5, 10, then 25.
 - **0c. Shuffle.** One paired run: shuffled against stored order, compared quote by quote. Settles whether quotes are shuffled into batches (which makes every partial histogram a fair sample).
 
@@ -86,13 +105,13 @@ Write the results into this doc. Cost of 0b and 0c together: well under £1.
 No visible change, except the fixes.
 
 - **Save each batch as it finishes**, its proposals and its entries in the register of sent quotes in one transaction, with a retry when the database is locked. A stopped or failed run keeps its saved batches, and the cut is applied to them.
-- **Accept** per D6.
+- **Accept live** per D6: the running estimate of the hybrid cut on each saved batch, the cautious start, the top-up when the run ends, and never over a researcher's decision (D2).
 - **Record how each decision was made**: a new column on `ProposedTag` (threshold or researcher), with a migration. Accept-all, deny-all and the catch-up's apply write "threshold"; the per-row accept and deny write "researcher".
 - **Telemetry** counts only researcher exclusions as rejections (D4).
 - **Read what's new**: a cursor on the proposals route ("proposals since id N"), and the counts by confidence on the status read, so the sidebar needs no extra request.
 - **The Mac holds the server** while AutoCode works, with no 30-minute cap (D16; `busy.py`, `ServeReaping`).
 - **Fix:** the failure pop-up's double full stop ("…out of credit.."): `activity.failed` adds a full stop after an `autocodeFailure` sentence that already ends with one.
-- **Signals** is rebuilt once when the last of several concurrent runs ends (open item).
+- **Signals** is rebuilt once when the last of several concurrent runs ends (D21).
 
 Tests: the shared register and proposals commit together; a crash between batches loses only batches still in flight; provenance written by each path; a stopped run's cut.
 
@@ -107,8 +126,7 @@ Tests: the shared register and proposals commit together; a crash between batche
 
 ### Phase 3: Default cut
 
-- Every first apply ends with the default cut: accept the strong band, leave the middle tentative, exclude the weak. This generalises today's house default (`autocode_house_default.py`, which accepts only and never excludes, because an exclusion could not be undone; Phase 2 removes that reason).
-- Lines or percentages per Phase 0.
+- Every first apply ends with the default cut (D5, the hybrid): accept the most confident 30%, never below 0.70; leave the middle tentative; exclude below 0.30. This generalises today's house default (`autocode_house_default.py`, which accepts only and never excludes, because an exclusion could not be undone; Phase 2 removes that reason).
 - The researcher stays where they are (D9).
 
 ### Phase 4: Live landing
@@ -120,15 +138,17 @@ Tests: the shared register and proposals commit together; a crash between batche
 - **Pacing by queue size**, with gradual speed changes: start below a per-model baseline (a running average of call times, kept app-wide; durations only, never the call log itself), speed up freely, slow gently, cap flashes at about three a second, and play the rest out over 1 to 2 s when the server finishes.
 - **Landing:** accepted tags flash (`badge-accept-flash`) on the card, the sidebar row and the lens row; tentative tags appear quietly; the D8 pulse schedule.
 - **Layout:** the tag row's height is reserved, so a landing tag never moves the page; filtered lists take matches live (D10), so check that WebKit keeps the reading position when content is added above it.
-- **Edge cases:** a page opened mid-run shows what's already saved without flashing it; a reload works out the state again; a hidden window pauses and then catches up quickly; catch-up passes land the same way (open item).
+- **Edge cases:** a page opened mid-run shows what's already saved without flashing it; a reload works out the state again; a hidden window pauses and then catches up quickly; catch-up passes land the same way, with Review live (D20).
+- **Decisions mid-run:** accepting or excluding a tentative tag on a quote card while the run lands is a researcher decision, pinned (D2).
+- **The end of a run:** the top-up's few accepted tags flash as the last of the playback.
 - **Histograms:** the scale only grows, in rounded steps; squares or bars are chosen once, from the quote count, at the start.
 - **Status:** the Mac line counts what the server has (it is native and cannot see the page); the CLI pop-up waits for playback (D11).
 
 ### Phase 5: Progress surfaces
 
-**Mockup:** `docs/mockups/autocode-progress-states.html` (`279c0b0f2`), to be updated with D13's words.
+**Mockup:** `docs/mockups/autocode-progress-states.html` (`279c0b0f2`), to be updated with D23's words.
 
-- Mac sidebar lines for stopped, failed and partly failed AutoCode, in the pipeline run's words (D13; `ProjectSubtitle.swift`, `SidebarSubtitleText.swift`, `ScreenReading.swift`).
+- Mac sidebar lines for stopped, failed and partly failed AutoCode, in the pipeline run's words (D13, D23; `ProjectSubtitle.swift`, `SidebarSubtitleText.swift`, `ScreenReading.swift`).
 - Then remove the pop-up inside the Mac app (`isEmbedded()`); the CLI web app keeps it.
 
 ### Phase 6: Tag sidebar overview
@@ -137,7 +157,8 @@ Tests: the shared register and proposals commit together; a crash between batche
 
 - The overview as D17, built on the existing `ConfidenceHistogram`; Review opens the existing `ThresholdReviewModal` for its codebook.
 - Hidden when its codebook's eye is closed; hidden in solo mode with the rest of the summary line; absent from the HTML export (proposals are server-only there, `routes/export.py`).
-- Grows live from the Phase 4 store; the split view's scale during a run per the open item.
+- Grows live from the Phase 4 store; in the split view the finished charts hold their scale until the run ends (D19).
+- Before any run, the top line counts every tag except Sentiment (D22).
 - New tokens for status text: the bar greens and ambers fall under 4.5:1 as small text in light mode (orange 2.2:1, green 3.3:1); the mockup's #b45309 and #15803d reach about 4.8:1 on the sidebar tint.
 - Depends on Phase 2, so Review opens a dialog over the same whole run the small chart shows.
 
@@ -164,7 +185,8 @@ telemetry and three surfaces, and a plan is cheaper to correct than a branch.
 
 ## References
 
-- Lab: `experiments/autocode-landing/` (`279c0b0f2`): a real run's proposals and 52 logged call times (median 29.8 s; 1 in 10 at 50 s or more).
+- Lab: `experiments/autocode-landing/` (`279c0b0f2`): a real run's proposals and 52 logged call times (median 29.8 s; 1 in 10 at 50 s or more). Its Lines handle lacks D6's running estimate; add it before tuning Phase 4.
+- Open questions, closed: `docs/mockups/autocode-open-questions.html` (Phase 0a's data in section 1).
 - States: `docs/mockups/autocode-progress-states.html`.
 - Sidebar overview: `docs/mockups/tag-sidebar-autocode-histogram.html`.
 - The dialog as built: `docs/design-autocode-threshold-review.md`.

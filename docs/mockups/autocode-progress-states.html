@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCode progress states</title>
+<style>
+/* ════ bristlenose/theme/tokens.css — lines 1–472 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+
+    /* Dialogs (atoms/modal.css, components/Dialog.tsx) — the macOS sheet, measured
+       24 Oct 2026 from a stock Save sheet in light mode on macOS 27: the window
+       behind is pulled towards a light grey rather than covered in black (no
+       blur), the sheet has a ~20 pt radius and a shadow offset downward, and it
+       slides 32 pt down into place while it fades in. Dark values below are
+       a judgement, not a measurement. */
+    --bn-overlay-scrim: rgb(170 170 170 / 0.59);
+    --bn-overlay-z: 1000;
+    --bn-toast-z: 1100;                     /* a notification stays above a dialog */
+    --bn-modal-bg: var(--bn-colour-bg);
+    --bn-modal-radius: 20px;
+    --bn-modal-hairline: rgb(0 0 0 / 0.1);
+    --bn-modal-shadow-colour: rgb(0 0 0 / 0.3);
+    --bn-modal-shadow: 0 0 0 1px var(--bn-modal-hairline), 0 10px 40px var(--bn-modal-shadow-colour);
+    --bn-modal-offset: 32px;                /* the sheet drops this far into place */
+    --bn-modal-enter: 230ms;                /* the drop, and the backdrop dimming */
+    --bn-modal-enter-fade: 100ms;           /* solid early; the drop carries on */
+    --bn-modal-enter-ease: cubic-bezier(0, 0, 0.58, 1);
+    --bn-modal-exit: 240ms;                 /* rise, fade and backdrop together, linear */
+    /* Native-looking controls in a dialog: the segmented control's track and raised segment, and
+       the round help button, in the system's own greys (the Mac sheet draws the real ones). Not
+       palette colours: they are the platform's, the same in every palette. Dark below. */
+    --bn-control-track: #e8e8ed;
+    --bn-control-raised-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+    --bn-help-button-bg: #e8e8ea;
+    --bn-help-button-bg-hover: #dcdcdf;
+    --bn-help-button-bg-active: #cfcfd3;
+    --bn-help-button-ink: #1d1d1f;
+    --bn-help-button-size: 26px;
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-space-2xl: 3rem;
+
+    /* Signals lens — semantic spacing aliases. The card keeps one generous
+       reading rhythm even when it is one member of a compound location. */
+    --bn-signal-card-inset: var(--bn-space-2xl);
+    --bn-signal-card-section-gap: var(--bn-space-xl);
+    --bn-signal-card-evidence-gap: var(--bn-space-md);
+    --bn-signal-card-quote-inset: var(--bn-space-md);
+    --bn-signal-card-footer-gap: var(--bn-space-lg);
+    --bn-signal-card-assertion-gap: var(--bn-space-sm);
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Block shimmer and ghost (docs/design-motion.md §4.7.2). Contrast follows area: slabs
+       (thumbnail, card) take a third of the text value; small shapes (sparkline bars, the
+       4.5px strip) take 8%, because a third-contrast sweep cannot be seen on so few pixels.
+       The peak is a translucent ink tint laid OVER the element's own fill. */
+    --bn-skeleton-base: var(--bn-colour-badge-bg);
+    --bn-skeleton-contrast: 2.7%;
+    --bn-skeleton-contrast-small: 8%;
+    --bn-skeleton-peak: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast), transparent);
+    --bn-skeleton-peak-small: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast-small), transparent);
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Native-looking dialog controls (see the light values above) */
+        --bn-control-track:          light-dark(#e8e8ed, #2c2c30);
+        --bn-help-button-bg:         light-dark(#e8e8ea, #3a3a3c);
+        --bn-help-button-bg-hover:   light-dark(#dcdcdf, #48484a);
+        --bn-help-button-bg-active:  light-dark(#cfcfd3, #545456);
+        --bn-help-button-ink:        light-dark(#1d1d1f, #f5f5f7);
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+
+        /* Dialogs in dark: the page dims towards black, and the sheet is a raised
+           surface, lighter than the page, with a light hairline, the way a dark
+           macOS sheet reads. Without the lift a dark card vanished into the dimmed
+           dark report (docs/mockups/modal-crash-way-out.html, dark frame). */
+        --bn-overlay-scrim:        light-dark(rgb(170 170 170 / 0.59), rgb(0 0 0 / 0.5));
+        --bn-modal-bg:             light-dark(var(--bn-colour-bg), color-mix(in srgb, var(--bn-colour-bg), white 9%));
+        --bn-modal-hairline:       light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.14));
+        --bn-modal-shadow-colour:  light-dark(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.6));
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–101 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-font-editorial: Georgia, "Times New Roman", serif;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+
+    /* Signal card finding hierarchy. The title is a compact app heading;
+       the claim is the generous editorial statement beneath it. */
+    --bn-text-signal-title: 0.9375rem;
+    --bn-text-signal-title-lh: 1.5;
+    --bn-track-signal-title: 0;
+    --bn-weight-signal-title: var(--bn-weight-strong);
+    --bn-text-signal-claim: 1.29375rem;
+    --bn-text-signal-claim-lh: 1.4;
+    --bn-track-signal-claim: -0.005em;
+    --bn-weight-signal-claim: 500;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — lines 1–177 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #1c1c1c);   /* Dark: the paper, the darkest surface of the ladder (10 L*). Everything else steps away from it: quote cards, then inspector chrome, then the native sidebar */
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #212121);   /* Inspector chrome — dark: one step up from the quote cards (12.7 L* against 11.8), neutral grey with no hue */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1f1f1f);   /* Dark: lifted off the paper (1.5 L*) but below the inspector chrome */
+        --bn-colour-paper:            light-dark(#f6f7f8, #1c1c1c);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #252525);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-edo.css — lines 1–190 ════ */
+/* palette-edo — Edo-period Japanese art colour theme.
+   Sampled from three artworks seen at the British Museum Samurai exhibition,
+   1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
+
+   Pigments: rokusho (verdigris), sumi (iron-gall ink), cinnabar vermillion,
+   bero-ai (Prussian blue), yellow ochre.
+
+   Desktop default. Activate: data-color-theme="edo" on <html>.
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
+
+[data-color-theme="edo"] {
+    /* Colour palette — warm paper with indigo/verdigris accents */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-paper: #f7f2e6;                 /* Transcript ground: washi under Paper White */
+    --bn-colour-sheet: #fdfbf7;                 /* A quote lifted: Paper White, 1.08:1 off the washi */
+    --bn-colour-badge-bg-paper: #e8dfc9;        /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;            /* Court Indigo */
+    --bn-colour-user-tag-bg: #e8dfc9;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;           /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;             /* Gold Ochre highlight */
+
+    /* Destructive action — vermillion */
+    --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
+    /* Playback-sync glow — Prussian Blue based */
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
+
+    /* Minimap — warm parchment tones */
+    --bn-minimap-quote: #d4c9a8;
+    --bn-minimap-heading: #9e8b6e;
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #5a7d9b;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #d4c9a8;
+
+    /* Group card — neutral */
+    --bn-group-none: #f0e9d8;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #c4b898;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #b8ad91;
+    --bn-colour-icon-idle: #b8ad91;
+    --bn-colour-starred: #9e8b6e;
+    --bn-colour-shadow: rgba(30, 20, 10, 0.12);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(30, 20, 10, 0.05);
+    --bn-hover-bg-subtle: rgba(30, 20, 10, 0.03);
+
+    /* Selection state — Prussian Blue */
+    --bn-selection-bg: #e0e8f0;
+    --bn-selection-border: #0f5c9e;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #0f5c9e;
+    --bn-colour-suggestion-bg: #e0e8f0;
+}
+
+/* Dark mode — Sumi Black bg, warm parchment text */
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-paper:            light-dark(#f7f2e6, #1a1816);   /* Washi / Sumi */
+        --bn-colour-sheet:            light-dark(#fdfbf7, #26221b);   /* 1.08:1 / 1.12:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
+        --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:        light-dark(#c4a96a, #6b5528);
+        --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
+        --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+        --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f0e9d8, #211e18);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#c4b898, #4a4030);
+
+        /* Destructive action — vermillion */
+        --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
+        --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
+        --bn-colour-starred:          light-dark(#9e8b6e, #b8a880);
+        --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
+    }
+}
+
+/* ════ bristlenose/theme/atoms/shimmer.css — lines 1–98 ════ */
+/* Atom: shimmer — the "thinking / work in progress" travelling-sheen for text.
+
+   Single shared cross-surface spec (docs/design-motion.md §4.7.1); this is the
+   web (CSS) rendering. Apply `.bn-thinking-shimmer` to a text element to signal
+   indeterminate work with no ETA. It REPLACES the spinner — never run it
+   alongside a determinate progress bar on the same element (design-motion §4.7).
+
+   Two gates, BOTH must pass to animate (degrade to static plain text otherwise):
+     1. @media (prefers-reduced-motion: no-preference)   — accessibility
+     2. :root:not([data-analysis-animation="off"])       — the app's "Show
+        animation while analysing" toggle, bridged from native chrome.
+
+   The consuming surface MUST set --bn-shimmer-base (its resting text colour) and
+   SHOULD set --bn-shimmer-peak (the pole the band moves toward). The clip-to-text
+   technique forces color:transparent, which would also turn `currentColor`
+   transparent — hence base must be an explicit colour, not currentColor.
+
+     - Dark text (headroom up):  peak = white  → band brightens (the default).
+     - Light text (headroom down): peak = the surface background → band dims.
+
+   Either way the perceptual magnitude is the tuned --bn-shimmer-contrast (5%),
+   so the *character* matches across surfaces even where polarity flips. */
+
+.bn-thinking-shimmer {
+    --_shimmer-base: var(--bn-shimmer-base, currentColor);
+    --_shimmer-peak: color-mix(
+        in srgb,
+        var(--_shimmer-base),
+        var(--bn-shimmer-peak, #fff) var(--bn-shimmer-contrast)
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .bn-thinking-shimmer {
+        /* Band half-width is `--bn-shimmer-band` (a fraction of the TEXT) ÷ 6:
+           ÷3 converts text-fraction → gradient-fraction (the gradient image is
+           300% of the text width, below), then ÷2 for the half. So the peak
+           spans ~34% of the text. */
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            var(--_shimmer-base) 0%,
+            var(--_shimmer-base) calc(50% - var(--bn-shimmer-band) / 6),
+            var(--_shimmer-peak) 50%,
+            var(--_shimmer-base) calc(50% + var(--bn-shimmer-band) / 6),
+            var(--_shimmer-base) 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        animation: bn-thinking-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+    }
+}
+
+@keyframes bn-thinking-shimmer {
+    /* Positions stay within [0%, 100%] so the 300%-wide no-repeat gradient ALWAYS
+       covers the text — outside that range the image slides off and the clipped
+       glyphs render transparent (they vanish). Over the sweep window (1800/2700 =
+       66.67%) the sampling window travels across the middle of the gradient: the
+       peak band enters from the left, crosses, and exits right. It then parks at
+       0% — where the band sits off-window and only the base colour shows — for the
+       0.9 s gap. Band is off-window at the hold, so the loop restart never pops. */
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}
+
+/* Block shimmer — `.is-working` on a box (docs/design-motion.md §4.7.2). The text clip does
+   not apply to a box, so the sweep is a translucent ink tint laid over whatever fill the element
+   already has: a ghost shape and a plain box share one rule. Same timing and the same two gates
+   as the text shimmer. Contrast is --bn-skeleton-peak; a small shape (a few px of area) sets
+   --bn-skeleton-peak: var(--bn-skeleton-peak-small). Give neighbours an independent
+   --bn-skeleton-phase (a negative delay) so they read as individual organisms, not a strobe. */
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .is-working {
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            transparent 0%,
+            transparent calc(50% - var(--bn-shimmer-band) / 6),
+            var(--bn-skeleton-peak) 50%,
+            transparent calc(50% + var(--bn-shimmer-band) / 6),
+            transparent 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        animation: bn-block-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+        animation-delay: var(--bn-skeleton-phase, 0ms);
+    }
+}
+
+@keyframes bn-block-shimmer {
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}
+
+/* ════ bristlenose/theme/atoms/activity-chip.css — lines 1–172 ════ */
+/* Atom: activity-chip — non-dismissable floating progress chips for background jobs */
+
+.activity-chip-stack {
+    position: fixed;
+    bottom: 48px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    font-family: var(--bn-font-body);
+    pointer-events: none;
+}
+
+.activity-chip {
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    padding: 0.6rem 1rem;
+    border-radius: var(--bn-radius-lg);
+    font-size: var(--bn-text-label);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    animation: chip-slide-in 0.2s ease-out;
+}
+
+@keyframes chip-slide-in {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Running label carries the shimmer (replaces the old spinner). The chip is a
+   filled pill with light text (light mode) / dark text (dark mode), so the band
+   moves toward whichever pole has headroom. Base must match the chip's own text
+   colour exactly (clip-to-text can't use currentColor). See atoms/shimmer.css. */
+.chip-label {
+    --bn-shimmer-base: var(--bn-colour-bg);   /* = the chip's light label colour */
+    --bn-shimmer-peak: var(--bn-colour-text); /* dim toward the dark pill */
+    /* The CSS chip runs 20% (both themes) — the filled-pill background-clip sweep
+       needs more travel to read than the token's 5% default. The native sidebar
+       (SidebarShimmerText, mid-grey secondary text) stays at 5%. */
+    --bn-shimmer-contrast: 20%;
+}
+
+.chip-check {
+    color: var(--bn-colour-positive);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+}
+
+.chip-error {
+    color: var(--bn-colour-negative);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+}
+
+/* Partial completion. --bn-colour-warning is defined in both palettes
+   (palette-default.css:38, palette-edo.css:55), unlike the --bn-colour-success
+   / --bn-colour-danger the autocode toast reaches for, which are defined
+   nowhere. Don't copy those two here. */
+.chip-warning {
+    color: var(--bn-colour-warning);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+}
+
+.chip-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: var(--bn-weight-emphasis);
+    margin-left: 0.3rem;
+    cursor: pointer;
+}
+
+.chip-link:hover { text-decoration: underline; }
+
+.chip-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: var(--bn-text-label);
+    padding: 0 0.2rem;
+    margin-left: 0.3rem;
+}
+
+.chip-close:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Cancel button (shown while running) */
+
+.chip-cancel {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: var(--bn-text-label);
+    padding: 0 0.2rem;
+    margin-left: auto;
+}
+
+.chip-cancel:hover {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: underline;
+}
+
+/* Summary chip (collapsed multi-job view) */
+
+.activity-chip-summary {
+    cursor: pointer;
+}
+
+.chip-toggle {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: var(--bn-text-badge);
+    padding: 0 0.2rem;
+    margin-left: auto;
+}
+
+.chip-toggle:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Collapse button (shown at bottom of expanded stack) */
+
+.activity-chip-collapse {
+    justify-content: center;
+    padding: 0.3rem 1rem;
+    cursor: pointer;
+    border: none;
+}
+
+/* Dark mode — inverted chip (light bg on dark theme) */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .activity-chip {
+        background: #e5e7eb;
+        color: #111;
+    }
+    [data-theme="dark"] .activity-chip .chip-link { color: #2563eb; }
+    [data-theme="dark"] .activity-chip .chip-close { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-cancel { color: rgba(0, 0, 0, 0.4); }
+    [data-theme="dark"] .activity-chip .chip-cancel:hover { color: rgba(0, 0, 0, 0.8); }
+    [data-theme="dark"] .activity-chip .chip-label {
+        --bn-shimmer-base: #111;   /* = the inverted (dark) chip label colour */
+        --bn-shimmer-peak: #fff;   /* brighten toward white — dark text has headroom up */
+        /* contrast (20%) inherited from .chip-label — near-black text needs it */
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .activity-chip {
+            background: #e5e7eb;
+            color: #111;
+        }
+        :root:not([data-theme="light"]) .activity-chip .chip-link { color: #2563eb; }
+        :root:not([data-theme="light"]) .activity-chip .chip-close { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-cancel { color: rgba(0, 0, 0, 0.4); }
+        :root:not([data-theme="light"]) .activity-chip .chip-cancel:hover { color: rgba(0, 0, 0, 0.8); }
+        :root:not([data-theme="light"]) .activity-chip .chip-label {
+            --bn-shimmer-base: #111;
+            --bn-shimmer-peak: #fff;
+        }
+    }
+}
+
+/* ════ docs/mockups/sidebar-status-roll.html — lines 123–145 ════ */
+/* ── ARTEFACT: the drawn sidebar rows. Stand-in glyphs; metrics follow ProjectCellSpec
+      (32 pt single line, 1 pt title-to-subtitle, subtitle line below). ──────────── */
+.art { position:relative; color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); padding:8px; }
+.sb { display:flex; flex-direction:column; gap:2px; }
+.row { display:flex; gap:6px; padding:0 8px 0 10px; border-radius:6px; align-items:flex-start; }
+.row.sel { background:var(--bn-colour-hover); }
+.ico { width:20px; flex:none; height:32px; display:flex; align-items:center; justify-content:center; }
+.ico i { width:11px; height:14px; border:1.5px solid var(--bn-colour-muted); border-radius:2px; display:block; }
+.col { width:var(--budget,22ch); font-size:11px; min-width:0; flex:none; }
+.t { height:32px; line-height:32px; font-size:13px; font-weight:490; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.subline { display:flex; gap:4px; margin-top:1px; height:14px; color:var(--bn-colour-muted); }
+.sub { position:relative; flex:1; min-width:0; height:14px; overflow:hidden; line-height:14px; }
+.ln { position:absolute; inset:0; display:flex; gap:4px; align-items:flex-start; line-height:14px; white-space:nowrap;
+  transition:transform var(--d,0ms) cubic-bezier(.4,0,.2,1), opacity var(--d,0ms) ease; }
+.ln .tx { flex:1 1 auto; min-width:0; display:block; overflow:hidden; text-overflow:ellipsis; }
+.ln.in-roll  { transform:translateY(100%); opacity:0; }
+.ln.out-roll { transform:translateY(-100%); opacity:0; }
+.ln.in-fade, .ln.out-fade { opacity:0; }
+.g { flex:none; line-height:14px; }
+.g.e { color:#d92d20; } .g.w { color:#d98200; } .g.i { color:var(--bn-colour-accent); }
+.ring { flex:none; width:12px; height:12px; margin-top:10px; border:2px solid var(--bn-colour-accent); border-right-color:transparent; border-radius:50%; animation:bnspin 1s linear infinite; }
+.ring[hidden] { display:none; }
+@keyframes bnspin { to { transform:rotate(360deg); } }
+
+/* ════ mockup chrome (not product) ════ */
+:root { color-scheme: light dark; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
+  font-family: var(--bn-font-body); font-size: var(--bn-text-label); }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 20px 60px; }
+.bar { position: sticky; top: 0; z-index: 10; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+  padding: 8px 20px; background: var(--bn-colour-badge-bg); border-bottom: 1px solid var(--bn-colour-border);
+  font-family: var(--bn-font-mono); font-size: 11px; }
+.bar select { font: inherit; }
+.rmnote { display: none; color: #b4701c; }
+@media (prefers-reduced-motion: reduce) { .rmnote { display: inline; } }
+h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 22px 0 4px; }
+.lede { color: var(--bn-colour-muted); max-width: 70ch; margin: 0 0 14px; }
+.key { display: flex; gap: 16px; font-family: var(--bn-font-mono); font-size: 11px; margin-bottom: 18px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 18px; height: 12px; display: inline-block; border: 1px solid var(--bn-colour-border); }
+.key i.hatch { background: repeating-linear-gradient(135deg, var(--bn-colour-badge-bg) 0 3px, transparent 3px 6px); }
+.state { margin: 0 0 18px; }
+.state h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 0 0 6px; }
+.pair { display: grid; grid-template-columns: 300px 1fr; gap: 14px; }
+@media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+figure { margin: 0; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); overflow: hidden; }
+.chrome { display: flex; justify-content: space-between; gap: .6rem; padding: .3rem .6rem;
+  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); font-family: var(--bn-font-mono);
+  font-size: var(--bn-text-micro); border-bottom: 1px solid var(--bn-colour-border); }
+.chrome .flag { color: #d92d20; }
+.ln .tx.mac-shimmer { --bn-shimmer-base: var(--bn-colour-muted); --bn-shimmer-peak: var(--bn-colour-text); }
+.sub.hole { background: repeating-linear-gradient(135deg, var(--bn-colour-badge-bg) 0 3px, transparent 3px 6px);
+  border-radius: 2px; }
+.cliart { position: relative; height: 92px; background: var(--bn-colour-bg); }
+.page-ghost { position: absolute; inset: 12px 14px; background: repeating-linear-gradient(
+  transparent 0 12px, var(--bn-colour-badge-bg) 12px 14px); opacity: .7; }
+.stackhere { position: absolute; right: 14px; bottom: 12px; }
+.chiphole { width: 360px; height: 38px; border-radius: var(--bn-radius-lg);
+  background: repeating-linear-gradient(135deg, var(--bn-colour-badge-bg) 0 4px, transparent 4px 8px); }
+.commentary { margin-top: 30px; padding: 12px 16px; border: 7px solid transparent; border-left: 3px solid var(--bn-colour-muted);
+  background: linear-gradient(var(--bn-colour-bg), var(--bn-colour-bg)) padding-box,
+  repeating-linear-gradient(135deg, var(--bn-colour-badge-bg) 0 5px, transparent 5px 10px) border-box; }
+.commentary .lab { font-family: var(--bn-font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--bn-colour-muted); }
+.commentary h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 14px 0 6px; }
+.commentary table { border-collapse: collapse; width: 100%; }
+.commentary td { border-top: 1px solid var(--bn-colour-border); padding: 6px 8px; vertical-align: top; }
+.commentary dt { margin-top: 10px; }
+.commentary dd { margin: 3px 0 0 0; color: var(--bn-colour-text); max-width: 80ch; line-height: 1.5; }
+code { font-family: var(--bn-font-mono); font-size: .92em; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span>autocode-progress-states</span>
+  <label>Palette <select id="pal"><option value="default">default</option><option value="edo">edo</option></select></label>
+  <label>Scheme <select id="sch"><option value="">auto</option><option value="light">light</option><option value="dark">dark</option></select></label>
+  <label>Motion <select id="mot"><option value="on">on</option><option value="off">off</option></select></label>
+  <span class="rmnote">Your system's reduced-motion setting freezes the shimmer whatever this says.</span>
+</div>
+<div class="wrap">
+<h1>AutoCode progress: every moment, both surfaces</h1>
+<p class="lede">Where a researcher learns how AutoCode is going: the Mac sidebar's project line and the CLI web
+app's pop-up. Generated by <code>autocode-progress-states.gen.py</code>: shipped CSS, shipped words, read by key.
+The landing itself (tags, bars, pacing) is in <code>experiments/autocode-landing/</code>.</p>
+<div class="key"><span><i></i> artefact: ships as drawn</span><span><i class="hatch"></i> hatched: no shipped
+wording, or commentary</span></div>
+<div class="state"><h3>1 · Waiting for the first batch</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="">desktop.chrome.pipeline.autocode</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub"><div class="ln"><span class="tx bn-thinking-shimmer mac-shimmer">AutoCode · 0 of 112</span></div></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>autocode.chip.coding + progress + activity.cancel</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="running"><span class="chip-label bn-thinking-shimmer">✦ AutoCoding Bristlenose UXR Codebook 0/112&hellip;</span><button class="chip-cancel">Cancel</button></div></div></div></figure></div></div><div class="state"><h3>2 · Tags landing</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="">desktop.chrome.pipeline.autocode</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub"><div class="ln"><span class="tx bn-thinking-shimmer mac-shimmer">AutoCode · 48 of 112</span></div></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>autocode.chip.coding + progress</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="running"><span class="chip-label bn-thinking-shimmer">✦ AutoCoding Bristlenose UXR Codebook 48/112&hellip;</span><button class="chip-cancel">Cancel</button></div></div></div></figure></div></div><div class="state"><h3>3 · Server finished, screen still playing out the last tags</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="">desktop.chrome.pipeline.pickingUpSignals (hands over at the total, today)</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub"><div class="ln"><span class="tx">Picking up Signals…</span></div></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>running until playback ends: a decision, see D2</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="running"><span class="chip-label bn-thinking-shimmer">✦ AutoCoding Bristlenose UXR Codebook 112/112&hellip;</span><button class="chip-cancel">Cancel</button></div></div></div></figure></div></div><div class="state"><h3>4 · Done</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="">the row&#x27;s resting line (unchanged)</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub hole"></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>autocode.chip.coded + activity.durationIn + codebook.viewReport</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="completed"><span class="chip-check"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span>✦ AutoCoded Bristlenose UXR Codebook in 1m 4s.</span><a class="chip-link" href="#">View Report</a><button class="chip-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div></figure></div></div><div class="state"><h3>5 · Finished, but some batches failed</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="flag">NO SHIPPED LINE: see S1</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub hole"></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>autocode.toast.donePartial</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="partial"><span class="chip-warning"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span><span>Tagged 87 of 112 quotes. Some batches failed.</span><a class="chip-link" href="#">View Report</a><button class="chip-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div></figure></div></div><div class="state"><h3>6 · Stopped by the researcher</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="flag">NO SHIPPED LINE: see S2</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub hole"></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>activity.cancelled</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="cancelled"><span class="chip-error"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span><span>✦ AutoCoding Bristlenose UXR Codebook cancelled.</span><button class="chip-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div></figure></div></div><div class="state"><h3>7 · Failed partway: out of credit</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="flag">NO SHIPPED LINE: see S3</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub hole"></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>activity.failed + autocodeFailure.outOfCredit</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="failed"><span class="chip-error"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span><span>✦ AutoCoding Bristlenose UXR Codebook failed: Your AI provider account is out of credit..</span><button class="chip-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div></figure></div></div><div class="state"><h3>8 · Failed partway: key rejected</h3><div class="pair"><figure><div class="chrome"><span>Mac sidebar</span><span class="flag">NO SHIPPED LINE: see S3</span></div><div class="art"><div class="sb"><div class="row sel"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Talismanic</div><div class="subline"><div class="sub hole"></div></div></div></div><div class="row"><div class="ico"><i></i></div><div class="col" style="--budget:24ch"><div class="t">Opholdsstue</div></div></div></div></div></figure><figure><div class="chrome"><span>CLI web app pop-up</span><span>activity.failed + autocodeFailure.invalidKey</span></div><div class="cliart"><div class="page-ghost"></div><div class="stackhere"><div class="activity-chip" data-status="failed"><span class="chip-error"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span><span>✦ AutoCoding Bristlenose UXR Codebook failed: Your API key was rejected..</span><button class="chip-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div></figure></div></div>
+<section class="commentary">
+  <div class="lab">Commentary</div>
+  <h2>String plan</h2>
+  <table><tr><td><b>S1</b></td><td>Mac line, finished with some batches failed</td><td>Candidates to reuse: <code>desktop.pipeline.diagnostic.pill.unknown</code> “Run had failures”, or a sibling of <code>desktop.chrome.pipeline.autocode</code> such as “AutoCode · 87 of 112” with the warning glyph. Owner to word.</td></tr><tr><td><b>S2</b></td><td>Mac line, stopped by the researcher</td><td>Candidate: <code>desktop.chrome.pipeline.stopped</code> “Stopped”, which the run line already uses, with the count kept so the researcher sees how far it got.</td></tr><tr><td><b>S3</b></td><td>Mac line, failed (credit, key)</td><td>Candidates: the run's own pills, <code>desktop.pipeline.diagnostic.pill.out_of_credit</code> “Out of credit” and <code>…pill.auth</code> “Provider key issue”, with the error glyph. Owner to word.</td></tr></table>
+  <h2>Decisions this page surfaces</h2>
+  <dl><dt><b>D1</b> Whose count does the Mac line show?</dt><dd>The line is native and polls the server (<code>/autocode/jobs</code>), so it counts what the server has saved. It cannot see the window's playback, and with no window open there is no playback at all. So the Mac line counts the server's progress, the window shows the landing, and the two differ by up to one call's worth while a run is live. The lab's “Status line counts” handle shows both.</dd><dt><b>D2</b> When does the pop-up say done?</dt><dd>It polls the server and says done when the job does, while the last tags may still be landing for 1 to 2 s. Either it waits for the page's playback (it lives in the same page, so it can), or it says done and the last tags land under it.</dd><dt><b>D3</b> Frame 3 on the Mac: Signals takes the line at the total</dt><dd><code>ProjectSubtitle.swift</code> hands the line to “Picking up Signals…” when the count reaches its total, which is when the Signals build begins. With playback, the window is still landing tags at that moment. Probably fine: the line is about the server's work.</dd><dt><b>D4</b> Taking the pop-up away on the Mac leaves frames 5 to 8 with nothing</dt><dd>Today the Mac's AutoCode line exists only while a first apply runs, and disappears when the job stops or fails (<code>ScreenReading.swift</code> keeps only pending or running jobs). The failure is told by the web pop-up, which is not hidden inside the app. Removing the pop-up on the Mac, as asked, needs S1 to S3 first, or a failed run becomes invisible.</dd><dt><b>D5</b> Frames 7 and 8: the pop-up ends with two full stops</dt><dd><code>activity.failed</code> is “{{label}} failed: {{error}}.” and every <code>codebook.autocodeFailure.*</code> sentence already ends with a full stop, so the chip reads “…out of credit..”. Drawn here as it renders. A fix, separate from this design.</dd></dl>
+</section>
+</div>
+<script>
+const root = document.documentElement;
+document.getElementById("pal").onchange = e => root.dataset.colorTheme = e.target.value;
+document.getElementById("sch").onchange = e => { if (e.target.value) root.dataset.theme = e.target.value; else delete root.dataset.theme; };
+document.getElementById("mot").onchange = e => root.dataset.analysisAnimation = e.target.value;
+</script>
+</body>
+</html>

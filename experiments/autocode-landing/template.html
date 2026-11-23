@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCode landing lab</title>
+<style>
+/*__CSS__*/
+
+/* ════ lab chrome (hand-rolled; not product) ════ */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
+  font-family: var(--bn-font-body); font-size: var(--bn-text-label); }
+header.top { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 8px 14px; background: var(--bn-colour-badge-bg); border-bottom: 1px solid var(--bn-colour-border);
+  font-family: var(--bn-font-mono); font-size: 12px; }
+header.top h1 { font: inherit; font-weight: 700; margin: 0 8px 0 0; }
+header.top button, header.top select { font: inherit; padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+header.top button.primary { background: var(--bn-colour-accent); color: #fff; border-color: transparent; }
+#clock { min-width: 15ch; }
+.main { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 44px); }
+aside.knobs { border-right: 1px solid var(--bn-colour-border); padding: 8px 12px 40px; overflow-y: auto;
+  max-height: calc(100vh - 44px); position: sticky; top: 44px; font-size: 12px; }
+.kg { margin: 10px 0 4px; font-family: var(--bn-font-mono); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--bn-colour-muted); border-top: 1px solid var(--bn-colour-border); padding-top: 8px; }
+.k { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; margin: 5px 0; }
+.k label { color: var(--bn-colour-text); }
+.k .v { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); font-size: 11px; }
+.k input[type=range] { grid-column: 1 / -1; width: 100%; }
+.k select, .k input[type=text] { font: inherit; font-size: 11.5px; max-width: 150px; }
+.k .note { grid-column: 1 / -1; color: var(--bn-colour-muted); font-size: 11px; line-height: 1.35; }
+.assume { margin-top: 14px; padding: 8px; border-left: 3px solid var(--bn-colour-border);
+  color: var(--bn-colour-muted); font-size: 11px; line-height: 1.45; }
+section.stage { display: flex; flex-direction: column; min-width: 0; }
+.surfaces { display: grid; grid-template-columns: 200px minmax(260px, 1fr) minmax(270px, 1fr); gap: 0; flex: 1; min-height: 0; }
+.pane { border-right: 1px solid var(--bn-colour-border); min-width: 0; height: calc(100vh - 44px - 190px);
+  overflow-y: auto; position: relative; }
+.pane > .ph { position: sticky; top: 0; z-index: 5; background: var(--bn-colour-bg); padding: 6px 10px;
+  font-family: var(--bn-font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--bn-colour-muted); border-bottom: 1px solid var(--bn-colour-border); display: flex; gap: 8px; align-items: center; }
+.pane > .ph select { font: inherit; text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+/* Mac sidebar stand-in (metrics follow docs/mockups/sidebar-status-roll.html) */
+.macsb { background: var(--bn-colour-quote-bg); padding: 8px 6px; border-bottom: 1px solid var(--bn-colour-border); }
+.prow { display: flex; gap: 6px; padding: 0 8px; border-radius: 6px; background: var(--bn-colour-hover); }
+.prow .ico { width: 18px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--bn-colour-accent); }
+.prow .t { height: 32px; line-height: 32px; font-size: 13px; font-weight: var(--bn-weight-emphasis); }
+.prow .sub { font-size: 11px; line-height: 14px; height: 14px; margin: -6px 0 6px; color: var(--bn-colour-muted); white-space: nowrap; }
+.prow .sub.bn-thinking-shimmer { --bn-shimmer-base: var(--bn-colour-muted); --bn-shimmer-peak: var(--bn-colour-text); }
+
+/* Tag rows (sidebar + codebook) */
+.tgrp { padding: 6px 10px 2px; font-size: 11px; color: var(--bn-colour-muted); font-weight: var(--bn-weight-emphasis); }
+.trow { display: grid; grid-template-columns: minmax(0, 1fr) 64px 26px; gap: 6px; align-items: center; padding: 2px 10px; }
+.trow .badge { justify-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.trow .bar { height: 7px; border-radius: 2px; background: transparent; display: flex; overflow: hidden; }
+.trow .bar i { display: block; height: 100%; transition: width .35s ease; }
+.trow .bar i.pale { opacity: .38; }
+.trow .n { font-family: var(--bn-font-mono); font-size: 11px; color: var(--bn-colour-muted); text-align: right; }
+
+/* Quote cards (stand-in) */
+.qc { padding: 10px 12px 8px; border-bottom: 1px solid var(--bn-colour-border); }
+.qc .meta { font-family: var(--bn-font-mono); font-size: 11px; color: var(--bn-colour-accent); display: flex; gap: 8px; }
+.qc .meta .sp { color: var(--bn-colour-muted); }
+.qc .tx { font-size: 14px; line-height: 1.45; margin: 3px 0 4px; }
+.qc .tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.reserve .qc .tags { min-height: 22px; }
+.qc[data-hidden] { display: none; }
+.newpill { position: sticky; top: 30px; z-index: 6; margin: 6px auto; display: block; width: max-content;
+  background: var(--bn-colour-accent); color: #fff; border: 0; border-radius: 999px; padding: 3px 12px;
+  font: inherit; font-size: 12px; cursor: pointer; }
+.newpill[hidden] { display: none; }
+.still .badge-proposed { animation: none !important; opacity: .72; }
+.rm *, .rm *::before, .rm *::after { animation: none !important; transition: none !important; }
+
+/* Histogram */
+.hist { padding: 10px 12px 4px; }
+.hplot { position: relative; height: 150px; display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px;
+  align-items: end; border-bottom: 1px solid var(--bn-colour-border); }
+.bin { display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 100%; }
+.bin.sq { flex-wrap: wrap-reverse; flex-direction: row; align-content: flex-start; gap: 1px; justify-content: center; }
+.seg { width: 100%; transition: height .4s ease; }
+.seg.acc { background: oklch(62% 0.13 150); }
+.seg.ten { background: oklch(78% 0.12 75); opacity: .55; }
+.seg.exc { background: var(--bn-bar-none); }
+.sqi { width: 7px; height: 7px; border-radius: 1px; }
+.sqi.ten { opacity: .45; outline: 1px dashed currentColor; outline-offset: -1px; }
+.sqi.exc { background: var(--bn-bar-none) !important; }
+.line { position: absolute; top: -4px; bottom: 0; width: 2px; background: var(--bn-colour-accent); transition: left .5s ease; }
+.line.lo { background: var(--bn-colour-muted); }
+.hax { display: flex; justify-content: space-between; font-family: var(--bn-font-mono); font-size: 10px; color: var(--bn-colour-muted); padding-top: 2px; }
+.hmeta { font-family: var(--bn-font-mono); font-size: 10.5px; color: var(--bn-colour-muted); margin: 4px 0 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.cbgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; padding: 6px 8px 20px; }
+.cbcard { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); padding: 4px 0 6px; }
+.cbcard .tgrp { color: var(--bn-colour-text); }
+
+/* chip inside the quotes pane (CLI surface) */
+.lab-chipstack { position: sticky; bottom: 10px; display: flex; justify-content: flex-end; padding: 0 10px; pointer-events: none; }
+.lab-chipstack[hidden] { display: none; }
+
+/* timeline */
+.tl { height: 190px; border-top: 1px solid var(--bn-colour-border); padding: 6px 12px; display: grid; grid-template-columns: 1fr 260px; gap: 12px; }
+.tl canvas { width: 100%; height: 170px; display: block; }
+.stats { font-family: var(--bn-font-mono); font-size: 11px; line-height: 1.55; color: var(--bn-colour-muted); }
+.stats b { color: var(--bn-colour-text); font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>AutoCode landing lab</h1>
+  <button id="play" class="primary">▶ Play</button>
+  <button id="restart">↺ Restart</button>
+  <label>Speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select>×</label>
+  <label>Preset <select id="preset">
+    <option value="">—</option>
+    <option value="today">Today: everything at the end</option>
+    <option value="brief">The brief: per batch, predicted pace</option>
+    <option value="rec">Small first batch, pace by queue</option>
+  </select></label>
+  <span id="clock">t = 0.0 s</span>
+  <span id="studyinfo" style="color:var(--bn-colour-muted)"></span>
+</header>
+<div class="main">
+  <aside class="knobs" id="knobs"></aside>
+  <section class="stage">
+    <div class="surfaces" id="surfaces">
+      <div class="pane" id="sidebarPane">
+        <div class="ph">Sidebar</div>
+        <div class="macsb" id="macsb">
+          <div class="prow"><div class="ico">❄</div><div><div class="t">Talismanic</div>
+            <div class="sub" id="statusLine"></div></div></div>
+        </div>
+        <div id="tagSidebar"></div>
+      </div>
+      <div class="pane" id="quotesPane">
+        <div class="ph">Quotes
+          <select id="filter"><option value="">All quotes</option></select>
+        </div>
+        <button class="newpill" id="newpill" hidden></button>
+        <div id="quotes"></div>
+        <div class="lab-chipstack" id="chipstack" hidden></div>
+      </div>
+      <div class="pane" id="codebookPane">
+        <div class="ph">Codebook</div>
+        <div class="hist">
+          <div class="hplot" id="hplot"></div>
+          <div class="hax"><span>0.0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div>
+          <div class="hmeta" id="hmeta"></div>
+        </div>
+        <div class="cbgrid" id="cbgrid"></div>
+      </div>
+    </div>
+    <div class="tl">
+      <canvas id="tl"></canvas>
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+</div>
+<script>
+const D = /*__DATA__*/null;
+const SLOTS = { ux: 5, emo: 6, task: 5, trust: 5, opp: 5 };
+const BIN_N = 20, HIST_H = 150, SQ = 8;
+
+// ── knobs ─────────────────────────────────────────────────────────────────────
+const K = {
+  save: "batch", sizes: "25", conc: 3, callMode: "replay", median: 30, p90: 50, share: 75,
+  order: "stored", seed: 7,
+  pacing: "predict", baseline: 30, startRate: 0.6, horizon: 8, accel: 0.8, decel: 0.3,
+  maxRate: 3, drain: 1.5, within: "stored", statusCount: "screen",
+  lines: "fixed", upper: 0.70, lower: 0.30, topPct: 30, botPct: 10,
+  axis: "grow", squares: "lock", tentative: "pulse", reserve: "on", filterMode: "hold",
+  surface: "mac", rm: "off",
+};
+const SPEC = [
+  ["Server", [
+    ["save", "Proposals saved", "sel", [["batch", "per batch"], ["end", "at the end (today)"]]],
+    ["sizes", "Batch sizes", "text", null, "Comma list; the last repeats. Today: 25."],
+    ["conc", "Calls at once", "range", [1, 6, 1]],
+    ["callMode", "Call time", "sel", [["replay", "replay logged calls"], ["model", "median + slow tail"]]],
+    ["median", "Median call (s)", "range", [5, 60, 1]],
+    ["p90", "1 in 10 slower than (s)", "range", [10, 120, 1]],
+    ["share", "Call time that scales with batch size (%)", "range", [0, 100, 5], "Assumed. 75% means a 5-quote call takes 40% of a 25-quote one."],
+    ["order", "Quote order", "sel", [["stored", "stored (by session)"], ["shuffled", "shuffled"]]],
+    ["seed", "Random seed", "range", [1, 50, 1]],
+  ]],
+  ["Playback", [
+    ["pacing", "Pacing", "sel", [["none", "none: whole batch at once"], ["predict", "predict next arrival"], ["buffer", "by queue size"]]],
+    ["baseline", "Baseline call time (s)", "range", [5, 60, 1], "The starting guess before this run's own batches."],
+    ["startRate", "Starting pace (tags/s)", "range", [0.1, 3, 0.1]],
+    ["horizon", "Queue horizon (s)", "range", [2, 30, 1], "By queue size: pace = tags waiting ÷ this."],
+    ["accel", "Speed-up limit (tags/s per s)", "range", [0.05, 3, 0.05]],
+    ["decel", "Slow-down limit (tags/s per s)", "range", [0.05, 3, 0.05]],
+    ["maxRate", "Flash limit (tags/s)", "range", [0.5, 10, 0.5], "WCAG 2.3.1 is 3 flashes/s for large areas."],
+    ["drain", "Play the rest when done over (s)", "range", [0, 6, 0.5]],
+    ["within", "Order within a batch", "sel", [["stored", "as sent"], ["strong", "strongest first"], ["random", "random"]]],
+    ["statusCount", "Status line counts", "sel", [["screen", "what has landed"], ["server", "what the server has"]]],
+  ]],
+  ["Lines", [
+    ["lines", "Accept / exclude lines", "sel", [["fixed", "fixed values"], ["pct", "percentages, live (can flip)"], ["wave", "tentative live, accept wave at end"]]],
+    ["upper", "Accept at or above", "range", [0.4, 0.95, 0.05]],
+    ["lower", "Exclude below", "range", [0, 0.6, 0.05]],
+    ["topPct", "Accept strongest (%)", "range", [5, 80, 5]],
+    ["botPct", "Exclude weakest (%)", "range", [0, 50, 5]],
+  ]],
+  ["Display", [
+    ["axis", "Bar scale", "sel", [["grow", "grow-only rounded steps"], ["tallest", "rescale to tallest"]]],
+    ["squares", "Squares or bars", "sel", [["lock", "chosen at start"], ["switch", "switch when full"]]],
+    ["tentative", "Tentative tags", "sel", [["pulse", "pulsing (today)"], ["still", "still dashed"]]],
+    ["reserve", "Reserve the tag row", "sel", [["on", "yes: no reflow"], ["off", "no: cards grow"]]],
+    ["filterMode", "Filtered list, new matches", "sel", [["hold", "hold + “N new”"], ["live", "insert live"]]],
+    ["surface", "Progress shown in", "sel", [["mac", "Mac sidebar line"], ["cli", "CLI pop-up"]]],
+    ["rm", "Reduced motion", "sel", [["off", "off"], ["on", "on"]]],
+  ]],
+];
+const PRESETS = {
+  today: { save: "end", sizes: "25", pacing: "none", tentative: "pulse", order: "stored", lines: "fixed", axis: "tallest", squares: "switch" },
+  brief: { save: "batch", sizes: "25", pacing: "predict", tentative: "pulse", order: "stored", lines: "fixed", axis: "tallest", squares: "switch" },
+  rec: { save: "batch", sizes: "5,10,25", pacing: "buffer", tentative: "still", order: "shuffled", lines: "fixed", axis: "grow", squares: "lock" },
+};
+
+function buildKnobs() {
+  const host = document.getElementById("knobs");
+  host.innerHTML = "";
+  for (const [group, items] of SPEC) {
+    const g = document.createElement("div"); g.className = "kg"; g.textContent = group; host.append(g);
+    for (const [key, label, type, opts, note] of items) {
+      const row = document.createElement("div"); row.className = "k";
+      const lab = document.createElement("label"); lab.textContent = label; row.append(lab);
+      let input;
+      if (type === "sel") {
+        input = document.createElement("select");
+        for (const [v, t] of opts) { const o = new Option(t, v); input.add(o); }
+        input.value = K[key]; row.append(input);
+      } else if (type === "text") {
+        input = document.createElement("input"); input.type = "text"; input.value = K[key]; input.size = 10; row.append(input);
+      } else {
+        const v = document.createElement("span"); v.className = "v"; v.textContent = K[key]; row.append(v);
+        input = document.createElement("input"); input.type = "range";
+        [input.min, input.max, input.step] = opts; input.value = K[key]; row.append(input);
+        input.addEventListener("input", () => { v.textContent = input.value; });
+      }
+      input.addEventListener("change", () => {
+        K[key] = type === "range" ? Number(input.value) : input.value;
+        restart();
+      });
+      if (note) { const n = document.createElement("div"); n.className = "note"; n.textContent = note; row.append(n); }
+      host.append(row);
+    }
+  }
+  const a = document.createElement("div"); a.className = "assume";
+  a.innerHTML = "<b>Measured:</b> " + D.calls_ms.length + " logged AutoCode calls (median " +
+    (median(D.calls_ms) / 1000).toFixed(1) + " s). <b>Assumed:</b> how call time scales with batch size; " +
+    "that shuffling leaves confidences unchanged. Quote text: Talismanic, codes only.";
+  host.append(a);
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffle(arr, rng) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function median(a) { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+function niceUp(x) { const steps = [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200, 300, 500, 1000]; for (const s of steps) if (s >= x) return s; return Math.ceil(x / 500) * 500; }
+function tagBg(t) { const tag = D.tags[t]; return `var(--bn-${tag.set}-${(tag.idx % (SLOTS[tag.set] || 5)) + 1}-bg)`; }
+function barColour(t) { return `var(--bn-bar-${D.tags[t].set}, var(--bn-bar-none))`; }
+function fmtTc(s) { const m = Math.floor(s / 60), r = s % 60; return `[${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}]`; }
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+// ── simulation state ──────────────────────────────────────────────────────────
+let S = null, playing = false, last = 0;
+const qById = new Map(D.quotes.map(q => [q.id, q]));
+const cardEls = new Map(), badgeEls = new Map(), sideRows = [], cbRows = [];
+
+function sizeFactor(n) { return (1 - K.share / 100) + (K.share / 100) * (n / 25); }
+function sampleCall(rng) {
+  if (K.callMode === "replay") return D.calls_ms[Math.floor(rng() * D.calls_ms.length)] / 1000;
+  const sigma = Math.log(Math.max(K.p90, K.median + 0.1) / K.median) / 1.2816;
+  const z = Math.sqrt(-2 * Math.log(rng() || 1e-9)) * Math.cos(2 * Math.PI * rng());
+  return K.median * Math.exp(sigma * z);
+}
+
+function plan() {
+  const rng = mulberry32(K.seed);
+  let order = D.quotes.map(q => q.id);
+  if (K.order === "shuffled") shuffle(order, mulberry32(K.seed * 7919));
+  let sizes = String(K.sizes).split(/[,\s]+/).map(Number).filter(n => n > 0);
+  if (!sizes.length) sizes = [25];
+  const batches = [];
+  for (let i = 0, k = 0; i < order.length; k++) {
+    const n = sizes[Math.min(k, sizes.length - 1)];
+    batches.push({ qids: order.slice(i, i + n), n: Math.min(n, order.length - i) });
+    i += n;
+  }
+  const lanes = Array(K.conc).fill(0);
+  for (const b of batches) {
+    b.dur = Math.max(1, sampleCall(rng) * sizeFactor(b.n));
+    let lane = 0; for (let j = 1; j < lanes.length; j++) if (lanes[j] < lanes[lane]) lane = j;
+    b.lane = lane; b.start = lanes[lane]; b.end = b.start + b.dur; lanes[lane] = b.end;
+  }
+  const serverEnd = Math.max(...batches.map(b => b.end));
+  for (const b of batches) b.visible = K.save === "end" ? serverEnd : b.end;
+  return { batches, serverEnd, arr: [...batches].sort((a, b) => a.visible - b.visible) };
+}
+
+function restart() {
+  const wasPlaying = playing;
+  const p = plan();
+  S = {
+    t: 0, ...p, ai: 0, queue: [], revealed: new Map(), rate: K.startRate, credits: 0,
+    observed: [], arrivedConfs: [], finished: false, waved: false, flips: 0, held: new Set(),
+    reveals: [], depth: [], lastDepthT: -1, histMax: 5, tagMax: 5, sqMode: null,
+    counts: D.tags.map(() => ({ a: 0, t: 0, e: 0 })), landedQuotes: 0, serverQuotes: 0,
+    firstReveal: null, doneT: null,
+  };
+  // squares or bars, chosen at start from what is known up front (the quote count)
+  const maxStack = Math.floor(HIST_H / SQ);
+  S.sqMode = K.squares === "lock" ? (D.quotes.length * 0.22 <= maxStack) : true;
+  document.documentElement.classList.toggle("rm", K.rm === "on");
+  document.body.classList.toggle("still", K.tentative === "still");
+  document.getElementById("quotes").classList.toggle("reserve", K.reserve === "on");
+  document.getElementById("chipstack").hidden = K.surface !== "cli";
+  document.getElementById("macsb").style.display = K.surface === "mac" ? "" : "none";
+  renderStatic();
+  updateAll();
+  playing = wasPlaying;
+}
+
+// ── classification ────────────────────────────────────────────────────────────
+function pctLines(confs) {
+  if (!confs.length) return { u: 2, l: -1 };
+  const s = [...confs].sort((a, b) => b - a);
+  const k = Math.max(1, Math.ceil(s.length * K.topPct / 100));
+  const z = Math.ceil(s.length * K.botPct / 100);
+  return { u: s[k - 1], l: z > 0 ? s[s.length - z] : -1 };
+}
+function currentLines() {
+  if (K.lines === "fixed") return { u: K.upper, l: K.lower, pct: false };
+  const L = pctLines(S.arrivedConfs);
+  return { u: L.u, l: L.l, pct: true };
+}
+function classify(conf) {
+  if (K.lines === "wave" && !S.waved) return "ten";
+  const L = currentLines();
+  if (conf >= L.u) return "acc";
+  if (L.pct ? conf <= L.l : conf < L.l) return "exc";
+  return "ten";
+}
+
+// ── static render ─────────────────────────────────────────────────────────────
+function renderStatic() {
+  const qhost = document.getElementById("quotes");
+  qhost.innerHTML = ""; cardEls.clear(); badgeEls.clear();
+  for (const q of D.quotes) {
+    const el = document.createElement("div"); el.className = "qc";
+    el.innerHTML = `<div class="meta"><span>${fmtTc(q.tc)}</span><span class="sp">${esc(q.p)}</span></div>` +
+      `<div class="tx">${esc(q.text)}</div><div class="tags"></div>`;
+    qhost.append(el); cardEls.set(q.id, el);
+  }
+  const filt = document.getElementById("filter");
+  const keep = filt.value;
+  filt.innerHTML = '<option value="">All quotes</option>' + D.tags.map((t, i) => `<option value="${i}">${esc(t.name)}</option>`).join("");
+  filt.value = keep;
+  const rowHTML = (t) => `<span class="badge" style="background:${tagBg(t)}">${esc(D.tags[t].name)}</span>` +
+    `<span class="bar"><i class="solid" style="background:${barColour(t)};width:0"></i><i class="pale" style="background:${barColour(t)};width:0"></i></span><span class="n">0</span>`;
+  const side = document.getElementById("tagSidebar"); side.innerHTML = ""; sideRows.length = 0;
+  const cb = document.getElementById("cbgrid"); cb.innerHTML = ""; cbRows.length = 0;
+  for (const g of D.groups) {
+    const h = document.createElement("div"); h.className = "tgrp"; h.textContent = g.name; side.append(h);
+    const card = document.createElement("div"); card.className = "cbcard";
+    card.innerHTML = `<div class="tgrp">${esc(g.name)}</div>`; cb.append(card);
+    D.tags.forEach((t, i) => {
+      if (t.group !== g.name) return;
+      const r = document.createElement("div"); r.className = "trow"; r.innerHTML = rowHTML(i); side.append(r); sideRows[i] = r;
+      const c = document.createElement("div"); c.className = "trow"; c.innerHTML = rowHTML(i); card.append(c); cbRows[i] = c;
+    });
+  }
+  const hp = document.getElementById("hplot"); hp.innerHTML = "";
+  for (let i = 0; i < BIN_N; i++) { const b = document.createElement("div"); b.className = "bin"; hp.append(b); }
+  for (const cls of ["lo", "hi"]) { const l = document.createElement("div"); l.className = "line " + cls; l.id = "line-" + cls; hp.append(l); }
+  document.getElementById("newpill").hidden = true;
+}
+
+// ── arrivals, reveals ─────────────────────────────────────────────────────────
+function arrive(b) {
+  b.arrived = true;
+  S.observed.push(b.dur / sizeFactor(b.n));
+  S.serverQuotes += b.n;
+  let items = b.qids.filter(id => D.props[id]).map(id => ({ qid: id, b }));
+  b.pending = items.length;
+  S.landedQuotes += b.n - items.length;
+  for (const it of items) S.arrivedConfs.push(D.props[it.qid].c);
+  if (K.within === "strong") items.sort((x, y) => D.props[y.qid].c - D.props[x.qid].c);
+  else if (K.within === "random") shuffle(items, mulberry32(K.seed + b.start * 1000 | 0));
+  S.queue.push(...items);
+  if (K.lines === "pct") reclassRevealed();
+}
+function reclassRevealed() {
+  for (const [qid, cls] of S.revealed) {
+    const n = classify(D.props[qid].c);
+    if (n !== cls) { setClass(qid, n, true); S.flips++; }
+  }
+}
+function reveal(it) {
+  const p = D.props[it.qid];
+  if (it.wave) { setClass(it.qid, classify(p.c), false); return; }
+  setClass(it.qid, classify(p.c), false);
+  it.b.pending--; S.landedQuotes++;
+  if (S.firstReveal === null) S.firstReveal = S.t;
+}
+function setClass(qid, cls, isFlip) {
+  const p = D.props[qid], t = p.t, prev = S.revealed.get(qid);
+  if (prev) S.counts[t][prev[0]]--;
+  S.revealed.set(qid, cls);
+  S.counts[t][cls[0]]++;
+  S.reveals.push({ t: S.t, cls, flip: isFlip });
+  // the quote card
+  const card = cardEls.get(qid), tags = card.querySelector(".tags");
+  let badge = badgeEls.get(qid);
+  if (cls === "exc") { if (badge) { badge.remove(); badgeEls.delete(qid); } }
+  else {
+    if (!badge) { badge = document.createElement("span"); tags.append(badge); badgeEls.set(qid, badge); }
+    badge.className = "badge " + (cls === "acc" ? "badge-user" : "badge-proposed");
+    badge.style.background = tagBg(t);
+    badge.textContent = D.tags[t].name;
+    if (cls === "acc") flash(badge); else if (!isFlip) appear(badge);
+  }
+  if (cls === "acc") { flash(sideRows[t].querySelector(".badge")); flash(cbRows[t].querySelector(".badge")); }
+  applyFilter(qid, true);
+  S.dirty = true;
+}
+function flash(el) {
+  if (K.rm === "on" || !el) return;
+  el.classList.remove("badge-accept-flash"); void el.offsetWidth; el.classList.add("badge-accept-flash");
+}
+function appear(el) {
+  if (K.rm === "on") return;
+  el.classList.add("badge-appearing"); setTimeout(() => el.classList.remove("badge-appearing"), 200);
+}
+
+// ── filter ────────────────────────────────────────────────────────────────────
+function matches(qid, f) { const cls = S.revealed.get(qid); return cls && cls !== "exc" && String(D.props[qid].t) === f; }
+function applyFilter(qid, fromLanding) {
+  const f = document.getElementById("filter").value, card = cardEls.get(qid);
+  if (!f) { delete card.dataset.hidden; return; }
+  const m = matches(qid, f);
+  if (m && fromLanding && K.filterMode === "hold" && card.dataset.hidden !== undefined) { S.held.add(qid); updatePill(); return; }
+  if (m) delete card.dataset.hidden; else card.dataset.hidden = "";
+}
+function refilter() { S.held.clear(); for (const q of D.quotes) applyFilter(q.id, false); updatePill(); }
+function updatePill() {
+  const pill = document.getElementById("newpill");
+  pill.hidden = S.held.size === 0; pill.textContent = `↑ ${S.held.size} new`;
+}
+document.getElementById("newpill").addEventListener("click", () => {
+  for (const q of S.held) delete cardEls.get(q).dataset.hidden;
+  S.held.clear(); updatePill();
+});
+document.getElementById("filter").addEventListener("change", refilter);
+
+// ── per-frame update ──────────────────────────────────────────────────────────
+function step(dt) {
+  S.t += dt;
+  while (S.ai < S.arr.length && S.arr[S.ai].visible <= S.t) arrive(S.arr[S.ai++]);
+  const serverDone = S.ai >= S.arr.length;
+  if (K.rm === "on" || K.pacing === "none") {
+    while (S.queue.length) reveal(S.queue.shift());
+  } else {
+    const q = S.queue.length;
+    if (serverDone) {
+      S.rate = Math.max(S.rate, q / Math.max(K.drain, 0.05));
+    } else {
+      let target;
+      if (K.pacing === "predict") {
+        const typical = S.observed.length ? median(S.observed) : K.baseline;
+        const inflight = S.batches.filter(b => b.start <= S.t && b.visible > S.t);
+        let next = inflight.length ? Math.min(...inflight.map(b => b.start + typical * sizeFactor(b.n))) : S.t + typical;
+        if (next < S.t + 0.5) next = S.t + 0.5;
+        target = q / (next - S.t);
+      } else target = q / K.horizon;
+      const d = target - S.rate;
+      S.rate += d > 0 ? Math.min(d, K.accel * dt) : Math.max(d, -K.decel * dt);
+      S.rate = Math.max(0, Math.min(S.rate, K.maxRate));
+    }
+    S.credits += S.rate * dt;
+    while (S.credits >= 1 && S.queue.length) { reveal(S.queue.shift()); S.credits -= 1; }
+    if (!S.queue.length) S.credits = Math.min(S.credits, 1);
+  }
+  if (serverDone && !S.queue.length && !S.finished) {
+    if (K.lines === "wave" && !S.waved) {
+      // the wave: every landed tag is re-cut at the final lines, strongest first;
+      // only the ones that change move, through the same paced queue
+      S.waved = true;
+      const items = [...S.revealed.keys()].sort((a, b) => D.props[b].c - D.props[a].c);
+      for (const qid of items) if (classify(D.props[qid].c) !== S.revealed.get(qid)) S.queue.push({ qid, wave: true });
+      if (!S.queue.length) { S.finished = true; S.doneT = S.t; }
+    } else { S.finished = true; S.doneT = S.t; }
+  }
+  if (S.t - S.lastDepthT >= 0.2) { S.depth.push({ t: S.t, q: S.queue.length, r: S.rate }); S.lastDepthT = S.t; }
+}
+
+function updateAll() {
+  updateStatus(); updateBars(); updateHist(); drawTimeline(); updateStats();
+  document.getElementById("clock").textContent = `t = ${S.t.toFixed(1)} s`;
+  S.dirty = false;
+}
+
+function updateStatus() {
+  const N = D.quotes.length;
+  const n = K.statusCount === "server" ? S.serverQuotes : Math.min(N, S.landedQuotes);
+  const running = !S.finished;
+  const line = document.getElementById("statusLine");
+  line.textContent = `AutoCode · ${n} of ${N}`;
+  line.classList.toggle("bn-thinking-shimmer", running);
+  const stack = document.getElementById("chipstack");
+  if (K.surface === "cli") {
+    const title = "Bristlenose UXR Codebook";
+    stack.innerHTML = running
+      ? `<div class="activity-chip" data-status="running"><span class="chip-label bn-thinking-shimmer">✦ AutoCoding ${title} ${n}/${N}…</span><button class="chip-cancel">Cancel</button></div>`
+      : `<div class="activity-chip" data-status="completed"><span class="chip-check">✓</span><span>✦ AutoCoded ${title} in ${fmtDur(S.doneT)}.</span></div>`;
+  }
+}
+function fmtDur(s) { const m = Math.floor(s / 60), r = Math.round(s % 60); return m ? `${m}m ${r}s` : `${r}s`; }
+
+function updateBars() {
+  const tallest = Math.max(1, ...S.counts.map(c => c.a + c.t));
+  S.tagMax = K.axis === "tallest" ? tallest : (tallest > S.tagMax ? niceUp(tallest * 1.25) : S.tagMax);
+  S.counts.forEach((c, t) => {
+    for (const row of [sideRows[t], cbRows[t]]) {
+      if (!row) continue;
+      row.querySelector(".solid").style.width = (c.a / S.tagMax * 100) + "%";
+      row.querySelector(".pale").style.width = (c.t / S.tagMax * 100) + "%";
+      row.querySelector(".n").textContent = c.a + c.t ? (c.t ? `${c.a}+${c.t}` : c.a) : "";
+    }
+  });
+}
+
+function updateHist() {
+  const bins = Array.from({ length: BIN_N }, () => []);
+  for (const [qid, cls] of S.revealed) {
+    const c = D.props[qid].c; const i = Math.min(BIN_N - 1, Math.floor(c * BIN_N));
+    bins[i].push({ qid, cls, t: D.props[qid].t });
+  }
+  const tallest = Math.max(1, ...bins.map(b => b.length));
+  const maxStack = Math.floor(HIST_H / SQ);
+  if (K.squares === "switch") S.sqMode = tallest <= maxStack;
+  S.histMax = K.axis === "tallest" ? tallest : (tallest > S.histMax ? niceUp(tallest * 1.25) : S.histMax);
+  const hp = document.getElementById("hplot");
+  [...hp.querySelectorAll(".bin")].forEach((el, i) => {
+    const b = bins[i];
+    if (S.sqMode) {
+      el.className = "bin sq";
+      const order = { acc: 0, ten: 1, exc: 2 };
+      b.sort((x, y) => order[x.cls] - order[y.cls]);
+      el.innerHTML = b.map(x => `<i class="sqi ${x.cls}" style="background:${tagBg(x.t)};color:var(--bn-colour-muted)"></i>`).join("");
+    } else {
+      el.className = "bin";
+      const n = { acc: 0, ten: 0, exc: 0 }; b.forEach(x => n[x.cls]++);
+      if (el.children.length !== 3 || el.firstChild.tagName !== "DIV") el.innerHTML = '<div class="seg acc"></div><div class="seg ten"></div><div class="seg exc"></div>';
+      const [a, t, e] = el.children;
+      a.style.height = (n.acc / S.histMax * HIST_H) + "px";
+      t.style.height = (n.ten / S.histMax * HIST_H) + "px";
+      e.style.height = (n.exc / S.histMax * HIST_H) + "px";
+    }
+  });
+  const L = currentLines();
+  const lo = document.getElementById("line-lo"), hi = document.getElementById("line-hi");
+  const show = !(K.lines === "wave" && !S.waved);
+  hi.style.display = lo.style.display = show && S.revealed.size ? "" : "none";
+  hi.style.left = `calc(${Math.min(1, L.u) * 100}% - 1px)`;
+  lo.style.left = `calc(${Math.max(0, L.l) * 100}% - 1px)`;
+  const tot = { a: 0, t: 0, e: 0 }; S.counts.forEach(c => { tot.a += c.a; tot.t += c.t; tot.e += c.e; });
+  document.getElementById("hmeta").innerHTML =
+    `<span>accepted ${tot.a}</span><span>tentative ${tot.t}</span><span>excluded ${tot.e}</span>` +
+    `<span>scale ${S.sqMode ? "squares" : "0–" + S.histMax}</span>` + (S.flips ? `<span style="color:#d92d20">flips ${S.flips}</span>` : "");
+}
+
+function drawTimeline() {
+  const cv = document.getElementById("tl"), dpr = devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.body);
+  const ink = css.getPropertyValue("color"), muted = "#8a8f98";
+  const T = Math.max(S.serverEnd + K.drain + 6, S.t + 2, S.doneT || 0);
+  const X = t => 40 + (W - 50) * t / T;
+  const laneH = 9, top = 4;
+  g.font = "10px ui-monospace, Menlo, monospace"; g.fillStyle = muted;
+  g.fillText("server", 0, top + 8);
+  for (const b of S.batches) {
+    const y = top + b.lane * (laneH + 2);
+    g.fillStyle = "rgba(128,128,128,.18)"; g.fillRect(X(b.start), y, X(b.end) - X(b.start), laneH);
+    const done = Math.min(S.t, b.end);
+    if (done > b.start) { g.fillStyle = b.arrived ? "rgba(62,92,160,.75)" : "rgba(62,92,160,.35)"; g.fillRect(X(b.start), y, X(done) - X(b.start), laneH); }
+    if (K.save === "end" && S.t < S.serverEnd) { /* nothing visible until the end */ }
+  }
+  const rY = top + K.conc * (laneH + 2) + 6;
+  g.fillStyle = muted; g.fillText("screen", 0, rY + 9);
+  const col = { acc: "#2f9e62", ten: "#d9a23a", exc: "#9aa0a6" };
+  for (const r of S.reveals) { g.fillStyle = r.flip ? "#d92d20" : col[r.cls]; g.fillRect(X(r.t), rY, 1.5, 12); }
+  const dY = rY + 22, dH = H - dY - 14;
+  g.fillStyle = muted; g.fillText("queue", 0, dY + 10);
+  const maxQ = Math.max(10, ...S.depth.map(d => d.q));
+  g.strokeStyle = "#7b61c9"; g.lineWidth = 1.2; g.beginPath();
+  S.depth.forEach((d, i) => { const x = X(d.t), y = dY + dH - d.q / maxQ * dH; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  g.strokeStyle = "rgba(47,158,98,.8)"; g.beginPath();
+  const maxR = Math.max(K.maxRate, 1);
+  S.depth.forEach((d, i) => { const x = X(d.t), y = dY + dH - Math.min(d.r, maxR) / maxR * dH; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  g.fillStyle = muted; g.fillText(`max ${maxQ}`, 0, dY + 22);
+  g.strokeStyle = "#d92d20"; g.beginPath(); g.moveTo(X(S.t), 0); g.lineTo(X(S.t), H - 12); g.stroke();
+  g.fillStyle = muted;
+  for (let s = 0; s <= T; s += T > 200 ? 60 : T > 60 ? 15 : 5) g.fillText(s + "s", X(s) - 6, H - 2);
+}
+
+function updateStats() {
+  const rv = S.reveals.filter(r => !r.flip);
+  let gap = 0;
+  for (let i = 1; i < rv.length; i++) gap = Math.max(gap, rv[i].t - rv[i - 1].t);
+  const fmt = v => v == null ? "—" : v.toFixed(1) + " s";
+  document.getElementById("stats").innerHTML =
+    `batches <b>${S.batches.length}</b> (${S.batches.map(b => b.n).join(", ").slice(0, 40)})<br>` +
+    `first tag on screen <b>${fmt(S.firstReveal)}</b><br>` +
+    `server finished <b>${fmt(S.serverEnd)}</b><br>` +
+    `screen finished <b>${fmt(S.doneT)}</b><br>` +
+    `longest still gap <b>${rv.length > 1 ? gap.toFixed(1) + " s" : "—"}</b><br>` +
+    `pace now <b>${S.rate.toFixed(2)}</b> tags/s · queue <b>${S.queue.length}</b><br>` +
+    `<span style="color:#2f9e62">■</span> accepted <span style="color:#d9a23a">■</span> tentative ` +
+    `<span style="color:#9aa0a6">■</span> excluded <span style="color:#d92d20">■</span> flipped<br>` +
+    `<span style="color:#7b61c9">—</span> queue <span style="color:#2f9e62">—</span> pace`;
+}
+
+// ── loop + header ─────────────────────────────────────────────────────────────
+function frame(ts) {
+  const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0; last = ts;
+  if (playing && !S.finished) {
+    step(dt * Number(document.getElementById("speed").value));
+    updateAll();
+  } else if (playing && S.finished) { setPlaying(false); updateAll(); }
+  requestAnimationFrame(frame);
+}
+function setPlaying(v) { playing = v; document.getElementById("play").textContent = v ? "❚❚ Pause" : "▶ Play"; }
+document.getElementById("play").addEventListener("click", () => { if (S.finished) restart(); setPlaying(!playing); });
+document.getElementById("restart").addEventListener("click", () => { restart(); setPlaying(true); });
+document.getElementById("preset").addEventListener("change", e => {
+  const p = PRESETS[e.target.value]; if (!p) return;
+  Object.assign(K, p); buildKnobs(); restart(); setPlaying(true);
+});
+window.addEventListener("resize", () => S && drawTimeline());
+document.getElementById("studyinfo").textContent =
+  `${D.quotes.length} quotes · ${Object.keys(D.props).length} proposals · ${D.framework}`;
+buildKnobs(); restart(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

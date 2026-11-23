@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCode landing lab</title>
+<style>
+/* ════ bristlenose/theme/tokens.css — lines 1–472 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+
+    /* Dialogs (atoms/modal.css, components/Dialog.tsx) — the macOS sheet, measured
+       24 Oct 2026 from a stock Save sheet in light mode on macOS 27: the window
+       behind is pulled towards a light grey rather than covered in black (no
+       blur), the sheet has a ~20 pt radius and a shadow offset downward, and it
+       slides 32 pt down into place while it fades in. Dark values below are
+       a judgement, not a measurement. */
+    --bn-overlay-scrim: rgb(170 170 170 / 0.59);
+    --bn-overlay-z: 1000;
+    --bn-toast-z: 1100;                     /* a notification stays above a dialog */
+    --bn-modal-bg: var(--bn-colour-bg);
+    --bn-modal-radius: 20px;
+    --bn-modal-hairline: rgb(0 0 0 / 0.1);
+    --bn-modal-shadow-colour: rgb(0 0 0 / 0.3);
+    --bn-modal-shadow: 0 0 0 1px var(--bn-modal-hairline), 0 10px 40px var(--bn-modal-shadow-colour);
+    --bn-modal-offset: 32px;                /* the sheet drops this far into place */
+    --bn-modal-enter: 230ms;                /* the drop, and the backdrop dimming */
+    --bn-modal-enter-fade: 100ms;           /* solid early; the drop carries on */
+    --bn-modal-enter-ease: cubic-bezier(0, 0, 0.58, 1);
+    --bn-modal-exit: 240ms;                 /* rise, fade and backdrop together, linear */
+    /* Native-looking controls in a dialog: the segmented control's track and raised segment, and
+       the round help button, in the system's own greys (the Mac sheet draws the real ones). Not
+       palette colours: they are the platform's, the same in every palette. Dark below. */
+    --bn-control-track: #e8e8ed;
+    --bn-control-raised-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+    --bn-help-button-bg: #e8e8ea;
+    --bn-help-button-bg-hover: #dcdcdf;
+    --bn-help-button-bg-active: #cfcfd3;
+    --bn-help-button-ink: #1d1d1f;
+    --bn-help-button-size: 26px;
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-space-2xl: 3rem;
+
+    /* Signals lens — semantic spacing aliases. The card keeps one generous
+       reading rhythm even when it is one member of a compound location. */
+    --bn-signal-card-inset: var(--bn-space-2xl);
+    --bn-signal-card-section-gap: var(--bn-space-xl);
+    --bn-signal-card-evidence-gap: var(--bn-space-md);
+    --bn-signal-card-quote-inset: var(--bn-space-md);
+    --bn-signal-card-footer-gap: var(--bn-space-lg);
+    --bn-signal-card-assertion-gap: var(--bn-space-sm);
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Block shimmer and ghost (docs/design-motion.md §4.7.2). Contrast follows area: slabs
+       (thumbnail, card) take a third of the text value; small shapes (sparkline bars, the
+       4.5px strip) take 8%, because a third-contrast sweep cannot be seen on so few pixels.
+       The peak is a translucent ink tint laid OVER the element's own fill. */
+    --bn-skeleton-base: var(--bn-colour-badge-bg);
+    --bn-skeleton-contrast: 2.7%;
+    --bn-skeleton-contrast-small: 8%;
+    --bn-skeleton-peak: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast), transparent);
+    --bn-skeleton-peak-small: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast-small), transparent);
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Native-looking dialog controls (see the light values above) */
+        --bn-control-track:          light-dark(#e8e8ed, #2c2c30);
+        --bn-help-button-bg:         light-dark(#e8e8ea, #3a3a3c);
+        --bn-help-button-bg-hover:   light-dark(#dcdcdf, #48484a);
+        --bn-help-button-bg-active:  light-dark(#cfcfd3, #545456);
+        --bn-help-button-ink:        light-dark(#1d1d1f, #f5f5f7);
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+
+        /* Dialogs in dark: the page dims towards black, and the sheet is a raised
+           surface, lighter than the page, with a light hairline, the way a dark
+           macOS sheet reads. Without the lift a dark card vanished into the dimmed
+           dark report (docs/mockups/modal-crash-way-out.html, dark frame). */
+        --bn-overlay-scrim:        light-dark(rgb(170 170 170 / 0.59), rgb(0 0 0 / 0.5));
+        --bn-modal-bg:             light-dark(var(--bn-colour-bg), color-mix(in srgb, var(--bn-colour-bg), white 9%));
+        --bn-modal-hairline:       light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.14));
+        --bn-modal-shadow-colour:  light-dark(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.6));
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–101 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-font-editorial: Georgia, "Times New Roman", serif;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+
+    /* Signal card finding hierarchy. The title is a compact app heading;
+       the claim is the generous editorial statement beneath it. */
+    --bn-text-signal-title: 0.9375rem;
+    --bn-text-signal-title-lh: 1.5;
+    --bn-track-signal-title: 0;
+    --bn-weight-signal-title: var(--bn-weight-strong);
+    --bn-text-signal-claim: 1.29375rem;
+    --bn-text-signal-claim-lh: 1.4;
+    --bn-track-signal-claim: -0.005em;
+    --bn-weight-signal-claim: 500;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — lines 1–177 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #1c1c1c);   /* Dark: the paper, the darkest surface of the ladder (10 L*). Everything else steps away from it: quote cards, then inspector chrome, then the native sidebar */
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #212121);   /* Inspector chrome — dark: one step up from the quote cards (12.7 L* against 11.8), neutral grey with no hue */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1f1f1f);   /* Dark: lifted off the paper (1.5 L*) but below the inspector chrome */
+        --bn-colour-paper:            light-dark(#f6f7f8, #1c1c1c);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #252525);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–338 ════ */
+/* Atom: badge — base badge, sentiment variants, AI and user variants */
+
+/* Every tag is one weight, separated from its kind by colour, not weight:
+   --bn-weight-mono-tag, 460 in the light appearance and 400 in dark. It was 370
+   (Light), which drew Light only on a Mac with Apple's SF Mono download and
+   Regular almost everywhere else (docs/design-monospace-roles.md §6). */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-mono-tag);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+/* Sentiment variants (v0.7+ taxonomy) — see docs/academic-sources.html */
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+/* Legacy variants (deprecated — kept for backward compat with old intermediate JSON) */
+.badge-suggestion { background: var(--bn-colour-suggestion-bg); color: var(--bn-colour-suggestion); }
+.badge-frustrated { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-delighted { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confused { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-amused { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-critical { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-sarcastic { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-judgment { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-narration { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-task_management { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+
+/* AI badge — deletable on hover */
+.badge-ai {
+    cursor: pointer;
+    position: relative;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.badge-ai:hover {
+    opacity: 0.8;
+}
+
+/* Delete circle — white floating chip with a red ×. The React badge draws the ×
+   as an icon (.badge-ai-delete, Badge.tsx); the ::after draws it as a character
+   for the frozen static report, and steps aside when the element is present.
+   Both share one box. */
+.badge-ai::after,
+.badge-ai-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-negative);
+    border-radius: 50%;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-ai::after {
+    content: "\00d7";
+}
+
+.badge-ai:has(> .badge-ai-delete)::after {
+    content: none;
+}
+
+.badge-ai:hover::after,
+.badge-ai:hover .badge-ai-delete {
+    opacity: 1;
+}
+
+/* User tag — mode-dependent treatment.
+   Light mode: dark text on washed codebook bg (pale tint).
+   Dark mode: white text on saturated codebook bg.
+   Background colour set via inline style from codebook.js.
+   Falls back to --bn-colour-user-tag-bg when no codebook colour assigned. */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    cursor: default;
+    position: relative;
+}
+
+/* Dark mode: user tags switch to white-on-saturated */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-user {
+        color: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-user {
+            color: #ffffff;
+        }
+    }
+}
+
+/* AI tag visibility toggle */
+body.hide-ai-tags .badge-ai { display: none; }
+
+.badge-user .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-negative);
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add-tag ghost button */
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+
+.badge-add:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Proposed badge — pulsating dashed border (AutoCode) */
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+
+/* Action pill — floating [✗ | ✓] bar at badge top-right.
+   ✗ (deny) anchored at delete-circle position, ✓ (accept) hangs right.
+   16px compartments, pill-shaped, appears on hover. */
+.badge-action-pill {
+    position: absolute;
+    top: calc(-0.3rem - 1px);              /* same vertical as delete × */
+    right: calc(-0.3rem - 1px - 1rem);     /* ✗ aligns with delete × position,
+                                              ✓ extends past badge right edge */
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-pill);   /* clamps to half-height; survives a height change */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;                              /* sit above adjacent badges */
+}
+
+.badge-proposed:hover .badge-action-pill,
+.badge-proposed:focus-within .badge-action-pill {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.badge-action-deny,
+.badge-action-accept {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;       /* 16px */
+    height: 1rem;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
+    transition: background var(--bn-transition-fast);
+}
+
+.badge-action-deny {
+    color: var(--bn-colour-negative);
+}
+
+.badge-action-accept {
+    color: var(--bn-colour-positive);
+    border-left: 1px solid var(--bn-colour-border);
+}
+
+.badge-action-deny:hover { background: #fef2f2; }
+.badge-action-accept:hover { background: #dcfce7; }
+
+/* Keyboard focus ring — inset (outline-offset negative) because the pill has
+   overflow:hidden, which would clip an outset ring on these 16px buttons. */
+.badge-action-deny:focus-visible,
+.badge-action-accept:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+/* Dark mode: pill and action compartments */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-action-pill {
+        background: var(--bn-colour-bg);
+    }
+    [data-theme="dark"] .badge-action-deny:hover {
+        background: rgba(220, 38, 38, 0.25);
+        color: #f87171;
+    }
+    [data-theme="dark"] .badge-action-accept:hover {
+        background: rgba(22, 163, 74, 0.25);
+        color: #4ade80;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-action-pill {
+            background: var(--bn-colour-bg);
+        }
+        :root:not([data-theme="light"]) .badge-action-deny:hover {
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+        }
+        :root:not([data-theme="light"]) .badge-action-accept:hover {
+            background: rgba(22, 163, 74, 0.25);
+            color: #4ade80;
+        }
+    }
+}
+
+/* Accept flash — brief brightness burst when a proposed tag is accepted.
+   Applied by React (QuoteCard) on the new user badge for ~400ms. */
+@keyframes badge-accept-flash {
+    0%   { filter: brightness(1.35); }
+    100% { filter: brightness(1); }
+}
+
+.badge-accept-flash {
+    animation: badge-accept-flash 0.4s ease-out;
+}
+
+/* Badge animations */
+@keyframes badge-fade-out {
+    to { opacity: 0; transform: scale(0.8); }
+}
+
+.badge-removing {
+    animation: badge-fade-out 0.15s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes badge-fade-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.badge-appearing {
+    animation: badge-fade-in 0.15s ease-out;
+}
+
+/* Bulk-tag flash — asymmetric highlight (0.2s in, 0.6s hold+out).
+   Uses box-shadow spread to avoid overriding codebook background colour. */
+@keyframes badge-bulk-flash {
+    0%   { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+    25%  { box-shadow: 0 0 0 3px var(--bn-selection-border); }
+    100% { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+}
+
+.badge-bulk-flash {
+    animation: badge-bulk-flash 0.8s ease-out;
+}
+
+/* "New" material marker — a body-sized highlighter shown inline after a
+   section/theme title (Phase 3, 3c).  Placeholder styling; click to dismiss
+   (it evaporates, no undo — it has served its purpose once noticed). */
+.bn-new-badge {
+    display: inline;
+    margin-left: 0.4rem;
+    padding: 0.05em 0.3em;
+    border: none;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-new-highlight);
+    color: var(--bn-colour-new-highlight-text);
+    font-family: inherit;
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+.bn-new-badge:hover { filter: brightness(0.95); }
+.bn-new-badge:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
+/* ════ bristlenose/theme/atoms/shimmer.css — lines 1–98 ════ */
+/* Atom: shimmer — the "thinking / work in progress" travelling-sheen for text.
+
+   Single shared cross-surface spec (docs/design-motion.md §4.7.1); this is the
+   web (CSS) rendering. Apply `.bn-thinking-shimmer` to a text element to signal
+   indeterminate work with no ETA. It REPLACES the spinner — never run it
+   alongside a determinate progress bar on the same element (design-motion §4.7).
+
+   Two gates, BOTH must pass to animate (degrade to static plain text otherwise):
+     1. @media (prefers-reduced-motion: no-preference)   — accessibility
+     2. :root:not([data-analysis-animation="off"])       — the app's "Show
+        animation while analysing" toggle, bridged from native chrome.
+
+   The consuming surface MUST set --bn-shimmer-base (its resting text colour) and
+   SHOULD set --bn-shimmer-peak (the pole the band moves toward). The clip-to-text
+   technique forces color:transparent, which would also turn `currentColor`
+   transparent — hence base must be an explicit colour, not currentColor.
+
+     - Dark text (headroom up):  peak = white  → band brightens (the default).
+     - Light text (headroom down): peak = the surface background → band dims.
+
+   Either way the perceptual magnitude is the tuned --bn-shimmer-contrast (5%),
+   so the *character* matches across surfaces even where polarity flips. */
+
+.bn-thinking-shimmer {
+    --_shimmer-base: var(--bn-shimmer-base, currentColor);
+    --_shimmer-peak: color-mix(
+        in srgb,
+        var(--_shimmer-base),
+        var(--bn-shimmer-peak, #fff) var(--bn-shimmer-contrast)
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .bn-thinking-shimmer {
+        /* Band half-width is `--bn-shimmer-band` (a fraction of the TEXT) ÷ 6:
+           ÷3 converts text-fraction → gradient-fraction (the gradient image is
+           300% of the text width, below), then ÷2 for the half. So the peak
+           spans ~34% of the text. */
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            var(--_shimmer-base) 0%,
+            var(--_shimmer-base) calc(50% - var(--bn-shimmer-band) / 6),
+            var(--_shimmer-peak) 50%,
+            var(--_shimmer-base) calc(50% + var(--bn-shimmer-band) / 6),
+            var(--_shimmer-base) 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        animation: bn-thinking-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+    }
+}
+
+@keyframes bn-thinking-shimmer {
+    /* Positions stay within [0%, 100%] so the 300%-wide no-repeat gradient ALWAYS
+       covers the text — outside that range the image slides off and the clipped
+       glyphs render transparent (they vanish). Over the sweep window (1800/2700 =
+       66.67%) the sampling window travels across the middle of the gradient: the
+       peak band enters from the left, crosses, and exits right. It then parks at
+       0% — where the band sits off-window and only the base colour shows — for the
+       0.9 s gap. Band is off-window at the hold, so the loop restart never pops. */
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}
+
+/* Block shimmer — `.is-working` on a box (docs/design-motion.md §4.7.2). The text clip does
+   not apply to a box, so the sweep is a translucent ink tint laid over whatever fill the element
+   already has: a ghost shape and a plain box share one rule. Same timing and the same two gates
+   as the text shimmer. Contrast is --bn-skeleton-peak; a small shape (a few px of area) sets
+   --bn-skeleton-peak: var(--bn-skeleton-peak-small). Give neighbours an independent
+   --bn-skeleton-phase (a negative delay) so they read as individual organisms, not a strobe. */
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .is-working {
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            transparent 0%,
+            transparent calc(50% - var(--bn-shimmer-band) / 6),
+            var(--bn-skeleton-peak) 50%,
+            transparent calc(50% + var(--bn-shimmer-band) / 6),
+            transparent 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        animation: bn-block-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+        animation-delay: var(--bn-skeleton-phase, 0ms);
+    }
+}
+
+@keyframes bn-block-shimmer {
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}
+
+/* ════ bristlenose/theme/atoms/activity-chip.css — lines 1–172 ════ */
+/* Atom: activity-chip — non-dismissable floating progress chips for background jobs */
+
+.activity-chip-stack {
+    position: fixed;
+    bottom: 48px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    font-family: var(--bn-font-body);
+    pointer-events: none;
+}
+
+.activity-chip {
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    padding: 0.6rem 1rem;
+    border-radius: var(--bn-radius-lg);
+    font-size: var(--bn-text-label);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    animation: chip-slide-in 0.2s ease-out;
+}
+
+@keyframes chip-slide-in {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Running label carries the shimmer (replaces the old spinner). The chip is a
+   filled pill with light text (light mode) / dark text (dark mode), so the band
+   moves toward whichever pole has headroom. Base must match the chip's own text
+   colour exactly (clip-to-text can't use currentColor). See atoms/shimmer.css. */
+.chip-label {
+    --bn-shimmer-base: var(--bn-colour-bg);   /* = the chip's light label colour */
+    --bn-shimmer-peak: var(--bn-colour-text); /* dim toward the dark pill */
+    /* The CSS chip runs 20% (both themes) — the filled-pill background-clip sweep
+       needs more travel to read than the token's 5% default. The native sidebar
+       (SidebarShimmerText, mid-grey secondary text) stays at 5%. */
+    --bn-shimmer-contrast: 20%;
+}
+
+.chip-check {
+    color: var(--bn-colour-positive);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+}
+
+.chip-error {
+    color: var(--bn-colour-negative);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+}
+
+/* Partial completion. --bn-colour-warning is defined in both palettes
+   (palette-default.css:38, palette-edo.css:55), unlike the --bn-colour-success
+   / --bn-colour-danger the autocode toast reaches for, which are defined
+   nowhere. Don't copy those two here. */
+.chip-warning {
+    color: var(--bn-colour-warning);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+}
+
+.chip-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: var(--bn-weight-emphasis);
+    margin-left: 0.3rem;
+    cursor: pointer;
+}
+
+.chip-link:hover { text-decoration: underline; }
+
+.chip-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: var(--bn-text-label);
+    padding: 0 0.2rem;
+    margin-left: 0.3rem;
+}
+
+.chip-close:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Cancel button (shown while running) */
+
+.chip-cancel {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: var(--bn-text-label);
+    padding: 0 0.2rem;
+    margin-left: auto;
+}
+
+.chip-cancel:hover {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: underline;
+}
+
+/* Summary chip (collapsed multi-job view) */
+
+.activity-chip-summary {
+    cursor: pointer;
+}
+
+.chip-toggle {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: var(--bn-text-badge);
+    padding: 0 0.2rem;
+    margin-left: auto;
+}
+
+.chip-toggle:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* Collapse button (shown at bottom of expanded stack) */
+
+.activity-chip-collapse {
+    justify-content: center;
+    padding: 0.3rem 1rem;
+    cursor: pointer;
+    border: none;
+}
+
+/* Dark mode — inverted chip (light bg on dark theme) */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .activity-chip {
+        background: #e5e7eb;
+        color: #111;
+    }
+    [data-theme="dark"] .activity-chip .chip-link { color: #2563eb; }
+    [data-theme="dark"] .activity-chip .chip-close { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
+    [data-theme="dark"] .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+    [data-theme="dark"] .activity-chip .chip-cancel { color: rgba(0, 0, 0, 0.4); }
+    [data-theme="dark"] .activity-chip .chip-cancel:hover { color: rgba(0, 0, 0, 0.8); }
+    [data-theme="dark"] .activity-chip .chip-label {
+        --bn-shimmer-base: #111;   /* = the inverted (dark) chip label colour */
+        --bn-shimmer-peak: #fff;   /* brighten toward white — dark text has headroom up */
+        /* contrast (20%) inherited from .chip-label — near-black text needs it */
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .activity-chip {
+            background: #e5e7eb;
+            color: #111;
+        }
+        :root:not([data-theme="light"]) .activity-chip .chip-link { color: #2563eb; }
+        :root:not([data-theme="light"]) .activity-chip .chip-close { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .activity-chip .chip-close:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-toggle { color: rgba(0, 0, 0, 0.3); }
+        :root:not([data-theme="light"]) .activity-chip .chip-toggle:hover { color: rgba(0, 0, 0, 0.7); }
+        :root:not([data-theme="light"]) .activity-chip .chip-cancel { color: rgba(0, 0, 0, 0.4); }
+        :root:not([data-theme="light"]) .activity-chip .chip-cancel:hover { color: rgba(0, 0, 0, 0.8); }
+        :root:not([data-theme="light"]) .activity-chip .chip-label {
+            --bn-shimmer-base: #111;
+            --bn-shimmer-peak: #fff;
+        }
+    }
+}
+
+
+/* ════ lab chrome (hand-rolled; not product) ════ */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
+  font-family: var(--bn-font-body); font-size: var(--bn-text-label); }
+header.top { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 8px 14px; background: var(--bn-colour-badge-bg); border-bottom: 1px solid var(--bn-colour-border);
+  font-family: var(--bn-font-mono); font-size: 12px; }
+header.top h1 { font: inherit; font-weight: 700; margin: 0 8px 0 0; }
+header.top button, header.top select { font: inherit; padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+header.top button.primary { background: var(--bn-colour-accent); color: #fff; border-color: transparent; }
+#clock { min-width: 15ch; }
+.main { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 44px); }
+aside.knobs { border-right: 1px solid var(--bn-colour-border); padding: 8px 12px 40px; overflow-y: auto;
+  max-height: calc(100vh - 44px); position: sticky; top: 44px; font-size: 12px; }
+.kg { margin: 10px 0 4px; font-family: var(--bn-font-mono); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--bn-colour-muted); border-top: 1px solid var(--bn-colour-border); padding-top: 8px; }
+.k { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; margin: 5px 0; }
+.k label { color: var(--bn-colour-text); }
+.k .v { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); font-size: 11px; }
+.k input[type=range] { grid-column: 1 / -1; width: 100%; }
+.k select, .k input[type=text] { font: inherit; font-size: 11.5px; max-width: 150px; }
+.k .note { grid-column: 1 / -1; color: var(--bn-colour-muted); font-size: 11px; line-height: 1.35; }
+.assume { margin-top: 14px; padding: 8px; border-left: 3px solid var(--bn-colour-border);
+  color: var(--bn-colour-muted); font-size: 11px; line-height: 1.45; }
+section.stage { display: flex; flex-direction: column; min-width: 0; }
+.surfaces { display: grid; grid-template-columns: 200px minmax(260px, 1fr) minmax(270px, 1fr); gap: 0; flex: 1; min-height: 0; }
+.pane { border-right: 1px solid var(--bn-colour-border); min-width: 0; height: calc(100vh - 44px - 190px);
+  overflow-y: auto; position: relative; }
+.pane > .ph { position: sticky; top: 0; z-index: 5; background: var(--bn-colour-bg); padding: 6px 10px;
+  font-family: var(--bn-font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--bn-colour-muted); border-bottom: 1px solid var(--bn-colour-border); display: flex; gap: 8px; align-items: center; }
+.pane > .ph select { font: inherit; text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+/* Mac sidebar stand-in (metrics follow docs/mockups/sidebar-status-roll.html) */
+.macsb { background: var(--bn-colour-quote-bg); padding: 8px 6px; border-bottom: 1px solid var(--bn-colour-border); }
+.prow { display: flex; gap: 6px; padding: 0 8px; border-radius: 6px; background: var(--bn-colour-hover); }
+.prow .ico { width: 18px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--bn-colour-accent); }
+.prow .t { height: 32px; line-height: 32px; font-size: 13px; font-weight: var(--bn-weight-emphasis); }
+.prow .sub { font-size: 11px; line-height: 14px; height: 14px; margin: -6px 0 6px; color: var(--bn-colour-muted); white-space: nowrap; }
+.prow .sub.bn-thinking-shimmer { --bn-shimmer-base: var(--bn-colour-muted); --bn-shimmer-peak: var(--bn-colour-text); }
+
+/* Tag rows (sidebar + codebook) */
+.tgrp { padding: 6px 10px 2px; font-size: 11px; color: var(--bn-colour-muted); font-weight: var(--bn-weight-emphasis); }
+.trow { display: grid; grid-template-columns: minmax(0, 1fr) 64px 26px; gap: 6px; align-items: center; padding: 2px 10px; }
+.trow .badge { justify-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.trow .bar { height: 7px; border-radius: 2px; background: transparent; display: flex; overflow: hidden; }
+.trow .bar i { display: block; height: 100%; transition: width .35s ease; }
+.trow .bar i.pale { opacity: .38; }
+.trow .n { font-family: var(--bn-font-mono); font-size: 11px; color: var(--bn-colour-muted); text-align: right; }
+
+/* Quote cards (stand-in) */
+.qc { padding: 10px 12px 8px; border-bottom: 1px solid var(--bn-colour-border); }
+.qc .meta { font-family: var(--bn-font-mono); font-size: 11px; color: var(--bn-colour-accent); display: flex; gap: 8px; }
+.qc .meta .sp { color: var(--bn-colour-muted); }
+.qc .tx { font-size: 14px; line-height: 1.45; margin: 3px 0 4px; }
+.qc .tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.reserve .qc .tags { min-height: 22px; }
+.qc[data-hidden] { display: none; }
+.newpill { position: sticky; top: 30px; z-index: 6; margin: 6px auto; display: block; width: max-content;
+  background: var(--bn-colour-accent); color: #fff; border: 0; border-radius: 999px; padding: 3px 12px;
+  font: inherit; font-size: 12px; cursor: pointer; }
+.newpill[hidden] { display: none; }
+.still .badge-proposed { animation: none !important; opacity: .72; }
+.rm *, .rm *::before, .rm *::after { animation: none !important; transition: none !important; }
+
+/* Histogram */
+.hist { padding: 10px 12px 4px; }
+.hplot { position: relative; height: 150px; display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px;
+  align-items: end; border-bottom: 1px solid var(--bn-colour-border); }
+.bin { display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 100%; }
+.bin.sq { flex-wrap: wrap-reverse; flex-direction: row; align-content: flex-start; gap: 1px; justify-content: center; }
+.seg { width: 100%; transition: height .4s ease; }
+.seg.acc { background: oklch(62% 0.13 150); }
+.seg.ten { background: oklch(78% 0.12 75); opacity: .55; }
+.seg.exc { background: var(--bn-bar-none); }
+.sqi { width: 7px; height: 7px; border-radius: 1px; }
+.sqi.ten { opacity: .45; outline: 1px dashed currentColor; outline-offset: -1px; }
+.sqi.exc { background: var(--bn-bar-none) !important; }
+.line { position: absolute; top: -4px; bottom: 0; width: 2px; background: var(--bn-colour-accent); transition: left .5s ease; }
+.line.lo { background: var(--bn-colour-muted); }
+.hax { display: flex; justify-content: space-between; font-family: var(--bn-font-mono); font-size: 10px; color: var(--bn-colour-muted); padding-top: 2px; }
+.hmeta { font-family: var(--bn-font-mono); font-size: 10.5px; color: var(--bn-colour-muted); margin: 4px 0 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.cbgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; padding: 6px 8px 20px; }
+.cbcard { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); padding: 4px 0 6px; }
+.cbcard .tgrp { color: var(--bn-colour-text); }
+
+/* chip inside the quotes pane (CLI surface) */
+.lab-chipstack { position: sticky; bottom: 10px; display: flex; justify-content: flex-end; padding: 0 10px; pointer-events: none; }
+.lab-chipstack[hidden] { display: none; }
+
+/* timeline */
+.tl { height: 190px; border-top: 1px solid var(--bn-colour-border); padding: 6px 12px; display: grid; grid-template-columns: 1fr 260px; gap: 12px; }
+.tl canvas { width: 100%; height: 170px; display: block; }
+.stats { font-family: var(--bn-font-mono); font-size: 11px; line-height: 1.55; color: var(--bn-colour-muted); }
+.stats b { color: var(--bn-colour-text); font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>AutoCode landing lab</h1>
+  <button id="play" class="primary">▶ Play</button>
+  <button id="restart">↺ Restart</button>
+  <label>Speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select>×</label>
+  <label>Preset <select id="preset">
+    <option value="">—</option>
+    <option value="today">Today: everything at the end</option>
+    <option value="brief">The brief: per batch, predicted pace</option>
+    <option value="rec">Small first batch, pace by queue</option>
+  </select></label>
+  <span id="clock">t = 0.0 s</span>
+  <span id="studyinfo" style="color:var(--bn-colour-muted)"></span>
+</header>
+<div class="main">
+  <aside class="knobs" id="knobs"></aside>
+  <section class="stage">
+    <div class="surfaces" id="surfaces">
+      <div class="pane" id="sidebarPane">
+        <div class="ph">Sidebar</div>
+        <div class="macsb" id="macsb">
+          <div class="prow"><div class="ico">❄</div><div><div class="t">Talismanic</div>
+            <div class="sub" id="statusLine"></div></div></div>
+        </div>
+        <div id="tagSidebar"></div>
+      </div>
+      <div class="pane" id="quotesPane">
+        <div class="ph">Quotes
+          <select id="filter"><option value="">All quotes</option></select>
+        </div>
+        <button class="newpill" id="newpill" hidden></button>
+        <div id="quotes"></div>
+        <div class="lab-chipstack" id="chipstack" hidden></div>
+      </div>
+      <div class="pane" id="codebookPane">
+        <div class="ph">Codebook</div>
+        <div class="hist">
+          <div class="hplot" id="hplot"></div>
+          <div class="hax"><span>0.0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div>
+          <div class="hmeta" id="hmeta"></div>
+        </div>
+        <div class="cbgrid" id="cbgrid"></div>
+      </div>
+    </div>
+    <div class="tl">
+      <canvas id="tl"></canvas>
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+</div>
+<script>
+const D = {"framework": "uxr", "groups": [{"name": "Behaviour", "set": "ux"}, {"name": "Pain points", "set": "emo"}, {"name": "Needs and desires", "set": "emo"}, {"name": "Mental models", "set": "task"}, {"name": "Motivation", "set": "task"}, {"name": "Emotion and trust", "set": "trust"}, {"name": "Context", "set": "trust"}, {"name": "Learning", "set": "opp"}], "tags": [{"name": "workaround", "group": "Behaviour", "set": "ux", "idx": 0}, {"name": "habit", "group": "Behaviour", "set": "ux", "idx": 1}, {"name": "avoidance", "group": "Behaviour", "set": "ux", "idx": 2}, {"name": "say-do gap", "group": "Behaviour", "set": "ux", "idx": 3}, {"name": "error recovery", "group": "Behaviour", "set": "ux", "idx": 4}, {"name": "exploration", "group": "Behaviour", "set": "ux", "idx": 5}, {"name": "friction", "group": "Pain points", "set": "emo", "idx": 0}, {"name": "dead end", "group": "Pain points", "set": "emo", "idx": 1}, {"name": "abandonment", "group": "Pain points", "set": "emo", "idx": 2}, {"name": "lost my place", "group": "Pain points", "set": "emo", "idx": 3}, {"name": "unmet need", "group": "Needs and desires", "set": "emo", "idx": 0}, {"name": "feature request", "group": "Needs and desires", "set": "emo", "idx": 1}, {"name": "desire path", "group": "Needs and desires", "set": "emo", "idx": 2}, {"name": "expectation mismatch", "group": "Needs and desires", "set": "emo", "idx": 3}, {"name": "mental model", "group": "Mental models", "set": "task", "idx": 0}, {"name": "assumption", "group": "Mental models", "set": "task", "idx": 1}, {"name": "prior experience", "group": "Mental models", "set": "task", "idx": 2}, {"name": "misconception", "group": "Mental models", "set": "task", "idx": 3}, {"name": "goal", "group": "Motivation", "set": "task", "idx": 0}, {"name": "trigger", "group": "Motivation", "set": "task", "idx": 1}, {"name": "barrier", "group": "Motivation", "set": "task", "idx": 2}, {"name": "job-to-be-done", "group": "Motivation", "set": "task", "idx": 3}, {"name": "anxiety", "group": "Emotion and trust", "set": "trust", "idx": 0}, {"name": "trust", "group": "Emotion and trust", "set": "trust", "idx": 1}, {"name": "distrust", "group": "Emotion and trust", "set": "trust", "idx": 2}, {"name": "interruption", "group": "Context", "set": "trust", "idx": 0}, {"name": "time pressure", "group": "Context", "set": "trust", "idx": 1}, {"name": "social influence", "group": "Context", "set": "trust", "idx": 2}, {"name": "device/channel", "group": "Context", "set": "trust", "idx": 3}, {"name": "aha moment", "group": "Learning", "set": "opp", "idx": 0}, {"name": "learning curve", "group": "Learning", "set": "opp", "idx": 1}, {"name": "self-taught", "group": "Learning", "set": "opp", "idx": 2}, {"name": "expertise", "group": "Learning", "set": "opp", "idx": 3}, {"name": "first-time use", "group": "Learning", "set": "opp", "idx": 4}], "quotes": [{"id": 1, "s": "s1", "p": "p1", "tc": 55, "text": "... it\u2019s a good one. ... let\u2019s say I\u2019ve got a... was it a Ninja Foodie? It\u2019s... one of these all in one... pressure cookers, air fryers type thing. Is that the right thing?", "topic": "General context and warm-up"}, {"id": 2, "s": "s1", "p": "p1", "tc": 92, "text": "... I\u2019ve got... one of those old style crock pots that you use for fermentation.", "topic": "General context and warm-up"}, {"id": 3, "s": "s1", "p": "p1", "tc": 102, "text": "... you put the water in and it creates a seal. So it\u2019s... yeah, it\u2019s good because it\u2019s... it\u2019s a practical thing. But it\u2019s designed to... be emotive, I guess.", "topic": "General context and warm-up"}, {"id": 4, "s": "s1", "p": "p1", "tc": 119, "text": "... a lot of... household stuff... [is] quite utilitarian, which is very good. And this is... it looks like it\u2019s something from the past, but yet it\u2019s quite... modern, but it\u2019s got... basic... the design of it\u2019s good and it\u2019s got... so you put a little bit of water in it and it... so when it\u2019s fermenting, the gas can come out as well. So it\u2019s... a simple ingenious solution. Your alternatives, you just get... loads of plastic and you can get... these plastic lids that... burp things and stuff like that and... let the air out. But this is... somehow a classic design... it\u2019s a new technology. But yeah, so it looks good. It looks good and it\u2019s practical.", "topic": "General context and warm-up"}, {"id": 5, "s": "s1", "p": "p1", "tc": 183, "text": "... I think... buying something dedicated to ferment shows... that I\u2019m a bit of a cooking nerd, I guess, and I enjoy geeking out. But also... you get these... fancy... lids and stuff like that you can get for... existing stuff. But this is... it\u2019s like a... okay. It\u2019s a tried and tested solution. ... although I like tech stuff, it\u2019s... people have been using this technique for God knows how long.", "topic": "General context and warm-up"}, {"id": 6, "s": "s1", "p": "p1", "tc": 248, "text": "... we went recently... obviously it\u2019s... not just... recency... we actually went shopping for him [our child]. ... we had to get some... desk chair... because he\u2019s now spending a lot of time doing homework and stuff like that. So it\u2019s one of these things, it\u2019s almost a little bit of a rite of passage... we\u2019re shopping for him as well. And he has opinions now about... the... items in his... room and stuff like that. So it just felt... it\u2019s a different thing \u2014 we would have just gone and bought something, even if it was... for his room, we\u2019d have gone like, right, fine, this is what you want. But yeah, it\u2019s a different... experience than normal.", "topic": "IKEA general experience discussion"}, {"id": 7, "s": "s1", "p": "p1", "tc": 336, "text": "... I quite enjoy it... in a weird way because... I quite look forward to it... because in a weird way, I quite like building the furniture, like doing [something with] my hands. So... that\u2019s... a bit of like, cool, I\u2019m going to have something, get it home and... be able to put it together and feel like I\u2019ve achieved something.", "topic": "IKEA general experience discussion"}, {"id": 8, "s": "s1", "p": "p1", "tc": 360, "text": "... disappointment in a way as well sometimes. Because the rooms all look... the designs they... do look all really good. But when you get the thing home and put it in your own house, it somehow doesn\u2019t... tie together.", "topic": "IKEA general experience discussion"}, {"id": 9, "s": "s1", "p": "p1", "tc": 378, "text": "... I also... wonder that I\u2019m being lazy... And maybe there\u2019s got to be some other options out there. And we do obviously just not get... we\u2019ve got lots of stuff. I get lots of stuff, not from Ikea, but it is... pretty straightforward. But I also quite treat myself to [a] hot dog at the end as well.", "topic": "IKEA general experience discussion"}, {"id": 10, "s": "s1", "p": "p1", "tc": 451, "text": "... this is ikea.com. So this is interesting. This feels more like a corporate site than actually... it doesn\u2019t feel like a furniture [site].", "topic": "IKEA.com homepage first impressions"}, {"id": 11, "s": "s1", "p": "p1", "tc": 461, "text": "... I\u2019ve gone down here and there\u2019s... it... feels like furniture, but it... yeah, it\u2019s a corporate site. It\u2019s actually selling. So... I\u2019m initially obviously... drawn to the 'go shopping'. So I see that it feels like that\u2019s going to ikea.co.uk. So this feels like this is not the... I\u2019m not gonna be able to buy anything here. This is about Ikea itself.", "topic": "IKEA.com homepage first impressions"}, {"id": 12, "s": "s1", "p": "p1", "tc": 506, "text": "... I\u2019ve got here... these... categorizations... that I can go to, but it\u2019s... that\u2019s probably, to be honest, it\u2019s quite... busy. Maybe I\u2019m not sure if I... I assume I\u2019d be looking for... I wouldn\u2019t be coming to browse. I\u2019d probably have a specific... thing in mind... when I come to Ikea. So I\u2019d... probably... look straight for the search. ... because I find some of these taxonomies... maybe they would be helpful, but... maybe I\u2019d have to try the room seating.", "topic": "IKEA.co.uk homepage navigation"}, {"id": 13, "s": "s1", "p": "p1", "tc": 577, "text": "... the obvious thing to pick here is... kitchenware and tableware... [But] normally I would [search], but there I... saw that kitchen tableware. I mean... it\u2019s right there. If it would probably been to the right, I probably wouldn\u2019t have bothered, but you\u2019re right. I could have... searched for crock pot, but I\u2019m not going to get anything, am I? So I guess... I\u2019ve got food and stuff like that. And I guess this is the problem, isn\u2019t it? Because I\u2019m now searching for something specific [in] kitchenware.", "topic": "Kitchenware and tableware category browsing"}, {"id": 14, "s": "s1", "p": "p1", "tc": 637, "text": "This is where I\u2019m a bit tricky. Maybe it\u2019s food storage. There we go. So it\u2019s a jar and tin. ... maybe one of these... this is it. I need to get some of these jars and this is... there we go. So actually that\u2019s... so that\u2019s interesting because that\u2019s exactly what I want to do.", "topic": "Food storage jars product listing"}, {"id": 15, "s": "s1", "p": "p1", "tc": 667, "text": "Did you have a name for this? No, no. Right. No, I was just looking... I know that... I\u2019m just looking for this... jar because that\u2019s obviously what I would use.", "topic": "Food storage jars product listing"}, {"id": 16, "s": "s1", "p": "p1", "tc": 691, "text": "... I\u2019m assuming it\u2019s... Swedish. ... I\u2019m assuming [KORKEN] is... it feels like the [word for] China. I wonder if it\u2019s a slight play... on words in that... you... close this lid, right? It\u2019s like a bung of some description, a bit like a cork.", "topic": "Food storage jars product listing"}, {"id": 17, "s": "s1", "p": "p1", "tc": 742, "text": "... this is interesting. I\u2019ve got to buy... oh, you\u2019ve got to buy at least two. Fine. That\u2019s okay. ... that\u2019s interesting. I initially... got a bit confused there where it said 'add two items'. I\u2019m a bit like, what? There\u2019s no, I don\u2019t want to. Maybe I thought I\u2019d accidentally clicked it and then there\u2019s that little thing at the bottom. Fine. So it\u2019s add two items. ... a bunch of useful things.", "topic": "Product page and add to bag"}, {"id": 18, "s": "s1", "p": "p1", "tc": 770, "text": "It\u2019s trying to get me to add some other things that might work, that might go with this. So maybe I want some different jars... some details, some measuring cups, but I don\u2019t want to. So I want to go to my shopping bag.", "topic": "Cross-sell upsell modal"}, {"id": 19, "s": "s1", "p": "p1", "tc": 801, "text": "Yeah, I think so. I mean, because I think you\u2019ve got the concept of the IKEA shopping bag, haven\u2019t you? So that makes sense to me. When I\u2019m initially [saw] 'shopping bag', I thought of... how you go to... the marketplace and they give you... the blue bags. So that\u2019s what... so that made sense to me.", "topic": "Shopping bag and delivery options"}, {"id": 20, "s": "s1", "p": "p1", "tc": 820, "text": "... I think if it was a different... website, it probably would feel a bit weird because you\u2019re used to... a cart or something like that.", "topic": "Shopping bag and delivery options"}, {"id": 21, "s": "s1", "p": "p1", "tc": 840, "text": "... one thing I\u2019m interested in before I go to checkout. So here I can check delivery because what I\u2019m interested in doing is... how much is it going to cost? Because... it\u2019s only \u00a35. ... I\u2019ve got my options. It\u2019s going to cost me \u00a310 to deliver it. ... or I can click and collect. That\u2019s interesting. I hadn\u2019t thought that... [was] an option. ... That wasn\u2019t clear. That was an option. I thought I was just purely going for online.", "topic": "Shopping bag and delivery options"}, {"id": 22, "s": "s1", "p": "p1", "tc": 881, "text": "Oh, I\u2019ve got to... I\u2019ve misunderstood that. I\u2019ve got to spend \u00a310. I\u2019ve got to spend \u00a310 more... to actually be able to get this delivered. But that\u2019s... that confuses me then because... now it\u2019s here, it says it\u2019s a minimum. Oh no, I\u2019ve got to spend \u00a310 more. I\u2019ve already got \u00a35. ... and it says it here. I hadn\u2019t even missed that, but then I\u2019m finding... I\u2019m getting a bit confused now because I can click 'continue to checkout'. So I don\u2019t know what would happen if I do that, because that doesn\u2019t make sense because I don\u2019t know what\u2019s going to happen. I mean, I can add more of these.", "topic": "Shopping bag and delivery options"}, {"id": 23, "s": "s1", "p": "p1", "tc": 932, "text": "Yeah. I find that quite confusing. So I\u2019ve got to get four.", "topic": "Checkout flow and delivery selection"}, {"id": 24, "s": "s1", "p": "p1", "tc": 941, "text": "... that\u2019s fine. They\u2019re useful... So now I can continue to checkout... join or log in. ... I probably wouldn\u2019t [log in] because unless this was going to be my second purchase or something like that, I\u2019ll just continue as a guest. Okay, so it\u2019s got my postcode already. Collect. I thought I wanted to get it delivered. Can I not get it delivered? I thought I had... oh, I\u2019ve got \u00a310. Let\u2019s get loads more of these, and it\u2019s \u00a350, so I\u2019m getting confused.", "topic": "Checkout flow and delivery selection"}, {"id": 25, "s": "s1", "p": "p1", "tc": 991, "text": "Cool. Now I can continue as guest. Now I should have the option to deliver. ... I don\u2019t want it obviously expressed, so let\u2019s get [standard] selected.", "topic": "Checkout flow and delivery selection"}, {"id": 26, "s": "s1", "p": "p1", "tc": 1008, "text": "Day. Oh, yeah. Thursday the 14th. Okay. I mean, that\u2019s fine. ... and then click continue.", "topic": "Checkout flow and delivery selection"}, {"id": 27, "s": "s1", "p": "p1", "tc": 1044, "text": "... I found... the minimum order things slightly confusing. ... I think they could have... been a bit more explicit about... or even... said 'add more of these' or something. ... just... been a bit more helpful because I got a bit... yeah... I... got confused between... \u00a310 and \u00a315 and stuff. ... I think they\u2019re trying to be helpful by saying 'add \u00a310 more', but then I\u2019m just saying that you don\u2019t want to add \u00a310 more. I\u2019ve got to spend \u00a310... more than \u00a315. So... some of that stuff up front [would help].", "topic": "Overall experience reflection"}, {"id": 28, "s": "s2", "p": "p2", "tc": 39, "text": "It\u2019s an Alessi kettle. And... when I inherited the house, there was exactly the same kettle, but it was very, very old. My dad had found it in the market. And over the years, it was heavily grimed. The lid has... melted. The little bird that goes in the stopper, the whistle had also melted and it was just generally in a really terrible condition.", "topic": "Favourite household object discussion"}, {"id": 29, "s": "s2", "p": "p2", "tc": 69, "text": "And so for my birthday, my husband bought me an identical one. And yeah, it\u2019s just really nice to have that kind of continuity, even though obviously my father would be appalled at paying this price for it. And I love the kettle, but it doesn\u2019t whistle. And I\u2019m not sure why. I don\u2019t know whether it\u2019s because the whistle hasn\u2019t been milled correctly, or whether there isn\u2019t quite an airtight seal in the manufacturing of the lid and spout. I don\u2019t know, the lid, I guess. Yeah. But I love the kettle anyway.", "topic": "Favourite household object discussion"}, {"id": 30, "s": "s2", "p": "p2", "tc": 149, "text": "Yeah, I mean, I hate things that are ugly, but functional, even though it annoys me, because obviously, if they work really well, but they\u2019re ugly, that just... annoys me, because I want things that I use to be beautiful, but if the thing is beautiful, but doesn\u2019t function, that\u2019s equally annoying. So there\u2019s some kind of balance between those things. And I don\u2019t think one should have to sacrifice one for the other. But so often, it is the case. I mean, much as I love the kettle, the handle does get hot. This is a kettle that goes on the hob. And it\u2019s maybe resin or some kind of plastic material. But... you can\u2019t just pick [up] a little bit of a kettle.", "topic": "Favourite household object discussion"}, {"id": 31, "s": "s2", "p": "p2", "tc": 204, "text": "I mean, come on guys, this is a bit stupid. ... It\u2019s a kettle, right? ... You need to be able to pour it. And we talked about the whistle not working. So... the whistle is so beautiful, ... it\u2019s this little bird. So I want it to both be delightful and elegant or beautiful and fully functional, really functional.", "topic": "Favourite household object discussion"}, {"id": 32, "s": "s2", "p": "p2", "tc": 235, "text": "In the full sense of thinking about all the ways that people have to use it.", "topic": "Favourite household object discussion"}, {"id": 33, "s": "s2", "p": "p2", "tc": 321, "text": "I went with my friend Bettina when we first had this place and we were coming out for the first summer. I went out beforehand with my friend to try and buy a mattress. And... because of the difficulty of... the access to the property, the mattress had to be a rolled mattress. And we did go to IKEA and look at mattresses. But they literally only had one. And I think... I\u2019m not even sure whether it was in stock or maybe I tried it and just didn\u2019t think it was very good.", "topic": "IKEA in-store visit recall"}, {"id": 34, "s": "s2", "p": "p2", "tc": 394, "text": "Yeah. I mean, the car parking is pretty straightforward there in front of the store. But weirdly, when you go in, you\u2019re... in the food area. Well, the food area is on one side of you, which is basically the end point of the visit. And then in front of you, there\u2019s a staircase and you... I think you can either go straight and you get into all of the different areas of room types... kitchens or bedrooms or whatever, or you can go down the stairs into the marketplace where there are all the little bits of things. Obviously we wanted to look at the beds and we went straight... into [that area] to try and find [it]. But of course, because it\u2019s IKEA, you have to go all the way around the houses through all the different areas till you get to the bed bit.", "topic": "IKEA in-store visit recall"}, {"id": 35, "s": "s2", "p": "p2", "tc": 478, "text": "I mean, before you go, you... have this feeling of, wow, maybe I\u2019ll find something that\u2019s just... incredibly well designed... but cheap... within my price point... something a bit wacky, because sometimes they do... wacky things.", "topic": "IKEA in-store visit recall"}, {"id": 36, "s": "s2", "p": "p2", "tc": 518, "text": "Well, it\u2019s the... excitement because it\u2019s... could be transformative.", "topic": "IKEA in-store visit recall"}, {"id": 37, "s": "s2", "p": "p2", "tc": 536, "text": "Well, within about the first minute, I\u2019m visually exhausted, because there\u2019s just so much going on, there\u2019s so many people, everyone\u2019s funneling through these spaces. There\u2019s too much to look at. I\u2019m distracted by all of the stuff. I sometimes forget why I even came... or what the problem that I\u2019m trying to solve or the product that I\u2019m looking for. And I just go into... overwhelm.", "topic": "IKEA in-store visit recall"}, {"id": 38, "s": "s2", "p": "p2", "tc": 1157, "text": "Well, I can see the different sections across... this band across the top quite easily \u2014 that makes it easier to select stuff. I\u2019m... interested both in the bed linen... that\u2019s... right there because that\u2019s something I\u2019ve been looking at at the minute. I mean, it looks like an IKEA website.", "topic": "IKEA website homepage first impressions"}, {"id": 39, "s": "s2", "p": "p2", "tc": 1205, "text": "Yeah. Usually I\u2019m looking for something very specific.", "topic": "IKEA website homepage first impressions"}, {"id": 40, "s": "s2", "p": "p2", "tc": 1221, "text": "Wait a minute, that didn\u2019t take me to bed linen. Okay. I thought it was about bed linen, but it\u2019s just what\u2019s new. So I clicked on here where the bed linen, where you can see the bed, and it said new. So the middle tile, discover our latest news for your home, which is actually a bit weird. And I just thought, oh, it\u2019s about bed linen.", "topic": "IKEA site navigation and search"}, {"id": 41, "s": "s2", "p": "p2", "tc": 1258, "text": "Discover our latest news \u2014 news for your home. News is current affairs. If it said new things, that\u2019d be different. But that language is very odd. Discover new things for your home. But our latest news, that doesn\u2019t make any sense.", "topic": "IKEA site navigation and search"}, {"id": 42, "s": "s2", "p": "p2", "tc": 1280, "text": "Anyway, so it took me to this page, which is all new things, shop news. That\u2019s right. So I\u2019m going to go to textiles, hoping that I might get bed linen.", "topic": "IKEA site navigation and search"}, {"id": 43, "s": "s2", "p": "p2", "tc": 1304, "text": "Okay. But I\u2019m looking specifically for pillowcases. ... I\u2019m gonna go down on this side. Okay. Cushions, six more. Okay. Oh, bedding. Bedding. There\u2019s also cushions and cushion covers.", "topic": "IKEA site navigation and search"}, {"id": 44, "s": "s2", "p": "p2", "tc": 1353, "text": "No, I usually search, but you asked me what was notable on the page, so I was telling you that, but normally, yes, I would use the search button.", "topic": "IKEA site navigation and search"}, {"id": 45, "s": "s2", "p": "p2", "tc": 1371, "text": "Kind of, but not pillowcases.", "topic": "IKEA site navigation and search"}, {"id": 46, "s": "s2", "p": "p2", "tc": 1375, "text": "There\u2019s not a category for that. So... I can go to the search bar. I don\u2019t feel like such a user. Pillowcases and then size. I\u2019ve got a very specific [size], that\u2019s what I want. They\u2019ve only got one in that size and it\u2019s white. How boring. Oh, it\u2019s not even 100% cotton. Okay. Well, that\u2019s not happening.", "topic": "IKEA site navigation and search"}, {"id": 47, "s": "s2", "p": "p2", "tc": 1402, "text": "Okay. What about in cushion covers? Go back to the cushion covers. Cushion[s] \u2014 17 of those. Shape, what about size? Square.", "topic": "IKEA site navigation and search"}, {"id": 48, "s": "s2", "p": "p2", "tc": 1453, "text": "I can\u2019t believe they\u2019ll have anything nice. Hmm, it doesn\u2019t look on the face of it like they have kettles. Coffee and tea, coffee makers, teapots. I don\u2019t think they sell electrical items. I wouldn\u2019t go to IKEA for a kettle. Go to John Lewis. Okay. I think it\u2019s a dead end here. ... A teapot, but not a kettle.", "topic": "Searching for a kettle on IKEA site"}, {"id": 49, "s": "s2", "p": "p2", "tc": 1520, "text": "Yeah, well, there\u2019s nothing here I really want to buy, but just to humour you, I will.", "topic": "Adding items to shopping bag"}, {"id": 50, "s": "s2", "p": "p2", "tc": 1527, "text": "Ugh, that\u2019s so ugly. Okay, let\u2019s go with this one. Okay, I\u2019m adding it to the basket. No, I don\u2019t want all those.", "topic": "Adding items to shopping bag"}, {"id": 51, "s": "s2", "p": "p2", "tc": 1540, "text": "It\u2019s just giving me a hundred other things, but it actually did remind me that I did want tea towels. So let\u2019s see if they have any. Hmm. I\u2019m not sure I should allow the user to do such scope creep.", "topic": "Adding items to shopping bag"}, {"id": 52, "s": "s2", "p": "p2", "tc": 1570, "text": "Clicking on add to shopping bag. Okay. So what\u2019s the information around that? ... Well, I can see that it\u2019s three pounds for a four pack. So price. I\u2019m assuming that I\u2019m going to get in the four pack... one of each colour. And I didn\u2019t check the material. It\u2019s cotton. That\u2019s okay. Then 100% cotton.", "topic": "Adding items to shopping bag"}, {"id": 53, "s": "s2", "p": "p2", "tc": 1605, "text": "... I mean the quality of it. Like that little thing that the dish drain[er had].", "topic": "Adding items to shopping bag"}, {"id": 54, "s": "s2", "p": "p2", "tc": 1627, "text": "I noticed that, yeah. Yeah, but maybe leafy green. Okay, so I\u2019ve got my tea towels, and I\u2019ve got my teapot, and I\u2019m at the checkout. Okay, now the thing I want to know now...", "topic": "Shopping bag and checkout page"}, {"id": 55, "s": "s2", "p": "p2", "tc": 1648, "text": "Okay. So the most important thing to me is how long is this going to take to arrive and how much will it cost? Because if the delivery costs too high, I\u2019m just not going to do it. I\u2019m going to go to the store. And if the... delivery is too long, it\u2019s going to take too long, I\u2019m also not going to do it. So... I can\u2019t [see it] \u2014 it\u2019s not telling me either of those key bits of information.", "topic": "Shopping bag and checkout page"}, {"id": 56, "s": "s2", "p": "p2", "tc": 1677, "text": "It says check delivery. Okay, so I can put my postcode in. ... So what does it say? It says I can have delivery if I spend \u00a35 more. It doesn\u2019t look like I can have click and collect. And collect near you. Again, I have to spend \u00a35 more. So... my order looks like it\u2019s too low for me to have delivery. Oh, yeah, look, requires a minimum order value of 15 pounds. Okay.", "topic": "Shopping bag and checkout page"}, {"id": 57, "s": "s2", "p": "p2", "tc": 1738, "text": "Depends. If there was something else that tangentially I might want, like the dish drainer.", "topic": "Shopping bag and checkout page"}, {"id": 58, "s": "s2", "p": "p2", "tc": 1813, "text": "That\u2019s... that\u2019s still what they want you to do. [They] want you to look at all these other things and feel inspired. Okay, how much have I got now? Okay, now I\u2019ve got enough for... Okay. So in the right hand side area, there\u2019s quite a few little details. Mostly I just saw the price and [I] continued to check out. And then I was looking back on the other side to see, ah, great. Okay. So now I can, wait a minute.", "topic": "Shopping bag and checkout page"}, {"id": 59, "s": "s2", "p": "p2", "tc": 1860, "text": "Click and collect at Belfast. Huh? Why, why, why would I want to collect in Belfast? Okay, collect... from \u00a32 and I can have delivery. That\u2019ll be... not too bad. But why would I, why has it chosen Belfast? That\u2019s so weird. Very random.", "topic": "Checkout delivery or collect selection"}, {"id": 60, "s": "s2", "p": "p2", "tc": 1891, "text": "Yeah, I think I would choose the delivery. Okay. What happened just there? I selected delivery. I put in my [postcode], it\u2019s checked my postcode. So then I\u2019m going to go to checkout. Hmm. Okay. Well, I do have a login. ... I can continue as a guest, but I have to fill everything out.", "topic": "Checkout delivery or collect selection"}, {"id": 61, "s": "s2", "p": "p2", "tc": 1931, "text": "I don\u2019t know why it says delivery or collect, because I\u2019ve already selected delivery. Ah. Delivery. Oh, dear.", "topic": "Checkout delivery or collect selection"}, {"id": 62, "s": "s2", "p": "p2", "tc": 1950, "text": "Well, how can I change my postcode? That\u2019s where I live. ... I think it\u2019s confused because it knows that I\u2019m in Spain.", "topic": "Checkout delivery or collect selection"}, {"id": 63, "s": "s2", "p": "p2", "tc": 1994, "text": "Well, look, most of all, I\u2019m just... completely baffled by why it thinks my local store is Belfast. Like not in a million years is the postcode that I put in the closest IKEA to me. I mean, so I\u2019m just baffled by that.", "topic": "Reflection on IKEA site experience"}, {"id": 64, "s": "s2", "p": "p2", "tc": 2019, "text": "Okay. These things say available for delivery, but then when I put my postcode in, it was like, no, sorry, love, not having it.", "topic": "Reflection on IKEA site experience"}, {"id": 65, "s": "s2", "p": "p2", "tc": 2044, "text": "The thing is, here on this page, I thought I\u2019d already chosen delivery. I chose it here. When I was in the shopping bag, I already did press delivery, right? I did save, enter postcode. So now it should know that that\u2019s what the option I\u2019m going for. So I don\u2019t understand the next step. And then it\u2019s like it forgets everything.", "topic": "Reflection on IKEA site experience"}, {"id": 66, "s": "s2", "p": "p2", "tc": 2086, "text": "Yeah, well, I mean... from their side, well, I\u2019m quite excited about this dish drainer.", "topic": "Reflection on IKEA site experience"}, {"id": 67, "s": "s2", "p": "p2", "tc": 2105, "text": "Yeah. They offered me up all these ridiculous things in my basket, but actually the one thing it didn\u2019t offer me up was a thing that I think I would buy.", "topic": "Reflection on IKEA site experience"}, {"id": 68, "s": "s3", "p": "p3", "tc": 397, "text": "... a purchase I\u2019ve done maybe two years ago and about which I\u2019m still very, very happy is a... it\u2019s like a cupboard thing. It\u2019s like from... I think it\u2019s a Swiss brand called USM Haller. And it\u2019s this kind of shelving cupboard unit and you can completely configure it yourself. You can decide on do you want to have drawers or do you want to have a shelving, glass, metal, whatever. And... I absolutely love it. It\u2019s like the centerpiece in our living room.", "topic": "Favourite Household Object Discussion"}, {"id": 69, "s": "s3", "p": "p3", "tc": 436, "text": "And we, my husband and myself, we spent a long time deciding on the color and eventually we went for a bright yellow. And it\u2019s like, it makes me happy every day I walk into the living room because it\u2019s so nice and bright and shiny and it\u2019s like sunshine.", "topic": "Favourite Household Object Discussion"}, {"id": 70, "s": "s3", "p": "p3", "tc": 476, "text": "Yeah, we had, originally we had this kind of very, almost like antique wooden cabinet in the living room and it was made out of wood and maybe, I don\u2019t know, 100 years old and it was brought, I think my husband brought it into the marriage and we both hated it so much because it wasn\u2019t very useful. And so... we thought we wanted to have something more modern, more practical with more storage space. And initially I had this other kind of shelving unit in mind... which is called string... furniture.", "topic": "Favourite Household Object Discussion"}, {"id": 71, "s": "s3", "p": "p3", "tc": 516, "text": "... I looked at it in, so I researched everything online... configured it. And then we went to a shop and... I opened one of the... doors of this unit and I thought, oh my God, this is so cheap. I mean, the whole thing is not cheap, but the way the mechanism was really not nice at all. And I thought, okay, I\u2019m not spending that money to get this kind of quality, although the whole thing looks nice and fits the... our architecture of the building. I wasn\u2019t impressed by the actual... the handle haptic of that thing.", "topic": "Favourite Household Object Discussion"}, {"id": 72, "s": "s3", "p": "p3", "tc": 559, "text": "So... we were in that furniture store looking around and then they say, okay, if you want to have something you can completely configure yourself, why not choose this brand? And... this brand... USM Haller is, you can find it quite often in... doctor surgeries... and I thought, ah, I\u2019m not sure.", "topic": "Favourite Household Object Discussion"}, {"id": 73, "s": "s3", "p": "p3", "tc": 624, "text": "... I think that\u2019s it. And I think for me, it was maybe \u2014 that is also the sign of the quality \u2014 what it feels like when you open and close drawers.", "topic": "Favourite Household Object Discussion"}, {"id": 74, "s": "s3", "p": "p3", "tc": 680, "text": "Yeah. Okay. So... I don\u2019t really go to Ikea anymore to... buy furniture. Having said that... we needed... a while ago, we needed new shelving for our downstairs for our cellar because we had... we had a flooding. And... so a lot of... the stuff got destroyed in the flood. And then we thought, okay, we need to have some metal shelves in case something like this happens before.", "topic": "General IKEA Experience and Attitudes"}, {"id": 75, "s": "s3", "p": "p3", "tc": 712, "text": "And we also needed... shelving, which doesn\u2019t come up very... right down to the floor in case there was a flood. We wanted to put up stuff a little bit higher on metal shelves. And... the last time I bought... shelf stuff like this... in a DIY store, but they were so difficult to put together. We thought, okay, let\u2019s go to Ikea. And... I think I also had a look beforehand online, what they have, if they have these kinds of shelving at all. And... then we went to Ikea and I think it was pretty straightforward.", "topic": "General IKEA Experience and Attitudes"}, {"id": 76, "s": "s3", "p": "p3", "tc": 751, "text": "... we knew exactly what we wanted. And... I think I also checked online whether they had the stuff in store because... in Dusseldorf, there are two IKEA stores. And I wanted to make sure that the one closer to our house... actually stocks the stuff. So we went in there. And... the way you always have to, what it feels like going through the entire store to actually then go to the store and get to the item you want.", "topic": "General IKEA Experience and Attitudes"}, {"id": 77, "s": "s3", "p": "p3", "tc": 789, "text": "Well, I\u2019m kind of, sometimes I like looking at the stuff and... but I also get a little bit annoyed with myself because then I pick up things I see on the way to the actual part where you get the stuff out of the shelves. And I always end up with... I don\u2019t know, hangers or napkins or... candles and... these kind of items... which fill up my basket. And... before I eventually go and pick the stuff in the... warehouse part where you collect the stuff from the shelves.", "topic": "General IKEA Experience and Attitudes"}, {"id": 78, "s": "s3", "p": "p3", "tc": 860, "text": "... I think in the beginning, it\u2019s a little bit like, oh no, we have to go to Ikea and... can I be bothered? But yes, we need something. Then... usually like parking, et cetera, is fine. There\u2019s no problem. You always find a space... go in there. And then... I know sometimes how to shortcut the way through this whole shop... I mean, if you\u2019ve been there several times, you know, that you can go straight from, I don\u2019t know, the bathroom section to the kitchen section.", "topic": "General IKEA Experience and Attitudes"}, {"id": 79, "s": "s3", "p": "p3", "tc": 894, "text": "... if I\u2019m really on a mission, then I go through the exit... I enter the shop through the exit and... that\u2019s the trick. ... Exactly. That\u2019s a life hack. But... I think it also depends if I\u2019m there on my own or with my husband.", "topic": "General IKEA Experience and Attitudes"}, {"id": 80, "s": "s3", "p": "p3", "tc": 950, "text": "Okay. Right. Can you hold on? I need to go to the window. Okay. This is not my computer, so I don\u2019t really want to. I open a new tab. Here we go. Okay. So can you see Google? ... Yeah. Okay. So I would go to Ikea. Can I go to the German website?", "topic": "IKEA Website Navigation Begins"}, {"id": 81, "s": "s3", "p": "p3", "tc": 979, "text": "I go to IKEA DE, and here we are. ... okay, I declined the cookies. Right, here I am.", "topic": "IKEA Website Navigation Begins"}, {"id": 82, "s": "s3", "p": "p3", "tc": 1028, "text": "So obviously the thing I want to replace is somewhere here where it says... it\u2019s like cupboards and storage. So I go there. ... Okay. So I\u2019m here. Aufbewahrung und Schr\u00e4nke. Have a look.", "topic": "Storage and Wardrobes Category Page"}, {"id": 83, "s": "s3", "p": "p3", "tc": 1048, "text": "Okay. ... well, this is... I can already see here in the image that this is maybe something going into the direction I want. ... here, weniger chaos, mehr Wohngef\u00fchl. Oh, it\u2019s die Beste. I mean, some of the products you know from Ikea because you\u2019ve seen them by being there.", "topic": "Storage and Wardrobes Category Page"}, {"id": 84, "s": "s3", "p": "p3", "tc": 1084, "text": "Yeah, I mean, I think... for me, obviously, it\u2019s the Billy shelving... which has been around for ages and ages, but also the PAX, which is like this cupboard unit thing. And it seems that everybody has somewhere or has somewhere in some time in their life had one of the PAX units. And... we\u2019ve got one in our... walk-in cupboard. And I know that the BEST\u00c5 is more like for the living room space. So maybe that\u2019s already something good. ... I think these are probably the three... product names I know. ... okay. So I\u2019m having a look here and I can see, ooh, brown is not my color. Why do you see? I\u2019ve got this yellow thing.", "topic": "Storage and Wardrobes Category Page"}, {"id": 85, "s": "s3", "p": "p3", "tc": 1136, "text": "And... I want to replace the yellow, but I don\u2019t think yellow is IKEA\u2019s color. ... let me see, I have a look down here. ... Yeah, I\u2019m just orientating myself... just to see... what\u2019s the best way to get to what I need. Yeah, I\u2019m just having a quick look what they have. And here, okay, that\u2019s not really what I want. I think that maybe if I go, hold on, what is looking a bit like what I have is, well, not as clunky as this. ... okay, so here I can see a little bit of the colors. You see, but Ikea, they only have like the white, the brown and some, well, this is horrible.", "topic": "Storage and Wardrobes Category Page"}, {"id": 86, "s": "s3", "p": "p3", "tc": 1213, "text": "It needs to be fully configurable. So I want to decide what units I can take... I mean, this is huge. I mean, we don\u2019t have the space like... I want to have it smaller. Oh, yeah, but here it says personalisier dein BEST\u00c5. So I can personalize it. And it opens the \u2014 I think it\u2019s probably some kind of configuration.", "topic": "BEST\u00c5 Furniture Configurator"}, {"id": 87, "s": "s3", "p": "p3", "tc": 1242, "text": "Oh, it says... oh, it\u2019s currently not possible to do this. Okay. This is annoying. ... hold on, but what can I... well, let me just see, maybe.", "topic": "BEST\u00c5 Furniture Configurator"}, {"id": 88, "s": "s3", "p": "p3", "tc": 1262, "text": "Sorry, I just need to move you away. ... okay, but they have, yeah, but this is no use for me to have like the things here. Can I drag them over there? Oh, here we go. It is working. Interesting. Okay. Okay. So in theory, I could put the stuff together. ... do you know the dimensions or can you, this is already 180 is too much. How can I delete this? Can I delete this? I have no idea. Why do I do this? I just, ah, here we go. Delete. Right.", "topic": "BEST\u00c5 Furniture Configurator"}, {"id": 89, "s": "s3", "p": "p3", "tc": 1309, "text": "Yeah, so if we stay with the 120, that\u2019s probably the right size, and then I want to have, let me see, yeah, so... I can build stuff. Obviously, this is not going on top. Okay, but can I also choose the colors? Okay, I can choose the styling. Imagine I wanted to have it all in white.", "topic": "BEST\u00c5 Furniture Configurator"}, {"id": 90, "s": "s3", "p": "p3", "tc": 1368, "text": "... obviously here I can do this like in my own time, but... I felt like when I went to the shop, I think... they were using the same kind of configuration software, but the woman who was doing this... I think she had in her mind, she had so many possible solutions and ideas.", "topic": "BEST\u00c5 Furniture Configurator"}, {"id": 91, "s": "s3", "p": "p3", "tc": 1395, "text": "... because with the system we have you can configure an awful lot. I mean, you can configure the surfaces, you can... select really absolutely everything... the height of... the legs and everything and she knew all this and... she was very good in suggesting different designs and setups really quickly and showing us... whereas here yes I can do this at home but I can only build on maybe my own ideas and I don\u2019t get this input.", "topic": "BEST\u00c5 Furniture Configurator"}, {"id": 92, "s": "s3", "p": "p3", "tc": 1454, "text": "Okay. The checkout process. Yes, of course. Hold on. ... so I just do this also in white and I want, well, what\u2019s the... brown corpus and here, let\u2019s say also white and brown. Okay. It\u2019s not... the nicest design, but let\u2019s say we live with it. Yeah. So it\u2019s okay. I can already see 300 euros, obviously much cheaper than what we have. Okay. So I see the summary here. ... I see the dimensions. ... oh, you see, and here I can... check whether it\u2019s available in our shop. Dusseldorf. Here we are.", "topic": "Configured Item and Store Availability Check"}, {"id": 93, "s": "s3", "p": "p3", "tc": 1513, "text": "Oh, you see? Okay. So is there a low, it might be that some products are not available or are only a few items left. ... How do you feel about might? Yeah. I mean, I could check out what exactly. No, you see, this is frustrating. So they tell me that some products are either in low stock or are not available. I would now think that they tell me, but they don\u2019t. They don\u2019t tell me which...", "topic": "Configured Item and Store Availability Check"}, {"id": 94, "s": "s3", "p": "p3", "tc": 1552, "text": "Yeah, I mean, they could, for example, tell me, okay, the dark gray frontage is not available. Maybe if I\u2019m really desperate, I would choose a different color.", "topic": "Configured Item and Store Availability Check"}, {"id": 95, "s": "s3", "p": "p3", "tc": 1579, "text": "Yeah, maybe I would say, okay, I then, if I can\u2019t pick it up... okay, but I need to also check whether they can deliver it. So I enter my postcode. ... Okay. So they tell me, which is good. They can tell me... they tell me here it\u2019s green. They can deliver it to me at home the way I\u2019ve kind of configured it now, which is also good. ... then I don\u2019t need to worry about going into the store. Do you want me to go into the basket?", "topic": "Configured Item and Store Availability Check"}, {"id": 96, "s": "s3", "p": "p3", "tc": 1627, "text": "Okay. So I\u2019ve added it to the basket. It\u2019s like a little picture here. I can go now straight to the basket... or I can save it. No, I can save my planning for future... usage. So in case I wasn\u2019t quite ready yet. Okay. Is that important to you? Yeah, because I think I would probably come back several times before I buy. Yeah, I think that\u2019s quite useful. Okay, so here we go. Ah, and here I can save it again.", "topic": "Shopping Basket and Assembly Service"}, {"id": 97, "s": "s3", "p": "p3", "tc": 1668, "text": "Okay, so I\u2019ve got the item here and... okay, they also offer me someone who... puts it together for me for 93 euros. It\u2019s a bit of a, I mean, I find it a little bit ridiculous that this is Ikea, that they give the kind of the \u2014 how do you call that? \u2014 Montage service, which is like... the person who comes to put it all together, that even that has a name, Taskrabbit. I mean, really?", "topic": "Shopping Basket and Assembly Service"}, {"id": 98, "s": "s3", "p": "p3", "tc": 1736, "text": "Yeah, I... I\u2019m probably no longer that... typical customer apart from the knickknack. ... I think it kind of works. It probably has worked for them for many, many years. And... the fact that... some product names have become so... I mean, everybody knows the Billy shelf... it\u2019s... maybe also because it\u2019s one of their most successful products.", "topic": "Shopping Basket and Assembly Service"}, {"id": 99, "s": "s3", "p": "p3", "tc": 1764, "text": "Okay. I mean, sometimes it is a little bit ridiculous... and... like this one here, I mean, Taskrabbit sounds like some Harry Potter or, I don\u2019t know, Lord of the Rings character for me...", "topic": "Shopping Basket and Assembly Service"}, {"id": 100, "s": "s3", "p": "p3", "tc": 1784, "text": "No, no. I mean, honestly... for me, it\u2019s like... I quite like DIY work and also... I mean, I\u2019m buying something for 300 euros and it\u2019s almost like a third is for... putting it together. I think if it was like a kitchen or whatever, I would actually consider it, but not for this kind of small piece of furniture. I would do that myself.", "topic": "Shopping Basket and Assembly Service"}, {"id": 101, "s": "s3", "p": "p3", "tc": 1814, "text": "But here we can also see... what else... ah, you see... no, they don\u2019t tell me how much they charge... to get it delivered at this stage. ... maybe it\u2019s the more I buy, the cheaper it gets, but I can go here on Preisinformation. ... so they tell me... it depends on the kilogram and the sizing says 16 kilograms and 60 by 60, 120. Okay. But now I don\u2019t know how heavy and how big the package is.", "topic": "Shopping Basket and Assembly Service"}, {"id": 102, "s": "s3", "p": "p3", "tc": 1856, "text": "I would assume that it is... heavier, but they... I mean, they can\u2019t deliver it with DHL. I mean, I\u2019m sure they come with like a lot... like their own... and here we go. Okay. So this is now, this is quite expensive. So up to a purchase order of 400 euros, they charge 89 euros. ... That\u2019s quite expensive.", "topic": "Shopping Basket and Assembly Service"}, {"id": 103, "s": "s3", "p": "p3", "tc": 1903, "text": "I\u2019m... I feel... so in a way... I mean, first of all... I would... I think I would go to continue... to find out more, but the thing is, I was willing to pick it up in the store, but they tell me that some of the bits and pieces of my products are not available in the store.", "topic": "Shopping Basket and Assembly Service"}, {"id": 104, "s": "s3", "p": "p3", "tc": 1926, "text": "Sure. So then I said, okay, then deliver it to my house. And then of course, everything is available. But now I don\u2019t know how much they charge. Okay. That\u2019s not good. Let\u2019s... continue and see what happens. Okay, so I go to continue. Ah, so now I need to register. Also, I need to... well, I do weiter als gast, because I still don\u2019t know how much it is... so I don\u2019t want to register. I first want to know.", "topic": "Guest Checkout and Delivery Options"}, {"id": 105, "s": "s3", "p": "p3", "tc": 1956, "text": "Let\u2019s do, let\u2019s be a guest. ... haha. Okay. This is interesting now. So they give me now the cost for the different delivery options... And so the cheapest one is what they say to... Bordsteinkante, which means that... they don\u2019t bring it to your house door. ... it\u2019s on the road, which in our case is not so bad because... we live in a small street and... whereas this is the standard delivery and then they can have express deliveries as well. Okay. But you see here, they say again... no extra cost is pick it up yourself, but I don\u2019t know which items are not available in the store. So this is a bit like going around in circles...", "topic": "Guest Checkout and Delivery Options"}, {"id": 106, "s": "s3", "p": "p3", "tc": 2027, "text": "Yeah, I mean, I would, because I would choose the cheapest one. Okay. Yeah, definitely. So they tell me what time, so 1st of October, which is good... time window from 7 o\u2019clock in the morning until 7 o\u2019clock in the afternoon is a large time frame... So... I would definitely need to be at home. I can choose a date. So... first of October is not good for me. So I select, I don\u2019t know, the sixth, which is... good that I can do this. Yeah. But I can\u2019t select a smaller time frame, time window.", "topic": "Guest Checkout and Delivery Options"}, {"id": 107, "s": "s3", "p": "p3", "tc": 2080, "text": "Right. So, but still, what can I do? ... I need to have a delivery.", "topic": "Guest Checkout and Delivery Options"}, {"id": 108, "s": "s3", "p": "p3", "tc": 2099, "text": "... I would maybe, it depends. I mean, if I... I don\u2019t know, if I knew I had to be somewhere at the time, I would maybe pay another 20 euros to have like a half day. ... I don\u2019t think so. ... because I went here on Bearbeiten and there I can only select the day. ... I\u2019m trying out different options and you see it\u2019s always seven till seven.", "topic": "Guest Checkout and Delivery Options"}, {"id": 109, "s": "s3", "p": "p3", "tc": 2139, "text": "Okay. Let\u2019s... go with this. Right. So I\u2019ve selected my [delivery] and I\u2019m thinking, yeah, I can do this. I can organize my work around it. I can see here my order. I can see the price. Yes. And off we go.", "topic": "Guest Checkout and Delivery Options"}, {"id": 110, "s": "s3", "p": "p3", "tc": 2180, "text": "... they should tell me which items are not in stock in my local shop. Okay. ... here I feel a little bit cheated because they... I mean, initially they tell me there are some stuff... which is out of stock or low stock, but they don\u2019t tell me which.", "topic": "Post-Task Reflection and Feedback"}, {"id": 111, "s": "s3", "p": "p3", "tc": 2205, "text": "And then I said, okay... then deliver it to my house. Yeah. But I have to pay for it. And I find it weird that they... offer me again, this option to pick it up in store. I mean, I would have been willing to pick it up in store, but only if I knew that everything is available...", "topic": "Post-Task Reflection and Feedback"}, {"id": 112, "s": "s3", "p": "p3", "tc": 2228, "text": "... So that is a little bit... yeah, that\u2019s... I think it\u2019s not very good. And... yeah... it\u2019s always better to have a smaller time window. ... but maybe from a logistic point of view, they can\u2019t really get this organized.", "topic": "Post-Task Reflection and Feedback"}], "props": {"1": {"t": 14, "c": 0.2}, "2": {"t": 14, "c": 0.2}, "3": {"t": 14, "c": 0.25}, "4": {"t": 14, "c": 0.35}, "5": {"t": 21, "c": 0.45}, "6": {"t": 18, "c": 0.55}, "7": {"t": 21, "c": 0.55}, "8": {"t": 13, "c": 0.75}, "9": {"t": 15, "c": 0.4}, "10": {"t": 13, "c": 0.75}, "11": {"t": 14, "c": 0.6}, "12": {"t": 1, "c": 0.55}, "13": {"t": 6, "c": 0.6}, "14": {"t": 5, "c": 0.55}, "15": {"t": 18, "c": 0.5}, "16": {"t": 15, "c": 0.6}, "17": {"t": 13, "c": 0.7}, "18": {"t": 2, "c": 0.6}, "19": {"t": 14, "c": 0.65}, "20": {"t": 16, "c": 0.65}, "21": {"t": 13, "c": 0.7}, "25": {"t": 18, "c": 0.55}, "26": {"t": 18, "c": 0.3}, "27": {"t": 6, "c": 0.85}, "28": {"t": 16, "c": 0.8}, "29": {"t": 10, "c": 0.65}, "30": {"t": 21, "c": 0.7}, "31": {"t": 10, "c": 0.75}, "32": {"t": 14, "c": 0.5}, "33": {"t": 16, "c": 0.85}, "34": {"t": 6, "c": 0.8}, "35": {"t": 14, "c": 0.7}, "36": {"t": 18, "c": 0.45}, "37": {"t": 9, "c": 0.8}, "38": {"t": 14, "c": 0.6}, "39": {"t": 18, "c": 0.75}, "40": {"t": 13, "c": 0.9}, "41": {"t": 13, "c": 0.8}, "42": {"t": 5, "c": 0.75}, "43": {"t": 5, "c": 0.7}, "44": {"t": 1, "c": 0.8}, "45": {"t": 10, "c": 0.6}, "46": {"t": 7, "c": 0.75}, "47": {"t": 5, "c": 0.7}, "48": {"t": 2, "c": 0.8}, "49": {"t": 2, "c": 0.5}, "50": {"t": 6, "c": 0.6}, "51": {"t": 5, "c": 0.55}, "52": {"t": 15, "c": 0.65}, "53": {"t": 14, "c": 0.3}, "54": {"t": 18, "c": 0.55}, "55": {"t": 7, "c": 0.72}, "56": {"t": 6, "c": 0.7}, "57": {"t": 10, "c": 0.55}, "58": {"t": 14, "c": 0.55}, "59": {"t": 13, "c": 0.8}, "60": {"t": 9, "c": 0.5}, "61": {"t": 13, "c": 0.75}, "62": {"t": 17, "c": 0.6}, "63": {"t": 13, "c": 0.75}, "64": {"t": 13, "c": 0.72}, "65": {"t": 13, "c": 0.8}, "66": {"t": 10, "c": 0.45}, "67": {"t": 10, "c": 0.65}, "68": {"t": 21, "c": 0.55}, "69": {"t": 21, "c": 0.6}, "70": {"t": 19, "c": 0.65}, "71": {"t": 13, "c": 0.75}, "72": {"t": 22, "c": 0.65}, "73": {"t": 14, "c": 0.65}, "74": {"t": 19, "c": 0.7}, "75": {"t": 16, "c": 0.7}, "76": {"t": 1, "c": 0.72}, "77": {"t": 1, "c": 0.78}, "78": {"t": 0, "c": 0.7}, "79": {"t": 0, "c": 0.85}, "80": {"t": 28, "c": 0.62}, "81": {"t": 18, "c": 0.45}, "82": {"t": 18, "c": 0.65}, "83": {"t": 16, "c": 0.72}, "84": {"t": 14, "c": 0.78}, "85": {"t": 5, "c": 0.75}, "86": {"t": 29, "c": 0.65}, "87": {"t": 7, "c": 0.72}, "88": {"t": 5, "c": 0.7}, "89": {"t": 18, "c": 0.65}, "90": {"t": 16, "c": 0.8}, "91": {"t": 10, "c": 0.78}, "92": {"t": 18, "c": 0.65}, "93": {"t": 6, "c": 0.82}, "94": {"t": 11, "c": 0.75}, "95": {"t": 18, "c": 0.62}, "96": {"t": 10, "c": 0.6}, "97": {"t": 24, "c": 0.62}, "98": {"t": 14, "c": 0.6}, "99": {"t": 24, "c": 0.55}, "100": {"t": 2, "c": 0.72}, "101": {"t": 6, "c": 0.72}, "102": {"t": 13, "c": 0.65}, "103": {"t": 10, "c": 0.7}, "104": {"t": 6, "c": 0.75}, "105": {"t": 6, "c": 0.72}, "106": {"t": 10, "c": 0.68}, "107": {"t": 18, "c": 0.62}, "108": {"t": 5, "c": 0.7}, "109": {"t": 18, "c": 0.6}, "110": {"t": 10, "c": 0.75}, "111": {"t": 6, "c": 0.68}, "112": {"t": 11, "c": 0.62}}, "calls_ms": [5568, 7798, 9396, 9807, 9922, 11098, 11291, 12973, 12976, 13995, 14327, 18919, 19872, 21488, 21857, 24222, 24242, 24502, 25152, 25847, 26212, 28235, 28236, 28649, 29153, 29557, 29959, 31405, 33180, 33600, 35168, 36033, 36603, 38381, 38382, 38837, 39680, 39763, 39961, 40368, 42671, 42841, 43579, 46610, 47471, 47896, 50206, 50215, 51848, 52608, 53076, 54347]};
+const SLOTS = { ux: 5, emo: 6, task: 5, trust: 5, opp: 5 };
+const BIN_N = 20, HIST_H = 150, SQ = 8;
+
+// ── knobs ─────────────────────────────────────────────────────────────────────
+const K = {
+  save: "batch", sizes: "25", conc: 3, callMode: "replay", median: 30, p90: 50, share: 75,
+  order: "stored", seed: 7,
+  pacing: "predict", baseline: 30, startRate: 0.6, horizon: 8, accel: 0.8, decel: 0.3,
+  maxRate: 3, drain: 1.5, within: "stored", statusCount: "screen",
+  lines: "fixed", upper: 0.70, lower: 0.30, topPct: 30, botPct: 10,
+  axis: "grow", squares: "lock", tentative: "pulse", reserve: "on", filterMode: "hold",
+  surface: "mac", rm: "off",
+};
+const SPEC = [
+  ["Server", [
+    ["save", "Proposals saved", "sel", [["batch", "per batch"], ["end", "at the end (today)"]]],
+    ["sizes", "Batch sizes", "text", null, "Comma list; the last repeats. Today: 25."],
+    ["conc", "Calls at once", "range", [1, 6, 1]],
+    ["callMode", "Call time", "sel", [["replay", "replay logged calls"], ["model", "median + slow tail"]]],
+    ["median", "Median call (s)", "range", [5, 60, 1]],
+    ["p90", "1 in 10 slower than (s)", "range", [10, 120, 1]],
+    ["share", "Call time that scales with batch size (%)", "range", [0, 100, 5], "Assumed. 75% means a 5-quote call takes 40% of a 25-quote one."],
+    ["order", "Quote order", "sel", [["stored", "stored (by session)"], ["shuffled", "shuffled"]]],
+    ["seed", "Random seed", "range", [1, 50, 1]],
+  ]],
+  ["Playback", [
+    ["pacing", "Pacing", "sel", [["none", "none: whole batch at once"], ["predict", "predict next arrival"], ["buffer", "by queue size"]]],
+    ["baseline", "Baseline call time (s)", "range", [5, 60, 1], "The starting guess before this run's own batches."],
+    ["startRate", "Starting pace (tags/s)", "range", [0.1, 3, 0.1]],
+    ["horizon", "Queue horizon (s)", "range", [2, 30, 1], "By queue size: pace = tags waiting ÷ this."],
+    ["accel", "Speed-up limit (tags/s per s)", "range", [0.05, 3, 0.05]],
+    ["decel", "Slow-down limit (tags/s per s)", "range", [0.05, 3, 0.05]],
+    ["maxRate", "Flash limit (tags/s)", "range", [0.5, 10, 0.5], "WCAG 2.3.1 is 3 flashes/s for large areas."],
+    ["drain", "Play the rest when done over (s)", "range", [0, 6, 0.5]],
+    ["within", "Order within a batch", "sel", [["stored", "as sent"], ["strong", "strongest first"], ["random", "random"]]],
+    ["statusCount", "Status line counts", "sel", [["screen", "what has landed"], ["server", "what the server has"]]],
+  ]],
+  ["Lines", [
+    ["lines", "Accept / exclude lines", "sel", [["fixed", "fixed values"], ["pct", "percentages, live (can flip)"], ["wave", "tentative live, accept wave at end"]]],
+    ["upper", "Accept at or above", "range", [0.4, 0.95, 0.05]],
+    ["lower", "Exclude below", "range", [0, 0.6, 0.05]],
+    ["topPct", "Accept strongest (%)", "range", [5, 80, 5]],
+    ["botPct", "Exclude weakest (%)", "range", [0, 50, 5]],
+  ]],
+  ["Display", [
+    ["axis", "Bar scale", "sel", [["grow", "grow-only rounded steps"], ["tallest", "rescale to tallest"]]],
+    ["squares", "Squares or bars", "sel", [["lock", "chosen at start"], ["switch", "switch when full"]]],
+    ["tentative", "Tentative tags", "sel", [["pulse", "pulsing (today)"], ["still", "still dashed"]]],
+    ["reserve", "Reserve the tag row", "sel", [["on", "yes: no reflow"], ["off", "no: cards grow"]]],
+    ["filterMode", "Filtered list, new matches", "sel", [["hold", "hold + “N new”"], ["live", "insert live"]]],
+    ["surface", "Progress shown in", "sel", [["mac", "Mac sidebar line"], ["cli", "CLI pop-up"]]],
+    ["rm", "Reduced motion", "sel", [["off", "off"], ["on", "on"]]],
+  ]],
+];
+const PRESETS = {
+  today: { save: "end", sizes: "25", pacing: "none", tentative: "pulse", order: "stored", lines: "fixed", axis: "tallest", squares: "switch" },
+  brief: { save: "batch", sizes: "25", pacing: "predict", tentative: "pulse", order: "stored", lines: "fixed", axis: "tallest", squares: "switch" },
+  rec: { save: "batch", sizes: "5,10,25", pacing: "buffer", tentative: "still", order: "shuffled", lines: "fixed", axis: "grow", squares: "lock" },
+};
+
+function buildKnobs() {
+  const host = document.getElementById("knobs");
+  host.innerHTML = "";
+  for (const [group, items] of SPEC) {
+    const g = document.createElement("div"); g.className = "kg"; g.textContent = group; host.append(g);
+    for (const [key, label, type, opts, note] of items) {
+      const row = document.createElement("div"); row.className = "k";
+      const lab = document.createElement("label"); lab.textContent = label; row.append(lab);
+      let input;
+      if (type === "sel") {
+        input = document.createElement("select");
+        for (const [v, t] of opts) { const o = new Option(t, v); input.add(o); }
+        input.value = K[key]; row.append(input);
+      } else if (type === "text") {
+        input = document.createElement("input"); input.type = "text"; input.value = K[key]; input.size = 10; row.append(input);
+      } else {
+        const v = document.createElement("span"); v.className = "v"; v.textContent = K[key]; row.append(v);
+        input = document.createElement("input"); input.type = "range";
+        [input.min, input.max, input.step] = opts; input.value = K[key]; row.append(input);
+        input.addEventListener("input", () => { v.textContent = input.value; });
+      }
+      input.addEventListener("change", () => {
+        K[key] = type === "range" ? Number(input.value) : input.value;
+        restart();
+      });
+      if (note) { const n = document.createElement("div"); n.className = "note"; n.textContent = note; row.append(n); }
+      host.append(row);
+    }
+  }
+  const a = document.createElement("div"); a.className = "assume";
+  a.innerHTML = "<b>Measured:</b> " + D.calls_ms.length + " logged AutoCode calls (median " +
+    (median(D.calls_ms) / 1000).toFixed(1) + " s). <b>Assumed:</b> how call time scales with batch size; " +
+    "that shuffling leaves confidences unchanged. Quote text: Talismanic, codes only.";
+  host.append(a);
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffle(arr, rng) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function median(a) { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+function niceUp(x) { const steps = [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200, 300, 500, 1000]; for (const s of steps) if (s >= x) return s; return Math.ceil(x / 500) * 500; }
+function tagBg(t) { const tag = D.tags[t]; return `var(--bn-${tag.set}-${(tag.idx % (SLOTS[tag.set] || 5)) + 1}-bg)`; }
+function barColour(t) { return `var(--bn-bar-${D.tags[t].set}, var(--bn-bar-none))`; }
+function fmtTc(s) { const m = Math.floor(s / 60), r = s % 60; return `[${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}]`; }
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+// ── simulation state ──────────────────────────────────────────────────────────
+let S = null, playing = false, last = 0;
+const qById = new Map(D.quotes.map(q => [q.id, q]));
+const cardEls = new Map(), badgeEls = new Map(), sideRows = [], cbRows = [];
+
+function sizeFactor(n) { return (1 - K.share / 100) + (K.share / 100) * (n / 25); }
+function sampleCall(rng) {
+  if (K.callMode === "replay") return D.calls_ms[Math.floor(rng() * D.calls_ms.length)] / 1000;
+  const sigma = Math.log(Math.max(K.p90, K.median + 0.1) / K.median) / 1.2816;
+  const z = Math.sqrt(-2 * Math.log(rng() || 1e-9)) * Math.cos(2 * Math.PI * rng());
+  return K.median * Math.exp(sigma * z);
+}
+
+function plan() {
+  const rng = mulberry32(K.seed);
+  let order = D.quotes.map(q => q.id);
+  if (K.order === "shuffled") shuffle(order, mulberry32(K.seed * 7919));
+  let sizes = String(K.sizes).split(/[,\s]+/).map(Number).filter(n => n > 0);
+  if (!sizes.length) sizes = [25];
+  const batches = [];
+  for (let i = 0, k = 0; i < order.length; k++) {
+    const n = sizes[Math.min(k, sizes.length - 1)];
+    batches.push({ qids: order.slice(i, i + n), n: Math.min(n, order.length - i) });
+    i += n;
+  }
+  const lanes = Array(K.conc).fill(0);
+  for (const b of batches) {
+    b.dur = Math.max(1, sampleCall(rng) * sizeFactor(b.n));
+    let lane = 0; for (let j = 1; j < lanes.length; j++) if (lanes[j] < lanes[lane]) lane = j;
+    b.lane = lane; b.start = lanes[lane]; b.end = b.start + b.dur; lanes[lane] = b.end;
+  }
+  const serverEnd = Math.max(...batches.map(b => b.end));
+  for (const b of batches) b.visible = K.save === "end" ? serverEnd : b.end;
+  return { batches, serverEnd, arr: [...batches].sort((a, b) => a.visible - b.visible) };
+}
+
+function restart() {
+  const wasPlaying = playing;
+  const p = plan();
+  S = {
+    t: 0, ...p, ai: 0, queue: [], revealed: new Map(), rate: K.startRate, credits: 0,
+    observed: [], arrivedConfs: [], finished: false, waved: false, flips: 0, held: new Set(),
+    reveals: [], depth: [], lastDepthT: -1, histMax: 5, tagMax: 5, sqMode: null,
+    counts: D.tags.map(() => ({ a: 0, t: 0, e: 0 })), landedQuotes: 0, serverQuotes: 0,
+    firstReveal: null, doneT: null,
+  };
+  // squares or bars, chosen at start from what is known up front (the quote count)
+  const maxStack = Math.floor(HIST_H / SQ);
+  S.sqMode = K.squares === "lock" ? (D.quotes.length * 0.22 <= maxStack) : true;
+  document.documentElement.classList.toggle("rm", K.rm === "on");
+  document.body.classList.toggle("still", K.tentative === "still");
+  document.getElementById("quotes").classList.toggle("reserve", K.reserve === "on");
+  document.getElementById("chipstack").hidden = K.surface !== "cli";
+  document.getElementById("macsb").style.display = K.surface === "mac" ? "" : "none";
+  renderStatic();
+  updateAll();
+  playing = wasPlaying;
+}
+
+// ── classification ────────────────────────────────────────────────────────────
+function pctLines(confs) {
+  if (!confs.length) return { u: 2, l: -1 };
+  const s = [...confs].sort((a, b) => b - a);
+  const k = Math.max(1, Math.ceil(s.length * K.topPct / 100));
+  const z = Math.ceil(s.length * K.botPct / 100);
+  return { u: s[k - 1], l: z > 0 ? s[s.length - z] : -1 };
+}
+function currentLines() {
+  if (K.lines === "fixed") return { u: K.upper, l: K.lower, pct: false };
+  const L = pctLines(S.arrivedConfs);
+  return { u: L.u, l: L.l, pct: true };
+}
+function classify(conf) {
+  if (K.lines === "wave" && !S.waved) return "ten";
+  const L = currentLines();
+  if (conf >= L.u) return "acc";
+  if (L.pct ? conf <= L.l : conf < L.l) return "exc";
+  return "ten";
+}
+
+// ── static render ─────────────────────────────────────────────────────────────
+function renderStatic() {
+  const qhost = document.getElementById("quotes");
+  qhost.innerHTML = ""; cardEls.clear(); badgeEls.clear();
+  for (const q of D.quotes) {
+    const el = document.createElement("div"); el.className = "qc";
+    el.innerHTML = `<div class="meta"><span>${fmtTc(q.tc)}</span><span class="sp">${esc(q.p)}</span></div>` +
+      `<div class="tx">${esc(q.text)}</div><div class="tags"></div>`;
+    qhost.append(el); cardEls.set(q.id, el);
+  }
+  const filt = document.getElementById("filter");
+  const keep = filt.value;
+  filt.innerHTML = '<option value="">All quotes</option>' + D.tags.map((t, i) => `<option value="${i}">${esc(t.name)}</option>`).join("");
+  filt.value = keep;
+  const rowHTML = (t) => `<span class="badge" style="background:${tagBg(t)}">${esc(D.tags[t].name)}</span>` +
+    `<span class="bar"><i class="solid" style="background:${barColour(t)};width:0"></i><i class="pale" style="background:${barColour(t)};width:0"></i></span><span class="n">0</span>`;
+  const side = document.getElementById("tagSidebar"); side.innerHTML = ""; sideRows.length = 0;
+  const cb = document.getElementById("cbgrid"); cb.innerHTML = ""; cbRows.length = 0;
+  for (const g of D.groups) {
+    const h = document.createElement("div"); h.className = "tgrp"; h.textContent = g.name; side.append(h);
+    const card = document.createElement("div"); card.className = "cbcard";
+    card.innerHTML = `<div class="tgrp">${esc(g.name)}</div>`; cb.append(card);
+    D.tags.forEach((t, i) => {
+      if (t.group !== g.name) return;
+      const r = document.createElement("div"); r.className = "trow"; r.innerHTML = rowHTML(i); side.append(r); sideRows[i] = r;
+      const c = document.createElement("div"); c.className = "trow"; c.innerHTML = rowHTML(i); card.append(c); cbRows[i] = c;
+    });
+  }
+  const hp = document.getElementById("hplot"); hp.innerHTML = "";
+  for (let i = 0; i < BIN_N; i++) { const b = document.createElement("div"); b.className = "bin"; hp.append(b); }
+  for (const cls of ["lo", "hi"]) { const l = document.createElement("div"); l.className = "line " + cls; l.id = "line-" + cls; hp.append(l); }
+  document.getElementById("newpill").hidden = true;
+}
+
+// ── arrivals, reveals ─────────────────────────────────────────────────────────
+function arrive(b) {
+  b.arrived = true;
+  S.observed.push(b.dur / sizeFactor(b.n));
+  S.serverQuotes += b.n;
+  let items = b.qids.filter(id => D.props[id]).map(id => ({ qid: id, b }));
+  b.pending = items.length;
+  S.landedQuotes += b.n - items.length;
+  for (const it of items) S.arrivedConfs.push(D.props[it.qid].c);
+  if (K.within === "strong") items.sort((x, y) => D.props[y.qid].c - D.props[x.qid].c);
+  else if (K.within === "random") shuffle(items, mulberry32(K.seed + b.start * 1000 | 0));
+  S.queue.push(...items);
+  if (K.lines === "pct") reclassRevealed();
+}
+function reclassRevealed() {
+  for (const [qid, cls] of S.revealed) {
+    const n = classify(D.props[qid].c);
+    if (n !== cls) { setClass(qid, n, true); S.flips++; }
+  }
+}
+function reveal(it) {
+  const p = D.props[it.qid];
+  if (it.wave) { setClass(it.qid, classify(p.c), false); return; }
+  setClass(it.qid, classify(p.c), false);
+  it.b.pending--; S.landedQuotes++;
+  if (S.firstReveal === null) S.firstReveal = S.t;
+}
+function setClass(qid, cls, isFlip) {
+  const p = D.props[qid], t = p.t, prev = S.revealed.get(qid);
+  if (prev) S.counts[t][prev[0]]--;
+  S.revealed.set(qid, cls);
+  S.counts[t][cls[0]]++;
+  S.reveals.push({ t: S.t, cls, flip: isFlip });
+  // the quote card
+  const card = cardEls.get(qid), tags = card.querySelector(".tags");
+  let badge = badgeEls.get(qid);
+  if (cls === "exc") { if (badge) { badge.remove(); badgeEls.delete(qid); } }
+  else {
+    if (!badge) { badge = document.createElement("span"); tags.append(badge); badgeEls.set(qid, badge); }
+    badge.className = "badge " + (cls === "acc" ? "badge-user" : "badge-proposed");
+    badge.style.background = tagBg(t);
+    badge.textContent = D.tags[t].name;
+    if (cls === "acc") flash(badge); else if (!isFlip) appear(badge);
+  }
+  if (cls === "acc") { flash(sideRows[t].querySelector(".badge")); flash(cbRows[t].querySelector(".badge")); }
+  applyFilter(qid, true);
+  S.dirty = true;
+}
+function flash(el) {
+  if (K.rm === "on" || !el) return;
+  el.classList.remove("badge-accept-flash"); void el.offsetWidth; el.classList.add("badge-accept-flash");
+}
+function appear(el) {
+  if (K.rm === "on") return;
+  el.classList.add("badge-appearing"); setTimeout(() => el.classList.remove("badge-appearing"), 200);
+}
+
+// ── filter ────────────────────────────────────────────────────────────────────
+function matches(qid, f) { const cls = S.revealed.get(qid); return cls && cls !== "exc" && String(D.props[qid].t) === f; }
+function applyFilter(qid, fromLanding) {
+  const f = document.getElementById("filter").value, card = cardEls.get(qid);
+  if (!f) { delete card.dataset.hidden; return; }
+  const m = matches(qid, f);
+  if (m && fromLanding && K.filterMode === "hold" && card.dataset.hidden !== undefined) { S.held.add(qid); updatePill(); return; }
+  if (m) delete card.dataset.hidden; else card.dataset.hidden = "";
+}
+function refilter() { S.held.clear(); for (const q of D.quotes) applyFilter(q.id, false); updatePill(); }
+function updatePill() {
+  const pill = document.getElementById("newpill");
+  pill.hidden = S.held.size === 0; pill.textContent = `↑ ${S.held.size} new`;
+}
+document.getElementById("newpill").addEventListener("click", () => {
+  for (const q of S.held) delete cardEls.get(q).dataset.hidden;
+  S.held.clear(); updatePill();
+});
+document.getElementById("filter").addEventListener("change", refilter);
+
+// ── per-frame update ──────────────────────────────────────────────────────────
+function step(dt) {
+  S.t += dt;
+  while (S.ai < S.arr.length && S.arr[S.ai].visible <= S.t) arrive(S.arr[S.ai++]);
+  const serverDone = S.ai >= S.arr.length;
+  if (K.rm === "on" || K.pacing === "none") {
+    while (S.queue.length) reveal(S.queue.shift());
+  } else {
+    const q = S.queue.length;
+    if (serverDone) {
+      S.rate = Math.max(S.rate, q / Math.max(K.drain, 0.05));
+    } else {
+      let target;
+      if (K.pacing === "predict") {
+        const typical = S.observed.length ? median(S.observed) : K.baseline;
+        const inflight = S.batches.filter(b => b.start <= S.t && b.visible > S.t);
+        let next = inflight.length ? Math.min(...inflight.map(b => b.start + typical * sizeFactor(b.n))) : S.t + typical;
+        if (next < S.t + 0.5) next = S.t + 0.5;
+        target = q / (next - S.t);
+      } else target = q / K.horizon;
+      const d = target - S.rate;
+      S.rate += d > 0 ? Math.min(d, K.accel * dt) : Math.max(d, -K.decel * dt);
+      S.rate = Math.max(0, Math.min(S.rate, K.maxRate));
+    }
+    S.credits += S.rate * dt;
+    while (S.credits >= 1 && S.queue.length) { reveal(S.queue.shift()); S.credits -= 1; }
+    if (!S.queue.length) S.credits = Math.min(S.credits, 1);
+  }
+  if (serverDone && !S.queue.length && !S.finished) {
+    if (K.lines === "wave" && !S.waved) {
+      // the wave: every landed tag is re-cut at the final lines, strongest first;
+      // only the ones that change move, through the same paced queue
+      S.waved = true;
+      const items = [...S.revealed.keys()].sort((a, b) => D.props[b].c - D.props[a].c);
+      for (const qid of items) if (classify(D.props[qid].c) !== S.revealed.get(qid)) S.queue.push({ qid, wave: true });
+      if (!S.queue.length) { S.finished = true; S.doneT = S.t; }
+    } else { S.finished = true; S.doneT = S.t; }
+  }
+  if (S.t - S.lastDepthT >= 0.2) { S.depth.push({ t: S.t, q: S.queue.length, r: S.rate }); S.lastDepthT = S.t; }
+}
+
+function updateAll() {
+  updateStatus(); updateBars(); updateHist(); drawTimeline(); updateStats();
+  document.getElementById("clock").textContent = `t = ${S.t.toFixed(1)} s`;
+  S.dirty = false;
+}
+
+function updateStatus() {
+  const N = D.quotes.length;
+  const n = K.statusCount === "server" ? S.serverQuotes : Math.min(N, S.landedQuotes);
+  const running = !S.finished;
+  const line = document.getElementById("statusLine");
+  line.textContent = `AutoCode · ${n} of ${N}`;
+  line.classList.toggle("bn-thinking-shimmer", running);
+  const stack = document.getElementById("chipstack");
+  if (K.surface === "cli") {
+    const title = "Bristlenose UXR Codebook";
+    stack.innerHTML = running
+      ? `<div class="activity-chip" data-status="running"><span class="chip-label bn-thinking-shimmer">✦ AutoCoding ${title} ${n}/${N}…</span><button class="chip-cancel">Cancel</button></div>`
+      : `<div class="activity-chip" data-status="completed"><span class="chip-check">✓</span><span>✦ AutoCoded ${title} in ${fmtDur(S.doneT)}.</span></div>`;
+  }
+}
+function fmtDur(s) { const m = Math.floor(s / 60), r = Math.round(s % 60); return m ? `${m}m ${r}s` : `${r}s`; }
+
+function updateBars() {
+  const tallest = Math.max(1, ...S.counts.map(c => c.a + c.t));
+  S.tagMax = K.axis === "tallest" ? tallest : (tallest > S.tagMax ? niceUp(tallest * 1.25) : S.tagMax);
+  S.counts.forEach((c, t) => {
+    for (const row of [sideRows[t], cbRows[t]]) {
+      if (!row) continue;
+      row.querySelector(".solid").style.width = (c.a / S.tagMax * 100) + "%";
+      row.querySelector(".pale").style.width = (c.t / S.tagMax * 100) + "%";
+      row.querySelector(".n").textContent = c.a + c.t ? (c.t ? `${c.a}+${c.t}` : c.a) : "";
+    }
+  });
+}
+
+function updateHist() {
+  const bins = Array.from({ length: BIN_N }, () => []);
+  for (const [qid, cls] of S.revealed) {
+    const c = D.props[qid].c; const i = Math.min(BIN_N - 1, Math.floor(c * BIN_N));
+    bins[i].push({ qid, cls, t: D.props[qid].t });
+  }
+  const tallest = Math.max(1, ...bins.map(b => b.length));
+  const maxStack = Math.floor(HIST_H / SQ);
+  if (K.squares === "switch") S.sqMode = tallest <= maxStack;
+  S.histMax = K.axis === "tallest" ? tallest : (tallest > S.histMax ? niceUp(tallest * 1.25) : S.histMax);
+  const hp = document.getElementById("hplot");
+  [...hp.querySelectorAll(".bin")].forEach((el, i) => {
+    const b = bins[i];
+    if (S.sqMode) {
+      el.className = "bin sq";
+      const order = { acc: 0, ten: 1, exc: 2 };
+      b.sort((x, y) => order[x.cls] - order[y.cls]);
+      el.innerHTML = b.map(x => `<i class="sqi ${x.cls}" style="background:${tagBg(x.t)};color:var(--bn-colour-muted)"></i>`).join("");
+    } else {
+      el.className = "bin";
+      const n = { acc: 0, ten: 0, exc: 0 }; b.forEach(x => n[x.cls]++);
+      if (el.children.length !== 3 || el.firstChild.tagName !== "DIV") el.innerHTML = '<div class="seg acc"></div><div class="seg ten"></div><div class="seg exc"></div>';
+      const [a, t, e] = el.children;
+      a.style.height = (n.acc / S.histMax * HIST_H) + "px";
+      t.style.height = (n.ten / S.histMax * HIST_H) + "px";
+      e.style.height = (n.exc / S.histMax * HIST_H) + "px";
+    }
+  });
+  const L = currentLines();
+  const lo = document.getElementById("line-lo"), hi = document.getElementById("line-hi");
+  const show = !(K.lines === "wave" && !S.waved);
+  hi.style.display = lo.style.display = show && S.revealed.size ? "" : "none";
+  hi.style.left = `calc(${Math.min(1, L.u) * 100}% - 1px)`;
+  lo.style.left = `calc(${Math.max(0, L.l) * 100}% - 1px)`;
+  const tot = { a: 0, t: 0, e: 0 }; S.counts.forEach(c => { tot.a += c.a; tot.t += c.t; tot.e += c.e; });
+  document.getElementById("hmeta").innerHTML =
+    `<span>accepted ${tot.a}</span><span>tentative ${tot.t}</span><span>excluded ${tot.e}</span>` +
+    `<span>scale ${S.sqMode ? "squares" : "0–" + S.histMax}</span>` + (S.flips ? `<span style="color:#d92d20">flips ${S.flips}</span>` : "");
+}
+
+function drawTimeline() {
+  const cv = document.getElementById("tl"), dpr = devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.body);
+  const ink = css.getPropertyValue("color"), muted = "#8a8f98";
+  const T = Math.max(S.serverEnd + K.drain + 6, S.t + 2, S.doneT || 0);
+  const X = t => 40 + (W - 50) * t / T;
+  const laneH = 9, top = 4;
+  g.font = "10px ui-monospace, Menlo, monospace"; g.fillStyle = muted;
+  g.fillText("server", 0, top + 8);
+  for (const b of S.batches) {
+    const y = top + b.lane * (laneH + 2);
+    g.fillStyle = "rgba(128,128,128,.18)"; g.fillRect(X(b.start), y, X(b.end) - X(b.start), laneH);
+    const done = Math.min(S.t, b.end);
+    if (done > b.start) { g.fillStyle = b.arrived ? "rgba(62,92,160,.75)" : "rgba(62,92,160,.35)"; g.fillRect(X(b.start), y, X(done) - X(b.start), laneH); }
+    if (K.save === "end" && S.t < S.serverEnd) { /* nothing visible until the end */ }
+  }
+  const rY = top + K.conc * (laneH + 2) + 6;
+  g.fillStyle = muted; g.fillText("screen", 0, rY + 9);
+  const col = { acc: "#2f9e62", ten: "#d9a23a", exc: "#9aa0a6" };
+  for (const r of S.reveals) { g.fillStyle = r.flip ? "#d92d20" : col[r.cls]; g.fillRect(X(r.t), rY, 1.5, 12); }
+  const dY = rY + 22, dH = H - dY - 14;
+  g.fillStyle = muted; g.fillText("queue", 0, dY + 10);
+  const maxQ = Math.max(10, ...S.depth.map(d => d.q));
+  g.strokeStyle = "#7b61c9"; g.lineWidth = 1.2; g.beginPath();
+  S.depth.forEach((d, i) => { const x = X(d.t), y = dY + dH - d.q / maxQ * dH; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  g.strokeStyle = "rgba(47,158,98,.8)"; g.beginPath();
+  const maxR = Math.max(K.maxRate, 1);
+  S.depth.forEach((d, i) => { const x = X(d.t), y = dY + dH - Math.min(d.r, maxR) / maxR * dH; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  g.fillStyle = muted; g.fillText(`max ${maxQ}`, 0, dY + 22);
+  g.strokeStyle = "#d92d20"; g.beginPath(); g.moveTo(X(S.t), 0); g.lineTo(X(S.t), H - 12); g.stroke();
+  g.fillStyle = muted;
+  for (let s = 0; s <= T; s += T > 200 ? 60 : T > 60 ? 15 : 5) g.fillText(s + "s", X(s) - 6, H - 2);
+}
+
+function updateStats() {
+  const rv = S.reveals.filter(r => !r.flip);
+  let gap = 0;
+  for (let i = 1; i < rv.length; i++) gap = Math.max(gap, rv[i].t - rv[i - 1].t);
+  const fmt = v => v == null ? "—" : v.toFixed(1) + " s";
+  document.getElementById("stats").innerHTML =
+    `batches <b>${S.batches.length}</b> (${S.batches.map(b => b.n).join(", ").slice(0, 40)})<br>` +
+    `first tag on screen <b>${fmt(S.firstReveal)}</b><br>` +
+    `server finished <b>${fmt(S.serverEnd)}</b><br>` +
+    `screen finished <b>${fmt(S.doneT)}</b><br>` +
+    `longest still gap <b>${rv.length > 1 ? gap.toFixed(1) + " s" : "—"}</b><br>` +
+    `pace now <b>${S.rate.toFixed(2)}</b> tags/s · queue <b>${S.queue.length}</b><br>` +
+    `<span style="color:#2f9e62">■</span> accepted <span style="color:#d9a23a">■</span> tentative ` +
+    `<span style="color:#9aa0a6">■</span> excluded <span style="color:#d92d20">■</span> flipped<br>` +
+    `<span style="color:#7b61c9">—</span> queue <span style="color:#2f9e62">—</span> pace`;
+}
+
+// ── loop + header ─────────────────────────────────────────────────────────────
+function frame(ts) {
+  const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0; last = ts;
+  if (playing && !S.finished) {
+    step(dt * Number(document.getElementById("speed").value));
+    updateAll();
+  } else if (playing && S.finished) { setPlaying(false); updateAll(); }
+  requestAnimationFrame(frame);
+}
+function setPlaying(v) { playing = v; document.getElementById("play").textContent = v ? "❚❚ Pause" : "▶ Play"; }
+document.getElementById("play").addEventListener("click", () => { if (S.finished) restart(); setPlaying(!playing); });
+document.getElementById("restart").addEventListener("click", () => { restart(); setPlaying(true); });
+document.getElementById("preset").addEventListener("change", e => {
+  const p = PRESETS[e.target.value]; if (!p) return;
+  Object.assign(K, p); buildKnobs(); restart(); setPlaying(true);
+});
+window.addEventListener("resize", () => S && drawTimeline());
+document.getElementById("studyinfo").textContent =
+  `${D.quotes.length} quotes · ${Object.keys(D.props).length} proposals · ${D.framework}`;
+buildKnobs(); restart(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

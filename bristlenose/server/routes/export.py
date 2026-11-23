@@ -107,6 +107,9 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/autocode/{framework_id}/proposals",
         "/projects/{project_id}/autocode/{framework_id}/status",
         "/projects/{project_id}/autocode/jobs",  # runs in flight, for a reload's chips; live only
+        # The tag sidebar's AutoCode overview: proposals by confidence, and whether it is
+        # open. Proposals never leave the server; the exported sidebar keeps the line alone.
+        "/projects/{project_id}/tag-overview",
         "/projects/{project_id}/codebook/remove-framework/{framework_id}/impact",
         "/projects/{project_id}/codebook/tags/{tag_id}/builder",
         "/projects/{project_id}/codebook/templates",

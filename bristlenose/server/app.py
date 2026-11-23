@@ -59,6 +59,7 @@ from bristlenose.server.routes.screens import router as screens_router
 from bristlenose.server.routes.screens_export import router as screens_export_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.signals import router as analysis_router
+from bristlenose.server.routes.tag_overview import router as tag_overview_router
 from bristlenose.server.routes.tapestry import router as tapestry_router
 from bristlenose.server.routes.transcript import router as transcript_router
 from bristlenose.server.status_page import detect_status, render_page
@@ -428,6 +429,7 @@ def create_app(
     app.include_router(runs_router)
     app.include_router(sessions_router)
     app.include_router(tapestry_router)
+    app.include_router(tag_overview_router)
     app.include_router(screens_router)
     app.include_router(reanalyse_router)
     app.include_router(discussion_router)

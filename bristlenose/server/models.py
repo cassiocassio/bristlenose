@@ -808,6 +808,25 @@ class ProjectFrameworkState(Base):
     )
 
 
+class TagOverviewState(Base):
+    """The tag sidebar's AutoCode overview, remembered per study (landing plan D12).
+
+    One row per project, made on the first write; absence means closed, merged, and
+    not yet opened by itself. ``auto_opened`` records that the overview has opened by
+    itself once, after a first run, so it never does again: from then on ``open`` and
+    ``split`` are the researcher's.
+    """
+
+    __tablename__ = "tag_overview_states"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), unique=True)
+    open: Mapped[bool] = mapped_column(default=False)
+    split: Mapped[bool] = mapped_column(default=False)
+    auto_opened: Mapped[bool] = mapped_column(default=False)
+    updated_at: Mapped[datetime] = mapped_column(default=func.now())
+
+
 class ElaborationCache(Base):
     """Cached LLM-generated signal elaboration.
 

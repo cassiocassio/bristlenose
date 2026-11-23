@@ -19,6 +19,7 @@ import type {
   CodebookTagResponse,
   ModeratorQuestionResponse,
   ProposalsListResponse,
+  LiveProposalsResponse,
   RemoveFrameworkInfo,
   CodebookSignalsListResponse,
   TagSignalsResponse,
@@ -678,6 +679,23 @@ export function getAutoCodeProposals(
 ): Promise<ProposalsListResponse> {
   const qs = minConfidence != null ? `?min_confidence=${minConfidence}` : "";
   return apiGet<ProposalsListResponse>(`/autocode/${frameworkId}/proposals${qs}`);
+}
+
+/** The live page's read of a run (docs/design-autocode-landing-plan.md Phase 4): every proposal
+ *  whatever its confidence, the new ones in full after `sinceId`, and every row's state. It is
+ *  read every few seconds while a run lands, so it is bounded like the status read, more
+ *  generously, since it carries rows. */
+const LIVE_READ_TIMEOUT_MS = 10_000;
+
+export function getAutoCodeLive(
+  frameworkId: string,
+  sinceId?: number | null,
+): Promise<LiveProposalsResponse> {
+  const since = sinceId != null ? `&since_id=${sinceId}` : "";
+  return apiGet<LiveProposalsResponse>(
+    `/autocode/${frameworkId}/proposals?min_confidence=0&live=true${since}`,
+    LIVE_READ_TIMEOUT_MS,
+  );
 }
 
 /** A proposal review, bounded like a curation write: the quotes store holds a

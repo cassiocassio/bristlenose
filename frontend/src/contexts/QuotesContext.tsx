@@ -33,6 +33,8 @@ import {
   type TagMode,
 } from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
+import { EMPTY_LIVE, mergedTagMap } from "../utils/liveTags";
+import type { LiveOverlay } from "../utils/liveTags";
 import { foldKey } from "../utils/searchMatch";
 import type { SearchPerson } from "../utils/searchSuggest";
 import {
@@ -77,6 +79,10 @@ export interface QuotesState {
   tags: Record<string, TagResponse[]>;
   deletedBadges: Record<string, string[]>;
   proposedTags: Record<string, ProposedTagBrief[]>;
+  /** The AutoCode tags a run is landing on screen (contexts/AutoCodePlayback.ts), which every
+   *  view folds into `tags` and `proposedTags` through utils/liveTags.ts. Empty when no run lands,
+   *  and always in an exported report. Never sent anywhere: the server has them already. */
+  live: LiveOverlay;
   /** All quotes from the API — populated by initFromQuotes. */
   quotes: QuoteResponse[];
   /** Pinned quotes the analysis left with no section/theme home (the
@@ -103,6 +109,7 @@ function emptyState(): QuotesState {
     tags: {},
     deletedBadges: {},
     proposedTags: {},
+    live: EMPTY_LIVE,
     quotes: [],
     uncategorised: [],
     viewMode: "all",
@@ -145,6 +152,8 @@ export function getVisibleQuotes(store: QuotesState): QuoteResponse[] {
 }
 
 let lastFilterState: FilterState | null = null;
+let lastFilterTags: Record<string, TagResponse[]> | null = null;
+let lastFilterLive: LiveOverlay | null = null;
 
 /**
  * The one filter state every surface reads: the Quotes sections and themes,
@@ -163,11 +172,14 @@ export function filterStateOf(store: QuotesState): FilterState {
     c.tagFilter === store.tagFilter &&
     c.hidden === store.hidden &&
     c.starred === store.starred &&
-    c.tags === store.tags &&
+    lastFilterTags === store.tags &&
+    lastFilterLive === store.live &&
     c.edits === store.edits
   ) {
     return c;
   }
+  lastFilterTags = store.tags;
+  lastFilterLive = store.live;
   lastFilterState = {
     searchQuery: store.searchQuery,
     searchTokens: store.searchTokens,
@@ -175,7 +187,9 @@ export function filterStateOf(store: QuotesState): FilterState {
     tagFilter: store.tagFilter,
     hidden: store.hidden,
     starred: store.starred,
-    tags: store.tags,
+    // The tags a run has landed count for the filters too, so a filtered list takes a new
+    // match live, in place (D10); the store's own map when nothing is landing.
+    tags: mergedTagMap(store.tags, store.live, () => []),
     edits: store.edits,
   };
   return lastFilterState;
@@ -243,6 +257,9 @@ export function initFromQuotes(
           // A hide mid-collapse commits only what is still in `hiding`, so
           // dropping it here would abandon the hide unsent.
           hiding: prev.hiding,
+          // What a run is landing is the playback's, not this read's: a reload of the
+          // ordinary data is exactly when it must stay (the run's end hands over to it).
+          live: prev.live,
         }
       : prev;
     const hidden = { ...base.hidden };
@@ -316,6 +333,12 @@ export function initFromQuotes(
       uncategorised: uncategorised ?? base.uncategorised,
     };
   });
+}
+
+/** Publish what an AutoCode run has landed on screen (the playback store's only write here). */
+export function setLiveOverlay(live: LiveOverlay): void {
+  if (state.live === live) return;
+  setState((prev) => ({ ...prev, live }));
 }
 
 /**

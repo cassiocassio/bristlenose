@@ -511,6 +511,33 @@ export interface ProposalsListResponse {
   total: number;
 }
 
+/** Where one proposal of a run stands now, as the live read lists it: what the page
+ *  reconciles the rows it holds by (docs/design-autocode-landing-plan.md Phase 4). With the
+ *  id, the quote and the tag are the row's identity, because SQLite reuses a deleted row's id. */
+export interface LiveProposalState {
+  id: number;
+  quote_id: number;
+  tag_definition_id: number;
+  status: "pending" | "accepted" | "denied";
+  decided_by?: "threshold" | "researcher" | "unknown" | null;
+}
+
+/** The run as the live read saw it. `settled`: nothing more will land from it, so the page's
+ *  last read of a run is the first with it. `cursor`: the next read's `since_id`. */
+export interface LiveRunState {
+  status: AutoCodeJobStatus["status"];
+  ending: boolean;
+  settled: boolean;
+  cursor: number | null;
+}
+
+/** `GET …/proposals?min_confidence=0&live=true[&since_id=N]`: the new rows in full, every row's
+ *  state, and the run. */
+export interface LiveProposalsResponse extends ProposalsListResponse {
+  states: LiveProposalState[];
+  run: LiveRunState;
+}
+
 // ---------------------------------------------------------------------------
 // Tag-based analysis API
 // ---------------------------------------------------------------------------

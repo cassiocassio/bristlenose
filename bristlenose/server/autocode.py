@@ -43,6 +43,13 @@ logger = logging.getLogger(__name__)
 #: budgets regardless of session length.
 BATCH_SIZE = 25
 
+#: A first apply's opening batches, before the rest go in batches of ``BATCH_SIZE``
+#: (docs/design-autocode-landing-plan.md D24, Phase 0b): a call costs about 3 s plus
+#: 1.9 s a quote, so the first tags land in about 12 s instead of about 49 s, for about
+#: $0.06 more a run. Catch-up passes keep ``BATCH_SIZE``: a researcher is not watching
+#: them land from nothing. Each is capped at ``BATCH_SIZE``.
+FIRST_APPLY_BATCH_RAMP = (5, 10)
+
 #: How many times one batch's save is tried before the batch is kept in memory and
 #: saved with the end of the run, and the wait before each retry (seconds). Each try
 #: also waits out the connection's ``busy_timeout`` for the write lock first.
@@ -347,9 +354,23 @@ async def _save_batch(
     return False, None
 
 
-def _store_pending_batch(db: SASession, job_id: int, answered: _Answered) -> None:
-    """A first apply's batch: its proposals (pending, for the review), its quotes on
-    the register, and the job's proposal count, in one transaction (uncommitted)."""
+def first_apply_batches(items: list[QuoteBatchItem]) -> list[list[QuoteBatchItem]]:
+    """A first apply's quotes in batches, in the order given: ``FIRST_APPLY_BATCH_RAMP``
+    first (each capped at ``BATCH_SIZE``), then ``BATCH_SIZE`` each (D24)."""
+    sizes = [min(size, BATCH_SIZE) for size in FIRST_APPLY_BATCH_RAMP]
+    batches: list[list[QuoteBatchItem]] = []
+    start = 0
+    while start < len(items):
+        size = sizes[len(batches)] if len(batches) < len(sizes) else BATCH_SIZE
+        batches.append(items[start : start + size])
+        start += size
+    return batches
+
+
+def _store_pending_batch(db: SASession, job_id: int, answered: _Answered) -> int:
+    """A first apply's batch: its proposals, its quotes on the register, the job's
+    proposal count, and the live acceptance its arrival allows (``accept_live``), in one
+    transaction (uncommitted). Answers how many proposals were accepted live."""
     from bristlenose.server.models import AutoCodeJob, ProposedTag
 
     for quote_id, tag_def_id, confidence, rationale in answered.proposals:
@@ -365,6 +386,9 @@ def _store_pending_batch(db: SASession, job_id: int, answered: _Answered) -> Non
             {AutoCodeJob.proposed_count: AutoCodeJob.proposed_count + len(answered.proposals)},
             synchronize_session=False,
         )
+    # With the batch, in its transaction: a batch's proposals and the acceptance they allow
+    # land together, and this save's retries are the acceptance's.
+    return accept_live(db, job_id)
 
 
 # ---------------------------------------------------------------------------
@@ -481,7 +505,9 @@ async def run_autocode_job(
         proposed_ids = {
             row[0] for row in db.query(ProposedTag.quote_id).filter(ProposedTag.job_id == job.id)
         }
-        to_send = [q for q in quotes_rows if q.id not in sent_ids]
+        # In stored order, never shuffled (D25, Phase 0c): mixing sessions in a batch moved
+        # the answers more than the model's own run-to-run noise. The read has no ORDER BY.
+        to_send = sorted((q for q in quotes_rows if q.id not in sent_ids), key=lambda q: q.id)
         already_done = len(quotes_rows) - len(to_send)
         kept_proposals = len(proposed_ids)
         kept_tokens = (job.input_tokens or 0, job.output_tokens or 0)
@@ -570,10 +596,8 @@ async def run_autocode_job(
         job.prompt_version = prompt_tmpl.version
         db.commit()
 
-        # Chunk into batches
-        batches: list[list[QuoteBatchItem]] = []
-        for i in range(0, len(batch_items), BATCH_SIZE):
-            batches.append(batch_items[i : i + BATCH_SIZE])
+        # 5, then 10, then 25 a batch (D24): the first tags land in seconds.
+        batches = first_apply_batches(batch_items)
 
         # Process batches with bounded concurrency
         semaphore = asyncio.Semaphore(settings.llm_concurrency)
@@ -645,7 +669,7 @@ async def run_autocode_job(
                 # the run goes on and a run cut off later keeps it. Until 23 Nov 2026
                 # every batch waited for the last, and a run stopped by a crash at 90%
                 # lost them all (docs/design-autocode-landing-plan.md Phase 1).
-                answered.saved, _ = await _save_batch(
+                answered.saved, live_accepted = await _save_batch(
                     db_factory,
                     lambda session: _store_pending_batch(session, job_id, answered),
                     f"job {framework_id}",
@@ -653,10 +677,11 @@ async def run_autocode_job(
                 processed_count += len(batch)
                 note_progress(len(batch))
                 logger.info(
-                    "AutoCode batch done: %d/%d quotes, %d proposals%s",
+                    "AutoCode batch done: %d/%d quotes, %d proposals, %d accepted live%s",
                     processed_count,
                     total_quotes,
                     len(answered.proposals),
+                    live_accepted or 0,
                     "" if answered.saved else " (kept for the end of the run)",
                 )
                 # Commit incremental progress via a separate short-lived session so
@@ -928,6 +953,95 @@ def hybrid_accept_line(confidences: Iterable[float]) -> float:
     return accept_line_for(hybrid_rank_confidence(confidences))
 
 
+def grid_line_at_or_below(confidence: float) -> float:
+    """The highest line on the review's 0.05 grid at or below ``confidence``: the line
+    a proposal accepted at ``confidence`` sits at or above. Float noise as
+    ``accept_line_for`` (0.55 * 20 is 11.000000000000002, 0.7 * 20 is 13.999999999999998)."""
+    steps = math.floor(confidence * CONFIDENCE_STEPS_PER_UNIT + 1e-9)
+    return max(0, min(steps, CONFIDENCE_STEPS_PER_UNIT)) / CONFIDENCE_STEPS_PER_UNIT
+
+
+#: Live acceptance (docs/design-autocode-landing-plan.md D6): until this many proposals of
+#: the run have landed, the running estimate of the cut is held at or above
+#: ``LIVE_EARLY_FLOOR``. A handful of proposals says little about the run's top 30%, and a
+#: tag accepted is never taken back.
+LIVE_EARLY_PROPOSALS = 25
+LIVE_EARLY_FLOOR = 0.80
+
+
+def live_accept_line(confidences: list[float], previous: float | None) -> float:
+    """The line a first apply's batch accepts at as it lands (D6, refined by the lead on
+    23 Nov 2026: the line never falls during a run).
+
+    The estimate is the hybrid's own line over every counted proposal of the run so far
+    (``hybrid_accept_line``: the 30% rank rounded up to the grid, never below 0.70), and
+    not below ``LIVE_EARLY_FLOOR`` until ``LIVE_EARLY_PROPOSALS`` have landed. The line is
+    the higher of that and every line used before (``previous``). Simulated over every
+    trial run with batches answering out of order, the plain estimate accepted up to 47%
+    of a run in unlucky timings (an early batch dragged it to 0.70, and the end's
+    reconcile then accepted the whole 0.70 to 0.75 band); never falling, every run matched
+    the end-only hybrid cut."""
+    estimate = hybrid_accept_line(confidences)
+    if len(confidences) < LIVE_EARLY_PROPOSALS:
+        estimate = max(estimate, LIVE_EARLY_FLOOR)
+    return estimate if previous is None else max(previous, estimate)
+
+
+def accept_live(session: SASession, job_id: int) -> int:
+    """Accept, as a batch lands, the run's pending proposals at or above the live line
+    (D6), in the caller's transaction (uncommitted). Answers how many it accepted.
+
+    A run with stored lines (a stop settled them, D27, or a review stored them) accepts at
+    its stored accept line; otherwise at ``live_accept_line`` over the run's counted
+    proposals, which is written back to the job so the next batch, and a resumed run,
+    continue from it. Only quotes that count, and only a proposal still pending at write
+    time (one conditional UPDATE): a researcher's decision, made meanwhile on the live page,
+    is never overwritten (D2). Nothing is excluded live: exclusion below 0.30 is the end
+    cut's (D5).
+
+    No ``QuoteTag`` is made here. The ordinary readers of tags (quote cards, the export,
+    Signals, the MCP tools) read ``QuoteTag`` with no job attached, so a tag made now would
+    show a run still coding there, which D32 holds back until Phase 4's playback; the
+    live page reads the proposals themselves. ``cut_first_apply`` makes the tags of every
+    proposal accepted this way when the run completes or a stop settles it, in the same
+    transaction as the outcome. A failed run keeps its live acceptances without tags until
+    a retry completes it.
+    """
+    from bristlenose.server.models import AutoCodeJob, ProposedTag
+    from bristlenose.server.speaker_slots import analysis_quotes
+
+    session.flush()
+    job = session.get(AutoCodeJob, job_id, populate_existing=True)
+    if job is None:
+        return 0
+    counted = {q.id for q in analysis_quotes(session, job.project_id)}
+    rows = [
+        (pid, confidence, status)
+        for pid, quote_id, confidence, status in session.query(
+            ProposedTag.id, ProposedTag.quote_id, ProposedTag.confidence, ProposedTag.status,
+        ).filter(ProposedTag.job_id == job_id)
+        if quote_id in counted
+    ]
+    if job.applied_upper_threshold is not None or job.applied_lower_threshold is not None:
+        line = stored_lines(job)[0]
+    else:
+        line = live_accept_line([c for _, c, _ in rows], job.live_accept_line)
+        if line != job.live_accept_line:
+            session.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
+                {AutoCodeJob.live_accept_line: line}, synchronize_session=False,
+            )
+    wanted = [pid for pid, confidence, status in rows if status == "pending" and confidence >= line]
+    if not wanted:
+        return 0
+    return int(session.query(ProposedTag).filter(
+        ProposedTag.id.in_(wanted), ProposedTag.status == "pending",
+    ).update(
+        {ProposedTag.status: "accepted", ProposedTag.decided_by: "threshold",
+         ProposedTag.reviewed_at: datetime.now(timezone.utc)},
+        synchronize_session=False,
+    ))
+
+
 @dataclass
 class CutOutcome:
     """What a first apply's end-of-run cut did: the lines it sorted by and what it moved."""
@@ -955,9 +1069,12 @@ def cut_first_apply(
 
     Over the run's proposals on quotes that count (accept-all's rule: a hidden quote's
     proposal is not ranked and not touched, and stays pending for when it counts again),
-    the line is ``hybrid_accept_line``. Pending proposals at or above it are accepted (a
-    tag made as AutoCode's, unless the quote has it already), pending ones below 0.30
-    excluded, the rest left pending. The same two lines are stored for the review and the
+    the line is ``hybrid_accept_line``, lowered when the batches accepted something below
+    it live (``accept_live``, D6) to the grid line at or below the lowest of those: an
+    accepted tag is never taken back. Pending proposals at or above the line are accepted
+    (the top-up), pending ones below 0.30 excluded, the rest left pending; then every
+    threshold acceptance of the run, live or top-up, gets its tag (made as AutoCode's,
+    unless the quote has it already). The same two lines are stored for the review and the
     catch-ups, so the review's Apply with the lines unmoved changes nothing (D26).
 
     A job that already has lines (a stop settled them, or a review stored them) is sorted
@@ -988,6 +1105,19 @@ def cut_first_apply(
         # Ranked over every proposal of the run, decided or not: the cut is a property of
         # the run, and a decision made meanwhile does not move it.
         accept_at = hybrid_accept_line(p.confidence for p in proposals)
+        # An accepted tag is never taken back (D6): the line stored is no higher than the
+        # grid line at or below the lowest proposal the run accepted live, so every
+        # accepted proposal sits at or above it, and the top-up below then leaves every
+        # pending one below it (D46: no inversion). The live line never falls, so this
+        # rarely bites; when it does, the run takes a little more than the exact cut.
+        live = [
+            confidence for (confidence,) in session.query(ProposedTag.confidence).filter(
+                ProposedTag.job_id == job_id, ProposedTag.status == "accepted",
+                ProposedTag.decided_by == "threshold",
+            )
+        ]
+        if live:
+            accept_at = min(accept_at, grid_line_at_or_below(min(live)))
         exclude_below = HYBRID_EXCLUDE_BELOW
         outcome = CutOutcome(accept_at=accept_at, exclude_below=exclude_below)
         if proposals or not stopped:
@@ -1015,16 +1145,34 @@ def cut_first_apply(
             continue
         if target == "denied":
             outcome.excluded += 1
+        else:
+            outcome.accepted += 1
+    # The tags: of the top-up's acceptances and of every one made live as the batches landed
+    # (``accept_live`` makes none, so a run still coding shows nowhere but the live page,
+    # D32). As ``_ensure_autocode_tag``: a tag the quote has already (the researcher's)
+    # stays. Every threshold acceptance of the job, a hidden quote's included: it was
+    # accepted, and a tag on a hidden quote counts nowhere until it is unhidden.
+    from sqlalchemy import and_
+
+    tagged = session.query(QuoteTag.quote_id, QuoteTag.tag_definition_id).join(
+        ProposedTag, and_(
+            ProposedTag.quote_id == QuoteTag.quote_id,
+            ProposedTag.tag_definition_id == QuoteTag.tag_definition_id,
+        ),
+    ).filter(ProposedTag.job_id == job_id)
+    has_tag: set[tuple[int, int]] = {(quote_id, tag_id) for quote_id, tag_id in tagged}
+    for quote_id, tag_definition_id in session.query(
+        ProposedTag.quote_id, ProposedTag.tag_definition_id,
+    ).filter(
+        ProposedTag.job_id == job_id, ProposedTag.status == "accepted",
+        ProposedTag.decided_by == "threshold",
+    ).all():
+        if (quote_id, tag_definition_id) in has_tag:
             continue
-        outcome.accepted += 1
-        # As ``_ensure_autocode_tag``: a tag the quote has already (the researcher's) stays.
-        if session.query(QuoteTag.id).filter_by(
-            quote_id=proposal.quote_id, tag_definition_id=proposal.tag_definition_id,
-        ).first() is None:
-            session.add(QuoteTag(
-                quote_id=proposal.quote_id, tag_definition_id=proposal.tag_definition_id,
-                source="autocode",
-            ))
+        has_tag.add((quote_id, tag_definition_id))
+        session.add(QuoteTag(
+            quote_id=quote_id, tag_definition_id=tag_definition_id, source="autocode",
+        ))
     return outcome
 
 
@@ -1131,10 +1279,11 @@ def of_applied_jobs() -> ColumnElement[bool]:
     or "cancelled", and every pending proposal of the first apply vanished from the
     lens until the next catch-up worked (RE#66). A first apply still coding, stopped
     or failed has no ``completed_at``, and shows none: its batches are saved as they
-    answer (Phase 1), but until Phase 4's playback nothing shows a run's proposals
+    answer (Phase 1) and accepted live (Phase 4, ``accept_live``, which makes no
+    ``QuoteTag`` until the run's cut), but no ordinary reader shows a run's proposals
     before it finishes, as shipped. Read by the quote cards (``/quotes``), the
-    Codebook lens's tentative counts and Signals; the review dialog lists its own
-    job's proposals and does not use it.
+    Codebook lens's tentative counts and Signals; the review dialog and the live page
+    read their own job's proposals (``GET …/proposals``, ``live=true``) and do not use it.
     """
     from sqlalchemy import or_, select
 
@@ -1530,7 +1679,8 @@ async def _reapply_to_new_quotes(
         # ``completed_at`` is "applied at least once"; never applied, nothing to do.
         if job.completed_at is None:
             return 0
-        new_quotes = owed_quotes(db, job)
+        # In stored order, as a first apply sends them (D25).
+        new_quotes = sorted(owed_quotes(db, job), key=lambda q: q.id)
         if not new_quotes:
             # Nothing owed may still follow a Stop that landed on the last batch,
             # or a failed catch-up whose sessions a re-import withdrew (#61).

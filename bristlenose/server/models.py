@@ -925,6 +925,11 @@ class AutoCodeJob(Base):
     # stamped when the job runs. See the codebook re-apply plan.
     applied_lower_threshold: Mapped[float | None] = mapped_column(default=None)
     applied_upper_threshold: Mapped[float | None] = mapped_column(default=None)
+    # A first apply's live accept line (migration 028, docs/design-autocode-landing-plan.md
+    # D6): the highest line its batches have accepted at so far. It never falls during a
+    # run, and a resumed run continues from it. NULL before the first batch is saved, and
+    # never read once the run has stored lines (``applied_*_threshold``).
+    live_accept_line: Mapped[float | None] = mapped_column(default=None)
     prompt_version: Mapped[str] = mapped_column(String(20), default="")
     input_tokens: Mapped[int] = mapped_column(default=0)
     output_tokens: Mapped[int] = mapped_column(default=0)

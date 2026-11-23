@@ -126,6 +126,13 @@ def _settings() -> Any:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture()
+def batches_of_25(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two batches of 25 for 50 quotes: these tests are about a batch's save, not the
+    first apply's opening ramp (5, then 10: D24, ``tests/test_autocode_live_accept.py``)."""
+    monkeypatch.setattr(autocode, "FIRST_APPLY_BATCH_RAMP", ())
+
+
 def test_each_batch_is_saved_with_its_register_entries_as_it_answers(tmp_path) -> None:
     session_cls, engine, project_id, _ = _file_project(tmp_path, 50)
     seen: list[tuple[int, int, int]] = []
@@ -138,8 +145,9 @@ def test_each_batch_is_saved_with_its_register_entries_as_it_answers(tmp_path) -
     with _patch_llm(AsyncMock(side_effect=analyze)):
         asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
 
-    # While the second batch was out, the first was already there, whole.
-    assert seen == [(0, 0, 0), (25, 25, 25)]
+    # While each batch was out, the ones before it were already there, whole: 5, then
+    # 10, then 25 a batch (D24).
+    assert seen == [(0, 0, 0), (5, 5, 5), (15, 15, 15), (40, 40, 40)]
     assert _counts(session_cls) == (50, 50, 50)
     # The host's progress figure moved by every quote answered.
     assert busy.progress() - progress_before == 50
@@ -186,6 +194,7 @@ def _hold_the_write_lock(db_path: Path, release: threading.Event, held: threadin
         conn.close()
 
 
+@pytest.mark.usefixtures("batches_of_25")
 def test_a_writer_holding_the_lock_does_not_lose_a_batch(tmp_path, monkeypatch) -> None:
     """Another connection holds the write lock through every try of the first batch's
     save: the batch is kept and saved with the end of the run, never dropped."""
@@ -223,6 +232,7 @@ def test_a_writer_holding_the_lock_does_not_lose_a_batch(tmp_path, monkeypatch) 
     engine.dispose()
 
 
+@pytest.mark.usefixtures("batches_of_25")
 def test_a_writer_that_lets_go_in_time_is_waited_for(tmp_path, monkeypatch) -> None:
     """A lock held for a moment is a retry, not a deferral: the batch is saved as it
     answered, before the next one goes."""
@@ -251,6 +261,7 @@ def test_a_writer_that_lets_go_in_time_is_waited_for(tmp_path, monkeypatch) -> N
     engine.dispose()
 
 
+@pytest.mark.usefixtures("batches_of_25")
 def test_a_crash_between_batches_keeps_the_saved_batches_and_the_sweep_keeps_the_counts(
     tmp_path,
 ) -> None:
@@ -344,6 +355,7 @@ def test_a_lock_held_through_the_end_of_the_run_leaves_the_quotes_owed_and_says_
     engine.dispose()
 
 
+@pytest.mark.usefixtures("batches_of_25")
 def test_a_batch_that_cannot_be_saved_makes_a_partial_run(tmp_path, monkeypatch) -> None:
     """One batch never saves (its write keeps failing), the other does: the run is
     applied, short by that batch, whose quotes stay owed."""
@@ -700,17 +712,20 @@ def test_a_burst_of_recuts_rebuilds_once_and_waits_for_a_pass_still_coding(
 @pytest.mark.parametrize(
     ("status", "accepted", "confidence", "expected"),
     [
-        ("completed", False, 0.9, "codebook_apply"),
+        ("completed", "no", 0.9, "codebook_apply"),
         # A stop's cut has landed with its outcome (``cut_first_apply``, landing plan Phase
-        # 3) before this reads it: what it accepted is what decides (D31).
-        ("cancelled", True, 0.9, "codebook_stopped"),
-        ("cancelled", False, 0.9, None),
-        ("failed", True, 0.9, "codebook_failed"),
-        ("failed", False, 0.9, None),
+        # 3) before this reads it: what it accepted, and tagged, is what decides (D31).
+        ("cancelled", "tagged", 0.9, "codebook_stopped"),
+        ("cancelled", "no", 0.9, None),
+        ("failed", "tagged", 0.9, "codebook_failed"),
+        ("failed", "no", 0.9, None),
+        # A failed run's live acceptances have no tags (``accept_live`` leaves them to the
+        # cut, which a failure does not run): Signals reads nothing new (Phase 4).
+        ("failed", "untagged", 0.9, None),
     ],
 )
 def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
-    tmp_path, status: str, accepted: bool, confidence: float, expected: str | None,
+    tmp_path, status: str, accepted: str, confidence: float, expected: str | None,
 ) -> None:
     from bristlenose.server.routes.autocode import _settle_first_apply
 
@@ -724,8 +739,10 @@ def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
         assert tag is not None
         db.add(ProposedTag(
             job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
-            confidence=confidence, status="accepted" if accepted else "pending",
+            confidence=confidence, status="pending" if accepted == "no" else "accepted",
         ))
+        if accepted == "tagged":
+            db.add(QuoteTag(quote_id=quote.id, tag_definition_id=tag.id, source="autocode"))
         db.commit()
     finally:
         db.close()

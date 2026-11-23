@@ -190,6 +190,15 @@ def _patch_llm(mock_analyze, input_tokens=0, output_tokens=0):
 class TestRunAutoCodeJob:
     """Tests for the background job runner."""
 
+    @pytest.fixture(autouse=True)
+    def _batches_of_25(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """These tests count calls and proposals per batch of 25; the opening ramp of a
+        first apply (5, then 10: D24) is pinned in ``TestBatching`` and
+        ``tests/test_autocode_live_accept.py``."""
+        import bristlenose.server.autocode as ac
+
+        monkeypatch.setattr(ac, "FIRST_APPLY_BATCH_RAMP", ())
+
     def test_completes_successfully(self, project_with_garrett) -> None:
         """Job runs to completion with mocked LLM."""
         project_id, framework_id, db_factory = project_with_garrett
@@ -969,7 +978,7 @@ class TestBatching:
     """Tests for the batching behaviour within the job runner."""
 
     def test_batches_of_25(self, db_session: SASession) -> None:
-        """100 quotes produce 4 LLM calls (4 batches of 25)."""
+        """100 quotes produce 6 LLM calls: 5, then 10, then 25 a batch (D24)."""
         db = db_session
         project = Project(name="Large", slug="large", input_dir="/tmp", output_dir="/tmp")
         db.add(project)
@@ -1016,8 +1025,7 @@ class TestBatching:
                 run_autocode_job(session_cls, project.id, "garrett", _mock_settings())
             )
 
-        assert len(call_sizes) == 4  # 100 / 25 = 4 batches
-        assert all(s == BATCH_SIZE for s in call_sizes)
+        assert call_sizes == [5, 10, BATCH_SIZE, BATCH_SIZE, BATCH_SIZE, 10]
 
     def test_a_genuine_partial_stays_completed_but_carries_the_reason(
         self, db_session: SASession
@@ -1088,7 +1096,7 @@ class TestBatching:
         assert job.failure_kind == LLMFailureKind.RATE_LIMITED.value
 
     def test_partial_last_batch(self, db_session: SASession) -> None:
-        """27 quotes produce 2 LLM calls (25 + 2)."""
+        """27 quotes produce 3 LLM calls (5 + 10 + 12): the ramp, then the rest."""
         db = db_session
         project = Project(
             name="Partial", slug="partial", input_dir="/tmp", output_dir="/tmp"
@@ -1135,7 +1143,7 @@ class TestBatching:
                 run_autocode_job(session_cls, project.id, "garrett", _mock_settings())
             )
 
-        assert call_count == 2  # 25 + 2
+        assert call_count == 3  # 5 + 10 + 12
 
         db2 = session_cls()
         job = db2.query(AutoCodeJob).first()

@@ -237,7 +237,9 @@ def test_researcher_and_unknown_decisions_are_never_touched() -> None:
 
 def test_only_a_proposal_still_pending_when_it_is_written_changes() -> None:
     """A researcher's decision committed after the cut read the proposals (a quote card,
-    mid-cut) is not overwritten: the write is conditional on pending (D2)."""
+    mid-cut) is not overwritten: the write is conditional on pending (D2). The decision
+    lands at the cut's read of the run's live acceptances, after it read the proposals
+    and before it writes."""
     app, ids = _seeded((0.95, 0.9, 0.5, 0.2))
     db = app.state.db_factory()
     landed: list[bool] = []
@@ -245,7 +247,7 @@ def test_only_a_proposal_still_pending_when_it_is_written_changes() -> None:
 
     def query_then_decide(*entities: Any, **kw: Any) -> Any:
         q = real_query(*entities, **kw)
-        if len(entities) == 1 and entities[0] is QuoteTag.id and not landed:  # first accept's tag check
+        if len(entities) == 1 and entities[0] is ProposedTag.confidence and not landed:
             landed.append(True)
             other = app.state.db_factory()
             try:
@@ -546,7 +548,7 @@ def test_no_reader_ever_sees_a_completed_first_apply_without_its_cut(tmp_path) -
     session_cls, engine, project_id, db_path = _file_project(tmp_path, 10)
     seen: list[tuple[str, float | None, int]] = []
     event.listen(session_cls, "after_commit", lambda _s: seen.append(_job_row(db_path)))
-    with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 7, tag="user need")):
+    with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 2, (0.5,) * 5, tag="user need")):
         asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
     completed = [row for row in seen if row[0] == "completed"]
     assert completed, seen
@@ -602,7 +604,7 @@ def test_a_lock_held_for_the_first_try_of_the_outcome_is_waited_out(tmp_path, mo
     wait, ``SAVE_ATTEMPTS``): a writer that lets go after the first try costs nothing."""
     session_cls, engine, project_id, db_path = _file_project(tmp_path, 10, busy_ms=30)
     _hold_during_outcome(monkeypatch, db_path, tries_held=1)
-    with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 7, tag="user need")):
+    with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 2, (0.5,) * 5, tag="user need")):
         asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
     assert _job_row(db_path) == ("completed", 0.95, 3)
     engine.dispose()
@@ -614,17 +616,19 @@ def test_a_lock_held_through_every_try_fails_the_run_and_the_retry_cuts_it(
     """Held through every try, the outcome is not saved: the run reads failed, never applied,
     with no cut and no lines, its proposals kept. Nothing claims a cut that did not land, and
     the cut is owed to the retry: Apply runs the job again, nothing is left to send, and it
-    completes with its cut."""
+    completes with its cut. The first batch's live acceptances (Phase 4, D6) stand, with no
+    tags until the retry's cut makes them (D32)."""
     session_cls, engine, project_id, db_path = _file_project(tmp_path, 10, busy_ms=30)
     _hold_during_outcome(monkeypatch, db_path, tries_held=None)
-    with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 7, tag="user need")):
+    with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 2, (0.5,) * 5, tag="user need")):
         asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
-    assert _job_row(db_path) == ("failed", None, 0)
+    assert _job_row(db_path) == ("failed", None, 3)
     db = session_cls()
     try:
         job = db.query(AutoCodeJob).one()
         assert job.completed_at is None
-        assert db.query(ProposedTag).filter_by(status="pending").count() == 10
+        assert db.query(ProposedTag).filter_by(status="pending").count() == 7
+        assert _autocode_tags(db) == 0
         job.status = "pending"  # what Apply's start does to a never-applied failed job
         db.commit()
     finally:

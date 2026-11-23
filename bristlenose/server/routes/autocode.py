@@ -145,6 +145,40 @@ class ProposalsResponse(BaseModel):
     total: int
 
 
+class ProposalState(BaseModel):
+    """Where one proposal of the run stands now: what a live page reconciles by."""
+
+    id: int
+    #: With the id, the row's identity: SQLite can give a deleted row's id to a new one.
+    quote_id: int
+    tag_definition_id: int
+    status: str
+    decided_by: str | None = None
+
+
+class LiveRun(BaseModel):
+    """The run as the same read saw it."""
+
+    status: str
+    #: A first apply's runner has not finished (``AutoCodeJobOut.ending``), read before the
+    #: proposals: once this is false and ``status`` is neither pending nor running, the
+    #: run's end (its cut, a stop's settle) is in this read.
+    ending: bool
+    #: Nothing more will land from the pass this read saw: ``status`` is not pending or
+    #: running and ``ending`` is false. The page's last read of a run is the first with it.
+    settled: bool
+    #: The largest proposal id in ``states``: the next read's ``since_id``.
+    cursor: int | None = None
+
+
+class LiveProposalsResponse(ProposalsResponse):
+    """``live=true``: the new rows in full, and every row's state, so a decision made on
+    a row already read (live acceptance, the end's top-up) is never missed."""
+
+    states: list[ProposalState]
+    run: LiveRun
+
+
 class BulkActionRequest(BaseModel):
     group_id: int | None = None
     min_confidence: float = 0.5
@@ -391,8 +425,18 @@ def _settle_first_apply(
                 except Exception:
                     logger.exception("After-apply step for AutoCode %s failed", framework_id)
             return "codebook_apply"
+        # An accepted proposal whose tag is on its quote: a failed run's live acceptances
+        # have none (``autocode.accept_live`` leaves the tags to the cut, which a failure
+        # does not run), so they change nothing Signals reads (D31).
+        from sqlalchemy import and_
+        from sqlalchemy import exists as sa_exists
+
+        tagged = sa_exists().where(and_(
+            QuoteTag.quote_id == ProposedTag.quote_id,
+            QuoteTag.tag_definition_id == ProposedTag.tag_definition_id,
+        ))
         if job.status in ("cancelled", "failed") and db.query(ProposedTag.id).filter(
-            ProposedTag.job_id == job.id, ProposedTag.status == "accepted",
+            ProposedTag.job_id == job.id, ProposedTag.status == "accepted", tagged,
         ).first() is not None:
             return "codebook_stopped" if job.status == "cancelled" else "codebook_failed"
         return None
@@ -792,20 +836,39 @@ def cancel_autocode_job(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/projects/{project_id}/autocode/{framework_id}/proposals")
+@router.get(
+    "/projects/{project_id}/autocode/{framework_id}/proposals",
+    response_model=ProposalsResponse,
+)
 def get_proposals(
     project_id: int,
     framework_id: str,
     request: Request,
     min_confidence: float = 0.5,
     since_id: int | None = None,
-) -> ProposalsResponse:
+    live: bool = False,
+) -> Any:
     """List proposed tag assignments above the confidence threshold.
 
-    ``since_id`` lists only proposals saved after the one with that id, so a page
-    following a run (batches are saved as they answer) reads what is new and not the
-    whole run again. Ids only grow, so the largest id it has seen is its cursor.
+    The job's own proposals, whatever the job's state: the review dialog's read, and,
+    with ``live=true``, the live page's (docs/design-autocode-landing-plan.md Phase 4,
+    D32). It never filtered by ``of_applied_jobs``, so a run still coding, stopped or
+    failed is listed here and nowhere else; the export does not embed it
+    (``SERVER_ONLY_PATH_TEMPLATES``).
+
+    ``since_id`` lists in full only proposals with a larger id, so a page following a
+    run reads what is new and not the whole run again.
+
+    ``live=true`` adds ``states``, every listed row's (id, quote, tag, status,
+    decided_by) whatever ``since_id``, and ``run`` (``LiveRun``). A cursor of ids alone
+    misses a decision made on a row already read (each batch's live acceptance can accept
+    earlier rows, and the end's top-up does), and SQLite reuses the id of a deleted row;
+    the states carry both, so a page reconciles every read: a state it has no row for is
+    fetched again (a read with no ``since_id``), a row with no state is gone. The page's
+    last read of a run is the first one with ``run.settled``.
     """
+    # Read before the proposals, so a read that sees the runner finished sees its end too.
+    ending = first_apply_ending(project_id, framework_id)
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -884,7 +947,33 @@ def get_proposals(
                 tag_name, td_id, cg_id, group_name, colour_set in rows
         ]
 
-        return ProposalsResponse(proposals=items, total=len(items))
+        if not live:
+            return ProposalsResponse(proposals=items, total=len(items))
+        states = [
+            ProposalState(
+                id=pid, quote_id=quote_id, tag_definition_id=tag_id, status=status,
+                decided_by=decided_by,
+            )
+            for pid, quote_id, tag_id, status, decided_by in db.query(
+                ProposedTag.id, ProposedTag.quote_id, ProposedTag.tag_definition_id,
+                ProposedTag.status, ProposedTag.decided_by,
+            ).filter(
+                ProposedTag.job_id == job.id, ProposedTag.confidence >= min_confidence,
+            ).order_by(ProposedTag.id)
+            if quote_id in counted
+        ]
+        run = LiveRun(
+            status=job.status, ending=ending,
+            settled=not ending and job.status not in ("pending", "running"),
+            cursor=states[-1].id if states else None,
+        )
+        # Its own model: declared on the route, the review's model would drop the states.
+        from fastapi.encoders import jsonable_encoder
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(jsonable_encoder(LiveProposalsResponse(
+            proposals=items, total=len(items), states=states, run=run,
+        )))
 
     finally:
         db.close()

@@ -484,9 +484,7 @@ def export_report(
         get_moderator_question as _get_moderator_question_handler,
     )
     from bristlenose.server.routes.sessions import get_sessions as _get_sessions_handler
-    from bristlenose.server.routes.signals import (
-        get_codebook_analysis as _get_codebook_analysis_handler,
-    )
+    from bristlenose.server.routes.signals import _build_codebook_analysis
     from bristlenose.server.routes.signals import (
         get_sentiment_analysis as _get_sentiment_analysis_handler,
     )
@@ -551,8 +549,11 @@ def export_report(
     # elaborate=True is effectively sync.
     import asyncio
 
+    # Accepted tags only, as in /quotes (D28): no tentative tag weighs on a card.
     codebook_analysis = asyncio.run(
-        _get_codebook_analysis_handler(project_id, request, top_n=20, elaborate=False)
+        _build_codebook_analysis(
+            project_id, request, top_n=20, elaborate=False, include_pending=False,
+        )
     )
     signal_snapshot = _get_stored_signal_snapshot_handler(project_id, request)
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import difflib
+import functools
 import logging
 import math
 from dataclasses import dataclass
@@ -46,6 +47,14 @@ BATCH_SIZE = 25
 #: also waits out the connection's ``busy_timeout`` for the write lock first.
 SAVE_ATTEMPTS = 4
 SAVE_BACKOFF_S = (0.05, 0.2, 0.5)
+#: How long one try waits for the write lock (ms), in place of the connection's 5 s: a
+#: long writer elsewhere (a re-import) then costs a batch a deferral of seconds.
+SAVE_BUSY_TIMEOUT_MS = 500
+
+#: What a job's stored message says when the database, not the provider, failed it.
+#: A database error's text carries SQL and the row it was writing, a participant's words
+#: among them, and the message is served by /status: never stored.
+NOT_SAVED_MESSAGE = "AutoCode could not save what it coded. Run it again to code the rest."
 
 #: One proposal as a batch answered it: (quote id, tag definition id, confidence,
 #: rationale). Plain values, not rows: a save that rolls back leaves an ORM row in a
@@ -221,54 +230,119 @@ def _is_lock_error(exc: BaseException) -> bool:
     return "locked" in message or "busy" in message
 
 
+def _db_error_name(exc: BaseException) -> str:
+    """An exception's type and SQLite's error name: what a log line may say about a
+    failed save. Never its text, which carries the statement and the row."""
+    orig = getattr(exc, "orig", None)
+    code = getattr(orig, "sqlite_errorname", None) if orig is not None else None
+    return f"{type(exc).__name__}{f' {code}' if code else ''}"
+
+
+def failure_text(provider: str | None, exc: BaseException) -> tuple[str, str]:
+    """(stored message, ``failure_kind``) for a pass that failed with ``exc``. A
+    database failure (or a save that never took) gets a fixed message and no kind: it is
+    not the provider's, and its text is not for a stored, served field."""
+    from sqlalchemy.exc import SQLAlchemyError
+
+    if isinstance(exc, (SQLAlchemyError, _NotSavedError)):
+        return NOT_SAVED_MESSAGE, ""
+    from bristlenose.llm.client import failure_summary
+
+    return failure_summary(exc), classify_exception(provider, exc).value
+
+
+def _is_db_error(exc: BaseException) -> bool:
+    from sqlalchemy.exc import SQLAlchemyError
+
+    return isinstance(exc, (SQLAlchemyError, _NotSavedError))
+
+
+class _NotSavedError(Exception):
+    """A save that ran out of tries: what it held stays owed."""
+
+
+def _in_memory(db_factory: Callable[[], SASession]) -> bool:
+    """An in-memory database is one connection a worker thread cannot share (each thread
+    gets its own, empty), so its saves stay on the loop."""
+    probe = db_factory()
+    try:
+        return probe.get_bind().engine.url.database in (None, "", ":memory:")
+    finally:
+        probe.close()
+
+
+def _try_save(
+    db_factory: Callable[[], SASession], write: Callable[[SASession], Any],
+) -> tuple[str, Any, str]:
+    """One try, on whatever thread: ("saved", value, ""), or ("locked" | "failed", None,
+    the error's name). Never raises. The write-lock wait is ``SAVE_BUSY_TIMEOUT_MS`` for
+    the try, and the connection's own is put back before it returns to the pool."""
+    from sqlalchemy.exc import OperationalError
+
+    db: SASession | None = None
+    restore: Any = None
+    try:
+        db = db_factory()
+        conn = db.connection()
+        restore = conn.exec_driver_sql("PRAGMA busy_timeout").scalar()
+        conn.exec_driver_sql(f"PRAGMA busy_timeout={int(SAVE_BUSY_TIMEOUT_MS)}")
+        value = write(db)
+        db.commit()
+        return "saved", value, ""
+    except Exception as exc:
+        if db is not None:
+            with contextlib.suppress(Exception):
+                db.rollback()
+        locked = isinstance(exc, OperationalError) and _is_lock_error(exc)
+        return ("locked" if locked else "failed"), None, _db_error_name(exc)
+    finally:
+        if db is not None:
+            if restore is not None:
+                with contextlib.suppress(Exception):
+                    db.connection().exec_driver_sql(f"PRAGMA busy_timeout={int(restore)}")
+            with contextlib.suppress(Exception):
+                db.close()
+
+
 async def _save_batch(
     db_factory: Callable[[], SASession],
     write: Callable[[SASession], Any],
     what: str,
 ) -> tuple[bool, Any]:
     """Save one answered batch in its own short transaction: ``(True, write's value)``,
-    or ``(False, None)`` when it could not be saved and the caller must keep it.
+    or ``(False, None)`` when it could not be saved and the caller must keep it. Never
+    raises: a paid, answered batch must never become a batch failure, still less one
+    named as the provider's.
 
     The save reads before it writes (the register skips a quote already on it; a
     catch-up reads the lines it sorts by), and SQLite refuses such a transaction at
     once when another connection has written since its read, whatever the
     ``busy_timeout`` (gotchas.md § AutoCode). So a locked or busy database rolls back,
     closes, waits a moment and tries again in a fresh session; when the tries run out
-    the batch stays with the caller, which saves it with the end of the run. Any other
-    failure is not retried: the end-of-run commit meets it again, and says so, as it
-    did when every batch was saved there. A batch is never dropped here.
+    the batch stays with the caller. Any other failure is not retried. Each try runs
+    on a worker thread (a file database), so a wait for the lock never holds the event
+    loop, and the serve's other routes, /status and /api/background-work, answer.
     """
-    from sqlalchemy.exc import OperationalError
-
-    for attempt in range(SAVE_ATTEMPTS):
-        db = db_factory()
-        retry = False
-        try:
-            value = write(db)
-            db.commit()
-            return True, value
-        except OperationalError as exc:
-            db.rollback()
-            if not _is_lock_error(exc):
-                logger.warning("AutoCode %s: save failed, kept for the end of the run",
-                               what, exc_info=True)
+    try:
+        off_loop = not _in_memory(db_factory)
+        for attempt in range(SAVE_ATTEMPTS):
+            if off_loop:
+                outcome, value, why = await asyncio.to_thread(_try_save, db_factory, write)
+            else:
+                outcome, value, why = _try_save(db_factory, write)
+            if outcome == "saved":
+                return True, value
+            if outcome == "failed":
+                logger.warning("AutoCode %s: the save failed (%s); the batch is kept", what, why)
                 return False, None
-            retry = attempt + 1 < SAVE_ATTEMPTS
-            if not retry:
-                logger.warning(
-                    "AutoCode %s: the database stayed locked through %d tries; the batch "
-                    "is kept and saved with the end of the run", what, SAVE_ATTEMPTS,
-                )
-        except Exception:
-            db.rollback()
-            logger.warning("AutoCode %s: save failed, kept for the end of the run",
-                           what, exc_info=True)
-            return False, None
-        finally:
-            db.close()
-        if not retry:
-            break
-        await asyncio.sleep(SAVE_BACKOFF_S[min(attempt, len(SAVE_BACKOFF_S) - 1)])
+            if attempt + 1 < SAVE_ATTEMPTS:
+                await asyncio.sleep(SAVE_BACKOFF_S[min(attempt, len(SAVE_BACKOFF_S) - 1)])
+        logger.warning(
+            "AutoCode %s: the database stayed locked through %d tries; the batch is kept",
+            what, SAVE_ATTEMPTS,
+        )
+    except Exception as exc:
+        logger.warning("AutoCode %s: the save could not run (%s)", what, _db_error_name(exc))
     return False, None
 
 
@@ -631,48 +705,42 @@ async def run_autocode_job(
                 batch_errors += 1
                 if first_error is None:
                     first_error = batch_result
-                continue
-            if batch_result is None:
-                continue  # not sent: the job was stopped
-            proposed_count += len(batch_result.proposals)
-            if not batch_result.saved:
-                for quote_id, tag_def_id, confidence, rationale in batch_result.proposals:
-                    db.add(ProposedTag(
-                        job_id=job_id, quote_id=quote_id, tag_definition_id=tag_def_id,
-                        confidence=confidence, rationale=rationale,
-                    ))
-        # The quotes this pass sent, in the same transaction as the proposals kept for
-        # it (a saved batch's are on the register already, and are skipped); one in a
-        # batch that failed or was never sent stays owed, and the next re-apply sends
-        # it (RE#66).
-        record_sent(db, job_id, _answered_quote_ids(batches, batch_results))
+        # A batch whose own save found the database locked through every try is tried
+        # again now, each in its own transaction with its own retries. One that still
+        # cannot be saved is not on the register, so its quotes stay owed, and the run
+        # says it fell short (#127 shape: a partial, or failed when nothing landed).
+        answered = [r for r in batch_results if isinstance(r, _Answered)]
+        for kept in answered:
+            if not kept.saved:
+                kept.saved, _ = await _save_batch(
+                    db_factory, functools.partial(
+                        _store_pending_batch, job_id=job_id, answered=kept),
+                    f"job {framework_id}, at the end of the run",
+                )
+        unsaved = [a for a in answered if not a.saved]
+        processed_count -= sum(len(a.quote_ids) for a in unsaved)
+        proposed_count = sum(len(a.proposals) for a in answered if a.saved)
 
         logger.info(
-            "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",
+            "AutoCode job finished: %d proposals from %d quotes (%d batch errors, "
+            "%d batches not saved)",
             proposed_count,
             len(batch_items),
             batch_errors,
+            len(unsaved),
         )
 
-        # Re-read job status — it may have been cancelled during processing.
-        db.expire(job)
         # A Stop that landed while the last batches were out found nothing left to stop:
-        # every quote was sent and answered, so the apply finishes as if it had not come
-        # (N94). Left cancelled it was never applied, and the codebook it had fully coded
-        # stopped following new sessions with nothing to say so. A batch that failed or was
-        # never sent leaves quotes owed, and that Stop stands.
+        # every quote was sent, answered and saved, so the apply finishes as if it had not
+        # come (N94). Left cancelled it was never applied, and the codebook it had fully
+        # coded stopped following new sessions with nothing to say so. A batch that failed,
+        # was never sent or could not be saved leaves quotes owed, and that Stop stands.
         every_quote_answered = all(
-            r is not None and not isinstance(r, BaseException) for r in batch_results
+            isinstance(r, _Answered) and r.saved for r in batch_results
         )
-        if job.status == "cancelled" and not every_quote_answered:
-            # Keep "cancelled" status but save any partial results.
-            job.processed_quotes = processed_count
-            job.proposed_count = kept_proposals + proposed_count
-            job.input_tokens = kept_tokens[0] + llm_client.tracker.input_tokens
-            job.output_tokens = kept_tokens[1] + llm_client.tracker.output_tokens
-            db.commit()
-            return
-
+        # This pass's own batches: what an earlier pass coded does not make a
+        # pass that coded nothing a partial success (#127).
+        nothing_landed = processed_count == already_done and bool(batch_errors or unsaved)
         # Every batch died ⇒ the job FAILED. "completed" with processed=0 is a
         # total failure wearing a partial-success costume: the toast rendered
         # "Tagged 0 of 33 quotes — some batches failed" (a warning) and offered
@@ -682,46 +750,63 @@ async def run_autocode_job(
         #
         # A genuine partial (some batches landed) stays "completed" — it has
         # usable proposals — but carries failure_kind so the surface can say
-        # *why* the rest are missing rather than leaving it to be guessed.
-        if batch_errors and first_error is not None:
-            job.failure_kind = classify_exception(
-                job.llm_provider or None, first_error
-            ).value
-            # Never ``str(exc)``: a provider's error is its whole body, which can
-            # carry the prompt (participants' quotes) and an echoed key.
-            from bristlenose.llm.client import failure_summary
+        # *why* the rest are missing rather than leaving it to be guessed. Never
+        # ``str(exc)``: a provider's error is its whole body, which can carry the
+        # prompt (participants' quotes) and an echoed key.
+        failure: tuple[str, str] | None = None
+        if first_error is not None:
+            failure = failure_text(job.llm_provider or None, first_error)
+        elif unsaved:
+            failure = (NOT_SAVED_MESSAGE, "")
+        tokens = (
+            kept_tokens[0] + llm_client.tracker.input_tokens,
+            kept_tokens[1] + llm_client.tracker.output_tokens,
+        )
 
-            job.error_message = failure_summary(first_error)
-        # This pass's own batches: what an earlier pass coded does not make a
-        # pass that coded nothing a partial success (#127).
-        nothing_landed = processed_count == already_done and bool(batch_errors)
-        job.status = "failed" if nothing_landed else "completed"
-        job.processed_quotes = processed_count
-        job.proposed_count = kept_proposals + proposed_count
-        job.input_tokens = kept_tokens[0] + llm_client.tracker.input_tokens
-        job.output_tokens = kept_tokens[1] + llm_client.tracker.output_tokens
-        # `completed_at` is NOT a timestamp of "the job stopped" — it means
-        # "applied at least once", and three things read it that way. It gates
-        # `reapply_active_frameworks`' ever-applied set and every re-apply; its
-        # presence is how `reconcile_orphaned_jobs` tells an initial-apply orphan
-        # from an interrupted catch-up; and Apply refuses a job that has it. Which
-        # quotes are coded is the register's job, not this one's (RE#66).
-        #
-        # So setting it on a job that coded nothing is worse than cosmetic: the
-        # framework would join the maintained set having applied nothing, and
-        # Apply would refuse the retry. Left NULL, the job is exactly the shape
-        # the rest of the system already calls an initial-apply orphan, and a
-        # retry codes what no pass has coded yet (#127).
-        #
-        # A genuine partial sets it: some quotes really were coded, and the
-        # ones in its failed batches are not on the register, so the next
-        # re-apply sends them.
-        if not nothing_landed:
-            job.completed_at = datetime.now(timezone.utc)
-        db.commit()
+        def _finish(session: SASession) -> str:
+            """The job's outcome, in its own transaction, apart from the batches: a
+            failure here costs the outcome a retry, never a saved batch."""
+            j = session.get(AutoCodeJob, job_id)
+            if j is None:
+                return "gone"
+            j.processed_quotes = processed_count
+            j.proposed_count = kept_proposals + proposed_count
+            j.input_tokens, j.output_tokens = tokens
+            if j.status == "cancelled" and not every_quote_answered:
+                return "cancelled"  # keep "cancelled", with what it saved
+            if failure is not None:
+                j.error_message, j.failure_kind = failure
+            j.status = "failed" if nothing_landed else "completed"
+            # `completed_at` is NOT a timestamp of "the job stopped" — it means
+            # "applied at least once", and three things read it that way. It gates
+            # `reapply_active_frameworks`' ever-applied set and every re-apply; its
+            # presence is how `reconcile_orphaned_jobs` tells an initial-apply orphan
+            # from an interrupted catch-up; and Apply refuses a job that has it. Which
+            # quotes are coded is the register's job, not this one's (RE#66).
+            #
+            # So setting it on a job that coded nothing is worse than cosmetic: the
+            # framework would join the maintained set having applied nothing, and
+            # Apply would refuse the retry. Left NULL, the job is exactly the shape
+            # the rest of the system already calls an initial-apply orphan, and a
+            # retry codes what no pass has coded yet (#127).
+            #
+            # A genuine partial sets it: some quotes really were coded, and the
+            # ones in its failed or unsaved batches are not on the register, so the
+            # next re-apply sends them.
+            if not nothing_landed:
+                j.completed_at = datetime.now(timezone.utc)
+            return j.status
+
+        finished, _ = await _save_batch(db_factory, _finish, f"job {framework_id}, its outcome")
+        if not finished:
+            raise _NotSavedError
 
     except Exception as exc:
-        logger.exception("AutoCode job failed: %s", exc)
+        if _is_db_error(exc):
+            # Its text carries the statement and the row: the type and code only.
+            logger.error("AutoCode job failed: the database (%s)", _db_error_name(exc))
+        else:
+            logger.exception("AutoCode job failed: %s", exc)
         try:
             db.rollback()
             job = (
@@ -731,16 +816,14 @@ async def run_autocode_job(
             )
             if job and job.status != "cancelled":
                 job.status = "failed"
-                from bristlenose.llm.client import failure_summary
-
-                job.error_message = failure_summary(exc)
                 # Name the failure. str(exc) cannot tell an exhausted account
                 # from a rate limit — Anthropic returns 400 for both — and
                 # telling a bankrupt researcher to "try again shortly" is the
-                # specific bug the classifier was written for.
-                job.failure_kind = classify_exception(
-                    job.llm_provider or None, exc
-                ).value
+                # specific bug the classifier was written for. A database failure
+                # is not the provider's, and its text is never stored.
+                job.error_message, job.failure_kind = failure_text(
+                    job.llm_provider or None, exc,
+                )
                 db.commit()
         except Exception:
             logger.exception("Failed to mark job as failed")
@@ -1306,16 +1389,20 @@ async def _reapply_to_new_quotes(
         tally = {"accepted": 0, "proposed": 0}
         lines_used = {(threshold, lower_threshold)}
 
-        def _store(session: SASession, answered: _Answered) -> None:
+        def _store(
+            session: SASession, answered: _Answered,
+        ) -> tuple[int, int, tuple[float, float]] | None:
             """One answered batch: its proposals sorted into the review's bands by
             the lines stored NOW, accepted tags made (never over an existing tag),
             its quotes on the register and the job's counts, in one transaction
-            (uncommitted). A job gone meanwhile (an uninstall) takes nothing."""
+            (uncommitted). Answers (tags made, proposals, the lines used), which the
+            caller counts only once the save has committed: a try that rolls back
+            and is tried again would otherwise count twice. A job gone meanwhile
+            (an uninstall) takes nothing and answers None."""
             j = session.get(AutoCodeJob, job_id, populate_existing=True)
             if j is None:
-                return
+                return None
             upper, lower = stored_lines(j)
-            lines_used.add((upper, lower))
             now = datetime.now(timezone.utc)
             accepted = 0
             for quote_id, tag_def_id, confidence, rationale in answered.proposals:
@@ -1363,8 +1450,13 @@ async def _reapply_to_new_quotes(
                 },
                 synchronize_session=False,
             )
-            tally["accepted"] += accepted
-            tally["proposed"] += len(answered.proposals)
+            return accepted, len(answered.proposals), (upper, lower)
+
+        def _count(stored: tuple[int, int, tuple[float, float]] | None) -> None:
+            if stored is not None:
+                tally["accepted"] += stored[0]
+                tally["proposed"] += stored[1]
+                lines_used.add(stored[2])
 
         async def _batch(batch: list[QuoteBatchItem]) -> _Answered | None:
             async with semaphore:
@@ -1417,10 +1509,12 @@ async def _reapply_to_new_quotes(
                 )
                 # Saved as it answers (review 8): the lines it is sorted by are the
                 # ones stored when it saves, and a pass cut off keeps what it saved.
-                answered.saved, _ = await _save_batch(
-                    db_factory, lambda session: _store(session, answered),
+                answered.saved, stored = await _save_batch(
+                    db_factory, functools.partial(_store, answered=answered),
                     f"re-apply {framework_id}",
                 )
+                if answered.saved:
+                    _count(stored)
                 note_progress(len(batch))
                 return answered
 
@@ -1452,72 +1546,91 @@ async def _reapply_to_new_quotes(
             )
         if failures and len(failures) == len(results):
             raise failures[0]
-        # Only a batch that answered counts as processed, as in run_autocode_job:
-        # the chip reads `processed < total` on a completed job as "some batches
-        # failed", and the re-apply grew `total_quotes` alone, so every catch-up
-        # that worked said it partly failed.
-        processed = sum(
-            len(b) for b, r in zip(batches, results, strict=True)
-            if r is not None and not isinstance(r, BaseException)
-        )
-
         for res in results:
             if isinstance(res, BaseException):
                 logger.error("Re-apply batch failed: %s", res)
-        # A batch whose own save found the database locked through every try is
-        # stored here, with the end of the pass, never dropped.
-        for res in results:
-            if isinstance(res, _Answered) and not res.saved:
-                _store(db, res)
+        # A batch whose own save found the database locked through every try is tried
+        # again now, each in its own transaction with its own retries. One that still
+        # cannot be saved is not on the register: its quotes stay owed and the pass
+        # reads as short (catch_up_processed < catch_up_total).
+        answered = [r for r in results if isinstance(r, _Answered)]
+        for kept in answered:
+            if not kept.saved:
+                kept.saved, stored = await _save_batch(
+                    db_factory, functools.partial(_store, answered=kept),
+                    f"re-apply {framework_id}, at the end of the pass",
+                )
+                if kept.saved:
+                    _count(stored)
+        if answered and not any(a.saved for a in answered) and not any(
+            r is None for r in results
+        ):
+            raise _NotSavedError  # nothing landed: a failure, with nothing registered
+        # Only a batch that answered and was saved counts as processed, as in
+        # run_autocode_job: the chip reads `processed < total` on a completed job as
+        # "some batches failed", and the re-apply grew `total_quotes` alone, so every
+        # catch-up that worked said it partly failed.
+        processed = sum(len(a.quote_ids) for a in answered if a.saved)
         accepted = tally["accepted"]
         new_proposed = tally["proposed"]
-        now = datetime.now(timezone.utc)
 
         # Sent, not selected: a Stop or a switch-off leaves batches unsent, and
-        # counting them over-reported the denominator. Each answered batch added its
-        # own quotes to both counts and its proposals as it was stored; what is left
-        # is the quotes of the batches that were sent and failed.
+        # counting them over-reported the denominator. Each saved batch added its own
+        # quotes to both counts and its proposals; what is left is the quotes of the
+        # batches that were sent and failed or could not be saved.
         sent = sum(len(b) for b, r in zip(batches, results, strict=True) if r is not None)
-        counts: dict[Any, Any] = {
-            AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + (sent - processed),
-        }
-        values: dict[Any, Any] = {**counts, AutoCodeJob.completed_at: now}
-        finish = db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id)
-        if track_status:
-            # Route set this to "running" for the chip; restore it now, with no
-            # failure left from an earlier catch-up, and this catch-up's own
-            # counts, which the chip reads: the cumulative pair above keeps any
-            # earlier shortfall for good (R12 wave 6).
-            values.update({
-                AutoCodeJob.status: "completed",
-                AutoCodeJob.error_message: "",
-                AutoCodeJob.failure_kind: "",
-                # The quotes this pass sent, not the quotes it was asked about: a switch-off
-                # or an import halts it with batches unsent, which stay owed, and the chip
-                # reads total > processed as "some batches failed" when nothing failed.
-                AutoCodeJob.catch_up_total: sent,
-                AutoCodeJob.catch_up_processed: processed,
-            })
-            # Unless it was stopped: one UPDATE that a Stop's row refuses, so a
-            # Stop landing at any moment before this commit is never written
-            # over (an ORM assignment reloaded the job and replaced it).
-            finish = finish.filter(AutoCodeJob.status != "cancelled")
-        if finish.update(values, synchronize_session=False) == 0:
-            # Stopped (#60): what answered is kept, with its register rows, and the job
-            # stays cancelled. What the Stop never sent stays owed, so the next
-            # catch-up or run codes it. Until 22 Oct 2026 a Stop kept nothing,
-            # and the batches already paid for were sent again.
-            db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
-                counts, synchronize_session=False,
-            )
-            db.commit()
+
+        def _finish(session: SASession) -> str:
+            """The pass's outcome, in its own transaction, apart from its batches."""
+            now = datetime.now(timezone.utc)
+            counts: dict[Any, Any] = {
+                AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + (sent - processed),
+            }
+            values: dict[Any, Any] = {**counts, AutoCodeJob.completed_at: now}
+            finish = session.query(AutoCodeJob).filter(AutoCodeJob.id == job_id)
+            if track_status:
+                # Route set this to "running" for the chip; restore it now, with no
+                # failure left from an earlier catch-up, and this catch-up's own
+                # counts, which the chip reads: the cumulative pair above keeps any
+                # earlier shortfall for good (R12 wave 6).
+                values.update({
+                    AutoCodeJob.status: "completed",
+                    AutoCodeJob.error_message: "",
+                    AutoCodeJob.failure_kind: "",
+                    # The quotes this pass sent, not the quotes it was asked about: a
+                    # switch-off or an import halts it with batches unsent, which stay
+                    # owed, and the chip reads total > processed as "some batches
+                    # failed" when nothing failed.
+                    AutoCodeJob.catch_up_total: sent,
+                    AutoCodeJob.catch_up_processed: processed,
+                })
+                # Unless it was stopped: one UPDATE that a Stop's row refuses, so a
+                # Stop landing at any moment before this commit is never written
+                # over (an ORM assignment reloaded the job and replaced it).
+                finish = finish.filter(AutoCodeJob.status != "cancelled")
+            if finish.update(values, synchronize_session=False) == 0:
+                # Stopped (#60): what answered is kept, with its register rows, and
+                # the job stays cancelled. What the Stop never sent stays owed, so the
+                # next catch-up or run codes it. Until 22 Oct 2026 a Stop kept
+                # nothing, and the batches already paid for were sent again.
+                session.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
+                    counts, synchronize_session=False,
+                )
+                return "stopped"
+            if not track_status:
+                j = session.get(AutoCodeJob, job_id)
+                if j is not None:
+                    _clear_failure_once_owed_nothing(session, j)
+            return "finished"
+
+        done, outcome = await _save_batch(db_factory, _finish, f"re-apply {framework_id}, its outcome")
+        if not done:
+            raise _NotSavedError
+        if outcome == "stopped":
             logger.info(
                 "Re-apply %s: stopped, kept %d proposals", framework_id, new_proposed,
             )
             return accepted
-        if not track_status:
-            _clear_failure_once_owed_nothing(db, job)
-        db.commit()
         logger.info(
             "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted; lines used "
             "(accept at or above, deny below): %s",
@@ -1530,19 +1643,22 @@ async def _reapply_to_new_quotes(
         return accepted
 
     except Exception as exc:
-        logger.exception("Re-apply failed for %s: %s", framework_id, exc)
-        db.rollback()
+        if _is_db_error(exc):
+            logger.error("Re-apply failed for %s: the database (%s)", framework_id,
+                         _db_error_name(exc))
+        else:
+            logger.exception("Re-apply failed for %s: %s", framework_id, exc)
+        with contextlib.suppress(Exception):
+            db.rollback()
         failed = True
         if track_status:
             # Named as run_autocode_job names it, so the chip can say which failure
             # this was (out of credit, rate limited…) and not only "Tagging failed."
             # Never ``str(exc)``: it is stored and served by /status, and a provider's
             # error is its whole body, which can carry the prompt and an echoed key.
-            from bristlenose.llm.client import failure_summary
-
+            message, kind = failure_text(settings.llm_provider or None, exc)
             _set_job_status(
-                db, project_id, framework_id, "failed", failure_summary(exc),
-                failure_kind=classify_exception(settings.llm_provider or None, exc).value,
+                db, project_id, framework_id, "failed", message, failure_kind=kind,
             )
         return 0
     finally:
@@ -1692,14 +1808,19 @@ def _take_owed_snapshot(project_id: int) -> str | None:
     return owed[1]
 
 
-async def coding_ended(app: Any, project_id: int, *, snapshot_source: str | None) -> None:
+async def coding_ended(
+    app: Any, project_id: int, *, snapshot_source: str | None, own_build: bool = False,
+) -> None:
     """The calling pass has ended; ``snapshot_source`` says it changed what Signals reads.
 
     When others of the project's passes still code, the rebuild is owed and the last
-    of them to end builds it once (D21): until 23 Nov 2026 each finished apply built
+    of them to end starts it, once (D21): until 23 Nov 2026 each finished apply built
     its own, so three codebooks applied at once paid for three builds, the first two
-    over tags the third was still changing. The build, when this is the last pass,
-    happens here, awaited, so the caller's busy mark covers it.
+    over tags the third was still changing. The build is its own task: a catch-up
+    that happens to end last must not run another pass's paid build inside its own
+    task, which the import pause, a run's re-apply and the debounced trigger all wait
+    on. ``own_build`` (an apply that asked for the build itself) awaits it, so its busy
+    mark covers it.
     """
     me = asyncio.current_task()
     if me is not None:
@@ -1709,8 +1830,18 @@ async def coding_ended(app: Any, project_id: int, *, snapshot_source: str | None
     if _others_coding(project_id, me):
         return
     source = _take_owed_snapshot(project_id)
-    if source is not None:
-        await build_signal_snapshot(app, project_id, source)
+    if source is None:
+        return
+    build = _start_snapshot_build(app, project_id, source)
+    if own_build and snapshot_source is not None:
+        await build
+
+
+def _start_snapshot_build(app: Any, project_id: int, source: str) -> asyncio.Task[Any]:
+    task = asyncio.ensure_future(build_signal_snapshot(app, project_id, source))
+    _SNAPSHOT_TASKS.add(task)
+    task.add_done_callback(_SNAPSHOT_TASKS.discard)
+    return task
 
 
 async def build_signal_snapshot(app: Any, project_id: int, source: str) -> None:
@@ -1721,59 +1852,73 @@ async def build_signal_snapshot(app: Any, project_id: int, source: str) -> None:
     LLM call per codebook with a card whose evidence changed since its cached
     narrative, and none when every card is cached (``elaboration.generate_elaborations``).
     """
-    from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
     from bristlenose.server.signal_snapshots import (
         begin_signals_preparing,
         end_signals_preparing,
     )
 
     begin_signals_preparing(app.state)
-    db = app.state.db_factory()
+    db: SASession | None = None
     try:
+        from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
+
+        db = app.state.db_factory()
         await materialise_completed_signal_snapshot(
             db, project_id, source=source,
             project_dir=getattr(app.state, "project_dir", None),
         )
-    except Exception:
-        db.rollback()
-        logger.exception("Signal snapshot (%s) for project %s failed", source, project_id)
+    except Exception as exc:
+        if db is not None:
+            with contextlib.suppress(Exception):
+                db.rollback()
+        if _is_db_error(exc):
+            logger.error("Signal snapshot (%s) for project %s failed: the database (%s)",
+                         source, project_id, _db_error_name(exc))
+        else:
+            logger.exception("Signal snapshot (%s) for project %s failed", source, project_id)
     finally:
-        db.close()
+        if db is not None:
+            with contextlib.suppress(Exception):
+                db.close()
         end_signals_preparing(app.state)
 
 
 def recut_made(app: Any, project_id: int) -> None:
-    """The review's lines were applied (accept-all or deny-all with the dialog's lines):
-    rebuild Signals once the burst settles, or, while a pass still codes, when the last
-    one ends. Callable from a route's worker thread or the loop; never raises."""
+    """The review's lines were applied (accept-all or deny-all with the dialog's lines)."""
+    signals_changed(app, project_id, "codebook_recut")
+
+
+def signals_changed(app: Any, project_id: int, source: str) -> None:
+    """Accepted tags changed outside a first apply (a re-cut, a catch-up that accepted
+    at the stored line): rebuild Signals once the burst settles, or, while a pass still
+    codes, when the last one ends. Callable from a route's worker thread or the loop;
+    never raises."""
     try:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
             from anyio import from_thread
 
-            from_thread.run_sync(_arm_recut_snapshot, app, project_id)
+            from_thread.run_sync(_arm_recut_snapshot, app, project_id, source)
             return
-        _arm_recut_snapshot(app, project_id)
+        _arm_recut_snapshot(app, project_id, source)
     except Exception:
-        logger.warning("Could not schedule the Signals rebuild after a re-cut", exc_info=True)
+        logger.warning("Could not schedule a Signals rebuild (%s)", source, exc_info=True)
 
 
-def _arm_recut_snapshot(app: Any, project_id: int) -> None:
+def _arm_recut_snapshot(app: Any, project_id: int, source: str) -> None:
     loop = asyncio.get_running_loop()
     handle = _RECUT_TIMERS.pop(project_id, None)
     if handle is not None:
         handle.cancel()
     _RECUT_TIMERS[project_id] = loop.call_later(
-        RECUT_SNAPSHOT_DEBOUNCE_S, _fire_recut_snapshot, app, project_id,
+        RECUT_SNAPSHOT_DEBOUNCE_S, _fire_recut_snapshot, app, project_id, source,
     )
 
 
-def _fire_recut_snapshot(app: Any, project_id: int) -> None:
+def _fire_recut_snapshot(app: Any, project_id: int, source: str) -> None:
     _RECUT_TIMERS.pop(project_id, None)
     if _others_coding(project_id, None):
-        _owe_snapshot(project_id, "codebook_recut")
+        _owe_snapshot(project_id, source)
         return
-    task = asyncio.ensure_future(build_signal_snapshot(app, project_id, "codebook_recut"))
-    _SNAPSHOT_TASKS.add(task)
-    task.add_done_callback(_SNAPSHOT_TASKS.discard)
+    _start_snapshot_build(app, project_id, source)

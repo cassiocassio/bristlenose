@@ -339,9 +339,9 @@ def _settle_first_apply(
     """What a first apply's end asks of Signals: the snapshot source, or None.
 
     A completed apply runs ``after_apply`` (the house default's cut) and asks for a
-    rebuild. A stopped one asks only if it has accepted tags (review 9): nothing is
-    accepted by a run itself before Phase 3, but a researcher can accept a tentative
-    tag while it codes. A failed one asks nothing. Never raises."""
+    rebuild. A stopped or failed one asks only if it has accepted tags (review 9):
+    nothing is accepted by a run itself before Phase 3, but a researcher can accept a
+    tentative tag while it codes. Never raises."""
     db = db_factory()
     try:
         job = db.query(AutoCodeJob).filter_by(
@@ -356,10 +356,10 @@ def _settle_first_apply(
                 except Exception:
                     logger.exception("After-apply step for AutoCode %s failed", framework_id)
             return "codebook_apply"
-        if job.status == "cancelled" and db.query(ProposedTag.id).filter(
+        if job.status in ("cancelled", "failed") and db.query(ProposedTag.id).filter(
             ProposedTag.job_id == job.id, ProposedTag.status == "accepted",
         ).first() is not None:
-            return "codebook_stopped"
+            return "codebook_stopped" if job.status == "cancelled" else "codebook_failed"
         return None
     except Exception:
         logger.exception("Could not read how AutoCode %s ended", framework_id)
@@ -518,7 +518,7 @@ async def start_autocode(
             finally:
                 # Signals is rebuilt once the last of the project's passes ends (D21):
                 # this one's build waits while another apply or catch-up still codes.
-                await coding_ended(app, project_id, snapshot_source=source)
+                await coding_ended(app, project_id, snapshot_source=source, own_build=True)
 
         task = asyncio.create_task(_run_and_snapshot())
         coding_started(project_id, task)

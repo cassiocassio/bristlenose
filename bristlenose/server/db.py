@@ -113,13 +113,20 @@ def get_engine(
     url = db_url or _default_db_url()
     # In-memory SQLite needs StaticPool so all connections share the
     # same database (otherwise each connection gets its own empty DB).
+    # ``hide_parameters``: a statement error's text otherwise ends "[parameters: …]", the
+    # row it was writing, which for an AutoCode proposal is the model's rationale quoting a
+    # participant, and that text reaches the log (and, through a failure summary, a job's
+    # stored message). The SQL and the error stay; the values do not (23 Nov 2026).
     if url == "sqlite://":
         return create_engine(
             url,
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
+            hide_parameters=True,
         )
-    engine = create_engine(url, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        url, connect_args={"check_same_thread": False}, hide_parameters=True,
+    )
     if study_output_dir is not None:
         _bind_under_settle_lock(engine, study_output_dir)
     return engine

@@ -27,6 +27,7 @@ from bristlenose.server.autocode import (
     coding_started,
     live_reapply,
     register_reapply,
+    signals_changed,
 )
 from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
@@ -1191,11 +1192,13 @@ def put_tags(
 
         uncategorised: CodebookGroup | None = None
         kept: set[tuple[int, int]] = set()
+        resolved: set[int] = set()  # the quotes the body named and the server has
 
         for dom_id, tag_names in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
                 continue
+            resolved.add(quote.id)
             seen_td_ids: set[int] = set()
             for tag_name in tag_names:
                 carried = existing_by_name.get((quote.id, tag_name.lower()))
@@ -1225,8 +1228,12 @@ def put_tags(
                     if source == "human" and not _is_sentiment_tag(db, td_id):
                         _mint_pin(db, quote)
 
-        # A tag the body no longer carries was removed by the researcher (review 1).
-        _exclude_removed_autocode_tags(db, set(existing_sources) - kept)
+        # A tag the body no longer carries, on a quote the body named, was removed by the
+        # researcher (review 1). A quote the body named by an id that no longer resolves
+        # lost its tags to the whole-map replace, not to a researcher's judgement.
+        _exclude_removed_autocode_tags(
+            db, {pair for pair in set(existing_sources) - kept if pair[0] in resolved},
+        )
         db.commit()
         return {"status": "ok"}
     finally:
@@ -1284,21 +1291,24 @@ def patch_tags(
                 # not take both.
                 names = {n.lower() for n in delta.remove}
                 ids = set(delta.remove_ids)
+                # Plain values, not rows: a row held here stays in the identity map,
+                # and a tag put back in the same request then collides with it.
                 gone = [
-                    qt
-                    for qt, td_name, fw in db.query(
-                        QuoteTag, TagDefinition.name, CodebookGroup.framework_id
+                    (qt_id, qt_quote_id, qt_td_id)
+                    for qt_id, qt_quote_id, qt_td_id, td_name, fw in db.query(
+                        QuoteTag.id, QuoteTag.quote_id, QuoteTag.tag_definition_id,
+                        TagDefinition.name, CodebookGroup.framework_id,
                     )
                     .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
                     .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
                     .filter(QuoteTag.quote_id == quote.id)
                     .all()
                     if (td_name.lower() in names and fw != "sentiment")
-                    or qt.tag_definition_id in ids
+                    or qt_td_id in ids
                 ]
                 if gone:
-                    removed.update((qt.quote_id, qt.tag_definition_id) for qt in gone)
-                    db.query(QuoteTag).filter(QuoteTag.id.in_([qt.id for qt in gone])).delete(
+                    removed.update((quote_id, td_id) for _, quote_id, td_id in gone)
+                    db.query(QuoteTag).filter(QuoteTag.id.in_([g[0] for g in gone])).delete(
                         synchronize_session=False
                     )
             add_td_ids: list[int] = sorted(_known_tag_ids(db, delta.add_ids))
@@ -1918,13 +1928,17 @@ def launch_catch_up(app: Any, project_id: int, framework_id: str) -> None:
                 framework_id,
                 n,
             )
+            if n:
+                # It accepted tags at the stored line: Signals follows, as for a re-cut.
+                signals_changed(app, project_id, "codebook_catch_up")
         except Exception:
             logger.exception(
                 "catch-up re-apply on enable failed | framework=%s", framework_id
             )
         finally:
-            # A catch-up asks for no rebuild of its own, but while it codes an apply
-            # that ends leaves its rebuild to the last pass, which may be this one (D21).
+            # A catch-up's own change reaches Signals through the debounced request
+            # above. While it codes, an apply that ends leaves its rebuild to the last
+            # pass, which may be this one (D21): started as its own task, not run here.
             await coding_ended(app, project_id, snapshot_source=None)
 
     # Hold a strong reference: the event loop only weakly references a bare task, so

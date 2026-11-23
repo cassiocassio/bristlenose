@@ -165,6 +165,7 @@ class TestRemovedOnACard:
         assert _proposal(client, ids[0]).decided_by == "researcher"
         assert _proposal(client, ids[0]).status == "denied"
 
+    @pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
     def test_removed_and_put_back_in_one_request_is_not_an_exclusion(self, seeded) -> None:
         client, ids, tag_ids = seeded
         _accept(client, ids[1])
@@ -179,13 +180,24 @@ class TestRemovedOnACard:
         _accept(client, ids[0])
         _accept(client, ids[3])
         whole = client.get(f"{BASE}/tags").json()
-        dropped = _dom_id(client, ids[0])
-        del whole[dropped]
+        whole[_dom_id(client, ids[0])] = []  # named, with its tag taken off
         assert client.put(f"{BASE}/tags", json=whole).status_code == 200
         assert (_proposal(client, ids[0]).status, _proposal(client, ids[0]).decided_by) == (
             "denied", "researcher")
         # Round-tripped, so kept: still the researcher's acceptance.
         assert (_proposal(client, ids[3]).status, _proposal(client, ids[3]).decided_by) == (
+            "accepted", "researcher")
+
+    def test_put_leaves_a_quote_it_could_not_place_alone(self, seeded) -> None:
+        """A whole-map PUT whose id for a quote no longer resolves (a re-run moved it)
+        loses that quote's tags to the replace, not to a researcher's judgement."""
+        client, ids, _ = seeded
+        _accept(client, ids[0])
+        _accept(client, ids[3])
+        whole = client.get(f"{BASE}/tags").json()
+        whole["q-p9-999"] = whole.pop(_dom_id(client, ids[0]))  # an id nobody has
+        assert client.put(f"{BASE}/tags", json=whole).status_code == 200
+        assert (_proposal(client, ids[0]).status, _proposal(client, ids[0]).decided_by) == (
             "accepted", "researcher")
 
     def test_a_pending_proposal_is_not_touched_by_a_removal(self, seeded) -> None:
@@ -219,6 +231,12 @@ def test_the_export_carries_no_tentative_tags(seeded) -> None:
 
     endpoints = _export(client)["endpoints"]
     assert _proposal_count(endpoints["/quotes"]) == 0
+    # Nor through Signals: no card weighs a tentative tag, and none is counted.
+    live_signals = client.get(f"{BASE}/signals/codebooks").json()["codebooks"]
+    assert any(c["source_breakdown"]["pending"] for c in live_signals)
+    assert endpoints["/signals/codebooks"]["codebooks"]
+    for codebook in endpoints["/signals/codebooks"]["codebooks"]:
+        assert codebook["source_breakdown"]["pending"] == 0
     tags = [t for g in endpoints["/codebook"]["groups"] for t in g["tags"]]
     assert all(t["tentative_count"] == 0 for t in tags)
     # The accepted one is a tag like any other.

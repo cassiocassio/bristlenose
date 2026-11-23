@@ -191,6 +191,7 @@ def test_a_writer_holding_the_lock_does_not_lose_a_batch(tmp_path, monkeypatch) 
     save: the batch is kept and saved with the end of the run, never dropped."""
     session_cls, engine, project_id, db_path = _file_project(tmp_path, 50, busy_ms=30)
     monkeypatch.setattr(autocode, "SAVE_BACKOFF_S", (0.01,))
+    monkeypatch.setattr(autocode, "SAVE_BUSY_TIMEOUT_MS", 30)
     release, held = threading.Event(), threading.Event()
     seen: list[tuple[int, int, int]] = []
     holder: list[threading.Thread] = []
@@ -227,6 +228,7 @@ def test_a_writer_that_lets_go_in_time_is_waited_for(tmp_path, monkeypatch) -> N
     answered, before the next one goes."""
     session_cls, engine, project_id, db_path = _file_project(tmp_path, 50, busy_ms=30)
     monkeypatch.setattr(autocode, "SAVE_BACKOFF_S", (0.1, 0.2, 0.4))
+    monkeypatch.setattr(autocode, "SAVE_BUSY_TIMEOUT_MS", 30)
     release, held = threading.Event(), threading.Event()
     seen: list[tuple[int, int, int]] = []
 
@@ -293,6 +295,167 @@ def test_a_crash_between_batches_keeps_the_saved_batches_and_the_sweep_keeps_the
     engine.dispose()
 
 
+def test_a_lock_held_through_the_end_of_the_run_leaves_the_quotes_owed_and_says_so(
+    tmp_path, monkeypatch, caplog,
+) -> None:
+    """The lock is held from the first answer through the end-of-run retries: no batch
+    can be saved. The job still records its outcome (failed, never applied, nothing on
+    the register, every quote owed) with a fixed message, and nothing a participant
+    said reaches the log."""
+    import logging
+
+    session_cls, engine, project_id, db_path = _file_project(tmp_path, 50, busy_ms=30)
+    monkeypatch.setattr(autocode, "SAVE_BACKOFF_S", (0.01,))
+    monkeypatch.setattr(autocode, "SAVE_BUSY_TIMEOUT_MS", 30)
+    release, held = threading.Event(), threading.Event()
+    holder: list[threading.Thread] = []
+    real_save = autocode._save_batch
+
+    async def save_spy(db_factory, write, what):  # type: ignore[no-untyped-def]
+        if what.endswith("its outcome"):
+            release.set()  # let go only once every batch has had its last try
+            holder[0].join(5)
+        return await real_save(db_factory, write, what)
+
+    async def analyze(system_prompt, user_prompt, response_model, **kw):  # type: ignore[no-untyped-def]
+        if not holder:
+            t = threading.Thread(target=_hold_the_write_lock, args=(db_path, release, held))
+            t.start()
+            holder.append(t)
+            assert held.wait(5)
+        return _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.8)
+
+    monkeypatch.setattr(autocode, "_save_batch", save_spy)
+    with caplog.at_level(logging.DEBUG, logger="bristlenose"):
+        with _patch_llm(AsyncMock(side_effect=analyze)):
+            asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+
+    assert _counts(session_cls) == (0, 0, 0)
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        assert (job.status, job.failure_kind) == ("failed", "")
+        assert job.error_message == autocode.NOT_SAVED_MESSAGE
+        assert job.completed_at is None and job.processed_quotes == 0
+        assert len(owed_quotes(db, job)) == 50
+    finally:
+        db.close()
+    assert "Rationale for quote" not in caplog.text
+    engine.dispose()
+
+
+def test_a_batch_that_cannot_be_saved_makes_a_partial_run(tmp_path, monkeypatch) -> None:
+    """One batch never saves (its write keeps failing), the other does: the run is
+    applied, short by that batch, whose quotes stay owed."""
+    from sqlalchemy.exc import OperationalError
+
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 50)
+    monkeypatch.setattr(autocode, "SAVE_BACKOFF_S", (0.0,))
+    real_store = autocode._store_pending_batch
+    first_batch: set[int] = set()
+
+    def store(db, job_id, answered):  # type: ignore[no-untyped-def]
+        if not first_batch:
+            first_batch.update(answered.quote_ids)
+        if set(answered.quote_ids) == first_batch:
+            raise OperationalError("INSERT", {}, Exception("database is locked"))
+        return real_store(db, job_id, answered)
+
+    monkeypatch.setattr(autocode, "_store_pending_batch", store)
+    with _patch_llm(AsyncMock(side_effect=lambda system_prompt, user_prompt, response_model, **kw:
+                              _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.8))):
+        asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+
+    assert _counts(session_cls) == (25, 25, 25)
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        assert job.status == "completed" and job.completed_at is not None
+        assert (job.processed_quotes, job.total_quotes) == (25, 50)  # the chip reads partial
+        assert job.error_message == autocode.NOT_SAVED_MESSAGE
+        assert {q.id for q in owed_quotes(db, job)} == first_batch
+    finally:
+        db.close()
+    engine.dispose()
+
+
+def test_a_save_waiting_for_the_lock_does_not_hold_the_event_loop(tmp_path, monkeypatch) -> None:
+    """A try waits for the lock on a worker thread, for SAVE_BUSY_TIMEOUT_MS, not the
+    connection's 5 s: the serve's other routes go on answering meanwhile."""
+    import time
+
+    session_cls, engine, _, db_path = _file_project(tmp_path, 1)
+    monkeypatch.setattr(autocode, "SAVE_ATTEMPTS", 1)
+    monkeypatch.setattr(autocode, "SAVE_BUSY_TIMEOUT_MS", 400)
+    release, held = threading.Event(), threading.Event()
+    t = threading.Thread(target=_hold_the_write_lock, args=(db_path, release, held))
+    t.start()
+    assert held.wait(5)
+
+    def write(db):  # type: ignore[no-untyped-def]
+        db.query(Project).update({Project.name: "saved"})
+
+    async def main() -> tuple[tuple[bool, Any], int, float]:
+        ticks = 0
+        stop = asyncio.Event()
+
+        async def ticker() -> None:
+            nonlocal ticks
+            while not stop.is_set():
+                ticks += 1
+                await asyncio.sleep(0.01)
+
+        tick_task = asyncio.ensure_future(ticker())
+        start = time.monotonic()
+        result = await autocode._save_batch(session_cls, write, "test")
+        elapsed = time.monotonic() - start
+        stop.set()
+        await tick_task
+        return result, ticks, elapsed
+
+    try:
+        result, ticks, elapsed = asyncio.run(main())
+    finally:
+        release.set()
+        t.join(5)
+    assert result == (False, None)
+    assert ticks >= 10  # the loop ran while the try waited
+    assert elapsed < 2.0  # one short wait, not busy_timeout's 5 s
+    engine.dispose()
+
+
+def test_a_save_never_raises(tmp_path) -> None:
+    def factory_that_fails() -> Any:
+        raise RuntimeError("no database")
+
+    def write_that_fails(db):  # type: ignore[no-untyped-def]
+        raise ValueError("bad row")
+
+    session_cls, engine, _, _ = _file_project(tmp_path, 1)
+    assert asyncio.run(autocode._save_batch(factory_that_fails, write_that_fails, "t")) == (
+        False, None)
+    assert asyncio.run(autocode._save_batch(session_cls, write_that_fails, "t")) == (False, None)
+    engine.dispose()
+
+
+def test_a_database_error_carries_no_parameters(tmp_path) -> None:
+    """The engine hides a statement's parameters, so a failed write of a proposal does
+    not put its rationale (a participant's words) into an exception's text."""
+    from sqlalchemy.exc import IntegrityError
+
+    session_cls, engine, _, _ = _file_project(tmp_path, 1)
+    db = session_cls()
+    try:
+        db.add(ProposedTag(job_id=999, quote_id=999, tag_definition_id=999,
+                           confidence=0.5, rationale="SECRET participant words"))
+        with pytest.raises(IntegrityError) as caught:
+            db.commit()
+        assert "SECRET" not in str(caught.value)
+    finally:
+        db.close()
+    engine.dispose()
+
+
 # ---------------------------------------------------------------------------
 # A catch-up
 # ---------------------------------------------------------------------------
@@ -343,6 +506,90 @@ def test_a_catch_up_saves_each_batch_by_the_lines_stored_when_it_saves(tmp_path)
         assert accepted == db.query(QuoteTag).count() == 13
         job = db.query(AutoCodeJob).one()
         assert (job.total_quotes, job.processed_quotes, job.proposed_count) == (50, 50, 50)
+    finally:
+        db.close()
+    engine.dispose()
+
+
+def _fail_commits_with_proposals(monkeypatch, how_many: int) -> list[int]:
+    """The first ``how_many`` tries at saving a batch fail as a locked database would,
+    after the batch's write ran: what a try counted must not count twice."""
+    import functools
+
+    from sqlalchemy.exc import OperationalError
+
+    real_try = autocode._try_save
+    failed: list[int] = []
+
+    def try_save(db_factory, write):  # type: ignore[no-untyped-def]
+        if isinstance(write, functools.partial) and len(failed) < how_many:
+            def write_then_fail(db):  # type: ignore[no-untyped-def]
+                write(db)
+                failed.append(1)
+                raise OperationalError("COMMIT", {}, Exception("database is locked"))
+
+            return real_try(db_factory, write_then_fail)
+        return real_try(db_factory, write)
+
+    monkeypatch.setattr(autocode, "_try_save", try_save)
+    monkeypatch.setattr(autocode, "SAVE_BACKOFF_S", (0.0,))
+    return failed
+
+
+def _catch_up(session_cls: Any, project_id: int, confidence: float) -> int:
+    with _patch_llm(AsyncMock(side_effect=lambda system_prompt, user_prompt, response_model, **kw:
+                              _make_batch_result(_n_in_prompt(user_prompt), "user need",
+                                                 confidence))):
+        return asyncio.run(reapply_to_new_quotes(
+            session_cls, project_id, "garrett", _settings(), track_status=True,
+        ))
+
+
+def test_a_catch_up_retry_counts_its_batch_once(tmp_path, monkeypatch) -> None:
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 25, applied=True)
+    failed = _fail_commits_with_proposals(monkeypatch, 1)
+    accepted = _catch_up(session_cls, project_id, 0.95)
+    assert failed == [1]
+    db = session_cls()
+    try:
+        assert accepted == db.query(QuoteTag).count() == 25
+        job = db.query(AutoCodeJob).one()
+        assert (job.proposed_count, job.catch_up_total, job.catch_up_processed) == (25, 25, 25)
+    finally:
+        db.close()
+    engine.dispose()
+
+
+def test_a_catch_up_batch_saved_only_at_the_end_lands_whole(tmp_path, monkeypatch) -> None:
+    """Every try of its own save fails; the end of the pass saves it."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 25, applied=True)
+    _fail_commits_with_proposals(monkeypatch, autocode.SAVE_ATTEMPTS)
+    accepted = _catch_up(session_cls, project_id, 0.95)
+    db = session_cls()
+    try:
+        assert accepted == db.query(QuoteTag).count() == 25
+        assert db.query(AutoCodeSentQuote).count() == 25
+        job = db.query(AutoCodeJob).one()
+        assert (job.status, job.catch_up_total, job.catch_up_processed) == ("completed", 25, 25)
+        assert owed_quotes(db, job) == []
+    finally:
+        db.close()
+    engine.dispose()
+
+
+def test_a_catch_up_batch_never_saved_stays_owed_and_fails_the_pass(
+    tmp_path, monkeypatch,
+) -> None:
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 25, applied=True)
+    _fail_commits_with_proposals(monkeypatch, 2 * autocode.SAVE_ATTEMPTS)
+    assert _catch_up(session_cls, project_id, 0.95) == 0
+    db = session_cls()
+    try:
+        assert db.query(ProposedTag).count() == 0
+        job = db.query(AutoCodeJob).one()
+        assert (job.status, job.failure_kind) == ("failed", "")
+        assert job.error_message == autocode.NOT_SAVED_MESSAGE
+        assert len(owed_quotes(db, job)) == 25
     finally:
         db.close()
     engine.dispose()
@@ -456,7 +703,8 @@ def test_a_burst_of_recuts_rebuilds_once_and_waits_for_a_pass_still_coding(
         ("completed", False, "codebook_apply"),
         ("cancelled", True, "codebook_stopped"),
         ("cancelled", False, None),
-        ("failed", True, None),
+        ("failed", True, "codebook_failed"),
+        ("failed", False, None),
     ],
 )
 def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
@@ -485,3 +733,78 @@ def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
     ) == expected
     assert after == ([True] if status == "completed" else [])
     engine.dispose()
+
+
+def test_a_build_owed_to_another_pass_does_not_run_inside_a_catch_up(tmp_path) -> None:
+    """The catch-up that ends last starts the apply's postponed build as its own task
+    and returns; the import pause and a run's re-apply wait on the catch-up's task."""
+    session_cls, engine, _, _ = _file_project(tmp_path, 1)
+    app = _fake_app(session_cls)
+    gate = asyncio.Event
+    started: list[bool] = []
+
+    async def main() -> tuple[bool, int]:
+        let_build_finish = gate()
+
+        async def slow_build(*args: Any, **kwargs: Any) -> None:
+            started.append(True)
+            await let_build_finish.wait()
+
+        with patch("bristlenose.server.routes.signals.materialise_completed_signal_snapshot",
+                   slow_build):
+            go_apply, go_catch_up = gate(), gate()
+
+            async def apply() -> None:
+                await go_apply.wait()
+                await autocode.coding_ended(
+                    app, 1, snapshot_source="codebook_apply", own_build=True,
+                )
+
+            async def catch_up() -> None:
+                await go_catch_up.wait()
+                await autocode.coding_ended(app, 1, snapshot_source=None)
+
+            a, c = asyncio.ensure_future(apply()), asyncio.ensure_future(catch_up())
+            autocode.coding_started(1, a)
+            autocode.coding_started(1, c)
+            go_apply.set()
+            await a  # the apply ends first, while the catch-up codes: its build is owed
+            go_catch_up.set()
+            await asyncio.wait_for(c, 1.0)  # ends without waiting for the build
+            catch_up_done_before_build = c.done() and not let_build_finish.is_set()
+            await asyncio.sleep(0)
+            let_build_finish.set()
+            await asyncio.gather(*list(autocode._SNAPSHOT_TASKS))
+            return catch_up_done_before_build, len(started)
+
+    assert asyncio.run(main()) == (True, 1)
+    engine.dispose()
+
+
+def test_a_catch_up_that_accepts_tags_asks_signals_to_follow(monkeypatch) -> None:
+    from bristlenose.server.routes import data as data_routes
+
+    asked: list[str] = []
+    monkeypatch.setattr(data_routes, "signals_changed",
+                        lambda app, pid, source: asked.append(source))
+    app = SimpleNamespace(state=SimpleNamespace(db_factory=None, settings=_settings()))
+
+    async def main(n: int) -> None:
+        with patch("bristlenose.server.autocode.reapply_to_new_quotes",
+                   AsyncMock(return_value=n)):
+            data_routes.launch_catch_up(app, 1, "garrett")
+            await asyncio.gather(*list(data_routes._CATCH_UP_TASKS))
+
+    asyncio.run(main(0))
+    assert asked == []
+    asyncio.run(main(3))
+    assert asked == ["codebook_catch_up"]
+
+
+def test_a_build_whose_session_cannot_open_still_ends_the_withheld_lens() -> None:
+    def no_session() -> Any:
+        raise RuntimeError("no database")
+
+    state = SimpleNamespace(db_factory=no_session, project_dir=None)
+    asyncio.run(autocode.build_signal_snapshot(SimpleNamespace(state=state), 1, "test"))
+    assert state.signals_preparing_count == 0

@@ -776,6 +776,8 @@ def _compute_group_analysis(
     shared: _SharedProjectData,
     db: Session,
     top_n: int,
+    *,
+    include_pending: bool = True,
 ) -> tuple[
     list[Signal],
     Matrix,  # section_matrix
@@ -787,7 +789,9 @@ def _compute_group_analysis(
 ] | None:
     """Run signal analysis for a set of codebook groups.
 
-    Returns None if no tag data available.
+    Returns None if no tag data available. ``include_pending=False`` counts accepted
+    tags only: the HTML export, whose tentative AutoCode tags are work in progress
+    and stay out of a deliverable (docs/design-autocode-landing-plan.md D28).
     """
     group_id_to_name = {g.id: g.name for g in active_groups}
     group_name_to_colour_set = {g.name: g.colour_set for g in active_groups}
@@ -847,6 +851,7 @@ def _compute_group_analysis(
             ProposedTag.status == "pending",
         )
         .all()
+        if include_pending else []
     )
 
     pending_count = 0
@@ -1127,8 +1132,11 @@ async def _build_codebook_analysis(
     *,
     db: Session | None = None,
     project_dir: Path | None = None,
+    include_pending: bool = True,
 ) -> CodebookSignalsListResponse:
     """Compute per-codebook signal analysis for a project.
+
+    ``include_pending=False`` (the HTML export) leaves tentative AutoCode tags out.
 
     Groups are partitioned by framework — each framework becomes a separate
     codebook entry. User-created groups (framework_id=None) are collected
@@ -1163,7 +1171,9 @@ async def _build_codebook_analysis(
 
         codebooks: list[CodebookSignalsOut] = []
         for codebook_id, cb_groups in partitions.items():
-            result = _compute_group_analysis(cb_groups, shared, db, top_n)
+            result = _compute_group_analysis(
+                cb_groups, shared, db, top_n, include_pending=include_pending,
+            )
             if result is None:
                 continue
 

@@ -1547,7 +1547,9 @@ def _make_run_completed_handler(
                     finally:
                         # Built here, or by the last of the project's AutoCode passes
                         # if another still codes (D21).
-                        await coding_ended(app, project_id, snapshot_source=source)
+                        await coding_ended(
+                            app, project_id, snapshot_source=source, own_build=True,
+                        )
             except Exception:
                 logger.exception("Auto re-apply or signal snapshot after run_completed failed")
             finally:

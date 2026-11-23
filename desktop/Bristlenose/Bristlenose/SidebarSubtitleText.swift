@@ -61,6 +61,8 @@ enum SidebarSubtitleText {
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .runUsage(let line):
             return line.text(i18n: i18n)
+        case .autocodeEnded(let line):
+            return autocodeEndedText(line, i18n: i18n)
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
         case .deltaOnly(let delta):
@@ -218,8 +220,43 @@ enum SidebarSubtitleText {
         case .waitingForWhisper:
             return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
         case .cantFind, .failed, .failedDiagnostic, .completedPartial, .reportError,
-             .runUsage, .ready, .deltaOnly, .placeholder:
+             .runUsage, .autocodeEnded, .ready, .deltaOnly, .placeholder:
             return nil
+        }
+    }
+
+    /// An ended AutoCode run's row text, in the pipeline run's words (landing plan D13, D23),
+    /// none of it new copy: a Stop reads "Stopped" as the run's does; a partial run "Partial
+    /// run"; a failure its category's label ("Out of credit", "Provider key issue", "Rate
+    /// limited", …), or "Run failed" when the failure has none. The popover headline reads this
+    /// too, so the two cannot disagree.
+    static func autocodeEndedText(_ line: AutoCodeEndedLine, i18n: I18n) -> String {
+        switch line.outcome {
+        case .stopped:
+            return i18n.t("desktop.chrome.pipeline.stopped")
+        case .partial:
+            return i18n.t("desktop.chrome.pipeline.partialRun")
+        case .failed:
+            let fallback = "desktop.pipeline.diagnostic.header.failed"
+            guard let category = line.pipelineCategory else { return i18n.t(fallback) }
+            let value = i18n.t(category.labelKey)
+            return value == category.labelKey ? i18n.t(fallback) : value
+        }
+    }
+
+    /// The AutoCode popover's sentence: the web chip's long one for the failure
+    /// (`codebook.autocodeFailure.*`), and for a partial run the web toast's count first
+    /// ("Tagged 87 of 112 quotes. Some batches failed."). Nil for a Stop, which has no popover.
+    static func autocodeEndedSentence(_ line: AutoCodeEndedLine, i18n: I18n) -> String? {
+        switch line.outcome {
+        case .stopped:
+            return nil
+        case .failed:
+            return i18n.t(line.failureSentenceKey)
+        case .partial:
+            let counted = i18n.t("common.autocode.toast.donePartial",
+                                 ["processed": String(line.processed), "total": String(line.total)])
+            return line.failureKind.isEmpty ? counted : counted + " " + i18n.t(line.failureSentenceKey)
         }
     }
 

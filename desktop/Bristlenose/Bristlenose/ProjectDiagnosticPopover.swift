@@ -39,6 +39,10 @@ struct ProjectDiagnosticPopover: View {
     /// may key on `.idle`.
     var reportCrash: ReportCrash? = nil
     var startupRefusalOverride: StudyStartupRefusal? = nil
+    /// An ended AutoCode run, when the glyph was drawn for one (landing plan D38): the AutoCode
+    /// variant. Outranks `state` (the `.idle` stand-in) for the headline, the body and Copy, as
+    /// `reportCrash` does. No Show Log: the pipeline's log is not where an AutoCode pass writes.
+    var autocodeFailure: AutoCodeEndedLine? = nil
     @EnvironmentObject var i18n: I18n
     @Environment(\.dismiss) private var dismiss
 
@@ -100,7 +104,10 @@ struct ProjectDiagnosticPopover: View {
             // The buttons keep their labels whole; the headline wraps instead.
             Text(headlineStatus).font(.headline)
             Spacer()
-            if startupRefusal == nil, state.needsFolderAccess, let onLocate {
+            if autocodeFailure != nil {
+                // The AutoCode variant offers Copy alone (below).
+                EmptyView()
+            } else if startupRefusal == nil, state.needsFolderAccess, let onLocate {
                 Button(i18n.t("desktop.chrome.locate")) { onLocate() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -173,6 +180,10 @@ struct ProjectDiagnosticPopover: View {
     /// became clickable on 26 Aug 2026 and this switch is why it isn't empty.
     private var headlineStatus: String {
         if let startupRefusal { return startupRefusal.headline(using: i18n) }
+        if let autocodeFailure {
+            // The row's words, so the two cannot disagree.
+            return SidebarSubtitleText.autocodeEndedText(autocodeFailure, i18n: i18n)
+        }
         if reportCrash != nil {
             // The row's key, so the two cannot disagree (as "Run failed").
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
@@ -205,11 +216,46 @@ struct ProjectDiagnosticPopover: View {
             }
             .font(.callout)
             .textSelection(.enabled)
+        } else if let autocodeFailure {
+            autocodeBody(autocodeFailure)
         } else if let reportCrash {
             reportCrashBody(reportCrash)
         } else {
             popoverBodyForPipelineState()
         }
+    }
+
+    /// The AutoCode variant — `reportCrashBody`'s shape: the web chip's long sentence for the
+    /// failure (with the partial run's count first), then the codebook's title as a caption.
+    @ViewBuilder
+    private func autocodeBody(_ line: AutoCodeEndedLine) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let sentence = SidebarSubtitleText.autocodeEndedSentence(line, i18n: i18n) {
+                Text(sentence)
+                    .font(.callout)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Text(line.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// What Copy puts on the pasteboard for an ended AutoCode run: a forensic payload, English by
+    /// decision as the other formats here are (`docs/design-i18n.md` §"Which surfaces are
+    /// targets"). Static so it is testable without a view.
+    static func formatAutoCodePlaintext(_ line: AutoCodeEndedLine, projectName: String) -> String {
+        var lines = ["Bristlenose — \(projectName)", "AutoCode — \(line.title)",
+                     "outcome: \(line.outcome.rawValue)"]
+        if !line.failureKind.isEmpty { lines.append("failure_kind: \(line.failureKind)") }
+        lines.append("quotes: \(line.processed) of \(line.total)")
+        return lines.joined(separator: "\n")
     }
 
     /// The report crash — `unreachableBody`'s shape: one callout sentence
@@ -444,6 +490,13 @@ struct ProjectDiagnosticPopover: View {
     /// native Mac pattern (Finder, Safari Copy URL). Dispatches on `state`.
     private func copyDiagnosticForCurrentState() {
         let text: String
+        if let autocodeFailure {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(Self.formatAutoCodePlaintext(autocodeFailure, projectName: project.name),
+                         forType: .string)
+            return
+        }
         if let startupRefusal {
             let pb = NSPasteboard.general
             pb.clearContents()

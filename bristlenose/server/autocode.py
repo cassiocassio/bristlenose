@@ -1660,6 +1660,29 @@ async def reapply_to_new_quotes(
         telemetry.reset_run_context(tokens)
 
 
+def _note_catch_up_total(db: SASession, job_id: int, total: int) -> None:
+    """Write an on-enable catch-up's own total as it starts, its processed count at 0, so the
+    Mac's row can count the pass while it codes (D40; each saved batch adds to the count).
+    Write-only and non-fatal (``bristlenose/server/gotchas.md`` § AutoCode): a locked
+    database costs the row its count, never the pass. A Stop that landed first is left alone."""
+    from sqlalchemy.exc import SQLAlchemyError
+
+    from bristlenose.server.models import AutoCodeJob
+
+    try:
+        db.query(AutoCodeJob).filter(
+            AutoCodeJob.id == job_id, AutoCodeJob.status != "cancelled",
+        ).update(
+            {AutoCodeJob.catch_up_total: total, AutoCodeJob.catch_up_processed: 0},
+            synchronize_session=False,
+        )
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.warning("Catch-up count not written at the start of the pass (%s)",
+                       type(exc).__name__)
+
+
 async def _reapply_to_new_quotes(
     db_factory: Callable[[], SASession],
     project_id: int,
@@ -1798,6 +1821,8 @@ async def _reapply_to_new_quotes(
             for i in range(0, len(batch_items), BATCH_SIZE)
         ]
         semaphore = asyncio.Semaphore(settings.llm_concurrency)
+        if track_status:
+            _note_catch_up_total(db, job_id, len(batch_items))
 
         def _halted() -> bool:
             """Read fresh before each batch. A catch-up's Stop sets its job
@@ -1878,14 +1903,19 @@ async def _reapply_to_new_quotes(
             # The quotes this batch sent, with the proposals they stand for (RE#66).
             record_sent(session, job_id, answered.quote_ids)
             n = len(answered.quote_ids)
+            grown: dict[Any, Any] = {
+                AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + n,
+                AutoCodeJob.processed_quotes: AutoCodeJob.processed_quotes + n,
+                AutoCodeJob.proposed_count:
+                    AutoCodeJob.proposed_count + len(answered.proposals),
+            }
+            if track_status:
+                # The pass's own count, per batch, so the Mac's row reads "AutoCode · N of M"
+                # over this pass's quotes while it codes (landing plan D40). The pass's end
+                # writes the final pair, as before.
+                grown[AutoCodeJob.catch_up_processed] = AutoCodeJob.catch_up_processed + n
             session.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
-                {
-                    AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + n,
-                    AutoCodeJob.processed_quotes: AutoCodeJob.processed_quotes + n,
-                    AutoCodeJob.proposed_count:
-                        AutoCodeJob.proposed_count + len(answered.proposals),
-                },
-                synchronize_session=False,
+                grown, synchronize_session=False,
             )
             return accepted, len(answered.proposals), (upper, lower)
 

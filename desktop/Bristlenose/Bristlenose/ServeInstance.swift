@@ -114,6 +114,28 @@ final class ServeInstance: ObservableObject {
         if busy != backgroundBusy { backgroundBusy = busy }
     }
 
+    /// The last `progress` count `/api/background-work` reported: quotes AutoCode batches have had
+    /// answered since this serve started (`bristlenose/server/busy.py`). Nil before the first
+    /// reading of a serve. Not `@Published`, for `backgroundBusy`'s reason.
+    private(set) var backgroundProgress: Int?
+    /// When that count last moved, or nil if it has not moved on this serve. The fleet holds a
+    /// busy study's server while this keeps moving, and counts its no-progress ceiling from here
+    /// (landing plan D16, refined: a stuck run cannot keep a server alive for ever).
+    private(set) var backgroundProgressMovedAt: ContinuousClock.Instant?
+
+    /// Fold a fresh `progress` reading in. The first reading of a serve is a baseline, not
+    /// movement; any change after it is (a decrease is a new serve, whose counter began again).
+    func noteBackgroundProgress(_ count: Int, at now: ContinuousClock.Instant = .now) {
+        if let last = backgroundProgress, count != last { backgroundProgressMovedAt = now }
+        if backgroundProgress != count { backgroundProgress = count }
+    }
+
+    /// A new serve has reported nothing yet.
+    func resetBackgroundProgress() {
+        backgroundProgress = nil
+        backgroundProgressMovedAt = nil
+    }
+
     func noteAgentCallCount(_ fresh: Int) -> Bool {
         // Write only on change. A `@Published` setter publishes on every
         // assignment, moved or not, and this runs every 1.5 s

@@ -38,7 +38,7 @@ import Testing
         case running, queued, stopped, partial, unreachable, addingInterviews, exportingReport
         case preparingSignals, runUsage
         case copying, importingBatch, readingScreens, codingQuotes, copyCancelling, waitingForWhisper
-        case ready, deltaOnly, placeholder, reportError
+        case ready, deltaOnly, placeholder, reportError, autocodeEnded
     }
 
     /// Every case, once, with a representative payload.
@@ -67,6 +67,9 @@ import Testing
         .deltaOnly(.unanalysed(count: 2)),
         .placeholder,
         .reportError(ReportCrash(route: "/report/quotes", message: "TypeError: x", frames: [])),
+        .autocodeEnded(AutoCodeEndedLine(outcome: .failed, failureKind: "out_of_credit",
+                                         frameworkID: "uxr", title: "UXR", processed: 48,
+                                         total: 112, key: "uxr|t|failed")),
     ]
 
     @Test("Every SubtitleVariant case is exercised by an exemplar")
@@ -94,8 +97,11 @@ import Testing
         let actionable = Set(Self.exemplars.filter { $0.glyphAction != .none }.map(\.tag))
         // `.reportError` joined on 21 Oct 2026 (decision #2): the route, the
         // error and the stack have no other home than the popover.
+        // `.autocodeEnded` joined with landing plan Phase 5 (D38): the failure's long sentence has
+        // no other home on the Mac once the web pop-up is designed out.
         #expect(actionable == [.failed, .failedDiagnostic,
-                               .completedPartial, .unreachable, .deltaOnly, .reportError],
+                               .completedPartial, .unreachable, .deltaOnly, .reportError,
+                               .autocodeEnded],
                 "actionable set drifted: \(actionable.sorted { "\($0)" < "\($1)" })")
     }
 
@@ -289,6 +295,7 @@ private extension SubtitleVariant {
         case .deltaOnly:        return .deltaOnly
         case .placeholder:      return .placeholder
         case .reportError:      return .reportError
+        case .autocodeEnded:    return .autocodeEnded
         }
     }
 }

@@ -663,6 +663,14 @@ class AutoCodeEndedJobSummary(AutoCodeJobSummary):
 
     #: ``LLMFailureKind`` value, or "" (a Stop, or a failure the classifier did not name).
     failure_kind: str = ""
+    #: When this run started: with the framework and status, the identity the Mac
+    #: remembers a line by once the researcher has seen it (a restart is a new run).
+    started_at: str = ""
+    #: A running catch-up's own counts (its quotes, answered so far), written per batch, so
+    #: the Mac's row reads "AutoCode · N of M" over the pass's own quotes (D40). The
+    #: cumulative pair above keeps every earlier pass.
+    catch_up_total: int = 0
+    catch_up_processed: int = 0
 
 
 class AutoCodeJobsWithEndedResponse(BaseModel):
@@ -683,8 +691,9 @@ def list_autocode_jobs(
     ``include_ended=true`` (the Mac's project row, Phase 5) also lists the first
     applies that ended unfinished, stopped or failed (``completed_at`` unset), and the
     ones that finished with some batches failed (a partial run, still carrying its
-    ``failure_kind``), each with its ``failure_kind``. Without it the answer is exactly
-    the running list the web's ActivityStore rehydrates its chips from.
+    ``failure_kind``), each with its ``failure_kind``, its ``started_at`` and a running
+    catch-up's own counts. Without it the answer is exactly the running list the web's
+    ActivityStore rehydrates its chips from.
     """
     from sqlalchemy import ColumnElement, and_, or_
 
@@ -729,12 +738,15 @@ def list_autocode_jobs(
         from fastapi.encoders import jsonable_encoder
         from fastapi.responses import JSONResponse
 
-        by_framework = {job.framework_id: job for job in rows}
         wide = AutoCodeJobsWithEndedResponse(jobs=[
             AutoCodeEndedJobSummary(
-                **f, failure_kind=by_framework[f["framework_id"]].failure_kind or "",
+                **f,
+                failure_kind=job.failure_kind or "",
+                started_at=job.started_at.isoformat() if job.started_at else "",
+                catch_up_total=job.catch_up_total or 0,
+                catch_up_processed=job.catch_up_processed or 0,
             )
-            for f in jobs
+            for job, f in zip(rows, jobs, strict=True)
         ])
         return JSONResponse(jsonable_encoder(wide))
     finally:

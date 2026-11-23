@@ -82,6 +82,15 @@ enum AgentActivity {
         json["busy"] as? Bool
     }
 
+    /// The same answer's `progress`: a count of quotes AutoCode batches have had answered since
+    /// the serve started, so a moving run can be told from a stuck one. Nil when absent (an older
+    /// serve) or not a whole number, which leaves the last reading standing.
+    static func parseBackgroundProgress(_ json: [String: Any]) -> Int? {
+        guard let n = json["progress"] as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID()
+        else { return nil }
+        return n.intValue
+    }
+
     static func samePath(_ a: String?, _ b: String) -> Bool {
         guard let a else { return false }
         return URL(fileURLWithPath: a).standardizedFileURL.path

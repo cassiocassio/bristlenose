@@ -42,9 +42,21 @@ enum ServeReaping {
     /// How often to look again at a study held for being busy.
     static let busyRecheck: Duration = .seconds(60)
 
-    /// The longest a window-less study is held for being busy, counted from the first hold. A job
-    /// that has wedged must not keep a server (about 140 MB, and a port) alive for ever.
+    /// The longest a window-less study is held for being busy **without its progress moving**,
+    /// counted from the later of the first hold and the last time the server's progress counter
+    /// moved (`stalledFor`). A run that keeps answering batches is held however long it takes
+    /// (landing plan D16, refined); a job that has wedged must not keep a server (about 140 MB,
+    /// and a port) alive for ever.
     static let busyCeiling: Duration = .seconds(30 * 60)
+
+    /// How long a held study has gone without progress: from the later of when the hold began and
+    /// when its server's progress counter last moved. A counter that moved before the hold began
+    /// buys nothing; one that keeps moving keeps this near zero.
+    static func stalledFor(heldSince: ContinuousClock.Instant,
+                           progressMovedAt: ContinuousClock.Instant?,
+                           now: ContinuousClock.Instant) -> Duration {
+        now - max(heldSince, progressMovedAt ?? heldSince)
+    }
 
     /// Default grace period. **A guess until measured** — pick it against how
     /// often testers close-and-reopen, not by taste. Long enough that ⌘W then
@@ -62,7 +74,8 @@ enum ServeReaping {
     ///   - memoryPressure: true under system memory pressure — grace is skipped,
     ///     because a warm cache is not worth a swap storm.
     ///   - busyFor: nil when the server reports no work in flight; otherwise how long it has been
-    ///     held for being busy (zero at the first hold). Past `busyCeiling` it is reaped anyway.
+    ///     held for being busy without progress (`stalledFor`; zero at the first hold). Past
+    ///     `busyCeiling` it is reaped anyway.
     static func verdict(project: UUID,
                         shownProjects: Set<UUID>,
                         unshownFor: Duration?,

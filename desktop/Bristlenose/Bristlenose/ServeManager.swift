@@ -206,9 +206,14 @@ final class ServeManager: ObservableObject {
     /// once (20 Sep 2026). `nil` clears the row.
     var onScreensProgress: ((ScreenReadingProgress?) -> Void)?
 
-    /// Where a first AutoCode apply's progress goes — the same route as `onScreensProgress`
+    /// Where a running AutoCode pass's progress goes — the same route as `onScreensProgress`
     /// and for the same reason (never through `instance`). `nil` clears the row.
     var onAutoCodeProgress: ((AutoCodeProgress?) -> Void)?
+
+    /// Where the ended first applies of a good answer go (`AutoCodeEndedLine.parseAll`), by the
+    /// same route. Called only with an answer: no running serve says nothing, so a reaped
+    /// study keeps its line (landing plan Phase 5).
+    var onAutoCodeEnded: (([AutoCodeEndedLine]) -> Void)?
 
     /// Where "does this project have a Screens lens?" goes — set by
     /// `ServeFleet` to a write into `ScreenReadingStore.available`, by the same
@@ -726,6 +731,7 @@ final class ServeManager: ObservableObject {
         authToken = nil
         serverVersion = nil
         instance.noteBackgroundBusy(false)   // a new serve has said nothing yet
+        instance.resetBackgroundProgress()
         // Nothing spawned yet; the spawn below records what it is given. An
         // external server was not spawned by us, so it stays false.
         instance.spawnedReadsScreens = false
@@ -1490,6 +1496,9 @@ final class ServeManager: ObservableObject {
         // A reading that lands after a restart must not describe the new serve.
         guard case .running(let current) = state, current == port else { return }
         instance.noteBackgroundBusy(busy)
+        if let progress = AgentActivity.parseBackgroundProgress(json) {
+            instance.noteBackgroundProgress(progress)
+        }
     }
 
     /// How `/api/background-work` is read. A property only so the poll has a test that does not
@@ -1610,15 +1619,18 @@ final class ServeManager: ObservableObject {
         onScreensAvailability?(ScreenReadingProgress.isAvailable(json))
     }
 
-    /// Read a first AutoCode apply's progress for the project row, beside `pollScreens` and with
-    /// its guards: no running serve clears the row; no visible window skips the request and
-    /// keeps what is there; a failed request or any status but 200 or 404 keeps it (a flicker is
-    /// worse than a count one tick old); a 404 (an older serve) clears it.
+    /// Read the project's AutoCode runs for its row — a running pass's count and the ended first
+    /// applies' lines — beside `pollScreens` and with its guards: no running serve clears the
+    /// count and says nothing about ended runs (a reaped study keeps its line); no visible window
+    /// skips the request and keeps what is there; a failed request or any status but 200 or 404
+    /// keeps it (a flicker is worse than a count one tick old); a 404 (an older serve) clears
+    /// both.
     @MainActor
     func pollAutoCode() async {
         guard case .running(let port) = state,
               let token = authToken,
-              let url = URL(string: "http://127.0.0.1:\(port)/api/projects/1/autocode/jobs")
+              let url = URL(string:
+                "http://127.0.0.1:\(port)/api/projects/1/autocode/jobs?include_ended=true")
         else {
             onAutoCodeProgress?(nil)
             return
@@ -1632,12 +1644,42 @@ final class ServeManager: ObservableObject {
         let status = (response as? HTTPURLResponse)?.statusCode
         if status == 404 {
             onAutoCodeProgress?(nil)
+            onAutoCodeEnded?([])
             return
         }
         guard status == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
         onAutoCodeProgress?(AutoCodeProgress.parse(json))
+        onAutoCodeEnded?(AutoCodeEndedLine.parseAll(json))
+    }
+
+    /// Stop a running AutoCode pass: the existing cancel route, the act the ring's hover × and the
+    /// row menu's Stop Analysis share (landing plan D38). Then read the row again at once, so
+    /// "Stopped" replaces the count without waiting for the next tick. A refusal (409: it had
+    /// already ended) changes nothing; the next read says how it ended.
+    @MainActor
+    func cancelAutoCode(frameworkID: String) async {
+        guard let request = Self.autoCodeCancelRequest(state: state, token: authToken,
+                                                       frameworkID: frameworkID) else { return }
+        _ = try? await URLSession.shared.data(for: request)
+        await pollAutoCode()
+    }
+
+    /// The cancel request, or nil with no running serve, no token, or no codebook. Pure, so the
+    /// route and the bearer are testable without a socket.
+    static func autoCodeCancelRequest(state: ServeState, token: String?,
+                                      frameworkID: String) -> URLRequest? {
+        guard case .running(let port) = state, let token, !frameworkID.isEmpty,
+              let escaped = frameworkID.addingPercentEncoding(
+                withAllowedCharacters: CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))),
+              let url = URL(string:
+                "http://127.0.0.1:\(port)/api/projects/1/autocode/\(escaped)/cancel")
+        else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 10)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

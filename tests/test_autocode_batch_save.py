@@ -573,6 +573,52 @@ def test_a_catch_up_retry_counts_its_batch_once(tmp_path, monkeypatch) -> None:
     engine.dispose()
 
 
+def test_a_catch_up_counts_its_own_pass_while_it_codes(tmp_path) -> None:
+    """The Mac's row follows a running catch-up as "AutoCode · N of M" over the pass's own
+    quotes (landing plan D40): the total is written as the pass starts, the processed count
+    grows with each saved batch, and the end still writes the final pair."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 50, applied=True)
+    seen: list[tuple[int, int]] = []
+
+    def analyze(system_prompt: str, user_prompt: str, response_model: Any, **kw: Any) -> Any:
+        db = session_cls()
+        try:
+            job = db.query(AutoCodeJob).one()
+            seen.append((job.catch_up_total, job.catch_up_processed))
+        finally:
+            db.close()
+        return _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.95)
+
+    with _patch_llm(AsyncMock(side_effect=analyze)):
+        asyncio.run(reapply_to_new_quotes(
+            session_cls, project_id, "garrett", _settings(), track_status=True,
+        ))
+    assert seen == [(50, 0), (50, 25)]  # batches of 25, one after another
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        assert (job.catch_up_total, job.catch_up_processed) == (50, 50)
+    finally:
+        db.close()
+    engine.dispose()
+
+
+def test_a_run_s_re_apply_leaves_the_catch_up_counts_alone(tmp_path) -> None:
+    """Only an on-enable catch-up (``track_status``) owns the pass's own counts: a finished
+    run's re-apply has no row line and must not overwrite the last catch-up's pair."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 25, applied=True)
+    with _patch_llm(AsyncMock(side_effect=lambda system_prompt, user_prompt, response_model, **kw:
+                              _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.95))):
+        asyncio.run(reapply_to_new_quotes(session_cls, project_id, "garrett", _settings()))
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        assert (job.catch_up_total, job.catch_up_processed) == (0, 0)
+    finally:
+        db.close()
+    engine.dispose()
+
+
 def test_a_catch_up_batch_saved_only_at_the_end_lands_whole(tmp_path, monkeypatch) -> None:
     """Every try of its own save fails; the end of the pass saves it."""
     session_cls, engine, project_id, _ = _file_project(tmp_path, 25, applied=True)

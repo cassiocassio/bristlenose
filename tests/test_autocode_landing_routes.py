@@ -453,6 +453,23 @@ def test_the_jobs_list_includes_ended_first_applies_when_asked() -> None:
     }
 
 
+def test_the_ended_list_carries_what_the_mac_row_needs() -> None:
+    """``started_at`` is the identity the Mac remembers a seen line by; a running catch-up's
+    own counts are its "AutoCode · N of M" (D40). Only the wide answer carries them."""
+    rows = [*_the_jobs(), {
+        "framework_id": "nielsen2", "status": "running", "completed_at": _DONE,
+        "total_quotes": 40, "processed_quotes": 40, "catch_up_total": 12,
+        "catch_up_processed": 5, "started_at": datetime(2026, 11, 8),
+    }]
+    client = _jobs_client(rows)
+    jobs = {j["framework_id"]: j
+            for j in client.get(f"{BASE}/autocode/jobs?include_ended=true").json()["jobs"]}
+    assert jobs["norman"]["started_at"].startswith("2026-11-03")
+    assert (jobs["nielsen2"]["catch_up_total"], jobs["nielsen2"]["catch_up_processed"]) == (12, 5)
+    narrow = client.get(f"{BASE}/autocode/jobs").json()["jobs"]
+    assert all("started_at" not in j and "catch_up_total" not in j for j in narrow)
+
+
 # ---------------------------------------------------------------------------
 # The busy route's progress (review 11)
 # ---------------------------------------------------------------------------

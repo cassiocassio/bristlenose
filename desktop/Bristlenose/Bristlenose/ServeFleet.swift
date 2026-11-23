@@ -125,6 +125,16 @@ final class ServeFleet: ObservableObject {
          makeManager: @escaping @MainActor () -> ServeManager = { ServeManager() }) {
         self.screenReading = screenReading
         self.makeManager = makeManager
+        screenReading.onStopAutoCode = { [weak self] project, framework in
+            self?.stopAutoCode(project: project, frameworkID: framework)
+        }
+    }
+
+    /// Stop `project`'s running AutoCode pass on `frameworkID` (the row ring's hover × and its
+    /// menu twin). A project with no running server has nothing to stop.
+    func stopAutoCode(project: UUID, frameworkID: String) {
+        guard let manager = managers[project] else { return }
+        Task { @MainActor in await manager.cancelAutoCode(frameworkID: frameworkID) }
     }
 
     /// The manager for `project`, creating one on first use.
@@ -145,6 +155,9 @@ final class ServeFleet: ObservableObject {
         }
         created.onAutoCodeProgress = { [weak self] progress in
             self?.screenReading.setAutoCode(progress, for: project)
+        }
+        created.onAutoCodeEnded = { [weak self] listed in
+            self?.screenReading.noteAutoCodeEnded(listed, for: project)
         }
         created.onScreensAvailability = { [weak self] isAvailable in
             self?.screenReading.setAvailable(isAvailable, for: project)
@@ -186,6 +199,9 @@ final class ServeFleet: ObservableObject {
         screenReading.set(nil, for: project)
         screenReading.setAutoCode(nil, for: project)
         screenReading.setAvailable(false, for: project)
+        // An ended AutoCode line outlives a reap (a failure seen before it must still be on the
+        // row after it, landing plan Phase 5); a study leaving the sidebar takes it along.
+        if forgettingAgentActivity { screenReading.forgetAutoCode(for: project) }
         readableProjects.remove(project)
         if frontedProject == project { frontedProject = nil }
         // Through `setExposed`, not a bare assignment: the project is being
@@ -256,7 +272,20 @@ final class ServeFleet: ObservableObject {
     /// When each running project last had no window. `ServeReaping` turns this
     /// plus the roster into a verdict; nothing here is a refcount.
     private var unshownSince: [UUID: ContinuousClock.Instant] = [:]
-    /// When each held-for-being-busy study was first held (`sweep`).
+    /// The projects a window showed at the last sweep, so the next can tell which were just opened.
+    private var lastShown: Set<UUID> = []
+
+    /// A study a window has just started showing has been opened: its ended AutoCode lines are
+    /// seen, and clear (landing plan Phase 5). Every roster change sweeps, so this sees every open
+    /// — a window that opens on a study, and a window switched to one. A study already on screen
+    /// when its run fails keeps the line until it is next opened or its codebook started again.
+    private func acknowledgeNewlyShown(_ shown: Set<UUID>) {
+        for id in shown.subtracting(lastShown) { screenReading.acknowledgeAutoCode(for: id) }
+        lastShown = shown
+    }
+
+    /// When each held-for-being-busy study was first held (`sweep`); its ceiling runs from the
+    /// later of this and its server's last progress.
     private var busySince: [UUID: ContinuousClock.Instant] = [:]
     private var reapTask: Task<Void, Never>?
 
@@ -278,6 +307,7 @@ final class ServeFleet: ObservableObject {
         // claim the whole change exists to make true. `deferred` so it runs
         // after the reaping decisions below, on every exit.
         defer { syncHandshake() }
+        acknowledgeNewlyShown(shownProjects)
         let now = ContinuousClock.now
         for id in runningProjects where !shownProjects.contains(id) {
             if unshownSince[id] == nil { unshownSince[id] = now }
@@ -288,10 +318,15 @@ final class ServeFleet: ObservableObject {
             (id, unshownSince[id].map { now - $0 })
         })
         // A study whose server reported paid or unrecoverable work on its last poll is held rather
-        // than reaped, for at most `busyCeiling` from the first hold (`ServeReaping`).
+        // than reaped, while its progress counter moves, and for at most `busyCeiling` once it
+        // stops (`ServeReaping.stalledFor`; landing plan D16, refined).
         var busyFor: [UUID: Duration] = [:]
         for id in runningProjects where managers[id]?.instance.backgroundBusy == true {
-            busyFor[id] = busySince[id].map { now - $0 } ?? .zero
+            busyFor[id] = busySince[id].map {
+                ServeReaping.stalledFor(heldSince: $0,
+                                        progressMovedAt: managers[id]?.instance.backgroundProgressMovedAt,
+                                        now: now)
+            } ?? .zero
         }
         let verdicts = ServeReaping.sweep(running: running,
                                           shownProjects: shownProjects,

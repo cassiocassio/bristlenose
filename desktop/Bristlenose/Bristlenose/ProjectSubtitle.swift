@@ -122,14 +122,20 @@ enum SubtitleVariant: Equatable {
     ///
     /// `done` counts recordings read; the warm-up reads "0 of M".
     case readingScreens(done: Int, total: Int)
-    /// The serve is applying a codebook to THIS project's quotes for the first time: the house
-    /// default after a run that shows screens, or an Apply the researcher pressed (the
-    /// project's row says what the project is doing; the toast is the act they started).
-    /// Renders "AutoCode · N of M" — the screens line's shape, the product name for the noun —
-    /// shimmering, **no ring** (nothing on the row stops it), no glyph. `done` counts quotes
-    /// answered, written per batch (25 quotes), so a small study reads 0, then most, then gone.
-    /// A catch-up pass is not this: it writes its counts once, at the end, so it has no row line.
+    /// The serve is applying a codebook to THIS project's quotes: a first apply (the house
+    /// default after a run that shows screens, or an Apply the researcher pressed) or a running
+    /// catch-up over the quotes it owes (landing plan D40; its own pass's count, not the
+    /// codebook's cumulative one). Renders "AutoCode · N of M" — the screens line's shape, the
+    /// product name for the noun — shimmering, no glyph, and the ring whose hover × stops it
+    /// (D38; the row menu's Stop Analysis is the keyboard route). `done` counts quotes answered,
+    /// written per batch.
     case codingQuotes(done: Int, total: Int)
+    /// A first AutoCode apply ended without finishing cleanly, in the pipeline run's words
+    /// (landing plan D13, D23): "Stopped" (no glyph), a failure's own label ("Out of credit",
+    /// "Provider key issue", … with its glyph), or "Partial run" (warning glyph). The glyph opens
+    /// the AutoCode popover with the long sentence. Outlives the study's server; clears when the
+    /// researcher opens the study or starts the codebook again (`AutoCodeLineMemory`).
+    case autocodeEnded(AutoCodeEndedLine)
     /// A copy into THIS project is being cancelled (rollback in flight). Renders
     /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
     /// row's hover-cancel, mirroring what the removed toolbar pill showed.
@@ -188,6 +194,9 @@ enum SubtitleGlyphAction: Equatable {
     case diagnostics
     /// Opens `ProjectFilesPopover` — which files are new, which have vanished.
     case files
+    /// Opens the AutoCode variant of `ProjectDiagnosticPopover`: the failure's long sentence,
+    /// not the pipeline's per-stage breakdown (landing plan D38).
+    case autocodeFailure
     /// No door. Includes states that carry a glyph purely as a marker.
     case none
 }
@@ -236,6 +245,10 @@ extension SubtitleVariant {
             // Not emitted under Schema E, but kept honest: a `.ready` carrying a
             // delta is the same disagreement with a date in front of it.
             return delta == nil ? .none : .files
+        case .autocodeEnded(let line):
+            // The sentence saying which failure has no other home on the Mac once the web
+            // pop-up is designed out (D38). A Stop has no glyph and so no door.
+            return line.glyphKind == nil ? .none : .autocodeFailure
         case .stopping, .running, .queued, .stopped, .partial,
              .addingInterviews, .exportingReport, .preparingSignals, .runUsage, .copying,
              .importingBatch, .readingScreens, .codingQuotes, .copyCancelling, .waitingForWhisper,
@@ -299,6 +312,10 @@ extension SubtitleVariant {
             // "Analysed files missing from disk → warning — beyond neutral,
             // files gone." The report cites recordings that aren't there.
             return .warning
+        case .autocodeEnded(let line):
+            // D23: a Stop says nothing more (they stopped it); a failure and a partial run are
+            // news, by the web chip's own kinds (`AutoCodeEndedLine.glyphKind`).
+            return line.glyphKind
         case .deltaOnly(.unanalysed), .ready(_, .some(.unanalysed)):
             // Blue ⓘ. Nothing went wrong — there is simply more material than
             // the report has read, and the researcher put it there. See
@@ -386,7 +403,9 @@ enum ProjectSubtitle {
     /// `cantFind (availability) › failed › running › unreachable ›
     /// completedPartial › reportError › queued / stopped / partial ›
     /// (idle: adding › exporting › batch › copying › forked › reportError ›
-    /// preparing Signals › screens › missing › unanalysed › silence)`. The report crash (21 Oct 2026)
+    /// AutoCode failed or partial › run usage › AutoCode count › preparing Signals ›
+    /// AutoCode stopped › screens › missing › unanalysed › silence)`, where the AutoCode
+    /// count, its Stop and screens yield to a delta with a glyph (landing plan Phase 5). The report crash (21 Oct 2026)
     /// yields to the verb-led and cause-shaped states and to the idle
     /// activities and the error-kind delta, and takes the line from the rest
     /// — `ReportCrash.outranks` plus the placement in `resolveIdle`. Preparing
@@ -431,6 +450,7 @@ enum ProjectSubtitle {
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
         autocode: (done: Int, total: Int)? = nil,
+        autocodeEnded: AutoCodeEndedLine? = nil,
         reportCrash: ReportCrash? = nil,
         startupRefusal: StudyStartupRefusal? = nil,
         serveFailedToStart: Bool = false,
@@ -508,6 +528,7 @@ enum ProjectSubtitle {
                 importBatch: importBatch,
                 screens: screens,
                 autocode: autocode,
+                autocodeEnded: autocodeEnded,
                 reportCrash: ReportCrash.outranks(pipelineState) ? reportCrash : nil,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
@@ -538,6 +559,7 @@ enum ProjectSubtitle {
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)?,
         autocode: (done: Int, total: Int)?,
+        autocodeEnded: AutoCodeEndedLine?,
         reportCrash: ReportCrash?,
         lastRunAt: Date?,
         missingCount: Int,
@@ -587,6 +609,18 @@ enum ProjectSubtitle {
         if let reportCrash {
             return .reportError(reportCrash)
         }
+        // An AutoCode run that failed or finished partly (D23). **Lead to confirm** (landing
+        // plan Phase 5): it ranks only in this idle tier, so every pipeline state above it (a run
+        // in flight, queued, stopped, failed, partial) keeps the line, and the line comes back
+        // when that clears. Here it takes the line from everything news-free and from the
+        // warning and info deltas: an error is graver than missing files, and a partial run
+        // is news the researcher has not seen (it clears when they open the study, and the delta
+        // returns). It yields to the acts they started, an error-kind delta and the report
+        // crash, as the AutoCode count does. Above the count too: a failure of one codebook
+        // outranks another's progress.
+        if let autocodeEnded, autocodeEnded.glyphKind != nil {
+            return .autocodeEnded(autocodeEnded)
+        }
         // What a successful run used, for its few seconds (owner, 18 Nov
         // 2026). It takes only a moment that carries no news of its own: any
         // delta (a warning, an info, an error) keeps its line, as a failure or
@@ -620,6 +654,12 @@ enum ProjectSubtitle {
         // being short, it outranks the warning and info deltas for its few
         // seconds, which come back when it ends.
         if preparingSignals { return .preparingSignals }
+        // A Stop the researcher made (D23: "Stopped", no glyph). Not news, so it ranks as the
+        // quiet activities do: under the AutoCode count and Signals, over the screen read, and
+        // yielding to any delta with a glyph. **Lead to confirm.**
+        if let autocodeEnded, autocodeEnded.glyphKind == nil, !deltaNeedsAttention {
+            return .autocodeEnded(autocodeEnded)
+        }
         // Screen reading is the quietest activity: a background job the
         // researcher did not start by a gesture and cannot stop, so every act
         // they did start (an add, a batch, a copy) keeps the line over it, and

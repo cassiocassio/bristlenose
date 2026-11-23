@@ -28,10 +28,15 @@ import Testing
         #expect(AutoCodeProgress.parse(body([job(status: "pending", processed: 0)]))?.done == 0)
     }
 
-    /// A catch-up writes its counts once, at the end, so a line for it would sit at "101 of 101"
-    /// for the whole pass. Only a job with no `completed_at` is a first apply.
-    @Test func aCatchUpPassHasNoRowLine() {
+    /// A catch-up's cumulative pair holds every earlier pass ("101 of 101" for the whole pass), so
+    /// it is counted by its own pass's pair (D40); with none (an older serve), it has no line.
+    @Test func aCatchUpPassCountsItsOwnPassOrNothing() {
         #expect(AutoCodeProgress.parse(body([job(completedAt: "2026-10-20T10:00:00")])) == nil)
+        var catchUp = job(completedAt: "2026-10-20T10:00:00", processed: 101, total: 101)
+        catchUp["catch_up_processed"] = 5
+        catchUp["catch_up_total"] = 12
+        #expect(AutoCodeProgress.parse(body([catchUp]))
+            == AutoCodeProgress(done: 5, total: 12, frameworkID: "uxr"))
     }
 
     @Test func nothingLeftToDoOrNothingToDoShowsNothing() {

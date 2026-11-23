@@ -86,39 +86,205 @@ struct ScreenReadingProgress: Equatable {
     }
 }
 
-/// How far a first AutoCode apply has got through a project's quotes: the house default after a
-/// run that shows screens, or an Apply the researcher pressed. Shown on the row as
-/// "AutoCode · N of M" (`SubtitleVariant.codingQuotes`), shaped like the screens line.
+/// How far an AutoCode pass has got through a project's quotes: a first apply (the house default
+/// after a run that shows screens, or an Apply the researcher pressed), or a running catch-up
+/// (re-enabling a codebook codes the quotes it still owes, landing plan D40). Shown on the row as
+/// "AutoCode · N of M" (`SubtitleVariant.codingQuotes`), shaped like the screens line, with a ring
+/// whose hover × stops it (D38).
 ///
-/// Read from `GET /api/projects/1/autocode/jobs`. **Only a first apply**: a job with a
-/// `completed_at` is a catch-up pass, whose counts are written once, at the end, so a line for it
-/// would sit at "101 of 101" for the whole pass. A job whose count is not below its total is
-/// finishing, so it shows nothing (the Signals build that follows takes over).
+/// Read from `GET /api/projects/1/autocode/jobs?include_ended=true`. A first apply counts its
+/// `processed_quotes` of `total_quotes`, written per batch. A catch-up (a job with a
+/// `completed_at`) counts **its own pass**, `catch_up_processed` of `catch_up_total`: the
+/// cumulative pair holds every earlier pass, so "101 of 101" would sit there for the whole pass.
+/// A job whose count is not below its total is finishing, so it shows nothing (the Signals build
+/// that follows takes over).
 struct AutoCodeProgress: Equatable {
     /// Quotes answered so far, and in all.
     let done: Int
     let total: Int
+    /// The codebook being coded: what the ring's Stop cancels.
+    var frameworkID: String = ""
 
-    /// `{"jobs": [{"status", "completed_at", "processed_quotes", "total_quotes", …}]}`; the first
-    /// job that is pending or running, never applied, and has something left to do. Pure, so the
-    /// rule for when the line appears is testable without a server.
+    /// `{"jobs": [{"framework_id", "status", "completed_at", "processed_quotes", "total_quotes",
+    /// "catch_up_processed", "catch_up_total", …}]}`; the first job that is pending or running and
+    /// has something left to do. Pure, so the rule for when the line appears is testable without
+    /// a server.
     static func parse(_ json: [String: Any]) -> AutoCodeProgress? {
         guard let jobs = json["jobs"] as? [[String: Any]] else { return nil }
         for job in jobs {
-            guard let status = job["status"] as? String, status == "pending" || status == "running",
-                  job["completed_at"] as? String == nil,
-                  let done = (job["processed_quotes"] as? NSNumber)?.intValue,
-                  let total = (job["total_quotes"] as? NSNumber)?.intValue,
+            guard let status = job["status"] as? String, status == "pending" || status == "running"
+            else { continue }
+            let catchUp = job["completed_at"] as? String != nil
+            guard let done = (job[catchUp ? "catch_up_processed" : "processed_quotes"] as? NSNumber)?.intValue,
+                  let total = (job[catchUp ? "catch_up_total" : "total_quotes"] as? NSNumber)?.intValue,
                   total > 0, done >= 0, done < total
             else { continue }
-            return AutoCodeProgress(done: done, total: total)
+            return AutoCodeProgress(done: done, total: total,
+                                    frameworkID: job["framework_id"] as? String ?? "")
         }
         return nil
     }
 }
 
+/// A first AutoCode apply that ended without finishing cleanly: stopped, failed, or finished with
+/// some batches failed. The row says so in the pipeline run's words (landing plan D13, D23) until
+/// the researcher opens the study or starts the codebook again.
+///
+/// Read from the same `…/autocode/jobs?include_ended=true` answer as `AutoCodeProgress`. Codable
+/// because it outlives the server: a study's server is reaped a little after its last window
+/// closes, and a failure seen before the reap must still be on the row after it
+/// (`AutoCodeLineMemory`, persisted by `ScreenReadingStore`).
+struct AutoCodeEndedLine: Codable, Equatable {
+    enum Outcome: String, Codable {
+        /// The researcher's Stop: "Stopped", no glyph (D23).
+        case stopped
+        /// The run failed partway: the failure's own label, with its glyph (D23).
+        case failed
+        /// The run finished with some batches failed: "Partial run", warning glyph (D23).
+        case partial
+    }
+
+    let outcome: Outcome
+    /// `LLMFailureKind` raw value (`bristlenose/llm/failure_classifier.py`), or "" for a Stop or
+    /// a failure the classifier did not name.
+    let failureKind: String
+    let frameworkID: String
+    /// The codebook's title, for the popover. Data, not chrome.
+    let title: String
+    /// Quotes answered and in all, for the partial run's sentence.
+    let processed: Int
+    let total: Int
+    /// Which run this is: the codebook, when the run started, and how it ended. A restart is a new
+    /// run with a new key, so a line the researcher has seen is never mistaken for a new one.
+    let key: String
+
+    /// Every ended first apply in the answer, in its order (by start). A running job, a clean
+    /// finish, and a catch-up (a job with `completed_at` that did not fail as a first apply) are
+    /// not ended lines. The route lists only these shapes, but the rule does not rely on it.
+    static func parseAll(_ json: [String: Any]) -> [AutoCodeEndedLine] {
+        guard let jobs = json["jobs"] as? [[String: Any]] else { return [] }
+        return jobs.compactMap { job in
+            guard let status = job["status"] as? String,
+                  let framework = job["framework_id"] as? String else { return nil }
+            let applied = job["completed_at"] as? String != nil
+            let failureKind = job["failure_kind"] as? String ?? ""
+            let outcome: Outcome
+            switch status {
+            case "cancelled" where !applied: outcome = .stopped
+            case "failed" where !applied: outcome = .failed
+            case "completed" where !failureKind.isEmpty: outcome = .partial
+            default: return nil
+            }
+            let started = job["started_at"] as? String ?? ""
+            return AutoCodeEndedLine(
+                outcome: outcome, failureKind: failureKind, frameworkID: framework,
+                title: job["title"] as? String ?? framework,
+                processed: (job["processed_quotes"] as? NSNumber)?.intValue ?? 0,
+                total: (job["total_quotes"] as? NSNumber)?.intValue ?? 0,
+                key: "\(framework)|\(started)|\(status)")
+        }
+    }
+
+    /// The failures the web chip calls warnings, because waiting fixes them
+    /// (`frontend/src/utils/autocodeFailure.ts`). Every other failure is an error: out of credit
+    /// and a rejected key above all (D23).
+    private static let waitingFixes: Set<String> = ["rate_limited", "server_error", "network"]
+
+    /// The glyph the row draws: none for a Stop (the researcher knows), warning for a partial run
+    /// and a failure that waiting fixes, error for the rest.
+    var glyphKind: MessageKind? {
+        switch outcome {
+        case .stopped: return nil
+        case .partial: return .warning
+        case .failed: return Self.waitingFixes.contains(failureKind) ? .warning : .error
+        }
+    }
+
+    /// The pipeline's category for a failure kind, so the row says it in the run's words (D13):
+    /// "Out of credit", "Provider key issue", … nil for a failure with no category, which reads
+    /// "Run failed" as an unnamed run failure does.
+    var pipelineCategory: PipelineFailureCategory? {
+        switch failureKind {
+        case "out_of_credit": return .outOfCredit
+        case "invalid_key": return .auth
+        case "rate_limited": return .quota
+        case "server_error": return .apiServer
+        case "network": return .network
+        case "model_unavailable": return .modelUnavailable
+        case "bad_request": return .apiRequest
+        default: return nil
+        }
+    }
+
+    /// The long sentence the web chip says for this failure (`codebook.autocodeFailure.*`, the
+    /// common namespace both surfaces read), for the popover. Keys spelled whole: the orphan gate
+    /// reads literals.
+    var failureSentenceKey: String {
+        switch failureKind {
+        case "out_of_credit": return "common.codebook.autocodeFailure.outOfCredit"
+        case "rate_limited": return "common.codebook.autocodeFailure.rateLimited"
+        case "invalid_key": return "common.codebook.autocodeFailure.invalidKey"
+        case "server_error": return "common.codebook.autocodeFailure.serverError"
+        case "bad_request": return "common.codebook.autocodeFailure.badRequest"
+        case "model_unavailable": return "common.codebook.autocodeFailure.modelUnavailable"
+        case "network": return "common.codebook.autocodeFailure.network"
+        default: return "common.codebook.autocodeFailure.unknown"
+        }
+    }
+
+    /// Which of several ended lines the row shows: a failure over a partial run over a Stop; the
+    /// earliest-started of equals.
+    static func pick(_ lines: [AutoCodeEndedLine]) -> AutoCodeEndedLine? {
+        func rank(_ o: Outcome) -> Int {
+            switch o {
+            case .failed: return 0
+            case .partial: return 1
+            case .stopped: return 2
+            }
+        }
+        return lines.enumerated().min { a, b in
+            (rank(a.element.outcome), a.offset) < (rank(b.element.outcome), b.offset)
+        }?.element
+    }
+}
+
+/// What the row remembers about a project's ended AutoCode runs, apart from its server, so a line
+/// survives the server being reaped and the app quitting, and clears when the researcher opens
+/// the study or starts the codebook again (landing plan Phase 5).
+///
+/// - `candidates`: the ended runs the server listed on its last good answer that the researcher
+///   has not yet seen. Replaced wholesale by every good answer, so a codebook started again (no
+///   longer ended) drops out at once.
+/// - `acknowledged`: the keys of runs the researcher has seen by opening the study. Kept only
+///   while the server still lists them, so the set cannot grow without bound.
+///
+/// Pure value type: the rules are table-tested without a store, a server or a window.
+struct AutoCodeLineMemory: Codable, Equatable {
+    var candidates: [AutoCodeEndedLine] = []
+    var acknowledged: Set<String> = []
+
+    /// The line the row shows, if any.
+    var line: AutoCodeEndedLine? { AutoCodeEndedLine.pick(candidates) }
+
+    var isEmpty: Bool { candidates.isEmpty && acknowledged.isEmpty }
+
+    /// A good answer from the server: `listed` is every ended run it named.
+    mutating func observe(_ listed: [AutoCodeEndedLine]) {
+        let keys = Set(listed.map(\.key))
+        acknowledged.formIntersection(keys)
+        candidates = listed.filter { !acknowledged.contains($0.key) }
+    }
+
+    /// The researcher opened the study: everything listed so far is seen.
+    mutating func acknowledge() {
+        acknowledged.formUnion(candidates.map(\.key))
+        candidates = []
+    }
+}
+
 /// Per-project serve background progress, for the sidebar: the screen-reading job's
-/// (`progress`, `available`) and a first AutoCode apply's (`autocode`).
+/// (`progress`, `available`), a running AutoCode pass's (`autocode`), and an ended first apply's
+/// line (`autocodeEnded`, which outlives the server).
 ///
 /// **Its own `ObservableObject`, never a field on `ServeInstance`.** A value
 /// published through `ServeInstance` reaches `ServeManager` and then
@@ -128,12 +294,42 @@ struct AutoCodeProgress: Equatable {
 /// reason), and only on change: an unchanged tick publishes nothing.
 @MainActor
 final class ScreenReadingStore: ObservableObject {
-    static let shared = ScreenReadingStore()
+    static let shared = ScreenReadingStore(defaults: .standard)
 
     @Published private(set) var progress: [UUID: ScreenReadingProgress] = [:]
 
-    /// A first AutoCode apply in each project, when one is running (`AutoCodeProgress`).
+    /// An AutoCode pass in each project, when one is running (`AutoCodeProgress`).
     @Published private(set) var autocode: [UUID: AutoCodeProgress] = [:]
+
+    /// The ended AutoCode line each project's row shows (`AutoCodeEndedLine`), derived from
+    /// `memory`. Survives the project's server: only a good answer, an open or a removal moves it.
+    @Published private(set) var autocodeEnded: [UUID: AutoCodeEndedLine] = [:]
+
+    /// What each project remembers about its ended runs. Persisted under `Self.endedLinesKey`
+    /// when the store has `defaults`, so a failure line outlives a reap and a quit.
+    private var memory: [UUID: AutoCodeLineMemory] = [:]
+
+    /// Where `memory` is persisted: `UserDefaults` under this key, one JSON object keyed by the
+    /// project's id. Nil for a store with no `defaults` (every test's, unless it passes a suite).
+    private let defaults: UserDefaults?
+    static let endedLinesKey = "autocodeEndedLines"
+
+    /// Stops a project's running AutoCode pass (the ring's hover ×, and the row menu's item).
+    /// Set by `ServeFleet`, which owns the servers; the sidebar reads the store, so the act rides
+    /// with the state rather than another closure threaded through the outline's host.
+    var onStopAutoCode: ((UUID, String) -> Void)?
+
+    init(defaults: UserDefaults? = nil) {
+        self.defaults = defaults
+        guard let data = defaults?.data(forKey: Self.endedLinesKey),
+              let stored = try? JSONDecoder().decode([String: AutoCodeLineMemory].self, from: data)
+        else { return }
+        for (key, value) in stored {
+            guard let id = UUID(uuidString: key) else { continue }
+            memory[id] = value
+            if let line = value.line { autocodeEnded[id] = line }
+        }
+    }
 
     /// The projects that have a Screens lens to offer
     /// (`ScreenReadingProgress.isAvailable`). Windows mirror their own
@@ -148,11 +344,46 @@ final class ScreenReadingStore: ObservableObject {
         progress[project] = value
     }
 
-    /// Write a first AutoCode apply's `value` for `project`; publishes only on change, and `nil`
+    /// Write a running AutoCode pass's `value` for `project`; publishes only on change, and `nil`
     /// clears the row.
     func setAutoCode(_ value: AutoCodeProgress?, for project: UUID) {
         guard autocode[project] != value else { return }
         autocode[project] = value
+    }
+
+    /// The server's good answer for `project`: every ended AutoCode run it lists. Not called when
+    /// there is no running server, so a reap leaves the line where it was.
+    func noteAutoCodeEnded(_ listed: [AutoCodeEndedLine], for project: UUID) {
+        var m = memory[project] ?? AutoCodeLineMemory()
+        m.observe(listed)
+        commit(m, for: project)
+    }
+
+    /// The researcher opened `project`: its ended lines are seen, and clear.
+    func acknowledgeAutoCode(for project: UUID) {
+        guard var m = memory[project] else { return }
+        m.acknowledge()
+        commit(m, for: project)
+    }
+
+    /// `project` left the sidebar: nothing of it is kept.
+    func forgetAutoCode(for project: UUID) {
+        guard memory[project] != nil else { return }
+        commit(AutoCodeLineMemory(), for: project)
+    }
+
+    /// Store `m`, publish the line only on change, and persist only on change.
+    private func commit(_ m: AutoCodeLineMemory, for project: UUID) {
+        let before = memory[project] ?? AutoCodeLineMemory()
+        memory[project] = m.isEmpty ? nil : m
+        if autocodeEnded[project] != m.line { autocodeEnded[project] = m.line }
+        guard before != m, let defaults else { return }
+        let stored = Dictionary(uniqueKeysWithValues: memory.map { ($0.key.uuidString, $0.value) })
+        if stored.isEmpty {
+            defaults.removeObject(forKey: Self.endedLinesKey)
+        } else if let data = try? JSONEncoder().encode(stored) {
+            defaults.set(data, forKey: Self.endedLinesKey)
+        }
     }
 
     /// Record whether `project` has a Screens lens — publishing only on change,

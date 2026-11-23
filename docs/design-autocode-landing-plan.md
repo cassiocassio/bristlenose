@@ -59,7 +59,32 @@ mockup (noted per phase).
 | D25 | Quotes go to the model in stored order, never shuffled (Phase 0c): mixing sessions changes the answers more than the model's own run-to-run noise. |
 | D26 | A re-cut moves only proposals whose zone changes against the stored lines: Apply with the lines unmoved changes nothing, whatever the live acceptance did (review finding 2). |
 | D27 | A first run stopped partway settles its cut at once: the exact cut over what was coded, and the top-up. Resuming continues with the same lines. |
-| D28 | The HTML export carries accepted tags only. Tentative tags are work in progress and stay out of a deliverable, as the overview does. **Under reconsideration (owner, 23 Nov, after Phase 1 built it):** a probable regression, since tentative tags feed the Signals maths and the solid-and-pale bars; tracked in 100days §2. Its three export changes revert on their own. |
+| D28 | ~~The HTML export carries accepted tags only.~~ **Reversed (owner, 23 Nov, after the regression audit):** the export carries tentative tags as it shipped (dashed tags, the pale bar segments, their confidence-weighted part in Signals), from finished runs only, never from a run still coding or stopped. |
+
+### Decisions after the regression audit (owner, 23 Nov 2026)
+
+Two read-only audits checked Phase 1 as built and Phases 2–7 as planned against shipped behaviour. Phase 1 had broken three things; the plan would have broken more. Rulings:
+
+| # | Decision |
+|---|---|
+| D29 | **No regressions to shipped behaviour.** A phase that changes what is shipped and tested needs a decision here naming it; anything else is a regression and is fixed before the phase lands. |
+| D30 | Undo of "remove tag" restores the tag and its proposal: a tag put back by Undo leaves no researcher exclusion behind (Phase 1 regression, fixed). |
+| D31 | Signals is rebuilt only when tags changed: when the last of several concurrent runs ends, after a stopped or failed first run that left accepted tags, and after a re-cut that moved something. Never after a catch-up pass, never after an Apply that moved nothing (Phase 1 regression, fixed). |
+| D32 | Until Phase 4's playback exists, proposals of a run still coding, stopped or failed are not shown anywhere (quote cards, tentative counts, Signals), exactly as shipped. Phase 4 turns them on for the live page only. |
+| D33 | `hide_parameters=True` stays on every database engine: no SQL error anywhere logs bound values (participant text). |
+| D34 | Phase 2: the server keeps refusing an ordinary accept or deny on an already-decided proposal ("reviewed elsewhere", 409, which both clients handle); the dialog's row override sends an explicit override. |
+| D35 | Phase 3: a stopped first run settles its cut (D27) but stays unfinished: no `completed_at`, and the house default's done marker is not written, so its remaining quotes are still coded. |
+| D36 | Phase 7: sentiments are reordered on screen only (tag sidebar, Codebook lens), by name; `sentiment.yaml`, colour slots and Signals' columns are untouched. |
+| D37 | Phase 2's dialog title loses its sparkle icon. |
+| D38 | Mac app only: the first-run AutoCode pop-up is designed out. The sidebar line is where progress lives, in every lens. Stop is the progress ring's hover × (the pattern copy and run already use, with its keyboard route); the long failure sentence is in the popover the line's glyph opens, an AutoCode variant, not the pipeline's Diagnostics; View Report is the tag sidebar overview's link (Phase 6), so Phase 5 lands with or after Phase 6. The pop-up's unseen work keeps running without it: telling the app about credit and key failures (`postLLMFailure`), and refreshing the lenses when coding ends. Every other pop-up stays in the app (catch-up passes, clip and screens exports, Copy Screens). The CLI web app keeps the AutoCode pop-up unchanged. |
+
+Mockups: `docs/mockups/autocode-review-dialog.html` (Phase 2, awaiting approval; the pin's label and whether "remaining" still reads right are owner wording), `docs/mockups/autocode-mac-popup.html` (D38 is its option B, with Stop on the ring rather than the menu drawn there).
+
+### Still open from the interface audit (defaults preserve shipped behaviour)
+
+- **Phase 4:** the pulse schedule (D8) also obeys the app's "Show analysis animation" setting and leaves the review dialog's tentative counter alone [default]; a researcher's own accept flash is never delayed or capped by playback [default]; the review dialog's histogram keeps today's behaviour, and grow-only scales apply to the sidebar overview only [default]; catch-up passes keep batches of 25 [default]; reserving the tag row's height applies only while a run lands [default]; live landing never fires `bn:tags-changed` per batch, and the store lets a researcher's own changes through at once, keeping `initFromQuotes`' rules; in export mode the store passes the embedded data straight through.
+- **Phase 6:** under search or Used, the summary line keeps today's live match count [default]; in the export, the line keeps D22's wording with no overview [default]; solo mode dims the line as today (it is not hidden); the search box still appears above 8 tags counted over all tags; add a test pinning the summary line before changing it.
+- **Phase 5:** where the new lines rank against Signals, run usage and deltas; a line must survive the server being reaped (today `pollAutoCode` clears it), and clears when the researcher starts the codebook again.
 
 Already shipped in this session: the count column and sentiment bar colours in the tag sidebar
 and Codebook lens (`ee2472c52`).
@@ -139,6 +164,7 @@ Tests: a batch's proposals and register entries commit together; a writer holdin
 - The dialog loads every proposal of the run: the histogram shows accepted, tentative and excluded; the zone lists show where each one sits now.
 - A re-cut moves only threshold decisions (D2) and only proposals whose zone changes against the stored lines (D26); researcher and unknown decisions carry a mark and stay put. No warning on removing tags (D3).
 - A re-cut deletes only tags whose source is AutoCode, never a tag the researcher added by hand that the proposal happened to match (review 1).
+- The title loses its sparkle icon: "AutoCode Review — <codebook>" (owner, 23 Nov 2026).
 - True `design-autocode-threshold-review.md`: §re-entry claims overrides that do not exist.
 
 Tests: reopening the dialog and pressing Apply with the lines unmoved changes nothing; a re-cut leaves a hand-added tag alone.

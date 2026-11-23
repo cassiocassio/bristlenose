@@ -850,6 +850,46 @@ DEFAULT_DENY_THRESHOLD = 0.30
 #: The review dialog's cutoffs sit on a 0.05 grid (``frontend/src/utils/confidenceStep.ts``).
 CONFIDENCE_STEPS_PER_UNIT = 20
 
+# The default cut at the end of a first apply: the hybrid (docs/design-autocode-landing-plan.md
+# D5). The most confident ``HYBRID_ACCEPT_PERCENT`` per cent of the run's proposals are
+# accepted, never below ``HYBRID_ACCEPT_FLOOR``; those below ``HYBRID_EXCLUDE_BELOW`` are
+# excluded; the band between stays pending for the review. Phase 0a measured every AutoCode run
+# in the trial studies (15 runs, 23 Nov 2026): a fixed 0.70 accepted about half of a typical
+# UXR run (the overwhelm); the top 30% alone accepted every proposal of a poorly fitting
+# codebook whose proposals all sat at 0.10; the hybrid took 31 to 35% of most fitting runs and
+# 0 to 3% of poorly fitting ones. Literal values, not the dialog's defaults above: those are
+# where a slider starts, these are a measured rule, and they may part.
+HYBRID_ACCEPT_PERCENT = 30
+HYBRID_ACCEPT_FLOOR = 0.70
+HYBRID_EXCLUDE_BELOW = 0.30
+
+
+def hybrid_cut(confidences: Iterable[float]) -> float:
+    """The exact accept line of the hybrid over a run's proposals (D5).
+
+    The confidence of the proposal ranked ``ceil(30% of n)`` (at least the first), so the
+    most confident 30% are at or above it, and a proposal tied with it goes in too (it is
+    accepted at ``>=``); never below ``HYBRID_ACCEPT_FLOOR``. A run with no proposals has
+    only the floor. The rank is the lab's (``pctLines`` in
+    ``experiments/autocode-landing/template.html``), in integer arithmetic.
+    """
+    ranked = sorted(confidences, reverse=True)
+    if not ranked:
+        return HYBRID_ACCEPT_FLOOR
+    k = max(1, -(-len(ranked) * HYBRID_ACCEPT_PERCENT // 100))
+    return max(ranked[k - 1], HYBRID_ACCEPT_FLOOR)
+
+
+def accept_line_for(cut: float) -> float:
+    """The accept line stored for an exact ``cut``: rounded UP to the review's 0.05 grid
+    (D41), so no pending proposal is left at or above the stored line (one below the cut
+    stays pending, and the line is at or above the cut). Rounded down, the dialog's
+    Apply with the lines unmoved would accept what the cut left. ``n / 20``, as
+    ``snap_cutoff`` returns a line; a confidence a hair over a grid value from float
+    arithmetic (0.55 * 20 is 11.000000000000002) is that value."""
+    steps = math.ceil(cut * CONFIDENCE_STEPS_PER_UNIT - 1e-9)
+    return min(steps, CONFIDENCE_STEPS_PER_UNIT) / CONFIDENCE_STEPS_PER_UNIT
+
 
 def snap_cutoff(value: float) -> float:
     """A review cutoff as exact as the label it was read from, or ``ValueError``.
@@ -879,6 +919,12 @@ def stored_lines(job: AutoCodeJob) -> tuple[float, float]:
     thresholds that were in place at the last AutoCode"). A line stored by a build
     whose slider drifted (0.7000000000000001) is the line its label says: both are
     compared at two decimals (N188).
+
+    Since Phase 3 of docs/design-autocode-landing-plan.md every first apply stores
+    the hybrid's lines when it ends or is stopped (``settle_first_apply_cut``): the
+    cut rounded up to the grid, and 0.30. So a catch-up after it excludes below 0.30,
+    which the house default's stored 0 used to prevent: intended (D5). A job the
+    house default applied before then keeps its 0.
     """
     upper = job.applied_upper_threshold
     if upper is None:
@@ -1435,7 +1481,10 @@ async def _reapply_to_new_quotes(
             for quote_id, tag_def_id, confidence, rationale in answered.proposals:
                 # The dialog's inequalities exactly (``zoneAt`` in frontend/src/utils/
                 # recut.ts, and the re-cut, accept-all and deny-all routes): ``>= upper``
-                # accepts, ``< lower`` denies.
+                # accepts, ``< lower`` denies. After a first apply's hybrid cut the lower
+                # line is 0.30, so a catch-up excludes below it unwatched: D5 intends it
+                # (the first apply's own end did the same), and the review's row override
+                # takes one back.
                 status: str
                 reviewed_at: datetime | None
                 decided_by: str | None

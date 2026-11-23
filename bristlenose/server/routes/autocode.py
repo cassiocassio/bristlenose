@@ -363,36 +363,64 @@ def _settle_first_apply(
     db_factory: Callable[[], Session], project_id: int, framework_id: str,
     after_apply: Callable[[], None] | None,
 ) -> str | None:
-    """What a first apply's end asks of Signals: the snapshot source, or None.
+    """Settle a first apply's end, then say what it asks of Signals: the snapshot source,
+    or None. Runs before the snapshot, so the snapshot sees the cut.
 
-    A completed apply runs ``after_apply`` (the house default's cut) and asks for a
-    rebuild. A stopped or failed one asks only if it has accepted tags (review 9):
-    nothing is accepted by a run itself before Phase 3, but a researcher can accept a
-    tentative tag while it codes. Never raises."""
-    db = db_factory()
+    A completed apply is cut by the hybrid (``settle_first_apply_cut``,
+    docs/design-autocode-landing-plan.md D5) and asks for a rebuild. ``after_apply``,
+    when given, IS that step (the house default's: the same cut, with its own retry and
+    its done marker); otherwise the step runs here. Before Phase 3 a researcher's first
+    apply left every proposal pending for the review, and the house default accepted
+    everything at 0.70 and excluded nothing (D5 changes both).
+
+    A stopped one (cancelled, not completed) settles its cut at once over what it coded
+    (D27), with no ``after_apply``: no ``completed_at`` and no house-default marker, so it
+    stays resumable and its remaining quotes are still coded (D35). A failed one is left
+    as shipped: no cut, its proposals pending for the retry, which cuts the whole run when
+    it completes (D27 and D35 name a stop, not a failure). Either asks for a rebuild
+    only if it has accepted tags (review 9, D31). Never raises."""
     try:
-        job = db.query(AutoCodeJob).filter_by(
-            project_id=project_id, framework_id=framework_id,
-        ).first()
-        if job is None:
-            return None
-        if job.status == "completed":
-            if after_apply is not None:
-                try:
+        db = db_factory()
+        try:
+            job = db.query(AutoCodeJob).filter_by(
+                project_id=project_id, framework_id=framework_id,
+            ).first()
+            if job is None:
+                return None
+            status, job_id = job.status, job.id
+        finally:
+            # Closed before the cut writes: a read transaction held open across it would
+            # not see the tags it makes (a file database's snapshot).
+            db.close()
+        if status == "completed":
+            try:
+                if after_apply is not None:
                     after_apply()
-                except Exception:
-                    logger.exception("After-apply step for AutoCode %s failed", framework_id)
+                else:
+                    settle_cut_retrying_once(db_factory, project_id, framework_id)
+            except Exception:
+                logger.exception("The end-of-run step for AutoCode %s failed", framework_id)
             return "codebook_apply"
-        if job.status in ("cancelled", "failed") and db.query(ProposedTag.id).filter(
-            ProposedTag.job_id == job.id, ProposedTag.status == "accepted",
-        ).first() is not None:
-            return "codebook_stopped" if job.status == "cancelled" else "codebook_failed"
+        if status == "cancelled":
+            try:
+                settle_cut_retrying_once(db_factory, project_id, framework_id, stopped=True)
+            except Exception:
+                logger.exception("Settling stopped AutoCode %s failed", framework_id)
+        if status not in ("cancelled", "failed"):
+            return None
+        db = db_factory()
+        try:
+            accepted = db.query(ProposedTag.id).filter(
+                ProposedTag.job_id == job_id, ProposedTag.status == "accepted",
+            ).first() is not None
+        finally:
+            db.close()
+        if accepted:
+            return "codebook_stopped" if status == "cancelled" else "codebook_failed"
         return None
     except Exception:
         logger.exception("Could not read how AutoCode %s ended", framework_id)
         return None
-    finally:
-        db.close()
 
 
 @router.post("/projects/{project_id}/autocode/{framework_id}")
@@ -415,9 +443,10 @@ async def start_autocode(
     """Start an AutoCode job for the given project and framework.
 
     One path for the route and for the house default (``autocode_house_default``).
-    ``after_apply``, when given, runs once the job's batches are done and it is
-    ``completed``, before the Signals snapshot: the house default uses it to apply the
-    default cutoff, since no researcher is there to open the review.
+    Every first apply ends with the hybrid cut before the Signals snapshot
+    (``_settle_first_apply``). ``after_apply``, when given, runs in its place once the job
+    has ``completed``: the house default's, which runs the same cut and then writes its
+    done marker.
 
     Guards:
     - 404 if project not found
@@ -1299,29 +1328,126 @@ def recut_proposals(
         db.close()
 
 
-def accept_at_default_cutoff(db_factory: Callable[[], Session], project_id: int,
-                             framework_id: str, cutoff: float) -> int:
-    """Apply a finished first job at ``cutoff`` as Accept all would: pending proposals at or
-    above it are accepted and the cutoff is stored for later re-applies (the catch-up reuses
-    it). The band below stays pending for the review; nothing is denied, since a denial
-    is the review's to make. Returns how many were accepted."""
+class CutOutcome(BaseModel):
+    """What a first apply's end step did: the lines it sorted by and what it moved."""
+
+    accept_at: float
+    exclude_below: float
+    accepted: int = 0
+    excluded: int = 0
+    #: The lines were the job's own, stored by an earlier stop (or a review), not computed.
+    from_stored: bool = False
+
+
+def settle_first_apply_cut(
+    db_factory: Callable[[], Session], project_id: int, framework_id: str,
+    *, stopped: bool = False,
+) -> CutOutcome | None:
+    """The end of a first apply: the hybrid cut (docs/design-autocode-landing-plan.md D5,
+    D27, D35, D41). One step for every first apply that completes, the house default's and a
+    researcher's, and for one stopped partway (``stopped``).
+
+    Over the run's proposals on quotes that count (accept-all's rule: a hidden quote's
+    proposal is not ranked and not touched, and stays pending for when it counts again), the
+    exact cut is ``hybrid_cut``: the most confident 30%, ties at the cut in, never below
+    0.70. Pending proposals at or above it are accepted (a tag made as AutoCode's, unless
+    the quote has it already), pending ones below 0.30 excluded, the rest left pending. The
+    lines are stored on the job for the review and the catch-ups: 0.30, and the cut
+    rounded UP to the 0.05 grid (``accept_line_for``, D41), so no pending proposal sits at
+    or above the stored line and the review's Apply with the lines unmoved changes nothing
+    (D26).
+
+    A job that already has lines (a stopped run settled them, or a review stored them) is
+    sorted by those, as a catch-up is (D27: a resumed run continues with the same lines),
+    and they are not recomputed. A stopped run that coded nothing stores none, so its
+    resumed run computes the cut over what it then codes.
+
+    Every change is a decision of the lines (``decided_by="threshold"``) and is made only on
+    a proposal still pending when it is written (a conditional update): a decision made
+    meanwhile, a researcher's or one from before decisions were recorded, is never touched
+    (D2). Never sets ``completed_at`` and never writes the house default's marker: the
+    caller's. One transaction, uncommitted until the end; raises on a database failure (the
+    callers retry once in a fresh session). None when the job is gone.
+    """
+    from bristlenose.server.autocode import (
+        HYBRID_EXCLUDE_BELOW,
+        accept_line_for,
+        hybrid_cut,
+        stored_lines,
+    )
+
     db = db_factory()
     try:
         job = db.query(AutoCodeJob).filter_by(
             project_id=project_id, framework_id=framework_id).first()
         if job is None:
-            return 0
-        job.applied_upper_threshold = cutoff
-        # No lower line either: unset, the later re-applies deny below the dialog's default, and
-        # nobody watched that denial. 0 leaves everything under the cutoff pending, for the review.
-        job.applied_lower_threshold = 0.0
-        query = db.query(ProposedTag).filter(
-            ProposedTag.job_id == job.id,
-            ProposedTag.status == "pending",
-            ProposedTag.confidence >= cutoff,
-        )
-        accepted = _accept_pending(db, project_id, query)
+            return None
+        counted = _counted_quote_ids(db, project_id)
+        proposals = [
+            p for p in db.query(ProposedTag).filter(ProposedTag.job_id == job.id).all()
+            if p.quote_id in counted
+        ]
+        if job.applied_upper_threshold is not None or job.applied_lower_threshold is not None:
+            accept_at, exclude_below = stored_lines(job)
+            outcome = CutOutcome(
+                accept_at=accept_at, exclude_below=exclude_below, from_stored=True,
+            )
+        else:
+            # Ranked over every proposal of the run, decided or not: the cut is a property
+            # of the run, and a decision made meanwhile does not move it.
+            accept_at = hybrid_cut(p.confidence for p in proposals)
+            exclude_below = HYBRID_EXCLUDE_BELOW
+            outcome = CutOutcome(accept_at=accept_at, exclude_below=exclude_below)
+            if proposals or not stopped:
+                job.applied_upper_threshold = accept_line_for(accept_at)
+                job.applied_lower_threshold = exclude_below
+
+        now = datetime.now(timezone.utc)
+        for proposal in proposals:
+            if proposal.confidence >= accept_at:
+                target = "accepted"
+            elif proposal.confidence < exclude_below:
+                target = "denied"
+            else:
+                continue
+            # Conditional on pending, at write time (D2): the ORM object's status is what
+            # was read, and a decision committed since must win.
+            changed = db.query(ProposedTag).filter(
+                ProposedTag.id == proposal.id, ProposedTag.status == "pending",
+            ).update(
+                {ProposedTag.status: target, ProposedTag.decided_by: "threshold",
+                 ProposedTag.reviewed_at: now},
+                synchronize_session=False,
+            )
+            if not changed:
+                continue
+            if target == "accepted":
+                _ensure_autocode_tag(db, proposal)
+                outcome.accepted += 1
+            else:
+                outcome.excluded += 1
         db.commit()
-        return accepted
+        return outcome
     finally:
         db.close()
+
+
+def settle_cut_retrying_once(
+    db_factory: Callable[[], Session], project_id: int, framework_id: str,
+    *, stopped: bool = False,
+) -> CutOutcome | None:
+    """``settle_first_apply_cut``, tried once more in a fresh session on failure: the step
+    reads before it writes, and SQLite refuses such a transaction at once when another
+    connection has written since its read (gotchas.md § AutoCode). The house default keeps
+    its own loop of the same shape, with its marker inside it."""
+    for attempt in (1, 2):
+        try:
+            return settle_first_apply_cut(
+                db_factory, project_id, framework_id, stopped=stopped,
+            )
+        except Exception:  # noqa: BLE001
+            if attempt == 2:
+                raise
+            logger.warning("AutoCode %s: the end-of-run cut failed, retrying", framework_id,
+                           exc_info=True)
+    return None  # pragma: no cover — the loop returns or raises

@@ -23,7 +23,7 @@ from bristlenose.server.app import _make_run_completed_handler, create_app
 from bristlenose.server.codebook_install import framework_linked
 from bristlenose.server.models import AutoCodeJob, ProposedTag, Quote, QuoteTag, TagDefinition
 from bristlenose.server.refusal import RefusalError, RefusalReason
-from bristlenose.server.routes.autocode import accept_at_default_cutoff
+from bristlenose.server.routes.autocode import settle_first_apply_cut
 from bristlenose.server.screen_text_job import ScreenTextJob
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -63,7 +63,7 @@ def _run(app: FastAPI, *, screens: bool = True, ready: bool = True,
         patch.object(hd, "_has_screens", lambda _a: screens),
         patch(READY, side_effect=None if ready else refuse),
         patch(START, start),
-        patch("bristlenose.server.routes.autocode.accept_at_default_cutoff", MagicMock()),
+        patch("bristlenose.server.routes.autocode.settle_first_apply_cut", MagicMock()),
     ):
         return asyncio.run(hd.maybe_apply(app)), start
 
@@ -219,7 +219,11 @@ def test_a_failed_start_is_logged_not_raised_and_stays_retryable(app: FastAPI) -
     assert _linked(app)
 
 
-def test_the_default_cutoff_accepts_at_and_above_and_stores_it(app: FastAPI) -> None:
+def test_the_house_defaults_cut_is_the_hybrid_and_excludes_below_the_lower_line(
+        app: FastAPI) -> None:
+    """D5 (landing plan Phase 3): the house default no longer accepts everything at 0.70 and
+    excludes nothing. Four proposals: the top 30% is two (0.9, 0.7), the cut 0.70; 0.5 stays
+    pending; 0.2 is excluded; the lines stored are 0.70 and 0.30."""
     db = app.state.db_factory()
     try:
         quotes = db.query(Quote).filter_by(project_id=1).order_by(Quote.id).all()
@@ -238,16 +242,16 @@ def test_the_default_cutoff_accepts_at_and_above_and_stores_it(app: FastAPI) -> 
     finally:
         db.close()
     assert n == 4
-    assert accept_at_default_cutoff(app.state.db_factory, 1, "uxr", 0.70) == 2
+    outcome = settle_first_apply_cut(app.state.db_factory, 1, "uxr")
+    assert outcome is not None and (outcome.accepted, outcome.excluded) == (2, 1)
     db = app.state.db_factory()
     try:
         status = {p.confidence: p.status for p in db.query(ProposedTag).all()}
-        assert status == {0.9: "accepted", 0.7: "accepted", 0.5: "pending", 0.2: "pending"}
+        assert status == {0.9: "accepted", 0.7: "accepted", 0.5: "pending", 0.2: "denied"}
         assert db.query(QuoteTag).filter_by(source="autocode").count() == 2
         stored = db.query(AutoCodeJob).one()
         assert stored.applied_upper_threshold == 0.70
-        # Later re-applies must not deny below the dialog's default: nothing was chosen.
-        assert stored.applied_lower_threshold == 0.0
+        assert stored.applied_lower_threshold == 0.30
     finally:
         db.close()
 

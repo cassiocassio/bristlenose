@@ -23,17 +23,21 @@ toast: no page started this job.
 
 What it does: installs the framework (the same helper the Import button uses; AutoCode resolves
 answers against the installed rows), starts the ordinary AutoCode job, and when that job has
-completed applies the default cutoff, because no researcher is there to open the review. The band
-below the cutoff stays pending for the review and nothing is denied, now or later: the lower
-line is stored as 0, so the post-run re-apply, which would otherwise deny below the dialog's
-default, only accepts at the cutoff and leaves the rest pending. The cutoff is stored on the job,
-so later sessions are coded at the same line.
+completed applies the end-of-run cut every first apply gets, the hybrid
+(``routes.autocode.settle_first_apply_cut``; docs/design-autocode-landing-plan.md D5): the most
+confident 30% of the run's proposals are accepted, never below 0.70; those below 0.30 are
+excluded; the band between stays pending for the review. The lines are stored on the job (the
+cut rounded up to the 0.05 grid, and 0.30), so later sessions are coded at the same lines, and a
+catch-up excludes below 0.30 too. Until Phase 3 (23 Nov 2026) this accepted everything at 0.70
+and stored a lower line of 0, so nothing was ever excluded: half of a typical UXR run, the flood
+the plan removes. A run stopped partway settles its cut at once but is not done: no marker, so it
+is retried, and the retry finishes at the stored lines (D27, D35).
 
 Known overlap, as with the Apply button: the job can run while the same run's re-apply of other
 codebooks and its Signals snapshot are still going.
 
 One shot, to completion: ``<output>/.bristlenose/house-codebooks.json`` records ``started`` when
-the job is launched and ``completed`` when it has finished and the cutoff is applied. It is a file
+the job is launched and ``completed`` when it has finished and the cut is applied. It is a file
 beside the database, not a row, so Remove (which deletes the job) cannot bring it back. A job
 that did not finish (a restart or a closed window killed it: 14 Nov 2026, 28 s in, nothing coded)
 is retried on the next completed run that shows screens; the register keeps quotes already coded
@@ -201,17 +205,16 @@ async def _apply(app: Any) -> bool:
     finally:
         db.close()
 
-    from bristlenose.server.autocode import DEFAULT_ACCEPT_THRESHOLD
-    from bristlenose.server.routes.autocode import accept_at_default_cutoff
+    from bristlenose.server.routes.autocode import settle_first_apply_cut
 
     def _apply_cutoff() -> None:
         # Once more on failure: a threadpool writer can hold the database for a moment, and a
         # completed job with every proposal pending is the outcome this exists to avoid.
         for attempt in (1, 2):
             try:
-                accept_at_default_cutoff(
-                    app.state.db_factory, PROJECT_ID, FRAMEWORK_ID, DEFAULT_ACCEPT_THRESHOLD
-                )
+                # The hybrid, as every first apply ends (D5); a job a stop already settled is
+                # sorted by its stored lines (D27).
+                settle_first_apply_cut(app.state.db_factory, PROJECT_ID, FRAMEWORK_ID)
                 _write_marker(app, completed=True)
                 return
             except Exception:  # noqa: BLE001

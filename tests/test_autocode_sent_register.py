@@ -708,11 +708,14 @@ class TestApplyKeepsANeverAppliedJobsWork:
         assert len(llm.prompts()) == 1
         assert "s3-0" in llm.prompts()[0] and "s3-1" in llm.prompts()[0]
         assert "s1-" not in llm.prompts()[0] and "s2-" not in llm.prompts()[0]
+        # The researcher's denial stays denied. The completed apply then ends with the
+        # hybrid cut (D5, landing plan Phase 3; until then every proposal stayed pending):
+        # every proposal is at 0.85, tied at the top 30%, so the pending ones are accepted.
         assert _proposals(factory) == {
-            "s1-0": "denied", "s1-1": "accepted", "s2-0": "pending",
-            "s3-0": "pending", "s3-1": "pending",
+            "s1-0": "denied", "s1-1": "accepted", "s2-0": "accepted",
+            "s3-0": "accepted", "s3-1": "accepted",
         }
-        assert _count(factory, QuoteTag) == 1
+        assert _count(factory, QuoteTag) == 4
         assert _stamped(factory) == {"s1", "s2", "s3"}
         job = _job(factory)
         assert job.id == job_id

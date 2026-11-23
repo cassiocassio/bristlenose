@@ -109,10 +109,10 @@ class TestDecidedBy:
         ]
 
     def test_the_house_defaults_cut_is_a_threshold_decision(self, seeded) -> None:
-        from bristlenose.server.routes.autocode import accept_at_default_cutoff
+        from bristlenose.server.routes.autocode import settle_first_apply_cut
 
         client, ids, _ = seeded
-        accept_at_default_cutoff(client.app.state.db_factory, 1, "garrett", 0.7)  # type: ignore[attr-defined]
+        settle_first_apply_cut(client.app.state.db_factory, 1, "garrett")  # type: ignore[attr-defined]
         assert [_proposal(client, i).decided_by for i in ids] == [
             None, None, "threshold", "threshold"]
 

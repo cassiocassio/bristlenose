@@ -698,17 +698,22 @@ def test_a_burst_of_recuts_rebuilds_once_and_waits_for_a_pass_still_coding(
 
 
 @pytest.mark.parametrize(
-    ("status", "accepted", "expected"),
+    ("status", "accepted", "confidence", "expected"),
     [
-        ("completed", False, "codebook_apply"),
-        ("cancelled", True, "codebook_stopped"),
-        ("cancelled", False, None),
-        ("failed", True, "codebook_failed"),
-        ("failed", False, None),
+        ("completed", False, 0.9, "codebook_apply"),
+        ("cancelled", True, 0.9, "codebook_stopped"),
+        # A stop settles its cut at once (D27, landing plan Phase 3): a pending 0.9 is the
+        # whole run's top 30% and is accepted, so the stop left accepted tags (D31).
+        ("cancelled", False, 0.9, "codebook_stopped"),
+        # Below the 0.70 floor the cut accepts nothing: nothing to rebuild for.
+        ("cancelled", False, 0.5, None),
+        ("failed", True, 0.9, "codebook_failed"),
+        # A failure is not settled (as shipped): its pending 0.9 stays pending.
+        ("failed", False, 0.9, None),
     ],
 )
 def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
-    tmp_path, status: str, accepted: bool, expected: str | None,
+    tmp_path, status: str, accepted: bool, confidence: float, expected: str | None,
 ) -> None:
     from bristlenose.server.routes.autocode import _settle_first_apply
 
@@ -721,8 +726,8 @@ def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
         tag = db.query(TagDefinition).first()
         assert tag is not None
         db.add(ProposedTag(
-            job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id, confidence=0.9,
-            status="accepted" if accepted else "pending",
+            job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
+            confidence=confidence, status="accepted" if accepted else "pending",
         ))
         db.commit()
     finally:

@@ -23,6 +23,7 @@ from bristlenose.server.autocode import (
     reapply_active_frameworks,
     reapply_to_new_quotes,
     run_autocode_job,
+    stored_lines,
 )
 from bristlenose.server.codebook import get_template
 from bristlenose.server.db import Base
@@ -1528,6 +1529,49 @@ class TestReapplyToNewQuotes:
             project_with_garrett, [0.45, 0.35], upper=0.8, lower=0.4
         )
         assert statuses == ["pending", "denied"]
+
+    def test_after_a_first_applys_hybrid_cut_a_catch_up_excludes_below_030(
+        self, project_with_garrett
+    ) -> None:
+        """Landing plan Phase 3 (D5): a first apply's end stores the hybrid's lines, its
+        cut rounded up and 0.30, and the catch-up sorts by them. The house default used to
+        store a lower line of 0, so a catch-up after it never excluded."""
+        from bristlenose.server.routes.autocode import settle_first_apply_cut
+
+        project_id, framework_id, db_factory = project_with_garrett
+        with _patch_llm(AsyncMock(return_value=_make_batch_result(10, "user need", 0.85))):
+            asyncio.run(run_autocode_job(db_factory, project_id, framework_id, _mock_settings()))
+        settle_first_apply_cut(db_factory, project_id, framework_id)
+        db = db_factory()
+        try:
+            job = db.query(AutoCodeJob).filter_by(
+                project_id=project_id, framework_id=framework_id).one()
+            assert stored_lines(job) == (0.85, 0.30)
+            job.completed_at = datetime(2020, 1, 1)
+            db.commit()
+        finally:
+            db.close()
+        self._add_quotes(db_factory, project_id, 3)
+        result = AutoCodeBatchResult(assignments=[
+            AutoCodeTagAssignment(quote_index=i, tag_name="user need", confidence=c,
+                                  rationale="r")
+            for i, c in enumerate([0.90, 0.50, 0.20])
+        ])
+        with _patch_llm(AsyncMock(return_value=result)):
+            asyncio.run(reapply_to_new_quotes(
+                db_factory, project_id, framework_id, _mock_settings()))
+        db = db_factory()
+        try:
+            rows = (
+                db.query(ProposedTag.status)
+                .join(Quote, Quote.id == ProposedTag.quote_id)
+                .filter(Quote.session_id == "s2")
+                .order_by(Quote.id)
+                .all()
+            )
+            assert [r[0] for r in rows] == ["accepted", "pending", "denied"]
+        finally:
+            db.close()
 
     def test_a_quote_exactly_on_a_line_follows_the_dialogs_inequality(
         self, project_with_garrett

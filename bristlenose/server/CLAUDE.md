@@ -304,7 +304,7 @@ Tests: `tests/test_server_lifecycle.py` (unit + 1 SIGTERM-delivery smoke test).
 - **Hard exclusions, pinned by tests — no tool takes a filesystem path (input-schema allowlist), no writes, no…**
 - **Adding a tool? — Put `project_id` in the signature (folder scope is phase 2), return JSON primitives only…**
 
-**AutoCode and the codebook builder** (11) — [full entries](gotchas.md#autocode-and-the-codebook-builder)
+**AutoCode and the codebook builder** (12) — [full entries](gotchas.md#autocode-and-the-codebook-builder)
 
 - **`TagPrompt` is instance-scoped (mirrors `TagDefinition`) — a code's boundary is a property of the concept…**
 - **Decision reasons are LOCAL ONLY — free-text reasons + quote content never leave the device. Consistent with…**
@@ -317,6 +317,7 @@ Tests: `tests/test_server_lifecycle.py` (unit + 1 SIGTERM-delivery smoke test).
 - **Which quotes a codebook has coded is its register of sent quotes, never a timestamp and never a session…**
 - **A quote that starts counting is coded by itself, a few seconds on…**
 - **An AutoCode incremental DB write MUST be write-only + non-fatal, or a locked DB silently eats a whole…**
+- **A live acceptance is a proposal's status, never a `QuoteTag`, until the run's cut (Phase 4a).**
 
 **Route notes from the layout tree** (3) — [full entries](gotchas.md#route-notes-from-the-layout-tree)
 

@@ -199,7 +199,14 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 > plain cut (only pending proposals sorted), offered while anything is pending. Since
 > Phase 3 (23 Nov 2026) a first apply stores the end-of-run hybrid cut's lines with its
 > outcome, and accepts at the stored accept line (rounded up to the grid), so the dialog
-> opens on them with every row in its zone and Apply off (D41, D46). A re-cut counts, and
+> opens on them with every row in its zone and Apply off (D41, D46). Since Phase 4a (23 Nov
+> 2026) the run also accepts live as each batch is saved (`autocode.accept_live`, D6: the
+> hybrid's line over the proposals so far, held at 0.80 until 25 have landed, never falling
+> during the run, kept on the job as `live_accept_line`); the end stores a line no higher
+> than the grid line at or below the lowest live acceptance, so the invariant still holds
+> and a run takes at least the exact cut. Live acceptance makes no tag: the cut makes the
+> tags of every threshold acceptance, so a run still coding shows only on the live read
+> (`GET …/proposals?live=true`, D32). A re-cut counts, and
 > rebuilds Signals for, only rows whose status changes. The
 > lines are stored, and Signals is rebuilt only when something moved (D31). The call
 > fails after the per-row writes' time limit and shows `applyFailed` (D43). Tests:

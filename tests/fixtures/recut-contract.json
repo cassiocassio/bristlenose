@@ -1,0 +1,24 @@
+{
+  "_comment": "Where the AutoCode review's Apply leaves one proposal: read by tests/test_recut_contract.py (the server's recut_target, through RecutRequest and the stored-line reading) and frontend/src/utils/recut.test.ts (outcomeZone, through the dialog's snapping). `stored` is the job's two applied_* columns as stored (null: never stored; drifted floats as an earlier build wrote them); `lines` the slider positions sent; `expected` the zone after Apply. docs/design-autocode-landing-plan.md Phase 2: D2, D26, D41.",
+  "defaults": {"lower": 0.3, "upper": 0.7},
+  "cases": [
+    {"name": "pending above the accept line, lines unmoved: accepted (D41)", "status": "pending", "decided_by": null, "confidence": 0.85, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "accepted"},
+    {"name": "pending in the band, lines unmoved: tentative", "status": "pending", "decided_by": null, "confidence": 0.5, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "tentative"},
+    {"name": "pending below the exclude line, lines unmoved: excluded (D41)", "status": "pending", "decided_by": null, "confidence": 0.2, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "excluded"},
+    {"name": "pending exactly on the exclude line: tentative", "status": "pending", "decided_by": null, "confidence": 0.3, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "tentative"},
+    {"name": "pending exactly on the accept line: accepted", "status": "pending", "decided_by": null, "confidence": 0.7, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "accepted"},
+    {"name": "threshold acceptance below the line, lines unmoved: stays (D26)", "status": "accepted", "decided_by": "threshold", "confidence": 0.5, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "accepted"},
+    {"name": "threshold acceptance under a raised accept line: tentative", "status": "accepted", "decided_by": "threshold", "confidence": 0.75, "stored": [0.3, 0.7], "lines": [0.3, 0.8], "expected": "tentative"},
+    {"name": "threshold acceptance still above the raised line: accepted", "status": "accepted", "decided_by": "threshold", "confidence": 0.85, "stored": [0.3, 0.7], "lines": [0.3, 0.8], "expected": "accepted"},
+    {"name": "threshold exclusion above a lowered exclude line: tentative", "status": "denied", "decided_by": "threshold", "confidence": 0.2, "stored": [0.3, 0.7], "lines": [0.15, 0.7], "expected": "tentative"},
+    {"name": "a decision with no record of who made it moves like a threshold one", "status": "denied", "decided_by": null, "confidence": 0.9, "stored": [0.3, 0.7], "lines": [0.3, 0.7], "expected": "excluded"},
+    {"name": "researcher acceptance never moves (D2)", "status": "accepted", "decided_by": "researcher", "confidence": 0.1, "stored": [0.3, 0.7], "lines": [0.5, 0.6], "expected": "accepted"},
+    {"name": "unknown exclusion never moves (D2)", "status": "denied", "decided_by": "unknown", "confidence": 0.95, "stored": [0.3, 0.7], "lines": [0.0, 0.05], "expected": "excluded"},
+    {"name": "never cut: pending on the accept line is accepted", "status": "pending", "decided_by": null, "confidence": 0.7, "stored": null, "lines": [0.3, 0.7], "expected": "accepted"},
+    {"name": "never cut: a decision stays, whatever its zone", "status": "accepted", "decided_by": "threshold", "confidence": 0.5, "stored": null, "lines": [0.3, 0.7], "expected": "accepted"},
+    {"name": "drifted stored lines read as their labels", "status": "accepted", "decided_by": "threshold", "confidence": 0.7, "stored": [0.30000000000000004, 0.7000000000000001], "lines": [0.3, 0.75], "expected": "tentative"},
+    {"name": "drifted stored lines, unmoved: a decision on the line stays", "status": "accepted", "decided_by": "threshold", "confidence": 0.7, "stored": [0.30000000000000004, 0.7000000000000001], "lines": [0.3, 0.7], "expected": "accepted"},
+    {"name": "drifted new lines are snapped before comparing", "status": "pending", "decided_by": null, "confidence": 0.7, "stored": [0.3, 0.7], "lines": [0.30000000000000004, 0.7000000000000001], "expected": "accepted"},
+    {"name": "one line stored: the other is the default", "status": "accepted", "decided_by": "threshold", "confidence": 0.72, "stored": [0.2, null], "lines": [0.2, 0.75], "expected": "tentative"}
+  ]
+}

@@ -127,14 +127,16 @@ def signals(monkeypatch: pytest.MonkeyPatch) -> list[int]:
 
 
 def test_apply_with_the_lines_unmoved_changes_nothing(run, signals) -> None:
-    """Earlier passes left the run unlike a clean cut at the stored lines (a tag accepted
-    live below the accept line, a pending one above it, an exclusion above the exclude
-    line). Apply at the same lines leaves every one of them as it is."""
+    """Earlier passes left the run's decisions unlike a clean cut at the stored lines (a
+    tag accepted live below the accept line, an exclusion above the exclude line). Apply
+    at the same lines leaves every decision as it is (D26), and a pending proposal in
+    the tentative band stays pending."""
     client, ids = run
     _store_lines(client, 0.30, 0.70)
     _set(client, ids[0], "accepted", "threshold", "autocode")  # 0.5, accepted live
+    _set(client, ids[2], "accepted", "threshold", "autocode")  # 0.7
     _set(client, ids[3], "denied", "threshold")  # 0.8, excluded by an earlier pass
-    # ids[1] (0.6) and ids[2] (0.7) stay pending; a clean cut would accept 0.7.
+    # ids[1] (0.6) stays pending, in the tentative band.
     before = _states(client, ids)
 
     assert _recut(client, 0.30, 0.70) == {"accepted": 0, "tentative": 0, "excluded": 0}
@@ -143,21 +145,60 @@ def test_apply_with_the_lines_unmoved_changes_nothing(run, signals) -> None:
 
 
 def test_a_recut_moves_only_what_changes_zone(run) -> None:
-    """Stored 0.30 / 0.70, re-cut to 0.55 / 0.75: 0.5 leaves tentative for excluded and
-    0.7 leaves accepted for tentative; 0.6 (tentative both times) and 0.8 (accepted
-    both times) keep whatever they were, a live acceptance and a pending one alike."""
+    """Stored 0.30 / 0.70, re-cut to 0.55 / 0.75: the threshold acceptance at 0.7 leaves
+    accepted for tentative, and the one at 0.6 (tentative both times) keeps what it was
+    (D26). Pending proposals are decided by the new lines (D41): 0.5 is excluded, 0.8
+    accepted."""
     client, ids = run
     _store_lines(client, 0.30, 0.70)
     _set(client, ids[1], "accepted", "threshold", "autocode")  # 0.6, accepted live
     _set(client, ids[2], "accepted", "threshold", "autocode")  # 0.7
 
-    assert _recut(client, 0.55, 0.75) == {"accepted": 0, "tentative": 1, "excluded": 1}
+    assert _recut(client, 0.55, 0.75) == {"accepted": 1, "tentative": 1, "excluded": 1}
     assert _states(client, ids) == [
         ("denied", "threshold", None),
         ("accepted", "threshold", "autocode"),
         ("pending", None, None),
-        ("pending", None, None),
+        ("accepted", "threshold", "autocode"),
     ]
+
+
+def _dom_id(client: TestClient, pid: int) -> str:
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        p = db.get(ProposedTag, pid)
+        assert p is not None
+        q = db.get(Quote, p.quote_id)
+        assert q is not None
+        return quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+    finally:
+        db.close()
+
+
+def test_an_unhidden_quotes_pending_proposal_is_sorted_by_an_unmoved_apply(run, signals) -> None:
+    """D41 (N175): a quote hidden at the last Apply keeps its proposal pending; unhidden,
+    the proposal comes back to the review, and Apply with the lines unmoved decides it
+    by those lines, as shipped, while a threshold decision stays as it is."""
+    client, ids = run
+    _store_lines(client, 0.30, 0.70)
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        p = db.get(ProposedTag, ids[3])
+        assert p is not None
+        p.confidence = 0.9
+        db.commit()
+    finally:
+        db.close()
+    _set(client, ids[0], "accepted", "threshold", "autocode")  # 0.5, accepted live
+    dom_id = _dom_id(client, ids[3])
+    client.patch(f"{BASE}/hidden", json={dom_id: True})
+    _recut(client, 0.30, 0.70)
+    assert _state(client, ids[3]) == ("pending", None, None)
+    client.patch(f"{BASE}/hidden", json={dom_id: False})
+    assert _recut(client, 0.30, 0.70) == {"accepted": 1, "tentative": 0, "excluded": 0}
+    assert _state(client, ids[3]) == ("accepted", "threshold", "autocode")
+    assert _state(client, ids[0]) == ("accepted", "threshold", "autocode")
+    assert signals == [1, 1]  # 0.7 accepted by the first Apply, 0.9 by the second
 
 
 def test_researcher_and_unknown_decisions_never_move(run) -> None:
@@ -282,8 +323,10 @@ def test_lines_off_the_grid_or_crossed_are_refused(run, body) -> None:
 
 
 def test_a_recut_that_moves_something_asks_for_a_signals_rebuild(run, signals) -> None:
-    client, _ = run
+    client, ids = run
     _store_lines(client, 0.30, 0.70)
+    _set(client, ids[2], "accepted", "threshold", "autocode")
+    _set(client, ids[3], "accepted", "threshold", "autocode")
     _recut(client, 0.30, 0.70)
     assert signals == []
     _recut(client, 0.30, 0.60)
@@ -302,8 +345,9 @@ def test_a_recut_of_an_unknown_codebook_is_404(run) -> None:
 
 
 def _row(client: TestClient, pid: int, verb: str, override: bool = True) -> None:
-    resp = client.post(f"{BASE}/autocode/proposals/{pid}/{verb}",
-                       json={"override": True} if override else {})
+    """The dialog's row call: an override names the status the dialog showed (D44)."""
+    body = {"override": True, "expected_status": _state(client, pid)[0]} if override else {}
+    resp = client.post(f"{BASE}/autocode/proposals/{pid}/{verb}", json=body)
     assert resp.status_code == 200, resp.text
 
 
@@ -312,7 +356,8 @@ def _row(client: TestClient, pid: int, verb: str, override: bool = True) -> None
     ("denied", "threshold"), ("denied", "unknown"),
 ])
 @pytest.mark.parametrize("verb", ["accept", "deny"])
-@pytest.mark.parametrize("body", [None, {}, {"override": False}])
+@pytest.mark.parametrize("body", [None, {}, {"override": False},
+                                  {"override": False, "expected_status": "accepted"}])
 def test_an_ordinary_call_on_a_decided_proposal_is_still_refused(
     run, status, decided_by, verb, body,
 ) -> None:
@@ -387,3 +432,40 @@ def test_an_overridden_exclusion_is_pinned_against_a_recut(run) -> None:
     _row(client, ids[0], "accept")
     _recut(client, 0.60, 0.70)
     assert _state(client, ids[0]) == ("accepted", "researcher", "autocode")
+
+
+# ---------------------------------------------------------------------------
+# D44: an override names the status it overrides, so a stale dialog loses
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("verb", ["accept", "deny"])
+def test_a_stale_override_is_refused_and_the_newer_decision_kept(run, verb) -> None:
+    """The dialog showed the proposal accepted by the lines; a quote card has since
+    excluded it. The dialog's override (expecting "accepted") is refused with the
+    409 naming how it went, and the card's decision stands."""
+    client, ids = run
+    _set(client, ids[2], "denied", "researcher")
+    resp = client.post(f"{BASE}/autocode/proposals/{ids[2]}/{verb}",
+                       json={"override": True, "expected_status": "accepted"})
+    assert resp.status_code == 409
+    assert resp.json()["reason"] == "proposal_denied"
+    assert _state(client, ids[2]) == ("denied", "researcher", None)
+
+
+def test_an_override_on_a_proposal_pending_again_goes_through(run) -> None:
+    """A proposal pending since the dialog drew it (a re-cut made it tentative) is
+    undecided: deciding it overwrites nothing."""
+    client, ids = run
+    resp = client.post(f"{BASE}/autocode/proposals/{ids[2]}/deny",
+                       json={"override": True, "expected_status": "accepted"})
+    assert resp.status_code == 200, resp.text
+    assert _state(client, ids[2]) == ("denied", "researcher", None)
+
+
+def test_an_override_without_the_status_it_expects_is_refused(run) -> None:
+    client, ids = run
+    _set(client, ids[2], "accepted", "threshold", "autocode")
+    resp = client.post(f"{BASE}/autocode/proposals/{ids[2]}/deny", json={"override": True})
+    assert resp.status_code == 422
+    assert _state(client, ids[2]) == ("accepted", "threshold", "autocode")

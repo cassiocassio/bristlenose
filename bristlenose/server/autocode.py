@@ -1433,8 +1433,9 @@ async def _reapply_to_new_quotes(
             now = datetime.now(timezone.utc)
             accepted = 0
             for quote_id, tag_def_id, confidence, rationale in answered.proposals:
-                # The dialog's inequalities exactly (ThresholdReviewModal.tsx and the
-                # accept-all / deny-all routes): ``>= upper`` accepts, ``< lower`` denies.
+                # The dialog's inequalities exactly (``zoneAt`` in frontend/src/utils/
+                # recut.ts, and the re-cut, accept-all and deny-all routes): ``>= upper``
+                # accepts, ``< lower`` denies.
                 status: str
                 reviewed_at: datetime | None
                 decided_by: str | None
@@ -1804,8 +1805,8 @@ _SNAPSHOT_OWED: dict[int, tuple[asyncio.AbstractEventLoop, str]] = {}
 # task can be collected mid-flight, gotchas.md § AutoCode).
 _RECUT_TIMERS: dict[int, asyncio.TimerHandle] = {}
 _SNAPSHOT_TASKS: set[asyncio.Task[Any]] = set()
-#: A burst of re-cuts (the review dialog's Apply sends accept-all and deny-all, and a
-#: researcher may move the lines twice) rebuilds Signals once, this long after the last.
+#: A burst of re-cuts (a researcher may Apply the review's lines twice in a row, and
+#: accept-all and deny-all are a pair) rebuilds Signals once, this long after the last.
 RECUT_SNAPSHOT_DEBOUNCE_S = 5.0
 
 

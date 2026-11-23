@@ -7,7 +7,7 @@ import logging
 import math
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, field_validator, model_validator
@@ -923,9 +923,31 @@ class ReviewRequest(BaseModel):
     (D34): it changes that decision instead of being refused. Every other caller
     (a quote card, the dialog's buttons on a pending row) sends none, and a decided
     proposal stays refused with 409 "reviewed elsewhere", which both clients handle
-    (a stale window, a double click)."""
+    (a stale window, a double click).
+
+    ``expected_status`` is the status the dialog showed, and an override needs it: when
+    the proposal has been decided differently since (on a quote card), the override is
+    refused with the same 409, so a stale dialog never overwrites a newer decision
+    (D44). A proposal pending again since is undecided, so the call goes through."""
 
     override: bool = False
+    expected_status: Literal["pending", "accepted", "denied"] | None = None
+
+    @model_validator(mode="after")
+    def _override_names_what_it_overrides(self) -> ReviewRequest:
+        if self.override and self.expected_status is None:
+            raise ValueError("an override names the status it expects (expected_status)")
+        return self
+
+
+def _check_decidable(proposal: ProposedTag, body: ReviewRequest | None) -> bool:
+    """Refuse (409, which way it went) a decided proposal unless ``body`` overrides the
+    status it is in now. True when the call overrides a decision."""
+    if proposal.status == "pending":
+        return False
+    if body is None or not body.override or body.expected_status != proposal.status:
+        raise _already_reviewed(proposal.status)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -943,7 +965,7 @@ def accept_proposal(
     """Accept a proposed tag, as the researcher's decision: its QuoteTag is made.
 
     A proposal already decided is refused (409, which way it went) unless the body
-    says ``override``: then an exclusion, the lines' or the researcher's own, is
+    says ``override`` with the status it is in (``expected_status``, D44): then an exclusion, the lines' or the researcher's own, is
     taken back, and accepting one already accepted pins it as the researcher's, so
     no re-cut moves it (D2, D34; landing plan Phase 2).
     """
@@ -955,9 +977,7 @@ def accept_proposal(
         if not proposal:
             raise HTTPException(status_code=404, detail="Proposal not found")
 
-        if proposal.status != "pending" and not (body is not None and body.override):
-            raise _already_reviewed(proposal.status)
-
+        _check_decidable(proposal, body)
         _ensure_autocode_tag(db, proposal)
 
         proposal.status = "accepted"
@@ -984,7 +1004,7 @@ def deny_proposal(
 ) -> dict[str, str]:
     """Exclude a proposed tag, as the researcher's decision; the row is kept for telemetry.
 
-    Refused for a decided proposal as accept is, unless ``override``: then excluding
+    Refused for a decided proposal as accept is, unless overridden: then excluding
     one that was accepted takes its tag off the quote when AutoCode made it, never a
     tag the researcher added by hand (review 1).
     """
@@ -996,9 +1016,7 @@ def deny_proposal(
         if not proposal:
             raise HTTPException(status_code=404, detail="Proposal not found")
 
-        if proposal.status != "pending":
-            if not (body is not None and body.override):
-                raise _already_reviewed(proposal.status)
+        if _check_decidable(proposal, body):
             _drop_autocode_tag(db, proposal)
 
         proposal.status = "denied"
@@ -1186,23 +1204,24 @@ def recut_target(
     stays where it is.
 
     A decision the researcher made, or one made before decisions were recorded
-    ("unknown"), never moves (D2). A threshold decision or a pending proposal moves
-    only when its zone under the stored lines ``before`` differs from its zone under
-    the new ones (D26): Apply with the lines unmoved changes nothing, whatever an
-    earlier pass left. ``before`` is None for a job no lines were ever stored on: no
-    cut has been made, so the first Apply is a plain cut, as it always was: only
-    pending proposals are sorted by the new lines, and every decision stays.
+    ("unknown"), never moves (D2). A pending proposal is undecided, so Apply decides it
+    by the new lines, as accept-all and deny-all always did: a quote unhidden after the
+    last Apply brings its proposal back to the review and the next Apply sorts it
+    (N175, D41). A threshold decision moves only when its zone under the stored lines
+    ``before`` differs from its zone under the new ones (D26): Apply with the lines
+    unmoved leaves every decision as it is, whatever an earlier pass left. ``before``
+    is None for a job no lines were ever stored on: no cut has been made, so the first
+    Apply is a plain cut, and every decision stays.
     """
     if proposal.decided_by in ("researcher", "unknown"):
         return None
-    if before is None and proposal.status != "pending":
-        return None
     after = zone_at(proposal.confidence, lower, upper)
-    was = (
-        _TENTATIVE
-        if before is None
-        else zone_at(proposal.confidence, before[1], before[0])
-    )
+    if proposal.status == "pending":
+        was = _TENTATIVE
+    elif before is None:
+        return None
+    else:
+        was = zone_at(proposal.confidence, before[1], before[0])
     if was == after:
         return None
     return after

@@ -51,6 +51,9 @@ Required tokens:
 --bn-colour-negative            Destructive action (delete, deny)
 --bn-colour-positive            Success / accepted (the sibling of negative)
 --bn-colour-warning             Caution — recoverable, partial, soft-degrade
+--bn-colour-positive-text       Positive as small text: 4.5:1 on --bn-colour-inspector-bg and --bn-colour-bg
+                                (the bar colour falls under it in light; the AutoCode overview's tally)
+--bn-colour-warning-text        Warning as small text, the same bar
 
 --bn-glow-colour                Playback sync glow (subtle)
 --bn-glow-colour-strong         Playback sync glow (strong)

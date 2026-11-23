@@ -55,6 +55,8 @@
        Caution — Gold Ochre, deepened for legibility on paper. */
     --bn-colour-positive: #4a6b4a;
     --bn-colour-warning: #a8842c;
+    --bn-colour-positive-text: #4a6b4a;
+    --bn-colour-warning-text: #866923;
 
     /* Playback-sync glow — Prussian Blue based */
     --bn-glow-colour: rgba(15, 92, 158, 0.08);
@@ -163,6 +165,9 @@
         /* Success — Pine Green; caution — Gold Ochre */
         --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
         --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:    light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning-text:     light-dark(#866923, #c4a96a);
 
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);

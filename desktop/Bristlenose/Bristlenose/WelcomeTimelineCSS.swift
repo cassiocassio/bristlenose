@@ -655,7 +655,7 @@ enum WelcomeTimelineCSS {
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css — lines 1–176 ════ */
+/* ════ bristlenose/theme/colors/palette-default.css — lines 1–181 ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -696,6 +696,8 @@ enum WelcomeTimelineCSS {
     /* Success and caution — the other two semantic kinds */
     --bn-colour-positive: #16a34a;
     --bn-colour-warning: #f59e0b;
+    --bn-colour-positive-text: #15803d;
+    --bn-colour-warning-text: #b45309;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(0, 122, 255, 0.06);
@@ -808,6 +810,9 @@ enum WelcomeTimelineCSS {
         /* Success and caution */
         --bn-colour-positive:         light-dark(#16a34a, #22c55e);
         --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:    light-dark(#15803d, #22c55e);
+        --bn-colour-warning-text:     light-dark(#b45309, #fbbf24);
 
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
@@ -833,7 +838,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo.css — lines 1–189 ════ */
+/* ════ bristlenose/theme/colors/palette-edo.css — lines 1–194 ════ */
 /* palette-edo — Edo-period Japanese art colour theme.
    Sampled from three artworks seen at the British Museum Samurai exhibition,
    1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
@@ -891,6 +896,8 @@ enum WelcomeTimelineCSS {
        Caution — Gold Ochre, deepened for legibility on paper. */
     --bn-colour-positive: #4a6b4a;
     --bn-colour-warning: #a8842c;
+    --bn-colour-positive-text: #4a6b4a;
+    --bn-colour-warning-text: #866923;
 
     /* Playback-sync glow — Prussian Blue based */
     --bn-glow-colour: rgba(15, 92, 158, 0.08);
@@ -999,6 +1006,9 @@ enum WelcomeTimelineCSS {
         /* Success — Pine Green; caution — Gold Ochre */
         --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
         --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:    light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning-text:     light-dark(#866923, #c4a96a);
 
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
@@ -1024,7 +1034,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo3.css — lines 1–110 ════ */
+/* ════ bristlenose/theme/colors/palette-edo3.css — lines 1–115 ════ */
 /* palette-edo3 - an experiment slot, a copy of edo-v1 until an iteration is promoted into it
    (workbench.py promote <iteration> --as edo3). Removed by `workbench.py finish`. */
 
@@ -1052,6 +1062,8 @@ enum WelcomeTimelineCSS {
     --bn-colour-negative: #b5432a;
     --bn-colour-positive: #4a6b4a;
     --bn-colour-warning: #a8842c;
+    --bn-colour-positive-text: #4a6b4a;
+    --bn-colour-warning-text: #8e6f25;
     --bn-glow-colour: rgba(7, 97, 170, 0.08);
     --bn-glow-colour-strong: rgba(7, 97, 170, 0.15);
     --bn-minimap-quote: #dfd8c1;
@@ -1107,6 +1119,9 @@ enum WelcomeTimelineCSS {
         --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
         --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
         --bn-colour-warning:            light-dark(#a8842c, #c4a96a);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning-text:       light-dark(#8e6f25, #c4a96a);
         --bn-glow-colour:               light-dark(rgba(7, 97, 170, 0.08), rgba(77, 159, 224, 0.1));
         --bn-glow-colour-strong:        light-dark(rgba(7, 97, 170, 0.15), rgba(77, 159, 224, 0.18));
         --bn-minimap-quote:             light-dark(#dfd8c1, #2d2820);
@@ -1136,7 +1151,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo4.css — lines 1–110 ════ */
+/* ════ bristlenose/theme/colors/palette-edo4.css — lines 1–115 ════ */
 /* palette-edo4 - an experiment slot, a copy of edo-v1 until an iteration is promoted into it
    (workbench.py promote <iteration> --as edo4). Removed by `workbench.py finish`. */
 
@@ -1164,6 +1179,8 @@ enum WelcomeTimelineCSS {
     --bn-colour-negative: #b5432a;
     --bn-colour-positive: #4a6b4a;
     --bn-colour-warning: #d4740d;
+    --bn-colour-positive-text: #4a6b4a;
+    --bn-colour-warning-text: #a95c0a;
     --bn-glow-colour: rgba(70, 150, 231, 0.08);
     --bn-glow-colour-strong: rgba(70, 150, 231, 0.15);
     --bn-minimap-quote: #ccc8bb;
@@ -1219,6 +1236,9 @@ enum WelcomeTimelineCSS {
         --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
         --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
         --bn-colour-warning:            light-dark(#d4740d, #f99b44);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning-text:       light-dark(#a95c0a, #f99b44);
         --bn-glow-colour:               light-dark(rgba(70, 150, 231, 0.08), rgba(77, 159, 224, 0.1));
         --bn-glow-colour-strong:        light-dark(rgba(70, 150, 231, 0.15), rgba(77, 159, 224, 0.18));
         --bn-minimap-quote:             light-dark(#ccc8bb, #2d2820);
@@ -1248,7 +1268,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-catppuccin.css — lines 1–160 ════ */
+/* ════ bristlenose/theme/colors/palette-catppuccin.css — lines 1–165 ════ */
 /* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
    Source: https://github.com/catppuccin/palette (catppuccin.com/palette).
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1288,6 +1308,8 @@ enum WelcomeTimelineCSS {
     --bn-colour-negative: #d20f39;
     --bn-colour-positive: #3f9e2b;
     --bn-colour-warning: #df8e1d;
+    --bn-colour-positive-text: #2f7620;
+    --bn-colour-warning-text: #905c13;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(136, 57, 239, 0.06);
@@ -1366,6 +1388,9 @@ enum WelcomeTimelineCSS {
         --bn-colour-negative:           light-dark(#d20f39, #f38ba8);
         --bn-colour-positive:           light-dark(#3f9e2b, #a6e3a1);
         --bn-colour-warning:            light-dark(#df8e1d, #f9e2af);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#2f7620, #a6e3a1);
+        --bn-colour-warning-text:       light-dark(#905c13, #f9e2af);
 
         /* Playback-sync glow */
         --bn-glow-colour:               light-dark(rgba(136, 57, 239, 0.06), rgba(203, 166, 247, 0.12));
@@ -1410,7 +1435,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-gruvbox.css — lines 1–160 ════ */
+/* ════ bristlenose/theme/colors/palette-gruvbox.css — lines 1–165 ════ */
 /* palette-gruvbox — Gruvbox, light and dark, medium contrast.
    Source: https://github.com/morhetz/gruvbox. Light uses the faded accents, dark the bright ones.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1450,6 +1475,8 @@ enum WelcomeTimelineCSS {
     --bn-colour-negative: #9d0006;
     --bn-colour-positive: #79740e;
     --bn-colour-warning: #b57614;
+    --bn-colour-positive-text: #6b670c;
+    --bn-colour-warning-text: #8c5b0f;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(7, 102, 120, 0.06);
@@ -1528,6 +1555,9 @@ enum WelcomeTimelineCSS {
         --bn-colour-negative:           light-dark(#9d0006, #fb5440);
         --bn-colour-positive:           light-dark(#79740e, #b8bb26);
         --bn-colour-warning:            light-dark(#b57614, #fabd2f);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#6b670c, #b8bb26);
+        --bn-colour-warning-text:       light-dark(#8c5b0f, #fabd2f);
 
         /* Playback-sync glow */
         --bn-glow-colour:               light-dark(rgba(7, 102, 120, 0.06), rgba(131, 165, 152, 0.12));
@@ -1572,7 +1602,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-rose-pine.css — lines 1–161 ════ */
+/* ════ bristlenose/theme/colors/palette-rose-pine.css — lines 1–166 ════ */
 /* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
    Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1613,6 +1643,8 @@ enum WelcomeTimelineCSS {
     --bn-colour-negative: #a45a6f;
     --bn-colour-positive: #286983;
     --bn-colour-warning: #ea9d34;
+    --bn-colour-positive-text: #286983;
+    --bn-colour-warning-text: #945c0f;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(121, 102, 142, 0.06);
@@ -1691,6 +1723,9 @@ enum WelcomeTimelineCSS {
         --bn-colour-negative:           light-dark(#a45a6f, #eb6f92);
         --bn-colour-positive:           light-dark(#286983, #9ccfd8);
         --bn-colour-warning:            light-dark(#ea9d34, #f6c177);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#286983, #9ccfd8);
+        --bn-colour-warning-text:       light-dark(#945c0f, #f6c177);
 
         /* Playback-sync glow */
         --bn-glow-colour:               light-dark(rgba(121, 102, 142, 0.06), rgba(196, 167, 231, 0.12));
@@ -1735,7 +1770,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-solarized.css — lines 1–166 ════ */
+/* ════ bristlenose/theme/colors/palette-solarized.css — lines 1–171 ════ */
 /* palette-solarized — Solarized, light and dark.
    Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
    MIT licence. Colours the brand names are used verbatim; every other token is
@@ -1781,6 +1816,8 @@ enum WelcomeTimelineCSS {
     --bn-colour-negative: #d5302e;
     --bn-colour-positive: #849700;
     --bn-colour-warning: #b58900;
+    --bn-colour-positive-text: #657300;
+    --bn-colour-warning-text: #876600;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(32, 115, 174, 0.06);
@@ -1859,6 +1896,9 @@ enum WelcomeTimelineCSS {
         --bn-colour-negative:           light-dark(#d5302e, #e56563);
         --bn-colour-positive:           light-dark(#849700, #859900);
         --bn-colour-warning:            light-dark(#b58900, #b58900);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#657300, #899e00);
+        --bn-colour-warning-text:       light-dark(#876600, #ba8d00);
 
         /* Playback-sync glow */
         --bn-glow-colour:               light-dark(rgba(32, 115, 174, 0.06), rgba(64, 153, 215, 0.12));

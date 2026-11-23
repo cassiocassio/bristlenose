@@ -37,6 +37,8 @@
     --bn-colour-negative: #d20f39;
     --bn-colour-positive: #3f9e2b;
     --bn-colour-warning: #df8e1d;
+    --bn-colour-positive-text: #2f7620;
+    --bn-colour-warning-text: #905c13;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(136, 57, 239, 0.06);
@@ -115,6 +117,9 @@
         --bn-colour-negative:           light-dark(#d20f39, #f38ba8);
         --bn-colour-positive:           light-dark(#3f9e2b, #a6e3a1);
         --bn-colour-warning:            light-dark(#df8e1d, #f9e2af);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#2f7620, #a6e3a1);
+        --bn-colour-warning-text:       light-dark(#905c13, #f9e2af);
 
         /* Playback-sync glow */
         --bn-glow-colour:               light-dark(rgba(136, 57, 239, 0.06), rgba(203, 166, 247, 0.12));

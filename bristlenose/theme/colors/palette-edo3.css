@@ -25,6 +25,8 @@
     --bn-colour-negative: #b5432a;
     --bn-colour-positive: #4a6b4a;
     --bn-colour-warning: #a8842c;
+    --bn-colour-positive-text: #4a6b4a;
+    --bn-colour-warning-text: #8e6f25;
     --bn-glow-colour: rgba(7, 97, 170, 0.08);
     --bn-glow-colour-strong: rgba(7, 97, 170, 0.15);
     --bn-minimap-quote: #dfd8c1;
@@ -80,6 +82,9 @@
         --bn-colour-negative:           light-dark(#b5432a, #e06a4a);
         --bn-colour-positive:           light-dark(#4a6b4a, #7fa87f);
         --bn-colour-warning:            light-dark(#a8842c, #c4a96a);
+        /* Status text: the same two kinds as small text, 4.5:1 on the inspector tint */
+        --bn-colour-positive-text:      light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning-text:       light-dark(#8e6f25, #c4a96a);
         --bn-glow-colour:               light-dark(rgba(7, 97, 170, 0.08), rgba(77, 159, 224, 0.1));
         --bn-glow-colour-strong:        light-dark(rgba(7, 97, 170, 0.15), rgba(77, 159, 224, 0.18));
         --bn-minimap-quote:             light-dark(#dfd8c1, #2d2820);

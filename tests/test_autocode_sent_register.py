@@ -819,7 +819,9 @@ class TestApplyKeepsANeverAppliedJobsWork:
         job = _job(factory)
         assert (job.status, job.completed_at) == ("failed", None)
         assert job.failure_kind != ""
-        assert _proposals(factory) == {"s1-0": "denied", "s1-1": "pending", "s2-0": "pending"}
+        # Settled with its failure (D27, extended by the lead on 23 Nov 2026): the hybrid cut
+        # over what was coded accepts the 0.85s; the researcher's exclusion stands (D2).
+        assert _proposals(factory) == {"s1-0": "denied", "s1-1": "accepted", "s2-0": "accepted"}
         assert _stamped(factory) == {"s1", "s2"}
 
         # And the next Apply still sends only s3.

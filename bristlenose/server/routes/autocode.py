@@ -18,6 +18,7 @@ from bristlenose.server.autocode import (
     coding_ended,
     coding_started,
     first_apply_ending,
+    live_reapply,
     recut_made,
     run_autocode_job,
     snap_cutoff,
@@ -165,9 +166,13 @@ class LiveRun(BaseModel):
     #: run's end (its cut, a stop's settle) is in this read.
     ending: bool
     #: Nothing more will land from the pass this read saw: ``status`` is not pending or
-    #: running and ``ending`` is false. The page's last read of a run is the first with it.
+    #: running, ``ending`` is false, and no catch-up of this codebook is coding (the silent
+    #: one after a run leaves the job "completed" while it codes). The page's last read of
+    #: a run is the first with it.
     settled: bool
-    #: The largest proposal id in ``states``: the next read's ``since_id``.
+    #: The largest id in this answer's ``proposals``, or the request's ``since_id`` when it
+    #: has none: the next read's ``since_id``. A row in ``states`` above it (committed
+    #: between this answer's two reads) comes in full on the next read.
     cursor: int | None = None
 
 
@@ -264,6 +269,23 @@ def _get_job(db: Session, project_id: int, framework_id: str) -> AutoCodeJob:
     if not job:
         raise HTTPException(status_code=404, detail="AutoCode job not found")
     return job
+
+
+def _refuse_while_first_apply_codes(job: AutoCodeJob) -> None:
+    """409 while the job's first apply is coding or settling: Review is inactive during a
+    run (docs/design-autocode-landing-plan.md D17). The run's own lines are still moving
+    (live acceptance, D6) and its end cut has not landed, so lines applied now would be
+    sorted against a run that is not there yet. A researcher's single accept or deny stays
+    allowed and pinned (D2). A catch-up on an applied job is not refused (D20)."""
+    if job.completed_at is None and (
+        job.status in ("pending", "running")
+        or first_apply_ending(job.project_id, job.framework_id)
+    ):
+        raise RefusalError(
+            409,
+            RefusalReason.ALREADY_RUNNING,
+            "AutoCode is still coding this codebook. Review it when the run has finished.",
+        )
 
 
 def _job_to_out(job: AutoCodeJob) -> AutoCodeJobOut:
@@ -401,16 +423,18 @@ def require_provider_callable(settings: Any) -> None:
 
 def _settle_first_apply(
     db_factory: Callable[[], Session], project_id: int, framework_id: str,
-    after_apply: Callable[[], None] | None,
+    after_apply: Callable[[], None] | None, settled_tags: int = 0,
 ) -> str | None:
     """What a first apply's end asks of Signals: the snapshot source, or None.
 
     The run's cut has landed by now, in the same transaction as its outcome
     (``autocode.cut_first_apply``, docs/design-autocode-landing-plan.md D5, D27): a
-    completed run's and a stopped one's alike, so the snapshot that follows reads it. A
-    completed apply runs ``after_apply`` (the house default's done marker, written after
-    the cut) and asks for a rebuild. A stopped or failed one asks only if it has accepted
-    tags (review 9, D31): a stop's cut can accept, a failure is not cut. Never raises."""
+    completed run's, and a stopped or failed one's settle, so the snapshot that follows
+    reads it. A completed apply runs ``after_apply`` (the house default's done marker,
+    written after the cut) and asks for a rebuild. A stopped or failed one asks only when
+    its settle made a tag (``settled_tags``, what ``run_autocode_job`` answers; review 9,
+    D31): an acceptance whose tag the quote already had, a researcher's own included,
+    changes nothing Signals reads. Never raises."""
     db = db_factory()
     try:
         job = db.query(AutoCodeJob).filter_by(
@@ -425,19 +449,7 @@ def _settle_first_apply(
                 except Exception:
                     logger.exception("After-apply step for AutoCode %s failed", framework_id)
             return "codebook_apply"
-        # An accepted proposal whose tag is on its quote: a failed run's live acceptances
-        # have none (``autocode.accept_live`` leaves the tags to the cut, which a failure
-        # does not run), so they change nothing Signals reads (D31).
-        from sqlalchemy import and_
-        from sqlalchemy import exists as sa_exists
-
-        tagged = sa_exists().where(and_(
-            QuoteTag.quote_id == ProposedTag.quote_id,
-            QuoteTag.tag_definition_id == ProposedTag.tag_definition_id,
-        ))
-        if job.status in ("cancelled", "failed") and db.query(ProposedTag.id).filter(
-            ProposedTag.job_id == job.id, ProposedTag.status == "accepted", tagged,
-        ).first() is not None:
+        if job.status in ("cancelled", "failed") and settled_tags > 0:
             return "codebook_stopped" if job.status == "cancelled" else "codebook_failed"
         return None
     except Exception:
@@ -586,7 +598,7 @@ async def start_autocode(
         async def _apply_and_snapshot() -> None:
             source: str | None = None
             try:
-                await run_autocode_job(
+                settled_tags = await run_autocode_job(
                     db_factory, project_id, framework_id, settings,
                     project_dir=project_dir,
                 )
@@ -594,7 +606,9 @@ async def start_autocode(
                 # in) was not in its batches and, the job not yet applied then, armed
                 # nothing: the codebook owes it now, so ask (ruling 4).
                 note_quotes_counting(app, project_id)
-                source = _settle_first_apply(db_factory, project_id, framework_id, after_apply)
+                source = _settle_first_apply(
+                    db_factory, project_id, framework_id, after_apply, settled_tags,
+                )
             finally:
                 # Signals is rebuilt once the last of the project's passes ends (D21):
                 # this one's build waits while another apply or catch-up still codes.
@@ -859,16 +873,22 @@ def get_proposals(
     ``since_id`` lists in full only proposals with a larger id, so a page following a
     run reads what is new and not the whole run again.
 
-    ``live=true`` adds ``states``, every listed row's (id, quote, tag, status,
-    decided_by) whatever ``since_id``, and ``run`` (``LiveRun``). A cursor of ids alone
+    ``live=true`` adds ``states``, the (id, quote, tag, status, decided_by) of every row
+    the same filters list (``min_confidence``, quotes that count) whatever ``since_id``,
+    and ``run`` (``LiveRun``). A cursor of ids alone
     misses a decision made on a row already read (each batch's live acceptance can accept
     earlier rows, and the end's top-up does), and SQLite reuses the id of a deleted row;
-    the states carry both, so a page reconciles every read: a state it has no row for is
-    fetched again (a read with no ``since_id``), a row with no state is gone. The page's
-    last read of a run is the first one with ``run.settled``.
+    the states carry both, so a page reconciles every read: a state above ``run.cursor``
+    comes in full on the next read; a state at or below it that the page holds no row for
+    (an id reused by another quote or tag) is fetched with a read with no ``since_id``; a
+    row with no state is gone. The page's last read of a run is the first one with
+    ``run.settled``.
     """
     # Read before the proposals, so a read that sees the runner finished sees its end too.
+    # A catch-up (the silent one after a run included) keeps an applied job "completed"
+    # while it codes; its task is registered (``autocode.register_reapply``).
     ending = first_apply_ending(project_id, framework_id)
+    catching_up = live_reapply(project_id, framework_id)
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -964,8 +984,13 @@ def get_proposals(
         ]
         run = LiveRun(
             status=job.status, ending=ending,
-            settled=not ending and job.status not in ("pending", "running"),
-            cursor=states[-1].id if states else None,
+            settled=(
+                not ending and catching_up is None
+                and job.status not in ("pending", "running")
+            ),
+            # What this answer's ``proposals`` reached: a batch committed between the two
+            # reads is in ``states`` only, and the next read lists it in full.
+            cursor=max((item.id for item in items), default=since_id),
         )
         # Its own model: declared on the route, the review's model would drop the states.
         from fastapi.encoders import jsonable_encoder
@@ -1164,6 +1189,7 @@ def accept_all_proposals(
     try:
         _check_project(db, project_id)
         job = _get_job(db, project_id, framework_id)
+        _refuse_while_first_apply_codes(job)
 
         min_conf = body.min_confidence if body else 0.5
         group_filter_id = body.group_id if body else None
@@ -1224,6 +1250,7 @@ def deny_all_proposals(
     try:
         _check_project(db, project_id)
         job = _get_job(db, project_id, framework_id)
+        _refuse_while_first_apply_codes(job)
 
         min_conf = body.min_confidence if body else 0.0
         max_conf = body.max_confidence if body else None
@@ -1329,8 +1356,17 @@ def recut_target(
 
 def _stored_lines_or_none(job: AutoCodeJob) -> tuple[float, float] | None:
     """The (accept, exclude) lines stored on ``job``, the dialog's defaults standing in
-    for one that is missing; None when neither was ever stored."""
+    for one that is missing; None when neither was ever stored.
+
+    A job that accepted live (``live_accept_line``) and stored no lines answers that line,
+    and no exclude line: its live acceptances are threshold decisions a plain cut would
+    leave where they are, inverted against the new lines. Every end of a first apply
+    stores lines (``autocode.cut_first_apply``) and Review is refused while one codes, so
+    no path is known to reach this; it is a belt (lead, 23 Nov 2026), with no twin in
+    ``frontend/src/utils/recut.ts``."""
     if job.applied_upper_threshold is None and job.applied_lower_threshold is None:
+        if job.live_accept_line is not None:
+            return round(job.live_accept_line, 2), 0.0
         return None
     from bristlenose.server.autocode import stored_lines
 
@@ -1358,6 +1394,7 @@ def recut_proposals(
     try:
         _check_project(db, project_id)
         job = _get_job(db, project_id, framework_id)
+        _refuse_while_first_apply_codes(job)
         before = _stored_lines_or_none(job)
         counted = _counted_quote_ids(db, project_id)
         moved = {_ACCEPT: 0, _TENTATIVE: 0, _EXCLUDE: 0}

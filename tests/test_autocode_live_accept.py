@@ -364,10 +364,13 @@ def test_a_decision_committed_while_the_acceptance_writes_wins() -> None:
 
 
 @pytest.mark.parametrize("stopped", [False, True])
-def test_the_stored_line_is_no_higher_than_the_lowest_live_acceptance(stopped: bool) -> None:
+def test_the_stored_line_is_no_higher_than_the_lowest_live_acceptance(
+    stopped: bool, caplog: pytest.LogCaptureFixture,
+) -> None:
     """Accepted live at 0.85; the run's exact cut ends at 0.95. The stored line is 0.85,
     the 0.85s stay accepted, and the 0.90s the exact cut would leave pending are
-    topped up: no accepted proposal below the line, no pending one above it (D46)."""
+    topped up: no accepted proposal below the line, no pending one above it (D46). The
+    overshoot is said, with both lines and what it added (lead, 23 Nov 2026)."""
     session_cls, job_id, tag_id, quotes = _study(35)
     _land(session_cls, job_id, tag_id, quotes[:5], [0.85] * 5)
     _land(session_cls, job_id, tag_id, quotes[5:25], [0.95] * 20)
@@ -380,15 +383,33 @@ def test_the_stored_line_is_no_higher_than_the_lowest_live_acceptance(stopped: b
     db.commit()
     db.close()
 
-    line = _end(session_cls, job_id, stopped=stopped)
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="bristlenose.server.autocode"):
+        line = _end(session_cls, job_id, stopped=stopped)
 
     assert line == 0.85
+    said = [r.getMessage() for r in caplog.records if "below the exact cut" in r.getMessage()]
+    assert said == [
+        f"AutoCode job {job_id}: stored line 0.85 is below the exact cut 0.95 (accepted live "
+        "below it); the top-up accepted 10 more because of it"
+    ]
     job = _job(session_cls, job_id)
     assert (job.applied_upper_threshold, job.applied_lower_threshold) == (0.85, 0.30)
     rows = _rows(session_cls, job_id)
     assert all(s == "accepted" for _, s, _ in rows)  # never taken back, and topped up
     _no_inversion(rows, line)
     assert _tags(session_cls) == 35  # the live acceptances' tags are made at the end
+
+
+def test_a_cut_that_lands_at_the_exact_line_says_nothing(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+
+    session_cls, job_id, tag_id, quotes = _study(10)
+    _land(session_cls, job_id, tag_id, quotes, [0.95] * 3 + [0.5] * 7)
+    with caplog.at_level(logging.INFO, logger="bristlenose.server.autocode"):
+        assert _end(session_cls, job_id) == 0.95
+    assert not [r for r in caplog.records if "below the exact cut" in r.getMessage()]
 
 
 def test_a_live_acceptance_has_no_tag_until_the_end() -> None:
@@ -399,14 +420,22 @@ def test_a_live_acceptance_has_no_tag_until_the_end() -> None:
     assert _tags(session_cls) == 5
 
 
-def test_a_tag_the_researcher_already_had_is_not_doubled() -> None:
+def test_a_tag_the_researcher_already_had_is_not_doubled_or_counted() -> None:
+    """The settle's count of tags it made (what decides a Signals rebuild after a stop or
+    a failure, D31) leaves out a tag the quote already had, the researcher's own."""
     session_cls, job_id, tag_id, quotes = _study(5)
     db = session_cls()
     db.add(QuoteTag(quote_id=quotes[0], tag_definition_id=tag_id, source="human"))
     db.commit()
     db.close()
     _land(session_cls, job_id, tag_id, quotes, [0.95] * 5)
-    _end(session_cls, job_id)
+    db = session_cls()
+    try:
+        out = cut_first_apply(db, job_id, stopped=True)
+        db.commit()
+    finally:
+        db.close()
+    assert out is not None and out.tagged == 4
     db = session_cls()
     try:
         assert db.query(QuoteTag).filter_by(quote_id=quotes[0]).count() == 1
@@ -617,3 +646,447 @@ def test_the_live_read_is_settled_only_once_the_runner_has_ended(seeded) -> None
     assert (run["ending"], run["settled"]) == (True, False)
     run = client.get(url).json()["run"]
     assert (run["ending"], run["settled"]) == (False, True)
+
+
+# ---------------------------------------------------------------------------
+# Every end of a first apply settles (D27, extended by the lead on 23 Nov 2026)
+# ---------------------------------------------------------------------------
+
+
+def _ended_job_holds_no_unsettled_acceptance(session_cls: Any) -> AutoCodeJob:
+    """The invariant over every terminal path: an ended job with a threshold acceptance
+    has stored lines, every such acceptance has its tag, and none sits below the stored
+    line nor any pending proposal on or above it."""
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        assert job.status in ("completed", "failed", "cancelled")
+        accepted = db.query(ProposedTag).filter_by(
+            job_id=job.id, status="accepted", decided_by="threshold",
+        ).all()
+        if accepted:
+            assert job.applied_upper_threshold is not None
+            tagged = {(t.quote_id, t.tag_definition_id) for t in db.query(QuoteTag)}
+            assert all((p.quote_id, p.tag_definition_id) in tagged for p in accepted)
+        if job.applied_upper_threshold is not None:
+            _no_inversion(
+                [(p.confidence, p.status, p.decided_by)
+                 for p in db.query(ProposedTag).filter_by(job_id=job.id)],
+                job.applied_upper_threshold,
+            )
+        db.expunge(job)
+        return job
+    finally:
+        db.close()
+
+
+def _set_job_status(session_cls: Any, status: str) -> None:
+    db = session_cls()
+    try:
+        db.query(AutoCodeJob).update({"status": status})
+        db.commit()
+    finally:
+        db.close()
+
+
+def _first_batch_lands_then(session_cls: Any, then: Any) -> AsyncMock:
+    """The first batch (5 at 0.95) answers and is accepted live; ``then`` runs as the
+    second batch is sent, which answers at 0.5."""
+    calls = {"n": 0}
+
+    async def analyze(system_prompt, user_prompt, response_model, **kw):  # type: ignore[no-untyped-def]
+        calls["n"] += 1
+        if calls["n"] == 2:
+            await then()
+        confidence = 0.95 if calls["n"] == 1 else 0.5
+        return _make_batch_result(_n_in_prompt(user_prompt), "user need", confidence)
+
+    return AsyncMock(side_effect=analyze)
+
+
+def test_a_stopped_run_settles(tmp_path) -> None:
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 40)
+
+    async def stop() -> None:
+        _set_job_status(session_cls, "cancelled")
+
+    with _patch_llm(_first_batch_lands_then(session_cls, stop)):
+        tags = asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    job = _ended_job_holds_no_unsettled_acceptance(session_cls)
+    assert (job.status, job.completed_at) == ("cancelled", None)
+    assert tags == _tags(session_cls) == 5
+    engine.dispose()
+
+
+@pytest.mark.parametrize("stopped", [False, True])
+def test_a_run_whose_outcome_never_saved_settles_with_its_failure(
+    tmp_path, monkeypatch: pytest.MonkeyPatch, stopped: bool,
+) -> None:
+    """The outcome's save runs out of tries: the job is marked failed (a Stop's stays
+    cancelled) and settled in the same transaction."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 40)
+    real_save = autocode._save_batch
+
+    async def save(db_factory, write, what):  # type: ignore[no-untyped-def]
+        if what.endswith("its outcome"):
+            return False, None
+        return await real_save(db_factory, write, what)
+
+    async def maybe_stop() -> None:
+        if stopped:
+            _set_job_status(session_cls, "cancelled")
+
+    monkeypatch.setattr(autocode, "_save_batch", save)
+    with _patch_llm(_first_batch_lands_then(session_cls, maybe_stop)):
+        tags = asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    job = _ended_job_holds_no_unsettled_acceptance(session_cls)
+    assert (job.status, job.completed_at) == ("cancelled" if stopped else "failed", None)
+    assert job.applied_upper_threshold is not None
+    assert tags == _tags(session_cls) == 5
+    engine.dispose()
+
+
+def test_a_run_that_fails_settles_what_earlier_passes_accepted(tmp_path) -> None:
+    """A pass whose every batch fails ends failed; what an earlier pass accepted live and
+    left without lines (a job from before every end settled) is settled with it."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 10)
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        tag = db.query(TagDefinition).filter_by(name="User need").first() or \
+            db.query(TagDefinition).first()
+        assert tag is not None
+        for quote in db.query(Quote).order_by(Quote.id).limit(5):
+            db.add(ProposedTag(job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
+                               confidence=0.9, rationale="r", status="accepted",
+                               decided_by="threshold"))
+            autocode.record_sent(db, job.id, [quote.id])
+        job.status, job.live_accept_line = "failed", 0.90
+        db.commit()
+    finally:
+        db.close()
+
+    with _patch_llm(AsyncMock(side_effect=RuntimeError("credit balance is too low"))):
+        tags = asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    job = _ended_job_holds_no_unsettled_acceptance(session_cls)
+    assert (job.status, job.completed_at, job.applied_upper_threshold) == ("failed", None, 0.9)
+    assert tags == 5
+    engine.dispose()
+
+
+def test_a_crash_mid_run_is_settled_by_the_boot_sweep(tmp_path) -> None:
+    from bristlenose.server.autocode import reconcile_orphaned_jobs
+
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 40)
+
+    async def main() -> None:
+        second = asyncio.Event()
+
+        async def never_answers() -> None:
+            second.set()
+            await asyncio.Event().wait()
+
+        with _patch_llm(_first_batch_lands_then(session_cls, never_answers)):
+            task = asyncio.ensure_future(
+                run_autocode_job(session_cls, project_id, "garrett", _settings()))
+            await second.wait()
+            task.cancel()  # the process goes; no handler of the job's runs
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+    asyncio.run(main())
+    assert _tags(session_cls) == 0  # accepted live, untagged, as the crash left it
+    db = session_cls()
+    try:
+        assert reconcile_orphaned_jobs(db) == 1
+    finally:
+        db.close()
+    job = _ended_job_holds_no_unsettled_acceptance(session_cls)
+    assert (job.status, job.completed_at, job.applied_upper_threshold) == ("failed", None, 0.95)
+    assert _tags(session_cls) == 5
+    engine.dispose()
+
+
+def test_a_failed_runs_retry_resumes_at_the_lines_it_settled(tmp_path) -> None:
+    """15 quotes go as 5 and 10: the first lands (0.95, accepted live), the second fails,
+    and the outcome cannot be saved, so the run ends failed and settles at 0.95. Its retry
+    sends the 10 owed, which answer 0.9: below the settled line, they stay pending."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 15)
+
+    async def fail() -> None:
+        raise RuntimeError("credit balance is too low")
+
+    real_save = autocode._save_batch
+
+    async def save(db_factory, write, what):  # type: ignore[no-untyped-def]
+        if what.endswith("its outcome"):
+            return False, None
+        return await real_save(db_factory, write, what)
+
+    with patch.object(autocode, "_save_batch", save), \
+            _patch_llm(_first_batch_lands_then(session_cls, fail)):
+        asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    assert _job(session_cls, 1).applied_upper_threshold == 0.95
+    _set_job_status(session_cls, "pending")  # Apply's start on a never-applied job
+    with _patch_llm(AsyncMock(side_effect=lambda system_prompt, user_prompt, response_model,
+                              **kw: _make_batch_result(_n_in_prompt(user_prompt),
+                                                       "user need", 0.9))):
+        asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    job = _ended_job_holds_no_unsettled_acceptance(session_cls)
+    assert (job.status, job.applied_upper_threshold) == ("completed", 0.95)
+    assert _tags(session_cls) == 5  # the 0.9s of the retry sit below the settled line
+    engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# Review is inactive while a first apply codes (D17)
+# ---------------------------------------------------------------------------
+
+
+_REVIEW_ACTIONS = [
+    ("recut", {"lower": 0.3, "upper": 0.8}),
+    ("accept-all", {"min_confidence": 0.8}),
+    ("deny-all", {"min_confidence": 0.0, "max_confidence": 0.3}),
+]
+
+
+@pytest.mark.parametrize(("action", "body"), _REVIEW_ACTIONS)
+@pytest.mark.parametrize("status", ["pending", "running"])
+def test_the_reviews_lines_are_refused_while_a_first_apply_codes(
+    seeded, action: str, body: dict, status: str,  # noqa: F811
+) -> None:
+    client, ids, _ = seeded
+    _unfinish(client, status)
+    resp = client.post(f"{BASE}/autocode/garrett/{action}", json=body)
+    assert resp.status_code == 409
+    assert resp.json()["reason"] == "already_running"
+    # A researcher's own decision on one row stays allowed (D2).
+    assert client.post(f"{BASE}/autocode/proposals/{ids[0]}/deny").status_code == 200
+
+
+@pytest.mark.parametrize(("action", "body"), _REVIEW_ACTIONS)
+def test_the_reviews_lines_are_refused_while_a_stopped_run_settles(
+    seeded, action: str, body: dict,  # noqa: F811
+) -> None:
+    client, _, _ = seeded
+    _unfinish(client, "cancelled")
+    url = f"{BASE}/autocode/garrett/{action}"
+    with patch.object(autocode, "_FIRST_APPLY_CODING", {(1, "garrett"): 1}):
+        assert client.post(url, json=body).status_code == 409
+    assert client.post(url, json=body).status_code == 200
+
+
+def test_the_review_stays_live_while_a_catch_up_codes(seeded) -> None:  # noqa: F811
+    """A catch-up on an applied job leaves it "running" with ``completed_at``: Review
+    stays live (D20)."""
+    client, _, _ = seeded
+    db = client.app.state.db_factory()
+    try:
+        db.query(AutoCodeJob).update({"status": "running"})
+        db.commit()
+    finally:
+        db.close()
+    resp = client.post(f"{BASE}/autocode/garrett/recut", json={"lower": 0.3, "upper": 0.8})
+    assert resp.status_code == 200
+
+
+def test_a_recut_with_no_stored_lines_reads_the_live_line(seeded) -> None:  # noqa: F811
+    """The belt: a job that accepted live and stored no lines (no known path reaches it)
+    is re-cut against its live line, so a live acceptance below the new line moves."""
+    client, ids, _ = seeded
+    db = client.app.state.db_factory()
+    try:
+        job = db.query(AutoCodeJob).one()
+        job.applied_upper_threshold = job.applied_lower_threshold = None
+        job.live_accept_line = 0.80
+        p = db.get(ProposedTag, ids[3])  # 0.8
+        assert p is not None
+        p.status, p.decided_by = "accepted", "threshold"
+        db.commit()
+    finally:
+        db.close()
+    resp = client.post(f"{BASE}/autocode/garrett/recut", json={"lower": 0.3, "upper": 0.85})
+    assert resp.status_code == 200
+    db = client.app.state.db_factory()
+    try:
+        p = db.get(ProposedTag, ids[3])
+        assert p is not None and (p.status, p.decided_by) == ("pending", None)
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# The live read: settled, and its cursor
+# ---------------------------------------------------------------------------
+
+
+def test_the_live_read_is_not_settled_while_a_catch_up_codes(seeded) -> None:  # noqa: F811
+    from unittest.mock import MagicMock
+
+    client, _, _ = seeded
+    url = f"{BASE}/autocode/garrett/proposals?min_confidence=0&live=true"
+    coding = MagicMock()
+    coding.done.return_value = False
+    with patch.dict(autocode._REAPPLY_IN_FLIGHT, {(1, "garrett"): coding}):
+        assert client.get(url).json()["run"]["settled"] is False
+    assert client.get(url).json()["run"]["settled"] is True
+
+
+def test_a_silent_catch_up_after_a_run_is_registered_while_it_codes(tmp_path) -> None:
+    """Every catch-up path registers its task, the run's silent one included, so the live
+    read can tell a codebook is still coding."""
+    from bristlenose.server.autocode import live_reapply, reapply_active_frameworks
+
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 3, applied=True)
+    seen: list[bool] = []
+
+    async def analyze(system_prompt, user_prompt, response_model, **kw):  # type: ignore[no-untyped-def]
+        seen.append(live_reapply(project_id, "garrett") is not None)
+        return _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.5)
+
+    with _patch_llm(AsyncMock(side_effect=analyze)):
+        asyncio.run(reapply_active_frameworks(session_cls, project_id, _settings()))
+    assert seen == [True]
+    engine.dispose()
+
+
+def test_the_cursor_is_what_this_answers_proposals_reached(seeded) -> None:  # noqa: F811
+    client, ids, _ = seeded
+    url = f"{BASE}/autocode/garrett/proposals?min_confidence=0&live=true"
+    assert client.get(f"{url}&since_id={ids[1]}").json()["run"]["cursor"] == ids[3]
+    assert client.get(f"{url}&since_id={ids[3]}").json()["run"]["cursor"] == ids[3]
+    assert client.get(f"{url}&min_confidence=0.99").json()["run"]["cursor"] is None
+
+
+def test_a_row_committed_between_the_two_reads_comes_in_full_next_time(seeded) -> None:  # noqa: F811
+    """The states read runs after the proposals read: a batch committed between them is in
+    ``states`` and not in ``proposals``, and the cursor stays below it."""
+    client, ids, tag_ids = seeded
+    db = client.app.state.db_factory()
+    try:
+        gone = db.get(ProposedTag, ids[3])
+        assert gone is not None
+        free_quote = gone.quote_id
+        db.delete(gone)
+        db.commit()
+    finally:
+        db.close()
+
+    real_factory = client.app.state.db_factory
+    landed: list[int] = []
+
+    def factory() -> Any:
+        session = real_factory()
+        real_query = session.query
+
+        def query(*entities: Any, **kw: Any) -> Any:
+            if len(entities) == 5 and entities[0] is ProposedTag.id and not landed:
+                other = real_factory()
+                try:
+                    job = other.query(AutoCodeJob).one()
+                    p = ProposedTag(job_id=job.id, quote_id=free_quote,
+                                    tag_definition_id=tag_ids[3], confidence=0.9,
+                                    rationale="r")
+                    other.add(p)
+                    other.commit()
+                    landed.append(p.id)
+                finally:
+                    other.close()
+            return real_query(*entities, **kw)
+
+        session.query = query  # type: ignore[method-assign]
+        return session
+
+    url = f"{BASE}/autocode/garrett/proposals?min_confidence=0&live=true"
+    with patch.object(client.app.state, "db_factory", factory):
+        body = client.get(f"{url}&since_id={ids[1]}").json()
+    assert landed
+    assert [p["id"] for p in body["proposals"]] == [ids[2]]
+    assert landed[0] in {s["id"] for s in body["states"]}
+    assert body["run"]["cursor"] == ids[2]
+    after = client.get(f"{url}&since_id={body['run']['cursor']}").json()
+    assert [p["id"] for p in after["proposals"]] == [landed[0]]
+
+
+# ---------------------------------------------------------------------------
+# Live acceptance can never cost a batch its save
+# ---------------------------------------------------------------------------
+
+
+def test_a_live_acceptance_that_fails_rolls_back_alone(
+    tmp_path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """It accepts, then fails: its savepoint takes back its own writes, the batch's
+    proposals are saved, and the end cut accepts what it missed."""
+    import logging
+
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 15)
+    real = autocode.accept_live
+
+    def accept_then_fail(session, job_id):  # type: ignore[no-untyped-def]
+        real(session, job_id)
+        session.flush()
+        raise RuntimeError("live acceptance broke")
+
+    monkeypatch.setattr(autocode, "accept_live", accept_then_fail)
+    seen: list[tuple[int, int]] = []
+
+    def accepted() -> int:
+        db = session_cls()
+        try:
+            return db.query(ProposedTag).filter_by(status="accepted").count()
+        finally:
+            db.close()
+
+    async def analyze(system_prompt, user_prompt, response_model, **kw):  # type: ignore[no-untyped-def]
+        seen.append((_counts(session_cls)[0], accepted()))
+        return _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.95)
+
+    with caplog.at_level(logging.WARNING, logger="bristlenose.server.autocode"), \
+            _patch_llm(AsyncMock(side_effect=analyze)):
+        asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    assert seen == [(0, 0), (5, 0)]  # saved, and nothing accepted live survived
+    assert sum("live acceptance skipped" in r.getMessage() for r in caplog.records) == 2
+    assert accepted() == 15 and _tags(session_cls) == 15
+    assert _job(session_cls, 1).status == "completed"
+    engine.dispose()
+
+
+def test_a_run_whose_codebook_is_gone_settles_what_it_had(tmp_path) -> None:
+    """The codebook's template missing fails the run at once; what an earlier pass accepted
+    live is settled with it."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 5)
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        tag = db.query(TagDefinition).first()
+        assert tag is not None
+        for quote in db.query(Quote).order_by(Quote.id):
+            db.add(ProposedTag(job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
+                               confidence=0.9, rationale="r", status="accepted",
+                               decided_by="threshold"))
+        job.status, job.live_accept_line = "failed", 0.90
+        db.commit()
+    finally:
+        db.close()
+    with patch("bristlenose.server.codebook.get_template", return_value=None):
+        tags = asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
+    job = _ended_job_holds_no_unsettled_acceptance(session_cls)
+    assert (job.status, job.applied_upper_threshold) == ("failed", 0.9)
+    assert tags == 5
+    engine.dispose()
+
+
+def test_a_settle_whose_acceptances_are_all_on_hidden_quotes_still_stores_lines() -> None:
+    from bristlenose.server.models import QuoteState
+
+    session_cls, job_id, tag_id, quotes = _study(5)
+    _land(session_cls, job_id, tag_id, quotes, [0.95] * 5)
+    db = session_cls()
+    db.add_all([QuoteState(quote_id=q, is_hidden=True) for q in quotes])
+    db.commit()
+    db.close()
+    _end(session_cls, job_id, stopped=True)
+    job = _job(session_cls, job_id)
+    assert (job.applied_upper_threshold, job.applied_lower_threshold) == (0.70, 0.30)
+    assert _tags(session_cls) == 5  # kept: accepted before they were hidden (lead's call)

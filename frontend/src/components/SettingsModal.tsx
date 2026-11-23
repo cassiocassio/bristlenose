@@ -180,7 +180,7 @@ const CONFIG_DATA: SettingCategory[] = [
       { labelKey: "configReference.settings.quotes.speakerMergeGap", envVar: "BRISTLENOSE_MERGE_SPEAKER_GAP_SECONDS", default: "2.0", file: ".env", filePath: "bristlenose/config.py", options: ["seconds"] },
       { labelKey: "configReference.settings.quotes.quoteSequenceGap", envVar: "SEQUENCE_GAP_SECONDS", default: "17.5", file: "models.py", filePath: "bristlenose/signals/models.py", options: ["seconds"] },
       { labelKey: "configReference.settings.quotes.llmFailureThreshold", envVar: "_FAIL_THRESHOLD", default: "3", file: "quote_extraction.py", filePath: "bristlenose/stages/quote_extraction.py" },
-      { labelKey: "configReference.settings.quotes.autocodeBatchSize", envVar: "BATCH_SIZE", default: "25", file: "autocode.py", filePath: "bristlenose/server/autocode.py" },
+      { labelKey: "configReference.settings.quotes.autocodeBatchSize", envVar: "BATCH_SIZE", default: "25 (a first run: 5, 10, then 25)", file: "autocode.py", filePath: "bristlenose/server/autocode.py" },
     ],
   },
   {

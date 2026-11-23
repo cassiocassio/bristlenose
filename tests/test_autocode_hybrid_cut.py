@@ -436,9 +436,9 @@ def test_a_researchers_first_apply_is_cut_before_the_signals_snapshot(study: Fas
     assert _lines(study.state.db_factory) == (0.90, 0.30)
 
 
-def test_a_failed_first_apply_is_not_settled(study: FastAPI) -> None:
-    """As shipped: a failure is not a stop (D27, D35 name a stop); its retry cuts the
-    whole run when it completes."""
+def test_a_failed_first_apply_that_coded_nothing_stores_no_lines(study: FastAPI) -> None:
+    """A failure settles as a Stop does (D27, extended by the lead on 23 Nov 2026), over what
+    was coded: here nothing, so no lines and no rebuild; its retry ranks what it codes."""
     _import_garrett(study)
     build, seen = _snapshot_spy()
     _start(study, "garrett", AsyncMock(side_effect=RuntimeError("boom")), build)
@@ -614,21 +614,21 @@ def test_a_lock_held_through_every_try_fails_the_run_and_the_retry_cuts_it(
     tmp_path, monkeypatch,
 ) -> None:
     """Held through every try, the outcome is not saved: the run reads failed, never applied,
-    with no cut and no lines, its proposals kept. Nothing claims a cut that did not land, and
-    the cut is owed to the retry: Apply runs the job again, nothing is left to send, and it
-    completes with its cut. The first batch's live acceptances (Phase 4, D6) stand, with no
-    tags until the retry's cut makes them (D32)."""
+    and is settled with its failure, as every end without a finish is (D27, extended by the
+    lead on 23 Nov 2026): stored lines, the first batch's live acceptances (Phase 4, D6)
+    kept, with their tags. Apply runs the job again, nothing is left to send, and it
+    completes at the lines it settled."""
     session_cls, engine, project_id, db_path = _file_project(tmp_path, 10, busy_ms=30)
     _hold_during_outcome(monkeypatch, db_path, tries_held=None)
     with _patch_llm(_answers((0.95,) * 3 + (0.5,) * 2, (0.5,) * 5, tag="user need")):
         asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
-    assert _job_row(db_path) == ("failed", None, 3)
+    assert _job_row(db_path) == ("failed", 0.95, 3)
     db = session_cls()
     try:
         job = db.query(AutoCodeJob).one()
         assert job.completed_at is None
         assert db.query(ProposedTag).filter_by(status="pending").count() == 7
-        assert _autocode_tags(db) == 0
+        assert _autocode_tags(db) == 3
         job.status = "pending"  # what Apply's start does to a never-applied failed job
         db.commit()
     finally:

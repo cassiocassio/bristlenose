@@ -38,7 +38,11 @@ def test_the_contracts_defaults_are_the_servers() -> None:
 @pytest.mark.parametrize("case", CONTRACT["cases"], ids=lambda c: c["name"])
 def test_recut_target_follows_the_contract(case: dict[str, Any]) -> None:
     stored = case["stored"] or [None, None]
-    job = SimpleNamespace(applied_lower_threshold=stored[0], applied_upper_threshold=stored[1])
+    # No live line: the server's belt for a job that accepted live and stored no lines
+    # (``_stored_lines_or_none``) has no reachable path and no twin in the client, so it is
+    # not part of the shared contract (tests/test_autocode_live_accept.py pins it).
+    job = SimpleNamespace(applied_lower_threshold=stored[0], applied_upper_threshold=stored[1],
+                          live_accept_line=None)
     before = _stored_lines_or_none(cast(AutoCodeJob, job))
     lines = RecutRequest(lower=case["lines"][0], upper=case["lines"][1])
     proposal = SimpleNamespace(

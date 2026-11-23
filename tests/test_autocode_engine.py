@@ -977,7 +977,7 @@ class TestRunAutoCodeJob:
 class TestBatching:
     """Tests for the batching behaviour within the job runner."""
 
-    def test_batches_of_25(self, db_session: SASession) -> None:
+    def test_a_first_apply_ramps_5_then_10_then_batches_of_25(self, db_session: SASession) -> None:
         """100 quotes produce 6 LLM calls: 5, then 10, then 25 a batch (D24)."""
         db = db_session
         project = Project(name="Large", slug="large", input_dir="/tmp", output_dir="/tmp")

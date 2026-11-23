@@ -355,10 +355,10 @@ def test_a_lock_held_through_the_end_of_the_run_leaves_the_quotes_owed_and_says_
     engine.dispose()
 
 
-@pytest.mark.usefixtures("batches_of_25")
 def test_a_batch_that_cannot_be_saved_makes_a_partial_run(tmp_path, monkeypatch) -> None:
-    """One batch never saves (its write keeps failing), the other does: the run is
-    applied, short by that batch, whose quotes stay owed."""
+    """One batch never saves (its write keeps failing), the others do: the run is
+    applied, short by that batch, whose quotes stay owed. With the shipped ramp (D24):
+    50 quotes go as 5, 10, 25, 10, and the batch of 5 is the one lost."""
     from sqlalchemy.exc import OperationalError
 
     session_cls, engine, project_id, _ = _file_project(tmp_path, 50)
@@ -378,12 +378,13 @@ def test_a_batch_that_cannot_be_saved_makes_a_partial_run(tmp_path, monkeypatch)
                               _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.8))):
         asyncio.run(run_autocode_job(session_cls, project_id, "garrett", _settings()))
 
-    assert _counts(session_cls) == (25, 25, 25)
+    assert len(first_batch) == autocode.FIRST_APPLY_BATCH_RAMP[0] == 5
+    assert _counts(session_cls) == (45, 45, 45)
     db = session_cls()
     try:
         job = db.query(AutoCodeJob).one()
         assert job.status == "completed" and job.completed_at is not None
-        assert (job.processed_quotes, job.total_quotes) == (25, 50)  # the chip reads partial
+        assert (job.processed_quotes, job.total_quotes) == (45, 50)  # the chip reads partial
         assert job.error_message == autocode.NOT_SAVED_MESSAGE
         assert {q.id for q in owed_quotes(db, job)} == first_batch
     finally:
@@ -710,45 +711,32 @@ def test_a_burst_of_recuts_rebuilds_once_and_waits_for_a_pass_still_coding(
 
 
 @pytest.mark.parametrize(
-    ("status", "accepted", "confidence", "expected"),
+    ("status", "settled_tags", "expected"),
     [
-        ("completed", "no", 0.9, "codebook_apply"),
-        # A stop's cut has landed with its outcome (``cut_first_apply``, landing plan Phase
-        # 3) before this reads it: what it accepted, and tagged, is what decides (D31).
-        ("cancelled", "tagged", 0.9, "codebook_stopped"),
-        ("cancelled", "no", 0.9, None),
-        ("failed", "tagged", 0.9, "codebook_failed"),
-        ("failed", "no", 0.9, None),
-        # A failed run's live acceptances have no tags (``accept_live`` leaves them to the
-        # cut, which a failure does not run): Signals reads nothing new (Phase 4).
-        ("failed", "untagged", 0.9, None),
+        ("completed", 0, "codebook_apply"),
+        # A stop's or a failure's settle has landed with its outcome (``cut_first_apply``)
+        # before this reads it: whether it made a tag is what decides (D31).
+        ("cancelled", 2, "codebook_stopped"),
+        ("cancelled", 0, None),
+        ("failed", 1, "codebook_failed"),
+        ("failed", 0, None),
     ],
 )
 def test_how_a_first_apply_ended_says_whether_signals_is_rebuilt(
-    tmp_path, status: str, accepted: str, confidence: float, expected: str | None,
+    tmp_path, status: str, settled_tags: int, expected: str | None,
 ) -> None:
     from bristlenose.server.routes.autocode import _settle_first_apply
 
     session_cls, engine, project_id, _ = _file_project(tmp_path, 1)
     db = session_cls()
     try:
-        job = db.query(AutoCodeJob).one()
-        job.status = status
-        quote = db.query(Quote).one()
-        tag = db.query(TagDefinition).first()
-        assert tag is not None
-        db.add(ProposedTag(
-            job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
-            confidence=confidence, status="pending" if accepted == "no" else "accepted",
-        ))
-        if accepted == "tagged":
-            db.add(QuoteTag(quote_id=quote.id, tag_definition_id=tag.id, source="autocode"))
+        db.query(AutoCodeJob).one().status = status
         db.commit()
     finally:
         db.close()
     after: list[bool] = []
     assert _settle_first_apply(
-        session_cls, project_id, "garrett", lambda: after.append(True),
+        session_cls, project_id, "garrett", lambda: after.append(True), settled_tags,
     ) == expected
     assert after == ([True] if status == "completed" else [])
     engine.dispose()

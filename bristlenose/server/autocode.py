@@ -387,8 +387,20 @@ def _store_pending_batch(db: SASession, job_id: int, answered: _Answered) -> int
             synchronize_session=False,
         )
     # With the batch, in its transaction: a batch's proposals and the acceptance they allow
-    # land together, and this save's retries are the acceptance's.
-    return accept_live(db, job_id)
+    # land together, and this save's retries are the acceptance's. In a savepoint, so it can
+    # never cost the batch its save: one that fails rolls back alone, the proposals are
+    # saved, and the run's end cut accepts what it missed (``begin_nested`` flushes the
+    # batch's rows first: flushed here, so their own errors still fail the save as before).
+    db.flush()
+    try:
+        with db.begin_nested():
+            return accept_live(db, job_id)
+    except Exception as exc:
+        logger.warning(
+            "AutoCode job %d: live acceptance skipped for a batch (%s); its end cut catches up",
+            job_id, _db_error_name(exc),
+        )
+        return 0
 
 
 # ---------------------------------------------------------------------------
@@ -415,8 +427,12 @@ async def run_autocode_job(
     framework_id: str,
     settings: BristlenoseSettings,
     project_dir: Path | None = None,
-) -> None:
+) -> int:
     """Execute an AutoCode job: load quotes, batch, call LLM, store proposals.
+
+    Answers how many tags the run's settle made when it ended without finishing (a Stop,
+    a failure): its caller asks Signals for a rebuild only if that changed what Signals
+    reads (D31). 0 for a run that completed, or whose settle made none.
 
     This is the top-level coroutine spawned by ``asyncio.create_task()``
     from the API endpoint.  It manages its own DB sessions and handles
@@ -458,6 +474,9 @@ async def run_autocode_job(
 
     key = (project_id, framework_id)
     _FIRST_APPLY_CODING[key] = _FIRST_APPLY_CODING.get(key, 0) + 1
+    #: Tags the settle made, when the run ends without finishing (the outcome's save may be
+    #: tried more than once: the try that commits writes it last).
+    settled_tags = [0]
     db = db_factory()
     try:
         # Load the job row
@@ -468,11 +487,11 @@ async def run_autocode_job(
         )
         if not job:
             logger.error("AutoCodeJob not found: project=%d framework=%s", project_id, framework_id)
-            return
+            return 0
 
         # If cancelled before the async task started, exit immediately.
         if job.status == "cancelled":
-            return
+            return 0
 
         job.status = "running"
         db.commit()
@@ -482,8 +501,10 @@ async def run_autocode_job(
         if not template:
             job.status = "failed"
             job.error_message = f"Template '{framework_id}' not found"
+            # What an earlier pass coded settles, as every end without a finish does.
+            out = cut_first_apply(db, job.id, stopped=True)
             db.commit()
-            return
+            return out.tagged if out is not None else 0
 
         # Load the quotes that count: a hidden quote is discounted evidence and
         # counts nowhere, a recoded speaker's quotes have left the evidence
@@ -495,7 +516,7 @@ async def run_autocode_job(
             job.completed_at = datetime.now(timezone.utc)
             cut_first_apply(db, job.id)  # with the outcome, as below
             db.commit()
-            return
+            return 0
 
         # What a Stop or a failure left this job is kept (#127): a quote on its
         # register of sent quotes, or with a proposal on it, was paid for, and
@@ -529,7 +550,7 @@ async def run_autocode_job(
                 "AutoCode job %s: every quote was coded by an earlier pass, nothing sent",
                 framework_id,
             )
-            return
+            return 0
 
         # Build batch items
         batch_items = [
@@ -809,6 +830,7 @@ async def run_autocode_job(
         def _finish(session: SASession) -> str:
             """The job's outcome, in its own transaction, apart from the batches: a
             failure here costs the outcome a retry, never a saved batch."""
+            settled_tags[0] = 0
             j = session.get(AutoCodeJob, job_id)
             if j is None:
                 return "gone"
@@ -819,7 +841,8 @@ async def run_autocode_job(
                 # Keep "cancelled", with what it saved, and settle its cut now that its last
                 # batches have answered (D27): no ``completed_at``, so it stays resumable and
                 # the house default's marker is not written (D35).
-                cut_first_apply(session, job_id, stopped=True)
+                settle = cut_first_apply(session, job_id, stopped=True)
+                settled_tags[0] = settle.tagged if settle is not None else 0
                 return "cancelled"
             if failure is not None:
                 j.error_message, j.failure_kind = failure
@@ -845,11 +868,19 @@ async def run_autocode_job(
                 # The end-of-run cut, in this transaction: no reader sees the run completed
                 # before its cut (D5), and this save's retries are the cut's.
                 cut_first_apply(session, job_id)
+            else:
+                # A failed run settles as a stopped one does (D27, extended by the lead to
+                # every end without a finish): the exact cut over what earlier passes coded,
+                # stored lines, the tags of its acceptances, and no ``completed_at``, so a
+                # retry resumes at those lines.
+                settle = cut_first_apply(session, job_id, stopped=True)
+                settled_tags[0] = settle.tagged if settle is not None else 0
             return j.status
 
         finished, _ = await _save_batch(db_factory, _finish, f"job {framework_id}, its outcome")
         if not finished:
             raise _NotSavedError
+        return settled_tags[0]
 
     except Exception as exc:
         if _is_db_error(exc):
@@ -874,9 +905,18 @@ async def run_autocode_job(
                 job.error_message, job.failure_kind = failure_text(
                     job.llm_provider or None, exc,
                 )
+            if job and job.completed_at is None:
+                # Failed, or a Stop whose outcome could not be saved: settled with it, in the
+                # same transaction, as every end without a finish is (D27, extended). If this
+                # cannot be saved either, the job stays "running" and the boot sweep settles it.
+                settle = cut_first_apply(db, job.id, stopped=True)
+                settled_tags[0] = settle.tagged if settle is not None else 0
+            if job:
                 db.commit()
         except Exception:
+            settled_tags[0] = 0
             logger.exception("Failed to mark job as failed")
+        return settled_tags[0]
     finally:
         db.close()
         _FIRST_APPLY_CODING[key] -= 1
@@ -1052,6 +1092,9 @@ class CutOutcome:
     excluded: int = 0
     #: The lines were the job's own (a stop settled them, or a review stored them).
     from_stored: bool = False
+    #: Tags it made (``QuoteTag`` rows added): what Signals reads changed only if this is
+    #: above 0. A tag the quote already had, a researcher's own included, is not counted.
+    tagged: int = 0
 
 
 def cut_first_apply(
@@ -1063,9 +1106,12 @@ def cut_first_apply(
     ``run_autocode_job`` runs it in the same transaction as the job's outcome, so no reader
     sees a completed run before its cut (a page refreshed by the chip's "completed" would
     otherwise draw the whole run as tentative), and the save's retries (worker thread,
-    ``SAVE_ATTEMPTS``, the short lock wait) are the cut's. A first apply stopped partway
-    (``stopped``) is cut the same way when its last batches have answered, so every paid
-    proposal is ranked, and stays unfinished: this never sets ``completed_at``.
+    ``SAVE_ATTEMPTS``, the short lock wait) are the cut's. A first apply that ends without
+    finishing (``stopped``: a Stop, a failure, an orphan the boot sweep finds, an outcome
+    that could not be saved) settles the same way when its last batches have answered, so
+    every paid proposal is ranked, and stays unfinished: this never sets ``completed_at``
+    (D27, D35; the lead extended D27 to every terminal path on 23 Nov 2026, so no ended
+    job holds a threshold acceptance without stored lines or without its tag).
 
     Over the run's proposals on quotes that count (accept-all's rule: a hidden quote's
     proposal is not ranked and not touched, and stays pending for when it counts again),
@@ -1079,8 +1125,8 @@ def cut_first_apply(
 
     A job that already has lines (a stop settled them, or a review stored them) is sorted
     by those, as a catch-up is (D27: a resumed run continues with the same lines), and they
-    are not recomputed. A stop that coded nothing stores none, so its resumed run ranks
-    what it then codes.
+    are not recomputed. A settle with nothing to rank and nothing accepted stores none, so
+    its resumed run ranks what it then codes.
 
     Every change is a decision of the lines (``decided_by="threshold"``), written only on a
     proposal still pending (a conditional update): a decision made meanwhile, a
@@ -1100,11 +1146,12 @@ def cut_first_apply(
     ]
     if job.applied_upper_threshold is not None or job.applied_lower_threshold is not None:
         accept_at, exclude_below = stored_lines(job)
+        exact = accept_at
         outcome = CutOutcome(accept_at=accept_at, exclude_below=exclude_below, from_stored=True)
     else:
         # Ranked over every proposal of the run, decided or not: the cut is a property of
         # the run, and a decision made meanwhile does not move it.
-        accept_at = hybrid_accept_line(p.confidence for p in proposals)
+        exact = accept_at = hybrid_accept_line(p.confidence for p in proposals)
         # An accepted tag is never taken back (D6): the line stored is no higher than the
         # grid line at or below the lowest proposal the run accepted live, so every
         # accepted proposal sits at or above it, and the top-up below then leaves every
@@ -1120,11 +1167,14 @@ def cut_first_apply(
             accept_at = min(accept_at, grid_line_at_or_below(min(live)))
         exclude_below = HYBRID_EXCLUDE_BELOW
         outcome = CutOutcome(accept_at=accept_at, exclude_below=exclude_below)
-        if proposals or not stopped:
+        # Stored whenever anything was ranked or accepted, so an ended job never holds a
+        # threshold acceptance without lines (live ones on quotes hidden since included).
+        if proposals or live or not stopped:
             job.applied_upper_threshold = accept_at
             job.applied_lower_threshold = exclude_below
 
     now = datetime.now(timezone.utc)
+    overshoot = 0
     for proposal in proposals:
         if proposal.confidence >= accept_at:
             target = "accepted"
@@ -1147,11 +1197,24 @@ def cut_first_apply(
             outcome.excluded += 1
         else:
             outcome.accepted += 1
+            if not outcome.from_stored and proposal.confidence < exact:
+                overshoot += 1
+    if not outcome.from_stored and accept_at < exact:
+        # The reconcile bit (D6): the batches accepted something live below the exact cut,
+        # so the run takes more than the end-only hybrid would. On every real trial run it
+        # never bites; on a well-fitting run whose early sessions are weaker it can. Said,
+        # so a real case shows (lead, 23 Nov 2026).
+        logger.info(
+            "AutoCode job %s: stored line %.2f is below the exact cut %.2f (accepted live "
+            "below it); the top-up accepted %d more because of it",
+            job_id, accept_at, exact, overshoot,
+        )
     # The tags: of the top-up's acceptances and of every one made live as the batches landed
     # (``accept_live`` makes none, so a run still coding shows nowhere but the live page,
     # D32). As ``_ensure_autocode_tag``: a tag the quote has already (the researcher's)
-    # stays. Every threshold acceptance of the job, a hidden quote's included: it was
-    # accepted, and a tag on a hidden quote counts nowhere until it is unhidden.
+    # stays. Every threshold acceptance of the job, a hidden quote's included (the lead's
+    # call, 23 Nov 2026): it was accepted live before the quote was hidden, an accepted tag
+    # is never taken back, and a tag on a hidden quote counts nowhere until it is unhidden.
     from sqlalchemy import and_
 
     tagged = session.query(QuoteTag.quote_id, QuoteTag.tag_definition_id).join(
@@ -1173,6 +1236,7 @@ def cut_first_apply(
         session.add(QuoteTag(
             quote_id=quote_id, tag_definition_id=tag_definition_id, source="autocode",
         ))
+        outcome.tagged += 1
     return outcome
 
 
@@ -1490,9 +1554,10 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     - **Initial-apply orphan** (``completed_at IS NULL``): ``run_autocode_job``
       crashed before finishing the first pass → mark ``failed`` with a retryable
       ``error_message``. The batches it saved are kept, with their counts (each
-      batch saves its proposals and ``proposed_count`` as it answers). The start-job guard
-      lets Apply run a never-applied ``failed`` job again, keeping what it
-      coded (#127).
+      batch saves its proposals and ``proposed_count`` as it answers), and settled
+      (``cut_first_apply``, as a Stop's settle: its live acceptances get stored lines and
+      their tags). The start-job guard lets Apply run a never-applied ``failed`` job
+      again, keeping what it coded (#127), at the lines it settled.
     - **Catch-up orphan** (``completed_at IS NOT NULL``): the on-enable catch-up
       set an applied job ``running`` and was cut off before it finished → mark
       ``failed``, unclassified, so a chip still polling a restarted serve says
@@ -1538,6 +1603,11 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
                 "AutoCode was interrupted before it finished (the app closed "
                 "or crashed mid-run). Run it again to retry."
             )
+            # Settled as every end without a finish is (D27, extended by the lead, 23 Nov
+            # 2026): what its batches coded and accepted live gets its cut, stored lines and
+            # tags, so a retry resumes at those lines and no ended job holds an acceptance
+            # without them.
+            cut_first_apply(db, job.id, stopped=True)
         changed += 1
 
     if changed:

@@ -556,6 +556,20 @@ def export_report(
         )
     )
     signal_snapshot = _get_stored_signal_snapshot_handler(project_id, request)
+    # The stored report was built with tentative tags weighted in: the file keeps the
+    # accepted ones only (D28), without a new build or a paid call.
+    if signal_snapshot.snapshot:
+        from bristlenose.server.signal_snapshots import (
+            accepted_tag_names,
+            keep_accepted_tags_only,
+        )
+
+        accepted_db = request.app.state.db_factory()
+        try:
+            accepted = accepted_tag_names(accepted_db, project_id)
+        finally:
+            accepted_db.close()
+        keep_accepted_tags_only(signal_snapshot.snapshot, accepted)
 
     # Transcripts — one embed key per session
     transcripts: dict[str, object] = {}

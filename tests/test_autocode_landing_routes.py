@@ -389,3 +389,43 @@ def test_the_review_dialogs_lines_ask_for_a_signals_rebuild(seeded, monkeypatch)
     client.post(f"{BASE}/autocode/garrett/deny-all",
                 json={"min_confidence": 0.0, "max_confidence": 0.5})
     assert asked == [1, 1]
+
+
+def test_the_exports_signals_report_carries_no_tentative_tags(seeded) -> None:
+    """The stored report was built with tentative tags weighted in (the in-app lens
+    keeps them); the file takes them out without a new build (D28)."""
+    import asyncio
+
+    from bristlenose.server.routes.signals import _build_codebook_analysis
+    from bristlenose.server.signal_snapshots import store_completed_snapshot
+
+    client, ids, _ = seeded
+    _accept(client, ids[0])
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        report = asyncio.run(_build_codebook_analysis(1, db=db, elaborate=False))
+        store_completed_snapshot(db, 1, source="test", payload=report.model_dump(mode="json"))
+        db.commit()
+    finally:
+        db.close()
+
+    def tag_names(snapshot: dict) -> set[str]:
+        return {
+            name for c in snapshot["codebooks"] for s in c["signals"]
+            for q in s["quotes"] for name in q["tag_names"]
+        }
+
+    live = client.get(f"{BASE}/signals/snapshot").json()["snapshot"]
+    assert any(c["source_breakdown"]["pending"] for c in live["codebooks"])
+    live_garrett = next(c for c in live["codebooks"] if c["codebook_id"] == "garrett")
+    assert sum(s["count"] for s in live_garrett["signals"]) == 2
+
+    embedded = _export(client)["endpoints"]["/signals/snapshot"]["snapshot"]
+    assert all(c["source_breakdown"]["pending"] == 0 for c in embedded["codebooks"])
+    garrett = next(c for c in embedded["codebooks"] if c["codebook_id"] == "garrett")
+    # The accepted quote stays on its card; the tentative one leaves it, and its cell.
+    assert sum(s["count"] for s in garrett["signals"]) == 1
+    assert garrett["section_matrix"]["grand_total"] + garrett["theme_matrix"]["grand_total"] < (
+        live_garrett["section_matrix"]["grand_total"] + live_garrett["theme_matrix"]["grand_total"])
+    removed = tag_names({"codebooks": [live_garrett]}) - tag_names({"codebooks": [garrett]})
+    assert removed  # a tentative tag's name was on the live card and is not in the file

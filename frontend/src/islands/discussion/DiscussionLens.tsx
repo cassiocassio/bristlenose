@@ -142,6 +142,7 @@ const S = {
   get addGuideFormats() { return d("addGuideFormats"); },
   get readingGuide() { return d("readingGuide"); },
   get chooseOtherGuide() { return d("chooseOtherGuide"); },
+  get changeGuide() { return d("changeGuide"); },
   get replaceGuide() { return d("replaceGuide"); },
   get guideHowTo() { return p("guideHowTo"); },
   get key() { return d("key"); },
@@ -365,6 +366,8 @@ function DiscussionBody({ data: record, host, handingOver }: { data: DiscussionD
   }, [record, order]);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
   const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
+  // The guide's file name as the radio shows it; trimmed when long.
+  const guideFileShown = data.guide_file ? formatFinderFilename(data.guide_file, 28) : data.guide_file;
   const [guideNote, setGuideNote] = useState(false);
   // All is the first choice and the default once there are two sessions (decided 17 Oct 2026);
   // with one, All would be that session twice, so there is no All.
@@ -1165,29 +1168,36 @@ function DiscussionBody({ data: record, host, handingOver }: { data: DiscussionD
         )}
         {mode === "planned" && data.guide && (
           // Native radios: arrow keys and announcement come with the element.
-          <div className="dl-guide-view" role="radiogroup" aria-label={S.guideView}>
+          // A trimmed file name stacks the two radios rather than running them
+          // side by side past the navigator's edge (stack, never shrink).
+          <div className={guideFileShown !== data.guide_file ? "dl-guide-view dl-guide-view--stacked" : "dl-guide-view"}
+            role="radiogroup" aria-label={S.guideView}>
             <label>
               <input type="radio" name="dl-guide-view" value="summary" checked={guideView === "summary"}
                 onChange={() => setGuideView("summary")} />
               {S.summary}
             </label>
             {data.guide_file ? (
-              // The original is shown by its file name, which is also how you
-              // choose a different guide (4 Oct 2026). The radio and the link are
-              // separate controls: nothing interactive nests inside a label.
+              // The original is shown by its file name, a plain label: clicking it
+              // selects the radio, like any radio's label. Choosing a different
+              // guide is its own button beside it (B, 23 Nov 2026), so the name is
+              // never both the view and the action. Nothing interactive nests
+              // inside a label, so the button sits beside it.
               <span className="dl-guide-opt">
                 {/* Named from text, not a composed attribute: the radio reads
                     "Original, <file>" in the reader's language. */}
                 <span id="dl-guide-original" className="bn-sr-only">{S.original}</span>
                 <span id="dl-guide-file-name" className="bn-sr-only">{data.guide_file}</span>
-                <input type="radio" name="dl-guide-view" value="original" checked={guideView === "original"}
-                  aria-labelledby="dl-guide-original dl-guide-file-name" onChange={() => setGuideView("original")} />
-                {isExportMode() ? (
-                  <span className="dl-guide-file" title={data.guide_file}>{formatFinderFilename(data.guide_file, 28)}</span>
-                ) : (
-                  <button type="button" className="dl-guide-file" title={`${S.chooseOtherGuide}: ${data.guide_file}`}
-                    aria-label={S.chooseOtherGuide} onClick={chooseGuide}>
-                    {formatFinderFilename(data.guide_file, 28)}
+                <label title={data.guide_file}>
+                  <input type="radio" name="dl-guide-view" value="original" checked={guideView === "original"}
+                    aria-labelledby="dl-guide-original dl-guide-file-name" onChange={() => setGuideView("original")} />
+                  <span className="dl-guide-file">{guideFileShown}</span>
+                </label>
+                {!isExportMode() && (
+                  <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm"
+                    title={`${S.chooseOtherGuide}: ${data.guide_file}`} aria-describedby="dl-guide-file-name"
+                    onClick={chooseGuide}>
+                    {S.changeGuide}
                   </button>
                 )}
               </span>

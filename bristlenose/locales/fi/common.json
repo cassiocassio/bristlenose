@@ -713,6 +713,7 @@
     "addGuideFormats": "Word, Markdown tai pelkkä teksti.",
     "readingGuide": "Luetaan runkoa…",
     "chooseOtherGuide": "Valitse toinen runko",
+    "changeGuide": "Vaihda\u2026",
     "replaceGuide": "Korvaa runko\u2026",
     "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d ja suorita sitten bristlenose run uudelleen projektikansiolle.",
     "key": "Selite",

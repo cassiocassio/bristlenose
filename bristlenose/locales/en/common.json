@@ -715,6 +715,7 @@
     "addGuideFormats": "Word, Markdown or plain text.",
     "readingGuide": "Reading your guide…",
     "chooseOtherGuide": "Choose a different guide",
+    "changeGuide": "Change\u2026",
     "replaceGuide": "Replace your guide…",
     "_comment_guideHowTo": "“Discussion guide” is the folder name the code looks for (bristlenose/discussion/guide.py). Keep it in English in every translation, or a researcher following the sentence makes a folder that is never read.",
     "guideHowTo": "Put your guide — Word, Markdown or plain text — in a folder named “Discussion guide” beside your recordings, then run bristlenose run on the project folder again.",

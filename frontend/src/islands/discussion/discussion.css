@@ -114,21 +114,18 @@
 /* Your guide: Summary | Original. Small native radios at caption size, above
    the first section, so the choice reads as a setting of this view. */
 .dl-guide-view {
-    display: flex; gap: var(--bn-space-md); margin: 0 0 var(--bn-space-sm);
+    display: flex; flex-wrap: wrap; gap: var(--bn-space-xs) var(--bn-space-md); margin: 0 0 var(--bn-space-sm);
     font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh); color: var(--bn-colour-muted);
 }
 .dl-guide-view label { display: inline-flex; align-items: center; gap: var(--bn-space-xs); cursor: pointer; }
 .dl-guide-view input { margin: 0; accent-color: var(--bn-colour-accent); }
-/* Summary | the guide's file: the file name is a link that chooses another.
-   A link, not a button: it reads as the file, which is what it names. */
-.dl-guide-opt { display: inline-flex; align-items: center; gap: var(--bn-space-xs); min-width: 0; }
-.dl-guide-file {
-    background: none; border: 0; padding: 0; font: inherit; color: var(--bn-colour-accent);
-    cursor: pointer; white-space: nowrap; text-decoration: none;
-}
-button.dl-guide-file:hover { text-decoration: underline; }
-button.dl-guide-file:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; border-radius: 2px; }
-span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
+/* A trimmed file name: one radio per line, so the name never runs past the edge. */
+.dl-guide-view--stacked { flex-direction: column; align-items: flex-start; gap: var(--bn-space-xs); }
+/* Summary | the guide's file name, a plain radio label, then Change… to choose
+   another. The button wraps under the name rather than run past the edge. */
+.dl-guide-opt { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--bn-space-xs) var(--bn-space-sm); min-width: 0; }
+.dl-guide-file { white-space: nowrap; }
+.dl-nav .dl-guide-view .bn-btn-sm { margin: 0; }   /* not the navigator foot's Add your guide… margin */
 /* The key: the shipped .bn-pipeline-key (type, gaps, colour) in a thin keyline
    box the width of the navigator's measure. Nothing here sets type. */
 .dl-key {

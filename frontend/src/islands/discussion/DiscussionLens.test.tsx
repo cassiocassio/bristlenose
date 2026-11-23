@@ -1206,18 +1206,30 @@ describe("the guide tabs (4 Oct 2026)", () => {
     expect(screen.getByRole("radio", { name: "Add your guide" })).toBeInTheDocument();
   });
 
-  it("show the guide by its file name, which chooses a different one", () => {
+  it("show the guide by its file name as the radio's label, with Change… beside it to choose another", () => {
     (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
     _resetEmbeddedCache();
     render(<DiscussionView data={{ ...data, guide_file: "Home coffee discussion guide v3 final.docx" }} />);
     fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
-    expect(screen.getByRole("radio", { name: "Original Home coffee discussion guide v3 final.docx" })).toBeInTheDocument();
-    const link = screen.getByRole("button", { name: "Choose a different guide" });
-    expect(link.textContent).toMatch(/…/); // shortened, the extension kept
-    expect(link.textContent).toMatch(/\.docx$/);
-    fireEvent.click(link);
+    const original = screen.getByRole("radio", { name: "Original Home coffee discussion guide v3 final.docx" });
+    const name = screen.getByText(/^Home coffee.*….*\.docx$/); // shortened, the extension kept
+    // The name is the radio's label: clicking it shows the original and opens nothing.
+    fireEvent.click(name);
+    expect(original).toBeChecked();
+    expect(bridge.postProjectAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Change…" }));
     expect(bridge.postProjectAction).toHaveBeenCalledWith("choose-discussion-guide");
-    expect(screen.queryByRole("button", { name: "Replace your guide…" })).toBeNull(); // the link replaces it
+    expect(screen.queryByRole("button", { name: "Replace your guide…" })).toBeNull(); // Change… replaces it
+  });
+
+  it("stack Summary and the guide when the guide's name is trimmed, and keep them side by side when it is not", () => {
+    const { unmount } = render(<DiscussionView data={{ ...data, guide_file: "Home coffee discussion guide v3 final.docx" }} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    expect(screen.getByRole("radiogroup", { name: "Show your guide as" })).toHaveClass("dl-guide-view--stacked");
+    unmount();
+    render(<DiscussionView data={{ ...data, guide_file: "guide.docx" }} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    expect(screen.getByRole("radiogroup", { name: "Show your guide as" })).not.toHaveClass("dl-guide-view--stacked");
   });
 
   it("say they are reading a guide the Mac has just copied in, in place of the upload block", () => {

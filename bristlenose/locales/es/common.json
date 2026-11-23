@@ -713,6 +713,7 @@
     "addGuideFormats": "Word, Markdown o texto sin formato.",
     "readingGuide": "Leyendo tu guía…",
     "chooseOtherGuide": "Elegir otra gu\u00eda",
+    "changeGuide": "Cambiar\u2026",
     "replaceGuide": "Sustituir tu gu\u00eda\u2026",
     "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones y vuelve a ejecutar bristlenose run en la carpeta del proyecto.",
     "key": "Leyenda",

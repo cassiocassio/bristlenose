@@ -784,6 +784,7 @@
     "addGuideFormats": "Word, Markdown nebo prost\u00fd text.",
     "readingGuide": "Na\u010d\u00edt\u00e1 se sc\u00e9n\u00e1\u0159\u2026",
     "chooseOtherGuide": "Vybrat jin\u00fd sc\u00e9n\u00e1\u0159",
+    "changeGuide": "Zm\u011bnit\u2026",
     "replaceGuide": "Nahradit sc\u00e9n\u00e1\u0159\u2026",
     "guideHowTo": "Ulo\u017ete sc\u00e9n\u00e1\u0159 (Word, Markdown nebo prost\u00fd text) do slo\u017eky s n\u00e1zvem \u201eDiscussion guide\u201c vedle nahr\u00e1vek a spus\u0165te znovu bristlenose run na slo\u017eku projektu.",
     "key": "Legenda",

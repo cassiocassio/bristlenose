@@ -713,6 +713,7 @@
     "addGuideFormats": "Word, Markdown o testo semplice.",
     "readingGuide": "Lettura della tua traccia…",
     "chooseOtherGuide": "Scegli un’altra traccia",
+    "changeGuide": "Cambia\u2026",
     "replaceGuide": "Sostituisci la tua traccia…",
     "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata “Discussion guide” accanto alle registrazioni, poi esegui di nuovo bristlenose run sulla cartella del progetto.",
     "key": "Legenda",

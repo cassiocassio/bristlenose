@@ -713,6 +713,7 @@
     "addGuideFormats": "Word, Markdown oder reiner Text.",
     "readingGuide": "Leitfaden wird gelesen …",
     "chooseOtherGuide": "Anderen Leitfaden w\u00e4hlen",
+    "changeGuide": "\u00c4ndern\u2026",
     "replaceGuide": "Leitfaden ersetzen \u2026",
     "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und f\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus.",
     "key": "Legende",

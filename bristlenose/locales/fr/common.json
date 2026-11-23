@@ -713,6 +713,7 @@
     "addGuideFormats": "Word, Markdown ou texte brut.",
     "readingGuide": "Lecture de votre guide…",
     "chooseOtherGuide": "Choisir un autre guide",
+    "changeGuide": "Changer\u2026",
     "replaceGuide": "Remplacer votre guide\u2026",
     "guideHowTo": "Placez votre guide (Word, Markdown ou texte brut) dans un dossier nomm\u00e9 \u00ab Discussion guide \u00bb \u00e0 c\u00f4t\u00e9 de vos enregistrements, puis relancez bristlenose run sur le dossier du projet.",
     "key": "L\u00e9gende",

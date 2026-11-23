@@ -265,7 +265,10 @@
   "tags": {
     "noTags": "Немає тегів",
     "tags": "Теги",
-    "countTags": "{{count}} тегів",
+    "countTags_one": "{{count}} тег",
+    "countTags_few": "{{count}} теги",
+    "countTags_many": "{{count}} тегів",
+    "countTags_other": "{{count}} тега",
     "countHidden": "{{count}} прихованих",
     "selectAll": "Вибрати всі",
     "clear": "Очистити",
@@ -279,6 +282,10 @@
     "userTags": "Теги користувача",
     "other": "Інше",
     "summary": "{{count}} тегів у {{frameworks}} фреймворках",
+    "summaryFromCodebooks_one": "{{tags}} з <link>{{count}} кодової книги</link>",
+    "summaryFromCodebooks_few": "{{tags}} з <link>{{count}} кодових книг</link>",
+    "summaryFromCodebooks_many": "{{tags}} з <link>{{count}} кодових книг</link>",
+    "summaryFromCodebooks_other": "{{tags}} з <link>{{count}} кодової книги</link>",
     "showFramework": "Показати {{framework}}",
     "hideFramework": "Приховати {{framework}}",
     "showGroup": "Показати {{group}}",
@@ -693,7 +700,8 @@
       "zoneAccept": "Прийняти",
       "zoneAccepted": "Прийнято",
       "zoneExcluded": "Виключено",
-      "yourDecision": "Ваше рішення"
+      "yourDecision": "Ваше рішення",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "\u041f\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u043e {{processed}} \u0456\u0437 {{total}} \u0446\u0438\u0442\u0430\u0442. Ч\u0430\u0441\u0442\u0438\u043d\u0430 \u043f\u0430\u043a\u0435\u0442\u0456\u0432 \u043d\u0435 \u0432\u0434\u0430\u043b\u0430\u0441\u044f.",

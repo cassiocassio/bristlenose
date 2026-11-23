@@ -8,6 +8,7 @@
 import type {
   AutoCodeJobStatus,
   AutoCodeJobsResponse,
+  TagOverviewResponse,
   ClipJobStartResponse,
   ClipJobStatus,
   ScreensExportStart,
@@ -425,6 +426,18 @@ export function getHiddenTagGroups(): Promise<string[]> {
  *  after a failed one, erased every other group hidden on the server. */
 export function patchHiddenTagGroups(data: Record<string, boolean>): Promise<void> {
   return queuedPatch("/hidden-tag-groups", data);
+}
+
+/** The tag sidebar's AutoCode overview: what it draws and what it remembers (Phase 6). */
+export function getTagOverview(): Promise<TagOverviewResponse> {
+  return apiGet<TagOverviewResponse>("/tag-overview", STATUS_READ_TIMEOUT_MS);
+}
+
+/** Remember what the researcher changed on the overview, naming only that. */
+export function patchTagOverview(
+  data: Partial<Pick<TagOverviewResponse, "open" | "split" | "auto_opened">>,
+): Promise<void> {
+  return queuedPatch("/tag-overview", data);
 }
 
 /**

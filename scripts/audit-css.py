@@ -225,6 +225,7 @@ LENS_OF = {
     "atoms/moderator-question.css": "codebook", "molecules/tag-filter.css": "codebook",
     "molecules/threshold-review.css": "codebook", "molecules/autocode-report.css": "codebook",
     "organisms/codebook-panel.css": "codebook", "organisms/sidebar-tags.css": "codebook",
+    "molecules/tag-overview.css": "codebook",
 }
 LENS_ORDER = ["quotes", "sessions", "themes", "analysis", "codebook", "shell"]
 

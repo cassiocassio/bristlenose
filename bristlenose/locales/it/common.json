@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Nessun tag",
     "tags": "Tag",
-    "countTags": "{{count}} tag",
+    "countTags_one": "{{count}} tag",
+    "countTags_other": "{{count}} tag",
     "countHidden": "{{count}} nascosti",
     "selectAll": "Seleziona tutto",
     "clear": "Cancella",
@@ -249,6 +250,8 @@
     "userTags": "Tag utente",
     "other": "Altri",
     "summary": "{{count}} tag in {{frameworks}} framework",
+    "summaryFromCodebooks_one": "{{tags}} da <link>{{count}} libro dei codici</link>",
+    "summaryFromCodebooks_other": "{{tags}} da <link>{{count}} libri dei codici</link>",
     "showFramework": "Mostra {{framework}}",
     "hideFramework": "Nascondi {{framework}}",
     "showGroup": "Mostra {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Accetta",
       "zoneAccepted": "Accettati",
       "zoneExcluded": "Esclusi",
-      "yourDecision": "La tua decisione"
+      "yourDecision": "La tua decisione",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "Etichettate {{processed}} citazioni su {{total}}: alcuni lotti non sono riusciti.",

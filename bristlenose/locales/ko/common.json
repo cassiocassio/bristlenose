@@ -212,7 +212,7 @@
   "tags": {
     "noTags": "태그 없음",
     "tags": "태그",
-    "countTags": "{{count}}개 태그",
+    "countTags_other": "태그 {{count}}개",
     "countHidden": "{{count}}개 숨김",
     "selectAll": "모두 선택",
     "clear": "지우기",
@@ -226,6 +226,7 @@
     "userTags": "사용자 태그",
     "other": "기타",
     "summary": "{{frameworks}}개 프레임워크의 {{count}}개 태그",
+    "summaryFromCodebooks_other": "<link>코드북 {{count}}개</link>의 {{tags}}",
     "showFramework": "{{framework}} 표시",
     "hideFramework": "{{framework}} 숨기기",
     "showGroup": "{{group}} 표시",
@@ -588,7 +589,8 @@
       "zoneAccept": "승인",
       "zoneAccepted": "승인됨",
       "zoneExcluded": "제외됨",
-      "yourDecision": "직접 내린 결정"
+      "yourDecision": "직접 내린 결정",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "\uc778\uc6a9\ubb38 {{total}}\uac1c \uc911 {{processed}}\uac1c\uc5d0 \ud0dc\uadf8\ub97c \uc9c0\uc815\ud588\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \ubc30\uce58\uac00 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",

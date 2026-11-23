@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Inga taggar",
     "tags": "Taggar",
-    "countTags": "{{count}} taggar",
+    "countTags_one": "{{count}} tagg",
+    "countTags_other": "{{count}} taggar",
     "countHidden": "{{count}} dolda",
     "selectAll": "Markera alla",
     "clear": "Rensa",
@@ -249,6 +250,8 @@
     "userTags": "Användartaggar",
     "other": "Övrigt",
     "summary": "{{count}} taggar i {{frameworks}} ramverk",
+    "summaryFromCodebooks_one": "{{tags}} från <link>{{count}} kodbok</link>",
+    "summaryFromCodebooks_other": "{{tags}} från <link>{{count}} kodböcker</link>",
     "showFramework": "Visa {{framework}}",
     "hideFramework": "Dölj {{framework}}",
     "showGroup": "Visa {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Godkänn",
       "zoneAccepted": "Godkänd",
       "zoneExcluded": "Exkluderad",
-      "yourDecision": "Ditt beslut"
+      "yourDecision": "Ditt beslut",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} av {{total}} citat taggade. Vissa satser misslyckades.",

@@ -230,7 +230,7 @@
   "tags": {
     "noTags": "タグなし",
     "tags": "タグ",
-    "countTags": "{{count}} 個のタグ",
+    "countTags_other": "{{count}} 個のタグ",
     "countHidden": "{{count}} 個非表示",
     "selectAll": "すべて選択",
     "clear": "クリア",
@@ -244,6 +244,7 @@
     "userTags": "ユーザータグ",
     "other": "その他",
     "summary": "{{frameworks}} フレームワーク中 {{count}} タグ",
+    "summaryFromCodebooks_other": "<link>{{count}} コードブック</link>の{{tags}}",
     "showFramework": "{{framework}} を表示",
     "hideFramework": "{{framework}} を非表示",
     "showGroup": "{{group}} を表示",
@@ -607,7 +608,8 @@
       "zoneAccept": "承認",
       "zoneAccepted": "承認済み",
       "zoneExcluded": "除外済み",
-      "yourDecision": "あなたの判断"
+      "yourDecision": "あなたの判断",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{total}} \u4ef6\u4e2d {{processed}} \u4ef6\u306e\u5f15\u7528\u306b\u30bf\u30b0\u3092\u4ed8\u3051\u307e\u3057\u305f\u3002\u4e00\u90e8\u306e\u30d0\u30c3\u30c1\u304c\u5931\u6557\u3057\u307e\u3057\u305f\u3002",

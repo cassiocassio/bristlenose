@@ -437,10 +437,12 @@ describe("TagSidebar summary line (as shipped)", () => {
     await waitFor(() => expect(document.querySelector(".tag-search-input")).toBeTruthy());
   });
 
-  it("with no filter, counts every tag and codebook in the sidebar, Sentiment too", async () => {
+  // Changed by D22 (Phase 6): before any run the line counts every tag but Sentiment's. It
+  // read "3 tags across 2 frameworks" here until then.
+  it("with no filter and no run, counts every tag but Sentiment's (D22)", async () => {
     vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(["Trust", "Pricing"].map(tag)));
     render(<TagSidebar />);
     await waitFor(() => expect(screen.getByText("Pricing")).toBeTruthy());
-    expect(line()).toBe("3 tags across 2 frameworks");
+    expect(line()).toBe("2 tags");
   });
 });

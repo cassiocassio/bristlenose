@@ -80,6 +80,8 @@ _THEME_FILES: list[str] = [
     "molecules/feedback.css",
     "molecules/autocode-report.css",
     "molecules/threshold-review.css",
+    # The tag sidebar overview: reuses threshold-review.css's zone colours.
+    "molecules/tag-overview.css",
     "organisms/blockquote.css",
     "organisms/responsive-grid.css",
     # After responsive-grid.css: Single column overrides its grid-lanes rule.

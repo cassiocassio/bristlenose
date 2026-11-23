@@ -265,7 +265,10 @@
   "tags": {
     "noTags": "Brak tagów",
     "tags": "Tagi",
-    "countTags": "{{count}} tagów",
+    "countTags_one": "{{count}} tag",
+    "countTags_few": "{{count}} tagi",
+    "countTags_many": "{{count}} tagów",
+    "countTags_other": "{{count}} tagu",
     "countHidden": "{{count}} ukrytych",
     "selectAll": "Zaznacz wszystko",
     "clear": "Wyczyść",
@@ -279,6 +282,10 @@
     "userTags": "Tagi użytkownika",
     "other": "Inne",
     "summary": "{{count}} tagów w {{frameworks}} ramach",
+    "summaryFromCodebooks_one": "{{tags}} z <link>{{count}} księgi kodów</link>",
+    "summaryFromCodebooks_few": "{{tags}} z <link>{{count}} ksiąg kodów</link>",
+    "summaryFromCodebooks_many": "{{tags}} z <link>{{count}} ksiąg kodów</link>",
+    "summaryFromCodebooks_other": "{{tags}} z <link>{{count}} księgi kodów</link>",
     "showFramework": "Pokaż {{framework}}",
     "hideFramework": "Ukryj {{framework}}",
     "showGroup": "Pokaż {{group}}",
@@ -693,7 +700,8 @@
       "zoneAccept": "Zaakceptuj",
       "zoneAccepted": "Zaakceptowane",
       "zoneExcluded": "Wykluczone",
-      "yourDecision": "Twoja decyzja"
+      "yourDecision": "Twoja decyzja",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "Otagowano {{processed}} z {{total}} cytat\u00f3w. Cz\u0119\u015b\u0107 partii nie powiod\u0142a si\u0119.",

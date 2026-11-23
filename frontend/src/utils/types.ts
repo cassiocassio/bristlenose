@@ -339,6 +339,30 @@ export interface AutoCodeJobsResponse {
   jobs: { framework_id: string; title: string; status: "pending" | "running"; completed_at: string | null }[];
 }
 
+/** One 0.05 band of a codebook's proposals, split by where each one sits now. */
+export interface ZoneBin {
+  accepted: number;
+  tentative: number;
+  excluded: number;
+}
+
+/** `GET /tag-overview`: the tag sidebar's AutoCode overview (landing plan Phase 6, D12, D17).
+ *  The remembered state, and per reviewable codebook (a run; never Sentiment) its proposals in
+ *  20 bands, the lines it was last cut at (null before a cut) and whether its first apply still
+ *  codes (Review inactive). Server-only: never in an export. */
+export interface TagOverviewResponse {
+  open: boolean;
+  split: boolean;
+  auto_opened: boolean;
+  codebooks: {
+    framework_id: string;
+    coding: boolean;
+    lower: number | null;
+    upper: number | null;
+    bins: (ZoneBin & { lower: number })[];
+  }[];
+}
+
 export interface AutoCodeJobStatus {
   id: number;
   framework_id: string;

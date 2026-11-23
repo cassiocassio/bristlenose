@@ -225,7 +225,8 @@
   "tags": {
     "noTags": "Keine Tags",
     "tags": "Tags",
-    "countTags": "{{count}} Tags",
+    "countTags_one": "{{count}} Tag",
+    "countTags_other": "{{count}} Tags",
     "countHidden": "{{count}} ausgeblendet",
     "selectAll": "Alle auswählen",
     "clear": "Löschen",
@@ -239,6 +240,8 @@
     "userTags": "Benutzer-Tags",
     "other": "Sonstige",
     "summary": "{{count}} Tags in {{frameworks}} Frameworks",
+    "summaryFromCodebooks_one": "{{tags}} aus <link>{{count}} Codebuch</link>",
+    "summaryFromCodebooks_other": "{{tags}} aus <link>{{count}} Codebüchern</link>",
     "showFramework": "{{framework}} anzeigen",
     "hideFramework": "{{framework}} ausblenden",
     "showGroup": "{{group}} anzeigen",
@@ -621,7 +624,8 @@
       "zoneAccept": "Akzeptieren",
       "zoneAccepted": "Akzeptiert",
       "zoneExcluded": "Ausgeschlossen",
-      "yourDecision": "Ihre Entscheidung"
+      "yourDecision": "Ihre Entscheidung",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} von {{total}} Zitaten verschlagwortet. Einige Stapel sind fehlgeschlagen.",

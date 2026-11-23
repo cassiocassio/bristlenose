@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Etiket yok",
     "tags": "Etiketler",
-    "countTags": "{{count}} etiket",
+    "countTags_one": "{{count}} etiket",
+    "countTags_other": "{{count}} etiket",
     "countHidden": "{{count}} gizli",
     "selectAll": "Tümünü seç",
     "clear": "Temizle",
@@ -249,6 +250,8 @@
     "userTags": "Kullanıcı Etiketleri",
     "other": "Diğer",
     "summary": "{{frameworks}} çerçeve boyunca {{count}} etiket",
+    "summaryFromCodebooks_one": "<link>{{count}} kod kitabından</link> {{tags}}",
+    "summaryFromCodebooks_other": "<link>{{count}} kod kitabından</link> {{tags}}",
     "showFramework": "{{framework}} göster",
     "hideFramework": "{{framework}} gizle",
     "showGroup": "{{group}} göster",
@@ -621,7 +624,8 @@
       "zoneAccept": "Kabul et",
       "zoneAccepted": "Kabul edildi",
       "zoneExcluded": "Hariç tutuldu",
-      "yourDecision": "Kararınız"
+      "yourDecision": "Kararınız",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{total}} al\u0131nt\u0131dan {{processed}} tanesi etiketlendi. Baz\u0131 gruplar ba\u015far\u0131s\u0131z oldu.",

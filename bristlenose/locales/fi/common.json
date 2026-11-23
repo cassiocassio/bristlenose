@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Ei tunnisteita",
     "tags": "Tunnisteet",
-    "countTags": "{{count}} tunnistetta",
+    "countTags_one": "{{count}} tunniste",
+    "countTags_other": "{{count}} tunnistetta",
     "countHidden": "{{count}} piilotettu",
     "selectAll": "Valitse kaikki",
     "clear": "Tyhjennä",
@@ -249,6 +250,8 @@
     "userTags": "Käyttäjän tunnisteet",
     "other": "Muut",
     "summary": "{{count}} tunnistetta {{frameworks}} viitekehyksessä",
+    "summaryFromCodebooks_one": "{{tags}} <link>{{count}} koodikirjasta</link>",
+    "summaryFromCodebooks_other": "{{tags}} <link>{{count}} koodikirjasta</link>",
     "showFramework": "Näytä {{framework}}",
     "hideFramework": "Piilota {{framework}}",
     "showGroup": "Näytä {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Hyväksy",
       "zoneAccepted": "Hyväksytty",
       "zoneExcluded": "Poissuljettu",
-      "yourDecision": "Oma päätöksesi"
+      "yourDecision": "Oma päätöksesi",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}}/{{total}} sitaattia merkitty. Osa erist\u00e4 ep\u00e4onnistui.",

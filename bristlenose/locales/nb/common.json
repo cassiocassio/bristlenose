@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Ingen tagger",
     "tags": "Tagger",
-    "countTags": "{{count}} tagger",
+    "countTags_one": "{{count}} tagg",
+    "countTags_other": "{{count}} tagger",
     "countHidden": "{{count}} skjult",
     "selectAll": "Merk alle",
     "clear": "Tøm",
@@ -249,6 +250,8 @@
     "userTags": "Brukertagger",
     "other": "Andre",
     "summary": "{{count}} tagger fordelt på {{frameworks}} rammeverk",
+    "summaryFromCodebooks_one": "{{tags}} fra <link>{{count}} kodebok</link>",
+    "summaryFromCodebooks_other": "{{tags}} fra <link>{{count}} kodebøker</link>",
     "showFramework": "Vis {{framework}}",
     "hideFramework": "Skjul {{framework}}",
     "showGroup": "Vis {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Godta",
       "zoneAccepted": "Godtatt",
       "zoneExcluded": "Utelatt",
-      "yourDecision": "Din beslutning"
+      "yourDecision": "Din beslutning",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} av {{total}} sitater merket. Noen partier mislyktes.",

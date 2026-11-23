@@ -6,11 +6,18 @@
  *   stacked vertically. Used when the tallest bin fits within the histogram height.
  * - **Continuous bar mode**: solid bars coloured by zone (green/amber/grey).
  *   Fallback for large datasets where unit squares would be too small.
+ *
+ * `ZoneHistogram` is the same chart drawn small from counts already split by zone, for the
+ * tag sidebar's AutoCode overview (docs/design-autocode-landing-plan.md Phase 6, D17, D19):
+ * each band stacked excluded, tentative, accepted from the bottom, on a scale the caller holds
+ * (it only grows while a run lands), squares or bars as the caller chose once, and the
+ * codebook's two lines as ticks when there is one pair to draw.
  */
 
 import { useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { ProposedTagResponse } from "../utils/types";
+import type { ProposedTagResponse, ZoneBin } from "../utils/types";
+import type { Lines } from "../utils/recut";
 import { getTagBg } from "../utils/colours";
 
 const NUM_BINS = 20;
@@ -28,7 +35,7 @@ interface ConfidenceHistogramProps {
 }
 
 /** Assign a proposal to a bin index (0–19). */
-function binIndex(confidence: number): number {
+export function binIndex(confidence: number): number {
   // Not `confidence / BIN_WIDTH`: 0.7 / 0.05 is 13.999999999999998, which put a
   // proposal sitting exactly on a bin edge one bin low. The epsilon is far below
   // any real confidence's resolution and far above the division's error.
@@ -138,6 +145,71 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
         <span>0.8</span>
         <span>1.0</span>
       </div>
+    </div>
+  );
+}
+
+// ── The small zone chart (tag sidebar overview) ──────────────────────────
+
+/** Zones bottom to top, as the chart reads: what is out, what waits, what is in. */
+const ZONE_ORDER = [
+  ["excluded", "grey"],
+  ["tentative", "amber"],
+  ["accepted", "green"],
+] as const;
+
+interface ZoneHistogramProps {
+  /** 20 bands of 0.05, each split by zone. */
+  bins: ZoneBin[];
+  /** The count a full-height bar stands for (bars only). */
+  scale: number;
+  /** One square per proposal, chosen once by the caller, never switched mid-run. */
+  squares: boolean;
+  /** The codebook's lines, drawn as ticks; null on a chart whose codebooks' lines differ. */
+  lines: Lines | null;
+  /** What the chart says, for a screen reader: the tally. */
+  label: string;
+}
+
+export function ZoneHistogram({ bins, scale, squares, lines, label }: ZoneHistogramProps) {
+  return (
+    <div
+      className="threshold-histogram threshold-histogram--overview"
+      role="img"
+      aria-label={label}
+      data-testid="bn-overview-histogram"
+    >
+      {bins.map((bin, idx) => (
+        <div key={idx} className="threshold-histogram-bin">
+          {ZONE_ORDER.map(([zone, colour]) => {
+            const n = bin[zone];
+            if (n === 0) return null;
+            if (squares) {
+              return Array.from({ length: n }, (_, i) => (
+                <div
+                  key={`${zone}-${i}`}
+                  className={`threshold-histogram-square threshold-histogram-bar--${colour}`}
+                  data-zone={zone}
+                />
+              ));
+            }
+            return (
+              <div
+                key={zone}
+                className={`threshold-histogram-bar threshold-histogram-bar--${colour}`}
+                data-zone={zone}
+                style={{ height: `${(n / Math.max(1, scale)) * 100}%` }}
+              />
+            );
+          })}
+        </div>
+      ))}
+      {lines && (
+        <>
+          <span className="threshold-histogram-tick" style={{ left: `${lines.lower * 100}%` }} />
+          <span className="threshold-histogram-tick" style={{ left: `${lines.upper * 100}%` }} />
+        </>
+      )}
     </div>
   );
 }

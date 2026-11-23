@@ -225,7 +225,8 @@
   "tags": {
     "noTags": "Aucune étiquette",
     "tags": "Étiquettes",
-    "countTags": "{{count}} étiquettes",
+    "countTags_one": "{{count}} étiquette",
+    "countTags_other": "{{count}} étiquettes",
     "countHidden": "{{count}} masquées",
     "selectAll": "Tout sélectionner",
     "clear": "Effacer",
@@ -239,6 +240,8 @@
     "userTags": "Étiquettes utilisateur",
     "other": "Autres",
     "summary": "{{count}} étiquettes dans {{frameworks}} cadres",
+    "summaryFromCodebooks_one": "{{tags}} dans <link>{{count}} grille de codage</link>",
+    "summaryFromCodebooks_other": "{{tags}} dans <link>{{count}} grilles de codage</link>",
     "showFramework": "Afficher {{framework}}",
     "hideFramework": "Masquer {{framework}}",
     "showGroup": "Afficher {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Accepter",
       "zoneAccepted": "Acceptées",
       "zoneExcluded": "Exclues",
-      "yourDecision": "Votre décision"
+      "yourDecision": "Votre décision",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} citations sur {{total}} \u00e9tiquet\u00e9es. Certains lots ont \u00e9chou\u00e9.",

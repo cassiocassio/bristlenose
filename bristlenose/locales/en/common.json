@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "No tags",
     "tags": "Tags",
-    "countTags": "{{count}} tags",
+    "countTags_one": "{{count}} tag",
+    "countTags_other": "{{count}} tags",
     "countHidden": "{{count}} hidden",
     "selectAll": "Select all",
     "clear": "Clear",
@@ -249,6 +250,8 @@
     "userTags": "User Tags",
     "other": "Other",
     "summary": "{{count}} tags across {{frameworks}} frameworks",
+    "summaryFromCodebooks_one": "{{tags}} from <link>{{count}} codebook</link>",
+    "summaryFromCodebooks_other": "{{tags}} from <link>{{count}} codebooks</link>",
     "showFramework": "Show {{framework}}",
     "hideFramework": "Hide {{framework}}",
     "showGroup": "Show {{group}}",
@@ -623,7 +626,8 @@
       "zoneAccept": "Accept",
       "zoneAccepted": "Accepted",
       "zoneExcluded": "Excluded",
-      "yourDecision": "Your decision"
+      "yourDecision": "Your decision",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "Tagged {{processed}} of {{total}} quotes. Some batches failed.",

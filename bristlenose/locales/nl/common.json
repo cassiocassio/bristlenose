@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Geen tags",
     "tags": "Tags",
-    "countTags": "{{count}} tags",
+    "countTags_one": "{{count}} tag",
+    "countTags_other": "{{count}} tags",
     "countHidden": "{{count}} verborgen",
     "selectAll": "Alles selecteren",
     "clear": "Wis",
@@ -249,6 +250,8 @@
     "userTags": "Gebruikerstags",
     "other": "Overige",
     "summary": "{{count}} tags over {{frameworks}} raamwerken",
+    "summaryFromCodebooks_one": "{{tags}} uit <link>{{count}} codeboek</link>",
+    "summaryFromCodebooks_other": "{{tags}} uit <link>{{count}} codeboeken</link>",
     "showFramework": "{{framework}} tonen",
     "hideFramework": "{{framework}} verbergen",
     "showGroup": "{{group}} tonen",
@@ -621,7 +624,8 @@
       "zoneAccept": "Accepteren",
       "zoneAccepted": "Geaccepteerd",
       "zoneExcluded": "Uitgesloten",
-      "yourDecision": "Jouw beslissing"
+      "yourDecision": "Jouw beslissing",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} van {{total}} citaten getagd. Sommige batches zijn mislukt.",

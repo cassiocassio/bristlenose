@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Cap etiqueta",
     "tags": "Etiquetes",
-    "countTags": "{{count}} etiquetes",
+    "countTags_one": "{{count}} etiqueta",
+    "countTags_other": "{{count}} etiquetes",
     "countHidden": "{{count}} ocultes",
     "selectAll": "Selecciona-ho tot",
     "clear": "Esborra",
@@ -249,6 +250,8 @@
     "userTags": "Etiquetes d'usuari",
     "other": "Altres",
     "summary": "{{count}} etiquetes en {{frameworks}} marcs",
+    "summaryFromCodebooks_one": "{{tags}} de <link>{{count}} llibre de codis</link>",
+    "summaryFromCodebooks_other": "{{tags}} de <link>{{count}} llibres de codis</link>",
     "showFramework": "Mostra {{framework}}",
     "hideFramework": "Oculta {{framework}}",
     "showGroup": "Mostra {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Accepta",
       "zoneAccepted": "Acceptades",
       "zoneExcluded": "Excloses",
-      "yourDecision": "La teva decisió"
+      "yourDecision": "La teva decisió",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "S'han etiquetat {{processed}} de {{total}} cites; alguns lots han fallat.",

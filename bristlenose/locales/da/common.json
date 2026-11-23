@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Ingen tags",
     "tags": "Tags",
-    "countTags": "{{count}} tags",
+    "countTags_one": "{{count}} tag",
+    "countTags_other": "{{count}} tags",
     "countHidden": "{{count}} skjult",
     "selectAll": "Vælg alle",
     "clear": "Ryd",
@@ -249,6 +250,8 @@
     "userTags": "Brugertags",
     "other": "Andet",
     "summary": "{{count}} tags fordelt på {{frameworks}} frameworks",
+    "summaryFromCodebooks_one": "{{tags}} fra <link>{{count}} kodebog</link>",
+    "summaryFromCodebooks_other": "{{tags}} fra <link>{{count}} kodebøger</link>",
     "showFramework": "Vis {{framework}}",
     "hideFramework": "Skjul {{framework}}",
     "showGroup": "Vis {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Godkend",
       "zoneAccepted": "Godkendt",
       "zoneExcluded": "Udelukket",
-      "yourDecision": "Din beslutning"
+      "yourDecision": "Din beslutning",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} af {{total}} citater tagget. Nogle batches mislykkedes.",

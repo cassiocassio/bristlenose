@@ -399,10 +399,11 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
         tag=DEAD,
         why="`4b3b1593` moved search, starred and remove-tag to the native toolbar, "
             "and the four count/empty-state strings the web dropdown had shown went "
-            "unread with it.",
+            "unread with it. `countTags` is read again, with plural forms, by the tag "
+            "sidebar overview (landing plan Phase 6).",
         leaves="""
-            countHidden countTags noTags noTagsLabel
-        """,  # 4
+            countHidden noTags noTagsLabel
+        """,  # 3
     ),
     "desktop.toolbar.": _Block(
         tag=DEAD,

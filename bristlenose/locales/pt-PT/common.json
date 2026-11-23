@@ -235,7 +235,8 @@
   "tags": {
     "noTags": "Sem etiquetas",
     "tags": "Etiquetas",
-    "countTags": "{{count}} etiquetas",
+    "countTags_one": "{{count}} etiqueta",
+    "countTags_other": "{{count}} etiquetas",
     "countHidden": "{{count}} ocultas",
     "selectAll": "Selecionar tudo",
     "clear": "Limpar",
@@ -249,6 +250,8 @@
     "userTags": "Etiquetas do utilizador",
     "other": "Outras",
     "summary": "{{count}} etiquetas em {{frameworks}} frameworks",
+    "summaryFromCodebooks_one": "{{tags}} de <link>{{count}} livro de códigos</link>",
+    "summaryFromCodebooks_other": "{{tags}} de <link>{{count}} livros de códigos</link>",
     "showFramework": "Mostrar {{framework}}",
     "hideFramework": "Ocultar {{framework}}",
     "showGroup": "Mostrar {{group}}",
@@ -621,7 +624,8 @@
       "zoneAccept": "Aceitar",
       "zoneAccepted": "Aceites",
       "zoneExcluded": "Excluídas",
-      "yourDecision": "A sua decisão"
+      "yourDecision": "A sua decisão",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "{{processed}} de {{total}} cita\u00e7\u00f5es etiquetadas. Alguns lotes falharam.",

@@ -18,7 +18,7 @@
  * @module TagSidebar
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
@@ -57,6 +57,15 @@ const selectTagSidebarState = (s: SidebarState) => ({
 import { EyeToggle } from "./EyeToggle";
 import { TagGroupCard } from "./TagGroupCard";
 import { Icon } from "./Icon";
+import { TagOverview } from "./TagOverview";
+import { SENTIMENT_ID, plainCounts } from "../utils/tagOverview";
+import type { OverviewBook } from "../utils/tagOverview";
+
+// The review dialog, loaded when Review is first pressed: it is the Codebook lens's chunk, and
+// the sidebar renders on first paint (frontend/gotchas.md, bundle size gate).
+const ThresholdReviewModal = lazy(() =>
+  import("./ThresholdReviewModal").then((m) => ({ default: m.ThresholdReviewModal })),
+);
 
 // ── Framework metadata (from codebook YAML files) ────────────────────────
 // The codebook API returns framework_id on groups but no framework-level
@@ -471,6 +480,21 @@ export function TagSidebar() {
   const totalTags = allTagNames.length;
   const totalFrameworks = frameworks.length;
 
+  // The AutoCode overview (Phase 6): the codebooks its line may count, and D22's counts.
+  const overviewCandidates = useMemo<OverviewBook[]>(
+    () =>
+      frameworks
+        .filter((fw) => !FLOOR_IDS.has(fw.id) && fw.id !== SENTIMENT_ID && !hiddenFrameworks.has(fw.id))
+        .map((fw) => ({
+          id: fw.id,
+          title: fw.title,
+          tagCount: fw.groups.reduce((n, g) => n + g.tags.length, 0),
+        })),
+    [frameworks, hiddenFrameworks],
+  );
+  const overviewPlain = useMemo(() => plainCounts(frameworks), [frameworks]);
+  const [reviewing, setReviewing] = useState<OverviewBook | null>(null);
+
   const visibleStats = useMemo(() => {
     if (!showUsedOnly && !search) return { tags: totalTags, frameworks: totalFrameworks };
     let tagCount = 0;
@@ -617,10 +641,18 @@ export function TagSidebar() {
 
   return (
     <div className={soloTag ? "tag-solo-active" : ""} style={countColumn}>
-      {/* Subtitle */}
-      <div className="tag-sidebar-subtitle">
-        {t("tags.summary", { count: visibleStats.tags, frameworks: visibleStats.frameworks })}
-      </div>
+      {/* The summary line, and the AutoCode overview it opens */}
+      <TagOverview
+        candidates={overviewCandidates}
+        plain={overviewPlain}
+        filterText={
+          search || showUsedOnly
+            ? t("tags.summary", { count: visibleStats.tags, frameworks: visibleStats.frameworks })
+            : null
+        }
+        quoteCount={store.quotes.length}
+        onReview={setReviewing}
+      />
 
       {/* Actions bar */}
       <div className="tag-sidebar-actions">
@@ -713,6 +745,31 @@ export function TagSidebar() {
           );
         })}
       </div>
+
+      {/* Review from the overview: the dialog the Codebook lens opens, for that codebook.
+          A re-cut or a row's decision moves tags, so every lens is told, as there (D42). */}
+      {reviewing && (
+        <Suspense fallback={null}>
+          <ThresholdReviewModal
+            open
+            frameworkId={reviewing.id}
+            frameworkTitle={reviewing.title}
+            onClose={(changed) => {
+              setReviewing(null);
+              if (changed) announceTagsMoved();
+            }}
+            onApply={() => {
+              setReviewing(null);
+              announceTagsMoved();
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
+}
+
+function announceTagsMoved(): void {
+  window.dispatchEvent(new Event("codebook-changed"));
+  document.dispatchEvent(new CustomEvent("bn:tags-changed"));
 }

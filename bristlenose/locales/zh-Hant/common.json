@@ -220,7 +220,7 @@
   "tags": {
     "noTags": "沒有標籤",
     "tags": "標籤",
-    "countTags": "{{count}} 個標籤",
+    "countTags_other": "{{count}} 個標籤",
     "countHidden": "{{count}} 個已隱藏",
     "selectAll": "全選",
     "clear": "清除",
@@ -234,6 +234,7 @@
     "userTags": "使用者標籤",
     "other": "其他",
     "summary": "{{frameworks}} 個架構中的 {{count}} 個標籤",
+    "summaryFromCodebooks_other": "<link>{{count}} 本編碼簿</link>中的 {{tags}}",
     "showFramework": "顯示 {{framework}}",
     "hideFramework": "隱藏 {{framework}}",
     "showGroup": "顯示 {{group}}",
@@ -588,7 +589,8 @@
       "zoneAccept": "接受",
       "zoneAccepted": "已接受",
       "zoneExcluded": "已排除",
-      "yourDecision": "你的決定"
+      "yourDecision": "你的決定",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "\u5df2\u6a19\u8a3b {{total}} \u5247\u5f15\u8a00\u4e2d\u7684 {{processed}} \u5247\uff0c\u90e8\u5206\u6279\u6b21\u5931\u6557\u3002",

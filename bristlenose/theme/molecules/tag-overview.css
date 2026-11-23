@@ -1,0 +1,156 @@
+/* Tag sidebar AutoCode overview — the summary line's disclosure, and the small
+   confidence chart it opens (docs/design-autocode-landing-plan.md Phase 6, D17).
+   Approved mockup: docs/mockups/tag-sidebar-autocode-histogram.html ("NEW" block).
+   React: frontend/src/components/TagOverview.tsx; the chart is ConfidenceHistogram's
+   ZoneHistogram, so its bands reuse threshold-review.css's zone colours. */
+
+/* ── The line ─────────────────────────────────────────────────── */
+
+/* One baseline for the line: the summary button is an inline-block, so its baseline
+   is its words', with the chevron sitting in the line as a glyph. It wraps at the
+   narrow end of the drag and nothing is cut (docs/design-control-labels.md). */
+.tag-overview-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.4rem;
+    padding-right: 0.6rem;
+}
+
+/* The whole phrase is the target, chevron and words, not the chevron alone. Padding
+   grows the hit box to 24px tall (WCAG 2.2 target size); the matching negative
+   margin keeps the layout. */
+.tag-overview-summary {
+    display: inline-block;
+    text-align: left;
+    line-height: var(--bn-text-badge-lh);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--bn-text-badge);
+    color: var(--bn-colour-muted);
+    padding: 5px 4px;
+    margin: -5px -4px;
+    border-radius: var(--bn-radius-sm);
+}
+
+.tag-overview-summary:hover {
+    color: var(--bn-colour-text);
+}
+
+.tag-overview-summary:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 0;
+}
+
+.tag-overview-summary .tag-overview-chevron {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin: 0 0.15rem 0 0;
+    vertical-align: -0.1em;
+}
+
+.tag-overview-summary[aria-expanded="true"] .tag-overview-chevron {
+    transform: rotate(90deg);
+}
+
+.tag-overview-review {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.tag-overview-split {
+    white-space: nowrap;
+}
+
+/* Present but inactive during a run, so nothing moves when it ends (D17). */
+.tag-overview-review .tag-filter-action[aria-disabled="true"] {
+    color: var(--bn-colour-muted);
+    cursor: default;
+    text-decoration: none;
+}
+
+/* ── The chart ────────────────────────────────────────────────── */
+
+.tag-overview-body {
+    padding: 0.15rem 0.75rem 0.45rem 0.85rem;
+}
+
+.tag-overview-book + .tag-overview-book {
+    margin-top: 0.55rem;
+}
+
+/* Split view: each codebook's name with its own Review on its baseline. */
+.tag-overview-book-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.4rem;
+    font-size: var(--bn-text-badge);
+    color: var(--bn-colour-text);
+    margin-bottom: 0.2rem;
+}
+
+.threshold-histogram--overview {
+    position: relative;
+    height: 34px;
+    gap: 1px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+/* Stacked bands, no gap between a column's zones. */
+.threshold-histogram--overview .threshold-histogram-bin {
+    gap: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.threshold-histogram--overview .threshold-histogram-bar {
+    flex-shrink: 0;
+    border-radius: 0;
+}
+
+/* The one rescale at a run's end is smooth (D19). */
+@media (prefers-reduced-motion: no-preference) {
+    .threshold-histogram--overview .threshold-histogram-bar {
+        transition: height var(--bn-transition-slow), background-color 0.1s ease;
+    }
+}
+
+.threshold-histogram-tick {
+    position: absolute;
+    top: -2px;
+    bottom: -3px;
+    width: 1px;
+    background: var(--bn-colour-accent);
+}
+
+.tag-overview-tally {
+    margin-top: 0.25rem;
+    font-size: var(--bn-text-badge);
+    color: var(--bn-colour-muted);
+}
+
+/* The number takes its zone's colour as text (4.5:1 on the inspector tint); the word
+   stays muted. */
+.tag-overview-n {
+    font-weight: var(--bn-weight-emphasis);
+    font-variant-numeric: tabular-nums;
+}
+
+.tag-overview-n--acc { color: var(--bn-colour-positive-text); }
+.tag-overview-n--ten { color: var(--bn-colour-warning-text); }
+.tag-overview-n--exc { color: var(--bn-colour-muted); }
+
+/* Solo mode dims the line with the other controls (organisms/sidebar-tags.css); the
+   chart under it goes with it. */
+.tag-solo-active .tag-overview-body {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity var(--bn-transition-fast);
+}

@@ -261,7 +261,10 @@
   "tags": {
     "noTags": "Žádné štítky",
     "tags": "Štítky",
-    "countTags": "{{count}} štítků",
+    "countTags_one": "{{count}} štítek",
+    "countTags_few": "{{count}} štítky",
+    "countTags_many": "{{count}} štítku",
+    "countTags_other": "{{count}} štítků",
     "countHidden": "{{count}} skrytých",
     "selectAll": "Vybrat vše",
     "clear": "Vymazat",
@@ -275,6 +278,10 @@
     "userTags": "Uživatelské štítky",
     "other": "Ostatní",
     "summary": "{{count}} štítků v {{frameworks}} rámcích",
+    "summaryFromCodebooks_one": "{{tags}} z <link>{{count}} knihy kódů</link>",
+    "summaryFromCodebooks_few": "{{tags}} z <link>{{count}} knih kódů</link>",
+    "summaryFromCodebooks_many": "{{tags}} z <link>{{count}} knihy kódů</link>",
+    "summaryFromCodebooks_other": "{{tags}} z <link>{{count}} knih kódů</link>",
     "showFramework": "Zobrazit {{framework}}",
     "hideFramework": "Skrýt {{framework}}",
     "showGroup": "Zobrazit {{group}}",
@@ -682,7 +689,8 @@
       "zoneAccept": "Přijmout",
       "zoneAccepted": "Přijato",
       "zoneExcluded": "Vyloučeno",
-      "yourDecision": "Vaše rozhodnutí"
+      "yourDecision": "Vaše rozhodnutí",
+      "tally": "{{excludedLabel}} <exc>{{excluded}}</exc> · {{tentativeLabel}} <ten>{{tentative}}</ten> · {{acceptedLabel}} <acc>{{accepted}}</acc>"
     },
     "toast": {
       "donePartial": "Ozna\u010deno {{processed}} z {{total}} citac\u00ed. N\u011bkter\u00e9 d\u00e1vky selhaly.",

@@ -274,7 +274,9 @@ class TestRunAutoCodeJob:
         assert len(proposals) == 10
         for p in proposals:
             assert p.confidence == 0.85
-            assert p.status == "pending"
+            # The end-of-run cut (landing plan Phase 3, D5; pending until then): all ten
+            # tie at the top 30%, on the grid, so all are accepted by the lines.
+            assert (p.status, p.decided_by) == ("accepted", "threshold")
             assert "Rationale for quote" in p.rationale
         db.close()
 
@@ -1150,9 +1152,14 @@ class TestReapplyToNewQuotes:
         self, project_id, framework_id, db_factory, threshold=0.7
     ) -> None:
         """Run the original autocode over the 10 fixture quotes, then stamp the
-        stored accept cutoff (as accept-all would)."""
+        stored accept cutoff (as accept-all would).
+
+        At 0.5, under the hybrid's 0.70 floor, so the first apply's own end-of-run cut
+        (landing plan Phase 3) accepts and excludes nothing and the original 10 stay
+        proposed; its lines are replaced by the accept cutoff alone, as a job applied
+        before Phase 3 carried it."""
         with _patch_llm(
-            AsyncMock(return_value=_make_batch_result(10, "user need", 0.85))
+            AsyncMock(return_value=_make_batch_result(10, "user need", 0.5))
         ):
             asyncio.run(
                 run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
@@ -1165,6 +1172,7 @@ class TestReapplyToNewQuotes:
                 .one()
             )
             job.applied_upper_threshold = threshold
+            job.applied_lower_threshold = None
             # Pin the apply time to a fixed past date so the "new session"
             # comparison is deterministic (the new session below imports "after").
             job.completed_at = datetime(2020, 1, 1)
@@ -1533,15 +1541,12 @@ class TestReapplyToNewQuotes:
     def test_after_a_first_applys_hybrid_cut_a_catch_up_excludes_below_030(
         self, project_with_garrett
     ) -> None:
-        """Landing plan Phase 3 (D5): a first apply's end stores the hybrid's lines, its
-        cut rounded up and 0.30, and the catch-up sorts by them. The house default used to
-        store a lower line of 0, so a catch-up after it never excluded."""
-        from bristlenose.server.routes.autocode import settle_first_apply_cut
-
+        """Landing plan Phase 3 (D5): a first apply ends by storing the hybrid's lines, the
+        line it accepted at and 0.30, and the catch-up sorts by them. The house default used
+        to store a lower line of 0, so a catch-up after it never excluded."""
         project_id, framework_id, db_factory = project_with_garrett
         with _patch_llm(AsyncMock(return_value=_make_batch_result(10, "user need", 0.85))):
             asyncio.run(run_autocode_job(db_factory, project_id, framework_id, _mock_settings()))
-        settle_first_apply_cut(db_factory, project_id, framework_id)
         db = db_factory()
         try:
             job = db.query(AutoCodeJob).filter_by(

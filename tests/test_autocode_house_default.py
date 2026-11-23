@@ -12,7 +12,7 @@ import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -20,10 +20,10 @@ from fastapi import FastAPI
 from bristlenose.events import KindEnum, RunCompletedEvent, new_run_id
 from bristlenose.server import autocode_house_default as hd
 from bristlenose.server.app import _make_run_completed_handler, create_app
+from bristlenose.server.autocode import cut_first_apply
 from bristlenose.server.codebook_install import framework_linked
 from bristlenose.server.models import AutoCodeJob, ProposedTag, Quote, QuoteTag, TagDefinition
 from bristlenose.server.refusal import RefusalError, RefusalReason
-from bristlenose.server.routes.autocode import settle_first_apply_cut
 from bristlenose.server.screen_text_job import ScreenTextJob
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -63,7 +63,6 @@ def _run(app: FastAPI, *, screens: bool = True, ready: bool = True,
         patch.object(hd, "_has_screens", lambda _a: screens),
         patch(READY, side_effect=None if ready else refuse),
         patch(START, start),
-        patch("bristlenose.server.routes.autocode.settle_first_apply_cut", MagicMock()),
     ):
         return asyncio.run(hd.maybe_apply(app)), start
 
@@ -242,7 +241,12 @@ def test_the_house_defaults_cut_is_the_hybrid_and_excludes_below_the_lower_line(
     finally:
         db.close()
     assert n == 4
-    outcome = settle_first_apply_cut(app.state.db_factory, 1, "uxr")
+    db = app.state.db_factory()
+    try:
+        outcome = cut_first_apply(db, db.query(AutoCodeJob).one().id)
+        db.commit()
+    finally:
+        db.close()
     assert outcome is not None and (outcome.accepted, outcome.excluded) == (2, 1)
     db = app.state.db_factory()
     try:

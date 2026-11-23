@@ -167,6 +167,21 @@ def _job(factory, framework: str = "garrett") -> AutoCodeJob:
         db.close()
 
 
+def _as_before_the_cut(factory, framework: str = "garrett") -> None:
+    """Undo a first apply's end-of-run cut (landing plan Phase 3): every threshold decision
+    pending again, AutoCode's tags off, no lines. The state a first apply left before Phase
+    3, which jobs in researchers' studies still carry; these register tests were written
+    against it, and the cut is pinned in ``tests/test_autocode_hybrid_cut.py``."""
+    db = factory()
+    job = db.query(AutoCodeJob).filter_by(framework_id=framework).one()
+    db.query(QuoteTag).filter_by(source="autocode").delete()
+    db.query(ProposedTag).filter_by(job_id=job.id, decided_by="threshold").update(
+        {"status": "pending", "decided_by": None, "reviewed_at": None})
+    job.applied_upper_threshold = job.applied_lower_threshold = None
+    db.commit()
+    db.close()
+
+
 def _first_apply(factory, analyze: AsyncMock, framework: str = "garrett") -> None:
     db = factory()
     db.add(AutoCodeJob(project_id=1, framework_id=framework, status="pending"))
@@ -174,6 +189,7 @@ def _first_apply(factory, analyze: AsyncMock, framework: str = "garrett") -> Non
     db.close()
     with _LLM(analyze):
         asyncio.run(run_autocode_job(factory, 1, framework, _settings()))
+    _as_before_the_cut(factory, framework)
     db = factory()
     job = db.query(AutoCodeJob).filter_by(framework_id=framework).one()
     job.applied_upper_threshold = 0.7
@@ -642,6 +658,7 @@ def _stopped_first_apply(factory, stop_on: str, tokens: tuple[int, int] = (0, 0)
 
     with _LLM(AsyncMock(side_effect=analyze), tokens):
         asyncio.run(run_autocode_job(factory, 1, "garrett", _settings()))
+    _as_before_the_cut(factory)
     if left_stopped:
         db = factory()
         db.query(AutoCodeJob).update({"status": "cancelled", "completed_at": None})

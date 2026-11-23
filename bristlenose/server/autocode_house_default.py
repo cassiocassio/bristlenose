@@ -22,13 +22,13 @@ Progress is the project row's line "AutoCode · N of M" (the Mac polls ``/autoco
 toast: no page started this job.
 
 What it does: installs the framework (the same helper the Import button uses; AutoCode resolves
-answers against the installed rows), starts the ordinary AutoCode job, and when that job has
-completed applies the end-of-run cut every first apply gets, the hybrid
-(``routes.autocode.settle_first_apply_cut``; docs/design-autocode-landing-plan.md D5): the most
-confident 30% of the run's proposals are accepted, never below 0.70; those below 0.30 are
-excluded; the band between stays pending for the review. The lines are stored on the job (the
-cut rounded up to the 0.05 grid, and 0.30), so later sessions are coded at the same lines, and a
-catch-up excludes below 0.30 too. Until Phase 3 (23 Nov 2026) this accepted everything at 0.70
+answers against the installed rows), and starts the ordinary AutoCode job, which ends, as every
+first apply does, with the hybrid cut committed with its outcome (``autocode.cut_first_apply``;
+docs/design-autocode-landing-plan.md D5, D46): the most confident 30% of the run's proposals,
+never below 0.70, at the line stored for them (rounded up to the 0.05 grid); those below 0.30
+excluded; the band between pending for the review. The lines are stored on the job, so later
+sessions are coded at the same lines, and a catch-up excludes below 0.30 too. Once the job has
+completed this writes its done marker. Until Phase 3 (23 Nov 2026) this accepted everything at 0.70
 and stored a lower line of 0, so nothing was ever excluded: half of a typical UXR run, the flood
 the plan removes. A run stopped partway settles its cut at once but is not done: no marker, so it
 is retried, and the retry finishes at the stored lines (D27, D35).
@@ -85,7 +85,7 @@ def _read_marker(app: Any) -> dict[str, Any]:
 
 
 def already_done(app: Any) -> bool:
-    """The default has gone through to the end: the job completed and the cutoff was applied."""
+    """The default has gone through to the end: the job completed, with its end-of-run cut."""
     return bool(_read_marker(app).get("completed"))
 
 
@@ -205,24 +205,14 @@ async def _apply(app: Any) -> bool:
     finally:
         db.close()
 
-    from bristlenose.server.routes.autocode import settle_first_apply_cut
-
-    def _apply_cutoff() -> None:
-        # Once more on failure: a threadpool writer can hold the database for a moment, and a
-        # completed job with every proposal pending is the outcome this exists to avoid.
-        for attempt in (1, 2):
-            try:
-                # The hybrid, as every first apply ends (D5); a job a stop already settled is
-                # sorted by its stored lines (D27).
-                settle_first_apply_cut(app.state.db_factory, PROJECT_ID, FRAMEWORK_ID)
-                _write_marker(app, completed=True)
-                return
-            except Exception:  # noqa: BLE001
-                if attempt == 2:
-                    raise
-                logger.warning("House default: applying the cutoff failed, retrying", exc_info=True)
+    def _mark_done() -> None:
+        # Runs once the job has completed, which since Phase 3 means its cut has landed with
+        # it, in one transaction the job's save retries (``autocode.cut_first_apply``): the
+        # marker is written after the cut, never instead of it. A stop is not a completion,
+        # so a stopped run is settled but never marked done (D35) and is retried.
+        _write_marker(app, completed=True)
 
     _write_marker(app, completed=False)  # tried: a retry is allowed, an unasked first one is not
-    await routes.start_autocode(app, PROJECT_ID, FRAMEWORK_ID, after_apply=_apply_cutoff)
+    await routes.start_autocode(app, PROJECT_ID, FRAMEWORK_ID, after_apply=_mark_done)
     logger.info("House default: %s applied to a study with screens", FRAMEWORK_ID)
     return True

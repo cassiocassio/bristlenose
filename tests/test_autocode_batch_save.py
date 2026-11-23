@@ -701,14 +701,11 @@ def test_a_burst_of_recuts_rebuilds_once_and_waits_for_a_pass_still_coding(
     ("status", "accepted", "confidence", "expected"),
     [
         ("completed", False, 0.9, "codebook_apply"),
+        # A stop's cut has landed with its outcome (``cut_first_apply``, landing plan Phase
+        # 3) before this reads it: what it accepted is what decides (D31).
         ("cancelled", True, 0.9, "codebook_stopped"),
-        # A stop settles its cut at once (D27, landing plan Phase 3): a pending 0.9 is the
-        # whole run's top 30% and is accepted, so the stop left accepted tags (D31).
-        ("cancelled", False, 0.9, "codebook_stopped"),
-        # Below the 0.70 floor the cut accepts nothing: nothing to rebuild for.
-        ("cancelled", False, 0.5, None),
+        ("cancelled", False, 0.9, None),
         ("failed", True, 0.9, "codebook_failed"),
-        # A failure is not settled (as shipped): its pending 0.9 stays pending.
         ("failed", False, 0.9, None),
     ],
 )

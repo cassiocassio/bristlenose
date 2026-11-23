@@ -370,6 +370,11 @@ export interface AutoCodeJobStatus {
    * thresholds that were used, not the defaults.
    */
   applied_lower_threshold: number | null;
+  /**
+   * The run's runner has not finished: it is coding, or a Stop has landed and the batches
+   * already out, and the run's cut, have not (landing plan D27). Absent reads as false.
+   */
+  ending?: boolean;
   applied_upper_threshold: number | null;
   input_tokens: number;
   output_tokens: number;

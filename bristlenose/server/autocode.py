@@ -372,6 +372,18 @@ def _store_pending_batch(db: SASession, job_id: int, answered: _Answered) -> Non
 # ---------------------------------------------------------------------------
 
 
+#: First applies whose runner is still coding or settling, by (project, framework): a Stop
+#: marks the job "cancelled" at once, but its batches out still answer and its cut lands
+#: after them (D27). The status read reports it (``ending``), so the page refreshes its
+#: lenses once the cut has landed rather than at the Stop.
+_FIRST_APPLY_CODING: dict[tuple[int, str], int] = {}
+
+
+def first_apply_ending(project_id: int, framework_id: str) -> bool:
+    """Whether a first apply's runner for this codebook has not yet finished."""
+    return bool(_FIRST_APPLY_CODING.get((project_id, framework_id)))
+
+
 @tracked("autocode")
 async def run_autocode_job(
     db_factory: Callable[[], SASession],
@@ -420,6 +432,8 @@ async def run_autocode_job(
         run_id = f"autocode-{project_id}-{framework_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
         telemetry_tokens = telemetry.set_run_context(run_id, run_dir)
 
+    key = (project_id, framework_id)
+    _FIRST_APPLY_CODING[key] = _FIRST_APPLY_CODING.get(key, 0) + 1
     db = db_factory()
     try:
         # Load the job row
@@ -455,6 +469,7 @@ async def run_autocode_job(
             job.status = "completed"
             job.total_quotes = 0
             job.completed_at = datetime.now(timezone.utc)
+            cut_first_apply(db, job.id)  # with the outcome, as below
             db.commit()
             return
 
@@ -481,6 +496,8 @@ async def run_autocode_job(
             # finished and applied, as for a Stop that lands once every batch has answered.
             job.status = "completed"
             job.completed_at = datetime.now(timezone.utc)
+            # The cut in the outcome's transaction (a resumed stop's: at its stored lines).
+            cut_first_apply(db, job.id)
             db.commit()
             logger.info(
                 "AutoCode job %s: every quote was coded by an earlier pass, nothing sent",
@@ -774,7 +791,11 @@ async def run_autocode_job(
             j.proposed_count = kept_proposals + proposed_count
             j.input_tokens, j.output_tokens = tokens
             if j.status == "cancelled" and not every_quote_answered:
-                return "cancelled"  # keep "cancelled", with what it saved
+                # Keep "cancelled", with what it saved, and settle its cut now that its last
+                # batches have answered (D27): no ``completed_at``, so it stays resumable and
+                # the house default's marker is not written (D35).
+                cut_first_apply(session, job_id, stopped=True)
+                return "cancelled"
             if failure is not None:
                 j.error_message, j.failure_kind = failure
             j.status = "failed" if nothing_landed else "completed"
@@ -796,6 +817,9 @@ async def run_autocode_job(
             # next re-apply sends them.
             if not nothing_landed:
                 j.completed_at = datetime.now(timezone.utc)
+                # The end-of-run cut, in this transaction: no reader sees the run completed
+                # before its cut (D5), and this save's retries are the cut's.
+                cut_first_apply(session, job_id)
             return j.status
 
         finished, _ = await _save_batch(db_factory, _finish, f"job {framework_id}, its outcome")
@@ -830,6 +854,9 @@ async def run_autocode_job(
             logger.exception("Failed to mark job as failed")
     finally:
         db.close()
+        _FIRST_APPLY_CODING[key] -= 1
+        if not _FIRST_APPLY_CODING[key]:
+            del _FIRST_APPLY_CODING[key]
         if telemetry_tokens is not None:
             try:
                 telemetry.trim_run_terminus()
@@ -859,19 +886,23 @@ CONFIDENCE_STEPS_PER_UNIT = 20
 # codebook whose proposals all sat at 0.10; the hybrid took 31 to 35% of most fitting runs and
 # 0 to 3% of poorly fitting ones. Literal values, not the dialog's defaults above: those are
 # where a slider starts, these are a measured rule, and they may part.
+#
+# The line accepted at is the stored one, the rank's confidence rounded UP to the review's
+# 0.05 grid (D41, D46), so every accepted row sits in the stored line's accepted zone and every
+# pending row below it. When the rank falls between two grid values (0.72), the proposals from
+# it up to the next one (0.72 to 0.75) stay pending, so such a run takes a little under 30%.
 HYBRID_ACCEPT_PERCENT = 30
 HYBRID_ACCEPT_FLOOR = 0.70
 HYBRID_EXCLUDE_BELOW = 0.30
 
 
-def hybrid_cut(confidences: Iterable[float]) -> float:
-    """The exact accept line of the hybrid over a run's proposals (D5).
+def hybrid_rank_confidence(confidences: Iterable[float]) -> float:
+    """The confidence the hybrid ranks at over a run's proposals (D5), before the grid.
 
-    The confidence of the proposal ranked ``ceil(30% of n)`` (at least the first), so the
-    most confident 30% are at or above it, and a proposal tied with it goes in too (it is
-    accepted at ``>=``); never below ``HYBRID_ACCEPT_FLOOR``. A run with no proposals has
-    only the floor. The rank is the lab's (``pctLines`` in
-    ``experiments/autocode-landing/template.html``), in integer arithmetic.
+    The confidence of the proposal ranked ``ceil(30% of n)`` (at least the first), never
+    below ``HYBRID_ACCEPT_FLOOR``; a run with no proposals has only the floor. The rank is
+    the lab's (``pctLines`` in ``experiments/autocode-landing/template.html``), in integer
+    arithmetic. The line accepted at is ``hybrid_accept_line``.
     """
     ranked = sorted(confidences, reverse=True)
     if not ranked:
@@ -880,15 +911,121 @@ def hybrid_cut(confidences: Iterable[float]) -> float:
     return max(ranked[k - 1], HYBRID_ACCEPT_FLOOR)
 
 
-def accept_line_for(cut: float) -> float:
-    """The accept line stored for an exact ``cut``: rounded UP to the review's 0.05 grid
-    (D41), so no pending proposal is left at or above the stored line (one below the cut
-    stays pending, and the line is at or above the cut). Rounded down, the dialog's
-    Apply with the lines unmoved would accept what the cut left. ``n / 20``, as
-    ``snap_cutoff`` returns a line; a confidence a hair over a grid value from float
+def accept_line_for(confidence: float) -> float:
+    """``confidence`` rounded UP to the review's 0.05 grid (D41): ``n / 20``, as
+    ``snap_cutoff`` returns a line. A confidence a hair over a grid value from float
     arithmetic (0.55 * 20 is 11.000000000000002) is that value."""
-    steps = math.ceil(cut * CONFIDENCE_STEPS_PER_UNIT - 1e-9)
+    steps = math.ceil(confidence * CONFIDENCE_STEPS_PER_UNIT - 1e-9)
     return min(steps, CONFIDENCE_STEPS_PER_UNIT) / CONFIDENCE_STEPS_PER_UNIT
+
+
+def hybrid_accept_line(confidences: Iterable[float]) -> float:
+    """The hybrid's accept line: the line it accepts at AND stores (D46). A proposal at or
+    above it is accepted, ties with the rank included when the rank is on the grid; one
+    below stays pending. Accepting at the rank itself left accepted rows in the stored
+    line's tentative zone, where raising the line never reached them and lowering it
+    counted moves that changed nothing."""
+    return accept_line_for(hybrid_rank_confidence(confidences))
+
+
+@dataclass
+class CutOutcome:
+    """What a first apply's end-of-run cut did: the lines it sorted by and what it moved."""
+
+    accept_at: float
+    exclude_below: float
+    accepted: int = 0
+    excluded: int = 0
+    #: The lines were the job's own (a stop settled them, or a review stored them).
+    from_stored: bool = False
+
+
+def cut_first_apply(
+    session: SASession, job_id: int, *, stopped: bool = False,
+) -> CutOutcome | None:
+    """The end of a first apply, in the caller's transaction (uncommitted): the hybrid cut
+    (docs/design-autocode-landing-plan.md D5, D27, D35, D41, D46).
+
+    ``run_autocode_job`` runs it in the same transaction as the job's outcome, so no reader
+    sees a completed run before its cut (a page refreshed by the chip's "completed" would
+    otherwise draw the whole run as tentative), and the save's retries (worker thread,
+    ``SAVE_ATTEMPTS``, the short lock wait) are the cut's. A first apply stopped partway
+    (``stopped``) is cut the same way when its last batches have answered, so every paid
+    proposal is ranked, and stays unfinished: this never sets ``completed_at``.
+
+    Over the run's proposals on quotes that count (accept-all's rule: a hidden quote's
+    proposal is not ranked and not touched, and stays pending for when it counts again),
+    the line is ``hybrid_accept_line``. Pending proposals at or above it are accepted (a
+    tag made as AutoCode's, unless the quote has it already), pending ones below 0.30
+    excluded, the rest left pending. The same two lines are stored for the review and the
+    catch-ups, so the review's Apply with the lines unmoved changes nothing (D26).
+
+    A job that already has lines (a stop settled them, or a review stored them) is sorted
+    by those, as a catch-up is (D27: a resumed run continues with the same lines), and they
+    are not recomputed. A stop that coded nothing stores none, so its resumed run ranks
+    what it then codes.
+
+    Every change is a decision of the lines (``decided_by="threshold"``), written only on a
+    proposal still pending (a conditional update): a decision made meanwhile, a
+    researcher's or one from before decisions were recorded, is never touched (D2). None
+    when the job is gone.
+    """
+    from bristlenose.server.models import AutoCodeJob, ProposedTag, QuoteTag
+    from bristlenose.server.speaker_slots import analysis_quotes
+
+    job = session.get(AutoCodeJob, job_id)
+    if job is None:
+        return None
+    counted = {q.id for q in analysis_quotes(session, job.project_id)}
+    proposals = [
+        p for p in session.query(ProposedTag).filter(ProposedTag.job_id == job_id).all()
+        if p.quote_id in counted
+    ]
+    if job.applied_upper_threshold is not None or job.applied_lower_threshold is not None:
+        accept_at, exclude_below = stored_lines(job)
+        outcome = CutOutcome(accept_at=accept_at, exclude_below=exclude_below, from_stored=True)
+    else:
+        # Ranked over every proposal of the run, decided or not: the cut is a property of
+        # the run, and a decision made meanwhile does not move it.
+        accept_at = hybrid_accept_line(p.confidence for p in proposals)
+        exclude_below = HYBRID_EXCLUDE_BELOW
+        outcome = CutOutcome(accept_at=accept_at, exclude_below=exclude_below)
+        if proposals or not stopped:
+            job.applied_upper_threshold = accept_at
+            job.applied_lower_threshold = exclude_below
+
+    now = datetime.now(timezone.utc)
+    for proposal in proposals:
+        if proposal.confidence >= accept_at:
+            target = "accepted"
+        elif proposal.confidence < exclude_below:
+            target = "denied"
+        else:
+            continue
+        # Conditional on pending, at write time (D2): the ORM object's status is what was
+        # read, and a decision committed since must win.
+        changed = session.query(ProposedTag).filter(
+            ProposedTag.id == proposal.id, ProposedTag.status == "pending",
+        ).update(
+            {ProposedTag.status: target, ProposedTag.decided_by: "threshold",
+             ProposedTag.reviewed_at: now},
+            synchronize_session=False,
+        )
+        if not changed:
+            continue
+        if target == "denied":
+            outcome.excluded += 1
+            continue
+        outcome.accepted += 1
+        # As ``_ensure_autocode_tag``: a tag the quote has already (the researcher's) stays.
+        if session.query(QuoteTag.id).filter_by(
+            quote_id=proposal.quote_id, tag_definition_id=proposal.tag_definition_id,
+        ).first() is None:
+            session.add(QuoteTag(
+                quote_id=proposal.quote_id, tag_definition_id=proposal.tag_definition_id,
+                source="autocode",
+            ))
+    return outcome
 
 
 def snap_cutoff(value: float) -> float:
@@ -920,11 +1057,12 @@ def stored_lines(job: AutoCodeJob) -> tuple[float, float]:
     whose slider drifted (0.7000000000000001) is the line its label says: both are
     compared at two decimals (N188).
 
-    Since Phase 3 of docs/design-autocode-landing-plan.md every first apply stores
-    the hybrid's lines when it ends or is stopped (``settle_first_apply_cut``): the
-    cut rounded up to the grid, and 0.30. So a catch-up after it excludes below 0.30,
-    which the house default's stored 0 used to prevent: intended (D5). A job the
-    house default applied before then keeps its 0.
+    Since Phase 3 of docs/design-autocode-landing-plan.md a first apply stores the
+    hybrid's lines with its outcome (``cut_first_apply``): the line it accepted at, on
+    the grid, and 0.30; a stop that coded nothing stores none. So a catch-up after it
+    excludes below 0.30, which the house default's stored 0 used to prevent: intended
+    (D5). A job applied before then keeps what it had (the house default's 0, or no
+    lines for a researcher's).
     """
     upper = job.applied_upper_threshold
     if upper is None:

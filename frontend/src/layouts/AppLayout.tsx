@@ -69,6 +69,7 @@ import {
   getScreensExportStatus,
 } from "../utils/api";
 import { revealExportOrSay } from "../utils/revealExport";
+import { waitForStoppedRunToSettle } from "../utils/autocodeSettle";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
@@ -969,7 +970,10 @@ function AppShell() {
           completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
           frameworkId: j.frameworkId,
           outcome: j.outcome,
-          onComplete: () => {
+          onComplete: async (outcome) => {
+            // A Stop's cut lands after the batches still out have answered (D27): refresh
+            // once it has, not at the Stop, or its tags are not drawn.
+            if (outcome.status === "cancelled") await waitForStoppedRunToSettle(j.frameworkId);
             window.dispatchEvent(new Event("codebook-changed"));
             // The proposals live on the quotes, and the lenses that draw them reload on
             // `bn:tags-changed`, not `codebook-changed`. Without it the chip said "Coded"

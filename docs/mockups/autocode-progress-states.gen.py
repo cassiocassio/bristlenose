@@ -170,6 +170,11 @@ def cli(chip: str | None) -> str:
 
 AC = "desktop.chrome.pipeline.autocode"
 SIG = "desktop.chrome.pipeline.pickingUpSignals"
+# D23 (landing plan, owner 23 Nov 2026): the Mac's ended lines, all the pipeline run's own words.
+PARTIAL = "desktop.chrome.pipeline.partialRun"
+STOPPED = "desktop.chrome.pipeline.stopped"
+CREDIT = "desktop.pipeline.category.outOfCredit"
+KEY = "desktop.pipeline.category.auth"
 
 # (state title, mac frame, mac chrome note, cli frame, cli chrome note)
 STATES = [
@@ -186,31 +191,33 @@ STATES = [
      mac(None), "the row's resting line (unchanged)",
      cli(chip_done("1m 4s")), "autocode.chip.coded + activity.durationIn + codebook.viewReport"),
     ("5 · Finished, but some batches failed",
-     mac(None), "NO SHIPPED LINE: see S1",
+     mac(d(PARTIAL), glyph="w"), PARTIAL + ", warning glyph (D23, S1)",
      cli(chip_partial(87)), "autocode.toast.donePartial"),
     ("6 · Stopped by the researcher",
-     mac(None), "NO SHIPPED LINE: see S2",
+     mac(d(STOPPED)), STOPPED + ", no glyph (D23, S2)",
      cli(chip_cancelled()), "activity.cancelled"),
     ("7 · Failed partway: out of credit",
-     mac(None), "NO SHIPPED LINE: see S3",
+     mac(d(CREDIT), glyph="e"), CREDIT + ", error glyph (D23, S3)",
      cli(chip_failed("codebook.autocodeFailure.outOfCredit")), "activity.failed + autocodeFailure.outOfCredit"),
     ("8 · Failed partway: key rejected",
-     mac(None), "NO SHIPPED LINE: see S3",
+     mac(d(KEY), glyph="e"), KEY + ", error glyph (D23, S3)",
      cli(chip_failed("codebook.autocodeFailure.invalidKey")), "activity.failed + autocodeFailure.invalidKey"),
 ]
 
 STRING_PLAN = [
     ("S1", "Mac line, finished with some batches failed",
-     "Candidates to reuse: <code>desktop.pipeline.diagnostic.pill.unknown</code> “"
-     + E(d("pipeline.diagnostic.pill.unknown")) + "”, or a sibling of <code>" + AC
-     + "</code> such as “AutoCode · 87 of 112” with the warning glyph. Owner to word."),
+     "Settled by D23: <code>" + PARTIAL + "</code> “" + E(d(PARTIAL))
+     + "”, the run's own words, with the warning glyph. The glyph opens the AutoCode popover: "
+     "the pop-up's sentence (<code>autocode.toast.donePartial</code>) and the failure's."),
     ("S2", "Mac line, stopped by the researcher",
-     "Candidate: <code>desktop.chrome.pipeline.stopped</code> “" + E(d("chrome.pipeline.stopped"))
-     + "”, which the run line already uses, with the count kept so the researcher sees how far it got."),
+     "Settled by D23: <code>" + STOPPED + "</code> “" + E(d(STOPPED))
+     + "”, which the run line already uses, with no glyph and no count (the researcher stopped it)."),
     ("S3", "Mac line, failed (credit, key)",
-     "Candidates: the run's own pills, <code>desktop.pipeline.diagnostic.pill.out_of_credit</code> “"
-     + E(d("pipeline.diagnostic.pill.out_of_credit")) + "” and <code>…pill.auth</code> “"
-     + E(d("pipeline.diagnostic.pill.auth")) + "”, with the error glyph. Owner to word."),
+     "Settled by D23: the run's own category labels, <code>" + CREDIT + "</code> “" + E(d(CREDIT))
+     + "” and <code>" + KEY + "</code> “" + E(d(KEY)) + "”, with the error glyph, which opens "
+     "the AutoCode popover with the long sentence (<code>codebook.autocodeFailure.*</code>). Other "
+     "failures take their category's label the same way (“" + E(d("pipeline.category.quota"))
+     + "”, …), or “" + E(d("pipeline.diagnostic.header.failed")) + "” when there is none."),
 ]
 
 DECISIONS = [
@@ -228,11 +235,11 @@ DECISIONS = [
      "<code>ProjectSubtitle.swift</code> hands the line to “" + E(d(SIG)) + "” when the count "
      "reaches its total, which is when the Signals build begins. With playback, the window is "
      "still landing tags at that moment. Probably fine: the line is about the server's work."),
-    ("D4", "Taking the pop-up away on the Mac leaves frames 5 to 8 with nothing",
-     "Today the Mac's AutoCode line exists only while a first apply runs, and disappears when the "
-     "job stops or fails (<code>ScreenReading.swift</code> keeps only pending or running jobs). The "
-     "failure is told by the web pop-up, which is not hidden inside the app. Removing the pop-up "
-     "on the Mac, as asked, needs S1 to S3 first, or a failed run becomes invisible."),
+    ("D4", "Taking the pop-up away on the Mac needs frames 5 to 8 on the row first",
+     "The row now keeps a line for a stopped, failed or partly failed first apply (D23, Phase 5a), "
+     "read from <code>/autocode/jobs?include_ended=true</code>. It outlives the study's server "
+     "(a failure seen before the reap is still there after it) and clears when the researcher "
+     "opens the study or starts the codebook again. Hiding the pop-up inside the app is Phase 5b."),
     ("D5", "Frames 7 and 8: the pop-up ends with two full stops",
      "<code>activity.failed</code> is “{{label}} failed: {{error}}.” and every "
      "<code>codebook.autocodeFailure.*</code> sentence already ends with a full stop, so the chip "

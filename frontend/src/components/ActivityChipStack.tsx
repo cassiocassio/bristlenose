@@ -120,6 +120,17 @@ function formatDuration(startedAt: string, completedAt: string): string {
 }
 
 /** Convert an AutoCode API status to the normalised shape. */
+/**
+ * A failure sentence without its own closing mark. `activity.failed` is
+ * "{{label}} failed: {{error}}." and every `codebook.autocodeFailure.*` sentence
+ * already ends with one, so the chip read "…out of credit.." in every locale. One
+ * mark comes off here rather than out of 21 locale files, where the sentences also
+ * stand alone (the Codebook lens's failure line).
+ */
+export function withoutFinalStop(sentence: string): string {
+  return sentence.replace(/[.。．!！]$/u, "");
+}
+
 export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
   const s = status.status;
   const reported: "running" | "completed" | "failed" | "cancelled" =
@@ -162,7 +173,7 @@ export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatu
     // "Tagging failed: Error code: 429 - {'type': 'error', ...}".
     errorMessage:
       effectiveStatus === "failed"
-        ? autocodeFailure(status.failure_kind).message
+        ? withoutFinalStop(autocodeFailure(status.failure_kind).message)
         : null,
     hasProposals: status.proposed_count > 0,
     failureKind: effectiveStatus === "failed" ? status.failure_kind : undefined,

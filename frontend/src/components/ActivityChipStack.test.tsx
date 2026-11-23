@@ -1,5 +1,5 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
-import { ActivityChipStack } from "./ActivityChipStack";
+import { ActivityChipStack, withoutFinalStop } from "./ActivityChipStack";
 import type { ActivityJob, NormalisedJobStatus } from "./ActivityChipStack";
 import type { AutoCodeJobStatus } from "../utils/types";
 
@@ -567,6 +567,30 @@ describe("ActivityChipStack", () => {
     expect(screen.queryByText(/rate_limit_error/)).not.toBeInTheDocument();
     expect(screen.queryByText(/429/)).not.toBeInTheDocument();
     expect(screen.getByText(/Rate limited/)).toBeInTheDocument();
+  });
+
+  it("ends the failure sentence with one full stop, not two", async () => {
+    // `activity.failed` closes the sentence itself, and every failure sentence
+    // already ends with its own mark: the chip read "…out of credit..".
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ status: "failed", failure_kind: "out_of_credit" }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    const line = screen.getByText(/out of credit/);
+    expect(line.textContent).toMatch(/out of credit\.$/);
+    expect(line.textContent).not.toMatch(/\.\.$/);
+  });
+
+  it("takes one closing mark off a failure sentence in any script", () => {
+    expect(withoutFinalStop("Your API key was rejected.")).toBe("Your API key was rejected");
+    expect(withoutFinalStop("API キーが拒否されました。")).toBe("API キーが拒否されました");
+    expect(withoutFinalStop("拒絕了！")).toBe("拒絕了");
+    expect(withoutFinalStop("Try again soon")).toBe("Try again soon");
+    // One mark, not every one: an ellipsis keeps two of its three.
+    expect(withoutFinalStop("Wait...")).toBe("Wait..");
   });
 
   it("falls back to the generic sentence when unclassified", async () => {

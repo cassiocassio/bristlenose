@@ -193,7 +193,9 @@ def review_link(state: str) -> str:
 # Sentiment is not counted (owner, 23 Nov 2026): it is machine-applied on every run and never
 # reviewed, so the sentence names only the codebooks a researcher chose. Talismanic: UXR alone.
 SUMMARY = "{{count}} tags from {{codebooks}} codebooks"
-SUMMARY_ONE = "{{count}} tags from 1 codebook"
+# With one codebook the source says nothing a researcher can act on, so the line is the count
+# alone (owner, 23 Nov 2026), the existing tags.countTags. It needs _one/_other forms ("1 tag").
+SUMMARY_ONE = t("tags.countTags")
 
 
 def invented(seed: int, n: int, a: float, b: float) -> list[float]:
@@ -321,7 +323,37 @@ def tag_rows(run: dict, groups: int) -> str:
     return "".join(out)
 
 
-def sidebar(run: dict, top: str, *, groups: int = 1, width: int = 280, export: bool = False) -> str:
+# The researcher's own hand-made tags (the floor): never AutoCoded, never reviewed, so not
+# counted on the overview's line (owner, 23 Nov 2026). Names and counts INVENTED for the frame.
+OWN_TAGS = [("storage", 7), ("kitchen ritual", 5), ("gift", 3), ("heirloom", 2)]
+
+
+def own_codebook() -> str:
+    title = t("codebook.projectTagsHeading", project="Talismanic")
+    top = max(c for _, c in OWN_TAGS)
+    rows = "".join(
+        '<div class="tag-row"><span class="tag-name-area"><label class="tag-checkbox-label">'
+        '<input type="checkbox" class="bn-checkbox" checked aria-label="' + E(name) + '"></label>'
+        '<span class="badge" data-truncates="user-content">' + E(name) + "</span></span>"
+        '<span class="tag-bar-area"><span class="tag-bar-track"><span class="tag-micro-bar" style="width:'
+        + str(round(c / top * 100)) + '%;background-color:var(--bn-bar-none)"></span></span>'
+        '<span class="tag-count is-accepted">' + str(c) + "</span></span></div>"
+        for name, c in OWN_TAGS
+    )
+    total = sum(c for _, c in OWN_TAGS)
+    return (
+        '<details class="codebook-framework" open><summary>' + CHEVRON.replace(" ov-chev", "")
+        + '<div class="codebook-info"><div class="codebook-title">' + E(title) + "</div></div></summary>"
+        '<div class="codebook-body"><div class="tag-filter-group" style="background:var(--bn-group-none)">'
+        '<div class="tag-filter-group-tags">' + rows + "</div>"
+        '<div class="group-total-row"><span class="group-total-label">' + E(t("tags.total")) + "</span>"
+        '<span class="group-total-count">' + str(total) + "</span></div></div></div></details>"
+    )
+
+
+def sidebar(
+    run: dict, top: str, *, groups: int = 1, width: int = 280, export: bool = False, own: bool = False,
+) -> str:
     actions = (
         '<div class="tag-sidebar-actions">'
         '<button type="button" class="tag-filter-action">' + E(t("tags.selectAll")) + "</button>"
@@ -330,8 +362,9 @@ def sidebar(run: dict, top: str, *, groups: int = 1, width: int = 280, export: b
         '<span class="tag-filter-separator">|</span>'
         '<button type="button" class="tag-filter-action">' + E(t("tags.used")) + "</button></div>"
     )
+    # groups=0 draws the codebook closed, so a frame can show what sits below it.
     framework = (
-        '<details class="codebook-framework" open><summary>'
+        '<details class="codebook-framework"' + (" open" if groups else "") + "><summary>"
         + CHEVRON.replace(" ov-chev", "")
         + '<div class="codebook-info"><div class="codebook-title">Bristlenose UXR Codebook</div></div>'
         '<button class="codebook-eye" aria-label="' + E(t("tags.hideFramework", framework="Bristlenose UXR Codebook"))
@@ -344,7 +377,7 @@ def sidebar(run: dict, top: str, *, groups: int = 1, width: int = 280, export: b
         + top + actions
         + '<div class="tag-search-container"><input type="text" class="tag-search-input" placeholder="'
         + E(t("tags.searchPlaceholder")) + '"></div>'
-        '<div class="tag-sidebar-body">' + framework + "</div></div>"
+        '<div class="tag-sidebar-body">' + framework + (own_codebook() if own else "") + "</div></div>"
     )
 
 
@@ -358,12 +391,14 @@ def frame(title: str, note: str, body: str, flag: bool = False) -> str:
 def build(run: dict) -> str:
     third = run["props"][len(run["props"]) * 4 // 10][0]  # about 40% of the run landed
     frames = [
-        frame("1 · No AutoCode run yet", "summary wording owner-written (new key); no chevron, no Review",
+        frame("1 · No AutoCode run yet", "no overview, so the line counts the sidebar's tags, as today",
               sidebar(run, overview(run, open_=False, show=False))),
         frame("2 · After a run, closed", "Review reachable without opening",
               sidebar(run, overview(run, open_=False))),
         frame("3 · After a run, open", "zone colours, as the dialog (threshold-review.css)",
               sidebar(run, overview(run, open_=True))),
+        frame("3b · After a run, with the researcher's own tags", "line counts the reviewable codebook only; own tags INVENTED",
+              sidebar(run, overview(run, open_=True), groups=0, own=True), flag=True),
         frame("4 · During a run", "Review present, inactive until the run ends",
               sidebar(run, overview(run, open_=True, done=third, review="inactive"))),
         frame("5a · Three codebooks coded: merged (the default)", "no ticks: the three cuts differ; no Review; two shapes INVENTED",

@@ -83,6 +83,7 @@ Two read-only audits checked Phase 1 as built and Phases 2–7 as planned agains
 | D43 | The review waits for the stored lines before drawing, within the 5 s status-read limit; a failed read shows "Failed to load proposals" with Apply off; Apply has the row writes' 30 s timeout (lead's call). |
 | D44 | A row override carries the status the dialog showed and is refused if it changed since (D34's stale-window protection, extended); any refusal re-reads the row. The zone lists keep their shipped open/closed defaults (lead's call). |
 | D45 | **Resequenced (lead's call, D29/D32):** per-batch live acceptance (D6) lands in Phase 4 with the playback that shows it, not in Phase 3: accepted tags appearing mid-run before Phase 4 would be the D32 regression again. Phase 3 is the end-of-run hybrid cut and the stopped-run settle. **Owner to confirm.** |
+| D46 | The cut accepts at the stored line itself: the 30% rank rounded UP to the 0.05 grid, on every path (completed, stopped, resumed). Every accepted proposal is then at or above the stored line and every pending one below it, so a later re-cut can never invert the order (Phase 3 review, lead's call). An off-grid rank takes slightly under 30%. Ties at the line all go in, so a codebook answering one flat confidence has all of it accepted. **Owner to confirm the tie rule.** The cut commits in the same transaction as the run's outcome, so no reader sees a finished run without its cut. Old studies with no stored lines are not cut retroactively (D29). |
 | D38 | Mac app only: the first-run AutoCode pop-up is designed out. The sidebar line is where progress lives, in every lens. Stop is the progress ring's hover × (the pattern copy and run already use, with its keyboard route); the long failure sentence is in the popover the line's glyph opens, an AutoCode variant, not the pipeline's Diagnostics; View Report is the tag sidebar overview's link (Phase 6), so Phase 5 lands with or after Phase 6. The pop-up's unseen work keeps running without it: telling the app about credit and key failures (`postLLMFailure`), and refreshing the lenses when coding ends. Every other pop-up stays in the app (catch-up passes, clip and screens exports, Copy Screens). The CLI web app keeps the AutoCode pop-up unchanged. |
 
 Mockups: `docs/mockups/autocode-review-dialog.html` (Phase 2, approved, D39), `docs/mockups/autocode-mac-popup.html` (D38 is its option B, with Stop on the ring rather than the menu drawn there).
@@ -179,15 +180,14 @@ Tests: a batch's proposals and register entries commit together; a writer holdin
 
 Tests: `tests/test_autocode_recut.py` (Apply with the lines unmoved changes nothing; only zone changes move; pinned decisions never move; a hand-added tag survives; a never-cut run's plain cut; the override routes and the 409 kept for ordinary calls; Signals only when something moved) and `ThresholdReviewModal.test.tsx` § "the whole run, re-cuttable".
 
-### Phase 3: Default cut, accepted live
+### Phase 3: Default cut at the end of the run (built 23 Nov 2026)
 
-- **Accept live** per D6: the running estimate of the hybrid cut on each saved batch, the cautious start, and the top-up when the run ends. The top-up and every live acceptance update only proposals still pending (the conditional-update pattern at `autocode.py:1347`), so a researcher's decision made mid-run is never overwritten (D2, review 5).
-- **The end of every first apply** runs the hybrid's own step: the exact cut, the top-up, and excluding below 0.30. It replaces `accept_at_default_cutoff` as the house default's `after_apply` (which accepts everything at 0.70, the flood this plan removes) and keeps its write of the house default's `completed` marker (review 3; pin in `tests/test_autocode_house_default.py`).
-- **The stored lines** are the exact cut snapped to the 0.05 grid the dialog and the catch-ups use; D26 keeps a later re-cut honest whatever the live acceptance did (review 2).
-- **A stopped first apply** settles at once (D27).
-- The researcher stays where they are (D9).
+Live acceptance moved to Phase 4 (D45). As built (commits 8d21bde40, 87f25a343, c08dc98db, c23c438aa; restore branch autocode-landing/phase-3):
 
-Test: a researcher's exclusion between a batch and the top-up stays excluded.
+- **Every first apply ends with the hybrid cut** (D5, D46): the run's counted proposals are ranked; the line is the 30% rank's confidence rounded up to the grid, never below 0.70; pending proposals at or above it are accepted, those below 0.30 excluded, the rest stay pending; `decided_by="threshold"`, conditional on still pending, so a researcher's decision is never overwritten (D2). The cut runs inside the run's outcome save (worker thread, retries), in the same transaction as the outcome.
+- **The house default** writes its done marker after the cut and keeps its retry rules; `accept_at_default_cutoff` is gone.
+- **A stopped first apply** settles over what was coded (D27) but stays unfinished: no `completed_at`, no marker (D35); a resumed run ends at the stored lines. The status reports `ending`, and the web page refreshes the lenses once a stopped run has settled. A **failed** first apply is not settled (lead's call: D27 names a stop; its retry cuts the whole run).
+- **Catch-ups** exclude below the stored lower line, 0.30 (D5).
 
 ### Phase 4: Live landing
 

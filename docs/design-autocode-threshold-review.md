@@ -196,7 +196,10 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 > A threshold decision moves only on a zone change. A researcher's or an "unknown" decision
 > never moves (D2); a proposal moved out of Accepted loses its tag only when AutoCode
 > made it; no warning on removing tags (D3). A run no lines were ever stored on gets a
-> plain cut (only pending proposals sorted), offered while anything is pending. The
+> plain cut (only pending proposals sorted), offered while anything is pending. Since
+> Phase 3 (23 Nov 2026) a first apply stores the end-of-run hybrid cut's lines when it
+> completes or is stopped, the accept line rounded up to the grid, so the dialog opens on
+> them with nothing pending outside the tentative band and Apply off (D41). The
 > lines are stored, and Signals is rebuilt only when something moved (D31). The call
 > fails after the per-row writes' time limit and shows `applyFailed` (D43). Tests:
 > `tests/test_autocode_recut.py`, `ThresholdReviewModal.test.tsx`.

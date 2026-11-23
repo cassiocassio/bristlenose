@@ -12,6 +12,10 @@ trued-against: HEAD@main on 2026-10-11 (after 83bab663)
 
 ## Changelog
 
+- _2026-11-23_ — **the end-of-run hybrid cut** (landing plan Phase 3, D5, D27, D35, D41): step
+  6a below. Replaces the house default's accept-everything-at-0.70 (`accept_at_default_cutoff`,
+  deleted) and a researcher's first apply leaving everything pending; a catch-up after it now
+  excludes below 0.30.
 - _2026-11-15_ — a **first apply shows on the project row** ("AutoCode · 25 of 101", shimmering,
   no ring), so the house default (`server/autocode_house_default.py`), which no page started and
   which has no toast, is visible. `GET /autocode/jobs` gained `processed_quotes` and
@@ -70,6 +74,20 @@ proposals with confidence + rationale).
    NO_FIT (`llm/prompts/autocode.md`: "Always return a tag name")
 6. Results stored as `ProposedTag` rows (status: "pending"), **one per quote**: when the
    model returns two assignments for one quote, the higher-confidence one is kept (see Gotchas)
+6a. **The end-of-run cut** (since 23 Nov 2026, `docs/design-autocode-landing-plan.md` Phase 3,
+   D5): every first apply that completes, the house default's and a researcher's, runs
+   `settle_first_apply_cut` (`routes/autocode.py`) before the Signals snapshot. The hybrid:
+   the most confident 30% of the run's proposals on quotes that count are accepted (ties at
+   the cut in), never below 0.70; those below 0.30 are excluded; the rest stay pending for the
+   review. Every change is a threshold decision, written only on a proposal still pending. The
+   lines are stored on the job, the accept line as the cut rounded **up** to the 0.05 grid
+   (D41), so the review opened on them has nothing to move. A first apply **stopped** partway
+   settles the same way at once but stays unfinished (no `completed_at`, no house-default
+   marker), and its resumed run ends at the stored lines (D27, D35); a **failed** one is not
+   settled, and its retry cuts the whole run. Until then a researcher's first apply left every
+   proposal pending, and the house default accepted everything at 0.70 and excluded nothing
+   (it stored a lower line of 0). Constants: `HYBRID_*` in `autocode.py`, with the Phase 0a
+   measurement.
 7. Progress surfaces as an activity chip (`addJob("autocode:" + id)`,
    `CodebookV2.tsx:409`). Review is **pulled, not pushed**: a Review door on the
    codebook tile (`frontend/src/islands/CodebookV2Page.tsx:233`) opens
@@ -133,7 +151,8 @@ proposals with confidence + rationale).
   register, so when it counts again (unhide, recoded back in, a paragraph move
   undone) it is owed and is coded: after a 10 s wait restarted by each gesture
   (60 s at most), one pass per codebook (one call for every 25 quotes owed), at the
-  thresholds the Apply stored, with no review and no human tag touched. Those are
+  thresholds the Apply stored (since Phase 3, the end-of-run cut's: step 6a), with no
+  review and no human tag touched. Those are
   the review dialog's three bands: at or above the upper line the tag is added, below
   the lower line (the dialog's 0.30 when none was stored) the proposal is denied, and
   between them it stays pending for the review, which shows it and counts it as

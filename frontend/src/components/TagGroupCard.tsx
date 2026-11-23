@@ -10,7 +10,7 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CodebookTagResponse } from "../utils/types";
-import { getTagBg, getBarColour } from "../utils/colours";
+import { getTagBg, getTagBarColour } from "../utils/colours";
 import { useSidebarSelector, type SidebarState } from "../contexts/SidebarStore";
 
 const selectHiddenTagGroups = (s: SidebarState) => s.hiddenTagGroups;
@@ -94,7 +94,6 @@ export function TagGroupCard({
     [tags, tagCounts],
   );
 
-  const barColour = getBarColour(colourSet);
 
   return (
     <div
@@ -131,7 +130,7 @@ export function TagGroupCard({
                   tentativeCount={tentativeCounts?.[tag.name.toLowerCase()] ?? 0}
                   maxCount={maxCount}
                   badgeBg={getTagBg(colourSet, tag.colour_index)}
-                  barColour={barColour}
+                  barColour={getTagBarColour(colourSet, tag.name)}
                   onToggle={onToggleTag}
                   onAssign={onAssign ? (name) => onAssign(name, tag.id) : undefined}
                   assignActive={assignActive}

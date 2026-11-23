@@ -35,6 +35,7 @@ import {
 } from "../components/CodebookAuthoring";
 import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { safeUrlOrNull } from "../utils/safeUrl";
+import { countColumnStyle } from "../utils/countColumn";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 import { renderLead } from "../utils/leadSentence";
 import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
@@ -319,7 +320,11 @@ export function CodebookV2Page({
           {t("codebook.noTagsInCodebook")}
         </div>
       ) : (
-        <div className="v2-groups">
+        // One count column across every group card, as in the tag sidebar (utils/countColumn).
+        <div
+          className="v2-groups"
+          style={countColumnStyle(groups.flatMap((g) => g.tags.map((tg) => tg.count)))}
+        >
           {groups.map((g) => (
             <CodebookGroupColumn
               key={g.id}

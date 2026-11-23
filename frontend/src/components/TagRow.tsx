@@ -148,16 +148,22 @@ export function TagRow({
         tabIndex={onSoloClick ? 0 : undefined}
         aria-label={onSoloClick ? t("tags.focusOnTag", { name }) : undefined}
       >
-        {hasTentative ? (
-          <MicroBar
-            value={acceptedFrac}
-            tentativeValue={tentativeFrac}
-            colour={barColour}
-            title={`${tentativeCount} tentative + ${count} accepted`}
-          />
-        ) : count > 0 ? (
-          <MicroBar value={acceptedFrac} colour={barColour} />
-        ) : null}
+        {/* A fixed-width track, so the longest bar fills it and no more: as a share
+            of the area it shared with the number, the 100% bar pushed its row's
+            number past the edge (23 Nov 2026). Drawn empty at zero, so every row
+            keeps the column. */}
+        <span className="tag-bar-track">
+          {hasTentative ? (
+            <MicroBar
+              value={acceptedFrac}
+              tentativeValue={tentativeFrac}
+              colour={barColour}
+              title={`${tentativeCount} tentative + ${count} accepted`}
+            />
+          ) : count > 0 ? (
+            <MicroBar value={acceptedFrac} colour={barColour} />
+          ) : null}
+        </span>
         <span className={`tag-count${countKind}${soloFocused ? " tag-solo-focused" : ""}`}>
           {shownCount > 0 ? shownCount : null}
         </span>

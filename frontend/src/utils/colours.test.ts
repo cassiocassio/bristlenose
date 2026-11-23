@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COLOUR_SETS, getTagBg, getGroupBg, getBarColour } from "./colours";
+import { COLOUR_SETS, getTagBg, getGroupBg, getBarColour, getTagBarColour } from "./colours";
 
 describe("COLOUR_SETS", () => {
   it("includes sentiment colour set", () => {
@@ -31,5 +31,24 @@ describe("getGroupBg — sentiment", () => {
 describe("getBarColour — sentiment", () => {
   it("returns sentiment bar colour", () => {
     expect(getBarColour("sentiment")).toBe("var(--bn-bar-sentiment)");
+  });
+});
+
+describe("getTagBarColour", () => {
+  it("gives a sentiment its own colour, as the Sessions grid draws it", () => {
+    expect(getTagBarColour("sentiment", "Frustration")).toBe(
+      "var(--bn-sentiment-frustration, var(--bn-bar-sentiment))",
+    );
+  });
+
+  it("keeps the group's one colour for every other codebook", () => {
+    expect(getTagBarColour("ux", "Frustration")).toBe("var(--bn-bar-ux)");
+    expect(getTagBarColour("", "anything")).toBe("var(--bn-bar-none)");
+  });
+
+  it("cannot be steered out of the property by a tag name", () => {
+    expect(getTagBarColour("sentiment", "a); background: red")).toBe(
+      "var(--bn-sentiment-abackgroundred, var(--bn-bar-sentiment))",
+    );
   });
 });

@@ -410,6 +410,17 @@
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: -2px;
 }
+/* The bar's track: a fixed width the longest bar fills, so every row's bar
+   ends at the same edge, the left edge of the count column. Before 23 Nov 2026
+   a bar was a share of the area it shared with its number, and the 100% bar
+   pushed that row's number past the others. Drawn empty for a zero count. */
+.tag-bar-track {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex: none;
+    width: 2rem;
+}
 .tag-micro-bar {
     height: 0.6rem;
     border-radius: var(--bn-radius-sm);
@@ -449,7 +460,12 @@
 .tag-count {
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
-    min-width: 16px;
+    /* As wide as the list's widest count, so every row's number and bar share
+       one column (utils/countColumn.ts sets --bn-count-digits on the list).
+       Tabular figures make one digit one ch. Unset, two digits, as before. */
+    /* 1.1ch, not 1ch: ch is the plain zero, and Inter's tabular digit is wider
+       (7.78 against 7.56px at 12px; SF Pro 7.56 against 7.55). Measured 23 Nov 2026. */
+    min-width: calc(var(--bn-count-digits, 2) * 1.1ch);
     text-align: right;
     font-variant-numeric: tabular-nums;
 }

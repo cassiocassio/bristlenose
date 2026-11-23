@@ -338,4 +338,23 @@ describe("TagSidebar", () => {
     await act(async () => { await Promise.resolve(); });
     expect(store.result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
   });
+
+  // The bars line up only if every row's number takes one width: the widest
+  // count's, set once on the sidebar and read by every row (23 Nov 2026).
+  it("sizes one count column for every row from the widest count it shows", async () => {
+    vi.mocked(getCodebook).mockResolvedValue(
+      withDefaultGroup([
+        { ...tag("Trust"), tentative_count: 128 },
+        { ...tag("Pricing"), tentative_count: 4 },
+      ]),
+    );
+    const { container } = render(<TagSidebar />);
+    await waitFor(() => expect(screen.getByText("Trust")).toBeTruthy());
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.getPropertyValue("--bn-count-digits")).toBe("3");
+    // Every row keeps the bar's track, even one with nothing to draw.
+    const rows = container.querySelectorAll(".tag-row");
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((row) => expect(row.querySelector(".tag-bar-area > .tag-bar-track")).toBeTruthy());
+  });
 });

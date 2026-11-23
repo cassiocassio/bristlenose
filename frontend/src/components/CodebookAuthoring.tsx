@@ -40,7 +40,7 @@ import { Dialog } from "./Dialog";
 import { EditableText } from "./EditableText";
 import { MicroBar } from "./MicroBar";
 import { TagInput } from "./TagInput";
-import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
+import { getBarColour, getGroupBg, getTagBarColour, getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
 import { requestSoloTag } from "../contexts/SidebarStore";
 import {
@@ -72,7 +72,7 @@ function CodebookTagBar({
   colourSet: string;
 }) {
   const { t } = useTranslation();
-  const barColour = getBarColour(colourSet);
+  const barColour = getTagBarColour(colourSet, tag.name);
   const tentative = tag.tentative_count ?? 0;
   const live = tag.count > 0;
 
@@ -110,16 +110,19 @@ function CodebookTagBar({
       draggable={live ? true : undefined}
       onDragStart={live ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
     >
-      {tentative > 0 ? (
-        <MicroBar
-          value={maxCount > 0 ? tag.count / maxCount : 0}
-          tentativeValue={maxCount > 0 ? tentative / maxCount : 0}
-          colour={barColour}
-          title={`${tentative} tentative + ${tag.count} accepted`}
-        />
-      ) : live ? (
-        <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={barColour} />
-      ) : null}
+      {/* Fixed-width track, as in the tag sidebar's TagRow: bars end at one edge. */}
+      <span className="tag-bar-track">
+        {tentative > 0 ? (
+          <MicroBar
+            value={maxCount > 0 ? tag.count / maxCount : 0}
+            tentativeValue={maxCount > 0 ? tentative / maxCount : 0}
+            colour={barColour}
+            title={`${tentative} tentative + ${tag.count} accepted`}
+          />
+        ) : live ? (
+          <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={barColour} />
+        ) : null}
+      </span>
       <span className="tag-count">{tag.count}</span>
     </span>
   );

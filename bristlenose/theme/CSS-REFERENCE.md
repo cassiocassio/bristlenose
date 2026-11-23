@@ -145,6 +145,7 @@ Uses a `repeat(auto-fill, minmax(240px, 1fr))` grid, progressively enhanced to n
 - **`.group-total-row`** — tag count + total quote count summary
 - **`.tag-row`** — grid row: badge + bar area, `cursor: grab`, drag states (`.dragging`, `.merge-target`)
 - **`.tag-bar-area`** / **`.tag-micro-bar`** / **`.tag-count`** — micro histogram with bar colours from `--bn-bar-*` tokens
+- **`.tag-bar-track`** — the bar's fixed-width track (2rem), so the longest bar fills it and every row's bar ends at one edge; **`.tag-count`** is `--bn-count-digits` × 1.1ch wide, set on the list by `utils/countColumn.ts` from its widest count (tag sidebar root, Codebook lens `.v2-groups`), so the numbers and bars share one column down the whole list
 - **`.tag-add-row`** / **`.tag-add-badge`** / **`.tag-add-input`** — dashed "+" button → inline input
 - **`.new-group-placeholder`** — dashed border card for creating new groups, also a drop target
 - **`.drag-ghost`** — fixed-position ghost element during drag

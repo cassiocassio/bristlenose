@@ -297,7 +297,14 @@
 .tag-sidebar .tag-count {
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
-    min-width: 16px;
+    /* The sidebar's one count column (utils/countColumn.ts). content-box, because
+       report.css makes every box border-box: the old min-width of 16px then
+       included the 12px of padding below, reserved 4px for the digits, and each
+       extra digit pushed its row's bar left (23 Nov 2026). */
+    box-sizing: content-box;
+    /* 1.1ch, not 1ch: ch is the plain zero, and Inter's tabular digit is wider
+       (7.78 against 7.56px at 12px; SF Pro 7.56 against 7.55). Measured 23 Nov 2026. */
+    min-width: calc(var(--bn-count-digits, 2) * 1.1ch);
     text-align: right;
     font-variant-numeric: tabular-nums;
     /* Always reserve space for solo highlight so toggling is colour-only (no jump) */

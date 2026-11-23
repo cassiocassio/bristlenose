@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
+import { countColumnStyle } from "../utils/countColumn";
 import type {
   CodebookResponse,
   CodebookGroupResponse,
@@ -421,6 +422,22 @@ export function TagSidebar() {
     return counts;
   }, [codebook]);
 
+  // One count column for the whole sidebar, as wide as its widest number, so
+  // every bar ends at one edge across groups and codebooks. The number a row
+  // shows is TagRow's: accepted when there are any, else the proposals.
+  const countColumn = useMemo(() => {
+    const shown: number[] = [];
+    for (const fw of frameworks) {
+      for (const g of fw.groups) {
+        for (const tag of g.tags) {
+          const key = tag.name.toLowerCase();
+          shown.push((tagCounts[key] ?? 0) || (tentativeCounts[key] ?? 0));
+        }
+      }
+    }
+    return countColumnStyle(shown);
+  }, [frameworks, tagCounts, tentativeCounts]);
+
   const uncheckedSet = useMemo(
     () => new Set(tagFilter.unchecked.map((t) => t.toLowerCase())),
     [tagFilter.unchecked],
@@ -586,7 +603,7 @@ export function TagSidebar() {
   if (!codebook) return null;
 
   return (
-    <div className={soloTag ? "tag-solo-active" : ""}>
+    <div className={soloTag ? "tag-solo-active" : ""} style={countColumn}>
       {/* Subtitle */}
       <div className="tag-sidebar-subtitle">
         {t("tags.summary", { count: visibleStats.tags, frameworks: visibleStats.frameworks })}

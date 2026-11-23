@@ -180,6 +180,23 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
+  // Sentiment's bars wear each sentiment's own colour, as the Sessions grid's
+  // do, and the page sets one count column for every group card (23 Nov 2026).
+  it("draws sentiment bars in their own colours, under one count column", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const { container } = render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-sentiment"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-sentiment"));
+    const bar = await waitFor(() => {
+      const el = container.querySelector(".v2-groups .tag-bar-track .tag-micro-bar");
+      expect(el).toBeTruthy();
+      return el!;
+    });
+    expect(bar.getAttribute("style") ?? "").toContain("--bn-sentiment-delight");
+    const grid = container.querySelector(".v2-groups") as HTMLElement;
+    expect(grid.style.getPropertyValue("--bn-count-digits")).toBe("1");
+  });
+
   it("treats an absent framework-state entry as enabled", async () => {
     // "off means off" is what gets stored; on is the absence of an off.
     render(<Lens projectId="1" projectName="Ikea" />);

@@ -197,9 +197,10 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 > never moves (D2); a proposal moved out of Accepted loses its tag only when AutoCode
 > made it; no warning on removing tags (D3). A run no lines were ever stored on gets a
 > plain cut (only pending proposals sorted), offered while anything is pending. Since
-> Phase 3 (23 Nov 2026) a first apply stores the end-of-run hybrid cut's lines when it
-> completes or is stopped, the accept line rounded up to the grid, so the dialog opens on
-> them with nothing pending outside the tentative band and Apply off (D41). The
+> Phase 3 (23 Nov 2026) a first apply stores the end-of-run hybrid cut's lines with its
+> outcome, and accepts at the stored accept line (rounded up to the grid), so the dialog
+> opens on them with every row in its zone and Apply off (D41, D46). A re-cut counts, and
+> rebuilds Signals for, only rows whose status changes. The
 > lines are stored, and Signals is rebuilt only when something moved (D31). The call
 > fails after the per-row writes' time limit and shows `applyFailed` (D43). Tests:
 > `tests/test_autocode_recut.py`, `ThresholdReviewModal.test.tsx`.

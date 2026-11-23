@@ -591,6 +591,10 @@ describe("ActivityChipStack", () => {
     expect(withoutFinalStop("Try again soon")).toBe("Try again soon");
     // One mark, not every one: an ellipsis keeps two of its three.
     expect(withoutFinalStop("Wait...")).toBe("Wait..");
+    expect(withoutFinalStop("Try again?")).toBe("Try again");
+    expect(withoutFinalStop("再試行しますか？")).toBe("再試行しますか");
+    expect(withoutFinalStop("Out of credit. ")).toBe("Out of credit");
+    expect(withoutFinalStop("Der Schlüssel wurde abgelehnt.“")).toBe("Der Schlüssel wurde abgelehnt“");
   });
 
   it("falls back to the generic sentence when unclassified", async () => {

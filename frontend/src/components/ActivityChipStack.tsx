@@ -119,18 +119,19 @@ function formatDuration(startedAt: string, completedAt: string): string {
   return min > 0 ? `${min}:${String(sec).padStart(2, "0")}` : `${sec}s`;
 }
 
-/** Convert an AutoCode API status to the normalised shape. */
 /**
  * A failure sentence without its own closing mark. `activity.failed` is
  * "{{label}} failed: {{error}}." and every `codebook.autocodeFailure.*` sentence
  * already ends with one, so the chip read "…out of credit.." in every locale. One
  * mark comes off here rather than out of 21 locale files, where the sentences also
- * stand alone (the Codebook lens's failure line).
+ * stand alone (the Codebook lens's failure line). A closing quote after the mark
+ * stays; trailing space goes.
  */
 export function withoutFinalStop(sentence: string): string {
-  return sentence.replace(/[.。．!！]$/u, "");
+  return sentence.replace(/[.。．!！?？](["'”“’»«」』]*)\s*$/u, "$1");
 }
 
+/** Convert an AutoCode API status to the normalised shape. */
 export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
   const s = status.status;
   const reported: "running" | "completed" | "failed" | "cancelled" =

@@ -23,8 +23,8 @@ open experiments/autocode-landing/landing-lab.html
 ## What is measured and what is assumed
 
 - **Measured:** the call times, the batch size of 25, three calls at once (`llm_concurrency`), and the quote order the job sends today (stored order, roughly session by session).
-- **Assumed:** how call time scales with batch size (the "share" handle, default 75%). The logs hint that it follows reply length: about 350 output tokens took 8 to 25 s, and about 2,400 took 28 to 54 s. One paired run settles it.
-- **Assumed:** that shuffling the quotes leaves the confidence scores unchanged. Also one paired run.
+- **Measured:** how call time scales with batch size (the "share" handle). Phase 0b measured it on 23 Nov 2026: 5 quotes took 12 s, 10 took 20 s, 25 took 49 s, so about 94% of a call scales with batch size; the handle defaults to 95%.
+- **Measured:** shuffling the quotes changes the answers more than the model's own run-to-run noise (Phase 0c: the same 50 quotes sent again in stored order kept the same tag for 35; shuffled, 30), so quotes go in stored order (D25).
 - **Biased low:** the replayed call times include calls from smaller batches (catch-up passes), so "replay logged calls" gives a full batch of 25 a shorter call than it would really take. "Median + slow tail" at 30 / 50 s is the fairer setting for a full batch.
 - **Not modelled:** the real Mac app's web view (whether it keeps your scroll position while content is added above you), throttling in a hidden window, two codebooks running at once.
 
@@ -33,6 +33,7 @@ open experiments/autocode-landing/landing-lab.html
 - **Today: everything at the end.** Proposals are saved when the whole job finishes, and everything lands in one burst.
 - **The brief: per batch, predicted pace.** Batches of 25, with the pace set to empty the queue as the next batch is due.
 - **Small first batch, pace by queue.** Batches of 5, 10, then 25, quotes shuffled, pace set by queue size with gradual changes, still dashed tentative tags, grow-only scales.
+- **As planned (D6, D24, D25).** Batches of 5, 10, then 25 in stored order; a 25-quote call of about 49 s; tags accepted per batch on the server against the running estimate of the 30% cut (never below 0.70, not below 0.80 until 25 proposals, and never falling during the run), never taken back; at the end the stored line is the lower of the exact cut and the lowest live acceptance, and a top-up accepts what the estimate missed. The histogram's meta line shows the live and stored line and the top-up count. Without "never falling", batches finishing out of order let an early dip lower the stored line: on the 109-proposal run, 200 random timings averaged 31% accepted and reached 47%, against 28% for the end-only cut.
 
 ## Reading the timeline
 

@@ -117,6 +117,7 @@ section.stage { display: flex; flex-direction: column; min-width: 0; }
     <option value="today">Today: everything at the end</option>
     <option value="brief">The brief: per batch, predicted pace</option>
     <option value="rec">Small first batch, pace by queue</option>
+    <option value="plan">As planned (D6, D24, D25)</option>
   </select></label>
   <span id="clock">t = 0.0 s</span>
   <span id="studyinfo" style="color:var(--bn-colour-muted)"></span>
@@ -164,7 +165,7 @@ const BIN_N = 20, HIST_H = 150, SQ = 8;
 
 // ── knobs ─────────────────────────────────────────────────────────────────────
 const K = {
-  save: "batch", sizes: "25", conc: 3, callMode: "replay", median: 30, p90: 50, share: 75,
+  save: "batch", sizes: "25", conc: 3, callMode: "replay", median: 30, p90: 50, share: 95,
   order: "stored", seed: 7,
   pacing: "predict", baseline: 30, startRate: 0.6, horizon: 8, accel: 0.8, decel: 0.3,
   maxRate: 3, drain: 1.5, within: "stored", statusCount: "screen",
@@ -180,7 +181,7 @@ const SPEC = [
     ["callMode", "Call time", "sel", [["replay", "replay logged calls"], ["model", "median + slow tail"]]],
     ["median", "Median call (s)", "range", [5, 60, 1]],
     ["p90", "1 in 10 slower than (s)", "range", [10, 120, 1]],
-    ["share", "Call time that scales with batch size (%)", "range", [0, 100, 5], "Assumed. 75% means a 5-quote call takes 40% of a 25-quote one."],
+    ["share", "Call time that scales with batch size (%)", "range", [0, 100, 5], "Measured 23 Nov 2026 (Phase 0b): about 94%. 5 quotes took 12 s, 10 took 20 s, 25 took 49 s."],
     ["order", "Quote order", "sel", [["stored", "stored (by session)"], ["shuffled", "shuffled"]]],
     ["seed", "Random seed", "range", [1, 50, 1]],
   ]],
@@ -197,7 +198,7 @@ const SPEC = [
     ["statusCount", "Status line counts", "sel", [["screen", "what has landed"], ["server", "what the server has"]]],
   ]],
   ["Lines", [
-    ["lines", "Accept / exclude lines", "sel", [["fixed", "fixed values"], ["pct", "percentages, live (can flip)"], ["wave", "tentative live, accept wave at end"]]],
+    ["lines", "Accept / exclude lines", "sel", [["fixed", "fixed values"], ["pct", "percentages, live (can flip)"], ["wave", "tentative live, accept wave at end"], ["live", "as planned: accepted per batch (D6)"]]],
     ["upper", "Accept at or above", "range", [0.4, 0.95, 0.05]],
     ["lower", "Exclude below", "range", [0, 0.6, 0.05]],
     ["topPct", "Accept strongest (%)", "range", [5, 80, 5]],
@@ -217,6 +218,7 @@ const PRESETS = {
   today: { save: "end", sizes: "25", pacing: "none", tentative: "pulse", order: "stored", lines: "fixed", axis: "tallest", squares: "switch" },
   brief: { save: "batch", sizes: "25", pacing: "predict", tentative: "pulse", order: "stored", lines: "fixed", axis: "tallest", squares: "switch" },
   rec: { save: "batch", sizes: "5,10,25", pacing: "buffer", tentative: "still", order: "shuffled", lines: "fixed", axis: "grow", squares: "lock" },
+  plan: { save: "batch", sizes: "5,10,25", pacing: "buffer", tentative: "pulse", order: "stored", lines: "live", topPct: 30, lower: 0.30, callMode: "model", median: 49, p90: 56, share: 95, baseline: 49, axis: "grow", squares: "lock" },
 };
 
 function buildKnobs() {
@@ -307,7 +309,7 @@ function restart() {
   const p = plan();
   S = {
     t: 0, ...p, ai: 0, queue: [], revealed: new Map(), rate: K.startRate, credits: 0,
-    observed: [], arrivedConfs: [], finished: false, waved: false, flips: 0, held: new Set(),
+    observed: [], arrivedConfs: [], decided: new Map(), liveLine: null, minLiveAcc: null, storedLine: null, finished: false, waved: false, flips: 0, held: new Set(),
     reveals: [], depth: [], lastDepthT: -1, histMax: 5, tagMax: 5, sqMode: null,
     counts: D.tags.map(() => ({ a: 0, t: 0, e: 0 })), landedQuotes: 0, serverQuotes: 0,
     firstReveal: null, doneT: null,
@@ -333,12 +335,25 @@ function pctLines(confs) {
   const z = Math.ceil(s.length * K.botPct / 100);
   return { u: s[k - 1], l: z > 0 ? s[s.length - z] : -1 };
 }
+// D6: the running estimate. 30% rank rounded UP to the 0.05 grid, never below 0.70,
+// and not below 0.80 until 25 proposals have landed. D46: accept at the rounded line.
+const ceilGrid = x => Math.ceil(x * 20 - 1e-9) / 20, floorGrid = x => Math.floor(x * 20 + 1e-9) / 20;
+function liveLine(confs) {
+  if (!confs.length) return 2;
+  const s = [...confs].sort((a, b) => b - a);
+  const k = Math.max(1, Math.ceil(s.length * K.topPct / 100));
+  let line = Math.max(0.70, ceilGrid(s[k - 1]));
+  if (confs.length < 25) line = Math.max(line, 0.80);
+  return line;
+}
 function currentLines() {
+  if (K.lines === "live") return { u: S.storedLine ?? S.liveLine ?? 2, l: S.storedLine !== null ? K.lower : -1, pct: false };
   if (K.lines === "fixed") return { u: K.upper, l: K.lower, pct: false };
   const L = pctLines(S.arrivedConfs);
   return { u: L.u, l: L.l, pct: true };
 }
-function classify(conf) {
+function classify(conf, qid) {
+  if (K.lines === "live") return S.decided.get(qid) || "ten";
   if (K.lines === "wave" && !S.waved) return "ten";
   const L = currentLines();
   if (conf >= L.u) return "acc";
@@ -389,6 +404,19 @@ function arrive(b) {
   b.pending = items.length;
   S.landedQuotes += b.n - items.length;
   for (const it of items) S.arrivedConfs.push(D.props[it.qid].c);
+  if (K.lines === "live") {
+    // the server accepts per batch against the running estimate; never taken back
+    // the live line never falls (D6 refined, 23 Nov 2026): an early dip would lower the stored line
+    S.liveLine = Math.max(S.liveLine ?? 0, liveLine(S.arrivedConfs));
+    for (const it of items) {
+      const c = D.props[it.qid].c;
+      if (c >= S.liveLine) { S.decided.set(it.qid, "acc"); S.minLiveAcc = S.minLiveAcc === null ? c : Math.min(S.minLiveAcc, c); }
+    }
+    // earlier pending ones the lowered line now reaches
+    for (const [qid] of S.revealed) if (!S.decided.has(qid) && D.props[qid].c >= S.liveLine) {
+      S.decided.set(qid, "acc"); S.minLiveAcc = Math.min(S.minLiveAcc ?? 1, D.props[qid].c); S.queue.push({ qid, wave: true });
+    }
+  }
   if (K.within === "strong") items.sort((x, y) => D.props[y.qid].c - D.props[x.qid].c);
   else if (K.within === "random") shuffle(items, mulberry32(K.seed + b.start * 1000 | 0));
   S.queue.push(...items);
@@ -396,14 +424,14 @@ function arrive(b) {
 }
 function reclassRevealed() {
   for (const [qid, cls] of S.revealed) {
-    const n = classify(D.props[qid].c);
+    const n = classify(D.props[qid].c, qid);
     if (n !== cls) { setClass(qid, n, true); S.flips++; }
   }
 }
 function reveal(it) {
   const p = D.props[it.qid];
-  if (it.wave) { setClass(it.qid, classify(p.c), false); return; }
-  setClass(it.qid, classify(p.c), false);
+  if (it.wave) { setClass(it.qid, classify(p.c, it.qid), false); return; }
+  setClass(it.qid, classify(p.c, it.qid), false);
   it.b.pending--; S.landedQuotes++;
   if (S.firstReveal === null) S.firstReveal = S.t;
 }
@@ -493,6 +521,22 @@ function step(dt) {
       const items = [...S.revealed.keys()].sort((a, b) => D.props[b].c - D.props[a].c);
       for (const qid of items) if (classify(D.props[qid].c) !== S.revealed.get(qid)) S.queue.push({ qid, wave: true });
       if (!S.queue.length) { S.finished = true; S.doneT = S.t; }
+    } else if (K.lines === "live" && !S.waved) {
+      // the reconcile: stored line = min(exact cut, grid line at or below the lowest live accept);
+      // the top-up accepts what the estimate missed, and the end excludes below the lower line
+      S.waved = true;
+      const ranked = [...S.arrivedConfs].sort((a, b) => b - a);
+      const exactCut = ranked.length ? Math.max(0.70, ceilGrid(ranked[Math.max(1, Math.ceil(ranked.length * K.topPct / 100)) - 1])) : 2;
+      S.storedLine = S.minLiveAcc === null ? exactCut : Math.min(exactCut, floorGrid(S.minLiveAcc));
+      S.topUp = 0;
+      const items = [...S.revealed.keys()].sort((a, b) => D.props[b].c - D.props[a].c);
+      for (const qid of items) {
+        if (S.decided.has(qid)) continue;
+        const c = D.props[qid].c;
+        if (c >= S.storedLine) { S.decided.set(qid, "acc"); S.topUp++; S.queue.push({ qid, wave: true }); }
+        else if (c < K.lower) { S.decided.set(qid, "exc"); S.queue.push({ qid, wave: true }); }
+      }
+      if (!S.queue.length) { S.finished = true; S.doneT = S.t; }
     } else { S.finished = true; S.doneT = S.t; }
   }
   if (S.t - S.lastDepthT >= 0.2) { S.depth.push({ t: S.t, q: S.queue.length, r: S.rate }); S.lastDepthT = S.t; }
@@ -564,14 +608,15 @@ function updateHist() {
   });
   const L = currentLines();
   const lo = document.getElementById("line-lo"), hi = document.getElementById("line-hi");
-  const show = !(K.lines === "wave" && !S.waved);
+  const show = !(K.lines === "wave" && !S.waved) && !(K.lines === "live" && S.liveLine === null);
   hi.style.display = lo.style.display = show && S.revealed.size ? "" : "none";
   hi.style.left = `calc(${Math.min(1, L.u) * 100}% - 1px)`;
   lo.style.left = `calc(${Math.max(0, L.l) * 100}% - 1px)`;
   const tot = { a: 0, t: 0, e: 0 }; S.counts.forEach(c => { tot.a += c.a; tot.t += c.t; tot.e += c.e; });
   document.getElementById("hmeta").innerHTML =
     `<span>accepted ${tot.a}</span><span>tentative ${tot.t}</span><span>excluded ${tot.e}</span>` +
-    `<span>scale ${S.sqMode ? "squares" : "0–" + S.histMax}</span>` + (S.flips ? `<span style="color:#d92d20">flips ${S.flips}</span>` : "");
+    `<span>scale ${S.sqMode ? "squares" : "0–" + S.histMax}</span>` +
+    (K.lines === "live" ? `<span>line ${S.storedLine !== null ? "stored " + S.storedLine.toFixed(2) + (S.topUp ? " · top-up " + S.topUp : "") : S.liveLine === null || S.liveLine > 1 ? "—" : "live " + S.liveLine.toFixed(2)}</span>` : "") + (S.flips ? `<span style="color:#d92d20">flips ${S.flips}</span>` : "");
 }
 
 function drawTimeline() {

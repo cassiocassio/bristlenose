@@ -781,11 +781,16 @@ def test_a_build_owed_to_another_pass_does_not_run_inside_a_catch_up(tmp_path) -
     engine.dispose()
 
 
-def test_a_catch_up_that_accepts_tags_asks_signals_to_follow(monkeypatch) -> None:
+def test_a_catch_up_never_asks_for_a_signals_rebuild(monkeypatch) -> None:
+    """Signals is rebuilt only when tags changed by a run ending, a stopped run or a
+    re-cut, never after a catch-up pass, whatever it accepted (D31)."""
     from bristlenose.server.routes import data as data_routes
 
     asked: list[str] = []
-    monkeypatch.setattr(data_routes, "signals_changed",
+    monkeypatch.setattr(autocode, "_arm_recut_snapshot",
+                        lambda app, pid, source: asked.append(source))
+    monkeypatch.setattr(autocode, "_owe_snapshot", lambda pid, source: asked.append(source))
+    monkeypatch.setattr(autocode, "_start_snapshot_build",
                         lambda app, pid, source: asked.append(source))
     app = SimpleNamespace(state=SimpleNamespace(db_factory=None, settings=_settings()))
 
@@ -796,9 +801,8 @@ def test_a_catch_up_that_accepts_tags_asks_signals_to_follow(monkeypatch) -> Non
             await asyncio.gather(*list(data_routes._CATCH_UP_TASKS))
 
     asyncio.run(main(0))
-    assert asked == []
     asyncio.run(main(3))
-    assert asked == ["codebook_catch_up"]
+    assert asked == []
 
 
 def test_a_build_whose_session_cannot_open_still_ends_the_withheld_lens() -> None:

@@ -479,12 +479,14 @@ def export_report(
     from bristlenose.server.routes.data import get_people as _get_people_handler
     from bristlenose.server.routes.discussion import get_discussion_payload
     from bristlenose.server.routes.quotes import _quote_dom_id
-    from bristlenose.server.routes.quotes import build_quotes as _build_quotes
     from bristlenose.server.routes.quotes import (
         get_moderator_question as _get_moderator_question_handler,
     )
+    from bristlenose.server.routes.quotes import get_quotes as _get_quotes_handler
     from bristlenose.server.routes.sessions import get_sessions as _get_sessions_handler
-    from bristlenose.server.routes.signals import _build_codebook_analysis
+    from bristlenose.server.routes.signals import (
+        get_codebook_analysis as _get_codebook_analysis_handler,
+    )
     from bristlenose.server.routes.signals import (
         get_sentiment_analysis as _get_sentiment_analysis_handler,
     )
@@ -505,14 +507,8 @@ def export_report(
 
     project_info = _get_project_info_handler(project_id, request)
     dashboard = _get_dashboard_handler(project_id, request)
-    # Accepted tags only (D28): a tentative AutoCode tag is work in progress, and the
-    # file has no review to settle it in.
-    quotes = _build_quotes(project_id, request, include_proposed=False)
+    quotes = _get_quotes_handler(project_id, request)
     codebook = _get_codebook_handler(project_id, request)
-    # The Codebook lens counts tentative tags beside accepted ones: none in the file (D28).
-    for group in codebook.groups:
-        for tag in group.tags:
-            tag.tentative_count = 0
     people = _get_people_handler(project_id, request)
     framework_states = _get_framework_states_handler(project_id, request)
     hidden_tag_groups = _get_hidden_tag_groups_handler(project_id, request)
@@ -549,27 +545,10 @@ def export_report(
     # elaborate=True is effectively sync.
     import asyncio
 
-    # Accepted tags only, as in /quotes (D28): no tentative tag weighs on a card.
     codebook_analysis = asyncio.run(
-        _build_codebook_analysis(
-            project_id, request, top_n=20, elaborate=False, include_pending=False,
-        )
+        _get_codebook_analysis_handler(project_id, request, top_n=20, elaborate=False)
     )
     signal_snapshot = _get_stored_signal_snapshot_handler(project_id, request)
-    # The stored report was built with tentative tags weighted in: the file keeps the
-    # accepted ones only (D28), without a new build or a paid call.
-    if signal_snapshot.snapshot:
-        from bristlenose.server.signal_snapshots import (
-            accepted_tag_names,
-            keep_accepted_tags_only,
-        )
-
-        accepted_db = request.app.state.db_factory()
-        try:
-            accepted = accepted_tag_names(accepted_db, project_id)
-        finally:
-            accepted_db.close()
-        keep_accepted_tags_only(signal_snapshot.snapshot, accepted)
 
     # Transcripts — one embed key per session
     transcripts: dict[str, object] = {}

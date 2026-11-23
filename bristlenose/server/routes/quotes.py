@@ -7,10 +7,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import quote_breaks, speaker_slots
+from bristlenose.server.autocode import of_applied_jobs
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
-    AutoCodeJob,
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
@@ -227,7 +227,7 @@ def _resolve_speaker_names(
 
 
 def _load_researcher_state(
-    db: Session, project_id: int, quote_ids: list[int], *, include_proposed: bool = True,
+    db: Session, project_id: int, quote_ids: list[int],
 ) -> tuple[
     dict[int, QuoteState],
     dict[int, str],
@@ -238,7 +238,6 @@ def _load_researcher_state(
     """Load all researcher state for the given quote IDs.
 
     Returns (state_map, edit_map, tags_map, badges_map, proposed_map).
-    ``include_proposed=False`` leaves ``proposed_map`` empty (the HTML export).
     """
     if not quote_ids:
         return {}, {}, {}, {}, {}
@@ -304,71 +303,58 @@ def _load_researcher_state(
     for b in badges:
         badges_map.setdefault(b.quote_id, []).append(b.sentiment)
 
-    # ProposedTag — the pending (tentative) proposals of every AutoCode job of the
-    # project, whatever its status. An applied job ("completed_at") keeps them when a
-    # catch-up is running, failed, cut off by a restart or stopped, which leaves it
-    # "running", "failed" or "cancelled": until RE#66 they vanished from the lens
-    # until the next catch-up worked. And a first apply shows them too while it is
-    # still coding, and once it was stopped or failed: its batches are saved as they
-    # answer, and the tentative tags land on the cards as the run goes
-    # (docs/design-autocode-landing-plan.md D7, review 6); until 23 Nov 2026 a first
-    # apply showed none until it completed. The export leaves them all out
-    # (``include_proposed=False``, D28).
+    # ProposedTag — pending proposals from applied AutoCode jobs (``of_applied_jobs``:
+    # ``completed_at``, not status, RE#66). A first apply still coding, stopped or
+    # failed has no ``completed_at``, and shows none (D32).
     proposed_map: dict[int, list[ProposedTagBrief]] = {}
-    completed_jobs = (
-        db.query(AutoCodeJob).filter(AutoCodeJob.project_id == project_id).all()
-        if include_proposed else []
+    proposed_rows = (
+        db.query(
+            ProposedTag,
+            TagDefinition.name,
+            TagDefinition.id,
+            TagDefinition.codebook_group_id,
+            CodebookGroup.name,
+            CodebookGroup.colour_set,
+        )
+        .join(TagDefinition, ProposedTag.tag_definition_id == TagDefinition.id)
+        .join(
+            CodebookGroup,
+            TagDefinition.codebook_group_id == CodebookGroup.id,
+        )
+        .filter(
+            of_applied_jobs(),
+            ProposedTag.quote_id.in_(quote_ids),
+            ProposedTag.status == "pending",
+        )
+        .all()
     )
-    if completed_jobs:
-        job_ids = [j.id for j in completed_jobs]
-        proposed_rows = (
-            db.query(
-                ProposedTag,
-                TagDefinition.name,
-                TagDefinition.id,
-                TagDefinition.codebook_group_id,
-                CodebookGroup.name,
-                CodebookGroup.colour_set,
-            )
-            .join(TagDefinition, ProposedTag.tag_definition_id == TagDefinition.id)
-            .join(
-                CodebookGroup,
-                TagDefinition.codebook_group_id == CodebookGroup.id,
-            )
-            .filter(
-                ProposedTag.job_id.in_(job_ids),
-                ProposedTag.quote_id.in_(quote_ids),
-                ProposedTag.status == "pending",
-            )
+    # Build colour_index lookup: position of each tag within its group
+    group_ids = {row[3] for row in proposed_rows}  # codebook_group_id
+    group_td_order: dict[int, list[int]] = {}
+    for gid in group_ids:
+        tds = (
+            db.query(TagDefinition.id)
+            .filter_by(codebook_group_id=gid)
+            .order_by(TagDefinition.id)
             .all()
         )
-        # Build colour_index lookup: position of each tag within its group
-        group_ids = {row[3] for row in proposed_rows}  # codebook_group_id
-        group_td_order: dict[int, list[int]] = {}
-        for gid in group_ids:
-            tds = (
-                db.query(TagDefinition.id)
-                .filter_by(codebook_group_id=gid)
-                .order_by(TagDefinition.id)
-                .all()
-            )
-            group_td_order[gid] = [td_id for (td_id,) in tds]
+        group_td_order[gid] = [td_id for (td_id,) in tds]
 
-        for pt, tag_name, td_id, group_id, group_name, colour_set in proposed_rows:
-            td_ids = group_td_order.get(group_id, [])
-            cidx = td_ids.index(td_id) if td_id in td_ids else 0
-            proposed_map.setdefault(pt.quote_id, []).append(
-                ProposedTagBrief(
-                    id=pt.id,
-                    tag_definition_id=td_id,
-                    tag_name=tag_name,
-                    group_name=group_name,
-                    colour_set=colour_set,
-                    colour_index=cidx,
-                    confidence=pt.confidence,
-                    rationale=pt.rationale,
-                )
+    for pt, tag_name, td_id, group_id, group_name, colour_set in proposed_rows:
+        td_ids = group_td_order.get(group_id, [])
+        cidx = td_ids.index(td_id) if td_id in td_ids else 0
+        proposed_map.setdefault(pt.quote_id, []).append(
+            ProposedTagBrief(
+                id=pt.id,
+                tag_definition_id=td_id,
+                tag_name=tag_name,
+                group_name=group_name,
+                colour_set=colour_set,
+                colour_index=cidx,
+                confidence=pt.confidence,
+                rationale=pt.rationale,
             )
+        )
 
     return state_map, edit_map, tags_map, badges_map, proposed_map
 
@@ -423,15 +409,6 @@ def get_quotes(
     request: Request,
 ) -> QuotesListResponse:
     """Return all quotes for a project grouped by section and theme."""
-    return build_quotes(project_id, request)
-
-
-def build_quotes(
-    project_id: int, request: Request, *, include_proposed: bool = True,
-) -> QuotesListResponse:
-    """The ``/quotes`` answer. The HTML export calls it with ``include_proposed=False``:
-    a deliverable carries accepted tags only, and tentative ones are work in progress
-    (docs/design-autocode-landing-plan.md D28)."""
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -460,9 +437,7 @@ def build_quotes(
 
         # Load researcher state
         state_map, edit_map, tags_map, badges_map, proposed_map = (
-            _load_researcher_state(
-                db, project_id, quote_ids, include_proposed=include_proposed,
-            )
+            _load_researcher_state(db, project_id, quote_ids)
         )
         breaks_map = quote_breaks.resolved(db, quote_by_id, edit_map)
 

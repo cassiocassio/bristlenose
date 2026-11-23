@@ -31,6 +31,7 @@ from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, Templat
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
+    from sqlalchemy import ColumnElement
     from sqlalchemy.orm import Session as SASession
 
     from bristlenose.config import BristlenoseSettings
@@ -934,6 +935,31 @@ def record_sent(db: SASession, job_id: int, quote_ids: Iterable[int]) -> None:
     }
     for quote_id in sorted(wanted - already):
         db.add(AutoCodeSentQuote(job_id=job_id, quote_id=quote_id))
+
+
+def of_applied_jobs() -> ColumnElement[bool]:
+    """The filter every reader of tentative tags puts on ``ProposedTag``: proposals of
+    applied jobs only (docs/design-autocode-landing-plan.md D32).
+
+    Applied is ``completed_at`` or "completed", not status alone: a catch-up running,
+    failed, cut off by a restart or stopped leaves an applied job "running", "failed"
+    or "cancelled", and every pending proposal of the first apply vanished from the
+    lens until the next catch-up worked (RE#66). A first apply still coding, stopped
+    or failed has no ``completed_at``, and shows none: its batches are saved as they
+    answer (Phase 1), but until Phase 4's playback nothing shows a run's proposals
+    before it finishes, as shipped. Read by the quote cards (``/quotes``), the
+    Codebook lens's tentative counts and Signals; the review dialog lists its own
+    job's proposals and does not use it.
+    """
+    from sqlalchemy import or_, select
+
+    from bristlenose.server.models import AutoCodeJob, ProposedTag
+
+    return ProposedTag.job_id.in_(
+        select(AutoCodeJob.id).where(
+            or_(AutoCodeJob.status == "completed", AutoCodeJob.completed_at.isnot(None)),
+        )
+    )
 
 
 def owed_quotes(
@@ -1884,13 +1910,14 @@ async def build_signal_snapshot(app: Any, project_id: int, source: str) -> None:
 
 
 def recut_made(app: Any, project_id: int) -> None:
-    """The review's lines were applied (accept-all or deny-all with the dialog's lines)."""
+    """The review's lines were applied (accept-all or deny-all with the dialog's lines)
+    and moved at least one proposal; a call that moved none does not come here (D31)."""
     signals_changed(app, project_id, "codebook_recut")
 
 
 def signals_changed(app: Any, project_id: int, source: str) -> None:
-    """Accepted tags changed outside a first apply (a re-cut, a catch-up that accepted
-    at the stored line): rebuild Signals once the burst settles, or, while a pass still
+    """Accepted tags changed outside a first apply (a re-cut; never a catch-up pass,
+    D31): rebuild Signals once the burst settles, or, while a pass still
     codes, when the last one ends. Callable from a route's worker thread or the loop;
     never raises."""
     try:

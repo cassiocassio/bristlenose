@@ -1026,8 +1026,9 @@ def accept_all_proposals(
 
         accepted = _accept_pending(db, project_id, query)
         db.commit()
-        if body is not None:
-            # The review dialog's lines: Signals follows, once the burst settles.
+        if body is not None and accepted:
+            # The review dialog's lines moved something: Signals follows, once the
+            # burst settles. A line that accepted nothing asks nothing (D31).
             recut_made(request.app, project_id)
         return {"accepted": accepted}
 
@@ -1098,8 +1099,9 @@ def deny_all_proposals(
             denied += 1
 
         db.commit()
-        if max_conf is not None:
-            # The review dialog's exclude line (accept-all's twin): one rebuild per burst.
+        if max_conf is not None and denied:
+            # The review dialog's exclude line (accept-all's twin) moved something: one
+            # rebuild per burst. A line that denied nothing asks nothing (D31).
             recut_made(request.app, project_id)
         return {"denied": denied}
 

@@ -20,8 +20,8 @@ internally consistent.
 
 Tag sources and weighting:
 - **Accepted tags** (``QuoteTag`` rows): weight 1.0
-- **Pending proposed tags** (``ProposedTag`` with status="pending"):
-  weight = LLM confidence (0.0–1.0)
+- **Pending proposed tags** (``ProposedTag`` with status="pending", of an applied
+  job only, ``autocode.of_applied_jobs``): weight = LLM confidence (0.0–1.0)
 - **Denied proposed tags**: excluded entirely
 - Accepted proposals already have a ``QuoteTag`` row — the endpoint
   de-duplicates to avoid double-counting.
@@ -43,6 +43,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
 from bristlenose.server.active_codebooks import active_project_groups
+from bristlenose.server.autocode import of_applied_jobs
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.signal_snapshots import (
     filter_snapshot_to_counted,
@@ -776,8 +777,6 @@ def _compute_group_analysis(
     shared: _SharedProjectData,
     db: Session,
     top_n: int,
-    *,
-    include_pending: bool = True,
 ) -> tuple[
     list[Signal],
     Matrix,  # section_matrix
@@ -789,9 +788,7 @@ def _compute_group_analysis(
 ] | None:
     """Run signal analysis for a set of codebook groups.
 
-    Returns None if no tag data available. ``include_pending=False`` counts accepted
-    tags only: the HTML export, whose tentative AutoCode tags are work in progress
-    and stay out of a deliverable (docs/design-autocode-landing-plan.md D28).
+    Returns None if no tag data available.
     """
     group_id_to_name = {g.id: g.name for g in active_groups}
     group_name_to_colour_set = {g.name: g.colour_set for g in active_groups}
@@ -849,9 +846,9 @@ def _compute_group_analysis(
         .filter(
             ProposedTag.tag_definition_id.in_(tag_def_to_group.keys()),
             ProposedTag.status == "pending",
+            of_applied_jobs(),  # never a run still coding, stopped or failed (D32)
         )
         .all()
-        if include_pending else []
     )
 
     pending_count = 0
@@ -1132,11 +1129,8 @@ async def _build_codebook_analysis(
     *,
     db: Session | None = None,
     project_dir: Path | None = None,
-    include_pending: bool = True,
 ) -> CodebookSignalsListResponse:
     """Compute per-codebook signal analysis for a project.
-
-    ``include_pending=False`` (the HTML export) leaves tentative AutoCode tags out.
 
     Groups are partitioned by framework — each framework becomes a separate
     codebook entry. User-created groups (framework_id=None) are collected
@@ -1171,9 +1165,7 @@ async def _build_codebook_analysis(
 
         codebooks: list[CodebookSignalsOut] = []
         for codebook_id, cb_groups in partitions.items():
-            result = _compute_group_analysis(
-                cb_groups, shared, db, top_n, include_pending=include_pending,
-            )
+            result = _compute_group_analysis(cb_groups, shared, db, top_n)
             if result is None:
                 continue
 

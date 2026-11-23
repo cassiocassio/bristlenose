@@ -1,7 +1,8 @@
 """AutoCode landing, Phase 1, at the routes (docs/design-autocode-landing-plan.md).
 
 How each decision was made (``decided_by``), a tag removed on a card as the
-researcher's exclusion (review 1), the export's accepted tags only (D28), the
+researcher's exclusion (review 1) and its Undo (D30), tentative tags shown only
+for applied jobs, the export's included (D32, D28 reversed), the
 proposals cursor and the counts by confidence, the jobs list the Mac reads (review
 10), and the busy route's progress (review 11). The engine half (per-batch saving,
 catch-up lines read at save time, the Signals rebuild) is in
@@ -175,6 +176,60 @@ class TestRemovedOnACard:
         })
         assert _proposal(client, ids[1]).status == "accepted"
 
+    def test_undo_of_a_removal_puts_the_proposal_back(self, seeded) -> None:
+        """Undo of "remove tag" is a second request that adds the tag back with its
+        source (``restoreTag``, decision #14), after the removal marked the proposal
+        excluded: the exclusion goes with it, accepted by the researcher (D30)."""
+        from bristlenose.server.models import QuoteTag
+
+        client, ids, tag_ids = seeded
+        client.post(f"{BASE}/autocode/garrett/accept-all", json={"min_confidence": 0.7})
+        dom = _dom_id(client, ids[2])
+        client.patch(f"{BASE}/tags", json={dom: {"remove_ids": [tag_ids[2]]}})
+        assert _proposal(client, ids[2]).status == "denied"
+        resp = client.patch(f"{BASE}/tags", json={
+            dom: {"add_ids": [tag_ids[2]], "source": "autocode"},
+        })
+        assert resp.status_code == 200
+        back = _proposal(client, ids[2])
+        assert (back.status, back.decided_by) == ("accepted", "researcher")
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            qt = db.query(QuoteTag).filter_by(
+                quote_id=back.quote_id, tag_definition_id=tag_ids[2]).one()
+            assert qt.source == "autocode"
+        finally:
+            db.close()
+        # The other accepted proposal was not touched.
+        assert (_proposal(client, ids[3]).status, _proposal(client, ids[3]).decided_by) == (
+            "accepted", "threshold")
+
+    def test_a_tag_put_back_by_hand_undoes_an_exclusion_too(self, seeded) -> None:
+        """Any source: the excluded proposal of the dialog's exclude line, its tag typed
+        back on the card by the researcher, is theirs and accepted."""
+        client, ids, tag_ids = seeded
+        client.post(f"{BASE}/autocode/garrett/deny-all",
+                    json={"min_confidence": 0.0, "max_confidence": 0.6})
+        assert (_proposal(client, ids[0]).status, _proposal(client, ids[0]).decided_by) == (
+            "denied", "threshold")
+        client.patch(f"{BASE}/tags", json={_dom_id(client, ids[0]): {"add_ids": [tag_ids[0]]}})
+        assert (_proposal(client, ids[0]).status, _proposal(client, ids[0]).decided_by) == (
+            "accepted", "researcher")
+
+    def test_put_adding_back_an_excluded_tag_undoes_the_exclusion(self, seeded) -> None:
+        client, ids, _ = seeded
+        _accept(client, ids[0])
+        whole = client.get(f"{BASE}/tags").json()
+        dom = _dom_id(client, ids[0])
+        names = whole[dom]
+        whole[dom] = []
+        client.put(f"{BASE}/tags", json=whole)
+        assert _proposal(client, ids[0]).status == "denied"
+        whole[dom] = names
+        client.put(f"{BASE}/tags", json=whole)
+        assert (_proposal(client, ids[0]).status, _proposal(client, ids[0]).decided_by) == (
+            "accepted", "researcher")
+
     def test_put_dropping_an_accepted_autocode_tag_excludes_it(self, seeded) -> None:
         client, ids, _ = seeded
         _accept(client, ids[0])
@@ -212,7 +267,7 @@ class TestRemovedOnACard:
 
 
 # ---------------------------------------------------------------------------
-# The export carries accepted tags only (D28)
+# Tentative tags: applied jobs only (D32), and the export carries them (D28 reversed)
 # ---------------------------------------------------------------------------
 
 
@@ -223,24 +278,62 @@ def _export(client: TestClient) -> dict:
     return json.loads(html[start:html.index(";\n</script>", start)])
 
 
-def test_the_export_carries_no_tentative_tags(seeded) -> None:
+def _tentative(quotes: dict, codebook: dict, signals: dict) -> tuple[int, int, int]:
+    """(proposals on the quote cards, the Codebook lens's tentative counts, Signals'
+    pending), each summed over the study."""
+    tags = [t for g in codebook["groups"] for t in g["tags"]]
+    return (
+        _proposal_count(quotes),
+        sum(t["tentative_count"] for t in tags),
+        sum(c["source_breakdown"]["pending"] for c in signals["codebooks"]),
+    )
+
+
+def _live(client: TestClient) -> tuple[int, int, int]:
+    return _tentative(
+        client.get(f"{BASE}/quotes").json(),
+        client.get(f"{BASE}/codebook").json(),
+        client.get(f"{BASE}/signals/codebooks").json(),
+    )
+
+
+def _embedded(client: TestClient) -> tuple[int, int, int]:
+    endpoints = _export(client)["endpoints"]
+    return _tentative(
+        endpoints["/quotes"], endpoints["/codebook"], endpoints["/signals/codebooks"],
+    )
+
+
+def _unfinish(client: TestClient, status: str) -> None:
+    """Make the seeded job a first apply that never finished."""
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        job = db.query(AutoCodeJob).one()
+        job.status = status
+        job.completed_at = None
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_a_finished_runs_tentative_tags_show_and_the_export_carries_them(seeded) -> None:
+    """The export carries tentative tags as shipped (dashed tags, the pale bar
+    segments, their weighted part in Signals): D28 is reversed."""
     client, ids, _ = seeded
     _accept(client, ids[3])
-    live = client.get(f"{BASE}/quotes").json()
-    assert _proposal_count(live) == 3  # the page shows the tentative ones
+    assert _live(client) == (3, 3, 3)
+    assert _embedded(client) == (3, 3, 3)
 
-    endpoints = _export(client)["endpoints"]
-    assert _proposal_count(endpoints["/quotes"]) == 0
-    # Nor through Signals: no card weighs a tentative tag, and none is counted.
-    live_signals = client.get(f"{BASE}/signals/codebooks").json()["codebooks"]
-    assert any(c["source_breakdown"]["pending"] for c in live_signals)
-    assert endpoints["/signals/codebooks"]["codebooks"]
-    for codebook in endpoints["/signals/codebooks"]["codebooks"]:
-        assert codebook["source_breakdown"]["pending"] == 0
-    tags = [t for g in endpoints["/codebook"]["groups"] for t in g["tags"]]
-    assert all(t["tentative_count"] == 0 for t in tags)
-    # The accepted one is a tag like any other.
-    assert sum(t["count"] for t in tags) >= 1
+
+@pytest.mark.parametrize("status", ["running", "pending", "failed", "cancelled"])
+def test_a_first_apply_not_finished_shows_no_tentative_tags_anywhere(seeded, status) -> None:
+    """Until Phase 4's playback, a run still coding, stopped or failed shows none of
+    its proposals, on the page or in the export (D32): its batches are saved as they
+    answer, but before Phase 1 they did not exist until it finished."""
+    client, _, _ = seeded
+    _unfinish(client, status)
+    assert _live(client) == (0, 0, 0)
+    assert _embedded(client) == (0, 0, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -374,26 +467,36 @@ def test_background_work_reports_a_progress_count_that_moves() -> None:
 
 
 
-def test_the_review_dialogs_lines_ask_for_a_signals_rebuild(seeded, monkeypatch) -> None:
-    """A re-cut changes the accepted tags Signals counts (review 9); a bulk action
-    without the dialog's lines asks nothing."""
+def test_the_review_dialogs_lines_ask_for_a_signals_rebuild_only_when_they_move_one(
+    seeded, monkeypatch,
+) -> None:
+    """A re-cut that accepted or denied something changes what Signals counts (review
+    9); one that moved nothing asks nothing (D31), and neither does a bulk action
+    without the dialog's lines."""
     from bristlenose.server.routes import autocode as autocode_routes
 
     client, _, _ = seeded
     asked: list[int] = []
     monkeypatch.setattr(autocode_routes, "recut_made", lambda app, pid: asked.append(pid))
-    client.post(f"{BASE}/autocode/garrett/accept-all")
-    client.post(f"{BASE}/autocode/garrett/deny-all")
+    # Nothing at or above 0.9, nothing below 0.5: no proposal moves.
+    assert client.post(f"{BASE}/autocode/garrett/accept-all",
+                       json={"min_confidence": 0.9}).json() == {"accepted": 0}
+    assert client.post(f"{BASE}/autocode/garrett/deny-all",
+                       json={"min_confidence": 0.0, "max_confidence": 0.5}).json() == {
+        "denied": 0}
     assert asked == []
     client.post(f"{BASE}/autocode/garrett/accept-all", json={"min_confidence": 0.7})
     client.post(f"{BASE}/autocode/garrett/deny-all",
-                json={"min_confidence": 0.0, "max_confidence": 0.5})
+                json={"min_confidence": 0.0, "max_confidence": 0.6})
+    assert asked == [1, 1]
+    assert client.post(f"{BASE}/autocode/garrett/accept-all").json() == {"accepted": 1}
+    client.post(f"{BASE}/autocode/garrett/deny-all")
     assert asked == [1, 1]
 
 
-def test_the_exports_signals_report_carries_no_tentative_tags(seeded) -> None:
-    """The stored report was built with tentative tags weighted in (the in-app lens
-    keeps them); the file takes them out without a new build (D28)."""
+def test_the_exports_signals_report_is_the_stored_one(seeded) -> None:
+    """The stored report, tentative tags weighted in, goes into the file as the lens
+    reads it: nothing is taken out (D28 reversed)."""
     import asyncio
 
     from bristlenose.server.routes.signals import _build_codebook_analysis
@@ -408,24 +511,6 @@ def test_the_exports_signals_report_carries_no_tentative_tags(seeded) -> None:
         db.commit()
     finally:
         db.close()
-
-    def tag_names(snapshot: dict) -> set[str]:
-        return {
-            name for c in snapshot["codebooks"] for s in c["signals"]
-            for q in s["quotes"] for name in q["tag_names"]
-        }
-
     live = client.get(f"{BASE}/signals/snapshot").json()["snapshot"]
     assert any(c["source_breakdown"]["pending"] for c in live["codebooks"])
-    live_garrett = next(c for c in live["codebooks"] if c["codebook_id"] == "garrett")
-    assert sum(s["count"] for s in live_garrett["signals"]) == 2
-
-    embedded = _export(client)["endpoints"]["/signals/snapshot"]["snapshot"]
-    assert all(c["source_breakdown"]["pending"] == 0 for c in embedded["codebooks"])
-    garrett = next(c for c in embedded["codebooks"] if c["codebook_id"] == "garrett")
-    # The accepted quote stays on its card; the tentative one leaves it, and its cell.
-    assert sum(s["count"] for s in garrett["signals"]) == 1
-    assert garrett["section_matrix"]["grand_total"] + garrett["theme_matrix"]["grand_total"] < (
-        live_garrett["section_matrix"]["grand_total"] + live_garrett["theme_matrix"]["grand_total"])
-    removed = tag_names({"codebooks": [live_garrett]}) - tag_names({"codebooks": [garrett]})
-    assert removed  # a tentative tag's name was on the live card and is not in the file
+    assert _export(client)["endpoints"]["/signals/snapshot"]["snapshot"] == live

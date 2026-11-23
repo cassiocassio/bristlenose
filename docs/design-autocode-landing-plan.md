@@ -147,16 +147,16 @@ automatically before the dialog can undo it (review 4).
 - **Catch-up passes too**: `_reapply_to_new_quotes` saves per batch and reads the lines when it saves, not when it starts, so a re-cut made during a pass applies to its quotes (review 8).
 - **Record how each decision was made**: a new column on `ProposedTag`: threshold, researcher, or unknown. Accept-all, deny-all and the apply steps write "threshold"; the per-row accept and deny write "researcher". Rows from before the migration get "unknown", which is pinned like a researcher's decision but never counted as a rejection (review 7). Migration test beside `tests/test_migration_025_autocode_sent_quotes.py`.
 - **A tag removed on a quote card is a researcher's exclusion**: `patch_tags` / `put_tags` mark the tag's proposal excluded by the researcher, so no re-cut brings it back (review 1).
-- **Tentative tags show during a first run**: `/quotes` returns pending proposals for a first apply still coding or stopped, not only for jobs with `completed_at` (review 6).
-- **Export: accepted tags only** (D28): the embedded `/quotes` leaves pending proposals out.
+- ~~**Tentative tags show during a first run**: `/quotes` returns pending proposals for a first apply still coding or stopped, not only for jobs with `completed_at` (review 6).~~ Reverted by D32: every reader of tentative tags (quote cards, the Codebook lens's tentative counts, Signals) sees only applied jobs' proposals (`autocode.of_applied_jobs`) until Phase 4.
+- ~~**Export: accepted tags only** (D28): the embedded `/quotes` leaves pending proposals out.~~ Reverted with D28: the export carries finished runs' tentative tags, as shipped.
 - **Telemetry:** the rejection emitter, when it is built, counts only researcher exclusions; nothing counts rejections today (D4, review 10).
 - **Read what's new**: a cursor on the proposals route ("proposals since id N"), and the counts by confidence on the status read, so the sidebar needs no extra request.
 - **The jobs list includes stopped and failed runs** until they are acknowledged, so the Mac can draw their lines (Phase 5; review 10).
 - **The Mac's busy hold** follows D16 as refined: held while the counters move, with a ceiling on no progress (`busy.py`, `ServeReaping.swift`; review 11).
-- **Signals** is rebuilt once when the last of several concurrent runs ends (D21), after a stopped run that has accepted tags, and after a re-cut (review 9). Owner, 23 Nov: right; let the study settle before spending tokens on Signals' write-ups.
+- **Signals** is rebuilt once when the last of several concurrent runs ends (D21), after a stopped run that has accepted tags, and after a re-cut that moved something (review 9); never after a catch-up pass (D31). Owner, 23 Nov: right; let the study settle before spending tokens on Signals' write-ups.
 - **Fix:** the failure pop-up's double full stop ("…out of credit.."): `activity.failed` adds a full stop after an `autocodeFailure` sentence that already ends with one.
 
-Tests: a batch's proposals and register entries commit together; a writer holding the lock does not lose a batch; a crash between batches loses only batches in flight and the sweep keeps the counts; provenance from each path, and "unknown" after the migration; a tag removed on a card survives a re-cut; `/quotes` shows a running first apply's tentative tags; the export carries no pending proposals.
+Tests: a batch's proposals and register entries commit together; a writer holding the lock does not lose a batch; a crash between batches loses only batches in flight and the sweep keeps the counts; provenance from each path, and "unknown" after the migration; a tag removed on a card survives a re-cut; ~~`/quotes` shows a running first apply's tentative tags; the export carries no pending proposals~~ (now: a first apply not finished shows no tentative tags anywhere, and the export carries a finished run's, D32/D28); an Undo of a removed tag puts its proposal back (D30).
 
 ### Phase 2: Re-cuttable review
 

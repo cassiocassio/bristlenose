@@ -27,7 +27,6 @@ from bristlenose.server.autocode import (
     coding_started,
     live_reapply,
     register_reapply,
-    signals_changed,
 )
 from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
@@ -1150,6 +1149,28 @@ def _exclude_removed_autocode_tags(db: Session, removed: set[tuple[int, int]]) -
             proposal.reviewed_at = now
 
 
+def _restore_readded_autocode_tags(db: Session, added: set[tuple[int, int]]) -> None:
+    """A tag put back on a quote whose AutoCode proposal for it was excluded undoes the
+    exclusion (D30): the proposal is accepted again, by the researcher, since putting a
+    tag on a card is a person's act (D2). Undo of "remove tag" sends its add in a
+    request of its own (``restoreTag``), after the removal's request marked the proposal
+    denied; without this the tag came back and the exclusion stayed, so a re-cut could
+    take it off again. Any source: a tag typed back by hand is the same decision.
+    Uncommitted: in the transaction that added the tags.
+    """
+    if not added:
+        return
+    now = datetime.now(timezone.utc)
+    for proposal in db.query(ProposedTag).filter(
+        ProposedTag.quote_id.in_({quote_id for quote_id, _ in added}),
+        ProposedTag.status == "denied",
+    ):
+        if (proposal.quote_id, proposal.tag_definition_id) in added:
+            proposal.status = "accepted"
+            proposal.decided_by = "researcher"
+            proposal.reviewed_at = now
+
+
 @router.put("/projects/{project_id}/tags")
 def put_tags(
     project_id: int,
@@ -1234,6 +1255,8 @@ def put_tags(
         _exclude_removed_autocode_tags(
             db, {pair for pair in set(existing_sources) - kept if pair[0] in resolved},
         )
+        # A tag the body carries that the quote did not have was added (D30).
+        _restore_readded_autocode_tags(db, kept - set(existing_sources))
         db.commit()
         return {"status": "ok"}
     finally:
@@ -1276,6 +1299,7 @@ def patch_tags(
         tag_defs = _name_resolver(db)
         uncategorised: CodebookGroup | None = None
         removed: set[tuple[int, int]] = set()  # (quote, tag) taken off by this request
+        added: set[tuple[int, int]] = set()  # (quote, tag) put on by this request
 
         for dom_id, delta in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
@@ -1326,6 +1350,7 @@ def patch_tags(
             for td_id in add_td_ids:
                 # Taken off and put back in one request is not a removal.
                 removed.discard((quote.id, td_id))
+                added.add((quote.id, td_id))
                 if db.query(QuoteTag).filter_by(
                     quote_id=quote.id, tag_definition_id=td_id
                 ).first():
@@ -1337,6 +1362,9 @@ def patch_tags(
 
         # Removed on a quote card: the researcher's exclusion, so no re-cut brings it back.
         _exclude_removed_autocode_tags(db, removed)
+        # Put back on a quote card, in this request or after one that removed it (Undo):
+        # the exclusion is undone (D30).
+        _restore_readded_autocode_tags(db, added - removed)
         db.commit()
         return {"status": "ok", "unresolved": unresolved}
     finally:
@@ -1928,17 +1956,14 @@ def launch_catch_up(app: Any, project_id: int, framework_id: str) -> None:
                 framework_id,
                 n,
             )
-            if n:
-                # It accepted tags at the stored line: Signals follows, as for a re-cut.
-                signals_changed(app, project_id, "codebook_catch_up")
         except Exception:
             logger.exception(
                 "catch-up re-apply on enable failed | framework=%s", framework_id
             )
         finally:
-            # A catch-up's own change reaches Signals through the debounced request
-            # above. While it codes, an apply that ends leaves its rebuild to the last
-            # pass, which may be this one (D21): started as its own task, not run here.
+            # A catch-up asks for no rebuild of its own (D31). While it codes, an apply
+            # that ends leaves its rebuild to the last pass, which may be this one
+            # (D21): started as its own task, not run here.
             await coding_ended(app, project_id, snapshot_source=None)
 
     # Hold a strong reference: the event loop only weakly references a bare task, so

@@ -8,6 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.autocode import of_applied_jobs
 from bristlenose.server.codebook import CODEBOOK_TEMPLATES, get_template
 from bristlenose.server.codebook_install import link_framework_once
 from bristlenose.server.models import (
@@ -141,7 +142,8 @@ def _tag_tentative_counts(
     """Return {tag_definition_id: this project's pending_proposal_count}.
 
     A pending proposal on a quote that does not count (hidden, recoded out) is
-    not in the AutoCode review either, so it is not a tentative tag here (N175).
+    not in the AutoCode review either, so it is not a tentative tag here (N175). Nor
+    is one of a first apply still coding, stopped or failed (``of_applied_jobs``, D32).
     """
     if not tag_ids:
         return {}
@@ -152,6 +154,7 @@ def _tag_tentative_counts(
             Quote.project_id == project_id,
             ProposedTag.tag_definition_id.in_(tag_ids),
             ProposedTag.status == "pending",
+            of_applied_jobs(),
         )
         .all()
     )

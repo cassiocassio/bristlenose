@@ -54,7 +54,8 @@ export interface DiscussionSection {
 
 export interface SpineSection {
   id: string;
-  title: string;
+  title: string;       // as written in the guide: the Original view
+  heading?: string;    // sentence case, names kept: Summary (records from 23 Nov 2026)
   kind: "questions" | "task" | "instruction";
   items: { id: string; terse: string; text: string }[];
 }

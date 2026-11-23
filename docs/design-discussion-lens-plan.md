@@ -359,7 +359,17 @@ overrides keyed on durable ids, never on labels.
   with no guide the second reads **Add your guide** (below), and with one whose
   record carries `guide_file` the second radio is the guide's file name, shortened
   Finder-style, as a link that chooses a different guide (records from before
-  keep "Original" and a "Replace your guide…" button). Each session is the shipped `PersonBadge` with `#N` as its code and the
+  keep "Original" and a "Replace your guide…" button). *23 Nov 2026 (owner, option
+  B):* the link and the radio fought to be the thing to click, and a link that
+  opened a file panel and started Analyse read as a label. The file name is now
+  the radio's plain label (clicking it selects Original) and a small secondary
+  **Change…** button beside it opens the panel; the two radios stack when the
+  name is shortened. *Same day, casing:* Summary and Normalised questions are our
+  lines and are in sentence case, acronyms and names kept (IKEA, NHS, ikea.com);
+  Original is the guide as written and is never touched. The parse prompt (1.1.0)
+  returns a `heading` per section beside its verbatim `title`; a record from
+  before it gets a first capital only (`sentenceStart` in `model.ts`), so its
+  "ikea" stays lower case until the guide is read again. Each session is the shipped `PersonBadge` with `#N` as its code and the
   participant names as its name half — no session-badge styling of our own, and
   no duration (that stays in the line under the session heading). Names cap at
   two: `Sarah and Mike`, else `Bettina and 4 others` — one new counted string with

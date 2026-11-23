@@ -46,6 +46,9 @@ class SpineItemOut(BaseModel):
 
 class SpineSectionOut(BaseModel):
     title: str
+    # The title in sentence case, names and acronyms kept (prompt 1.1.0, 23 Nov
+    # 2026). Summary and Normalised questions show it; Original shows `title`.
+    heading: str = ""
     kind: Literal["questions", "task", "instruction"] = "questions"
     items: list[SpineItemOut] = Field(default_factory=list)
 
@@ -175,7 +178,8 @@ class RecordSpineItem(BaseModel):
 
 class RecordSpineSection(BaseModel):
     id: str
-    title: str
+    title: str  # as written in the guide: the Original view
+    heading: str = ""  # sentence case: Summary; empty in records before 23 Nov 2026
     kind: Literal["questions", "task", "instruction"] = "questions"
     # Instruction sections keep their title only: consent, logistics and
     # welfare text is not evidence and must not ride into exports (§9.C).

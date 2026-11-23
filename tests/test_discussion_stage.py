@@ -99,7 +99,8 @@ class FakeClient:
             return SpineOut(sections=[
                 SpineSectionOut(title="Consent", kind="instruction",
                                 items=[SpineItemOut(text="Confirm consent to record", terse="Consent")]),
-                SpineSectionOut(title="About you", items=[SpineItemOut(text="Who do you live with?", terse="Household")]),
+                SpineSectionOut(title="About you", heading="About you and your home",
+                                items=[SpineItemOut(text="Who do you live with?", terse="Household")]),
             ])
         if response_model is SessionLabelsOut:
             ids = re.findall(r"^(s\d@[\d:]+'*) \|", user_prompt, re.M)
@@ -166,6 +167,19 @@ def test_instruction_sections_keep_their_title_only(tmp_path):
     record, _ = run(ts, qs, tmp_path, FakeClient())
     consent = next(s for s in record.spine if s.kind == "instruction")
     assert consent.title == "Consent" and consent.items == []
+
+
+def test_a_guide_section_keeps_its_title_as_written_and_gains_a_sentence_case_heading(tmp_path):
+    # Original shows the title; Summary and Normalised questions show the heading
+    # (parse prompt 1.1.0, 23 Nov 2026). No heading from the model: the title stands in.
+    write_guide(tmp_path)
+    ts, qs = two_sessions()
+    record, _ = run(ts, qs, tmp_path, FakeClient())
+    about = next(s for s in record.spine if s.id == "s2")
+    assert (about.title, about.heading) == ("About you", "About you and your home")
+    assert next(s for s in record.sections if s.id == "s2").heading == "About you and your home"
+    consent = next(s for s in record.spine if s.kind == "instruction")
+    assert consent.heading == consent.title == "Consent"
 
 
 def test_without_a_guide_runs_merged_only(tmp_path):

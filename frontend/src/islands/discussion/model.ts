@@ -55,6 +55,17 @@ export function sessionOrder(data: DiscussionData): string[] {
   return data.sessions.map((s) => s.id);
 }
 
+/** Summary and Normalised questions are our lines, so they start with a capital;
+ *  Original is the guide's own wording and is never touched. Only a first word in
+ *  plain lower case is capitalised, so "e.g.", "iPhone", "ikea.com" and "IKEA" stay
+ *  as they are. Names and acronyms further in are the parse prompt's job (`heading`,
+ *  prompt 1.1.0, 23 Nov 2026), which older records lack; this is their floor.
+ *  `toUpperCase`, not the locale's: a Turkish reader must not turn "ikea" into "İkea". */
+export function sentenceStart(s: string): string {
+  if (!/^\p{Ll}+(?=$|[\s,;:?!'’])/u.test(s)) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /** Merged: the record — sections as run, every item with its provenance. */
 export function mergedEntries(data: DiscussionData): NavEntry[] {
   const order = sessionOrder(data);
@@ -63,20 +74,22 @@ export function mergedEntries(data: DiscussionData): NavEntry[] {
     out.push({
       type: "head",
       id: s.id,
-      title: s.title,
+      // A planned section's heading is the guide's title in sentence case; an
+      // emergent one's title is the model's own name for the topic.
+      title: sentenceStart(s.origin === "planned" ? s.heading || s.title : s.title),
       // The approved mockup badges an instruction section only. (A "new" badge on
       // emergent sections was added in the port without a decision; removed 3 Oct.)
       badge: s.kind === "instruction" ? "instruction" : undefined,
     });
     for (const it of s.items) {
-      out.push({ type: "row", id: it.id, text: it.terse, title: it.verbatim,
+      out.push({ type: "row", id: it.id, text: sentenceStart(it.terse), title: it.verbatim,
         mark: markOf(it), sessions: itemSessions(it, order) });
     }
   }
   if (data.standalone.length) {
     out.push({ type: "head", id: "standalone", title: "Standalone" });
     for (const it of data.standalone) {
-      out.push({ type: "row", id: it.id, text: it.terse, title: it.verbatim,
+      out.push({ type: "row", id: it.id, text: sentenceStart(it.terse), title: it.verbatim,
         mark: "plus", sessions: itemSessions(it, order) });
     }
   }
@@ -91,11 +104,12 @@ export function plannedEntries(data: DiscussionData, view: GuideView = "summary"
   for (const s of data.sections) for (const it of s.items) merged.set(it.id, it);
   const out: NavEntry[] = [];
   for (const s of data.spine) {
-    out.push({ type: "head", id: s.id, title: s.title,
+    const original = view === "original";
+    out.push({ type: "head", id: s.id, title: original ? s.title : sentenceStart(s.heading || s.title),
       badge: s.kind === "instruction" ? "instruction" : undefined });
     for (const it of s.items) {
       const m = merged.get(it.id);
-      out.push({ type: "row", id: it.id, text: view === "original" ? it.text : it.terse,
+      out.push({ type: "row", id: it.id, text: original ? it.text : sentenceStart(it.terse),
         title: it.text, mark: "dot",
         sessions: m ? itemSessions(m, order) : [] });
     }

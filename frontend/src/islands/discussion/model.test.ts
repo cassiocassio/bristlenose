@@ -13,6 +13,7 @@ import {
   mergedEntries,
   plannedEntries,
   quoteTurns,
+  sentenceStart,
   sessionColumn,
   sessionForFocus,
   sessionLeftovers,
@@ -83,6 +84,46 @@ describe("navigator entries", () => {
     const rows = mergedEntries(d).filter((x): x is NavRow => x.type === "row" && x.sessions.length > 1);
     const order = d.sessions.map((s) => s.id);
     for (const r of rows) expect(r.sessions).toEqual(order.filter((s) => r.sessions.includes(s)));
+  });
+});
+
+describe("sentence case: our lines, never the guide's", () => {
+  it("capitalises a first word in plain lower case, and leaves anything else alone", () => {
+    expect(sentenceStart("what emotions do you associate with trips to ikea")).toBe("What emotions do you associate with trips to ikea");
+    expect(sentenceStart("let's go to ikea.com")).toBe("Let's go to ikea.com");
+    expect(sentenceStart("naming?")).toBe("Naming?");
+    for (const kept of ["e.g. furniture", "iPhone setup", "ikea.com first", "IKEA trip", "STOP THE CALL", "1st visit", "", "使い方"]) {
+      expect(sentenceStart(kept)).toBe(kept);
+    }
+  });
+
+  const guide: DiscussionData = {
+    ...tiny([], []), guide: true,
+    spine: [
+      { id: "s1", title: "STOP THE CALL", heading: "Stop the call", kind: "instruction", items: [] },
+      { id: "s2", title: "can you tell me a trip to ikea", kind: "questions",
+        items: [{ id: "s2.1", terse: "e.g. furniture", text: "e.g. furniture" }, { id: "s2.2", terse: "trip memory", text: "a particular memory" }] },
+    ],
+    sections: [
+      { id: "s2", title: "can you tell me a trip to ikea", heading: "Can you tell me about a trip to IKEA?", kind: "questions", origin: "planned",
+        items: [item({ id: "s2.2", terse: "trip memory", source: "both" })] },
+      { id: "e1", title: "delivery costs", heading: "Delivery costs", kind: "questions", origin: "emergent", items: [] },
+    ],
+  };
+
+  it("Summary shows the heading, or the title with a capital; Original shows the guide as written", () => {
+    const summary = plannedEntries(guide, "summary");
+    expect(summary.map((e) => (e.type === "head" ? e.title : e.text))).toEqual(
+      ["Stop the call", "Can you tell me a trip to ikea", "e.g. furniture", "Trip memory"]);
+    const original = plannedEntries(guide, "original");
+    expect(original.map((e) => (e.type === "head" ? e.title : e.text))).toEqual(
+      ["STOP THE CALL", "can you tell me a trip to ikea", "e.g. furniture", "a particular memory"]);
+  });
+
+  it("Normalised questions takes a planned section's heading and an emergent one's own name", () => {
+    const e = mergedEntries(guide);
+    expect(e.map((x) => (x.type === "head" ? x.title : x.text))).toEqual(
+      ["Can you tell me about a trip to IKEA?", "Trip memory", "Delivery costs"]);
   });
 });
 

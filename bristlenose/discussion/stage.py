@@ -100,7 +100,7 @@ async def _parse_guide(client: LLMClient, guide: Guide) -> list[st.Section]:
     )
     spine: list[st.Section] = []
     for i, sec in enumerate(out.sections, 1):  # ids by CODE, in guide order
-        spine.append(st.Section(f"s{i}", sec.title, sec.kind, "planned", sec.title,
+        spine.append(st.Section(f"s{i}", sec.title, sec.kind, "planned", sec.heading.strip() or sec.title,
                                 [st.Item(f"s{i}.{j}", it.terse or it.text[:24], it.text)
                                  for j, it in enumerate(sec.items, 1)]))
     return spine
@@ -346,7 +346,7 @@ async def run_discussion(
                           asks=[RecordAsk(turn=x, session=turns[x].session, sec=turns[x].sec) for x in it.turns])
 
     record.spine = [RecordSpineSection(
-        id=s.id, title=s.title, kind=s.kind,  # type: ignore[arg-type]
+        id=s.id, title=s.title, heading=s.heading, kind=s.kind,  # type: ignore[arg-type]
         # instruction sections keep their title only — not evidence, not exported (§9.C)
         items=[] if s.kind == "instruction" else [RecordSpineItem(id=i.id, terse=i.terse, text=i.verbatim)
                                                   for i in s.items])

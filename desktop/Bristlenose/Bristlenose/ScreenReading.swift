@@ -106,12 +106,14 @@ struct AutoCodeProgress: Equatable {
     var frameworkID: String = ""
 
     /// `{"jobs": [{"framework_id", "status", "completed_at", "processed_quotes", "total_quotes",
-    /// "catch_up_processed", "catch_up_total", …}]}`; the first job that is pending or running and
-    /// has something left to do. Pure, so the rule for when the line appears is testable without
-    /// a server.
+    /// "catch_up_processed", "catch_up_total", …}]}`, listed by start; the **most recently
+    /// started** job that is pending or running and has something left to do. One codebook per
+    /// row, so the line, its ring and Stop all name the same run; with two at once, the newer
+    /// (lead to confirm). A count past its total (a catch-up whose total was not written) shows
+    /// nothing. Pure, so the rule for when the line appears is testable without a server.
     static func parse(_ json: [String: Any]) -> AutoCodeProgress? {
         guard let jobs = json["jobs"] as? [[String: Any]] else { return nil }
-        for job in jobs {
+        for job in jobs.reversed() {
             guard let status = job["status"] as? String, status == "pending" || status == "running"
             else { continue }
             let catchUp = job["completed_at"] as? String != nil
@@ -275,10 +277,61 @@ struct AutoCodeLineMemory: Codable, Equatable {
         candidates = listed.filter { !acknowledged.contains($0.key) }
     }
 
-    /// The researcher opened the study: everything listed so far is seen.
+    /// The researcher opened the study: a Stop is seen, and clears. A failure and a partial run
+    /// are not cleared by being seen: they stay until they are resolved (the codebook started
+    /// again or resumed, and the server stops listing them), because a failed run must stay
+    /// visible and retryable (owner's rule; Phase 5a review).
     mutating func acknowledge() {
-        acknowledged.formUnion(candidates.map(\.key))
+        let seen = candidates.filter { $0.outcome == .stopped }
+        acknowledged.formUnion(seen.map(\.key))
+        candidates.removeAll { $0.outcome == .stopped }
+    }
+
+    /// The server could not list ended runs (a 404: an older serve, or no such project). What was
+    /// listed goes, but what the researcher has seen stays seen, so it never comes back.
+    mutating func listingUnavailable() {
         candidates = []
+    }
+}
+
+/// One read of the ended AutoCode runs: what the server listed, or that it could not list them.
+enum AutoCodeEndedAnswer: Equatable {
+    case listed([AutoCodeEndedLine])
+    case unavailable
+}
+
+/// What Stop does for a project, wherever it is asked (Project ▸ Stop and ⌘., the row's context
+/// menu): the pipeline run when the app can stop one, which wins when both run; else a running
+/// AutoCode pass, gated on the run alone and not on which line the row shows (Phase 5a review);
+/// else nothing. One decision, so the menu bar, the context menu and the label cannot disagree.
+enum StopTarget: Equatable {
+    case pipeline
+    case autocode(framework: String)
+    case none
+
+    static func resolve(pipelineCanStop: Bool, autocode: AutoCodeProgress?,
+                        stopping: Bool) -> StopTarget {
+        if pipelineCanStop { return .pipeline }
+        if let autocode, !autocode.frameworkID.isEmpty, !stopping {
+            return .autocode(framework: autocode.frameworkID)
+        }
+        return .none
+    }
+
+    /// Whether Project ▸ Stop carries ⌘. in this state. Not for AutoCode (lead's call, pending
+    /// the owner): the web report binds ⌘. to "toggle both sidebars" on the Quotes lens, where
+    /// AutoCode runs, so ⌘. there would stop the run when the researcher meant the sidebars.
+    /// The pipeline's Stop Analysis keeps it, as before.
+    var takesCommandPeriod: Bool { if case .autocode = self { false } else { true } }
+
+    /// The menu item's words: "Stop Analysis" for the run, "Stop AutoCode" for AutoCode (the
+    /// owner's option B, `docs/mockups/autocode-mac-popup.html`). Keys spelled whole for the
+    /// orphan gate.
+    var labelKey: String {
+        switch self {
+        case .autocode: return "desktop.menu.project.stopAutoCode"
+        case .pipeline, .none: return "desktop.menu.project.stopAnalysis"
+        }
     }
 }
 
@@ -314,10 +367,28 @@ final class ScreenReadingStore: ObservableObject {
     private let defaults: UserDefaults?
     static let endedLinesKey = "autocodeEndedLines"
 
-    /// Stops a project's running AutoCode pass (the ring's hover ×, and the row menu's item).
-    /// Set by `ServeFleet`, which owns the servers; the sidebar reads the store, so the act rides
-    /// with the state rather than another closure threaded through the outline's host.
+    /// Stops a project's running AutoCode pass. Set by `ServeFleet`, which owns the servers; call
+    /// `stopAutoCode(_:framework:)`, which acknowledges the click first.
     var onStopAutoCode: ((UUID, String) -> Void)?
+
+    /// The codebook a Stop was asked of, per project, until the run's count goes: the row says
+    /// "Stopping…" and its ring loses the × at once (the immediate acknowledgement a copy's cancel
+    /// gives), rather than waiting for the next read.
+    @Published private(set) var autocodeStopping: [UUID: String] = [:]
+
+    /// Stop `project`'s running AutoCode pass on `framework`: the ring's hover ×, the row menu's
+    /// Stop AutoCode and Project ▸ Stop AutoCode (⌘.) all come here.
+    func stopAutoCode(_ project: UUID, framework: String) {
+        guard !framework.isEmpty, autocodeStopping[project] == nil else { return }
+        autocodeStopping[project] = framework
+        onStopAutoCode?(project, framework)
+    }
+
+    /// The cancel request found no server or no answer: the run is still going, so the × comes
+    /// back. (A refusal because it had already ended clears with its count.)
+    func autoCodeStopFailed(for project: UUID) {
+        if autocodeStopping[project] != nil { autocodeStopping[project] = nil }
+    }
 
     init(defaults: UserDefaults? = nil) {
         self.defaults = defaults
@@ -347,6 +418,10 @@ final class ScreenReadingStore: ObservableObject {
     /// Write a running AutoCode pass's `value` for `project`; publishes only on change, and `nil`
     /// clears the row.
     func setAutoCode(_ value: AutoCodeProgress?, for project: UUID) {
+        // A Stop's "Stopping…" lasts until the run it stopped is no longer the one counting.
+        if let stopping = autocodeStopping[project], value?.frameworkID != stopping {
+            autocodeStopping[project] = nil
+        }
         guard autocode[project] != value else { return }
         autocode[project] = value
     }
@@ -359,7 +434,16 @@ final class ScreenReadingStore: ObservableObject {
         commit(m, for: project)
     }
 
-    /// The researcher opened `project`: its ended lines are seen, and clear.
+    /// The server answered that it cannot list ended runs (404): drop what was listed, keep what
+    /// was seen (`AutoCodeLineMemory.listingUnavailable`).
+    func noteAutoCodeUnavailable(for project: UUID) {
+        guard var m = memory[project] else { return }
+        m.listingUnavailable()
+        commit(m, for: project)
+    }
+
+    /// The researcher opened `project`: its "Stopped" line is seen, and clears; a failure stays
+    /// until it is resolved.
     func acknowledgeAutoCode(for project: UUID) {
         guard var m = memory[project] else { return }
         m.acknowledge()

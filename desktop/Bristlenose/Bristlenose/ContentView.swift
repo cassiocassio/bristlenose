@@ -1467,6 +1467,16 @@ struct ContentView: View {
             if arrival == .forget { forgetSeedPlace() } else { _ = arriveAtSeedPlace(for: id) }
         }
         .onReceive(serveFleet.screenReading.$available) { screensAvailableProjects = $0 }
+        // Project ▸ Stop also stops a running AutoCode pass, named for it and without ⌘., which
+        // stays the run's (`StopTarget.takesCommandPeriod`): follow the pass's start and end, and
+        // a Stop's acknowledgement (Phase 5a review).
+        // `@Published` emits before the value is stored, so read it a turn later.
+        .onReceive(serveFleet.screenReading.$autocode) { _ in
+            Task { @MainActor in refreshStopTarget() }
+        }
+        .onReceive(serveFleet.screenReading.$autocodeStopping) { _ in
+            Task { @MainActor in refreshStopTarget() }
+        }
         // The Screens row follows this project's availability. Mirrored onto
         // the bridge for the View menu's ⌘7. When it leaves the rail under the
         // same project — Read shared screens switched off, whose serve is
@@ -1705,7 +1715,9 @@ struct ContentView: View {
                 bridgeHandler.mirrorSelectedProjectRun(
                     project: project, state: pipelineRunner.state[id],
                     data: projectIndex.unanalysed[id],
-                    runIsOwnedElsewhere: !pipelineRunner.canStop(id))
+                    runIsOwnedElsewhere: !pipelineRunner.canStop(id),
+                    autocode: serveFleet.screenReading.autocode[id],
+                    autocodeStopping: serveFleet.screenReading.autocodeStopping[id] != nil)
                 projectIndex.updateLastOpened(id: id)
                 // Gate serve on consent + availability — nothing is sent to a
                 // provider before the user has seen the AI data disclosure
@@ -1789,6 +1801,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectCanStop = false
+            bridgeHandler.selectedProjectStopTarget = .none
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName =
@@ -1802,6 +1815,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectCanStop = false
+            bridgeHandler.selectedProjectStopTarget = .none
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName = ""
@@ -1905,7 +1919,18 @@ struct ContentView: View {
         case .locateProject:
             if let project = selectedProject { locateProject(project) }
         case .stopProject:
-            if let project = selectedProject { pipelineRunner.cancel(project: project) }
+            // The run when the app can stop one, else a running AutoCode pass (`StopTarget`,
+            // Phase 5a review): one decision, shared with the menu's label and the row's menu.
+            guard let project = selectedProject else { return }
+            switch StopTarget.resolve(
+                pipelineCanStop: pipelineRunner.canStop(project.id),
+                autocode: serveFleet.screenReading.autocode[project.id],
+                stopping: serveFleet.screenReading.autocodeStopping[project.id] != nil) {
+            case .pipeline: pipelineRunner.cancel(project: project)
+            case .autocode(let framework):
+                serveFleet.screenReading.stopAutoCode(project.id, framework: framework)
+            case .none: break
+            }
         case .reAnalyseProject:
             // `--clean` moves `bristlenose-output/` aside — the whole directory,
             // database included — and discards it once the new run succeeds
@@ -3847,17 +3872,33 @@ struct ContentView: View {
     /// Called on pipeline-state change and when a session count lands;
     /// selection-time sync is in `applySelectionChange`. Both go through
     /// `mirrorSelectedProjectRun`, so neither can skip a field (R64).
+    /// Re-mirror the run gates only when an AutoCode change moves what Stop would stop. The
+    /// count ticks every few seconds; mirroring on each tick would publish to the menu bar every
+    /// time, which collapses an open menu (the 20 Sep 2026 incident `ScreenReadingStore` notes).
+    private func refreshStopTarget() {
+        guard case .project(let id) = (selection.count == 1 ? selection.first : nil) else { return }
+        let target = StopTarget.resolve(
+            pipelineCanStop: bridgeHandler.selectedProjectIsRunning && pipelineRunner.canStop(id),
+            autocode: serveFleet.screenReading.autocode[id],
+            stopping: serveFleet.screenReading.autocodeStopping[id] != nil)
+        guard target != bridgeHandler.selectedProjectStopTarget else { return }
+        updateSelectedProjectRunState()
+    }
+
     private func updateSelectedProjectRunState() {
         if case .project(let id) = (selection.count == 1 ? selection.first : nil),
            let project = projectIndex.projects.first(where: { $0.id == id }) {
             bridgeHandler.mirrorSelectedProjectRun(
                 project: project, state: pipelineRunner.state[id],
                 data: projectIndex.unanalysed[id],
-                runIsOwnedElsewhere: !pipelineRunner.canStop(id))
+                runIsOwnedElsewhere: !pipelineRunner.canStop(id),
+                autocode: serveFleet.screenReading.autocode[id],
+                autocodeStopping: serveFleet.screenReading.autocodeStopping[id] != nil)
         } else {
             bridgeHandler.selectedProjectNeedsFolderAccess = false
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectCanStop = false
+            bridgeHandler.selectedProjectStopTarget = .none
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedProjectTakesFiles = false

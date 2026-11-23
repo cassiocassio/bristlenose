@@ -121,11 +121,15 @@ final class ServeFleet: ObservableObject {
     /// The one pre-booted sidecar a study can take instead of paying for a boot.
     let standby = StandbyPool()
 
-    init(screenReading: ScreenReadingStore = .shared,
+    /// `screenReading` defaults to a fresh store that persists nothing: the app passes `.shared`,
+    /// whose ended AutoCode lines live in the app's own defaults, so a fleet made by a test never
+    /// writes there (desktop/CLAUDE.md § Testing; Phase 5a review).
+    init(screenReading: ScreenReadingStore? = nil,
          makeManager: @escaping @MainActor () -> ServeManager = { ServeManager() }) {
-        self.screenReading = screenReading
+        let store = screenReading ?? ScreenReadingStore()
+        self.screenReading = store
         self.makeManager = makeManager
-        screenReading.onStopAutoCode = { [weak self] project, framework in
+        store.onStopAutoCode = { [weak self] project, framework in
             self?.stopAutoCode(project: project, frameworkID: framework)
         }
     }
@@ -133,7 +137,10 @@ final class ServeFleet: ObservableObject {
     /// Stop `project`'s running AutoCode pass on `frameworkID` (the row ring's hover × and its
     /// menu twin). A project with no running server has nothing to stop.
     func stopAutoCode(project: UUID, frameworkID: String) {
-        guard let manager = managers[project] else { return }
+        guard let manager = managers[project] else {
+            screenReading.autoCodeStopFailed(for: project)
+            return
+        }
         Task { @MainActor in await manager.cancelAutoCode(frameworkID: frameworkID) }
     }
 
@@ -156,8 +163,14 @@ final class ServeFleet: ObservableObject {
         created.onAutoCodeProgress = { [weak self] progress in
             self?.screenReading.setAutoCode(progress, for: project)
         }
-        created.onAutoCodeEnded = { [weak self] listed in
-            self?.screenReading.noteAutoCodeEnded(listed, for: project)
+        created.onAutoCodeEnded = { [weak self] answer in
+            switch answer {
+            case .listed(let lines): self?.screenReading.noteAutoCodeEnded(lines, for: project)
+            case .unavailable: self?.screenReading.noteAutoCodeUnavailable(for: project)
+            }
+        }
+        created.onAutoCodeStopFailed = { [weak self] in
+            self?.screenReading.autoCodeStopFailed(for: project)
         }
         created.onScreensAvailability = { [weak self] isAvailable in
             self?.screenReading.setAvailable(isAvailable, for: project)
@@ -272,6 +285,22 @@ final class ServeFleet: ObservableObject {
     /// When each running project last had no window. `ServeReaping` turns this
     /// plus the roster into a verdict; nothing here is a refcount.
     private var unshownSince: [UUID: ContinuousClock.Instant] = [:]
+    /// Reap `id`'s server, reading its AutoCode runs one last time first when it can still answer,
+    /// so a run that ended while no window was visible leaves its line on the row (Phase 5a
+    /// review). The read is bounded by the request's 5 s timeout; a study that regained a window
+    /// meanwhile is not reaped. A server with no token (never booted, or a test's) goes at once.
+    private func reap(_ id: UUID) {
+        guard let manager = managers[id], manager.runningPort != nil, manager.authToken != nil else {
+            discard(id, forgettingAgentActivity: false)
+            return
+        }
+        Task { @MainActor [weak self] in
+            await manager.pollAutoCode(force: true)
+            guard let self, self.managers[id] === manager, !self.lastShown.contains(id) else { return }
+            self.discard(id, forgettingAgentActivity: false)
+        }
+    }
+
     /// The projects a window showed at the last sweep, so the next can tell which were just opened.
     private var lastShown: Set<UUID> = []
 
@@ -338,7 +367,7 @@ final class ServeFleet: ObservableObject {
             switch verdict {
             case .reapNow:
                 busySince[id] = nil
-                discard(id, forgettingAgentActivity: false)
+                reap(id)
             case .keepWhileBusy:
                 if busySince[id] == nil {
                     busySince[id] = now

@@ -64,6 +64,10 @@ enum SidebarExternalDrop: Equatable {
 private final class SubtitleActionButton: NSButton {
     var projectID: UUID?
     var subtitleAction: SubtitleGlyphAction = .none
+    /// The ended AutoCode line this button was drawn for, captured when the cell is built: a click
+    /// can select the row and rebuild it, and the popover must show what the researcher clicked
+    /// (Phase 5a review).
+    var autocodeLine: AutoCodeEndedLine?
     // Clickable inline chrome → pointing hand on hover (native idiom, no underline).
     override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }
@@ -1912,6 +1916,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                        prefixGlyph: prefix,
                                        subtitleAction: glyphAction,
                                        subtitleActionProjectID: glyphAction == .none ? nil : id,
+                                       autocodeLine: variant.autocodeLine,
                                        agentProjectID: id,
                                        rightSlot: cellRightSlot(for: project),
                                        shimmer: shimmerSubtitle(for: variant))),
@@ -2273,6 +2278,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
             autocode: screenReading?.autocode[id].map { (done: $0.done, total: $0.total) },
             autocodeEnded: screenReading?.autocodeEnded[id],
+            autocodeStopping: screenReading?.autocodeStopping[id] != nil,
             reportCrash: reportCrash.flatMap { $0.projectID == id ? $0.crash : nil },
             startupRefusal: startupRefusals[id],
             serveFailedToStart: serveFailures.contains(id),
@@ -2349,7 +2355,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             presentFilesPopover(projectID: id,
                                 anchorRect: sender.convert(sender.bounds, to: outlineView))
         case .autocodeFailure:
-            presentAutoCodePopover(projectID: id,
+            guard let line = sender.autocodeLine else { return }
+            presentAutoCodePopover(projectID: id, line: line,
                                    anchorRect: sender.convert(sender.bounds, to: outlineView))
         case .none:
             break
@@ -2358,10 +2365,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     /// The AutoCode variant of the diagnostic popover (landing plan D38): the row's words as the
     /// headline and the failure's long sentence below, not the pipeline's per-stage breakdown.
-    /// Reads the line the row was drawn for, so the two cannot disagree.
-    private func presentAutoCodePopover(projectID id: UUID, anchorRect rect: NSRect) {
+    /// Takes the line the row was drawn for (captured by the glyph, or read when the context menu
+    /// was built), so the two cannot disagree.
+    private func presentAutoCodePopover(projectID id: UUID, line: AutoCodeEndedLine,
+                                        anchorRect rect: NSRect) {
         guard let project = projectIndex?.projects.first(where: { $0.id == id }),
-              case .autocodeEnded(let line) = subtitleVariant(for: project),
               let liveData, let i18n else { return }
         let content = ProjectDiagnosticPopover(
             project: project, state: .idle, liveData: liveData,
@@ -2562,14 +2570,24 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             menu.addItem(.separator())
         }
         // The keyboard and VoiceOver route to the AutoCode ring's hover ×, as Cancel Copy is the
-        // copy ring's. The run's own words, no new copy (owner to confirm); never beside the
-        // run's Stop Analysis, which outranks it.
-        if pipelineRunner?.canStop(id) != true, autoCodeStopTarget(id) != nil {
-            menu.addItem(menuItem("desktop.menu.project.stopAnalysis", #selector(menuStopAutoCode(_:))))
+        // copy ring's: "Stop AutoCode", offered whenever the pass runs, whatever line the row
+        // shows (Phase 5a review). Never beside the run's Stop Analysis, which wins
+        // (`StopTarget`).
+        if case .autocode = stopTarget(id) {
+            menu.addItem(menuItem("desktop.menu.project.stopAutoCode", #selector(menuStopAutoCode(_:))))
             menu.addItem(.separator())
         }
         if isFailureState(state) {
             menu.addItem(menuItem("desktop.menu.project.showDiagnostics", #selector(menuShowDiagnostics(_:))))
+            menu.addItem(.separator())
+        } else if let project = projectIndex?.projects.first(where: { $0.id == id }),
+                  case .autocodeEnded(let line) = subtitleVariant(for: project),
+                  line.glyphKind != nil {
+            // The keyboard route to the AutoCode popover, under the glyph's own name.
+            let item = menuItem("desktop.menu.project.showDiagnostics",
+                                #selector(menuShowAutoCodeDiagnostics(_:)))
+            item.representedObject = line
+            menu.addItem(item)
             menu.addItem(.separator())
         }
         if canAnalyse(id, state: state) {
@@ -2933,9 +2951,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         copyMachinery?.cancel()
     }
 
-    /// The codebook a project's running AutoCode pass is coding, when the row shows its count:
-    /// what the ring's × and the menu's Stop Analysis cancel. Nil when nothing can be stopped.
-    private func autoCodeStopTarget(_ id: UUID) -> String? {
+    /// What Stop does for this project (`StopTarget`): the menu's item and Project ▸ Stop agree.
+    private func stopTarget(_ id: UUID) -> StopTarget {
+        StopTarget.resolve(pipelineCanStop: pipelineRunner?.canStop(id) == true,
+                           autocode: screenReading?.autocode[id],
+                           stopping: screenReading?.autocodeStopping[id] != nil)
+    }
+
+    /// The codebook the ring's × stops: only while the row says "AutoCode · N of M", so the ring
+    /// never stands beside another line's words. The menu's Stop asks `stopTarget` instead.
+    private func ringStopTarget(_ id: UUID) -> String? {
         guard let project = projectIndex?.projects.first(where: { $0.id == id }),
               case .codingQuotes = subtitleVariant(for: project),
               let framework = screenReading?.autocode[id]?.frameworkID, !framework.isEmpty
@@ -2944,8 +2969,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     @objc private func menuStopAutoCode(_ sender: NSMenuItem) {
-        guard let id = menuClickedNodeID, let framework = autoCodeStopTarget(id) else { return }
-        screenReading?.onStopAutoCode?(id, framework)
+        guard let id = menuClickedNodeID, case .autocode(let framework) = stopTarget(id) else { return }
+        screenReading?.stopAutoCode(id, framework: framework)
+    }
+
+    @objc private func menuShowAutoCodeDiagnostics(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID, let line = sender.representedObject as? AutoCodeEndedLine
+        else { return }
+        presentAutoCodePopover(projectID: id, line: line, anchorRect: rowRect(forNodeID: id))
     }
 
     @objc private func menuShowDiagnostics(_ sender: NSMenuItem) {
@@ -3064,11 +3095,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             }
         }
         // An AutoCode pass: the copy ring again, its × the pass's Stop (D38). Only while the row
-        // says "AutoCode · N of M", so the ring never stands beside another line's words.
-        if let framework = autoCodeStopTarget(id), let progress = screenReading?.autocode[id] {
+        // says "AutoCode · N of M", so the ring never stands beside another line's words. Once
+        // Stop is asked, "Stopping…" and a spinner with no × until the count goes, as a copy's
+        // cancel does (you can't stop a stop).
+        if let progress = screenReading?.autocode[id], screenReading?.autocodeStopping[id] != nil,
+           case .stopping = subtitleVariant(for: project), progress.total > 0 {
+            return .ring(fraction: nil, onStop: nil)
+        }
+        if let framework = ringStopTarget(id), let progress = screenReading?.autocode[id] {
             let (done, total) = (progress.done, progress.total)
             return .ring(fraction: total > 0 ? Double(done) / Double(total) : 0,
-                         onStop: { [weak self] in self?.screenReading?.onStopAutoCode?(id, framework) })
+                         onStop: { [weak self] in self?.screenReading?.stopAutoCode(id, framework: framework) })
         }
         if project.agentAccess {
             return .agent(exposedNow: handshakeProjectPaths.contains { AgentActivity.samePath($0, project.path) })
@@ -3086,6 +3123,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                     prefixGlyph: (symbol: String, color: NSColor)?,
                                     subtitleAction: SubtitleGlyphAction,
                                     subtitleActionProjectID: UUID?,
+                                    autocodeLine: AutoCodeEndedLine? = nil,
                                     agentProjectID: UUID?,
                                     rightSlot: RightSlot,
                                     shimmer: Bool) -> NSTableCellView {
@@ -3149,6 +3187,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                               action: #selector(subtitleActionClicked(_:)))
             button.projectID = subtitleActionProjectID
             button.subtitleAction = subtitleAction
+            button.autocodeLine = autocodeLine
             statusKind = .button(button)
         } else {
             statusKind = .plain
@@ -3189,6 +3228,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                                   action: #selector(subtitleActionClicked(_:)))
                 button.projectID = subtitleActionProjectID
                 button.subtitleAction = subtitleAction
+                button.autocodeLine = autocodeLine
                 button.isBordered = false
                 button.bezelStyle = .regularSquare
                 button.imagePosition = .imageOnly
@@ -3198,9 +3238,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 // the subtitle already says "3 files missing", which is the
                 // better label than anything invented for it.
                 switch subtitleAction {
-                case .diagnostics:
+                case .diagnostics, .autocodeFailure:
+                    // The menu twin's name, so the failure the subtitle already says is not
+                    // read twice (Phase 5a review).
                     button.setAccessibilityLabel(i18n?.t("desktop.menu.project.showDiagnostics"))
-                case .files, .autocodeFailure, .none:
+                case .files, .none:
                     button.setAccessibilityLabel(subtitle)
                 }
                 glyph = button

@@ -10,11 +10,18 @@ import AppKit
 ///
 /// **Hover-× (Phase 4).** When `onStop != nil`, hovering swaps the ring for a
 /// grey `xmark.circle.fill` in the SAME 16pt frame (no reflow); clicking it calls
-/// `onStop` (cancel the run / cancel the copy). Grey, not red — red reads as
-/// "error" (Finder / App Store download-ring idiom). Mouse-only + accessibility-
-/// hidden: keyboard / VoiceOver reach Stop via the Project menu (⌘.) and the row
-/// context menu. `onStop == nil` → no × (the cancel-rollback spinner: you can't
-/// cancel a cancel). Mirrors `ProjectRowActivityIndicator.ring(fraction:)`.
+/// `onStop` (cancel the run, the copy, or an AutoCode pass). Grey, not red — red
+/// reads as "error" (Finder / App Store download-ring idiom). Mouse-only +
+/// accessibility-hidden: keyboard / VoiceOver reach the same act through the row's
+/// context menu (Stop Analysis, Cancel Copy, Stop AutoCode) and Project ▸ Stop (⌘.)
+/// for a run or an AutoCode pass (`StopTarget`). `onStop == nil` → no × (the
+/// cancel-rollback spinner, or "Stopping…": you can't cancel a cancel). Mirrors
+/// `ProjectRowActivityIndicator.ring(fraction:)`.
+///
+/// **Appearance.** The arc's colours are `CGColor`s, which do not follow the
+/// appearance on their own; `updateLayerColors` resolves them against this view's
+/// effective appearance, again whenever it changes (Light/Dark, Increase Contrast,
+/// a new accent colour) mid-run.
 ///
 /// **The reload-contention trap.** Live progress rebuilds this view ~1×/s
 /// (full `reloadData` per tick, the §6 Phase-A cost). A naive hover swap would
@@ -160,7 +167,25 @@ final class SidebarActivityRing: NSView {
         layer?.addSublayer(track)
         layer?.addSublayer(fill)
         ringLayers = [track, fill]
+        updateLayerColors()
     }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateLayerColors()
+    }
+
+    /// The track's and fill's colours, resolved in this view's appearance.
+    private func updateLayerColors() {
+        guard ringLayers.count == 2 else { return }
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            ringLayers[0].strokeColor = NSColor.tertiaryLabelColor.cgColor
+            ringLayers[1].strokeColor = NSColor.controlAccentColor.cgColor
+        }
+    }
+
+    /// The fill's and track's stroke colours, for a test that flips the appearance.
+    var strokeColorsForTesting: [CGColor?] { ringLayers.map(\.strokeColor) }
 
     private func buildSpinner() {
         let spinner = NSProgressIndicator()

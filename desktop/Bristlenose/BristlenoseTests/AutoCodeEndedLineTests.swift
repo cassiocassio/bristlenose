@@ -234,11 +234,11 @@ private func ended(_ outcome: AutoCodeEndedLine.Outcome, _ kind: String = "",
         #expect(m.line?.frameworkID == "b")
     }
 
-    /// Opening the study clears the line, and the server listing the same run again does not
-    /// bring it back.
-    @Test func openingTheStudyClearsItForGood() {
+    /// Opening the study clears a "Stopped" line, and the server listing the same run again does
+    /// not bring it back.
+    @Test func openingTheStudyClearsAStopForGood() {
         var m = AutoCodeLineMemory()
-        let line = ended(.failed, "out_of_credit")
+        let line = ended(.stopped)
         m.observe([line])
         m.acknowledge()
         #expect(m.line == nil)
@@ -246,19 +246,48 @@ private func ended(_ outcome: AutoCodeEndedLine.Outcome, _ kind: String = "",
         #expect(m.line == nil, "a seen line came back")
     }
 
+    /// A failure and a partial run clear when resolved, not when seen (Phase 5a review: failed
+    /// runs stay visible and retryable). Opening the study clears a Stop beside them.
+    @Test func aFailureOrPartialRunSurvivesBeingSeen() {
+        var m = AutoCodeLineMemory()
+        let credit = ended(.failed, "out_of_credit", framework: "a")
+        let partial = ended(.partial, "network", framework: "b")
+        let stop = ended(.stopped, framework: "c")
+        m.observe([credit, partial, stop])
+        m.acknowledge()
+        #expect(m.line == credit)
+        m.observe([partial, stop])            // the credit run was started again
+        #expect(m.line == partial)
+        m.observe([stop])                     // and the partial one resolved by a catch-up
+        #expect(m.line == nil, "the seen Stop came back")
+    }
+
     /// Starting the codebook again: the server no longer lists the run, so the line goes, and a
     /// new run that ends is a new line even though the old one was seen.
     @Test func startingTheCodebookAgainClearsItAndANewEndingShows() {
         var m = AutoCodeLineMemory()
-        let first = ended(.failed, "out_of_credit")
+        let first = ended(.stopped)
         m.observe([first])
         m.acknowledge()
         m.observe([])
         #expect(m.line == nil)
         #expect(m.isEmpty, "a seen key outlived its run")
-        let second = ended(.failed, "out_of_credit", started: "2026-11-24T09:00:00")
+        let second = ended(.stopped, started: "2026-11-24T09:00:00")
         m.observe([second])
         #expect(m.line == second)
+    }
+
+    /// A 404 drops what was listed but never what was seen, so a seen Stop cannot come back on
+    /// the next good answer (Phase 5a review).
+    @Test func anUnavailableListingKeepsWhatWasSeen() {
+        var m = AutoCodeLineMemory()
+        let stop = ended(.stopped)
+        m.observe([stop, ended(.failed, "invalid_key", framework: "b")])
+        m.acknowledge()
+        m.listingUnavailable()
+        #expect(m.line == nil)
+        m.observe([stop])
+        #expect(m.line == nil, "a 404 forgot what the researcher had seen")
     }
 
     /// Nothing but an answer, an open or a removal moves it: a reap is no answer.
@@ -296,8 +325,8 @@ private func ended(_ outcome: AutoCodeEndedLine.Outcome, _ kind: String = "",
         let d = suite()
         let (a, b) = (UUID(), UUID())
         let store = ScreenReadingStore(defaults: d)
-        store.noteAutoCodeEnded([ended(.failed, "out_of_credit")], for: a)
-        store.noteAutoCodeEnded([ended(.stopped)], for: b)
+        store.noteAutoCodeEnded([ended(.stopped)], for: a)
+        store.noteAutoCodeEnded([ended(.failed, "out_of_credit")], for: b)
         store.acknowledgeAutoCode(for: a)
         #expect(store.autocodeEnded[a] == nil)
         store.forgetAutoCode(for: b)
@@ -305,7 +334,7 @@ private func ended(_ outcome: AutoCodeEndedLine.Outcome, _ kind: String = "",
         let reread = ScreenReadingStore(defaults: d)
         #expect(reread.autocodeEnded.isEmpty)
         // a's seen key is kept while its run is listed, so it does not come back on the next answer
-        reread.noteAutoCodeEnded([ended(.failed, "out_of_credit")], for: a)
+        reread.noteAutoCodeEnded([ended(.stopped)], for: a)
         #expect(reread.autocodeEnded[a] == nil)
     }
 
@@ -337,8 +366,8 @@ private func ended(_ outcome: AutoCodeEndedLine.Outcome, _ kind: String = "",
         let f = fleet(store)
         let (a, b) = (UUID(), UUID())
         let line = ended(.failed, "out_of_credit")
-        f.manager(for: a).onAutoCodeEnded?([line])
-        f.manager(for: b).onAutoCodeEnded?([line])
+        f.manager(for: a).onAutoCodeEnded?(.listed([line]))
+        f.manager(for: b).onAutoCodeEnded?(.listed([line]))
         f.discard(a, forgettingAgentActivity: false)   // the reap's call
         f.discard(b)                                     // leaving the sidebar
         #expect(store.autocodeEnded[a] == line, "a failure seen before the reap was lost")
@@ -347,26 +376,29 @@ private func ended(_ outcome: AutoCodeEndedLine.Outcome, _ kind: String = "",
 
     @Test func noRunningServeSaysNothingAboutEndedRuns() async {
         let m = ServeManager(resolvedMode: .success(.external(port: 9)))  // idle: never started
-        var ended: [[AutoCodeEndedLine]] = []
+        var ended: [AutoCodeEndedAnswer] = []
         m.onAutoCodeEnded = { ended.append($0) }
         await m.pollAutoCode()
         #expect(ended.isEmpty)
     }
 
-    /// Opening is a study newly shown in a window. One already on screen when its run fails keeps
-    /// the line until it is next opened.
-    @Test func openingTheStudyClearsTheLine() {
+    /// Opening is a study newly shown in a window, and it clears a "Stopped" line. One already
+    /// on screen when its run stops keeps the line until it is next opened. A failure is not
+    /// cleared by opening at all.
+    @Test func openingTheStudyClearsAStop() {
         let store = ScreenReadingStore()
         let f = fleet(store)
-        let (a, b) = (UUID(), UUID())
+        let (a, b, c) = (UUID(), UUID(), UUID())
         f.sweep(shownProjects: [b])
-        store.noteAutoCodeEnded([ended(.failed, "out_of_credit")], for: a)
-        store.noteAutoCodeEnded([ended(.failed, "invalid_key")], for: b)
+        store.noteAutoCodeEnded([ended(.stopped)], for: a)
+        store.noteAutoCodeEnded([ended(.stopped)], for: b)
+        store.noteAutoCodeEnded([ended(.failed, "out_of_credit")], for: c)
         f.sweep(shownProjects: [b])
         #expect(store.autocodeEnded[b] != nil, "a study already on screen lost its new line")
-        f.sweep(shownProjects: [a, b])
-        #expect(store.autocodeEnded[a] == nil, "opening the study did not clear its line")
+        f.sweep(shownProjects: [a, b, c])
+        #expect(store.autocodeEnded[a] == nil, "opening the study did not clear its Stop")
         #expect(store.autocodeEnded[b] != nil)
+        #expect(store.autocodeEnded[c] != nil, "opening the study cleared an unresolved failure")
     }
 
     @Test func theFleetWiresTheRingsStop() {

@@ -1507,13 +1507,18 @@ private struct ProjectMenuContent: View {
             }
 
             // ⌘. is the canonical macOS Stop/Cancel; here it's the keyboard
-            // accelerator for the row's hover-× and context-menu Stop. Acts on
+            // accelerator for the row's hover-× and context-menu Stop (a run's or AutoCode's). Acts on
             // the sole-selected project; dimmed (not hidden) when it isn't
             // running, per menu-bar HIG (context menus hide instead).
-            Button(i18n.t("desktop.menu.project.stopAnalysis"), systemImage: "stop.circle") {
+            // "Stop AutoCode" when a running AutoCode pass is what it will stop (Phase 5a review;
+            // the run, when there is one, wins, and keeps "Stop Analysis").
+            Button(i18n.t(bridgeHandler.selectedProjectStopTarget.labelKey), systemImage: "stop.circle") {
                 windowCommands?.perform(.stopProject)
             }
-            .keyboardShortcut(".", modifiers: .command)
+            // ⌘. only for the run's Stop Analysis: on Quotes the report binds ⌘. to the sidebars,
+            // and Stop AutoCode must not take it there (`StopTarget.takesCommandPeriod`).
+            .keyboardShortcut(bridgeHandler.selectedProjectStopTarget.takesCommandPeriod
+                              ? KeyboardShortcut(".", modifiers: .command) : nil)
             .disabled(!bridgeHandler.selectedProjectCanStop || !enabled(.stopProject))
 
             // Routed natively (`windowCommands`), not through the web bridge —

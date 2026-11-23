@@ -486,9 +486,13 @@ final class BridgeHandler: ObservableObject {
     /// Project ▸ Stop Analysis (⌘.) — the menu-bar accelerator for the
     /// hover-× / context-menu Stop. Dimmed (not hidden) when false, per HIG.
     @Published var selectedProjectIsRunning: Bool = false
-    /// Whether that run is one Stop can reach: not a run another process owns
-    /// (`PipelineRunner.canStop`). Gates Project ▸ Stop Analysis (decision #39).
+    /// Whether Project ▸ Stop (⌘.) has something to stop: a run Stop can reach (not one another
+    /// process owns, `PipelineRunner.canStop`, decision #39), or a running AutoCode pass (Phase 5a
+    /// review). Which of the two is `selectedProjectStopTarget`.
     @Published var selectedProjectCanStop: Bool = false
+    /// What Project ▸ Stop stops, and so what it is called: "Stop Analysis" for the run (which
+    /// wins when both run), "Stop AutoCode" for AutoCode (`StopTarget`).
+    @Published var selectedProjectStopTarget: StopTarget = .none
     /// Whether the selected project has an analysis that Re-analyse could
     /// replace. Read by the Project menu, which dims rather than hides —
     /// the sidebar's context menu asks the same question of
@@ -626,9 +630,15 @@ final class BridgeHandler: ObservableObject {
     /// so Project ▸ Re-analyse stayed dimmed after a first analysis until the
     /// study was reselected (R64).
     func mirrorSelectedProjectRun(project: Project, state: PipelineState?,
-                                  data: UnanalysedState?, runIsOwnedElsewhere: Bool = false) {
+                                  data: UnanalysedState?, runIsOwnedElsewhere: Bool = false,
+                                  autocode: AutoCodeProgress? = nil,
+                                  autocodeStopping: Bool = false) {
         selectedProjectIsRunning = SidebarOutlineController.isRunningOrQueued(state)
-        selectedProjectCanStop = selectedProjectIsRunning && !runIsOwnedElsewhere
+        let target = StopTarget.resolve(
+            pipelineCanStop: selectedProjectIsRunning && !runIsOwnedElsewhere,
+            autocode: autocode, stopping: autocodeStopping)
+        if selectedProjectStopTarget != target { selectedProjectStopTarget = target }
+        selectedProjectCanStop = target != .none
         // An unreachable folder can keep `.ready` (an ejected drive), so the
         // folder's own availability is asked too: files would copy into nothing.
         selectedProjectTakesFiles = project.isAvailable
@@ -1866,6 +1876,7 @@ final class BridgeHandler: ObservableObject {
         selectedProjectNeedsFolderAccess = false
         selectedProjectIsRunning = false
         selectedProjectCanStop = false
+        selectedProjectStopTarget = .none
         selectedProjectIsAnalysed = false
         hasSelectedProject = false
         selectedProjectTakesFiles = false

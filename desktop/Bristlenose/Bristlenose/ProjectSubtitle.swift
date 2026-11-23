@@ -351,6 +351,12 @@ extension SubtitleVariant {
         return false
     }
 
+    /// The ended AutoCode line this variant carries, if it is one.
+    var autocodeLine: AutoCodeEndedLine? {
+        if case .autocodeEnded(let line) = self { return line }
+        return nil
+    }
+
     /// Whether the glyph opens the diagnostic popover. Derived from
     /// `glyphAction` so the two can't disagree.
     var isDiagnostic: Bool { glyphAction == .diagnostics }
@@ -451,6 +457,7 @@ enum ProjectSubtitle {
         screens: (done: Int, total: Int)? = nil,
         autocode: (done: Int, total: Int)? = nil,
         autocodeEnded: AutoCodeEndedLine? = nil,
+        autocodeStopping: Bool = false,
         reportCrash: ReportCrash? = nil,
         startupRefusal: StudyStartupRefusal? = nil,
         serveFailedToStart: Bool = false,
@@ -529,6 +536,7 @@ enum ProjectSubtitle {
                 screens: screens,
                 autocode: autocode,
                 autocodeEnded: autocodeEnded,
+                autocodeStopping: autocodeStopping,
                 reportCrash: ReportCrash.outranks(pipelineState) ? reportCrash : nil,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
@@ -560,6 +568,7 @@ enum ProjectSubtitle {
         screens: (done: Int, total: Int)?,
         autocode: (done: Int, total: Int)?,
         autocodeEnded: AutoCodeEndedLine?,
+        autocodeStopping: Bool,
         reportCrash: ReportCrash?,
         lastRunAt: Date?,
         missingCount: Int,
@@ -643,6 +652,9 @@ enum ProjectSubtitle {
         // usually follows because that has finished by the time the house default starts, and a
         // manual Apply can overlap one. It yields to the same deltas screen reading does.
         if let autocode, !deltaNeedsAttention {
+            // A Stop the researcher just asked for reads "Stopping…" at once, the run's own
+            // acknowledgement, until the count goes (Phase 5a review).
+            if autocodeStopping { return .stopping }
             return .codingQuotes(done: autocode.done, total: autocode.total)
         }
         // The first Signals report is being built (the window's bridge says the

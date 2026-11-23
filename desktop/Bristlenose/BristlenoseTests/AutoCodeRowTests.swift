@@ -53,13 +53,24 @@ import Testing
         }
     }
 
-    /// Several codebooks at once: the first first-apply that has something left, never a sum.
-    @Test func theFirstQualifyingJobWins() {
-        let jobs = [job(completedAt: "2026-10-20T10:00:00"), job(processed: 10, total: 50),
-                    job(processed: 1, total: 9)]
+    /// Several codebooks at once: the most recently started that has something left (the list is
+    /// by start), never a sum, so the line, its ring and Stop name the same run (Phase 5a review,
+    /// lead to confirm).
+    @Test func theMostRecentlyStartedQualifyingJobWins() {
+        let jobs = [job(processed: 10, total: 50), job(processed: 1, total: 9),
+                    job(completedAt: "2026-10-20T10:00:00")]
         let p = AutoCodeProgress.parse(body(jobs))
-        #expect(p?.done == 10)
-        #expect(p?.total == 50)
+        #expect(p?.done == 1)
+        #expect(p?.total == 9)
+    }
+
+    /// A count at or past its total shows nothing: a catch-up whose total was not written never
+    /// reads "25 of 0" (Phase 5a review; the server clamps too).
+    @Test func aCountPastItsTotalShowsNothing() {
+        var catchUp = job(completedAt: "2026-10-20T10:00:00")
+        catchUp["catch_up_processed"] = 25
+        catchUp["catch_up_total"] = 12
+        #expect(AutoCodeProgress.parse(body([catchUp])) == nil)
     }
 }
 

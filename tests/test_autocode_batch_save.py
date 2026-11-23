@@ -603,6 +603,37 @@ def test_a_catch_up_counts_its_own_pass_while_it_codes(tmp_path) -> None:
     engine.dispose()
 
 
+def test_a_catch_up_count_never_passes_its_total(tmp_path, monkeypatch) -> None:
+    """If the total's write at the start of the pass failed, the per-batch count stays at the
+    total (0), so the Mac's row shows no count rather than "25 of 0" (Phase 5a review). The end
+    of the pass still writes the real pair."""
+    session_cls, engine, project_id, _ = _file_project(tmp_path, 50, applied=True)
+    monkeypatch.setattr(autocode, "_note_catch_up_total", lambda db, job_id, total: None)
+    seen: list[tuple[int, int]] = []
+
+    def analyze(system_prompt: str, user_prompt: str, response_model: Any, **kw: Any) -> Any:
+        db = session_cls()
+        try:
+            job = db.query(AutoCodeJob).one()
+            seen.append((job.catch_up_total, job.catch_up_processed))
+        finally:
+            db.close()
+        return _make_batch_result(_n_in_prompt(user_prompt), "user need", 0.95)
+
+    with _patch_llm(AsyncMock(side_effect=analyze)):
+        asyncio.run(reapply_to_new_quotes(
+            session_cls, project_id, "garrett", _settings(), track_status=True,
+        ))
+    assert seen == [(0, 0), (0, 0)]
+    db = session_cls()
+    try:
+        job = db.query(AutoCodeJob).one()
+        assert (job.catch_up_total, job.catch_up_processed) == (50, 50)
+    finally:
+        db.close()
+    engine.dispose()
+
+
 def test_a_run_s_re_apply_leaves_the_catch_up_counts_alone(tmp_path) -> None:
     """Only an on-enable catch-up (``track_status``) owns the pass's own counts: a finished
     run's re-apply has no row line and must not overwrite the last catch-up's pair."""

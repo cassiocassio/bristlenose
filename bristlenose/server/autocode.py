@@ -1911,9 +1911,16 @@ async def _reapply_to_new_quotes(
             }
             if track_status:
                 # The pass's own count, per batch, so the Mac's row reads "AutoCode · N of M"
-                # over this pass's quotes while it codes (landing plan D40). The pass's end
-                # writes the final pair, as before.
-                grown[AutoCodeJob.catch_up_processed] = AutoCodeJob.catch_up_processed + n
+                # over this pass's quotes while it codes (landing plan D40). Never past the
+                # total: if the total's write at the start failed, the count stays at 0 and the
+                # row shows none (Phase 5a review). The pass's end writes the final pair.
+                from sqlalchemy import case
+
+                added = AutoCodeJob.catch_up_processed + n
+                grown[AutoCodeJob.catch_up_processed] = case(
+                    (added > AutoCodeJob.catch_up_total, AutoCodeJob.catch_up_total),
+                    else_=added,
+                )
             session.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
                 grown, synchronize_session=False,
             )

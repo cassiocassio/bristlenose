@@ -126,7 +126,7 @@ struct BristlenoseApp: App {
     /// manager* rather than switching one — and that is a re-write, not a
     /// line-by-line move. Landing the fleet first means the crossing is one
     /// well-scoped change with everything under it already proven.
-    @StateObject private var serveFleet = ServeFleet()
+    @StateObject private var serveFleet = ServeFleet(screenReading: .shared)
 
     /// Holds the prefs/consent observer that fans out to every sidecar.
     @State private var prefsFanOut: (any NSObjectProtocol)?

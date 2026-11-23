@@ -37,6 +37,14 @@ import {
   useQuotesStore,
 } from "../contexts/QuotesContext";
 import { toggleTagGroupHidden, useSidebarSelector, shallowEqual, type SidebarState } from "../contexts/SidebarStore";
+import { acceptLiveProposal, denyLiveProposal, removeLiveAccepted } from "../contexts/AutoCodePlayback";
+import {
+  flashKeys,
+  liveAcceptedFor,
+  liveTentative,
+  mergedProposals,
+  mergedTags,
+} from "../utils/liveTags";
 
 const selectHiddenAndFrameworks = (s: SidebarState) => ({ hiddenTagGroups: s.hiddenTagGroups, disabledFrameworks: s.disabledFrameworks });
 import { apiGet, getCodebook } from "../utils/api";
@@ -206,11 +214,27 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
     [tagInfo, targets, hiddenTagGroups],
   );
   const onTagRemove = useCallback(
-    (domId: string, name: string, tagId?: number) => removeTag(domId, name, true, tagId),
-    [],
+    (domId: string, name: string, tagId?: number) => {
+      // A tag a running AutoCode has landed accepted and not made yet (QuoteGroup.handleTagRemove).
+      const landed = liveAcceptedFor(domId, name, store.tags[domId] ?? [], store.live);
+      if (landed) removeLiveAccepted(landed.id);
+      else removeTag(domId, name, true, tagId);
+    },
+    [store.tags, store.live],
+  );
+  const onProposedDeny = useCallback(
+    (domId: string, proposalId: number) => {
+      if (liveTentative(domId, proposalId, store.live)) denyLiveProposal(proposalId);
+      else denyProposedTag(domId, proposalId);
+    },
+    [store.live],
   );
   const onProposedAccept = useCallback(
     (domId: string, proposalId: number, name: string) => {
+      if (liveTentative(domId, proposalId, store.live)) {
+        acceptLiveProposal(proposalId);
+        return;
+      }
       const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
       acceptProposedTag(domId, proposalId, {
         id: pt?.tag_definition_id ?? undefined,
@@ -221,8 +245,13 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         source: "autocode",
       });
     },
-    [store.proposedTags],
+    [store.proposedTags, store.live],
   );
+  // The tags a running AutoCode lands accepted flash here as on the Quotes lens.
+  const liveFlashing = useMemo(() => {
+    const keys = flashKeys(store.live);
+    return keys.length > 0 ? new Set(keys) : NO_FLASH;
+  }, [store.live]);
 
   // Stable while nothing it reads changes, so a lens can memoise a column of cards (Discussion's
   // All view keeps a splitter drag from re-rendering 1,800 of them).
@@ -231,9 +260,10 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
     // Hidden, and collapsing before it leaves: the Quotes lens's own collapse (QuoteGroup;
     // hidden-quotes.css .bn-hiding, HIDE_DURATION), for a lens that asks for it.
     if (opts.collapse && store.hiding.has(id)) return <blockquote key={id} id={id} className="quote-card bn-hiding" />;
-    const allTags = store.tags[id] ?? [];
+    // With what a running AutoCode has landed folded in (utils/liveTags.ts).
+    const allTags = mergedTags(id, store.tags[id] ?? [], store.live);
     const edited = store.edits[id] ?? null;
-    const proposed = store.proposedTags[id] ?? [];
+    const proposed = mergedProposals(id, store.proposedTags[id] ?? [], allTags, store.live);
     return (
       <QuoteCard
         quote={q}
@@ -253,7 +283,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         hasMedia
         hasModerator={hasModerator}
         proposedTags={proposed.filter((p) => !isBadgeHidden(vis, p.tag_name, p.group_name))}
-        flashingTags={NO_FLASH}
+        flashingTags={liveFlashing}
         moderatorQuestion={null}
         isQuestionOpen={false}
         isPillVisible={false}
@@ -269,7 +299,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         onBadgeDelete={deleteBadge}
         onBadgeRestore={restoreBadges}
         onProposedAccept={(pid, name) => onProposedAccept(id, pid, name)}
-        onProposedDeny={(pid) => denyProposedTag(id, pid)}
+        onProposedDeny={(pid) => onProposedDeny(id, pid)}
         onToggleQuestion={noop}
         onQuoteHoverEnter={noop}
         onQuoteHoverLeave={noop}
@@ -278,7 +308,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         highlight={opts.highlight}
       />
     );
-  }, [store, vis, vocabulary, groupedVocabulary, hasModerator, onToggleStar, onToggleHide, onTagAdd, onTagRemove, onProposedAccept]);
+  }, [store, vis, vocabulary, groupedVocabulary, hasModerator, onToggleStar, onToggleHide, onTagAdd, onTagRemove, onProposedAccept, onProposedDeny, liveFlashing]);
 
   /** The hidden-quotes Counter's rows for these quotes. */
   const { byId } = host;

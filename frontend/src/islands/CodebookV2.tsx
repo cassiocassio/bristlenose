@@ -36,6 +36,7 @@ import { autocodeRefusal } from "../utils/autocodeRefusal";
 import { autocodeFailure } from "../utils/autocodeFailure";
 import { toast } from "../utils/toast";
 import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
+import { stampedRead, useLiveCodebook } from "../contexts/AutoCodePlayback";
 import type {
   CodebookResponse,
   RemoveFrameworkInfo,
@@ -147,7 +148,10 @@ function provenanceFor(
 
 export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const { t } = useTranslation();
-  const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
+  const [readCodebook, setCodebook] = useState<CodebookResponse | null>(null);
+  // With a running AutoCode's landed tags in its codebook's counts until the run has handed over
+  // (contexts/AutoCodePlayback.ts): the rail's tentative count and the rows' bars and counts.
+  const codebook = useLiveCodebook(readCodebook);
   // Null offline: the catalogue is server-only, and the lens degrades to the
   // codebook it can read rather than failing.
   const [templates, setTemplates] = useState<TemplateListResponse | null>(null);
@@ -265,7 +269,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const { reload, handingOver } = useLensRead({
     read: () =>
       Promise.all([
-        getCodebook(),
+        // Stamped, so the counts can tell a read from before a run's end from one after it.
+        stampedRead(getCodebook),
         getCodebookTemplates().catch((e: unknown) => {
           // Expected offline; in serve the console says why the catalogue is the old one.
           if (!isExportMode()) console.warn("Codebook: templates unavailable", e);

@@ -46,6 +46,14 @@ import {
   starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import { useSidebarSelector, shallowEqual, toggleTagGroupHidden, type SidebarState } from "../contexts/SidebarStore";
+import { acceptLiveProposal, denyLiveProposal, removeLiveAccepted } from "../contexts/AutoCodePlayback";
+import {
+  flashKeys,
+  liveAcceptedFor,
+  liveTentative,
+  mergedProposals,
+  mergedTags,
+} from "../utils/liveTags";
 
 const selectHiddenAndFrameworks = (s: SidebarState) => ({ hiddenTagGroups: s.hiddenTagGroups, disabledFrameworks: s.disabledFrameworks });
 import type { SearchTerm } from "../utils/searchMatch";
@@ -623,9 +631,16 @@ export function QuoteGroup({
 
   const handleTagRemove = useCallback(
     (domId: string, tagName: string, tagId?: number) => {
+      // An accepted tag a running AutoCode has landed and not yet made (its cut makes it):
+      // removing it excludes its proposal instead (D2).
+      const landed = liveAcceptedFor(domId, tagName, store.tags[domId] ?? [], store.live);
+      if (landed) {
+        removeLiveAccepted(landed.id);
+        return;
+      }
       removeTag(domId, tagName, true, tagId);
     },
-    [],
+    [store.tags, store.live],
   );
 
   const handleBadgeDelete = useCallback(
@@ -646,16 +661,21 @@ export function QuoteGroup({
 
   const handleProposedAccept = useCallback(
     (domId: string, proposalId: number, tagName: string) => {
-      // Find the proposal to carry its colour into the accepted tag.
-      const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
-      acceptProposedTag(domId, proposalId, {
-        id: pt?.tag_definition_id ?? undefined,
-        name: tagName,
-        codebook_group: pt?.group_name ?? "Uncategorised",
-        colour_set: pt?.colour_set ?? "",
-        colour_index: pt?.colour_index ?? 0,
-        source: "autocode",
-      });
+      if (liveTentative(domId, proposalId, store.live)) {
+        // A tag a running AutoCode is landing: accepted at once, never behind the playback.
+        acceptLiveProposal(proposalId);
+      } else {
+        // Find the proposal to carry its colour into the accepted tag.
+        const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
+        acceptProposedTag(domId, proposalId, {
+          id: pt?.tag_definition_id ?? undefined,
+          name: tagName,
+          codebook_group: pt?.group_name ?? "Uncategorised",
+          colour_set: pt?.colour_set ?? "",
+          colour_index: pt?.colour_index ?? 0,
+          source: "autocode",
+        });
+      }
       // Trigger accept flash animation on the new badge.
       const flashKey = `${domId}:${tagName}`;
       setFlashingTags((prev) => new Set(prev).add(flashKey));
@@ -667,15 +687,25 @@ export function QuoteGroup({
         });
       }, 500);
     },
-    [store.proposedTags],
+    [store.proposedTags, store.live],
   );
 
   const handleProposedDeny = useCallback(
     (domId: string, proposalId: number) => {
-      denyProposedTag(domId, proposalId);
+      if (liveTentative(domId, proposalId, store.live)) denyLiveProposal(proposalId);
+      else denyProposedTag(domId, proposalId);
     },
-    [],
+    [store.live],
   );
+
+  // The cards' flashes: the researcher's own (above) and the tags a run lands accepted.
+  const cardFlashingTags = useMemo(() => {
+    const landing = flashKeys(store.live);
+    if (landing.length === 0) return flashingTags;
+    const all = new Set(flashingTags);
+    for (const k of landing) all.add(k);
+    return all;
+  }, [flashingTags, store.live]);
 
   // ── Moderator question handlers ──────────────────────────────────────
 
@@ -938,13 +968,16 @@ export function QuoteGroup({
           const isHidden = !!store.hidden[q.dom_id];
           const isStarred = !!store.starred[q.dom_id];
           const editedText = store.edits[q.dom_id] ?? null;
-          const allUserTags = store.tags[q.dom_id] ?? [];
+          // With what a running AutoCode has landed folded in (utils/liveTags.ts).
+          const allUserTags = mergedTags(q.dom_id, store.tags[q.dom_id] ?? [], store.live);
           const allTagNames = allUserTags.map((t) => t.name);
           const userTags = anyBadgeHidden
             ? allUserTags.filter((t) => !isBadgeHidden(tagVisibility, t.name, t.codebook_group))
             : allUserTags;
           const deletedBadgesList = store.deletedBadges[q.dom_id] ?? [];
-          const allProposedTags = store.proposedTags[q.dom_id] ?? [];
+          const allProposedTags = mergedProposals(
+            q.dom_id, store.proposedTags[q.dom_id] ?? [], allUserTags, store.live,
+          );
           const proposedTagsList = anyBadgeHidden
             ? allProposedTags.filter((pt) => !isBadgeHidden(tagVisibility, pt.tag_name, pt.group_name))
             : allProposedTags;
@@ -986,7 +1019,7 @@ export function QuoteGroup({
               hasMedia={hasMedia}
               hasModerator={hasModerator}
               proposedTags={proposedTagsList}
-              flashingTags={flashingTags}
+              flashingTags={cardFlashingTags}
               moderatorQuestion={modQuestionCache[q.dom_id] ?? null}
               isQuestionOpen={openQuestions.has(q.dom_id)}
               isPillVisible={pillVisibleFor === q.dom_id}

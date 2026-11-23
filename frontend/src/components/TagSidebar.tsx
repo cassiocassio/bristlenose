@@ -32,6 +32,8 @@ import type {
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { matchesAll, parseQuery } from "../utils/searchMatch";
 import { useQuotesStore, setTagFilter, addTagToQuotes } from "../contexts/QuotesContext";
+import { stampedRead, useLiveCodebook, usePlayback } from "../contexts/AutoCodePlayback";
+import { mergedTags } from "../utils/liveTags";
 import { useFocus } from "../contexts/FocusContext";
 import {
   enterSoloMode,
@@ -306,10 +308,18 @@ export function TagSidebar() {
 
   // Flashing sidebar tags (same Set+timeout pattern as QuoteGroup)
   const [flashingSidebarTags, setFlashingSidebarTags] = useState<Set<string>>(new Set());
+  // …and the rows a running AutoCode lands an accepted tag on.
+  const playback = usePlayback();
+  const sidebarFlashing = useMemo(() => {
+    if (playback.flashingTagNames.size === 0) return flashingSidebarTags;
+    return new Set([...flashingSidebarTags, ...playback.flashingTagNames]);
+  }, [flashingSidebarTags, playback]);
 
   // Fetch codebook
+  // Stamped, so the counts can tell a read from before a run's end from one after it
+  // (contexts/AutoCodePlayback.ts, `useLiveCodebook`).
   useEffect(() => {
-    getCodebook().then(setCodebook).catch(() => {});
+    stampedRead(getCodebook).then(setCodebook).catch(() => {});
   }, []);
 
   // Fetch project name to title the floor codebook "<project> tags" (same /info
@@ -337,7 +347,7 @@ export function TagSidebar() {
   // Re-fetch on autocode tag changes
   useEffect(() => {
     const handler = () => {
-      getCodebook().then(setCodebook).catch(() => {});
+      stampedRead(getCodebook).then(setCodebook).catch(() => {});
     };
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);
@@ -399,20 +409,23 @@ export function TagSidebar() {
     const counts: Record<string, number> = {};
     for (const q of store.quotes) {
       if (store.hidden[q.dom_id]) continue;
-      const tags = store.tags[q.dom_id] ?? q.tags;
+      // With the tags a running AutoCode has landed accepted (utils/liveTags.ts).
+      const tags = mergedTags(q.dom_id, store.tags[q.dom_id] ?? q.tags, store.live);
       for (const t of tags) {
         const lower = t.name.toLowerCase();
         counts[lower] = (counts[lower] || 0) + 1;
       }
     }
     return counts;
-  }, [store.quotes, store.tags, store.hidden]);
+  }, [store.quotes, store.tags, store.hidden, store.live]);
 
-  // Tentative counts from codebook API (pending autocode proposals)
+  // Tentative counts from codebook API (pending autocode proposals), with a running AutoCode's
+  // landed tentative tags in place of its codebook's until the run has handed over.
+  const liveCodebook = useLiveCodebook(codebook);
   const tentativeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    if (!codebook) return counts;
-    for (const g of codebook.groups) {
+    if (!liveCodebook) return counts;
+    for (const g of liveCodebook.groups) {
       for (const t of g.tags) {
         if ((t.tentative_count ?? 0) > 0) {
           counts[t.name.toLowerCase()] = t.tentative_count ?? 0;
@@ -420,7 +433,7 @@ export function TagSidebar() {
       }
     }
     return counts;
-  }, [codebook]);
+  }, [liveCodebook]);
 
   // One count column for the whole sidebar, as wide as its widest number, so
   // every bar ends at one edge across groups and codebooks. The number a row
@@ -689,7 +702,7 @@ export function TagSidebar() {
                       hideGroupHeader={fw.groups.length === 1}
                       onAssign={handleSidebarAssign}
                       assignActive={assignActive}
-                      flashingTags={flashingSidebarTags}
+                      flashingTags={sidebarFlashing}
                       onSoloClick={handleSoloClick}
                       soloTag={soloTag}
                     />

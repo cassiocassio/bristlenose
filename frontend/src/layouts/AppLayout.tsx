@@ -70,6 +70,8 @@ import {
 } from "../utils/api";
 import { revealExportOrSay } from "../utils/revealExport";
 import { waitForStoppedRunToSettle } from "../utils/autocodeSettle";
+import { beginHandover, followAutoCode, holdForPlayback, whenPlayedOut } from "../contexts/AutoCodePlayback";
+import { PlaybackScrollKeeper } from "../components/PlaybackScrollKeeper";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
@@ -333,6 +335,17 @@ function AppShell() {
   useEffect(() => {
     void rehydrateActivityJobs(projectId);
   }, [projectId]);
+
+  // Every AutoCode run (and catch-up) with a chip still running lands its tags live on this page
+  // (contexts/AutoCodePlayback.ts, docs/design-autocode-landing-plan.md Phase 4). A page opened or
+  // reloaded mid-run starts from what is saved, unflashed. Nothing in an exported report.
+  useEffect(() => {
+    for (const j of activityJobs.values()) {
+      if ((j.type === "autocode" || j.type === "catchup") && !j.outcome && j.frameworkId) {
+        followAutoCode(j.frameworkId, j.type === "catchup" ? "catchup" : "first");
+      }
+    }
+  }, [activityJobs]);
 
   // An unhide that hands a quote to a codebook starts a pass the server runs by itself a few seconds
   // on; the chip for it is found, not given, so its tags appear without a reload.
@@ -938,7 +951,10 @@ function AppShell() {
             completedLabel: i18n.t("autocode.chip.recoded"),
             frameworkId: j.frameworkId,
             outcome: j.outcome,
-            onComplete: () => {
+            onComplete: async () => {
+              // After the pass's last tag has landed (D20), the one reload of the run.
+              await whenPlayedOut(j.frameworkId);
+              beginHandover(j.frameworkId);
               window.dispatchEvent(new Event("codebook-changed"));
               document.dispatchEvent(new CustomEvent("bn:tags-changed"));
             },
@@ -959,7 +975,7 @@ function AppShell() {
                 total_quotes: s.catch_up_total ?? 0,
                 processed_quotes: s.catch_up_processed ?? 0,
               });
-              return { ...norm, progressLabel: null };
+              return { ...holdForPlayback(j.frameworkId, norm), progressLabel: null };
             },
           };
         }
@@ -970,10 +986,21 @@ function AppShell() {
           completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
           frameworkId: j.frameworkId,
           outcome: j.outcome,
+          // The server's status, held at "running" while this page lands the run's last tags, so
+          // the chip says done after the last one has landed on screen (D11), within a bound.
+          pollFn: async (): Promise<NormalisedJobStatus> => {
+            const s = await getAutoCodeStatus(j.frameworkId);
+            return holdForPlayback(j.frameworkId, normaliseAutoCode(s), s);
+          },
           onComplete: async (outcome) => {
             // A Stop's cut lands after the batches still out have answered (D27): refresh
             // once it has, not at the Stop, or its tags are not drawn.
             if (outcome.status === "cancelled") await waitForStoppedRunToSettle(j.frameworkId);
+            // A Stop or a failure ends the chip at once; the settle's tags still land first
+            // (D48), within the same bound. Then the run's one reload, handed over from the
+            // playback with nothing on screen moving.
+            await whenPlayedOut(j.frameworkId);
+            beginHandover(j.frameworkId);
             window.dispatchEvent(new Event("codebook-changed"));
             // The proposals live on the quotes, and the lenses that draw them reload on
             // `bn:tags-changed`, not `codebook-changed`. Without it the chip said "Coded"
@@ -1100,6 +1127,9 @@ function AppShell() {
       <PanelErrorBoundary quiet>
         <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} onSettled={settleJob} />
       </PanelErrorBoundary>
+      <PanelErrorBoundary quiet>
+        <PlaybackScrollKeeper />
+      </PanelErrorBoundary>
       {/* Invisible, so a crash in one draws nothing and leaves the report standing. */}
       <PanelErrorBoundary quiet>
         <AnnounceRegion />
@@ -1122,6 +1152,7 @@ function AppShell() {
     </SidebarLayout>
   );
 }
+
 
 export function AppLayout() {
   const navigate = useNavigate();

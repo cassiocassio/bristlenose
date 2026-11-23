@@ -53,6 +53,7 @@ import {
 import type { TFunction } from "i18next";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 import { Icon } from "./Icon";
+import { useLiveTagFlash } from "../contexts/AutoCodePlayback";
 
 /**
  * A code's histogram bar and count — the same element the tag sidebar draws,
@@ -237,6 +238,7 @@ export function TagRow({
     [tag, onMergeDrop],
   );
 
+  const liveFlash = useLiveTagFlash(tag.id);
   const classes = [
     "tag-row",
     isMergeTarget ? "merge-target" : null,
@@ -277,6 +279,8 @@ export function TagRow({
             text={tag.name}
             variant="deletable"
             colour={getTagBg(colourSet, tag.colour_index)}
+            // Flashes as a running AutoCode lands an accepted tag on this code (D7).
+            className={liveFlash ? "badge-accept-flash" : undefined}
             // Focus first, act second — the Finder / Things idiom, and the
             // reason a stray click on a filename does not drop you into an
             // edit field. Before this, one click both focused the code AND

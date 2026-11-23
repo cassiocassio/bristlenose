@@ -160,18 +160,53 @@ body.hide-ai-tags .badge-ai { display: none; }
     color: var(--bn-colour-accent);
 }
 
-/* Proposed badge — pulsating dashed border (AutoCode) */
+/* Proposed badge — dashed border (AutoCode). The review dialog's tentative counter
+   (molecules/threshold-review.css) keeps this keyframe, pulsing as it always has. */
 @keyframes bn-proposed-pulse {
     0%   { opacity: 0.50; }
     50%  { opacity: 0.78; }
     100% { opacity: 0.50; }
 }
 
+/* D8 (docs/design-autocode-landing-plan.md): a tentative tag pulses while a run lands and for a
+   minute after, then calms to a still dashed outline over 30 s; at rest it is still. The
+   playback store (contexts/AutoCodePlayback.ts) sets `data-autocode-tentative` on the root:
+   "pulse", then "calm", then nothing. The pulse is one keyframe whose depth is a registered
+   property, so calming eases the swing down to the still opacity without restarting it: at
+   depth 1 it is the shipped 0.50 to 0.78, at depth 0 it holds 0.72, the still outline. The
+   property does not inherit, so the 30 s transition restyles the proposed badges only, never the
+   page under the root (frontend/gotchas.md, custom properties in WebKit). No pulse under reduced
+   motion or with the app's "Show animation while analysing" off (as atoms/shimmer.css). */
+@property --bn-proposed-pulse-depth {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 1;
+}
+
+@keyframes bn-proposed-breathe {
+    0%   { opacity: calc(0.72 - 0.22 * var(--bn-proposed-pulse-depth)); }
+    50%  { opacity: calc(0.72 + 0.06 * var(--bn-proposed-pulse-depth)); }
+    100% { opacity: calc(0.72 - 0.22 * var(--bn-proposed-pulse-depth)); }
+}
+
 .badge-proposed {
-    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    opacity: 0.72;
     border: 1px dashed currentColor;
     cursor: pointer;
     position: relative;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root[data-autocode-tentative="pulse"]:not([data-analysis-animation="off"]) .badge-proposed {
+        --bn-proposed-pulse-depth: 1;
+        animation: bn-proposed-breathe 3s ease-in-out infinite;
+    }
+
+    :root[data-autocode-tentative="calm"]:not([data-analysis-animation="off"]) .badge-proposed {
+        --bn-proposed-pulse-depth: 0;
+        animation: bn-proposed-breathe 3s ease-in-out infinite;
+        transition: --bn-proposed-pulse-depth 30s linear;
+    }
 }
 
 .badge-proposed:hover {

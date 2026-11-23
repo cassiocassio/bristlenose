@@ -659,12 +659,6 @@ function followOf(id: number): Follow | null {
   return null;
 }
 
-/** Whether this proposal is one the playback holds (the card asks before taking the ordinary
- *  path). */
-export function isLiveProposal(id: number): boolean {
-  return followOf(id) !== null;
-}
-
 function reviewedElsewhere(err: ApiError | null | undefined): boolean {
   return !!err?.reason?.startsWith("proposal_") || err?.status === 404;
 }

@@ -148,12 +148,14 @@ def background_work() -> dict[str, object]:
     """Whether this serve has paid or unrecoverable work in flight (``server/busy.py``).
 
     Behind the bearer, unlike ``/api/health``: the Mac holds the reap of a window-less study while
-    this says busy. Coarse kinds only (``autocode``, ``signals``), no timestamps.
+    this says busy. Coarse kinds only (``autocode``, ``signals``), no timestamps. ``progress`` is a
+    count that grows as AutoCode batches answer, so the host can tell a moving run from a stuck one
+    (``busy.progress``).
     """
-    from bristlenose.server.busy import active_kinds
+    from bristlenose.server.busy import active_kinds, progress
 
     kinds = active_kinds()
-    return {"busy": bool(kinds), "kinds": kinds}
+    return {"busy": bool(kinds), "kinds": kinds, "progress": progress()}
 
 
 @router.get("/agent-activity")

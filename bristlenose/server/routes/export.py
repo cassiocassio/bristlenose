@@ -479,10 +479,10 @@ def export_report(
     from bristlenose.server.routes.data import get_people as _get_people_handler
     from bristlenose.server.routes.discussion import get_discussion_payload
     from bristlenose.server.routes.quotes import _quote_dom_id
+    from bristlenose.server.routes.quotes import build_quotes as _build_quotes
     from bristlenose.server.routes.quotes import (
         get_moderator_question as _get_moderator_question_handler,
     )
-    from bristlenose.server.routes.quotes import get_quotes as _get_quotes_handler
     from bristlenose.server.routes.sessions import get_sessions as _get_sessions_handler
     from bristlenose.server.routes.signals import (
         get_codebook_analysis as _get_codebook_analysis_handler,
@@ -507,8 +507,14 @@ def export_report(
 
     project_info = _get_project_info_handler(project_id, request)
     dashboard = _get_dashboard_handler(project_id, request)
-    quotes = _get_quotes_handler(project_id, request)
+    # Accepted tags only (D28): a tentative AutoCode tag is work in progress, and the
+    # file has no review to settle it in.
+    quotes = _build_quotes(project_id, request, include_proposed=False)
     codebook = _get_codebook_handler(project_id, request)
+    # The Codebook lens counts tentative tags beside accepted ones: none in the file (D28).
+    for group in codebook.groups:
+        for tag in group.tags:
+            tag.tentative_count = 0
     people = _get_people_handler(project_id, request)
     framework_states = _get_framework_states_handler(project_id, request)
     hidden_tag_groups = _get_hidden_tag_groups_handler(project_id, request)

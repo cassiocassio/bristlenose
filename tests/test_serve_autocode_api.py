@@ -1384,9 +1384,13 @@ class TestProposalsInTheQuotesLens:
         body = client_with_garrett.get("/api/projects/1/quotes").json()
         assert _proposal_count(body) == 1
 
-    def test_a_first_apply_still_coding_shows_none(
-        self, client_with_garrett: TestClient,
+    @pytest.mark.parametrize("status", ["running", "pending", "failed", "cancelled"])
+    def test_a_first_apply_shows_its_tentative_tags_while_coding_and_once_stopped(
+        self, client_with_garrett: TestClient, status: str,
     ) -> None:
-        self._seed(client_with_garrett, "running", None)
+        """A first apply saves each batch as it answers, and its tentative tags land on
+        the cards as the run goes, and stay when it is stopped or fails (D7, review 6).
+        Until 23 Nov 2026 a first apply showed none until it completed."""
+        self._seed(client_with_garrett, status, None)
         body = client_with_garrett.get("/api/projects/1/quotes").json()
-        assert _proposal_count(body) == 0
+        assert _proposal_count(body) == 1

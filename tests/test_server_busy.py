@@ -117,9 +117,11 @@ def test_the_paid_entry_points_are_the_ones_marked() -> None:
 
 def test_the_route_reports_idle_and_busy(app) -> None:
     client = AuthTestClient(app)
-    assert client.get("/api/background-work").json() == {"busy": False, "kinds": []}
+    idle = client.get("/api/background-work").json()
+    assert {k: idle[k] for k in ("busy", "kinds")} == {"busy": False, "kinds": []}
     with busy.working("signals"):
-        assert client.get("/api/background-work").json() == {"busy": True, "kinds": ["signals"]}
+        body = client.get("/api/background-work").json()
+        assert {k: body[k] for k in ("busy", "kinds")} == {"busy": True, "kinds": ["signals"]}
     assert client.get("/api/background-work").json()["busy"] is False
 
 

@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from bristlenose.llm.failure_classifier import classify_exception
-from bristlenose.server.busy import tracked
+from bristlenose.server.busy import note_progress, tracked
 from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, TemplateTag
 
 if TYPE_CHECKING:
@@ -40,6 +40,17 @@ logger = logging.getLogger(__name__)
 #: Number of quotes per LLM call.  Fixed batches give predictable token
 #: budgets regardless of session length.
 BATCH_SIZE = 25
+
+#: How many times one batch's save is tried before the batch is kept in memory and
+#: saved with the end of the run, and the wait before each retry (seconds). Each try
+#: also waits out the connection's ``busy_timeout`` for the write lock first.
+SAVE_ATTEMPTS = 4
+SAVE_BACKOFF_S = (0.05, 0.2, 0.5)
+
+#: One proposal as a batch answered it: (quote id, tag definition id, confidence,
+#: rationale). Plain values, not rows: a save that rolls back leaves an ORM row in a
+#: state another session cannot simply take, so each attempt builds its own.
+ProposalValues = tuple[int, int, float, str]
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +189,110 @@ def build_tag_name_map(
 
 
 # ---------------------------------------------------------------------------
+# Saving a batch as it answers
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _Answered:
+    """A batch the model answered: its proposals (one per quote, the most confident)
+    and every quote it sent, tagged or not. ``saved`` is False while it waits in
+    memory for the end of the run, its own save having found the database locked."""
+
+    proposals: list[ProposalValues]
+    quote_ids: list[int]
+    saved: bool = False
+
+
+def _best_per_quote(rows: Iterable[ProposalValues]) -> list[ProposalValues]:
+    """One proposal per quote, the most confident. ``ProposedTag`` is unique on (job,
+    quote), and a model asked for "the single best" tag can still return two, which
+    failed the commit and took every proposal with it (gotchas.md § AutoCode)."""
+    best: dict[int, ProposalValues] = {}
+    for row in rows:
+        prev = best.get(row[0])
+        if prev is None or row[2] > prev[2]:
+            best[row[0]] = row
+    return list(best.values())
+
+
+def _is_lock_error(exc: BaseException) -> bool:
+    message = str(getattr(exc, "orig", exc)).lower()
+    return "locked" in message or "busy" in message
+
+
+async def _save_batch(
+    db_factory: Callable[[], SASession],
+    write: Callable[[SASession], Any],
+    what: str,
+) -> tuple[bool, Any]:
+    """Save one answered batch in its own short transaction: ``(True, write's value)``,
+    or ``(False, None)`` when it could not be saved and the caller must keep it.
+
+    The save reads before it writes (the register skips a quote already on it; a
+    catch-up reads the lines it sorts by), and SQLite refuses such a transaction at
+    once when another connection has written since its read, whatever the
+    ``busy_timeout`` (gotchas.md § AutoCode). So a locked or busy database rolls back,
+    closes, waits a moment and tries again in a fresh session; when the tries run out
+    the batch stays with the caller, which saves it with the end of the run. Any other
+    failure is not retried: the end-of-run commit meets it again, and says so, as it
+    did when every batch was saved there. A batch is never dropped here.
+    """
+    from sqlalchemy.exc import OperationalError
+
+    for attempt in range(SAVE_ATTEMPTS):
+        db = db_factory()
+        retry = False
+        try:
+            value = write(db)
+            db.commit()
+            return True, value
+        except OperationalError as exc:
+            db.rollback()
+            if not _is_lock_error(exc):
+                logger.warning("AutoCode %s: save failed, kept for the end of the run",
+                               what, exc_info=True)
+                return False, None
+            retry = attempt + 1 < SAVE_ATTEMPTS
+            if not retry:
+                logger.warning(
+                    "AutoCode %s: the database stayed locked through %d tries; the batch "
+                    "is kept and saved with the end of the run", what, SAVE_ATTEMPTS,
+                )
+        except Exception:
+            db.rollback()
+            logger.warning("AutoCode %s: save failed, kept for the end of the run",
+                           what, exc_info=True)
+            return False, None
+        finally:
+            db.close()
+        if not retry:
+            break
+        await asyncio.sleep(SAVE_BACKOFF_S[min(attempt, len(SAVE_BACKOFF_S) - 1)])
+    return False, None
+
+
+def _store_pending_batch(db: SASession, job_id: int, answered: _Answered) -> None:
+    """A first apply's batch: its proposals (pending, for the review), its quotes on
+    the register, and the job's proposal count, in one transaction (uncommitted)."""
+    from bristlenose.server.models import AutoCodeJob, ProposedTag
+
+    for quote_id, tag_def_id, confidence, rationale in answered.proposals:
+        db.add(ProposedTag(
+            job_id=job_id, quote_id=quote_id, tag_definition_id=tag_def_id,
+            confidence=confidence, rationale=rationale,
+        ))
+    record_sent(db, job_id, answered.quote_ids)
+    if answered.proposals:
+        # Followed per batch so a crash between batches leaves the count true: the boot
+        # sweep (reconcile_orphaned_jobs) keeps the row's counts as they are.
+        db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
+            {AutoCodeJob.proposed_count: AutoCodeJob.proposed_count + len(answered.proposals)},
+            synchronize_session=False,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Job runner
 # ---------------------------------------------------------------------------
 
@@ -313,6 +428,8 @@ async def run_autocode_job(
 
         job.llm_provider = settings.llm_provider
         job.llm_model = settings.llm_model
+        # What the job holds now; each batch adds its own as it saves.
+        job.proposed_count = kept_proposals
         db.commit()
 
         # Build taxonomy text (once, shared across all batches)
@@ -376,7 +493,7 @@ async def run_autocode_job(
         job_id = job.id
         total_quotes = job.total_quotes
 
-        async def _process_batch(batch: list[QuoteBatchItem]) -> list[ProposedTag] | None:
+        async def _process_batch(batch: list[QuoteBatchItem]) -> _Answered | None:
             nonlocal processed_count
             async with semaphore:
                 # Cancellation checkpoint — check DB before starting LLM call.
@@ -410,8 +527,8 @@ async def run_autocode_job(
                         response_model=AutoCodeBatchResult,
                         prompt_template=prompt_tmpl,
                     )
-                # Map assignments to ProposedTag rows
-                proposals: list[ProposedTag] = []
+                # Map assignments to proposals
+                values: list[ProposalValues] = []
                 for assignment in result.assignments:
                     if assignment.quote_index < 0 or assignment.quote_index >= len(batch):
                         logger.warning(
@@ -424,26 +541,35 @@ async def run_autocode_job(
                     tag_def_id = resolve_tag_name_to_id(assignment.tag_name, tag_map)
                     if tag_def_id is None:
                         continue
-                    proposals.append(
-                        ProposedTag(
-                            job_id=job_id,
-                            quote_id=quote_item.db_id,
-                            tag_definition_id=tag_def_id,
-                            confidence=assignment.confidence,
-                            rationale=assignment.rationale,
-                        )
-                    )
+                    values.append((
+                        quote_item.db_id, tag_def_id, assignment.confidence,
+                        assignment.rationale,
+                    ))
+                answered = _Answered(
+                    proposals=_best_per_quote(values),
+                    quote_ids=[item.db_id for item in batch],
+                )
+                # Saved now, with its register entries, so the page can show it while
+                # the run goes on and a run cut off later keeps it. Until 23 Nov 2026
+                # every batch waited for the last, and a run stopped by a crash at 90%
+                # lost them all (docs/design-autocode-landing-plan.md Phase 1).
+                answered.saved, _ = await _save_batch(
+                    db_factory,
+                    lambda session: _store_pending_batch(session, job_id, answered),
+                    f"job {framework_id}",
+                )
                 processed_count += len(batch)
+                note_progress(len(batch))
                 logger.info(
-                    "AutoCode batch done: %d/%d quotes, %d proposals",
+                    "AutoCode batch done: %d/%d quotes, %d proposals%s",
                     processed_count,
                     total_quotes,
-                    len(proposals),
+                    len(answered.proposals),
+                    "" if answered.saved else " (kept for the end of the run)",
                 )
                 # Commit incremental progress via a separate short-lived session so
-                # the status endpoint sees the counter tick (the main session holds
-                # the proposals transaction until all batches finish). Two rules make
-                # this safe under concurrency:
+                # the status endpoint sees the counter tick. Two rules make this safe
+                # under concurrency:
                 #
                 #  1. A **write-only atomic UPDATE** (no SELECT-then-modify). A
                 #     read-then-write transaction takes a read snapshot and then
@@ -477,7 +603,7 @@ async def run_autocode_job(
                         )
                     finally:
                         progress_db.close()
-                return proposals
+                return answered
 
         # Gather all batches
         batch_results = await asyncio.gather(
@@ -485,7 +611,7 @@ async def run_autocode_job(
             return_exceptions=True,
         )
 
-        # Store results, handling per-batch errors gracefully.
+        # Count the results, handling per-batch errors gracefully.
         #
         # ``return_exceptions=True`` means a batch failure never reaches the
         # outer ``except``, so nothing below it runs — including the classifier.
@@ -494,14 +620,11 @@ async def run_autocode_job(
         # wrote status="completed", failure_kind=NULL, and the toast reported a
         # partial success whose partial was zero.
         #
-        # Collapse to one proposal per quote (keep highest confidence), as
-        # ``reapply_to_new_quotes`` does. ProposedTag is unique on
-        # (job_id, quote_id), and the prompt asking for "the single best" tag
-        # does not stop a model returning two — so storing both raised
-        # IntegrityError at commit and rolled back every batch's proposals.
+        # Each answered batch saved itself (one proposal per quote, its register
+        # entries with it). A batch whose save found the database locked through
+        # every try is saved here, with the end of the run, never dropped.
         batch_errors = 0
         first_error: BaseException | None = None
-        best_by_quote: dict[int, ProposedTag] = {}
         for batch_result in batch_results:
             if isinstance(batch_result, BaseException):
                 logger.error("Batch failed: %s", batch_result)
@@ -511,16 +634,17 @@ async def run_autocode_job(
                 continue
             if batch_result is None:
                 continue  # not sent: the job was stopped
-            for proposal in batch_result:
-                prev = best_by_quote.get(proposal.quote_id)
-                if prev is None or proposal.confidence > prev.confidence:
-                    best_by_quote[proposal.quote_id] = proposal
-        for proposal in best_by_quote.values():
-            db.add(proposal)
-            proposed_count += 1
-        # The quotes this pass sent, in the same transaction as their proposals;
-        # one in a batch that failed or was never sent stays owed, and the next
-        # re-apply sends it (RE#66).
+            proposed_count += len(batch_result.proposals)
+            if not batch_result.saved:
+                for quote_id, tag_def_id, confidence, rationale in batch_result.proposals:
+                    db.add(ProposedTag(
+                        job_id=job_id, quote_id=quote_id, tag_definition_id=tag_def_id,
+                        confidence=confidence, rationale=rationale,
+                    ))
+        # The quotes this pass sent, in the same transaction as the proposals kept for
+        # it (a saved batch's are on the register already, and are skipped); one in a
+        # batch that failed or was never sent stays owed, and the next re-apply sends
+        # it (RE#66).
         record_sent(db, job_id, _answered_quote_ids(batches, batch_results))
 
         logger.info(
@@ -660,6 +784,26 @@ def snap_cutoff(value: float) -> float:
     return steps / CONFIDENCE_STEPS_PER_UNIT
 
 
+def stored_lines(job: AutoCodeJob) -> tuple[float, float]:
+    """The (accept, exclude) lines a re-apply sorts its proposals by: the ones the
+    review stored, or the dialog's defaults where none was stored.
+
+    The catch-up applies the review dialog's three bands, not two: at or above the
+    accept line is accepted, strictly below the exclude line is denied (a denial
+    cannot be undone in the UI), and the band between stays pending for the review,
+    as in a first apply (#207: "the same thresholds that were in place at the last
+    AutoCode"). A line stored by a build whose slider drifted (0.7000000000000001) is
+    the line its label says: both are compared at two decimals (N188).
+    """
+    upper = job.applied_upper_threshold
+    if upper is None:
+        upper = DEFAULT_ACCEPT_THRESHOLD
+    lower = job.applied_lower_threshold
+    if lower is None:
+        lower = DEFAULT_DENY_THRESHOLD
+    return round(upper, 2), round(lower, 2)
+
+
 def _answered_quote_ids(
     batches: list[list[QuoteBatchItem]], results: list[Any],
 ) -> set[int]:
@@ -757,8 +901,8 @@ def delete_jobs(db: SASession, job_ids: list[int]) -> None:
 _REAPPLY_IN_FLIGHT: dict[tuple[int, str], Any] = {}
 
 
-# A run's import rebuilds the quote rows, and a re-apply writes its proposals in one commit at
-# the end against the ids it read. One still coding when the next run's import landed lost the
+# A run's import rebuilds the quote rows, and a re-apply writes its proposals against the ids
+# it read (in one commit at the end until 23 Nov 2026, now as each batch answers). One still coding when the next run's import landed lost the
 # commit to a foreign-key failure after every batch was paid for (N92). So an import asks the
 # re-applies to stop at their next batch (what answered is kept, the rest stays owed: the Stop
 # and switch-off path) and waits for them, for a bounded time, before it starts. A serve holds
@@ -901,16 +1045,19 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     flag ``reapply_active_frameworks`` already trusts over ``status`` (see ca944a0a):
 
     - **Initial-apply orphan** (``completed_at IS NULL``): ``run_autocode_job``
-      crashed before finishing the first pass, so nothing usable was produced →
-      mark ``failed`` with a retryable ``error_message``. The start-job guard
+      crashed before finishing the first pass → mark ``failed`` with a retryable
+      ``error_message``. The batches it saved are kept, with their counts (each
+      batch saves its proposals and ``proposed_count`` as it answers). The start-job guard
       lets Apply run a never-applied ``failed`` job again, keeping what it
       coded (#127).
     - **Catch-up orphan** (``completed_at IS NOT NULL``): the on-enable catch-up
       set an applied job ``running`` and was cut off before it finished → mark
       ``failed``, unclassified, so a chip still polling a restarted serve says
-      "Tagging failed." rather than "Re-coded" over nothing (#63, RE#66). It wrote
-      no register rows, so its quotes are still owed and the next run or re-enable
-      codes them; ``completed_at`` keeps the codebook maintained, and Apply
+      "Tagging failed." rather than "Re-coded" over nothing (#63, RE#66). The
+      batches it saved before the cut are kept, with their register rows and
+      counts (each batch is saved as it answers, since 23 Nov 2026); the quotes of
+      the rest are still owed and the next run or re-enable codes them;
+      ``completed_at`` keeps the codebook maintained, and Apply
       refuses an applied job, so ``failed`` no longer invites a re-Apply that
       would delete the original proposals. Until 22 Oct 2026 this restored
       ``completed`` with the catch-up's counts at zero.
@@ -931,8 +1078,9 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     changed = 0
     for job in query.all():
         if job.completed_at is not None:
-            # Catch-up orphan: applied, but this catch-up never finished. Its
-            # quotes are not on the register, so they are owed whatever this says.
+            # Catch-up orphan: applied, but this catch-up never finished. The
+            # quotes of the batches it had not saved are not on the register, so
+            # they are owed whatever this says.
             job.status = "failed"
             job.failure_kind = ""
             job.error_message = (
@@ -1072,22 +1220,9 @@ async def _reapply_to_new_quotes(
         if not template:
             return 0
 
-        threshold = job.applied_upper_threshold
-        if threshold is None:
-            threshold = DEFAULT_ACCEPT_THRESHOLD
-        # A cutoff stored by a build whose slider drifted (0.7000000000000001) is the
-        # cutoff its label says: compare at two decimals (N188).
-        threshold = round(threshold, 2)
-        # The lower line the researcher set (or the dialog's default when Apply
-        # never stored one), snapped the same way. The catch-up applies the review
-        # dialog's three bands, not two: at or above ``threshold`` is accepted,
-        # strictly below ``lower_threshold`` is denied (a denial cannot be undone in
-        # the UI), and the band between stays pending for the review, as in a first
-        # apply (#207: "the same thresholds that were in place at the last AutoCode").
-        lower_threshold = job.applied_lower_threshold
-        if lower_threshold is None:
-            lower_threshold = DEFAULT_DENY_THRESHOLD
-        lower_threshold = round(lower_threshold, 2)
+        # The lines the review stored, read again as each batch is saved (review 8):
+        # a re-cut made while this pass codes applies to the batches saved after it.
+        threshold, lower_threshold = stored_lines(job)
 
         # Delta = the quotes this job still owes (RE#66, ruling 4): those that
         # count (as in the first apply, N175) and are not on its register. The
@@ -1168,9 +1303,70 @@ async def _reapply_to_new_quotes(
             finally:
                 check.close()
 
-        async def _batch(
-            batch: list[QuoteBatchItem],
-        ) -> list[tuple[int, int, float, str]] | None:
+        tally = {"accepted": 0, "proposed": 0}
+        lines_used = {(threshold, lower_threshold)}
+
+        def _store(session: SASession, answered: _Answered) -> None:
+            """One answered batch: its proposals sorted into the review's bands by
+            the lines stored NOW, accepted tags made (never over an existing tag),
+            its quotes on the register and the job's counts, in one transaction
+            (uncommitted). A job gone meanwhile (an uninstall) takes nothing."""
+            j = session.get(AutoCodeJob, job_id, populate_existing=True)
+            if j is None:
+                return
+            upper, lower = stored_lines(j)
+            lines_used.add((upper, lower))
+            now = datetime.now(timezone.utc)
+            accepted = 0
+            for quote_id, tag_def_id, confidence, rationale in answered.proposals:
+                # The dialog's inequalities exactly (ThresholdReviewModal.tsx and the
+                # accept-all / deny-all routes): ``>= upper`` accepts, ``< lower`` denies.
+                status: str
+                reviewed_at: datetime | None
+                decided_by: str | None
+                if confidence >= upper:
+                    status, reviewed_at, decided_by = "accepted", now, "threshold"
+                elif confidence < lower:
+                    status, reviewed_at, decided_by = "denied", now, "threshold"
+                else:
+                    status, reviewed_at, decided_by = "pending", None, None
+                # Record the proposal on the existing job — audit trail, and it
+                # marks the quote as "seen" so a later re-apply won't re-code it.
+                session.add(ProposedTag(
+                    job_id=job_id, quote_id=quote_id, tag_definition_id=tag_def_id,
+                    confidence=confidence, rationale=rationale, status=status,
+                    reviewed_at=reviewed_at, decided_by=decided_by,
+                ))
+                if status == "accepted":
+                    # Non-clobbering: never overwrite an existing (human or
+                    # autocode) tag on this quote.
+                    existing = (
+                        session.query(QuoteTag)
+                        .filter_by(quote_id=quote_id, tag_definition_id=tag_def_id)
+                        .first()
+                    )
+                    if existing is None:
+                        session.add(QuoteTag(
+                            quote_id=quote_id, tag_definition_id=tag_def_id,
+                            source="autocode",
+                        ))
+                        accepted += 1
+            # The quotes this batch sent, with the proposals they stand for (RE#66).
+            record_sent(session, job_id, answered.quote_ids)
+            n = len(answered.quote_ids)
+            session.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
+                {
+                    AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + n,
+                    AutoCodeJob.processed_quotes: AutoCodeJob.processed_quotes + n,
+                    AutoCodeJob.proposed_count:
+                        AutoCodeJob.proposed_count + len(answered.proposals),
+                },
+                synchronize_session=False,
+            )
+            tally["accepted"] += accepted
+            tally["proposed"] += len(answered.proposals)
+
+        async def _batch(batch: list[QuoteBatchItem]) -> _Answered | None:
             async with semaphore:
                 # Checked before each batch, as run_autocode_job does, so a Stop
                 # or a switch-off ends the spending. None = not sent, which
@@ -1190,7 +1386,7 @@ async def _reapply_to_new_quotes(
                         response_model=AutoCodeBatchResult,
                         prompt_template=prompt_tmpl,
                     )
-                out: list[tuple[int, int, float, str]] = []
+                out: list[ProposalValues] = []
                 for a in result.assignments:
                     if a.quote_index < 0 or a.quote_index >= len(batch):
                         logger.warning(
@@ -1211,7 +1407,22 @@ async def _reapply_to_new_quotes(
                         "Re-apply %s: a batch answered %d assignments and none named "
                         "a tag in the codebook", framework_id, len(result.assignments),
                     )
-                return out
+                # One proposal per quote (keep highest confidence): the (job, quote)
+                # key is unique, and a duplicate failed the commit, rolled back the
+                # pass with its register rows, and the same quotes re-failed on every
+                # later run, silently.
+                answered = _Answered(
+                    proposals=_best_per_quote(out),
+                    quote_ids=[item.db_id for item in batch],
+                )
+                # Saved as it answers (review 8): the lines it is sorted by are the
+                # ones stored when it saves, and a pass cut off keeps what it saved.
+                answered.saved, _ = await _save_batch(
+                    db_factory, lambda session: _store(session, answered),
+                    f"re-apply {framework_id}",
+                )
+                note_progress(len(batch))
+                return answered
 
         results = await asyncio.gather(
             *(_batch(b) for b in batches), return_exceptions=True
@@ -1250,82 +1461,25 @@ async def _reapply_to_new_quotes(
             if r is not None and not isinstance(r, BaseException)
         )
 
-        accepted = 0
-        new_proposed = 0
-        now = datetime.now(timezone.utc)
-
-        # Collapse to one proposal per quote (keep highest confidence). The
-        # ProposedTag unique constraint is (job_id, quote_id) — one tag per quote
-        # per job — so an LLM that returns two assignments for the same quote would
-        # otherwise raise IntegrityError at commit, rolling back the ENTIRE re-apply
-        # including its register rows. The same quotes would then be re-selected and
-        # re-fail on every subsequent run, forever, silently. Deduping here keeps
-        # the collision from ever forming.
-        best_by_quote: dict[int, tuple[int, int, float, str]] = {}
         for res in results:
             if isinstance(res, BaseException):
                 logger.error("Re-apply batch failed: %s", res)
-                continue
-            if res is None:
-                continue  # not sent: the catch-up was stopped
-            for quote_id, tag_def_id, confidence, rationale in res:
-                prev = best_by_quote.get(quote_id)
-                if prev is None or confidence > prev[2]:
-                    best_by_quote[quote_id] = (quote_id, tag_def_id, confidence, rationale)
-
-        for quote_id, tag_def_id, confidence, rationale in best_by_quote.values():
-            # The dialog's inequalities exactly (ThresholdReviewModal.tsx and the
-            # accept-all / deny-all routes): ``>= upper`` accepts, ``< lower`` denies.
-            if confidence >= threshold:
-                status, reviewed_at = "accepted", now
-            elif confidence < lower_threshold:
-                status, reviewed_at = "denied", now
-            else:
-                status, reviewed_at = "pending", None
-            is_accept = status == "accepted"
-            # Record the proposal on the existing job — audit trail, and it
-            # marks the quote as "seen" so a later re-apply won't re-code it.
-            db.add(
-                ProposedTag(
-                    job_id=job_id,
-                    quote_id=quote_id,
-                    tag_definition_id=tag_def_id,
-                    confidence=confidence,
-                    rationale=rationale,
-                    status=status,
-                    reviewed_at=reviewed_at,
-                )
-            )
-            new_proposed += 1
-            if is_accept:
-                # Non-clobbering: never overwrite an existing (human or
-                # autocode) tag on this quote.
-                existing = (
-                    db.query(QuoteTag)
-                    .filter_by(quote_id=quote_id, tag_definition_id=tag_def_id)
-                    .first()
-                )
-                if existing is None:
-                    db.add(
-                        QuoteTag(
-                            quote_id=quote_id,
-                            tag_definition_id=tag_def_id,
-                            source="autocode",
-                        )
-                    )
-                    accepted += 1
-
-        # The quotes this pass sent, with the proposals they stand for; the rest
-        # stay owed (RE#66).
-        record_sent(db, job_id, _answered_quote_ids(batches, list(results)))
+        # A batch whose own save found the database locked through every try is
+        # stored here, with the end of the pass, never dropped.
+        for res in results:
+            if isinstance(res, _Answered) and not res.saved:
+                _store(db, res)
+        accepted = tally["accepted"]
+        new_proposed = tally["proposed"]
+        now = datetime.now(timezone.utc)
 
         # Sent, not selected: a Stop or a switch-off leaves batches unsent, and
-        # counting them over-reported the denominator.
+        # counting them over-reported the denominator. Each answered batch added its
+        # own quotes to both counts and its proposals as it was stored; what is left
+        # is the quotes of the batches that were sent and failed.
         sent = sum(len(b) for b, r in zip(batches, results, strict=True) if r is not None)
         counts: dict[Any, Any] = {
-            AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + sent,
-            AutoCodeJob.processed_quotes: AutoCodeJob.processed_quotes + processed,
-            AutoCodeJob.proposed_count: AutoCodeJob.proposed_count + new_proposed,
+            AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + (sent - processed),
         }
         values: dict[Any, Any] = {**counts, AutoCodeJob.completed_at: now}
         finish = db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id)
@@ -1365,14 +1519,13 @@ async def _reapply_to_new_quotes(
             _clear_failure_once_owed_nothing(db, job)
         db.commit()
         logger.info(
-            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f "
-            "(denied below %.2f, pending between)",
+            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted; lines used "
+            "(accept at or above, deny below): %s",
             framework_id,
             len(batch_items),
             new_proposed,
             accepted,
-            threshold,
-            lower_threshold,
+            ", ".join(f"{u:.2f}/{lo:.2f}" for u, lo in sorted(lines_used)),
         )
         return accepted
 
@@ -1490,3 +1643,137 @@ async def reapply_active_frameworks(
         register_reapply(project_id, framework_id, task)
         results[framework_id] = await task
     return results
+
+
+# ---------------------------------------------------------------------------
+# When Signals is rebuilt after AutoCode (D21, review 9)
+# ---------------------------------------------------------------------------
+
+# The AutoCode passes coding each project now, as their tasks: first applies, catch-ups
+# and a run's re-apply. Read and written on the event loop only, so no lock. A task, not
+# a count: a task that ended without saying so, or whose loop is gone, is not coding.
+_LIVE_CODING: dict[int, set[asyncio.Task[Any]]] = {}
+# A Signals rebuild a pass asked for while another of the project's passes still coded,
+# by project, with the loop it was asked on and the source the last asker gave. The
+# last pass to end builds it.
+_SNAPSHOT_OWED: dict[int, tuple[asyncio.AbstractEventLoop, str]] = {}
+# The pending rebuild after a re-cut, per project, and the builds in flight (a bare
+# task can be collected mid-flight, gotchas.md § AutoCode).
+_RECUT_TIMERS: dict[int, asyncio.TimerHandle] = {}
+_SNAPSHOT_TASKS: set[asyncio.Task[Any]] = set()
+#: A burst of re-cuts (the review dialog's Apply sends accept-all and deny-all, and a
+#: researcher may move the lines twice) rebuilds Signals once, this long after the last.
+RECUT_SNAPSHOT_DEBOUNCE_S = 5.0
+
+
+def coding_started(project_id: int, task: asyncio.Task[Any]) -> None:
+    """``task`` codes this project until it ends; it calls ``coding_ended`` when it does.
+    On the loop."""
+    _LIVE_CODING.setdefault(project_id, set()).add(task)
+
+
+def _others_coding(project_id: int, me: asyncio.Task[Any] | None) -> bool:
+    loop = asyncio.get_running_loop()
+    live = _LIVE_CODING.get(project_id, set())
+    live.difference_update({t for t in live if t.done() or t.get_loop() is not loop})
+    if not live:
+        _LIVE_CODING.pop(project_id, None)
+    return any(t is not me for t in live)
+
+
+def _owe_snapshot(project_id: int, source: str) -> None:
+    _SNAPSHOT_OWED[project_id] = (asyncio.get_running_loop(), source)
+
+
+def _take_owed_snapshot(project_id: int) -> str | None:
+    owed = _SNAPSHOT_OWED.pop(project_id, None)
+    if owed is None or owed[0] is not asyncio.get_running_loop():
+        return None
+    return owed[1]
+
+
+async def coding_ended(app: Any, project_id: int, *, snapshot_source: str | None) -> None:
+    """The calling pass has ended; ``snapshot_source`` says it changed what Signals reads.
+
+    When others of the project's passes still code, the rebuild is owed and the last
+    of them to end builds it once (D21): until 23 Nov 2026 each finished apply built
+    its own, so three codebooks applied at once paid for three builds, the first two
+    over tags the third was still changing. The build, when this is the last pass,
+    happens here, awaited, so the caller's busy mark covers it.
+    """
+    me = asyncio.current_task()
+    if me is not None:
+        _LIVE_CODING.get(project_id, set()).discard(me)
+    if snapshot_source is not None:
+        _owe_snapshot(project_id, snapshot_source)
+    if _others_coding(project_id, me):
+        return
+    source = _take_owed_snapshot(project_id)
+    if source is not None:
+        await build_signal_snapshot(app, project_id, source)
+
+
+async def build_signal_snapshot(app: Any, project_id: int, source: str) -> None:
+    """Materialise the project's Signals report now. Never raises: a codebook stays
+    applied whatever its optional synthesis meets, and the next trigger tries again.
+
+    Cost: ``materialise_completed_signal_snapshot`` elaborates the report's cards, one
+    LLM call per codebook with a card whose evidence changed since its cached
+    narrative, and none when every card is cached (``elaboration.generate_elaborations``).
+    """
+    from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
+    from bristlenose.server.signal_snapshots import (
+        begin_signals_preparing,
+        end_signals_preparing,
+    )
+
+    begin_signals_preparing(app.state)
+    db = app.state.db_factory()
+    try:
+        await materialise_completed_signal_snapshot(
+            db, project_id, source=source,
+            project_dir=getattr(app.state, "project_dir", None),
+        )
+    except Exception:
+        db.rollback()
+        logger.exception("Signal snapshot (%s) for project %s failed", source, project_id)
+    finally:
+        db.close()
+        end_signals_preparing(app.state)
+
+
+def recut_made(app: Any, project_id: int) -> None:
+    """The review's lines were applied (accept-all or deny-all with the dialog's lines):
+    rebuild Signals once the burst settles, or, while a pass still codes, when the last
+    one ends. Callable from a route's worker thread or the loop; never raises."""
+    try:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            from anyio import from_thread
+
+            from_thread.run_sync(_arm_recut_snapshot, app, project_id)
+            return
+        _arm_recut_snapshot(app, project_id)
+    except Exception:
+        logger.warning("Could not schedule the Signals rebuild after a re-cut", exc_info=True)
+
+
+def _arm_recut_snapshot(app: Any, project_id: int) -> None:
+    loop = asyncio.get_running_loop()
+    handle = _RECUT_TIMERS.pop(project_id, None)
+    if handle is not None:
+        handle.cancel()
+    _RECUT_TIMERS[project_id] = loop.call_later(
+        RECUT_SNAPSHOT_DEBOUNCE_S, _fire_recut_snapshot, app, project_id,
+    )
+
+
+def _fire_recut_snapshot(app: Any, project_id: int) -> None:
+    _RECUT_TIMERS.pop(project_id, None)
+    if _others_coding(project_id, None):
+        _owe_snapshot(project_id, "codebook_recut")
+        return
+    task = asyncio.ensure_future(build_signal_snapshot(app, project_id, "codebook_recut"))
+    _SNAPSHOT_TASKS.add(task)
+    task.add_done_callback(_SNAPSHOT_TASKS.discard)

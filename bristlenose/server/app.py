@@ -1533,33 +1533,30 @@ def _make_run_completed_handler(
         begin_signals_preparing(app.state)
 
         async def _reapply_after_run() -> None:
+            from bristlenose.server.autocode import coding_ended
             from bristlenose.server.busy import working
 
             try:
                 # Paid work end to end, so the gap between the re-apply and the
                 # snapshot build is not a moment the study can be reaped.
                 with working("autocode"):
-                    await reapply
-                    from bristlenose.server.routes.signals import (
-                        materialise_completed_signal_snapshot,
-                    )
-
-                    snapshot_db = session_factory()
+                    source: str | None = None
                     try:
-                        await materialise_completed_signal_snapshot(
-                            snapshot_db,
-                            project_id,
-                            source="new_interviews",
-                            project_dir=getattr(app.state, "project_dir", None),
-                        )
+                        await reapply
+                        source = "new_interviews"
                     finally:
-                        snapshot_db.close()
+                        # Built here, or by the last of the project's AutoCode passes
+                        # if another still codes (D21).
+                        await coding_ended(app, project_id, snapshot_source=source)
             except Exception:
                 logger.exception("Auto re-apply or signal snapshot after run_completed failed")
             finally:
                 end_signals_preparing(app.state)
 
+        from bristlenose.server.autocode import coding_started
+
         task = asyncio.create_task(_reapply_after_run())
+        coding_started(project_id, task)
         _REAPPLY_AFTER_RUN_TASKS.add(task)  # a bare task can be GC'd mid-flight
         task.add_done_callback(_REAPPLY_AFTER_RUN_TASKS.discard)
 

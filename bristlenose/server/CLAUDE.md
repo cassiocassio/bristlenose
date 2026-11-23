@@ -200,7 +200,7 @@ Four middleware layers in `create_app()` (plus the `@app.middleware` no-store ho
 
 ## Work that must not be cut off: `busy.py` and `GET /api/background-work`
 
-The Mac reaps a study's server about 90 s after its last window closes (`ServeReaping`). That is right for an idle server and wrong for one in the middle of a **paid** pass, whose calls are lost and which nothing restarts on a timer. The server says so: `busy.active_kinds()`, served at `/api/background-work` (`{"busy": bool, "kinds": [...]}`), which the desktop reads on its 20 s poll and holds the reap for, at most 30 minutes from the first hold.
+The Mac reaps a study's server about 90 s after its last window closes (`ServeReaping`). That is right for an idle server and wrong for one in the middle of a **paid** pass, whose calls are lost and which nothing restarts on a timer. The server says so: `busy.active_kinds()`, served at `/api/background-work` (`{"busy": bool, "kinds": [...], "progress": int}`; `progress` counts quotes AutoCode batches have had answered since the serve started, so a moving run can be told from a stuck one), which the desktop reads on its 20 s poll and holds the reap for, at most 30 minutes from the first hold.
 
 - **A job is busy if an interrupted pass costs money or loses work nothing restarts.** Today: AutoCode (`run_autocode_job`, and a catch-up that is waiting or running) and Signals elaboration (`generate_elaborations`). Mark a new one with `@tracked("kind")` or `with busy.working("kind")`.
 - **Screens reading and the scene strips are deliberately not busy.** They spend nothing, are cached by recording and resume at the next start, and holding a server for a study nobody is looking at would keep the Vision engine and the disk working for hours.

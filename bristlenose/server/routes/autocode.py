@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
@@ -13,7 +14,13 @@ from pydantic import BaseModel, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from bristlenose.config import load_settings
-from bristlenose.server.autocode import run_autocode_job, snap_cutoff
+from bristlenose.server.autocode import (
+    coding_ended,
+    coding_started,
+    recut_made,
+    run_autocode_job,
+    snap_cutoff,
+)
 from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.busy import working
 from bristlenose.server.codebook import get_template
@@ -61,6 +68,18 @@ _AUTOCODE_LIVE: dict[tuple[int, str], asyncio.Task[Any]] = {}
 # ---------------------------------------------------------------------------
 
 
+class ConfidenceBin(BaseModel):
+    """One 0.05-wide band of a job's proposals, by where each one sits now."""
+
+    #: The band's lower edge (0.00, 0.05 … 0.95); the top band takes 1.00 too.
+    lower: float
+    accepted: int = 0
+    #: Still pending: proposed, not decided.
+    tentative: int = 0
+    #: Denied, by a line or by a researcher.
+    excluded: int = 0
+
+
 class AutoCodeJobOut(BaseModel):
     id: int
     framework_id: str
@@ -89,6 +108,10 @@ class AutoCodeJobOut(BaseModel):
     output_tokens: int
     started_at: str
     completed_at: str | None
+    #: The job's proposals by confidence, 20 bands of 0.05, each split by disposition,
+    #: over the quotes that count (the ones the review lists). Only on a status read
+    #: that asks for it (``?counts=true``), so the chip's two-second poll stays cheap.
+    confidence_counts: list[ConfidenceBin] | None = None
 
 
 class ProposedTagOut(BaseModel):
@@ -107,6 +130,9 @@ class ProposedTagOut(BaseModel):
     confidence: float
     rationale: str
     status: str
+    #: How ``status`` was decided: "threshold", "researcher" or "unknown" (decided
+    #: before migration 027); None while pending.
+    decided_by: str | None = None
 
 
 class ProposalsResponse(BaseModel):
@@ -306,6 +332,42 @@ def require_provider_callable(settings: Any) -> None:
         raise no_key
 
 
+def _settle_first_apply(
+    db_factory: Callable[[], Session], project_id: int, framework_id: str,
+    after_apply: Callable[[], None] | None,
+) -> str | None:
+    """What a first apply's end asks of Signals: the snapshot source, or None.
+
+    A completed apply runs ``after_apply`` (the house default's cut) and asks for a
+    rebuild. A stopped one asks only if it has accepted tags (review 9): nothing is
+    accepted by a run itself before Phase 3, but a researcher can accept a tentative
+    tag while it codes. A failed one asks nothing. Never raises."""
+    db = db_factory()
+    try:
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project_id, framework_id=framework_id,
+        ).first()
+        if job is None:
+            return None
+        if job.status == "completed":
+            if after_apply is not None:
+                try:
+                    after_apply()
+                except Exception:
+                    logger.exception("After-apply step for AutoCode %s failed", framework_id)
+            return "codebook_apply"
+        if job.status == "cancelled" and db.query(ProposedTag.id).filter(
+            ProposedTag.job_id == job.id, ProposedTag.status == "accepted",
+        ).first() is not None:
+            return "codebook_stopped"
+        return None
+    except Exception:
+        logger.exception("Could not read how AutoCode %s ended", framework_id)
+        return None
+    finally:
+        db.close()
+
+
 @router.post("/projects/{project_id}/autocode/{framework_id}")
 async def start_autocode_job(
     project_id: int,
@@ -442,45 +504,24 @@ async def start_autocode(
                 end_signals_preparing(app.state)
 
         async def _apply_and_snapshot() -> None:
-            await run_autocode_job(
-                db_factory, project_id, framework_id, settings,
-                project_dir=project_dir,
-            )
-            # A quote that began to count while this ran (an unhide, a recode back in)
-            # was not in its batches and, the job not yet applied then, armed nothing:
-            # the codebook owes it now, so ask (ruling 4).
-            note_quotes_counting(app, project_id)
-            snapshot_db = db_factory()
+            source: str | None = None
             try:
-                completed = snapshot_db.query(AutoCodeJob).filter_by(
-                    project_id=project_id,
-                    framework_id=framework_id,
-                    status="completed",
-                ).first()
-                if completed is None:
-                    return
-                if after_apply is not None:
-                    try:
-                        after_apply()
-                    except Exception:
-                        logger.exception("After-apply step for AutoCode %s failed", framework_id)
-                from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
-
-                await materialise_completed_signal_snapshot(
-                    snapshot_db,
-                    project_id,
-                    source="codebook_apply",
+                await run_autocode_job(
+                    db_factory, project_id, framework_id, settings,
                     project_dir=project_dir,
                 )
-            except Exception:
-                # A completed codebook must remain completed if optional signal
-                # synthesis fails; retry happens on the next LLM-backed run.
-                snapshot_db.rollback()
-                logger.exception("Signal snapshot after AutoCode %s failed", framework_id)
+                # A quote that began to count while this ran (an unhide, a recode back
+                # in) was not in its batches and, the job not yet applied then, armed
+                # nothing: the codebook owes it now, so ask (ruling 4).
+                note_quotes_counting(app, project_id)
+                source = _settle_first_apply(db_factory, project_id, framework_id, after_apply)
             finally:
-                snapshot_db.close()
+                # Signals is rebuilt once the last of the project's passes ends (D21):
+                # this one's build waits while another apply or catch-up still codes.
+                await coding_ended(app, project_id, snapshot_source=source)
 
         task = asyncio.create_task(_run_and_snapshot())
+        coding_started(project_id, task)
         _AUTOCODE_TASKS.add(task)
         task.add_done_callback(_AUTOCODE_TASKS.discard)
         key = (project_id, framework_id)
@@ -511,8 +552,8 @@ class AutoCodeJobSummary(BaseModel):
     #: Set on a catch-up (a finished run re-coding new sessions), None on a first run.
     completed_at: str | None
     #: Quotes answered so far and in all, for the Mac's project row ("AutoCode · 25 of 101").
-    #: Written per batch on a first run; a catch-up writes them once, at the end, so the row
-    #: reads these only for a job with no ``completed_at``.
+    #: Written per batch on a first run; a catch-up adds its batches to the codebook's
+    #: running totals, so the row reads these only for a job with no ``completed_at``.
     processed_quotes: int = 0
     total_quotes: int = 0
 
@@ -521,24 +562,54 @@ class AutoCodeJobsResponse(BaseModel):
     jobs: list[AutoCodeJobSummary]
 
 
-@router.get("/projects/{project_id}/autocode/jobs")
-def list_autocode_jobs(project_id: int, request: Request) -> AutoCodeJobsResponse:
+class AutoCodeEndedJobSummary(AutoCodeJobSummary):
+    """A first apply that ended without finishing, or finished with batches missing:
+    what the Mac's project row needs to say "Stopped", "Out of credit", "Provider key
+    issue" or "Partial run" (docs/design-autocode-landing-plan.md D23, Phase 5)."""
+
+    #: ``LLMFailureKind`` value, or "" (a Stop, or a failure the classifier did not name).
+    failure_kind: str = ""
+
+
+class AutoCodeJobsWithEndedResponse(BaseModel):
+    jobs: list[AutoCodeEndedJobSummary]
+
+
+@router.get("/projects/{project_id}/autocode/jobs", response_model=AutoCodeJobsResponse)
+def list_autocode_jobs(
+    project_id: int, request: Request, include_ended: bool = False,
+) -> Any:
     """The project's AutoCode runs still pending or running.
 
     A reloaded report asks this once to put back the chips of runs it has no chip for
     (R14): a window carries its own chips across a reload (RE#38), but not another
     window's, and the per-framework status read cannot say which frameworks to ask
     about.
+
+    ``include_ended=true`` (the Mac's project row, Phase 5) also lists the first
+    applies that ended unfinished, stopped or failed (``completed_at`` unset), and the
+    ones that finished with some batches failed (a partial run, still carrying its
+    ``failure_kind``), each with its ``failure_kind``. Without it the answer is exactly
+    the running list the web's ActivityStore rehydrates its chips from.
     """
+    from sqlalchemy import ColumnElement, and_, or_
+
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+        wanted: ColumnElement[bool] = AutoCodeJob.status.in_(("pending", "running"))
+        if include_ended:
+            wanted = or_(
+                wanted,
+                and_(
+                    AutoCodeJob.completed_at.is_(None),
+                    AutoCodeJob.status.in_(("failed", "cancelled")),
+                ),
+                and_(AutoCodeJob.status == "completed", AutoCodeJob.failure_kind != ""),
+            )
         rows = (
             db.query(AutoCodeJob)
-            .filter(
-                AutoCodeJob.project_id == project_id,
-                AutoCodeJob.status.in_(("pending", "running")),
-            )
+            .filter(AutoCodeJob.project_id == project_id, wanted)
             .order_by(AutoCodeJob.started_at)
             .all()
         )
@@ -548,15 +619,30 @@ def list_autocode_jobs(project_id: int, request: Request) -> AutoCodeJobsRespons
             if template is None:
                 logger.warning("AutoCode job for framework %r has no template; titled by its id",
                                job.framework_id)
-            jobs.append(AutoCodeJobSummary(
-                framework_id=job.framework_id,
-                title=template.title if template else job.framework_id,
-                status=job.status,
-                completed_at=job.completed_at.isoformat() if job.completed_at else None,
-                processed_quotes=job.processed_quotes,
-                total_quotes=job.total_quotes,
-            ))
-        return AutoCodeJobsResponse(jobs=jobs)
+            fields: dict[str, Any] = {
+                "framework_id": job.framework_id,
+                "title": template.title if template else job.framework_id,
+                "status": job.status,
+                "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+                "processed_quotes": job.processed_quotes,
+                "total_quotes": job.total_quotes,
+            }
+            jobs.append(fields)
+        if not include_ended:
+            return AutoCodeJobsResponse(jobs=[AutoCodeJobSummary(**f) for f in jobs])
+        # The wider answer is its own model: declared on the route, the running list's
+        # model would drop ``failure_kind``, and adding it there changes the web's answer.
+        from fastapi.encoders import jsonable_encoder
+        from fastapi.responses import JSONResponse
+
+        by_framework = {job.framework_id: job for job in rows}
+        wide = AutoCodeJobsWithEndedResponse(jobs=[
+            AutoCodeEndedJobSummary(
+                **f, failure_kind=by_framework[f["framework_id"]].failure_kind or "",
+            )
+            for f in jobs
+        ])
+        return JSONResponse(jsonable_encoder(wide))
     finally:
         db.close()
 
@@ -571,15 +657,53 @@ def get_autocode_status(
     project_id: int,
     framework_id: str,
     request: Request,
+    counts: bool = False,
 ) -> AutoCodeJobOut:
-    """Get the current status of an AutoCode job."""
+    """Get the current status of an AutoCode job.
+
+    ``counts=true`` adds ``confidence_counts`` (the tag sidebar's histogram), so the
+    sidebar needs no second request; without it the read is the job row alone.
+    """
     db = _get_db(request)
     try:
         _check_project(db, project_id)
         job = _get_job(db, project_id, framework_id)
-        return _job_to_out(job)
+        out = _job_to_out(job)
+        if counts:
+            out.confidence_counts = confidence_counts(db, project_id, job.id)
+        return out
     finally:
         db.close()
+
+
+def confidence_counts(db: Session, project_id: int, job_id: int) -> list[ConfidenceBin]:
+    """The job's proposals on quotes that count, in 20 bands of 0.05 by confidence,
+    each split into accepted, tentative (pending) and excluded (denied). One query of
+    three columns over the job's proposals; a confidence of 1.00 is in the top band."""
+    from bristlenose.server.autocode import CONFIDENCE_STEPS_PER_UNIT
+
+    bins = [
+        ConfidenceBin(lower=i / CONFIDENCE_STEPS_PER_UNIT)
+        for i in range(CONFIDENCE_STEPS_PER_UNIT)
+    ]
+    counted = _counted_quote_ids(db, project_id)
+    rows = db.query(ProposedTag.quote_id, ProposedTag.status, ProposedTag.confidence).filter(
+        ProposedTag.job_id == job_id
+    )
+    for quote_id, status, confidence in rows:
+        if quote_id not in counted:
+            continue
+        # Rounded before the floor, as the dialog's grid is: 0.7000000000000001 and
+        # 0.6999999999999999 are both the 0.70 band (N188).
+        steps = math.floor(round((confidence or 0.0) * CONFIDENCE_STEPS_PER_UNIT, 6))
+        band = bins[min(max(steps, 0), CONFIDENCE_STEPS_PER_UNIT - 1)]
+        if status == "accepted":
+            band.accepted += 1
+        elif status == "denied":
+            band.excluded += 1
+        else:
+            band.tentative += 1
+    return bins
 
 
 # ---------------------------------------------------------------------------
@@ -638,8 +762,14 @@ def get_proposals(
     framework_id: str,
     request: Request,
     min_confidence: float = 0.5,
+    since_id: int | None = None,
 ) -> ProposalsResponse:
-    """List proposed tag assignments above the confidence threshold."""
+    """List proposed tag assignments above the confidence threshold.
+
+    ``since_id`` lists only proposals saved after the one with that id, so a page
+    following a run (batches are saved as they answer) reads what is new and not the
+    whole run again. Ids only grow, so the largest id it has seen is its cursor.
+    """
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -669,6 +799,7 @@ def get_proposals(
             .filter(
                 ProposedTag.job_id == job.id,
                 ProposedTag.confidence >= min_confidence,
+                *([ProposedTag.id > since_id] if since_id is not None else []),
             )
             .order_by(ProposedTag.confidence.desc())
             .all()
@@ -711,6 +842,7 @@ def get_proposals(
                 confidence=p.confidence,
                 rationale=p.rationale,
                 status=p.status,
+                decided_by=p.decided_by,
             )
             for p, quote_text, participant_id, session_id, start_tc, ordinal,
                 tag_name, td_id, cg_id, group_name, colour_set in rows
@@ -770,6 +902,7 @@ def accept_proposal(
             ))
 
         proposal.status = "accepted"
+        proposal.decided_by = "researcher"
         proposal.reviewed_at = datetime.now(timezone.utc)
         db.commit()
         return {"status": "ok"}
@@ -802,6 +935,7 @@ def deny_proposal(
             raise _already_reviewed(proposal.status)
 
         proposal.status = "denied"
+        proposal.decided_by = "researcher"
         proposal.reviewed_at = datetime.now(timezone.utc)
         db.commit()
         return {"status": "ok"}
@@ -841,6 +975,7 @@ def _accept_pending(db: Session, project_id: int, query: Any) -> int:
             ))
 
         proposal.status = "accepted"
+        proposal.decided_by = "threshold"
         proposal.reviewed_at = now
         accepted += 1
     return accepted
@@ -891,6 +1026,9 @@ def accept_all_proposals(
 
         accepted = _accept_pending(db, project_id, query)
         db.commit()
+        if body is not None:
+            # The review dialog's lines: Signals follows, once the burst settles.
+            recut_made(request.app, project_id)
         return {"accepted": accepted}
 
     finally:
@@ -955,10 +1093,14 @@ def deny_all_proposals(
 
         for proposal in proposals:
             proposal.status = "denied"
+            proposal.decided_by = "threshold"
             proposal.reviewed_at = now
             denied += 1
 
         db.commit()
+        if max_conf is not None:
+            # The review dialog's exclude line (accept-all's twin): one rebuild per burst.
+            recut_made(request.app, project_id)
         return {"denied": denied}
 
     finally:

@@ -21,7 +21,13 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from bristlenose.server import quote_breaks
-from bristlenose.server.autocode import _REAPPLY_IN_FLIGHT, live_reapply, register_reapply
+from bristlenose.server.autocode import (
+    _REAPPLY_IN_FLIGHT,
+    coding_ended,
+    coding_started,
+    live_reapply,
+    register_reapply,
+)
 from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
 from bristlenose.server.models import (
@@ -36,6 +42,7 @@ from bristlenose.server.models import (
     Person,
     Project,
     ProjectFrameworkState,
+    ProposedTag,
     Quote,
     QuoteBreak,
     QuoteEdit,
@@ -1120,6 +1127,28 @@ def get_tags(
         db.close()
 
 
+def _exclude_removed_autocode_tags(db: Session, removed: set[tuple[int, int]]) -> None:
+    """A tag the researcher removed from a quote is their exclusion of it (review 1).
+
+    For each (quote, tag) removed whose AutoCode proposal on that quote, for that tag, is
+    accepted, the proposal becomes denied by the researcher: pinned, so no re-cut of the
+    review's lines and no end-of-run top-up puts the tag back (D2), and counted as a
+    rejection when rejections are counted (D4). A proposal for a tag not removed is not
+    touched. Uncommitted: in the transaction that deleted the tags.
+    """
+    if not removed:
+        return
+    now = datetime.now(timezone.utc)
+    for proposal in db.query(ProposedTag).filter(
+        ProposedTag.quote_id.in_({quote_id for quote_id, _ in removed}),
+        ProposedTag.status == "accepted",
+    ):
+        if (proposal.quote_id, proposal.tag_definition_id) in removed:
+            proposal.status = "denied"
+            proposal.decided_by = "researcher"
+            proposal.reviewed_at = now
+
+
 @router.put("/projects/{project_id}/tags")
 def put_tags(
     project_id: int,
@@ -1161,6 +1190,7 @@ def put_tags(
             )
 
         uncategorised: CodebookGroup | None = None
+        kept: set[tuple[int, int]] = set()
 
         for dom_id, tag_names in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
@@ -1180,6 +1210,7 @@ def put_tags(
                     tag_defs[tag_name.lower()] = td_id
                 if td_id not in seen_td_ids:
                     seen_td_ids.add(td_id)
+                    kept.add((quote.id, td_id))
                     source = existing_sources.get((quote.id, td_id), "human")
                     db.add(QuoteTag(
                         quote_id=quote.id,
@@ -1194,6 +1225,8 @@ def put_tags(
                     if source == "human" and not _is_sentiment_tag(db, td_id):
                         _mint_pin(db, quote)
 
+        # A tag the body no longer carries was removed by the researcher (review 1).
+        _exclude_removed_autocode_tags(db, set(existing_sources) - kept)
         db.commit()
         return {"status": "ok"}
     finally:
@@ -1235,6 +1268,7 @@ def patch_tags(
 
         tag_defs = _name_resolver(db)
         uncategorised: CodebookGroup | None = None
+        removed: set[tuple[int, int]] = set()  # (quote, tag) taken off by this request
 
         for dom_id, delta in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
@@ -1251,7 +1285,7 @@ def patch_tags(
                 names = {n.lower() for n in delta.remove}
                 ids = set(delta.remove_ids)
                 gone = [
-                    qt.id
+                    qt
                     for qt, td_name, fw in db.query(
                         QuoteTag, TagDefinition.name, CodebookGroup.framework_id
                     )
@@ -1263,7 +1297,8 @@ def patch_tags(
                     or qt.tag_definition_id in ids
                 ]
                 if gone:
-                    db.query(QuoteTag).filter(QuoteTag.id.in_(gone)).delete(
+                    removed.update((qt.quote_id, qt.tag_definition_id) for qt in gone)
+                    db.query(QuoteTag).filter(QuoteTag.id.in_([qt.id for qt in gone])).delete(
                         synchronize_session=False
                     )
             add_td_ids: list[int] = sorted(_known_tag_ids(db, delta.add_ids))
@@ -1279,6 +1314,8 @@ def patch_tags(
                     tag_defs[tag_name.lower()] = td_id
                 add_td_ids.append(td_id)
             for td_id in add_td_ids:
+                # Taken off and put back in one request is not a removal.
+                removed.discard((quote.id, td_id))
                 if db.query(QuoteTag).filter_by(
                     quote_id=quote.id, tag_definition_id=td_id
                 ).first():
@@ -1288,6 +1325,8 @@ def patch_tags(
                 if delta.source == "human" and not _is_sentiment_tag(db, td_id):
                     _mint_pin(db, quote)
 
+        # Removed on a quote card: the researcher's exclusion, so no re-cut brings it back.
+        _exclude_removed_autocode_tags(db, removed)
         db.commit()
         return {"status": "ok", "unresolved": unresolved}
     finally:
@@ -1883,11 +1922,16 @@ def launch_catch_up(app: Any, project_id: int, framework_id: str) -> None:
             logger.exception(
                 "catch-up re-apply on enable failed | framework=%s", framework_id
             )
+        finally:
+            # A catch-up asks for no rebuild of its own, but while it codes an apply
+            # that ends leaves its rebuild to the last pass, which may be this one (D21).
+            await coding_ended(app, project_id, snapshot_source=None)
 
     # Hold a strong reference: the event loop only weakly references a bare task, so
     # a suspended one can be GC'd mid-flight — which here would skip its finally and
     # strand the job "running". Discard on completion.
     task = asyncio.create_task(_run())
+    coding_started(project_id, task)
     _CATCH_UP_TASKS.add(task)
     task.add_done_callback(_CATCH_UP_TASKS.discard)
     register_reapply(project_id, framework_id, task)

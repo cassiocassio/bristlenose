@@ -959,6 +959,13 @@ class ProposedTag(Base):
     rationale: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, accepted, denied
     reviewed_at: Mapped[datetime | None] = mapped_column(default=None)
+    # How the decision in ``status`` was made (migration 027, 23 Nov 2026): "threshold"
+    # (a cut-off: accept-all, deny-all, the house default's cut, a catch-up's bands),
+    # "researcher" (one proposal accepted or excluded by hand, or its tag removed on a
+    # quote card), or "unknown" (decided before this column existed). NULL while pending.
+    # A researcher's and an unknown decision are pinned against a later re-cut; only a
+    # researcher's exclusion is a rejection (docs/design-autocode-landing-plan.md D2, D4).
+    decided_by: Mapped[str | None] = mapped_column(String(20), default=None)
 
     job: Mapped[AutoCodeJob] = relationship(back_populates="proposed_tags")
 

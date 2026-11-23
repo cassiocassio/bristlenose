@@ -15,6 +15,12 @@ for hours. Add a kind only if an interrupted pass costs money or loses work that
 
 Behind the bearer token, not on ``/api/health``: health is auth-exempt and refuses to publish when
 the researcher is working (see ``routes/health.py``). The answer here is coarse kinds, no timestamps.
+
+**Progress, so a moving run can be told from a stuck one** (D16 as refined, review 11): a counter
+of the quotes AutoCode passes have had answered since this serve started, bumped as each batch
+answers. It only grows, and starts again at 0 with the serve (a host treats a decrease as a new
+serve). A host holds the reap while it moves, and a run whose counter stands still meets the ceiling.
+A count, not a timestamp, for the reason ``/api/agent-activity`` gives: the host needs only the edge.
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ from typing import Any, TypeVar
 
 _lock = threading.Lock()
 _active: Counter[str] = Counter()
+_progress = 0
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -70,6 +77,19 @@ def tracked(kind: str) -> Callable[[F], F]:
         return inner  # type: ignore[return-value]
 
     return wrap
+
+
+def note_progress(quotes: int) -> None:
+    """``quotes`` more were answered by a paid pass (an AutoCode batch)."""
+    global _progress
+    with _lock:
+        _progress += max(0, quotes)
+
+
+def progress() -> int:
+    """Quotes answered by paid passes since this serve started; never decreases."""
+    with _lock:
+        return _progress
 
 
 def active_kinds() -> list[str]:

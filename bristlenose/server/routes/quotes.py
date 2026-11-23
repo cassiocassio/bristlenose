@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from bristlenose.server import quote_breaks, speaker_slots
@@ -228,7 +227,7 @@ def _resolve_speaker_names(
 
 
 def _load_researcher_state(
-    db: Session, project_id: int, quote_ids: list[int],
+    db: Session, project_id: int, quote_ids: list[int], *, include_proposed: bool = True,
 ) -> tuple[
     dict[int, QuoteState],
     dict[int, str],
@@ -239,6 +238,7 @@ def _load_researcher_state(
     """Load all researcher state for the given quote IDs.
 
     Returns (state_map, edit_map, tags_map, badges_map, proposed_map).
+    ``include_proposed=False`` leaves ``proposed_map`` empty (the HTML export).
     """
     if not quote_ids:
         return {}, {}, {}, {}, {}
@@ -304,20 +304,20 @@ def _load_researcher_state(
     for b in badges:
         badges_map.setdefault(b.quote_id, []).append(b.sentiment)
 
-    # ProposedTag — pending proposals from applied AutoCode jobs. Applied is
-    # ``completed_at``, not status: a catch-up running, failed, cut off by a
-    # restart or stopped leaves an applied job "running", "failed" or
-    # "cancelled", and every pending proposal of the first apply vanished from
-    # the lens until the next catch-up worked (RE#66). A first apply still coding
-    # has no ``completed_at``, and shows none.
+    # ProposedTag — the pending (tentative) proposals of every AutoCode job of the
+    # project, whatever its status. An applied job ("completed_at") keeps them when a
+    # catch-up is running, failed, cut off by a restart or stopped, which leaves it
+    # "running", "failed" or "cancelled": until RE#66 they vanished from the lens
+    # until the next catch-up worked. And a first apply shows them too while it is
+    # still coding, and once it was stopped or failed: its batches are saved as they
+    # answer, and the tentative tags land on the cards as the run goes
+    # (docs/design-autocode-landing-plan.md D7, review 6); until 23 Nov 2026 a first
+    # apply showed none until it completed. The export leaves them all out
+    # (``include_proposed=False``, D28).
     proposed_map: dict[int, list[ProposedTagBrief]] = {}
     completed_jobs = (
-        db.query(AutoCodeJob)
-        .filter(
-            AutoCodeJob.project_id == project_id,
-            or_(AutoCodeJob.status == "completed", AutoCodeJob.completed_at.isnot(None)),
-        )
-        .all()
+        db.query(AutoCodeJob).filter(AutoCodeJob.project_id == project_id).all()
+        if include_proposed else []
     )
     if completed_jobs:
         job_ids = [j.id for j in completed_jobs]
@@ -423,6 +423,15 @@ def get_quotes(
     request: Request,
 ) -> QuotesListResponse:
     """Return all quotes for a project grouped by section and theme."""
+    return build_quotes(project_id, request)
+
+
+def build_quotes(
+    project_id: int, request: Request, *, include_proposed: bool = True,
+) -> QuotesListResponse:
+    """The ``/quotes`` answer. The HTML export calls it with ``include_proposed=False``:
+    a deliverable carries accepted tags only, and tentative ones are work in progress
+    (docs/design-autocode-landing-plan.md D28)."""
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -451,7 +460,9 @@ def get_quotes(
 
         # Load researcher state
         state_map, edit_map, tags_map, badges_map, proposed_map = (
-            _load_researcher_state(db, project_id, quote_ids)
+            _load_researcher_state(
+                db, project_id, quote_ids, include_proposed=include_proposed,
+            )
         )
         breaks_map = quote_breaks.resolved(db, quote_by_id, edit_map)
 

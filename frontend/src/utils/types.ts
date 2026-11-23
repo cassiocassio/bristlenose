@@ -493,6 +493,12 @@ export interface ProposedTagResponse {
   confidence: number;
   rationale: string;
   status: "pending" | "accepted" | "denied";
+  /**
+   * How `status` was decided: by a line ("threshold"), by hand ("researcher"), or
+   * before this was recorded ("unknown"). Null while pending. A researcher's and an
+   * unknown decision are pinned against a re-cut (docs/design-autocode-landing-plan.md D2).
+   */
+  decided_by?: "threshold" | "researcher" | "unknown" | null;
 }
 
 export interface ProposalsListResponse {

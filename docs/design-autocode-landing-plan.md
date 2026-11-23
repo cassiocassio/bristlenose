@@ -76,9 +76,10 @@ Two read-only audits checked Phase 1 as built and Phases 2–7 as planned agains
 | D35 | Phase 3: a stopped first run settles its cut (D27) but stays unfinished: no `completed_at`, and the house default's done marker is not written, so its remaining quotes are still coded. |
 | D36 | Phase 7: sentiments are reordered on screen only (tag sidebar, Codebook lens), by name; `sentiment.yaml`, colour slots and Signals' columns are untouched. |
 | D37 | Phase 2's dialog title loses its sparkle icon. |
+| D39 | **Phase 2's dialog is approved as drawn** in `docs/mockups/autocode-review-dialog.html` (owner, 23 Nov 2026): the whole run, the pin on a person's decision (Lucide Pin, label "Your decision" in 21 locales), counters showing Apply's outcome, decided rows listed with their ✗ and ✓ (an explicit override, D34), Apply only after a line moves, the whole run when nothing is pending, and no sparkle in the title. The subtitle keeps its shipped words. |
 | D38 | Mac app only: the first-run AutoCode pop-up is designed out. The sidebar line is where progress lives, in every lens. Stop is the progress ring's hover × (the pattern copy and run already use, with its keyboard route); the long failure sentence is in the popover the line's glyph opens, an AutoCode variant, not the pipeline's Diagnostics; View Report is the tag sidebar overview's link (Phase 6), so Phase 5 lands with or after Phase 6. The pop-up's unseen work keeps running without it: telling the app about credit and key failures (`postLLMFailure`), and refreshing the lenses when coding ends. Every other pop-up stays in the app (catch-up passes, clip and screens exports, Copy Screens). The CLI web app keeps the AutoCode pop-up unchanged. |
 
-Mockups: `docs/mockups/autocode-review-dialog.html` (Phase 2, awaiting approval; the pin's label and whether "remaining" still reads right are owner wording), `docs/mockups/autocode-mac-popup.html` (D38 is its option B, with Stop on the ring rather than the menu drawn there).
+Mockups: `docs/mockups/autocode-review-dialog.html` (Phase 2, approved, D39), `docs/mockups/autocode-mac-popup.html` (D38 is its option B, with Stop on the ring rather than the menu drawn there).
 
 ### Still open from the interface audit (defaults preserve shipped behaviour)
 
@@ -159,7 +160,7 @@ Tests: a batch's proposals and register entries commit together; a writer holdin
 
 ### Phase 2: Re-cuttable review
 
-**Mockup owed:** the dialog over a whole run, with dispositions shown and hand decisions pinned. Owner approval before building.
+**Mockup approved (D39):** `docs/mockups/autocode-review-dialog.html`. Build to it exactly.
 
 - The dialog loads every proposal of the run: the histogram shows accepted, tentative and excluded; the zone lists show where each one sits now.
 - A re-cut moves only threshold decisions (D2) and only proposals whose zone changes against the stored lines (D26); researcher and unknown decisions carry a mark and stay put. No warning on removing tags (D3).

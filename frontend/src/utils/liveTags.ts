@@ -3,20 +3,24 @@
  * folds them into the data it already draws.
  *
  * Ordinary readers show nothing of a running first apply until its cut (D32), so the live page
- * takes the run's tentative and accepted tags from the playback store
- * (`contexts/AutoCodePlayback.ts`), which plays them out at a paced rate. That store publishes
- * the overlay below into the quotes store (`QuotesState.live`); these pure helpers merge it into
- * a quote card's tags, the tag counts and the filters, so no view shows a tag another has not
- * played yet.
+ * takes the run's tentative and accepted tags from the playback (`contexts/AutoCodePlayback.ts`),
+ * which plays them out at a paced rate. The playback publishes the overlay below into the quotes
+ * store (`QuotesState.live`); these pure helpers merge it into a quote card's tags, the tag counts
+ * and the filters, so no view shows a tag another has not played yet. Flashes are not in the
+ * overlay: a flash ending is not a change to the quotes, so it comes from the playback's own
+ * snapshot (`usePlayback().flashingCardKeys`).
  *
- * The overlay never draws a tag twice. A refetch can bring the same tag through the ordinary data
- * (the run's end hands over to it, docs/design-autocode-landing-plan.md Phase 4), so:
+ * A tag is matched by its definition (`tag_definition_id`, a tag's `id`), never by name: a
+ * researcher's own tag or another codebook's tag of the same name is a different tag. The overlay
+ * never draws a tag twice. A refetch can bring the same tag through the ordinary data (the run's
+ * end hands over to it, docs/design-autocode-landing-plan.md Phase 4; a catch-up makes its tags
+ * batch by batch), so:
  * - a proposal the playback holds is drawn from the overlay only, never from the store's
  *   `proposedTags`, so a tentative tag the playback has not played is not shown either;
- * - an accepted tag the overlay shows is skipped when the store already has that tag on that
- *   quote;
- * - a tag the server has accepted and the playback has not yet played as accepted is held back
- *   from the store's tags (`waitingAccept`), so it turns green when its turn comes, not early.
+ * - an accepted tag the overlay shows is skipped when the quote already carries that definition;
+ * - an AutoCode-made tag the server has accepted and the playback has not yet played as accepted
+ *   is held back from the store's tags (`waitingAccept`), so it turns green when its turn comes,
+ *   not early. A researcher's hand-added tag is never held back.
  *
  * @module liveTags
  */
@@ -36,8 +40,6 @@ export interface LiveTag {
   rationale: string;
   /** How the playback shows it now. */
   shown: "tentative" | "accepted";
-  /** Landed as accepted in the last moment, and flashing. */
-  flash: boolean;
 }
 
 export interface LiveOverlay {
@@ -45,7 +47,7 @@ export interface LiveOverlay {
   byQuote: Record<string, LiveTag[]>;
   /** Every proposal id the playback holds, landed or not. */
   held: ReadonlySet<number>;
-  /** `${dom_id}|${tag name, lower case}` of tags the server has accepted and the playback has not
+  /** `${dom_id}|${tag_definition_id}` of tags the server has accepted and the playback has not
    *  yet landed as accepted. */
   waitingAccept: ReadonlySet<string>;
 }
@@ -60,7 +62,23 @@ export function isLiveEmpty(live: LiveOverlay | undefined): boolean {
   return !live || live.held.size === 0;
 }
 
-const key = (domId: string, name: string) => `${domId}|${name.toLowerCase()}`;
+/** `waitingAccept`'s key. */
+export function waitingKey(domId: string, tagDefinitionId: number): string {
+  return `${domId}|${tagDefinitionId}`;
+}
+
+/** Whether a tag on a quote is this live tag's definition. A tag typed since the last read has no
+ *  id yet, and is matched by name. */
+function sameDefinition(t: TagResponse, live: LiveTag): boolean {
+  return t.id != null
+    ? t.id === live.tag_definition_id
+    : t.name.toLowerCase() === live.tag_name.toLowerCase();
+}
+
+/** A store tag the overlay holds back: AutoCode made it, and the playback has not landed it. */
+function heldBack(domId: string, t: TagResponse, live: LiveOverlay): boolean {
+  return t.source === "autocode" && t.id != null && live.waitingAccept.has(waitingKey(domId, t.id));
+}
 
 /** A live accepted tag as the card's tag row draws a tag. */
 export function liveTagAsTag(t: LiveTag): TagResponse {
@@ -94,14 +112,13 @@ export function mergedTags(domId: string, tags: TagResponse[], live: LiveOverlay
   if (!live || isLiveEmpty(live)) return tags;
   const landed = live.byQuote[domId];
   let out = tags;
-  if (live.waitingAccept.size > 0 && tags.some((t) => live.waitingAccept.has(key(domId, t.name)))) {
-    out = tags.filter((t) => !live.waitingAccept.has(key(domId, t.name)));
+  if (live.waitingAccept.size > 0 && tags.some((t) => heldBack(domId, t, live))) {
+    out = tags.filter((t) => !heldBack(domId, t, live));
   }
   if (landed) {
     for (const t of landed) {
       if (t.shown !== "accepted") continue;
-      const lower = t.tag_name.toLowerCase();
-      if (out.some((x) => x.name.toLowerCase() === lower)) continue;
+      if (out.some((x) => sameDefinition(x, t))) continue;
       out = out === tags ? [...tags, liveTagAsTag(t)] : [...out, liveTagAsTag(t)];
     }
   }
@@ -109,7 +126,7 @@ export function mergedTags(domId: string, tags: TagResponse[], live: LiveOverlay
 }
 
 /** A quote's proposals with the overlay folded in: the store's minus the ones the playback holds,
- *  plus the ones it shows tentative, minus any tag the quote already has accepted. */
+ *  plus the ones it shows tentative, minus any whose definition the quote already carries. */
 export function mergedProposals(
   domId: string,
   proposals: ProposedTagBrief[],
@@ -124,41 +141,34 @@ export function mergedProposals(
   if (landed) {
     for (const t of landed) {
       if (t.shown !== "tentative") continue;
-      const lower = t.tag_name.toLowerCase();
-      if (acceptedTags.some((x) => x.name.toLowerCase() === lower)) continue;
+      if (acceptedTags.some((x) => sameDefinition(x, t))) continue;
       out = [...out, liveTagAsProposal(t)];
     }
   }
   return out;
 }
 
-/** The names of a quote's tags flashing as they land accepted (`${domId}:${name}`, the card's
- *  `flashingTags` key). */
-export function flashKeys(live: LiveOverlay | undefined): string[] {
-  const out: string[] = [];
-  if (!live) return out;
-  for (const [domId, tags] of Object.entries(live.byQuote)) {
-    for (const t of tags) if (t.flash && t.shown === "accepted") out.push(`${domId}:${t.tag_name}`);
-  }
-  return out;
-}
-
-/** The landed live tag behind an accepted tag a card draws, if the tag is only in the overlay
- *  (not yet a tag in the store): a removal of it goes to the playback store. */
+/** The landed accepted tag behind a tag a card draws (its row's id when the card has one, else
+ *  its name), if the playback holds one. */
 export function liveAcceptedFor(
   domId: string,
   name: string,
-  storeTags: TagResponse[],
+  tagId: number | undefined,
   live: LiveOverlay | undefined,
 ): LiveTag | null {
-  if (!live) return null;
+  if (!live || isLiveEmpty(live)) return null;
   const lower = name.toLowerCase();
-  if (storeTags.some((t) => t.name.toLowerCase() === lower && !live.waitingAccept.has(key(domId, t.name)))) {
-    return null;
-  }
   return (live.byQuote[domId] ?? []).find(
-    (t) => t.shown === "accepted" && t.tag_name.toLowerCase() === lower,
+    (t) =>
+      t.shown === "accepted" &&
+      (tagId != null && tagId > 0 ? t.tag_definition_id === tagId : t.tag_name.toLowerCase() === lower),
   ) ?? null;
+}
+
+/** Whether the quote's tags in the store already carry this landed tag's definition (and the
+ *  overlay is not holding it back): a removal then goes the ordinary way. */
+export function storeCarries(domId: string, storeTags: TagResponse[], t: LiveTag, live: LiveOverlay): boolean {
+  return storeTags.some((x) => sameDefinition(x, t) && !heldBack(domId, x, live));
 }
 
 /** The overlay's tentative tag with this proposal id, if the playback shows it. */

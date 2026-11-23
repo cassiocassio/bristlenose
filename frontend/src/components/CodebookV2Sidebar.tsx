@@ -47,7 +47,7 @@
  * @module CodebookV2Sidebar
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -61,6 +61,7 @@ import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { resolveSelectedId, selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
 import { adoptFrameworkDisabled } from "../contexts/SidebarStore";
 import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
+import { liveTentativeTotal, stampedRead, usePlayback } from "../contexts/AutoCodePlaybackView";
 import { isExportMode } from "../utils/exportData";
 import i18n from "../i18n";
 
@@ -237,6 +238,11 @@ export function CodebookV2Sidebar() {
   const { t } = useTranslation();
   const { selectedId: storedId } = useCodebookV2Store();
   const [books, setBooks] = useState<V2NavBook[] | null>(null);
+  // The codebook read the books were built from, stamped, so a running AutoCode's landed
+  // tentative tags stand in for its pending count until the run has handed over
+  // (contexts/AutoCodePlaybackView.ts): the badge never shows a tag the lens has not played.
+  const [read, setRead] = useState<CodebookResponse | null>(null);
+  const playback = usePlayback();
   const readOnly = isExportMode();
   const [, setSearchParams] = useSearchParams();
 
@@ -251,13 +257,14 @@ export function CodebookV2Sidebar() {
     // `/info` carries the project name, which the codebook payload does not,
     // and is the same source the shipped sidebar reads it from.
     Promise.all([
-      getCodebook(),
+      stampedRead(getCodebook),
       getCodebookTemplates().catch(() => null),
       getFrameworkStates(),
       apiGet<{ project_name: string }>("/info").catch(() => null),
     ])
       .then(([codebook, templates, states, info]) => {
         const built = buildBooks(codebook, templates, states, info?.project_name ?? "");
+        setRead(codebook);
         setBooks(built);
         adoptFrameworkDisabled(new Set(disabledIds(built)));
       })
@@ -349,12 +356,21 @@ export function CodebookV2Sidebar() {
     );
   }, [setSearchParams]);
 
-  if (books === null) return null;
+  const shown = useMemo(
+    () =>
+      books?.map((b) => {
+        const live = b.id ? liveTentativeTotal(playback, b.id, read) : null;
+        return live === null ? b : { ...b, pending: live };
+      }) ?? null,
+    [books, playback, read],
+  );
 
-  const selectedId = resolveSelectedId(storedId, books);
-  const floor = books.filter((b) => b.floor);
-  const builtIn = books.filter((b) => !b.floor && b.builtIn);
-  const frameworks = books.filter((b) => !b.floor && !b.builtIn);
+  if (shown === null) return null;
+
+  const selectedId = resolveSelectedId(storedId, shown);
+  const floor = shown.filter((b) => b.floor);
+  const builtIn = shown.filter((b) => !b.floor && b.builtIn);
+  const frameworks = shown.filter((b) => !b.floor && !b.builtIn);
 
   // Unconditional (D25). Only Frameworks can actually be empty — the floor is
   // always one row and Default always holds sentiment, which D20 made

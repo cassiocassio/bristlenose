@@ -334,6 +334,29 @@ describe("ActivityChipStack", () => {
     expect(screen.getByTestId("bn-activity-chip-close")).toBeInTheDocument();
   });
 
+  it("offers Stop while a job runs, and none while a finished run only lands its last tags (D11)", async () => {
+    const running = {
+      status: "running" as const, progressLabel: "4/40", durationLabel: null,
+      errorMessage: null, partialMessage: null,
+    };
+    const onCancel = vi.fn();
+    const { unmount } = render(
+      <ActivityChipStack jobs={[makeJob({ onCancel, pollFn: () => Promise.resolve(running) })]} onDismiss={vi.fn()} />,
+    );
+    await act(async () => {});
+    expect(document.querySelector(".chip-cancel")).not.toBeNull();
+    unmount();
+    render(
+      <ActivityChipStack
+        jobs={[makeJob({ onCancel, pollFn: () => Promise.resolve({ ...running, progressLabel: "40/40", landing: true }) })]}
+        onDismiss={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+    expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
+    expect(document.querySelector(".chip-cancel")).toBeNull();
+  });
+
   // ── Partial completion ───────────────────────────────────────────────────
   // The engine gathers batches with `return_exceptions=True` and carries on, so
   // a job can report "completed" having tagged a subset. That shortfall used to

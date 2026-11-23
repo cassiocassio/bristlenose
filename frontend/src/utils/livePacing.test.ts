@@ -46,8 +46,9 @@ function maxPerSecond(times: number[]): number {
 }
 
 describe("livePacing", () => {
-  it("copies the lab's As planned handles", () => {
-    expect(PACING).toEqual({ startRate: 0.6, horizon: 8, accel: 0.8, decel: 0.3, maxRate: 3, drain: 1.5 });
+  it("copies the lab's As planned handles, with the owner's three-second final wave", () => {
+    expect(PACING).toEqual({ startRate: 0.6, horizon: 8, accel: 0.8, decel: 0.3, maxRate: 3, drain: 3 });
+    expect(DRAIN_LANDINGS).toBe(9);
   });
 
   it("never lands more than three times in any second, however long the queue", () => {
@@ -69,8 +70,8 @@ describe("livePacing", () => {
     expect(Math.max(...rates)).toBeLessThanOrEqual(PACING.maxRate);
   });
 
-  it("drains what is left over about a second and a half, a few landings of several tags", () => {
-    const { landings, left } = simulate(3, { 0: 40 }, () => "drain");
+  it("drains what is left over about three seconds, nine landings of several tags", () => {
+    const { landings, left } = simulate(4, { 0: 40 }, () => "drain");
     expect(left).toBe(0);
     expect(landings.length).toBe(DRAIN_LANDINGS);
     expect(landings.reduce((s, l) => s + l.n, 0)).toBe(40);
@@ -83,7 +84,7 @@ describe("livePacing", () => {
   });
 
   it("drains a short queue one tag a landing", () => {
-    const { landings } = simulate(3, { 0: 3 }, () => "drain");
+    const { landings } = simulate(4, { 0: 3 }, () => "drain");
     expect(landings.map((l) => l.n)).toEqual([1, 1, 1]);
   });
 

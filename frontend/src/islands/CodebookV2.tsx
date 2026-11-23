@@ -36,7 +36,7 @@ import { autocodeRefusal } from "../utils/autocodeRefusal";
 import { autocodeFailure } from "../utils/autocodeFailure";
 import { toast } from "../utils/toast";
 import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
-import { stampedRead, useLiveCodebook } from "../contexts/AutoCodePlayback";
+import { stampedRead, useLiveCodebook } from "../contexts/AutoCodePlaybackView";
 import type {
   CodebookResponse,
   RemoveFrameworkInfo,
@@ -150,7 +150,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const { t } = useTranslation();
   const [readCodebook, setCodebook] = useState<CodebookResponse | null>(null);
   // With a running AutoCode's landed tags in its codebook's counts until the run has handed over
-  // (contexts/AutoCodePlayback.ts): the rail's tentative count and the rows' bars and counts.
+  // (contexts/AutoCodePlaybackView.ts): the rail's tentative count and the rows' bars and counts.
   const codebook = useLiveCodebook(readCodebook);
   // Null offline: the catalogue is server-only, and the lens degrades to the
   // codebook it can read rather than failing.

@@ -1903,7 +1903,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/atoms/badge.css — lines 1–372 ════ */
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–373 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
 /* Every tag is one weight, separated from its kind by colour, not weight:
@@ -2067,7 +2067,8 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 /* Proposed badge — dashed border (AutoCode). The review dialog's tentative counter
-   (molecules/threshold-review.css) keeps this keyframe, pulsing as it always has. */
+   (molecules/threshold-review.css) keeps this keyframe: it pulses as it always has, except
+   under reduced motion or with the analysis animation off. */
 @keyframes bn-proposed-pulse {
     0%   { opacity: 0.50; }
     50%  { opacity: 0.78; }

@@ -148,8 +148,16 @@
 }
 
 .threshold-zone-counter--tentative {
-    animation: bn-proposed-pulse 3s ease-in-out infinite;
     border: 1px dashed currentColor;
+}
+
+/* The counter pulses as it always has, but not under reduced motion or with the app's "Show
+   animation while analysing" off (D8 of docs/design-autocode-landing-plan.md; as atoms/badge.css
+   and atoms/shimmer.css gate theirs). */
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .threshold-zone-counter--tentative {
+        animation: bn-proposed-pulse 3s ease-in-out infinite;
+    }
 }
 
 .threshold-zone-counter--tentative:hover {

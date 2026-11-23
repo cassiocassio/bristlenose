@@ -161,7 +161,8 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 /* Proposed badge — dashed border (AutoCode). The review dialog's tentative counter
-   (molecules/threshold-review.css) keeps this keyframe, pulsing as it always has. */
+   (molecules/threshold-review.css) keeps this keyframe: it pulses as it always has, except
+   under reduced motion or with the analysis animation off. */
 @keyframes bn-proposed-pulse {
     0%   { opacity: 0.50; }
     50%  { opacity: 0.78; }

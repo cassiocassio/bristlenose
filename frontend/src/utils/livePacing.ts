@@ -6,15 +6,16 @@
  * Retune in the lab, then change both. The pace aims at "everything waiting, played over the
  * horizon", speeds up freely and slows gently, and never lands tags more often than three times a
  * second (WCAG 2.3.1). When the server has finished, or a hidden window is shown again, what waits
- * is played out over `drain` seconds in at most that many landings, several tags at once in each,
- * so a large end-of-run top-up is a few landings, never a strobe.
+ * is played out over `drain` seconds, strongest confidence first, in as many landings as fit at
+ * the minimum gap, several tags at once in each, so a large end-of-run top-up is a soft final wave
+ * of about nine landings, never a strobe.
  *
  * Pure: the playback store (`contexts/AutoCodePlayback.ts`) owns the clock and the queue.
  *
  * @module livePacing
  */
 
-/** The lab's "As planned" playback handles. */
+/** The lab's "As planned" playback handles, with the owner's longer final wave. */
 export const PACING = {
   /** Starting pace, tags a second. */
   startRate: 0.6,
@@ -26,8 +27,9 @@ export const PACING = {
   decel: 0.3,
   /** Flash limit, tags a second (WCAG 2.3.1: three flashes in any second). */
   maxRate: 3,
-  /** Play the rest when the server is done over this many seconds. */
-  drain: 1.5,
+  /** Play the rest when the server is done over this many seconds: the final wave. 3 s (owner,
+   *  23 Nov 2026; the lab's 1.5 s read as abrupt), strongest first (`contexts/AutoCodePlayback`). */
+  drain: 3,
 } as const;
 
 /**

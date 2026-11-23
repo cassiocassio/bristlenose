@@ -70,7 +70,7 @@ import {
 } from "../utils/api";
 import { revealExportOrSay } from "../utils/revealExport";
 import { waitForStoppedRunToSettle } from "../utils/autocodeSettle";
-import { beginHandover, followAutoCode, holdForPlayback, whenPlayedOut } from "../contexts/AutoCodePlayback";
+import { beginHandover, followRun, holdForPlayback, serverFinished, whenPlayedOut } from "../contexts/AutoCodePlaybackView";
 import { PlaybackScrollKeeper } from "../components/PlaybackScrollKeeper";
 import {
   copyQuotesToClipboard,
@@ -337,12 +337,12 @@ function AppShell() {
   }, [projectId]);
 
   // Every AutoCode run (and catch-up) with a chip still running lands its tags live on this page
-  // (contexts/AutoCodePlayback.ts, docs/design-autocode-landing-plan.md Phase 4). A page opened or
+  // (contexts/AutoCodePlayback.ts, loaded only then; docs/design-autocode-landing-plan.md Phase 4). A page opened or
   // reloaded mid-run starts from what is saved, unflashed. Nothing in an exported report.
   useEffect(() => {
-    for (const j of activityJobs.values()) {
+    for (const [id, j] of activityJobs) {
       if ((j.type === "autocode" || j.type === "catchup") && !j.outcome && j.frameworkId) {
-        followAutoCode(j.frameworkId, j.type === "catchup" ? "catchup" : "first");
+        followRun(j.frameworkId, j.type === "catchup" ? "catchup" : "first", id);
       }
     }
   }, [activityJobs]);
@@ -953,8 +953,8 @@ function AppShell() {
             outcome: j.outcome,
             onComplete: async () => {
               // After the pass's last tag has landed (D20), the one reload of the run.
-              await whenPlayedOut(j.frameworkId);
-              beginHandover(j.frameworkId);
+              await whenPlayedOut(j.frameworkId, id);
+              beginHandover(j.frameworkId, id);
               window.dispatchEvent(new Event("codebook-changed"));
               document.dispatchEvent(new CustomEvent("bn:tags-changed"));
             },
@@ -975,7 +975,7 @@ function AppShell() {
                 total_quotes: s.catch_up_total ?? 0,
                 processed_quotes: s.catch_up_processed ?? 0,
               });
-              return { ...holdForPlayback(j.frameworkId, norm), progressLabel: null };
+              return { ...holdForPlayback(j.frameworkId, id, norm), progressLabel: null };
             },
           };
         }
@@ -990,7 +990,7 @@ function AppShell() {
           // the chip says done after the last one has landed on screen (D11), within a bound.
           pollFn: async (): Promise<NormalisedJobStatus> => {
             const s = await getAutoCodeStatus(j.frameworkId);
-            return holdForPlayback(j.frameworkId, normaliseAutoCode(s), s);
+            return holdForPlayback(j.frameworkId, id, normaliseAutoCode(s), s);
           },
           onComplete: async (outcome) => {
             // A Stop's cut lands after the batches still out have answered (D27): refresh
@@ -999,8 +999,8 @@ function AppShell() {
             // A Stop or a failure ends the chip at once; the settle's tags still land first
             // (D48), within the same bound. Then the run's one reload, handed over from the
             // playback with nothing on screen moving.
-            await whenPlayedOut(j.frameworkId);
-            beginHandover(j.frameworkId);
+            await whenPlayedOut(j.frameworkId, id);
+            beginHandover(j.frameworkId, id);
             window.dispatchEvent(new Event("codebook-changed"));
             // The proposals live on the quotes, and the lenses that draw them reload on
             // `bn:tags-changed`, not `codebook-changed`. Without it the chip said "Coded"
@@ -1023,6 +1023,8 @@ function AppShell() {
           actionLabel: i18n.t("codebook.viewReport"),
           actionHref: j.originRoute ?? "/report/codebook",
           onCancel: () => {
+            // Never a Stop to a run the server has finished (its chip only lands the last tags).
+            if (serverFinished(j.frameworkId, id)) return;
             cancelAutoCode(j.frameworkId).catch((err) =>
               console.error("Cancel AutoCode failed:", err),
             );

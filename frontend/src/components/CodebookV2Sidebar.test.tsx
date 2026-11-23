@@ -628,3 +628,25 @@ describe("buildBooks", () => {
     expect(byId(rows, "nielsen").title).toBe("nielsen");
   });
 });
+
+// ── A running AutoCode's pending badge (landing plan Phase 4) ──────────────
+
+describe("the pending badge while AutoCode lands", () => {
+  it("shows the landed tentative tags, never the read's, until the run hands over", async () => {
+    const { setPlaybackSnapshot, EMPTY_SNAPSHOT } = await import("../contexts/AutoCodePlaybackView");
+    renderSidebar();
+    await screen.findByText("10 Usability Heuristics");
+    const badge = () =>
+      screen.getByTestId("bn-v2-nav-row-nielsen").querySelector(".v2-nav-pending")?.textContent;
+    expect(badge()).toBe("5");
+    act(() =>
+      setPlaybackSnapshot({
+        ...EMPTY_SNAPSHOT,
+        frameworks: new Map([["nielsen", { kind: "first", handoverAt: null, tentative: new Map([[3, 2]]), accepted: [] }]]),
+      }),
+    );
+    expect(badge()).toBe("2");
+    act(() => setPlaybackSnapshot(EMPTY_SNAPSHOT));
+    expect(badge()).toBe("5");
+  });
+});

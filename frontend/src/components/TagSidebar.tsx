@@ -32,7 +32,7 @@ import type {
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { matchesAll, parseQuery } from "../utils/searchMatch";
 import { useQuotesStore, setTagFilter, addTagToQuotes } from "../contexts/QuotesContext";
-import { stampedRead, useLiveCodebook, usePlayback } from "../contexts/AutoCodePlayback";
+import { stampedRead, useLiveCodebook, usePlayback } from "../contexts/AutoCodePlaybackView";
 import { mergedTags } from "../utils/liveTags";
 import { useFocus } from "../contexts/FocusContext";
 import {
@@ -317,7 +317,7 @@ export function TagSidebar() {
 
   // Fetch codebook
   // Stamped, so the counts can tell a read from before a run's end from one after it
-  // (contexts/AutoCodePlayback.ts, `useLiveCodebook`).
+  // (contexts/AutoCodePlaybackView.ts, `useLiveCodebook`).
   useEffect(() => {
     stampedRead(getCodebook).then(setCodebook).catch(() => {});
   }, []);

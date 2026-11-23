@@ -53,7 +53,7 @@ import {
 import type { TFunction } from "i18next";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 import { Icon } from "./Icon";
-import { useLiveTagFlash } from "../contexts/AutoCodePlayback";
+import { useLiveTagFlash } from "../contexts/AutoCodePlaybackView";
 
 /**
  * A code's histogram bar and count — the same element the tag sidebar draws,

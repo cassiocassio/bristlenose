@@ -46,13 +46,13 @@ import {
   starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import { useSidebarSelector, shallowEqual, toggleTagGroupHidden, type SidebarState } from "../contexts/SidebarStore";
-import { acceptLiveProposal, denyLiveProposal, removeLiveAccepted } from "../contexts/AutoCodePlayback";
+import { acceptLanding, denyLanding, removeLanding, usePlayback } from "../contexts/AutoCodePlaybackView";
 import {
-  flashKeys,
   liveAcceptedFor,
   liveTentative,
   mergedProposals,
   mergedTags,
+  storeCarries,
 } from "../utils/liveTags";
 
 const selectHiddenAndFrameworks = (s: SidebarState) => ({ hiddenTagGroups: s.hiddenTagGroups, disabledFrameworks: s.disabledFrameworks });
@@ -631,11 +631,14 @@ export function QuoteGroup({
 
   const handleTagRemove = useCallback(
     (domId: string, tagName: string, tagId?: number) => {
-      // An accepted tag a running AutoCode has landed and not yet made (its cut makes it):
-      // removing it excludes its proposal instead (D2).
-      const landed = liveAcceptedFor(domId, tagName, store.tags[domId] ?? [], store.live);
+      // An accepted tag a running AutoCode has landed: the playback decides how it goes (its
+      // exclusion pinned, D2), with the card's own removal when the quote already carries it.
+      const landed = liveAcceptedFor(domId, tagName, tagId, store.live);
       if (landed) {
-        removeLiveAccepted(landed.id);
+        const own = store.tags[domId] ?? [];
+        removeLanding(domId, landed, storeCarries(domId, own, landed, store.live), () =>
+          removeTag(domId, tagName, true, tagId),
+        );
         return;
       }
       removeTag(domId, tagName, true, tagId);
@@ -661,9 +664,10 @@ export function QuoteGroup({
 
   const handleProposedAccept = useCallback(
     (domId: string, proposalId: number, tagName: string) => {
-      if (liveTentative(domId, proposalId, store.live)) {
+      const landing = liveTentative(domId, proposalId, store.live);
+      if (landing) {
         // A tag a running AutoCode is landing: accepted at once, never behind the playback.
-        acceptLiveProposal(proposalId);
+        acceptLanding(domId, landing);
       } else {
         // Find the proposal to carry its colour into the accepted tag.
         const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
@@ -692,20 +696,21 @@ export function QuoteGroup({
 
   const handleProposedDeny = useCallback(
     (domId: string, proposalId: number) => {
-      if (liveTentative(domId, proposalId, store.live)) denyLiveProposal(proposalId);
+      const landing = liveTentative(domId, proposalId, store.live);
+      if (landing) denyLanding(domId, landing);
       else denyProposedTag(domId, proposalId);
     },
     [store.live],
   );
 
-  // The cards' flashes: the researcher's own (above) and the tags a run lands accepted.
+  // The cards' flashes: the researcher's own (above) and the tags a run lands accepted, from
+  // the playback's own snapshot, so a flash ending never changes the quotes store.
+  const playback = usePlayback();
   const cardFlashingTags = useMemo(() => {
-    const landing = flashKeys(store.live);
-    if (landing.length === 0) return flashingTags;
-    const all = new Set(flashingTags);
-    for (const k of landing) all.add(k);
-    return all;
-  }, [flashingTags, store.live]);
+    const landing = playback.flashingCardKeys;
+    if (landing.size === 0) return flashingTags;
+    return new Set([...flashingTags, ...landing]);
+  }, [flashingTags, playback]);
 
   // ── Moderator question handlers ──────────────────────────────────────
 

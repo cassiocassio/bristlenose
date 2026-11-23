@@ -2,22 +2,28 @@
  * AutoCodePlayback — the one store between a running AutoCode run and every view that shows its
  * tags (docs/design-autocode-landing-plan.md Phase 4, D7–D11, D19–D21).
  *
+ * Loaded only when a run starts landing on this page (`AutoCodePlaybackView.playbackEngine`);
+ * the views import the small `AutoCodePlaybackView` module, never this one.
+ *
  * A first apply's proposals and its live acceptances are invisible to ordinary readers until the
  * run's cut (D32), so the live page reads them itself: while a run lands, the store polls the
  * live read (`getAutoCodeLive`), reconciles what it holds, queues every change and plays the
  * queue out at a paced rate (`utils/livePacing.ts`). What has been played is published:
  *
  * - into the quotes store as `QuotesState.live` (`utils/liveTags.ts`), which the quote cards, the
- *   tag sidebar's accepted counts and the filters fold into their data;
- * - as this store's snapshot, which the tag sidebar's tentative counts, the Codebook lens's
- *   counts and its rows' flashes read (`useLiveCodebook`, `useLiveTagFlash`), and which the tag
- *   sidebar overview (Phase 6) will read for its histograms (`liveProposals`).
+ *   tag sidebar's accepted counts and the filters fold into their data. It changes only when what
+ *   is landed changes: at most once a landing, never for a read that brought nothing new, never
+ *   for a flash ending;
+ * - as the playback snapshot (`AutoCodePlaybackView`): counts and flashes, which the tag sidebar,
+ *   the Codebook lens and its navigator, and the cards' flashes read.
  *
  * So no view shows a tag another has not played yet. When a run has settled and its queue is
- * played out, the activity chip says done (D11, `playbackPending`), its completion hands over
+ * played out, the activity chip says done (D11, `holdForPlayback`), its completion hands over
  * (`beginHandover`) and fires the one `codebook-changed` + `bn:tags-changed` of the run, and the
- * overlay is kept, deduplicated against the reloaded data, until every view has read the
- * ordinary data again; then it goes, with nothing on screen moving.
+ * overlay is kept, deduplicated against the reloaded data, for `HANDOVER_GRACE_MS`; then it goes,
+ * with nothing on screen moving. A follow belongs to one chip (`jobKey`): a handover from another
+ * chip is ignored, and a new run of the codebook (a Resume) takes the follow over with what is
+ * already landed, so nothing blinks or flashes again.
  *
  * A page opened mid-run, or reloaded, shows what is already saved at once, without flashing it
  * (the first read is not played). A hidden window pauses playback and catches up quickly when
@@ -25,32 +31,35 @@
  * unflashed. An exported report has no server: nothing here runs, and every view draws the
  * embedded data as it is.
  *
- * A researcher's own accept or deny of a tag the run is landing shows at once, never queued
- * behind the playback, and is pinned (D2).
+ * A researcher's own accept, deny or remove of a tag the run is landing shows at once, never
+ * queued behind the playback, and is pinned (D2): a refusal caused by the playback lagging the
+ * server is retried once as an explicit override, so the researcher's decision wins. During the
+ * handover grace the decision goes the ordinary way (the quotes store's own write) and is only
+ * pinned here, so it stays when the overlay goes.
  *
- * Module-level state with `useSyncExternalStore`, the pattern of `QuotesContext` and
- * `ActivityStore`. Nothing is kept in browser storage: a reload works the state out again from
- * the server (frontend/gotchas.md, `localStorage`).
+ * Nothing is kept in browser storage: a reload works the state out again from the server
+ * (frontend/gotchas.md, `localStorage`).
  *
  * @module AutoCodePlayback
  */
 
-import { useMemo, useSyncExternalStore } from "react";
+import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { acceptProposal, denyProposal, getAutoCodeLive, toastSaveFailed } from "../utils/api";
-import type { ApiError } from "../utils/api";
+import type { ApiError, DecidedStatus } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { newPacer, stepPacer } from "../utils/livePacing";
 import type { PacerState } from "../utils/livePacing";
-import { EMPTY_LIVE } from "../utils/liveTags";
+import { EMPTY_LIVE, liveTagAsTag, waitingKey } from "../utils/liveTags";
 import type { LiveOverlay, LiveTag } from "../utils/liveTags";
-import type { NormalisedJobStatus } from "../components/ActivityChipStack";
-import type {
-  AutoCodeJobStatus,
-  CodebookResponse,
-  LiveProposalsResponse,
-  ProposedTagResponse,
-} from "../utils/types";
-import { setLiveOverlay } from "./QuotesContext";
+import type { AutoCodeJobStatus, LiveProposalsResponse, ProposedTagResponse } from "../utils/types";
+import {
+  EMPTY_SNAPSHOT,
+  captureScrollAnchor,
+  resetPlaybackView,
+  setPlaybackSnapshot,
+} from "./AutoCodePlaybackView";
+import type { LandedAccepted, PlaybackFramework } from "./AutoCodePlaybackView";
+import { acceptProposedTag, denyProposedTag, getQuotesSnapshot, setLiveOverlay } from "./QuotesContext";
 
 // ── Timings ──────────────────────────────────────────────────────────────
 
@@ -63,9 +72,10 @@ export const FLASH_MS = 450;
 /** Live reads failing in a row after which the page stops following the run: the chip still
  *  ends, and the run's end reloads the ordinary data as before Phase 4. */
 const MAX_READ_FAILURES = 5;
-/** The longest the activity chip waits, after the server has finished, for the playback to land
- *  the last tag (D11). A playback that cannot finish (hidden window, a read failing) never keeps
- *  the chip running past it. */
+/** The longest, from the moment the server has finished a run, until its chip says done and the
+ *  run's reload fires (D11): the chip's hold and the completion's wait share it. A playback that
+ *  cannot finish (hidden window, a read failing) never keeps the chip running past it. The final
+ *  wave takes about 3 s (`PACING.drain`), the last read up to a poll more. */
 export const CHIP_WAIT_MS = 20_000;
 /** How long the overlay is kept after the run's end hands over, so every view has read the
  *  ordinary data again before it goes. */
@@ -97,15 +107,17 @@ interface Row {
 
 interface Follow {
   frameworkId: string;
-  /** A first apply's rows are hidden from ordinary readers until its cut (D32); a catch-up's are
-   *  not, which decides what the Codebook lens's counts add (`liveCounts`). */
+  /** The chip this follow belongs to. */
+  jobKey: string;
+  /** A first apply's live acceptances make no tag until its cut (D32); a catch-up makes its tags
+   *  batch by batch. Decides what a codebook read already counts (`taggedAt`). */
   kind: "first" | "catchup";
   rows: Map<number, Row>;
   shown: Map<number, Shown>;
-  /** Accepted when the page started following (a catch-up's earlier tags, already counted). */
-  acceptedAtStart: Set<number>;
+  /** When the page first knew each accepted row's quote carried it as a tag (`LandedAccepted`). */
+  taggedAt: Map<number, number | null>;
   /** The researcher's own decisions on this page: shown at once and kept over the server's
-   *  state until the run's end (D2). */
+   *  state until the overlay goes (D2). */
   pins: Map<number, Pin>;
   flashUntil: Map<number, number>;
   cursor: number | null;
@@ -116,8 +128,8 @@ interface Follow {
   reading: boolean;
   failures: number;
   pollTimer: ReturnType<typeof setTimeout> | null;
-  /** When the chip first asked whether to wait (D11's bound runs from here). */
-  chipWaitFrom: number | null;
+  /** When the server was first seen to have finished (D11's bound runs from here). */
+  finishedAt: number | null;
   handoverAt: number | null;
 }
 
@@ -126,62 +138,19 @@ const follows = new Map<string, Follow>();
 let queue: { fw: string; id: number }[] = [];
 let pacer: PacerState = newPacer();
 let catchingUp = false;
+/** The queue has been put strongest first for the drain under way. */
+let drainSorted = false;
 let stepTimer: ReturnType<typeof setInterval> | null = null;
 let lastStepAt = 0;
 let wasHidden = false;
-let landings = 0;
+
+/** What is landed has changed since the overlay was last built. */
+let overlayDirty = false;
+let lastOverlay: LiveOverlay = EMPTY_LIVE;
 
 // The D8 schedule.
 let lastActiveAt: number | null = null;
 let pulseTimer: ReturnType<typeof setTimeout> | null = null;
-
-// ── Snapshot ─────────────────────────────────────────────────────────────
-
-export interface LiveCounts {
-  /** Landed tentative, per tag definition. */
-  tentative: Map<number, number>;
-  /** Landed accepted that the ordinary data cannot have yet, per tag definition. */
-  accepted: Map<number, number>;
-}
-
-export interface PlaybackFramework {
-  kind: "first" | "catchup";
-  handoverAt: number | null;
-  counts: LiveCounts;
-}
-
-export interface PlaybackSnapshot {
-  frameworks: ReadonlyMap<string, PlaybackFramework>;
-  /** Tag definitions flashing as a tag lands on them accepted. */
-  flashingTagIds: ReadonlySet<number>;
-  /** The same, by tag name, for the tag sidebar. */
-  flashingTagNames: ReadonlySet<string>;
-  /** Landings so far (the scroll keeper restores after each). */
-  landings: number;
-}
-
-const EMPTY_SNAPSHOT: PlaybackSnapshot = {
-  frameworks: new Map(),
-  flashingTagIds: new Set(),
-  flashingTagNames: new Set(),
-  landings: 0,
-};
-
-let snapshot: PlaybackSnapshot = EMPTY_SNAPSHOT;
-const listeners = new Set<() => void>();
-
-function subscribe(cb: () => void): () => void {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-
-export function getPlaybackSnapshot(): PlaybackSnapshot {
-  return snapshot;
-}
-
-export function usePlayback(): PlaybackSnapshot {
-  return useSyncExternalStore(subscribe, getPlaybackSnapshot, getPlaybackSnapshot);
-}
 
 function desiredOf(f: Follow, id: number): Shown | null {
   const pin = f.pins.get(id);
@@ -191,25 +160,18 @@ function desiredOf(f: Follow, id: number): Shown | null {
   return row.status === "pending" ? "tentative" : row.status === "accepted" ? "accepted" : null;
 }
 
-/** Recompute what every view reads, and tell them. */
-function publish(): void {
-  const now = Date.now();
+function buildOverlay(): LiveOverlay {
   const byQuote: Record<string, LiveTag[]> = {};
   const held = new Set<number>();
   const waitingAccept = new Set<string>();
-  const frameworks = new Map<string, PlaybackFramework>();
-  const flashingTagIds = new Set<number>();
-  const flashingTagNames = new Set<string>();
   for (const f of follows.values()) {
-    const counts: LiveCounts = { tentative: new Map(), accepted: new Map() };
     for (const row of f.rows.values()) {
       held.add(row.id);
       const shown = f.shown.get(row.id);
       if (desiredOf(f, row.id) === "accepted" && shown !== "accepted") {
-        waitingAccept.add(`${row.dom_id}|${row.tag_name.toLowerCase()}`);
+        waitingAccept.add(waitingKey(row.dom_id, row.tag_definition_id));
       }
       if (!shown) continue;
-      const flash = (f.flashUntil.get(row.id) ?? 0) > now;
       (byQuote[row.dom_id] ??= []).push({
         id: row.id,
         dom_id: row.dom_id,
@@ -221,25 +183,51 @@ function publish(): void {
         confidence: row.confidence,
         rationale: row.rationale,
         shown,
-        flash,
       });
+    }
+  }
+  return held.size === 0 ? EMPTY_LIVE : { byQuote, held, waitingAccept };
+}
+
+/** Recompute what every view reads, and tell them: the overlay only when what is landed has
+ *  changed, the snapshot (counts, flashes) every time. */
+function publish(): void {
+  if (overlayDirty) {
+    overlayDirty = false;
+    const overlay = buildOverlay();
+    if (overlay !== lastOverlay) {
+      lastOverlay = overlay;
+      setLiveOverlay(overlay);
+    }
+  }
+  const now = Date.now();
+  const frameworks = new Map<string, PlaybackFramework>();
+  const flashingTagIds = new Set<number>();
+  const flashingTagNames = new Set<string>();
+  const flashingCardKeys = new Set<string>();
+  for (const f of follows.values()) {
+    const tentative = new Map<number, number>();
+    const accepted: LandedAccepted[] = [];
+    for (const [id, shown] of f.shown) {
+      const row = f.rows.get(id);
+      if (!row) continue;
       const tag = row.tag_definition_id;
       if (shown === "tentative") {
-        counts.tentative.set(tag, (counts.tentative.get(tag) ?? 0) + 1);
-      } else if (f.kind === "first" || !f.acceptedAtStart.has(row.id)) {
-        counts.accepted.set(tag, (counts.accepted.get(tag) ?? 0) + 1);
+        tentative.set(tag, (tentative.get(tag) ?? 0) + 1);
+        continue;
       }
-      if (flash && shown === "accepted") {
+      accepted.push({ tag, taggedAt: f.taggedAt.get(id) ?? null });
+      if ((f.flashUntil.get(id) ?? 0) > now) {
         flashingTagIds.add(tag);
         flashingTagNames.add(row.tag_name);
+        flashingCardKeys.add(`${row.dom_id}:${row.tag_name}`);
       }
     }
-    frameworks.set(f.frameworkId, { kind: f.kind, handoverAt: f.handoverAt, counts });
+    frameworks.set(f.frameworkId, { kind: f.kind, handoverAt: f.handoverAt, tentative, accepted });
   }
-  const overlay: LiveOverlay = held.size === 0 ? EMPTY_LIVE : { byQuote, held, waitingAccept };
-  snapshot = { frameworks, flashingTagIds, flashingTagNames, landings };
-  setLiveOverlay(overlay);
-  for (const l of listeners) l();
+  setPlaybackSnapshot(
+    frameworks.size === 0 ? EMPTY_SNAPSHOT : { frameworks, flashingTagIds, flashingTagNames, flashingCardKeys },
+  );
   updatePulse();
 }
 
@@ -247,37 +235,47 @@ function publish(): void {
 
 /**
  * Follow a codebook's run on this page: called for every AutoCode or catch-up chip still
- * running. Idempotent while the run is followed; a new run of a codebook whose last run is
- * handing over starts a fresh follow. Nothing in an exported report.
+ * running, with the chip's id. Idempotent for the same chip. Another chip of the codebook (a
+ * Resume, a catch-up after the first apply) takes the follow over, keeping what is landed so
+ * nothing blinks or flashes again. Nothing in an exported report.
  */
-export function followAutoCode(frameworkId: string, kind: "first" | "catchup"): void {
+export function followAutoCode(frameworkId: string, kind: "first" | "catchup", jobKey: string): void {
   if (isExportMode()) return;
   const existing = follows.get(frameworkId);
-  if (existing && existing.handoverAt === null && !existing.stopped) return;
-  if (existing) dropFollow(existing);
+  if (existing && existing.jobKey === jobKey) return;
   const f: Follow = {
     frameworkId,
+    jobKey,
     kind,
-    rows: new Map(),
-    shown: new Map(),
-    acceptedAtStart: new Set(),
-    pins: new Map(),
-    flashUntil: new Map(),
+    rows: existing ? existing.rows : new Map(),
+    shown: existing ? existing.shown : new Map(),
+    taggedAt: existing ? existing.taggedAt : new Map(),
+    pins: existing ? existing.pins : new Map(),
+    flashUntil: existing ? existing.flashUntil : new Map(),
     cursor: null,
     needFull: true,
-    started: false,
+    // Taking over: the next read is played against what is landed, not shown wholesale.
+    started: existing ? existing.started : false,
     settled: false,
     stopped: false,
     reading: false,
     failures: 0,
     pollTimer: null,
-    chipWaitFrom: null,
+    finishedAt: null,
     handoverAt: null,
   };
+  if (existing) retire(existing);
   follows.set(frameworkId, f);
   lastActiveAt = null;
   ensureVisibilityListener();
   poll(f);
+}
+
+/** Stop a follow's reads; its rows and queue entries stay with whoever takes it over. */
+function retire(f: Follow): void {
+  if (f.pollTimer !== null) clearTimeout(f.pollTimer);
+  f.pollTimer = null;
+  f.stopped = true;
 }
 
 function current(f: Follow): boolean {
@@ -288,9 +286,8 @@ function poll(f: Follow): void {
   if (f.reading || f.stopped || f.settled || !current(f)) return;
   f.reading = true;
   const since = f.needFull ? null : f.cursor;
-  // Started inside a promise, so a helper that throws rather than rejects is a failed read too.
   Promise.resolve()
-    // A follow dropped before the read started (a reset, a newer run) does not read.
+    // A follow retired before the read started (a reset, a newer run) does not read.
     .then(() => (current(f) ? getAutoCodeLive(f.frameworkId, since) : null))
     .then((resp) => {
       if (!current(f)) return;
@@ -350,31 +347,64 @@ function unqueue(fw: string, id: number): void {
   queue = queue.filter((q) => !(q.fw === fw && q.id === id));
 }
 
+/** Whether the quote already carries this tag in the quotes store (a hand-added tag, or one a
+ *  reload brought): any codebook read counts it. */
+function quoteCarries(row: Row): boolean {
+  return (getQuotesSnapshot().tags[row.dom_id] ?? []).some((t) => t.id === row.tag_definition_id);
+}
+
+/** Note when the page first knew an accepted row's quote carried it as a tag. */
+function noteTagged(f: Follow, row: Row, now: number): void {
+  if (f.taggedAt.has(row.id) || desiredOf(f, row.id) !== "accepted") return;
+  const isTag =
+    f.pins.get(row.id) === "accepted" ||
+    row.decided_by === "researcher" || row.decided_by === "unknown" ||
+    f.kind === "catchup" || quoteCarries(row);
+  // Before the page followed the run, any read may already count it.
+  f.taggedAt.set(row.id, isTag ? (f.started && !quoteCarries(row) ? now : -Infinity) : null);
+}
+
 /**
  * Fold one live read into what the follow holds (the reconcile rule of the live read,
  * `routes/autocode.py` `get_proposals`): the new rows in full; every held row takes its state;
  * a held row with no state is gone; a held row whose state names another quote or tag is an id
  * SQLite reused, and so is a state at or below the cursor with no held row: both are fetched
  * again with a full read. The next read starts at `run.cursor`; the first read with
- * `run.settled` is the last.
+ * `run.settled` is the last. Nothing is published for a read that changed nothing.
  */
 function reconcile(f: Follow, resp: LiveProposalsResponse): void {
+  const now = Date.now();
+  let changed = !f.started;
   const states = new Map(resp.states.map((s) => [s.id, s]));
-  for (const p of resp.proposals) f.rows.set(p.id, toRow(p));
+  for (const p of resp.proposals) {
+    const was = f.rows.get(p.id);
+    if (
+      !was || was.quote_id !== p.quote_id || was.tag_definition_id !== p.tag_definition_id ||
+      was.status !== p.status || was.decided_by !== (p.decided_by ?? null)
+    ) {
+      changed = true;
+    }
+    f.rows.set(p.id, toRow(p));
+  }
   let needFull = false;
   for (const [id, row] of f.rows) {
     const s = states.get(id);
     if (!s) {
       f.rows.delete(id);
+      changed = true;
       continue;
     }
     if (s.quote_id !== row.quote_id || s.tag_definition_id !== row.tag_definition_id) {
       f.rows.delete(id);
       needFull = true;
+      changed = true;
       continue;
     }
-    row.status = s.status;
-    row.decided_by = s.decided_by ?? null;
+    if (row.status !== s.status || row.decided_by !== (s.decided_by ?? null)) {
+      row.status = s.status;
+      row.decided_by = s.decided_by ?? null;
+      changed = true;
+    }
   }
   const cursor = resp.run.cursor;
   let above = false;
@@ -392,37 +422,36 @@ function reconcile(f: Follow, resp: LiveProposalsResponse): void {
     if (!f.rows.has(id)) {
       f.shown.delete(id);
       unqueue(f.frameworkId, id);
+      overlayDirty = true;
     }
   }
-  for (const id of f.rows.keys()) {
+  for (const [id, row] of f.rows) {
+    noteTagged(f, row, now);
     const want = desiredOf(f, id);
     if (!f.started) {
       // What is already saved when the page starts following shows at once, unflashed.
       if (want) f.shown.set(id, want);
-      if (want === "accepted") f.acceptedAtStart.add(id);
       continue;
     }
     if (want !== (f.shown.get(id) ?? null) && !isQueued(f.frameworkId, id)) {
       queue.push({ fw: f.frameworkId, id });
     }
   }
+  // Rows held or their states changed: `held` and `waitingAccept` with them.
+  if (changed) overlayDirty = true;
   f.started = true;
   if (resp.run.settled && !needFull && !above) {
     f.settled = true;
+    f.finishedAt ??= now;
     if (f.pollTimer !== null) clearTimeout(f.pollTimer);
     f.pollTimer = null;
+    // The snapshot and the pulse change, not the overlay.
+    changed = true;
   }
+  if (!changed && !overlayDirty) return;
   captureScrollAnchor();
   publish();
   ensureClock();
-}
-
-function dropFollow(f: Follow): void {
-  if (f.pollTimer !== null) clearTimeout(f.pollTimer);
-  f.pollTimer = null;
-  f.stopped = true;
-  queue = queue.filter((q) => q.fw !== f.frameworkId);
-  if (current(f)) follows.delete(f.frameworkId);
 }
 
 // ── The clock ────────────────────────────────────────────────────────────
@@ -464,6 +493,10 @@ function settledFor(fw: string): boolean {
   return !f || f.settled || f.stopped;
 }
 
+function confidenceOf(q: { fw: string; id: number }): number {
+  return follows.get(q.fw)?.rows.get(q.id)?.confidence ?? 0;
+}
+
 function step(): void {
   const now = Date.now();
   const dt = Math.min(0.25, Math.max(0, (now - lastStepAt) / 1000));
@@ -487,16 +520,25 @@ function step(): void {
       flash = false;
     } else {
       const drain = catchingUp || queue.every((q) => settledFor(q.fw));
+      if (drain && !drainSorted) {
+        // The final wave plays strongest first (owner, 23 Nov 2026); arrivals keep their order.
+        drainSorted = true;
+        queue = queue
+          .map((q, i) => ({ q, i }))
+          .sort((a, b) => confidenceOf(b.q) - confidenceOf(a.q) || a.i - b.i)
+          .map(({ q }) => q);
+      }
       n = stepPacer(pacer, dt, queue.length, drain ? "drain" : "buffer");
     }
-    if (n > 0) {
-      land(n, flash, now);
-      changed = true;
+    if (n > 0 && land(n, flash, now)) changed = true;
+    if (queue.length === 0) {
+      catchingUp = false;
+      drainSorted = false;
     }
-    if (queue.length === 0) catchingUp = false;
   } else {
     stepPacer(pacer, dt, 0, "buffer");
     catchingUp = false;
+    drainSorted = false;
   }
   if (changed) publish();
   if (queue.length === 0 && !anyFlashing(now)) {
@@ -519,7 +561,7 @@ function expireFlashes(now: number): boolean {
 }
 
 /** Land the next `n` changes from the queue: one landing, every tag in it at once. */
-function land(n: number, flash: boolean, now: number): void {
+function land(n: number, flash: boolean, now: number): boolean {
   captureScrollAnchor();
   let landed = 0;
   while (landed < n && queue.length > 0) {
@@ -534,18 +576,27 @@ function land(n: number, flash: boolean, now: number): void {
     if (flash && want === "accepted") f.flashUntil.set(id, now + FLASH_MS);
     landed += 1;
   }
-  if (landed > 0) landings += 1;
+  if (landed > 0) overlayDirty = true;
+  return landed > 0;
 }
 
-/** A follow whose run has settled and whose queue is empty is done; it waits for its chip to
- *  hand over. */
+/** A follow handed over, past its grace and with nothing left to land, goes. */
 function maybeEndFollows(): void {
   const now = Date.now();
+  let gone = false;
   for (const f of [...follows.values()]) {
-    if (f.handoverAt !== null && now - f.handoverAt >= HANDOVER_GRACE_MS && !queue.some((q) => q.fw === f.frameworkId)) {
-      dropFollow(f);
-      publish();
+    if (
+      f.handoverAt !== null && now - f.handoverAt >= HANDOVER_GRACE_MS &&
+      !queue.some((q) => q.fw === f.frameworkId)
+    ) {
+      retire(f);
+      follows.delete(f.frameworkId);
+      gone = true;
     }
+  }
+  if (gone) {
+    overlayDirty = true;
+    publish();
   }
 }
 
@@ -576,55 +627,68 @@ function hasQueued(fw: string): boolean {
   return queue.some((q) => q.fw === fw);
 }
 
+function followFor(frameworkId: string, jobKey: string): Follow | null {
+  const f = follows.get(frameworkId);
+  return f && f.jobKey === jobKey ? f : null;
+}
+
 /**
  * Whether the activity chip of a run the server has finished should still say it is running:
  * yes while this page is landing the run's last tags, so "done" comes after the last one has
  * landed on screen (D11). Never in a hidden window, never once the page has stopped following
- * (a read failing, an export), and never past `CHIP_WAIT_MS` from the first time it is asked.
+ * (a read failing, an export), never before a first read, and never past `CHIP_WAIT_MS` from the
+ * first time the server was seen to have finished.
  */
-export function playbackPending(frameworkId: string): boolean {
-  const f = follows.get(frameworkId);
-  // Nothing read yet means nothing to land: the chip does not wait on a read.
+export function playbackPending(frameworkId: string, jobKey: string): boolean {
+  const f = followFor(frameworkId, jobKey);
   if (!f || !f.started || f.stopped || f.handoverAt !== null || isHidden()) return false;
   const now = Date.now();
-  f.chipWaitFrom ??= now;
-  if (now - f.chipWaitFrom >= CHIP_WAIT_MS) return false;
+  f.finishedAt ??= now;
+  if (now - f.finishedAt >= CHIP_WAIT_MS) return false;
   return !(f.settled && !hasQueued(frameworkId));
+}
+
+/** Whether the server has finished this chip's run (the chip only lands its last tags). */
+export function serverFinished(frameworkId: string, jobKey: string): boolean {
+  return followFor(frameworkId, jobKey)?.finishedAt != null;
 }
 
 /**
  * A finished AutoCode run's chip status, held at "running" while the page is still landing the
- * run's last tags (D11; `playbackPending` bounds the wait and never holds in a hidden window or
- * after the page stopped following). Every other status passes through.
+ * run's last tags (`playbackPending`), and marked `landing` so the chip offers no Stop: the run
+ * has ended, and a Stop would be sent to a finished job. Every other status passes through.
  */
 export function holdForPlayback(
   frameworkId: string,
+  jobKey: string,
   norm: NormalisedJobStatus,
   status?: AutoCodeJobStatus,
 ): NormalisedJobStatus {
   if (norm.status !== "completed" && norm.status !== "partial") return norm;
-  if (!playbackPending(frameworkId)) return norm;
+  if (!playbackPending(frameworkId, jobKey)) return norm;
   return {
     ...norm,
     status: "running",
     progressLabel: status ? `${status.processed_quotes}/${status.total_quotes}` : null,
     durationLabel: null,
     partialMessage: null,
+    landing: true,
   };
 }
 
-/** Resolves once the run's tags have landed, the playback cannot go on, or `limitMs` has passed.
- *  Never rejects. For a chip that ended without waiting (a Stop, a failure), before it hands
- *  over. */
-export function whenPlayedOut(frameworkId: string, limitMs = CHIP_WAIT_MS): Promise<void> {
-  const deadline = Date.now() + limitMs;
+/** Resolves once the run's tags have landed, the playback cannot go on, or `CHIP_WAIT_MS` has
+ *  passed since the server was first seen to have finished: the same bound as the chip's hold,
+ *  so a chip that held for it does not wait again. Never rejects. */
+export function whenPlayedOut(frameworkId: string, jobKey: string): Promise<void> {
   return new Promise((resolve) => {
     const check = () => {
-      const f = follows.get(frameworkId);
+      const f = followFor(frameworkId, jobKey);
+      if (f) f.finishedAt ??= Date.now();
       const done =
         !f || f.stopped || f.handoverAt !== null || isHidden() ||
-        (!f.started && !f.reading) || (f.settled && !hasQueued(frameworkId));
-      if (done || Date.now() >= deadline) resolve();
+        (!f.started && !f.reading) || (f.settled && !hasQueued(frameworkId)) ||
+        Date.now() - (f.finishedAt ?? 0) >= CHIP_WAIT_MS;
+      if (done) resolve();
       else setTimeout(check, 250);
     };
     check();
@@ -633,13 +697,13 @@ export function whenPlayedOut(frameworkId: string, limitMs = CHIP_WAIT_MS): Prom
 
 /**
  * The run's end hands over to the ordinary data: called by the chip's completion just before it
- * fires the run's one `codebook-changed` + `bn:tags-changed`. The overlay stays, deduplicated
- * against what the views read again, for `HANDOVER_GRACE_MS` and until its queue is empty, then
- * goes. A view that read its codebook after this moment has the run in it
- * (`snapshotHasRun`).
+ * fires the run's one `codebook-changed` + `bn:tags-changed`. Ignored from a chip the follow no
+ * longer belongs to (a Stop's completion after a Resume took over). The overlay stays,
+ * deduplicated against what the views read again, for `HANDOVER_GRACE_MS` and until its queue is
+ * empty, then goes. A view that read its codebook after this moment has the run in it.
  */
-export function beginHandover(frameworkId: string): void {
-  const f = follows.get(frameworkId);
+export function beginHandover(frameworkId: string, jobKey: string): void {
+  const f = followFor(frameworkId, jobKey);
   if (!f || f.handoverAt !== null) return;
   f.handoverAt = Date.now();
   if (f.pollTimer !== null) clearTimeout(f.pollTimer);
@@ -659,132 +723,99 @@ function followOf(id: number): Follow | null {
   return null;
 }
 
-function reviewedElsewhere(err: ApiError | null | undefined): boolean {
-  return !!err?.reason?.startsWith("proposal_") || err?.status === 404;
-}
-
-function decide(id: number, pin: Pin, call: () => Promise<void>, onFail: (f: Follow, err: ApiError) => void): void {
-  if (isExportMode()) return;
-  const f = followOf(id);
-  if (!f) return;
+/** Show a researcher's decision here at once and keep it over the server's state; no request. */
+function pinLocal(f: Follow, id: number, pin: Pin): void {
   f.pins.set(id, pin);
+  if (pin === "accepted" && !(f.taggedAt.get(id) != null)) f.taggedAt.set(id, Date.now());
   unqueue(f.frameworkId, id);
   if (pin === "accepted") f.shown.set(id, "accepted");
   else f.shown.delete(id);
+  overlayDirty = true;
   publish();
-  call().catch((err: ApiError) => {
-    console.error("AutoCode: a decision on a landing tag failed:", err);
-    if (!current(f)) return;
-    onFail(f, err);
-    const want = desiredOf(f, id);
-    if (want) f.shown.set(id, want);
-    else f.shown.delete(id);
-    publish();
-  });
 }
 
-/** Accept a tentative tag the run is landing: it turns accepted on every view at once (the card
- *  flashes it as it does any accept). Accepted elsewhere keeps it; denied elsewhere or gone drops
- *  it; anything else puts it back, and says so. */
-export function acceptLiveProposal(id: number): void {
-  decide(id, "accepted", () => acceptProposal(id), (f, err) => {
-    if (err?.reason === "proposal_accepted") return;
-    toastSaveFailed(err);
-    if (err?.reason === "proposal_denied" || err?.status === 404) f.pins.set(id, "denied");
-    else f.pins.delete(id);
-  });
+const REFUSED_AS: Record<string, DecidedStatus> = {
+  proposal_accepted: "accepted",
+  proposal_denied: "denied",
+};
+
+/**
+ * Send a researcher's decision on a row the playback holds. The row's status here may lag the
+ * server (a live acceptance not read yet, the end's top-up), so a refusal that names the status
+ * the row is in is the playback's lag, not someone else's decision: it is sent once more as an
+ * explicit override of that status, and the researcher's decision wins (D2, D34). A decision on a
+ * row already decided by the lines is sent as an override at once. Anything else puts the row
+ * back as the server has it, and says so; a row gone (404) stays off.
+ */
+function decide(f: Follow, id: number, pin: Pin, send: (expected?: DecidedStatus) => Promise<void>): void {
+  if (isExportMode()) return;
+  const row = f.rows.get(id);
+  const expected = row && row.status !== "pending" ? row.status : undefined;
+  pinLocal(f, id, pin);
+  const attempt = (exp: DecidedStatus | undefined, retried: boolean): void => {
+    send(exp).catch((err: ApiError) => {
+      const now = err?.status === 409 && err.reason ? REFUSED_AS[err.reason] : undefined;
+      if (now && !retried) {
+        attempt(now, true);
+        return;
+      }
+      console.error("AutoCode: a decision on a landing tag failed:", err);
+      if (!current(f)) return;
+      if (err?.status === 404) return;
+      toastSaveFailed(err);
+      f.pins.delete(id);
+      const want = desiredOf(f, id);
+      if (want) f.shown.set(id, want);
+      else f.shown.delete(id);
+      overlayDirty = true;
+      publish();
+    });
+  };
+  attempt(expected, false);
 }
 
-/** Exclude a tentative tag the run is landing, as the card's ✗ does. */
-export function denyLiveProposal(id: number): void {
-  decide(id, "denied", () => denyProposal(id), (f, err) => {
-    if (err?.reason === "proposal_denied") return;
-    toastSaveFailed(err);
-    if (err?.reason === "proposal_accepted") f.pins.set(id, "accepted");
-    else if (!reviewedElsewhere(err)) f.pins.delete(id);
-    // Gone (404): it stays off the screen.
-  });
+/** ✓ on a tentative tag the run is landing: accepted on every view at once (the card flashes it
+ *  as it does any accept). During the handover grace it is the quotes store's own accept. */
+export function acceptLanding(domId: string, t: LiveTag): void {
+  const f = followOf(t.id);
+  if (!f) return;
+  if (f.handoverAt !== null) {
+    acceptProposedTag(domId, t.id, liveTagAsTag(t));
+    pinLocal(f, t.id, "accepted");
+    return;
+  }
+  decide(f, t.id, "accepted", (exp) => acceptProposal(t.id, exp));
 }
 
-/** Remove an accepted tag the run has landed and the quote does not carry yet (its tag is made at
- *  the run's cut): the excluding override of the review dialog's ✗ on an accepted row (D34),
- *  which takes the tag off when AutoCode made it and pins the exclusion (D2). */
-export function removeLiveAccepted(id: number): void {
-  decide(id, "denied", () => denyProposal(id, "accepted"), (f, err) => {
-    if (err?.reason === "proposal_denied") return;
-    toastSaveFailed(err);
-    f.pins.delete(id);
-  });
-}
-
-// ── What the views read ──────────────────────────────────────────────────
-
-/** When each codebook read started, so a view can tell whether its data has the run in it. */
-const readStarted = new WeakMap<object, number>();
-
-/** Read the codebook (or anything a view draws counts from) and remember when the read started. */
-export function stampedRead<T extends object>(read: () => Promise<T>): Promise<T> {
-  const at = Date.now();
-  return read().then((value) => {
-    if (value && typeof value === "object") readStarted.set(value, at);
-    return value;
-  });
-}
-
-/** Whether data read with `stampedRead` already has this run's end in it: read after the run
- *  handed over. Unstamped data is treated as older. */
-export function snapshotHasRun(data: object | null | undefined, fw: PlaybackFramework): boolean {
-  if (!data || fw.handoverAt === null) return false;
-  const at = readStarted.get(data);
-  return at !== undefined && at >= fw.handoverAt;
+/** ✗ on a tentative tag the run is landing. During the handover grace it is the quotes store's
+ *  own deny. */
+export function denyLanding(domId: string, t: LiveTag): void {
+  const f = followOf(t.id);
+  if (!f) return;
+  if (f.handoverAt !== null) {
+    denyProposedTag(domId, t.id);
+    pinLocal(f, t.id, "denied");
+    return;
+  }
+  decide(f, t.id, "denied", (exp) => denyProposal(t.id, exp));
 }
 
 /**
- * A codebook with the playback's counts folded in, for every codebook the playback is landing
- * whose read predates its end: the tentative count is the landed tentative tags (the live read
- * lists exactly what the codebook's `tentative_count` counts once the run has been cut), and the
- * accepted count gains the landed accepted tags the ordinary data cannot have yet. The codebook
- * itself when nothing is landing.
+ * × on an accepted tag the run has landed. When the quote's tags in the store already carry it
+ * (a catch-up's tag after a reload, the cut's after the handover, a researcher's own), it is the
+ * card's own removal, and the playback only pins the exclusion so it does not draw the tag again.
+ * Otherwise the tag is made only at the run's cut, so the proposal's acceptance is overridden
+ * (the review dialog's ✗ on an accepted row, D34), which pins the exclusion on the server (D2).
  */
-export function applyLiveCounts(
-  codebook: CodebookResponse | null,
-  snap: PlaybackSnapshot,
-): CodebookResponse | null {
-  if (!codebook || snap.frameworks.size === 0) return codebook;
-  let changed = false;
-  const groups = codebook.groups.map((g) => {
-    const fw = g.framework_id ? snap.frameworks.get(g.framework_id) : undefined;
-    if (!fw || snapshotHasRun(codebook, fw)) return g;
-    changed = true;
-    return {
-      ...g,
-      tags: g.tags.map((t) => ({
-        ...t,
-        tentative_count: fw.counts.tentative.get(t.id) ?? 0,
-        count: t.count + (fw.counts.accepted.get(t.id) ?? 0),
-      })),
-    };
-  });
-  if (!changed) return codebook;
-  const out = { ...codebook, groups };
-  const at = readStarted.get(codebook);
-  if (at !== undefined) readStarted.set(out, at);
-  return out;
-}
-
-/** `applyLiveCounts` for a component: the codebook it read, with the playback folded in. */
-export function useLiveCodebook(codebook: CodebookResponse | null): CodebookResponse | null {
-  const snap = usePlayback();
-  return useMemo(() => applyLiveCounts(codebook, snap), [codebook, snap]);
-}
-
-/** Whether a codebook row's tag is flashing as a tag lands on it accepted (Codebook lens). */
-export function useLiveTagFlash(tagId: number): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => snapshot.flashingTagIds.has(tagId),
-    () => false,
-  );
+export function removeLanding(_domId: string, t: LiveTag, storeHasTag: boolean, ordinary: () => void): void {
+  const f = followOf(t.id);
+  if (!f) return;
+  if (storeHasTag) {
+    ordinary();
+    pinLocal(f, t.id, "denied");
+    return;
+  }
+  decide(f, t.id, "denied", (exp) => denyProposal(t.id, exp ?? "accepted"));
 }
 
 /** The run's landed proposals with their confidence and how they show, for a chart that grows
@@ -846,82 +877,34 @@ function updatePulse(): void {
   }
 }
 
-// ── Holding the reading position (WebKit) ────────────────────────────────
-//
-// Chromium and Firefox keep the reading position when content above it grows (CSS scroll
-// anchoring). WebKit has no `overflow-anchor`, so a tag that wraps a card above the viewport, or
-// a quote a filter takes in above it (D10), would move the page. There, the first quote card at
-// the top of the window is measured before a landing and the page scrolled back by however far
-// it moved (`components/PlaybackScrollKeeper.tsx`, mounted by AppLayout).
-
-let anchor: { el: Element; top: number } | null = null;
-
-function nativeAnchoring(): boolean {
-  return typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("overflow-anchor", "auto");
-}
-
-/** The first quote card whose bottom is below the top of the window, found by bisection: cards
- *  are in reading order, and measuring every one would lay out the ones `content-visibility`
- *  skips. */
-function topCard(): Element | null {
-  const cards = document.querySelectorAll("blockquote.quote-card");
-  let lo = 0;
-  let hi = cards.length - 1;
-  let found: Element | null = null;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const r = cards[mid].getBoundingClientRect();
-    if (r.bottom > 0) {
-      found = cards[mid];
-      hi = mid - 1;
-    } else {
-      lo = mid + 1;
-    }
-  }
-  return found;
-}
-
-function captureScrollAnchor(): void {
-  if (typeof document === "undefined" || nativeAnchoring() || window.scrollY <= 0) {
-    anchor = null;
-    return;
-  }
-  const el = topCard();
-  anchor = el ? { el, top: el.getBoundingClientRect().top } : null;
-}
-
-/** After a landing has been drawn: scroll back by however far the anchor card moved. */
-export function restoreScrollAnchor(): void {
-  const a = anchor;
-  anchor = null;
-  if (!a || !a.el.isConnected) return;
-  const moved = a.el.getBoundingClientRect().top - a.top;
-  if (Math.abs(moved) >= 1) window.scrollBy(0, moved);
-}
-
 // ── Tests ────────────────────────────────────────────────────────────────
 
 /** Reset for tests. */
 export function resetPlayback(): void {
-  for (const f of follows.values()) if (f.pollTimer !== null) clearTimeout(f.pollTimer);
+  for (const f of follows.values()) retire(f);
   follows.clear();
   queue = [];
   pacer = newPacer();
   catchingUp = false;
+  drainSorted = false;
   stopClock();
   wasHidden = false;
-  landings = 0;
+  overlayDirty = false;
+  lastOverlay = EMPTY_LIVE;
   lastActiveAt = null;
   if (pulseTimer !== null) clearTimeout(pulseTimer);
   pulseTimer = null;
-  anchor = null;
-  snapshot = EMPTY_SNAPSHOT;
   if (typeof document !== "undefined") document.documentElement.removeAttribute("data-autocode-tentative");
   setLiveOverlay(EMPTY_LIVE);
-  for (const l of listeners) l();
+  resetPlaybackView();
 }
 
 /** The queue's length, for tests. */
 export function _queuedForTest(): number {
   return queue.length;
+}
+
+/** The queue's rows in order, for tests. */
+export function _queueForTest(): number[] {
+  return queue.map((q) => q.id);
 }

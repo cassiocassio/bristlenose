@@ -138,7 +138,7 @@ When the proposal count is small enough, each bar is composed of **individual sq
 
 Three inline chips below the histogram. Update in real-time as sliders move. They count **where Apply would leave each proposal over the whole run** (Phase 2): a pinned decision where it sits; a pending proposal where the sliders put it, since Apply decides it (D41, as shipped: a quote unhidden after the last Apply brings its proposal back, N175); a threshold decision where its status puts it unless the sliders put it in a different zone from the stored lines (D26). Same words, same place. The rule is `outcomeZone` in `frontend/src/utils/recut.ts`, the client's copy of the server's `recut_target`; both read the cases in `tests/fixtures/recut-contract.json` (`tests/test_recut_contract.py`, `recut.test.ts`).
 
-The **Tentative** counter uses the same pulsating dashed-border treatment as the `badge-proposed` variant in the quotes screen (the counter always pulses; since Phase 4 of the landing plan a proposed badge pulses only while a run lands and for a minute after, D8). This visual link teaches the researcher: "these are the same badges you'll see on your quotes." The Exclude and Accept counters use solid borders (grey and green respectively).
+The **Tentative** counter uses the same pulsating dashed-border treatment as the `badge-proposed` variant in the quotes screen (the counter pulses whenever the dialog is open, except under reduced motion or with the analysis animation off; since Phase 4 of the landing plan a proposed badge pulses only while a run lands and for a minute after, D8). This visual link teaches the researcher: "these are the same badges you'll see on your quotes." The Exclude and Accept counters use solid borders (grey and green respectively).
 
 ### Proposal lists
 
@@ -201,7 +201,7 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 > outcome, and accepts at the stored accept line (rounded up to the grid), so the dialog
 > opens on them with every row in its zone and Apply off (D41, D46). Since Phase 4a (23 Nov
 > 2026) the run also accepts live as each batch is saved (`autocode.accept_live`, D6: the
-> hybrid's line over the proposals so far, held at 0.80 until 25 have landed, never falling
+> hybrid's line over the proposals so far, held at 0.75 until 25 have landed (0.80 until 23 Nov 2026), never falling
 > during the run, kept on the job as `live_accept_line`). Every end of a first apply settles
 > (completion, a Stop, a failure, an outcome that could not be saved, an orphan the boot
 > sweep finds; D27 extended): it stores a line no higher than the grid line at or below

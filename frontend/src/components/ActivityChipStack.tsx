@@ -59,6 +59,12 @@ export interface NormalisedJobStatus {
    */
   failureKind?: string;
   provider?: string;
+  /**
+   * The server has finished the run and the page is still landing its last tags
+   * (`AutoCodePlaybackView.holdForPlayback`, landing plan D11): the chip says running, and offers
+   * no Stop, since there is nothing left to stop.
+   */
+  landing?: boolean;
 }
 
 /** Terminal statuses — no further polling, and `onComplete` has fired. */
@@ -408,7 +414,7 @@ export function ActivityChipStack({ jobs, onDismiss, onSettled }: ActivityChipSt
             actionLabel={job.actionLabel}
             actionHref={job.actionHref}
             onDismiss={reportable ? undefined : () => onDismiss(job.id)}
-            onCancel={chip.status === "running" ? job.onCancel : undefined}
+            onCancel={chip.status === "running" && !norm?.landing ? job.onCancel : undefined}
           />
           );
         })}

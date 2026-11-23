@@ -264,12 +264,30 @@ describe("a per-row review's override (D34)", () => {
 
   it("sends the explicit flag when the review dialog overrides a decided row", async () => {
     fetchMock.mockImplementation(async () => answer(200, { status: "ok" }));
-    await acceptProposal(7, true);
-    await denyProposal(8, true);
+    await acceptProposal(7, "denied");
+    await denyProposal(8, "accepted");
     const calls = fetchMock.mock.calls as [string, RequestInit][];
     expect(calls[0][0]).toMatch(/\/autocode\/proposals\/7\/accept$/);
     expect(calls[1][0]).toMatch(/\/autocode\/proposals\/8\/deny$/);
-    for (const [, init] of calls) expect(JSON.parse(String(init.body))).toEqual({ override: true });
+    expect(JSON.parse(String(calls[0][1].body))).toEqual({ override: true, expected_status: "denied" });
+    expect(JSON.parse(String(calls[1][1].body))).toEqual({ override: true, expected_status: "accepted" });
+  });
+});
+
+describe("a re-cut that never answers (D43)", () => {
+  it("fails, so the dialog can say Apply failed", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation((_url: string, init: RequestInit) => new Promise((_, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new DOMException("timed out", "TimeoutError")));
+      }));
+      const recut = recutProposals("garrett", 0.3, 0.75);
+      const failed = expect(recut).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await failed;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

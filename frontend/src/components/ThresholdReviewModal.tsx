@@ -28,7 +28,7 @@ import type { ApiError } from "../utils/api";
 import type { ProposedTagResponse } from "../utils/types";
 import { isExportMode } from "../utils/exportData";
 import { snapToStep } from "../utils/confidenceStep";
-import { outcomeZone } from "../utils/recut";
+import { outcomeZone, snapLines, storedLinesOf } from "../utils/recut";
 import type { Lines } from "../utils/recut";
 import { reviewedElsewhere } from "../contexts/QuotesContext";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
@@ -40,13 +40,15 @@ const DEFAULT_LOWER = 0.30;
 const DEFAULT_UPPER = 0.70;
 
 type Decision = "accepted" | "denied";
-type Outcome = "landed" | "back" | "gone" | "other";
+type Outcome = "landed" | "back" | "gone" | "reread";
 
 interface ThresholdReviewModalProps {
   open: boolean;
   frameworkId: string;
   frameworkTitle: string;
-  onClose: () => void;
+  /** `changed`: a per-row decision was saved (or may have been) in this opening, so the
+   *  page's tags are stale and the caller says so, as after Apply (D42). */
+  onClose: (changed: boolean) => void;
   onApply: () => void;
 }
 
@@ -79,6 +81,9 @@ export function ThresholdReviewModal({
 
   // Moves each time the modal opens (see `review`).
   const opening = useRef(0);
+  // A row call landed in this opening, or is still in flight: Close says so (D42).
+  const changed = useRef(false);
+  const inFlight = useRef(0);
 
   // Fetch the whole run (min_confidence=0) and the lines it was cut at, together, so
   // the counters never show a cut against the wrong lines.
@@ -86,6 +91,8 @@ export function ThresholdReviewModal({
     if (!open) return;
     opening.current += 1;
     const mine = opening.current;
+    changed.current = false;
+    inFlight.current = 0;
     setLoading(true);
     setProposals([]);
     setLoaded([]);
@@ -95,11 +102,11 @@ export function ThresholdReviewModal({
     setStored(null);
     setError(null);
     setApplying(false);
-    // The lines failing to load is not a precondition for reviewing: the defaults
-    // set above are a usable state, and Apply's re-cut reads the stored lines on the
-    // server whatever this side drew.
-    const status = getAutoCodeStatus(frameworkId).catch(() => null);
-    Promise.all([getAutoCodeProposals(frameworkId, 0), status])
+    // The counters show Apply's outcome against the stored lines, so the run is not
+    // drawn without them: a status read that fails, or passes its time limit
+    // (`getAutoCodeStatus` is bounded), says the review could not load, and Apply
+    // stays off (D43).
+    Promise.all([getAutoCodeProposals(frameworkId, 0), getAutoCodeStatus(frameworkId)])
       .then(([resp, job]) => {
         if (opening.current !== mine) return;
         // Seed the sliders from the cutoffs actually applied, so the dialog never
@@ -107,13 +114,8 @@ export function ThresholdReviewModal({
         // values (0.30000000000000004) and reopening on one would keep sending it.
         // A job with one line stored is cut at it and the default for the other, as
         // the server reads it (`stored_lines`).
-        const lo = job?.applied_lower_threshold;
-        const hi = job?.applied_upper_threshold;
-        if (lo != null || hi != null) {
-          const lines = {
-            lower: snapToStep(lo ?? DEFAULT_LOWER),
-            upper: snapToStep(hi ?? DEFAULT_UPPER),
-          };
+        const lines = storedLinesOf(job, { lower: DEFAULT_LOWER, upper: DEFAULT_UPPER });
+        if (lines) {
           setStored(lines);
           setLower(lines.lower);
           setUpper(lines.upper);
@@ -134,7 +136,7 @@ export function ThresholdReviewModal({
   // Where Apply at the sliders' lines leaves each proposal, over the whole run (D26):
   // what the counters count and the zone lists list.
   const { accepted, tentative, excluded } = useMemo(() => {
-    const lines = { lower: snapToStep(lower), upper: snapToStep(upper) };
+    const lines = snapLines(lower, upper);
     const acc: ProposedTagResponse[] = [];
     const tent: ProposedTagResponse[] = [];
     const excl: ProposedTagResponse[] = [];
@@ -149,11 +151,12 @@ export function ThresholdReviewModal({
 
   // Per-row accept and deny call the API at once; the row slides out and comes back
   // where the decision put it, pinned as the researcher's. A row already decided
-  // (an accepted or excluded one, D39) sends the explicit override (D34); a pending
-  // one does not, so a row the server says was decided meanwhile is refused as
-  // "reviewed elsewhere". One that fails says so and comes back as it was (R5); one
-  // decided elsewhere the way the click asked has landed; one decided the other way
-  // lands there (N33); one that is gone (404) leaves.
+  // (an accepted or excluded one, D39) sends the explicit override, naming the status
+  // it was shown in (D34, D44); a pending one does not. One that fails says so and
+  // comes back as it was (R5); one that is gone (404) leaves. One the server says was
+  // decided already (any 409: here meanwhile, or differently since the dialog drew
+  // it) is read again from the server and drawn as it is there (D44), quietly when it
+  // went the way the click asked, saying so otherwise (N33).
   //
   // `opening` moves each time the modal opens and re-reads the run, so an answer
   // from an earlier opening still says so but changes no row.
@@ -163,37 +166,56 @@ export function ThresholdReviewModal({
     if (isExportMode()) return; // no server in an exported report
     const mine = opening.current;
     const id = before.id;
-    const other: Decision = decision === "accepted" ? "denied" : "accepted";
+    const reread = () => {
+      getAutoCodeProposals(frameworkId, 0).then(
+        (resp) => {
+          if (opening.current !== mine) return;
+          const fresh = resp.proposals.find((p) => p.id === id);
+          setProposals((prev) => (fresh
+            ? prev.map((p) => (p.id === id ? fresh : p))
+            : prev.filter((p) => p.id !== id)));
+        },
+        (err) => {
+          console.error("Re-read proposals failed:", err);
+          if (opening.current !== mine) return;
+          setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
+        },
+      );
+    };
     const place = (o: Outcome) => {
       if (o === "back") {
         setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
       } else if (o === "gone") {
         setProposals((prev) => prev.filter((p) => p.id !== id));
+      } else if (o === "reread") {
+        reread();
       } else {
-        // Decided elsewhere ("other") was a person too: while this dialog is open the
-        // only other writer of a listed row's decision is a quote card.
-        const status = o === "landed" ? decision : other;
-        const decided_by = "researcher" as const;
-        setProposals((prev) => prev.map((p) => (p.id === id ? { ...p, status, decided_by } : p)));
+        setProposals((prev) => prev.map((p) => (p.id === id
+          ? { ...p, status: decision, decided_by: "researcher" as const } : p)));
       }
     };
     outcome.current.delete(id);
     left.current.delete(id);
+    inFlight.current += 1;
     setRemoving((prev) => new Set(prev).add(id));
     const settle = (o: Outcome) => {
       if (opening.current !== mine) return;
+      inFlight.current -= 1;
+      if (o === "landed" || o === "reread") changed.current = true;
       outcome.current.set(id, o);
       if (left.current.has(id)) place(o); // else the timer applies it
     };
     const call = decision === "accepted" ? acceptProposal : denyProposal;
-    call(id, before.status !== "pending").then(
+    call(id, before.status === "pending" ? undefined : before.status).then(
       () => settle("landed"),
       (err: ApiError) => {
         console.error("Review proposal failed:", err);
-        if (err?.reason === `proposal_${decision}`) return settle("landed");
+        if (err?.reason?.startsWith("proposal_")) {
+          if (err.reason !== `proposal_${decision}`) toastSaveFailed(err);
+          return settle("reread");
+        }
         toastSaveFailed(err);
-        const decidedElsewhere = !!err?.reason?.startsWith("proposal_");
-        settle(decidedElsewhere ? "other" : reviewedElsewhere(err) ? "gone" : "back");
+        settle(reviewedElsewhere(err) ? "gone" : "back");
       },
     );
     setTimeout(() => {
@@ -203,7 +225,12 @@ export function ThresholdReviewModal({
       const o = outcome.current.get(id);
       if (o !== "back") place(o ?? "landed");
     }, 200);
-  }, []);
+  }, [frameworkId]);
+
+  const close = useCallback(
+    () => onClose(changed.current || inFlight.current > 0),
+    [onClose],
+  );
 
   const byId = useMemo(() => new Map(proposals.map((p) => [p.id, p])), [proposals]);
 
@@ -241,11 +268,13 @@ export function ThresholdReviewModal({
   const acceptedCount = proposals.filter((p) => p.status === "accepted").length;
   const deniedCount = proposals.filter((p) => p.status === "denied").length;
   const hasProposals = proposals.length > 0;
-  // Apply changes nothing with the lines where the run was cut (D26), so it waits for
-  // a line to move. A run never cut has no stored lines: its first Apply is a plain
-  // cut, offered while anything is pending, as it always was.
+  // Apply waits until it would change something: a line moved from where the run was
+  // cut (D26), or a pending proposal the lines decide (one whose quote came back,
+  // D41). A run never cut has no stored lines: its first Apply is a plain cut,
+  // offered while anything is pending, as it always was.
   const linesMoved = stored
     ? snapToStep(lower) !== stored.lower || snapToStep(upper) !== stored.upper
+      || [...accepted, ...excluded].some((p) => p.status === "pending")
     : pendingCount > 0;
 
   return (
@@ -253,7 +282,7 @@ export function ThresholdReviewModal({
     // shared one is off.
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={close}
       className="codebook-modal"
       testId="bn-threshold-overlay"
       labelledBy="bn-threshold-title"
@@ -279,7 +308,7 @@ export function ThresholdReviewModal({
           </div>
           <button
             className="codebook-modal-close"
-            onClick={onClose}
+            onClick={close}
             aria-label={t("autocode.close")}
           >
             <Icon name="close" decorative />
@@ -366,7 +395,7 @@ export function ThresholdReviewModal({
         <div className="threshold-footer">
           <button
             className="bn-btn"
-            onClick={onClose}
+            onClick={close}
             data-testid="bn-threshold-close"
           >
             {t("autocode.close")}

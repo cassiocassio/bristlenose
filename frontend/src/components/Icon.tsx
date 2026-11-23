@@ -106,7 +106,8 @@ const ICONS = {
   /** A part of the report that couldn't be shown. The broken-image mark, for
    *  what everyone already knows to do about one: reload (PanelErrorBoundary). */
   broken: ImageOff,
-  /** The AutoCode dialogs' title ornament (pick: Lucide sparkle over keeping ✦). */
+  /** The AutoCode ornament (pick: Lucide sparkle over keeping ✦). It has no caller since
+   *  the review dialog's title lost it (landing plan D37); kept for the next AI mark. */
   ai: Sparkle,
   /** A decision a person made, which the review's lines never move (AutoCode review,
    *  landing plan D2/D39). */

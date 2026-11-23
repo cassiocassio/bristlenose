@@ -467,6 +467,46 @@ describe("phase 5 — the destructive edge", () => {
     }
   });
 
+  it("ANNOUNCES a Close after a per-row decision, so removed tags leave the page (D42)", async () => {
+    // A row's override can take a tag off a quote; closing without Apply told nobody,
+    // so the quote cards, the tag sidebar and the badge kept the removed tag.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    vi.mocked(api.getAutoCodeProposals).mockResolvedValueOnce({
+      total: 1,
+      proposals: [
+        {
+          id: 1, quote_id: 1, dom_id: "q1", session_id: "s1",
+          speaker_code: "P1", start_timecode: 0, quote_text: "…",
+          tag_definition_id: 1, tag_name: "friction", group_name: "Pain",
+          colour_set: "ux", colour_index: 0, confidence: 0.5,
+          rationale: "…", status: "pending",
+        },
+      ],
+    } as never);
+
+    const seen: string[] = [];
+    const spy = (e: Event) => seen.push(e.type);
+    window.addEventListener("codebook-changed", spy);
+    document.addEventListener("bn:tags-changed", spy);
+    try {
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav"));
+      fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
+      fireEvent.click(await screen.findByTestId("bn-v2-review"));
+      const row = await screen.findByTestId("bn-proposal-row-1");
+      fireEvent.click(row.querySelector(".threshold-action-deny")!);
+      await waitFor(() => expect(api.denyProposal).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 250)); // the row settles
+      seen.length = 0;
+      fireEvent.click(screen.getByTestId("bn-threshold-close"));
+      await waitFor(() => expect(seen).toEqual(expect.arrayContaining(["codebook-changed", "bn:tags-changed"])));
+    } finally {
+      window.removeEventListener("codebook-changed", spy);
+      document.removeEventListener("bn:tags-changed", spy);
+    }
+  });
+
   it("hands the authoring hook the ANNOUNCER, not a private reload", async () => {
     // Floor authoring — add, rename, delete, merge a manual tag — changes the
     // tag count `lensSubtitle.ts` renders in the window subtitle, which counts

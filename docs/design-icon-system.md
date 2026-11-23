@@ -157,7 +157,7 @@ otherwise.
 | Help | `circle-help` (picked over `info`) | `questionmark.circle` | SVG |
 | Star (control) | ★ kept, by decision | `star` / `star.fill` | ★ |
 | Play | `play` | `play` | ▶ (`.bn-play-icon`) |
-| AI ornament | `sparkle` (picked over keeping ✦) | `sparkles` | ✦ ×2 |
+| AI ornament | `sparkle` (picked over keeping ✦) | `sparkles` | ✦ ×2. No caller since 23 Nov 2026: the AutoCode review's title lost it (`docs/design-autocode-landing-plan.md` D37); the concept stays in `Icon.tsx` |
 | Pinned decision (AutoCode review: a person's decision the lines never move) | `pin` | `pin` | — (new, 23 Nov 2026; `docs/mockups/autocode-review-dialog.html`, D39) |
 | Deny proposal | `x` (picked over `ban`) | `xmark` (`nosign` means *forbidden*) | ⊘ |
 | Warning | `triangle-alert` | `exclamationmark.triangle` | ⚠ |

@@ -21,6 +21,9 @@ trued-against: HEAD@main on 2026-11-23 (Phase 2 of docs/design-autocode-landing-
   moved, and Apply is one re-cut call. §Re-entry claimed overrides that did not exist
   (the server refused a decided proposal with 409); it now describes what is built.
   The sections below are trued to it; the sparkle left the title.
+  Review fixes the same day (D41–D44): Apply decides pending proposals by the lines,
+  as shipped; Close after a row decision refreshes the page's tags; the lines' read
+  and Apply are bounded; an override names the status it expects.
 - _2026-09-20_ — trued up: marked the doc shipped, which it had never said. A cold
   reader hit §Context describing the modal as unbuilt and a **Goal:** for something
   five months live, and would reasonably have triaged the whole doc as pending.
@@ -133,7 +136,7 @@ When the proposal count is small enough, each bar is composed of **individual sq
 
 ### Zone counters
 
-Three inline chips below the histogram. Update in real-time as sliders move. They count **where Apply would leave each proposal over the whole run** (Phase 2): a pinned decision where it sits; any other proposal where its status puts it unless the sliders put it in a different zone from the stored lines (D26). Same words, same place. The rule is `outcomeZone` in `frontend/src/utils/recut.ts`, the client's copy of the server's `recut_target`.
+Three inline chips below the histogram. Update in real-time as sliders move. They count **where Apply would leave each proposal over the whole run** (Phase 2): a pinned decision where it sits; a pending proposal where the sliders put it, since Apply decides it (D41, as shipped: a quote unhidden after the last Apply brings its proposal back, N175); a threshold decision where its status puts it unless the sliders put it in a different zone from the stored lines (D26). Same words, same place. The rule is `outcomeZone` in `frontend/src/utils/recut.ts`, the client's copy of the server's `recut_target`; both read the cases in `tests/fixtures/recut-contract.json` (`tests/test_recut_contract.py`, `recut.test.ts`).
 
 The **Tentative** counter uses the same pulsating dashed-border treatment as the `badge-proposed` variant in the quotes screen. This visual link teaches the researcher: "these are the same badges you'll see on your quotes." The Exclude and Accept counters use solid borders (grey and green respectively).
 
@@ -171,7 +174,9 @@ The tentative zone proposals stay as `pending` — not committed by Apply. They 
 When the researcher clicks Accept or Deny on an individual row, the API is called right away. This means:
 - Per-row decisions persist even if the dialog is closed without Apply
 - The row fades out (200 ms) and comes back in the zone the decision put it in, pinned (Phase 2; it used to leave the dialog)
-- A pending row sends an ordinary accept or deny: one decided meanwhile elsewhere is refused with 409 `proposal_accepted` / `proposal_denied` and lands where it was decided (N33). A decided row sends `{"override": true}` (D34)
+- A pending row sends an ordinary accept or deny. A decided row sends `{"override": true, "expected_status": <the status it was shown in>}` (D34, D44); decided differently since (on a quote card), the server refuses it with the same 409
+- A 409 (`proposal_accepted` / `proposal_denied`) means the row was decided elsewhere: the dialog reads the run again and draws that row as the server holds it (D44), saying so when it went the other way from the click (N33)
+- Closing after a row call that saved tells the caller (`onClose(changed)`), which raises `codebook-changed` and `bn:tags-changed` as Apply does, so quote cards and the tag sidebar drop a tag an override removed (D42)
 - A failure toasts and puts the row back as it was (R5); a 404 removes it
 - The histogram does NOT change on per-row actions (it's a fixed reference for the distribution shape)
 - The zone counters and the subtitle's counts update
@@ -186,11 +191,14 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 > `{"lower", "upper"}` on the 0.05 grid (`recutProposals` in `utils/api.ts`). It moves
 > only threshold decisions and pending proposals, and only those whose zone under the
 > stored lines differs from their zone under the new ones (D26), so it is offered only
-> once a line has moved from the stored lines. A researcher's or an "unknown" decision
+> once a line has moved from the stored lines, or while a pending proposal sits outside
+> the tentative band (D41: Apply decides pending proposals by the lines, as shipped).
+> A threshold decision moves only on a zone change. A researcher's or an "unknown" decision
 > never moves (D2); a proposal moved out of Accepted loses its tag only when AutoCode
 > made it; no warning on removing tags (D3). A run no lines were ever stored on gets a
 > plain cut (only pending proposals sorted), offered while anything is pending. The
-> lines are stored, and Signals is rebuilt only when something moved (D31). Tests:
+> lines are stored, and Signals is rebuilt only when something moved (D31). The call
+> fails after the per-row writes' time limit and shows `applyFailed` (D43). Tests:
 > `tests/test_autocode_recut.py`, `ThresholdReviewModal.test.tsx`.
 >
 > The two-call description below is how it was built in April; accept-all and deny-all
@@ -228,8 +236,10 @@ In `deny_all_proposals()`: when `max_confidence` is provided, filter `ProposedTa
 > **Phase 2 added two things** (23 Nov 2026): `POST …/autocode/{fw}/recut` (§Apply
 > thresholds re-cuts the run), and a body `{"override": true}` on the per-row
 > `…/proposals/{id}/accept` and `/deny`, which only the dialog's buttons on a decided row
-> send. Without it a decided proposal is still refused with 409 (`_already_reviewed`),
-> which the quote cards rely on for a stale window or a double click (D34).
+> send, with `expected_status` (required with it). Without it a decided proposal is
+> still refused with 409 (`_already_reviewed`), which the quote cards rely on for a
+> stale window or a double click (D34); with it, a proposal whose status is no longer
+> the expected one is refused the same way (D44).
 
 No new endpoints needed. The frontend fetches all proposals with `min_confidence=0.0` and computes histogram bins client-side. A distribution endpoint is an optimisation for later if datasets grow beyond 500+ proposals.
 
@@ -287,10 +297,10 @@ Register in `_THEME_FILES` list in `bristlenose/stages/s12_render/theme_assets.p
 
 The dialog is re-opened from the codebook page's Review door (see below). On re-entry:
 
-- Fresh API fetch of the whole run and of the job's stored lines, together
+- Fresh API fetch of the whole run and of the job's stored lines, together; nothing is drawn until both answer, and a status read that fails or passes its time limit (`STATUS_READ_TIMEOUT_MS`) shows `loadFailed` with Apply off (D43)
 - The histogram, counters and zone lists cover every proposal; decided rows are listed in their zones, a person's decisions pinned
 - Subtitle keeps its shipped words: "N of M proposals remaining (X accepted, Y excluded)"
-- The sliders start at the stored lines (snapped), or the defaults when none were stored; Apply is off until a line moves
+- The sliders start at the stored lines (snapped), or the defaults when none were stored; Apply is off until it would change something (a line moved, or a pending proposal the lines decide)
 - With nothing pending the whole run still shows, so a finished run can be re-cut and any decision overridden per row
 
 ### Always-visible entry point

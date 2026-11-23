@@ -328,7 +328,7 @@ describe("ThresholdReviewModal", () => {
 
     fireEvent.click(denyBtn);
     // A pending row: an ordinary deny, no override (D34).
-    expect(mockDenyProposal).toHaveBeenCalledWith(1, false);
+    expect(mockDenyProposal).toHaveBeenCalledWith(1, undefined);
 
     // After the slide (200 ms) the row leaves Tentative for Excluded, pinned as the
     // researcher's decision. It used to leave the dialog: the whole run stays (D39).
@@ -361,6 +361,13 @@ describe("ThresholdReviewModal", () => {
       fireEvent.click(
         screen.getByTestId("bn-proposal-row-1").querySelector(`.threshold-action-${action}`)!,
       );
+    // What the server holds for the row once it says it was decided (the dialog reads
+    // it again, D44): decided on a quote card.
+    const decidedOnServer = (status: "accepted" | "denied") =>
+      mockGetProposals.mockResolvedValue({
+        proposals: [makeProposal({ id: 1, confidence: 0.5, status, decided_by: "researcher" })],
+        total: 1,
+      });
 
     it.each([["before", 0], ["after", 300]] as const)(
       "comes back and says so when the answer lands %s the row leaves",
@@ -411,10 +418,12 @@ describe("ThresholdReviewModal", () => {
           mockDenyProposal.mockRejectedValue(refused);
           mockAcceptProposal.mockRejectedValue(refused);
           await renderModal();
+          decidedOnServer(reason === "proposal_accepted" ? "accepted" : "denied");
           click(action);
           await act(async () => { vi.advanceTimersByTime(300); });
-          // It leaves Tentative for the zone it was decided into (it used to leave the
-          // dialog: the whole run stays, D39).
+          // It is read again (D44) and drawn where it was decided (it used to leave
+          // the dialog: the whole run stays, D39).
+          expect(mockGetProposals).toHaveBeenCalledTimes(2);
           const zone = reason === "proposal_accepted" ? "bn-zone-accepted" : "bn-zone-excluded";
           expect(screen.getByTestId(zone).querySelector('[data-testid="bn-proposal-row-1"]')).not.toBeNull();
           expect(toastSaveFailed).toHaveBeenCalledTimes(1);
@@ -434,6 +443,7 @@ describe("ThresholdReviewModal", () => {
           Object.assign(new Error("409"), { status: 409, reason: "proposal_accepted" }),
         );
         await renderModal();
+        decidedOnServer("accepted");
         click("deny");
         await act(async () => {}); // the answer is in before the 200 ms slide ends
         await act(async () => { vi.advanceTimersByTime(300); });
@@ -451,6 +461,7 @@ describe("ThresholdReviewModal", () => {
         let refuse: (e: unknown) => void = () => {};
         mockDenyProposal.mockImplementation(() => new Promise((_, r) => { refuse = r; }));
         await renderModal();
+        decidedOnServer("accepted");
         click("deny");
         await act(async () => { vi.advanceTimersByTime(300); });
         await act(async () => {
@@ -531,6 +542,7 @@ describe("ThresholdReviewModal", () => {
           Object.assign(new Error("409"), { status: 409, reason: "proposal_denied" }),
         );
         await renderModal();
+        decidedOnServer("denied");
         click("deny");
         await act(async () => { vi.advanceTimersByTime(300); });
         // In Excluded now, rather than out of the dialog (D39).
@@ -709,8 +721,8 @@ describe("ThresholdReviewModal", () => {
     // Stored lines 0.30 / 0.70. One proposal of each kind:
     //   1 pending 0.50 · 2 accepted by the lines 0.75 · 3 accepted by the researcher 0.72
     //   4 excluded by the lines 0.20 · 5 excluded by the researcher 0.90
-    //   6 accepted before the record ("unknown") 0.78 · 7 pending 0.85 (above the line,
-    //   left pending by an earlier pass)
+    //   6 accepted before the record ("unknown") 0.78 · 7 pending 0.85 (above the line:
+    //   its quote was hidden at the last Apply, and is back)
     const run = () => [
       makeProposal({ id: 1, confidence: 0.5 }),
       makeProposal({ id: 2, confidence: 0.75, status: "accepted", decided_by: "threshold" }),
@@ -746,8 +758,9 @@ describe("ThresholdReviewModal", () => {
 
     it("loads every proposal of the run, decided ones in their zones", async () => {
       await open();
-      expect(inZone("accepted")).toEqual([2, 3, 6]);
-      expect(inZone("tentative")).toEqual([1, 7]);
+      // 7 is pending above the accept line: Apply decides it by the lines (D41).
+      expect(inZone("accepted")).toEqual([2, 3, 6, 7]);
+      expect(inZone("tentative")).toEqual([1]);
       expect(inZone("excluded")).toEqual([4, 5]);
       // The histogram counts the whole run, not only what is pending.
       const bars = screen.getByTestId("bn-threshold-histogram");
@@ -769,16 +782,16 @@ describe("ThresholdReviewModal", () => {
 
     it("counts and lists Apply's outcome: only threshold and pending rows whose zone changes move", async () => {
       await open();
-      // Unmoved lines: everything stays where its status puts it (D26), so the
-      // pending 0.85 stays tentative although it is above the accept line.
-      expect([counter("exclude"), counter("tentative"), counter("accept")]).toEqual([2, 2, 3]);
+      // Unmoved lines: every decision stays where its status puts it (D26); the
+      // pending 0.85 is decided by the lines (D41).
+      expect([counter("exclude"), counter("tentative"), counter("accept")]).toEqual([2, 1, 4]);
       raiseAcceptLine(2); // 0.70 → 0.80
       // 2 (threshold, 0.75) moves to tentative; 3 (researcher, 0.72) and 6 (unknown,
-      // 0.78) are pinned and stay; 7 (0.85) is in the accept zone both times and stays.
-      expect(inZone("accepted")).toEqual([3, 6]);
-      expect(inZone("tentative")).toEqual([1, 2, 7]);
+      // 0.78) are pinned and stay; 7 (0.85) is still above the line.
+      expect(inZone("accepted")).toEqual([3, 6, 7]);
+      expect(inZone("tentative")).toEqual([1, 2]);
       expect(inZone("excluded")).toEqual([4, 5]);
-      expect([counter("exclude"), counter("tentative"), counter("accept")]).toEqual([2, 3, 2]);
+      expect([counter("exclude"), counter("tentative"), counter("accept")]).toEqual([2, 2, 3]);
       // Both lines to the top (accept 1.00, exclude 0.95): everything movable is
       // excluded, the pinned accepts are not, and the researcher's exclusion stays.
       raiseAcceptLine(4);
@@ -790,7 +803,7 @@ describe("ThresholdReviewModal", () => {
     });
 
     it("keeps Apply off until a line moves from the stored lines, and off again when it is put back", async () => {
-      await open();
+      await open(run().filter((p) => p.id !== 7)); // nothing pending the lines decide
       const apply = screen.getByTestId("bn-threshold-apply");
       expect(apply).toBeDisabled();
       raiseAcceptLine(1);
@@ -823,7 +836,8 @@ describe("ThresholdReviewModal", () => {
           expect(inZone(from)).toContain(id);
           fireEvent.click(screen.getByTestId(`bn-proposal-row-${id}`).querySelector(`.threshold-action-${action}`)!);
           const mock = action === "deny" ? mockDenyProposal : mockAcceptProposal;
-          expect(mock).toHaveBeenCalledWith(id, true);
+          // The override names the status the row was shown in (D44).
+          expect(mock).toHaveBeenCalledWith(id, from === "accepted" ? "accepted" : "denied");
           await act(async () => { vi.advanceTimersByTime(300); });
           expect(inZone(to)).toContain(id);
           expect(screen.getByTestId(`bn-proposal-pin-${id}`)).toBeInTheDocument();
@@ -840,7 +854,7 @@ describe("ThresholdReviewModal", () => {
       mockAcceptProposal.mockResolvedValue(undefined);
       await open();
       fireEvent.click(screen.getByTestId("bn-proposal-row-1").querySelector(".threshold-action-accept")!);
-      expect(mockAcceptProposal).toHaveBeenCalledWith(1, false);
+      expect(mockAcceptProposal).toHaveBeenCalledWith(1, undefined);
     });
 
     it("a run never cut is offered a plain cut: only pending rows move, decisions stay", async () => {
@@ -851,6 +865,123 @@ describe("ThresholdReviewModal", () => {
       expect(inZone("excluded")).toEqual([4, 5]);
       raiseAcceptLine(2); // 0.80: 2 (threshold, 0.75) still stays, decisions are not re-cut
       expect(inZone("accepted")).toEqual([2, 3, 6, 7]);
+      expect(screen.getByTestId("bn-threshold-apply")).toBeEnabled();
+    });
+
+    it("offers Apply with the lines unmoved when a pending row is above the line (D41)", async () => {
+      await open([makeProposal({ id: 8, confidence: 0.9 }),
+        makeProposal({ id: 2, confidence: 0.75, status: "accepted", decided_by: "threshold" })]);
+      expect(inZone("accepted")).toEqual([2, 8]);
+      expect(screen.getByTestId("bn-threshold-apply")).toBeEnabled();
+    });
+
+    it("a row refused as decided elsewhere is read again, not assumed (D44)", async () => {
+      vi.useFakeTimers();
+      try {
+        mockAcceptProposal.mockRejectedValue(
+          Object.assign(new Error("409"), { status: 409, reason: "proposal_accepted" }),
+        );
+        await open();
+        // Meanwhile the lines accepted proposal 1 (a threshold decision, not a person's).
+        mockGetProposals.mockResolvedValue({
+          proposals: run().map((p) => (p.id === 1
+            ? { ...p, status: "accepted" as const, decided_by: "threshold" as const } : p)),
+          total: 7,
+        });
+        fireEvent.click(screen.getByTestId("bn-proposal-row-1").querySelector(".threshold-action-accept")!);
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(mockGetProposals).toHaveBeenCalledTimes(2);
+        expect(inZone("accepted")).toContain(1);
+        expect(screen.queryByTestId("bn-proposal-pin-1")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("a stale override refused by the server draws the newer decision, quietly (D44)", async () => {
+      vi.useFakeTimers();
+      try {
+        mockDenyProposal.mockRejectedValue(
+          Object.assign(new Error("409"), { status: 409, reason: "proposal_denied" }),
+        );
+        await open();
+        // A quote card excluded 2 after the dialog drew it accepted.
+        mockGetProposals.mockResolvedValue({
+          proposals: run().map((p) => (p.id === 2
+            ? { ...p, status: "denied" as const, decided_by: "researcher" as const } : p)),
+          total: 7,
+        });
+        fireEvent.click(screen.getByTestId("bn-proposal-row-2").querySelector(".threshold-action-deny")!);
+        expect(mockDenyProposal).toHaveBeenCalledWith(2, "accepted");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(inZone("excluded")).toContain(2);
+        expect(screen.getByTestId("bn-proposal-pin-2")).toBeInTheDocument();
+        // It went the way the click asked (an override expects one decided status, so
+        // a refusal is always the other one), so there is nothing to complain about.
+        expect(toastSaveFailed).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it.each([["the Close button", "bn-threshold-close"], ["the header ×", null]] as const)(
+      "%s says whether a row decision was saved, so the page can refresh its tags (D42)",
+      async (_label, testId) => {
+        vi.useFakeTimers();
+        try {
+          mockDenyProposal.mockResolvedValue(undefined);
+          const onClose = vi.fn();
+          mockGetStatus.mockResolvedValue({ applied_lower_threshold: 0.3, applied_upper_threshold: 0.7 } as never);
+          mockGetProposals.mockResolvedValue({ proposals: run(), total: 7 });
+          const props = { frameworkId: "garrett", frameworkTitle: "Garrett", onApply: vi.fn(), onClose };
+          const { rerender } = render(<ThresholdReviewModal open {...props} />);
+          await act(async () => {});
+          const closeIt = () => fireEvent.click(testId
+            ? screen.getByTestId(testId)
+            : document.querySelector(".codebook-modal-close")!);
+          closeIt();
+          expect(onClose).toHaveBeenLastCalledWith(false);
+          rerender(<ThresholdReviewModal open={false} {...props} />);
+          rerender(<ThresholdReviewModal open {...props} />);
+          await act(async () => {});
+          fireEvent.click(screen.getByTestId("bn-proposal-row-2").querySelector(".threshold-action-deny")!);
+          await act(async () => { vi.advanceTimersByTime(300); });
+          closeIt();
+          expect(onClose).toHaveBeenLastCalledWith(true);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it("does not draw the run when the stored lines cannot be read, and Apply stays off (D43)", async () => {
+      mockGetStatus.mockRejectedValue(Object.assign(new Error("timed out"), { name: "TimeoutError" }));
+      mockGetProposals.mockResolvedValue({ proposals: run(), total: 7 });
+      render(
+        <ThresholdReviewModal open frameworkId="garrett" frameworkTitle="Garrett"
+          onClose={vi.fn()} onApply={vi.fn()} />,
+      );
+      await act(async () => {});
+      expect(screen.getByText("Failed to load proposals")).toBeInTheDocument();
+      expect(screen.queryByTestId("bn-threshold-histogram")).toBeNull();
+      expect(screen.getByTestId("bn-threshold-apply")).toBeDisabled();
+    });
+
+    it("an Apply that fails or times out says so and stays open (D43)", async () => {
+      mockRecut.mockRejectedValue(Object.assign(new Error("timed out"), { name: "TimeoutError" }));
+      const onApply = vi.fn();
+      mockGetStatus.mockResolvedValue({ applied_lower_threshold: 0.3, applied_upper_threshold: 0.7 } as never);
+      mockGetProposals.mockResolvedValue({ proposals: run(), total: 7 });
+      render(
+        <ThresholdReviewModal open frameworkId="garrett" frameworkTitle="Garrett"
+          onClose={vi.fn()} onApply={onApply} />,
+      );
+      await act(async () => {});
+      raiseAcceptLine(1);
+      fireEvent.click(screen.getByTestId("bn-threshold-apply"));
+      await act(async () => {});
+      expect(screen.getByText(/Apply failed/)).toBeInTheDocument();
+      expect(onApply).not.toHaveBeenCalled();
       expect(screen.getByTestId("bn-threshold-apply")).toBeEnabled();
     });
 

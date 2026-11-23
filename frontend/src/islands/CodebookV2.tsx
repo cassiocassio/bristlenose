@@ -902,15 +902,22 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         name={authoring.nameClash}
         onDismiss={authoring.onDismissNameClash}
       />
-      {/* Q15 — the shipped threshold review, unchanged. `onApply` mirrors
-          `CodebookPanel.handleReportApply`: close, refetch, and tell the other
-          islands that tags moved, since a bulk apply changes what QuoteSections
-          renders. */}
+      {/* Q15 — the threshold review, re-cuttable since Phase 2 of the AutoCode
+          landing plan (the whole run, pins, Apply as one re-cut; D39). `onApply`
+          mirrors `CodebookPanel.handleReportApply`: close, refetch, and tell the
+          other islands that tags moved, since a re-cut changes what QuoteSections
+          renders. A Close after a per-row decision says the same (D42): a row's
+          override can take a tag off a quote. */}
       <ThresholdReviewModal
         open={reportModal !== null}
         frameworkId={reportModal?.frameworkId ?? ""}
         frameworkTitle={reportModal?.frameworkTitle ?? ""}
-        onClose={() => setReportModal(null)}
+        onClose={(changed) => {
+          setReportModal(null);
+          if (!changed) return;
+          announce();
+          document.dispatchEvent(new CustomEvent("bn:tags-changed"));
+        }}
         onApply={() => {
           setReportModal(null);
           // The v1 lens carried the identical shape here

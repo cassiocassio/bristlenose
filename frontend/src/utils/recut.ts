@@ -5,6 +5,7 @@
  * is pressed (docs/design-autocode-landing-plan.md, Phase 2: D2, D26, D39).
  */
 import type { ProposedTagResponse } from "./types";
+import { snapToStep } from "./confidenceStep";
 
 export type Zone = "accepted" | "tentative" | "excluded";
 
@@ -35,17 +36,36 @@ export function statusZone(p: ProposedTagResponse): Zone {
 }
 
 /**
- * Where Apply at `lines` would leave `p`. A pinned decision stays where it is. Any
- * other proposal moves only when its zone under the `stored` lines differs from its
- * zone under the new ones (D26), so Apply with the lines unmoved changes nothing.
- * `stored` is null for a run no lines were ever stored on: Apply is then a plain cut,
- * as it always was, sorting only the pending proposals by the new lines.
+ * Where Apply at `lines` would leave `p`. A pinned decision stays where it is. A
+ * pending proposal is undecided, so Apply decides it by the new lines, as shipped
+ * (N175, D41). A threshold decision moves only when its zone under the `stored` lines
+ * differs from its zone under the new ones (D26), so Apply with the lines unmoved
+ * leaves every decision as it is. `stored` is null for a run no lines were ever
+ * stored on: Apply is then a plain cut, and every decision stays.
  */
 export function outcomeZone(p: ProposedTagResponse, stored: Lines | null, lines: Lines): Zone {
   const now = statusZone(p);
   if (isPinned(p)) return now;
-  if (stored === null && p.status !== "pending") return now;
+  if (p.status === "pending") return zoneAt(p.confidence, lines);
+  if (stored === null) return now;
+  const was = zoneAt(p.confidence, stored);
   const after = zoneAt(p.confidence, lines);
-  const was = stored ? zoneAt(p.confidence, stored) : now;
   return was === after ? now : after;
+}
+
+/** The lines a job was last cut at, snapped to the 0.05 grid as the server reads them
+ *  (`stored_lines`): a missing one is the default; null when neither was ever stored. */
+export function storedLinesOf(
+  job: { applied_lower_threshold: number | null; applied_upper_threshold: number | null },
+  defaults: Lines,
+): Lines | null {
+  const lo = job.applied_lower_threshold;
+  const hi = job.applied_upper_threshold;
+  if (lo == null && hi == null) return null;
+  return { lower: snapToStep(lo ?? defaults.lower), upper: snapToStep(hi ?? defaults.upper) };
+}
+
+/** The slider positions as Apply sends them: on the 0.05 grid. */
+export function snapLines(lower: number, upper: number): Lines {
+  return { lower: snapToStep(lower), upper: snapToStep(upper) };
 }

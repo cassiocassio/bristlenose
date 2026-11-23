@@ -683,24 +683,34 @@ export function getAutoCodeProposals(
 /** A proposal review, bounded like a curation write: the quotes store holds a
  *  quote as under review until its review answers, so one that never answered
  *  would freeze that quote's tags and proposals until a reload. */
-function timedReview(path: string, override: boolean): Promise<void> {
+/** A POST that fails after WRITE_TIMEOUT_MS rather than hanging. */
+function timedPost<T>(path: string, body: unknown): Promise<T> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), WRITE_TIMEOUT_MS);
-  return apiPost<void>(path, override ? { override: true } : {}, abort.signal)
-    .finally(() => clearTimeout(timer));
+  return apiPost<T>(path, body, abort.signal).finally(() => clearTimeout(timer));
+}
+
+/** The status a decided row was shown in, which the review dialog's override names. */
+export type DecidedStatus = "accepted" | "denied";
+
+function timedReview(path: string, overriding?: DecidedStatus): Promise<void> {
+  return timedPost<void>(
+    path, overriding ? { override: true, expected_status: overriding } : {},
+  );
 }
 
 /** Accept one proposal, as the researcher's decision. A proposal decided already is
- *  refused (409 `proposal_accepted` / `proposal_denied`) unless `override` is set,
- *  which only the review dialog's buttons on a decided row send (D34). */
-export function acceptProposal(proposalId: number, override = false): Promise<void> {
-  return timedReview(`/autocode/proposals/${proposalId}/accept`, override);
+ *  refused (409 `proposal_accepted` / `proposal_denied`) unless `overriding` names the
+ *  status it is in, which only the review dialog's buttons on a decided row send
+ *  (D34); decided differently since, it is refused the same way (D44). */
+export function acceptProposal(proposalId: number, overriding?: DecidedStatus): Promise<void> {
+  return timedReview(`/autocode/proposals/${proposalId}/accept`, overriding);
 }
 
 /** Exclude one proposal, as `acceptProposal`; an override of an accepted one takes
  *  its tag off the quote when AutoCode made it. */
-export function denyProposal(proposalId: number, override = false): Promise<void> {
-  return timedReview(`/autocode/proposals/${proposalId}/deny`, override);
+export function denyProposal(proposalId: number, overriding?: DecidedStatus): Promise<void> {
+  return timedReview(`/autocode/proposals/${proposalId}/deny`, overriding);
 }
 
 export function acceptAllProposals(
@@ -737,7 +747,8 @@ export function recutProposals(
   lower: number,
   upper: number,
 ): Promise<RecutResult> {
-  return apiPost<RecutResult>(`/autocode/${frameworkId}/recut`, { lower, upper });
+  // Timed like the per-row writes: a hung Apply fails and says so (D43).
+  return timedPost<RecutResult>(`/autocode/${frameworkId}/recut`, { lower, upper });
 }
 
 // ---------------------------------------------------------------------------

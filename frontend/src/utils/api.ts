@@ -683,18 +683,24 @@ export function getAutoCodeProposals(
 /** A proposal review, bounded like a curation write: the quotes store holds a
  *  quote as under review until its review answers, so one that never answered
  *  would freeze that quote's tags and proposals until a reload. */
-function timedReview(path: string): Promise<void> {
+function timedReview(path: string, override: boolean): Promise<void> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), WRITE_TIMEOUT_MS);
-  return apiPost<void>(path, {}, abort.signal).finally(() => clearTimeout(timer));
+  return apiPost<void>(path, override ? { override: true } : {}, abort.signal)
+    .finally(() => clearTimeout(timer));
 }
 
-export function acceptProposal(proposalId: number): Promise<void> {
-  return timedReview(`/autocode/proposals/${proposalId}/accept`);
+/** Accept one proposal, as the researcher's decision. A proposal decided already is
+ *  refused (409 `proposal_accepted` / `proposal_denied`) unless `override` is set,
+ *  which only the review dialog's buttons on a decided row send (D34). */
+export function acceptProposal(proposalId: number, override = false): Promise<void> {
+  return timedReview(`/autocode/proposals/${proposalId}/accept`, override);
 }
 
-export function denyProposal(proposalId: number): Promise<void> {
-  return timedReview(`/autocode/proposals/${proposalId}/deny`);
+/** Exclude one proposal, as `acceptProposal`; an override of an accepted one takes
+ *  its tag off the quote when AutoCode made it. */
+export function denyProposal(proposalId: number, override = false): Promise<void> {
+  return timedReview(`/autocode/proposals/${proposalId}/deny`, override);
 }
 
 export function acceptAllProposals(
@@ -713,6 +719,25 @@ export function denyAllProposals(
   return apiPost<{ denied: number }>(`/autocode/${frameworkId}/deny-all`, {
     ...(maxConfidence != null ? { max_confidence: maxConfidence } : {}),
   });
+}
+
+/** How many proposals a re-cut moved into each zone. */
+export interface RecutResult {
+  accepted: number;
+  tentative: number;
+  excluded: number;
+}
+
+/** The review dialog's Apply (landing plan Phase 2): move the run's lines to
+ *  (`lower`, `upper`), both on the 0.05 grid (`snapToStep`). The server moves only
+ *  threshold decisions and pending proposals whose zone changes against the stored
+ *  lines; a researcher's decision never moves. */
+export function recutProposals(
+  frameworkId: string,
+  lower: number,
+  upper: number,
+): Promise<RecutResult> {
+  return apiPost<RecutResult>(`/autocode/${frameworkId}/recut`, { lower, upper });
 }
 
 // ---------------------------------------------------------------------------

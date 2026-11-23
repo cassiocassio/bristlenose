@@ -7,11 +7,13 @@ import {
   getClipExtractionStatus,
   getScreensExportStatus,
   deleteParagraphEdit,
+  denyProposal,
   patchHidden,
   postParagraphReassign,
   patchStarred,
   patchTags,
   putFrameworkStates,
+  recutProposals,
   sendPut,
   toastSaveFailed,
   updateCodebookTag,
@@ -162,7 +164,7 @@ describe("curation writes", () => {
   const settle = () => new Promise((r) => setTimeout(r, 0));
 
   it("sends a PATCH carrying only the change", async () => {
-    fetchMock.mockResolvedValue(answer(200, { status: "ok" }));
+    fetchMock.mockImplementation(async () => answer(200, { status: "ok" }));
     await patchTags({ "q-p1-10": { add: ["x"] } });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toMatch(/\/tags$/);
@@ -234,6 +236,40 @@ describe("curation writes", () => {
     await settle();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     for (const a of answers) a(answer(200, { status: "ok" }));
+  });
+});
+
+describe("the review dialog's re-cut", () => {
+  it("posts both lines to the codebook's recut route", async () => {
+    fetchMock.mockResolvedValue(answer(200, { accepted: 1, tentative: 0, excluded: 2 }));
+    await expect(recutProposals("garrett", 0.3, 0.75)).resolves.toEqual(
+      { accepted: 1, tentative: 0, excluded: 2 },
+    );
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/autocode\/garrett\/recut$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({ lower: 0.3, upper: 0.75 });
+  });
+});
+
+describe("a per-row review's override (D34)", () => {
+  it("sends no override by default, so a decided proposal is still refused", async () => {
+    fetchMock.mockImplementation(async () => answer(200, { status: "ok" }));
+    await acceptProposal(7);
+    await denyProposal(8);
+    for (const [, init] of fetchMock.mock.calls as [string, RequestInit][]) {
+      expect(JSON.parse(String(init.body))).toEqual({});
+    }
+  });
+
+  it("sends the explicit flag when the review dialog overrides a decided row", async () => {
+    fetchMock.mockImplementation(async () => answer(200, { status: "ok" }));
+    await acceptProposal(7, true);
+    await denyProposal(8, true);
+    const calls = fetchMock.mock.calls as [string, RequestInit][];
+    expect(calls[0][0]).toMatch(/\/autocode\/proposals\/7\/accept$/);
+    expect(calls[1][0]).toMatch(/\/autocode\/proposals\/8\/deny$/);
+    for (const [, init] of calls) expect(JSON.parse(String(init.body))).toEqual({ override: true });
   });
 });
 

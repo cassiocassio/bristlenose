@@ -16,6 +16,7 @@ import { formatTimecode } from "../utils/format";
 import { placeProps, windowPlace } from "../utils/contextPlace";
 import { isEmbedded } from "../utils/embedded";
 import { postOpenInNewWindow } from "../shims/bridge";
+import { isPinned } from "../utils/recut";
 import { Icon } from "./Icon";
 import { TimecodeLink } from "./TimecodeLink";
 
@@ -173,6 +174,14 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
           </td>
           <td className="threshold-confidence">
             {p.confidence.toFixed(2)}
+            {/* A decision a person made (or one from before who decided was recorded): the
+                lines never move it (landing plan D2, D39). */}
+            {isPinned(p) && (
+              <span className="threshold-pin" title={t("autocode.review.yourDecision")}
+                data-testid={`bn-proposal-pin-${p.id}`}>
+                <Icon name="pinned" label={t("autocode.review.yourDecision")} />
+              </span>
+            )}
           </td>
           <td className="threshold-actions">
             {/* Accepted zone: only deny (override) */}

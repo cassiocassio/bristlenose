@@ -620,7 +620,8 @@
       "zoneTentative": "Foreløpig",
       "zoneAccept": "Godta",
       "zoneAccepted": "Godtatt",
-      "zoneExcluded": "Utelatt"
+      "zoneExcluded": "Utelatt",
+      "yourDecision": "Din beslutning"
     },
     "toast": {
       "donePartial": "{{processed}} av {{total}} sitater merket. Noen partier mislyktes.",

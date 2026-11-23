@@ -620,7 +620,8 @@
       "zoneTentative": "Provvisori",
       "zoneAccept": "Accetta",
       "zoneAccepted": "Accettati",
-      "zoneExcluded": "Esclusi"
+      "zoneExcluded": "Esclusi",
+      "yourDecision": "La tua decisione"
     },
     "toast": {
       "donePartial": "Etichettate {{processed}} citazioni su {{total}}: alcuni lotti non sono riusciti.",

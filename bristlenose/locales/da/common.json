@@ -620,7 +620,8 @@
       "zoneTentative": "Foreløbig",
       "zoneAccept": "Godkend",
       "zoneAccepted": "Godkendt",
-      "zoneExcluded": "Udelukket"
+      "zoneExcluded": "Udelukket",
+      "yourDecision": "Din beslutning"
     },
     "toast": {
       "donePartial": "{{processed}} af {{total}} citater tagget. Nogle batches mislykkedes.",

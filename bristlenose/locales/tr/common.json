@@ -620,7 +620,8 @@
       "zoneTentative": "Geçici",
       "zoneAccept": "Kabul et",
       "zoneAccepted": "Kabul edildi",
-      "zoneExcluded": "Hariç tutuldu"
+      "zoneExcluded": "Hariç tutuldu",
+      "yourDecision": "Kararınız"
     },
     "toast": {
       "donePartial": "{{total}} al\u0131nt\u0131dan {{processed}} tanesi etiketlendi. Baz\u0131 gruplar ba\u015far\u0131s\u0131z oldu.",

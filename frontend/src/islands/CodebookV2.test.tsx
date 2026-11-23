@@ -117,6 +117,8 @@ vi.mock("../utils/api", () => ({
   acceptProposal: vi.fn(() => Promise.resolve({ status: "ok" })),
   denyAllProposals: vi.fn(() => Promise.resolve({ denied: 0 })),
   denyProposal: vi.fn(() => Promise.resolve({ status: "ok" })),
+  // The review's Apply is the re-cut since Phase 2 of the AutoCode landing plan (D39).
+  recutProposals: vi.fn(() => Promise.resolve({ accepted: 1, tentative: 0, excluded: 0 })),
 }));
 vi.mock("../contexts/ActivityStore", () => ({
   addJob: vi.fn(),

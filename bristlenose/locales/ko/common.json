@@ -587,7 +587,8 @@
       "zoneTentative": "잠정",
       "zoneAccept": "승인",
       "zoneAccepted": "승인됨",
-      "zoneExcluded": "제외됨"
+      "zoneExcluded": "제외됨",
+      "yourDecision": "직접 내린 결정"
     },
     "toast": {
       "donePartial": "\uc778\uc6a9\ubb38 {{total}}\uac1c \uc911 {{processed}}\uac1c\uc5d0 \ud0dc\uadf8\ub97c \uc9c0\uc815\ud588\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \ubc30\uce58\uac00 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",

@@ -620,7 +620,8 @@
       "zoneTentative": "Preliminär",
       "zoneAccept": "Godkänn",
       "zoneAccepted": "Godkänd",
-      "zoneExcluded": "Exkluderad"
+      "zoneExcluded": "Exkluderad",
+      "yourDecision": "Ditt beslut"
     },
     "toast": {
       "donePartial": "{{processed}} av {{total}} citat taggade. Vissa satser misslyckades.",

@@ -620,7 +620,8 @@
       "zoneTentative": "Tentative",
       "zoneAccept": "Accepter",
       "zoneAccepted": "Acceptées",
-      "zoneExcluded": "Exclues"
+      "zoneExcluded": "Exclues",
+      "yourDecision": "Votre décision"
     },
     "toast": {
       "donePartial": "{{processed}} citations sur {{total}} \u00e9tiquet\u00e9es. Certains lots ont \u00e9chou\u00e9.",

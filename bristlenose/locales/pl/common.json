@@ -692,7 +692,8 @@
       "zoneTentative": "Wstępne",
       "zoneAccept": "Zaakceptuj",
       "zoneAccepted": "Zaakceptowane",
-      "zoneExcluded": "Wykluczone"
+      "zoneExcluded": "Wykluczone",
+      "yourDecision": "Twoja decyzja"
     },
     "toast": {
       "donePartial": "Otagowano {{processed}} z {{total}} cytat\u00f3w. Cz\u0119\u015b\u0107 partii nie powiod\u0142a si\u0119.",

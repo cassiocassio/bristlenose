@@ -162,13 +162,16 @@ Tests: a batch's proposals and register entries commit together; a writer holdin
 
 **Mockup approved (D39):** `docs/mockups/autocode-review-dialog.html`. Build to it exactly.
 
-- The dialog loads every proposal of the run: the histogram shows accepted, tentative and excluded; the zone lists show where each one sits now.
-- A re-cut moves only threshold decisions (D2) and only proposals whose zone changes against the stored lines (D26); researcher and unknown decisions carry a mark and stay put. No warning on removing tags (D3).
-- A re-cut deletes only tags whose source is AutoCode, never a tag the researcher added by hand that the proposal happened to match (review 1).
-- The title loses its sparkle icon: "AutoCode Review — <codebook>" (owner, 23 Nov 2026).
-- True `design-autocode-threshold-review.md`: §re-entry claims overrides that do not exist.
+**Built 23 Nov 2026** (server `6200b97d5`, `1b8b6efaf`; the dialog in the commit after them):
 
-Tests: reopening the dialog and pressing Apply with the lines unmoved changes nothing; a re-cut leaves a hand-added tag alone.
+- The dialog loads every proposal of the run: the histogram shows accepted, tentative and excluded; the counters and zone lists show where Apply would leave each one (`frontend/src/utils/recut.ts`, the client's copy of the server's `recut_target`).
+- Apply is `POST …/autocode/{fw}/recut`: it moves only threshold decisions and pending proposals (D2), and only those whose zone changes against the stored lines (D26); researcher and unknown decisions carry a pin ("Your decision") and stay put. No warning on removing tags (D3). It stores the snapped lines and asks for a Signals rebuild only when something moved (D31). Apply is off until a line moves from the stored lines. A run no lines were ever stored on gets a plain cut: only pending proposals are sorted, offered while anything is pending.
+- A re-cut deletes only tags whose source is AutoCode, never a tag the researcher added by hand that the proposal happened to match (review 1).
+- Accepted and Excluded list decided rows with their ✗ and ✓. On a decided row they send `{"override": true}` (D34); the ordinary accept and deny still refuse a decided proposal with 409. An overridden deny removes only an AutoCode-made tag.
+- The title loses its sparkle icon: "AutoCode Review — <codebook>" (D37). The `ai` icon concept now has no caller.
+- `design-autocode-threshold-review.md` trued (§re-entry, the counters, Apply).
+
+Tests: `tests/test_autocode_recut.py` (Apply with the lines unmoved changes nothing; only zone changes move; pinned decisions never move; a hand-added tag survives; a never-cut run's plain cut; the override routes and the 409 kept for ordinary calls; Signals only when something moved) and `ThresholdReviewModal.test.tsx` § "the whole run, re-cuttable".
 
 ### Phase 3: Default cut, accepted live
 

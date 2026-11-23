@@ -681,7 +681,8 @@
       "zoneTentative": "Předběžné",
       "zoneAccept": "Přijmout",
       "zoneAccepted": "Přijato",
-      "zoneExcluded": "Vyloučeno"
+      "zoneExcluded": "Vyloučeno",
+      "yourDecision": "Vaše rozhodnutí"
     },
     "toast": {
       "donePartial": "Ozna\u010deno {{processed}} z {{total}} citac\u00ed. N\u011bkter\u00e9 d\u00e1vky selhaly.",

@@ -1,11 +1,16 @@
 /**
  * ThresholdReviewModal — confidence-aware review dialog for AutoCode proposals.
  *
- * Replaces AutoCodeReportModal with:
- * - Confidence histogram (unit-square or continuous bars)
+ * - Confidence histogram (unit-square or continuous bars) over the whole run
  * - Dual threshold slider (lower/upper)
- * - Three zone lists (accepted / tentative / excluded)
- * - Bulk apply: accept above upper, deny below lower, leave middle as pending
+ * - Three zone lists (accepted / tentative / excluded), showing where Apply leaves
+ *   each proposal
+ * - Apply re-cuts the run at the two lines (landing plan Phase 2: D2, D26, D39)
+ *
+ * The whole run loads, decided proposals included, so a cut can be moved again and an
+ * exclusion taken back (D1). A decision a person made is pinned: the lines never move
+ * it, and its row carries a pin (D2). docs/mockups/autocode-review-dialog.html is the
+ * approved design.
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -14,16 +19,17 @@ import { Dialog } from "./Dialog";
 import {
   getAutoCodeStatus,
   getAutoCodeProposals,
-  acceptAllProposals,
   acceptProposal,
-  denyAllProposals,
   denyProposal,
+  recutProposals,
   toastSaveFailed,
 } from "../utils/api";
 import type { ApiError } from "../utils/api";
 import type { ProposedTagResponse } from "../utils/types";
 import { isExportMode } from "../utils/exportData";
 import { snapToStep } from "../utils/confidenceStep";
+import { outcomeZone } from "../utils/recut";
+import type { Lines } from "../utils/recut";
 import { reviewedElsewhere } from "../contexts/QuotesContext";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
@@ -32,6 +38,9 @@ import { Icon } from "./Icon";
 
 const DEFAULT_LOWER = 0.30;
 const DEFAULT_UPPER = 0.70;
+
+type Decision = "accepted" | "denied";
+type Outcome = "landed" | "back" | "gone" | "other";
 
 interface ThresholdReviewModalProps {
   open: boolean;
@@ -49,166 +58,177 @@ export function ThresholdReviewModal({
   onApply,
 }: ThresholdReviewModalProps) {
   const { t } = useTranslation();
-  const [allProposals, setAllProposals] = useState<ProposedTagResponse[]>([]);
+  // The run as it stands on this side: every proposal, with each row's decision as
+  // the per-row buttons have changed it.
+  const [proposals, setProposals] = useState<ProposedTagResponse[]>([]);
+  // The run as it loaded: the histogram's fixed reference for the distribution.
+  const [loaded, setLoaded] = useState<ProposedTagResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Proposals that have been individually acted on (removed from zone lists)
-  const [removed, setRemoved] = useState<Set<number>>(new Set());
+  // Rows sliding out after a per-row action, before they settle where it put them.
   const [removing, setRemoving] = useState<Set<number>>(new Set());
 
-  // Slider state
+  // Slider state, and the lines the run was last cut at (null: never cut).
   const [lower, setLower] = useState(DEFAULT_LOWER);
   const [upper, setUpper] = useState(DEFAULT_UPPER);
+  const [stored, setStored] = useState<Lines | null>(null);
 
-  // Track total counts for subtitle
   const [totalCount, setTotalCount] = useState(0);
-  const [acceptedCount, setAcceptedCount] = useState(0);
-  const [deniedCount, setDeniedCount] = useState(0);
 
   // Moves each time the modal opens (see `review`).
   const opening = useRef(0);
 
-  // Fetch all proposals when opened (min_confidence=0 to get everything)
+  // Fetch the whole run (min_confidence=0) and the lines it was cut at, together, so
+  // the counters never show a cut against the wrong lines.
   useEffect(() => {
     if (!open) return;
     opening.current += 1;
+    const mine = opening.current;
     setLoading(true);
-    setAllProposals([]);
-    setRemoved(new Set());
+    setProposals([]);
+    setLoaded([]);
     setRemoving(new Set());
     setLower(DEFAULT_LOWER);
     setUpper(DEFAULT_UPPER);
+    setStored(null);
     setError(null);
     setApplying(false);
-    getAutoCodeProposals(frameworkId, 0)
-      .then((resp) => {
-        const pending = resp.proposals.filter((p) => p.status === "pending");
-        const accepted = resp.proposals.filter((p) => p.status === "accepted").length;
-        const denied = resp.proposals.filter((p) => p.status === "denied").length;
-        setAllProposals(pending);
+    // The lines failing to load is not a precondition for reviewing: the defaults
+    // set above are a usable state, and Apply's re-cut reads the stored lines on the
+    // server whatever this side drew.
+    const status = getAutoCodeStatus(frameworkId).catch(() => null);
+    Promise.all([getAutoCodeProposals(frameworkId, 0), status])
+      .then(([resp, job]) => {
+        if (opening.current !== mine) return;
+        // Seed the sliders from the cutoffs actually applied, so the dialog never
+        // draws lines where they weren't. Snapped: an earlier build stored drifted
+        // values (0.30000000000000004) and reopening on one would keep sending it.
+        // A job with one line stored is cut at it and the default for the other, as
+        // the server reads it (`stored_lines`).
+        const lo = job?.applied_lower_threshold;
+        const hi = job?.applied_upper_threshold;
+        if (lo != null || hi != null) {
+          const lines = {
+            lower: snapToStep(lo ?? DEFAULT_LOWER),
+            upper: snapToStep(hi ?? DEFAULT_UPPER),
+          };
+          setStored(lines);
+          setLower(lines.lower);
+          setUpper(lines.upper);
+        }
+        setProposals(resp.proposals);
+        setLoaded(resp.proposals);
         setTotalCount(resp.total);
-        setAcceptedCount(accepted);
-        setDeniedCount(denied);
         setLoading(false);
       })
       .catch((err) => {
+        if (opening.current !== mine) return;
         console.error("Fetch proposals failed:", err);
         setError(t("autocode.review.loadFailed"));
         setLoading(false);
       });
-
-    // Seed the sliders from the cutoffs actually applied, when there are any.
-    // Without this the modal reopens on DEFAULT_LOWER/UPPER and draws threshold
-    // lines where they weren't — a report of a run that never happened. Failing
-    // quietly is deliberate: the defaults set above are already a usable state,
-    // and this is fidelity, not a precondition for reviewing.
-    getAutoCodeStatus(frameworkId)
-      .then((job) => {
-        // Snapped: an earlier build stored drifted values (0.30000000000000004)
-        // and reopening on one would keep sending it to Apply.
-        if (job.applied_lower_threshold != null) setLower(snapToStep(job.applied_lower_threshold));
-        if (job.applied_upper_threshold != null) setUpper(snapToStep(job.applied_upper_threshold));
-      })
-      .catch(() => {});
   }, [open, frameworkId]);
 
-  // Proposals that are still pending (not individually removed)
-  const pendingProposals = useMemo(
-    () => allProposals.filter((p) => !removed.has(p.id)),
-    [allProposals, removed],
-  );
-
-  // The histogram always shows the initial pending set (fixed reference)
-  const histogramProposals = allProposals;
-
-  // Zone assignments based on current thresholds
+  // Where Apply at the sliders' lines leaves each proposal, over the whole run (D26):
+  // what the counters count and the zone lists list.
   const { accepted, tentative, excluded } = useMemo(() => {
+    const lines = { lower: snapToStep(lower), upper: snapToStep(upper) };
     const acc: ProposedTagResponse[] = [];
     const tent: ProposedTagResponse[] = [];
     const excl: ProposedTagResponse[] = [];
-    for (const p of pendingProposals) {
-      if (p.confidence >= upper) acc.push(p);
-      else if (p.confidence < lower) excl.push(p);
+    for (const p of proposals) {
+      const zone = outcomeZone(p, stored, lines);
+      if (zone === "accepted") acc.push(p);
+      else if (zone === "excluded") excl.push(p);
       else tent.push(p);
     }
     return { accepted: acc, tentative: tent, excluded: excl };
-  }, [pendingProposals, lower, upper]);
+  }, [proposals, stored, lower, upper]);
 
-  // Per-row accept and deny call the API at once and slide the row out. One
-  // that fails said nothing and left as if saved (R5): now it says so and the
-  // row comes back. A row the server says was decided already leaves either
-  // way, counted where it actually landed: under this click's bucket when it
-  // went the way the click asked, under the other bucket when it was decided
-  // the other way elsewhere (N33), and in neither when it is gone (404).
+  // Per-row accept and deny call the API at once; the row slides out and comes back
+  // where the decision put it, pinned as the researcher's. A row already decided
+  // (an accepted or excluded one, D39) sends the explicit override (D34); a pending
+  // one does not, so a row the server says was decided meanwhile is refused as
+  // "reviewed elsewhere". One that fails says so and comes back as it was (R5); one
+  // decided elsewhere the way the click asked has landed; one decided the other way
+  // lands there (N33); one that is gone (404) leaves.
   //
-  // `opening` moves each time the modal opens and re-reads its counts, so an
-  // answer from an earlier opening still says so but changes no row or count.
-  const outcome = useRef(new Map<number, "landed" | "back" | "gone" | "other">());
+  // `opening` moves each time the modal opens and re-reads the run, so an answer
+  // from an earlier opening still says so but changes no row.
+  const outcome = useRef(new Map<number, Outcome>());
   const left = useRef(new Set<number>());
-  const review = useCallback(
-    (
-      proposalId: number,
-      call: (id: number) => Promise<unknown>,
-      same: string,
-      count: React.Dispatch<React.SetStateAction<number>>,
-      other: React.Dispatch<React.SetStateAction<number>>,
-    ) => {
-      if (isExportMode()) return; // no server in an exported report
-      const mine = opening.current;
-      outcome.current.delete(proposalId);
-      left.current.delete(proposalId);
-      setRemoving((prev) => new Set(prev).add(proposalId));
-      const settle = (o: "landed" | "back" | "gone" | "other") => {
-        if (opening.current !== mine) return;
-        outcome.current.set(proposalId, o);
-        if (!left.current.has(proposalId)) return; // the timer applies it
-        if (o === "back") setRemoved((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
-        if (o !== "landed") count((prev) => prev - 1);
-        if (o === "other") other((prev) => prev + 1);
-      };
-      call(proposalId).then(
-        () => settle("landed"),
-        (err: ApiError) => {
-          console.error("Review proposal failed:", err);
-          if (err?.reason === same) return settle("landed");
-          toastSaveFailed(err);
-          const decidedElsewhere = !!err?.reason?.startsWith("proposal_");
-          settle(decidedElsewhere ? "other" : reviewedElsewhere(err) ? "gone" : "back");
-        },
-      );
-      setTimeout(() => {
-        if (opening.current !== mine) return;
-        left.current.add(proposalId);
-        const o = outcome.current.get(proposalId);
-        setRemoving((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
-        if (o === "back") return;
-        setRemoved((prev) => new Set(prev).add(proposalId));
-        if (o === "other") other((prev) => prev + 1);
-        else if (o !== "gone") count((prev) => prev + 1);
-      }, 200);
-    },
-    [],
-  );
+  const review = useCallback((before: ProposedTagResponse, decision: Decision) => {
+    if (isExportMode()) return; // no server in an exported report
+    const mine = opening.current;
+    const id = before.id;
+    const other: Decision = decision === "accepted" ? "denied" : "accepted";
+    const place = (o: Outcome) => {
+      if (o === "back") {
+        setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
+      } else if (o === "gone") {
+        setProposals((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        // Decided elsewhere ("other") was a person too: while this dialog is open the
+        // only other writer of a listed row's decision is a quote card.
+        const status = o === "landed" ? decision : other;
+        const decided_by = "researcher" as const;
+        setProposals((prev) => prev.map((p) => (p.id === id ? { ...p, status, decided_by } : p)));
+      }
+    };
+    outcome.current.delete(id);
+    left.current.delete(id);
+    setRemoving((prev) => new Set(prev).add(id));
+    const settle = (o: Outcome) => {
+      if (opening.current !== mine) return;
+      outcome.current.set(id, o);
+      if (left.current.has(id)) place(o); // else the timer applies it
+    };
+    const call = decision === "accepted" ? acceptProposal : denyProposal;
+    call(id, before.status !== "pending").then(
+      () => settle("landed"),
+      (err: ApiError) => {
+        console.error("Review proposal failed:", err);
+        if (err?.reason === `proposal_${decision}`) return settle("landed");
+        toastSaveFailed(err);
+        const decidedElsewhere = !!err?.reason?.startsWith("proposal_");
+        settle(decidedElsewhere ? "other" : reviewedElsewhere(err) ? "gone" : "back");
+      },
+    );
+    setTimeout(() => {
+      if (opening.current !== mine) return;
+      left.current.add(id);
+      setRemoving((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      const o = outcome.current.get(id);
+      if (o !== "back") place(o ?? "landed");
+    }, 200);
+  }, []);
+
+  const byId = useMemo(() => new Map(proposals.map((p) => [p.id, p])), [proposals]);
 
   const handleAccept = useCallback(
-    (proposalId: number) => review(proposalId, acceptProposal, "proposal_accepted", setAcceptedCount, setDeniedCount),
-    [review],
+    (proposalId: number) => {
+      const p = byId.get(proposalId);
+      if (p) review(p, "accepted");
+    },
+    [byId, review],
   );
 
   const handleDeny = useCallback(
-    (proposalId: number) => review(proposalId, denyProposal, "proposal_denied", setDeniedCount, setAcceptedCount),
-    [review],
+    (proposalId: number) => {
+      const p = byId.get(proposalId);
+      if (p) review(p, "denied");
+    },
+    [byId, review],
   );
 
-  // Bulk apply: accept above upper, deny below lower
+  // Apply re-cuts the run at the sliders' lines, on the 0.05 grid.
   const handleApply = useCallback(async () => {
     setApplying(true);
     setError(null);
     try {
-      await acceptAllProposals(frameworkId, upper);
-      await denyAllProposals(frameworkId, lower);
+      await recutProposals(frameworkId, snapToStep(lower), snapToStep(upper));
       onApply();
     } catch (err) {
       console.error("Apply thresholds failed:", err);
@@ -217,8 +237,16 @@ export function ThresholdReviewModal({
     }
   }, [frameworkId, lower, upper, onApply]);
 
-  const pendingCount = pendingProposals.length;
-  const hasProposals = pendingCount > 0 || acceptedCount > 0 || deniedCount > 0;
+  const pendingCount = proposals.filter((p) => p.status === "pending").length;
+  const acceptedCount = proposals.filter((p) => p.status === "accepted").length;
+  const deniedCount = proposals.filter((p) => p.status === "denied").length;
+  const hasProposals = proposals.length > 0;
+  // Apply changes nothing with the lines where the run was cut (D26), so it waits for
+  // a line to move. A run never cut has no stored lines: its first Apply is a plain
+  // cut, offered while anything is pending, as it always was.
+  const linesMoved = stored
+    ? snapToStep(lower) !== stored.lower || snapToStep(upper) !== stored.upper
+    : pendingCount > 0;
 
   return (
     // The header draws its own × in the shell (no crash boundary here), so the
@@ -235,7 +263,7 @@ export function ThresholdReviewModal({
         <div className="codebook-modal-header">
           <div>
             <div className="codebook-modal-title" id="bn-threshold-title">
-              <Icon name="ai" decorative />{" "}{t("autocode.review.title")} &mdash; {frameworkTitle}
+              {t("autocode.review.title")} &mdash; {frameworkTitle}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-threshold-subtitle">
               {t("autocode.review.remaining", { pending: pendingCount, total: totalCount })}
@@ -268,7 +296,7 @@ export function ThresholdReviewModal({
             <>
               {/* Histogram */}
               <ConfidenceHistogram
-                proposals={histogramProposals}
+                proposals={loaded}
                 lower={lower}
                 upper={upper}
               />
@@ -346,7 +374,7 @@ export function ThresholdReviewModal({
           <button
             className="bn-btn bn-btn-primary"
             onClick={handleApply}
-            disabled={applying || pendingCount === 0}
+            disabled={applying || !linesMoved}
             data-testid="bn-threshold-apply"
           >
             {applying ? t("autocode.review.applying") : t("autocode.review.apply")}

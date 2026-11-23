@@ -620,7 +620,8 @@
       "zoneTentative": "Vorläufig",
       "zoneAccept": "Akzeptieren",
       "zoneAccepted": "Akzeptiert",
-      "zoneExcluded": "Ausgeschlossen"
+      "zoneExcluded": "Ausgeschlossen",
+      "yourDecision": "Ihre Entscheidung"
     },
     "toast": {
       "donePartial": "{{processed}} von {{total}} Zitaten verschlagwortet. Einige Stapel sind fehlgeschlagen.",

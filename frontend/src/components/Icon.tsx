@@ -28,7 +28,7 @@ import {
   MessageCircleQuestionMark,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
   CircleCheck, ExternalLink, Eye, EyeOff, Folder, GalleryHorizontal, Info, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
-  ImageOff, RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
+  ImageOff, Pin, RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
   TriangleAlert, Undo2, X, ZoomIn, ZoomOut, type LucideIcon,
 } from "lucide-react";
 
@@ -108,6 +108,9 @@ const ICONS = {
   broken: ImageOff,
   /** The AutoCode dialogs' title ornament (pick: Lucide sparkle over keeping ✦). */
   ai: Sparkle,
+  /** A decision a person made, which the review's lines never move (AutoCode review,
+   *  landing plan D2/D39). */
+  pinned: Pin,
   /** Dev-only playground controls. */
   playground: SlidersHorizontal,
   minus: Minus,

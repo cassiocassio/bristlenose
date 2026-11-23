@@ -622,7 +622,8 @@
       "zoneTentative": "Tentative",
       "zoneAccept": "Accept",
       "zoneAccepted": "Accepted",
-      "zoneExcluded": "Excluded"
+      "zoneExcluded": "Excluded",
+      "yourDecision": "Your decision"
     },
     "toast": {
       "donePartial": "Tagged {{processed}} of {{total}} quotes. Some batches failed.",

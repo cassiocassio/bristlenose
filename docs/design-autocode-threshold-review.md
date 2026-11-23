@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-20 (835cde98)
+last-trued: 2026-11-23
+trued-against: HEAD@main on 2026-11-23 (Phase 2 of docs/design-autocode-landing-plan.md)
 ---
 
 > **Truing status:** Partial — **this shipped.** The design half (§UX design,
@@ -14,6 +14,13 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 
 ## Changelog
 
+- _2026-11-23_ — Phase 2 of `docs/design-autocode-landing-plan.md` (decisions D1–D3,
+  D26, D34, D37, D39; design `docs/mockups/autocode-review-dialog.html`): the dialog
+  loads the whole run, pins a person's decision, counts Apply's outcome, lists decided
+  rows with their ✗ / ✓ as an explicit override, offers Apply only once a line has
+  moved, and Apply is one re-cut call. §Re-entry claimed overrides that did not exist
+  (the server refused a decided proposal with 409); it now describes what is built.
+  The sections below are trued to it; the sparkle left the title.
 - _2026-09-20_ — trued up: marked the doc shipped, which it had never said. A cold
   reader hit §Context describing the modal as unbuilt and a **Goal:** for something
   five months live, and would reasonably have triaged the whole doc as pending.
@@ -55,7 +62,7 @@ The current `AutoCodeReportModal` shows a flat triage table of all proposals abo
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  ✦ AutoCode Review — {frameworkTitle}                  [×]   │
+│  AutoCode Review — {frameworkTitle}                    [×]   │
 │  180 of 280 proposals remaining (60 accepted, 40 excluded)   │
 │  Drag the thresholds to control how many auto-tags are       │
 │  applied as tentative or accepted.                           │
@@ -101,7 +108,7 @@ The current `AutoCodeReportModal` shows a flat triage table of all proposals abo
 - **20 bins** of width 0.05: [0.00, 0.05), [0.05, 0.10), ..., [0.95, 1.00]
 - Max height ~120px (histogram area), scaled relative to the tallest bin
 - X-axis labels at 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
-- **Shows only pending proposals** — already-accepted/denied proposals are excluded from the histogram
+- **Shows the whole run** — pending, accepted and excluded proposals alike, as they stood when the dialog opened (Phase 2, D1); bars stay coloured by position against the sliders, and a pinned decision is counted in its bar but not drawn differently there
 - Split bins (where a threshold falls mid-bin): the bar is visually divided at the threshold point
 
 #### Unit-square mode vs continuous bars
@@ -126,7 +133,7 @@ When the proposal count is small enough, each bar is composed of **individual sq
 
 ### Zone counters
 
-Three inline chips below the histogram. Update in real-time as sliders move. Counts only pending proposals.
+Three inline chips below the histogram. Update in real-time as sliders move. They count **where Apply would leave each proposal over the whole run** (Phase 2): a pinned decision where it sits; any other proposal where its status puts it unless the sliders put it in a different zone from the stored lines (D26). Same words, same place. The rule is `outcomeZone` in `frontend/src/utils/recut.ts`, the client's copy of the server's `recut_target`.
 
 The **Tentative** counter uses the same pulsating dashed-border treatment as the `badge-proposed` variant in the quotes screen. This visual link teaches the researcher: "these are the same badges you'll see on your quotes." The Exclude and Accept counters use solid borders (grey and green respectively).
 
@@ -136,11 +143,15 @@ Three collapsible sections:
 
 | Zone | Default state | Per-row actions | Ordering |
 |------|--------------|-----------------|----------|
-| **Accepted** (above upper) | Collapsed | Deny button (override) | Confidence desc |
-| **Tentative** (between thresholds) | **Expanded** | Accept + Deny buttons | Confidence desc |
-| **Excluded** (below lower) | Collapsed | Accept button (rescue) | Confidence desc |
+| **Accepted** (where Apply leaves it accepted) | Collapsed | Deny button (override) | Confidence desc |
+| **Tentative** (where Apply leaves it pending) | **Expanded** | Accept + Deny buttons | Confidence desc |
+| **Excluded** (where Apply leaves it excluded) | Collapsed | Accept button (rescue) | Confidence desc |
 
-Each row shows: timecode (linked to transcript), speaker badge, quote text, tag badge (with rationale tooltip), **confidence score** (two decimals, monospace), action buttons.
+Each row shows: timecode (linked to transcript), speaker badge, quote text, tag badge (with rationale tooltip), **confidence score** (two decimals, tabular figures), action buttons.
+
+**Pinned rows (Phase 2, D2).** A decision a person made (`decided_by` "researcher", here or on a quote card) or one made before who decided was recorded ("unknown") carries Lucide *Pin* (`Icon` concept `pinned`) after its confidence, muted (`.threshold-pin` in `molecules/threshold-review.css`), with the label "Your decision" (`autocode.review.yourDecision`) as its tooltip and accessible name. Pinned rows never move with the sliders.
+
+**Decided rows are listed (Phase 2, D39).** Accepted and Excluded list proposals already decided, not only pending ones the sliders would move there, so ✗ on an accepted row excludes it and ✓ on an excluded row accepts it. On a decided row the button sends the explicit override (D34); either way the row becomes the researcher's pinned decision.
 
 Rows are grouped by session ID with session headers, same as the current triage table.
 
@@ -157,19 +168,35 @@ The tentative zone proposals stay as `pending` — not committed by Apply. They 
 
 ### Per-row actions call the API immediately
 
-When the researcher clicks Accept or Deny on an individual row, the API is called right away (matching current `AutoCodeReportModal` behaviour). This means:
+When the researcher clicks Accept or Deny on an individual row, the API is called right away. This means:
 - Per-row decisions persist even if the dialog is closed without Apply
-- The local proposals array is updated optimistically (fade-out animation, then remove from list)
+- The row fades out (200 ms) and comes back in the zone the decision put it in, pinned (Phase 2; it used to leave the dialog)
+- A pending row sends an ordinary accept or deny: one decided meanwhile elsewhere is refused with 409 `proposal_accepted` / `proposal_denied` and lands where it was decided (N33). A decided row sends `{"override": true}` (D34)
+- A failure toasts and puts the row back as it was (R5); a 404 removes it
 - The histogram does NOT change on per-row actions (it's a fixed reference for the distribution shape)
-- Only the zone counters update
+- The zone counters and the subtitle's counts update
 
 ### Slider changes are purely visual
 
 Moving sliders recomputes zone assignments client-side. No API calls until Apply. The proposals list re-sorts based on the new thresholds.
 
-### Apply thresholds commits bulk actions
+### Apply thresholds re-cuts the run
 
-"Apply thresholds" makes two API calls:
+> **Since Phase 2 (23 Nov 2026) Apply is one call**, `POST …/autocode/{fw}/recut` with
+> `{"lower", "upper"}` on the 0.05 grid (`recutProposals` in `utils/api.ts`). It moves
+> only threshold decisions and pending proposals, and only those whose zone under the
+> stored lines differs from their zone under the new ones (D26), so it is offered only
+> once a line has moved from the stored lines. A researcher's or an "unknown" decision
+> never moves (D2); a proposal moved out of Accepted loses its tag only when AutoCode
+> made it; no warning on removing tags (D3). A run no lines were ever stored on gets a
+> plain cut (only pending proposals sorted), offered while anything is pending. The
+> lines are stored, and Signals is rebuilt only when something moved (D31). Tests:
+> `tests/test_autocode_recut.py`, `ThresholdReviewModal.test.tsx`.
+>
+> The two-call description below is how it was built in April; accept-all and deny-all
+> remain as routes.
+
+"Apply thresholds" made two API calls:
 1. `POST accept-all` with `{"min_confidence": upperThreshold}` — accepts all pending above upper
 2. `POST deny-all` with `{"max_confidence": lowerThreshold}` — denies all pending below lower
 
@@ -197,6 +224,12 @@ class BulkActionRequest(BaseModel):
 ```
 
 In `deny_all_proposals()`: when `max_confidence` is provided, filter `ProposedTag.confidence < body.max_confidence` instead of `>= min_confidence`. This gives "deny everything below X" semantics.
+
+> **Phase 2 added two things** (23 Nov 2026): `POST …/autocode/{fw}/recut` (§Apply
+> thresholds re-cuts the run), and a body `{"override": true}` on the per-row
+> `…/proposals/{id}/accept` and `/deny`, which only the dialog's buttons on a decided row
+> send. Without it a decided proposal is still refused with 409 (`_already_reviewed`),
+> which the quote cards rely on for a stale window or a double click (D34).
 
 No new endpoints needed. The frontend fetches all proposals with `min_confidence=0.0` and computes histogram bins client-side. A distribution endpoint is an optimisation for later if datasets grow beyond 500+ proposals.
 
@@ -247,13 +280,18 @@ Register in `_THEME_FILES` list in `bristlenose/stages/s12_render/theme_assets.p
 
 ## Re-entry flow
 
-The dialog can be re-opened any time from the proposed count badge on the ✦ AutoCode button in the codebook panel. On re-entry:
+> **As built since Phase 2 (23 Nov 2026).** This section used to say a reopened dialog
+> showed only pending proposals and that a decided one could be overridden; the second
+> was not true (the server refused it with 409) and the first was the one-way ratchet
+> the landing plan removes. What is built:
 
-- Fresh API fetch: proposals with updated statuses (previous accept/deny reflected)
-- Histogram shows only remaining `pending` proposals
-- Subtitle shows "N of M proposals remaining (X accepted, Y excluded)"
-- Slider thresholds reset to defaults (not persisted)
-- If zero pending: disabled state, "All proposals reviewed"
+The dialog is re-opened from the codebook page's Review door (see below). On re-entry:
+
+- Fresh API fetch of the whole run and of the job's stored lines, together
+- The histogram, counters and zone lists cover every proposal; decided rows are listed in their zones, a person's decisions pinned
+- Subtitle keeps its shipped words: "N of M proposals remaining (X accepted, Y excluded)"
+- The sliders start at the stored lines (snapped), or the defaults when none were stored; Apply is off until a line moves
+- With nothing pending the whole run still shows, so a finished run can be re-cut and any decision overridden per row
 
 ### Always-visible entry point
 
@@ -292,7 +330,7 @@ This requires the frontend to know whether autocode has been run for a framework
 | All high confidence | All bars green, tentative+excluded zones empty. Apply accepts all |
 | All low confidence | All bars grey, accepted+tentative zones empty. Researcher can lower upper threshold or close |
 | Very few proposals (<10) | Histogram is sparse but readable. Still useful for showing confidence range |
-| Zero pending (re-entry after full review) | Empty histogram, all zones empty, Apply disabled |
+| Zero pending (re-entry after full review) | The whole run shows, decided rows in their zones; Apply off until a line moves (Phase 2) |
 | Network error during Apply | Individual per-row overrides already committed. Bulk calls are idempotent — retry is safe. Show error, stay open |
 | Lower = upper (single threshold) | Tentative zone collapses to one 0.05 bin. Valid configuration |
 

@@ -232,6 +232,15 @@
     color: var(--bn-colour-muted);
 }
 
+/* A decision a person made, after its confidence: the review's lines never move
+   it (landing plan D2, D39; docs/mockups/autocode-review-dialog.html). */
+.threshold-pin {
+    display: inline-flex;
+    margin-left: var(--bn-space-sm);
+    color: var(--bn-colour-muted);
+    vertical-align: -0.1em;
+}
+
 .threshold-actions {
     width: 64px;
     text-align: right;

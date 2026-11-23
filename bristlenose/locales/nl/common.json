@@ -620,7 +620,8 @@
       "zoneTentative": "Voorlopig",
       "zoneAccept": "Accepteren",
       "zoneAccepted": "Geaccepteerd",
-      "zoneExcluded": "Uitgesloten"
+      "zoneExcluded": "Uitgesloten",
+      "yourDecision": "Jouw beslissing"
     },
     "toast": {
       "donePartial": "{{processed}} van {{total}} citaten getagd. Sommige batches zijn mislukt.",

@@ -620,7 +620,8 @@
       "zoneTentative": "Provisional",
       "zoneAccept": "Accepta",
       "zoneAccepted": "Acceptades",
-      "zoneExcluded": "Excloses"
+      "zoneExcluded": "Excloses",
+      "yourDecision": "La teva decisió"
     },
     "toast": {
       "donePartial": "S'han etiquetat {{processed}} de {{total}} cites; alguns lots han fallat.",

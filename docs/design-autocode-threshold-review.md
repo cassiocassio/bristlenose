@@ -138,7 +138,7 @@ When the proposal count is small enough, each bar is composed of **individual sq
 
 Three inline chips below the histogram. Update in real-time as sliders move. They count **where Apply would leave each proposal over the whole run** (Phase 2): a pinned decision where it sits; a pending proposal where the sliders put it, since Apply decides it (D41, as shipped: a quote unhidden after the last Apply brings its proposal back, N175); a threshold decision where its status puts it unless the sliders put it in a different zone from the stored lines (D26). Same words, same place. The rule is `outcomeZone` in `frontend/src/utils/recut.ts`, the client's copy of the server's `recut_target`; both read the cases in `tests/fixtures/recut-contract.json` (`tests/test_recut_contract.py`, `recut.test.ts`).
 
-The **Tentative** counter uses the same pulsating dashed-border treatment as the `badge-proposed` variant in the quotes screen. This visual link teaches the researcher: "these are the same badges you'll see on your quotes." The Exclude and Accept counters use solid borders (grey and green respectively).
+The **Tentative** counter uses the same pulsating dashed-border treatment as the `badge-proposed` variant in the quotes screen (the counter always pulses; since Phase 4 of the landing plan a proposed badge pulses only while a run lands and for a minute after, D8). This visual link teaches the researcher: "these are the same badges you'll see on your quotes." The Exclude and Accept counters use solid borders (grey and green respectively).
 
 ### Proposal lists
 
@@ -165,7 +165,7 @@ Rows are grouped by session ID with session headers, same as the current triage 
 | **Close** | Close without API calls. No changes committed |
 | **Apply thresholds** | 1. Accept-all with `min_confidence=upper`, 2. Deny-below with `max_confidence=lower`, 3. Refresh codebook, close |
 
-The tentative zone proposals stay as `pending` — not committed by Apply. They appear on quotes as pulsating proposed badges. The researcher can re-open the dialog to review them later.
+The tentative zone proposals stay as `pending` — not committed by Apply. They appear on quotes as dashed proposed badges (still at rest; they pulse only while a run lands and for a minute after, `docs/design-autocode-landing-plan.md` D8). The researcher can re-open the dialog to review them later.
 
 ## State model
 

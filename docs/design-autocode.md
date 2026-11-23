@@ -66,8 +66,11 @@ proposals with confidence + rationale).
    used to carry the control died with the v1 lens.
 2. `POST /api/projects/{id}/autocode/{framework_id}` → starts background job via
    `asyncio.create_task()`
-3. Engine loads all quotes + codebook discrimination prompts, batches into groups
-   of 25 (`BATCH_SIZE = 25`, `autocode.py:38`)
+3. Engine loads all quotes + codebook discrimination prompts, in stored (id) order, and
+   batches them: a first apply sends 5, then 10, then 25 a batch
+   (`FIRST_APPLY_BATCH_RAMP`, `first_apply_batches`; landing plan D24, D25), so its
+   first tags land in seconds; a catch-up sends 25 a batch (`BATCH_SIZE = 25`). A
+   resumed first apply ramps again, one or two calls more than a run of 25s
 4. Each batch → one LLM call with full taxonomy (all sub-tags with
    definition/apply_when/not_this)
 5. LLM returns best-fit tag + confidence (0.0-1.0) + rationale per quote — no hard

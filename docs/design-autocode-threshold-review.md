@@ -202,11 +202,16 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 > opens on them with every row in its zone and Apply off (D41, D46). Since Phase 4a (23 Nov
 > 2026) the run also accepts live as each batch is saved (`autocode.accept_live`, D6: the
 > hybrid's line over the proposals so far, held at 0.80 until 25 have landed, never falling
-> during the run, kept on the job as `live_accept_line`); the end stores a line no higher
-> than the grid line at or below the lowest live acceptance, so the invariant still holds
-> and a run takes at least the exact cut. Live acceptance makes no tag: the cut makes the
-> tags of every threshold acceptance, so a run still coding shows only on the live read
-> (`GET …/proposals?live=true`, D32). A re-cut counts, and
+> during the run, kept on the job as `live_accept_line`). Every end of a first apply settles
+> (completion, a Stop, a failure, an outcome that could not be saved, an orphan the boot
+> sweep finds; D27 extended): it stores a line no higher than the grid line at or below
+> the lowest live acceptance, so every threshold acceptance sits at or above the stored
+> line and every pending row on a quote that counts below it, and a run takes at least the
+> exact cut. Live acceptance makes no tag: the settle makes the tags of every threshold
+> acceptance, so a run still coding shows only on the live read (`GET …/proposals?live=true`,
+> D32), and no ended run shows an acceptance without its tag. While a first apply codes or
+> settles, Apply (`recut`), accept-all and deny-all are refused with 409 (D17) and the
+> dialog shows `applyFailed`; a single row's accept or deny stays allowed (D2). A re-cut counts, and
 > rebuilds Signals for, only rows whose status changes. The
 > lines are stored, and Signals is rebuilt only when something moved (D31). The call
 > fails after the per-row writes' time limit and shows `applyFailed` (D43). Tests:

@@ -873,11 +873,12 @@ def stored_lines(job: AutoCodeJob) -> tuple[float, float]:
     review stored, or the dialog's defaults where none was stored.
 
     The catch-up applies the review dialog's three bands, not two: at or above the
-    accept line is accepted, strictly below the exclude line is denied (a denial
-    cannot be undone in the UI), and the band between stays pending for the review,
-    as in a first apply (#207: "the same thresholds that were in place at the last
-    AutoCode"). A line stored by a build whose slider drifted (0.7000000000000001) is
-    the line its label says: both are compared at two decimals (N188).
+    accept line is accepted, strictly below the exclude line is denied (the review's
+    row override can take a denial back, but nobody would know to look), and the band
+    between stays pending for the review, as in a first apply (#207: "the same
+    thresholds that were in place at the last AutoCode"). A line stored by a build
+    whose slider drifted (0.7000000000000001) is the line its label says: both are
+    compared at two decimals (N188).
     """
     upper = job.applied_upper_threshold
     if upper is None:
@@ -1910,8 +1911,9 @@ async def build_signal_snapshot(app: Any, project_id: int, source: str) -> None:
 
 
 def recut_made(app: Any, project_id: int) -> None:
-    """The review's lines were applied (accept-all or deny-all with the dialog's lines)
-    and moved at least one proposal; a call that moved none does not come here (D31)."""
+    """The review's lines were applied (the dialog's re-cut, or accept-all or deny-all
+    with the dialog's lines) and moved at least one proposal; a call that moved none
+    does not come here (D31)."""
     signals_changed(app, project_id, "codebook_recut")
 
 

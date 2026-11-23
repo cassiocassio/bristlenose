@@ -23,7 +23,7 @@ bristlenose/server/
     screens.py    — GET /api/projects/{id}/screens, …/screens/still, …/screens/status, …/screens/arrangements (the Screens lens; participants' screens are bearer-only and SERVER_ONLY in the export); full note: gotchas.md § Route notes from the layout tree
     quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
-    autocode.py   — 9 AutoCode endpoints (start, status, jobs in flight, cancel, proposals, accept/deny, accept-all/deny-all)
+    autocode.py   — 10 AutoCode endpoints (start, status, jobs in flight, cancel, proposals, accept/deny, accept-all/deny-all, recut)
     codebook_builder.py — 5 dynamic-codebook-builder endpoints (per-tag prompt cultivation)
     dev.py        — Dev-only endpoints (visual diff, system info)
   codebook/       — YAML codebook templates (garrett, norman, uxr, plato …); a renamed tag carries renamed_from:
@@ -341,7 +341,7 @@ Migration complete (Steps 1–10). M5 (Feb 2026) landed 14 primitives + 2 infras
 
 ## AutoCode (LLM-assisted tag application)
 
-`autocode.py` engine + `routes/autocode.py` (9 endpoints) + three ORM tables (`AutoCodeJob`, `ProposedTag`, `AutoCodeSentQuote`, the register). First feature to call LLMs from serve mode — uses `asyncio.create_task()`, no Celery/Redis. Cloud-only (prompt weight ~14K-17K tokens doesn't fit Ollama's 4K context). Unique constraint `(project_id, framework_id)` — one job per codebook per project.
+`autocode.py` engine + `routes/autocode.py` (10 endpoints) + three ORM tables (`AutoCodeJob`, `ProposedTag`, `AutoCodeSentQuote`, the register). First feature to call LLMs from serve mode — uses `asyncio.create_task()`, no Celery/Redis. Cloud-only (prompt weight ~14K-17K tokens doesn't fit Ollama's 4K context). Unique constraint `(project_id, framework_id)` — one job per codebook per project.
 
 **Gotcha:** `LLMClient(settings)` takes only settings, not an LLMUsageTracker — creates its own internally.
 

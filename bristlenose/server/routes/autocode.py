@@ -167,6 +167,33 @@ class BulkActionRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class RecutRequest(BaseModel):
+    """The review dialog's two lines: accept at or above ``upper``, exclude below ``lower``."""
+
+    lower: float
+    upper: float
+
+    @field_validator("lower", "upper")
+    @classmethod
+    def _on_the_review_grid(cls, value: float) -> float:
+        """Stored and reused by the catch-up, so only the review's 0.05 grid (N188)."""
+        return snap_cutoff(value)
+
+    @model_validator(mode="after")
+    def _lower_not_above_upper(self) -> RecutRequest:
+        if self.lower > self.upper:
+            raise ValueError("the exclude line must be at or below the accept line")
+        return self
+
+
+class RecutResponse(BaseModel):
+    """How many proposals the re-cut moved into each zone."""
+
+    accepted: int
+    tentative: int
+    excluded: int
+
+
 def _get_db(request: Request) -> Session:
     db: Session = request.app.state.db_factory()
     return db
@@ -854,12 +881,51 @@ def get_proposals(
         db.close()
 
 
+def _ensure_autocode_tag(db: Session, proposal: ProposedTag) -> None:
+    """Give the proposal's quote its tag, as AutoCode's, unless the quote has it already
+    (a tag the researcher added by hand stays theirs). Uncommitted."""
+    existing = (
+        db.query(QuoteTag)
+        .filter_by(quote_id=proposal.quote_id, tag_definition_id=proposal.tag_definition_id)
+        .first()
+    )
+    if existing is None:
+        db.add(QuoteTag(
+            quote_id=proposal.quote_id,
+            tag_definition_id=proposal.tag_definition_id,
+            source="autocode",
+        ))
+
+
+def _drop_autocode_tag(db: Session, proposal: ProposedTag) -> None:
+    """Take the proposal's tag off its quote, only when AutoCode made it: a tag the
+    researcher added by hand that the proposal happens to match is never touched
+    (docs/design-autocode-landing-plan.md, review 1). Uncommitted."""
+    db.query(QuoteTag).filter_by(
+        quote_id=proposal.quote_id,
+        tag_definition_id=proposal.tag_definition_id,
+        source="autocode",
+    ).delete(synchronize_session=False)
+
+
 def _already_reviewed(status: str) -> RefusalError:
     """409 for a proposal reviewed already, naming which way it went."""
     reason = (
         RefusalReason.PROPOSAL_ACCEPTED if status == "accepted" else RefusalReason.PROPOSAL_DENIED
     )
     return RefusalError(409, reason, f"Proposal already {status}")
+
+
+class ReviewRequest(BaseModel):
+    """The body of a per-row accept or deny.
+
+    ``override`` is the review dialog's row button on a proposal already decided
+    (D34): it changes that decision instead of being refused. Every other caller
+    (a quote card, the dialog's buttons on a pending row) sends none, and a decided
+    proposal stays refused with 409 "reviewed elsewhere", which both clients handle
+    (a stale window, a double click)."""
+
+    override: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -872,8 +938,15 @@ def accept_proposal(
     project_id: int,
     proposal_id: int,
     request: Request,
+    body: ReviewRequest | None = None,
 ) -> dict[str, str]:
-    """Accept a proposed tag — creates a QuoteTag row."""
+    """Accept a proposed tag, as the researcher's decision: its QuoteTag is made.
+
+    A proposal already decided is refused (409, which way it went) unless the body
+    says ``override``: then an exclusion, the lines' or the researcher's own, is
+    taken back, and accepting one already accepted pins it as the researcher's, so
+    no re-cut moves it (D2, D34; landing plan Phase 2).
+    """
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -882,24 +955,10 @@ def accept_proposal(
         if not proposal:
             raise HTTPException(status_code=404, detail="Proposal not found")
 
-        if proposal.status != "pending":
+        if proposal.status != "pending" and not (body is not None and body.override):
             raise _already_reviewed(proposal.status)
 
-        # Create the QuoteTag (may fail on unique constraint if already exists)
-        existing_qt = (
-            db.query(QuoteTag)
-            .filter_by(
-                quote_id=proposal.quote_id,
-                tag_definition_id=proposal.tag_definition_id,
-            )
-            .first()
-        )
-        if not existing_qt:
-            db.add(QuoteTag(
-                quote_id=proposal.quote_id,
-                tag_definition_id=proposal.tag_definition_id,
-                source="autocode",
-            ))
+        _ensure_autocode_tag(db, proposal)
 
         proposal.status = "accepted"
         proposal.decided_by = "researcher"
@@ -921,8 +980,14 @@ def deny_proposal(
     project_id: int,
     proposal_id: int,
     request: Request,
+    body: ReviewRequest | None = None,
 ) -> dict[str, str]:
-    """Deny a proposed tag — keeps the row for telemetry."""
+    """Exclude a proposed tag, as the researcher's decision; the row is kept for telemetry.
+
+    Refused for a decided proposal as accept is, unless ``override``: then excluding
+    one that was accepted takes its tag off the quote when AutoCode made it, never a
+    tag the researcher added by hand (review 1).
+    """
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -932,7 +997,9 @@ def deny_proposal(
             raise HTTPException(status_code=404, detail="Proposal not found")
 
         if proposal.status != "pending":
-            raise _already_reviewed(proposal.status)
+            if not (body is not None and body.override):
+                raise _already_reviewed(proposal.status)
+            _drop_autocode_tag(db, proposal)
 
         proposal.status = "denied"
         proposal.decided_by = "researcher"
@@ -958,22 +1025,7 @@ def _accept_pending(db: Session, project_id: int, query: Any) -> int:
     now = datetime.now(timezone.utc)
 
     for proposal in proposals:
-        # Create QuoteTag if not already present
-        existing_qt = (
-            db.query(QuoteTag)
-            .filter_by(
-                quote_id=proposal.quote_id,
-                tag_definition_id=proposal.tag_definition_id,
-            )
-            .first()
-        )
-        if not existing_qt:
-            db.add(QuoteTag(
-                quote_id=proposal.quote_id,
-                tag_definition_id=proposal.tag_definition_id,
-                source="autocode",
-            ))
-
+        _ensure_autocode_tag(db, proposal)
         proposal.status = "accepted"
         proposal.decided_by = "threshold"
         proposal.reviewed_at = now
@@ -1109,12 +1161,133 @@ def deny_all_proposals(
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# POST /projects/{id}/autocode/{framework_id}/recut — the review dialog's Apply
+# ---------------------------------------------------------------------------
+
+#: The three zones a pair of lines makes, by the dialog's inequalities.
+_ACCEPT, _TENTATIVE, _EXCLUDE = "accepted", "tentative", "excluded"
+
+#: Where each status sits today.
+_STATUS_ZONE = {"accepted": _ACCEPT, "pending": _TENTATIVE, "denied": _EXCLUDE}
+
+
+def zone_at(confidence: float, lower: float, upper: float) -> str:
+    """The zone a confidence falls in: at or above ``upper`` is accepted, strictly
+    below ``lower`` excluded, the band between tentative (the catch-up's and the
+    bulk actions' own inequalities)."""
+    if confidence >= upper:
+        return _ACCEPT
+    if confidence < lower:
+        return _EXCLUDE
+    return _TENTATIVE
+
+
+def recut_target(
+    proposal: ProposedTag, before: tuple[float, float] | None, lower: float, upper: float,
+) -> str | None:
+    """The zone a re-cut to (``lower``, ``upper``) puts ``proposal`` in, or None when it
+    stays where it is.
+
+    A decision the researcher made, or one made before decisions were recorded
+    ("unknown"), never moves (D2). A threshold decision or a pending proposal moves
+    only when its zone under the stored lines ``before`` differs from its zone under
+    the new ones (D26): Apply with the lines unmoved changes nothing, whatever an
+    earlier pass left. ``before`` is None for a job no lines were ever stored on: no
+    cut has been made, so where each proposal sits now is its status, and the first
+    Apply is a plain cut, as it always was.
+    """
+    if proposal.decided_by in ("researcher", "unknown"):
+        return None
+    after = zone_at(proposal.confidence, lower, upper)
+    was = (
+        _STATUS_ZONE.get(proposal.status, _TENTATIVE)
+        if before is None
+        else zone_at(proposal.confidence, before[1], before[0])
+    )
+    if was == after:
+        return None
+    return after
+
+
+def _stored_lines_or_none(job: AutoCodeJob) -> tuple[float, float] | None:
+    """The (accept, exclude) lines stored on ``job``, the dialog's defaults standing in
+    for one that is missing; None when neither was ever stored."""
+    if job.applied_upper_threshold is None and job.applied_lower_threshold is None:
+        return None
+    from bristlenose.server.autocode import stored_lines
+
+    return stored_lines(job)
+
+
+@router.post("/projects/{project_id}/autocode/{framework_id}/recut")
+def recut_proposals(
+    project_id: int,
+    framework_id: str,
+    request: Request,
+    body: RecutRequest,
+) -> RecutResponse:
+    """Move the run's lines to ``body`` and re-sort what the move changes (Phase 2 of
+    docs/design-autocode-landing-plan.md: D2, D3, D26).
+
+    Each movable proposal (a threshold decision, or pending) whose zone changes is set
+    to its new zone: accepted (a tag made as AutoCode's, unless the quote has it),
+    tentative (pending again, undecided; AutoCode's tag taken off), or excluded
+    (AutoCode's tag taken off). A tag the researcher added by hand is never removed.
+    Only quotes that count are touched, as the bulk actions do; the lines are stored
+    for the catch-up. One transaction, no confirmation (D3).
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        job = _get_job(db, project_id, framework_id)
+        before = _stored_lines_or_none(job)
+        counted = _counted_quote_ids(db, project_id)
+        moved = {_ACCEPT: 0, _TENTATIVE: 0, _EXCLUDE: 0}
+        now = datetime.now(timezone.utc)
+
+        for proposal in db.query(ProposedTag).filter(ProposedTag.job_id == job.id).all():
+            if proposal.quote_id not in counted:
+                continue
+            target = recut_target(proposal, before, body.lower, body.upper)
+            if target is None:
+                continue
+            if target == _ACCEPT:
+                _ensure_autocode_tag(db, proposal)
+                proposal.status = "accepted"
+                proposal.decided_by = "threshold"
+                proposal.reviewed_at = now
+            elif target == _EXCLUDE:
+                _drop_autocode_tag(db, proposal)
+                proposal.status = "denied"
+                proposal.decided_by = "threshold"
+                proposal.reviewed_at = now
+            else:
+                _drop_autocode_tag(db, proposal)
+                proposal.status = "pending"
+                proposal.decided_by = None
+                proposal.reviewed_at = None
+            moved[target] += 1
+
+        job.applied_lower_threshold = body.lower
+        job.applied_upper_threshold = body.upper
+        db.commit()
+        if any(moved.values()):
+            # Accepted tags changed: Signals follows, once the burst settles (review 9).
+            recut_made(request.app, project_id)
+        return RecutResponse(
+            accepted=moved[_ACCEPT], tentative=moved[_TENTATIVE], excluded=moved[_EXCLUDE],
+        )
+    finally:
+        db.close()
+
+
 def accept_at_default_cutoff(db_factory: Callable[[], Session], project_id: int,
                              framework_id: str, cutoff: float) -> int:
     """Apply a finished first job at ``cutoff`` as Accept all would: pending proposals at or
     above it are accepted and the cutoff is stored for later re-applies (the catch-up reuses
     it). The band below stays pending for the review; nothing is denied, since a denial
-    cannot be undone in the UI. Returns how many were accepted."""
+    is the review's to make. Returns how many were accepted."""
     db = db_factory()
     try:
         job = db.query(AutoCodeJob).filter_by(
@@ -1123,7 +1296,7 @@ def accept_at_default_cutoff(db_factory: Callable[[], Session], project_id: int,
             return 0
         job.applied_upper_threshold = cutoff
         # No lower line either: unset, the later re-applies deny below the dialog's default, and
-        # a denial cannot be undone. 0 leaves everything under the cutoff pending, for the review.
+        # nobody watched that denial. 0 leaves everything under the cutoff pending, for the review.
         job.applied_lower_threshold = 0.0
         query = db.query(ProposedTag).filter(
             ProposedTag.job_id == job.id,

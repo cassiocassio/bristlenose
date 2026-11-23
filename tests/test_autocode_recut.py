@@ -184,6 +184,17 @@ def test_a_never_cut_run_gets_a_plain_cut(run) -> None:
     assert [s[0] for s in _states(client, ids)] == ["pending", "pending", "accepted", "accepted"]
 
 
+def test_a_never_cut_runs_first_apply_leaves_every_decision(run) -> None:
+    """The plain cut sorts only what is pending, as accept-all and deny-all did: a
+    decision already made (by a line or by an older build) stays, whatever its zone."""
+    client, ids = run
+    _set(client, ids[0], "accepted", "threshold", "autocode")  # 0.5, tentative zone
+    _set(client, ids[3], "denied", None)  # 0.8, accept zone
+    assert _recut(client, 0.30, 0.70) == {"accepted": 1, "tentative": 0, "excluded": 0}
+    assert _state(client, ids[0]) == ("accepted", "threshold", "autocode")
+    assert _state(client, ids[3]) == ("denied", None, None)
+
+
 # ---------------------------------------------------------------------------
 # Tags: AutoCode's are made and removed, a hand-added one never is (review 1)
 # ---------------------------------------------------------------------------

@@ -1168,10 +1168,6 @@ def deny_all_proposals(
 #: The three zones a pair of lines makes, by the dialog's inequalities.
 _ACCEPT, _TENTATIVE, _EXCLUDE = "accepted", "tentative", "excluded"
 
-#: Where each status sits today.
-_STATUS_ZONE = {"accepted": _ACCEPT, "pending": _TENTATIVE, "denied": _EXCLUDE}
-
-
 def zone_at(confidence: float, lower: float, upper: float) -> str:
     """The zone a confidence falls in: at or above ``upper`` is accepted, strictly
     below ``lower`` excluded, the band between tentative (the catch-up's and the
@@ -1194,14 +1190,16 @@ def recut_target(
     only when its zone under the stored lines ``before`` differs from its zone under
     the new ones (D26): Apply with the lines unmoved changes nothing, whatever an
     earlier pass left. ``before`` is None for a job no lines were ever stored on: no
-    cut has been made, so where each proposal sits now is its status, and the first
-    Apply is a plain cut, as it always was.
+    cut has been made, so the first Apply is a plain cut, as it always was: only
+    pending proposals are sorted by the new lines, and every decision stays.
     """
     if proposal.decided_by in ("researcher", "unknown"):
         return None
+    if before is None and proposal.status != "pending":
+        return None
     after = zone_at(proposal.confidence, lower, upper)
     was = (
-        _STATUS_ZONE.get(proposal.status, _TENTATIVE)
+        _TENTATIVE
         if before is None
         else zone_at(proposal.confidence, before[1], before[0])
     )

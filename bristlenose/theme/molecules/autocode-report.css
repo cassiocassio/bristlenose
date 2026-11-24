@@ -57,15 +57,11 @@
 
 .report-tag { width: auto; }
 
-/* Row removal animation */
-.report-row.removing {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    border: none;
-}
-
-.report-row.removing td { padding-top: 0; padding-bottom: 0; }
+/* A row whose tick or cross is on its way to the server: it dims at once (the click is
+   heard) and stays put until it glides to where the decision lands it
+   (utils/reviewMotion.ts). Its buttons rest, so it is not decided twice. */
+.report-row--deciding { opacity: 0.5; }
+.report-row--deciding .threshold-actions { pointer-events: none; }
 
 /* Rationale tooltip (shared with proposed badges).
    Soft surface, 300ms hover delay, float-up-from-below animation.

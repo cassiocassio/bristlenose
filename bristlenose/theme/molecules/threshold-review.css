@@ -7,6 +7,7 @@
 /* Two classes: .codebook-modal-body (organisms, loaded after this file) pads all round. */
 .codebook-modal-body.threshold-body {
     padding: 0 var(--bn-space-lg) var(--bn-space-lg);
+    position: relative;  /* holds a row's copy in flight (utils/reviewMotion.ts) */
 }
 
 .threshold-body::before {
@@ -371,3 +372,59 @@
     cursor: pointer;
     user-select: none;
 }
+
+/* ── Rows moving, counts rolling (owner, 24 Nov 2026) ──────── */
+
+/* The row a tick or cross moved, while it glides: it crosses the others, so it covers
+   them. Transformed, it already paints above them. */
+.bn-flip-lifted > td {
+    background: var(--bn-modal-bg);
+}
+
+.bn-flip-lifted {
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+
+/* A copy of a row flying into a closed zone's header. */
+.bn-flip-ghost {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    background: var(--bn-modal-bg);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+
+/* An odometer count (components/RollingNumber.tsx): a changed digit rolls in from below
+   when the count grows, from above when it shrinks, and the old one rolls out the other
+   way. clip-path, not overflow, so the column keeps the text's baseline. */
+.bn-roll-col {
+    display: inline-block;
+    clip-path: inset(0);
+}
+
+.bn-roll-digit {
+    display: inline-block;
+    position: relative;
+}
+
+.bn-roll-digit::before {
+    content: attr(data-from);
+    content: attr(data-from) / "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+}
+
+.bn-roll-digit--up::before   { top: -100%; }
+.bn-roll-digit--down::before { top: 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .bn-roll-digit--up   { animation: bn-roll-up 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .bn-roll-digit--down { animation: bn-roll-down 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+
+.bn-no-animations .bn-roll-digit { animation: none; }
+
+@keyframes bn-roll-up   { from { transform: translateY(100%); }  to { transform: none; } }
+@keyframes bn-roll-down { from { transform: translateY(-100%); } to { transform: none; } }

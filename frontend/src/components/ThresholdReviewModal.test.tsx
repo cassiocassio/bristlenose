@@ -1050,6 +1050,26 @@ describe("ThresholdReviewModal", () => {
       expect(badge(2)).not.toHaveClass("badge-proposed");
     });
 
+    it("keeps a row in place, dimmed and counted, until its decision lands it", async () => {
+      vi.useFakeTimers();
+      try {
+        mockDenyProposal.mockResolvedValue(undefined);
+        await show([makeProposal({ id: 1, confidence: 0.5 }), makeProposal({ id: 2, confidence: 0.4 })]);
+        const count = () => screen.getByTestId("bn-zone-header-tentative").textContent;
+        expect(count()).toContain("(2)");
+        fireEvent.click(screen.getByTestId("bn-proposal-row-1").querySelector(".threshold-action-deny")!);
+        const row = screen.getByTestId("bn-zone-tentative").querySelector('[data-testid="bn-proposal-row-1"]');
+        expect(row).toHaveClass("report-row--deciding");
+        expect(count()).toContain("(2)");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(screen.getByTestId("bn-zone-excluded").querySelector('[data-testid="bn-proposal-row-1"]'))
+          .not.toBeNull();
+        expect(count()).toContain("(1)");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("cuts each quote to a line until Word wrap is ticked, then draws it whole", async () => {
       await show([makeProposal({ id: 1, confidence: 0.5 })]);
       const table = () => screen.getByTestId("bn-zone-tentative").querySelector("table")!;

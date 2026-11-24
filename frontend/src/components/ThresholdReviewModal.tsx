@@ -13,7 +13,7 @@
  * approved design.
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "./Dialog";
 import {
@@ -35,6 +35,9 @@ import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
 import { ProposalZoneList } from "./ProposalZoneList";
 import { Icon } from "./Icon";
+import { RollingNumber } from "./RollingNumber";
+import { captureLayout, playLayout } from "../utils/reviewMotion";
+import type { Layout } from "../utils/reviewMotion";
 
 const DEFAULT_LOWER = 0.30;
 const DEFAULT_UPPER = 0.70;
@@ -82,6 +85,21 @@ export function ThresholdReviewModal({
   // Off: each quote is one line, cut to fit. On: every quote is drawn whole, which is
   // more scrolling and easier to judge (owner, 24 Nov 2026). Kept across openings.
   const [wordWrap, setWordWrap] = useState(false);
+
+  // A row moving to where a decision put it glides there, and the rows around it make
+  // room (utils/reviewMotion.ts): the layout is measured just before the state that
+  // moves it is set, and played just after React has drawn it.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const flip = useRef<Layout | null>(null);
+  const measure = useCallback((id: number) => {
+    flip.current = captureLayout(bodyRef.current, [`row-${id}`]);
+  }, []);
+  useLayoutEffect(() => {
+    const from = flip.current;
+    if (!from) return;
+    flip.current = null;
+    playLayout(bodyRef.current, from);
+  });
 
   // Moves each time the modal opens (see `review`).
   const opening = useRef(0);
@@ -175,6 +193,7 @@ export function ThresholdReviewModal({
         (resp) => {
           if (opening.current !== mine) return;
           const fresh = resp.proposals.find((p) => p.id === id);
+          measure(id);
           setProposals((prev) => (fresh
             ? prev.map((p) => (p.id === id ? fresh : p))
             : prev.filter((p) => p.id !== id)));
@@ -182,11 +201,13 @@ export function ThresholdReviewModal({
         (err) => {
           console.error("Re-read proposals failed:", err);
           if (opening.current !== mine) return;
+          measure(id);
           setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
         },
       );
     };
     const place = (o: Outcome) => {
+      if (o !== "reread") measure(id);
       if (o === "back") {
         setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
       } else if (o === "gone") {
@@ -225,11 +246,12 @@ export function ThresholdReviewModal({
     setTimeout(() => {
       if (opening.current !== mine) return;
       left.current.add(id);
+      measure(id);
       setRemoving((prev) => { const n = new Set(prev); n.delete(id); return n; });
       const o = outcome.current.get(id);
       if (o !== "back") place(o ?? "landed");
     }, 200);
-  }, [frameworkId]);
+  }, [frameworkId, measure]);
 
   const close = useCallback(
     () => onClose(changed.current || inFlight.current > 0),
@@ -322,7 +344,7 @@ export function ThresholdReviewModal({
         {/* Body */}
         {/* No padding at the top: a zone header sticks to the very top of the scroll (the
             histogram's own room sits inside it), so no row shows above a stuck header. */}
-        <div className="codebook-modal-body threshold-body">
+        <div className="codebook-modal-body threshold-body" ref={bodyRef}>
           {loading ? (
             <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.loading")}</p>
           ) : !hasProposals ? (
@@ -349,19 +371,19 @@ export function ThresholdReviewModal({
                 <span className="threshold-zone-counter threshold-zone-counter--exclude">
                   {t("autocode.review.zoneExclude")}{" "}
                   <span className="threshold-zone-counter-count">
-                    {excluded.filter((p) => !removing.has(p.id)).length}
+                    <RollingNumber value={excluded.length} />
                   </span>
                 </span>
                 <span className="threshold-zone-counter threshold-zone-counter--tentative">
                   {t("autocode.review.zoneTentative")}{" "}
                   <span className="threshold-zone-counter-count">
-                    {tentative.filter((p) => !removing.has(p.id)).length}
+                    <RollingNumber value={tentative.length} />
                   </span>
                 </span>
                 <span className="threshold-zone-counter threshold-zone-counter--accept">
                   {t("autocode.review.zoneAccept")}{" "}
                   <span className="threshold-zone-counter-count">
-                    {accepted.filter((p) => !removing.has(p.id)).length}
+                    <RollingNumber value={accepted.length} />
                   </span>
                 </span>
               </div>

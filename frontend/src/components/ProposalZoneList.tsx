@@ -18,6 +18,7 @@ import { isEmbedded } from "../utils/embedded";
 import { postOpenInNewWindow } from "../shims/bridge";
 import { isPinned } from "../utils/recut";
 import { Icon } from "./Icon";
+import { RollingNumber } from "./RollingNumber";
 import { TimecodeLink } from "./TimecodeLink";
 
 type Zone = "accepted" | "tentative" | "excluded";
@@ -53,7 +54,9 @@ export function ProposalZoneList({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultExpanded);
 
-  const visibleCount = proposals.filter((p) => !removing.has(p.id)).length;
+  // A row whose decision is in flight stays where it is, dimmed, and is counted here,
+  // until it lands where the decision puts it (then the counts roll).
+  const visibleCount = proposals.length;
 
   /** Group proposals by session, sessions in number order (s2 before s10), sorted by
    *  confidence desc within each session. */
@@ -72,7 +75,7 @@ export function ProposalZoneList({
   if (visibleCount === 0 && !isOpen) return null;
 
   return (
-    <div className="threshold-zone-list" data-testid={`bn-zone-${zone}`}>
+    <div className="threshold-zone-list" data-testid={`bn-zone-${zone}`} data-flip-zone="">
       {/* A button, so the zone opens from the keyboard too. It sticks to the top of the
           scroll while its rows pass under it, until the next zone pushes it away. */}
       <button
@@ -81,15 +84,20 @@ export function ProposalZoneList({
         onClick={toggleOpen}
         aria-expanded={isOpen}
         data-testid={`bn-zone-header-${zone}`}
+        data-flip={`zone-${zone}`}
+        data-flip-landing=""
       >
         <span className={`threshold-zone-list-chevron${isOpen ? " threshold-zone-list-chevron--open" : ""}`}>
           <Icon name="disclose" decorative />
         </span>
         <span>{t(ZONE_LABEL_KEYS[zone])}</span>
-        <span className="threshold-zone-list-count">({visibleCount})</span>
+        <span className="threshold-zone-list-count">(<RollingNumber value={visibleCount} />)</span>
       </button>
 
-      <div className={`threshold-zone-list-body${isOpen ? " threshold-zone-list-body--open" : ""}`}>
+      <div
+        className={`threshold-zone-list-body${isOpen ? " threshold-zone-list-body--open" : ""}`}
+        data-flip-collapsed={isOpen ? undefined : ""}
+      >
         <table
           className={`threshold-proposal-table${wordWrap ? " threshold-proposal-table--wrap" : ""}`}
         >
@@ -125,22 +133,21 @@ interface SessionRowsProps {
 
 function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: SessionRowsProps) {
   const { t } = useTranslation();
-  // Filter out removed items for display but keep them in DOM briefly for animation
-  const visibleItems = items.filter((p) => !removing.has(p.id));
-  if (visibleItems.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <>
-      <tr>
+      <tr data-flip={`session-${zone}-${sessionId}`}>
         <td colSpan={6} className="report-session-header">
           {/^s\d+$/.test(sessionId) ? t("autocode.sessionLabel", { id: sessionId.slice(1) }) : sessionId}
         </td>
       </tr>
-      {visibleItems.map((p) => (
+      {items.map((p) => (
         <tr
           key={p.id}
-          className={`report-row${removing.has(p.id) ? " removing" : ""}`}
+          className={`report-row${removing.has(p.id) ? " report-row--deciding" : ""}`}
           data-testid={`bn-proposal-row-${p.id}`}
+          data-flip={`row-${p.id}`}
         >
           {/* The timecode plays, as every blue timecode does (owner, 7 Nov 2026); the speaker
               opens the transcript at that moment, in a new tab or window so the review stays

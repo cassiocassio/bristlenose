@@ -95,12 +95,26 @@
     margin-top: 0.55rem;
 }
 
-/* Split view: each codebook's name with its own Review on its baseline. */
+/* Split view: each codebook's name on the left and its own Review at the right edge, on
+   one baseline (owner, 24 Nov 2026). A long name wraps; Review never does. Apart, the
+   "|" between them separates nothing, so this row drops it. */
 .tag-overview-book-name {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
     font-size: var(--bn-text-badge);
     color: var(--bn-colour-text);
     margin-bottom: 0.2rem;
 }
+
+.tag-overview-book-name > :first-child { min-width: 0; }
+
+.tag-overview-book-name .tag-overview-review {
+    margin-inline-start: auto;
+    flex-shrink: 0;
+}
+
+.tag-overview-book-name .tag-filter-separator { display: none; }
 
 .threshold-histogram--overview {
     position: relative;

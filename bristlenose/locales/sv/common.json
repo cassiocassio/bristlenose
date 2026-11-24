@@ -628,6 +628,7 @@
       "apply": "Använd trösklar",
       "applying": "Använder…",
       "applyFailed": "Kunde inte använda — dina beslut per rad är sparade. Försök igen.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Kunde inte läsa in förslag",
       "zoneExclude": "Exkludera",
       "zoneTentative": "Preliminär",

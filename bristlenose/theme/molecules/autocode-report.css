@@ -58,9 +58,11 @@
 .report-tag { width: auto; }
 
 /* A row whose tick or cross is on its way to the server: it dims at once (the click is
-   heard) and stays put until it glides to where the decision lands it
-   (utils/reviewMotion.ts). Its buttons rest, so it is not decided twice. */
-.report-row--deciding { opacity: 0.5; }
+   heard) and stays put until the answer glides it to where the decision lands it
+   (utils/reviewMotion.ts). Its buttons rest (the mouse here; the keyboard in
+   ThresholdReviewModal's guard), so it is not decided twice. 0.7, not lower: it lasts
+   as long as the server takes, and the quote must stay readable meanwhile. */
+.report-row--deciding { opacity: 0.7; }
 .report-row--deciding .threshold-actions { pointer-events: none; }
 
 /* Rationale tooltip (shared with proposed badges).

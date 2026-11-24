@@ -628,6 +628,7 @@
       "apply": "Anvend tærskler",
       "applying": "Anvender…",
       "applyFailed": "Anvendelse mislykkedes — dine beslutninger pr. række er gemt. Prøv igen.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Kunne ikke indlæse forslag",
       "zoneExclude": "Udeluk",
       "zoneTentative": "Foreløbig",

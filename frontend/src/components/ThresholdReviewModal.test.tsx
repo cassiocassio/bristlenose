@@ -1038,7 +1038,7 @@ describe("ThresholdReviewModal", () => {
       expect(headers).toEqual(["Session 2", "Session 3", "Session 10"]);
     });
 
-    it("draws a tentative tag with the tentative tag's dashed outline, and only there", async () => {
+    it("draws a tentative tag with the dashed outline, and only there", async () => {
       await show([
         makeProposal({ id: 1, confidence: 0.5 }),
         makeProposal({ id: 2, confidence: 0.9 }),
@@ -1046,8 +1046,10 @@ describe("ThresholdReviewModal", () => {
       fireEvent.click(screen.getByTestId("bn-zone-header-accepted"));
       const badge = (id: number) =>
         screen.getByTestId(`bn-proposal-row-${id}`).querySelector(".report-tag .badge")!;
-      expect(badge(1)).toHaveClass("badge-proposed");
-      expect(badge(2)).not.toHaveClass("badge-proposed");
+      expect(badge(1)).toHaveClass("threshold-tag-tentative");
+      expect(badge(2)).not.toHaveClass("threshold-tag-tentative");
+      // Not the shared tentative class: in a list it would fade and pulse (owner, 24 Nov 2026).
+      expect(badge(1)).not.toHaveClass("badge-proposed");
     });
 
     it("keeps a row in place, dimmed and counted, until its decision lands it", async () => {
@@ -1062,12 +1064,39 @@ describe("ThresholdReviewModal", () => {
         expect(row).toHaveClass("report-row--deciding");
         expect(count()).toContain("(2)");
         await act(async () => { vi.advanceTimersByTime(300); });
-        expect(screen.getByTestId("bn-zone-excluded").querySelector('[data-testid="bn-proposal-row-1"]'))
-          .not.toBeNull();
+        const landedRow = screen.getByTestId("bn-zone-excluded")
+          .querySelector('[data-testid="bn-proposal-row-1"]');
+        expect(landedRow).not.toBeNull();
+        expect(landedRow).not.toHaveClass("report-row--deciding");
         expect(count()).toContain("(1)");
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it("sends one decision for a row however often it is pressed while deciding", async () => {
+      let answer: () => void = () => {};
+      mockDenyProposal.mockImplementation(() => new Promise<void>((r) => { answer = r; }));
+      await show([makeProposal({ id: 1, confidence: 0.5 })]);
+      const deny = () => screen.getByTestId("bn-proposal-row-1").querySelector<HTMLElement>(".threshold-action-deny")!;
+      fireEvent.click(deny());
+      fireEvent.click(deny());
+      expect(deny()).toHaveAttribute("aria-disabled", "true");
+      expect(mockDenyProposal).toHaveBeenCalledTimes(1);
+      await act(async () => { answer(); });
+      expect(screen.getByTestId("bn-zone-excluded").querySelector('[data-testid="bn-proposal-row-1"]'))
+        .not.toBeNull();
+    });
+
+    it("leaves a row whose save failed where it was, no longer dimmed", async () => {
+      mockDenyProposal.mockRejectedValue(new Error("offline"));
+      await show([makeProposal({ id: 1, confidence: 0.5 })]);
+      fireEvent.click(screen.getByTestId("bn-proposal-row-1").querySelector(".threshold-action-deny")!);
+      await act(async () => {});
+      const row = screen.getByTestId("bn-zone-tentative").querySelector('[data-testid="bn-proposal-row-1"]');
+      expect(row).not.toBeNull();
+      expect(row).not.toHaveClass("report-row--deciding");
+      expect(toastSaveFailed).toHaveBeenCalledTimes(1);
     });
 
     it("cuts each quote to a line until Word wrap is ticked, then draws it whole", async () => {

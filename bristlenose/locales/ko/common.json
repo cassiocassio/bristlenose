@@ -591,6 +591,7 @@
       "apply": "임계값 적용",
       "applying": "적용 중…",
       "applyFailed": "적용 실패 — 개별 결정은 저장되었습니다. 다시 시도하세요.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "제안을 로드하지 못했습니다",
       "zoneExclude": "제외",
       "zoneTentative": "잠정",

@@ -628,6 +628,7 @@
       "apply": "Grenzen toepassen",
       "applying": "Toepassen…",
       "applyFailed": "Toepassen mislukt — je beslissingen per rij zijn bewaard. Probeer opnieuw.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Kon voorstellen niet laden",
       "zoneExclude": "Uitsluiten",
       "zoneTentative": "Voorlopig",

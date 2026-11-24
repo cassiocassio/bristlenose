@@ -591,6 +591,7 @@
       "apply": "套用門檻",
       "applying": "正在套用⋯",
       "applyFailed": "套用失敗——你的逐列決定已儲存。請再試一次。",
+      "landed": "{{zone}}。{{tally}}",
       "loadFailed": "無法載入提案",
       "zoneExclude": "排除",
       "zoneTentative": "暫定",

@@ -628,6 +628,7 @@
       "apply": "Bruk terskler",
       "applying": "Bruker …",
       "applyFailed": "Bruk mislyktes – beslutningene dine per rad er lagret. Prøv igjen.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Klarte ikke å laste inn forslag",
       "zoneExclude": "Utelat",
       "zoneTentative": "Foreløpig",

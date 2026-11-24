@@ -628,6 +628,7 @@
       "apply": "Aplicar umbrales",
       "applying": "Aplicando…",
       "applyFailed": "Error al aplicar — tus decisiones por fila están guardadas. Inténtalo de nuevo.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Error al cargar propuestas",
       "zoneExclude": "Excluir",
       "zoneTentative": "Tentativa",

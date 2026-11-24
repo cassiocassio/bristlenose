@@ -628,6 +628,7 @@
       "apply": "Aplica els llindars",
       "applying": "S'estan aplicant…",
       "applyFailed": "L'aplicació ha fallat: les teves decisions per fila estan desades. Torna-ho a provar.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "No s'han pogut carregar les propostes",
       "zoneExclude": "Exclou",
       "zoneTentative": "Provisional",

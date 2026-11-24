@@ -12,7 +12,7 @@
 import { useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CONFIDENCE_STEP, snapToStep } from "../utils/confidenceStep";
+import { CONFIDENCE_STEP, confidenceText, snapToStep } from "../utils/confidenceStep";
 
 const STEP = CONFIDENCE_STEP;
 const MIN_GAP = 0.05;
@@ -62,7 +62,7 @@ export function DualThresholdSlider({
   onUpperChange,
   children,
 }: DualThresholdSliderProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const trackRef = useRef<HTMLDivElement>(null);
 
   /** Convert a mouse/touch clientX to a 0–1 value along the track. */
@@ -141,13 +141,14 @@ export function DualThresholdSlider({
           aria-valuemin={0}
           aria-valuemax={snap(upper - MIN_GAP)}
           aria-valuenow={lower}
+          aria-valuetext={confidenceText(lower, i18n.language)}
           tabIndex={0}
           onPointerDown={startDrag("lower")}
           onKeyDown={handleKeyDown("lower")}
           data-testid="bn-threshold-lower"
         >
           <Pointer />
-          <span className="threshold-slider-label">{lower.toFixed(2)}</span>
+          <span className="threshold-slider-label">{confidenceText(lower, i18n.language)}</span>
         </div>
         <div
           className="threshold-slider-thumb threshold-slider-thumb--upper"
@@ -157,13 +158,14 @@ export function DualThresholdSlider({
           aria-valuemin={snap(lower + MIN_GAP)}
           aria-valuemax={1}
           aria-valuenow={upper}
+          aria-valuetext={confidenceText(upper, i18n.language)}
           tabIndex={0}
           onPointerDown={startDrag("upper")}
           onKeyDown={handleKeyDown("upper")}
           data-testid="bn-threshold-upper"
         >
           <Pointer />
-          <span className="threshold-slider-label">{upper.toFixed(2)}</span>
+          <span className="threshold-slider-label">{confidenceText(upper, i18n.language)}</span>
         </div>
       </div>
     </div>

@@ -697,6 +697,7 @@
       "apply": "Použít prahy",
       "applying": "Použití…",
       "applyFailed": "Použití se nezdařilo — vaše rozhodnutí u jednotlivých řádků jsou uložena. Zkuste to znovu.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Nepodařilo se načíst návrhy",
       "zoneExclude": "Vyloučit",
       "zoneTentative": "Předběžné",

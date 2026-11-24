@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Dialog } from "./Dialog";
 import {
@@ -31,6 +32,7 @@ import { snapToStep } from "../utils/confidenceStep";
 import { outcomeZone, snapLines, storedLinesOf } from "../utils/recut";
 import type { Lines } from "../utils/recut";
 import { reviewedElsewhere } from "../contexts/QuotesContext";
+import { announce } from "../utils/announce";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
 import { ProposalZoneList } from "./ProposalZoneList";
@@ -43,7 +45,28 @@ const DEFAULT_LOWER = 0.30;
 const DEFAULT_UPPER = 0.70;
 
 type Decision = "accepted" | "denied";
-type Outcome = "landed" | "back" | "gone" | "reread";
+
+/**
+ * Where keyboard focus goes when a decided row leaves its zone: the same button on the
+ * next row of the zone the researcher was working down (or the row before, or the zone's
+ * header), the triage habit (owner, 24 Nov 2026). Null when focus is not in that row.
+ */
+function focusAfter(root: HTMLElement | null, id: number): HTMLElement | null {
+  const row = root?.querySelector(`[data-flip="row-${id}"]`);
+  const active = document.activeElement;
+  if (!row || !active || !row.contains(active)) return null;
+  const zone = row.closest("[data-flip-zone]");
+  if (!zone) return null;
+  const rows = Array.from(zone.querySelectorAll("tr.report-row"));
+  const i = rows.indexOf(row);
+  const next = rows[i + 1] ?? rows[i - 1];
+  const kind = active.classList.contains("threshold-action-accept") ? "accept" : "deny";
+  return (
+    next?.querySelector<HTMLElement>(`.threshold-action-${kind}`)
+    ?? next?.querySelector<HTMLElement>(".threshold-action-btn")
+    ?? zone.querySelector<HTMLElement>("[data-flip-landing]")
+  );
+}
 
 interface ThresholdReviewModalProps {
   open: boolean;
@@ -72,8 +95,14 @@ export function ThresholdReviewModal({
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Rows sliding out after a per-row action, before they settle where it put them.
+  // Rows whose decision is on its way to the server: dimmed in place, their buttons at
+  // rest, until the answer moves them (or leaves them where they were).
   const [removing, setRemoving] = useState<Set<number>>(new Set());
+  // The same set as a ref, read synchronously: a second key press on a row still
+  // deciding is ignored, never sent (the CSS rest stops only the mouse).
+  const deciding = useRef(new Set<number>());
+  // The last decision that landed, for the screen-reader line (see the effect below).
+  const [landed, setLanded] = useState<{ zone: "accepted" | "excluded"; n: number } | null>(null);
 
   // Slider state, and the lines the run was last cut at (null: never cut).
   const [lower, setLower] = useState(DEFAULT_LOWER);
@@ -88,12 +117,10 @@ export function ThresholdReviewModal({
 
   // A row moving to where a decision put it glides there, and the rows around it make
   // room (utils/reviewMotion.ts): the layout is measured just before the state that
-  // moves it is set, and played just after React has drawn it.
+  // moves it is set, and played in the same task, in the commit `flushSync` forces, so
+  // nothing (a scroll, another commit) can come between the two.
   const bodyRef = useRef<HTMLDivElement>(null);
   const flip = useRef<Layout | null>(null);
-  const measure = useCallback((id: number) => {
-    flip.current = captureLayout(bodyRef.current, [`row-${id}`]);
-  }, []);
   useLayoutEffect(() => {
     const from = flip.current;
     if (!from) return;
@@ -115,6 +142,8 @@ export function ThresholdReviewModal({
     const mine = opening.current;
     changed.current = false;
     inFlight.current = 0;
+    deciding.current = new Set();
+    setLanded(null);
     setLoading(true);
     setProposals([]);
     setLoaded([]);
@@ -171,87 +200,109 @@ export function ThresholdReviewModal({
     return { accepted: acc, tentative: tent, excluded: excl };
   }, [proposals, stored, lower, upper]);
 
-  // Per-row accept and deny call the API at once; the row slides out and comes back
-  // where the decision put it, pinned as the researcher's. A row already decided
-  // (an accepted or excluded one, D39) sends the explicit override, naming the status
-  // it was shown in (D34, D44); a pending one does not. One that fails says so and
-  // comes back as it was (R5); one that is gone (404) leaves. One the server says was
-  // decided already (any 409: here meanwhile, or differently since the dialog drew
-  // it) is read again from the server and drawn as it is there (D44), quietly when it
-  // went the way the click asked, saying so otherwise (N33).
+  // Said once per landed decision, for a screen reader: the motion and the rolling counts
+  // are the sighted confirmation. Never a live region on the counters themselves, which a
+  // slider drag would flood.
+  const announced = useRef(0);
+  useEffect(() => {
+    if (!landed || landed.n === announced.current) return;
+    announced.current = landed.n;
+    const tally = t("autocode.review.tally", {
+      excludedLabel: t("autocode.review.zoneExcluded"),
+      tentativeLabel: t("autocode.review.zoneTentative"),
+      acceptedLabel: t("autocode.review.zoneAccepted"),
+      excluded: excluded.length,
+      tentative: tentative.length,
+      accepted: accepted.length,
+    }).replace(/<\/?[a-z]+>/g, "");
+    announce(t("autocode.review.landed", {
+      zone: t(landed.zone === "accepted" ? "autocode.review.zoneAccepted" : "autocode.review.zoneExcluded"),
+      tally,
+    }));
+  }, [landed, accepted.length, tentative.length, excluded.length, t]);
+
+  // Per-row accept and deny call the API at once. The row dims where it is, and moves
+  // when the server answers, so the motion means "saved" (owner, 24 Nov 2026): it glides
+  // to where the decision put it, pinned as the researcher's. A row already decided (an
+  // accepted or excluded one, D39) sends the explicit override, naming the status it was
+  // shown in (D34, D44); a pending one does not. One that fails says so and undims where
+  // it was (R5); one that is gone (404) leaves. One the server says was decided already
+  // (any 409: here meanwhile, or differently since the dialog drew it) is read again from
+  // the server and drawn as it is there (D44), quietly when it went the way the click
+  // asked, saying so otherwise (N33).
   //
-  // `opening` moves each time the modal opens and re-reads the run, so an answer
-  // from an earlier opening still says so but changes no row.
-  const outcome = useRef(new Map<number, Outcome>());
-  const left = useRef(new Set<number>());
+  // `opening` moves each time the modal opens and re-reads the run, so an answer from an
+  // earlier opening still says so but changes no row.
   const review = useCallback((before: ProposedTagResponse, decision: Decision) => {
     if (isExportMode()) return; // no server in an exported report
-    const mine = opening.current;
     const id = before.id;
-    const reread = () => {
-      getAutoCodeProposals(frameworkId, 0).then(
-        (resp) => {
-          if (opening.current !== mine) return;
-          const fresh = resp.proposals.find((p) => p.id === id);
-          measure(id);
-          setProposals((prev) => (fresh
-            ? prev.map((p) => (p.id === id ? fresh : p))
-            : prev.filter((p) => p.id !== id)));
-        },
-        (err) => {
-          console.error("Re-read proposals failed:", err);
-          if (opening.current !== mine) return;
-          measure(id);
-          setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
-        },
-      );
-    };
-    const place = (o: Outcome) => {
-      if (o !== "reread") measure(id);
-      if (o === "back") {
-        setProposals((prev) => prev.map((p) => (p.id === id ? before : p)));
-      } else if (o === "gone") {
-        setProposals((prev) => prev.filter((p) => p.id !== id));
-      } else if (o === "reread") {
-        reread();
-      } else {
-        setProposals((prev) => prev.map((p) => (p.id === id
-          ? { ...p, status: decision, decided_by: "researcher" as const } : p)));
-      }
-    };
-    outcome.current.delete(id);
-    left.current.delete(id);
+    if (deciding.current.has(id)) return;
+    deciding.current.add(id);
+    const mine = opening.current;
     inFlight.current += 1;
     setRemoving((prev) => new Set(prev).add(id));
-    const settle = (o: Outcome) => {
+
+    // Draw the answer: measure, change the run and undim the row in one forced commit
+    // (the layout effect plays the motion inside it), then hand focus on if it was lost.
+    const land = (next: (prev: ProposedTagResponse[]) => ProposedTagResponse[],
+      zone?: "accepted" | "excluded") => {
       if (opening.current !== mine) return;
-      inFlight.current -= 1;
-      if (o === "landed" || o === "reread") changed.current = true;
-      outcome.current.set(id, o);
-      if (left.current.has(id)) place(o); // else the timer applies it
+      deciding.current.delete(id);
+      const after = focusAfter(bodyRef.current, id);
+      flip.current = captureLayout(bodyRef.current, [`row-${id}`]);
+      flushSync(() => {
+        setProposals(next);
+        setRemoving((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        if (zone) setLanded((prev) => ({ zone, n: (prev?.n ?? 0) + 1 }));
+      });
+      const active = document.activeElement;
+      if (after?.isConnected && (!active || active === document.body)) {
+        after.focus({ preventScroll: true });
+      }
     };
+    const zoneOf = (status: string) =>
+      (status === "accepted" ? "accepted" : status === "denied" ? "excluded" : undefined);
+
     const call = decision === "accepted" ? acceptProposal : denyProposal;
     call(id, before.status === "pending" ? undefined : before.status).then(
-      () => settle("landed"),
+      () => {
+        if (opening.current !== mine) return;
+        inFlight.current -= 1;
+        changed.current = true;
+        land((prev) => prev.map((p) => (p.id === id
+          ? { ...p, status: decision, decided_by: "researcher" as const } : p)),
+          decision === "accepted" ? "accepted" : "excluded");
+      },
       (err: ApiError) => {
         console.error("Review proposal failed:", err);
-        if (err?.reason?.startsWith("proposal_")) {
-          if (err.reason !== `proposal_${decision}`) toastSaveFailed(err);
-          return settle("reread");
+        // Said even when the dialog has since been closed and opened again: the decision
+        // did not save, whichever opening is showing.
+        const conflict = err?.reason?.startsWith("proposal_");
+        if (!conflict || err.reason !== `proposal_${decision}`) toastSaveFailed(err);
+        if (opening.current !== mine) return;
+        inFlight.current -= 1;
+        if (conflict) {
+          changed.current = true;
+          getAutoCodeProposals(frameworkId, 0).then(
+            (resp) => {
+              const fresh = resp.proposals.find((p) => p.id === id);
+              land((prev) => (fresh
+                ? prev.map((p) => (p.id === id ? fresh : p))
+                : prev.filter((p) => p.id !== id)), fresh ? zoneOf(fresh.status) : undefined);
+            },
+            (e) => {
+              console.error("Re-read proposals failed:", e);
+              land((prev) => prev.map((p) => (p.id === id ? before : p)));
+            },
+          );
+          return;
         }
-        toastSaveFailed(err);
-        settle(reviewedElsewhere(err) ? "gone" : "back");
+        land(reviewedElsewhere(err)
+          ? (prev) => prev.filter((p) => p.id !== id)
+          : (prev) => prev.map((p) => (p.id === id ? before : p)));
       },
     );
-    setTimeout(() => {
-      if (opening.current !== mine) return;
-      left.current.add(id);
-      measure(id);
-      setRemoving((prev) => { const n = new Set(prev); n.delete(id); return n; });
-      const o = outcome.current.get(id);
-      if (o !== "back") place(o ?? "landed");
-    }, 200);
-  }, [frameworkId, measure]);
+  }, [frameworkId]);
 
   const close = useCallback(
     () => onClose(changed.current || inFlight.current > 0),

@@ -628,6 +628,7 @@
       "apply": "Eşikleri uygula",
       "applying": "Uygulanıyor…",
       "applyFailed": "Uygulama başarısız oldu — satır bazlı kararlarınız kaydedildi. Yeniden deneyin.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Öneriler yüklenemedi",
       "zoneExclude": "Hariç tut",
       "zoneTentative": "Geçici",

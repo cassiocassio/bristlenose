@@ -630,6 +630,7 @@
       "apply": "Apply thresholds",
       "applying": "Applying…",
       "applyFailed": "Apply failed — your per-row decisions are saved. Try again.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Failed to load proposals",
       "zoneExclude": "Exclude",
       "zoneTentative": "Tentative",

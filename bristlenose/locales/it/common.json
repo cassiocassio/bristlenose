@@ -628,6 +628,7 @@
       "apply": "Applica soglie",
       "applying": "Applicazione…",
       "applyFailed": "Applicazione non riuscita — le decisioni per ciascuna riga sono salvate. Riprova.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Impossibile caricare le proposte",
       "zoneExclude": "Escludi",
       "zoneTentative": "Provvisori",

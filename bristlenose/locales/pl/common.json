@@ -708,6 +708,7 @@
       "apply": "Zastosuj progi",
       "applying": "Stosowanie…",
       "applyFailed": "Zastosowanie nie powiodło się — Twoje decyzje dla poszczególnych wierszy są zapisane. Spróbuj ponownie.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Nie udało się wczytać propozycji",
       "zoneExclude": "Wyklucz",
       "zoneTentative": "Wstępne",

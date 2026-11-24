@@ -19,6 +19,7 @@ import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse, ZoneBin } from "../utils/types";
 import { getTagBg } from "../utils/colours";
+import { confidenceText } from "../utils/confidenceStep";
 
 const NUM_BINS = 20;
 const BIN_WIDTH = 0.05;
@@ -55,7 +56,7 @@ function binZone(binIdx: number, lower: number, upper: number): "grey" | "amber"
 }
 
 export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHistogramProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   /** Build bins: each bin has a count and an array of proposals (for unit-square mode). */
@@ -106,7 +107,7 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
                 key={p.id}
                 className="threshold-histogram-square"
                 style={{ backgroundColor: getTagBg(p.colour_set, p.colour_index) }}
-                title={`${p.tag_name} (${p.confidence.toFixed(2)})`}
+                title={`${p.tag_name} (${confidenceText(p.confidence, i18n.language)})`}
               />
             ))}
           </div>
@@ -125,7 +126,7 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
         </div>
       );
     },
-    [lower, upper, maxCount, useSquares, t],
+    [lower, upper, maxCount, useSquares, t, i18n.language],
   );
 
   // Drawn inside the threshold slider's box (DualThresholdSlider), which tints the zones

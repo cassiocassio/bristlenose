@@ -6,7 +6,7 @@
  * confidence score, and zone-specific action buttons.
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
@@ -17,6 +17,7 @@ import { placeProps, windowPlace } from "../utils/contextPlace";
 import { isEmbedded } from "../utils/embedded";
 import { postOpenInNewWindow } from "../shims/bridge";
 import { isPinned } from "../utils/recut";
+import { confidenceText } from "../utils/confidenceStep";
 import { Icon } from "./Icon";
 import { RollingNumber } from "./RollingNumber";
 import { TimecodeLink } from "./TimecodeLink";
@@ -53,6 +54,17 @@ export function ProposalZoneList({
 }: ProposalZoneListProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultExpanded);
+  // Open and done opening. The body clips its rows only while it opens or closes (the
+  // height animates); once settled open it clips nothing, so a long zone shows every row
+  // and a row gliding in is seen all the way (owner, 24 Nov 2026). Rows in a zone not
+  // settled open count as hidden to the motion (`data-flip-collapsed`).
+  const [settled, setSettled] = useState(defaultExpanded);
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => setSettled(true), 220); // the 0.2 s open, in the CSS
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+  const bodyId = useId();
 
   // A row whose decision is in flight stays where it is, dimmed, and is counted here,
   // until it lands where the decision puts it (then the counts roll).
@@ -70,7 +82,10 @@ export function ProposalZoneList({
     return new Map([...map.entries()].sort(([a], [b]) => SESSION_ORDER.compare(a, b)));
   }, [proposals]);
 
-  const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
+  const toggleOpen = useCallback(() => {
+    setSettled(false);
+    setIsOpen((prev) => !prev);
+  }, []);
 
   if (visibleCount === 0 && !isOpen) return null;
 
@@ -83,6 +98,7 @@ export function ProposalZoneList({
         className="threshold-zone-list-header"
         onClick={toggleOpen}
         aria-expanded={isOpen}
+        aria-controls={bodyId}
         data-testid={`bn-zone-header-${zone}`}
         data-flip={`zone-${zone}`}
         data-flip-landing=""
@@ -94,10 +110,16 @@ export function ProposalZoneList({
         <span className="threshold-zone-list-count">(<RollingNumber value={visibleCount} />)</span>
       </button>
 
+      {/* A closed zone is inert: its rows are out of the Tab order and the accessibility
+          tree, as `aria-expanded="false"` says. */}
       <div
-        className={`threshold-zone-list-body${isOpen ? " threshold-zone-list-body--open" : ""}`}
-        data-flip-collapsed={isOpen ? undefined : ""}
+        id={bodyId}
+        className={`threshold-zone-list-body${isOpen ? " threshold-zone-list-body--open" : ""}${
+          isOpen && settled ? " threshold-zone-list-body--settled" : ""}`}
+        data-flip-collapsed={isOpen && settled ? undefined : ""}
+        inert={!isOpen}
       >
+        <div className="threshold-zone-list-inner">
         <table
           className={`threshold-proposal-table${wordWrap ? " threshold-proposal-table--wrap" : ""}`}
         >
@@ -115,6 +137,7 @@ export function ProposalZoneList({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -132,8 +155,15 @@ interface SessionRowsProps {
 }
 
 function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: SessionRowsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   if (items.length === 0) return null;
+  // A row gliding to its new place ignores a click: the button under a still pointer is
+  // passing, not the one aimed at (utils/reviewMotion.ts sets `data-flip-moving`).
+  const act = (fn: ((id: number) => void) | undefined, id: number) =>
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (e.currentTarget.closest("[data-flip-moving]")) return;
+      fn?.(id);
+    };
 
   return (
     <>
@@ -185,11 +215,11 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
           </td>
           <td className="report-tag">
             <span
-              // A tag Apply would leave tentative is drawn as a tentative tag is everywhere
-              // else: the dashed outline (owner, 24 Nov 2026).
+              // A tag Apply would leave tentative wears the tentative tag's dashed
+              // outline, without its fade or its pulse (owner, 24 Nov 2026).
               className={[
                 "badge",
-                zone === "tentative" ? "badge-proposed" : "",
+                zone === "tentative" ? "threshold-tag-tentative" : "",
                 featureFlags.proposalRationaleTooltip ? "has-tooltip" : "",
               ].filter(Boolean).join(" ")}
               style={{ backgroundColor: getTagBg(p.colour_set, p.colour_index) }}
@@ -201,7 +231,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
             </span>
           </td>
           <td className="threshold-confidence">
-            {p.confidence.toFixed(2)}
+            {confidenceText(p.confidence, i18n.language)}
             {/* A decision a person made (or one from before who decided was recorded): the
                 lines never move it (landing plan D2, D39). */}
             {isPinned(p) && (
@@ -216,7 +246,8 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
             {zone === "accepted" && onDeny && (
               <button
                 className="threshold-action-btn threshold-action-deny"
-                onClick={() => onDeny(p.id)}
+                aria-disabled={removing.has(p.id) || undefined}
+                onClick={act(onDeny, p.id)}
                 title={t("autocode.deny")}
               >
                 <Icon name="close" decorative />
@@ -228,7 +259,8 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                 {onAccept && (
                   <button
                     className="threshold-action-btn threshold-action-accept"
-                    onClick={() => onAccept(p.id)}
+                aria-disabled={removing.has(p.id) || undefined}
+                    onClick={act(onAccept, p.id)}
                     title={t("autocode.accept")}
                   >
                     <Icon name="check" decorative />
@@ -237,7 +269,8 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                 {onDeny && (
                   <button
                     className="threshold-action-btn threshold-action-deny"
-                    onClick={() => onDeny(p.id)}
+                aria-disabled={removing.has(p.id) || undefined}
+                    onClick={act(onDeny, p.id)}
                     title={t("autocode.deny")}
                   >
                     <Icon name="close" decorative />
@@ -249,7 +282,8 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
             {zone === "excluded" && onAccept && (
               <button
                 className="threshold-action-btn threshold-action-accept"
-                onClick={() => onAccept(p.id)}
+                aria-disabled={removing.has(p.id) || undefined}
+                onClick={act(onAccept, p.id)}
                 title={t("autocode.accept")}
               >
                 <Icon name="check" decorative />

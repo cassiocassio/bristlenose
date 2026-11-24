@@ -628,6 +628,7 @@
       "apply": "Käytä kynnyksiä",
       "applying": "Otetaan käyttöön…",
       "applyFailed": "Käyttöönotto epäonnistui — rivikohtaiset päätöksesi on tallennettu. Yritä uudelleen.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Ehdotusten lataus epäonnistui",
       "zoneExclude": "Sulje pois",
       "zoneTentative": "Alustava",

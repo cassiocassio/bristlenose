@@ -610,6 +610,7 @@
       "apply": "しきい値を適用",
       "applying": "適用中…",
       "applyFailed": "適用に失敗しました — 各行ごとの判断は保存されています。もう一度お試しください。",
+      "landed": "{{zone}}。{{tally}}",
       "loadFailed": "提案の読み込みに失敗しました",
       "zoneExclude": "除外",
       "zoneTentative": "暫定",

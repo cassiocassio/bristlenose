@@ -8,6 +8,8 @@
 .codebook-modal-body.threshold-body {
     padding: 0 var(--bn-space-lg) var(--bn-space-lg);
     position: relative;  /* holds a row's copy in flight (utils/reviewMotion.ts) */
+    /* A focused row is scrolled clear of a stuck zone header, not under it (2.4.11). */
+    scroll-padding-top: 2.5rem;
 }
 
 .threshold-body::before {
@@ -94,10 +96,12 @@
     pointer-events: none;
 }
 
+/* The zones' hues in their text-strength forms: an outline is the pointer's whole shape,
+   so it needs 3:1 against the ground (WCAG 1.4.11), which the fill amber (2.15:1) is not. */
 .threshold-slider-guide--lower,
-.threshold-slider-thumb--lower { --threshold-ink: var(--bn-colour-warning); }
+.threshold-slider-thumb--lower { --threshold-ink: var(--bn-colour-warning-text); }
 .threshold-slider-guide--upper,
-.threshold-slider-thumb--upper { --threshold-ink: var(--bn-colour-positive); }
+.threshold-slider-thumb--upper { --threshold-ink: var(--bn-colour-positive-text); }
 
 .threshold-slider-rail {
     position: relative;
@@ -113,27 +117,33 @@
     height: 24px;
     margin-left: -20px;
     cursor: grab;
-    outline: none;
     z-index: 1;
+    border-radius: var(--bn-radius-sm);
 }
 
 .threshold-slider-thumb:active { cursor: grabbing; }
 
+/* The house focus ring, on the pointer's box. A pointer being dragged or focused comes
+   to the front, so at the minimum gap in a narrow dialog the one in hand is never under
+   the other. */
+.threshold-slider-thumb:focus { outline: none; }
+.threshold-slider-thumb:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+.threshold-slider-thumb:focus-visible,
+.threshold-slider-thumb:active { z-index: 2; }
+
 .threshold-slider-pointer {
     display: block;
     overflow: visible;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.15));
+    filter: drop-shadow(var(--bn-control-raised-shadow));
 }
 
 .threshold-slider-pointer path {
     fill: var(--bn-modal-bg);
     stroke: var(--threshold-ink);
     stroke-width: 1.5;
-}
-
-.threshold-slider-thumb:focus-visible .threshold-slider-pointer path {
-    stroke: var(--bn-colour-accent);
-    stroke-width: 2;
 }
 
 .threshold-slider-label {
@@ -240,6 +250,12 @@
 
 .threshold-zone-list-header:hover { color: var(--bn-colour-accent); }
 
+/* Inset, so a stuck header's ring is not cut by the scroll's top edge. */
+.threshold-zone-list-header:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
 .threshold-zone-list-chevron {
     font-size: var(--bn-text-badge);
     transition: transform 0.15s ease;
@@ -253,16 +269,30 @@
     font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-muted);
     font-size: var(--bn-text-label);
+    font-variant-numeric: tabular-nums;
 }
 
+/* A zone opens and closes by its grid row (0fr to 1fr), so it has no height cap: a long
+   zone shows every row. The inner box clips only while the height moves; settled open
+   (--settled, set by ProposalZoneList after the 0.2 s), it clips nothing, so a row
+   gliding in is seen the whole way (owner, 24 Nov 2026). */
 .threshold-zone-list-body {
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.2s ease;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease;
 }
 
-.threshold-zone-list-body--open {
-    max-height: 2000px;
+.threshold-zone-list-body--open { grid-template-rows: 1fr; }
+
+.threshold-zone-list-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.threshold-zone-list-body--settled > .threshold-zone-list-inner { overflow: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+    .threshold-zone-list-body { transition: none; }
 }
 
 /* ── Proposal table rows (cells: .report-* in autocode-report.css) ── */
@@ -280,9 +310,11 @@
     text-overflow: clip;
 }
 
-/* A tentative tag here is the tentative tag (atoms/badge.css), but not a control. */
-.threshold-proposal-table .badge-proposed {
-    cursor: inherit;
+/* A tag Apply would leave tentative: the tentative tag's dashed outline
+   (atoms/badge.css .badge-proposed), without its fade or its pulse, which in a list of
+   rows would breathe under the text being read (owner, 24 Nov 2026). */
+.badge.threshold-tag-tentative {
+    border: 1px dashed currentColor;
 }
 
 /* Figures throughout this molecule: body face, tabular numerals (docs/design-monospace-roles.md §4). */
@@ -353,9 +385,15 @@
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--bn-colour-border);
     display: flex;
+    flex-wrap: wrap;  /* a long translation stacks; a control is never squeezed */
     justify-content: flex-end;
     align-items: baseline;
     gap: 0.5rem;
+}
+
+.threshold-footer .bn-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* Word wrap, bottom left, its words on the buttons' baseline. */
@@ -372,23 +410,30 @@
 
 /* ── Rows moving, counts rolling (owner, 24 Nov 2026) ──────── */
 
+/* A row gliding to its new place rests its buttons: a click would land on whichever
+   row is passing under the pointer (utils/reviewMotion.ts; ProposalZoneList ignores the
+   keyboard's too). */
+[data-flip-moving] .threshold-actions { pointer-events: none; }
+
 /* The row a tick or cross moved, while it glides: it crosses the others, so it covers
-   them. Transformed, it already paints above them. */
-.bn-flip-lifted > td {
+   them. Transformed, it already paints above them. The hairline keeps its edge on the
+   dark sheet, where a black shadow cannot be seen. */
+[data-flip-lifted] > td {
     background: var(--bn-modal-bg);
 }
 
-.bn-flip-lifted {
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+[data-flip-lifted] {
+    box-shadow: var(--bn-control-raised-shadow), 0 0 0 1px var(--bn-modal-hairline);
 }
 
-/* A copy of a row flying into a closed zone's header. */
+/* A copy of a row flying towards a closed zone's header. Under the stuck zone headers
+   (z-index 1), never over them. */
 .bn-flip-ghost {
     position: absolute;
-    z-index: 2;
+    z-index: 0;
     pointer-events: none;
     background: var(--bn-modal-bg);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+    box-shadow: var(--bn-control-raised-shadow), 0 0 0 1px var(--bn-modal-hairline);
 }
 
 /* An odometer count (components/RollingNumber.tsx): a changed digit rolls in from below
@@ -421,7 +466,6 @@
     .bn-roll-digit--down { animation: bn-roll-down 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 }
 
-.bn-no-animations .bn-roll-digit { animation: none; }
 
 @keyframes bn-roll-up   { from { transform: translateY(100%); }  to { transform: none; } }
 @keyframes bn-roll-down { from { transform: translateY(-100%); } to { transform: none; } }

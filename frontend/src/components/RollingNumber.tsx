@@ -5,8 +5,9 @@
  *
  * The outgoing digit is CSS generated content (`data-from`) with empty alternative text,
  * so the element's text, and what a screen reader reads, is only ever the current value.
- * The motion is CSS (threshold-review.css, `.bn-roll-*`) and stops under reduced motion
- * or with the house animations off; a column restarts by remounting under a new key.
+ * The motion is CSS (threshold-review.css, `.bn-roll-*`) and stops under the system's
+ * reduced motion; a column restarts by remounting under a new key. When the roll ends the
+ * count goes back to plain text, so no outgoing digit is left in the page.
  */
 
 import { useState } from "react";
@@ -20,7 +21,8 @@ export function RollingNumber({ value }: { value: number }) {
   }
   const to = String(shown.value);
   const from = String(shown.from);
-  if (shown.turn === 0 || to === from) return <>{to}</>;
+  if (shown.turn === 0 || to === from || shown.from === shown.value) return <>{to}</>;
+  const rolled = () => setShown((s) => (s.turn === shown.turn ? { ...s, from: s.value } : s));
 
   const width = Math.max(to.length, from.length);
   const next = to.padStart(width, " ");
@@ -32,7 +34,7 @@ export function RollingNumber({ value }: { value: number }) {
         digit === prev[i] ? (
           digit.trim()
         ) : (
-          <span className="bn-roll-col" key={`${i}-${shown.turn}`}>
+          <span className="bn-roll-col" key={`${i}-${shown.turn}`} onAnimationEnd={rolled}>
             <span className={`bn-roll-digit bn-roll-digit--${dir}`} data-from={prev[i].trim()}>
               {digit.trim()}
             </span>

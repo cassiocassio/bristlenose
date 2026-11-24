@@ -628,6 +628,7 @@
       "apply": "Aplicar limites",
       "applying": "Aplicando…",
       "applyFailed": "Falha ao aplicar — suas decisões por linha foram salvas. Tente novamente.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Falha ao carregar propostas",
       "zoneExclude": "Excluir",
       "zoneTentative": "Tentativa",

@@ -15,6 +15,7 @@ SRC = Path(__file__).resolve().parents[1] / "frontend" / "src"
 
 # file (relative to frontend/src) → (inline <svg> it may contain, what it draws)
 CHARTS: dict[str, tuple[int, str]] = {
+    "components/DualThresholdSlider.tsx": (1, "the threshold pointer: a slider handle's outline, tip at its value, the value inside"),
     "components/IntensityDots.tsx": (1, "signal intensity dots, the one drawing the chart and the quote rows share"),
     "components/TranscriptionDiagnostics.tsx": (1, "diagnostic lanes: sound, pace, gaps"),
     "components/SessionTapestry.tsx": (1, "the session timeline"),

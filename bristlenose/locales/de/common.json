@@ -628,6 +628,7 @@
       "apply": "Schwellenwerte anwenden",
       "applying": "Wird angewendet…",
       "applyFailed": "Anwendung fehlgeschlagen — Ihre Einzelentscheidungen sind gespeichert. Versuchen Sie es erneut.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Vorschläge konnten nicht geladen werden",
       "zoneExclude": "Ausschließen",
       "zoneTentative": "Vorläufig",

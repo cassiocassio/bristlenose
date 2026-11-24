@@ -619,7 +619,7 @@
     "proposalCount_other": "{{count}} propositions",
     "sessionLabel": "Session {{id}}",
     "review": {
-      "title": "Révision AutoCode : {{codebook}}",
+      "title": "Révision AutoCode : {{codebook}}",
       "wordWrap": "Retour à la ligne",
       "remaining": "{{pending}} sur {{total}} propositions restantes",
       "accepted": "{{count}} acceptées",
@@ -628,6 +628,7 @@
       "apply": "Appliquer les seuils",
       "applying": "Application…",
       "applyFailed": "Échec de l'application — vos décisions par ligne sont sauvegardées. Réessayez.",
+      "landed": "{{zone}}. {{tally}}",
       "loadFailed": "Échec du chargement des propositions",
       "zoneExclude": "Exclure",
       "zoneTentative": "Tentative",

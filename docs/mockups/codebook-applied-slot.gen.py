@@ -670,6 +670,7 @@ shimmering words while AutoCode runs → the green “Applied” cartouche when 
 <li>The button is our regular button, one size down (<code>bn-btn-sm</code>, the button radius). The cartouche is a
 status badge (pill radius, not interactive). The running words have no box and are not clickable.</li>
 <li>The AutoCode button is primary, small, for now (owner, 24 Nov).</li>
+<li>A run that completes says Applied however little it applied, none included. A run that ends with a failure, whole or partial (some batches failed), brings the button back, to resume (owner, 24 Nov).</li>
 <li>No Uninstall on cards. On the page, Uninstall is a small secondary button beside Review.</li>
 <li>Installed but not applied (stopped, failed, refused): the button comes back, to resume. Uninstall is hidden while a run goes; switching a codebook off mid-run stops the run. Review shows whenever there are tags (D39). The explainer says the most confident proposals are applied; no cost warning.</li>
 <li>The codebook page's counts stay as shipped, zeros included (§4).</li>

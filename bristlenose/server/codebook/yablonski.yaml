@@ -34,13 +34,17 @@ author_bio: >
   contribution is curation and design-context translation.
 
 author_links:
-  - label: lawsofux.com — all laws with explanations
+  - label: lawsofux.com
     url: https://lawsofux.com/
-  - label: Amazon US — Laws of UX (2nd edition, 2024)
+  - label: Posters — Jon's store
+    url: https://jonyablonski.bigcartel.com/
+  - label: Amazon US
     url: https://www.amazon.com/dp/1098146964
-  - label: Amazon UK — Laws of UX (2nd edition, 2024)
+  - label: Amazon UK
     url: https://www.amazon.co.uk/dp/1098146964
-  - label: O'Reilly — Laws of UX, 2nd edition
+  - label: Amazon DE — German edition
+    url: https://www.amazon.de/dp/3960092466
+  - label: O'Reilly
     url: https://www.oreilly.com/library/view/laws-of-ux/9781098146955/
 
 preamble: >

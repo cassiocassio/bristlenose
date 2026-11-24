@@ -7,7 +7,7 @@
 <!-- bn-accurate. Generated: markup captured from a live serve of the smoke fixture, CSS from the
      shipped theme files named in the block headers. Regenerate rather than edit. -->
 <style>
-/* ════ bristlenose/theme/tokens.css — lines 1–406 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–472 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -166,6 +166,36 @@
     --bn-rail-width: 36px;       /* collapsed icon rail width */
     --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
     --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+
+    /* Dialogs (atoms/modal.css, components/Dialog.tsx) — the macOS sheet, measured
+       24 Oct 2026 from a stock Save sheet in light mode on macOS 27: the window
+       behind is pulled towards a light grey rather than covered in black (no
+       blur), the sheet has a ~20 pt radius and a shadow offset downward, and it
+       slides 32 pt down into place while it fades in. Dark values below are
+       a judgement, not a measurement. */
+    --bn-overlay-scrim: rgb(170 170 170 / 0.59);
+    --bn-overlay-z: 1000;
+    --bn-toast-z: 1100;                     /* a notification stays above a dialog */
+    --bn-modal-bg: var(--bn-colour-bg);
+    --bn-modal-radius: 20px;
+    --bn-modal-hairline: rgb(0 0 0 / 0.1);
+    --bn-modal-shadow-colour: rgb(0 0 0 / 0.3);
+    --bn-modal-shadow: 0 0 0 1px var(--bn-modal-hairline), 0 10px 40px var(--bn-modal-shadow-colour);
+    --bn-modal-offset: 32px;                /* the sheet drops this far into place */
+    --bn-modal-enter: 230ms;                /* the drop, and the backdrop dimming */
+    --bn-modal-enter-fade: 100ms;           /* solid early; the drop carries on */
+    --bn-modal-enter-ease: cubic-bezier(0, 0, 0.58, 1);
+    --bn-modal-exit: 240ms;                 /* rise, fade and backdrop together, linear */
+    /* Native-looking controls in a dialog: the segmented control's track and raised segment, and
+       the round help button, in the system's own greys (the Mac sheet draws the real ones). Not
+       palette colours: they are the platform's, the same in every palette. Dark below. */
+    --bn-control-track: #e8e8ed;
+    --bn-control-raised-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+    --bn-help-button-bg: #e8e8ea;
+    --bn-help-button-bg-hover: #dcdcdf;
+    --bn-help-button-bg-active: #cfcfd3;
+    --bn-help-button-ink: #1d1d1f;
+    --bn-help-button-size: 26px;
     --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
     --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
 
@@ -193,6 +223,16 @@
     --bn-space-md: 0.75rem;
     --bn-space-lg: 1.5rem;
     --bn-space-xl: 2rem;
+    --bn-space-2xl: 3rem;
+
+    /* Signals lens — semantic spacing aliases. The card keeps one generous
+       reading rhythm even when it is one member of a compound location. */
+    --bn-signal-card-inset: var(--bn-space-2xl);
+    --bn-signal-card-section-gap: var(--bn-space-xl);
+    --bn-signal-card-evidence-gap: var(--bn-space-md);
+    --bn-signal-card-quote-inset: var(--bn-space-md);
+    --bn-signal-card-footer-gap: var(--bn-space-lg);
+    --bn-signal-card-assertion-gap: var(--bn-space-sm);
 
     /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
        the same in light and dark; the dark text reads on it in both modes. */
@@ -300,6 +340,16 @@
     --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
     --bn-shimmer-easing: ease-in-out;
 
+    /* Block shimmer and ghost (docs/design-motion.md §4.7.2). Contrast follows area: slabs
+       (thumbnail, card) take a third of the text value; small shapes (sparkline bars, the
+       4.5px strip) take 8%, because a third-contrast sweep cannot be seen on so few pixels.
+       The peak is a translucent ink tint laid OVER the element's own fill. */
+    --bn-skeleton-base: var(--bn-colour-badge-bg);
+    --bn-skeleton-contrast: 2.7%;
+    --bn-skeleton-contrast-small: 8%;
+    --bn-skeleton-peak: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast), transparent);
+    --bn-skeleton-peak-small: color-mix(in srgb, var(--bn-colour-text) var(--bn-skeleton-contrast-small), transparent);
+
     /* Legacy aliases — used by inline styles in generated HTML.
        Theme authors: override the --bn-* versions above;
        these aliases follow automatically. */
@@ -326,6 +376,13 @@
 @supports (color: light-dark(#000, #fff)) {
     :root {
         color-scheme: light dark;
+
+        /* Native-looking dialog controls (see the light values above) */
+        --bn-control-track:          light-dark(#e8e8ed, #2c2c30);
+        --bn-help-button-bg:         light-dark(#e8e8ea, #3a3a3c);
+        --bn-help-button-bg-hover:   light-dark(#dcdcdf, #48484a);
+        --bn-help-button-bg-active:  light-dark(#cfcfd3, #545456);
+        --bn-help-button-ink:        light-dark(#1d1d1f, #f5f5f7);
 
         /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
         --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
@@ -407,6 +464,15 @@
         --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
         --bn-colour-delight:          var(--bn-sentiment-delight);
         --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+
+        /* Dialogs in dark: the page dims towards black, and the sheet is a raised
+           surface, lighter than the page, with a light hairline, the way a dark
+           macOS sheet reads. Without the lift a dark card vanished into the dimmed
+           dark report (docs/mockups/modal-crash-way-out.html, dark frame). */
+        --bn-overlay-scrim:        light-dark(rgb(170 170 170 / 0.59), rgb(0 0 0 / 0.5));
+        --bn-modal-bg:             light-dark(var(--bn-colour-bg), color-mix(in srgb, var(--bn-colour-bg), white 9%));
+        --bn-modal-hairline:       light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.14));
+        --bn-modal-shadow-colour:  light-dark(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.6));
     }
 
     /* Explicit overrides — lock theme regardless of OS preference */
@@ -414,7 +480,7 @@
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css — lines 1–89 ════ */
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–101 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -442,6 +508,7 @@
        Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
        Chromium on a Mac and Courier New in Windows 10's Edge. */
     --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-font-editorial: Georgia, "Times New Roman", serif;
 
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
        On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
@@ -490,6 +557,17 @@
     --bn-text-title-lh:    1.25;
     --bn-text-display:     1.75rem;     /* 28px   — report h1 */
     --bn-text-display-lh:  1.2;
+
+    /* Signal card finding hierarchy. The title is a compact app heading;
+       the claim is the generous editorial statement beneath it. */
+    --bn-text-signal-title: 0.9375rem;
+    --bn-text-signal-title-lh: 1.5;
+    --bn-track-signal-title: 0;
+    --bn-weight-signal-title: var(--bn-weight-strong);
+    --bn-text-signal-claim: 1.29375rem;
+    --bn-text-signal-claim-lh: 1.4;
+    --bn-track-signal-claim: -0.005em;
+    --bn-weight-signal-claim: 500;
 }
 
 /* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
@@ -606,18 +684,18 @@
     :root,
     [data-color-theme="default"] {
         /* Colour palette */
-        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-bg:               light-dark(#ffffff, #1c1c1c);   /* Dark: the paper, the darkest surface of the ladder (10 L*). Everything else steps away from it: quote cards, then inspector chrome, then the native sidebar */
         --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
         --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
         --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
         --bn-colour-accent:           light-dark(#007aff, #0a84ff);
         --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
-        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #212121);   /* Inspector chrome — dark: one step up from the quote cards (12.7 L* against 11.8), neutral grey with no hue */
 
         /* Semantic surfaces */
-        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
-        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
-        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1f1f1f);   /* Dark: lifted off the paper (1.5 L*) but below the inspector chrome */
+        --bn-colour-paper:            light-dark(#f6f7f8, #1c1c1c);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #252525);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
         --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
         --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
         --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
@@ -1419,59 +1497,101 @@ body.hide-ai-tags .badge-ai { display: none; }
     margin: var(--bn-space-sm) 0 0;
 }
 
-/* ════ bristlenose/theme/atoms/modal.css — lines 1–286 ════ */
+/* ════ bristlenose/theme/atoms/modal.css — lines 1–459 ════ */
 /* Atom: modal — shared overlay backdrop, card, and close button.
-   Used by help-overlay.css and feedback.css. Each adds its own
-   content-specific styles on top. */
+   The React dialogs all draw this through one component, Dialog.tsx; the
+   frozen static report's modal.js uses the same classes. The look is the macOS
+   sheet, measured (tokens.css § Dialogs). A click on the backdrop never closes
+   a dialog (24 Oct 2026): Escape and the dialog's own buttons do. */
 
-/* Overlay backdrop — fullscreen, centred, fade transition */
+/* Backdrop — fullscreen, centred. It fades in with the sheet's drop and out
+   with its rise. */
 .bn-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--bn-overlay-scrim);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--bn-overlay-z);
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
+    transition: opacity var(--bn-modal-exit) linear, visibility var(--bn-modal-exit) linear;
 }
 
 .bn-overlay.visible {
     opacity: 1;
     visibility: visible;
+    transition: opacity var(--bn-modal-enter) linear, visibility 0s;
 }
 
-/* Card scale+fade — matches modal-nav-shell transition */
+/* The sheet's motion. A transition takes the timing of the state it is going
+   TO, so the resting rule carries the exit and `.visible` the entrance:
+   in, it drops 32 pt and is solid early; out, it rises, fading with the
+   backdrop, all at one pace. */
 .bn-overlay .bn-modal {
-    transform: scale(0.97);
+    transform: translateY(calc(-1 * var(--bn-modal-offset)));
     opacity: 0;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+    transition: transform var(--bn-modal-exit) linear, opacity var(--bn-modal-exit) linear;
 }
 
 .bn-overlay.visible .bn-modal {
-    transform: scale(1);
+    transform: none;
     opacity: 1;
+    transition: transform var(--bn-modal-enter) var(--bn-modal-enter-ease),
+        opacity var(--bn-modal-enter-fade) linear;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .bn-overlay .bn-modal {
-        transition: none;
+/* A dialog that mounts already open has no previous style to transition from,
+   so it starts from here: the same resting state, for its first frame. */
+@starting-style {
+    .bn-overlay.visible {
+        opacity: 0;
+    }
+    .bn-overlay.visible .bn-modal {
+        transform: translateY(calc(-1 * var(--bn-modal-offset)));
+        opacity: 0;
     }
 }
 
-/* Modal card — centred white box with shadow.
-   Default max-width suits confirmation dialogs; override per-modal for
-   wider content (help-modal 600px, feedback-modal 420px). */
+@media (prefers-reduced-motion: reduce) {
+    .bn-overlay .bn-modal,
+    .bn-overlay.visible .bn-modal {
+        transform: none;
+    }
+    @starting-style {
+        .bn-overlay.visible .bn-modal {
+            transform: none;
+        }
+    }
+}
+
+/* Modal card — centred, raised, with the sheet's radius and shadow.
+   Default max-width suits confirmation dialogs; a dialog's own class sets
+   its width (.feedback-modal 420px, .settings-modal 42rem). */
 .bn-modal {
     position: relative;
-    background: var(--bn-colour-bg);
-    border-radius: var(--bn-radius-lg);
+    background: var(--bn-modal-bg);
+    border-radius: var(--bn-modal-radius);
     padding: var(--bn-space-xl);
     width: 90%;
     max-width: 24rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--bn-modal-shadow);
+}
+
+/* The card takes focus when nothing in it asks for it: a focus sink, not a
+   control, so no ring (theme CLAUDE.md, focus sinks). */
+.bn-modal:focus-visible {
+    outline: none;
+}
+
+/* Widths for dialogs that had them inline. */
+.bn-modal.bn-export-modal {
+    max-width: 420px;
+}
+
+.bn-modal.bn-board-modal {
+    max-width: 460px;
 }
 
 /* Modal heading */
@@ -1706,7 +1826,138 @@ body.hide-ai-tags .badge-ai { display: none; }
 .bn-linkish:disabled { color: var(--bn-colour-muted); cursor: default; text-decoration: none; }
 .bn-linkish:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
 
-/* ════ bristlenose/theme/organisms/sidebar.css — lines 1–1105 ════ */
+/* ── Two-route dialogs (Send to Miro: Miro app | Developer access token) ──────────────────────
+   A segmented control: one choice of a few, shown as joined buttons. The Mac sheet draws the
+   system's segmented control; this is its web twin, the same shape, in the dialog's tokens.
+   Tablist semantics live in components/SegmentedTabs.tsx. */
+.bn-seg {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-control-track);
+    margin: 0 0 var(--bn-space-md);
+}
+
+.bn-seg button {
+    font: inherit;
+    font-size: var(--bn-text-label);
+    border: 0;
+    background: transparent;
+    color: var(--bn-colour-text);
+    padding: 4px 14px;
+    border-radius: calc(var(--bn-radius-md) - 2px);
+    cursor: pointer;
+}
+
+.bn-seg button[aria-selected="true"] {
+    background: var(--bn-colour-bg);
+    box-shadow: var(--bn-control-raised-shadow);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.bn-seg button:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
+/* The report's own rule (templates/report.css `hr`), with a dialog-sized margin. */
+.bn-board-modal hr {
+    border: none;
+    border-top: 1px solid var(--bn-colour-keyline);
+    margin: var(--bn-space-md) 0 0;
+}
+
+/* The Mac form (owner, 9 Nov 2026; Pixelmator's Settings, Apple's own panes, our Mac sheet's
+   token tab): each label ends in a colon and right-aligns on one axis, each control left-aligns in
+   the column beside it, and a rule spans both columns between groups. The eye reads the controls;
+   the labels support them. */
+.bn-board-form {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--bn-space-sm);
+    row-gap: var(--bn-space-sm);
+    align-items: baseline;
+    font-size: var(--bn-text-label);
+}
+
+.bn-board-form-label {
+    text-align: right;
+    color: var(--bn-colour-muted);
+}
+
+.bn-board-form > .bn-export-checkbox,
+.bn-board-form-radios .bn-export-checkbox {
+    margin: 0;
+}
+
+.bn-board-form-radios {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--bn-space-lg);
+}
+
+.bn-board-form > hr {
+    grid-column: 1 / -1;
+    margin: var(--bn-space-xs) 0;
+}
+
+/* Either and or: two buttons stacked, one width. */
+.bn-board-form-button {
+    min-width: 12em;
+}
+
+/* A button that changes its words in place (Copy board data → Copied) keeps its width: both
+   labels share one grid cell and the resting one is hidden, so the box is the wider label's in
+   every language, where a fixed width would not survive German. */
+.bn-keep-width {
+    display: inline-grid;
+}
+
+.bn-keep-width > span {
+    grid-area: 1 / 1;
+}
+
+.bn-keep-width > [aria-hidden="true"] {
+    visibility: hidden;
+}
+
+/* The round help button, at the leading end of the action row, drawn as macOS draws its own
+   (the Mac sheet's SwiftUI HelpLink): a filled grey disc and a dark "?". */
+.bn-modal-actions .bn-help-btn {
+    margin-right: auto;
+}
+
+.bn-help-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--bn-help-button-size);
+    height: var(--bn-help-button-size);
+    border-radius: 50%;
+    background: var(--bn-help-button-bg);
+    color: var(--bn-help-button-ink);
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 0 0 0.5px var(--bn-modal-hairline);
+    align-self: center;
+}
+
+.bn-help-btn:hover {
+    background: var(--bn-help-button-bg-hover);
+}
+
+.bn-help-btn:active {
+    background: var(--bn-help-button-bg-active);
+}
+
+.bn-help-btn:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 1–1117 ════ */
 /* Dual-sidebar layout — 6-column grid for serve-mode Quotes tab.
    [toc-rail | toc-sidebar | center | minimap | tag-sidebar | tag-rail]
 
@@ -1856,16 +2107,18 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 .layout.embedded:not(.tags-open) > .minimap-slot {
-    padding-right: calc(var(--bn-space-md) + var(--bn-space-lg));
+    --bn-minimap-extra-pad-r: var(--bn-space-lg);
 }
 
-/* Animated slide — added before state change, removed on transitionend */
-.layout.animating {
+/* Animated slide — set before state change, cleared on transitionend. An
+   attribute, not a class: React rewrites .layout's className on the re-render
+   the state change causes, which dropped a class before the columns moved. */
+.layout[data-animating] {
     transition: grid-template-columns 75ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .layout.animating { transition: none; }
+    .layout[data-animating] { transition: none; }
 
     /* Overlay: instant open/close, no motion */
     .layout.toc-overlay .toc-sidebar,
@@ -1881,7 +2134,7 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 /* Overlay mode uses its own animation, not grid transition */
-.layout.toc-overlay.animating {
+.layout.toc-overlay[data-animating] {
     transition: none;
 }
 
@@ -2362,7 +2615,11 @@ body.hide-ai-tags .badge-ai { display: none; }
 
 .tag-sidebar-actions {
     display: flex;
-    gap: 0.5rem;
+    /* Wraps at the narrow end of the drag (200px): Russian "Select all / Clear /
+       Used" needs ~230px, and the sidebar's overflow-x: hidden would cut the
+       last button off. A control never truncates (owner rule, 9 Nov 2026). */
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
     padding: var(--bn-space-xs) 0 0.5rem 0.85rem;
     border-bottom: 1px solid var(--bn-colour-border);
     flex-shrink: 0;
@@ -2428,7 +2685,8 @@ body.hide-ai-tags .badge-ai { display: none; }
     /* Equal breathing room from center content (left) and tag sidebar/rail (right).
        The center column has no right padding — this column provides ALL the
        visual separation. Padding inserts the abstract lines symmetrically. */
-    padding: 0 var(--bn-space-md);
+    --bn-minimap-extra-pad-r: 0px;
+    padding: 0 calc(var(--bn-space-md) + var(--bn-minimap-extra-pad-r)) 0 var(--bn-space-md);
 }
 
 /* ── Drag handles ─────────────────────────────────────────────── */
@@ -2773,6 +3031,11 @@ body.dragging * {
     background: var(--bn-colour-hover);
 }
 
+/* The mini tag says its signal in the signal's ink, as the chip on the card does. */
+.signal-entry .badge {
+    color: var(--bn-signal-accent-ink, inherit);
+}
+
 .signal-entry:focus-visible {
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: -2px;
@@ -2812,7 +3075,7 @@ body.dragging * {
     font-size: var(--bn-text-micro);
 }
 
-/* ════ bristlenose/theme/organisms/codebook-panel.css — lines 1–1136 ════ */
+/* ════ bristlenose/theme/organisms/codebook-panel.css — lines 1–1091 ════ */
 /* organisms/codebook-panel.css — Codebook page grid layout and components.
    Used only on codebook.html (standalone page opened from toolbar button).
    All values via design tokens — no hard-coded colours/spacing. */
@@ -3452,27 +3715,20 @@ body.dragging * {
     filter: brightness(0.9);
 }
 
-/* ── Merge overlay ────────────────────────────────────────────────────── */
-
-.merge-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 150;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: color-mix(in srgb, var(--bn-colour-bg) 60%, transparent);
-    backdrop-filter: blur(2px);
-}
-.merge-overlay .confirm-dialog {
-    position: static;
+/* ── Confirm dialog as a modal ─────────────────────────────────────────── */
+/* The merge and name-taken confirms are drawn by Dialog.tsx (the shared
+   .bn-overlay + .bn-modal); ConfirmDialog's own card steps aside inside it,
+   so there is one card, the sheet's. */
+.bn-modal.confirm-dialog-modal {
     max-width: 360px;
-    width: 90%;
-    background: var(--bn-colour-bg);
-    border: 1px solid var(--bn-colour-border);
-    border-radius: var(--bn-radius-lg);
-    padding: var(--bn-space-lg);
-    box-shadow: 0 8px 32px var(--bn-colour-shadow);
+}
+.bn-modal .confirm-dialog {
+    position: static;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
 }
 
 /* ── Codebook header ─────────────────────────────────────────────────── */
@@ -3623,56 +3879,18 @@ body.dragging * {
     white-space: nowrap;
 }
 
-/* ── Codebook picker modal ───────────────────────────────────────────── */
+/* ── AutoCode Review modal ───────────────────────────────────────────── */
+/* The backdrop, card surface, radius, shadow and motion are the shared dialog's
+   (atoms/modal.css); this is only the review's own layout. */
 
-.codebook-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    overflow: hidden;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
-}
-
-.codebook-modal-overlay.visible {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.codebook-modal {
-    background: var(--bn-colour-bg);
-    border-radius: var(--bn-radius-lg);
-    box-shadow: 0 20px 60px var(--bn-colour-shadow);
+.bn-modal.codebook-modal {
     width: 100%;
     max-width: 56rem;
     max-height: 85vh;
+    padding: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--bn-colour-border);
-    transform: scale(0.97);
-    opacity: 0;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-}
-
-.codebook-modal-overlay.visible .codebook-modal {
-    transform: scale(1);
-    opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .codebook-modal-overlay,
-    .codebook-modal-overlay .codebook-modal {
-        transition: none;
-    }
 }
 
 .codebook-modal-header {
@@ -4458,6 +4676,27 @@ body.dragging * {
 .cat-installed .bn-icon, .cat-tick .bn-icon { color: var(--bn-colour-accent); }
 .cat-tick { display: inline-flex; vertical-align: -0.12em; margin-right: 0.3em; }
 .cat-installed-word { color: var(--bn-colour-text); }
+.v2-card-grid .cat-corner-card .picker-card-title { padding-right: var(--cat-clear); }
+.cat-corner { position: absolute; top: var(--bn-space-md); right: var(--bn-space-md); display: inline-flex; align-items: center; gap: 0.3em;
+  font-size: 1.15rem; color: var(--bn-colour-accent); --bn-icon-stem: var(--bn-icon-stem-strong); }
+.cat-corner .cat-word { font-size: var(--bn-text-caption); font-weight: var(--bn-weight-emphasis); }
+.cat-check { font-size: 1rem; }
+.cat-corner .cat-fill { fill: currentColor; }
+.cat-corner .cat-fill ~ * { stroke: var(--bn-colour-bg); }
+.cat-corner.is-off { color: var(--bn-colour-muted); }
+.cat-corner.is-off .cat-fill { fill: none; }
+.cat-corner.is-off .cat-fill ~ * { stroke: currentColor; }
+.cat-pill { font-size: 0.85rem; padding: 0.15em 0.55em; border-radius: var(--bn-radius-pill);
+  background: color-mix(in srgb, var(--bn-colour-accent) 12%, transparent); }
+.cat-pill.is-off { background: var(--bn-colour-badge-bg); }
+.cat-pill.pill-blue { background: color-mix(in srgb, var(--bn-colour-accent) 6%, transparent); }
+/* Sampled 24 Oct 2026 from NSColor.systemGreen on macOS 27.0 (sRGB): #34C759 light, #30D158 dark.
+   Not a theme token yet — the theme's green is --bn-colour-positive (#16a34a), a Tailwind value. */
+:root { --cat-system-green: light-dark(#34C759, #30D158); }
+.cat-pill.pill-green { color: var(--cat-system-green); background: color-mix(in srgb, var(--cat-system-green) 8%, transparent); }
+.cat-pill.pill-greentick { color: var(--bn-colour-text); background: color-mix(in srgb, var(--cat-system-green) 8%, transparent); }
+.cat-pill.pill-greentick .bn-icon { color: var(--cat-system-green); }
+.cat-three { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 .pg-stat.cat-note { margin-top: var(--bn-space-xs); max-width: 38rem; }
 
 /* ════ Mockup chrome — not the product ════ */
@@ -4489,21 +4728,52 @@ h2.step { font: 600 13px/1.4 ui-monospace, Menlo, monospace; margin: 28px 0 10px
 <div class="cmp">
 <figure class="frame small">
   <figcaption class="chrome"><span>Shipped</span><span>Install / Uninstall on every card</span></figcaption>
-  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-sentiment"><div class="picker-card-title">Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status">7 tags · applied to 4 quotes in Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-uxr"><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span><button class="bn-btn bn-btn-secondary picker-card-toggle picker-card-toggle-uninstall">Uninstall</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-cli-ux">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-garrett">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-morville"><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span><button class="bn-btn bn-btn-secondary picker-card-toggle picker-card-toggle-uninstall">Uninstall</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-nielsen">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-norman">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-yablonski">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-plato">Install</button></div></div></div></div></div></div></div>
+  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-sentiment"><div class="picker-card-title">Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status">7 tags · applied to 4 quotes in Smoke Test</span></div></div><div class="picker-card off2" role="button" tabindex="0" data-testid="bn-v2-card-uxr"><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span><button class="bn-btn bn-btn-secondary picker-card-toggle picker-card-toggle-uninstall">Uninstall</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-cli-ux">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-garrett">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-morville"><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span><button class="bn-btn bn-btn-secondary picker-card-toggle picker-card-toggle-uninstall">Uninstall</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-nielsen">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-norman">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-yablonski">Install</button></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span><button class="bn-btn bn-btn-primary picker-card-toggle" data-testid="bn-v2-card-action-plato">Install</button></div></div></div></div></div></div></div>
 </figure>
 <figure class="frame small">
-  <figcaption class="chrome"><span>Proposed — marker A</span><span>✓ Installed where the button was · owner-written word</span></figcaption>
-  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-sentiment"><div class="picker-card-title">Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status">7 tags · applied to 4 quotes in Smoke Test</span><span class="cat-installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg>Installed</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-uxr"><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span><span class="cat-installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg>Installed</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-morville"><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span><span class="cat-installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg>Installed</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span></div></div></div></div></div></div></div>
+  <figcaption class="chrome"><span>Proposed</span><span>marker top right (6c, chosen 24 Oct) · UXR switched off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card cat-corner-card" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-sentiment"><span class="cat-corner cat-pill pill-greentick" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status">7 tags · applied to 4 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-pill is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div><div class="picker-card cat-corner-card" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-pill pill-greentick" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span></div></div></div></div></div></div></div>
 </figure>
 </div>
-<h2 class="step">Marker alternatives, same catalogue</h2>
+<h2 class="step">The top-right marker — six Lucide options. Each row: installed and on · installed and switched off · not installed</h2>
+<div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>1 — check, strong stroke, with the word</span><span>lucide check · stem-strong · accent / grey when off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:6.5em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-check" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:6.5em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-check is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>2 — filled disc</span><span>lucide circle-check, circle filled · hollow and grey when off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-disc" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check bn-icon" aria-hidden="true"><circle cx="12" cy="12" r="10" vector-effect="non-scaling-stroke" class="cat-fill"></circle><path d="m16 9-5.5 5.5L8 12" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-disc is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check bn-icon" aria-hidden="true"><circle cx="12" cy="12" r="10" vector-effect="non-scaling-stroke" class="cat-fill"></circle><path d="m16 9-5.5 5.5L8 12" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>3 — ring, strong stroke</span><span>lucide circle-check · stem-strong · grey when off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-ring" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check bn-icon" aria-hidden="true"><circle cx="12" cy="12" r="10" vector-effect="non-scaling-stroke"></circle><path d="m16 9-5.5 5.5L8 12" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-ring is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check bn-icon" aria-hidden="true"><circle cx="12" cy="12" r="10" vector-effect="non-scaling-stroke"></circle><path d="m16 9-5.5 5.5L8 12" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>4 — filled badge</span><span>lucide badge-check, badge filled · hollow and grey when off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-badge" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-badge-check bn-icon" aria-hidden="true"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" vector-effect="non-scaling-stroke" class="cat-fill"></path><path d="m16 9-5.5 5.5L8 12" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-badge is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-badge-check bn-icon" aria-hidden="true"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" vector-effect="non-scaling-stroke" class="cat-fill"></path><path d="m16 9-5.5 5.5L8 12" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>5 — bookmark</span><span>lucide bookmark-check, filled · hollow and grey when off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-bookmark" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check bn-icon" aria-hidden="true"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" vector-effect="non-scaling-stroke" class="cat-fill"></path><path d="m9 10 2 2 4-4" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:2em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-bookmark is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check bn-icon" aria-hidden="true"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" vector-effect="non-scaling-stroke" class="cat-fill"></path><path d="m9 10 2 2 4-4" vector-effect="non-scaling-stroke"></path></svg></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>6 — the word in a pill</span><span>tinted pill with a check · neutral when off</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-pill" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-pill is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div>
+<h2 class="step">Option 6, refined (24 Oct): a fainter tint, and green</h2>
+<div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>6a — blue, fainter tint</span><span>accent tick and word · accent at 6% behind</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-pill pill-blue" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-pill is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>6b — macOS green, tick and word</span><span>NSColor.systemGreen (sampled, macOS 27) · 8% behind · fails contrast in light</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-pill pill-green" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-pill is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div><div class="cmp one"><figure class="frame ">
+  <figcaption class="chrome"><span>6c — macOS green tick, word in body ink</span><span>NSColor.systemGreen tick · body-ink word · 8% behind</span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-card-grid cat-three"><div class="picker-card cat-corner-card" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-morville"><span class="cat-corner cat-pill pill-greentick" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card cat-corner-card off2" style="--cat-clear:7.5em" role="button" tabindex="0" data-cat="bn-v2-card-uxr"><span class="cat-corner cat-pill is-off" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path d="M20 6 9 17l-5-5" vector-effect="non-scaling-stroke"></path></svg><span class="cat-word">Installed</span></span><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div></div></div></div>
+</figure></div>
+<h2 class="step">Earlier placements (superseded 24 Oct: the marker goes top right)</h2>
 <div class="cmp">
 <figure class="frame small">
-  <figcaption class="chrome"><span>Marker B</span><span>tick before the title, word in a tooltip</span></figcaption>
-  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-sentiment"><div class="picker-card-title"><span class="cat-tick" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg></span>Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status">7 tags · applied to 4 quotes in Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-uxr"><div class="picker-card-title"><span class="cat-tick" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg></span>Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-morville"><div class="picker-card-title"><span class="cat-tick" title="Installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg></span>The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span></div></div></div></div></div></div></div>
+  <figcaption class="chrome"><span>A — where the button was</span><span></span></figcaption>
+  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-sentiment"><div class="picker-card-title">Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status">7 tags · applied to 4 quotes in Smoke Test</span><span class="cat-installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg>Installed</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-uxr"><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags · none applied to Smoke Test</span><span class="cat-installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg>Installed</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-morville"><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status">15 tags · applied to 3 quotes in Smoke Test</span><span class="cat-installed"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check bn-icon" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M20 6 9 17l-5-5"></path></svg>Installed</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span></div></div></div></div></div></div></div>
 </figure>
 <figure class="frame small">
-  <figcaption class="chrome"><span>Marker C</span><span>the word leads the status line</span></figcaption>
+  <figcaption class="chrome"><span>C — the word leads the status line</span><span></span></figcaption>
   <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-browse-grid"><div class="v2-card-grid"><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-sentiment"><div class="picker-card-title">Emotional &amp; Cognitive Signals</div><div class="picker-card-author prov-system">On by default</div><div class="picker-card-desc">Seven sentiment categories designed for UX research.</div><div class="picker-card-footrow"><span class="picker-card-status"><span class="cat-installed-word">Installed</span> · 7 tags · applied to 4 quotes in Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-uxr"><div class="picker-card-title">Bristlenose UXR Codebook</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div><div class="picker-card-footrow"><span class="picker-card-status"><span class="cat-installed-word">Installed</span> · 34 tags · none applied to Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-cli-ux"><div class="picker-card-title">Command-Line UX</div><div class="picker-card-author prov-system">Available by default</div><div class="picker-card-desc">Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal.</div><div class="picker-card-footrow"><span class="picker-card-status">35 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-garrett"><div class="picker-card-title">The Elements of User Experience</div><div class="picker-card-author">Jesse James Garrett</div><div class="picker-card-desc">Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</div><div class="picker-card-footrow"><span class="picker-card-status">18 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-morville"><div class="picker-card-title">The User Experience Honeycomb</div><div class="picker-card-author">Peter Morville</div><div class="picker-card-desc">Seven facets of user experience — useful, usable, desirable, findable, accessible, credible, valuable — drawn as a honeycomb so that each can be "a singular looking glass" on a product.</div><div class="picker-card-footrow"><span class="picker-card-status"><span class="cat-installed-word">Installed</span> · 15 tags · applied to 3 quotes in Smoke Test</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-nielsen"><div class="picker-card-title">10 Usability Heuristics for User Interface Design</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div><div class="picker-card-footrow"><span class="picker-card-status">34 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-norman"><div class="picker-card-title">The Design of Everyday Things</div><div class="picker-card-author">Don Norman</div><div class="picker-card-desc">Norman's seven fundamental principles of design — discoverability, feedback, conceptual model, affordances, signifiers, mappings and constraints — plus his classification of human error into slips and mistakes.</div><div class="picker-card-footrow"><span class="picker-card-status">28 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-yablonski"><div class="picker-card-title">Laws of UX</div><div class="picker-card-author">Jon Yablonski</div><div class="picker-card-desc">A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics.</div><div class="picker-card-footrow"><span class="picker-card-status">24 tags</span></div></div><div class="picker-card" role="button" tabindex="0" data-testid="bn-v2-card-plato"><div class="picker-card-title">Platonic Ontology &amp; Epistemology</div><div class="picker-card-author">Composite — Vlastos, Fine, Kraut, Sedley</div><div class="picker-card-desc">A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection).</div><div class="picker-card-footrow"><span class="picker-card-status">26 tags</span></div></div></div></div></div></div></div>
 </figure>
 </div>
@@ -4511,14 +4781,14 @@ h2.step { font: 600 13px/1.4 ui-monospace, Menlo, monospace; margin: 28px 0 10px
 <div class="cmp one">
 <figure class="frame ">
   <figcaption class="chrome"><span>Proposed</span><span>shipped page + one owner-written line under the status</span></figcaption>
-  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-page"><div class="pg-head"><div class="pg-headmain"><div class="pg-titlerow"><div class="pg-titletext"><div class="pg-title">The Elements of User Experience</div><div class="pg-author">Jesse James Garrett</div></div><div class="pg-titleaction"><button class="bn-btn bn-btn-primary" data-testid="bn-v2-install">Install</button></div></div><div class="pg-stat">18 tags · not installed</div><div class="pg-stat cat-note">Installing proposes one of these 18 tags for each of the 4 quotes in Smoke Test. Nothing is applied until you review the proposals.</div><div class="pg-desc bn-lead-para"><p class="bn-lead-claim"><strong>Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</strong></p><p class="bn-lead-rest">A framework for locating where in the design stack a finding lives: the objectives and needs behind the product, the features and content it includes, how its parts are arranged, how each screen is laid out, and what the senses meet.</p></div></div><div class="pg-side"><div class="preview-author" data-testid="bn-v2-author"><div class="preview-author-name">Jesse James Garrett</div><div class="preview-author-bio">Co-founded the user experience consultancy Adaptive Path in 2001 (it became part of Capital One in 2014) and now coaches and advises design leaders. Coined the term "Ajax" (2005). The five-plane "Elements" diagram of March 2000 became "The Elements of User Experience" (New Riders, 2002; 2nd ed. "User-Centered Design for the Web and Beyond", 2010).</div><div class="preview-author-links"><a href="https://jessejamesgarrett.com/" target="_blank" rel="noopener noreferrer">jessejamesgarrett.com <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.com/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon US <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.co.uk/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon UK <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a></div></div></div></div><div class="v2-groups"><div class="codebook-group" style="background-color: var(--bn-group-ux);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Strategy</span></div><p class="group-subtitle">Is the product solving the right problem, for its users and for its makers?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-1-bg);">user need</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-2-bg);">product objective</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-3-bg);">success metric</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-4-bg);">brand identity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-emo);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Scope</span></div><p class="group-subtitle">Does the product include the right features and content?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-1-bg);">functional requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-2-bg);">content requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-3-bg);">requirement priority</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-4-bg);">scope creep</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-task);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Structure</span></div><p class="group-subtitle">How do the pieces fit together — the flows and the organisation of content?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-1-bg);">interaction design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-2-bg);">information architecture</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-3-bg);">error handling</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-trust);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Skeleton</span></div><p class="group-subtitle">How is each screen laid out — the interface, the navigation, the information?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-1-bg);">interface design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-2-bg);">navigation design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-3-bg);">information design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-4-bg);">convention</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-opp);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Surface</span></div><p class="group-subtitle">What do the senses meet — colour, type, contrast, consistency?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-1-bg);">visual design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-2-bg);">contrast and uniformity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-3-bg);">consistency</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div></div></div></div></div></div>
+  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-page"><div class="pg-head"><div class="pg-headmain"><div class="pg-titlerow"><div class="pg-titletext"><div class="pg-title">The Elements of User Experience</div><div class="pg-author">Jesse James Garrett</div></div><div class="pg-titleaction"><button class="bn-btn bn-btn-primary" data-testid="bn-v2-install">Install</button></div></div><div class="pg-stat">18 tags · not installed</div><div class="pg-stat cat-note">Installing proposes one of these 18 tags for each of the 4 quotes in Smoke Test. Nothing is applied until you review the proposals.</div><div class="pg-desc bn-lead-para"><p class="bn-lead-claim"><strong>Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</strong></p><p class="bn-lead-rest">A framework for locating where in the design stack a finding lives: the objectives and needs behind the product, the features and content it includes, how its parts are arranged, how each screen is laid out, and what the senses meet.</p></div></div><div class="pg-side"><div class="preview-author" data-testid="bn-v2-author"><div class="preview-author-name">Jesse James Garrett</div><div class="preview-author-bio">Co-founded the user experience consultancy Adaptive Path in 2001 (it became part of Capital One in 2014) and now coaches and advises design leaders. Coined the term "Ajax" (2005). The five-plane "Elements" diagram of March 2000 became "The Elements of User Experience" (New Riders, 2002; 2nd ed. "User-Centered Design for the Web and Beyond", 2010).</div><div class="preview-author-links"><a href="https://jessejamesgarrett.com/" target="_blank" rel="noopener noreferrer">jessejamesgarrett.com <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.com/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon US <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.co.uk/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon UK <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a></div></div></div></div><div class="v2-groups"><div class="codebook-group" style="background-color: var(--bn-group-ux);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Strategy</span></div><p class="group-subtitle">Is the product solving the right problem, for its users and for its makers?</p></div></div><div class="tag-list"><div id="code--1" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-1-bg);">user need</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--2" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-2-bg);">product objective</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-3-bg);">success metric</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--4" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-4-bg);">brand identity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-emo);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Scope</span></div><p class="group-subtitle">Does the product include the right features and content?</p></div></div><div class="tag-list"><div id="code--1001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-1-bg);">functional requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--1002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-2-bg);">content requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--1003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-3-bg);">requirement priority</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--1004" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-4-bg);">scope creep</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-task);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Structure</span></div><p class="group-subtitle">How do the pieces fit together — the flows and the organisation of content?</p></div></div><div class="tag-list"><div id="code--2001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-1-bg);">interaction design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--2002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-2-bg);">information architecture</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--2003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-3-bg);">error handling</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-trust);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Skeleton</span></div><p class="group-subtitle">How is each screen laid out — the interface, the navigation, the information?</p></div></div><div class="tag-list"><div id="code--3001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-1-bg);">interface design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-2-bg);">navigation design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-3-bg);">information design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3004" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-4-bg);">convention</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-opp);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Surface</span></div><p class="group-subtitle">What do the senses meet — colour, type, contrast, consistency?</p></div></div><div class="tag-list"><div id="code--4001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-1-bg);">visual design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--4002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-2-bg);">contrast and uniformity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--4003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-3-bg);">consistency</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div></div></div></div></div></div>
 </figure>
 </div>
 <h2 class="step">3 · After Install, once the run has finished</h2>
 <div class="cmp one">
 <figure class="frame ">
   <figcaption class="chrome"><span>Shipped as is</span><span>Uninstall in the title row · the Review door</span></figcaption>
-  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-page"><div class="pg-head"><div class="pg-headmain"><div class="pg-titlerow"><div class="pg-titletext"><div class="pg-title">The Elements of User Experience</div><div class="pg-author">Jesse James Garrett</div></div><div class="pg-titleaction"><button class="bn-btn bn-btn-secondary framework-remove-btn">Uninstall</button></div></div><div class="pg-review-row"><span class="pg-review-meta">18 tags · none applied to Smoke Test<span class="undec"> · 4 tentative</span></span><button class="bn-btn bn-btn-secondary bn-btn-sm">Review</button></div><div class="pg-desc bn-lead-para"><p class="bn-lead-claim"><strong>Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</strong></p><p class="bn-lead-rest">A framework for locating where in the design stack a finding lives: the objectives and needs behind the product, the features and content it includes, how its parts are arranged, how each screen is laid out, and what the senses meet.</p></div></div><div class="pg-side"><div class="preview-author" data-testid="bn-v2-author"><div class="preview-author-name">Jesse James Garrett</div><div class="preview-author-bio">Co-founded the user experience consultancy Adaptive Path in 2001 (it became part of Capital One in 2014) and now coaches and advises design leaders. Coined the term "Ajax" (2005). The five-plane "Elements" diagram of March 2000 became "The Elements of User Experience" (New Riders, 2002; 2nd ed. "User-Centered Design for the Web and Beyond", 2010).</div><div class="preview-author-links"><a href="https://jessejamesgarrett.com/" target="_blank" rel="noopener noreferrer">jessejamesgarrett.com <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.com/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon US <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.co.uk/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon UK <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a></div></div></div></div><div class="v2-groups"><div class="codebook-group" style="background-color: var(--bn-group-ux);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Strategy</span></div><p class="group-subtitle">Is the product solving the right problem, for its users and for its makers?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-1-bg);">user need</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-2-bg);">product objective</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-3-bg);">success metric</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-4-bg);">brand identity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-emo);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Scope</span></div><p class="group-subtitle">Does the product include the right features and content?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-1-bg);">functional requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-2-bg);">content requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-3-bg);">requirement priority</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-4-bg);">scope creep</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-task);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Structure</span></div><p class="group-subtitle">How do the pieces fit together — the flows and the organisation of content?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-1-bg);">interaction design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-2-bg);">information architecture</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-3-bg);">error handling</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-trust);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Skeleton</span></div><p class="group-subtitle">How is each screen laid out — the interface, the navigation, the information?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-1-bg);">interface design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-2-bg);">navigation design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-3-bg);">information design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-4-bg);">convention</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-opp);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Surface</span></div><p class="group-subtitle">What do the senses meet — colour, type, contrast, consistency?</p></div></div><div class="tag-list"><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-1-bg);">visual design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-2-bg);">contrast and uniformity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-3-bg);">consistency</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div></div></div></div></div></div>
+  <div class="surface"><div class="v2-layout"><div class="v2-main"><div data-testid="bn-v2-page"><div class="pg-head"><div class="pg-headmain"><div class="pg-titlerow"><div class="pg-titletext"><div class="pg-title">The Elements of User Experience</div><div class="pg-author">Jesse James Garrett</div></div><div class="pg-titleaction"><button class="bn-btn bn-btn-secondary framework-remove-btn">Uninstall</button></div></div><div class="pg-review-row"><span class="pg-review-meta">18 tags · none applied to Smoke Test<span class="undec"> · 4 tentative</span></span><button class="bn-btn bn-btn-secondary bn-btn-sm">Review</button></div><div class="pg-desc bn-lead-para"><p class="bn-lead-claim"><strong>Five planes of user experience, from abstract to concrete — strategy, scope, structure, skeleton, surface — each dependent on the plane below it, and each with two sides: the product as functionality and the product as information.</strong></p><p class="bn-lead-rest">A framework for locating where in the design stack a finding lives: the objectives and needs behind the product, the features and content it includes, how its parts are arranged, how each screen is laid out, and what the senses meet.</p></div></div><div class="pg-side"><div class="preview-author" data-testid="bn-v2-author"><div class="preview-author-name">Jesse James Garrett</div><div class="preview-author-bio">Co-founded the user experience consultancy Adaptive Path in 2001 (it became part of Capital One in 2014) and now coaches and advises design leaders. Coined the term "Ajax" (2005). The five-plane "Elements" diagram of March 2000 became "The Elements of User Experience" (New Riders, 2002; 2nd ed. "User-Centered Design for the Web and Beyond", 2010).</div><div class="preview-author-links"><a href="https://jessejamesgarrett.com/" target="_blank" rel="noopener noreferrer">jessejamesgarrett.com <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.com/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon US <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a><a href="https://www.amazon.co.uk/dp/0321683684" target="_blank" rel="noopener noreferrer">Amazon UK <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link bn-icon bn-icon-external" focusable="false" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a></div></div></div></div><div class="v2-groups"><div class="codebook-group" style="background-color: var(--bn-group-ux);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Strategy</span></div><p class="group-subtitle">Is the product solving the right problem, for its users and for its makers?</p></div></div><div class="tag-list"><div id="code--1" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-1-bg);">user need</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--2" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-2-bg);">product objective</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-3-bg);">success metric</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--4" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-ux-4-bg);">brand identity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-emo);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Scope</span></div><p class="group-subtitle">Does the product include the right features and content?</p></div></div><div class="tag-list"><div id="code--1001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-1-bg);">functional requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--1002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-2-bg);">content requirement</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--1003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-3-bg);">requirement priority</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--1004" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-emo-4-bg);">scope creep</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-task);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Structure</span></div><p class="group-subtitle">How do the pieces fit together — the flows and the organisation of content?</p></div></div><div class="tag-list"><div id="code--2001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-1-bg);">interaction design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--2002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-2-bg);">information architecture</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--2003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-task-3-bg);">error handling</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-trust);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Skeleton</span></div><p class="group-subtitle">How is each screen laid out — the interface, the navigation, the information?</p></div></div><div class="tag-list"><div id="code--3001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-1-bg);">interface design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-2-bg);">navigation design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-3-bg);">information design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--3004" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-trust-4-bg);">convention</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div><div class="codebook-group" style="background-color: var(--bn-group-opp);"><div class="group-header"><div class="group-title-area"><div class="group-title"><span class="group-title-text">Surface</span></div><p class="group-subtitle">What do the senses meet — colour, type, contrast, consistency?</p></div></div><div class="tag-list"><div id="code--4001" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-1-bg);">visual design</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--4002" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-2-bg);">contrast and uniformity</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div><div id="code--4003" class="tag-row"><div class="tag-name-area"><span class="badge" style="background-color: var(--bn-opp-3-bg);">consistency</span></div><span class="tag-bar-area"><span class="tag-count">0</span></span></div></div></div></div></div></div></div></div>
 </figure>
 </div>
 
@@ -4526,7 +4796,10 @@ h2.step { font: 600 13px/1.4 ui-monospace, Menlo, monospace; margin: 28px 0 10px
 <b class="label">Commentary</b>
 <p><b>The problem.</b> In testing, people installed from the card without knowing what they were getting, and Install starts an AutoCode run (D4: installing <i>is</i> applying). The card shows a title, an author and one sentence; the page shows every group and tag, the author and their sources. The decision belongs where the evidence is.</p>
 <p><b>The flow.</b> The catalogue becomes a catalogue: each card is already a button that opens its codebook (D12), so removing Install / Uninstall costs no route. Install and Uninstall already live in the page's title row; nothing moves there, it just becomes the only place. Sentiment's card already has no button today, so a button-less card is a shipped shape, not a new one.</p>
-<p><b>The marker.</b> A: a tick and "Installed" where the button was, so the eye finds it in the same place. B: a tick before the title, quieter, the word only in a tooltip (hover-only, so weaker for keyboard and screen-reader users unless it is also in the label). C: the word leads the status line, no glyph. The status phrase already differs (installed cards say "applied to…" or "none applied to…"), so the marker restates a fact the card half-carries; A makes it scannable. Not-installed cards show nothing: absence is the information.</p>
+<p><b>The marker (revised 24 Oct, owner): top right, a stronger tick, and an "off" form.</b> Six Lucide options, each shown on an installed codebook that is on, one that is installed but switched off, and one not installed. A switched-off codebook keeps its marker, because it is still installed: the marker turns from blue to grey, and the filled forms go hollow, the way a selected control reads against a deselected one. The card's shipped knock-back (half opacity, D27a) stays, so the grey reads faint; that is today's switched-off look, not something new. Not-installed cards carry nothing: absence is the information. My pick is 2, the filled disc: filled-blue against hollow-grey is the clearest on/off pair, and it needs no word. 4 (badge) reads almost the same as 2 at this size, and 5 (bookmark) says "saved" more than "installed". 1 and 6 carry the word, which costs title width.</p>
+<p><b>Option 6 refined: a fainter tint, and green (24 Oct).</b> The tint drops from 12% to 6–8%. The green is macOS's own <code>NSColor.systemGreen</code>, sampled on macOS 27.0: #34C759 light, #30D158 dark (the theme's only green today is <code>--bn-colour-positive</code>, a Tailwind #16a34a, so this would be a new token). Measured on the tinted pill: the green word and tick (6b) reach 2.1:1 in light, under both the 4.5:1 a 12px word needs and the 3:1 a meaningful graphic needs; 8.3:1 in dark. 6c keeps the green for the tick only and sets the word in body ink (16.4:1 light, 13.6:1 dark), so the word carries the meaning and the tick may be faint. Blue 6a measures 3.7:1 light, 4.9:1 dark; the accent's word is already only about 4:1 on plain white, and the tint takes it lower. My pick is 6c.</p>
+<p><b>Decided 24 Oct 2026 (owner): 6c, the green tick.</b> Blue already means selection, the on/off switch, and focus across Bristlenose; "installed" is none of those, so it takes a different colour: the macOS system green, on the tick only, with the word in body ink and a faint green tint behind. Switched off, the same pill goes neutral grey. The flow itself (no buttons on the cards, Install only on the page) is still an idea, not decided.</p>
+<p><b>Why no SF Symbol.</b> The card is drawn by the web view, in the browser and in the Mac app alike, and SF Symbols never appear in anything a browser engine draws: Apple licenses them for native interface only (<code>docs/design-icon-system.md</code>). The icon system pairs Lucide <code>check</code> with SF <code>checkmark</code>; it has no row for a circled check yet. If a native surface ever shows the same state, option 2's natural twin is SF <code>checkmark.circle.fill</code> (hollow: <code>checkmark.circle</code>), and that pair would be a new row in the doc's table. The stroke is the icon system's strong stem (<code>--bn-icon-stem-strong</code>); the filled forms are Lucide's own geometry with the outer shape filled.</p>
 <p><b>The page line.</b> Under the status, one sentence saying what Install does, true to the code: the first run leaves every proposal pending until it is reviewed. It is also where D4's unmet obligation could land ("the number moves to the install control"); the alternative is to put the count on the button ("Install and code 4 quotes").</p>
 <table>
 <tr><th>New string</th><th>Where</th><th>Note</th></tr>

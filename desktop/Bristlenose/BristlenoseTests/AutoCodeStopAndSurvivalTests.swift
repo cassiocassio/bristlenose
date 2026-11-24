@@ -220,6 +220,9 @@ private func failedJobsBody() -> [String: Any] {
         let m = ServeManager(resolvedMode: .success(.external(port: 5000)))
         m.instance.state = .running(port: 5000)
         m.instance.authToken = "tok"
+        // Every manager's own 3 s loop polls too while a window is up. On a slow guest the test
+        // outlived a tick and recorded its answer as a third one (Sequoia guest, 24 Nov 2026).
+        m.autoCodeWindowVisible = { false }
         let gate = Gate()
         var call = 0
         m.autoCodeJobsReader = { _ in
@@ -245,6 +248,7 @@ private func failedJobsBody() -> [String: Any] {
         m.instance.state = .running(port: 5000)
         m.instance.authToken = "tok"
         m.autoCodeJobsReader = { _ in (404, nil) }
+        m.autoCodeWindowVisible = { false }                 // only the forced read below
         var answers: [AutoCodeEndedAnswer] = []
         m.onAutoCodeEnded = { answers.append($0) }
         await m.pollAutoCode(force: true)

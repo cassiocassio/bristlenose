@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import StoreKit
 import StoreKitTest
 import Testing
@@ -18,8 +19,31 @@ import Testing
 // is how a 30- or 90-day lapse is built in a test that runs in seconds. The
 // product in `Bristlenose.storekit` starts with a one-week free trial.
 
+// StoreKit's local test store answers only a team-signed test host: an unsigned one (CI=1,
+// `CODE_SIGNING_ALLOWED=NO`, which is GitHub's Mac runner and the guest matrix) gets
+// `.notEntitled` from every purchase. So this suite runs in a signed local run and is skipped,
+// by name, in an unsigned one. Found red on both guests on 24 Nov 2026, two days after it landed.
+enum StoreKitTestHost {
+    /// Whether this test process carries a Team ID in its signature.
+    static var isTeamSigned: Bool {
+        var code: SecCode?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return false }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else {
+            return false
+        }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation),
+                                            &info) == errSecSuccess,
+              let dict = info as? [String: Any] else { return false }
+        return (dict[kSecCodeInfoTeamIdentifier as String] as? String)?.isEmpty == false
+    }
+}
+
 @MainActor
-@Suite("Early adopters against the local StoreKit test store", .serialized)
+@Suite("Early adopters against the local StoreKit test store", .serialized,
+       .enabled(if: StoreKitTestHost.isTeamSigned,
+                "StoreKit's test store needs a team-signed host; this run is unsigned"))
 struct EarlyAdopterStoreKitTests {
 
     private let id = SubscriptionAccess.monthlyProductID

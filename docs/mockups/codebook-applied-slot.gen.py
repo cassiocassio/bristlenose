@@ -529,6 +529,9 @@ h2.step { font: 600 1.05rem/1.3 var(--bn-font-body); margin: 3rem 0 0.8rem; max-
 .app { display: flex; min-height: 0; }
 .app-side { flex: 0 0 240px; }
 .app-side .toc-sidebar { position: static; height: auto; min-height: 100%; }
+/* The open state, as `.layout.toc-open .toc-sidebar` gives it in the app (sidebar.css:261): closed is
+   hidden at opacity 0, and the toolbar bleed's negative margin has no toolbar to bleed under here. */
+.app-side .toc-sidebar { visibility: visible; opacity: 1; margin-top: 0; padding-top: var(--bn-space-xl); }
 .app-main { flex: 1; min-width: 0; padding: 0 0.5rem 1.5rem 2rem; }
 .wide .surface { padding: 0; overflow-x: auto; }
 .v2-card-grid.one { grid-template-columns: minmax(0, 330px); }

@@ -440,6 +440,34 @@ Run `scripts/bump-version.py` (`bristlenose/__init__.py` is the single source of
 
 ## Changelog
 
+**0.48.0** — _25 Nov 2026_
+
+AutoCode now tags while it works: tags appear batch by batch, a first run ends by accepting its most confident share, and the tag sidebar and the Mac sidebar show where it has got to. Quotes keep their paragraphs, a quote is one passage on one point, and the Mac sidebar drags smoothly.
+
+**New**
+
+- **AutoCode's tags appear as it works.** Each batch is saved and shown as it answers. A first run ends by accepting its most confident 30%, never below 0.70, and a stopped or failed run keeps what it had.
+- **The tag sidebar opens on an AutoCode overview:** each codebook's results, live during a run and remembered per study, with a link to review each one. Two labelled controls select all or none, and show used tags or all of them.
+- **The AutoCode review shows the whole run.** A levels-style threshold slider re-cuts it, your own decisions are kept, and a decided row slides to its new place.
+- **The Mac sidebar shows AutoCode's progress** on the project row, including stopped, failed and partial runs, and AutoCode can be stopped from the menus.
+- **Editing a long quote keeps its paragraphs.** Shift-Return starts a paragraph, Backspace at its start joins it, and Tab saves and stays on the quote.
+- **The Mac app's Help menu has Privacy Policy and Terms of Use.**
+
+**Improved**
+
+- **A quote is one passage on one point.** Think-aloud sessions analysed with ChatGPT were cut into one quote per sentence. This applies to new studies and re-analysed sessions only.
+- **Dragging the Mac sidebar's divider is smooth,** about four times the frame rate it was.
+- **The session timeline** gives no room to a lane a session has nothing for, draws the reading window and the player's position over every lane, and no longer cuts off a short session's last flag.
+- **Codebook cards and pages say AutoCode, Autocoding or Applied in one place,** and a switched-off codebook's card is knocked back.
+- **Sentiment is listed in the Sessions grid's order** in the tag sidebar and the codebook lens, with its bars in its own colours.
+- **Provider links go to each provider's current pages,** for keys, billing and pricing, in the app, the CLI and the docs.
+- **Discussion summaries and questions are in sentence case,** with the original kept as written.
+- **Small text in positive and warning colours is readable** (4.5:1) on the inspector tint in every palette.
+
+**Fixed**
+
+- **Undoing an AutoCode decision restores the proposal,** and an exported report's embedded signals carry accepted tags only.
+
 **0.47.0** — _20 Nov 2026_
 
 Zoom import is on for everyone, a study now shows what its analysis cost, and a failed run says in the sidebar what went wrong. Agents asking questions of a study get more careful answers, and a headless run no longer starts a server.

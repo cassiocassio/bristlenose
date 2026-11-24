@@ -23,8 +23,9 @@ When asked to audit i18n (with or without a specific scope):
    - Root `CLAUDE.md` — the i18n gotchas section
    - `docs/design-i18n.md` — terminology table, strategy, cross-cutting rules
    - `frontend/CLAUDE.md` — React i18n conventions
-2. **Read all locale files** — `bristlenose/locales/*/common.json` (en, de, fr,
-   es, ko, ja). English is the source of truth.
+2. **Read all locale files** — `bristlenose/locales/*/common.json`, for the
+   codes in `SUPPORTED_LOCALES` (`bristlenose/i18n.py`). English is the source
+   of truth.
 3. **Scope the audit** — if the user specifies files or a git range, focus
    there. Otherwise audit the full frontend + locale set.
 4. **Run the checks below** in order.
@@ -37,7 +38,8 @@ When asked to audit i18n (with or without a specific scope):
 Compare key sets across every enrolled locale against English (source of truth).
 
 - **Missing keys**: present in `en/common.json` but absent from another locale.
-  Every `t("key")` call needs a corresponding entry in all 6 files.
+  Every `t("key")` call needs a corresponding entry in every full locale
+  (all enrolled codes except the `zh-Hant-HK` overrides).
 - **Orphan keys**: present in a non-English locale but absent from English —
   likely leftover from a rename or removal.
 - **Plural forms**: English, German, French, Spanish need both `_one` and

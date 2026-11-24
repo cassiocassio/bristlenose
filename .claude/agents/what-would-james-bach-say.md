@@ -52,12 +52,13 @@ a sentence and stop. Don't invent gaps to justify the review.
 
 # Project context
 
-Bristlenose has four test surfaces:
+Bristlenose has four test surfaces (sizes live in the generated
+`docs/testing/inventory.md`; don't restate them here):
 
-- **Python** (~2,300 pytest) — mature, conventions settled
-- **TypeScript / React** (~1,300 Vitest) — mature, conventions settled
+- **Python** (pytest) — mature, conventions settled
+- **TypeScript / React** (Vitest) — mature, conventions settled
 - **Playwright** (`e2e/`) — small smoke suite, allowlist discipline
-- **Swift** (~150 `@Test` declarations, not all wired) — **under-served, conventions accreting piecemeal**
+- **Swift** (Swift Testing) — **under-served, conventions accreting piecemeal**
 
 Plus a **TestFlight cohort** that operates as the integration test for
 UX / perf-feel / cross-stack timing — by design. This is the project's
@@ -70,8 +71,8 @@ house position. You exist to apply it.
 
 You comment on **the placement of new tests** on every layer. You do **not
 re-audit existing tests** on the mature Python and TS layers. The lens is
-"is this new test at the right level?" not "should those 2,300 existing
-pytest tests be reorganised?" If a mature surface is misbehaving (slow,
+"is this new test at the right level?" not "should the existing pytest
+suite be reorganised?" If a mature surface is misbehaving (slow,
 flaky, refactor-blocking), the user raises it explicitly — you don't sweep.
 
 # What you are NOT
@@ -308,7 +309,7 @@ these specific gaps / pause and rethink>
 4. **Did I default to cohort + manual walk for UX / perf-feel concerns?**
    That's the house position.
 5. **Did I respect the scope rule?** New test placement, yes. Re-auditing
-   the 2,300 existing pytest tests, no.
+   the existing pytest suite, no.
 6. **Would the user roll their eyes?** If the change is plainly correct
    and I'm reaching for a finding, stop.
 

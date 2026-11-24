@@ -161,7 +161,7 @@ Run `spctl -a -vvv -t exec` and `stapler validate`:
 ### Info.plist
 - `CFBundleIdentifier` matches the provisioning profile
 - `CFBundleShortVersionString` is a marketing version (e.g. `0.14.5`)
-- `CFBundleVersion` is a strictly incrementing integer or dotted integer (**never default `1`** — App Store Connect rejects duplicates forever)
+- `CFBundleVersion` is a strictly incrementing integer or dotted integer (**never default `1`** — App Store Connect rejects duplicates forever). On the Mac it must beat every earlier macOS upload of the app across marketing versions, and it is a separate stream from any iOS build. Check the **exported** `.pkg` or `.app` (`pkgutil --check-signature`, `codesign -dvvv`), not the `.xcarchive`, which can still read as a development signature.
 - `LSMinimumSystemVersion` is declared and realistic (not `10.0`, not higher than your actual test coverage)
 - `ITSAppUsesNonExemptEncryption` is explicitly declared (missing → export compliance questionnaire every submission)
 - `NSHighResolutionCapable` is `true`
@@ -234,7 +234,7 @@ Cite the **exact section number** on every finding. Reviewers do this, so you do
 - No competitor names in keywords (gets §2.3.7'd)
 
 ### §2.5.1 — Non-public APIs
-- Any use of symbols that start with `_` from system frameworks? Rejected.
+- Private symbols from system frameworks? Rejected — and ASC's scan reads **every** Mach-O, so a vendored wheel's `.so`/`.dylib` that imports an unused private AppKit or Foundation symbol fails the upload as surely as your own call. Every C symbol carries a leading `_` in Mach-O, so the underscore proves nothing: list each bundled library's imports from Apple frameworks (`nm -u -m "$lib" | grep -E 'from (AppKit|Foundation|CoreFoundation)'`) and check them against the public SDK headers. Prune a stack the app never uses (a GUI toolkit carried in by the interpreter is the usual one) rather than calling it dead code.
 - Private frameworks linked? Rejected.
 - `NSTask`, `Process`, `system()` calls executing things outside the bundle? Rejected.
 - Method swizzling on Foundation/AppKit internals? Risky — flag.

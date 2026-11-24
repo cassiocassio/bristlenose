@@ -312,8 +312,8 @@ shortcuts and features.
 
 ## Keyboard shortcuts
 
-Shortcuts are how power users (and reviewers) judge whether you understand the
-Mac.
+Shortcuts are how people who live in an app (and reviewers) judge whether you
+understand the Mac.
 
 - **Reserved system shortcuts — never override:**
   `Cmd+Space` (Spotlight), `Cmd+Tab` (app switcher), `Cmd+H` (hide),

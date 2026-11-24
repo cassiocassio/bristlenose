@@ -37,7 +37,7 @@ try/except (Python), try/catch (TS), error callbacks, fallback/default-on-failur
 - **Smoke fixtures missing a `RunCompletedEvent`** in `pipeline-events.jsonl` — the status page silently intercepts and the SPA never mounts; tests fail on an absent `#bn-app-root` for a non-obvious reason. Any new serve-against-fixture test must include a terminus event.
 
 **Serialization / output:**
-- **`json.dumps(ensure_ascii=False)` embedded in `<script>`** — does NOT escape `</script>`; an XSS vector that "works" in tests. Embedded/exported JSON must use `ensure_ascii=True` (escapes `<` → `<`).
+- **`json.dumps` embedded in `<script>`** — `ensure_ascii=True` escapes only code points above 127, so `<`, `>` and `&` pass through and a `</script>` in a name or quote breaks out of the block: an XSS vector that "works" in tests. Use `script_json` (`bristlenose/stages/s12_render/html_helpers.py`) or the same three replaces `routes/export.py` makes; outside `s12_render/` no test catches a bare `json.dumps`.
 - **`console.print()` eating `[name]` as Rich markup** — unknown styles are silently consumed (`pip install bristlenose[serve]` renders as `…bristlenose`). Flag interpolated package-specs/globs/versions without `markup=False` or `rich.markup.escape`.
 
 **Runtime / subprocess (mostly App-Sandbox-only, so they pass on dev machines):**
@@ -51,7 +51,7 @@ try/except (Python), try/catch (TS), error callbacks, fallback/default-on-failur
 **Pipeline / data integrity:**
 - **Cloud placeholders (`fs.ensure_materialised`)** — the 30-minute bound with no message during the wait is silent *by policy* (`docs/design-cloud-files.md`). Flag a read of user media with no bound, or a timed-out read reported as a damaged file, a toolchain fault or a whole-run failure (it is a per-session, retryable `cloud_fetch`). Never recommend a wait label, a cloud glyph or provider advice.
 - **`model_copy()` is shallow** — redacting a segment's `.text` leaves `.words` pointing at the original unredacted `Word` objects: a silent PII leak. Always clear `clean_seg.words = []` (and audit `speaker_label`, `source_file`).
-- **Declared-but-unwired config** — `pii_llm_pass` and `pii_custom_names` exist in `config.py` but `s07_pii_removal.py` ignores them (warn-only). Never write code that *reads* a config flag as if it's implemented without checking it's wired.
+- **Declared-but-unwired config** — a settings field nothing honours. `pii_llm_pass` and `pii_custom_names` in `config.py` are the house case: `s07_pii_removal.py` refuses to run when either is set, because a warning was lost in a long run while redaction reported success. A new unwired field must fail the same way. Never write code that *reads* a config flag as if it's implemented without checking it's wired.
 
 **CI parity (passes locally, fails or misleads in CI):**
 - **Tests depending on local env** (API keys, Ollama, installed tools) — CI has none; mock them. (Caused the v0.6.7–v0.6.13 release-pipeline failures.)

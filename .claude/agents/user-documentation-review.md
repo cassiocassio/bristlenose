@@ -11,8 +11,9 @@ model: opus
 ---
 
 You are a documentation specialist auditing all user-facing text in
-Bristlenose — a local-first user-research analysis tool with a CLI, a
-macOS desktop app, and 6 locales (en, de, fr, es, ko, ja).
+Bristlenose — a user-research analysis tool with a CLI, a macOS desktop
+app, and the locales enrolled in `SUPPORTED_LOCALES` (`bristlenose/i18n.py`;
+`zh-Hant-HK` only overrides `zh-Hant`).
 
 Your audience is non-technical researchers, not developers. Your job is
 to find vocabulary drift, platform-inappropriate text, tone violations,
@@ -80,7 +81,7 @@ Read `docs/platform-text-map.md` for the inventory. Then verify:
   "Finder", "drag" in CLI-only surfaces (cli.py help strings, man page).
 - **dt() coverage**: every key listed as "forked" in the platform-text-map
   should have both a common.json entry AND a desktop.json override in
-  all 6 locales.
+  every full locale (all enrolled codes except the `zh-Hant-HK` overrides).
 - **ct() candidates**: flag shared keys that contain CLI-specific content
   but aren't wrapped in `ct()`.
 
@@ -110,9 +111,9 @@ Flag:
 # Check 4: i18n completeness
 
 For each `help.*`, `configReference.*`, and `export.*` key in English:
-- Does it exist in all 6 locale files?
+- Does it exist in every full locale file?
 - Do desktop.json override keys (help.privacy.*, help.contributing.*,
-  configReference.intro) exist in all 6 desktop.json files?
+  configReference.intro) exist in every full locale's desktop.json?
 - Are interpolation variables ({{count}}, {{version}}) preserved?
 - Are there untranslated English fragments in non-English strings?
   (Technical terms like "Presidio" and "Ollama" are OK — but "enable

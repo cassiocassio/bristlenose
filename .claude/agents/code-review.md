@@ -198,8 +198,8 @@ agent in Anthropic's pr-review-toolkit. Paraphrased, not copied.)_
 
 **Python lens** (when `.py` files are in scope):
 - Type hint completeness (strict mypy is the standard)
-- Pydantic for data structures (except `analysis/` which uses plain
-  dataclasses)
+- Pydantic for data structures (except `bristlenose/signals/`, which uses
+  plain dataclasses)
 - Test isolation — tests must not depend on local environment (API keys,
   Ollama, local config). The v0.6.7-v0.6.13 CI failures were caused by
   exactly this
@@ -249,7 +249,7 @@ agent in Anthropic's pr-review-toolkit. Paraphrased, not copied.)_
   default actor isolation `nonisolated`, so `@MainActor` annotations are
   genuinely needed and strict-concurrency diagnostics mostly don't fire (see
   that skill's `VENDORED.md`)
-- Read `desktop/CLAUDE.md` and `docs/design-desktop-app.md` for context
+- Read `desktop/CLAUDE.md` and `docs/archive/design-desktop-app.md` for context
 
 # Brevity
 

@@ -19,14 +19,20 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from bristlenose.server.autocode import first_apply_ending
 from bristlenose.server.models import AutoCodeJob, Project, TagOverviewState
-from bristlenose.server.routes.autocode import ConfidenceBin, confidence_counts
+from bristlenose.server.routes.autocode import (
+    ConfidenceBin,
+    _counted_quote_ids,
+    confidence_counts,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +50,9 @@ class OverviewCodebook(BaseModel):
     #: The lines the run was last cut at; None before any cut.
     lower: float | None
     upper: float | None
+    #: A first apply's live accept line (D47, D50): the upper tick while the run codes and
+    #: before its cut stores the lines. None before its first batch is saved.
+    live_accept_line: float | None
     bins: list[ConfidenceBin]
 
 
@@ -100,10 +109,12 @@ def get_tag_overview(project_id: int, request: Request) -> TagOverviewOut:
             .all()
         )
         codebooks = []
+        # Worked out once for every job this read lists.
+        counted = _counted_quote_ids(db, project_id)
         for job in jobs:
             if job.framework_id in _NOT_REVIEWABLE:
                 continue
-            bins = confidence_counts(db, project_id, job.id)
+            bins = confidence_counts(db, project_id, job.id, counted)
             coding = _coding(job)
             # A run that ended with nothing to show (a failure before any batch answered)
             # has nothing to review; one still coding is on the line, Review inactive.
@@ -115,6 +126,7 @@ def get_tag_overview(project_id: int, request: Request) -> TagOverviewOut:
                     coding=coding,
                     lower=job.applied_lower_threshold,
                     upper=job.applied_upper_threshold,
+                    live_accept_line=job.live_accept_line,
                     bins=bins,
                 )
             )
@@ -132,19 +144,28 @@ def get_tag_overview(project_id: int, request: Request) -> TagOverviewOut:
 def patch_tag_overview(
     project_id: int, request: Request, data: TagOverviewPatch
 ) -> dict[str, str]:
-    """Remember the fields named (open, split, auto_opened), and no others."""
+    """Remember the fields named (open, split, auto_opened), and no others.
+
+    The row is made with an insert that yields to one already there, then updated, so
+    two windows writing a study's first state at once both land (no unique-index refusal).
+    """
     db = _get_db(request)
     try:
         _check_project(db, project_id)
-        state = db.query(TagOverviewState).filter_by(project_id=project_id).first()
-        if state is None:
-            state = TagOverviewState(project_id=project_id)
-            db.add(state)
-        for field in ("open", "split", "auto_opened"):
-            value = getattr(data, field)
-            if value is not None:
-                setattr(state, field, value)
-        state.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.execute(
+            sqlite_insert(TagOverviewState)
+            .values(project_id=project_id)
+            .on_conflict_do_nothing(index_elements=["project_id"])
+        )
+        values: dict[Any, Any] = {
+            name: getattr(data, name)
+            for name in ("open", "split", "auto_opened")
+            if getattr(data, name) is not None
+        }
+        values["updated_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.query(TagOverviewState).filter_by(project_id=project_id).update(
+            values, synchronize_session=False
+        )
         db.commit()
         return {"status": "ok"}
     finally:

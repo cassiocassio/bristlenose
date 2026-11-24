@@ -782,17 +782,22 @@ def get_autocode_status(
         db.close()
 
 
-def confidence_counts(db: Session, project_id: int, job_id: int) -> list[ConfidenceBin]:
+def confidence_counts(
+    db: Session, project_id: int, job_id: int, counted: set[int] | None = None,
+) -> list[ConfidenceBin]:
     """The job's proposals on quotes that count, in 20 bands of 0.05 by confidence,
     each split into accepted, tentative (pending) and excluded (denied). One query of
-    three columns over the job's proposals; a confidence of 1.00 is in the top band."""
+    three columns over the job's proposals; a confidence of 1.00 is in the top band.
+    ``counted``: the quotes that count, when the caller has worked them out already (the
+    tag sidebar overview reads several jobs in one request)."""
     from bristlenose.server.autocode import CONFIDENCE_STEPS_PER_UNIT
 
     bins = [
         ConfidenceBin(lower=i / CONFIDENCE_STEPS_PER_UNIT)
         for i in range(CONFIDENCE_STEPS_PER_UNIT)
     ]
-    counted = _counted_quote_ids(db, project_id)
+    if counted is None:
+        counted = _counted_quote_ids(db, project_id)
     rows = db.query(ProposedTag.quote_id, ProposedTag.status, ProposedTag.confidence).filter(
         ProposedTag.job_id == job_id
     )

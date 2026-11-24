@@ -123,6 +123,29 @@ class TestCodebooks:
         assert AuthTestClient(app).get(URL).json()["codebooks"] == []
 
 
+class TestOneCountedSet:
+    def test_the_quotes_that_count_are_worked_out_once_per_read(self, app_and_tags, monkeypatch) -> None:
+        import bristlenose.server.routes.tag_overview as overview
+
+        app, tags = app_and_tags
+        _add_job(app, "garrett", "completed", True, [0.5, 0.8], tags)
+        _add_job(app, "uxr", "completed", True, [0.6], tags)
+        calls: list[int] = []
+        real = overview._counted_quote_ids
+
+        def counting(db: object, project_id: int) -> set[int]:
+            calls.append(project_id)
+            return real(db, project_id)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(overview, "_counted_quote_ids", counting)
+        import bristlenose.server.routes.autocode as autocode_routes
+
+        monkeypatch.setattr(autocode_routes, "_counted_quote_ids", counting)
+        got = AuthTestClient(app).get(URL).json()["codebooks"]
+        assert len(got) == 2
+        assert calls == [1]
+
+
 class TestExport:
     def test_the_overview_is_server_only(self) -> None:
         from bristlenose.server.routes.export import (
@@ -133,6 +156,66 @@ class TestExport:
         path = "/projects/{project_id}/tag-overview"
         assert path in SERVER_ONLY_PATH_TEMPLATES
         assert path not in EMBED_PATH_TEMPLATES
+
+
+class TestRaceSafePatch:
+    def test_two_first_writes_at_once_both_land(self, tmp_path: Path) -> None:
+        import threading
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url=f"sqlite:///{tmp_path / 'r.db'}")
+        client = AuthTestClient(app)
+        barrier = threading.Barrier(2)
+        codes: list[int] = []
+
+        def write(body: dict[str, bool]) -> None:
+            barrier.wait()
+            codes.append(client.patch(URL, json=body).status_code)
+
+        threads = [threading.Thread(target=write, args=(b,))
+                   for b in ({"open": True}, {"split": True})]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert codes == [200, 200]
+        got = client.get(URL).json()
+        assert (got["open"], got["split"]) == (True, True)
+        db = app.state.db_factory()
+        try:
+            from bristlenose.server.models import TagOverviewState
+
+            assert db.query(TagOverviewState).count() == 1
+        finally:
+            db.close()
+
+    def test_a_first_write_onto_a_row_made_meanwhile_lands(self, client) -> None:
+        # The insert yields to a row another write made, then updates it.
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            from bristlenose.server.models import TagOverviewState
+
+            db.add(TagOverviewState(project_id=1, split=True))
+            db.commit()
+        finally:
+            db.close()
+        assert client.patch(URL, json={"open": True}).status_code == 200
+        got = client.get(URL).json()
+        assert (got["open"], got["split"]) == (True, True)
+
+
+class TestLiveLine:
+    def test_a_first_apply_reports_its_live_accept_line(self, app_and_tags) -> None:
+        app, tags = app_and_tags
+        _add_job(app, "garrett", "running", False, [0.9], tags)
+        db = app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            job = db.query(AutoCodeJob).one()
+            job.live_accept_line = 0.8
+            db.commit()
+        finally:
+            db.close()
+        got = AuthTestClient(app).get(URL).json()["codebooks"][0]
+        assert (got["coding"], got["live_accept_line"], got["upper"]) == (True, 0.8, None)
 
 
 class TestMigration029:
@@ -168,6 +251,42 @@ class TestMigration029:
         assert version == MIGRATION_HEAD == "029"
         assert rows == 0
         assert tuple(row) == (0, 0, 0)
+
+    @pytest.mark.parametrize(
+        ("fw", "status", "proposals", "seeded"),
+        [
+            ("garrett", "completed", True, True),   # a finished run: opened once already
+            ("garrett", "cancelled", True, True),   # a stopped run that settled
+            ("garrett", "running", True, False),    # still coding: it opens after
+            ("garrett", "failed", False, False),    # nothing to show
+            ("sentiment", "completed", True, False),  # never reviewable
+        ],
+    )
+    @pytest.mark.parametrize("table_made_by_create_all", [False, True])
+    def test_an_upgrade_seeds_studies_with_a_finished_run(
+        self, tmp_path: Path, fw: str, status: str, proposals: bool, seeded: bool,
+        table_made_by_create_all: bool,
+    ) -> None:
+        from bristlenose.server.db import run_migrations
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url=f"sqlite:///{tmp_path / 'u.db'}")
+        tags = _import_garrett(app)
+        _add_job(app, fw, status, status == "completed", [0.5] if proposals else [], tags)
+        engine = sa.create_engine(f"sqlite:///{tmp_path / 'u.db'}")
+        with engine.connect() as conn:
+            if table_made_by_create_all:
+                # init_db runs create_all before the migrations: the table is there, empty.
+                conn.execute(sa.text("DELETE FROM tag_overview_states"))
+            else:
+                conn.execute(sa.text("DROP TABLE tag_overview_states"))
+            conn.execute(sa.text("UPDATE alembic_version SET version_num = '028'"))
+            conn.commit()
+        run_migrations(engine)
+        with engine.connect() as conn:
+            rows = conn.execute(
+                sa.text("SELECT project_id, open, split, auto_opened FROM tag_overview_states")
+            ).all()
+        assert [tuple(r) for r in rows] == ([(1, 0, 0, 1)] if seeded else [])
 
     def test_a_fresh_database_upgrades_cleanly(self, tmp_path: Path) -> None:
         from bristlenose.server.db import init_db, run_migrations

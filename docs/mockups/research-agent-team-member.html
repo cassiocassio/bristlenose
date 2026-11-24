@@ -122,6 +122,8 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <h1>Research agent: the asker's experience</h1>
 <p class="lede">Companion to <code>docs/design-research-agent.md</code>. A quick sketch (Tier 1): hand-rolled styles, and every word is proposed copy nobody has reviewed. It draws what a PM, designer or engineer on the Product X team experiences, one frame per scenario; the ids (A1…) match the PRD's §7.</p>
 <p class="lede">The chat surfaces are generic stand-ins for Teams, Slack, Figma Make and Claude, drawn only to show where the answer lands. They copy no one's interface. The quotes are invented.</p>
+<p class="lede"><b>What the copy may know.</b> Bristlenose can't know who the researcher works for, what their contract says, or whose IT will run anything. So every name in Bristlenose's own copy comes from something a user typed, data Bristlenose holds, or an answer from the system it's talking to (a directory's groups, a sign-in's name). The emails and chat messages people write themselves are theirs.</p>
+<p class="lede"><b>Updated 22 Nov 2026 after review:</b> matches <code>research-agent-publisher-v2.html</code>. Participants are counted per project, citations show the fieldwork month rather than the session date, the report links are gone, and every refusal names the person to ask without claiming more.</p>
 <div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario</span></div>
 
 <!-- ============ 1 ============ -->
@@ -131,7 +133,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
   <div class="inner chat">
     <div class="msg"><span class="av">HR</span><div class="body">
       <div class="who">Halden IT<span class="t">Mon 15 Mar, 09:12</span></div>
-      <p><b>Meet <span class="mention">@UXR-ProductX</span></b>: everything Sam Okafor's research found about Product X, from 3 studies with 36 participants (Oct 2026 to Mar 2027).</p>
+      <p><b>Meet <span class="mention">@UXR-ProductX</span></b>: What we know about Product X, from 3 projects (Nov 2026 to Feb 2027).</p>
       <p>Mention it here, or add it in Figma Make, Claude or ChatGPT, and ask things like <i>“what frustrated people about onboarding?”</i> It answers with quotes from the research and says when the research doesn't cover something.</p>
       <p>Questions about the research: Priya Shah.</p>
     </div></div>
@@ -157,10 +159,10 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
     <div class="msg"><span class="av bot">UX</span><div class="body">
       <div class="who">UXR-ProductX<span class="agent">Agent</span><span class="t">11:03</span></div>
       <p>Confusion during onboarding was the strongest signal in the onboarding study: <b>9 of 14 participants</b>. Three examples:</p>
-      <div class="q"><p class="txt">“I didn't know what a ‘workspace’ was, so I just clicked whatever was blue.”</p><span class="cite">p4 · Onboarding study · 14 Nov 2026 · 12:41</span></div>
-      <div class="q"><p class="txt">“It asked me to invite my team before I'd even seen what it does.”</p><span class="cite">p9 · Onboarding study · 20 Nov 2026 · 08:15</span></div>
-      <div class="q"><p class="txt">“I gave up on the import step and came back two days later.”</p><span class="cite">p2 · Onboarding study · 12 Nov 2026 · 31:02</span></div>
-      <div class="foot">From What we know about Product X · 3 studies, Oct 2026 to Mar 2027 · <a href="#">Open the report</a></div>
+      <div class="q"><p class="txt">“I didn't know what a ‘workspace’ was, so I just clicked whatever was blue.”</p><span class="cite">p4 · Onboarding study · Nov 2026 · 12:41</span></div>
+      <div class="q"><p class="txt">“It asked me to invite my team before I'd even seen what it does.”</p><span class="cite">p9 · Onboarding study · Nov 2026 · 08:15</span></div>
+      <div class="q"><p class="txt">“I gave up on the import step and came back two days later.”</p><span class="cite">p2 · Onboarding study · Nov 2026 · 31:02</span></div>
+      <div class="foot">From What we know about Product X · 3 projects, Nov 2026 to Feb 2027</div>
     </div></div>
   </div>
 </div>
@@ -185,9 +187,9 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
     <div class="msg"><span class="av bot">UX</span><div class="body">
       <div class="who">UXR-ProductX<span class="agent">Agent</span><span class="t">14:22</span></div>
       <p><b>7 of the 12 participants</b> in the admin console study talked about permissions or roles (study recorded in February 2027). That counts people, not quotes. Two of them:</p>
-      <div class="q"><p class="txt">“I need to know who can delete things before I hand this to forty people.”</p><span class="cite">p3 · Admin console study · 9 Feb 2027 · 22:10</span></div>
-      <div class="q"><p class="txt">“The roles all sound the same: ‘manager’, ‘admin’, ‘owner’.”</p><span class="cite">p11 · Admin console study · 16 Feb 2027 · 17:48</span></div>
-      <div class="foot">From What we know about Product X · <a href="#">See all 7</a></div>
+      <div class="q"><p class="txt">“I need to know who can delete things before I hand this to forty people.”</p><span class="cite">p3 · Admin console study · Feb 2027 · 22:10</span></div>
+      <div class="q"><p class="txt">“The roles all sound the same: ‘manager’, ‘admin’, ‘owner’.”</p><span class="cite">p11 · Admin console study · Feb 2027 · 17:48</span></div>
+      <div class="foot">From What we know about Product X · <a href="#">Show all 7 here</a></div>
     </div></div>
     <div class="msg"><span class="av" style="background:#7c3aed">DB</span><div class="body">
       <div class="who">Dev Bhatt<span class="t">14:25</span></div>
@@ -197,7 +199,8 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 </div>
 <div class="com"><b class="lbl">Commentary</b>
   <p>A2: the counting question is where agents built from files go wrong, so it's where this one has to be right. An exact count, its denominator, its study and date, and "that counts people, not quotes", because that's the misreading that happens in a thread.</p>
-  <p>"See all 7" opens the report filtered to those quotes, so nobody has to take the number on trust.</p>
+  <p>"Show all 7 here" lists the rest of the published quotes in the thread, so nobody has to take the number on trust. It opens no report: a link to today's HTML export would carry transcripts and, unless anonymised, names (review F3).</p>
+  <p><b>Decided 23 Nov 2026 (owner question A):</b> publishing takes every quote the researcher didn't hide, by default, so "7 of 12" is exact. A project published as "Starred only" can't count the study; the answer then says "7 of the 9 participants with starred quotes", never "of 12".</p>
 </div>
 
 <!-- ============ 4 ============ -->
@@ -231,7 +234,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 </div>
 <div class="com"><b class="lbl">Commentary</b>
   <p>A3: the research becomes context for the prototype, and the designer can see exactly which quotes shaped it. The chips are the trace: clicking one would show the quote. Whether the tool shows that trace is the tool's choice, not ours ("know the protocol, never the client"). What Bristlenose can do is make every answer it gives carry its sources, so a tool that wants to show them can.</p>
-  <p>Connecting is one sign-in with the designer's Halden account, because IT already decided who can ask (IT mockup, frame 3).</p>
+  <p>Connecting is one sign-in with the designer's own work account, because IT already decided who can ask (IT mockup, frame 3).</p>
 </div>
 
 <!-- ============ 5 ============ -->
@@ -247,7 +250,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
       <div class="who">Assistant <span class="agent">using What we know about Product X</span></div>
       <p>The research touches on invites in the onboarding study only: being asked to invite the team before seeing the product. Ready to paste:</p>
 <pre>&gt; “It asked me to invite my team before I'd even seen what it does.”
-&gt; (p9, Onboarding study, Halden user research, recorded 20 Nov 2026)
+&gt; (p9, Onboarding study, What we know about Product X, fieldwork Nov 2026)
 
 Invites came up with 3 of 14 onboarding participants. The research
 has no study of the invite flow itself.</pre>
@@ -267,14 +270,14 @@ has no study of the invite flow itself.</pre>
   <div class="inner grid2">
     <div class="card"><div class="ids" style="margin-bottom:6px">A5 · not covered</div>
       <p style="margin:0 0 4px"><i>“What do people think of our mobile app?”</i></p>
-      <p style="margin:0">The research doesn't cover the mobile app. It covers onboarding, pricing and the admin console on the web, from Oct 2026 to Mar 2027. Priya Shah can tell you whether there's other research.</p></div>
+      <p style="margin:0">The research doesn't cover the mobile app. It covers onboarding, pricing and the admin console, from Nov 2026 to Feb 2027. Priya Shah is the person to ask about this research.</p></div>
     <div class="card"><div class="ids" style="margin-bottom:6px">A6 · who is this?</div>
       <p style="margin:0 0 4px"><i>“Who is p3? I'd like to talk to them.”</i></p>
-      <p style="margin:0">Participants are identified only by code, to protect them. If you'd like to talk to participants, ask Priya Shah, who can arrange it with their consent.</p></div>
+      <p style="margin:0">Participants are identified only by code, to protect them. Priya Shah is the person to ask about this research.</p></div>
     <div class="card"><div class="ids" style="margin-bottom:6px">A7 · no access</div>
-      <p style="margin:0">You don't have access to What we know about Product X. It's available to the Product X team and Design &amp; Research. Ask Halden IT if you need it.</p></div>
+      <p style="margin:0">You don't have access to What we know about Product X. It's available to the Product X team and Design &amp; Research. Ask your IT team if you need it.</p></div>
     <div class="card"><div class="ids" style="margin-bottom:6px">A10 · expired</div>
-      <p style="margin:0">The checkout diary study stopped answering on 1 Apr 2028, as its researcher asked. Priya Shah can tell you what has replaced it.</p></div>
+      <p style="margin:0">The checkout diary study stopped answering after 31 Mar 2028, as its researcher set. Priya Shah is the person to ask about this research.</p></div>
   </div>
 </div>
 <div class="com"><b class="lbl">Commentary</b>
@@ -294,9 +297,9 @@ has no study of the invite flow itself.</pre>
     <div class="msg"><span class="av" style="background:#475569">AI</span><div class="body">
       <div class="who">Assistant <span class="agent">using What we know about Product X</span></div>
       <p>There's now a study of team invites (recorded August 2027), as well as the earlier onboarding study. In the team invites study, <b>8 of 10 participants</b> weren't sure whether an invite had arrived.</p>
-      <div class="q"><p class="txt">“I sent the invite and had no idea whether anyone got it.”</p><span class="cite">p5 · Team invites study · 3 Aug 2027 · 06:30</span></div>
-      <div class="q"><p class="txt">“Half my team uses their personal email, so the invite went nowhere.”</p><span class="cite">p8 · Team invites study · 6 Aug 2027 · 19:12</span></div>
-      <div class="q"><p class="txt">“It asked me to invite my team before I'd even seen what it does.”</p><span class="cite">p9 · Onboarding study · 20 Nov 2026 · 08:15</span></div>
+      <div class="q"><p class="txt">“I sent the invite and had no idea whether anyone got it.”</p><span class="cite">p5 · Team invites study · Aug 2027 · 06:30</span></div>
+      <div class="q"><p class="txt">“Half my team uses their personal email, so the invite went nowhere.”</p><span class="cite">p8 · Team invites study · Aug 2027 · 19:12</span></div>
+      <div class="q"><p class="txt">“It asked me to invite my team before I'd even seen what it does.”</p><span class="cite">p9 · Onboarding study · Nov 2026 · 08:15</span></div>
       <div class="foot">What we know about Product X now has 6 studies, Oct 2026 to Aug 2027</div>
     </div></div>
   </div>
@@ -313,9 +316,9 @@ has no study of the invite flow itself.</pre>
   <div class="inner grid2">
     <div class="card"><div class="ids" style="margin-bottom:6px">Agent pack, in the company's agent builder</div>
       <p style="margin:0">The research pack says permissions came up with 7 of 12 admin console participants. For other counts, open the full report: I can only repeat the numbers the pack states.</p>
-      <div class="foot">From files: Product X research pack, published 14 Mar 2027</div></div>
+      <div class="foot">From files: What we know about Product X agent pack, saved 12 Mar 2027</div></div>
     <div class="card"><div class="ids" style="margin-bottom:6px">Research agent</div>
-      <p style="margin:0"><b>7 of the 12 participants</b> in the admin console study talked about permissions or roles (study recorded in February 2027). That counts people, not quotes. <a href="#">See all 7</a></p>
+      <p style="margin:0"><b>7 of the 12 participants</b> in the admin console study talked about permissions or roles (study recorded in February 2027). That counts people, not quotes. <a href="#">Show all 7 here</a></p>
       <div class="foot">From What we know about Product X</div></div>
   </div>
 </div>

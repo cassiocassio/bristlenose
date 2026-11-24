@@ -98,6 +98,8 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <h1>Research agent: IT's experience</h1>
 <p class="lede">Companion to <code>docs/design-research-agent.md</code>. A quick sketch (Tier 1): hand-rolled styles, and every word is proposed copy nobody has reviewed. It draws the IT admin's jobs as a flow, one frame per scenario; the ids (I1, P7…) match the PRD's §7. How each step is built is parked (PRD Appendix A).</p>
 <p class="lede">The cast is invented: <b>Sam Okafor</b>, a freelance researcher; <b>Priya Shah</b>, an in-house researcher; <b>Halden</b>, the client; <b>Product X</b>, its product.</p>
+<p class="lede"><b>What the copy may know.</b> Bristlenose can't know who the researcher works for, what their contract says, or whose IT will run anything. So every name in Bristlenose's own copy comes from something a user typed, data Bristlenose holds, or an answer from the system it's talking to (a directory's groups, a sign-in's name). The emails and chat messages people write themselves are theirs.</p>
+<p class="lede"><b>Updated 22 Nov 2026 after review:</b> matches <code>research-agent-publisher-v2.html</code>. The request to IT carries no research (researchers publish once IT has set it up), no frame claims that no copy exists anywhere, counts are per project, and dates fall on working days.</p>
 <div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario</span></div>
 
 <!-- ============ 1 ============ -->
@@ -108,19 +110,19 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
     <div class="mail-h">
       <span class="k">From</span><span>Sam Okafor (contractor)</span>
       <span class="k">To</span><span>IT requests</span>
-      <span class="k">Subject</span><span>Request: somewhere to run the Product X research that only Halden sign-in can reach</span>
+      <span class="k">Subject</span><span>Request: run a research agent container behind your sign-in</span>
     </div>
     <p>Hi,</p>
-    <p>My engagement on Product X ends on Friday. I'd like to leave the research behind as something the team can ask from Teams, Slack and Figma Make, instead of a file on SharePoint.</p>
-    <p>All I need is somewhere to run it that only people signed in with Halden accounts can reach. The attached file opens to one page written for you: what it is, what's in it, and how to remove it.</p>
-    <p>Priya Shah on the research team has agreed to own it after I leave.</p>
-    <p>Thanks, Sam</p>
-    <div class="attach"><span class="ic"></span><span><b>What we know about Product X</b><br><span class="muted">Research to host · 3 studies</span></span></div>
+    <p>I'd like to set up a research agent so people can ask “What we know about Product X” from Teams, Slack, Figma Make and Claude.</p>
+    <p>It's one container, run behind your company sign-in. The attached setup guide says what it is, what it will hold, what it needs and how to remove it. It holds no research: once it's set up, please send me its address and allow me to publish to it.</p>
+    <p>Questions about the research: Priya Shah.</p>
+    <p>My contract ends on Friday, so Priya will look after it from then. Thanks, Sam</p>
+    <div class="attach"><span class="ic"></span><span><b>What we know about Product X</b><br><span class="muted">Setup guide · no research inside</span></span></div>
   </div>
 </div>
 <div class="com"><b class="lbl">Commentary</b>
-  <p>Bristlenose drafts this email at publish time, because "what do I even ask IT for?" is where this dies (P2). Sam doesn't need to know the technical words; the email uses words IT knows, and the ask is the PRD's one sentence (principle 6).</p>
-  <p>It names who owns it after Sam leaves, because a tool nobody owns is IT's biggest worry (§3.2).</p>
+  <p>Bristlenose drafts this email at publish time, because "what do I even ask IT for?" is where this dies (P2). The draft holds only what Bristlenose knows: the name, the person to ask, and what it needs. "A container, behind your sign-in" is a request IT recognises.</p>
+  <p>The last line is Sam's own, added before sending: only Sam knows their contract ends on Friday. A tool nobody owns is IT's biggest worry (§3.2), so the person to ask is a field in the publish sheet, not an afterthought.</p>
 </div>
 
 <!-- ============ 2 ============ -->
@@ -128,28 +130,27 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <div class="frame">
   <div class="bar"><span class="dots"><i></i><i></i><i></i></span>What we know about Product X · for IT<span class="tag">I1 · I2</span></div>
   <div class="inner">
-    <p class="muted" style="margin:0">Research prepared by Sam Okafor on 14 Mar 2027</p>
-    <p class="ask">Sam Okafor asks you for somewhere to run this that only people signed in with your accounts can reach.</p>
+    <p class="muted" style="margin:0">Prepared with Bristlenose on 11 Mar 2027</p>
+    <p class="ask">You've been asked to run one container, behind your company sign-in, so people can ask research questions.</p>
     <div class="row" style="margin-bottom:18px">
       <a class="btn primary" href="#">Set it up</a>
       <a class="btn" href="#">Security details</a>
-      <a class="btn" href="#">Ask Sam a question</a>
     </div>
     <div class="grid2">
       <div class="card"><h3>What it is</h3>
         <p style="margin:0">Three user-research studies about Product X that your colleagues can ask questions of, from Teams, Slack, Figma Make, Claude or ChatGPT. It answers with quotes from the research and can't change anything.</p></div>
-      <div class="card"><h3>What's in it</h3>
-        <ul><li>3 studies: onboarding, pricing, admin console</li>
-        <li>412 quotes chosen by the researcher, from 36 participants</li>
+      <div class="card"><h3>What it will hold</h3>
+        <ul><li>Nothing until a researcher you allow publishes to it</li><li>Then: 3 projects (onboarding, pricing, admin console)</li>
+        <li>412 quotes the researcher kept (quotes they hid are left out), from 14, 10 and 12 participants</li>
         <li>Participants appear as codes (p1, p2…), never by name</li>
         <li>No video, no audio, no full transcripts</li>
-        <li>Stops answering on 31 Mar 2028</li></ul></div>
+        <li>Stops answering after 31 Mar 2028</li><li>Questions about the research: Priya Shah</li></ul></div>
       <div class="card"><h3>Who's involved</h3>
         <ul><li>It runs on your infrastructure, behind your sign-in</li>
         <li>You choose who can ask, from your existing groups</li>
-        <li>No one outside Halden holds the data, including the makers of Bristlenose</li></ul></div>
+        <li>No one else holds the data, including the makers of Bristlenose</li></ul></div>
       <div class="card"><h3>How to remove it</h3>
-        <p style="margin:0">One action removes it and everything in it. No copy is kept anywhere else.</p></div>
+        <p style="margin:0">One action removes it and deletes its copy of the research. Answers people already received stay where they were sent.</p></div>
     </div>
   </div>
 </div>
@@ -192,7 +193,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
     <p class="ask" style="max-width:none">@UXR-ProductX is ready for the Product X team and Design &amp; Research.</p>
     <p class="muted" style="margin:-6px 0 14px">Post this in the team's channel so people know it's there:</p>
     <div class="post">
-      <p style="margin:0 0 6px"><b>Meet @UXR-ProductX</b>: everything Sam Okafor's research found about Product X, from 3 studies with 36 participants (Oct 2026 to Mar 2027).</p>
+      <p style="margin:0 0 6px"><b>Meet @UXR-ProductX</b>: What we know about Product X, from 3 projects (Nov 2026 to Feb 2027).</p>
       <p style="margin:0 0 6px">Mention it here, or add it in Figma Make, Claude or ChatGPT, and ask things like <i>“what frustrated people about onboarding?”</i> It answers with quotes from the research and says when the research doesn't cover something.</p>
       <p style="margin:0">Questions about the research: Priya Shah.</p>
     </div>
@@ -206,15 +207,15 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <!-- ============ 5 ============ -->
 <h2>5. Day to day</h2>
 <div class="frame">
-  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Halden research · signed in as IT admin<span class="tag">I6 · I4</span></div>
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Research agents · signed in as IT admin<span class="tag">I6 · I4</span></div>
   <div class="inner">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
-      <div><b>Halden research</b> <span class="pill ok">working</span> <span class="muted">· nothing needs you</span></div>
+      <div><b>Research agents</b> <span class="pill ok">working</span> <span class="muted">· nothing needs you</span></div>
       <a class="btn" href="#">Set up another collection</a>
     </div>
     <table>
       <tr><th>Collection</th><th>Studies</th><th>Who can ask</th><th>Who can add research</th><th>This month</th></tr>
-      <tr><td><b>What we know about Product X</b><br><span class="muted">@UXR-ProductX</span></td><td>3 · updated 14 Mar 2027</td><td>Product X team<br>Design &amp; Research</td><td>Sam Okafor (guest, until 31 Mar)<br>Priya Shah</td><td>214 questions from 38 people</td></tr>
+      <tr><td><b>What we know about Product X</b><br><span class="muted">@UXR-ProductX</span></td><td>3 · updated 12 Mar 2027</td><td>Product X team<br>Design &amp; Research</td><td>Sam Okafor (guest, until 31 Mar)<br>Priya Shah</td><td>214 questions from 38 people</td></tr>
       <tr><td><b>Checkout research</b><br><span class="muted">@UXR-Checkout</span></td><td>2 · updated 2 Feb 2027</td><td>Design &amp; Research</td><td>Priya Shah</td><td>41 questions from 9 people</td></tr>
     </table>
   </div>
@@ -227,7 +228,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <!-- ============ 6 ============ -->
 <h2>6. Sam comes back; Priya adds research at the same time</h2>
 <div class="frame">
-  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Halden research · What we know about Product X<span class="tag">P7 · P6 · I7 · I8</span></div>
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Research agents · What we know about Product X<span class="tag">P7 · P6 · I7 · I8</span></div>
   <div class="inner">
     <div class="card" style="border-color:var(--warn);margin-bottom:14px">
       <b>Sam Okafor would like to add 2 studies to this collection.</b>
@@ -239,8 +240,8 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
       <tr><td>18 Aug 2027, 14:12</td><td><b>Sam Okafor</b> added 2 studies: <i>Permissions</i>, <i>Team invites</i>. The collection now has 6.</td></tr>
       <tr><td>18 Aug 2027, 14:11</td><td><b>Priya Shah</b> updated her study <i>Admin console follow-up</i>. The other studies are unchanged.</td></tr>
       <tr><td>18 Aug 2027, 09:40</td><td>You allowed Sam Okafor to add research until 31 Dec 2027.</td></tr>
-      <tr><td>2 May 2027, 11:05</td><td><b>Priya Shah</b> added 1 study: <i>Admin console follow-up</i>.</td></tr>
-      <tr><td>14 Mar 2027, 17:02</td><td><b>Sam Okafor</b> added 3 studies: <i>Onboarding</i>, <i>Pricing</i>, <i>Admin console</i>.</td></tr>
+      <tr><td>4 May 2027, 11:05</td><td><b>Priya Shah</b> added 1 study: <i>Admin console follow-up</i>.</td></tr>
+      <tr><td>12 Mar 2027, 17:02</td><td><b>Sam Okafor</b> added 3 studies: <i>Onboarding</i>, <i>Pricing</i>, <i>Admin console</i>.</td></tr>
     </table>
   </div>
 </div>
@@ -254,15 +255,16 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <!-- ============ 7 ============ -->
 <h2>7. End of life</h2>
 <div class="frame">
-  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Halden research · Checkout research<span class="tag">I9 · A10</span></div>
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Research agents · Checkout research<span class="tag">I9 · A10</span></div>
   <div class="inner">
     <table style="margin-bottom:18px">
       <tr><th>Study</th><th>State</th></tr>
-      <tr><td>Checkout diary study, 2025</td><td><span class="pill bad">stopped answering on 1 Apr 2028</span><br><span class="muted">People who ask are told it has expired and to ask Priya Shah.</span></td></tr>
+      <tr><td>Checkout diary study, 2025</td><td><span class="pill bad">stopped answering after 31 Mar 2028</span><br><span class="muted">People who ask are told it has expired and that Priya Shah is the person to ask.</span></td></tr>
+      <tr><td>Checkout usability, 2026</td><td><span class="pill ok">answering</span></td></tr>
     </table>
     <div class="sheet">
       <b>Remove “Checkout research”?</b>
-      <p style="margin:6px 0">This removes the collection and its 2 studies. People will no longer be able to ask @UXR-Checkout. No copy is kept anywhere.</p>
+      <p style="margin:6px 0">This removes the collection and its 2 studies. People will no longer be able to ask @UXR-Checkout. Answers people already received stay where they were sent.</p>
       <p class="muted" style="margin:6px 0 14px">Priya Shah, who adds research to it, will be told.</p>
       <div class="row" style="justify-content:flex-end"><a class="btn primary" href="#">Cancel</a><a class="btn" href="#" style="color:var(--bad)">Remove</a></div>
     </div>

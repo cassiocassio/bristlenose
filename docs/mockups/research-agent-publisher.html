@@ -136,6 +136,9 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 .num { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background: var(--accent); color:#fff; font: 600 11px var(--body); margin-right: 8px; flex:none; }
 .stepl { display:flex; align-items:flex-start; margin: 8px 0; }
 @media (max-width: 720px) { .app { grid-template-columns: 1fr; } .side { border-right:0; border-bottom:1px solid var(--rule); } }
+.handover { display:block; margin-top:6px; font-size:12px; color: var(--ink); }
+.handover b { font-weight:600; }
+.superseded { color: var(--bad); }
 @media (max-width: 640px) { .inner { padding: 16px; } .ask { font-size: 18px; } }
 </style>
 </head>
@@ -145,6 +148,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 <h1>Research agent: the researcher publishing</h1>
 <p class="lede">Companion to <code>docs/design-research-agent.md</code>. A quick sketch (Tier 1): hand-rolled styles that only approximate the Mac app, and every word is proposed copy nobody has reviewed. It draws the publisher's jobs (PRD §3.1) as a flow, one frame per scenario; the ids (P1…P10) match the PRD's §7.1.</p>
 <p class="lede">The cast is invented: <b>Sam Okafor</b>, a freelance researcher; <b>Priya Shah</b>, an in-house researcher; <b>Halden</b>, the client; <b>Product X</b>, its product.</p>
+<p class="lede"><b>What the copy may know.</b> Bristlenose can't know who the researcher works for, what their contract says, or whose IT will run anything. They might be in-house, a consultant, a freelancer, or at an agency placed on someone else's project. So every name in the product's own copy comes from something the user typed, data Bristlenose already holds (projects, quotes, dates), or an answer from the system it's talking to. Everything else is said in words that are true for all of them.</p>
 <div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario</span></div>
 
 <!-- ============ 1 ============ -->
@@ -190,12 +194,12 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 </div>
 
 <!-- ============ 3 ============ -->
-<h2>3. Sam publishes three studies together</h2>
+<h2>3. Sam publishes three studies together <span class="muted" style="font-weight:400">(first pass, superseded by 3b)</span></h2>
 <div class="frame">
-  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose<span class="tag">P2</span></div>
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose<span class="tag superseded">P2 · superseded</span></div>
   <div class="app">
     <div class="side">
-      <div class="grp">Halden · Product X</div>
+      <div class="grp">Product X</div>
       <div class="it sel"><span class="cb"></span>Onboarding</div>
       <div class="it sel"><span class="cb"></span>Pricing</div>
       <div class="it sel"><span class="cb"></span>Admin console</div>
@@ -210,11 +214,11 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
           <div class="compose" style="margin-top:0;color:var(--ink)">What we know about Product X</div>
           <p class="muted small" style="margin:4px 0 0">People will ask it as @UXR-ProductX</p>
           <div class="sec-h">How should your team get it?</div>
-          <div class="opt on"><span class="rd"></span><span><b>Somewhere they can ask from Teams, Slack and Figma Make</b><br><span class="muted">Halden's IT sets it up once. You'll get a request to send them.</span></span></div>
+          <div class="opt on"><span class="rd"></span><span><b>Somewhere they can ask from Teams, Slack and Figma Make</b><br><span class="muted">Their IT sets it up once. You'll get a request to send them.</span></span></div>
           <div class="opt"><span class="rd"></span><span><b>Files for an agent they make themselves</b><br><span class="muted">For Copilot, Gemini, ChatGPT or Claude. No IT needed.</span></span></div>
           <div class="opt"><span class="rd"></span><span><b>A report file</b><br><span class="muted">One file people open in a browser.</span></span></div>
           <div class="sec-h">Stop answering after</div>
-          <div class="row"><div class="compose" style="margin:0;color:var(--ink)">31 Mar 2028</div><span class="muted small">Optional. Check your contract with Halden.</span></div>
+          <div class="row"><div class="compose" style="margin:0;color:var(--ink)">31 Mar 2028</div><span class="muted small">Optional. After this date it stops answering and says who to ask.</span></div>
           <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Continue</a></div>
         </div>
       </div>
@@ -222,8 +226,54 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
   </div>
 </div>
 <div class="com"><b class="lbl">Commentary</b>
+  <p><b>Superseded by 3b (owner, 22 Nov 2026):</b> "Somewhere they can ask from" names no thing. A researcher can't ask IT for "a somewhere"; even they want to know what kind of thing it is. Kept as the record of what was tried.</p>
   <p>P2: select the three projects in the sidebar, choose Publish, and the sheet asks three things only: what to call it, how the team should get it, and when it should stop. Sam never meets the words "container", "SSO" or "MCP": the options are described by where the team will use them and whether IT is involved.</p>
-  <p>The three options are the PRD's three tiers (§6). The end date is optional, with a nudge towards the contract, because freelance engagements often set how long research may be kept.</p>
+  <p>The three options are the PRD's three tiers (§6). The end date is optional. Its hint says what the date does, not why you might want one: Bristlenose can't know what agreement the research sits under.</p>
+</div>
+
+<!-- ============ 3b ============ -->
+<h2>3b. Each option names the thing you get</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose<span class="tag">P2 · iteration 2</span></div>
+  <div class="app">
+    <div class="side">
+      <div class="grp">Product X</div>
+      <div class="it sel"><span class="cb"></span>Onboarding</div>
+      <div class="it sel"><span class="cb"></span>Pricing</div>
+      <div class="it sel"><span class="cb"></span>Admin console</div>
+      <div class="grp">Other clients</div>
+      <div class="it"><span class="cb"></span>Meridian checkout</div>
+    </div>
+    <div class="pane">
+      <div class="scrim">
+        <div class="sheet wide">
+          <h4>Publish 3 Studies</h4>
+          <div class="sec-h">Name</div>
+          <div class="compose" style="margin-top:0;color:var(--ink)">What we know about Product X</div>
+          <div class="sec-h">Short name</div>
+          <div class="row"><div class="compose" style="margin:0;color:var(--ink)">@UXR-ProductX</div><span class="muted small">What people type to ask it</span></div>
+          <div class="sec-h">Who should people ask about this research?</div>
+          <div class="compose" style="margin-top:0;color:var(--ink)">Priya Shah</div>
+          <p class="muted small" style="margin:4px 0 0">Named when it can't answer something. You can change this later.</p>
+          <div class="sec-h">What should the people who'll use it get?</div>
+          <div class="opt on"><span class="rd"></span><span><b>A research agent</b><br><span class="muted">A small web app that their IT runs on their own systems, behind their sign-in. People ask it from Teams, Slack, Figma Make and Claude.</span><span class="handover"><b>You send their IT:</b> a container to run, with a one-page setup guide</span></span></div>
+          <div class="opt"><span class="rd"></span><span><b>An agent pack</b><br><span class="muted">A folder of quotes, findings and instructions. Anyone who'll use it can make it into an agent in Copilot, Gemini, ChatGPT or Claude. No IT needed.</span><span class="handover"><b>You share:</b> a folder in OneDrive or Google Drive</span></span></div>
+          <div class="opt"><span class="rd"></span><span><b>A self-contained HTML report</b><br><span class="muted">One file with everything inside it, which people open in any browser, even offline. Nothing to set up, but it can't answer questions.</span><span class="handover"><b>You share:</b> one .html file</span></span></div>
+          <div class="sec-h">Stop answering after</div>
+          <div class="row"><div class="compose" style="margin:0;color:var(--ink)">31 Mar 2028</div><span class="muted small">Optional. After this date it stops answering and says who to ask.</span></div>
+          <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Continue</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>Each option now leads with a noun: <i>a research agent</i>, <i>an agent pack</i>, <i>a self-contained HTML report</i>. These are the PRD's names for the three tiers (§6), so the sheet, the PRD and anything the researcher says to IT use the same words.</p>
+  <p>Each body says what the thing is in plain terms (a small web app, a folder of files, one file that works offline) before saying where people meet it. The new last line is what the researcher actually hands over. For the research agent it names "a container", which is the word to use with IT, so "can you run this container for me?" is a request IT recognises. The researcher doesn't need to know what a container is to pass the word on.</p>
+  <p>The section heading asks about "the people who'll use it", not "your team": for a consultant or a freelancer they aren't the researcher's team. "Their IT" works whether that's the researcher's own employer or a client.</p>
+  <p>Two new typed fields replace things the earlier copy pretended to know. The <b>short name</b> is what people @-mention. The <b>person to ask</b> is the name the agent gives when it can't answer, and the name every "ask Priya Shah" in the other mockups comes from.</p>
+  <p><b>Open:</b> the end date only binds the research agent; files can be copied. When the agent pack or the HTML report is chosen, the date field should say so or go away. Not drawn yet.</p>
+  <p><b>Open:</b> "@UXR-ProductX" means nothing for the HTML report. That line should follow the choice.</p>
 </div>
 
 <!-- ============ 4 ============ -->
@@ -258,11 +308,11 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
   <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Studies<span class="tag">P2 · P5</span></div>
   <div class="inner" style="background:var(--sunk)">
     <div class="sheet wide">
-      <h4>Ready to send to Halden's IT</h4>
-      <p style="margin:0 0 10px">“What we know about Product X” is saved in Downloads. Send it to IT with this request; it opens to a page written for them.</p>
+      <h4>Ready to send to IT</h4>
+      <p style="margin:0 0 10px">“What we know about Product X” is saved in Downloads. Send it to the IT team who'll run it, with this request. The file opens to a page written for them.</p>
       <div class="post small">
-        <p style="margin:0 0 4px"><b>Request: somewhere to run the Product X research that only Halden sign-in can reach</b></p>
-        <p style="margin:0">My engagement on Product X ends on Friday. I'd like to leave the research behind as something the team can ask from Teams, Slack and Figma Make…</p>
+        <p style="margin:0 0 4px"><b>Request: run a research agent container behind your sign-in</b></p>
+        <p style="margin:0">I'd like to set up a research agent so people can ask “What we know about Product X” from Teams, Slack, Figma Make and Claude. It needs one container, running behind your sign-in…</p>
       </div>
       <div class="row" style="margin-top:10px"><a class="btn" href="#">Copy Request</a><a class="btn" href="#">Open in Mail</a><a class="btn" href="#">Show in Finder</a></div>
       <p class="muted small" style="margin:12px 0 0">If IT can't host it, you can publish the same studies as files for an agent instead. Nothing needs redoing.</p>
@@ -272,6 +322,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
 </div>
 <div class="com"><b class="lbl">Commentary</b>
   <p>P2: the end of Sam's part. A file, and a request already written in words IT knows (the IT mockup's frame 1 is what arrives). Sam can copy it, open it in Mail, or find the file.</p>
+  <p>The draft holds only what Bristlenose knows: the name, the short name, the person to ask, and what the container needs. Anything about the researcher's own situation (a contract ending, who they are to this team) is theirs to add, because only they know it.</p>
   <p>P5 is answered before it happens: if IT says no, the same choices publish as files for an agent instead, with nothing redone.</p>
 </div>
 
@@ -289,14 +340,14 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
       <div class="stepl"><span class="num">1</span><span>Saved to <b>OneDrive - Halden › Research › What we know about Product X</b>.</span></div>
       <div class="stepl"><span class="num">2</span><span>In Microsoft 365 Copilot, create an agent and add that folder as its knowledge.</span></div>
       <div class="stepl"><span class="num">3</span><span>Paste these instructions into the agent. <a class="btn" href="#" style="padding:2px 10px;margin-left:4px">Copy Instructions</a></span></div>
-      <div class="stepl"><span class="num">4</span><span>Share the agent and the folder with the Product X team.</span></div>
+      <div class="stepl"><span class="num">4</span><span>Share the agent and the folder with the people who'll use it.</span></div>
       <div class="btns"><a class="btn" href="#">Open Copilot</a><a class="btn primary" href="#">Done</a></div>
     </div>
   </div>
 </div>
 <div class="com"><b class="lbl">Commentary</b>
   <p>P10, the zero-sign-in route: Bristlenose saves the pack into the cloud folder already on the Mac, then walks the researcher through the last steps, which only they can do in the builder. No sign-in screen, no "needs admin approval".</p>
-  <p>"Not on this Mac" is stated as a fact, not hidden: Google Drive still works through "Another folder…" or a later sign-in route (PRD §9 Q7). The tabs show the same four steps in each builder's own words.</p>
+  <p>"OneDrive - Halden" is the synced folder's own name, read from the Mac, so it's data, not a guess. "Not on this Mac" is stated as a fact, not hidden: Google Drive still works through "Another folder…" or a later sign-in route (PRD §9 Q7). The tabs show the same four steps in each builder's own words.</p>
   <p>Step 3's instructions carry the rules the research agent enforces itself: answer with quotes, say when the research doesn't cover something, don't count beyond the numbers given (asker mockup, frame 8).</p>
 </div>
 
@@ -308,7 +359,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
     <div class="sheet wide">
       <h4>Publish 2 Studies</h4>
       <div class="opt"><span class="rd"></span><span><b>As something new</b></span></div>
-      <div class="opt on"><span class="rd"></span><span><b>Add to What we know about Product X</b><br><span class="muted">Halden · @UXR-ProductX · you published it on 14 Mar 2027</span></span></div>
+      <div class="opt on"><span class="rd"></span><span><b>Add to What we know about Product X</b><br><span class="muted">@UXR-ProductX at research.halden.example · you published it on 14 Mar 2027</span></span></div>
       <div class="sec-h">After publishing it will have 6 studies</div>
       <table class="small">
         <tr><td><b>Permissions</b>, <b>Team invites</b></td><td>New, from you</td></tr>
@@ -316,8 +367,8 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
         <tr><td>Admin console follow-up</td><td>Priya Shah's. Unchanged</td></tr>
       </table>
       <div class="card" style="border-color:var(--warn);margin-top:12px">
-        <b>Halden needs to allow you to add research again</b>
-        <p style="margin:4px 0 0">Your permission ended on 31 Mar 2027. Bristlenose will ask Halden's IT, and publish as soon as they say yes.</p>
+        <b>You need permission to add research again</b>
+        <p style="margin:4px 0 0">This research agent stopped accepting research from you on 31 Mar 2027. Bristlenose will ask the people who run it, and publish when they say yes.</p>
       </div>
       <div class="btns"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Ask and Publish</a></div>
     </div>
@@ -353,7 +404,7 @@ pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px
     <div class="sheet">
       <h4>Anyone with the address could read this</h4>
       <p style="margin:0 0 6px">experiments.halden.example answered without asking who you are. Publishing there would put participants' words where anyone with the link can read them.</p>
-      <p style="margin:0">Ask whoever runs that platform to put Halden sign-in in front of it, then publish again.</p>
+      <p style="margin:0">Ask whoever runs that platform to put a sign-in in front of it, then publish again.</p>
       <div class="btns"><a class="btn primary" href="#">OK</a></div>
     </div>
   </div>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research agent: publishing v2</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --page: light-dark(#f6f6f4, #1b1b1d);
+  --ink: light-dark(#1d1d1f, #ececee);
+  --muted: light-dark(#6b6b70, #9a9aa0);
+  --rule: light-dark(#dcdcd8, #3a3a3e);
+  --card: light-dark(#ffffff, #242427);
+  --sunk: light-dark(#f0f0ed, #2c2c30);
+  --accent: light-dark(#2563eb, #6b9bff);
+  --ok: light-dark(#15803d, #4ade80);
+  --warn: light-dark(#b45309, #fbbf24);
+  --bad: light-dark(#b91c1c, #f87171);
+  --hatch: light-dark(#e3e0d6, #34343a);
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 16px; margin: 40px 0 10px; font-weight: 600; }
+code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+.lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 12px 0 8px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.sw-art { width: 18px; height: 12px; border: 1px solid var(--rule); background: var(--card); }
+.sw-com { width: 18px; height: 12px; border-left: 3px solid var(--muted);
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); }
+
+/* artefact frame */
+.frame { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--sunk);
+  border-bottom: 1px solid var(--rule); font: 12px var(--mono); color: var(--muted); }
+.bar .dots { display: flex; gap: 5px; }
+.bar .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); display: block; }
+.bar .tag { margin-left: auto; }
+.inner { padding: 20px 24px; }
+
+/* commentary */
+.com { margin: 10px 0 0; padding: 10px 14px; font-size: 13px; color: var(--ink);
+  border: 7px solid transparent; border-left: 3px solid var(--muted);
+  background: linear-gradient(var(--page), var(--page)) padding-box,
+              repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box; }
+.com b.lbl { font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+.com p { margin: 4px 0; }
+.ids { font: 12px var(--mono); color: var(--muted); }
+
+/* product pieces */
+.btn { display: inline-block; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--rule);
+  background: var(--card); color: var(--ink); font: 500 13px var(--body); text-decoration: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; background: var(--card); }
+.card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.card ul { margin: 0; padding-left: 18px; }
+.card li { margin: 2px 0; }
+.muted { color: var(--muted); }
+.ask { font-size: 20px; line-height: 1.35; font-weight: 600; margin: 4px 0 14px; max-width: 34ch; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 500 11.5px var(--body);
+  background: var(--sunk); color: var(--muted); border: 1px solid var(--rule); }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+pre { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px; padding: 10px 12px; overflow-x: auto; margin: 6px 0 12px; white-space: pre; }
+.mail-h { display: grid; grid-template-columns: 70px 1fr; gap: 2px 10px; font-size: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.mail-h .k { color: var(--muted); }
+.attach { display: inline-flex; gap: 10px; align-items: center; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px; margin-top: 10px; background: var(--sunk); }
+.attach .ic { width: 28px; height: 34px; border-radius: 4px; background: var(--accent); opacity: .85; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; }
+.tabs span { padding: 6px 12px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; }
+.tabs span.on { color: var(--ink); border-bottom-color: var(--accent); }
+.term { background: #111214; color: #d6d6d6; border-radius: 7px; padding: 12px 14px; font: 12.5px/1.55 var(--mono); white-space: pre; overflow-x: auto; }
+.term .e { color: #f87171; } .term .d { color: #8b8b93; }
+.opt { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--rule); border-radius:8px; padding:10px 12px; margin:6px 0; }
+.opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.opt .rd { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted); margin-top:3px; flex:none; }
+.opt.on .rd { border:4px solid var(--accent); }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:var(--sunk); border:1px solid var(--rule); font-size:12.5px; margin:2px 4px 2px 0; }
+.chip .x { color: var(--muted); }
+.step { font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing:.04em; margin: 16px 0 4px; }
+.post { border:1px solid var(--rule); border-radius:8px; padding:12px 14px; background:var(--sunk); }
+.sheet { max-width: 460px; margin: 0 auto; border:1px solid var(--rule); border-radius:12px; padding:18px 20px; box-shadow: 0 8px 28px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.5)); background: var(--card); }
+.chat { display:flex; flex-direction:column; gap:14px; }
+.msg { display:flex; gap:10px; align-items:flex-start; }
+.av { width:32px; height:32px; border-radius:7px; flex:none; display:grid; place-items:center; font:600 12px var(--body); color:#fff; background:#8b8b93; }
+.av.bot { background: var(--accent); }
+.who { font-weight:600; font-size:13px; }
+.who .agent { font: 500 10.5px var(--body); color: var(--muted); border:1px solid var(--rule); border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px; }
+.who .t { font-weight:400; color: var(--muted); font-size:12px; margin-left:6px; }
+.body p { margin: 2px 0 6px; }
+.q { border-left:3px solid var(--accent); padding:4px 10px; margin:6px 0; background: var(--sunk); border-radius: 0 6px 6px 0; }
+.q .txt { margin:0; }
+.q .cite { font: 11.5px var(--mono); color: var(--muted); }
+.foot { font-size:12px; color: var(--muted); border-top:1px solid var(--rule); padding-top:6px; margin-top:8px; }
+.mention { color: var(--accent); font-weight:500; }
+.split { display:grid; grid-template-columns: minmax(260px, 360px) 1fr; gap:0; }
+.split > div { padding: 16px 18px; }
+.split > div + div { border-left:1px solid var(--rule); background: var(--sunk); }
+.phone { width: 220px; margin: 0 auto; border:1px solid var(--rule); border-radius: 22px; background: var(--card); padding: 18px 14px; min-height: 380px; }
+.wf { height:10px; border-radius:4px; background: var(--rule); margin:8px 0; }
+.wf.s { width:60%; } .wf.m { width:80%; }
+.wfbtn { height:34px; border-radius:8px; background: var(--accent); opacity:.85; margin-top:18px; }
+.used { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.small { font-size:12.5px; }
+.compose { border:1px solid var(--rule); border-radius:8px; padding:8px 10px; color: var(--muted); font-size:13px; margin-top:12px; }
+@media (max-width: 720px) { .split { grid-template-columns: 1fr; } .split > div + div { border-left:0; border-top:1px solid var(--rule); } }
+.app { display:grid; grid-template-columns: 210px 1fr; min-height: 360px; }
+.side { background: var(--sunk); border-right:1px solid var(--rule); padding: 12px 8px; font-size: 13px; }
+.side .grp { font: 600 11px var(--body); color: var(--muted); margin: 10px 8px 4px; }
+.side .it { display:flex; gap:8px; align-items:center; padding: 5px 8px; border-radius: 6px; }
+.side .it.sel { background: var(--accent); color: #fff; }
+.side .it .cb { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid currentColor; opacity: .8; flex:none; }
+.side .it.sel .cb { background: #fff; }
+.pane { padding: 18px 22px; position: relative; }
+.scrim { position:absolute; inset:0; background: light-dark(rgba(0,0,0,.08), rgba(0,0,0,.35)); display:flex; justify-content:center; align-items:flex-start; padding-top: 24px; }
+.sheet.wide { max-width: 520px; width: 100%; }
+.sheet h4 { margin: 0 0 8px; font-size: 14px; }
+.btns { display:flex; gap:8px; justify-content:flex-end; margin-top: 16px; }
+.btn.dis { opacity: .45; }
+.sec-h { font: 600 12px var(--body); color: var(--muted); margin: 14px 0 6px; text-transform: none; }
+.clip { display:flex; gap:10px; align-items:center; border:1px solid var(--rule); border-radius:8px; padding:6px; margin:4px 0; }
+.clip .th { width: 64px; height: 38px; border-radius: 4px; background: var(--rule); flex:none; }
+.flag { display:flex; gap:10px; align-items:flex-start; border-top: 1px solid var(--rule); padding: 8px 0; font-size: 13px; }
+.flag .q { flex:1; margin:0; }
+.seg { display:inline-flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden; font-size:12px; flex:none; }
+.seg span { padding: 3px 8px; } .seg span.on { background: var(--accent); color:#fff; }
+.num { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background: var(--accent); color:#fff; font: 600 11px var(--body); margin-right: 8px; flex:none; }
+.stepl { display:flex; align-items:flex-start; margin: 8px 0; }
+@media (max-width: 720px) { .app { grid-template-columns: 1fr; } .side { border-right:0; border-bottom:1px solid var(--rule); } }
+.handover { display:block; margin-top:4px; font-size:12px; color: var(--ink); }
+.menu { width: 300px; border:1px solid var(--rule); border-radius:8px; background: var(--card); box-shadow: 0 8px 24px light-dark(rgba(0,0,0,.14), rgba(0,0,0,.5)); padding:4px; font-size:13px; }
+.menu .mi { display:flex; justify-content:space-between; padding:4px 10px; border-radius:5px; }
+.menu .mi.on { background: var(--accent); color:#fff; }
+.menu .mi .k { color: var(--muted); } .menu .mi.on .k { color:#fff; }
+.menu .sep { height:1px; background: var(--rule); margin:4px 6px; }
+.menu .mi.dim { color: var(--muted); }
+.form { display:grid; grid-template-columns: max-content 1fr; gap: 10px 12px; align-items: baseline; }
+.form > .l { text-align:right; color: var(--ink); white-space: nowrap; }
+.form .hint { display:block; font-size:12px; color: var(--muted); margin-top:2px; }
+.fld { display:inline-block; border:1px solid var(--rule); border-radius:5px; padding:3px 8px; background: var(--card); min-width: 220px; }
+.pop { display:inline-flex; gap:8px; align-items:center; border:1px solid var(--rule); border-radius:5px; padding:3px 8px; background: var(--card); }
+.pop::after { content:"⌃⌄"; font-size:9px; color: var(--muted); letter-spacing:-2px; }
+.radio { display:flex; gap:8px; align-items:flex-start; margin: 2px 0 8px; }
+.radio .rd { width:13px; height:13px; border-radius:50%; border:1.5px solid var(--muted); margin-top:4px; flex:none; }
+.radio.on .rd { border:4px solid var(--accent); }
+.radio .d { display:block; font-size:12.5px; color: var(--muted); }
+.stephead { font-weight:600; margin: 0 0 12px; }
+.foot2 { display:flex; gap:8px; align-items:center; margin-top: 16px; }
+.foot2 .why { margin-right:auto; font-size:12.5px; color: var(--muted); }
+.alert { max-width: 300px; margin: 0 auto; text-align:center; border:1px solid var(--rule); border-radius:12px; padding:18px 16px 14px; background: var(--card); box-shadow: 0 8px 28px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.5)); }
+.alert .ic { width:40px; height:40px; border-radius:9px; background: var(--sunk); margin: 0 auto 8px; border:1px solid var(--rule); }
+.alert h4 { margin: 0 0 6px; font-size:13.5px; }
+.alert p { margin: 0 0 12px; font-size:12.5px; }
+.alert .stack { display:flex; flex-direction:column; gap:6px; }
+.alert .stack .btn { text-align:center; }
+.kv { display:grid; grid-template-columns: max-content 1fr; gap: 3px 12px; font-size:13px; }
+.kv .k { color: var(--muted); }
+.ptable { width:100%; border-collapse: collapse; font-size:12.5px; }
+.ptable th { font-weight:600; color: var(--muted); text-align:left; padding:4px 6px; border-bottom:1px solid var(--rule); }
+.ptable td { padding:5px 6px; border-bottom:1px solid var(--rule); vertical-align: middle; }
+.cbx { display:inline-block; width:12px; height:12px; border:1.5px solid var(--muted); border-radius:3px; vertical-align:-1px; margin-right:4px; }
+.cbx.on { background: var(--accent); border-color: var(--accent); }
+.new { font: 600 10.5px var(--body); color: var(--accent); border:1px solid var(--accent); border-radius:4px; padding:0 4px; margin-left:6px; }
+.caution { display:flex; gap:8px; align-items:flex-start; margin-top:12px; font-size:13px; }
+.caution .tri { flex:none; width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:14px solid var(--warn); margin-top:2px; }
+.savepanel { border:1px solid var(--rule); border-radius:10px; background: var(--card); overflow:hidden; max-width: 560px; margin: 0 auto; }
+.savepanel .top { padding:10px 14px; border-bottom:1px solid var(--rule); font-size:13px; }
+.savepanel .mid { display:grid; grid-template-columns: 150px 1fr; min-height: 120px; }
+.savepanel .mid .sb { background: var(--sunk); border-right:1px solid var(--rule); padding:8px; font-size:12px; }
+.savepanel .mid .sb div { padding:3px 6px; border-radius:4px; }
+.savepanel .mid .sb div.on { background: var(--rule); }
+.savepanel .mid .ls { padding:8px 12px; font-size:12.5px; color: var(--muted); }
+.savepanel .bot { padding:10px 14px; border-top:1px solid var(--rule); display:flex; gap:8px; justify-content:flex-end; align-items:center; }
+.savepanel .bot .why { margin-right:auto; font-size:12px; color: var(--muted); }
+@media (max-width: 640px) { .inner { padding: 16px; } .ask { font-size: 18px; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Research agent: the researcher publishing (v2)</h1>
+<p class="lede">Second pass at the publish flow, after a six-reviewer pass on 22 Nov 2026 (code, Mac taste, UX, accessibility, i18n, documentation) and a proportion check. It replaces <code>research-agent-publisher.html</code>, which stays as the record of v1. Still a quick sketch (Tier 1) of a <b>native Mac</b> flow: hand-rolled styles that only suggest AppKit, and every word is proposed copy. Scenario ids match <code>docs/design-research-agent.md</code> §7.1; finding numbers (F1…) refer to the private review log.</p>
+<p class="lede"><b>What the copy may know.</b> The researcher may be in-house, a consultant, a freelancer or agency staff. Every name in Bristlenose's own copy comes from something a user typed, data Bristlenose holds, or an answer from the system it's talking to.</p>
+<p class="lede"><b>What changed from v1:</b> a menu command, not a button that lives in one place (F19). "Project" on the Mac (F20). What to make is chosen first (F22). The HTML report left Publish for File ▸ Export Report… (F4). The first request to IT carries no research; you publish once IT has set it up (F1). Every publish, including a republish, goes through the review step (F5). No publish happens while you're away (F6). Files go through a save panel (F24). Person to ask and end date are per project (F12, F13).</p>
+<div class="key"><span><i class="sw-art"></i> Artefact: what the person would see</span><span><i class="sw-com"></i> Commentary: why, and which scenario or finding</span></div>
+
+<!-- ============ 1 ============ -->
+<h2>1. Where Publish lives</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · File menu, and the sidebar's context menu<span class="tag">P1 · P2 · F19</span></div>
+  <div class="inner grid2">
+    <div class="menu">
+      <div class="mi"><span>New Project…</span><span class="k">⌘N</span></div>
+      <div class="sep"></div>
+      <div class="mi"><span>Export Report…</span><span class="k">⇧⌘E</span></div>
+      <div class="mi on"><span>Publish…</span><span class="k"></span></div>
+      <div class="sep"></div>
+      <div class="mi dim"><span>Close Window</span><span class="k">⌘W</span></div>
+    </div>
+    <div class="menu">
+      <div class="mi"><span>Show in Finder</span><span class="k"></span></div>
+      <div class="mi"><span>Rename…</span><span class="k"></span></div>
+      <div class="sep"></div>
+      <div class="mi on"><span>Publish 3 Projects…</span><span class="k"></span></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>One command, <b>File ▸ Publish…</b>, right under its sibling Export Report…, acting on the sidebar selection. The same command in the sidebar's context menu ("Publish 3 Projects…") and as a row in the toolbar's existing export popover (not drawn). The curated tab can have a Publish… button too; it runs the same command (F19).</p>
+  <p>No keyboard shortcut: it's rare and it's a disclosure. The item dims only when nothing is selected. It doesn't dim when nothing is curated, because a dimmed item can't say why; frame 3 does.</p>
+  <p>Context-menu rows other than Publish are placeholders: check them against the shipped sidebar menu before Tier 2.</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2>2. The curated view the agent is made from</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Onboarding · Highlights<span class="tag">P1 · prerequisite</span></div>
+  <div class="inner">
+    <div class="row" style="justify-content:space-between">
+      <div><b style="font-size:16px">Highlights</b> <span class="muted">· what you'd lead with</span></div>
+      <a class="btn" href="#">Publish…</a>
+    </div>
+    <div class="sec-h">Strongest signals</div>
+    <div class="card" style="padding:10px 14px"><b>Confusion during onboarding</b> <span class="muted">· 9 of 14 participants</span></div>
+    <div class="sec-h">Starred quotes · 24</div>
+    <div class="q"><p class="txt">“I didn't know what a ‘workspace’ was, so I just clicked whatever was blue.”</p><span class="cite">p4 · 12:41</span></div>
+    <div class="q"><p class="txt">“I gave up on the import step and came back two days later.”</p><span class="cite">p2 · 31:02</span></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>The future Report lens (PRD §5), still undefined. <b>Decided 23 Nov 2026 (owner question A):</b> publishing takes every quote you haven't hidden by default, and this view's starred quotes only when you choose "Starred only" (frame 4). So the Report lens is no longer a prerequisite for publishing. Clips are gone from this frame until video is in scope.</p>
+  <p>"Highlights" stays a placeholder name: in Dovetail a highlight is a quote, so it collides (owner call).</p>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2>3. Nothing chosen, or not in every project</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · alerts<span class="tag">P3 · F18 · F28</span></div>
+  <div class="inner grid2" style="background:var(--sunk)">
+    <div class="alert"><div class="ic"></div>
+      <h4>Pricing has nothing chosen to publish</h4>
+      <p>Publishing shares what you've chosen in Highlights. Star the quotes you'd lead with, then publish.</p>
+      <div class="stack"><a class="btn primary" href="#">Open Highlights</a><a class="btn" href="#">Cancel</a></div></div>
+    <div class="alert"><div class="ic"></div>
+      <h4>Pricing has nothing chosen to publish</h4>
+      <p>You can publish the other 2 projects now, or choose what to publish from Pricing first.</p>
+      <div class="stack"><a class="btn primary" href="#">Publish 2 Projects…</a><a class="btn" href="#">Open Pricing's Highlights</a><a class="btn" href="#">Cancel</a></div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>Standard alerts, which VoiceOver reads in full and which answer Return and Escape (F28). Left: one project selected. Right: three selected, one with nothing chosen; the alert names it and offers the other two (F18). "Star the quotes you'd lead with", because signals can't be starred today (F36).</p>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4. What to make, first</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P2 · F1 · F4 · F12 · F13 · F22 · F29</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 3 Projects</h4>
+      <div class="form">
+        <span class="l">Make:</span>
+        <div>
+          <div class="radio on"><span class="rd"></span><span>A research agent<span class="d">A small web app their IT runs behind their company sign-in. People ask it from tools like Teams, Slack, Figma Make, Claude and ChatGPT, whichever their IT connects.</span></span></div>
+          <div class="radio"><span class="rd"></span><span>An agent pack<span class="d">A folder of quotes, signals and instructions you can add to a Copilot agent, a Gem, a GPT or a Claude Project. Nothing for IT to run.</span></span></div>
+          <span class="hint">To share a whole report as one file, use File ▸ Export Report….</span>
+        </div>
+        <span class="l">Publish to:</span>
+        <div><span class="pop">New research agent</span><span class="hint">Their IT sets it up first. You'll get a request to send them.</span></div>
+        <span class="l">Name:</span>
+        <div><span class="fld">What we know about Product X</span></div>
+        <span class="l">Quotes:</span>
+        <div>
+          <div class="radio on"><span class="rd"></span><span>All except hidden</span></div>
+          <div class="radio"><span class="rd"></span><span>Starred only</span></div>
+        </div>
+        <span class="l">Suggested short name:</span>
+        <div><span class="fld">@UXR-ProductX</span><span class="hint">For tools where people @-mention it. Their IT chooses the final name.</span></div>
+      </div>
+      <div class="sec-h" style="margin-top:16px">For each project</div>
+      <table class="ptable">
+        <tr><th>Project</th><th>Person to ask</th><th>Stop answering after</th></tr>
+        <tr><td>Onboarding</td><td><span class="fld" style="min-width:120px">Priya Shah</span></td><td><span class="cbx on"></span>31 Mar 2028</td></tr>
+        <tr><td>Pricing</td><td><span class="fld" style="min-width:120px">Priya Shah</span></td><td><span class="cbx on"></span>31 Mar 2028</td></tr>
+        <tr><td>Admin console</td><td><span class="fld" style="min-width:120px">Priya Shah</span></td><td><span class="cbx on"></span>31 Mar 2028</td></tr>
+      </table>
+      <p class="hint muted small" style="margin:6px 0 0">The person to ask is who the agent names when it can't answer. Times are in UK time.</p>
+      <div class="foot2"><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Continue</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p><b>The choice comes first</b> (F22), and the fields below are the ones that apply to it. Choosing "An agent pack" dims "Publish to" and "Suggested short name", and the end-date column reads "Files keep working once copied" (F12, F13). The sheet doesn't change size.</p>
+  <p><b>Two options, not three:</b> the HTML report left Publish. It already exists as File ▸ Export Report…, which exports a whole report, and a second, curated HTML file would be a second product (F4).</p>
+  <p><b>"Quotes: All except hidden"</b> is the default (owner, 23 Nov 2026): the quotes you'd keep in any export, since Miro, FigJam and CSV leave hidden quotes out too. "Starred only" is the smaller disclosure; askers' counts then cover starred quotes only, and the agent says so.</p>
+  <p><b>"Publish to: New research agent"</b> is the first-time case. Later the same pop-up lists research agents you can publish to (frame 7).</p>
+  <p><b>Per project</b> person to ask and end date (F12, F13): Sam's later projects can't overwrite Priya's, and an end date can't stop someone else's project. Prefilled from the first row; "Times are in UK time" is the Mac's own time zone.</p>
+  <p><b>The short name is a suggestion</b> (F29): the name people @-mention is set by IT in Teams or Slack.</p>
+  <p>Sketch fidelity: house sheets use a form grid with right-aligned colon labels and a native radio group, roughly as here; the exact layout is Tier 2 (F23).</p>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2>5. The request to IT carries no research</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P2 · F1 · F25</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 3 Projects</h4>
+      <p class="stephead">Send this request to the IT team who'll run it</p>
+      <p style="margin:0 0 10px">It holds no research. When they've set it up and sent you its address, choose File ▸ Publish… again to publish these projects into it.</p>
+      <div class="post small" style="max-height:150px;overflow:auto">
+        <p style="margin:0 0 6px"><b>Request: run a research agent behind our company sign-in</b></p>
+        <p style="margin:0 0 6px">Please could you set up a research agent called “What we know about Product X”, so people can ask about this research from tools like Teams, Slack, Figma Make, Claude and ChatGPT.</p>
+        <p style="margin:0 0 6px">It's one container, run behind your company sign-in. The attached setup guide says what it is, what it will hold, what it needs and how to remove it.</p>
+        <p style="margin:0 0 6px">When it's ready, please send me its address and allow me to publish to it.</p>
+        <p style="margin:0">Person to ask about the research: Priya Shah.</p>
+      </div>
+      <div class="foot2"><span class="why"></span><a class="btn" href="#">Copy Request</a><a class="btn" href="#">Save Setup Guide…</a><a class="btn" href="#">Share…</a><a class="btn primary" href="#">Done</a></div>
+      <p class="hint muted small" style="margin:8px 0 0">If their IT can't run one, publish the same projects as an agent pack instead. Your choices are kept.</p>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p><b>The biggest change (F1).</b> In v1 Sam emailed IT a container holding 412 participant quotes. That put participant data in an inbox outside "who can ask", beyond any end date, and a container is far over a mail attachment limit. Now the request and setup guide hold no research. IT sets the agent up empty; Sam publishes into it from the Mac. Day 1 and Sam's return five months later become the same publish (frame 7), and the address comes from IT, not from a guess.</p>
+  <p><b>Cost:</b> on a freelancer's last day it's a two-step: request in the morning, publish once IT replies. If Sam leaves before IT replies, Priya publishes (if she has the projects) or IT and Sam arrange it.</p>
+  <p><b>Share…</b> opens the system share picker, so Outlook, Teams or Slack appear if that's what the researcher uses, instead of assuming Mail (F25). The request is shown in full in a scrolling, selectable view.</p>
+  <p>The draft holds only what Bristlenose knows: the name, the person to ask. Anything about the researcher's own situation is theirs to add.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2>6. Once IT has set it up: publish into it</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P2 · P6 · P7 · F7</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 3 Projects</h4>
+      <div class="form">
+        <span class="l">Make:</span><span>A research agent</span>
+        <span class="l">Publish to:</span>
+        <div>
+          <div class="menu" style="width:auto;max-width:420px">
+            <div class="mi on"><span>What we know about Product X<br><span style="font-size:11.5px;opacity:.9">research.halden.example · set up by Halden IT</span></span></div>
+            <div class="mi"><span>What we know about Product X<br><span style="font-size:11.5px" class="k">agents.meridian.example · set up by Meridian Platform</span></span></div>
+            <div class="sep"></div>
+            <div class="mi"><span>Add a Research Agent by Address…</span></div>
+            <div class="mi"><span>New Research Agent…</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="foot2"><a class="btn" href="#">Cancel</a><a class="btn" href="#">Back</a><a class="btn primary" href="#">Continue</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>Sam pastes the address IT sent ("Add a Research Agent by Address…"), signs in with the company sign-in, and from then on it's in this list. Each entry shows its address and who set it up, as the research agent itself reports them, never just a name (F7).</p>
+  <p>Why: a freelancer with two clients can easily have two research agents both called "What we know about Product X". Picking by name would send one client's participant quotes to the other. Under the hood each needs an id the research agent issues (a build constraint).</p>
+  <p>This is also how a second researcher, Priya on her own Mac, finds the same agent (P6): the address from IT, then the same list.</p>
+</div>
+
+<!-- ============ 7 ============ -->
+<h2>7. Check what will be published</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P1 · P4 · F8 · F9 · F10 · F11 · F27 · F31</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 3 Projects</h4>
+      <p class="stephead">Check what will be published to “What we know about Product X”</p>
+      <table class="ptable">
+        <tr><th>Project</th><th>Fieldwork</th><th>Participants</th><th>Quotes</th><th>Signals</th></tr>
+        <tr><td>Onboarding</td><td>Nov 2026</td><td>14</td><td>168</td><td>3</td></tr>
+        <tr><td>Pricing</td><td>Jan 2027</td><td>10</td><td>112</td><td>2</td></tr>
+        <tr><td>Admin console</td><td>Feb 2027</td><td>12</td><td>132</td><td>4</td></tr>
+      </table>
+      <div class="kv" style="margin-top:10px">
+        <span class="k">With each quote:</span><span>participant code (p1, p2…), project, fieldwork month, time in the session, tags</span>
+        <span class="k">Not published:</span><span>participants' names, hidden quotes, transcripts, video</span>
+      </div>
+      <div class="sec-h" style="margin-top:14px">6 quotes mention a name, place or employer</div>
+      <p class="small muted" style="margin:0 0 6px">Bristlenose checks these quotes for names, places, employers and contact details. It can't catch every way a quote could identify someone, so read them as you publish. Leaving a quote out affects only what's published; it stays in your report.</p>
+      <div class="flag"><p class="q">“…since I moved from the <mark>Leeds</mark> office to run the finance team…” <span class="cite" style="display:block">p7 · Admin console · flagged: a place</span></p><span class="seg"><span>Include</span><span>Leave Out</span></span></div>
+      <div class="flag"><p class="q">“My manager, <mark>Rob</mark>, set the whole thing up for us.” <span class="cite" style="display:block">p3 · Onboarding · flagged: a name</span></p><span class="seg"><span>Include</span><span class="on">Leave Out</span></span></div>
+      <p class="small muted" style="margin:4px 0 0">4 more below</p>
+      <div class="foot2"><span class="why">5 quotes still need a decision.</span><a class="btn" href="#">Cancel</a><a class="btn" href="#">Back</a><a class="btn dis" href="#">Publish</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p><b>Every publish comes through here</b>, including a republish and Sam's return (F5), so nothing leaves that the researcher didn't see.</p>
+  <p><b>Counts per project</b>, never one total across them, because Bristlenose can't know whether two projects share a participant (F11). Fieldwork as a month, not a session date: a colleague who knows who was out on 14 Nov could otherwise work out who p4 is (F10). The table and the "With each quote" line list every field that leaves.</p>
+  <p><b>The check says what it checks and that it can miss things</b>, and the same sentence appears when it finds nothing (F8). Each flag names its kind. The mock flags now show what a name-and-place check would really catch ("Leeds", "Rob"), not an employer it couldn't (F37). "Include / Leave Out" with nothing chosen to start with; the reason Publish is dimmed sits on the button row (F27). Whether Publish then becomes the Return key is owner question J; drawn here without a default.</p>
+  <p>"Names aren't published" rather than v1's "their names stay on this Mac", because the project folder may itself be in a synced folder (F9). Drawn with the default, all except hidden (owner, 23 Nov 2026): 412 quotes across three projects, so the check finds more than a starred-only publish would. With "Starred only" the Quotes column counts starred quotes and the heading says so.</p>
+</div>
+
+<!-- ============ 8 ============ -->
+<h2>8. Published</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P2</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 3 Projects</h4>
+      <p class="stephead">✓ Published to “What we know about Product X”</p>
+      <p style="margin:0 0 8px">Onboarding, Pricing and Admin console now answer at research.halden.example, until 31 Mar 2028.</p>
+      <p class="small muted" style="margin:0">To change what's published, publish a project again. To stop it answering, ask the IT team who runs it.</p>
+      <div class="foot2"><span class="why"></span><a class="btn" href="#">Copy Announcement</a><a class="btn primary" href="#">Done</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>The done step states the fact the research agent reported back. "Copy Announcement" gives the researcher the same post IT gets (IT mockup, frame 4), in case they announce it themselves. Reopening File ▸ Publish… on these projects later shows "Published 12 Mar 2027 to research.halden.example" at the top; that's the whole of "published state" for now. A separate Published window was judged too much for this stage.</p>
+</div>
+
+<!-- ============ 9 ============ -->
+<h2>9. An agent pack: choose the builder, then save</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P10 · F14 · F24 · F26</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px;margin-bottom:16px">
+      <h4>Publish 3 Projects</h4>
+      <div class="form">
+        <span class="l">Make:</span><span>An agent pack</span>
+        <span class="l">For:</span><div><span class="pop">Microsoft 365 Copilot</span><span class="hint">Also: Gemini, ChatGPT, Claude</span></div>
+      </div>
+      <div class="foot2"><a class="btn" href="#">Cancel</a><a class="btn" href="#">Back</a><a class="btn primary" href="#">Save Agent Pack…</a></div>
+    </div>
+    <div class="savepanel">
+      <div class="top">Save As: <span class="fld">What we know about Product X</span></div>
+      <div class="mid">
+        <div class="sb"><div>Desktop</div><div>Documents</div><div class="on">OneDrive - Halden</div><div>Google Drive</div></div>
+        <div class="ls">Research<br>Shared<br>…</div>
+      </div>
+      <div class="bot"><span class="why">A folder in your own account goes when the account does. Choose one that will stay after you leave.</span><a class="btn" href="#">Cancel</a><a class="btn primary" href="#">Save</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p><b>Builder first, then the system save panel</b> (F24, F26). Copilot reads a OneDrive folder, so the panel opens there; Gemini opens at Google Drive; ChatGPT and Claude take uploaded files, so the panel opens wherever you like and the next step says to upload them. No hand-made folder chooser, and nothing is saved until Save is pressed.</p>
+  <p>The panel's one added line (an accessory view) states a fact for anyone whose account will be closed, such as a freelancer: the pack goes with it (F14). It doesn't tell them where to put it.</p>
+  <p>Review (frame 7) comes between "Continue" in frame 4 and this step; not redrawn here.</p>
+</div>
+
+<!-- ============ 10 ============ -->
+<h2>10. An agent pack: the last steps are theirs</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 3 Projects<span class="tag">P10 · F26 · F35</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 3 Projects</h4>
+      <p class="stephead">✓ Saved to OneDrive - Halden › Research › What we know about Product X</p>
+      <p class="small" style="margin:0 0 8px">To make it into a Copilot agent:</p>
+      <div class="stepl"><span class="num">1</span><span>In Microsoft 365 Copilot, create an agent and add this folder to its knowledge.</span></div>
+      <div class="stepl"><span class="num">2</span><span>Paste the instructions into the agent. They tell it to answer with quotes and to name Priya Shah when it can't answer.</span></div>
+      <div class="stepl"><span class="num">3</span><span>Share the agent, and the folder, with the people who'll use it.</span></div>
+      <p class="small muted" style="margin:8px 0 0">Files keep working wherever they're copied, so an agent pack can't stop answering on a date.</p>
+      <div class="foot2"><span class="why"></span><a class="btn" href="#">Copy Instructions</a><a class="btn" href="#">Open Copilot in Browser</a><a class="btn primary" href="#">Done</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>Steps written in the chosen builder's own words: Copilot "agent" and "knowledge" here; for Gemini a Gem, for ChatGPT a GPT, for Claude a Claude Project (F26; these go in the vendor-terms register before any string exists). Copy Instructions changes to "Copied" in place, no toast.</p>
+  <p>The last line says plainly what an agent pack can't do, rather than leaving the researcher to assume an end date applies (F12).</p>
+</div>
+
+<!-- ============ 11 ============ -->
+<h2>11. Sam comes back with two more projects</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 2 Projects<span class="tag">P7 · P6 · F6 · F7</span></div>
+  <div class="inner" style="background:var(--sunk)">
+    <div class="sheet wide" style="max-width:600px">
+      <h4>Publish 2 Projects</h4>
+      <div class="form">
+        <span class="l">Make:</span><span>A research agent</span>
+        <span class="l">Publish to:</span><div><span class="pop">What we know about Product X · research.halden.example</span></div>
+      </div>
+      <table class="ptable" style="margin-top:12px">
+        <tr><th>In “What we know about Product X” after publishing</th><th>Published by</th></tr>
+        <tr><td>Permissions<span class="new">New</span></td><td>You</td></tr>
+        <tr><td>Team invites<span class="new">New</span></td><td>You</td></tr>
+        <tr><td>Onboarding, Pricing, Admin console</td><td>You, on 12 Mar 2027</td></tr>
+        <tr><td>Admin console follow-up</td><td>Priya Shah, on 4 May 2027</td></tr>
+      </table>
+      <div class="caution"><span class="tri"></span><span><b>You can't publish here at the moment.</b> research.halden.example stopped accepting projects from you on 31 Mar 2027. Ask its IT team to let you publish again, then come back.</span></div>
+      <div class="foot2"><a class="btn" href="#">Cancel</a><a class="btn" href="#">Request Permission…</a><a class="btn primary dis" href="#">Continue</a></div>
+    </div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p><b>No publish waits on IT</b> (F6). v1's "Ask and Publish" published later, possibly days later with nobody at the Mac, from a snapshot that might no longer match what was reviewed (a withdrawal, a new star). Now "Request Permission…" opens the same drafted-request step as frame 5. When IT agrees, Sam comes back, picks the same agent and publishes, through review (frame 7). Nothing is in flight in between, so there's no pending state to show or lose.</p>
+  <p>The list says who published what and when, as the research agent reports it, so Sam sees Priya's project is untouched (P6). Before Sam has access again, the research agent may not show anyone else's projects; then only Sam's own rows appear (build detail).</p>
+  <p>Caution shown as a symbol and text, not a coloured box. The dimmed Continue has its reason right above it.</p>
+</div>
+
+<!-- ============ 12 ============ -->
+<h2>12. Republishing a corrected project</h2>
+<div class="frame">
+  <div class="bar"><span class="dots"><i></i><i></i><i></i></span>Bristlenose · Publish 1 Project<span class="tag">P9 · F5 · F36</span></div>
+  <div class="inner grid2" style="background:var(--sunk)">
+    <div class="sheet" style="max-width:none">
+      <h4>Publish 1 Project</h4>
+      <p class="stephead">Check what will be published to “What we know about Product X”</p>
+      <p class="small" style="margin:0 0 6px">Admin console follow-up · last published 4 May 2027</p>
+      <div class="kv"><span class="k">Quotes:</span><span>46 <span class="new">3 new</span> <span class="new">1 left out</span></span><span class="k">Signals:</span><span>2 <span class="new">1 changed</span></span></div>
+      <div class="foot2"><a class="btn" href="#">Cancel</a><a class="btn" href="#">Back</a><a class="btn" href="#">Publish</a></div>
+    </div>
+    <div class="alert"><div class="ic"></div>
+      <h4>Replace “Admin console follow-up”?</h4>
+      <p>From now on, answers will use this version. The version published on 4 May 2027 will be removed from research.halden.example. Answers people already received aren't changed.</p>
+      <div class="stack"><a class="btn primary" href="#">Cancel</a><a class="btn" href="#">Replace</a></div></div>
+  </div>
+</div>
+<div class="com"><b class="lbl">Commentary</b>
+  <p>P9 through the same review (F5). What changed since the last publish is marked "new" or "changed"; a full diff view was judged too much for now. Only the matching project is replaced, matched by the id the research agent issued when it was first published, never by title (F7).</p>
+  <p>The confirmation names exactly what's replaced, what happens to the old version (will be removed, future tense) and what it can't reach: answers already given (F9). Verb: "Replace", the same as the act. Cancel is the default, because it's a real loss.</p>
+</div>
+
+<h2>Not drawn this pass</h2>
+<div class="com"><b class="lbl">Commentary</b>
+  <p><b>P8, a self-serve platform with no sign-in:</b> v1 frame 9 had no way in, because no step took an address. "Add a Research Agent by Address…" (frame 6) is now that way in, and the check would sit next to the address field rather than in an alert. Whether P8 is in the first version at all is an owner question; the rule that Bristlenose won't publish where nothing checks who's signing in is recorded as a build constraint either way.</p>
+  <p><b>Accessibility, i18n and Mac form detail</b> from the review (focus on each step, announcements, plural keys, the date format, vendor-terms rows, button rows that stack) are recorded as build constraints, not drawn.</p>
+</div>
+
+</main>
+</body>
+</html>

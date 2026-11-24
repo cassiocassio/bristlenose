@@ -353,7 +353,8 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `research-agent-publisher.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch for `docs/design-research-agent.md`: the researcher's flow from the curated view to Publish, the hand-off to IT or an agent builder, returning with more studies, correcting one, and the no-sign-in stop (scenarios P1–P10). Unreviewed copy; the curated tab's name is a placeholder. |
+| `research-agent-publisher-v2.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch of the native Mac publish flow after review: File ▸ Publish…, what to make chosen first, a request to IT with no research in it, publish into a research agent picked by address and owner, one review step for every publish, agent pack via save panel, per-project person to ask and end date. Owner questions A, E, J and P8 open (`docs/design-research-agent.md` §9). |
+| `research-agent-publisher.html` | 22 Nov 2026 | PROPOSED 22 Nov 2026 · SUPERSEDED 22 Nov 2026 by `research-agent-publisher-v2.html` — a six-reviewer pass found it emailed participant quotes to IT inside the first hand-off, published unattended after IT approval, skipped review on republish, put an HTML report into Publish beside Export, and said "Studies" where the app says Project. |
 | `research-agent-it-handover.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch for `docs/design-research-agent.md`: the IT admin's flow, from a researcher's request to end of life (scenarios I1–I9, P6, P7). Unreviewed copy; implementation parked. |
 | `research-agent-team-member.html` | 22 Nov 2026 | PROPOSED — Tier 1 sketch for `docs/design-research-agent.md`: the asker's experience in Teams-, Slack-, Figma Make- and Claude-like stand-ins (scenarios A1–A11), plus agent pack vs research agent. Unreviewed copy. |
 

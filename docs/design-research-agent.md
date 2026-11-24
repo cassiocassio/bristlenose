@@ -3,7 +3,8 @@ status: proposal
 date: 22 Nov 2026
 owner-decisions: none yet (see §9)
 timing: 2027, after the beta reliability phase and after the Report lens
-mockups: docs/mockups/research-agent-publisher.html, docs/mockups/research-agent-it-handover.html, docs/mockups/research-agent-team-member.html
+mockups: docs/mockups/research-agent-publisher-v2.html (v1: research-agent-publisher.html, superseded), docs/mockups/research-agent-it-handover.html, docs/mockups/research-agent-team-member.html
+reviewed: 22 Nov 2026, six reviewers plus a proportion pass; findings in the private review log (docs/private/reviews/research-agent.md)
 ---
 
 # PRD: the published research agent ("@UXR-ProductX")
@@ -41,21 +42,24 @@ Research outlives its report badly.
 ## 2. The stories
 
 > **Sam is a freelance researcher.** Over six months they ran three studies for
-> a client's Product X: onboarding, pricing, and the admin console. On the last
-> day of the engagement Sam picks the starred quotes, the strongest signals and
-> the clips worth watching, and publishes them as **"What we know about Product
-> X"**. Sam asks the client's IT for one thing: somewhere to run it that only
-> people with company sign-in can reach. From then on **@UXR-ProductX** answers
-> in Teams, Slack, Figma Make and Claude, with Sam's quotes and Sam's counts.
+> a client's Product X: onboarding, pricing, and the admin console. Near the end
+> of the engagement Sam stars the quotes they'd lead with and asks the client's
+> IT for one thing: a research agent called **"What we know about Product X"**,
+> run behind the company sign-in. The request carries no research. IT sets it up
+> empty and sends Sam its address, and on Sam's last day Sam publishes the three
+> projects into it from the Mac. From then on **@UXR-ProductX** answers in
+> Teams, Slack, Figma Make, Claude and ChatGPT, with Sam's quotes.
 >
-> **Five months later the client hires Sam again** for two more studies. Sam
-> publishes them **into the same agent**. Nobody re-installs anything, the name
+> **Five months later the client hires Sam again** for two more studies. IT lets
+> Sam publish again, and Sam publishes them **into the same agent**, the same way
+> as the first time. Nobody re-installs anything, the name
 > doesn't change, and the agent now knows all of them and says which one each
 > quote came from.
 >
 > **Meanwhile Priya**, an in-house researcher at the client, on her own Mac,
-> adds a study of her own to the same collection and corrects one of Sam's
-> numbers in hers. Neither of them has to coordinate with the other.
+> adds a study of her own to the same collection, and later republishes it with
+> a correction. Neither of them has to coordinate with the other, and neither
+> can change the other's study.
 
 Smaller stories the scenarios also cover:
 
@@ -136,6 +140,13 @@ PMs, designers, engineers, executives, new joiners.
    week: *"Let me run one thing that only people with our sign-in can reach."*
 7. **Staleness is visible, not hidden.** Every answer shows how old its
    evidence is, so nobody needs a warning banner.
+8. **Only say what Bristlenose can know.** The researcher may be in-house, a
+   consultant, a freelancer, or at an agency placed on someone else's project.
+   Bristlenose can't know which, who they work for, what their contract says,
+   or whose IT will run anything. Every name in Bristlenose's own copy comes
+   from something a user typed, data Bristlenose holds, or an answer from the
+   system it's talking to; everything else is said in words true for all of
+   them ("the people who'll use it", "their IT"). Owner, 22 Nov 2026.
 
 ## 5. What gets published, in people's terms
 
@@ -147,17 +158,36 @@ PMs, designers, engineers, executives, new joiners.
 - **Curated, not everything.** It comes from a future **Report lens**: the best
   signals, the starred quotes, "if you only watch these clips". Today's report
   is "Bristlenose for people without Bristlenose"; the Report lens is the
-  researcher's argument. **The Report lens is a prerequisite.** Without it,
-  publishing means publishing everything, which breaks principle 4.
+  researcher's argument. The Report lens is still undefined, and it is no
+  longer a prerequisite for publishing.
+- **Every quote the researcher hasn't hidden, by default; starred only as an
+  option** (owner, 23 Nov 2026, §9 Q8). Hiding is the curation researchers
+  already do, so "not hidden" is the consent boundary of principle 4, and it
+  matches every other export: Miro, FigJam, CSV, clips and the MCP tools all
+  leave hidden quotes out. With every visible quote published, counts like
+  "7 of 12 participants" are exact. Choosing **Starred only** at publish time
+  gives a smaller disclosure, and the agent then says its counts are of the
+  starred quotes, never of the study.
 - **Never in it:** participants' names (speakers are codes like `p3`), hidden
-  quotes, unpublished work. No video in the first version: clips show faces and
-  need a higher level of consent.
-- **Optionally, an end date** after which it stops answering and says who to
-  ask instead.
+  quotes, unpublished work, transcripts. No video in the first version: clips
+  show faces and need a higher level of consent. Quotes carry the fieldwork
+  month, not the session date, because a colleague who knows who was out that
+  day could work out who `p4` is. Participants are counted per project, never
+  as one total, because Bristlenose can't know whether two projects share a
+  participant (`INVARIANTS`).
+- **Per project, optionally, an end date** after which that project stops
+  answering, and **per project, a person to ask** about it, both typed by the
+  publisher. Per project so that one researcher's choices can't stop or
+  re-label another's. The person to ask is who the agent names whenever it
+  can't answer (principle 8: never guessed). An end date only binds the
+  research agent: an agent pack's files keep working wherever they're copied,
+  and the publish flow says so.
+- **A suggested short name** for tools where people @-mention it. IT sets the
+  final name when it connects Teams or Slack.
 
 ## 6. Three ways to leave research behind
 
-| | **The report file** | **The agent pack** | **The research agent** |
+| | **The self-contained HTML report** (File ▸ Export Report…, not part of Publish) | **The agent pack** | **The research agent** |
 |---|---|---|---|
 | Exists today? | Yes (HTML export) | No | No |
 | In one line | A file people open | Files the researcher turns into an agent in Copilot, Gemini, ChatGPT or Claude | Something IT hosts once, that the whole team can ask from anywhere |
@@ -181,15 +211,15 @@ and what they must never experience. Ids match the mockups.
 
 | Id | Situation | They experience | They never experience |
 |---|---|---|---|
-| P1 | An in-house researcher publishes one study for their own team | Report lens → Publish → a summary of exactly what will leave (studies, quotes, what's excluded) → choose agent pack or research agent | Publishing something they didn't choose |
-| P2 | **A freelancer leaves three studies behind on their last day** | Pick three projects, name the collection, optionally set an end date, get a ready-written request to send IT | Having to know what Docker, SSO or MCP are |
+| P1 | An in-house researcher publishes one study for their own team | File ▸ Publish… → choose agent pack or research agent → its fields → a review of exactly what will be published (counts per project, the fields each quote carries, what's left out, quotes that mention a name or place) → publish | Publishing something they didn't review |
+| P2 | **A freelancer leaves three studies behind** | Pick three projects, name it, set a person to ask and optional end dates, get a ready-written request for IT that carries no research; once IT sends the address, publish into it | Having to know what Docker, SSO or MCP are; participant quotes travelling by email |
 | P3 | Nothing is curated yet | A plain refusal naming what's missing, and a way to the Report lens | "Publish everything" as a default |
 | P4 | Some quotes were flagged as possibly identifying | The count, and each one to keep or leave out before publishing | Finding out after it's live |
 | P5 | IT says no | The agent pack instead, from the same curation | Redoing the work |
-| P6 | **Two researchers on two Macs both contribute to the Product X collection** | Each publishes their own studies into it, whenever they like | Overwriting each other; having to coordinate a release |
-| P7 | **The freelancer returns and adds two studies to the original three** | Publish into the existing collection by name; the three earlier studies stay as they were | Needing the old files back; a new name or a new install for the team |
+| P6 | **Two researchers on two Macs both contribute to the Product X collection** | Each adds the research agent by the address IT gave them, and publishes their own projects into it whenever they like | Overwriting each other; having to coordinate a release |
+| P7 | **The freelancer returns and adds two studies to the original three** | Pick the existing research agent from a list showing each one's address and who set it up (never by name alone); if publishing has lapsed, ask IT, then publish when they agree; the three earlier studies stay as they were | Needing the old files back; a new name or a new install for the team; quotes sent to another client's agent with the same name |
 | P8 | A researcher has a self-serve platform for internal experiments | The same publish, pointed at their platform; a clear stop if nothing checks who's signing in | Accidentally putting participant quotes on the open internet |
-| P9 | A researcher corrects a published study | Republish it; askers see the new date | The old version lingering somewhere |
+| P9 | A researcher corrects a published study | Republish it, through the same review, with what's new or changed marked; the confirmation says the old version will be removed and that answers already given aren't changed | The old version lingering in the research agent |
 | P10 | **A researcher publishes the agent pack to Copilot or a Gem** | Bristlenose puts the pack where the builder reads it (their OneDrive, their Google Drive) and walks them through the last few clicks in Agent Builder or Gemini: pick this folder, paste these instructions, share with this group | A sign-in that stops at "needs admin approval"; being told to "upload files" with no idea which |
 
 ### 7.2 IT
@@ -204,7 +234,7 @@ and what they must never experience. Ids match the mockups.
 | I6 | Day to day | A quiet page: healthy, in use by how many people, nothing to do | Being paged by it |
 | I7 | **The freelancer returns**, their access long expired | One clear request: let Sam publish again, until a date | Re-installing or re-approving the whole thing |
 | I8 | Two researchers publish at the same time | Both appear in the activity, in order | A conflict to resolve |
-| I9 | The end date passes, or the company wants it gone | It stops answering and says who to ask; removal is one action | Wondering whether a copy is left anywhere |
+| I9 | The end date passes, or the company wants it gone | It stops answering and says who to ask; removal is one action and deletes its copy of the research; it says plainly that answers already given stay where they were sent | A claim that no copy exists anywhere (answers live on in chats and pasted docs) |
 
 ### 7.3 Asker
 
@@ -215,7 +245,7 @@ and what they must never experience. Ids match the mockups.
 | A3 | A designer in Figma Make prompts a prototype with research as context | The research shapes the prototype, and they can see which quotes it used | Research they can't trace |
 | A4 | A PM writes a PRD in Claude | Quotes and counts they can cite, ready to paste with their source | Having to rewrite citations |
 | A5 | A question the research doesn't cover | "The research doesn't cover that", and what it does cover | An answer from general knowledge dressed up as research |
-| A6 | "Who is p3?" | A polite no, and who the researcher of record is | A name |
+| A6 | "Who is p3?" | A polite no, and the person to ask about this research | A name |
 | A7 | Someone outside the group asks | Who to ask for access | A cryptic error |
 | A8 | Someone asks for a clip | The moment's timecode and a link to the report | Video in the first version |
 | A9 | Asking after Sam's return | Answers from all six studies, each saying which study and when | Not knowing whether it's up to date |
@@ -235,9 +265,9 @@ End to end, as drawn in the mockups.
    *IT mockup frame 6; team mockup frame 7.*
 5. **End of life** (IT, askers): I9 → A10. *IT mockup frame 7.*
 
-6. **Publish** (researchers): P1 → P3 → P2 → P4 → hand-off to IT (P5) or the
-   agent pack (P10); later P7 and P6, P9, and the P8 stop. *Publisher mockup,
-   frames 1–9.*
+6. **Publish** (researchers): P3 → P2 request → P6/P2 publish → P1/P4 review →
+   done; or the agent pack (P10); later P7, P9. *Publisher mockup v2, frames
+   1–12.* P8 isn't drawn in v2 (§9 Q11).
 
 ## 9. Open product questions for the owner
 
@@ -259,6 +289,42 @@ End to end, as drawn in the mockups.
    cloud import's sign-in, with the consent gates that import already met
    (Appendix A). Either way, creating the agent itself stays a guided last
    step the researcher does in the builder.
+
+### Proposed answers from the 22 Nov 2026 review (owner to confirm)
+
+The review and its proportion pass proposed these; the v2 mockup draws them.
+
+- **B. First hand-off:** a request with no research in it; IT sets the agent
+  up empty; researchers publish into it from the Mac. Day 1 and a return
+  months later are the same publish, and no participant data travels by email.
+- **C. No publish waits on IT:** "Request Permission…" drafts a request; the
+  researcher publishes when IT agrees. Nothing is in flight in between.
+- **D. HTML stays where it is:** File ▸ Export Report…, not an option in
+  Publish.
+- **F. Per project,** not per collection: person to ask and end date.
+- **G. No separate "Published" window** for now: reopening Publish shows what
+  was published, when, and where.
+- **H. File ▸ Publish…,** under Export Report…, plus the sidebar context menu
+  and the toolbar export popover. No shortcut.
+- **I. Flagged quotes:** Include / Leave Out per quote; no bulk actions or
+  "Edit Quote…" until real counts show the need.
+- **E (half): "Project"** on the Mac, as everywhere else in the app; "study"
+  only as the word askers see.
+
+### Still open after the review
+
+8. ~~**The published unit (A).**~~ **Decided 23 Nov 2026 (owner):** every
+   quote not hidden by default, **Starred only** as a choice at publish time
+   (§5). v2 frames 4, 7 and 12 draw it.
+9. **"Agent" has three meanings (E).** Agent Access / MCP Agents (an AI client
+   reading your project), the research agent (others ask it), the agent pack.
+   Rename one, or explain the family in one place? All terms are provisional
+   until this is decided.
+10. **The final review step's default button (J).** Publish on Return, or an
+    explicit click only, because it's a disclosure that can't be recalled for
+    an agent pack?
+11. **Is P8 (self-serve platform) in the first version?** If yes, the address
+    check sits beside "Add a Research Agent by Address…".
 
 ## 10. Out of scope for the first version
 
@@ -328,6 +394,36 @@ so the thinking isn't lost; none of it is a requirement yet.
   - Import's lesson stands: a consent check passed on our own tenant proves
     nothing, because its owner is a Global Administrator. Test on a
     client-shaped tenant.
+- **Hidden quotes come from `export_core`, not from the report payload**
+  (found 23 Nov 2026). Miro, FigJam, CSV and clips select through
+  `export_core._load_all_visible` / `_resolve_quote_ids`, which drop hidden
+  quotes even from an explicit selection. The HTML export does not: it embeds
+  the whole `/quotes` payload, hidden quotes included with `is_hidden: true`,
+  and the "N hidden quotes" badge (`Counter`, not gated by `isExportMode()`)
+  lets a reader open their previews. Publish must take the first path.
+- **Build constraints from the 22 Nov 2026 review** (recorded, not drawn):
+  - Research agents and published projects are identified by ids the research
+    agent issues, bound to the publisher's directory identity; never by name or
+    title (P7, P9).
+  - Publish runs its own name, place, employer and contact-details check on
+    what will be published, because redaction is off by default and redacts
+    rather than flags. The copy always says what it checks and that it can
+    miss things, including when it finds nothing.
+  - End dates are stored with a time zone; "after D" means after the end of D
+    in that zone.
+  - Bristlenose won't publish where nothing checks who is signing in (P8).
+  - Strings: whole-sentence plural keys; no possessives on typed names; lists
+    through `ListFormatter`; locale quote pairs around typed names; a Swift
+    absolute-date format registered in `docs/design-shared-formats.md` before
+    any date string is written; rows for the vendor nouns (Copilot agent, Gem,
+    GPT, Claude Project) in `bristlenose/locales/vendor-terms.json`; rows in
+    `docs/design-i18n.md`'s surfaces table for the IT request, the setup
+    guide, the agent-pack instructions and the agent's own replies.
+  - Mac: one fixed-size sheet modelled on `FigJamSheet.swift`; native radio
+    group; `NSSavePanel`; `NSSharingServicePicker` for Share…; alerts for
+    refusals and the replace confirmation; button rows that stack rather than
+    truncate (`docs/design-control-labels.md`); focus moves to each step's
+    heading; count changes announced.
 - **The same code as serve mode**, not a fork: `grounding.py`, `mcp_server.py`,
   `INVARIANTS`; the study snapshot shares its data with the HTML export
   (`EMBED_PATH_TEMPLATES` in `routes/export.py`).

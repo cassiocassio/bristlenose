@@ -60,7 +60,8 @@ struct TimelineMenuRequest: Equatable {
                   let title = row["title"] as? String else { return nil }
             return Lane(lanes: n, title: title, hint: row["hint"] as? String ?? "")
         }
-        guard laneItems.count == rows.count, !laneItems.isEmpty else { return nil }
+        // No details is a real answer: a session that can draw only Compact offers none.
+        guard laneItems.count == rows.count else { return nil }
         self.init(on: on, lanes: lanes, anchor: CGRect(x: x, y: y, width: w, height: h),
                   journey: journey, timeline: timeline, detail: detail, laneItems: laneItems)
     }
@@ -91,12 +92,13 @@ enum TimelineMenuEntry: Equatable {
     case header(String)
 
     static func entries(for r: TimelineMenuRequest) -> [TimelineMenuEntry] {
-        [
+        let toggle: [TimelineMenuEntry] = [
             .item(title: r.journey, subtitle: nil, checked: !r.on, pick: r.on ? .toggle : .none),
             .item(title: r.timeline, subtitle: nil, checked: r.on, pick: r.on ? .none : .toggle),
-            .separator,
-            .header(r.detail),
-        ] + r.laneItems.map {
+        ]
+        // The page sends only the details this session can draw, and none when there is no choice.
+        if r.laneItems.isEmpty { return toggle }
+        return toggle + [.separator, .header(r.detail)] + r.laneItems.map {
             .item(title: $0.title, subtitle: $0.hint.isEmpty ? nil : $0.hint,
                   checked: r.lanes == $0.lanes, pick: .lanes($0.lanes))
         }

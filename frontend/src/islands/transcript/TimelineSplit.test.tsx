@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { TimelineSplit } from "./TimelineSplit";
-import { getTranscriptTimeline, resetTranscriptTimelineStore } from "../../contexts/TranscriptTimelineStore";
+import {
+  getTranscriptTimeline,
+  resetTranscriptTimelineStore,
+  setTimelineAvailable,
+  setTimelineLanes,
+} from "../../contexts/TranscriptTimelineStore";
 import { _resetEmbeddedCache } from "../../utils/embedded";
 import contractJson from "../../../../tests/fixtures/timeline-menu-bridge-contract.json";
 
@@ -35,6 +40,30 @@ describe("TimelineSplit", () => {
       "Full+ Themes",
     ]);
     expect(items.map((i) => i.getAttribute("aria-checked"))).toEqual(["true", "false", "false", "true", "false"]);
+  });
+
+  it("offers only the details this session can draw, ticks the one drawn, and keeps the reader's choice", () => {
+    setTimelineLanes(5);
+    setTimelineAvailable(true, 3); // quotes, but none in a theme
+    render(<TimelineSplit />);
+    fireEvent.click(screen.getByTestId("timeline-more"));
+    const items = screen.getAllByRole("menuitemradio");
+    expect(items.map((i) => i.textContent)).toEqual([
+      "User journey",
+      "Session timeline",
+      "CompactSections · Moderator · Participant",
+      "Standard+ Sentiment",
+    ]);
+    expect(items.map((i) => i.getAttribute("aria-checked"))).toEqual(["false", "true", "false", "true"]);
+    expect(getTranscriptTimeline().lanes).toBe(5);
+  });
+
+  it("offers no detail at all when only Compact can draw", () => {
+    setTimelineAvailable(true, 2);
+    render(<TimelineSplit />);
+    fireEvent.click(screen.getByTestId("timeline-more"));
+    expect(screen.getAllByRole("menuitemradio").map((i) => i.textContent)).toEqual(["User journey", "Session timeline"]);
+    expect(screen.queryByRole("separator")).toBeNull();
   });
 
   it("picks a detail, which also turns the timeline on, and closes", () => {

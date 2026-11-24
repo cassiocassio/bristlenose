@@ -94,7 +94,7 @@ export type BridgeMessage =
     }
   | { type: "store-miro-token"; token: string }
   | { type: "lens-availability"; lenses: Record<string, boolean> }
-  | { type: "timeline-state"; available: boolean; on: boolean; lanes: number }
+  | { type: "timeline-state"; available: boolean; on: boolean; lanes: number; most: number }
   | { type: "quote-edits-state"; available: boolean; on: boolean }
   | ({ type: "timeline-menu" } & WireTimelineMenu)
   | { type: "llm-failure"; kind: string; provider: string }
@@ -505,11 +505,12 @@ export function postPanelState(
  * Push the transcript's sticky-slot state, so the native View menu can offer Show / Hide Session
  * Timeline honestly and tick the current Timeline Detail. `available` is true only while a
  * transcript with a timeline is on screen (TranscriptTimelineStore); native greys the rows
- * otherwise. Posted from an effect keyed on the state, so it also fires on mount, like
+ * otherwise. `lanes` is the detail drawn; `most` the most this session can draw, so native greys
+ * the details above it. Posted from an effect keyed on the state, so it also fires on mount, like
  * `panel-state`. No-ops outside the desktop WKWebView.
  */
-export function postTimelineState(available: boolean, on: boolean, lanes: number): void {
-  postNativeMessage({ type: "timeline-state", available, on, lanes });
+export function postTimelineState(available: boolean, on: boolean, lanes: number, most = 5): void {
+  postNativeMessage({ type: "timeline-state", available, on, lanes, most });
 }
 
 /**

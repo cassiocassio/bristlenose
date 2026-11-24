@@ -40,6 +40,8 @@ import { TranscriptTimeline } from "./transcript/TranscriptTimeline";
 import {
   onTimelineWillChange,
   setTimelineAvailable,
+  mostLanes,
+  shownLanes,
   useTranscriptTimeline,
 } from "../contexts/TranscriptTimelineStore";
 import "./transcript/transcript-gutter.css";
@@ -699,10 +701,13 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     };
   }, [sessionId, tapestryKey]);
   const hasTimeline = !!tapestry && tapestry.session_id === sessionId && tapestry.turns.length > 0;
+  // The most detail this session can draw: the split control offers no more, and the timeline draws
+  // no more, while the reader's own choice is kept for the next session.
+  const most = hasTimeline ? mostLanes(tapestry.quotes) : 5;
   useEffect(() => {
-    setTimelineAvailable(hasTimeline);
+    setTimelineAvailable(hasTimeline, most);
     return () => setTimelineAvailable(false);
-  }, [hasTimeline]);
+  }, [hasTimeline, most]);
   const showTimeline = hasTimeline && timeline.on;
 
   // Switching keeps the reader's place: the paragraph under the header stays the same distance
@@ -1021,7 +1026,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         {showTimeline && tapestry && (
           <TranscriptTimeline
             session={tapestry}
-            lanes={timeline.lanes}
+            lanes={shownLanes(timeline)}
             bodyRef={bodyRef}
             headerRef={headerRef}
             nameOf={speakerNameOf}

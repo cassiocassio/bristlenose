@@ -80,7 +80,7 @@ import {
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
-import { applyTimelineMenuAction, useTranscriptTimeline } from "../contexts/TranscriptTimelineStore";
+import { applyTimelineMenuAction, shownLanes, useTranscriptTimeline } from "../contexts/TranscriptTimelineStore";
 import { panelFit, shallowEqual, useSidebarSelector, wantedWidth, type SidebarState } from "../contexts/SidebarStore";
 
 // What this layout reads of the sidebar store: the panel fit (which flips at a few widths, not per
@@ -454,8 +454,10 @@ function AppShell() {
   const transcriptTimeline = useTranscriptTimeline();
   useEffect(() => {
     if (!embedded) return;
-    postTimelineState(transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes);
-  }, [embedded, transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes]);
+    // The detail drawn (the reader's choice, down to what this session has) and the most it can draw.
+    postTimelineState(transcriptTimeline.available, transcriptTimeline.on, shownLanes(transcriptTimeline),
+      transcriptTimeline.most);
+  }, [embedded, transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes, transcriptTimeline.most]);
 
   // View ▸ Show / Hide Quote Edits (QuoteEditsStore). Live only on a transcript, and cleared on
   // leaving it, so the root class and the menu's tick never outlive the page they describe.

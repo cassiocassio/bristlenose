@@ -45,6 +45,54 @@ describe("SessionTapestry", () => {
     expect(document.querySelectorAll(".bn-tp-theme")).toHaveLength(1);
   });
 
+  it("leaves out a lane the session has nothing for, and its height, but always draws the participant", () => {
+    const draw = (s: TapestrySession, sPerPx = 1) => {
+      document.body.innerHTML = "";
+      render(<SessionTapestry session={s} sPerPx={sPerPx} nameOf={(c) => c} onJump={() => {}} />);
+      const svg = document.querySelector<SVGSVGElement>(".bn-tapestry-svg")!;
+      return { lanes: svg.querySelectorAll(".bn-tp-lane").length, h: Number(svg.getAttribute("height")), pptY: Number(svg.dataset.pptY) };
+    };
+    const full = draw(session);
+    expect(full.lanes).toBe(5);
+
+    const noThemes = draw({ ...session, quotes: session.quotes.map((q) => ({ ...q, theme: null })) });
+    expect(noThemes.lanes).toBe(4);
+    expect(document.querySelectorAll(".bn-tp-theme")).toHaveLength(0);
+    expect(noThemes.h).toBeLessThan(full.h);
+
+    const solo = draw({ ...session, turns: session.turns.filter((tn) => tn.speaker === "p1") });
+    expect(solo.lanes).toBe(4);
+    expect(solo.pptY).toBeLessThan(full.pptY);
+    expect(solo.h).toBeLessThan(full.h);
+
+    const noSections = draw({ ...session, sections: [] });
+    expect(noSections.lanes).toBe(4);
+    expect(noSections.pptY).toBeLessThan(full.pptY);
+
+    const noQuotes = draw({ ...session, sections: [], quotes: [], turns: [{ t0: 0, t1: 600, speaker: "p1", colour: null }] });
+    expect(noQuotes.lanes).toBe(1); // the participant, alone
+    expect(document.querySelector(".bn-tp-axis")).toBeNull();
+    expect(document.querySelectorAll(".bn-tp-tick").length).toBeGreaterThan(0); // the time axis stays
+  });
+
+  it("decides the lanes from the whole session, never from the zoom", () => {
+    // A 1 s moderator turn is too thin to draw at 20 s/px; the Moderator lane stays all the same.
+    const brief = { ...session, turns: [{ t0: 0, t1: 1, speaker: "m1", colour: null }, { t0: 1, t1: 600, speaker: "p1", colour: null }] };
+    render(<SessionTapestry session={brief} sPerPx={20} nameOf={(c) => c} onJump={() => {}} />);
+    expect(document.querySelectorAll(".bn-tp-lane")).toHaveLength(5);
+  });
+
+  it("makes the themes lane as tall as the rows it uses", () => {
+    const one = Number(render(<SessionTapestry session={session} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />)
+      .container.querySelector(".bn-tapestry-svg")!.getAttribute("height"));
+    document.body.innerHTML = "";
+    const two = { ...session, quotes: [...session.quotes, { ...session.quotes[2], t0: 520, theme: "Another theme" }] };
+    const h2 = Number(render(<SessionTapestry session={two} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />)
+      .container.querySelector(".bn-tapestry-svg")!.getAttribute("height"));
+    // One row more is one theme row (chip height + gap, 18 + 4 at the shipped tuning).
+    expect(h2 - one).toBe(22);
+  });
+
   it("flags every visit and marks the first, the one the row's journey chain names", () => {
     const back = { ...session, sections: [
       { t0: 40, label: "Basket" }, { t0: 200, label: "Modal" }, { t0: 300, label: "Basket" },

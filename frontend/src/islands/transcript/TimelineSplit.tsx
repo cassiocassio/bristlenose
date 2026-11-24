@@ -21,8 +21,9 @@ import { useMenuKeyboard } from "../../hooks/useMenuKeyboard";
 import { postTimelineMenu } from "../../shims/bridge";
 import { isEmbedded } from "../../utils/embedded";
 import {
-  TIMELINE_LANES,
+  offeredLanes,
   setTimelineLanes,
+  shownLanes,
   setTimelineOn,
   toggleTimeline,
   useTranscriptTimeline,
@@ -37,7 +38,11 @@ const DETAIL_KEY: Record<TimelineLanes, string> = {
 
 export function TimelineSplit() {
   const { t } = useTranslation();
-  const { on, lanes } = useTranscriptTimeline();
+  const timeline = useTranscriptTimeline();
+  const { on } = timeline;
+  // Only the details this session can draw: none at all when only Compact can (one is no choice).
+  const lanes = shownLanes(timeline);
+  const offered = offeredLanes(timeline.most);
   const moreRef = useRef<HTMLButtonElement | null>(null);
   const { open, setOpen, toggle, containerRef } = useDropdown();
   const { menuRef } = useMenuKeyboard({ open, onClose: () => setOpen(false), triggerRef: moreRef });
@@ -76,7 +81,7 @@ export function TimelineSplit() {
         journey: t("sessions.colJourney"),
         timeline: t("sessions.tapestry.label"),
         detail: t("sessions.tapestry.detail"),
-        lanes: TIMELINE_LANES.map((n) => ({ lanes: n, title: t(DETAIL_KEY[n]), hint: hint[n] })),
+        lanes: offered.map((n) => ({ lanes: n, title: t(DETAIL_KEY[n]), hint: hint[n] })),
       },
     });
     setNativeOpen(true);
@@ -144,8 +149,8 @@ export function TimelineSplit() {
         <ul ref={menuRef} role="menu" className="export-dropdown-menu" aria-label={t("sessions.tapestry.detail")}>
           {item("chain", !on, t("sessions.colJourney"), () => setTimelineOn(false))}
           {item("timeline", on, t("sessions.tapestry.label"), () => setTimelineOn(true))}
-          <li role="separator" className="export-dropdown-separator" />
-          {TIMELINE_LANES.map((n) => item(`lanes-${n}`, lanes === n, t(DETAIL_KEY[n]), () => setTimelineLanes(n), hint[n]))}
+          {offered.length > 0 && <li role="separator" className="export-dropdown-separator" />}
+          {offered.map((n) => item(`lanes-${n}`, lanes === n, t(DETAIL_KEY[n]), () => setTimelineLanes(n), hint[n]))}
         </ul>
       )}
     </div>

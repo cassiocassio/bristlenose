@@ -61,6 +61,19 @@ struct TimelineMenuTests {
         #expect(off[1] == .item(title: "Session timeline", subtitle: nil, checked: false, pick: .toggle))
     }
 
+    /// A session that can draw only Compact: the page sends no details, and the menu is the toggle alone.
+    @Test func noDetailsMeansNoDetailSection() throws {
+        var body = try wire(on: true)
+        var labels = try #require(body["labels"] as? [String: Any])
+        labels["lanes"] = [[String: Any]]()
+        body["labels"] = labels
+        let entries = TimelineMenuEntry.entries(for: try #require(TimelineMenuRequest(message: body)))
+        #expect(entries == [
+            .item(title: "User journey", subtitle: nil, checked: false, pick: .toggle),
+            .item(title: "Session timeline", subtitle: nil, checked: true, pick: .none),
+        ])
+    }
+
     @Test func picksSendTheViewMenusOwnActions() {
         #expect(TimelineMenuEntry.Pick.none.action == nil)
         #expect(TimelineMenuEntry.Pick.toggle.action?.name == "toggleSessionTimeline")

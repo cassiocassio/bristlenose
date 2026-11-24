@@ -436,6 +436,8 @@ final class BridgeHandler: ObservableObject {
     @Published var timelineAvailable = false
     @Published var timelineOn = false
     @Published var timelineLanes = 3
+    /// The most detail the session on screen can draw (2, 3 or 5): Timeline Detail ▸ greys the rest.
+    @Published var timelineMost = 5
 
     /// View ▸ Show / Hide Quote Edits (docs/design-quote-edits-view.md): whether a
     /// transcript is on screen, and whether the transcript is showing how each
@@ -1609,9 +1611,11 @@ final class BridgeHandler: ObservableObject {
             let available = body["available"] as? Bool ?? false
             let on = body["on"] as? Bool ?? false
             let lanes = body["lanes"] as? Int ?? 3
+            let most = body["most"] as? Int ?? 5
             if available != timelineAvailable { timelineAvailable = available }
             if on != timelineOn { timelineOn = on }
             if lanes != timelineLanes { timelineLanes = lanes }
+            if most != timelineMost { timelineMost = most }
 
         case "quote-edits-state":
             // Sole writer, equality-guarded, same shape as `timeline-state`.
@@ -1856,6 +1860,7 @@ final class BridgeHandler: ObservableObject {
         timelineAvailable = false
         timelineOn = false
         timelineLanes = 3
+        timelineMost = 5
         quoteEditsAvailable = false
         quoteEditsOn = false
         // Same discipline, and it was missed when these shipped: all eight

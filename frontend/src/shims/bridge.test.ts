@@ -299,8 +299,8 @@ describe("installBridge", () => {
 describe("postTimelineState", () => {
   it("posts the transcript's sticky-slot state for the View menu", () => {
     const post = installMockWebkit();
-    postTimelineState(true, false, 3);
-    expect(post).toHaveBeenCalledWith({ type: "timeline-state", available: true, on: false, lanes: 3 });
+    postTimelineState(true, false, 3, 5);
+    expect(post).toHaveBeenCalledWith({ type: "timeline-state", available: true, on: false, lanes: 3, most: 5 });
   });
 });
 

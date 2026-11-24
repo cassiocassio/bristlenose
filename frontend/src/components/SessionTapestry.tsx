@@ -244,9 +244,17 @@ export default function SessionTapestry({
   const clips = sPerPx <= CLIP_THRESHOLD;
   const ownInk = useMemo(() => screenInk(s.turns.flatMap((tn) => (tn.colour ? [tn.colour] : []))), [s.turns]);
   const labelInk = clipInk ?? ownInk;
-  // Lane geometry follows the tuned flag and clip heights (defaults: the shipped layout).
-  const MT = { y: P.flagH + 12, h: P.clipH };
-  const PT = { y: P.flagH + 12 + P.clipH + 3, h: P.clipH + 2 };
+  // A lane with nothing in it for this session is not drawn and takes no height: the session's own
+  // data decides, never the zoom or the scroll. The participant track always draws (it is where the
+  // pointer jumps and previews), and the time axis always draws.
+  const hasSections = s.sections.length > 0;
+  const hasTeam = s.turns.some(teamTurn);
+  // Lane geometry follows the tuned flag and clip heights (defaults: the shipped layout). Without
+  // flags the tracks still keep room above them for the scene notches and the player's head.
+  const trackTop = hasSections ? P.flagH + 12 : 12;
+  const MT = { y: trackTop, h: P.clipH };
+  const PT = { y: hasTeam ? trackTop + P.clipH + 3 : trackTop, h: P.clipH + 2 };
+  const bandY = hasTeam ? MT.y : PT.y; // the top of the speaker band, whichever track is first
   // One geometry for a clip's fill, its window onto the scene strip and its edge: an inset rounded
   // rect when the scale shows clips, a bare sliver above the threshold. Null for a clip too thin to draw.
   const clipGeom = (tn: TapestrySession["turns"][number]) => {
@@ -257,13 +265,42 @@ export default function SessionTapestry({
     if (w < 1) return null;
     return { x: x0 + 0.5, y: tr.y, w: Math.max(1, w - 1), h: tr.h, rx: Math.min(3, w / 2) };
   };
+  // Theme spans: first to last quote of each theme, packed into rows below.
+  const spans = useMemo(() => {
+    const by = new Map<string, { t0: number; t1: number; n: number }>();
+    for (const q of s.quotes) {
+      if (!q.theme) continue;
+      const sp = by.get(q.theme) ?? { t0: q.t0, t1: q.t0, n: 0 };
+      sp.t0 = Math.min(sp.t0, q.t0);
+      sp.t1 = Math.max(sp.t1, q.t0);
+      sp.n += 1;
+      by.set(q.theme, sp);
+    }
+    return [...by.entries()].sort((a, b) => a[1].t0 - b[1].t0);
+  }, [s.quotes]);
   const SE = { mid: PT.y + PT.h + 41, amp: 30 };
   const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
-  // Fewer lanes stop drawing below a lane; the geometry above stays the one layout.
-  const showSentiment = lanes >= 3;
-  const showThemes = lanes >= 5;
-  const lanesBottom = showThemes ? TG.y + TG.row * TG.rows : showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1;
-  const H = showThemes ? TG.y + TG.row * TG.rows + 14 : lanesBottom + 16;
+  // Fewer lanes (the transcript's choice) stop drawing below a lane; the geometry above stays the one layout.
+  const showSentiment = lanes >= 3 && s.quotes.length > 0;
+
+  // Theme spans, packed into at most TG.rows rows; the lane is as tall as the rows it uses.
+  const themeEnds = Array(TG.rows).fill(-1e9) as number[];
+  const themeLayout = spans.map(([theme, sp]) => {
+    const x0 = x(sp.t0);
+    const x1 = Math.max(x(sp.t1), x0 + 6);
+    const row = themeEnds.indexOf(Math.min(...themeEnds));
+    const lx = Math.max(x0, themeEnds[row] + 4);
+    // Truncated only at the slice's edge, never to the span: the chip marks where the theme
+    // starts (its left edge, on the timecode), and fades out to the right.
+    const text = fit(theme, W - RIGHT - lx - 2 * P.themeX, F.tag);
+    const tw = text ? measure(text, F.tag) : 0;
+    themeEnds[row] = Math.max(x1, lx + tw + 2 * P.themeX);
+    return { theme, x0, x1, row, lx, text, tw };
+  });
+  const themeRows = themeLayout.reduce((n, l) => Math.max(n, l.row + 1), 0);
+  const showThemes = lanes >= 5 && themeRows > 0;
+  const lanesBottom = showThemes ? TG.y + TG.row * themeRows : showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1;
+  const H = showThemes ? lanesBottom + 14 : lanesBottom + 16;
 
   // While a quote is open, ← → step quotes and Esc closes, whatever has focus:
   // WebKit does not focus an SVG element on click, so a bar-scoped handler let
@@ -356,20 +393,6 @@ export default function SessionTapestry({
     return i;
   };
 
-  // Theme spans: first to last quote of each theme, packed into rows.
-  const spans = useMemo(() => {
-    const by = new Map<string, { t0: number; t1: number; n: number }>();
-    for (const q of s.quotes) {
-      if (!q.theme) continue;
-      const sp = by.get(q.theme) ?? { t0: q.t0, t1: q.t0, n: 0 };
-      sp.t0 = Math.min(sp.t0, q.t0);
-      sp.t1 = Math.max(sp.t1, q.t0);
-      sp.n += 1;
-      by.set(q.theme, sp);
-    }
-    return [...by.entries()].sort((a, b) => a[1].t0 - b[1].t0);
-  }, [s.quotes]);
-
   // The popover floats under its bar — over the themes track, not below the slice — with its
   // arrow on the bar. Measured after layout: the slice scrolls, the popover does not.
   const selQ = selected >= 0 ? s.quotes[selected] : undefined;
@@ -414,8 +437,6 @@ export default function SessionTapestry({
   const top = hotFlag >= 0 ? hotFlag : lifted;
   const flagOrder = s.sections.map((_, i) => i).filter((i) => i !== top);
   if (top >= 0) flagOrder.push(top); // raised or hot flag draws last, on top
-
-  const themeEnds = Array(TG.rows).fill(-1e9) as number[];
 
   // The reading window and its drag (the transcript): dragging it scrolls the page, as the
   // minimap's viewport does; a click without a drag jumps like the speaker lane.
@@ -505,15 +526,15 @@ export default function SessionTapestry({
               <stop offset="1" style={{ stopColor: "var(--bn-colour-badge-bg)", stopOpacity: 0 }} />
             </linearGradient>
           </defs>
-          <text className="bn-tp-lane" aria-hidden="true" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>
-          <text className="bn-tp-lane" aria-hidden="true" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
+          {hasSections && <text className="bn-tp-lane" aria-hidden="true" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>}
+          {hasTeam && <text className="bn-tp-lane" aria-hidden="true" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>}
           <text className="bn-tp-lane" aria-hidden="true" x={12} y={PT.y + PT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
           {showSentiment && <text className="bn-tp-lane" aria-hidden="true" x={12} y={SE.mid + centre(F.px.lane)}>{lane(t("sessions.colSentiment"))}</text>}
           {showThemes && <text className="bn-tp-lane" aria-hidden="true" x={12} y={TG.y + P.themeH / 2 + centre(F.px.lane)}>{lane(t("quotes.themes"))}</text>}
 
           {/* Speaker clips */}
-          <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
-            height={PT.y + PT.h - MT.y + 2} rx={4} />
+          <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={bandY - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
+            height={PT.y + PT.h - bandY + 2} rx={4} />
           {s.turns.map((tn, i) => {
             const g = clipGeom(tn);
             if (!g) return null;
@@ -570,7 +591,7 @@ export default function SessionTapestry({
           {/* Notches: where the scene changed, just above the tracks. Half-pixel like the flag staffs. */}
           {featureFlags.sceneNotches && s.strip?.edges.filter((t) => t <= s.duration_seconds).map((t) => (
             <line key={t} className="bn-tp-notch" x1={Math.round(x(t)) + 0.5} x2={Math.round(x(t)) + 0.5}
-              y1={MT.y - 6} y2={MT.y - 2} />
+              y1={bandY - 6} y2={bandY - 2} />
           ))}
 
           {/* Section flags */}
@@ -611,7 +632,7 @@ export default function SessionTapestry({
                   setHotFlag(-1);
                   setPlayhead(null);
                 }}>
-                <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={MT.y - 2} />
+                <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={bandY - 2} />
                 {/* Half-pixel coordinates: a 1px stroke on whole pixels smears across two and
                     reads as a heavier line than the hairline it is. */}
                 <path d={`M${fx + 1.5},2.5 h${pw} l-5,${half} l5,${half} h-${pw} z`}
@@ -623,8 +644,8 @@ export default function SessionTapestry({
 
           {thumbs && <ThumbOutline sessionId={s.session_id} x={x} y={PT.y} h={PT.h} />}
           {/* Hit area over the speaker lane: hover raises a flag, click jumps to exactly that moment */}
-          <rect ref={laneRef} className="bn-tp-hit" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
-            height={PT.y + PT.h - MT.y + 2} fill="transparent"
+          <rect ref={laneRef} className="bn-tp-hit" x={TAPESTRY_GUTTER} y={bandY - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
+            height={PT.y + PT.h - bandY + 2} fill="transparent"
             onMouseEnter={() => {
               if (!thumbs) return;
               framesFor(s.session_id, s.frames_key); // starts the fetch inside the open delay
@@ -656,20 +677,20 @@ export default function SessionTapestry({
             }} />
           {win && (
             // What the reader can see (the transcript): over the lanes, under the flags' labels.
-            <rect className={`bn-tp-window${onScrub ? " draggable" : ""}`} x={win.x0} y={MT.y - 4} width={win.x1 - win.x0}
-              height={lanesBottom + 3 - (MT.y - 4)} rx={3} data-testid="tapestry-window"
+            <rect className={`bn-tp-window${onScrub ? " draggable" : ""}`} x={win.x0} y={bandY - 4} width={win.x1 - win.x0}
+              height={lanesBottom + 3 - (bandY - 4)} rx={3} data-testid="tapestry-window"
               onPointerDown={onScrub ? windowDown : undefined}
               onPointerMove={onScrub ? windowMove : undefined}
               onPointerUp={onScrub ? windowUp : undefined}
               onPointerCancel={onScrub ? windowCancel : undefined} />
           )}
           {playhead !== null && (
-            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={MT.y - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
+            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={bandY - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
           )}
           {player !== null && (
             <g className="bn-tp-player" data-testid="tapestry-player">
-              <path d={`M${x(player) - 4},${MT.y - 9} h8 l-4,5 z`} />
-              <line x1={x(player)} x2={x(player)} y1={MT.y - 5} y2={lanesBottom + 3} />
+              <path d={`M${x(player) - 4},${bandY - 9} h8 l-4,5 z`} />
+              <line x1={x(player)} x2={x(player)} y1={bandY - 5} y2={lanesBottom + 3} />
             </g>
           )}
 
@@ -736,17 +757,8 @@ export default function SessionTapestry({
           })}
 
           {/* Theme spans */}
-          {showThemes && spans.map(([theme, sp]) => {
-            const x0 = x(sp.t0);
-            const x1 = Math.max(x(sp.t1), x0 + 6);
-            const row = themeEnds.indexOf(Math.min(...themeEnds));
-            const lx = Math.max(x0, themeEnds[row] + 4);
+          {showThemes && themeLayout.map(({ theme, x0, x1, row, lx, text, tw }) => {
             const y = TG.y + row * TG.row;
-            // Truncated only at the slice's edge, never to the span: the chip marks where the theme
-            // starts (its left edge, on the timecode), and fades out to the right.
-            const text = fit(theme, W - RIGHT - lx - 2 * P.themeX, F.tag);
-            const tw = text ? measure(text, F.tag) : 0;
-            themeEnds[row] = Math.max(x1, lx + tw + 2 * P.themeX);
             return (
               <g key={theme} className="bn-tp-theme" aria-hidden="true" onMouseEnter={() => setThemeFocus(theme)}
                 onMouseLeave={() => setThemeFocus(null)}>

@@ -1276,14 +1276,17 @@ private struct ViewMenuContent: View {
         Menu(i18n.t("desktop.menu.view.timelineDetail")) {
             // Radio-style, like All Quotes / Starred Quotes Only above: the
             // ticked detail is the SPA's, and picking one turns the timeline on.
+            // A detail this session has no lanes for is dimmed, not removed: menus dim, never hide.
             ForEach(Self.timelineDetails) { detail in
                 Toggle(i18n.t(detail.key), isOn: Binding(
                     get: { bridgeHandler.timelineLanes == detail.lanes },
                     set: { _ in bridgeHandler.menuAction("setSessionTimelineLanes", payload: ["lanes": detail.lanes]) }
                 ))
+                .disabled(detail.lanes > bridgeHandler.timelineMost)
             }
         }
-        .disabled(!(bridgeHandler.canDispatch && bridgeHandler.timelineAvailable))
+        // Only Compact drawable is no choice: the whole submenu dims.
+        .disabled(!(bridgeHandler.canDispatch && bridgeHandler.timelineAvailable) || bridgeHandler.timelineMost <= 2)
 
         // How the transcript became each quote (docs/design-quote-edits-view.md).
         // Off by default and not remembered; no shortcut. Live only while a

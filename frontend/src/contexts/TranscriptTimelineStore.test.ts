@@ -2,11 +2,14 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   applyTimelineMenuAction,
   getTranscriptTimeline,
+  mostLanes,
+  offeredLanes,
   onTimelineWillChange,
   resetTranscriptTimelineStore,
   setTimelineAvailable,
   setTimelineLanes,
   setTimelineOn,
+  shownLanes,
   toggleTimeline,
 } from "./TranscriptTimelineStore";
 import contractJson from "../../../tests/fixtures/report-prefs-contract.json";
@@ -15,7 +18,28 @@ beforeEach(() => resetTranscriptTimelineStore());
 
 describe("TranscriptTimelineStore", () => {
   it("starts on the chain at the Standard detail", () => {
-    expect(getTranscriptTimeline()).toEqual({ on: false, lanes: 3, available: false });
+    expect(getTranscriptTimeline()).toEqual({ on: false, lanes: 3, available: false, most: 5 });
+  });
+
+  it("draws the reader's detail down to what the session has, and keeps the choice for the next", () => {
+    setTimelineLanes(5);
+    setTimelineAvailable(true, 3);
+    expect(shownLanes(getTranscriptTimeline())).toBe(3);
+    expect(getTranscriptTimeline().lanes).toBe(5);
+    expect(JSON.parse(localStorage.getItem("bn-transcript-timeline")!)).toMatchObject({ lanes: 5 });
+    setTimelineAvailable(true, 5);
+    expect(shownLanes(getTranscriptTimeline())).toBe(5);
+    setTimelineAvailable(false, 2); // leaving the transcript forgets the session's limit
+    expect(getTranscriptTimeline().most).toBe(5);
+  });
+
+  it("reads the most detail from the quotes, and offers a choice only when there is one", () => {
+    expect(mostLanes([])).toBe(2);
+    expect(mostLanes([{ theme: null }])).toBe(3);
+    expect(mostLanes([{ theme: null }, { theme: "Trust" }])).toBe(5);
+    expect(offeredLanes(5)).toEqual([2, 3, 5]);
+    expect(offeredLanes(3)).toEqual([2, 3]);
+    expect(offeredLanes(2)).toEqual([]);
   });
 
   it("remembers on and the detail for the viewer, but never availability", () => {
@@ -79,6 +103,6 @@ describe("TranscriptTimelineStore", () => {
     localStorage.setItem("bn-transcript-timeline", "{\"on\":\"yes\",\"lanes\":7}");
     vi.resetModules();
     const fresh = await import("./TranscriptTimelineStore");
-    expect(fresh.getTranscriptTimeline()).toEqual({ on: false, lanes: 3, available: false });
+    expect(fresh.getTranscriptTimeline()).toEqual({ on: false, lanes: 3, available: false, most: 5 });
   });
 });

@@ -1,6 +1,15 @@
 # Lens-wide design-system audit — diagnose and fix
 
-**Status:** Plan, awaiting review + triage (6 Aug 2026). Nothing implemented.
+**Status:** Plan, awaiting review + triage (6 Aug 2026). Phase 3 (icons) done 16 Oct 2026.
+Phase 0 partly built 4 Nov 2026: `scripts/audit-css.py` scores the CSS source and
+`experiments/token-xray/live-scan.mjs` scans the rendered page; neither runs in CI. On 24 Nov
+2026 the tooling question was reopened and researched; the planned spike is §8. Planning
+only, nothing on the App Store path depends on it.
+
+**Scope (owner, 24 Nov 2026):** the React SPA and the CSS it draws with. The deprecated
+static report is out of scope entirely: its CSS-only files stay out of every score, and a
+shared-CSS change that shifts its output is accepted unchecked. The Mac app's native UI is
+the Mac's own business.
 
 Extends the **design police** method from `docs/design-dashboard-widgets/design-police.md`
 from one parked widget effort to **all six lenses**. That doc is the method and stays the
@@ -31,22 +40,28 @@ all.
 
 ## 2. What we borrow from outside (prior art)
 
-We are a one-person system with two render paths and three consumers (web SPA, static
-render, native shell). The prior art that fits that shape:
+We are a one-person system. When this was written (6 Aug) that meant two render paths and
+three consumers (web SPA, static render, native shell); since 24 Nov the static render is
+out of scope, so it is one render path in two hosts (browser and the Mac's WKWebView). The
+prior art that fits that shape:
 
 | Source | What we take | Where it lands |
 |---|---|---|
 | [stylelint-value-no-unknown-custom-properties](https://stylelint.io/awesome-stylelint/) | Fails on a `var(--x)` that no token defines. Would have caught `--bn-colour-danger` the day it was written. **Highest leverage single tool for this codebase.** | Phase 0 (report), Phase 1 (error) |
 | [stylelint-declaration-strict-value](https://github.com/AndyOGo/stylelint-declaration-strict-value) | Requires a token (not a literal) for named properties — colour, spacing, radius. | Phase 0 (report), Phase 6 (error) |
-| [Omlet CLI](https://www.npmjs.com/package/@omlet/cli) (`@omlet/cli`, [Zeplin](https://github.com/zeplin/omlet)) | Static React component analytics — "see what new custom components are being created and review whether they should be added to your design system". Automates the page-local-component finding permanently. | Phase 0 |
+| [Omlet CLI](https://www.npmjs.com/package/@omlet/cli) (`@omlet/cli`, [Zeplin](https://github.com/zeplin/omlet)) | Static React component analytics — "see what new custom components are being created and review whether they should be added to your design system". Automates the page-local-component finding permanently. *24 Nov 2026: its makers blogged on 28 Apr 2026 that it is going open source under MIT; whether the hosted service continues is unconfirmed. §8 prefers a small script (react-scanner raw report or the TypeScript compiler) that classifies each component by where it is defined and how many files import it.* | Phase 0 |
 | [DTCG format + Style Dictionary 4](https://styledictionary.com/info/dtcg/) — spec [stable since Oct 2025](https://www.w3.org/community/design-tokens/) | One token source → CSS custom properties + Swift constants + Figma variables. The only real fix for the web/native/Figma three-way drift. | Phase 1 decision point |
 | [Brad Frost, *Maintaining Design Systems*](https://atomicdesign.bradfrost.com/chapter-5/) | The **interface inventory** as a recurring ritual, not a launch task. | Phase 6 cadence |
 | [Nathan Curtis, *Naming Tokens in Design Systems*](https://medium.com/eightshapes-llc/naming-tokens-in-design-systems-9e86c7444676) and [*On Classification*](https://medium.com/eightshapes-llc/on-classification-in-design-systems-6b33b97f4a8f) | Taxonomy discipline — the vocabulary for settling our three-way naming split. | Phase 2 |
 | [Design-system maintenance practice](https://www.magicpatterns.com/blog/design-system-maintenance) | Quarterly audit cadence as the sweet spot; a component **lifecycle with an owner** prevents more drift than any review checklist; watch for components that technically use the library but override so many props they've gone custom. | Phase 6 |
 
-Deliberately **not** adopting: Storybook (a third render path for a system that already
-struggles with two), and any hosted design-system SaaS (Supernova/Knapsack/Backlight —
+Deliberately **not** adopting: any hosted design-system SaaS (Supernova/Knapsack/Backlight —
 priced and shaped for teams).
+
+*Storybook was on that list on 6 Aug, as "a third render path for a system that already
+struggles with two". The second path was the static render, now out of scope, so that
+reason no longer holds. Reopened 24 Nov 2026: Storybook, hosted visual diffs and plain
+Playwright screenshots go through the spike in §8 rather than being decided here.*
 
 ## 3. Diagnosis so far
 
@@ -70,7 +85,9 @@ would force 118 sites onto values that don't exist.** Fix the scale, then lint.
 **B. Three colour tokens are used but never defined.** `--bn-colour-danger`,
 `--bn-colour-success`, `--bn-colour-warning`: zero definitions, ~20 use sites, every one
 silently rendering its hex fallback and therefore blind to `data-color-theme`. This is the
-pattern the linter in Phase 0 exists to make impossible.
+pattern the linter in Phase 0 exists to make impossible. *24 Nov 2026: `warning` is now
+defined in the palettes; `danger` still has no definition and 2 use sites; `success` has
+none of either.*
 
 **C. The catalogue drifts because it re-declares the system.** `style-guide.html` opens
 with `/* Bristlenose design tokens (subset for this guide) */` and hardcodes them. A
@@ -108,7 +125,18 @@ number to move.
   orphan-class detection (TSX `className` with no CSS home), and the raw-value/breakpoint
   histogram from §3A.
 - Run `@omlet/cli` over `frontend/src` for the component-usage graph — confirm or correct
-  the ~25 page-local components counted by hand.
+  the ~25 page-local components counted by hand. *(24 Nov: or the inventory script in §8,
+  given Omlet's uncertain status.)*
+- *Added 24 Nov 2026:* a **declared-exception marker** for the odd legitimate literal, e.g.
+  `/* ds-deviation: optical nudge for the timecode glyph */` on the declaration (the CSS twin
+  of `live-scan.mjs`'s `data-ds-deviation`). `audit-css.py` counts it as *declared*, not
+  *outside*, and lists every one with its reason. The target becomes "no undeclared
+  exceptions" rather than a coverage percentage. Today `audit-css.py` strips comments first,
+  so it cannot see one.
+- *Added 24 Nov 2026:* hold the number with the CI ratchet (`docs/testing/ratchet.json`,
+  `scripts/check-ratchet.py`) so it cannot fall while the burndown runs. Baseline 24 Nov:
+  81% coverage, 91 health; 2,534 declarations through tokens, 63 literals that equal a
+  token (one-line swaps), 554 outside.
 - Output: `docs/design-system/AUDIT.md`, regenerated by one command, with the baseline
   counts as of today.
 
@@ -286,3 +314,120 @@ findings are transcribed here at the start of Phase 0 so the ledger is the singl
 5. **Native parity** is deliberately out of scope here (design-police scoped itself to
    HTML/CSS; SF Symbols are "a separate world"). Confirm that still holds — Phase 1's token
    work is the one place where a shared source would change the answer.
+   *24 Nov 2026: confirmed — "the mac stuff is the mac stuff".*
+
+## 8. Tooling spike: Playwright screenshots, Storybook, hosted diffs (planned 24 Nov 2026)
+
+*Planning only; nothing built. Source: the research report
+[`Storybook and visual regression spike`](../experiments/storybook-research/reports/Storybook%20and%20visual%20regression%20spike.md)
+and its four note files beside it, researched 24 Nov 2026. Prices and versions are as of
+that date. Every threshold below is a proposal: the research found no published framework
+for scoping this kind of spike.*
+
+### The question is which layer is missing
+
+| Layer | Tool | Good for | Status |
+|---|---|---|---|
+| Logic | Vitest (jsdom), ~1,700 tests | Behaviour; renders nothing | Live |
+| Component | Storybook | Every state of one component, in every theme and locale, per push | Candidate |
+| Page | Playwright E2E in CI, Chromium + WebKit on Linux | Mounts, links, requests, clipped labels, overflow | Live; no pixels |
+| Whole app | Guest walk, nightly (`docs/design-guest-walk.md`) | The real signed app, real macOS, real WKWebView, real journeys | Live: 22 steps, 26 captures, ~4 min (20 Oct) |
+
+- **Real WKWebView fidelity already belongs to the guest walk**, and no candidate can take
+  it over. Playwright's WebKit is a patched WebKit trunk build, not Safari; Chromatic's and
+  Percy's Safari are approximations too. Linux WebKit screenshots are a tripwire for layout
+  and token regressions, not a check of how the Mac app looks.
+- **What is missing is a deterministic pixel check on every push, and reach into odd
+  states** (empty, error, long German labels, every colour theme) that the walk can't get
+  to cheaply.
+- **Determinism is the same work whichever tool captures**: frozen clock (`page.clock`),
+  stubbed polling, `document.fonts.ready`, transitions off via `stylePath`, mouse moved
+  away, baselines made in the pinned Playwright Docker image. Playwright is the cheapest
+  place to do it.
+
+### What the research found
+
+- **Playwright `toHaveScreenshot()` is the floor** (the owner's "just extend Playwright"):
+  no new tool, tests the app as assembled, both browsers. Baselines are per OS (the
+  platform is in the filename), so they are made in Docker; the image has a remote-server
+  mode so the Mac can render in Linux without running the tests in Docker.
+- **Storybook 10.6.8 fits the stack** (React 19, Vite 8 since 10.3, Node 24, TS 6), with
+  open Vite 8 bugs but none fatal. **Storybook 11 is in beta** (11.0.0-beta.5, 23 Nov) with
+  a migration roughly 15× the size of 9→10; adopt on 11 stable, not 10.6.
+- **Mocking is where Storybook gets expensive here.** ~40 files import `utils/api.ts`
+  directly and ~30 use `useSyncExternalStore`. Cheapest route: `sb.mock` on `api.ts` in
+  `preview.ts` plus a reset hook per store (stores can't be automocked). Open bugs: #37040
+  (spy mode differs between Storybook and CI) and #32336 (files exporting a TS `enum`).
+- **Storybook's Vitest addon documents Chromium only** and has no native screenshot
+  assertion; every workaround needs the same Docker discipline as plain Playwright.
+- **Goals (a) and (b) need none of these tools.** Token coverage is a stylelint ratchet
+  (`declaration-strict-value` + `value-no-unknown-custom-properties`) beside
+  `audit-css.py`; "shared vs one-off" is an inventory script; accessibility is
+  `@axe-core/playwright` in the existing suite rather than Storybook's a11y addon.
+- **Hosted services sell review, not capture.**
+  - *Chromatic:* free is 5,000 snapshots/month, Chrome only, and pauses at the cap. At
+    ~600 snapshots a build (150 stories × light/dark × 2 locales) that is ~8 builds.
+    Safari needs Starter at $179/month. It needs Storybook, and it re-renders in its own
+    browsers.
+  - *Argos:* compares screenshots your own CI takes, so it can sit on top of the
+    Playwright shots with no Storybook, and the browser is whatever Playwright ran. Hobby is
+    free for 5,000/month (one person, 30-day retention); Pro is $100/month. Only PNGs are
+    uploaded. Platform MIT-licensed; self-hosting unsupported. That it accepts WebKit
+    screenshots is inferred, not documented.
+  - *Percy:* lists macOS Safari, but extras cost $0.036 each.
+  - *Happo:* $4 per 1,000, all browsers on every plan.
+  - *Lost Pixel:* shut down; its team joined Figma and the repo was archived on 22 Apr 2026.
+  - Nearly every 2026 comparison found was written by Argos; treat them as vendor-authored.
+
+### The spike (about 6 working days)
+
+| Order | Step | Smallest version worth comparing | Time |
+|---|---|---|---|
+| 0 | Shared harness | The determinism kit above, and a branch with six deliberate regressions | 0.5 day |
+| 1 | Playwright screenshots | ~10 page and ~10 component (locator) shots on the committed fixture; light and dark; one non-default colour theme; German on 5 key components; Chromium and WebKit; WebP baselines; a `workflow_dispatch` job to regenerate them | 2 days |
+| 2 | Goals (a) and (b) | stylelint rules above with violations baselined; inventory script over `frontend/src` | 0.5 day |
+| 3 | Storybook | Hand-rolled scheme, theme and locale decorators; `sb.mock` on `api.ts`; store resets. Stories for 3 primitives, 2 connected components (one API-driven, one store-driven) and 1 page-local one-off, each with Empty, Error, Long German and Dark. Addon-vitest on Chromium and WebKit. One timed upgrade to the 11 beta | 2 days |
+| 4 | Hosted review | Upload step 1's screenshots to Argos Hobby; optionally Chromatic free to judge its review screen | 0.5 day |
+| 5 | Decision | Score against the table below; write the outcome here | 0.5 day |
+
+The six seeded regressions: a 1px padding token change; a colour token changed in dark mode
+only inside a non-default colour theme (a state the guest walk never visits); a font-weight
+change; a hidden icon; a German label overflowing its button; and a native-control or
+scrollbar change only WKWebView renders faithfully (records whether Linux WebKit sees it, or
+whether it stays the walk's job).
+
+| Criterion | How measured | Success | Kill |
+|---|---|---|---|
+| Flake rate | `--repeat-each=20` in Docker, then 5 consecutive CI runs | 0 screenshot failures | More than 1 flaky shot in 100 runs after the kit |
+| Cross-OS baselines | Mac-made baselines (arm64 Docker) compared on GitHub's x86_64 runner | Pass unchanged | Never match, and the CI-only update loop takes over 10 min |
+| Seeded regressions | The six breaks, against step 1 and step 3 separately | Playwright catches ≥5 of 6; Storybook catches the token and overflow breaks | Playwright catches fewer than 4 |
+| Time to add a screenshot | Idea to committed baseline | ≤10 min | >30 min |
+| Time to add a story | Median, primitive vs connected | Primitive ≤15 min; connected ≤45 min | Connected median >90 min |
+| Mocking cost | Fixture and decorator lines, plus any app-code change, per connected story | Typed fixtures and one store-reset hook per store only | Needs app restructuring or `api.ts` changes, or hits #37040/#32336 with no workaround |
+| Review time after a token change | Change one shared colour token, review every diff | ≤15 min in the Playwright HTML report | >30 min — the trigger to try Argos Pro, not a kill of Playwright |
+| CI minutes | Added wall-clock per push, both browsers | ≤3 min | >8 min |
+| Bytes added to git | One full regeneration, WebP vs PNG, projected at 4 refreshes a month | <10 MB/month | >50 MB/month, or LFS needed |
+| WebKit under addon-vitest | Step 3's stories on WebKit, Mac and Linux | Green with no WebKit-only workaround | WebKit-only failures taking over an hour to diagnose |
+| Storybook 11 exposure | Migration items touching spike files; timed beta upgrade | <2 hours and <10 items | >half a day, or a decorator broken with no migration path |
+| Hosted value | Argos review of the token-change diff vs the HTML report | Measurably faster, WebKit screenshots accepted | WebKit rejected, or no time saved |
+
+**Decision rule (proposal).** If Playwright passes flake, cross-OS and seeded-regression, it
+becomes the visual-regression layer, with its soft-gate disposition recorded in
+`docs/testing/soft-gates.json` before it ships. The stylelint ratchet and the inventory
+script go ahead whatever happens to the visual tooling. Storybook is adopted only if
+connected-component cost lands under the kill line, it reaches states that Playwright could
+reach only through costlier stubs, and the catalogue is wanted as documentation; then it is
+scoped to the primitives plus a few named connected states, on 11 stable. A hosted service
+is tried only if review time, not capture, breaks its line. The guest walk stays the arbiter
+of what the Mac app actually looks like.
+
+**Design reading.** The components that are costly to give stories (they fetch and
+subscribe for themselves) are the same page-local one-offs Phase 5 wants surfaced. Record
+mocking cost per component as a measure of that coupling, not only as a verdict on
+Storybook: pulling them into presentational primitives would raise token consistency,
+shrink the inventory and make stories cheap at once.
+
+**Open research gaps:** no independent hands-on 2024–26 reports for either route; no
+measured hours per connected story; whether arm64 Docker on the Mac matches GitHub's x86_64
+runner pixel for pixel; whether standard macOS runners are free for public repos; where
+Chromatic and Happo run Safari; Omlet's hosted status.

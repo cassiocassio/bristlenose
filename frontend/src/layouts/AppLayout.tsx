@@ -118,7 +118,7 @@ import { announce } from "../utils/announce";
 import i18n from "../i18n";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
 import { isEditing } from "../utils/editing";
-import { isEmbedded } from "../utils/embedded";
+import { hostShowsAutoCode, isEmbedded } from "../utils/embedded";
 import { isReportPartial, startConditionPolling } from "../contexts/ConditionStore";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
@@ -951,6 +951,7 @@ function AppShell() {
             completedLabel: i18n.t("autocode.chip.recoded"),
             frameworkId: j.frameworkId,
             outcome: j.outcome,
+            hidden: hostShowsAutoCode(),
             onComplete: async () => {
               // After the pass's last tag has landed (D20), the one reload of the run.
               await whenPlayedOut(j.frameworkId, id);
@@ -979,8 +980,11 @@ function AppShell() {
             },
           };
         }
-        // Default: autocode job
+        // Default: autocode job. On a Mac whose sidebar shows AutoCode, not drawn (D38, D40,
+        // D51): the job still polls and ends here, so the handover, the lens refresh and the
+        // shell's failure signal run as before.
         return {
+          hidden: hostShowsAutoCode(),
           id,
           label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
           completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),

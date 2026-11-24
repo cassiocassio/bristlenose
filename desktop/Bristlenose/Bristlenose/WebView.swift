@@ -151,6 +151,13 @@ struct WebView: NSViewRepresentable {
 
     @EnvironmentObject var i18n: I18n
 
+    /// The page's flag for "this host's sidebar shows AutoCode" (`hostShowsAutoCode()` in
+    /// `frontend/src/utils/embedded.ts`): set exactly when the AppKit sidebar is on.
+    static func sidebarAutoCodeScript(in defaults: UserDefaults = .standard) -> String? {
+        BristlenoseFlags.appKitSidebar(in: defaults)
+            ? "window.__BRISTLENOSE_SIDEBAR_AUTOCODE__ = true;" : nil
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(bridgeHandler: bridgeHandler, i18n: i18n)
     }
@@ -186,6 +193,17 @@ struct WebView: NSViewRepresentable {
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
+
+        // The AppKit sidebar draws AutoCode's progress and endings, so the report draws no
+        // AutoCode pop-up of its own (landing plan D38, D40, D51). The SwiftUI sidebar does not,
+        // and keeps it. Read when the view is built, as the sidebar choice is.
+        if let script = Self.sidebarAutoCodeScript() {
+            userContentController.addUserScript(WKUserScript(
+                source: script,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            ))
+        }
 
         // The diagnostics preference reaches the report too: the Sessions grid
         // shows each recording's transcription numbers under its timeline only

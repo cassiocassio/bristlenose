@@ -104,6 +104,11 @@ export interface ActivityJob {
    * again).
    */
   outcome?: NormalisedJobStatus;
+  /**
+   * Not drawn: the Mac host's sidebar shows this job (landing plan D38, D40). Everything else
+   * runs as for a drawn chip (the polling, `onComplete`, the shell's failure signal, `onSettled`).
+   */
+  hidden?: boolean;
 }
 
 interface ActivityChipStackProps {
@@ -351,15 +356,16 @@ export function ActivityChipStack({ jobs, onDismiss, onSettled }: ActivityChipSt
     }
   }, [jobs, statuses, onSettled]);
 
-  if (jobs.length === 0) return null;
+  const shown = jobs.filter((job) => !job.hidden);
+  if (shown.length === 0) return null;
 
-  const chipJobs = jobs.map((job) => {
+  const chipJobs = shown.map((job) => {
     const norm = statuses[job.id] ?? job.outcome ?? null;
     return { job, norm, chip: toChipJob(job, norm) };
   });
 
   const runningCount = chipJobs.filter((c) => c.chip.status === "running").length;
-  const showSummary = jobs.length >= 2;
+  const showSummary = shown.length >= 2;
 
   const content = (
     <div className="activity-chip-stack" role="status" data-testid="bn-activity-chip-stack">
@@ -380,7 +386,7 @@ export function ActivityChipStack({ jobs, onDismiss, onSettled }: ActivityChipSt
           <span className="chip-label bn-thinking-shimmer">
             {runningCount > 0
               ? `${runningCount} task${runningCount !== 1 ? "s" : ""} running`
-              : `${jobs.length} task${jobs.length !== 1 ? "s" : ""}`}
+              : `${shown.length} task${shown.length !== 1 ? "s" : ""}`}
           </span>
           <button
             className="chip-toggle"

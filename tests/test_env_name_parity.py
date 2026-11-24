@@ -47,3 +47,24 @@ def test_swift_env_names_are_names_python_reads() -> None:
     assert python, "found no Python env names: the pattern or the path has drifted"
     unread = sorted(swift - python)
     assert not unread, f"Swift sets variables no Python code reads: {unread}"
+
+
+# The page's globals the host injects (`window.__BRISTLENOSE_…__ = …;` in a WKUserScript): the
+# same contract one language over, Swift to the TypeScript that reads them. A misspelt flag fails
+# silently there too; the page just behaves as in the browser.
+JS_GLOBAL = re.compile(r"window\.(__BRISTLENOSE_[A-Z0-9_]+__)\s*=")
+FRONTEND = REPO / "frontend" / "src"
+
+
+def test_swift_page_globals_are_globals_the_page_reads() -> None:
+    swift: set[str] = set()
+    for path in SWIFT_ROOTS[0].rglob("*.swift"):
+        swift |= set(JS_GLOBAL.findall(path.read_text(encoding="utf-8", errors="ignore")))
+    assert "__BRISTLENOSE_EMBEDDED__" in swift, "found no Swift page globals: the pattern drifted"
+    page = "\n".join(
+        p.read_text(encoding="utf-8", errors="ignore")
+        for p in FRONTEND.rglob("*.ts*")
+        if ".test." not in p.name
+    )
+    unread = sorted(name for name in swift if name not in page)
+    assert not unread, f"Swift injects page globals no frontend code reads: {unread}"

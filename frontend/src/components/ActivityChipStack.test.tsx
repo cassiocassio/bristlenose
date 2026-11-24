@@ -952,4 +952,55 @@ describe("ActivityChipStack", () => {
       expect(onSettled).not.toHaveBeenCalled();
     });
   });
+
+  // Landing plan D38/D40/D51: on a Mac whose sidebar shows AutoCode, its chip is not drawn, and
+  // the work the chip did unseen still runs.
+  describe("a job the host draws instead", () => {
+    it("draws no chip, and still ends: the failure signal, onComplete and onSettled, once each", async () => {
+      mockGetStatus.mockResolvedValue(
+        makeStatus({ status: "failed", failure_kind: "out_of_credit", llm_provider: "anthropic" }),
+      );
+      const onComplete = vi.fn();
+      const onSettled = vi.fn();
+      render(
+        <ActivityChipStack jobs={[makeJob({ hidden: true, onComplete })]} onDismiss={vi.fn()} onSettled={onSettled} />,
+      );
+      await act(async () => {});
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+
+      expect(screen.queryByTestId("bn-activity-chip-stack")).not.toBeInTheDocument();
+      expect(mockPostLLMFailure).toHaveBeenCalledOnce();
+      expect(mockPostLLMFailure).toHaveBeenCalledWith("out_of_credit", "anthropic");
+      expect(onComplete).toHaveBeenCalledOnce();
+      expect(onComplete.mock.calls[0][0].status).toBe("failed");
+      expect(onSettled).toHaveBeenCalledOnce();
+    });
+
+    it("keeps polling a running job it does not draw", async () => {
+      mockGetStatus.mockResolvedValue(makeStatus());
+      render(<ActivityChipStack jobs={[makeJob({ hidden: true })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
+      expect(mockGetStatus).toHaveBeenCalledTimes(3);
+      expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument();
+    });
+
+    it("draws every other job, alone and uncounted with the hidden one", async () => {
+      mockGetStatus.mockResolvedValue(makeStatus());
+      const clips = makeJob({
+        id: "clips:1",
+        label: "Exporting clips",
+        pollFn: async () => ({
+          status: "running", progressLabel: "1/3", durationLabel: null, errorMessage: null, partialMessage: null,
+        }),
+      });
+      render(<ActivityChipStack jobs={[makeJob({ hidden: true }), clips]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+
+      // One drawn job is a chip of its own, not a "2 tasks" summary.
+      expect(screen.queryByTestId("bn-activity-chip-summary")).not.toBeInTheDocument();
+      expect(screen.getAllByTestId("bn-activity-chip")).toHaveLength(1);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveTextContent("Exporting clips");
+    });
+  });
 });

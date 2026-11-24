@@ -8,8 +8,11 @@ enum BristlenoseFlags {
     /// sidebar is the in-progress framework migration — see
     /// `docs/design-desktop-sidebar-appkit.md`. Flip with:
     /// `defaults write app.bristlenose BristlenoseAppKitSidebar -bool YES`
-    static var appKitSidebar: Bool {
-        UserDefaults.standard.bool(forKey: "BristlenoseAppKitSidebar")
+    static let appKitSidebarKey = "BristlenoseAppKitSidebar"
+    static var appKitSidebar: Bool { appKitSidebar(in: .standard) }
+
+    static func appKitSidebar(in defaults: UserDefaults) -> Bool {
+        defaults.bool(forKey: appKitSidebarKey)
     }
 
     /// Welcome-screen cell-tint working candidate (open decision #3,

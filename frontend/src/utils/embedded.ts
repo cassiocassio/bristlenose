@@ -24,3 +24,13 @@ export function isEmbedded(): boolean {
 export function _resetEmbeddedCache(): void {
   _cached = undefined;
 }
+
+/**
+ * The Mac host's sidebar draws AutoCode's progress and its endings (the AppKit sidebar, landing
+ * plan D51), so the page draws no pop-up of its own for a first run or a catch-up (D38, D40).
+ * Injected as `window.__BRISTLENOSE_SIDEBAR_AUTOCODE__` by `WebView.sidebarAutoCodeScript`; the
+ * SwiftUI sidebar and the browser never set it, and keep the pop-up.
+ */
+export function hostShowsAutoCode(): boolean {
+  return (window as unknown as Record<string, unknown>).__BRISTLENOSE_SIDEBAR_AUTOCODE__ === true;
+}

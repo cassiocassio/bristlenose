@@ -138,8 +138,8 @@ describe("AutoCode pop-ups in a Mac app whose sidebar shows AutoCode", () => {
       expect(ears.heard).toEqual({ codebook: 1, tags: 1 });
       expect(vi.mocked(beginHandover)).toHaveBeenCalledOnce();
       expect(vi.mocked(beginHandover)).toHaveBeenCalledWith("norman", `${type}:norman:1`);
-      // The job is in the store, and ended, as with a chip drawn.
-      expect(getJobs().get(`${type}:norman:1`)?.outcome?.status).toBe("completed");
+      // Ended unseen, the job has left the store: nothing is left to end it a second time.
+      expect(getJobs().has(`${type}:norman:1`)).toBe(false);
       expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument();
     } finally {
       ears.stop();
@@ -155,7 +155,32 @@ describe("AutoCode pop-ups in a Mac app whose sidebar shows AutoCode", () => {
     expect(posted.filter((m) => m.type === "llm-failure")).toEqual([
       { type: "llm-failure", kind: "out_of_credit", provider: "anthropic" },
     ]);
-    expect(getJobs().get("autocode:norman:1")?.outcome?.status).toBe("failed");
+    // A first apply's failure is the sidebar's line and popover (D38), never a pop-up.
+    expect(getJobs().has("autocode:norman:1")).toBe(false);
+    expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument();
+  });
+
+  // The sidebar has no ended line for a catch-up, so a pass that ends badly is shown here, in the
+  // words the browser uses (lead's call, owner to confirm: a failed run is never silent).
+  it.each([
+    ["fails", { ...OUT_OF_CREDIT, completed_at: FINISHED.completed_at }, "failed", "out of credit"],
+    ["codes only part of its quotes", { ...FINISHED, catch_up_total: 4, catch_up_processed: 2 }, "partial", "Some batches failed"],
+  ])("a catch-up that %s draws its chip with the ending", async (_name, status, shown, words) => {
+    autocode = status;
+    renderAt("/report/sessions/");
+    act(() => addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" }));
+    const chip = await screen.findByTestId("bn-activity-chip");
+    await waitFor(() => expect(chip).toHaveAttribute("data-status", shown));
+    expect(chip).toHaveTextContent(words);
+    await letItRun();
+    expect(getJobs().get("catchup:norman:1")?.outcome?.status).toBe(shown);
+  });
+
+  it("a catch-up the researcher stopped stays unseen", async () => {
+    autocode = { ...FINISHED, status: "cancelled" };
+    renderAt("/report/sessions/");
+    act(() => addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" }));
+    await waitFor(() => expect(getJobs().has("catchup:norman:1")).toBe(false));
     expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument();
   });
 

@@ -54,6 +54,23 @@ def test_swift_env_names_are_names_python_reads() -> None:
 # silently there too; the page just behaves as in the browser.
 JS_GLOBAL = re.compile(r"window\.(__BRISTLENOSE_[A-Z0-9_]+__)\s*=")
 FRONTEND = REPO / "frontend" / "src"
+# Comments go first: a doc comment naming the global is not a read, and it sits beside every one.
+_COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+
+
+def _page_reads(source: str) -> set[str]:
+    """Globals the code reads, as `.NAME` or `["NAME"]`, outside comments."""
+    code = _COMMENT.sub("", source)
+    return set(re.findall(r"""(?:\.|\[["'])(__BRISTLENOSE_[A-Z0-9_]+__)""", code))
+
+
+def test_page_reads_ignore_comments() -> None:
+    # The checker itself: a comment naming a global is not a read, and the two read forms are.
+    assert _page_reads("/** `window.__BRISTLENOSE_X__` */\n// w.__BRISTLENOSE_Y__\n") == set()
+    assert _page_reads('w.__BRISTLENOSE_X__ === true; w["__BRISTLENOSE_Y__"]') == {
+        "__BRISTLENOSE_X__",
+        "__BRISTLENOSE_Y__",
+    }
 
 
 def test_swift_page_globals_are_globals_the_page_reads() -> None:
@@ -61,10 +78,9 @@ def test_swift_page_globals_are_globals_the_page_reads() -> None:
     for path in SWIFT_ROOTS[0].rglob("*.swift"):
         swift |= set(JS_GLOBAL.findall(path.read_text(encoding="utf-8", errors="ignore")))
     assert "__BRISTLENOSE_EMBEDDED__" in swift, "found no Swift page globals: the pattern drifted"
-    page = "\n".join(
-        p.read_text(encoding="utf-8", errors="ignore")
-        for p in FRONTEND.rglob("*.ts*")
-        if ".test." not in p.name
-    )
-    unread = sorted(name for name in swift if name not in page)
+    page: set[str] = set()
+    for p in FRONTEND.rglob("*.ts*"):
+        if ".test." not in p.name:
+            page |= _page_reads(p.read_text(encoding="utf-8", errors="ignore"))
+    unread = sorted(swift - page)
     assert not unread, f"Swift injects page globals no frontend code reads: {unread}"

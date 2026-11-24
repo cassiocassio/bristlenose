@@ -2,8 +2,8 @@
  * ActivityChipStack — container for 0-N background job chips.
  *
  * Renders via createPortal to document.body so chips persist across tab
- * navigation. Owns polling for each job. Shows a summary chip when 2+
- * jobs are active, expandable to show individual chips.
+ * navigation. Owns polling for each job, drawn or not. Shows a summary chip
+ * when 2+ jobs are drawn, expandable to show individual chips.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -105,10 +105,12 @@ export interface ActivityJob {
    */
   outcome?: NormalisedJobStatus;
   /**
-   * Not drawn: the Mac host's sidebar shows this job (landing plan D38, D40). Everything else
-   * runs as for a drawn chip (the polling, `onComplete`, the shell's failure signal, `onSettled`).
+   * Whether the chip is not drawn, given its status: the Mac host's sidebar shows the job (landing
+   * plan D38, D40). Everything else runs as for a drawn chip (the polling, `onComplete`, the
+   * shell's failure signal, `onSettled`), and a job that ends hidden then leaves the list, so a
+   * late answer cannot end it twice.
    */
-  hidden?: boolean;
+  hidden?: (status: NormalisedJobStatus | null) => boolean;
 }
 
 interface ActivityChipStackProps {
@@ -346,17 +348,19 @@ export function ActivityChipStack({ jobs, onDismiss, onSettled }: ActivityChipSt
         } catch (err) {
           console.error("Activity: a job's completion handler threw", err);
         }
-        if (norm !== LOST) {
-          const id = job.id;
-          void Promise.resolve(ending)
-            .catch(() => undefined)
-            .then(() => onSettled?.(id, norm));
-        }
+        const id = job.id;
+        const quiet = job.hidden?.(norm);
+        void Promise.resolve(ending)
+          .catch(() => undefined)
+          .then(() => {
+            if (norm !== LOST) onSettled?.(id, norm);
+            if (quiet) onDismiss(id);
+          });
       }
     }
-  }, [jobs, statuses, onSettled]);
+  }, [jobs, statuses, onSettled, onDismiss]);
 
-  const shown = jobs.filter((job) => !job.hidden);
+  const shown = jobs.filter((job) => !job.hidden?.(statuses[job.id] ?? job.outcome ?? null));
   if (shown.length === 0) return null;
 
   const chipJobs = shown.map((job) => {

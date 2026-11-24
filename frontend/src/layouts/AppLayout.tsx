@@ -813,6 +813,7 @@ function AppShell() {
     return () => window.removeEventListener("bn:menu-action", handler);
   }, [embedded, navigate]);
 
+  const mac = hostShowsAutoCode();
   const chipJobs: ActivityJob[] = useMemo(
     () =>
       Array.from(activityJobs.entries()).map(([id, j]) => {
@@ -951,7 +952,9 @@ function AppShell() {
             completedLabel: i18n.t("autocode.chip.recoded"),
             frameworkId: j.frameworkId,
             outcome: j.outcome,
-            hidden: hostShowsAutoCode(),
+            // On a Mac whose sidebar shows AutoCode, drawn only when the pass ends badly: the
+            // sidebar has no ended line for a catch-up, and a failed run is never silent.
+            hidden: mac ? (s) => s?.status !== "failed" && s?.status !== "partial" : undefined,
             onComplete: async () => {
               // After the pass's last tag has landed (D20), the one reload of the run.
               await whenPlayedOut(j.frameworkId, id);
@@ -980,11 +983,11 @@ function AppShell() {
             },
           };
         }
-        // Default: autocode job. On a Mac whose sidebar shows AutoCode, not drawn (D38, D40,
-        // D51): the job still polls and ends here, so the handover, the lens refresh and the
-        // shell's failure signal run as before.
+        // Default: autocode job. On a Mac whose sidebar shows AutoCode, never drawn (D38, D51):
+        // its line and popover say every ending. The job still polls and ends here, so the
+        // handover, the lens refresh and the shell's failure signal run as before.
         return {
-          hidden: hostShowsAutoCode(),
+          hidden: mac ? () => true : undefined,
           id,
           label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
           completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
@@ -1035,7 +1038,7 @@ function AppShell() {
           },
         };
       }),
-    [activityJobs, isCodebook, navigate],
+    [activityJobs, isCodebook, navigate, mac],
   );
 
   return (

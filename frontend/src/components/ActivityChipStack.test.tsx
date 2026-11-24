@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { ActivityChipStack, withoutFinalStop } from "./ActivityChipStack";
 import type { ActivityJob, NormalisedJobStatus } from "./ActivityChipStack";
@@ -963,7 +964,7 @@ describe("ActivityChipStack", () => {
       const onComplete = vi.fn();
       const onSettled = vi.fn();
       render(
-        <ActivityChipStack jobs={[makeJob({ hidden: true, onComplete })]} onDismiss={vi.fn()} onSettled={onSettled} />,
+        <ActivityChipStack jobs={[makeJob({ hidden: () => true, onComplete })]} onDismiss={vi.fn()} onSettled={onSettled} />,
       );
       await act(async () => {});
       await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
@@ -976,9 +977,65 @@ describe("ActivityChipStack", () => {
       expect(onSettled).toHaveBeenCalledOnce();
     });
 
+    it("lets a job that ended hidden leave the list, once its ending is recorded", async () => {
+      mockGetStatus.mockResolvedValue(makeStatus({ status: "completed", processed_quotes: 10 }));
+      const order: string[] = [];
+      const onSettled = vi.fn(() => order.push("settled"));
+      const onDismiss = vi.fn(() => order.push("dismissed"));
+      render(<ActivityChipStack jobs={[makeJob({ hidden: () => true })]} onDismiss={onDismiss} onSettled={onSettled} />);
+      await act(async () => {});
+      await act(async () => {});
+      expect(order).toEqual(["settled", "dismissed"]);
+      expect(onDismiss).toHaveBeenCalledWith("autocode:garrett");
+    });
+
+    it("never ends a hidden job twice: a late answer after the lost state finds it gone", async () => {
+      mockGetStatus.mockRejectedValue(new Error("server gone"));
+      const onComplete = vi.fn();
+      const hidden = makeJob({ hidden: () => true, onComplete });
+      const clips = makeJob({
+        id: "clips:1",
+        pollFn: async () => ({
+          status: "running", progressLabel: "1/3", durationLabel: null, errorMessage: null, partialMessage: null,
+        }),
+      });
+      let setJobs!: (f: (js: ActivityJob[]) => ActivityJob[]) => void;
+      function Window() {
+        const [jobs, set] = useState<ActivityJob[]>([hidden]);
+        setJobs = set;
+        return <ActivityChipStack jobs={jobs} onDismiss={(id) => set((js) => js.filter((j) => j.id !== id))} />;
+      }
+      render(<Window />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+      expect(onComplete).toHaveBeenCalledOnce();
+      expect(onComplete.mock.calls[0][0].status).toBe("failed");
+
+      // The server answers again, and a change to the list polls every job once more.
+      mockGetStatus.mockResolvedValue(makeStatus({ status: "completed", processed_quotes: 10 }));
+      act(() => setJobs((js) => [...js, clips]));
+      await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+      expect(onComplete).toHaveBeenCalledOnce();
+    });
+
+    it("draws a job whose status says so, and leaves it for the reader to dismiss", async () => {
+      mockGetStatus.mockResolvedValue(makeStatus());
+      const onDismiss = vi.fn();
+      render(
+        <ActivityChipStack jobs={[makeJob({ hidden: (s) => s?.status !== "failed" })]} onDismiss={onDismiss} />,
+      );
+      await act(async () => {});
+      expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument();
+
+      mockGetStatus.mockResolvedValue(makeStatus({ status: "failed", failure_kind: "out_of_credit" }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+      await act(async () => {});
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed");
+      expect(onDismiss).not.toHaveBeenCalled();
+    });
+
     it("keeps polling a running job it does not draw", async () => {
       mockGetStatus.mockResolvedValue(makeStatus());
-      render(<ActivityChipStack jobs={[makeJob({ hidden: true })]} onDismiss={vi.fn()} />);
+      render(<ActivityChipStack jobs={[makeJob({ hidden: () => true })]} onDismiss={vi.fn()} />);
       await act(async () => {});
       await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
       expect(mockGetStatus).toHaveBeenCalledTimes(3);
@@ -994,7 +1051,7 @@ describe("ActivityChipStack", () => {
           status: "running", progressLabel: "1/3", durationLabel: null, errorMessage: null, partialMessage: null,
         }),
       });
-      render(<ActivityChipStack jobs={[makeJob({ hidden: true }), clips]} onDismiss={vi.fn()} />);
+      render(<ActivityChipStack jobs={[makeJob({ hidden: () => true }), clips]} onDismiss={vi.fn()} />);
       await act(async () => {});
 
       // One drawn job is a chip of its own, not a "2 tasks" summary.

@@ -23,15 +23,21 @@ def _web_view() -> str:
 
 
 def test_the_report_view_is_given_the_seed_at_document_start() -> None:
+    # Every document-start script comes from one builder, `reportUserScripts` (whose output
+    # `SidebarAutoCodeCapabilityTests` reads); the seed must be one of them, and makeNSView must
+    # add each of them at document start.
     src = _web_view()
+    builder = src[src.index("static func reportUserScripts(") : src.index("func makeCoordinator(")]
+    assert builder.count("scripts.append(BridgeHandler.reportPrefsSeedScript(defaults: defaults))") == 1
     wired = re.findall(
+        r"for source in Self\.reportUserScripts\(authToken: authToken\) \{\s*"
         r"userContentController\.addUserScript\(WKUserScript\(\s*"
-        r"source:\s*BridgeHandler\.reportPrefsSeedScript\(\),\s*"
+        r"source:\s*source,\s*"
         r"injectionTime:\s*\.atDocumentStart,\s*"
         r"forMainFrameOnly:\s*true\s*\)\)",
         src,
     )
-    assert len(wired) == 1, "WebView.swift must add reportPrefsSeedScript() as a document-start user script"
+    assert len(wired) == 1, "makeNSView must add every reportUserScripts() source at document start"
 
 
 def test_the_seed_is_added_where_the_report_view_is_built() -> None:
@@ -39,6 +45,6 @@ def test_the_seed_is_added_where_the_report_view_is_built() -> None:
     # to a controller after the view exists never runs for the document it loaded.
     src = _web_view()
     make = src.index("func makeNSView(")
-    seed = src.index("BridgeHandler.reportPrefsSeedScript()")
+    seed = src.index("Self.reportUserScripts(authToken: authToken)", make)
     handed = src.index("config.userContentController = userContentController", make)
     assert make < seed < handed

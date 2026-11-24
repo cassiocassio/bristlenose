@@ -151,11 +151,51 @@ struct WebView: NSViewRepresentable {
 
     @EnvironmentObject var i18n: I18n
 
-    /// The page's flag for "this host's sidebar shows AutoCode" (`hostShowsAutoCode()` in
-    /// `frontend/src/utils/embedded.ts`): set exactly when the AppKit sidebar is on.
-    static func sidebarAutoCodeScript(in defaults: UserDefaults = .standard) -> String? {
-        BristlenoseFlags.appKitSidebar(in: defaults)
-            ? "window.__BRISTLENOSE_SIDEBAR_AUTOCODE__ = true;" : nil
+    /// The scripts `makeNSView` injects at document start, in order: what the page is told
+    /// about its host before it loads. Read when the view is built, so a change applies to the
+    /// next report the app opens.
+    @MainActor static func reportUserScripts(authToken: String?,
+                                              in defaults: UserDefaults = .standard) -> [String] {
+        // The React SPA checks this to suppress NavBar/Footer/Header.
+        var scripts = ["window.__BRISTLENOSE_EMBEDDED__ = true;"]
+
+        // This app draws the person picker natively, so the Sessions grid asks
+        // for it over the bridge instead of opening the web one. A flag rather
+        // than an assumption: an app without the native picker keeps the web
+        // one (docs/design-people.md § UX iteration 3).
+        scripts.append("window.__BRISTLENOSE_NATIVE_PERSON_PICKER__ = true;")
+
+        // The AppKit sidebar draws AutoCode's progress and endings, so the report draws no
+        // AutoCode pop-up of its own (landing plan D38, D40, D51); `hostShowsAutoCode()` in
+        // `frontend/src/utils/embedded.ts`. The SwiftUI sidebar does not, and keeps it. The
+        // sidebar choice is read on every body evaluation, this only once per web view, so a
+        // flag flipped while the app runs reaches the page with the next report it opens.
+        if BristlenoseFlags.appKitSidebar(in: defaults) {
+            scripts.append("window.__BRISTLENOSE_SIDEBAR_AUTOCODE__ = true;")
+        }
+
+        // The diagnostics preference reaches the report too: the Sessions grid
+        // shows each recording's transcription numbers under its timeline only
+        // when it is on (docs/design-transcription-quality.md), like `isInspectable` below.
+        if DiagnosticsPreference.isEnabled(defaults) {
+            scripts.append("window.__BRISTLENOSE_DIAGNOSTICS__ = true;")
+        }
+
+        // Seed the saved subtitle preferences into this partition's (ephemeral)
+        // localStorage before the SPA reads them. See BridgeHandler.
+        scripts.append(BridgeHandler.subtitlePrefsSeedScript(defaults: defaults))
+
+        // The same for zoom and the report's panels (R89), carrying every change saved
+        // before this load.
+        scripts.append(BridgeHandler.reportPrefsSeedScript(defaults: defaults))
+
+        // Auth token for localhost API access control. Validates format before
+        // interpolation (security rule 3 compliance).
+        if let token = authToken,
+           token.range(of: "^[A-Za-z0-9_-]+$", options: .regularExpression) != nil {
+            scripts.append("window.__BRISTLENOSE_AUTH_TOKEN__ = '\(token)';")
+        }
+        return scripts
     }
 
     func makeCoordinator() -> Coordinator {
@@ -175,75 +215,13 @@ struct WebView: NSViewRepresentable {
 
         let userContentController = WKUserContentController()
 
-        // Inject embedded flag before the page loads. The React SPA checks
-        // window.__BRISTLENOSE_EMBEDDED__ to suppress NavBar/Footer/Header.
-        let embeddedScript = WKUserScript(
-            source: "window.__BRISTLENOSE_EMBEDDED__ = true;",
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        )
-        userContentController.addUserScript(embeddedScript)
-
-        // This app draws the person picker natively, so the Sessions grid asks
-        // for it over the bridge instead of opening the web one. A flag rather
-        // than an assumption: an app without the native picker keeps the web
-        // one (docs/design-people.md § UX iteration 3).
-        userContentController.addUserScript(WKUserScript(
-            source: "window.__BRISTLENOSE_NATIVE_PERSON_PICKER__ = true;",
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        ))
-
-        // The AppKit sidebar draws AutoCode's progress and endings, so the report draws no
-        // AutoCode pop-up of its own (landing plan D38, D40, D51). The SwiftUI sidebar does not,
-        // and keeps it. Read when the view is built, as the sidebar choice is.
-        if let script = Self.sidebarAutoCodeScript() {
+        // Everything the page is told before it loads, from one tested builder.
+        for source in Self.reportUserScripts(authToken: authToken) {
             userContentController.addUserScript(WKUserScript(
-                source: script,
+                source: source,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
             ))
-        }
-
-        // The diagnostics preference reaches the report too: the Sessions grid
-        // shows each recording's transcription numbers under its timeline only
-        // when it is on (docs/design-transcription-quality.md). Read when the
-        // view is built, like `isInspectable` below, so a change applies to the
-        // next report the app opens.
-        if DiagnosticsPreference.isEnabled() {
-            userContentController.addUserScript(WKUserScript(
-                source: "window.__BRISTLENOSE_DIAGNOSTICS__ = true;",
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: true
-            ))
-        }
-
-        // Seed the saved subtitle preferences into this partition's (ephemeral)
-        // localStorage before the SPA reads them. See BridgeHandler.
-        userContentController.addUserScript(WKUserScript(
-            source: BridgeHandler.subtitlePrefsSeedScript(),
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        ))
-
-        // The same for zoom and the report's panels (R89). Read when the view
-        // is built, so it carries every change saved before this load.
-        userContentController.addUserScript(WKUserScript(
-            source: BridgeHandler.reportPrefsSeedScript(),
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        ))
-
-        // Inject auth token for localhost API access control.
-        // Validates format before interpolation (security rule 3 compliance).
-        if let token = authToken,
-           token.range(of: "^[A-Za-z0-9_-]+$", options: .regularExpression) != nil {
-            let tokenScript = WKUserScript(
-                source: "window.__BRISTLENOSE_AUTH_TOKEN__ = '\(token)';",
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: true
-            )
-            userContentController.addUserScript(tokenScript)
         }
 
         // Register message handler for bridge messages from the web layer.

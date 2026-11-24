@@ -320,7 +320,7 @@ def specimen() -> str:
     for label, cls in (("Card or page", "card"),):
         cells = []
         for state, kw, cap in (
-            ("act", {"variant": "primary"}, "button · primary"),
+            ("act", {"variant": "primary"}, "button · primary (chosen for now, 24 Nov)"),
             ("act", {"variant": "secondary"}, "button · secondary"),
             ("run", {}, "running · plain text"),
             ("done", {}, "applied · on"),
@@ -669,6 +669,7 @@ proposal changes it. Words marked <span style="color:#b06a00">owner-written</spa
 shimmering words while AutoCode runs → the green “Applied” cartouche when the run completes.</li>
 <li>The button is our regular button, one size down (<code>bn-btn-sm</code>, the button radius). The cartouche is a
 status badge (pill radius, not interactive). The running words have no box and are not clickable.</li>
+<li>The AutoCode button is primary, small, for now (owner, 24 Nov).</li>
 <li>No Uninstall on cards. On the page, Uninstall is a small secondary button beside Review.</li>
 <li>Installed but not applied (stopped, failed, refused): the button comes back, to resume. Uninstall is hidden while a run goes; switching a codebook off mid-run stops the run. Review shows whenever there are tags (D39). The explainer says the most confident proposals are applied; no cost warning.</li>
 <li>The codebook page's counts stay as shipped, zeros included (§4).</li>

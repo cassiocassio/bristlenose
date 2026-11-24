@@ -50,64 +50,40 @@
 .threshold-histogram-bar--amber  { background-color: var(--bn-colour-warning); }
 .threshold-histogram-bar--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.5; }
 
-/* Unit-square mode — tag-coloured squares. A square is as wide as its bin, unless the
-   tallest stack (--bn-hist-stack, set by the component) would then overflow the histogram's height
-   (--bn-hist-height; 120 px, or less where the slider gives it headroom):
-   in a wide dialog a bin is ~42 px and four squares stood ~50 px above the box, into the
-   header (owner, 24 Nov 2026). Then every square shrinks to fit, centred in its bin. */
-.threshold-histogram:has(.threshold-histogram-square) {
-    container-type: inline-size;
-}
-
+/* Unit-square mode — tag-coloured squares */
 .threshold-histogram-square {
-    --bn-hist-square: min(
-        calc((100cqw - 19px) / 20),
-        calc((var(--bn-hist-height, 120px) - (var(--bn-hist-stack, 1) - 1) * 1px) / var(--bn-hist-stack, 1))
-    );
-    width: var(--bn-hist-square);
-    height: var(--bn-hist-square);
-    align-self: center;
+    width: 100%;
+    aspect-ratio: 1;
     border-radius: 1px;
     flex-shrink: 0;
 }
 
 /* ── The threshold slider: a Levels control (DualThresholdSlider) ──
    Pixelmator Pro's Levels, frame B of docs/mockups/autocode-levels-slider.html (owner,
-   24 Nov 2026). The histogram is the box; the zones tint its ground; a dotted guide rises
+   24 Nov 2026). The histogram is the box (its ground plain); a dotted guide rises
    through it at each line; the pointers hang from its floor with their value inside. */
 
 .threshold-slider {
-    margin: var(--bn-space-md) 0 var(--bn-space-sm);
+    container-type: inline-size;  /* the histogram's height reads its width */
+    margin: 0 0 var(--bn-space-sm);
     user-select: none;
     touch-action: none;
 }
 
+/* The box: the histogram on its floor, headroom above (owner, 24 Nov 2026). */
 .threshold-slider-track {
     position: relative;
-    height: 120px;
-    border-radius: var(--bn-radius-sm) var(--bn-radius-sm) 0 0;
+    padding-top: var(--bn-space-md);
     border-bottom: 1px solid var(--bn-colour-border);
-    overflow: hidden;
 }
 
-/* Standing on the floor, with headroom above the tallest stack (owner, 24 Nov 2026). */
+/* The squares are as wide as their bin, a pixel apart, as they always were; the box
+   grows to hold the tallest stack (--bn-hist-stack, set by the component in square
+   mode) rather than letting it stand out over the dialog's header. 20 bins, 19 gaps. */
 .threshold-slider-track .threshold-histogram {
-    --bn-hist-height: 104px;
-    position: absolute;
-    inset: auto 0 0 0;
-    height: var(--bn-hist-height);
+    height: max(120px, calc(var(--bn-hist-stack, 0) * ((100cqw - 19px) / 20 + 1px)));
     margin: 0;
 }
-
-.threshold-slider-segment {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-}
-
-.threshold-slider-segment--grey  { background: color-mix(in srgb, var(--bn-colour-muted) 9%, transparent); }
-.threshold-slider-segment--amber { background: color-mix(in srgb, var(--bn-colour-warning) 13%, transparent); }
-.threshold-slider-segment--green { background: color-mix(in srgb, var(--bn-colour-positive) 11%, transparent); }
 
 .threshold-slider-guide {
     position: absolute;

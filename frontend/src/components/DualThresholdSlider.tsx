@@ -2,9 +2,10 @@
  * DualThresholdSlider — the two confidence thresholds, drawn as a Levels control
  * (Pixelmator Pro's; owner, 24 Nov 2026, frame B of docs/mockups/autocode-levels-slider.html).
  *
- * The histogram (`children`) is the control's box: the three zones tint its ground grey,
- * orange and green, a dotted guide rises through it at each threshold, and the two
- * pointers hang from its floor, tip up at their value, the value inside. Step
+ * The histogram (`children`) is the control's box: a dotted guide rises through it at
+ * each threshold, and the two pointers hang from its floor, tip up at their value, the
+ * value inside, orange for the lower line and green for the upper. The pointers carry
+ * the zones' colours; the histogram's ground stays plain (owner, 24 Nov 2026). Step
  * granularity: 0.05 (matches histogram bins).
  */
 
@@ -122,21 +123,9 @@ export function DualThresholdSlider({
 
   return (
     <div className="threshold-slider" data-testid="bn-threshold-slider">
-      {/* The box: the zones' ground, the histogram, and a guide at each line. It is also
-          what a drag measures against. */}
+      {/* The box: the histogram, and a guide at each line. It is also what a drag
+          measures against. */}
       <div className="threshold-slider-track" ref={trackRef}>
-        <div
-          className="threshold-slider-segment threshold-slider-segment--grey"
-          style={{ left: 0, width: lowerPct }}
-        />
-        <div
-          className="threshold-slider-segment threshold-slider-segment--amber"
-          style={{ left: lowerPct, width: `${(upper - lower) * 100}%` }}
-        />
-        <div
-          className="threshold-slider-segment threshold-slider-segment--green"
-          style={{ left: upperPct, width: `${(1 - upper) * 100}%` }}
-        />
         {children}
         <div className="threshold-slider-guide threshold-slider-guide--lower" style={{ left: lowerPct }} />
         <div className="threshold-slider-guide threshold-slider-guide--upper" style={{ left: upperPct }} />

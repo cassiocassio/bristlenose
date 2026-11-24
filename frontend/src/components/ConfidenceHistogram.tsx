@@ -136,8 +136,8 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
       ref={containerRef}
       className="threshold-histogram"
       data-testid="bn-threshold-histogram"
-      // The tallest stack, so the squares can fit it in the box (threshold-review.css).
-      style={{ "--bn-hist-stack": maxCount } as CSSProperties}
+      // Square mode: the tallest stack, so the box grows to hold it (threshold-review.css).
+      style={useSquares ? ({ "--bn-hist-stack": maxCount } as CSSProperties) : undefined}
     >
       {bins.map((bin, idx) => renderBin(bin, idx))}
     </div>

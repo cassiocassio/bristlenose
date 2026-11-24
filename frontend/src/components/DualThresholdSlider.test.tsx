@@ -146,4 +146,20 @@ describe("ConfidenceHistogram bins at the 0.05 grid", () => {
     expect(container.querySelectorAll(".threshold-histogram-bar--green")).toHaveLength(1);
     expect(container.querySelectorAll(".threshold-histogram-bar--amber")).toHaveLength(0);
   });
+
+  // The Levels control (owner, 24 Nov 2026): the histogram sits in the box, a guide
+  // stands at each line, and each pointer carries its value.
+  it("draws the histogram inside its box, a guide at each line, the value in each pointer", () => {
+    const { container } = render(
+      <DualThresholdSlider lower={0.3} upper={0.6} onLowerChange={() => {}} onUpperChange={() => {}}>
+        <div data-testid="hist" />
+      </DualThresholdSlider>,
+    );
+    const track = container.querySelector(".threshold-slider-track")!;
+    expect(track.contains(screen.getByTestId("hist"))).toBe(true);
+    expect(container.querySelector<HTMLElement>(".threshold-slider-guide--lower")!.style.left).toBe("30%");
+    expect(container.querySelector<HTMLElement>(".threshold-slider-guide--upper")!.style.left).toBe("60%");
+    expect(screen.getByTestId("bn-threshold-lower")).toHaveTextContent("0.30");
+    expect(screen.getByTestId("bn-threshold-upper")).toHaveTextContent("0.60");
+  });
 });

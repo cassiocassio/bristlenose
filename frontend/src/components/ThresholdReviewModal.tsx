@@ -351,20 +351,15 @@ export function ThresholdReviewModal({
             <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.empty")}</p>
           ) : (
             <>
-              {/* Histogram */}
-              <ConfidenceHistogram
-                proposals={loaded}
-                lower={lower}
-                upper={upper}
-              />
-
-              {/* Dual slider */}
+              {/* The Levels control: the histogram is its box, the lines its pointers. */}
               <DualThresholdSlider
                 lower={lower}
                 upper={upper}
                 onLowerChange={setLower}
                 onUpperChange={setUpper}
-              />
+              >
+                <ConfidenceHistogram proposals={loaded} lower={lower} upper={upper} />
+              </DualThresholdSlider>
 
               {/* Zone counters */}
               <div className="threshold-zone-counters">

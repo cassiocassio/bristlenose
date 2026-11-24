@@ -1,11 +1,15 @@
 /**
- * DualThresholdSlider — two-handle slider for lower/upper confidence thresholds.
+ * DualThresholdSlider — the two confidence thresholds, drawn as a Levels control
+ * (Pixelmator Pro's; owner, 24 Nov 2026, frame B of docs/mockups/autocode-levels-slider.html).
  *
- * Renders a horizontal track with three coloured segments (grey/amber/green)
- * and two draggable thumb handles. Step granularity: 0.05 (matches histogram bins).
+ * The histogram (`children`) is the control's box: the three zones tint its ground grey,
+ * orange and green, a dotted guide rises through it at each threshold, and the two
+ * pointers hang from its floor, tip up at their value, the value inside. Step
+ * granularity: 0.05 (matches histogram bins).
  */
 
 import { useCallback, useRef } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CONFIDENCE_STEP, snapToStep } from "../utils/confidenceStep";
 
@@ -17,6 +21,21 @@ interface DualThresholdSliderProps {
   upper: number;
   onLowerChange: (value: number) => void;
   onUpperChange: (value: number) => void;
+  /** The histogram the thresholds cut. */
+  children?: ReactNode;
+}
+
+/** A pointer: tip up at x = 0, widened to hold its value (40 × 24). */
+const POINTER = "M0 0.75 L5.5 6 L18.5 6 Q19.25 6 19.25 6.75 L19.25 22.5 Q19.25 23.25 18.5 23.25 "
+  + "L-18.5 23.25 Q-19.25 23.25 -19.25 22.5 L-19.25 6.75 Q-19.25 6 -18.5 6 L-5.5 6 Z";
+
+function Pointer() {
+  return (
+    <svg className="threshold-slider-pointer" width="40" height="24" viewBox="-20 0 40 24"
+      aria-hidden="true">
+      <path d={POINTER} />
+    </svg>
+  );
 }
 
 /** Snap a raw 0–1 value to the nearest 0.05 step (see `snapToStep`). */
@@ -40,6 +59,7 @@ export function DualThresholdSlider({
   upper,
   onLowerChange,
   onUpperChange,
+  children,
 }: DualThresholdSliderProps) {
   const { t } = useTranslation();
   const trackRef = useRef<HTMLDivElement>(null);
@@ -102,56 +122,60 @@ export function DualThresholdSlider({
 
   return (
     <div className="threshold-slider" data-testid="bn-threshold-slider">
+      {/* The box: the zones' ground, the histogram, and a guide at each line. It is also
+          what a drag measures against. */}
       <div className="threshold-slider-track" ref={trackRef}>
-        {/* Grey segment: 0 → lower */}
         <div
           className="threshold-slider-segment threshold-slider-segment--grey"
           style={{ left: 0, width: lowerPct }}
         />
-        {/* Amber segment: lower → upper */}
         <div
           className="threshold-slider-segment threshold-slider-segment--amber"
           style={{ left: lowerPct, width: `${(upper - lower) * 100}%` }}
         />
-        {/* Green segment: upper → 1.0 */}
         <div
           className="threshold-slider-segment threshold-slider-segment--green"
           style={{ left: upperPct, width: `${(1 - upper) * 100}%` }}
         />
+        {children}
+        <div className="threshold-slider-guide threshold-slider-guide--lower" style={{ left: lowerPct }} />
+        <div className="threshold-slider-guide threshold-slider-guide--upper" style={{ left: upperPct }} />
       </div>
 
-      {/* Lower thumb */}
-      <div
-        className="threshold-slider-thumb"
-        style={{ left: lowerPct }}
-        role="slider"
-        aria-label={t("autocode.lowerThreshold")}
-        aria-valuemin={0}
-        aria-valuemax={snap(upper - MIN_GAP)}
-        aria-valuenow={lower}
-        tabIndex={0}
-        onPointerDown={startDrag("lower")}
-        onKeyDown={handleKeyDown("lower")}
-        data-testid="bn-threshold-lower"
-      >
-        <span className="threshold-slider-label">{lower.toFixed(2)}</span>
-      </div>
-
-      {/* Upper thumb */}
-      <div
-        className="threshold-slider-thumb"
-        style={{ left: upperPct }}
-        role="slider"
-        aria-label={t("autocode.upperThreshold")}
-        aria-valuemin={snap(lower + MIN_GAP)}
-        aria-valuemax={1}
-        aria-valuenow={upper}
-        tabIndex={0}
-        onPointerDown={startDrag("upper")}
-        onKeyDown={handleKeyDown("upper")}
-        data-testid="bn-threshold-upper"
-      >
-        <span className="threshold-slider-label">{upper.toFixed(2)}</span>
+      {/* The pointers hang from the box's floor. */}
+      <div className="threshold-slider-rail">
+        <div
+          className="threshold-slider-thumb threshold-slider-thumb--lower"
+          style={{ left: lowerPct }}
+          role="slider"
+          aria-label={t("autocode.lowerThreshold")}
+          aria-valuemin={0}
+          aria-valuemax={snap(upper - MIN_GAP)}
+          aria-valuenow={lower}
+          tabIndex={0}
+          onPointerDown={startDrag("lower")}
+          onKeyDown={handleKeyDown("lower")}
+          data-testid="bn-threshold-lower"
+        >
+          <Pointer />
+          <span className="threshold-slider-label">{lower.toFixed(2)}</span>
+        </div>
+        <div
+          className="threshold-slider-thumb threshold-slider-thumb--upper"
+          style={{ left: upperPct }}
+          role="slider"
+          aria-label={t("autocode.upperThreshold")}
+          aria-valuemin={snap(lower + MIN_GAP)}
+          aria-valuemax={1}
+          aria-valuenow={upper}
+          tabIndex={0}
+          onPointerDown={startDrag("upper")}
+          onKeyDown={handleKeyDown("upper")}
+          data-testid="bn-threshold-upper"
+        >
+          <Pointer />
+          <span className="threshold-slider-label">{upper.toFixed(2)}</span>
+        </div>
       </div>
     </div>
   );

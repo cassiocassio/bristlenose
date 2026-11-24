@@ -27,11 +27,6 @@
     margin-bottom: 0.25rem;
 }
 
-/* Air above the tallest bar, so it does not run into the dialog's header (owner,
-   24 Nov 2026). A margin, not padding: the bins' height is the histogram's 120 px. */
-.threshold-body .threshold-histogram {
-    margin-top: var(--bn-space-md);
-}
 
 .threshold-histogram-bin {
     flex: 1;
@@ -56,8 +51,8 @@
 .threshold-histogram-bar--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.5; }
 
 /* Unit-square mode — tag-coloured squares. A square is as wide as its bin, unless the
-   tallest stack (--bn-hist-stack, set by the component) would then overflow the histogram's 120 px
-   (its height, above):
+   tallest stack (--bn-hist-stack, set by the component) would then overflow the histogram's height
+   (--bn-hist-height; 120 px, or less where the slider gives it headroom):
    in a wide dialog a bin is ~42 px and four squares stood ~50 px above the box, into the
    header (owner, 24 Nov 2026). Then every square shrinks to fit, centred in its bin. */
 .threshold-histogram:has(.threshold-histogram-square) {
@@ -67,7 +62,7 @@
 .threshold-histogram-square {
     --bn-hist-square: min(
         calc((100cqw - 19px) / 20),
-        calc((120px - (var(--bn-hist-stack, 1) - 1) * 1px) / var(--bn-hist-stack, 1))
+        calc((var(--bn-hist-height, 120px) - (var(--bn-hist-stack, 1) - 1) * 1px) / var(--bn-hist-stack, 1))
     );
     width: var(--bn-hist-square);
     height: var(--bn-hist-square);
@@ -76,80 +71,106 @@
     flex-shrink: 0;
 }
 
-/* X-axis labels */
-.threshold-histogram-axis {
-    display: flex;
-    justify-content: space-between;
-    font-size: var(--bn-text-micro);
-    color: var(--bn-colour-muted);
-    font-family: var(--bn-font-body);
-    font-variant-numeric: tabular-nums;
-    padding: 0.15rem 0 0;
-    user-select: none;
-}
-
-/* ── Dual threshold slider ─────────────────────────────────── */
+/* ── The threshold slider: a Levels control (DualThresholdSlider) ──
+   Pixelmator Pro's Levels, frame B of docs/mockups/autocode-levels-slider.html (owner,
+   24 Nov 2026). The histogram is the box; the zones tint its ground; a dotted guide rises
+   through it at each line; the pointers hang from its floor with their value inside. */
 
 .threshold-slider {
-    position: relative;
-    height: 24px;
-    margin: 0.5rem 0 0.75rem;
+    margin: var(--bn-space-md) 0 var(--bn-space-sm);
     user-select: none;
     touch-action: none;
 }
 
 .threshold-slider-track {
-    position: absolute;
-    top: 10px;
-    left: 0;
-    right: 0;
-    height: 4px;
-    border-radius: 2px;
+    position: relative;
+    height: 120px;
+    border-radius: var(--bn-radius-sm) var(--bn-radius-sm) 0 0;
+    border-bottom: 1px solid var(--bn-colour-border);
     overflow: hidden;
+}
+
+/* Standing on the floor, with headroom above the tallest stack (owner, 24 Nov 2026). */
+.threshold-slider-track .threshold-histogram {
+    --bn-hist-height: 104px;
+    position: absolute;
+    inset: auto 0 0 0;
+    height: var(--bn-hist-height);
+    margin: 0;
 }
 
 .threshold-slider-segment {
     position: absolute;
     top: 0;
-    height: 100%;
+    bottom: 0;
 }
 
-.threshold-slider-segment--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.3; }
-.threshold-slider-segment--amber  { background-color: var(--bn-colour-warning); opacity: 0.5; }
-.threshold-slider-segment--green  { background-color: var(--bn-colour-positive); opacity: 0.5; }
+.threshold-slider-segment--grey  { background: color-mix(in srgb, var(--bn-colour-muted) 9%, transparent); }
+.threshold-slider-segment--amber { background: color-mix(in srgb, var(--bn-colour-warning) 13%, transparent); }
+.threshold-slider-segment--green { background: color-mix(in srgb, var(--bn-colour-positive) 11%, transparent); }
 
+.threshold-slider-guide {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px dotted var(--threshold-ink);
+    pointer-events: none;
+}
+
+.threshold-slider-guide--lower,
+.threshold-slider-thumb--lower { --threshold-ink: var(--bn-colour-warning); }
+.threshold-slider-guide--upper,
+.threshold-slider-thumb--upper { --threshold-ink: var(--bn-colour-positive); }
+
+.threshold-slider-rail {
+    position: relative;
+    height: 26px;
+}
+
+/* Outlined, not filled, so the value is text colour on the dialog's ground in both
+   schemes (white on the amber fill is 2:1). */
 .threshold-slider-thumb {
     position: absolute;
-    top: 2px;
-    width: 20px;
-    height: 20px;
-    margin-left: -10px;
-    border-radius: 50%;
-    background: var(--bn-colour-bg, #fff);
-    border: 2px solid var(--bn-colour-accent, #3b82f6);
+    top: 0;
+    width: 40px;
+    height: 24px;
+    margin-left: -20px;
     cursor: grab;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    outline: none;
+    z-index: 1;
 }
 
 .threshold-slider-thumb:active { cursor: grabbing; }
 
-.threshold-slider-thumb:focus-visible {
-    outline: 2px solid var(--bn-colour-accent);
-    outline-offset: 2px;
+.threshold-slider-pointer {
+    display: block;
+    overflow: visible;
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.15));
+}
+
+.threshold-slider-pointer path {
+    fill: var(--bn-modal-bg);
+    stroke: var(--threshold-ink);
+    stroke-width: 1.5;
+}
+
+.threshold-slider-thumb:focus-visible .threshold-slider-pointer path {
+    stroke: var(--bn-colour-accent);
+    stroke-width: 2;
 }
 
 .threshold-slider-label {
     position: absolute;
-    top: -18px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    top: 7px;
+    line-height: 15px;
+    text-align: center;
     font-size: var(--bn-text-micro);
     font-family: var(--bn-font-body);
     font-variant-numeric: tabular-nums;
+    font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     white-space: nowrap;
     pointer-events: none;

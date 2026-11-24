@@ -128,25 +128,18 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
     [lower, upper, maxCount, useSquares, t],
   );
 
+  // Drawn inside the threshold slider's box (DualThresholdSlider), which tints the zones
+  // behind it and draws the lines over it. No axis: the two pointers carry the only
+  // values that matter here (owner, 24 Nov 2026).
   return (
-    <div>
-      <div
-        ref={containerRef}
-        className="threshold-histogram"
-        data-testid="bn-threshold-histogram"
-        // The tallest stack, so the squares can fit it in the box (threshold-review.css).
-        style={{ "--bn-hist-stack": maxCount } as CSSProperties}
-      >
-        {bins.map((bin, idx) => renderBin(bin, idx))}
-      </div>
-      <div className="threshold-histogram-axis">
-        <span>0.0</span>
-        <span>0.2</span>
-        <span>0.4</span>
-        <span>0.6</span>
-        <span>0.8</span>
-        <span>1.0</span>
-      </div>
+    <div
+      ref={containerRef}
+      className="threshold-histogram"
+      data-testid="bn-threshold-histogram"
+      // The tallest stack, so the squares can fit it in the box (threshold-review.css).
+      style={{ "--bn-hist-stack": maxCount } as CSSProperties}
+    >
+      {bins.map((bin, idx) => renderBin(bin, idx))}
     </div>
   );
 }

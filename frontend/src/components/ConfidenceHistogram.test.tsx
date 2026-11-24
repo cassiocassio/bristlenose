@@ -36,13 +36,12 @@ describe("ConfidenceHistogram", () => {
     expect(bins).toHaveLength(20);
   });
 
-  it("renders x-axis labels", () => {
+  it("draws no axis: the slider's pointers carry the values (owner, 24 Nov 2026)", () => {
     render(
       <ConfidenceHistogram proposals={[]} lower={0.3} upper={0.7} />,
     );
-    expect(screen.getByText("0.0")).toBeInTheDocument();
-    expect(screen.getByText("0.4")).toBeInTheDocument();
-    expect(screen.getByText("1.0")).toBeInTheDocument();
+    expect(screen.queryByText("0.0")).toBeNull();
+    expect(screen.queryByText("1.0")).toBeNull();
   });
 
   it("assigns proposals to correct bins", () => {

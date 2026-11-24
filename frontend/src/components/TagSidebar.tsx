@@ -690,23 +690,44 @@ export function TagSidebar() {
         onReview={setReviewing}
       />
 
-      {/* Actions bar */}
+      {/* Two labelled controls (owner, 24 Nov 2026): "Select: All | None", the two
+          actions split by a rule, and "Show:" with a small pop-up of Used and All. Same
+          behaviour as the three links they replace. */}
       <div className="tag-sidebar-actions">
-        <button type="button" className="tag-filter-action" onClick={handleSelectAll}>
-          {t("tags.selectAll")}
-        </button>
-        <span className="tag-filter-separator">|</span>
-        <button type="button" className="tag-filter-action" onClick={handleClear}>
-          {t("tags.clear")}
-        </button>
-        <span className="tag-filter-separator">|</span>
-        <button
-          type="button"
-          className={`tag-filter-action${showUsedOnly ? " tag-filter-action-active" : ""}`}
-          onClick={() => setShowUsedOnly((v) => !v)}
-        >
-          {showUsedOnly ? t("tags.all") : t("tags.used")}
-        </button>
+        <span className="tag-sidebar-control" role="group" aria-labelledby="bn-tag-select-label">
+          <span className="tag-sidebar-control-label" id="bn-tag-select-label">
+            {t("tags.selectLabel")}
+          </span>
+          <button
+            type="button"
+            className="tag-filter-action"
+            onClick={handleSelectAll}
+            data-testid="bn-tag-select-all"
+          >
+            {t("tags.all")}
+          </button>
+          <span className="tag-filter-separator" aria-hidden="true">|</span>
+          <button
+            type="button"
+            className="tag-filter-action"
+            onClick={handleClear}
+            data-testid="bn-tag-select-none"
+          >
+            {t("tags.none")}
+          </button>
+        </span>
+        <label className="tag-sidebar-control">
+          <span className="tag-sidebar-control-label">{t("tags.showLabel")}</span>
+          <select
+            className="tag-sidebar-show"
+            value={showUsedOnly ? "used" : "all"}
+            onChange={(e) => setShowUsedOnly(e.target.value === "used")}
+            data-testid="bn-tag-show"
+          >
+            <option value="used">{t("tags.used")}</option>
+            <option value="all">{t("tags.all")}</option>
+          </select>
+        </label>
       </div>
 
       {/* Search */}

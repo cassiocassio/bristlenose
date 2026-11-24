@@ -669,6 +669,49 @@
     font-weight: var(--bn-weight-emphasis);
 }
 
+/* The row's two labelled controls (owner, 24 Nov 2026): "Select: All | None" on the
+   left, "Show: [Used ▾]" at the right edge, each label with its control on one
+   baseline. The row wraps rather than cutting a control (above). */
+.tag-sidebar-actions:has(.tag-sidebar-control) {
+    justify-content: space-between;
+    align-items: baseline;
+    padding-right: var(--bn-space-md);  /* the overview body's right inset: Show ends under Review */
+}
+
+.tag-sidebar-control {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.tag-sidebar-control-label {
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+}
+
+/* A small pop-up: the house select (organisms/settings.css .bn-locale-select), at the
+   row's caption size. */
+.tag-sidebar-show {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    padding: 0 var(--bn-space-xs);
+    cursor: pointer;
+}
+
+.tag-sidebar-show:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+.tag-sidebar-show:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
 .tag-sidebar-body {
     flex: 1;
     overflow-y: auto;

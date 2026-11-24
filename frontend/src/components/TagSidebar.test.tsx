@@ -412,7 +412,7 @@ describe("TagSidebar summary line (as shipped)", () => {
     vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(["Trust", "Pricing"].map(tag)));
     render(<TagSidebar />);
     await waitFor(() => expect(screen.getByText("Pricing")).toBeTruthy());
-    fireEvent.click(screen.getByText("Used"));
+    fireEvent.change(screen.getByTestId("bn-tag-show"), { target: { value: "used" } });
     expect(line()).toBe("1 tags across 1 frameworks");
   });
 

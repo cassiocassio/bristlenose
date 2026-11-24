@@ -1422,6 +1422,10 @@ with a colour token, never `opacity` (`theme/gotchas.md`); the mockup offers
 muted ink as the alternative (4.2:1 on the selected row in light mode, 4.6:1 or
 better elsewhere). Owner's choice, 24 Nov: opacity.
 
+**Accepted for v1 as built (owner, 24 Nov):** the sub-4.5:1 white on accent, the
+half-opacity off pill, and a title that can re-wrap once at a count of 1000 or
+more all stand for v1; none is a known bug to fix before release.
+
 Frame: **V8** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
 
 ### D11 — each control appears exactly once; installed state is shown, not re-offered

@@ -74,3 +74,18 @@ def test_miro_allowed_in_captions_but_not_in_subtitle(tmp_path):
     code, out = run(tmp_path, subtitle="Miro research analysis")
     assert code == 1
     assert "third-party names" in out
+
+def test_figjam_allowed_in_captions_but_not_in_subtitle(tmp_path):
+    code, out = run(tmp_path, captions="One\nSend to Miro, FigJam\nThree")
+    assert code == 0, out
+    code, out = run(tmp_path, subtitle="FigJam research analysis")
+    assert code == 1
+    assert "third-party names" in out
+
+
+def test_import_services_allowed_in_captions_but_not_in_keywords(tmp_path):
+    code, out = run(tmp_path, captions="One\nDirect from Teams, Google Meet and Zoom\nThree")
+    assert code == 0, out
+    code, out = run(tmp_path, keywords="zoom,teams,interview")
+    assert code == 1
+    assert "third-party names" in out

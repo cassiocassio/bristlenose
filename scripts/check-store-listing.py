@@ -31,6 +31,7 @@ MARKS = [
     "gemini",
     "azure",
     "miro",
+    "figjam",
     "zoom",
     "teams",
     "google",
@@ -215,8 +216,11 @@ def main():
     for k in ("name", "subtitle", "keywords", "captions", "promo"):
         v = f.get(k, "")
         # Miro may be named in captions: owner decision 18 Nov, factual "compatible with" use
-        # under Miro Developer Terms 2.3. Still failed in name, subtitle and keywords.
-        allowed = {"miro"} if k == "captions" else set()
+        # under Miro Developer Terms 2.3. FigJam likewise: owner decision 22 Nov, same factual
+        # use. Both still failed in name, subtitle and keywords.
+        # Teams, Google and Zoom likewise (22 Nov, owner): the import frame names the three
+        # services recordings come from, factually.
+        allowed = {"miro", "figjam", "teams", "google", "zoom"} if k == "captions" else set()
         hit = [t for t in MARKS if t not in allowed and re.search(rf"\b{t}\b", v, re.I)]
         if hit and k != "promo":
             fail("2.3.7/5.2.1", f"'{k}' contains third-party names: {', '.join(hit)}")

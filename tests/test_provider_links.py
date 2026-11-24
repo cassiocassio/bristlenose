@@ -177,3 +177,12 @@ def test_the_normal_run_makes_no_network_call(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(cpl, "fetch_chain", boom)
     monkeypatch.setattr(cpl.urllib.request, "build_opener", boom)
     assert cpl.check(cpl.website_root()) == []
+
+
+def test_a_finding_fails_the_gate_and_none_passes_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The exit code is the gate: check() can find everything and still be
+    # ignored if main() maps findings to 0.
+    monkeypatch.setattr(cpl, "check", lambda web: ["somefile:1 unregistered url"])
+    assert cpl.main([]) == 1
+    monkeypatch.setattr(cpl, "check", lambda web: [])
+    assert cpl.main([]) == 0

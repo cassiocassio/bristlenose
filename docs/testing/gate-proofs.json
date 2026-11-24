@@ -1,6 +1,21 @@
 {
   "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
   "declared": {
+    "check-docs-terms": {
+        "evidence": "with main()'s failure return changed from 1 to 0, 4 of 18 fail; restored, 18 passed",
+        "how": "tests/test_check_docs_terms.py, which runs the gate on fixtures with and without a forbidden spelling; mutated the exit locally under PYTHONDONTWRITEBYTECODE=1, then restored by the reverse edit",
+        "observed": "2026-11-25"
+    },
+    "check-provider-links": {
+        "evidence": "the offline gate's findings come from check(), which the suite drives with one-change mutations of the register; the exit mapping (code = 1 if problems else 0) was unpinned, so test_a_finding_fails_the_gate_and_none_passes_it was added: with that line changed to code = 0, 1 of 21 fails; restored, 21 passed. Not covered: --live (needs the network)",
+        "how": "tests/test_provider_links.py; mutated the exit locally, then restored by the reverse edit",
+        "observed": "2026-11-25"
+    },
+    "check-release-closeout": {
+        "evidence": "watched red on a real release: for 0.48.0 before its close-out, release log, CLAUDE.md status and website changelog all failed and it exited 1; for 0.47.0 the same three rows passed, so it discriminates rather than rejecting everything (its website-pushed row was red for both, genuinely: 4 unpushed website commits). Not an automated proof: it reads live state",
+        "how": "ran scripts/check-release-closeout.sh 0.48.0 and 0.47.0 side by side during the 0.48.0 release",
+        "observed": "2026-11-25"
+    },
     "check-store-listing": {
         "evidence": "with the failure exit changed from 1 to 0, 4 of 6 fail (a download size that differs between description and review notes, a Zoom-import claim, a TODO left in a field, a third-party name in the subtitle); restored, 6 passed. The clean fixture passing is half the proof: a gate that rejected everything would fail it. Not covered: --shots and --preview (sips, macOS only)",
         "how": "tests/test_check_store_listing.py, which runs the script on a clean listing and on one-change mutations of it; mutated the exit locally, then restored",

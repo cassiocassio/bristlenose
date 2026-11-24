@@ -23,27 +23,18 @@ OUT = Path(__file__).with_suffix("").with_suffix(".html")
 # Order: the six codebooks that carry author links, as the library lists them.
 IDS = ["garrett", "morville", "nielsen", "norman", "plato", "yablonski"]
 
-# Labels are the YAML's own unless overridden here. A label marked * is
-# owner-written copy (not a book title, retailer or domain).
-PROPOSED: dict[str, list[tuple[str, str]]] = {
-    "nielsen": [
-        ("nngroup.com", "https://www.nngroup.com/articles/ten-usability-heuristics/"),
-        ("CHI 1994 paper", "https://doi.org/10.1145/191666.191729"),
-        ("Amazon US", "https://www.amazon.com/dp/0125184069"),
-        ("Amazon UK", "https://www.amazon.co.uk/dp/0125184069"),
-    ],
-    "morville": [
-        ("semanticstudios.com", "https://semanticstudios.com"),
-        ("Honeycomb essay (2004)", "https://semanticstudios.com/user_experience_design/"),
-        ("Information Architecture (US)", "https://www.amazon.com/dp/1491911689"),
-        ("Information Architecture (UK)", "https://www.amazon.co.uk/dp/1491911689"),
-        ("Ambient Findability (US)", "https://www.amazon.com/dp/0596007655"),
-        ("Ambient Findability (UK)", "https://www.amazon.co.uk/dp/0596007655"),
-    ],
-}
+# Labels shipped in the YAML. A label not taken from a domain, retailer or book
+# title is owner-written copy; the commentary lists them.
+PROPOSED: dict[str, list[tuple[str, str]]] = {}
 
-# Yablonski's labels were shortened in 44fe0ace7; "current" shows them as they were.
-BEFORE_REV = {"yablonski": "44fe0ace7^"}
+# "Current" shows each codebook's labels as they were before the 24 Nov 2026
+# shortening: Yablonski's changed in 44fe0ace7, Nielsen's and Morville's in the
+# commit after 31646c294 (the mockup's own commit, whose tree predates them).
+BEFORE_REV = {
+    "yablonski": "44fe0ace7^",
+    "nielsen": "31646c294",
+    "morville": "31646c294",
+}
 
 EXTERNAL_SVG = (
     '<svg class="bn-icon bn-icon-external" xmlns="http://www.w3.org/2000/svg" '
@@ -98,7 +89,7 @@ def card(cid: str, author: str, bio: str, links: list[tuple[str, str]]) -> str:
 
 
 def frame(cid: str, title: str, inner: str, changed: bool) -> str:
-    tag = "proposed" if changed else "unchanged"
+    tag = "changed" if changed else "unchanged"
     return (
         f'<figure class="mk-frame"><figcaption class="mk-bar"><span>{html.escape(title)}</span>'
         f'<span class="mk-tag mk-{tag}">{tag}</span></figcaption>'
@@ -171,7 +162,7 @@ h2.mk-h { font: 600 13px/1.4 ui-monospace, Menlo, monospace; letter-spacing: .04
        background: light-dark(#f6f6f6, #2a2a2a); border-bottom: 1px solid var(--bn-colour-border); }
 .mk-bar span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
 .mk-tag { padding: 0 6px; border-radius: 4px; }
-.mk-proposed { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #bfdbfe); }
+.mk-changed { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #bfdbfe); }
 /* The frame stands in for .pg-head (display:flex), the parent that gives .pg-side
    its 240px flex-basis; padding goes on the frame so the gutter stays 240px. */
 .mk-stage { display: flex; padding: 16px; }
@@ -194,10 +185,10 @@ h2.mk-h { font: 600 13px/1.4 ui-monospace, Menlo, monospace; letter-spacing: .04
 </div>
 <p class="mk-key">Frames = the shipped author card (.pg-side 240px gutter + .preview-author), theme CSS inlined from the tree. Grey bar = mockup chrome. Hatched block = commentary.</p>
 
-<h2 class="mk-h">Proposed</h2>
+<h2 class="mk-h">Shipped (24 Nov 2026)</h2>
 <div class="mk-row"><!--AFTER--></div>
 
-<h2 class="mk-h">Current (Laws of UX as before today's change)</h2>
+<h2 class="mk-h">Before (labels as of 23 Nov 2026)</h2>
 <div class="mk-row"><!--BEFORE--></div>
 
 <section class="mk-note">

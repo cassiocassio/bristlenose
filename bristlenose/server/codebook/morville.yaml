@@ -44,15 +44,15 @@ author_bio: >
 author_links:
   - label: semanticstudios.com
     url: https://semanticstudios.com
-  - label: User Experience Design (2004)
+  - label: Honeycomb essay (2004)
     url: https://semanticstudios.com/user_experience_design/
-  - label: Amazon US — Information Architecture
+  - label: Information Architecture (US)
     url: https://www.amazon.com/dp/1491911689
-  - label: Amazon UK — Information Architecture
+  - label: Information Architecture (UK)
     url: https://www.amazon.co.uk/dp/1491911689
-  - label: Amazon US — Ambient Findability
+  - label: Ambient Findability (US)
     url: https://www.amazon.com/dp/0596007655
-  - label: Amazon UK — Ambient Findability
+  - label: Ambient Findability (UK)
     url: https://www.amazon.co.uk/dp/0596007655
 
 preamble: >

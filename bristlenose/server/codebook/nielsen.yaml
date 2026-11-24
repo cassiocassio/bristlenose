@@ -35,13 +35,13 @@ author_bio: >
   and the set was refined in 1994.
 
 author_links:
-  - label: 10 Usability Heuristics
+  - label: nngroup.com
     url: https://www.nngroup.com/articles/ten-usability-heuristics/
-  - label: 1994 CHI paper (DOI)
+  - label: CHI 1994 paper
     url: https://doi.org/10.1145/191666.191729
-  - label: Usability Engineering (US)
+  - label: Amazon US
     url: https://www.amazon.com/dp/0125184069
-  - label: Usability Engineering (UK)
+  - label: Amazon UK
     url: https://www.amazon.co.uk/dp/0125184069
 
 preamble: >

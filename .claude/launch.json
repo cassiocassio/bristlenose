@@ -72,6 +72,15 @@
         "/Users/cassio/Code/bristlenose-website"
       ],
       "port": 8212
+    },
+    {
+      "name": "website-pricing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "/Users/cassio/Code/bristlenose-website-pricing/scripts/serve.py",
+        "8213"
+      ],
+      "port": 8213
     }
   ]
 }

@@ -606,6 +606,10 @@
 .pageoff .cb-applied { background: var(--bn-colour-badge-bg); }
 .off2 .cb-applied .bn-icon,
 .pageoff .cb-applied .bn-icon { color: var(--bn-colour-muted); }
+/* A card is knocked back whole (.off2's opacity), its cartouche with it; the page is
+   not, so its cartouche takes the same knock-back itself and the two read alike
+   (owner, 24 Nov 2026). */
+.pageoff .cb-applied { opacity: var(--bn-opacity-off); }
 
 /* ── Codebook v2 — the uninstall confirmation ─────────────────────────────
    Phase 5. Reuses the shipped .bn-modal-overlay / .bn-modal shell; only the

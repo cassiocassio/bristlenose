@@ -15,6 +15,7 @@
  */
 
 import { useMemo, useRef, useCallback } from "react";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse, ZoneBin } from "../utils/types";
 import { getTagBg } from "../utils/colours";
@@ -133,6 +134,8 @@ export function ConfidenceHistogram({ proposals, lower, upper }: ConfidenceHisto
         ref={containerRef}
         className="threshold-histogram"
         data-testid="bn-threshold-histogram"
+        // The tallest stack, so the squares can fit it in the box (threshold-review.css).
+        style={{ "--bn-hist-stack": maxCount } as CSSProperties}
       >
         {bins.map((bin, idx) => renderBin(bin, idx))}
       </div>

@@ -29,7 +29,11 @@ interface ProposalZoneListProps {
   onAccept?: (proposalId: number) => void;
   onDeny?: (proposalId: number) => void;
   removing: Set<number>;
+  /** Draw every quote whole rather than one line cut to fit. */
+  wordWrap?: boolean;
 }
+
+const SESSION_ORDER = new Intl.Collator(undefined, { numeric: true });
 
 const ZONE_LABEL_KEYS: Record<Zone, string> = {
   accepted: "autocode.review.zoneAccepted",
@@ -44,13 +48,15 @@ export function ProposalZoneList({
   onAccept,
   onDeny,
   removing,
+  wordWrap = false,
 }: ProposalZoneListProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   const visibleCount = proposals.filter((p) => !removing.has(p.id)).length;
 
-  /** Group proposals by session, sorted by confidence desc within each session. */
+  /** Group proposals by session, sessions in number order (s2 before s10), sorted by
+   *  confidence desc within each session. */
   const groupedBySession = useMemo(() => {
     const sorted = [...proposals].sort((a, b) => b.confidence - a.confidence);
     const map = new Map<string, ProposedTagResponse[]>();
@@ -58,7 +64,7 @@ export function ProposalZoneList({
       if (!map.has(p.session_id)) map.set(p.session_id, []);
       map.get(p.session_id)!.push(p);
     }
-    return map;
+    return new Map([...map.entries()].sort(([a], [b]) => SESSION_ORDER.compare(a, b)));
   }, [proposals]);
 
   const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
@@ -67,17 +73,26 @@ export function ProposalZoneList({
 
   return (
     <div className="threshold-zone-list" data-testid={`bn-zone-${zone}`}>
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-      <div className="threshold-zone-list-header" onClick={toggleOpen}>
+      {/* A button, so the zone opens from the keyboard too. It sticks to the top of the
+          scroll while its rows pass under it, until the next zone pushes it away. */}
+      <button
+        type="button"
+        className="threshold-zone-list-header"
+        onClick={toggleOpen}
+        aria-expanded={isOpen}
+        data-testid={`bn-zone-header-${zone}`}
+      >
         <span className={`threshold-zone-list-chevron${isOpen ? " threshold-zone-list-chevron--open" : ""}`}>
           <Icon name="disclose" decorative />
         </span>
         <span>{t(ZONE_LABEL_KEYS[zone])}</span>
         <span className="threshold-zone-list-count">({visibleCount})</span>
-      </div>
+      </button>
 
       <div className={`threshold-zone-list-body${isOpen ? " threshold-zone-list-body--open" : ""}`}>
-        <table className="threshold-proposal-table">
+        <table
+          className={`threshold-proposal-table${wordWrap ? " threshold-proposal-table--wrap" : ""}`}
+        >
           <tbody>
             {Array.from(groupedBySession.entries()).map(([sessionId, items]) => (
               <SessionRows
@@ -163,7 +178,13 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
           </td>
           <td className="report-tag">
             <span
-              className={featureFlags.proposalRationaleTooltip ? "badge has-tooltip" : "badge"}
+              // A tag Apply would leave tentative is drawn as a tentative tag is everywhere
+              // else: the dashed outline (owner, 24 Nov 2026).
+              className={[
+                "badge",
+                zone === "tentative" ? "badge-proposed" : "",
+                featureFlags.proposalRationaleTooltip ? "has-tooltip" : "",
+              ].filter(Boolean).join(" ")}
               style={{ backgroundColor: getTagBg(p.colour_set, p.colour_index) }}
             >
               {p.tag_name}

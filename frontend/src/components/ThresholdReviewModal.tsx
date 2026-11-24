@@ -79,6 +79,10 @@ export function ThresholdReviewModal({
 
   const [totalCount, setTotalCount] = useState(0);
 
+  // Off: each quote is one line, cut to fit. On: every quote is drawn whole, which is
+  // more scrolling and easier to judge (owner, 24 Nov 2026). Kept across openings.
+  const [wordWrap, setWordWrap] = useState(false);
+
   // Moves each time the modal opens (see `review`).
   const opening = useRef(0);
   // A row call landed in this opening, or is still in flight: Close says so (D42).
@@ -292,7 +296,7 @@ export function ThresholdReviewModal({
         <div className="codebook-modal-header">
           <div>
             <div className="codebook-modal-title" id="bn-threshold-title">
-              {t("autocode.review.title")} &mdash; {frameworkTitle}
+              {t("autocode.review.title", { codebook: frameworkTitle })}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-threshold-subtitle">
               {t("autocode.review.remaining", { pending: pendingCount, total: totalCount })}
@@ -316,7 +320,9 @@ export function ThresholdReviewModal({
         </div>
 
         {/* Body */}
-        <div className="codebook-modal-body" style={{ padding: "1.5rem" }}>
+        {/* No padding at the top: a zone header sticks to the very top of the scroll (the
+            histogram's own room sits inside it), so no row shows above a stuck header. */}
+        <div className="codebook-modal-body threshold-body">
           {loading ? (
             <p style={{ color: "var(--bn-colour-muted)" }}>{t("autocode.loading")}</p>
           ) : !hasProposals ? (
@@ -364,12 +370,14 @@ export function ThresholdReviewModal({
               <ProposalZoneList
                 zone="accepted"
                 proposals={accepted}
+                wordWrap={wordWrap}
                 removing={removing}
                 onDeny={handleDeny}
               />
               <ProposalZoneList
                 zone="tentative"
                 proposals={tentative}
+                wordWrap={wordWrap}
                 defaultExpanded={true}
                 removing={removing}
                 onAccept={handleAccept}
@@ -378,6 +386,7 @@ export function ThresholdReviewModal({
               <ProposalZoneList
                 zone="excluded"
                 proposals={excluded}
+                wordWrap={wordWrap}
                 removing={removing}
                 onAccept={handleAccept}
               />
@@ -393,6 +402,15 @@ export function ThresholdReviewModal({
 
         {/* Footer */}
         <div className="threshold-footer">
+          <label className="threshold-wrap">
+            <input
+              type="checkbox"
+              checked={wordWrap}
+              onChange={(e) => setWordWrap(e.target.checked)}
+              data-testid="bn-threshold-wrap"
+            />
+            {t("autocode.review.wordWrap")}
+          </label>
           <button
             className="bn-btn"
             onClick={close}

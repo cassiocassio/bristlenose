@@ -1,5 +1,20 @@
 /* Molecule: threshold-review — confidence histogram, dual slider, zone lists */
 
+/* ── The dialog's scroll ───────────────────────────────────── */
+
+/* No padding at the top, so a zone header stuck to the top of the scroll sits at its very
+   edge and no row shows above it. The room the padding gave is a spacer that scrolls away. */
+/* Two classes: .codebook-modal-body (organisms, loaded after this file) pads all round. */
+.codebook-modal-body.threshold-body {
+    padding: 0 var(--bn-space-lg) var(--bn-space-lg);
+}
+
+.threshold-body::before {
+    content: "";
+    display: block;
+    height: var(--bn-space-lg);
+}
+
 /* ── Histogram ──────────────────────────────────────────────── */
 
 .threshold-histogram {
@@ -9,6 +24,12 @@
     height: 120px;
     padding: 0;
     margin-bottom: 0.25rem;
+}
+
+/* Air above the tallest bar, so it does not run into the dialog's header (owner,
+   24 Nov 2026). A margin, not padding: the bins' height is the histogram's 120 px. */
+.threshold-body .threshold-histogram {
+    margin-top: var(--bn-space-md);
 }
 
 .threshold-histogram-bin {
@@ -33,10 +54,23 @@
 .threshold-histogram-bar--amber  { background-color: var(--bn-colour-warning); }
 .threshold-histogram-bar--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.5; }
 
-/* Unit-square mode — tag-coloured squares */
+/* Unit-square mode — tag-coloured squares. A square is as wide as its bin, unless the
+   tallest stack (--bn-hist-stack, set by the component) would then overflow the histogram's 120 px
+   (its height, above):
+   in a wide dialog a bin is ~42 px and four squares stood ~50 px above the box, into the
+   header (owner, 24 Nov 2026). Then every square shrinks to fit, centred in its bin. */
+.threshold-histogram:has(.threshold-histogram-square) {
+    container-type: inline-size;
+}
+
 .threshold-histogram-square {
-    width: 100%;
-    aspect-ratio: 1;
+    --bn-hist-square: min(
+        calc((100cqw - 19px) / 20),
+        calc((120px - (var(--bn-hist-stack, 1) - 1) * 1px) / var(--bn-hist-stack, 1))
+    );
+    width: var(--bn-hist-square);
+    height: var(--bn-hist-square);
+    align-self: center;
     border-radius: 1px;
     flex-shrink: 0;
 }
@@ -182,17 +216,28 @@
     margin-bottom: 0.5rem;
 }
 
+/* A button (it opens from the keyboard), drawn as the heading it was. It sticks to the
+   top of the scroll while its zone's rows pass under it; the next zone pushes it away,
+   since a sticky element stays inside its parent (.threshold-zone-list). */
 .threshold-zone-list-header {
     display: flex;
     align-items: center;
     gap: 0.4rem;
+    width: 100%;
     padding: 0.5rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+    background: var(--bn-modal-bg);
+    font: inherit;
+    text-align: start;
     cursor: pointer;
     font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     user-select: none;
-    border-bottom: 1px solid var(--bn-colour-border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .threshold-zone-list-header:hover { color: var(--bn-colour-accent); }
@@ -227,6 +272,19 @@
 .threshold-proposal-table {
     width: 100%;
     border-collapse: collapse;
+}
+
+/* Word wrap on: every quote drawn whole. Its column keeps the width it had, so only the
+   rows grow; the row's other cells sit on the quote's first line (baseline). */
+.threshold-proposal-table--wrap .report-quote {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+/* A tentative tag here is the tentative tag (atoms/badge.css), but not a control. */
+.threshold-proposal-table .badge-proposed {
+    cursor: inherit;
 }
 
 /* Figures throughout this molecule: body face, tabular numerals (docs/design-monospace-roles.md §4). */
@@ -298,5 +356,18 @@
     border-top: 1px solid var(--bn-colour-border);
     display: flex;
     justify-content: flex-end;
+    align-items: baseline;
     gap: 0.5rem;
+}
+
+/* Word wrap, bottom left, its words on the buttons' baseline. */
+.threshold-wrap {
+    margin-inline-end: auto;
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    user-select: none;
 }

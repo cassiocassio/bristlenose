@@ -108,7 +108,7 @@ describe("ThresholdReviewModal", () => {
     );
     await act(async () => {});
     expect(
-      screen.getByText(/Drag the thresholds to control/),
+      screen.getByText(/Drag thresholds to control/),
     ).toBeInTheDocument();
   });
 
@@ -989,7 +989,7 @@ describe("ThresholdReviewModal", () => {
       await open();
       const title = document.getElementById("bn-threshold-title")!;
       expect(title.querySelector("svg")).toBeNull();
-      expect(title).toHaveTextContent("AutoCode Review — Garrett");
+      expect(title).toHaveTextContent("AutoCode Review: Garrett");
     });
 
     it("opens on the whole run when nothing is pending", async () => {
@@ -1004,6 +1004,61 @@ describe("ThresholdReviewModal", () => {
         "0 of 7 proposals remaining (5 accepted, 2 excluded)",
       );
       expect(screen.getByTestId("bn-threshold-apply")).toBeDisabled();
+    });
+  });
+
+  // The owner's review-pane rulings (24 Nov 2026).
+  describe("the review pane's small fixes", () => {
+    const show = async (proposals: ProposedTagResponse[]) => {
+      mockGetProposals.mockResolvedValue({ proposals, total: proposals.length });
+      render(
+        <ThresholdReviewModal open frameworkId="garrett" frameworkTitle="Garrett"
+          onClose={vi.fn()} onApply={vi.fn()} />,
+      );
+      await act(async () => {});
+    };
+
+    it("opens and closes a zone from the keyboard: its header is a button", async () => {
+      await show([makeProposal({ id: 1, confidence: 0.9 })]);
+      const header = screen.getByTestId("bn-zone-header-accepted");
+      expect(header.tagName).toBe("BUTTON");
+      expect(header).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(header);
+      expect(header).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("lists sessions in number order, not by their best proposal", async () => {
+      await show([
+        makeProposal({ id: 1, session_id: "s10", confidence: 0.6 }),
+        makeProposal({ id: 2, session_id: "s3", confidence: 0.69 }),
+        makeProposal({ id: 3, session_id: "s2", confidence: 0.4 }),
+      ]);
+      const headers = [...screen.getByTestId("bn-zone-tentative")
+        .querySelectorAll(".report-session-header")].map((h) => h.textContent);
+      expect(headers).toEqual(["Session 2", "Session 3", "Session 10"]);
+    });
+
+    it("draws a tentative tag with the tentative tag's dashed outline, and only there", async () => {
+      await show([
+        makeProposal({ id: 1, confidence: 0.5 }),
+        makeProposal({ id: 2, confidence: 0.9 }),
+      ]);
+      fireEvent.click(screen.getByTestId("bn-zone-header-accepted"));
+      const badge = (id: number) =>
+        screen.getByTestId(`bn-proposal-row-${id}`).querySelector(".report-tag .badge")!;
+      expect(badge(1)).toHaveClass("badge-proposed");
+      expect(badge(2)).not.toHaveClass("badge-proposed");
+    });
+
+    it("cuts each quote to a line until Word wrap is ticked, then draws it whole", async () => {
+      await show([makeProposal({ id: 1, confidence: 0.5 })]);
+      const table = () => screen.getByTestId("bn-zone-tentative").querySelector("table")!;
+      const wrap = screen.getByTestId("bn-threshold-wrap");
+      expect(wrap).not.toBeChecked();
+      expect(screen.getByLabelText("Word wrap")).toBe(wrap);
+      expect(table()).not.toHaveClass("threshold-proposal-table--wrap");
+      fireEvent.click(wrap);
+      expect(table()).toHaveClass("threshold-proposal-table--wrap");
     });
   });
 });

@@ -681,23 +681,12 @@ export default function SessionTapestry({
               const change = thumbs ? tapestryThumb.changeAt(s.session_id) : null;
               onJump(change !== null ? Math.max(0, change - 1) : secAt(e.clientX));
             }} />
-          {win && (
-            // What the reader can see (the transcript): over the lanes, under the flags' labels.
-            <rect className={`bn-tp-window${onScrub ? " draggable" : ""}`} x={win.x0} y={bandY - 4} width={win.x1 - win.x0}
-              height={lanesBottom + 3 - (bandY - 4)} rx={3} data-testid="tapestry-window"
-              onPointerDown={onScrub ? windowDown : undefined}
-              onPointerMove={onScrub ? windowMove : undefined}
-              onPointerUp={onScrub ? windowUp : undefined}
-              onPointerCancel={onScrub ? windowCancel : undefined} />
-          )}
-          {playhead !== null && (
-            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={bandY - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
-          )}
-          {player !== null && (
-            <g className="bn-tp-player" data-testid="tapestry-player">
-              <path d={`M${x(player) - 4},${bandY - 9} h8 l-4,5 z`} />
-              <line x1={x(player)} x2={x(player)} y1={bandY - 5} y2={lanesBottom + 3} />
-            </g>
+          {win && onScrub && (
+            // The window's grip: invisible, under the bars and theme chips so they stay clickable
+            // inside it. What it looks like is drawn last, over every lane (below).
+            <rect className="bn-tp-window-grab" x={win.x0} y={bandY - 4} width={win.x1 - win.x0}
+              height={lanesBottom + 3 - (bandY - 4)} rx={3} data-testid="tapestry-window-grab"
+              onPointerDown={windowDown} onPointerMove={windowMove} onPointerUp={windowUp} onPointerCancel={windowCancel} />
           )}
 
           {/* Sentiment */}
@@ -780,6 +769,23 @@ export default function SessionTapestry({
               </g>
             );
           })}
+
+          {/* Where the reader is, drawn after every lane so no chip or bar covers it: the reading
+              window (what the transcript shows), the hover cursor and the player's moment. None
+              takes the pointer; the window's grip is the invisible rect above. */}
+          {win && (
+            <rect className="bn-tp-window" x={win.x0} y={bandY - 4} width={win.x1 - win.x0}
+              height={lanesBottom + 3 - (bandY - 4)} rx={3} data-testid="tapestry-window" />
+          )}
+          {playhead !== null && (
+            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={bandY - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
+          )}
+          {player !== null && (
+            <g className="bn-tp-player" data-testid="tapestry-player">
+              <path d={`M${x(player) - 4},${bandY - 9} h8 l-4,5 z`} />
+              <line x1={x(player)} x2={x(player)} y1={bandY - 5} y2={lanesBottom + 3} />
+            </g>
+          )}
 
           {ticks.map((tk) => (
             <text key={tk} className={`bn-tp-tick${nearTick === tk ? " near" : ""}`} aria-hidden="true" x={x(tk)} y={H - 2} textAnchor={tk === 0 ? "start" : "middle"}>

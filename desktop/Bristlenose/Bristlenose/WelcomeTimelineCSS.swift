@@ -2318,7 +2318,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–443 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–444 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -2719,9 +2719,10 @@ body.hide-ai-tags .badge-ai { display: none; }
     stroke-width: 1.5;
     pointer-events: none;
 }
-/* Draggable, as the minimap's viewport is: dragging scrolls the transcript. */
-.bn-tp-window.draggable { pointer-events: auto; cursor: grab; }
-.bn-tp-window.draggable:active { cursor: grabbing; }
+/* Draggable, as the minimap's viewport is: dragging scrolls the transcript. The grip is a separate,
+   invisible rect under the bars and chips; the window drawn over every lane never takes the pointer. */
+.bn-tp-window-grab { fill: transparent; stroke: none; cursor: grab; }
+.bn-tp-window-grab:active { cursor: grabbing; }
 /* The player's moment: accent, a notch heavier than the hover cursor (.bn-tp-playhead), with a
    head, so the two never read as one. */
 .bn-tp-player { pointer-events: none; }

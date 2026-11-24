@@ -642,7 +642,17 @@ describe("SessionTapestry — in the transcript", () => {
     // x = gutter (82) + seconds / sPerPx.
     expect(Number(win.getAttribute("x"))).toBe(182);
     expect(Number(win.getAttribute("width"))).toBe(120);
-    expect(win).not.toHaveClass("draggable");
+    expect(document.querySelector(".bn-tp-window-grab")).toBeNull(); // nothing to drag without onScrub
+  });
+
+  it("draws the reading window and the player's moment over every lane, so no theme chip or bar covers them", () => {
+    draw({ readingWindow: [100, 220], player: 150 });
+    const svg = document.querySelector("svg")!;
+    const order = [...svg.querySelectorAll(".bn-tp-theme, .bn-tp-bar, .bn-tp-window, .bn-tp-player")];
+    const lastLane = Math.max(...order.map((n, i) => (n.matches(".bn-tp-theme, .bn-tp-bar") ? i : -1)));
+    expect(lastLane).toBeGreaterThan(-1);
+    expect(order.indexOf(svg.querySelector(".bn-tp-window")!)).toBeGreaterThan(lastLane);
+    expect(order.indexOf(svg.querySelector(".bn-tp-player")!)).toBeGreaterThan(lastLane);
   });
 
   it("keeps the current section's flag raised at rest", () => {
@@ -678,8 +688,9 @@ describe("SessionTapestry — in the transcript", () => {
   it("scrubs while the window is dragged, and a click on it without a drag jumps", () => {
     const onScrub = vi.fn();
     const { onJump } = draw({ readingWindow: [100, 220], onScrub });
-    const win = document.querySelector<SVGRectElement>(".bn-tp-window")!;
-    expect(win).toHaveClass("draggable");
+    // The grip is its own rect, under the bars; the window drawn over the lanes takes no pointer.
+    const win = document.querySelector<SVGRectElement>(".bn-tp-window-grab")!;
+    expect(Number(win.getAttribute("x"))).toBe(Number(document.querySelector(".bn-tp-window")!.getAttribute("x")));
     // jsdom: the svg sits at 0, so clientX is the drawn x.
     fireEvent.pointerDown(win, { clientX: 200, pointerId: 1 });
     fireEvent.pointerMove(win, { clientX: 260, pointerId: 1 });

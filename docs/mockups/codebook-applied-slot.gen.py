@@ -372,8 +372,7 @@ def alignment() -> str:
     return "".join(out)
 
 
-EXPLAIN = ("AutoCode proposes one of these 18 tags for each of the 24 quotes in Demo study and applies the most "
-           "confident. The rest wait for your review.")
+EXPLAIN = "AutoCode proposes 18 tags for 24 quotes."
 
 
 def sequence() -> str:
@@ -640,7 +639,7 @@ def build() -> str:
         f"<tr><td>Slot, running</td><td>{W_RUN}…</td><td>new key; spelled as the shipped toast “{E(t('autocode.toast.progress', processed='N', total='M'))}”</td></tr>"
         f"<tr><td>Slot, done</td><td>{W_DONE}</td><td>new key (owner, 24 Nov), replaces the 6c “Installed”</td></tr>"
         f"<tr><td>Catalogue heading</td><td>{E(t('codebook.browseCodebooks'))}</td><td>shipped key <code>codebook.browseCodebooks</code>, 21 locales</td></tr>"
-        f"<tr><td>Explainer, before</td><td>{E(EXPLAIN)}</td><td>owner-written, replaces the 6c draft’s “Nothing is applied until you review the proposals” (untrue since the default cut); pluralised on both counts; no cost warning</td></tr>"
+        f"<tr><td>Explainer, before</td><td>{E(EXPLAIN)}</td><td>new key, worded by the owner 24 Nov; replaces the 6c draft’s “Nothing is applied until you review the proposals” (untrue since the default cut); pluralised on both counts; no cost warning</td></tr>"
         "<tr><td>Codebook page heading</td><td>Codebook</td><td>new key; each locale's value is the <code>Codebook</code> row of <code>locales/glossary.csv</code> (today a hard-coded English literal)</td></tr>"
         f"<tr><td>Meta line</td><td>“{E(t('codebook.notInstalled'))}”, “{E(t('codebook.tentativeCount_other', count=7))}”, {E(t('codebook.reviewProposals'))}, {E(t('codebook.removeFromCodebook'))}</td><td>shipped keys</td></tr>"
         "</table>"
@@ -674,7 +673,7 @@ status badge (pill radius, not interactive). The running words have no box and a
 <li>Sentiment shows Applied and never a button: the pipeline applies it (D20; confirmed by the owner, 24 Nov).</li>
 <li>The shipped “Available by default” stays as worded for v1 (owner, 24 Nov).</li>
 <li>No Uninstall on cards. On the page, Uninstall is a small secondary button beside Review.</li>
-<li>Installed but not applied (stopped, failed, refused): the button comes back, to resume. Uninstall is hidden while a run goes; switching a codebook off mid-run stops the run. Review shows whenever there are tags (D39). The explainer says the most confident proposals are applied; no cost warning.</li>
+<li>Installed but not applied (stopped, failed, refused): the button comes back, to resume. Uninstall is hidden while a run goes; switching a codebook off mid-run stops the run. Review shows whenever there are tags (D39). The explainer reads “AutoCode proposes 18 tags for 24 quotes.” (owner, 24 Nov); no cost warning.</li>
 <li>The codebook page's counts stay as shipped, zeros included (§4).</li>
 <li>The catalogue is headed “Codebook Library” (the shipped key), with no Browse button in its heading; the sidebar keeps its Browse button, disabled, and has no current row (§5).</li>
 <li>The slot's words sit on the title's first baseline (alignment B, §2), on card and page alike.</li>

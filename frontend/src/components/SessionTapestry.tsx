@@ -517,8 +517,8 @@ export default function SessionTapestry({
           data-s-per-px={sPerPx}
         >
           <defs>
-            <filter id={`bn-tp-lift-${s.session_id}`} x="-10%" y="-30%" width="120%" height="170%">
-              <feDropShadow dx={0} dy={1} stdDeviation={1.2} floodColor="#000" floodOpacity={0.24} />
+            <filter id={`bn-tp-lift-${s.session_id}`} x="-20%" y="-40%" width="140%" height="190%">
+              <feDropShadow dx={0} dy={1.5} stdDeviation={1.8} floodColor="#000" floodOpacity={0.26} />
             </filter>
             {/* Theme chips: solid for their first 80%, fading out over the rightmost 20%. */}
             <linearGradient id={`bn-tp-fade-${s.session_id}`} x1="0" x2="1" y1="0" y2="0">

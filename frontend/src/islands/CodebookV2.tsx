@@ -35,7 +35,13 @@ import type { ApiError } from "../utils/api";
 import { autocodeRefusal } from "../utils/autocodeRefusal";
 import { autocodeFailure } from "../utils/autocodeFailure";
 import { toast } from "../utils/toast";
-import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
+import {
+  addJob,
+  getJobs,
+  newJobId,
+  removeJob,
+  useActivityJobs,
+} from "../contexts/ActivityStore";
 import { stampedRead, useLiveCodebook } from "../contexts/AutoCodePlaybackView";
 import type {
   CodebookResponse,
@@ -65,6 +71,7 @@ import { postCodebookFocus, postCodebookPage } from "../shims/bridge";
 import { SectionHeading } from "../components/SectionHeading";
 import { ErrorNotice } from "../components/RouteError";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
+import { slotState } from "./CodebookV2Slot";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
 // Q15: the threshold review is the EXISTING modal, not a v2 rebuild. Imported
 // by path rather than through the `components` barrel for the same reason as
@@ -449,8 +456,105 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     toast(failure.message, undefined, failure.kind);
   }, []);
 
-  const onInstall = useCallback(
-    (id: string, title: string) => {
+  // The codebooks this window's activity chips show coding: the slot says
+  // AutoCoding… from the click, before the server's answer is read again.
+  const activity = useActivityJobs();
+  const runningHere = useMemo(() => {
+    const ids = new Set<string>();
+    for (const job of activity.values()) {
+      if ((job.type === "autocode" || job.type === "catchup") && !job.outcome) {
+        ids.add(job.frameworkId);
+      }
+    }
+    return ids;
+  }, [activity]);
+  // And the ones whose start is still on the wire (an install is two requests):
+  // the button turns to words at the click, so a second click cannot send a
+  // second start, which the server would answer "already tagging".
+  const [starting, setStarting] = useState<ReadonlySet<string>>(() => new Set());
+  const markStarting = useCallback((id: string, on: boolean) => {
+    setStarting((prev) => {
+      if (prev.has(id) === on) return prev;
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+  const slotFor = useCallback(
+    (id: string, installed: boolean) =>
+      slotState(
+        id,
+        installed,
+        // Absent means enabled; a codebook not installed has no switch.
+        !installed || states[id] !== false,
+        codebook?.framework_autocode?.[id],
+        runningHere.has(id) || starting.has(id),
+      ),
+    [codebook, runningHere, starting, states],
+  );
+
+  /** A run has started: its chip goes up, and everyone is told the codebook moved. */
+  const started = useCallback(
+    (id: string, title: string, catchUp: boolean) => {
+      // Register with the activity store so the chip stack shows progress.
+      // Autotagging is not instant; without this the researcher clicks
+      // AutoCode and nothing appears to happen for minutes.
+      //
+      // Each run is its own job, and this codebook's last chip goes, as
+      // for clip exports: under one id per codebook, a reinstall joined
+      // the last run's finished chip, and a run that failed before its
+      // first read stayed "Done".
+      const type = catchUp ? "catchup" : "autocode";
+      for (const [jobId, job] of getJobs()) {
+        if ((job.type === "autocode" || job.type === "catchup") && job.frameworkId === id) {
+          removeJob(jobId);
+        }
+      }
+      addJob(newJobId(`${type}:${id}`), {
+        type,
+        frameworkId: id,
+        frameworkTitle: title,
+        // The route the chip's "View Report" returns to: this lens.
+        originRoute: "/report/codebook/",
+      });
+      announce();
+    },
+    [announce],
+  );
+
+  const onAutoCode = useCallback(
+    (id: string, title: string, installed: boolean) => {
+      // A failed start leaves the codebook installed and uncoded, so everyone is
+      // told it is there, and the failure is tagging's.
+      const start = () =>
+        startAutoCode(id)
+          .then(
+            // An applied run that ended unfinished resumes as a catch-up (its job
+            // has `completed_at`), which has its own chip. An answer that is not
+            // running started nothing (nothing was owed), so no chip, only a re-read.
+            (job) => {
+              if (job.status === "pending" || job.status === "running") {
+                started(id, title, job.completed_at != null);
+              } else {
+                announce();
+              }
+            },
+            (e: Error) => {
+              announce();
+              reportStartError(e);
+            },
+          )
+          // The chip, or the server's answer once re-read, says it from here.
+          .finally(() => markStarting(id, false));
+      markStarting(id, true);
+      if (installed) {
+        // Installed but not applied (stopped, failed, refused for want of a key,
+        // or partly failed): the slot's button resumes (owner, 24 Nov 2026).
+        // Install again would be answered 409.
+        start();
+        return;
+      }
       // **Install IS apply** (D4), and that is two calls, not one. Importing the
       // template alone would put the tags in the codebook and code nothing —
       // which is precisely the separate-Apply-step v2 exists to remove, left
@@ -458,47 +562,16 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       //
       // No confirmation, deliberately: it spends, but the researcher asked by
       // clicking, and a dialog on an additive act teaches them to dismiss
-      // dialogs — which is what makes the destructive one stop working.
+      // dialogs — which is what makes the destructive one stop working. No cost
+      // warning either (owner, 24 Nov 2026).
       //
-      // A failed import saved nothing ("Couldn't save your change"). A failed
-      // start leaves the codebook installed and uncoded, so everyone is told it
-      // is there, and the failure is tagging's.
-      const started = () => {
-        // Register with the activity store so the chip stack shows progress.
-        // Autotagging is not instant; without this the researcher clicks
-        // Install and nothing appears to happen for minutes.
-        //
-        // Each run is its own job, and this codebook's last chip goes, as
-        // for clip exports: under one id per codebook, a reinstall joined
-        // the last run's finished chip, and a run that failed before its
-        // first read stayed "Done".
-        for (const [jobId, job] of getJobs()) {
-          if (job.type === "autocode" && job.frameworkId === id) removeJob(jobId);
-        }
-        addJob(newJobId(`autocode:${id}`), {
-          type: "autocode",
-          frameworkId: id,
-          frameworkTitle: title,
-          // Was "/report/codebook-v2/", which stopped resolving when this
-          // lens took the codebook route on 31 Aug 2026 — the activity
-          // chip's "View Report" would have 404'd. The field itself was
-          // added while two lenses ran side by side and the chip sent
-          // everyone to the shipped one; with one lens it is redundant but
-          // harmless, and explicit beats an implicit default.
-          originRoute: "/report/codebook/",
-        });
-        announce();
-      };
-      importCodebookTemplate(id).then(
-        () =>
-          startAutoCode(id).then(started, (e: Error) => {
-            announce();
-            reportStartError(e);
-          }),
-        reportActionError,
-      );
+      // A failed import saved nothing ("Couldn't save your change").
+      importCodebookTemplate(id).then(start, (e: Error) => {
+        markStarting(id, false);
+        reportActionError(e);
+      });
     },
-    [announce, reportActionError, reportStartError],
+    [announce, markStarting, reportActionError, reportStartError, started],
   );
 
   const onAskUninstall = useCallback((id: string, title: string) => {
@@ -621,9 +694,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         quotes: codebook?.framework_quote_totals?.[t.id] ?? 0,
         tags: t.groups.reduce((n, g) => n + g.tags.length, 0),
         template: t,
+        slot: slotFor(t.id, installedIds.has(t.id)),
       };
     });
-  }, [templates, books, states, codebook]);
+  }, [templates, books, states, codebook, slotFor]);
 
   // Memoised: both bridge effects below depend on it, and an object
   // rebuilt every render posts `codebook-page` to native on every render.
@@ -638,6 +712,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         installed: true,
         quotes: codebook?.framework_quote_totals?.[current.id] ?? 0,
         template: templates?.templates.find((t) => t.id === current.id),
+        slot: slotFor(current.id, true),
       }
     : previewTemplate
       ? {
@@ -655,9 +730,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           pending: 0,
           quotes: 0,
           template: previewTemplate,
+          slot: slotFor(previewTemplate.id, false),
         }
         : null,
-    [current, codebook, templates, previewTemplate, previewProv],
+    [current, codebook, templates, previewTemplate, previewProv, slotFor],
   );
 
   // ── Native Codes menu ───────────────────────────────────────────────────
@@ -704,7 +780,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     const onPage = view === "page" && page !== null;
     postCodebookPage(
       onPage,
-      onPage && !readOnly && canInstall(page),
+      // Dims the menu's Uninstall while a run goes, as the page hides it: the
+      // server refuses it then too.
+      onPage && !readOnly && canInstall(page) && page.slot !== "run",
       onPage ? page.installed : false,
       // `book.floor` — the same condition `CodebookV2Page` renders the New
       // Group placeholder under. "Only the floor grows groups"; a framework's
@@ -773,11 +851,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           break;
         case "installCodebook":
           if (page && canInstall(page) && !page.installed) {
-            onInstall(page.id, page.title);
+            onAutoCode(page.id, page.title, false);
           }
           break;
         case "uninstallCodebook":
-          if (page && canInstall(page) && page.installed) {
+          if (page && canInstall(page) && page.installed && page.slot !== "run") {
             onAskUninstall(page.id, page.title);
           }
           break;
@@ -787,7 +865,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     };
     window.addEventListener("bn:menu-action", handler);
     return () => window.removeEventListener("bn:menu-action", handler);
-  }, [authoring, page, setView, onInstall, onAskUninstall, view, readOnly]);
+  }, [authoring, page, setView, onAutoCode, onAskUninstall, view, readOnly]);
 
   return (
     // A FRAGMENT, not a wrapper div. `report.css` flushes the first zone title
@@ -818,10 +896,13 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             Browse Library, because there is no catalogue to browse (the
             templates route is server-only) and installing is a write. Passing
             no action is the house pattern; the row's height and the keyline's
-            position are identical either way. */}
+            position are identical either way.
+
+            Not on the catalogue itself (owner, 24 Nov 2026): there it goes
+            nowhere. The sidebar's Browse button stays, disabled. */}
         <SectionHeading
           action={
-            !readOnly ? (
+            !readOnly && view !== "browse" ? (
               <button
                 className="bn-btn bn-btn-secondary bn-btn-lg"
                 data-testid="bn-v2-browse"
@@ -839,7 +920,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
               `section:first-of-type > .section-heading`, so a per-view heading
               would be a second construction to keep flush, which is the exact
               defect Codebook v2 shipped with on 30 Aug. */}
-          {view === "browse" ? "Codebooks" : "Codebook"}
+          {/* "Codebook Library" is the name the reinstall sentences already send
+              people to (owner, 24 Nov 2026). */}
+          {view === "browse" ? t("codebook.browseCodebooks") : t("codebook.pageHeading")}
         </SectionHeading>
         {/* For a lens with nothing to show: a failed re-read keeps what is drawn (R86). */}
         {error && !codebook && <ErrorNotice scope="lens" />}
@@ -858,18 +941,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                   setSelected(id);
                   setView("page");
                 }}
-                onInstall={(id) =>
-                  onInstall(
-                    id,
-                    browseBooks.find((b) => b.id === id)?.title ?? id,
-                  )
-                }
-                onUninstall={(id) =>
-                  onAskUninstall(
-                    id,
-                    browseBooks.find((b) => b.id === id)?.title ?? id,
-                  )
-                }
+                onAutoCode={(id) => {
+                  const b = browseBooks.find((x) => x.id === id);
+                  onAutoCode(id, b?.title ?? id, b?.installed ?? false);
+                }}
               />
             </div>
           ) : page ? (
@@ -886,7 +961,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                     frameworkTitle: page.title,
                   })
                 }
-                onInstall={(id) => onInstall(id, page.title)}
+                onAutoCode={(id) => onAutoCode(id, page.title, page.installed)}
+                quoteCount={codebook?.quote_count ?? 0}
                 onUninstall={(id) => onAskUninstall(id, page.title)}
                 readOnly={readOnly}
               />

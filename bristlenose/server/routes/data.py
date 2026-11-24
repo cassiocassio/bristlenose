@@ -2069,6 +2069,23 @@ async def put_framework_states(
                     updated_at=_now(),
                 )
             )
+        # ON → OFF stops a first apply that is still coding (owner, 24 Nov 2026), as
+        # its Stop does: the job reads "cancelled" and the run halts before its next
+        # batch, keeping what it coded, and the slot offers AutoCode again to resume.
+        # A catch-up (an applied job) needs nothing here: it re-reads the switch
+        # before every batch and stops by itself.
+        from bristlenose.server.models import AutoCodeJob
+
+        switched_off = [
+            fw for fw, enabled in data.items() if not enabled and fw not in was_disabled
+        ]
+        if switched_off:
+            db.query(AutoCodeJob).filter(
+                AutoCodeJob.project_id == project_id,
+                AutoCodeJob.framework_id.in_(switched_off),
+                AutoCodeJob.status.in_(("pending", "running")),
+                AutoCodeJob.completed_at.is_(None),
+            ).update({AutoCodeJob.status: "cancelled"}, synchronize_session=False)
         db.commit()
         # OFF → ON transition: was explicitly disabled, now enabled (sent true or
         # omitted → default enabled). Of those, only the ones owing sessions to

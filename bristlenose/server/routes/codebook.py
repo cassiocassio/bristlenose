@@ -66,6 +66,48 @@ class CodebookResponse(BaseModel):
     #: larger than the number of quotes they have. The client cannot fix it: it
     #: holds counts, not quote ids. Register B6.
     framework_quote_totals: dict[str, int] = {}
+    #: framework_id -> where its AutoCode stands, for the codebook pages' slot (owner,
+    #: 24 Nov 2026): ``running`` (a pass is pending or running, the first apply or a
+    #: catch-up), ``applied`` (it completed cleanly, however little it applied), or
+    #: ``unfinished`` (stopped, failed or partly failed: the slot offers AutoCode again,
+    #: to resume). Absent: never started. ``autocode_state`` says which.
+    framework_autocode: dict[str, str] = {}
+    #: The quotes AutoCode would code: the ones that count (``analysis_quotes``). The
+    #: page's explainer says "AutoCode proposes 18 tags for 24 quotes."
+    quote_count: int = 0
+
+
+def autocode_state(job: AutoCodeJob) -> str:
+    """``running``, ``applied`` or ``unfinished`` for one job (see ``framework_autocode``).
+
+    ``running`` is the row's pending or running, or a stopped first apply whose runner
+    is still landing its last batches and its cut (``first_apply_ending``): the chip
+    re-reads the codebook only once that has settled, so the slot never offers a resume
+    the server would refuse. Not a live task in general: a finished apply's task stays
+    alive through the Signals build, and nothing re-reads the codebook when that ends.
+
+    ``unfinished`` is every way a pass can end with quotes owed that only the
+    researcher's click will code: a first apply that never finished (no
+    ``completed_at``), a Stop or a failure of any pass (``cancelled``, ``failed``), a
+    first apply with some batches failed (its ``failure_kind``), and a catch-up with
+    some batches failed, which ends ``completed`` with no kind and says so only in its
+    own counts (``catch_up_processed < catch_up_total``; batches a switch-off halted are
+    not in ``catch_up_total``). A switch-off ends a catch-up ``completed`` and whole,
+    and switching back on codes what it left, so that one reads ``applied``.
+    """
+    from bristlenose.server.autocode import first_apply_ending
+
+    if job.status in ("pending", "running"):
+        return "running"
+    if job.status == "cancelled" and first_apply_ending(job.project_id, job.framework_id):
+        return "running"
+    if (
+        job.status in ("failed", "cancelled")
+        or job.failure_kind
+        or (job.catch_up_total or 0) > (job.catch_up_processed or 0)
+    ):
+        return "unfinished"
+    return "applied"
 
 
 class CreateGroupRequest(BaseModel):
@@ -300,10 +342,13 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
             _build_group(uncategorised, 9999, is_default=True),
         )
 
+        jobs = db.query(AutoCodeJob).filter_by(project_id=project_id).all()
         return CodebookResponse(
             framework_quote_totals={
                 fid: len(qs) for fid, qs in framework_quotes.items()
             },
+            framework_autocode={job.framework_id: autocode_state(job) for job in jobs},
+            quote_count=len(counted),
             groups=group_list,
             ungrouped=[],  # deprecated — kept for back-compat
             all_tag_names=sorted(set(all_tag_names)),
@@ -865,6 +910,37 @@ def remove_framework(
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+
+        # Not while AutoCode is coding with it (owner, 24 Nov 2026: the page hides
+        # Uninstall while a run goes). Deleting the job row did not stop the run: its
+        # stop check reads only "cancelled", so it kept calling the model, for a
+        # codebook that was gone. The native Codes menu reaches here too, so the
+        # refusal is the server's, not only the button's absence.
+        # The predicate: the row, a stopped first apply still landing its batches,
+        # and a catch-up or a run's re-apply still coding. Not a finished apply's
+        # task in general, which lives on through the Signals build and codes nothing.
+        from bristlenose.server.autocode import first_apply_ending, live_reapply
+        from bristlenose.server.refusal import RefusalError, RefusalReason
+
+        running = (
+            db.query(AutoCodeJob.id)
+            .filter(
+                AutoCodeJob.project_id == project_id,
+                AutoCodeJob.framework_id == framework_id,
+                AutoCodeJob.status.in_(("pending", "running")),
+            )
+            .first()
+        )
+        if (
+            running is not None
+            or first_apply_ending(project_id, framework_id)
+            or live_reapply(project_id, framework_id) is not None
+        ):
+            raise RefusalError(
+                409,
+                RefusalReason.ALREADY_RUNNING,
+                f"AutoCode is running for framework '{framework_id}'",
+            )
 
         # Find all groups for this framework in this project
         pcg_rows = (

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render as rtlRender, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { CodebookV2 } from "./CodebookV2";
@@ -125,6 +125,7 @@ vi.mock("../contexts/ActivityStore", () => ({
   removeJob: vi.fn(),
   getJobs: vi.fn(() => new Map()),
   newJobId: vi.fn((kind: string) => `${kind}:t-1`),
+  useActivityJobs: vi.fn(() => new Map()),
 }));
 vi.mock("../utils/toast", () => ({ toast: vi.fn() }));
 
@@ -277,9 +278,28 @@ describe("D22 — Browse Library is the navigation", () => {
 
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    // "Codebook Library", the shipped key the reinstall sentences already send
+    // people to (owner, 24 Nov 2026).
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      /^Codebooks$/,
+      /^Codebook Library$/,
     );
+  });
+
+  it("on the catalogue: no Browse in the heading, the sidebar's disabled, no row current", async () => {
+    // The heading's Browse goes nowhere on the catalogue itself; the sidebar's
+    // stays where it always is, disabled, because a button that vanishes moves
+    // the rows under it (owner, 24 Nov 2026).
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    expect(screen.getByTestId("bn-v2-nav-browse")).toBeEnabled();
+    expect(document.querySelector(".v2-nav-row.active")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.queryByTestId("bn-v2-browse")).not.toBeInTheDocument();
+    expect(screen.getByTestId("bn-v2-nav-browse")).toBeDisabled();
+    expect(document.querySelector(".v2-nav-row.active")).toBeNull();
   });
 
   it("opens on an installed codebook, UXR first, not the researcher's own (empty) tags", async () => {
@@ -894,5 +914,128 @@ describe("a not-yet-installed codebook opens its details page", () => {
     expect(page).toContain("first-time use");
     // It is not installed, so the page must say so rather than claim reach.
     expect(page).toContain("not installed");
+  });
+});
+
+describe("the slot follows the run (owner, 24 Nov 2026)", () => {
+  // The sidebar reads the codebook too, so a one-shot answer goes to whichever
+  // asks first: answer every read, and put the shared fixture back after.
+  afterEach(async () => {
+    const api = await import("../utils/api");
+    vi.mocked(api.getCodebook).mockImplementation(() => Promise.resolve(codebook as never));
+  });
+  it("says Applied for a completed run and for sentiment, AutoCode for the rest", async () => {
+    const api = await import("../utils/api");
+    vi.mocked(api.getCodebook).mockResolvedValue({
+      ...codebook,
+      framework_autocode: { uxr: "applied", nielsen: "unfinished" },
+    } as never);
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.getByTestId("bn-v2-card-action-sentiment")).toHaveTextContent("Applied");
+    expect(screen.getByTestId("bn-v2-card-action-uxr")).toHaveTextContent("Applied");
+    expect(screen.getByTestId("bn-v2-card-action-nielsen")).toHaveTextContent("AutoCode");
+    expect(screen.getByTestId("bn-v2-card-action-cliux")).toHaveTextContent("AutoCode");
+  });
+
+  it("says AutoCoding while the server says a pass is running", async () => {
+    const api = await import("../utils/api");
+    vi.mocked(api.getCodebook).mockResolvedValue({
+      ...codebook,
+      framework_autocode: { nielsen: "running" },
+    } as never);
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.getByTestId("bn-v2-card-action-nielsen")).toHaveTextContent(/^AutoCoding/);
+  });
+
+  it("resumes an installed, unfinished codebook by starting it, never by installing again", async () => {
+    // Install again would be answered 409: the codebook is there already.
+    const api = await import("../utils/api");
+    vi.mocked(api.importCodebookTemplate).mockClear();
+    vi.mocked(api.startAutoCode).mockClear();
+    vi.mocked(api.getCodebook).mockResolvedValue({
+      ...codebook,
+      framework_autocode: { nielsen: "unfinished" },
+    } as never);
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-nielsen"));
+    await waitFor(() => expect(api.startAutoCode).toHaveBeenCalledWith("nielsen"));
+    expect(api.importCodebookTemplate).not.toHaveBeenCalled();
+  });
+
+  it("raises no chip when the answer started nothing (nothing was owed)", async () => {
+    const api = await import("../utils/api");
+    const store = await import("../contexts/ActivityStore");
+    vi.mocked(store.addJob).mockClear();
+    vi.mocked(api.startAutoCode).mockResolvedValueOnce({
+      status: "completed", completed_at: "2026-11-20T10:00:00",
+    } as never);
+    vi.mocked(api.getCodebook).mockResolvedValue({
+      ...codebook,
+      framework_autocode: { nielsen: "unfinished" },
+    } as never);
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-nielsen"));
+    await waitFor(() => expect(api.startAutoCode).toHaveBeenCalledWith("nielsen"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-v2-card-action-nielsen")).toHaveTextContent("AutoCode"),
+    );
+    expect(store.addJob).not.toHaveBeenCalled();
+  });
+
+  it("offers no button on a switched-off codebook", async () => {
+    // UXR is off in this fixture (getFrameworkStates).
+    const api = await import("../utils/api");
+    vi.mocked(api.getCodebook).mockResolvedValue({
+      ...codebook,
+      framework_autocode: { uxr: "unfinished" },
+    } as never);
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.queryByTestId("bn-v2-card-action-uxr")).not.toBeInTheDocument();
+  });
+
+  it("turns to words at the click, so a second click cannot start a second run", async () => {
+    const api = await import("../utils/api");
+    vi.mocked(api.startAutoCode).mockClear();
+    let answer: (v: never) => void = () => {};
+    vi.mocked(api.startAutoCode).mockImplementationOnce(
+      () => new Promise((resolve) => { answer = resolve as (v: never) => void; }),
+    );
+    vi.mocked(api.getCodebook).mockResolvedValue({
+      ...codebook,
+      framework_autocode: { nielsen: "unfinished" },
+    } as never);
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-nielsen"));
+    // Still on the wire, and already saying so: there is no button to press again.
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-v2-card-action-nielsen")).toHaveTextContent(/^AutoCoding/),
+    );
+    expect(screen.getByTestId("bn-v2-card-action-nielsen").tagName).toBe("SPAN");
+    expect(api.startAutoCode).toHaveBeenCalledTimes(1);
+    answer({ status: "pending", completed_at: null } as never);
   });
 });

@@ -1532,10 +1532,14 @@ def _clear_failure_once_owed_nothing(db: SASession, job: AutoCodeJob) -> None:
             AutoCodeJob.status.in_(("failed", "cancelled")),
             AutoCodeJob.failure_kind != "",
             AutoCodeJob.error_message != "",
+            # A catch-up with some batches failed ends "completed" and says so only
+            # in its own counts, which the codebook pages read (24 Nov 2026).
+            AutoCodeJob.catch_up_total != AutoCodeJob.catch_up_processed,
         ),
     ).update(
         {AutoCodeJob.status: "completed", AutoCodeJob.error_message: "",
-         AutoCodeJob.failure_kind: ""},
+         AutoCodeJob.failure_kind: "",
+         AutoCodeJob.catch_up_processed: AutoCodeJob.catch_up_total},
         synchronize_session=False,
     )
 

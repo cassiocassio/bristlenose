@@ -153,6 +153,18 @@ async def maybe_apply(app: Any) -> bool:
         return False
 
 
+def _switched_off(db: Any) -> bool:
+    """Whether the researcher has switched the house default's codebook off."""
+    from bristlenose.server.models import ProjectFrameworkState
+
+    row = (
+        db.query(ProjectFrameworkState)
+        .filter_by(project_id=PROJECT_ID, framework_id=FRAMEWORK_ID)
+        .first()
+    )
+    return row is not None and not row.enabled
+
+
 async def _apply(app: Any) -> bool:
     from bristlenose.server.codebook import get_template
     from bristlenose.server.codebook_install import link_framework_once
@@ -197,6 +209,10 @@ async def _apply(app: Any) -> bool:
             existing.status not in ("failed", "cancelled") or existing.completed_at is not None
         ):
             return False  # in flight, or applied: nothing to retry
+        elif existing is not None and _switched_off(db):
+            # Switching the codebook off mid-run stops the run (owner, 24 Nov 2026), and
+            # off means off: the retry a Stop earns (D35) would code it again unasked.
+            return False
         # An earlier attempt of ours that did not finish is retried (a restart or a closed window
         # killed it): the job row is re-run and the register keeps quotes already coded from
         # being paid for twice.

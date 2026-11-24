@@ -41,6 +41,7 @@ import { renderLead } from "../utils/leadSentence";
 import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
+import { CodebookSlot, type SlotState } from "./CodebookV2Slot";
 
 export interface PageBook {
   id: string;
@@ -54,6 +55,8 @@ export interface PageBook {
   /** Distinct across the framework, not the sum of its groups (B6). */
   quotes: number;
   template?: TemplateOut;
+  /** The slot beside the title (`slotState`). */
+  slot: SlotState;
 }
 
 interface Props {
@@ -65,8 +68,11 @@ interface Props {
   // to the lens rather than to any one codebook. D22 makes it the unconditional
   // route to the catalogue, so it must not come and go with the selection.
   onReview: (frameworkId: string) => void;
-  onInstall: (frameworkId: string) => void;
+  /** Install and code, or resume (the slot's button). */
+  onAutoCode: (frameworkId: string) => void;
   onUninstall: (frameworkId: string) => void;
+  /** The quotes AutoCode would code, for the explainer before an install. */
+  quoteCount: number;
   /**
    * The shared authoring apparatus. Passed for every codebook, not just the
    * floor: the group column knows which of its own controls apply, and a lens
@@ -97,10 +103,9 @@ interface Props {
  * via `t(key, { count })`, so there is nothing here to carry forward.
  */
 
-// Exported so the native Codes menu mirrors this exact predicate. There are
-// already two `canInstall`s (the browse card's omits the floor check, because
-// the floor is never a browse card); a third, in the bridge, is how the menu
-// and the button start disagreeing about Sentiment.
+// Exported so the native Codes menu mirrors this exact predicate: a second one,
+// in the bridge, is how the menu and the page start disagreeing about Sentiment.
+// The browse card needs none: its slot decides (`slotState`).
 export const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
 
 /** A door onto nothing is worse than no door (**D26**). */
@@ -109,10 +114,10 @@ export const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
  * The threshold modal reads `/autocode/proposals`, which is SERVER_ONLY and so
  * absent from a leave-behind, and its primary act is a write. Left visible, a
  * client opening the exported report offline would find a control that opens a
- * dialog which cannot load and cannot apply. v2's other controls escape this by
- * accident of the extraction — Uninstall carries `.framework-remove-btn` and
- * the authoring carries `.tag-add-row`, both of which `theme/templates/export.css`
- * already hides — but the Review door has no such class, so it needs the gate.
+ * dialog which cannot load and cannot apply. The authoring escapes this by
+ * accident of the extraction (it carries `.tag-add-row`, which
+ * `theme/templates/export.css` hides); the Review door, the slot's button and
+ * Uninstall (`showUninstall`) are gated on `readOnly` here.
  */
 const hasReviewDoor = (b: PageBook, tagCount: number, readOnly: boolean) =>
   !readOnly &&
@@ -123,14 +128,17 @@ export function CodebookV2Page({
   projectName,
   groups,
   onReview,
-  onInstall,
+  onAutoCode,
   onUninstall,
+  quoteCount,
   authoring,
   allTagNames,
   readOnly = false,
 }: Props) {
   const { t } = useTranslation();
   const tagCount = groups.reduce((n, g) => n + g.tags.length, 0);
+  const running = book.slot === "run";
+  const showUninstall = canInstall(book) && book.installed && !readOnly && !running;
   const tpl = book.template;
   const links = (tpl?.author_links ?? [])
     .map((l) => ({ label: l.label, href: safeUrlOrNull(l.url) }))
@@ -140,14 +148,11 @@ export function CodebookV2Page({
     <div className={book.enabled ? undefined : "pageoff"} data-testid="bn-v2-page">
       <div className="pg-head">
         <div className="pg-headmain">
-          {/* INSTALL/UNINSTALL BELONGS TO THE TITLE. It was the last thing in
-              the right-hand gutter, below the author card — so the one control
-              that decides whether this codebook is in the project at all sat
-              after the author's biography, further from the title than
-              anything else on the page and below the fold on a short window.
-              A control that acts on the whole page is the page heading's
-              action, which is the same rule `SectionHeading` follows for
-              Browse Library one level up. */}
+          {/* THE SLOT BELONGS TO THE TITLE. Install sat in the right-hand gutter,
+              below the author card, further from the title than anything else
+              on the page; it moved to the title, and on 24 Nov 2026 became the
+              slot (AutoCode → AutoCoding… → Applied), the same one the card
+              carries. Uninstall went down to the Review row. */}
           <div className="pg-titlerow">
             <div className="pg-titletext">
               <div className="pg-title">{book.title}</div>
@@ -159,34 +164,19 @@ export function CodebookV2Page({
                 </div>
               )}
             </div>
-            {canInstall(book) && !readOnly && (
-              // Same pair as the browse card: Install leads (primary), Uninstall
-              // recedes (secondary + the red hover `framework-remove-btn`
-              // brings). Ranked by intent, not by danger — the confirmation
-              // sheet is where the cost is stated.
-              <div className="pg-titleaction">
-                {book.installed ? (
-                  <button
-                    className="bn-btn bn-btn-secondary framework-remove-btn"
-                    onClick={() => onUninstall(book.id)}
-                    data-testid="bn-v2-uninstall"
-                  >
-                    {t("codebook.removeFromCodebook")}
-                  </button>
-                ) : (
-                  <button
-                    className="bn-btn bn-btn-primary"
-                    onClick={() => onInstall(book.id)}
-                    data-testid="bn-v2-install"
-                  >
-                    {t("codebook.importCodebook")}
-                  </button>
-                )}
-              </div>
+            {/* The slot: AutoCode → AutoCoding… → Applied, as on the card (owner,
+                24 Nov 2026). Its words sit on the title's first baseline. The
+                floor is not a codebook you install or code, so it has none. */}
+            {!book.floor && (
+              <CodebookSlot
+                state={book.slot}
+                onAutoCode={readOnly ? undefined : () => onAutoCode(book.id)}
+                testId="bn-v2-slot"
+              />
             )}
           </div>
 
-          {hasReviewDoor(book, tagCount, readOnly) ? (
+          {hasReviewDoor(book, tagCount, readOnly) || showUninstall ? (
             // The verb is the button; the counts are text on its baseline. A
             // sentence wearing a border is not a control, and it read as more
             // prominent than Install, which it must not be.
@@ -229,20 +219,52 @@ export function CodebookV2Page({
                   `secondary` over `cancel`: the two declare identical
                   properties, so the pixels are the same, but `cancel` is a
                   dismissal verb and this button reviews. */}
-              <button
-                className="bn-btn bn-btn-secondary bn-btn-sm"
-                onClick={() => onReview(book.id)}
-                data-testid="bn-v2-review"
-              >
-                {t("codebook.reviewProposals")}
-              </button>
+              {hasReviewDoor(book, tagCount, readOnly) && (
+                <button
+                  className="bn-btn bn-btn-secondary bn-btn-sm"
+                  onClick={() => onReview(book.id)}
+                  // Present but inactive while the run goes (D17): the server
+                  // refuses a re-cut mid-run (D49).
+                  disabled={running}
+                  data-testid="bn-v2-review"
+                >
+                  {t("codebook.reviewProposals")}
+                </button>
+              )}
+              {/* Uninstall moved here from the title (owner, 24 Nov 2026): the
+                  title's place is the slot's. The same small secondary as Review,
+                  red only on hover (`.pg-uninstall`); the sheet is where the cost
+                  is stated. Not the v1 lens's `framework-remove-btn`, whose margin,
+                  caption type and muted ink set it apart from Review. Hidden while
+                  a run goes: uninstalling mid-run is refused by the server too. */}
+              {showUninstall && (
+                <button
+                  className="bn-btn bn-btn-secondary bn-btn-sm pg-uninstall"
+                  onClick={() => onUninstall(book.id)}
+                  data-testid="bn-v2-uninstall"
+                >
+                  {t("codebook.removeFromCodebook")}
+                </button>
+              )}
             </div>
           ) : (
-            <div className="pg-stat">
-              {book.installed
-                ? reachPhrase(tagCount, book.quotes, projectName)
-                : `${vocabularyPhrase(tagCount)} \u00b7 ${t("codebook.notInstalled")}`}
-            </div>
+            <>
+              <div className="pg-stat">
+                {book.installed
+                  ? reachPhrase(tagCount, book.quotes, projectName)
+                  : `${vocabularyPhrase(tagCount)} \u00b7 ${t("codebook.notInstalled")}`}
+              </div>
+              {/* What the slot's button will do, before it is pressed (owner, 24 Nov
+                  2026). No cost warning, by decision. */}
+              {!book.installed && canInstall(book) && !readOnly && (
+                <div className="pg-stat" data-testid="bn-v2-explainer">
+                  {t("codebook.autocodeExplainer", {
+                    tags: t("codebook.autocodeExplainerTags", { count: tagCount }),
+                    quotes: t("codebook.autocodeExplainerQuotes", { count: quoteCount }),
+                  })}
+                </div>
+              )}
+            </>
           )}
 
           {tpl?.description && (

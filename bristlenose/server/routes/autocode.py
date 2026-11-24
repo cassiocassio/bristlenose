@@ -531,6 +531,17 @@ async def start_autocode(
                 f"AutoCode is already running for framework '{framework_id}'",
             )
         if existing and (existing.status == "completed" or existing.completed_at is not None):
+            # An applied run that ended unfinished (some batches failed, or its
+            # catch-up failed) owes the quotes it never coded, and the codebook pages
+            # offer AutoCode again to code them (owner, 24 Nov 2026). They are a
+            # catch-up's work, at the thresholds the apply stored: coding the corpus
+            # again would pay twice (#64, RE#66). The provider is checked first, as
+            # for a run, so a missing key is a refusal rather than a failed chip.
+            from bristlenose.server.routes.codebook import autocode_state
+
+            if existing.completed_at is not None and autocode_state(existing) == "unfinished":
+                require_provider_ready(load_settings())
+                return _resume_applied(app, db, project_id, framework_id, existing)
             raise RefusalError(
                 409,
                 RefusalReason.ALREADY_APPLIED,
@@ -631,6 +642,44 @@ async def start_autocode(
 
     finally:
         db.close()
+
+
+def _resume_applied(
+    app: Any, db: Session, project_id: int, framework_id: str, job: AutoCodeJob,
+) -> AutoCodeJobOut:
+    """Code what an applied but unfinished run owes, as a catch-up (``start_autocode``).
+
+    The job reads "running" before this returns, so the chip the page adds sees the
+    pass from its first poll. A pass already coding this codebook (a run's re-apply)
+    is a 409, as for a running job. Nothing owed (another pass coded it since) leaves
+    nothing to resume: the job's old failure is cleared, so the slot says Applied, and
+    the answer's status is not "running", so the page raises no chip.
+    """
+    from bristlenose.server.autocode import _clear_failure_once_owed_nothing, live_reapply
+    from bristlenose.server.routes.data import _start_catch_ups, launch_catch_up
+
+    if live_reapply(project_id, framework_id) is not None:
+        raise RefusalError(
+            409,
+            RefusalReason.ALREADY_RUNNING,
+            f"AutoCode is already running for framework '{framework_id}'",
+        )
+    if not _start_catch_ups(db, project_id, [framework_id]):
+        _clear_failure_once_owed_nothing(db, job)
+        db.commit()
+        db.refresh(job)
+        return _job_to_out(job)
+    try:
+        launch_catch_up(app, project_id, framework_id)
+    except Exception:
+        # Set "running" for a task that never started: say it is not, or its chip
+        # would spin for ever (as the debounced catch-up does).
+        from bristlenose.server.autocode import _set_job_status
+
+        _set_job_status(db, project_id, framework_id, "failed", when="running")
+        raise
+    db.refresh(job)
+    return _job_to_out(job)
 
 
 # ---------------------------------------------------------------------------

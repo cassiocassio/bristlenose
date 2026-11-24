@@ -21,7 +21,7 @@ function book(over: Partial<BrowseBook> = {}): BrowseBook {
   return {
     id: "nielsen", title: "10 Usability Heuristics", provenance: "Jakob Nielsen",
     provenanceIsPerson: true, installed: true, enabled: true, quotes: 72, tags: 36,
-    template: tpl(), ...over,
+    template: tpl(), slot: "done", ...over,
   };
 }
 
@@ -30,8 +30,7 @@ function book(over: Partial<BrowseBook> = {}): BrowseBook {
 // passes the suite and then fails the build.
 type Handlers = {
   onOpen?: (id: string) => void;
-  onInstall?: (id: string) => void;
-  onUninstall?: (id: string) => void;
+  onAutoCode?: (id: string) => void;
 };
 
 const noop = () => {};
@@ -41,30 +40,51 @@ const renderGrid = (books: BrowseBook[], on: Handlers = {}) =>
       projectName="Ikea"
       books={books}
       onOpen={on.onOpen ?? noop}
-      onInstall={on.onInstall ?? noop}
-      onUninstall={on.onUninstall ?? noop}
+      onAutoCode={on.onAutoCode ?? noop}
     />,
   );
 
-describe("D12 — one button that swaps its verb", () => {
-  it("says Uninstall when installed", () => {
+describe("the slot beside the title: AutoCode, AutoCoding…, Applied (24 Nov 2026)", () => {
+  it("offers AutoCode as the small primary button", () => {
+    const onAutoCode = vi.fn();
+    renderGrid([book({ installed: false, slot: "act" })], { onAutoCode });
+    const btn = screen.getByTestId("bn-v2-card-action-nielsen");
+    expect(btn).toHaveTextContent("AutoCode");
+    expect(btn).toHaveClass("bn-btn-primary", "bn-btn-sm");
+    fireEvent.click(btn);
+    expect(onAutoCode).toHaveBeenCalledWith("nielsen");
+  });
+
+  it("says AutoCoding with a growing ellipsis while it runs, and is not a control", () => {
+    renderGrid([book({ slot: "run" })]);
+    const words = screen.getByTestId("bn-v2-card-action-nielsen");
+    expect(words.tagName).toBe("SPAN");
+    expect(words).toHaveClass("cb-running", "bn-thinking-shimmer");
+    expect(words).toHaveTextContent(/^AutoCoding\.\.\.$/);
+    expect(words.querySelector(".cb-dots")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("says Applied, with a tick, once a run completes", () => {
+    renderGrid([book({ slot: "done" })]);
+    const done = screen.getByTestId("bn-v2-card-action-nielsen");
+    expect(done).toHaveClass("cb-applied");
+    expect(done).toHaveTextContent("Applied");
+    expect(done.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("puts no Install or Uninstall on a card", () => {
     renderGrid([book()]);
-    expect(screen.getByTestId("bn-v2-card-action-nielsen")).toHaveTextContent("Uninstall");
+    expect(screen.queryByText("Uninstall")).not.toBeInTheDocument();
+    expect(screen.queryByText("Install")).not.toBeInTheDocument();
   });
 
-  it("says Install when not", () => {
-    renderGrid([book({ installed: false })]);
-    expect(screen.getByTestId("bn-v2-card-action-nielsen")).toHaveTextContent("Install");
-  });
-
-  it("gives sentiment no button at all", () => {
-    // D20: it arrives with the pipeline, so there is nothing to install and
-    // uninstalling only destroys tags nothing can restore.
-    renderGrid([book({ id: "sentiment", provenance: "On by default", provenanceIsPerson: false })]);
-    expect(screen.queryByTestId("bn-v2-card-action-sentiment")).not.toBeInTheDocument();
-    // And nothing stands in for it: the provenance line already says what the
-    // card needs to say, so a second copy in the button slot would be the
-    // absence of a control pretending to be one.
+  it("gives sentiment Applied and never a button", () => {
+    // D20: the pipeline applies it, so there is nothing to start.
+    renderGrid([
+      book({ id: "sentiment", provenance: "On by default", provenanceIsPerson: false, slot: "done" }),
+    ]);
+    expect(screen.getByTestId("bn-v2-card-action-sentiment")).toHaveTextContent("Applied");
+    expect(screen.queryByRole("button", { name: "AutoCode" })).not.toBeInTheDocument();
     expect(screen.getAllByText("On by default")).toHaveLength(1);
   });
 
@@ -92,12 +112,13 @@ describe("the whole card navigates; the button does not", () => {
 
   it("does NOT open when the button is clicked", () => {
     // The one region of the card that does not navigate. Without
-    // stopPropagation an uninstall would also change the page under you.
+    // stopPropagation AutoCode would also change the page under you.
     const onOpen = vi.fn();
-    const onUninstall = vi.fn();
-    renderGrid([book()], { onOpen, onUninstall });
+    const onAutoCode = vi.fn();
+    renderGrid([book({ slot: "act" })], { onOpen, onAutoCode });
     fireEvent.click(screen.getByTestId("bn-v2-card-action-nielsen"));
-    expect(onUninstall).toHaveBeenCalledWith("nielsen");
+    fireEvent.keyDown(screen.getByTestId("bn-v2-card-action-nielsen"), { key: "Enter" });
+    expect(onAutoCode).toHaveBeenCalledWith("nielsen");
     expect(onOpen).not.toHaveBeenCalled();
   });
 });
@@ -114,7 +135,7 @@ describe("D12 — version renders only if present", () => {
   });
 });
 
-describe("D27 — switched off, still uninstallable", () => {
+describe("D27 — switched off, still openable", () => {
   it("knocks the card back", () => {
     const { container } = renderGrid([book({ enabled: false })]);
     expect(container.querySelector(".picker-card.off2")).toBeInTheDocument();

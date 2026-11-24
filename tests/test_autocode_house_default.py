@@ -189,6 +189,27 @@ def test_a_job_in_flight_or_applied_is_never_retried(app: FastAPI, status: str,
     start.assert_not_awaited()
 
 
+def test_a_run_stopped_by_switching_the_codebook_off_is_not_retried(app: FastAPI) -> None:
+    """Switching a codebook off mid-run stops the run (owner, 24 Nov 2026), as a Stop, and a
+    Stop earns a retry (D35). Off means off: the house default must not code it again."""
+    from bristlenose.server.models import ProjectFrameworkState
+
+    hd.arm(app)
+    _run(app, complete=False)
+    _job_row(app, "cancelled", applied=False)
+    db = app.state.db_factory()
+    try:
+        db.add(ProjectFrameworkState(project_id=1, framework_id="uxr", enabled=False,
+                                     updated_at=datetime.now(timezone.utc)))
+        db.commit()
+    finally:
+        db.close()
+    hd.arm(app)
+    started, start = _run(app)
+    assert started is False
+    start.assert_not_awaited()
+
+
 def test_an_old_bare_timestamp_marker_reads_as_started_not_done(app: FastAPI) -> None:
     hd.marker_path(app).write_text('{"uxr": "2026-11-14T17:50:25+00:00"}', encoding="utf-8")
     assert not hd.already_done(app)

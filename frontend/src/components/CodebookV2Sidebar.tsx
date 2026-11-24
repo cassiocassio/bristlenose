@@ -274,7 +274,11 @@ export function CodebookV2Sidebar() {
   const [read, setRead] = useState<CodebookResponse | null>(null);
   const playback = usePlayback();
   const readOnly = isExportMode();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // On the catalogue no codebook is current, and Browse, which opens it, is
+  // disabled rather than hidden: a button that vanishes moves the rows under it
+  // (owner, 24 Nov 2026).
+  const inLibrary = searchParams.get("view") === "library";
 
   // Each load also sets the store's mirror of the switch (the badges, the tag
   // sidebar and autocomplete read it) to what the server holds, so after a
@@ -425,7 +429,7 @@ export function CodebookV2Sidebar() {
         <Row
           key={rowKey(b)}
           book={b}
-          selected={(b.id || "") === selectedId}
+          selected={!inLibrary && (b.id || "") === selectedId}
           onToggle={onToggle}
           readOnly={readOnly}
           keepSlot={counted.has(rowKey(b))}
@@ -466,6 +470,7 @@ export function CodebookV2Sidebar() {
           className="bn-btn bn-btn-secondary bn-btn-sm"
           data-testid="bn-v2-nav-browse"
           onClick={openLibrary}
+          disabled={inLibrary}
         >
           {t("codebook.browseCodebooksButton")}
         </button>

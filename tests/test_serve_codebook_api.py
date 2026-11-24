@@ -79,6 +79,8 @@ class TestGetCodebook:
             "ungrouped",
             "all_tag_names",
             "framework_quote_totals",
+            "framework_autocode",
+            "quote_count",
         }
         # Sentiment group auto-imported + Uncategorised default group
         assert len(data["groups"]) == 2
@@ -1287,3 +1289,161 @@ class TestFrameworkRemovalIsProjectScoped:
         # A confirmation whose number is wrong is worse than none, because it is
         # the number the researcher decides on.
         assert resp.json()["quote_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# The codebook pages' slot (owner, 24 Nov 2026): the run state on the read, no
+# uninstall while a run goes, and switching off stops a first apply
+# ---------------------------------------------------------------------------
+
+
+def _garrett_client() -> tuple[TestClient, object]:
+    app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+    tc = AuthTestClient(app)
+    resp = tc.post("/api/projects/1/codebook/import-template", json={"template_id": "garrett"})
+    assert resp.status_code == 200, resp.text
+    return tc, app
+
+
+def _job(app: object, **fields: object) -> None:
+    db = app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        db.add(AutoCodeJob(project_id=1, framework_id="garrett", **fields))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _status(app: object) -> str:
+    db = app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        return str(db.query(AutoCodeJob).one().status)
+    finally:
+        db.close()
+
+
+class TestTheSlotsRunState:
+    def test_the_read_says_where_each_run_stands(self) -> None:
+        from datetime import datetime
+
+        from bristlenose.server.models import AutoCodeJob as Job
+        from bristlenose.server.routes.codebook import autocode_state
+
+        done = datetime(2026, 11, 20)
+
+        def job(**f: object) -> Job:
+            fields: dict[str, object] = {"catch_up_total": 0, "catch_up_processed": 0,
+                                         "failure_kind": "", **f}
+            return Job(project_id=1, framework_id="garrett", **fields)
+
+        cases = [
+            (job(status="pending"), "running"),
+            (job(status="running", completed_at=done), "running"),  # a catch-up
+            (job(status="completed", completed_at=done), "applied"),
+            # A switch-off halts a catch-up "completed" and whole: its halted batches are
+            # not in its total, and switching on again codes them.
+            (job(status="completed", completed_at=done, catch_up_total=8,
+                 catch_up_processed=8), "applied"),
+            # A catch-up with some batches failed says so only in its counts (Fable, 24 Nov).
+            (job(status="completed", completed_at=done, catch_up_total=8,
+                 catch_up_processed=5), "unfinished"),
+            # A Stop of any pass is the researcher's to resume.
+            (job(status="cancelled", completed_at=done), "unfinished"),
+            (job(status="cancelled"), "unfinished"),
+            (job(status="failed", failure_kind="out_of_credit"), "unfinished"),
+            (Job(project_id=1, framework_id="garrett", status="completed", completed_at=done,
+                 failure_kind="out_of_credit"), "unfinished"),  # partial first apply
+            (job(status="failed", completed_at=done), "unfinished"),  # a catch-up orphan
+        ]
+        for j, want in cases:
+            assert autocode_state(j) == want, (j.status, j.completed_at, j.failure_kind)
+
+    def test_a_stopped_first_apply_still_landing_its_batches_reads_running(self) -> None:
+        # Its chip re-reads the codebook only once the runner has settled; until then
+        # the slot must not offer a resume the server would refuse.
+        from bristlenose.server import autocode as engine
+        from bristlenose.server.models import AutoCodeJob as Job
+        from bristlenose.server.routes.codebook import autocode_state
+
+        j = Job(project_id=1, framework_id="garrett", status="cancelled", failure_kind="",
+                catch_up_total=0, catch_up_processed=0)
+        engine._FIRST_APPLY_CODING[(1, "garrett")] = 1
+        try:
+            assert autocode_state(j) == "running"
+        finally:
+            engine._FIRST_APPLY_CODING.pop((1, "garrett"), None)
+        assert autocode_state(j) == "unfinished"
+
+    def test_the_codebook_read_carries_it_and_the_quote_count(self) -> None:
+        tc, app = _garrett_client()
+        body = tc.get("/api/projects/1/codebook").json()
+        assert body["framework_autocode"] == {}  # never started
+        assert body["quote_count"] == 4  # the smoke-test fixture's quotes
+        _job(app, status="running")
+        assert tc.get("/api/projects/1/codebook").json()["framework_autocode"] == {
+            "garrett": "running"
+        }
+
+
+class TestNoUninstallWhileARunGoes:
+    @pytest.mark.parametrize("status", ["pending", "running"])
+    def test_refused_while_the_job_codes(self, status: str) -> None:
+        tc, app = _garrett_client()
+        _job(app, status=status)
+        resp = tc.delete("/api/projects/1/codebook/remove-framework/garrett")
+        assert resp.status_code == 409
+        assert resp.json()["reason"] == "already_running"
+        # Nothing went: the codebook and its job are where they were.
+        groups = tc.get("/api/projects/1/codebook").json()["groups"]
+        assert any(g["framework_id"] == "garrett" for g in groups)
+        assert _status(app) == status
+
+    def test_refused_while_a_stopped_first_apply_lands_its_last_batches(self) -> None:
+        from bristlenose.server import autocode as engine
+
+        tc, app = _garrett_client()
+        _job(app, status="cancelled")
+        engine._FIRST_APPLY_CODING[(1, "garrett")] = 1
+        try:
+            resp = tc.delete("/api/projects/1/codebook/remove-framework/garrett")
+        finally:
+            engine._FIRST_APPLY_CODING.pop((1, "garrett"), None)
+        assert resp.status_code == 409
+
+    def test_allowed_once_it_has_stopped(self) -> None:
+        tc, app = _garrett_client()
+        _job(app, status="cancelled")
+        assert tc.delete("/api/projects/1/codebook/remove-framework/garrett").status_code == 200
+
+
+class TestSwitchingOffStopsAFirstApply:
+    @pytest.mark.parametrize("status", ["pending", "running"])
+    def test_a_first_apply_is_stopped(self, status: str) -> None:
+        tc, app = _garrett_client()
+        _job(app, status=status)
+        resp = tc.put("/api/projects/1/framework-states", json={"garrett": False})
+        assert resp.status_code == 200, resp.text
+        assert _status(app) == "cancelled"
+
+    def test_a_catch_up_is_left_to_stop_by_itself(self) -> None:
+        # It re-reads the switch before every batch; its job row is the applied
+        # run's, and writing "cancelled" over it would say the apply stopped.
+        from datetime import datetime
+
+        tc, app = _garrett_client()
+        _job(app, status="running", completed_at=datetime(2026, 11, 20))
+        tc.put("/api/projects/1/framework-states", json={"garrett": False})
+        assert _status(app) == "running"
+
+    def test_a_codebook_already_off_is_not_touched(self) -> None:
+        tc, app = _garrett_client()
+        tc.put("/api/projects/1/framework-states", json={"garrett": False})
+        _job(app, status="running")  # started while off, by its own button
+        tc.put("/api/projects/1/framework-states", json={"garrett": False, "uxr": False})
+        assert _status(app) == "running"
+
+    def test_switching_on_stops_nothing(self) -> None:
+        tc, app = _garrett_client()
+        _job(app, status="running")
+        tc.put("/api/projects/1/framework-states", json={"garrett": True})
+        assert _status(app) == "running"

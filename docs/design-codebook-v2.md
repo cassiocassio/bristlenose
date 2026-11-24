@@ -46,6 +46,9 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-11-24_ — D12: an as-built note for the slot (owner, 24 Nov): AutoCode → AutoCoding… →
+  Applied on card and page, Uninstall beside Review, the explainer, "Codebook Library", and the
+  three server rules under it. Only D12 was read against HEAD; `last-trued` is unchanged.
 - _2026-11-24_ — D10: a dated as-built note for the rail count's new treatment (owner, 24 Nov):
   one switch-sized box in every state, a fixed three-figure slot so the title never re-wraps, and a
   spoken and hovered label. Only D10 was read against HEAD; `last-trued` is unchanged.
@@ -1537,6 +1540,39 @@ _As built, 15 Oct 2026._ Item 2 is done: B6 was fixed server-side on 31 Aug.
 Item 1 is half done: a first-sentence fallback ships (`shortDescription` in
 `CodebookV2Browse.tsx`), the field does not (Q7). The version row is written
 but cannot render, because the API never sends `version` (Q6).
+
+_As built, 24 Nov 2026 (owner)._ **The Action row is superseded.** The card no longer carries
+Install or Uninstall: a slot beside the title, the same on the card and the codebook page
+(`CodebookV2Slot.tsx`; spec [`mockups/codebook-applied-slot.html`](mockups/codebook-applied-slot.html)),
+reads **AutoCode** (our small primary button), then **AutoCoding** with the house shimmer and a
+growing ellipsis, in muted ink, while a run goes, then **Applied** (a green tick in a cartouche, not
+a control) when it completes, however little it applied. Sentiment always says Applied (D20). A run
+that stops or fails, whole or in part, brings the button back, and it resumes. Its words sit on the
+title's first baseline.
+
+- **The page.** The slot takes the title row's place; Uninstall is a small secondary button beside
+  Review, hidden while a run goes, when Review stays but is inactive (D17). Before an install a second
+  line reads "AutoCode proposes 18 tags for 24 quotes." (both counts pluralised, no cost warning).
+  The heading is "Codebook" (a key now, `codebook.pageHeading`, from the glossary's Codebook row).
+- **The catalogue.** Headed "Codebook Library" (`codebook.browseCodebooks`), with no Browse button
+  of its own; the sidebar's Browse stays, disabled, and no row is current.
+- **The server.** `GET /codebook` says where each run stands (`framework_autocode`:
+  running, applied or unfinished, by `routes/codebook.py` `autocode_state`) and how many quotes count
+  (`quote_count`). Running includes a stopped first apply still landing its last batches. Unfinished
+  is every pass that ends with quotes owed only a click will code: a Stop or failure of any pass, a
+  first apply with batches failed (`failure_kind`), and a catch-up with batches failed, which ends
+  `completed` and says so only in its own counts. Uninstall is refused while a run codes (409
+  `already_running`): deleting the job did not stop the run, which kept calling the model. Switching
+  a codebook off cancels a first apply still coding, as a Stop does, and the house default does not
+  retry one stopped that way; a catch-up already stops itself. AutoCode on an applied run that ended
+  unfinished resumes it as a catch-up of the quotes it owes, never a second whole run (#64); nothing
+  owed clears the old failure and raises no chip; a pass already coding it is a 409.
+- **Switched off:** a codebook switched off offers no button (switching it off is what stopped its
+  run; switching it on is the way back), and still says Applied, knocked back, if it was.
+- **The Mac's Codes menu** dims Uninstall Codebook while a run goes, as the page hides it. It still
+  says Install Codebook where the page says AutoCode, and has no resume item: native copy, not
+  changed here.
+- **An exported report** shows Applied where it was, and neither the button nor the running words.
 
 Frame: **V10** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
 

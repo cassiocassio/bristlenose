@@ -42,6 +42,7 @@ function book(over: Partial<PageBook> = {}): PageBook {
     enabled: true,
     pending: 12,
     quotes: 72,
+    slot: "done",
     ...over,
   };
 }
@@ -63,15 +64,15 @@ const renderPage = (b: PageBook, groups: CodebookGroupResponse[] = [group(3)]) =
     <CodebookV2Page
       projectName="Ikea"
       book={b} groups={groups}
-      onReview={noop} onInstall={noop} onUninstall={noop}
+      onReview={noop} onAutoCode={noop} onUninstall={noop} quoteCount={24}
       authoring={inertAuthoring} allTagNames={[]}
     />,
   );
 
 describe("D20 — three shapes", () => {
-  it("the floor has no install or uninstall", () => {
+  it("the floor has no slot and no uninstall", () => {
     renderPage(book({ id: "", floor: true, title: "Your tags", provenance: "" }));
-    expect(screen.queryByTestId("bn-v2-install")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-v2-slot")).not.toBeInTheDocument();
     expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
   });
 
@@ -80,6 +81,8 @@ describe("D20 — three shapes", () => {
     // destroys tags nothing can restore (register A4, closed by deletion).
     renderPage(book({ id: "sentiment", title: "Sentiment", provenance: "On by default", provenanceIsPerson: false }));
     expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
+    // Applied, never a button: the pipeline applies it (D20).
+    expect(screen.getByTestId("bn-v2-slot")).toHaveTextContent("Applied");
   });
 
   it("a framework has one", () => {
@@ -87,30 +90,57 @@ describe("D20 — three shapes", () => {
     expect(screen.getByTestId("bn-v2-uninstall")).toBeInTheDocument();
   });
 
-  it("rides on the title row, not below the author card", () => {
-    // It lived in `.pg-side` under `.preview-author` — the one control that
-    // decides whether this codebook is in the project at all, placed after the
-    // author's biography and below the fold on a short window. A control that
-    // acts on the whole page belongs to the page's heading, which is the rule
-    // `SectionHeading` already follows for Browse Library a level up.
-    //
-    // Asserted by ANCESTRY rather than by presence: the old placement passed
-    // every "is the button there?" test, which is exactly why moving it needed
-    // a test that could tell the difference.
+  it("the slot rides on the title row, last, and Uninstall sits beside Review", () => {
+    // The title's place is the slot's (owner, 24 Nov 2026): AutoCode →
+    // AutoCoding… → Applied, as on the card. Uninstall went down to the Review
+    // row, small and secondary. Asserted by ANCESTRY, not presence.
     const { container } = renderPage(book());
-    const btn = screen.getByTestId("bn-v2-uninstall");
-    expect(btn.closest(".pg-titlerow")).not.toBeNull();
-    expect(btn.closest(".pg-side")).toBeNull();
-
-    // And it is the LAST thing in that row, so the title reads first.
+    const slot = screen.getByTestId("bn-v2-slot");
     const row = container.querySelector(".pg-titlerow")!;
-    expect(row.lastElementChild!.contains(btn)).toBe(true);
+    expect(row.lastElementChild).toBe(slot);
+    const uninstall = screen.getByTestId("bn-v2-uninstall");
+    expect(uninstall.closest(".pg-titlerow")).toBeNull();
+    expect(uninstall.closest(".pg-review-row")).not.toBeNull();
+    expect(uninstall).toHaveClass("bn-btn-sm", "bn-btn-secondary");
   });
 
-  it("Install takes the same slot as Uninstall", () => {
-    // One slot, two verbs — not two placements that happen to agree today.
-    renderPage(book({ installed: false }));
-    expect(screen.getByTestId("bn-v2-install").closest(".pg-titlerow")).not.toBeNull();
+  it("offers AutoCode in the slot when not installed, and says what it will do", () => {
+    const onAutoCode = vi.fn();
+    render(
+      <CodebookV2Page
+        projectName="Ikea"
+        book={book({ installed: false, slot: "act" })} groups={[group(18)]}
+        onReview={noop} onAutoCode={onAutoCode} onUninstall={noop} quoteCount={24}
+        authoring={inertAuthoring} allTagNames={[]}
+      />,
+    );
+    const btn = screen.getByTestId("bn-v2-slot");
+    expect(btn).toHaveTextContent("AutoCode");
+    fireEvent.click(btn);
+    expect(onAutoCode).toHaveBeenCalledWith("nielsen");
+    // The owner's words, pluralised on both counts; no cost warning.
+    expect(screen.getByTestId("bn-v2-explainer")).toHaveTextContent(
+      /^AutoCode proposes 18 tags for 24 quotes\.$/,
+    );
+  });
+
+  it("says one tag and one quote in the explainer", () => {
+    render(
+      <CodebookV2Page
+        projectName="Ikea"
+        book={book({ installed: false, slot: "act" })} groups={[group(1)]}
+        onReview={noop} onAutoCode={noop} onUninstall={noop} quoteCount={1}
+        authoring={inertAuthoring} allTagNames={[]}
+      />,
+    );
+    expect(screen.getByTestId("bn-v2-explainer")).toHaveTextContent(
+      /^AutoCode proposes 1 tag for 1 quote\.$/,
+    );
+  });
+
+  it("has no explainer once installed", () => {
+    renderPage(book());
+    expect(screen.queryByTestId("bn-v2-explainer")).not.toBeInTheDocument();
   });
 
   it("says 'not installed' in the reader's language (BR-10)", async () => {
@@ -125,9 +155,24 @@ describe("D20 — three shapes", () => {
     }
   });
 
-  it("offers Install when not installed", () => {
-    renderPage(book({ installed: false }));
-    expect(screen.getByTestId("bn-v2-install")).toBeInTheDocument();
+  it("offers AutoCode again when installed but unfinished, to resume", () => {
+    renderPage(book({ slot: "act" }));
+    expect(screen.getByTestId("bn-v2-slot")).toHaveTextContent("AutoCode");
+    expect(screen.getByTestId("bn-v2-uninstall")).toBeInTheDocument();
+  });
+});
+
+describe("while AutoCode runs", () => {
+  it("the slot says AutoCoding, Review stays but is inactive, Uninstall is hidden", () => {
+    renderPage(book({ slot: "run" }));
+    expect(screen.getByTestId("bn-v2-slot")).toHaveTextContent(/^AutoCoding\.\.\.$/);
+    expect(screen.getByTestId("bn-v2-review")).toBeDisabled();
+    expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
+  });
+
+  it("Review is active again once it has finished", () => {
+    renderPage(book({ slot: "done" }));
+    expect(screen.getByTestId("bn-v2-review")).toBeEnabled();
   });
 });
 
@@ -302,18 +347,18 @@ describe("the stat line can count", () => {
 });
 
 describe("Q14 — export mode hides the doors it cannot honour", () => {
-  // v2's other controls escape by accident of the extraction: Uninstall carries
-  // `.framework-remove-btn` and the authoring carries `.tag-add-row`, both of
-  // which theme/templates/export.css already hides. The Review door has no such
-  // class, so nothing was hiding it — and its modal reads a SERVER_ONLY
-  // endpoint and offers a write, neither of which exists in a leave-behind.
+  // The authoring escapes by accident of the extraction (`.tag-add-row`, which
+  // theme/templates/export.css hides). The Review door, the slot's button and
+  // Uninstall have no such class, so the page gates them — the Review modal
+  // reads a SERVER_ONLY endpoint and offers a write, neither of which exists in
+  // a leave-behind.
 
   const renderReadOnly = (b = book()) =>
     render(
       <CodebookV2Page
       projectName="Ikea"
         book={b} groups={[group(3)]}
-        onReview={noop} onInstall={noop} onUninstall={noop}
+        onReview={noop} onAutoCode={noop} onUninstall={noop} quoteCount={24}
         authoring={inertAuthoring} allTagNames={[]} readOnly
       />,
     );
@@ -323,10 +368,12 @@ describe("Q14 — export mode hides the doors it cannot honour", () => {
     expect(screen.queryByTestId("bn-v2-review")).not.toBeInTheDocument();
   });
 
-  it("hides Install and Uninstall", () => {
-    renderReadOnly();
-    expect(screen.queryByTestId("bn-v2-install")).not.toBeInTheDocument();
+  it("hides AutoCode and Uninstall, and keeps Applied", () => {
+    renderReadOnly(book({ slot: "act" }));
+    expect(screen.queryByTestId("bn-v2-slot")).not.toBeInTheDocument();
     expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
+    renderReadOnly(book({ id: "garrett", slot: "done" }));
+    expect(screen.getByTestId("bn-v2-slot")).toHaveTextContent("Applied");
   });
 
   it("still shows the counts — read-only is not blank", () => {
@@ -343,7 +390,7 @@ describe("Q14 — export mode hides the doors it cannot honour", () => {
       <CodebookV2Page
       projectName="Ikea"
         book={book()} groups={[group(3)]}
-        onReview={noop} onInstall={noop} onUninstall={noop}
+        onReview={noop} onAutoCode={noop} onUninstall={noop} quoteCount={24}
         authoring={inertAuthoring} allTagNames={[]}
       />,
     );

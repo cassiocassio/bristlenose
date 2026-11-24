@@ -443,14 +443,15 @@ class TestStartAutoCodeJob:
         assert seen == [True]
         assert signals_preparing(app.state) is False
 
-    @pytest.mark.parametrize("status", ["cancelled", "failed"])
+    @pytest.mark.parametrize("status", ["completed"])
     def test_apply_over_an_applied_job_is_refused(
         self, client_with_garrett: TestClient, status: str
     ) -> None:
         """#64: a failed or stopped catch-up leaves an applied job "failed" or
         "cancelled", and Apply then deleted every proposal of the original apply
         and coded the whole corpus again. An applied job (completed_at set) is
-        refused like a completed one, whatever its status (RE#66)."""
+        refused like a completed one (RE#66), except one that ended unfinished,
+        which resumes as a catch-up (``TestResumeAnAppliedRun``)."""
         from datetime import datetime
 
         db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
@@ -1390,3 +1391,134 @@ class TestProposalsInTheQuotesLens:
         self._seed(client_with_garrett, "running", None)
         body = client_with_garrett.get("/api/projects/1/quotes").json()
         assert _proposal_count(body) == 0
+
+
+# ---------------------------------------------------------------------------
+# The codebook pages' slot: resume an applied run that ended unfinished
+# (owner, 24 Nov 2026)
+# ---------------------------------------------------------------------------
+
+
+class TestResumeAnAppliedRun:
+    """The slot offers AutoCode again for a run that ended unfinished. On an applied
+    job that is a catch-up of the quotes it owes, never a second whole-corpus run
+    (#64): its proposals stay, and only what is off the register is sent."""
+
+    def _seed(self, client: TestClient, status: str, failure_kind: str = "") -> None:
+        from datetime import datetime
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            job = AutoCodeJob(
+                project_id=1, framework_id="garrett", status=status,
+                failure_kind=failure_kind,
+                completed_at=datetime(2026, 11, 20, 10, 0, 0),
+            )
+            db.add(job)
+            db.flush()
+            quote = db.query(Quote).filter_by(project_id=1).first()
+            tag = db.query(TagDefinition).first()
+            assert quote is not None and tag is not None
+            db.add(ProposedTag(
+                job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
+                confidence=0.9, rationale="r",
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+    def _start(self, client: TestClient, launched: list[str]) -> object:
+        def fake_launch(app: object, project_id: int, framework_id: str) -> None:
+            launched.append(framework_id)
+
+        with (
+            patch("bristlenose.server.routes.autocode.load_settings") as mock_ls,
+            patch("bristlenose.server.routes.data.launch_catch_up", fake_launch),
+            patch(
+                "bristlenose.server.routes.autocode.run_autocode_job",
+                new_callable=AsyncMock,
+            ) as first_apply,
+        ):
+            mock_ls.return_value = _mock_cloud_settings()
+            resp = client.post("/api/projects/1/autocode/garrett")
+            assert not first_apply.called, "a resume must never run the first apply again"
+        return resp
+
+    @pytest.mark.parametrize(
+        ("status", "failure_kind"),
+        [("completed", "out_of_credit"), ("failed", "invalid_key"), ("failed", ""),
+         ("cancelled", "")],
+    )
+    def test_an_unfinished_applied_run_resumes_as_a_catch_up(
+        self, client_with_garrett: TestClient, status: str, failure_kind: str
+    ) -> None:
+        self._seed(client_with_garrett, status, failure_kind)
+        launched: list[str] = []
+        resp = self._start(client_with_garrett, launched)
+        assert resp.status_code == 200, resp.text  # type: ignore[attr-defined]
+        assert launched == ["garrett"]
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            job = db.query(AutoCodeJob).one()
+            assert job.status == "running"
+            assert job.completed_at is not None  # still applied: a catch-up, not a rerun
+            assert db.query(ProposedTag).count() == 1  # nothing deleted
+        finally:
+            db.close()
+
+    def test_nothing_owed_clears_the_failure_and_starts_nothing(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        from bristlenose.server.models import AutoCodeSentQuote
+
+        self._seed(client_with_garrett, "completed", "out_of_credit")
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            job = db.query(AutoCodeJob).one()
+            for (qid,) in db.query(Quote.id).filter_by(project_id=1):
+                db.add(AutoCodeSentQuote(job_id=job.id, quote_id=qid))
+            db.commit()
+        finally:
+            db.close()
+        launched: list[str] = []
+        resp = self._start(client_with_garrett, launched)
+        assert resp.status_code == 200, resp.text  # type: ignore[attr-defined]
+        assert launched == []
+        # Not "running", so the page raises no chip over a pass that never started.
+        assert resp.json()["status"] == "completed"  # type: ignore[attr-defined]
+        codebook = client_with_garrett.get("/api/projects/1/codebook").json()
+        assert codebook["framework_autocode"] == {"garrett": "applied"}
+
+    def test_a_pass_already_coding_it_is_a_409_not_a_200_over_nothing(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        self._seed(client_with_garrett, "completed", "out_of_credit")
+        live = MagicMock()
+        live.done.return_value = False
+        launched: list[str] = []
+        with patch.dict(
+            "bristlenose.server.autocode._REAPPLY_IN_FLIGHT", {(1, "garrett"): live}
+        ):
+            resp = self._start(client_with_garrett, launched)
+        assert resp.status_code == 409  # type: ignore[attr-defined]
+        assert resp.json()["reason"] == "already_running"  # type: ignore[attr-defined]
+        assert launched == []
+
+    def test_a_resume_with_no_provider_is_refused_before_anything_moves(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        self._seed(client_with_garrett, "completed", "out_of_credit")
+        launched: list[str] = []
+        settings = _mock_cloud_settings()
+        settings.anthropic_api_key = ""
+        with (
+            patch("bristlenose.server.routes.autocode.load_settings", return_value=settings),
+            patch(
+                "bristlenose.server.routes.data.launch_catch_up",
+                lambda app, pid, fid: launched.append(fid),
+            ),
+        ):
+            resp = client_with_garrett.post("/api/projects/1/autocode/garrett")
+        assert resp.status_code == 503
+        assert resp.json()["reason"] == "no_api_key"
+        assert launched == []

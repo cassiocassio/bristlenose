@@ -227,7 +227,16 @@ export interface CodebookResponse {
   /** framework_id -> DISTINCT quotes carrying any of its tags. Register B6:
    *  summing per-group totals double-counts a quote tagged in two groups. */
   framework_quote_totals?: Record<string, number>;
+  /** framework_id -> where its AutoCode stands (`routes/codebook.py` `autocode_state`).
+   *  Absent: never started. Optional: an export made before 24 Nov 2026 lacks it. */
+  framework_autocode?: Record<string, AutoCodeRunState>;
+  /** The quotes AutoCode would code (the ones that count), for the page's explainer. */
+  quote_count?: number;
 }
+
+/** `running`: a pass is coding. `applied`: it completed cleanly. `unfinished`: stopped,
+ *  failed or partly failed, so the codebook pages offer AutoCode again, to resume. */
+export type AutoCodeRunState = "running" | "applied" | "unfinished";
 
 export interface TemplateTagOut {
   name: string;

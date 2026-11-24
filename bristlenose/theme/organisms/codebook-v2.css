@@ -8,7 +8,10 @@
    codebook-v2-rail.html and -parity.html for the measurements. The pending
    count's box (15px, 7.5px) is that same switch geometry, not a new value; its
    padding (4px), the slot's hair (9px) and the white on the accent (#fff, as
-   the switch's own knob) are the only other literals (D10, 24 Nov 2026). */
+   the switch's own knob) are the only other literals (D10, 24 Nov 2026). The
+   Applied cartouche's green is macOS system green, the colour 6c chose
+   (24 Oct), with WebKit's live system colour where it exists; not a palette
+   token yet, because --bn-colour-positive is a different green. */
 
 /* One knock-back opacity, shared by the rail, the page and the browse card.
    NOT a new value: the theme has seven disabled declarations carrying five
@@ -294,23 +297,19 @@
     background: var(--bn-colour-quote-bg);
 }
 
-/* The title and its action share a row: text left, control hard right, both
-   aligned to the TOP so a two-line title does not drag the button down with
-   it. The action was in `.pg-side` below the author card — the one control
-   that decides whether this codebook is in the project sitting after the
-   author's biography. */
+/* The title and the slot share a row: text left, slot hard right, the slot's
+   words on the title's FIRST baseline (alignment B, owner 24 Nov 2026), so a
+   two-line title keeps the slot on its first line. Was `flex-start`, which put
+   the button's box at the title's ascender line and its words above the
+   title's baseline. */
 .pg-titlerow {
     display: flex;
-    align-items: flex-start;
+    align-items: baseline;
     justify-content: space-between;
     gap: var(--bn-space-md);
 }
 
 .pg-titletext { min-width: 0; }
-
-/* `flex-shrink: 0` because the label is the affordance — "Uninstall" wrapping
-   to two lines, or ellipsing, is worse than a narrower title. */
-.pg-titleaction { flex-shrink: 0; }
 
 .pg-title {
     font-size: var(--bn-text-title);
@@ -359,6 +358,15 @@
 }
 
 .pg-review-meta { font-size: var(--bn-text-label); color: var(--bn-colour-text); }
+
+/* Uninstall beside Review: the same small secondary, red only on hover, as the
+   v1 lens's remove button was (owner, 24 Nov 2026). Its own class, because that
+   one also sets a margin, caption type and muted ink. */
+.pg-review-row .pg-uninstall:hover,
+.pg-review-row .pg-uninstall:focus-visible {
+    color: var(--bn-colour-negative);
+    border-color: var(--bn-colour-negative);
+}
 .pg-review-meta .undec { color: var(--bn-colour-muted); }
 
 /* D26 — a codebook that defines no tags says so, plainly. */
@@ -515,10 +523,89 @@
 
 .v2-card-grid .picker-card.off2 { opacity: var(--bn-opacity-off); }
 
-/* The uninstall control is EXEMPT, on the card exactly as on the page: a
-   blanket knock-back removes precisely the one control that must stay
-   reachable on a disabled codebook (D27). */
-.v2-card-grid .picker-card.off2 .picker-card-toggle { opacity: 1; }
+/* ── The slot: AutoCode → AutoCoding… → Applied ─────────────────────────────
+   One top-right slot on the catalogue card and the codebook page, always in
+   the same state (owner, 24 Nov 2026; docs/mockups/codebook-applied-slot.html):
+   the small primary button, then plain shimmering words while AutoCode runs,
+   then the green cartouche when the run completes. The words and the
+   cartouche are not controls: no box on the words, no hover, the arrow cursor.
+   The same size on a card and a page: caption type in both. */
+
+:root { --bn-codebook-applied: light-dark(#34C759, #30D158); }
+@supports (color: -apple-system-green) {
+    :root { --bn-codebook-applied: -apple-system-green; }
+}
+
+/* A card's title and its slot share one row, on the title's first baseline
+   (alignment B), as on the page. The row takes the title's own spacing. */
+.v2-card-grid .picker-card-titlerow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--bn-space-sm);
+    margin-bottom: 0.15rem;
+}
+.v2-card-grid .picker-card-titlerow .picker-card-title {
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+/* The label is the affordance, and never wraps or shrinks. */
+.cb-act,
+.cb-running,
+.cb-applied {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Running: muted ink, the house shimmer, and an ellipsis that grows
+   ". .. ..." and repeats. Plain words, not a control. */
+.cb-running {
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    cursor: default;
+    --bn-shimmer-base: var(--bn-colour-muted);
+    color: var(--bn-shimmer-base);
+}
+.cb-dots i { font-style: normal; }
+/* The dots fade by opacity, never display, so the slot's width holds still.
+   Frozen (animation off, reduced motion) the ellipsis reads as a plain "...". */
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .cb-dots i:nth-child(2) {
+        animation: cb-dot2 1.5s steps(1, end) infinite;
+    }
+    :root:not([data-analysis-animation="off"]) .cb-dots i:nth-child(3) {
+        animation: cb-dot3 1.5s steps(1, end) infinite;
+    }
+}
+@keyframes cb-dot2 { 0% { opacity: 0; } 33.33%, 100% { opacity: 1; } }
+@keyframes cb-dot3 { 0% { opacity: 0; } 66.67%, 100% { opacity: 1; } }
+
+/* Applied: a status badge (pill radius, not interactive). Body font, never the
+   tag pill's mono, so it cannot read as a tag called "Applied". */
+.cb-applied {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3em;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    padding: 0.15em 0.55em;
+    border-radius: var(--bn-radius-pill);
+    background: color-mix(in srgb, var(--bn-codebook-applied) 8%, transparent);
+    cursor: default;
+}
+.cb-applied .bn-icon {
+    align-self: center;
+    color: var(--bn-codebook-applied);
+    font-size: 1.15em;
+    --bn-icon-stem: var(--bn-icon-stem-strong);
+}
+/* Switched off, the cartouche goes neutral, under the shipped knock-back. */
+.off2 .cb-applied,
+.pageoff .cb-applied { background: var(--bn-colour-badge-bg); }
+.off2 .cb-applied .bn-icon,
+.pageoff .cb-applied .bn-icon { color: var(--bn-colour-muted); }
 
 /* ── Codebook v2 — the uninstall confirmation ─────────────────────────────
    Phase 5. Reuses the shipped .bn-modal-overlay / .bn-modal shell; only the

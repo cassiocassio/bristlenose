@@ -46,6 +46,9 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-11-24_ — D10: a dated as-built note for the rail count's new treatment (owner, 24 Nov):
+  one switch-sized box in every state, a fixed three-figure slot so the title never re-wraps, and a
+  spoken and hovered label. Only D10 was read against HEAD; `last-trued` is unchanged.
 - _2026-10-15_ — trued up: retitled "Open — navigation" as built and flipped
   Q12–Q14 and Copy link to resolved; struck closed rows in the consolidated
   questions and marked the 29 Aug status rollup superseded, with a current table
@@ -1390,6 +1393,34 @@ does not use; so register B5's hardcoded tint now sits on dead CSS. The page
 door is not an accent-filled "Review 12": per D18 it is a secondary, small
 "Review" button, and the count is the coverage line beside it, with "·
 N tentative" (`CodebookV2Page.tsx`). Uninstall is in the title row (D11).
+
+_As built, 24 Nov 2026 (owner)._ The rail count's grey pill is gone: its fill
+all but vanished on the selected row (the badge grey on the selection grey,
+`#f3f4f6` on `#efefef`; Edo `#e8dfc9` on `#e6ddc9`), and it changed size between
+states, re-wrapping long titles. Now (`codebook-v2.css`, `.v2-nav-pending` and
+`.v2-nav-pending-slot`; `PendingCount` in `CodebookV2Sidebar.tsx`):
+
+- **Zero:** nothing shows.
+- **On:** an outlined pill in ink. **Off**, selected or not: the same pill at
+  `--bn-opacity-off`. **Selected and on:** white figures on the accent.
+- **Nothing moves.** Every state is one box, the mini switch's 15 px height and
+  radius, at least as wide as it is high, regular weight, centred on the switch;
+  a state changes only fill, figure colour and opacity.
+- **The title never re-wraps.** The count sits in a slot sized for three figures,
+  so the number landing live or falling as proposals are reviewed leaves the
+  title's width alone; once a row has shown a count its slot stays, empty, at
+  zero. A row that never had one keeps its full width.
+- **It says what it is.** The tooltip and a screen-reader label read "5
+  tentative" (`codebook.tentativeCount`, plural in all 21 locales); the figure
+  itself is `aria-hidden`.
+
+Contrast, measured in the mockup (`mockups/codebook-pending-count.html`): the on
+pill is 11:1 or better everywhere; white on accent is 6.9:1 in Edo light but
+under 4.5:1 in default light (4.0), Edo dark (2.9) and default dark (3.7); the
+half-opacity off pill is 2.9 to 4.3:1. The theme's own rule mutes readable text
+with a colour token, never `opacity` (`theme/gotchas.md`); the mockup offers
+muted ink as the alternative (4.2:1 on the selected row in light mode, 4.6:1 or
+better elsewhere). Owner's choice, 24 Nov: opacity.
 
 Frame: **V8** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
 

@@ -144,7 +144,9 @@ What each pair renders comes straight from the table above. For example, `.badge
 **Figures** (numbers set in mono for alignment until 15 Oct 2026; now the body face with `font-variant-numeric: tabular-nums`, weights unchanged):
 
 - `signals.css:161`, `:373`, `:531` and `:607`: metric value at label, heatmap cell at label 490, tooltip metrics and footer at micro
-- `codebook-v2.css:98`: `.v2-nav-pending` at micro
+- `codebook-v2.css:98`: `.v2-nav-pending` at micro (since 24 Nov 2026 the rule is at `codebook-v2.css:128`,
+  with a `.v2-nav-pending-slot` above it, and sets `--bn-weight-normal` itself rather than inheriting the row's
+  weight, which differed between a selected row and the rest: `docs/design-codebook-v2.md` D10)
 - `molecules/threshold-review.css:50`, `:115`, `:164` and `:222`: axis, slider label, zone counter (490) and confidence
 
 Fifteen other rules already align numbers in the body face with `font-variant-numeric: tabular-nums`: `transcription-diagnostics.css`, `sidebar.css:930`, `codebook-panel.css`, `codebook-v2.css`, `sidebar-tags.css`, `search.css`, `tag-filter.css`, `autocode-toast.css` and `screens.css`.

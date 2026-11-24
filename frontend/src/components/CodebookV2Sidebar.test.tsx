@@ -650,3 +650,47 @@ describe("the pending badge while AutoCode lands", () => {
     expect(badge()).toBe("5");
   });
 });
+
+// ── The count's slot and label (owner, 24 Nov 2026) ─────────────────────────
+
+describe("the pending count says what it is, and never moves the title", () => {
+  const row = (id: string) => screen.getByTestId(`bn-v2-nav-row-${id}`);
+
+  it("is labelled for a pointer and for VoiceOver, from the shipped plural key", async () => {
+    renderSidebar();
+    await screen.findByText("10 Usability Heuristics");
+    const count = row("nielsen").querySelector(".v2-nav-pending");
+    expect(count?.textContent).toBe("5");
+    // The figure is hidden from assistive tech; the words are read instead.
+    expect(count?.getAttribute("aria-hidden")).toBe("true");
+    expect(count?.getAttribute("title")).toBe("5 tentative");
+    expect(row("nielsen").querySelector(".bn-sr-only")?.textContent).toBe("5 tentative");
+  });
+
+  it("sits in a fixed-width slot, and a row that never had a count gets none", async () => {
+    renderSidebar();
+    await screen.findByText("10 Usability Heuristics");
+    expect(row("nielsen").querySelector(".v2-nav-pending-slot > .v2-nav-pending")).not.toBeNull();
+    // The floor has nothing waiting in the fixture: its title keeps its full width.
+    expect(row("floor").querySelector(".v2-nav-pending-slot")).toBeNull();
+  });
+
+  it("keeps the empty slot when the count reaches zero, so the title does not re-wrap", async () => {
+    const { setPlaybackSnapshot, EMPTY_SNAPSHOT } = await import("../contexts/AutoCodePlaybackView");
+    renderSidebar();
+    await screen.findByText("10 Usability Heuristics");
+    expect(row("nielsen").querySelector(".v2-nav-pending")?.textContent).toBe("5");
+    act(() =>
+      setPlaybackSnapshot({
+        ...EMPTY_SNAPSHOT,
+        frameworks: new Map([["nielsen", { kind: "first", handoverAt: null, tentative: new Map(), accepted: [] }]]),
+      }),
+    );
+    // Nothing waiting: no figure, no words, but the slot holds the title's width.
+    expect(row("nielsen").querySelector(".v2-nav-pending")).toBeNull();
+    expect(row("nielsen").querySelector(".bn-sr-only")).toBeNull();
+    expect(row("nielsen").querySelector(".v2-nav-pending-slot")).not.toBeNull();
+    act(() => setPlaybackSnapshot(EMPTY_SNAPSHOT));
+    expect(row("nielsen").querySelector(".v2-nav-pending")?.textContent).toBe("5");
+  });
+});

@@ -5,7 +5,10 @@
 
    Everything is tokens. The one value that is not a token is the switch's
    26x15, which is measured rather than chosen — see docs/mockups/
-   codebook-v2-rail.html and -parity.html for the measurements. */
+   codebook-v2-rail.html and -parity.html for the measurements. The pending
+   count's box (15px, 7.5px) is that same switch geometry, not a new value; its
+   padding (4px), the slot's hair (9px) and the white on the accent (#fff, as
+   the switch's own knob) are the only other literals (D10, 24 Nov 2026). */
 
 /* One knock-back opacity, shared by the rail, the page and the browse card.
    NOT a new value: the theme has seven disabled declarations carrying five
@@ -92,16 +95,63 @@
 .v2-nav-row.codebook-disabled .v2-nav-provenance { color: var(--bn-colour-muted); }
 
 /* Undecided-proposal count (D10). Inboard of the switch so the switch keeps the
-   trailing edge (D16) and the badge never displaces it. */
-.v2-nav-pending {
+   trailing edge (D16) and the badge never displaces it.
+
+   NOTHING MOVES (owner, 24 Nov 2026; docs/mockups/codebook-pending-count.html).
+   The grey pill it replaces changed shape between states and its fill all but
+   vanished on the selected row (#f3f4f6 on #efefef; Edo #e8dfc9 on #e6ddc9).
+   Now every state draws one box: the switch's own height and radius (26 x 15,
+   7.5, `.sw.mini` below and `.enable`), at least as wide as it is high, regular
+   weight, so a row being selected or switched off changes only fill, figure
+   colour and opacity. The row centres it on the switch.
+
+   The SLOT holds the count at a fixed width for three figures, the pill set
+   against the switch inside it, so the title keeps one width as proposals are
+   reviewed (10 -> 9) or land live, and never re-wraps. It takes the count's
+   size and the pill's weight (the row's weight differs when it is selected, and
+   with it a figure's advance), so `ch` is one tabular figure at the pill's own
+   setting; + 9px is the pill's padding and a hair. Three figures is the limit:
+   a count of 1000 or more widens the slot and can re-wrap the title once.
+   The component keeps an empty slot on a row once it has shown a count, so
+   reviewing the last proposal does not re-wrap the title either. */
+.v2-nav-pending-slot {
     flex-shrink: 0;
+    display: inline-flex;
+    justify-content: flex-end;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-normal);
+    font-variant-numeric: tabular-nums;
+    min-width: calc(3ch + 9px);
+}
+
+.v2-nav-pending {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 15px;
+    min-width: 15px;
+    padding: 0 4px;
+    border-radius: 7.5px;
+    line-height: 1;
     font-family: var(--bn-font-body);   /* a count: figures, not mono (docs/design-monospace-roles.md §4) */
     font-size: var(--bn-text-micro);
-    color: var(--bn-colour-badge-text);
-    background: var(--bn-colour-badge-bg);
-    border-radius: var(--bn-radius-pill);
-    padding: 0.05rem 0.35rem;
+    font-weight: var(--bn-weight-normal);
     font-variant-numeric: tabular-nums;
+    color: var(--bn-colour-text);
+    /* An inset ring, not a border, so the ring and the selected fill share one box. */
+    box-shadow: inset 0 0 0 1px var(--bn-colour-border-hover);
+}
+
+/* Switched off, selected or not: the same pill at the codebook's off opacity. */
+.v2-nav-row.codebook-disabled .v2-nav-pending { opacity: var(--bn-opacity-off); }
+
+/* Selected and on: white figures on the accent, like the switch beside it. */
+.v2-nav-row.active:not(.codebook-disabled) .v2-nav-pending {
+    color: #fff;
+    background: var(--bn-colour-accent);
+    box-shadow: inset 0 0 0 1px var(--bn-colour-accent);
 }
 
 /* The hover underline belongs to the TITLE, not to the whole row. `.toc-link:hover`

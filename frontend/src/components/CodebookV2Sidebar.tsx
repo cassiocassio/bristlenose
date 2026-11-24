@@ -147,16 +147,46 @@ function EnableControl({
 
 // ── Row ────────────────────────────────────────────────────────────────────
 
+/**
+ * The undecided-proposal count (D10), in a fixed-width slot.
+ *
+ * The slot keeps the title at one width whatever the number does (it lands live
+ * during AutoCode, and falls as proposals are reviewed), so the title never
+ * re-wraps under the researcher. `keepSlot` holds it, empty, once the row has
+ * shown a count, so reviewing the last proposal does not move the title either;
+ * a row that never had one gets no slot and keeps its full width.
+ *
+ * The figure is `aria-hidden` and the words are screen-reader text, so VoiceOver
+ * reads "5 tentative", not a stray "5" after the codebook's name. The tooltip
+ * says the same to a pointer. One shipped key, plural in every locale.
+ */
+function PendingCount({ count, keepSlot }: { count: number; keepSlot: boolean }) {
+  const { t } = useTranslation();
+  if (count <= 0 && !keepSlot) return null;
+  if (count <= 0) return <span className="v2-nav-pending-slot" />;
+  const label = t("codebook.tentativeCount", { count });
+  return (
+    <span className="v2-nav-pending-slot">
+      <span className="v2-nav-pending" aria-hidden="true" title={label}>
+        {count}
+      </span>
+      <span className="bn-sr-only">{label}</span>
+    </span>
+  );
+}
+
 function Row({
   book,
   selected,
   onToggle,
   readOnly,
+  keepSlot,
 }: {
   book: V2NavBook;
   selected: boolean;
   onToggle: (id: string, enabled: boolean) => void;
   readOnly: boolean;
+  keepSlot: boolean;
 }) {
   return (
     // `.toc-link` + `.codebook-toc-link` are the shipped navigator's row — same
@@ -196,7 +226,7 @@ function Row({
           <span className="v2-nav-provenance">{book.provenance}</span>
         )}
       </span>
-      {book.pending > 0 && <span className="v2-nav-pending">{book.pending}</span>}
+      <PendingCount count={book.pending} keepSlot={keepSlot} />
       {!readOnly && <EnableControl book={book} onToggle={onToggle} />}
     </a>
   );
@@ -365,8 +395,20 @@ export function CodebookV2Sidebar() {
     [books, playback, read],
   );
 
+  // The rows that have shown a count since this navigator mounted, so their slot
+  // stays when the count reaches zero (PendingCount). React's pattern for state
+  // kept from earlier renders: a guarded update during render, which re-renders
+  // at once and settles, since a row only ever joins. A fresh mount starts empty,
+  // where nothing can move because nothing was drawn yet.
+  const [counted, setCounted] = useState<ReadonlySet<string>>(() => new Set());
+  const newlyCounted = (shown ?? [])
+    .filter((b) => b.pending > 0 && !counted.has(b.id || "floor"))
+    .map((b) => b.id || "floor");
+  if (newlyCounted.length > 0) setCounted(new Set([...counted, ...newlyCounted]));
+
   if (shown === null) return null;
 
+  const rowKey = (b: V2NavBook) => b.id || "floor";
   const selectedId = resolveSelectedId(storedId, shown);
   const floor = shown.filter((b) => b.floor);
   const builtIn = shown.filter((b) => !b.floor && b.builtIn);
@@ -381,11 +423,12 @@ export function CodebookV2Sidebar() {
       <div className="toc-heading">{label}</div>
       {rows.map((b) => (
         <Row
-          key={b.id || "floor"}
+          key={rowKey(b)}
           book={b}
           selected={(b.id || "") === selectedId}
           onToggle={onToggle}
           readOnly={readOnly}
+          keepSlot={counted.has(rowKey(b))}
         />
       ))}
     </>

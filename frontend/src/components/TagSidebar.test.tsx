@@ -446,3 +446,84 @@ describe("TagSidebar summary line (as shipped)", () => {
     expect(line()).toBe("2 tags");
   });
 });
+
+// ── D15: sentiment in the Sessions grid's order ───────────────────────────
+// The codebook arrives in sentiment.yaml's order, each tag carrying the colour slot of
+// its place there. The rows are listed in SENTIMENT_ORDER; each colour stays its own.
+
+const YAML_ORDER = [
+  "frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence",
+];
+
+describe("TagSidebar sentiment order (D15)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    resetSidebarStore();
+    vi.mocked(getHiddenTagGroups).mockResolvedValue([]);
+    vi.mocked(getFrameworkStates).mockResolvedValue({});
+    vi.mocked(apiGet).mockResolvedValue({ project_name: "ikea3" });
+    const sentiment: CodebookGroupResponse = {
+      id: 1, name: "Sentiment", subtitle: "", colour_set: "sentiment", order: 0,
+      tags: YAML_ORDER.map((name, i) => ({ id: 100 + i, name, count: 1, colour_index: i })),
+      total_quotes: 7, is_default: false, framework_id: "sentiment",
+    };
+    // A researcher's own tags that happen to share sentiment names: their order is theirs.
+    const own: CodebookGroupResponse = {
+      id: 2, name: "Uncategorised", subtitle: "", colour_set: "", order: 9999,
+      tags: ["satisfaction", "frustration", "Pricing"].map((name, i) => ({
+        id: 200 + i, name, count: 0, colour_index: i,
+      })),
+      total_quotes: 0, is_default: true, framework_id: null,
+    };
+    vi.mocked(getCodebook).mockResolvedValue({ groups: [sentiment, own], ungrouped: [], all_tag_names: [] });
+    initFromQuotes([
+      {
+        dom_id: "q-p1-10", text: "hello", participant_id: "p1", speaker_name: "p1",
+        start_timecode: 10, session_id: "s1", deleted_badges: [], proposed_tags: [],
+        tags: YAML_ORDER.map((name, i) => ({
+          name, codebook_group: "Sentiment", colour_set: "sentiment", colour_index: i, source: "pipeline",
+        })),
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ] as any);
+  });
+
+  const rowsOf = (card: Element) =>
+    [...card.querySelectorAll(".tag-row")].map((row) => ({
+      name: row.querySelector("input")!.getAttribute("aria-label"),
+      badge: row.querySelector(".badge")!.getAttribute("style") ?? "",
+      bar: row.querySelector(".tag-bar-track")!.innerHTML,
+    }));
+
+  async function cards() {
+    await waitFor(() => expect(screen.getByLabelText("Pricing")).toBeTruthy());
+    return [...document.querySelectorAll(".tag-filter-group")];
+  }
+
+  it("lists the sentiment rows in the Sessions grid's order", async () => {
+    render(<TagSidebar />);
+    const [sentiment] = await cards();
+    expect(rowsOf(sentiment).map((r) => r.name)).toEqual([
+      "frustration", "confusion", "doubt", "surprise", "confidence", "delight", "satisfaction",
+    ]);
+  });
+
+  it("keeps every other group's order, sentiment names or not", async () => {
+    render(<TagSidebar />);
+    const [, own] = await cards();
+    expect(rowsOf(own).map((r) => r.name)).toEqual(["satisfaction", "frustration", "Pricing"]);
+  });
+
+  it("draws each sentiment in the colour it had in the yaml's order", async () => {
+    // Before D15 the rows came in YAML_ORDER, slot i for row i; the slot travels with the
+    // tag, so after the reorder each name keeps the same badge and bar.
+    render(<TagSidebar />);
+    const [sentiment] = await cards();
+    const byName = new Map(rowsOf(sentiment).map((r) => [r.name, r]));
+    YAML_ORDER.forEach((name, i) => {
+      expect(byName.get(name)!.badge).toContain(`--bn-sentiment-${i + 1}-bg`);
+      expect(byName.get(name)!.bar).toContain(`--bn-sentiment-${name}`);
+    });
+  });
+});

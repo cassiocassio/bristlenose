@@ -402,3 +402,47 @@ describe("a code's histogram goes to its quotes", () => {
     });
   }
 });
+
+// D15: the Sentiment page lists its rows in the Sessions grid's order. The codebook arrives
+// in sentiment.yaml's order, each tag carrying the colour slot of its place there; the slot
+// travels with the tag, so the reorder leaves every colour as it was.
+describe("sentiment in the Sessions grid's order (D15)", () => {
+  const YAML_ORDER = [
+    "frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence",
+  ];
+  const sentimentBook = book({
+    id: "sentiment", title: "Sentiment", provenance: "On by default", provenanceIsPerson: false,
+  });
+  const groupOf = (colour_set: string, names: string[]): CodebookGroupResponse => ({
+    id: 1, name: "Sentiment", subtitle: "", colour_set, order: 0, total_quotes: 7,
+    is_default: false, framework_id: "sentiment",
+    tags: names.map((name, i) => ({ id: 100 + i, name, count: 1, tentative_count: 0, colour_index: i })),
+  });
+  const rowsOf = (container: HTMLElement) =>
+    [...container.querySelectorAll(".tag-row")].map((row) => ({
+      name: YAML_ORDER[Number(row.id.replace("code-", "")) - 100],
+      badge: row.querySelector(".badge")!.getAttribute("style") ?? "",
+      bar: row.querySelector(".tag-bar-area")!.innerHTML,
+    }));
+
+  it("lists the sentiment rows in the Sessions grid's order", () => {
+    const { container } = renderPage(sentimentBook, [groupOf("sentiment", YAML_ORDER)]);
+    expect(rowsOf(container).map((r) => r.name)).toEqual([
+      "frustration", "confusion", "doubt", "surprise", "confidence", "delight", "satisfaction",
+    ]);
+  });
+
+  it("keeps another group's order, even when its tags share sentiment names", () => {
+    const { container } = renderPage(book(), [groupOf("ux", YAML_ORDER)]);
+    expect(rowsOf(container).map((r) => r.name)).toEqual(YAML_ORDER);
+  });
+
+  it("draws each sentiment in the colour it had in the yaml's order", () => {
+    const { container } = renderPage(sentimentBook, [groupOf("sentiment", YAML_ORDER)]);
+    const byName = new Map(rowsOf(container).map((r) => [r.name, r]));
+    YAML_ORDER.forEach((name, i) => {
+      expect(byName.get(name)!.badge).toContain(`--bn-sentiment-${i + 1}-bg`);
+      expect(byName.get(name)!.bar).toContain(`--bn-sentiment-${name}`);
+    });
+  });
+});

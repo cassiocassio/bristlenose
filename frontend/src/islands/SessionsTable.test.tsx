@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { SessionsTable } from "./SessionsTable";
+import { SENTIMENT_ORDER } from "../utils/sentimentOrder";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import { _resetExportCache } from "../utils/exportData";
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
@@ -1722,5 +1723,37 @@ describe("SessionsTable: a failed session", () => {
     expect(container.querySelector('[data-testid="bn-session-failed-reason"]')?.textContent).toBe(
       "Not analysed: the file could not be read.",
     );
+  });
+});
+
+// D15: the sparkline's order is the one the tag sidebar and the Codebook lens list
+// sentiment in, declared once in utils/sentimentOrder.
+describe("SessionsTable sentiment sparkline", () => {
+  it("draws its bars in SENTIMENT_ORDER, whatever order the counts arrive in", async () => {
+    const counts = {
+      satisfaction: 1, delight: 2, confidence: 3, surprise: 4, doubt: 5, confusion: 6, frustration: 7,
+    };
+    const withCounts = {
+      ...sessionsResponse,
+      sessions: [{ ...sessionsResponse.sessions[0], sentiment_counts: counts }],
+    };
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("/sessions")
+          ? { ok: true, json: async () => withCounts }
+          : url.includes("/people")
+            ? { ok: true, json: async () => peopleResponse }
+            : { ok: false, status: 404, json: async () => ({}) },
+      ),
+    );
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    const bars = [...container.querySelectorAll(".bn-session-sentiment .bn-sparkline-bar")];
+    expect(bars.map((b) => b.getAttribute("style") ?? "")).toEqual(
+      SENTIMENT_ORDER.map((name) => expect.stringContaining(`--bn-sentiment-${name})`)),
+    );
+    expect([...SENTIMENT_ORDER]).toEqual([
+      "frustration", "confusion", "doubt", "surprise", "confidence", "delight", "satisfaction",
+    ]);
   });
 });

@@ -11,6 +11,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CodebookTagResponse } from "../utils/types";
 import { getTagBg, getTagBarColour } from "../utils/colours";
+import { inSentimentOrder } from "../utils/sentimentOrder";
 import { useSidebarSelector, type SidebarState } from "../contexts/SidebarStore";
 
 const selectHiddenTagGroups = (s: SidebarState) => s.hiddenTagGroups;
@@ -72,6 +73,8 @@ export function TagGroupCard({
   const { t } = useTranslation();
   const hiddenTagGroups = useSidebarSelector(selectHiddenTagGroups);
   const isHidden = hiddenTagGroups.has(name);
+  // Sentiment's rows in the Sessions grid's order (D15); every other group as it came.
+  const rows = useMemo(() => inSentimentOrder(colourSet, tags), [colourSet, tags]);
 
   const handleEyeClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -119,7 +122,7 @@ export function TagGroupCard({
       {!isHidden && (
         <>
           <div className="tag-filter-group-tags">
-            {tags.map((tag) => {
+            {rows.map((tag) => {
               const isChecked = !clearAll && !uncheckedSet.has(tag.name.toLowerCase());
               return (
                 <TagRow

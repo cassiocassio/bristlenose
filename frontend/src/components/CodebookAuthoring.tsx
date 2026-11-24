@@ -41,6 +41,7 @@ import { EditableText } from "./EditableText";
 import { MicroBar } from "./MicroBar";
 import { TagInput } from "./TagInput";
 import { getBarColour, getGroupBg, getTagBarColour, getTagBg } from "../utils/colours";
+import { inSentimentOrder } from "../utils/sentimentOrder";
 import { isExportMode } from "../utils/exportData";
 import { requestSoloTag } from "../contexts/SidebarStore";
 import {
@@ -625,7 +626,8 @@ export function CodebookGroupColumn({
       </div>
 
       <div className="tag-list">
-        {group.tags.map((tag) => {
+        {/* Sentiment's rows in the Sessions grid's order (D15); every other group as it came. */}
+        {inSentimentOrder(group.colour_set, group.tags).map((tag) => {
           const tagDisplayName = isSentiment
             ? te(`sentiment.${tag.name}`, { defaultValue: tag.name })
             : tag.name;

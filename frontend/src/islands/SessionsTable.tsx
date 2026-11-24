@@ -68,6 +68,7 @@ import { screenInk } from "../utils/sceneInk";
 import { TapestryPreview } from "../components/TapestryPreview";
 import { mergeTapestry, withoutStripState } from "../utils/tapestryMerge";
 import { diagnosticsEnabled } from "../utils/diagnostics";
+import { SENTIMENT_ORDER } from "../utils/sentimentOrder";
 import { momentPlace, placeProps, sessionPlace } from "../utils/contextPlace";
 import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
 import { handoverClass, useLensRead } from "../hooks/useLensRead";
@@ -100,16 +101,6 @@ const PersonPickerPopover = lazy(() =>
 // ---------------------------------------------------------------------------
 // Sentiment → Sparkline mapping
 // ---------------------------------------------------------------------------
-
-const SENTIMENT_ORDER = [
-  "frustration",
-  "confusion",
-  "doubt",
-  "surprise",
-  "confidence",
-  "delight",
-  "satisfaction",
-];
 
 /**
  * Placeholder role word shown (muted/italic) when a speaker has no identified

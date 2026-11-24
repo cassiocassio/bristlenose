@@ -2318,7 +2318,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–439 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–443 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -2430,7 +2430,11 @@ body.hide-ai-tags .badge-ai { display: none; }
     padding-bottom: calc(var(--bn-space-sm) + 14px);
     overflow-x: auto;
 }
-.bn-tapestry-svg { display: block; }
+/* Visible overflow: a raised flag shows its whole label, and on a session shorter than the row
+   the last one would otherwise be cut at the end of the session's own drawing, with empty row
+   to its right. The scroll box still clips at the row's edge, and overflow paints, it does not
+   scroll, so no scrollbar appears for it. */
+.bn-tapestry-svg { display: block; overflow: visible; }
 
 /* Lane labels read as headings: the column headers' face, weight and ink
    (.bn-sessions-head), one stop down the ladder. */

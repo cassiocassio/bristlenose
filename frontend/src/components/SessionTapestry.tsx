@@ -518,7 +518,7 @@ export default function SessionTapestry({
         >
           <defs>
             <filter id={`bn-tp-lift-${s.session_id}`} x="-10%" y="-30%" width="120%" height="170%">
-              <feDropShadow dx={0} dy={0.6} stdDeviation={0.9} floodColor="#000" floodOpacity={0.16} />
+              <feDropShadow dx={0} dy={1} stdDeviation={1.2} floodColor="#000" floodOpacity={0.24} />
             </filter>
             {/* Theme chips: solid for their first 80%, fading out over the rightmost 20%. */}
             <linearGradient id={`bn-tp-fade-${s.session_id}`} x1="0" x2="1" y1="0" y2="0">
@@ -634,10 +634,11 @@ export default function SessionTapestry({
                 }}>
                 <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={bandY - 2} />
                 {/* Half-pixel coordinates: a 1px stroke on whole pixels smears across two and
-                    reads as a heavier line than the hairline it is. */}
-                <path d={`M${fx + 1.5},2.5 h${pw} l-5,${half} l5,${half} h-${pw} z`}
+                    reads as a heavier line than the hairline it is. The banner's left edge is the
+                    staff's own pixel column, so the two read as one hairline, not a doubled one. */}
+                <path d={`M${fx + 0.5},2.5 h${pw} l-5,${half} l5,${half} h-${pw} z`}
                   filter={isRaised ? `url(#bn-tp-lift-${s.session_id})` : undefined} />
-                {text && <text x={fx + 1 + P.flagX} y={2.5 + half + centre(F.px.flag)}>{text}</text>}
+                {text && <text x={fx + P.flagX} y={2.5 + half + centre(F.px.flag)}>{text}</text>}
               </g>
             );
           })}
@@ -658,6 +659,11 @@ export default function SessionTapestry({
                 frame.current = 0;
                 if (pendingX.current === null) return;
                 const sec = secAt(pendingX.current);
+                // The pointer is on the lane, so no flag is under it. A flag can miss its own
+                // mouseleave: raising it moves its node in the DOM, and a browser sends no leave
+                // to a node moved out from under the pointer. A stale hot flag would keep drawing
+                // last, over the flag the lane has just raised.
+                setHotFlag(-1);
                 setRaised(sectionAt(sec));
                 setPlayhead(sec);
                 if (thumbs) tapestryThumb.move(s.session_id, framesFor(s.session_id, s.frames_key), sec, pendingX.current);

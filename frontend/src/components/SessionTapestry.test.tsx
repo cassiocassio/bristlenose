@@ -316,6 +316,31 @@ describe("SessionTapestry — hovering a section flag", () => {
     expect(document.querySelector(".bn-tp-flag.hot")).toBeNull();
     expect(document.querySelector(".bn-tp-playhead")).toBeNull();
   });
+
+  it("lets go of a flag that missed its mouseleave once the pointer is on the lane, and draws the lane's flag on top", async () => {
+    setup();
+    // Raising a flag moves its node, and a browser sends no mouseleave to a node moved out from
+    // under the pointer: so the leave below is never fired.
+    fireEvent.mouseEnter(document.querySelectorAll(".bn-tp-flag")[1]);
+    vi.useFakeTimers();
+    fireEvent.mouseMove(document.querySelector(".bn-tp-hit")!, { clientX: 82 + 60 }); // 1:00, section 0
+    await act(async () => {
+      vi.advanceTimersByTime(16);
+    });
+    vi.useRealTimers();
+    expect(document.querySelector(".bn-tp-flag.hot")).toBeNull();
+    const flags = Array.from(document.querySelectorAll<SVGGElement>(".bn-tp-flag"));
+    const last = flags[flags.length - 1];
+    expect(last.dataset.i).toBe("0");
+    expect(last).toHaveClass("raised");
+  });
+
+  it("starts the banner on the staff's own pixel column, so its left edge is one hairline", () => {
+    setup();
+    const flag = document.querySelectorAll(".bn-tp-flag")[1];
+    const staffX = flag.querySelector("line")!.getAttribute("x1");
+    expect(flag.querySelector("path")!.getAttribute("d")!.match(/^M([\d.]+),/)![1]).toBe(staffX);
+  });
 });
 
 describe("SessionTapestry — which track a speaker is on", () => {

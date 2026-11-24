@@ -307,7 +307,7 @@ def app(side: str, main: str, width: int = 1132) -> str:
 
 
 def frame(tag: str, note: str, body: str, cls: str = "", owner: bool = False) -> str:
-    own = '<span class="own">owner-written words: AutoCode · AutoCoding… · Applied</span>' if owner else ""
+    own = '<span class="own">new words, decided 24 Nov, not yet keys: AutoCode · AutoCoding… · Applied</span>' if owner else ""
     return (
         f'<figure class="frame {cls}"><figcaption class="chrome"><span class="tag">{E(tag)}</span>'
         f"<span>{E(note)}</span>{own}<span class=\"delta\"></span></figcaption>"
@@ -636,7 +636,7 @@ def build() -> str:
 
     strings = (
         "<table><tr><th>Where</th><th>Words drawn</th><th>Status</th></tr>"
-        f"<tr><td>Slot, before</td><td>{W_ACT}</td><td>owner-written placeholder; shipped today: “{E(t('codebook.importCodebook'))}” (<code>codebook.importCodebook</code>). The verb is parked.</td></tr>"
+        f"<tr><td>Slot, before</td><td>{W_ACT}</td><td>new key (owner, 24 Nov), replaces the shipped “{E(t('codebook.importCodebook'))}” (<code>codebook.importCodebook</code>) on this button</td></tr>"
         f"<tr><td>Slot, running</td><td>{W_RUN}…</td><td>new key; spelled as the shipped toast “{E(t('autocode.toast.progress', processed='N', total='M'))}”</td></tr>"
         f"<tr><td>Slot, done</td><td>{W_DONE}</td><td>new key (owner, 24 Nov), replaces the 6c “Installed”</td></tr>"
         f"<tr><td>Catalogue heading</td><td>{E(t('codebook.browseCodebooks'))}</td><td>shipped key <code>codebook.browseCodebooks</code>, 21 locales</td></tr>"
@@ -675,7 +675,7 @@ status badge (pill radius, not interactive). The running words have no box and a
 <li>The catalogue is headed “Codebook Library” (the shipped key), with no Browse button in its heading; the sidebar keeps its Browse button, disabled, and has no current row (§5).</li>
 <li>The slot's words sit on the title's first baseline (alignment B, §2), on card and page alike.</li>
 <li>While it runs, the words are muted ink with the shimmer and an ellipsis that grows “. .. ...” and repeats (§1b).</li>
-<li>Parked: the verb (“AutoCode” drawn as a placeholder), and animating the swap if it jars.</li>
+<li>The words: AutoCode → AutoCoding… → Applied (decided 24 Nov; “Install” was the browser-extension model, and what the researcher cares about is whether the tags are applied). Parked: animating the swap, if it jars.</li>
 </ol>''')}
 
 <h2 class="step">1 · The three states, at real size</h2>
@@ -749,8 +749,7 @@ leaves the action slot empty and keeps the row's height (Q14). The sidebar's own
 disabled (owner, 24 Nov): the library is what it opens, and a button that vanishes moves the rows under it. On the
 catalogue no codebook is current, so the sidebar shows none. The
 heading becomes the shipped “Codebook Library”, the name the reinstall sentences already send people to. Sentiment's card
-carries “Applied” too: it is applied by the pipeline and has no button (D20). <b>Chosen (owner, 24 Nov): proposed</b>, the “Codebook Library” heading included; the
-slot's words stay owner-written until the verb is settled.</p>''')}
+carries “Applied” too: it is applied by the pipeline and has no button (D20). <b>Chosen (owner, 24 Nov): proposed</b>, the “Codebook Library” heading included.</p>''')}
 
 <h2 class="step">Strings</h2>
 {commentary("what is shipped and what is new", strings)}

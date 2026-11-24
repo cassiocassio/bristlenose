@@ -107,7 +107,11 @@
     margin-bottom: 0.2rem;
 }
 
-.tag-overview-book-name > :first-child { min-width: 0; }
+/* The name one weight up from the line's text, at the same size (owner, 24 Nov 2026). */
+.tag-overview-book-name > :first-child {
+    min-width: 0;
+    font-weight: var(--bn-weight-emphasis);
+}
 
 .tag-overview-book-name .tag-overview-review {
     margin-inline-start: auto;

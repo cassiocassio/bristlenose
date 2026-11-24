@@ -255,6 +255,7 @@ function sendWrite(
   path: string,
   body: unknown,
   signal?: AbortSignal,
+  quiet = false,
 ): Promise<void> {
   if (isExportMode()) return Promise.resolve(); // No server in export mode
   return fetch(`${apiBase()}${path}`, {
@@ -297,6 +298,11 @@ function sendWrite(
       }
     })
     .catch((err) => {
+      if (quiet) {
+        // A view state nobody loses work over (the tag overview's open/split): one line, no toast.
+        console.warn(`${method} ${path} failed:`, err);
+        throw err;
+      }
       console.error(`${method} ${path} failed:`, err);
       // A failed background sync is otherwise invisible until reload silently
       // reverts the change. One toast covers every view-toggle consumer
@@ -375,14 +381,14 @@ export interface CurationDelta {
 const writeQueues = new Map<string, Promise<void>>();
 const WRITE_TIMEOUT_MS = 30_000;
 
-function timedPatch(path: string, body: unknown): Promise<void> {
+function timedPatch(path: string, body: unknown, quiet = false): Promise<void> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), WRITE_TIMEOUT_MS);
-  return sendWrite("PATCH", path, body, abort.signal).finally(() => clearTimeout(timer));
+  return sendWrite("PATCH", path, body, abort.signal, quiet).finally(() => clearTimeout(timer));
 }
 
-function queuedPatch(path: string, body: unknown): Promise<void> {
-  const next = (writeQueues.get(path) ?? Promise.resolve()).then(() => timedPatch(path, body));
+function queuedPatch(path: string, body: unknown, quiet = false): Promise<void> {
+  const next = (writeQueues.get(path) ?? Promise.resolve()).then(() => timedPatch(path, body, quiet));
   // A failed write has already said why; the queue must outlive it, or every
   // later write to the path would be skipped.
   writeQueues.set(path, next.catch(() => undefined));
@@ -433,11 +439,12 @@ export function getTagOverview(): Promise<TagOverviewResponse> {
   return apiGet<TagOverviewResponse>("/tag-overview", STATUS_READ_TIMEOUT_MS);
 }
 
-/** Remember what the researcher changed on the overview, naming only that. */
+/** Remember what the researcher changed on the overview, naming only that. Quiet: a failure
+ *  is one console line, never the "couldn't save" toast, for a view state. */
 export function patchTagOverview(
   data: Partial<Pick<TagOverviewResponse, "open" | "split" | "auto_opened">>,
 ): Promise<void> {
-  return queuedPatch("/tag-overview", data);
+  return queuedPatch("/tag-overview", data, true);
 }
 
 /**

@@ -4,34 +4,34 @@
  * docs/mockups/tag-sidebar-autocode-histogram.html).
  *
  * - **Before any run, and in an export** (D22): the line counts every tag in the sidebar but
- *   Sentiment's, as plain text. An export never reads the overview: proposals are server-only.
+ *   Sentiment's and those of a codebook whose eye is closed, as plain text. An export never
+ *   reads the overview: proposals are server-only.
  * - **One reviewable codebook** (D17): "34 tags | Review". The line, chevron and words, is the
  *   disclosure; the chart below has the codebook's lines as ticks; Review opens the dialog.
  * - **Several**: "96 tags from **3 codebooks**", the count a link that splits the one merged
  *   chart (no ticks, no Review: their lines differ) into one chart per codebook, each with its
- *   own ticks and its own Review. Clicked while closed, it opens the overview split.
+ *   own ticks and its own Review. Clicked while closed, it opens the overview split. The words
+ *   around the link take their spacing from the translation, never from the layout: in Korean
+ *   and Japanese the particle sits against the count.
  * - A reviewable codebook is one with a run, never Sentiment, never the researcher's own tags,
  *   and only while its eye is open and it is enabled. The line counts their tags only.
  * - **During a run** Review is drawn but inactive, so nothing moves when it ends (D17; the
  *   server refuses it, D49). The chart grows from the playback (D19): the scale only grows, in
  *   rounded steps; split charts that are not landing hold theirs; all rescale once at the end.
+ *   Its ticks: the lower line at 0.30 and the upper at the run's live accept line (D47, D50).
  * - **Under search or Used** the line says what it always said there, the live match count.
  * - **Remembered per study, on the server** (D12): open/closed and merged/split; it opens by
- *   itself once, after a first run.
+ *   itself once, after a first run. After the first read each window keeps its own view
+ *   (`contexts/TagOverviewStore.ts`).
  *
  * @module TagOverview
  */
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { getTagOverview, patchTagOverview } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
-import { chooseSquares } from "../utils/livePacing";
-import { storedLinesOf } from "../utils/recut";
-import type { Lines } from "../utils/recut";
 import {
-  DEFAULT_LINES,
   liveZoneBins,
   markupRuns,
   nextScales,
@@ -39,74 +39,59 @@ import {
   splitAround,
   sumBins,
   tallyOf,
+  ticksFor,
   zoneBins,
 } from "../utils/tagOverview";
 import type { OverviewBook } from "../utils/tagOverview";
 import type { TagOverviewResponse, ZoneBin } from "../utils/types";
+import { loadedEngine, snapshotHasRun, usePlayback } from "../contexts/AutoCodePlaybackView";
 import {
-  loadedEngine,
-  snapshotHasRun,
-  stampedRead,
-  usePlayback,
-} from "../contexts/AutoCodePlaybackView";
+  autoOpenOverview,
+  loadTagOverview,
+  rememberView,
+  startTagOverview,
+  useTagOverview,
+} from "../contexts/TagOverviewStore";
 import { ZoneHistogram } from "./ConfidenceHistogram";
+import type { TickLines } from "./ConfidenceHistogram";
 import { Icon } from "./Icon";
 
-/** The chart's height in px (molecules/tag-overview.css) over a bin about 11 px wide in the
- *  sidebar's usual width: two squares to a column. */
-const MAX_STACK = 2;
 const MERGED = "__merged";
+/** While a first apply lands here, the overview is read again this often, for the live accept
+ *  line's tick: the playback carries the rows, not the line. */
+const LIVE_LINE_READ_MS = 10_000;
 
 type Served = TagOverviewResponse["codebooks"][number];
-
-function isOverview(value: unknown): value is TagOverviewResponse {
-  const v = value as TagOverviewResponse | null;
-  return !!v && typeof v === "object" && Array.isArray(v.codebooks) && typeof v.open === "boolean";
-}
 
 interface TagOverviewProps {
   /** Codebooks the line may count: enabled, eye open, not Sentiment, not the floor. */
   candidates: OverviewBook[];
-  /** D22's counts: every tag in the sidebar but Sentiment's, and their codebooks. */
+  /** D22's counts: every tag in the sidebar but Sentiment's and eye-closed codebooks'. */
   plain: { tags: number; codebooks: number };
   /** Today's words under search or Used (the live match count), or null with no filter. */
   filterText: string | null;
-  /** Quotes in the study: squares or bars are chosen once, from it. */
-  quoteCount: number;
   onReview: (book: OverviewBook) => void;
 }
 
-export function TagOverview({ candidates, plain, filterText, quoteCount, onReview }: TagOverviewProps) {
+export function TagOverview({ candidates, plain, filterText, onReview }: TagOverviewProps) {
   const { t } = useTranslation();
   const exportMode = isExportMode();
   const bodyId = useId();
-
-  // ── The server's read, again after a run ends or a codebook changes ──
-  const [read, setRead] = useState<TagOverviewResponse | null>(null);
-  useEffect(() => {
-    if (exportMode) return;
-    let alive = true;
-    const load = () => {
-      // Stamped, so a read from before a run's end is told from one after it.
-      stampedRead(getTagOverview)
-        .then((r) => {
-          if (alive && isOverview(r)) setRead(r);
-        })
-        .catch(() => {
-          // The overview is an extra: the line stays as it was.
-        });
-    };
-    load();
-    document.addEventListener("bn:tags-changed", load);
-    window.addEventListener("codebook-changed", load);
-    return () => {
-      alive = false;
-      document.removeEventListener("bn:tags-changed", load);
-      window.removeEventListener("codebook-changed", load);
-    };
-  }, [exportMode]);
-
+  const { read, settled, view } = useTagOverview();
   const snap = usePlayback();
+
+  useEffect(() => {
+    startTagOverview();
+  }, []);
+
+  // A run's follow leaving the playback: read once more, so the chart is the server's again.
+  const following = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const now = new Set(snap.frameworks.keys());
+    const left = [...following.current].some((id) => !now.has(id));
+    following.current = now;
+    if (left) loadTagOverview();
+  }, [snap]);
 
   // ── Which codebooks are reviewable, and how each one draws ──
   const books = useMemo(() => {
@@ -118,10 +103,9 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
       // A run is landing here while the read cannot have it yet.
       const live = !!fw && !snapshotHasRun(read, fw);
       if (!c && !live) return [];
-      const stored = c ? storedLinesOf({ applied_lower_threshold: c.lower, applied_upper_threshold: c.upper }, DEFAULT_LINES) : null;
-      const lines: Lines = stored ?? DEFAULT_LINES;
+      const lines: TickLines = ticksFor(c);
       const bins: ZoneBin[] = live
-        ? liveZoneBins(c ? zoneBins(c.bins) : null, engine?.liveProposals(book.id) ?? [], lines.lower)
+        ? liveZoneBins(engine?.liveProposals(book.id) ?? [], lines.lower)
         : zoneBins(c?.bins);
       // Review is inactive while a first apply codes (D17, D49); a catch-up keeps it live (D20).
       const coding = !!c?.coding || (!!fw && fw.kind === "first" && fw.handoverAt === null);
@@ -129,37 +113,25 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
     });
   }, [candidates, read, snap]);
 
-  // ── What is remembered: the first read's, then the researcher's ──
-  const [view, setView] = useState<{ open: boolean; split: boolean } | null>(null);
-  if (read && view === null) setView({ open: read.open, split: read.split });
+  // The live accept line rises batch by batch: read it again while a first apply lands.
+  const landingFirst = books.some((b) => b.live && b.coding);
+  useEffect(() => {
+    if (!landingFirst) return;
+    const timer = setInterval(loadTagOverview, LIVE_LINE_READ_MS);
+    return () => clearInterval(timer);
+  }, [landingFirst]);
+
   const open = view?.open ?? false;
   const split = view?.split ?? false;
 
   // Opens by itself once, after a first run (D12): a reviewable codebook whose run has ended
   // with something to show, on a study the overview never opened itself on.
-  const [autoOpened, setAutoOpened] = useState(false);
+  // `autoOpenOverview` opens it once per window, whatever a later read says.
   const shouldAutoOpen =
-    !!read && view !== null && !read.auto_opened && !autoOpened &&
-    books.some((b) => b.finished && tallyTotal(b.bins) > 0);
-  if (shouldAutoOpen) {
-    setAutoOpened(true);
-    if (!view.open) setView({ ...view, open: true });
-  }
-  const told = useRef(false);
+    !!read && !read.auto_opened && books.some((b) => b.finished && tallyTotal(b.bins) > 0);
   useEffect(() => {
-    if (!autoOpened || told.current) return;
-    told.current = true;
-    patchTagOverview({ open: true, auto_opened: true }).catch(() => undefined);
-  }, [autoOpened]);
-
-  const remember = useCallback((next: { open: boolean; split: boolean }) => {
-    setView(next);
-    patchTagOverview(next).catch(() => undefined);
-  }, []);
-
-  // Squares or bars, chosen once, from the quote count, when it is first known (D19).
-  const [squares, setSquares] = useState<boolean | null>(null);
-  if (squares === null && quoteCount > 0) setSquares(chooseSquares(quoteCount, MAX_STACK));
+    if (shouldAutoOpen) autoOpenOverview();
+  }, [shouldAutoOpen]);
 
   // ── Scales: grow-only while anything lands, one rescale when it ends (D19) ──
   const merged = useMemo(() => sumBins(books.map((b) => b.bins)), [books]);
@@ -175,6 +147,11 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
   if (!sameScales(scales, computed)) setScales(computed);
 
   // ── The line ──
+  if (!exportMode && !settled) {
+    // The first read has not answered: the line keeps its height, so the wrong words never
+    // flash before the right ones.
+    return <div className="tag-sidebar-subtitle" data-testid="bn-tag-summary" aria-hidden="true">{" "}</div>;
+  }
   if (exportMode || books.length === 0) {
     return (
       <div className="tag-sidebar-subtitle" data-testid="bn-tag-summary">
@@ -186,8 +163,8 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
   const one = books.length === 1;
   const tagTotal = books.reduce((s, b) => s + b.tagCount, 0);
   const tags = t("tags.countTags", { count: tagTotal });
-  const toggle = () => remember({ open: !open, split });
-  const onSplit = () => remember({ open: true, split: open ? !split : true });
+  const toggle = () => rememberView({ open: !open, split });
+  const onSplit = () => rememberView({ open: true, split: open ? !split : true });
 
   const review = (book: (typeof books)[number]) => (
     <span className="tag-overview-review">
@@ -206,12 +183,13 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
     </span>
   );
 
-  const summary = (words: ReactNode) => (
+  const summary = (words: ReactNode, label?: string) => (
     <button
       type="button"
       className="tag-overview-summary"
       aria-expanded={open}
       aria-controls={open ? bodyId : undefined}
+      aria-label={label}
       onClick={toggle}
       data-testid="bn-tag-overview-toggle"
     >
@@ -224,15 +202,21 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
   if (filterText !== null) {
     // Search or Used: the live match count, as shipped; the split link is part of the sentence
     // it replaces, so it waits for the filter to clear.
-    line = <>{summary(filterText)}{one && review(books[0])}</>;
+    line = <>{summary(filterText)}{one && <>{" "}{review(books[0])}</>}</>;
   } else if (one) {
-    line = <>{summary(tags)}{review(books[0])}</>;
+    line = <>{summary(tags)}{" "}{review(books[0])}</>;
   } else {
     const sentence = t("tags.summaryFromCodebooks", { count: books.length, tags });
     const parts = splitAround(sentence, "link") ?? { before: sentence, inner: "", after: "" };
+    const before = parts.before.trimEnd();
+    const after = parts.after.trimStart();
     line = (
       <>
-        {summary(parts.before.trimEnd() || null)}
+        {/* The button holds only the words before the link, so it is named by the whole
+            sentence, as a screen reader should hear it. */}
+        {summary(before || null, joined(parts))}
+        {/* Spacing from the translation: a space only where the sentence has one. */}
+        {before !== parts.before && " "}
         {parts.inner && (
           <button
             type="button"
@@ -244,9 +228,10 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
             {parts.inner}
           </button>
         )}
-        {parts.after.trim() && (
-          // Words after the link (the codebook count leads in Japanese, Korean, Turkish and
-          // Chinese): the same disclosure for a pointer. The keyboard has the chevron's button.
+        {after !== parts.after && " "}
+        {after && (
+          // Words after the link (the count leads in Japanese, Korean, Turkish and Chinese): the
+          // same disclosure for a pointer. The keyboard has the chevron's button.
           <button
             type="button"
             className="tag-overview-summary tag-overview-after"
@@ -254,30 +239,29 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
             aria-hidden="true"
             onClick={toggle}
           >
-            {parts.after.trim()}
+            {after}
           </button>
         )}
       </>
     );
   }
 
-  const chart = (bins: ZoneBin[], scale: number, lines: Lines | null) => {
+  const chart = (bins: ZoneBin[], scale: number, lines: TickLines | null) => {
     const tally = tallyOf(bins);
-    const labels = {
+    const sentence = t("autocode.review.tally", {
       excludedLabel: t("autocode.review.zoneExcluded"),
       tentativeLabel: t("autocode.review.zoneTentative"),
       acceptedLabel: t("autocode.review.zoneAccepted"),
       excluded: tally.excluded,
       tentative: tally.tentative,
       accepted: tally.accepted,
-    };
-    const sentence = t("autocode.review.tally", labels);
-    const plainTally = markupRuns(sentence, ["exc", "ten", "acc"]).map((r) => r.text).join("");
+    });
+    const runs = markupRuns(sentence, ["exc", "ten", "acc"]);
     return (
       <div className="tag-overview-chart">
-        <ZoneHistogram bins={bins} scale={scale} squares={squares ?? false} lines={lines} label={plainTally} />
+        <ZoneHistogram bins={bins} scale={scale} lines={lines} label={runs.map((r) => r.text).join("")} />
         <div className="tag-overview-tally" aria-hidden="true">
-          {markupRuns(sentence, ["exc", "ten", "acc"]).map((r, i) =>
+          {runs.map((r, i) =>
             r.tag ? (
               <b key={i} className={`tag-overview-n tag-overview-n--${r.tag}`}>{r.text}</b>
             ) : (
@@ -304,8 +288,7 @@ export function TagOverview({ candidates, plain, filterText, quoteCount, onRevie
             books.map((b) => (
               <div key={b.id} className="tag-overview-book" data-testid="bn-tag-overview-book">
                 <div className="tag-overview-book-name">
-                  <span>{b.title}</span>
-                  {review(b)}
+                  <span>{b.title}</span>{" "}{review(b)}
                 </div>
                 {chart(b.bins, scaleOf(b.id), b.lines)}
               </div>
@@ -326,6 +309,10 @@ function tallyTotal(bins: readonly ZoneBin[]): number {
   return t.accepted + t.tentative + t.excluded;
 }
 
+function joined(parts: { before: string; inner: string; after: string }): string {
+  return `${parts.before}${parts.inner}${parts.after}`;
+}
+
 /** D22's line: "43 tags", or "96 tags from 3 codebooks" as plain words with no link. */
 function plainLine(
   t: ReturnType<typeof useTranslation>["t"],
@@ -335,5 +322,5 @@ function plainLine(
   if (plain.codebooks <= 1) return tags;
   const sentence = t("tags.summaryFromCodebooks", { count: plain.codebooks, tags });
   const parts = splitAround(sentence, "link");
-  return parts ? `${parts.before}${parts.inner}${parts.after}` : sentence;
+  return parts ? joined(parts) : sentence;
 }

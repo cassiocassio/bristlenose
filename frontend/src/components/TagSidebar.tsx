@@ -18,7 +18,8 @@
  * @module TagSidebar
  */
 
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
@@ -62,10 +63,42 @@ import { SENTIMENT_ID, plainCounts } from "../utils/tagOverview";
 import type { OverviewBook } from "../utils/tagOverview";
 
 // The review dialog, loaded when Review is first pressed: it is the Codebook lens's chunk, and
-// the sidebar renders on first paint (frontend/gotchas.md, bundle size gate).
-const ThresholdReviewModal = lazy(() =>
-  import("./ThresholdReviewModal").then((m) => ({ default: m.ThresholdReviewModal })),
-);
+// the sidebar renders on first paint (frontend/gotchas.md, bundle size gate). The load is tried
+// twice; a load that still fails is forgotten (`React.lazy` keeps a rejection for ever), so the
+// next Review tries again, and it never takes the sidebar down (`ReviewBoundary`).
+type ReviewModule = typeof import("./ThresholdReviewModal");
+let importReview: () => Promise<ReviewModule> = () => import("./ThresholdReviewModal");
+function makeReviewDialog() {
+  return lazy(() =>
+    importReview()
+      .catch(() => importReview())
+      .then((m) => ({ default: m.ThresholdReviewModal })),
+  );
+}
+let ReviewDialog = makeReviewDialog();
+
+/** For tests: the dialog's import, and a fresh loader unless `keepLoader` (to see that a failed
+ *  load is forgotten by the sidebar itself). */
+export function _setReviewImportForTest(load: () => Promise<ReviewModule>, keepLoader = false): void {
+  importReview = load;
+  if (!keepLoader) ReviewDialog = makeReviewDialog();
+}
+
+/** A dialog that fails to load or render closes, and leaves the sidebar as it was. */
+class ReviewBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(err: unknown) {
+    console.warn("Review dialog failed to load:", err);
+    ReviewDialog = makeReviewDialog();
+    this.props.onError();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 // ── Framework metadata (from codebook YAML files) ────────────────────────
 // The codebook API returns framework_id on groups but no framework-level
@@ -492,7 +525,11 @@ export function TagSidebar() {
         })),
     [frameworks, hiddenFrameworks],
   );
-  const overviewPlain = useMemo(() => plainCounts(frameworks), [frameworks]);
+  // D22's fallback never counts a codebook whose eye is closed: closing an eye cannot raise it.
+  const overviewPlain = useMemo(
+    () => plainCounts(frameworks.filter((fw) => !hiddenFrameworks.has(fw.id))),
+    [frameworks, hiddenFrameworks],
+  );
   const [reviewing, setReviewing] = useState<OverviewBook | null>(null);
 
   const visibleStats = useMemo(() => {
@@ -650,7 +687,6 @@ export function TagSidebar() {
             ? t("tags.summary", { count: visibleStats.tags, frameworks: visibleStats.frameworks })
             : null
         }
-        quoteCount={store.quotes.length}
         onReview={setReviewing}
       />
 
@@ -749,21 +785,23 @@ export function TagSidebar() {
       {/* Review from the overview: the dialog the Codebook lens opens, for that codebook.
           A re-cut or a row's decision moves tags, so every lens is told, as there (D42). */}
       {reviewing && (
-        <Suspense fallback={null}>
-          <ThresholdReviewModal
-            open
-            frameworkId={reviewing.id}
-            frameworkTitle={reviewing.title}
-            onClose={(changed) => {
-              setReviewing(null);
-              if (changed) announceTagsMoved();
-            }}
-            onApply={() => {
-              setReviewing(null);
-              announceTagsMoved();
-            }}
-          />
-        </Suspense>
+        <ReviewBoundary onError={() => setReviewing(null)}>
+          <Suspense fallback={null}>
+            <ReviewDialog
+              open
+              frameworkId={reviewing.id}
+              frameworkTitle={reviewing.title}
+              onClose={(changed) => {
+                setReviewing(null);
+                if (changed) announceTagsMoved();
+              }}
+              onApply={() => {
+                setReviewing(null);
+                announceTagsMoved();
+              }}
+            />
+          </Suspense>
+        </ReviewBoundary>
       )}
     </div>
   );

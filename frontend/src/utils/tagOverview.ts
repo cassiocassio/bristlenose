@@ -8,8 +8,11 @@
  */
 
 import { binIndex } from "../components/ConfidenceHistogram";
+import type { TickLines } from "../components/ConfidenceHistogram";
+import { snapToStep } from "./confidenceStep";
 import { growOnlyScale } from "./livePacing";
-import type { ZoneBin } from "./types";
+import { storedLinesOf } from "./recut";
+import type { TagOverviewResponse, ZoneBin } from "./types";
 
 /** The house default's lines: the ticks of a run not cut yet, and where a landing tentative tag
  *  below the lower line will be excluded at the cut (D5). */
@@ -27,6 +30,20 @@ export interface OverviewBook {
   tagCount: number;
 }
 
+/**
+ * A codebook's ticks. After its cut, the lines it was cut at. During a first run, before any
+ * cut: the lower line at the house default's 0.30 (D5), and the upper at the run's live accept
+ * line (D47, D50), which only rises; none until the first batch has set one.
+ */
+export function ticksFor(c: TagOverviewResponse["codebooks"][number] | undefined): TickLines {
+  const stored = c
+    ? storedLinesOf({ applied_lower_threshold: c.lower, applied_upper_threshold: c.upper }, DEFAULT_LINES)
+    : null;
+  if (stored) return stored;
+  const live = c?.live_accept_line;
+  return { lower: DEFAULT_LINES.lower, upper: live == null ? null : snapToStep(live) };
+}
+
 export function emptyBins(): ZoneBin[] {
   return Array.from({ length: 20 }, () => ({ accepted: 0, tentative: 0, excluded: 0 }));
 }
@@ -41,22 +58,20 @@ export function zoneBins(bins: readonly ZoneBin[] | null | undefined): ZoneBin[]
 }
 
 /**
- * A run that is landing, as the page has played it (D19): the tags shown on the cards, accepted
- * or tentative, by confidence. A tentative tag below the lower line is drawn excluded, where the
- * run's cut will put it (D5). What the server had already excluded before the run (a stopped
- * run's settle, a researcher's ✗) is kept from its read: the playback shows no excluded rows.
+ * A run that is landing, as the page has played it (D19): the whole job's rows, accepted and
+ * tentative as the cards show them, excluded as the playback holds them (`liveProposals`). A
+ * tentative tag below the lower line is drawn excluded, where the run's cut will put it (D5).
+ * Every row is counted once, from the playback alone: nothing from an older read is added.
  */
 export function liveZoneBins(
-  served: readonly ZoneBin[] | null,
-  landed: readonly { confidence: number; shown: "tentative" | "accepted" }[],
+  landed: readonly { confidence: number; shown: "tentative" | "accepted" | "excluded" }[],
   lower: number,
 ): ZoneBin[] {
   const out = emptyBins();
-  if (served) served.forEach((b, i) => { if (i < 20) out[i].excluded = b.excluded; });
   for (const p of landed) {
     const bin = out[binIndex(p.confidence)];
     if (p.shown === "accepted") bin.accepted += 1;
-    else if (p.confidence < lower - 1e-9) bin.excluded += 1;
+    else if (p.shown === "excluded" || p.confidence < lower - 1e-9) bin.excluded += 1;
     else bin.tentative += 1;
   }
   return out;

@@ -324,6 +324,7 @@ The primitive-first approach means Milestone 2 produces more than a quote card â
 | `organisms/codebook-panel.css` (`.tag-micro-bar`) | MicroBar (bare mode) | reuse | Done (M5) |
 | `organisms/signals.css` (`.conc-bar-*`) | MicroBar (tracked mode) | reuse | Done (M5) |
 | `organisms/codebook-panel.css` (`.confirm-dialog`) | ConfirmDialog | 1:1 | Done (M5) |
+| `molecules/tag-overview.css` (+ `threshold-review.css` zone colours) | TagOverview, ZoneHistogram (in `ConfidenceHistogram.tsx`) | 1:1 (`.tag-overview-*`, `.threshold-histogram--overview`) | Done (AutoCode landing Phase 6) |
 
 ---
 

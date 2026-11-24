@@ -12,6 +12,7 @@ import {
   postParagraphReassign,
   patchStarred,
   patchTags,
+  patchTagOverview,
   putFrameworkStates,
   recutProposals,
   sendPut,
@@ -423,5 +424,23 @@ describe("a job status read that never answers", () => {
   it("an answer in time is the answer", async () => {
     fetchMock.mockResolvedValue(answer(200, { status: "running" }));
     await expect(getClipExtractionStatus()).resolves.toEqual({ status: "running" });
+  });
+});
+
+// The tag sidebar overview's open/split is a view state nobody loses work over: a failed write
+// is one console line, never the "couldn't save" toast (Phase 6 review).
+describe("patchTagOverview — a quiet write", () => {
+  it("rejects without a toast and logs one line", async () => {
+    fetchMock.mockResolvedValue(answer(500, { detail: "boom" }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await expect(patchTagOverview({ open: true })).rejects.toBeTruthy();
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("an ordinary write still toasts", async () => {
+    fetchMock.mockResolvedValue(answer(500, { detail: "boom" }));
+    await expect(patchHidden({ "q-p1-10": true })).rejects.toBeTruthy();
+    expect(toastMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -6,7 +6,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TagOverviewResponse, ZoneBin } from "../utils/types";
 
@@ -29,14 +29,17 @@ vi.mock("../utils/exportData", async (importOriginal) => {
   return { ...actual, isExportMode: vi.fn(() => false) };
 });
 
-const landed: { id: number; tag_definition_id: number; confidence: number; shown: "tentative" | "accepted" }[] = [];
+const landed: { id: number; tag_definition_id: number; confidence: number; shown: "tentative" | "accepted" | "excluded" }[] = [];
 vi.mock("../contexts/AutoCodePlaybackView", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return { ...actual, loadedEngine: () => ({ liveProposals: () => landed }) };
 });
 
+import i18n from "../i18n";
+import jaCommon from "../../../bristlenose/locales/ja/common.json";
+import koCommon from "../../../bristlenose/locales/ko/common.json";
 import { TagOverview } from "./TagOverview";
-import { TagSidebar } from "./TagSidebar";
+import { TagSidebar, _setReviewImportForTest } from "./TagSidebar";
 import {
   apiGet,
   getCodebook,
@@ -48,6 +51,7 @@ import {
 import { isExportMode } from "../utils/exportData";
 import { resetPlaybackView, setPlaybackSnapshot, EMPTY_SNAPSHOT } from "../contexts/AutoCodePlaybackView";
 import { resetStore } from "../contexts/QuotesContext";
+import { resetTagOverviewStore } from "../contexts/TagOverviewStore";
 import { requestSoloTag, resetSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
 import { liveZoneBins, nextScales, plainCounts, splitAround, markupRuns } from "../utils/tagOverview";
 import type { CodebookResponse } from "../utils/types";
@@ -70,10 +74,10 @@ function served(
 }
 
 const uxr = (over: Partial<TagOverviewResponse["codebooks"][number]> = {}) => ({
-  framework_id: "uxr", coding: false, lower: 0.3, upper: 0.7, bins: UXR_BINS, ...over,
+  framework_id: "uxr", coding: false, lower: 0.3, upper: 0.7, live_accept_line: null, bins: UXR_BINS, ...over,
 });
 const norman = (over: Partial<TagOverviewResponse["codebooks"][number]> = {}) => ({
-  framework_id: "norman", coding: false, lower: 0.25, upper: 0.6,
+  framework_id: "norman", coding: false, lower: 0.25, upper: 0.6, live_accept_line: null,
   bins: bins({ 12: { tentative: 2 }, 18: { accepted: 1 } }), ...over,
 });
 
@@ -90,7 +94,6 @@ function renderOverview(props: Partial<Parameters<typeof TagOverview>[0]> = {}) 
         candidates={BOOKS}
         plain={{ tags: 70, codebooks: 3 }}
         filterText={null}
-        quoteCount={400}
         onReview={onReview}
         {...props}
       />
@@ -105,6 +108,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   landed.length = 0;
   resetPlaybackView();
+  resetTagOverviewStore();
   vi.mocked(isExportMode).mockReturnValue(false);
   vi.mocked(getTagOverview).mockResolvedValue(served([]));
 });
@@ -186,11 +190,11 @@ describe("merged and split", () => {
     expect(split[0].textContent).toContain("Bristlenose UXR Codebook");
     expect(split[0].querySelectorAll(".threshold-histogram-tick")).toHaveLength(2);
     expect(screen.getAllByTestId("bn-tag-overview-review")).toHaveLength(2);
-    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: true });
+    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: true, auto_opened: true });
 
     fireEvent.click(screen.getByTestId("bn-tag-overview-split"));
     expect(screen.queryAllByTestId("bn-tag-overview-book")).toHaveLength(0);
-    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: false });
+    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: false, auto_opened: true });
   });
 
   it("the codebook count, clicked while closed, opens the overview split", async () => {
@@ -198,7 +202,7 @@ describe("merged and split", () => {
     renderOverview();
     fireEvent.click(await waitFor(() => screen.getByTestId("bn-tag-overview-split")));
     expect(screen.getAllByTestId("bn-tag-overview-book")).toHaveLength(2);
-    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: true });
+    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: true, auto_opened: true });
   });
 
   it("colours the tally's numbers by zone", async () => {
@@ -251,10 +255,10 @@ describe("remembered per study (D12)", () => {
     await waitFor(() => expect(screen.getAllByTestId("bn-tag-overview-book")).toHaveLength(2));
     fireEvent.click(screen.getByTestId("bn-tag-overview-toggle"));
     expect(screen.queryByTestId("bn-tag-overview")).toBeNull();
-    expect(patchTagOverview).toHaveBeenCalledWith({ open: false, split: true });
+    expect(patchTagOverview).toHaveBeenCalledWith({ open: false, split: true, auto_opened: true });
     fireEvent.click(screen.getByTestId("bn-tag-overview-toggle"));
     expect(screen.getAllByTestId("bn-tag-overview-book")).toHaveLength(2);
-    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: true });
+    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: true, auto_opened: true });
   });
 
   it("opens by itself once, after a first run, and says so to the server", async () => {
@@ -289,20 +293,53 @@ describe("remembered per study (D12)", () => {
 // ── Live, and the scale that only grows (D19) ─────────────────────────────
 
 describe("live", () => {
-  it("grows the chart from the playback while a run lands", async () => {
-    vi.mocked(getTagOverview).mockResolvedValue(served([uxr({ coding: true, lower: null, upper: null, bins: bins({}) })], { open: true }));
+  it("grows the chart from the playback alone while a run lands", async () => {
+    // The read is from mid-run and counts what had landed then: the playback is drawn instead.
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr({
+      coding: true, lower: null, upper: null, bins: bins({ 1: { excluded: 7 }, 10: { tentative: 9 } }),
+    })], { open: true }));
     renderOverview();
     await waitFor(() => expect(screen.getByTestId("bn-tag-overview")).toBeTruthy());
     landed.push(
       { id: 1, tag_definition_id: 1, confidence: 0.85, shown: "accepted" },
       { id: 2, tag_definition_id: 1, confidence: 0.5, shown: "tentative" },
       { id: 3, tag_definition_id: 1, confidence: 0.1, shown: "tentative" },
+      { id: 4, tag_definition_id: 1, confidence: 0.6, shown: "excluded" },
     );
     const fw = { kind: "first" as const, handoverAt: null, tentative: new Map(), accepted: [] };
     act(() => setPlaybackSnapshot({ ...EMPTY_SNAPSHOT, frameworks: new Map([["uxr", fw]]) }));
-    // Below the lower line a landing tentative tag is drawn where the cut will put it.
+    // Below the lower line a landing tentative tag is drawn where the cut will put it; a row the
+    // playback holds excluded stays excluded; nothing is added from the read.
     expect(screen.getByTestId("bn-tag-overview").querySelector(".tag-overview-tally")?.textContent)
-      .toBe("Excluded 1 · Tentative 1 · Accepted 1");
+      .toBe("Excluded 2 · Tentative 1 · Accepted 1");
+  });
+
+  it("draws a first run's ticks: 0.30, and the live accept line once there is one", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr({ coding: true, lower: null, upper: null })], { open: true }));
+    renderOverview();
+    const chart = await waitFor(() => screen.getByTestId("bn-overview-histogram"));
+    expect((chart.querySelector("[data-tick=lower]") as HTMLElement).style.left).toBe("30%");
+    expect(chart.querySelector("[data-tick=upper]")).toBeNull();
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr({ coding: true, lower: null, upper: null, live_accept_line: 0.8 })], { open: true }));
+    act(() => { document.dispatchEvent(new CustomEvent("bn:tags-changed")); });
+    await waitFor(() => expect(screen.getByTestId("bn-overview-histogram").querySelector("[data-tick=upper]")).toBeTruthy());
+    expect((screen.getByTestId("bn-overview-histogram").querySelector("[data-tick=upper]") as HTMLElement).style.left).toBe("80%");
+  });
+
+  it("after the cut, the stored lines", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr({ lower: 0.25, upper: 0.85, live_accept_line: 0.8 })], { open: true }));
+    renderOverview();
+    const chart = await waitFor(() => screen.getByTestId("bn-overview-histogram"));
+    expect((chart.querySelector("[data-tick=lower]") as HTMLElement).style.left).toBe("25%");
+    expect((chart.querySelector("[data-tick=upper]") as HTMLElement).style.left).toBe("85%");
+  });
+
+  it("draws bars, never squares, whatever the study's size", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()], { open: true }));
+    renderOverview();
+    const chart = await waitFor(() => screen.getByTestId("bn-overview-histogram"));
+    expect(chart.querySelector(".threshold-histogram-square")).toBeNull();
+    expect(chart.querySelectorAll(".threshold-histogram-bar").length).toBeGreaterThan(0);
   });
 
   it("only grows, in rounded steps, while a run lands; rescales once when it ends", () => {
@@ -359,11 +396,16 @@ describe("helpers", () => {
       .toEqual([null, "exc", null, "acc"]);
   });
 
-  it("keeps what the server had excluded under a landing run", () => {
-    const server = bins({ 1: { excluded: 2, tentative: 9 } });
-    const out = liveZoneBins(server, [{ confidence: 0.9, shown: "accepted" }], 0.3);
-    expect(out[1]).toEqual({ accepted: 0, tentative: 0, excluded: 2 });
+  it("counts every landing row once, from the playback alone", () => {
+    const out = liveZoneBins([
+      { confidence: 0.9, shown: "accepted" },
+      { confidence: 0.06, shown: "excluded" },
+      { confidence: 0.5, shown: "excluded" },
+      { confidence: 0.5, shown: "tentative" },
+    ], 0.3);
     expect(out[18].accepted).toBe(1);
+    expect(out[1].excluded).toBe(1);
+    expect(out[10]).toEqual({ accepted: 0, tentative: 1, excluded: 1 });
   });
 });
 
@@ -439,5 +481,168 @@ describe("in the tag sidebar", () => {
     fireEvent.click(await waitFor(() => screen.getByTestId("bn-tag-overview-review")));
     await waitFor(() => expect(screen.getByTestId("bn-threshold-overlay")).toBeTruthy());
     expect(screen.getByText(/AutoCode Review/).textContent).toContain("Bristlenose UXR Codebook");
+  });
+});
+
+// ── Review fixes (Phase 6 review) ─────────────────────────────────────────
+
+describe("the line in other languages", () => {
+  afterEach(async () => {
+    await act(async () => { await i18n.changeLanguage("en"); });
+  });
+
+  it("names the summary button with the whole sentence, in English and Japanese", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr(), norman()]));
+    renderOverview();
+    await waitFor(() => expect(screen.getByTestId("bn-tag-overview-split")).toBeTruthy());
+    expect(screen.getByTestId("bn-tag-overview-toggle").getAttribute("aria-label")).toBe("62 tags from 2 codebooks");
+    i18n.addResourceBundle("ja", "common", jaCommon, true, true);
+    await act(async () => { await i18n.changeLanguage("ja"); });
+    const toggle = screen.getByTestId("bn-tag-overview-toggle");
+    expect(toggle.getAttribute("aria-label")).toBe("2 コードブック中 62 個のタグ");
+    // The link leads in Japanese: the button holds the chevron alone, named by the sentence.
+    expect(toggle.textContent).toBe("");
+  });
+
+  it("takes its spacing from the translation: a space in English, none before Korean 의", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr(), norman()]));
+    renderOverview();
+    await waitFor(() => expect(screen.getByTestId("bn-tag-overview-split")).toBeTruthy());
+    expect(line().textContent).toBe("62 tags from 2 codebooks");
+    i18n.addResourceBundle("ko", "common", koCommon, true, true);
+    await act(async () => { await i18n.changeLanguage("ko"); });
+    expect(line().textContent).toBe("코드북 2개의 태그 62개");
+    const link = screen.getByTestId("bn-tag-overview-split");
+    // The particle is the very next thing after the link: no text node, no gap.
+    expect(link.nextSibling?.textContent).toBe("의 태그 62개");
+  });
+});
+
+describe("the read, held for the page", () => {
+  it("keeps the line's height, blank, until the first read answers", async () => {
+    let answer!: (r: TagOverviewResponse) => void;
+    vi.mocked(getTagOverview).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    renderOverview({ plain: { tags: 70, codebooks: 3 } });
+    expect(line().textContent).toBe(" ");
+    expect(line().getAttribute("aria-hidden")).toBe("true");
+    await act(async () => { answer(served([uxr()])); });
+    expect(screen.getByTestId("bn-tag-overview-toggle").textContent).toBe("34 tags");
+  });
+
+  it("falls back to the plain words when the read fails", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.mocked(getTagOverview).mockRejectedValueOnce(new Error("offline"));
+    renderOverview({ plain: { tags: 70, codebooks: 3 } });
+    await waitFor(() => expect(line().textContent).toBe("70 tags from 3 codebooks"));
+  });
+
+  it("a remount draws at once, as it was, with no second read", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()], { open: true }));
+    const first = renderOverview();
+    await waitFor(() => expect(screen.getByTestId("bn-tag-overview")).toBeTruthy());
+    first.unmount();
+    renderOverview();
+    expect(screen.getByTestId("bn-tag-overview")).toBeTruthy();
+    expect(getTagOverview).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies only the newest read started", async () => {
+    let slow!: (r: TagOverviewResponse) => void;
+    vi.mocked(getTagOverview)
+      .mockReturnValueOnce(new Promise((res) => { slow = res; }))
+      .mockResolvedValueOnce(served([uxr(), norman()]));
+    renderOverview();
+    act(() => { document.dispatchEvent(new CustomEvent("bn:tags-changed")); });
+    await waitFor(() => expect(screen.getByTestId("bn-tag-overview-split")).toBeTruthy());
+    await act(async () => { slow(served([uxr()])); });
+    expect(screen.getByTestId("bn-tag-overview-split")).toBeTruthy();
+  });
+
+  it("reads again once when a run's follow leaves the playback", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()]));
+    renderOverview();
+    await waitFor(() => expect(getTagOverview).toHaveBeenCalledTimes(1));
+    const fw = { kind: "first" as const, handoverAt: 1, tentative: new Map(), accepted: [] };
+    act(() => setPlaybackSnapshot({ ...EMPTY_SNAPSHOT, frameworks: new Map([["uxr", fw]]) }));
+    expect(getTagOverview).toHaveBeenCalledTimes(1);
+    act(() => setPlaybackSnapshot(EMPTY_SNAPSHOT));
+    await waitFor(() => expect(getTagOverview).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("opened by itself, once, for good", () => {
+  it("every later write says so, when the read does", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()], { auto_opened: true }));
+    renderOverview();
+    fireEvent.click(await waitFor(() => screen.getByTestId("bn-tag-overview-toggle")));
+    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: true, split: false, auto_opened: true });
+  });
+
+  it("a failed auto-open write cannot open it again, and the next write heals it", async () => {
+    vi.mocked(patchTagOverview).mockRejectedValueOnce(new Error("offline"));
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()], { auto_opened: false }));
+    const first = renderOverview();
+    await waitFor(() => expect(screen.getByTestId("bn-tag-overview")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("bn-tag-overview-toggle"));
+    expect(screen.queryByTestId("bn-tag-overview")).toBeNull();
+    expect(patchTagOverview).toHaveBeenLastCalledWith({ open: false, split: false, auto_opened: true });
+    // The server never heard of the auto-open; a re-read says so: it stays closed.
+    act(() => { document.dispatchEvent(new CustomEvent("bn:tags-changed")); });
+    await waitFor(() => expect(getTagOverview).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId("bn-tag-overview")).toBeNull();
+    // Nor does a remount (a lens switch) open it again.
+    first.unmount();
+    renderOverview();
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId("bn-tag-overview")).toBeNull();
+  });
+});
+
+describe("the review dialog's load", () => {
+  beforeEach(() => {
+    resetStore();
+    resetSidebarStore();
+    vi.mocked(getCodebook).mockResolvedValue(codebook());
+    vi.mocked(getHiddenTagGroups).mockResolvedValue([]);
+    vi.mocked(getFrameworkStates).mockResolvedValue({});
+    vi.mocked(apiGet).mockResolvedValue({ project_name: "ikea" });
+  });
+
+  it("a failed load is tried twice, never takes the sidebar down, and the next Review tries again", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const failing = vi.fn(() => Promise.reject(new Error("chunk failed")));
+    _setReviewImportForTest(failing);
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()]));
+    render(<TagSidebar />);
+    fireEvent.click(await waitFor(() => screen.getByTestId("bn-tag-overview-review")));
+    await waitFor(() => expect(failing).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(warn).toHaveBeenCalledWith("Review dialog failed to load:", expect.anything()));
+    expect(screen.getByText("credibility")).toBeTruthy();
+    expect(screen.queryByTestId("bn-threshold-overlay")).toBeNull();
+    // The network is back: the next Review loads.
+    _setReviewImportForTest(() => import("./ThresholdReviewModal"), true);
+    fireEvent.click(screen.getByTestId("bn-tag-overview-review"));
+    await waitFor(() => expect(screen.getByTestId("bn-threshold-overlay")).toBeTruthy());
+  });
+});
+
+describe("the fallback line", () => {
+  beforeEach(() => {
+    resetStore();
+    resetSidebarStore();
+    vi.mocked(getCodebook).mockResolvedValue(codebook());
+    vi.mocked(getHiddenTagGroups).mockResolvedValue([]);
+    vi.mocked(getFrameworkStates).mockResolvedValue({});
+    vi.mocked(apiGet).mockResolvedValue({ project_name: "ikea" });
+  });
+
+  it("never counts a codebook whose eye is closed, so closing an eye cannot raise it", async () => {
+    vi.mocked(getTagOverview).mockResolvedValue(served([uxr()]));
+    render(<TagSidebar />);
+    await waitFor(() => expect(screen.getByTestId("bn-tag-overview-toggle").textContent).toBe("3 tags"));
+    act(() => toggleTagGroupHidden("Trust"));
+    // No reviewable codebook left in sight: the plain words, without the closed one's tags.
+    expect(line().textContent).toBe("4 tags from 2 codebooks");
   });
 });

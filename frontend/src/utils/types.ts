@@ -359,6 +359,9 @@ export interface TagOverviewResponse {
     coding: boolean;
     lower: number | null;
     upper: number | null;
+    /** A first apply's live accept line (D47, D50): the upper tick before the cut stores the
+     *  lines. Null before its first batch is saved. */
+    live_accept_line: number | null;
     bins: (ZoneBin & { lower: number })[];
   }[];
 }

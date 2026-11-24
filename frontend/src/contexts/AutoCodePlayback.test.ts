@@ -47,6 +47,7 @@ import {
   denyLanding,
   followAutoCode,
   holdForPlayback,
+  liveProposals,
   playbackPending,
   removeLanding,
   resetPlayback,
@@ -791,5 +792,71 @@ describe("holding the reading position (WebKit)", () => {
       vi.unstubAllGlobals();
       Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
     }
+  });
+});
+
+// ── What a chart that grows live reads (the tag sidebar overview, Phase 6 review) ──
+
+describe("liveProposals: what the overview's chart draws", () => {
+  const denied = (p: ProposedTagResponse): ProposedTagResponse =>
+    ({ ...p, status: "denied", decided_by: "threshold" });
+  const zones = () => liveProposals("uxr").map((p) => `${p.id}:${p.shown}`).sort();
+
+  it("during a catch-up, the whole job: every row the codebook's job holds, not the pass's few", async () => {
+    const job = [
+      ...Array.from({ length: 20 }, (_, i) => accepted(prop(i + 1))),
+      ...Array.from({ length: 5 }, (_, i) => denied(prop(i + 21))),
+      ...Array.from({ length: 5 }, (_, i) => prop(i + 26)),
+    ];
+    await start(answer(job, job), "catchup");
+    // The pass codes two more quotes.
+    const more = [...job, prop(31), accepted(prop(32))];
+    live.mockResolvedValue(answer([prop(31), accepted(prop(32))], more, { cursor: 32 }));
+    await advance(LIVE_POLL_MS + 20_000);
+    const got = liveProposals("uxr");
+    expect(got).toHaveLength(32);
+    expect(got.filter((p) => p.shown === "excluded")).toHaveLength(5);
+    expect(got.filter((p) => p.shown === "accepted")).toHaveLength(21);
+  });
+
+  it("nothing leaves the chart as the end's cut plays out", async () => {
+    const rows = [
+      prop(1, { confidence: 0.9 }), prop(2, { confidence: 0.5 }), prop(3, { confidence: 0.1 }),
+      prop(4, { confidence: 0.2 }),
+    ];
+    await start(answer(rows, rows));
+    const cut = [accepted(rows[0]), rows[1], denied(rows[2]), denied(rows[3])];
+    live.mockResolvedValueOnce(answer([], cut, { ...SETTLED, cursor: 4 }));
+    const sizes: number[] = [];
+    for (let t = 0; t < LIVE_POLL_MS + 5000; t += 50) {
+      await advance(50);
+      sizes.push(liveProposals("uxr").length);
+    }
+    expect(new Set(sizes)).toEqual(new Set([4]));
+    expect(zones()).toEqual(["1:accepted", "2:tentative", "3:excluded", "4:excluded"]);
+  });
+
+  it("a researcher's ✗ mid-run keeps the row in the chart, excluded", async () => {
+    await start(answer([prop(1)], [prop(1)]));
+    denyLanding("q-p1-1", landedTag(1));
+    await advance(0);
+    expect(zones()).toEqual(["1:excluded"]);
+  });
+
+  it("a ✓ on a row excluded before a resume counts it once, accepted", async () => {
+    const rows = [denied(prop(1)), prop(2)];
+    await start(answer(rows, rows));
+    expect(zones()).toEqual(["1:excluded", "2:tentative"]);
+    acceptLanding("q-p1-1", { ...landedTagFrom(rows[0]), shown: "tentative" });
+    await advance(0);
+    expect(zones()).toEqual(["1:accepted", "2:tentative"]);
+  });
+
+  it("a row waiting to land is not drawn yet", async () => {
+    await start(answer([], []));
+    live.mockResolvedValueOnce(answer([prop(1)], [prop(1)], { cursor: 1 }));
+    await advance(LIVE_POLL_MS);
+    expect(_queuedForTest()).toBe(1);
+    expect(liveProposals("uxr")).toEqual([]);
   });
 });

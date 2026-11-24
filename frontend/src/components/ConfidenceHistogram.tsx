@@ -10,14 +10,13 @@
  * `ZoneHistogram` is the same chart drawn small from counts already split by zone, for the
  * tag sidebar's AutoCode overview (docs/design-autocode-landing-plan.md Phase 6, D17, D19):
  * each band stacked excluded, tentative, accepted from the bottom, on a scale the caller holds
- * (it only grows while a run lands), squares or bars as the caller chose once, and the
- * codebook's two lines as ticks when there is one pair to draw.
+ * (it only grows while a run lands), bars only, and the codebook's lines as ticks when
+ * there is one pair to draw (during a first run, the lower line and the live accept line).
  */
 
 import { useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse, ZoneBin } from "../utils/types";
-import type { Lines } from "../utils/recut";
 import { getTagBg } from "../utils/colours";
 
 const NUM_BINS = 20;
@@ -158,20 +157,25 @@ const ZONE_ORDER = [
   ["accepted", "green"],
 ] as const;
 
+/** The ticks a zone chart draws: the lower line always, the upper one once there is one. */
+export interface TickLines {
+  lower: number;
+  upper: number | null;
+}
+
 interface ZoneHistogramProps {
   /** 20 bands of 0.05, each split by zone. */
   bins: ZoneBin[];
-  /** The count a full-height bar stands for (bars only). */
+  /** The count a full-height bar stands for. */
   scale: number;
-  /** One square per proposal, chosen once by the caller, never switched mid-run. */
-  squares: boolean;
   /** The codebook's lines, drawn as ticks; null on a chart whose codebooks' lines differ. */
-  lines: Lines | null;
+  lines: TickLines | null;
   /** What the chart says, for a screen reader: the tally. */
   label: string;
 }
 
-export function ZoneHistogram({ bins, scale, squares, lines, label }: ZoneHistogramProps) {
+/** Bars only: squares stay the dialog's (owner, review of Phase 6). */
+export function ZoneHistogram({ bins, scale, lines, label }: ZoneHistogramProps) {
   return (
     <div
       className="threshold-histogram threshold-histogram--overview"
@@ -181,34 +185,31 @@ export function ZoneHistogram({ bins, scale, squares, lines, label }: ZoneHistog
     >
       {bins.map((bin, idx) => (
         <div key={idx} className="threshold-histogram-bin">
-          {ZONE_ORDER.map(([zone, colour]) => {
-            const n = bin[zone];
-            if (n === 0) return null;
-            if (squares) {
-              return Array.from({ length: n }, (_, i) => (
-                <div
-                  key={`${zone}-${i}`}
-                  className={`threshold-histogram-square threshold-histogram-bar--${colour}`}
-                  data-zone={zone}
-                />
-              ));
-            }
-            return (
+          {ZONE_ORDER.map(([zone, colour]) =>
+            bin[zone] === 0 ? null : (
               <div
                 key={zone}
                 className={`threshold-histogram-bar threshold-histogram-bar--${colour}`}
                 data-zone={zone}
-                style={{ height: `${(n / Math.max(1, scale)) * 100}%` }}
+                style={{ height: `${(bin[zone] / Math.max(1, scale)) * 100}%` }}
               />
-            );
-          })}
+            ),
+          )}
         </div>
       ))}
       {lines && (
-        <>
-          <span className="threshold-histogram-tick" style={{ left: `${lines.lower * 100}%` }} />
-          <span className="threshold-histogram-tick" style={{ left: `${lines.upper * 100}%` }} />
-        </>
+        <span
+          className="threshold-histogram-tick"
+          data-tick="lower"
+          style={{ left: `${lines.lower * 100}%` }}
+        />
+      )}
+      {lines?.upper != null && (
+        <span
+          className="threshold-histogram-tick"
+          data-tick="upper"
+          style={{ left: `${lines.upper * 100}%` }}
+        />
       )}
     </div>
   );

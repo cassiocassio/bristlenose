@@ -18,9 +18,9 @@
  * narrower than its content (scrollWidth > clientWidth). That catches an
  * ellipsis, a hard clip and a fixed width alike.
  *
- * Also opened: the Feedback and Settings dialogs, and the tag sidebar at the
- * narrow end of its drag. Still unseen: menus, popovers and any dialog not
- * opened here — covered by the review rule in .claude/agents/ux-critique.md;
+ * Also opened: the Feedback and Settings dialogs, the tag sidebar at the
+ * narrow end of its drag, and its AutoCode overview open and split. Still
+ * unseen: menus, popovers and any dialog not opened here — covered by the review rule in .claude/agents/ux-critique.md;
  * add each new one to this walk.
  *
  * The one exemption: an element marked data-truncates="user-content" shows
@@ -254,6 +254,57 @@ for (const locale of ['en', 'ru', 'ca', 'pl']) {
     )).toBeLessThanOrEqual(210);
     // The sidebar slides open since 10 Nov 2026 (`.layout[data-animating]`): measure it at rest, not
     // mid-slide, where the same label is 3px wider than the sidebar that is still closing on it.
+    await expect(page.locator('.layout[data-animating]')).toHaveCount(0);
+    const cuts = await truncatedControls(page);
+    expect(cuts, describeCuts(cuts)).toEqual([]);
+  });
+}
+
+// The tag sidebar's AutoCode overview, open and split, at the sidebar's narrowest (landing plan
+// Phase 6). The smoke fixture has no AutoCode run (making one is a paid call), so the codebook
+// read gains two codebooks and the overview's read answers for them: every control drawn is the
+// real one. Its writes are answered here, so the fixture's database is never written.
+const OVERVIEW_BOOKS = [
+  { fw: 'uxr', group: 'Trust and credibility', tags: ['credibility', 'risk', 'proof'] },
+  { fw: 'norman', group: 'Affordances and signifiers', tags: ['signifier', 'mapping'] },
+];
+for (const locale of ['en', 'de', 'ru', 'pl', 'ja', 'ko']) {
+  test(`no truncated button label — tag overview, open and split, in ${locale}`, async ({ page }) => {
+    await page.route(/\/api\/projects\/\d+\/codebook(\?.*)?$/, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      OVERVIEW_BOOKS.forEach((b, i) => body.groups.push({
+        id: 9000 + i, name: b.group, subtitle: '', colour_set: 'ux', order: 100 + i,
+        total_quotes: 0, is_default: false, framework_id: b.fw,
+        tags: b.tags.map((name, j) => ({ id: 90000 + i * 10 + j, name, count: 0, colour_index: j })),
+      }));
+      await route.fulfill({ response, json: body });
+    });
+    await page.route(/\/api\/projects\/\d+\/tag-overview$/, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fulfill({ json: { status: 'ok' } });
+        return;
+      }
+      const bins = Array.from({ length: 20 }, (_, i) => ({
+        lower: i / 20, accepted: i > 14 ? 4 : 0, tentative: i > 5 && i <= 14 ? 3 : 0, excluded: i <= 5 ? 1 : 0,
+      }));
+      await route.fulfill({ json: {
+        open: true, split: true, auto_opened: true,
+        codebooks: OVERVIEW_BOOKS.map((b) => ({
+          framework_id: b.fw, coding: false, lower: 0.3, upper: 0.7, live_accept_line: null, bins,
+        })),
+      } });
+    });
+    await page.goto(`/report/quotes/?locale=${locale}`);
+    await waitForPageReady(page);
+    if (!(await page.locator('.tag-drag-handle').isVisible())) {
+      await page.locator('.tag-rail .rail-btn').click();
+    }
+    const handle = page.locator('.tag-drag-handle');
+    await expect(handle).toBeVisible();
+    await handle.focus();
+    await page.keyboard.press('Home');
+    await expect(page.locator('[data-testid="bn-tag-overview-book"]')).toHaveCount(2);
     await expect(page.locator('.layout[data-animating]')).toHaveCount(0);
     const cuts = await truncatedControls(page);
     expect(cuts, describeCuts(cuts)).toEqual([]);

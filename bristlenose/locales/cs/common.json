@@ -279,7 +279,7 @@
     "other": "Ostatní",
     "summary": "{{count}} štítků v {{frameworks}} rámcích",
     "summaryFromCodebooks_one": "{{tags}} z <link>{{count}} knihy kódů</link>",
-    "summaryFromCodebooks_few": "{{tags}} z <link>{{count}} knih kódů</link>",
+    "summaryFromCodebooks_few": "{{tags}} ze <link>{{count}} knih kódů</link>",
     "summaryFromCodebooks_many": "{{tags}} z <link>{{count}} knihy kódů</link>",
     "summaryFromCodebooks_other": "{{tags}} z <link>{{count}} knih kódů</link>",
     "showFramework": "Zobrazit {{framework}}",

@@ -244,7 +244,7 @@
     "userTags": "ユーザータグ",
     "other": "その他",
     "summary": "{{frameworks}} フレームワーク中 {{count}} タグ",
-    "summaryFromCodebooks_other": "<link>{{count}} コードブック</link>の{{tags}}",
+    "summaryFromCodebooks_other": "<link>{{count}} コードブック</link>中 {{tags}}",
     "showFramework": "{{framework}} を表示",
     "hideFramework": "{{framework}} を非表示",
     "showGroup": "{{group}} を表示",

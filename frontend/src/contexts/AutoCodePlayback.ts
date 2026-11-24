@@ -818,15 +818,24 @@ export function removeLanding(_domId: string, t: LiveTag, storeHasTag: boolean, 
   decide(f, t.id, "denied", (exp) => denyProposal(t.id, exp ?? "accepted"));
 }
 
-/** The run's landed proposals with their confidence and how they show, for a chart that grows
- *  live (the tag sidebar overview, Phase 6). */
-export function liveProposals(frameworkId: string): { id: number; tag_definition_id: number; confidence: number; shown: Shown }[] {
+/** How a row of a run sits in a chart that grows live: as it shows on the cards, or excluded. */
+export type LiveZone = Shown | "excluded";
+
+/**
+ * The run's proposals with their confidence and how they sit, for a chart that grows live (the
+ * tag sidebar overview, Phase 6): accepted and tentative as the cards show them, and every row
+ * the run holds excluded (a researcher's ✗, the cut's exclusions, a catch-up row denied on
+ * arrival) once nothing waits to show it, so nothing leaves the chart as the end's cut plays.
+ * A row still waiting to land is not drawn yet. The whole job, not one pass: the live read lists
+ * every row of the codebook's job.
+ */
+export function liveProposals(frameworkId: string): { id: number; tag_definition_id: number; confidence: number; shown: LiveZone }[] {
   const f = follows.get(frameworkId);
   if (!f) return [];
-  const out: { id: number; tag_definition_id: number; confidence: number; shown: Shown }[] = [];
-  for (const [id, shown] of f.shown) {
-    const row = f.rows.get(id);
-    if (row) out.push({ id, tag_definition_id: row.tag_definition_id, confidence: row.confidence, shown });
+  const out: { id: number; tag_definition_id: number; confidence: number; shown: LiveZone }[] = [];
+  for (const [id, row] of f.rows) {
+    const shown: LiveZone | undefined = f.shown.get(id) ?? (desiredOf(f, id) === null ? "excluded" : undefined);
+    if (shown) out.push({ id, tag_definition_id: row.tag_definition_id, confidence: row.confidence, shown });
   }
   return out;
 }

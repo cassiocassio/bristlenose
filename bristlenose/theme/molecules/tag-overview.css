@@ -6,20 +6,24 @@
 
 /* ── The line ─────────────────────────────────────────────────── */
 
-/* One baseline for the line: the summary button is an inline-block, so its baseline
-   is its words', with the chevron sitting in the line as a glyph. It wraps at the
-   narrow end of the drag and nothing is cut (docs/design-control-labels.md). */
-.tag-overview-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 0.4rem;
+/* The line is running text, not a flex row: the spaces between its words are the
+   translation's own text, so Korean 의 and Japanese 中 sit where the sentence puts
+   them and no layout gap splits a word from its particle. One baseline: the buttons
+   are inline-blocks, so each one's baseline is its words', with the chevron sitting in
+   the line as a glyph. It wraps at the narrow end of the drag and nothing is cut
+   (docs/design-control-labels.md). Two classes, so it wins over sidebar.css's
+   `.tag-sidebar-subtitle` (which loads after this file): that sets the 0.85rem left
+   inset, kept, which lines the chevron up with the chart and the codebook chevrons
+   below. */
+.tag-sidebar-subtitle.tag-overview-line {
+    display: block;
     padding-right: 0.6rem;
 }
 
 /* The whole phrase is the target, chevron and words, not the chevron alone. Padding
    grows the hit box to 24px tall (WCAG 2.2 target size); the matching negative
-   margin keeps the layout. */
+   margin keeps the layout. No sideways margin past the words: it would eat the space
+   the translation puts beside them. */
 .tag-overview-summary {
     display: inline-block;
     text-align: left;
@@ -30,9 +34,14 @@
     font: inherit;
     font-size: var(--bn-text-badge);
     color: var(--bn-colour-muted);
-    padding: 5px 4px;
-    margin: -5px -4px;
+    padding: 5px 0;
+    margin: -5px 0;
     border-radius: var(--bn-radius-sm);
+}
+
+.tag-overview-summary:first-child {
+    padding-left: 4px;
+    margin-left: -4px;
 }
 
 .tag-overview-summary:hover {
@@ -48,7 +57,7 @@
     display: inline-block;
     width: 0.75rem;
     height: 0.75rem;
-    margin: 0 0.15rem 0 0;
+    margin: 0 var(--bn-space-xs) 0 0;
     vertical-align: -0.1em;
 }
 
@@ -56,11 +65,13 @@
     transform: rotate(90deg);
 }
 
+/* "| Review" stays together; the space before it is the line's own. */
 .tag-overview-review {
     display: inline-flex;
     align-items: baseline;
     gap: 0.4rem;
     white-space: nowrap;
+    margin-inline-start: var(--bn-space-xs);
 }
 
 .tag-overview-split {
@@ -77,7 +88,7 @@
 /* ── The chart ────────────────────────────────────────────────── */
 
 .tag-overview-body {
-    padding: 0.15rem 0.75rem 0.45rem 0.85rem;
+    padding: var(--bn-space-xs) var(--bn-space-md) 0.45rem 0.85rem;
 }
 
 .tag-overview-book + .tag-overview-book {
@@ -86,10 +97,6 @@
 
 /* Split view: each codebook's name with its own Review on its baseline. */
 .tag-overview-book-name {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 0.4rem;
     font-size: var(--bn-text-badge);
     color: var(--bn-colour-text);
     margin-bottom: 0.2rem;
@@ -122,7 +129,7 @@
     }
 }
 
-.threshold-histogram-tick {
+.threshold-histogram--overview .threshold-histogram-tick {
     position: absolute;
     top: -2px;
     bottom: -3px;

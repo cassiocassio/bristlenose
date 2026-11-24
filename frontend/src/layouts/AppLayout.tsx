@@ -31,7 +31,7 @@ import { UndoSync } from "../components/UndoSync";
 import { applyNativeSearchAction, NativeSearchSync } from "../components/NativeSearchSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
-import { useActivityJobs, removeJob, rehydrateActivityJobs, sameExport, settleJob, watchForCatchUp } from "../contexts/ActivityStore";
+import { useActivityJobs, recheckRunsInFlight, removeJob, rehydrateActivityJobs, sameExport, settleJob, watchForCatchUp } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useAnchorReporter } from "../hooks/useAnchorReporter";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
@@ -120,6 +120,7 @@ import { resolveBrowserLang } from "../i18n/LocaleStore";
 import { isEditing } from "../utils/editing";
 import { hostShowsAutoCode, isEmbedded } from "../utils/embedded";
 import { isReportPartial, startConditionPolling } from "../contexts/ConditionStore";
+import { useLastRun } from "../contexts/LastRunStore";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 import { asPhrase } from "../utils/searchMatch";
@@ -335,6 +336,16 @@ function AppShell() {
   useEffect(() => {
     void rehydrateActivityJobs(projectId);
   }, [projectId]);
+
+  // And a run that starts after the page loaded, which this page did not start (the house default
+  // after a pipeline run, another window): the runs in flight are read again every 12 s, and when
+  // the report's data moves.
+  const { refreshKey } = useLastRun();
+  useEffect(() => {
+    if (refreshKey) recheckRunsInFlight();
+    const t = setInterval(recheckRunsInFlight, 12_000);
+    return () => clearInterval(t);
+  }, [refreshKey]);
 
   // Every AutoCode run (and catch-up) with a chip still running lands its tags live on this page
   // (contexts/AutoCodePlayback.ts, loaded only then; docs/design-autocode-landing-plan.md Phase 4). A page opened or

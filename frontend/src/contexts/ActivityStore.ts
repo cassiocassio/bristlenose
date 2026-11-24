@@ -50,6 +50,9 @@ export interface ActivityJobEntry {
 // ── Module-level state ───────────────────────────────────────────────────
 
 let jobs = new Map<string, ActivityJobEntry>();
+/** Chips ended or gone, counted, so a read of the runs in flight that was out meanwhile can tell
+ *  (`recheckRunsInFlight`). */
+let ends = 0;
 let snapshot = new Map<string, ActivityJobEntry>();
 const listeners = new Set<() => void>();
 
@@ -156,6 +159,7 @@ export function addJob(id: string, entry: ActivityJobEntry): void {
 
 export function removeJob(id: string): void {
   if (!jobs.has(id)) return;
+  ends++;
   jobs = new Map(jobs);
   jobs.delete(id);
   snapshot = jobs;
@@ -178,6 +182,7 @@ export function newJobId(kind: string): string {
 export function settleJob(id: string, outcome: NormalisedJobStatus): void {
   const entry = jobs.get(id);
   if (!entry) return;
+  ends++;
   jobs = new Map(jobs);
   jobs.set(id, { ...entry, outcome });
   snapshot = jobs;
@@ -301,51 +306,75 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
         ...(screens.value.job_id ? { jobId: screens.value.job_id } : {}),
       });
     }
-    const runs = autocode.status === "fulfilled" ? autocode.value?.jobs : undefined;
-    if (!Array.isArray(runs)) return;
-    for (const run of runs) {
-      if (typeof run?.framework_id !== "string") continue;
-      // A running job that finished once is a catch-up: switching a codebook back on, or a
-      // quote counting again, sets a finished job running again (§4a). It comes back as the
-      // chip the switch gave it (R12).
-      if (run.completed_at) {
-        adoptCatchUp(run);
-        continue;
-      }
-      if (hasJob((j) => j.type === "autocode" && j.frameworkId === run.framework_id)) continue;
-      supersedeCarried("autocode", run.framework_id);
-      addJob(newJobId(`autocode:${run.framework_id}:restored`), {
-        type: "autocode",
-        frameworkId: run.framework_id,
-        frameworkTitle: run.title,
-        originRoute: "/report/codebook/",
-      });
-    }
+    adoptRuns(autocode.status === "fulfilled" ? autocode.value?.jobs : undefined, (id) => carriedFinishedAtLoad.has(id));
   }).catch((err: unknown) => console.warn("Activity: restoring the chips on load failed", err));
 }
 
-/** A finished chip this window carried across the reload cannot stand for a run the server is
- *  still working on: that run began after it ended, so the newer run's chip replaces it (N87). Only
- *  chips that had already ended when the page loaded: one that ended on this page may have ended
- *  after the server read began (the same reason `hasJob` skips a finished chip). */
-function supersedeCarried(type: ActivityJobEntry["type"], frameworkId: string): void {
+/** The AutoCode runs in flight a read found that the window has no chip for: each gets one, as a
+ *  catch-up or a first apply. `replaces` says which finished chip of the same work on the codebook
+ *  the newer run's chip replaces. */
+function adoptRuns(runs: unknown, replaces: (id: string) => boolean): void {
+  if (!Array.isArray(runs)) return;
+  for (const run of runs) {
+    if (typeof run?.framework_id !== "string") continue;
+    // A running job that finished once is a catch-up: switching a codebook back on, or a
+    // quote counting again, sets a finished job running again (§4a). It comes back as the
+    // chip the switch gave it (R12).
+    if (run.completed_at) {
+      adoptCatchUp(run, replaces);
+      continue;
+    }
+    if (hasJob((j) => j.type === "autocode" && j.frameworkId === run.framework_id)) continue;
+    supersede("autocode", run.framework_id, replaces);
+    addJob(newJobId(`autocode:${run.framework_id}:restored`), {
+      type: "autocode",
+      frameworkId: run.framework_id,
+      frameworkTitle: run.title,
+      originRoute: "/report/codebook/",
+    });
+  }
+}
+
+/**
+ * Read the runs in flight again while the report is open (the shell calls this every few seconds
+ * and when the data moves), so a run the page did not start after it loaded (the server's house
+ * default after a pipeline run, another window) gets its chip, and so its playback, as if it had
+ * been there at load. A finished chip of the same work on the codebook gives way to it. Not before
+ * the load's own read, not while the window is hidden, never in an exported report. A read during
+ * which a chip ended or left is dropped, since it may name that run still running; the next one
+ * is not. A failed read adds nothing and says nothing: the next one is a few seconds off.
+ */
+export function recheckRunsInFlight(): void {
+  if (isExportMode() || rehydratedProjectId === null || document.visibilityState === "hidden") return;
+  const at = ends;
+  Promise.resolve()
+    .then(() => listAutoCodeJobs())
+    .then((r) => ends === at && adoptRuns(r?.jobs, () => true))
+    .catch(() => {});
+}
+
+/** A finished chip cannot stand for a run the server is still working on: that run began after it
+ *  ended, so the newer run's chip replaces it (N87). At load, only the chips this window carried
+ *  that had already ended when the page loaded: one that ended on this page may have ended after
+ *  the server read began (the same reason `hasJob` skips a finished chip). A recheck drops such a
+ *  read, so any finished chip of the work may go. */
+function supersede(type: ActivityJobEntry["type"], frameworkId: string, replaces: (id: string) => boolean): void {
   for (const [id, j] of jobs) {
-    if (carriedFinishedAtLoad.has(id) && j.outcome && j.type === type && j.frameworkId === frameworkId) {
+    if (replaces(id) && j.outcome && j.type === type && j.frameworkId === frameworkId) {
       removeJob(id);
     }
   }
 }
 
 /** A catch-up the server is running gets a chip, unless this window has one for its codebook. */
-function adoptCatchUp(run: { framework_id: string; title: string }): boolean {
-  if (hasJob((j) => j.type === "catchup" && j.frameworkId === run.framework_id)) return false;
-  supersedeCarried("catchup", run.framework_id);
+function adoptCatchUp(run: { framework_id: string; title: string }, replaces: (id: string) => boolean): void {
+  if (hasJob((j) => j.type === "catchup" && j.frameworkId === run.framework_id)) return;
+  supersede("catchup", run.framework_id, replaces);
   addJob(newJobId(`catchup:${run.framework_id}:restored`), {
     type: "catchup",
     frameworkId: run.framework_id,
     frameworkTitle: run.title,
   });
-  return true;
 }
 
 // ── A quote that counts again (ruling 4) ─────────────────────────────────

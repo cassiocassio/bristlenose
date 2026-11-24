@@ -9,6 +9,7 @@ import {
   useActivityJobs,
   resetActivityStore,
   rehydrateActivityJobs,
+  recheckRunsInFlight,
   watchForCatchUp,
 } from "./ActivityStore";
 import {
@@ -709,5 +710,171 @@ describe("watchForCatchUp", () => {
     watchForCatchUp([armed("norman")]);
     await tick(10_000);
     expect(status).not.toHaveBeenCalled();
+  });
+});
+
+// A run started after the page loaded, by anything but this page (the server's house default
+// after a pipeline run, another window), gets its chip as if it had been there at load
+// (docs/design-autocode-landing-plan.md Phase 4, the gap the 24 Nov measurement found).
+describe("recheckRunsInFlight", () => {
+  const autocode = vi.mocked(listAutoCodeJobs);
+  const idle = { status: "idle", total: 0 } as never;
+  const garrett = { framework_id: "garrett", title: "Garrett", status: "running", completed_at: null };
+  const done = {
+    status: "completed", progressLabel: null, durationLabel: null, errorMessage: null, partialMessage: null,
+  } as const;
+  const running = (...jobs: object[]) => autocode.mockResolvedValue({ jobs } as never);
+  /** Let a read's answer land. */
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+  async function recheck() {
+    recheckRunsInFlight();
+    await settle();
+  }
+  /** The page loaded with nothing running. */
+  async function load() {
+    await rehydrateActivityJobs("1");
+    autocode.mockClear();
+  }
+
+  beforeEach(() => {
+    resetActivityStore();
+    vi.mocked(isExportMode).mockReturnValue(false);
+    vi.mocked(getClipExtractionStatus).mockReset().mockResolvedValue(idle);
+    vi.mocked(getScreensExportStatus).mockReset().mockResolvedValue(idle);
+    autocode.mockReset().mockResolvedValue({ jobs: [] });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+  });
+
+  it("gives a first apply that started after the page loaded its chip, once", async () => {
+    await load();
+    expect(kinds()).toEqual([]);
+    running(garrett);
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:restored"]);
+    expect(byKind("autocode:garrett:restored")).toEqual({
+      type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett", originRoute: "/report/codebook/",
+    });
+    await recheck();
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:restored"]);
+  });
+
+  it("does not add a run the page already has a chip for", async () => {
+    running(garrett);
+    await rehydrateActivityJobs("1");
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:restored"]);
+  });
+
+  it("does not double a run this page started", async () => {
+    await load();
+    // The Codebook lens adds its chip once the start answers (CodebookV2 `started`).
+    addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    running(garrett);
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:1"]);
+  });
+
+  it("does not double a run this page started while the read was out", async () => {
+    await load();
+    let answer!: (v: unknown) => void;
+    autocode.mockReturnValue(new Promise((r) => (answer = r)) as never);
+    recheckRunsInFlight();
+    await settle();
+    addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    answer({ jobs: [garrett] });
+    await settle();
+    expect(kinds()).toEqual(["autocode:garrett:1"]);
+  });
+
+  it("does not bring back a finished chip the researcher dismissed while a read naming it was out", async () => {
+    await load();
+    running(garrett);
+    await recheck();
+    const [id] = [...getJobs().keys()];
+    let answer!: (v: unknown) => void;
+    autocode.mockReturnValue(new Promise((r) => (answer = r)) as never);
+    recheckRunsInFlight();
+    await settle();
+    settleJob(id, done);
+    removeJob(id);
+    answer({ jobs: [garrett] }); // the read began before the run ended
+    await settle();
+    expect(kinds()).toEqual([]);
+    // The next read, after the run ended, names nothing.
+    running();
+    await recheck();
+    expect(kinds()).toEqual([]);
+  });
+
+  it.each([
+    ["ended", (id: string) => settleJob(id, done), ["autocode:garrett:restored"]],
+    ["left without an ending (a hidden job whose run was lost)", (id: string) => removeJob(id), []],
+  ] as const)("a chip that %s while a read naming its run was out is not replaced or brought back",
+    async (_name, end, left) => {
+      await load();
+      running(garrett);
+      await recheck();
+      const [id] = [...getJobs().keys()];
+      let answer!: (v: unknown) => void;
+      autocode.mockReturnValue(new Promise((r) => (answer = r)) as never);
+      recheckRunsInFlight();
+      await settle();
+      end(id);
+      answer({ jobs: [garrett] });
+      await settle();
+      expect(kinds()).toEqual(left);
+      expect(getJobs().get(id)?.outcome?.status).toBe(left.length ? "completed" : undefined);
+    });
+
+  it("a newer run replaces this page's finished chip for the same codebook", async () => {
+    await load();
+    addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    settleJob("autocode:garrett:1", done);
+    running(garrett);
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:restored"]);
+    expect(byKind("autocode:garrett:restored")?.outcome).toBeUndefined();
+  });
+
+  it("gives a catch-up started after load its catch-up chip", async () => {
+    await load();
+    running({ ...garrett, completed_at: "2026-10-20T10:00:00" });
+    await recheck();
+    expect(kinds()).toEqual(["catchup:garrett:restored"]);
+  });
+
+  it("reads nothing while the window is hidden", async () => {
+    await load();
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    running(garrett);
+    await recheck();
+    expect(autocode).not.toHaveBeenCalled();
+    expect(kinds()).toEqual([]);
+  });
+
+  it("reads nothing before the page's own read on load", async () => {
+    running(garrett);
+    await recheck();
+    expect(autocode).not.toHaveBeenCalled();
+  });
+
+  it("reads nothing in an exported report", async () => {
+    await load();
+    vi.mocked(isExportMode).mockReturnValue(true);
+    running(garrett);
+    await recheck();
+    expect(autocode).not.toHaveBeenCalled();
+    expect(kinds()).toEqual([]);
+  });
+
+  it("a failed read adds nothing and does not reject", async () => {
+    await load();
+    autocode.mockRejectedValue(new Error("offline"));
+    await recheck();
+    expect(kinds()).toEqual([]);
   });
 });

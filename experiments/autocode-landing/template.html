@@ -168,7 +168,7 @@ const K = {
   save: "batch", sizes: "25", conc: 3, callMode: "replay", median: 30, p90: 50, share: 95,
   order: "stored", seed: 7,
   pacing: "predict", baseline: 30, startRate: 0.6, horizon: 8, accel: 0.8, decel: 0.3,
-  maxRate: 3, drain: 1.5, within: "stored", statusCount: "screen",
+  maxRate: 3, drain: 3, within: "stored", statusCount: "screen",
   lines: "fixed", upper: 0.70, lower: 0.30, topPct: 30, botPct: 10,
   axis: "grow", squares: "lock", tentative: "pulse", reserve: "on", filterMode: "hold",
   surface: "mac", rm: "off",
@@ -343,7 +343,7 @@ function liveLine(confs) {
   const s = [...confs].sort((a, b) => b - a);
   const k = Math.max(1, Math.ceil(s.length * K.topPct / 100));
   let line = Math.max(0.70, ceilGrid(s[k - 1]));
-  if (confs.length < 25) line = Math.max(line, 0.80);
+  if (confs.length < 25) line = Math.max(line, 0.75);  // D50 (was 0.80)
   return line;
 }
 function currentLines() {

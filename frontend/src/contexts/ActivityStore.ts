@@ -53,6 +53,11 @@ let jobs = new Map<string, ActivityJobEntry>();
 /** Chips ended or gone, counted, so a read of the runs in flight that was out meanwhile can tell
  *  (`recheckRunsInFlight`). */
 let ends = 0;
+/** The runs whose chip left without an ending (its reads were lost; on the Mac a hidden job then
+ *  leaves quietly), by kind and codebook. No read gives such a run another chip, or it would be
+ *  added, lost and removed over and over; a read that lists none forgets it, so a run listed after
+ *  is a newer one. (The running list carries no start time to tell runs apart by.) */
+const lost = new Set<string>();
 let snapshot = new Map<string, ActivityJobEntry>();
 const listeners = new Set<() => void>();
 
@@ -158,8 +163,10 @@ export function addJob(id: string, entry: ActivityJobEntry): void {
 }
 
 export function removeJob(id: string): void {
-  if (!jobs.has(id)) return;
+  const gone = jobs.get(id);
+  if (!gone) return;
   ends++;
+  if (!gone.outcome) lost.add(gone.type + gone.frameworkId);
   jobs = new Map(jobs);
   jobs.delete(id);
   snapshot = jobs;
@@ -263,12 +270,16 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
   }
   // Started inside a promise, so a helper that throws rather than rejects is a failed read too.
   const read = <T>(fn: () => Promise<T>) => Promise.resolve().then(fn);
+  const at = ends;
   return Promise.allSettled([
     read(() => getClipExtractionStatus()),
     read(() => getScreensExportStatus()),
     read(() => listAutoCodeJobs()),
   ]).then(([clips, screens, autocode]) => {
     if (rehydratedProjectId !== projectId) return;
+    // A chip that ended or left while the reads were out may be named running by them, as on a
+    // recheck; its runs are left to the next one. Taken before the removals below.
+    const fresh = ends === at;
     let failed = false;
     for (const [kind, r] of [["clips", clips], ["screens", screens], ["autocode", autocode]] as const) {
       if (r.status === "rejected") {
@@ -306,7 +317,7 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
         ...(screens.value.job_id ? { jobId: screens.value.job_id } : {}),
       });
     }
-    adoptRuns(autocode.status === "fulfilled" ? autocode.value?.jobs : undefined, (id) => carriedFinishedAtLoad.has(id));
+    if (fresh) adoptRuns(autocode.status === "fulfilled" ? autocode.value?.jobs : undefined, (id) => carriedFinishedAtLoad.has(id));
   }).catch((err: unknown) => console.warn("Activity: restoring the chips on load failed", err));
 }
 
@@ -315,8 +326,11 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
  *  the newer run's chip replaces. */
 function adoptRuns(runs: unknown, replaces: (id: string) => boolean): void {
   if (!Array.isArray(runs)) return;
+  const kindOf = (r: { completed_at?: unknown; framework_id?: unknown } | null) =>
+    (r?.completed_at ? "catchup" : "autocode") + r?.framework_id;
+  for (const k of lost) if (!runs.some((r) => kindOf(r) === k)) lost.delete(k);
   for (const run of runs) {
-    if (typeof run?.framework_id !== "string") continue;
+    if (typeof run?.framework_id !== "string" || lost.has(kindOf(run))) continue;
     // A running job that finished once is a catch-up: switching a codebook back on, or a
     // quote counting again, sets a finished job running again (§4a). It comes back as the
     // chip the switch gave it (R12).
@@ -342,7 +356,8 @@ function adoptRuns(runs: unknown, replaces: (id: string) => boolean): void {
  * been there at load. A finished chip of the same work on the codebook gives way to it. Not before
  * the load's own read, not while the window is hidden, never in an exported report. A read during
  * which a chip ended or left is dropped, since it may name that run still running; the next one
- * is not. A failed read adds nothing and says nothing: the next one is a few seconds off.
+ * is not. A run whose chip was lost is not given another (`lost`). A failed read adds nothing
+ * and says nothing: the next one is a few seconds off.
  */
 export function recheckRunsInFlight(): void {
   if (isExportMode() || rehydratedProjectId === null || document.visibilityState === "hidden") return;
@@ -442,6 +457,7 @@ export function resetActivityStore({ keepSession = false }: { keepSession?: bool
   snapshot = jobs;
   stopWatching();
   watched.clear();
+  lost.clear();
   rehydratedProjectId = null;
   storageKey = null;
   carriedIds = new Set();

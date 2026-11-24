@@ -503,9 +503,10 @@ describe("a window's chips across a reload", () => {
     settleJob("autocode:garrett:1", done); // its own poll saw the end while the read is out
     answer({ jobs: [{ framework_id: "garrett", title: "Garrett", status: "running", completed_at: null }] });
     await pending;
-    // The chip that stood for the run stays with how it ended. A second, restored chip for the
-    // stale read's "running" may also appear; it polls once and settles (a known corner).
+    // The chip that stood for the run stays with how it ended, and the stale read's "running"
+    // gives it no second chip (review of 7c6c12293: the load read is dropped like a recheck's).
     expect(getJobs().get("autocode:garrett:1")?.outcome?.status).toBe("completed");
+    expect([...getJobs().keys()]).toEqual(["autocode:garrett:1"]);
   });
 
   it("a carried finished chip for another kind of work on the codebook stays", async () => {
@@ -717,6 +718,7 @@ describe("watchForCatchUp", () => {
 // after a pipeline run, another window), gets its chip as if it had been there at load
 // (docs/design-autocode-landing-plan.md Phase 4, the gap the 24 Nov measurement found).
 describe("recheckRunsInFlight", () => {
+  const w = window as unknown as Record<string, unknown>;
   const autocode = vi.mocked(listAutoCodeJobs);
   const idle = { status: "idle", total: 0 } as never;
   const garrett = { framework_id: "garrett", title: "Garrett", status: "running", completed_at: null };
@@ -829,6 +831,68 @@ describe("recheckRunsInFlight", () => {
       expect(kinds()).toEqual(left);
       expect(getJobs().get(id)?.outcome?.status).toBe(left.length ? "completed" : undefined);
     });
+
+  it("the load's read, answered late, does not double a run a recheck gave its chip", async () => {
+    // Its AutoCode read answered "running", a sibling read was slow, a recheck gave the run its
+    // chip and the run ended: then the load's reads all land.
+    let clipsAnswer!: (v: unknown) => void;
+    vi.mocked(getClipExtractionStatus).mockReturnValue(new Promise((r) => (clipsAnswer = r)) as never);
+    running(garrett);
+    const loading = rehydrateActivityJobs("1");
+    await recheck();
+    const [id] = [...getJobs().keys()];
+    settleJob(id, done);
+    clipsAnswer(idle);
+    await loading;
+    expect([...getJobs().keys()]).toEqual([id]);
+    expect(getJobs().get(id)?.outcome?.status).toBe("completed");
+  });
+
+  it("a run whose chip was lost gets no other chip until the server lists a newer run", async () => {
+    await load();
+    running(garrett);
+    await recheck();
+    removeJob([...getJobs().keys()][0]); // its reads were lost; on the Mac it leaves unseen
+    await recheck();
+    await recheck();
+    expect(kinds()).toEqual([]);
+    // A catch-up of the codebook is other work, and gets its chip.
+    running({ ...garrett, completed_at: "2026-10-20T10:00:00" });
+    await recheck();
+    expect(kinds()).toEqual(["catchup:garrett:restored"]);
+    removeJob([...getJobs().keys()][0]);
+    // The run ends: the next first apply listed is a newer run.
+    running();
+    await recheck();
+    running(garrett);
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:restored"]);
+  });
+
+  it("a run started after a finished chip was dismissed gets its chip at once", async () => {
+    await load();
+    addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    settleJob("autocode:garrett:1", done);
+    removeJob("autocode:garrett:1");
+    running(garrett);
+    await recheck();
+    expect(kinds()).toEqual(["autocode:garrett:restored"]);
+  });
+
+  it("the load's own removal of a replaced export does not hold back the runs it found", async () => {
+    w.__BRISTLENOSE_AUTH_TOKEN__ = "serve-a";
+    try {
+      sessionStorage.setItem(activityStorageKey("1")!, JSON.stringify([
+        ["clips:1", { type: "clips", frameworkId: "", frameworkTitle: "", total: 3, jobId: "c1" }],
+      ]));
+      vi.mocked(getClipExtractionStatus).mockResolvedValue({ status: "running", total: 5, job_id: "c2" } as never);
+      running(garrett);
+      await rehydrateActivityJobs("1");
+      expect(kinds()).toEqual(["clips:restored", "autocode:garrett:restored"]);
+    } finally {
+      delete w.__BRISTLENOSE_AUTH_TOKEN__;
+    }
+  });
 
   it("a newer run replaces this page's finished chip for the same codebook", async () => {
     await load();

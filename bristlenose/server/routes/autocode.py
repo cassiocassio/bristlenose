@@ -683,10 +683,11 @@ def list_autocode_jobs(
 ) -> Any:
     """The project's AutoCode runs still pending or running.
 
-    A reloaded report asks this once to put back the chips of runs it has no chip for
+    A report asks this when it loads, to put back the chips of runs it has no chip for
     (R14): a window carries its own chips across a reload (RE#38), but not another
     window's, and the per-framework status read cannot say which frameworks to ask
-    about.
+    about. It asks again every 12 s and whenever its data moves, so a run started after
+    it loaded (the house default, another window) gets its chip too. One indexed query.
 
     ``include_ended=true`` (the Mac's project row, Phase 5) also lists the first
     applies that ended unfinished, stopped or failed (``completed_at`` unset), and the

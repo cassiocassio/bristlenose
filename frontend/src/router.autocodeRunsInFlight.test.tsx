@@ -26,6 +26,10 @@ const w = window as unknown as W;
 /** What the server's list of runs in flight answers. */
 let inFlight: object[];
 let jobListReads = 0;
+/** What the run's status read answers. */
+let uxrStatus: object;
+/** Holds the load's clip export read until the test lets it answer. */
+let clipsHeld: Promise<void> | null = null;
 
 const RUNNING = {
   status: "running", processed_quotes: 1, total_quotes: 4, proposed_count: 0,
@@ -36,6 +40,8 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   inFlight = [];
   jobListReads = 0;
+  uxrStatus = RUNNING;
+  clipsHeld = null;
   w.BRISTLENOSE_API_BASE = "/api/projects/1";
   const root = document.createElement("div");
   root.id = "bn-app-root";
@@ -53,10 +59,11 @@ beforeEach(() => {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = String(input);
     if (url.includes("/autocode/jobs")) jobListReads++;
+    if (url.includes("/export/clips/status") && clipsHeld) await clipsHeld;
     const body = url.includes("/autocode/jobs")
       ? { jobs: inFlight }
       : url.includes("/autocode/uxr/status")
-        ? RUNNING
+        ? uxrStatus
         : url.includes("/export/clips/status") || url.includes("/export/screens/status")
           ? { status: "idle", progress: 0, total: 0 }
           : url.includes("/quotes")
@@ -129,5 +136,36 @@ describe("a first apply that starts after the report loaded", () => {
     expect([...getJobs().values()].map((j) => j.frameworkId)).toEqual(["uxr"]);
     expect(followed()).toHaveLength(1);
     expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument();
+  });
+});
+
+describe("the load's own read", () => {
+  it("answered after a recheck gave the run its chip and the run ended, adds no second chip", async () => {
+    // Review of 7c6c12293: the load's AutoCode read says "running", a sibling read is slow, a
+    // recheck gives the run its chip, the run ends, then the load's reads land.
+    let release!: () => void;
+    clipsHeld = new Promise((r) => (release = r));
+    inFlight = [uxr];
+    // The chip's completion is the run's one lens refresh (`codebook-changed` with it).
+    let reloads = 0;
+    const onReload = () => reloads++;
+    window.addEventListener("codebook-changed", onReload);
+    try {
+      render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/report/sessions/"] })} />);
+      await wait(12_500);
+      expect(getJobs().size).toBe(1);
+      uxrStatus = { ...RUNNING, status: "completed", processed_quotes: 4, completed_at: "2026-11-24T10:02:00Z" };
+      inFlight = []; // the load's AutoCode read answered before this
+      await wait(5_000);
+      expect([...getJobs().values()][0].outcome?.status).toBe("completed");
+      expect(reloads).toBe(1);
+      release();
+      await wait(25_000);
+      expect(getJobs().size).toBe(1);
+      expect(screen.getAllByTestId("bn-activity-chip")).toHaveLength(1);
+      expect(reloads).toBe(1);
+    } finally {
+      window.removeEventListener("codebook-changed", onReload);
+    }
   });
 });

@@ -684,7 +684,8 @@ export function getAutoCodeStatus(frameworkId: string): Promise<AutoCodeJobStatu
   return apiGet<AutoCodeJobStatus>(`/autocode/${frameworkId}/status`, STATUS_READ_TIMEOUT_MS);
 }
 
-/** The runs in flight, read once when the report loads (R14). */
+/** The runs in flight: read when the report loads (R14), then again every 12 s and whenever the
+ *  report's data moves, so a run started later gets its chip. One indexed query. */
 export function listAutoCodeJobs(): Promise<AutoCodeJobsResponse> {
   return apiGet<AutoCodeJobsResponse>("/autocode/jobs", STATUS_READ_TIMEOUT_MS);
 }

@@ -64,6 +64,7 @@ import type {
   TapestrySession,
 } from "../utils/types";
 import { TAPESTRY_GUTTER, fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
+import { isTeamTurn } from "../utils/sessionLanes";
 import { screenInk } from "../utils/sceneInk";
 import { TapestryPreview } from "../components/TapestryPreview";
 import { mergeTapestry, withoutStripState } from "../utils/tapestryMerge";
@@ -776,14 +777,13 @@ export function SessionsTable({
             sess.speakers.find((x) => (x.slot_code || x.speaker_code) === slot);
           const codeOf = (slot: string) => speakerOf(slot)?.speaker_code || slot;
           const nameOf = (slot: string) => speakerOf(slot)?.name || codeOf(slot);
-          const isTeamTurn = (tn: TapestrySession["turns"][number]) =>
-            typeof tn.team === "boolean" ? tn.team : /^[mo]/.test(codeOf(tn.speaker));
+          const teamTurn = (tn: TapestrySession["turns"][number]) => isTeamTurn(tn, codeOf);
           return [
           <SessionRow
             key={sess.session_id}
             tapestryOpen={ts ? open : undefined}
             preview={ts && gridWidth > 0 ? (
-              <TapestryPreview session={ts} width={gridWidth} isTeam={isTeamTurn}
+              <TapestryPreview session={ts} width={gridWidth} isTeam={teamTurn}
                 onToggle={(all, sec) => {
                   // Opening from the strip aims the timeline at the moment clicked: it opens
                   // scrolled with that moment in the middle (the browser clamps at either end).

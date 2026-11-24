@@ -335,11 +335,15 @@ describe("SessionTapestry — hovering a section flag", () => {
     expect(last).toHaveClass("raised");
   });
 
-  it("starts the banner on the staff's own pixel column, so its left edge is one hairline", () => {
-    setup();
+  it("starts the banner on the staff's own pixel column, centred on a whole pixel, so its left edge is one hairline", () => {
+    // A scale that puts the section start on a fractional x: 300 s at 0.7 s/px is 82 + 428.57.
+    render(<SessionTapestry session={session} sPerPx={0.7} nameOf={(c) => c} onJump={vi.fn()} />);
     const flag = document.querySelectorAll(".bn-tp-flag")[1];
-    const staffX = flag.querySelector("line")!.getAttribute("x1");
+    const staffX = flag.querySelector("line")!.getAttribute("x1")!;
     expect(flag.querySelector("path")!.getAttribute("d")!.match(/^M([\d.]+),/)![1]).toBe(staffX);
+    expect(Number(staffX) - 0.5).toBe(Math.round(Number(staffX) - 0.5));
+    fireEvent.mouseEnter(flag); // the cursor the flag sets lies on its staff
+    expect(document.querySelector(".bn-tp-playhead")!.getAttribute("x1")).toBe(staffX);
   });
 });
 

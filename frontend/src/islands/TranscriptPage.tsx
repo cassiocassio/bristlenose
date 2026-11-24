@@ -40,12 +40,12 @@ import { TranscriptTimeline } from "./transcript/TranscriptTimeline";
 import {
   onTimelineWillChange,
   setTimelineAvailable,
-  mostLanes,
   shownLanes,
   useTranscriptTimeline,
 } from "../contexts/TranscriptTimelineStore";
 import "./transcript/transcript-gutter.css";
 import { quoteExtents } from "../utils/quoteExtents";
+import { sessionLanes } from "../utils/sessionLanes";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { Selector } from "../components/Selector";
 import { isEmbedded } from "../utils/embedded";
@@ -703,11 +703,16 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   const hasTimeline = !!tapestry && tapestry.session_id === sessionId && tapestry.turns.length > 0;
   // The most detail this session can draw: the split control offers no more, and the timeline draws
   // no more, while the reader's own choice is kept for the next session.
-  const most = hasTimeline ? mostLanes(tapestry.quotes) : 5;
+  // The lanes this session has, by the timeline's own rule (TranscriptTimeline passes no codeOf,
+  // so neither does this): the detail menu offers, and Compact's hint names, only those.
+  const has = hasTimeline ? sessionLanes(tapestry) : null;
+  const most = has?.most;
+  const hasSections = has?.sections;
+  const hasTeam = has?.team;
   useEffect(() => {
-    setTimelineAvailable(hasTimeline, most);
+    setTimelineAvailable(hasTimeline, most && { most, sections: !!hasSections, team: !!hasTeam });
     return () => setTimelineAvailable(false);
-  }, [hasTimeline, most]);
+  }, [hasTimeline, most, hasSections, hasTeam]);
   const showTimeline = hasTimeline && timeline.on;
 
   // Switching keeps the reader's place: the paragraph under the header stays the same distance

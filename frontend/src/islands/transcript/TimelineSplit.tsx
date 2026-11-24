@@ -64,9 +64,15 @@ export function TimelineSplit() {
 
   // What each detail adds, in the timeline's own lane words. These keys are borrowed: the speaker
   // placeholders and the Sentiment column header read as lane names today, in every locale; if one
-  // of them is reworded for its own place, this hint changes with it.
+  // of them is reworded for its own place, this hint changes with it. Compact names only the lanes
+  // this session has: no Sections without flags, no Moderator without a team turn.
+  const compact = [
+    timeline.sections && t("quotes.sections"),
+    timeline.team && t("sessions.speakerPlaceholder.moderator"),
+    t("sessions.speakerPlaceholder.participant"),
+  ].filter(Boolean);
   const hint: Record<TimelineLanes, string> = {
-    2: [t("quotes.sections"), t("sessions.speakerPlaceholder.moderator"), t("sessions.speakerPlaceholder.participant")].join(" · "),
+    2: compact.join(" · "),
     3: `+ ${t("sessions.colSentiment")}`,
     5: `+ ${t("quotes.themes")}`,
   };

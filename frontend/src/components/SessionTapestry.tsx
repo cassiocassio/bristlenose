@@ -33,6 +33,7 @@ import { framesFor, tapestryThumb } from "../utils/tapestryThumb";
 import { ThumbOutline, ThumbPreview } from "./TapestryThumb";
 import { Icon } from "./Icon";
 import { screenInk } from "../utils/sceneInk";
+import { isTeamTurn, sessionLanes } from "../utils/sessionLanes";
 
 const POSITIVE = new Set(["satisfaction", "delight", "confidence"]);
 
@@ -92,7 +93,6 @@ function fonts(type: TapestryTuning["type"]) {
 /** Baseline offset that centres a line of text of this size on a box's middle. */
 const centre = (fontPx: number) => fontPx * 0.35;
 
-const isTeam = (code: string) => /^[mo]/.test(code);
 
 // Only one slice holds an open quote at a time, so ← → and Esc drive exactly one.
 const ACTIVE_EVENT = "bn:tapestry-active";
@@ -235,9 +235,7 @@ export default function SessionTapestry({
   const thumbs = !!s.frames_key && !isExportMode();
   const laneRef = useRef<SVGRectElement>(null);
   useEffect(() => () => tapestryThumb.forget(s.session_id), [s.session_id]);
-  // The server's per-turn answer wins (it reads the slot's role); otherwise the displayed code.
-  const teamTurn = (tn: TapestrySession["turns"][number]) =>
-    typeof tn.team === "boolean" ? tn.team : isTeam(codeOf(tn.speaker));
+  const teamTurn = (tn: TapestrySession["turns"][number]) => isTeamTurn(tn, codeOf);
   const x = (sec: number) => TAPESTRY_GUTTER + sec / sPerPx;
   const xEnd = x(s.duration_seconds);
   const W = Math.ceil(xEnd + RIGHT);
@@ -247,8 +245,10 @@ export default function SessionTapestry({
   // A lane with nothing in it for this session is not drawn and takes no height: the session's own
   // data decides, never the zoom or the scroll. The participant track always draws (it is where the
   // pointer jumps and previews), and the time axis always draws.
-  const hasSections = s.sections.length > 0;
-  const hasTeam = s.turns.some(teamTurn);
+  // One rule with the transcript's detail menu (utils/sessionLanes.ts), so it offers only these.
+  const has = sessionLanes(s, codeOf);
+  const hasSections = has.sections;
+  const hasTeam = has.team;
   // Lane geometry follows the tuned flag and clip heights (defaults: the shipped layout). Without
   // flags the tracks still keep room above them for the scene notches and the player's head.
   const trackTop = hasSections ? P.flagH + 12 : 12;
@@ -281,7 +281,7 @@ export default function SessionTapestry({
   const SE = { mid: PT.y + PT.h + 41, amp: 30 };
   const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
   // Fewer lanes (the transcript's choice) stop drawing below a lane; the geometry above stays the one layout.
-  const showSentiment = lanes >= 3 && s.quotes.length > 0;
+  const showSentiment = lanes >= 3 && has.most >= 3;
 
   // Theme spans, packed into at most TG.rows rows; the lane is as tall as the rows it uses.
   const themeEnds = Array(TG.rows).fill(-1e9) as number[];
@@ -298,7 +298,7 @@ export default function SessionTapestry({
     return { theme, x0, x1, row, lx, text, tw };
   });
   const themeRows = themeLayout.reduce((n, l) => Math.max(n, l.row + 1), 0);
-  const showThemes = lanes >= 5 && themeRows > 0;
+  const showThemes = lanes >= 5 && has.most === 5;
   const lanesBottom = showThemes ? TG.y + TG.row * themeRows : showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1;
   const H = showThemes ? lanesBottom + 14 : lanesBottom + 16;
 
@@ -599,7 +599,9 @@ export default function SessionTapestry({
             const f = s.sections[i];
             const isHot = i === hotFlag;
             const isRaised = i === lifted || isHot;
-            const fx = x(f.t0);
+            // Whole pixels, as the scene notches are: x() is fractional at almost any scale, and a
+            // hairline on a fractional column smears across two however the staff and banner meet.
+            const fx = Math.round(x(f.t0));
             const next = i + 1 < s.sections.length ? x(s.sections[i + 1].t0) : xEnd;
             const text = isRaised ? f.label : fit(f.label, next - fx - 20, F.flag);
             const pw = (text ? measure(text, F.flag) : 0) + 2 * P.flagX + 6;
@@ -778,7 +780,8 @@ export default function SessionTapestry({
               height={lanesBottom + 3 - (bandY - 4)} rx={3} data-testid="tapestry-window" />
           )}
           {playhead !== null && (
-            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={bandY - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
+            // Snapped like the flag staffs, so the cursor a flag sets lies on its staff, not beside it.
+            <line className="bn-tp-playhead" x1={Math.round(x(playhead)) + 0.5} x2={Math.round(x(playhead)) + 0.5} y1={bandY - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
           )}
           {player !== null && (
             <g className="bn-tp-player" data-testid="tapestry-player">

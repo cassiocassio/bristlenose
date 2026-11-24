@@ -11,12 +11,17 @@
  * menu greys its rows everywhere else. Nor is `most`, the most detail this session can draw (no
  * quotes, no Sentiment lane; no theme, no Themes lane): the timeline draws `shownLanes()`, the lesser
  * of the two, and only the details up to `most` are offered, so the reader's choice waits, unchanged,
- * for the next session that has the lanes.
+ * for the next session that has the lanes. `sections` and `team` (not stored either) say whether the
+ * session has a Sections and a Moderator lane, so Compact's hint names only the lanes it draws.
  */
 
 import { useSyncExternalStore } from "react";
 import type { TapestryLanes } from "../components/SessionTapestry";
 import { storePref } from "../utils/nativePrefs";
+import type { SessionLanes } from "../utils/sessionLanes";
+
+// The rule lives with the timeline's lane rule (utils/sessionLanes.ts); re-exported for callers here.
+export { mostLanes } from "../utils/sessionLanes";
 
 /** Compact: sections and speakers. Standard: + sentiment. Full: + themes. The timeline's own type
  *  (type-only, so the lazy timeline stays off this store's chunk). */
@@ -30,7 +35,12 @@ export interface TranscriptTimelineState {
   lanes: TimelineLanes;
   available: boolean;
   most: TimelineLanes;
+  sections: boolean;
+  team: boolean;
 }
+
+/** Outside a transcript with a timeline: every lane, so nothing is held back or left unnamed. */
+const ALL: SessionLanes = { most: 5, sections: true, team: true };
 
 /** The detail the timeline draws: the reader's choice, down to what this session has. */
 export function shownLanes(s: Pick<TranscriptTimelineState, "lanes" | "most">): TimelineLanes {
@@ -44,13 +54,6 @@ export function offeredLanes(most: TimelineLanes): readonly TimelineLanes[] {
   return up.length > 1 ? up : [];
 }
 
-/** The most detail a session can draw, from its quotes: Sentiment needs a quote, Themes a quote in
- *  a theme. Every session with a timeline has the speaker lanes. */
-export function mostLanes(quotes: readonly { theme: string | null }[]): TimelineLanes {
-  if (quotes.some((q) => q.theme)) return 5;
-  return quotes.length > 0 ? 3 : 2;
-}
-
 const LS_KEY = "bn-transcript-timeline";
 
 const isLanes = (n: unknown): n is TimelineLanes => n === 2 || n === 3 || n === 5;
@@ -60,12 +63,12 @@ function read(): TranscriptTimelineState {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
       const v = JSON.parse(raw) as { on?: unknown; lanes?: unknown };
-      return { on: v.on === true, lanes: isLanes(v.lanes) ? v.lanes : DEFAULT_LANES, available: false, most: 5 };
+      return { on: v.on === true, lanes: isLanes(v.lanes) ? v.lanes : DEFAULT_LANES, available: false, ...ALL };
     }
   } catch {
     // Storage unavailable or unreadable: the chain, at the default detail.
   }
-  return { on: false, lanes: DEFAULT_LANES, available: false, most: 5 };
+  return { on: false, lanes: DEFAULT_LANES, available: false, ...ALL };
 }
 
 let state: TranscriptTimelineState = read();
@@ -82,7 +85,7 @@ export function onTimelineWillChange(fn: () => void): () => void {
 function set(next: Partial<TranscriptTimelineState>): void {
   const merged = { ...state, ...next };
   if (merged.on === state.on && merged.lanes === state.lanes && merged.available === state.available
-    && merged.most === state.most) return;
+    && merged.most === state.most && merged.sections === state.sections && merged.team === state.team) return;
   const persist = merged.on !== state.on || merged.lanes !== state.lanes;
   if (persist) willChange.forEach((fn) => fn());
   state = merged;
@@ -119,9 +122,10 @@ export function applyTimelineMenuAction(action: string, payload?: unknown): bool
   return false;
 }
 
-/** The transcript page, while it shows a session with a timeline: and how much it can draw. */
-export function setTimelineAvailable(available: boolean, most: TimelineLanes = 5): void {
-  set({ available, most: available ? most : 5 });
+/** The transcript page, while it shows a session with a timeline: and which lanes it has. */
+export function setTimelineAvailable(available: boolean, has: SessionLanes = ALL): void {
+  const { most, sections, team } = available ? has : ALL;
+  set({ available, most, sections, team });
 }
 
 export function getTranscriptTimeline(): TranscriptTimelineState {
@@ -144,6 +148,6 @@ export function resetTranscriptTimelineStore(): void {
   } catch {
     // nothing to clear
   }
-  state = { on: false, lanes: DEFAULT_LANES, available: false, most: 5 };
+  state = { on: false, lanes: DEFAULT_LANES, available: false, ...ALL };
   listeners.forEach((l) => l());
 }

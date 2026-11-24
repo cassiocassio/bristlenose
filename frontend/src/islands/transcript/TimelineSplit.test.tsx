@@ -44,7 +44,7 @@ describe("TimelineSplit", () => {
 
   it("offers only the details this session can draw, ticks the one drawn, and keeps the reader's choice", () => {
     setTimelineLanes(5);
-    setTimelineAvailable(true, 3); // quotes, but none in a theme
+    setTimelineAvailable(true, { most: 3, sections: true, team: true }); // quotes, but none in a theme
     render(<TimelineSplit />);
     fireEvent.click(screen.getByTestId("timeline-more"));
     const items = screen.getAllByRole("menuitemradio");
@@ -58,8 +58,15 @@ describe("TimelineSplit", () => {
     expect(getTranscriptTimeline().lanes).toBe(5);
   });
 
+  it("names in Compact's hint only the lanes this session has", () => {
+    setTimelineAvailable(true, { most: 3, sections: false, team: false }); // a participant alone, no sections
+    render(<TimelineSplit />);
+    fireEvent.click(screen.getByTestId("timeline-more"));
+    expect(screen.getByTestId("timeline-menu-lanes-2").textContent).toBe("CompactParticipant");
+  });
+
   it("offers no detail at all when only Compact can draw", () => {
-    setTimelineAvailable(true, 2);
+    setTimelineAvailable(true, { most: 2, sections: true, team: true });
     render(<TimelineSplit />);
     fireEvent.click(screen.getByTestId("timeline-more"));
     expect(screen.getAllByRole("menuitemradio").map((i) => i.textContent)).toEqual(["User journey", "Session timeline"]);

@@ -71,6 +71,12 @@ if g "$W" tree "$B" "Bristlenose" 2>/dev/null | grep -q '"Continue"'; then
   do_ "accept AI consent" press "$B" AXButton "Continue" "Bristlenose"
   shot consent-accepted
 fi
+# The Whisper ask (2fcbaaccc, first walked in 0.47.0) is a sheet on Welcome and disables its
+# close button. The walk pairs transcripts and never transcribes, so it declines.
+if g "$W" tree "$B" "Welcome" 2>/dev/null | grep -q '"Not Now"'; then
+  do_ "decline the Whisper download" press "$B" AXButton "Not Now" "Welcome"
+  shot whisper-declined
+fi
 if g "$W" windows "$B" | grep -q "Welcome to Bristlenose"; then
   do_ "close Welcome" press "$B" AXCloseButton "" "Welcome"
 fi

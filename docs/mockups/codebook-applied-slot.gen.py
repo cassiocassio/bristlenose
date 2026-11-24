@@ -279,7 +279,10 @@ def uxr_groups(n: int) -> str:
 def sidebar(active: bool) -> str:
     sb = UXR["sidebar"]
     if not active:
+        # On the library: no codebook is current, and the sidebar's own Browse button stays,
+        # disabled (the shipped `.bn-btn:disabled`), since the library is what it opens.
         sb = sb.replace("v2-nav-row active", "v2-nav-row").replace(' aria-current="location"', "")
+        sb = sb.replace('data-testid="bn-v2-nav-browse">', 'data-testid="bn-v2-nav-browse" disabled>')
     return sb
 
 
@@ -416,7 +419,7 @@ def catalogue() -> str:
     after = app(sidebar(False), heading(t("codebook.browseCodebooks"), False)
                 + f'<div class="v2-layout al-base"><div class="v2-main"><div class="v2-card-grid">{cards}</div></div></div>')
     return (frame("Shipped, not chosen", "Browse button on the catalogue itself; UXR still current in the sidebar", before, cls="wide")
-            + frame("Proposed, chosen 24 Nov", "heading “Codebook Library” (shipped key), no action, nothing current; the slot on each card", after, cls="wide", owner=True))
+            + frame("Proposed, chosen 24 Nov", "heading “Codebook Library” (shipped key), no action; the sidebar’s Browse disabled, nothing current; the slot on each card", after, cls="wide", owner=True))
 
 
 # ── The page ────────────────────────────────────────────────────────────────────────────────
@@ -669,7 +672,7 @@ status badge (pill radius, not interactive). The running words have no box and a
 <li>No Uninstall on cards. On the page, Uninstall is a small secondary button beside Review.</li>
 <li>Installed but not applied (stopped, failed, refused): the button comes back, to resume. Uninstall is hidden while a run goes; switching a codebook off mid-run stops the run. Review shows whenever there are tags (D39). The explainer says the most confident proposals are applied; no cost warning.</li>
 <li>The codebook page's counts stay as shipped, zeros included (§4).</li>
-<li>The catalogue is headed “Codebook Library” (the shipped key), with no Browse button and no current row in the sidebar (§5).</li>
+<li>The catalogue is headed “Codebook Library” (the shipped key), with no Browse button in its heading; the sidebar keeps its Browse button, disabled, and has no current row (§5).</li>
 <li>The slot's words sit on the title's first baseline (alignment B, §2), on card and page alike.</li>
 <li>While it runs, the words are muted ink with the shimmer and an ellipsis that grows “. .. ...” and repeats (§1b).</li>
 <li>Parked: the verb (“AutoCode” drawn as a placeholder), and animating the swap if it jars.</li>
@@ -741,8 +744,10 @@ The group's Total row already hides at zero. <b>Chosen (owner, 24 Nov): shipped<
 
 <h2 class="step">5 · The catalogue's own chrome: proposed chosen</h2>
 {catalogue()}
-{commentary("catalogue", '''<p>“Browse Codebooks” on the catalogue goes nowhere; the export already leaves the action
-slot empty and keeps the row's height (Q14). On the catalogue no codebook is current, so the sidebar shows none. The
+{commentary("catalogue", '''<p>The heading's “Browse Codebooks” on the catalogue goes nowhere, so it is not shown; the export already
+leaves the action slot empty and keeps the row's height (Q14). The sidebar's own Browse button stays where it always is,
+disabled (owner, 24 Nov): the library is what it opens, and a button that vanishes moves the rows under it. On the
+catalogue no codebook is current, so the sidebar shows none. The
 heading becomes the shipped “Codebook Library”, the name the reinstall sentences already send people to. Sentiment's card
 carries “Applied” too: it is applied by the pipeline and has no button (D20). <b>Chosen (owner, 24 Nov): proposed</b>, the “Codebook Library” heading included; the
 slot's words stay owner-written until the verb is settled.</p>''')}

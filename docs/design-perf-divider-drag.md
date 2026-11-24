@@ -1,6 +1,8 @@
 ---
 status: partial
 date: 20 Nov 2026
+last-trued: 2026-11-21
+trued-against: HEAD@main (a8087ddbb) on 2026-11-21
 area: desktop — sidebar divider drag (NavigationSplitView + NSOutlineView + WKWebView)
 ---
 

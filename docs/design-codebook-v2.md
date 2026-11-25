@@ -46,6 +46,9 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-11-24_ — External links § Presentation: a dated post-script for the short link labels
+  shipped in 0.48.0 (destination-only, 24 links). Only that section was read against HEAD;
+  `last-trued` is unchanged.
 - _2026-11-24_ — D12: an as-built note for the slot (owner, 24 Nov): AutoCode → AutoCoding… →
   Applied on card and page, Uninstall beside Review, the explainer, "Codebook Library", and the
   three server rules under it. Only D12 was read against HEAD; `last-trued` is unchanged.
@@ -3834,6 +3837,24 @@ deliberately (commit "nielsen bio links fit one line each: the book title stays,
 the domain goes"). Garrett's reads `jessejamesgarrett.com`, Plato's
 `SEP — Plato`. Only five files besides Nielsen carry links (cli-ux, sentiment
 and uxr have none). The total is still 22, all `https`.
+
+_24 Nov 2026 (shipped in 0.48.0): reversed again, and the rule is now written
+down._ The page already names the book, so a label names only where the link
+goes: the author's own site by its host first, then the retailers. A book title
+stays only when the author has several (Morville). Nielsen's first link reads
+`nngroup.com` again, and the paper is `CHI 1994 paper`. Morville's are
+`Honeycomb essay (2004)` and `Information Architecture (US)` / `(UK)`, then the
+same pair for `Ambient Findability`. Yablonski gained `Posters — Jon's store`
+and `Amazon DE — German edition`, the corpus's first non-English edition. That
+makes 24 links, all `https`, each on one line in the 192px card at both
+typography sets. The widths were measured in
+`docs/mockups/codebook-author-links.html`, which shows the before and after
+labels for every codebook side by side (commits "laws of ux codebook: shorter
+link labels, add jon's poster store and the german edition" and "nielsen and
+morville codebooks: short link labels, the page already names the book"). The
+host-in-label mitigation below is
+still open for submitted codebooks; curated author sites now satisfy it by
+convention, retailer links do not.
 
 **And that same change is the mitigation for the mismatch attack.** Rather than
 revealing the destination on hover — `title` is not keyboard-reachable and is

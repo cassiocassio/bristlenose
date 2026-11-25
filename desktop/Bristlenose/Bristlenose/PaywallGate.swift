@@ -29,13 +29,17 @@ final class SubscriptionGate: ObservableObject {
     /// channel, so it has no store and no paywall. To test the purchase with
     /// `Bristlenose.storekit`, switch on `BRISTLENOSE_DEBUG_SUBSCRIPTION` in the
     /// "Bristlenose Store" scheme. Honoured in `.debug` only; the `.dmg` and the
-    /// App Store build ignore it.
+    /// App Store build ignore it. Compiled into Debug only: a Release Mach-O must
+    /// not carry the name at all (`desktop/scripts/check-release-binary.sh`
+    /// refuses any `BRISTLENOSE_DEBUG_*` literal), and `.debug` never occurs there.
     nonisolated static func effectiveChannel(_ channel: DistributionChannel,
                                  environment: [String: String] = ProcessInfo.processInfo.environment)
         -> DistributionChannel {
+        #if DEBUG
         if channel == .debug, environment["BRISTLENOSE_DEBUG_SUBSCRIPTION"] == "1" {
             return .appStoreOrTestFlight
         }
+        #endif
         return channel
     }
 

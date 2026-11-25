@@ -230,6 +230,9 @@ export interface CodebookResponse {
   /** framework_id -> where its AutoCode stands (`routes/codebook.py` `autocode_state`).
    *  Absent: never started. Optional: an export made before 24 Nov 2026 lacks it. */
   framework_autocode?: Record<string, AutoCodeRunState>;
+  /** framework_id -> its title and author, from the codebook's YAML. Absent for an id
+   *  no bundled YAML has. Optional: an export made before 25 Nov 2026 lacks it. */
+  frameworks?: Record<string, { title: string; author: string }>;
   /** The quotes AutoCode would code (the ones that count), for the page's explainer. */
   quote_count?: number;
 }

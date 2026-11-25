@@ -55,8 +55,9 @@
     flex: 1;
 }
 
-/* `.codebook-toc-label` (from sidebar.css) supplies the title's size and
-   truncation — the same span the shipped navigator uses. */
+/* `.codebook-toc-label` is the same span the shipped navigator uses; its size
+   comes from `.toc-link` (sidebar.css). The title is never truncated: a long one
+   wraps, which is why the pending-count slot below holds a fixed width. */
 
 /* Provenance. A person keeps D19's weight because the name is the point —
    Jakob Nielsen is better known than his heuristics. A system fact ("On by

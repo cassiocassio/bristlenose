@@ -54,6 +54,11 @@ class CodebookGroupOut(BaseModel):
     framework_id: str | None = None
 
 
+class FrameworkMetaOut(BaseModel):
+    title: str
+    author: str
+
+
 class CodebookResponse(BaseModel):
     groups: list[CodebookGroupOut]
     ungrouped: list[CodebookTagOut]  # deprecated — kept for back-compat, always []
@@ -72,6 +77,13 @@ class CodebookResponse(BaseModel):
     #: ``unfinished`` (stopped, failed or partly failed: the slot offers AutoCode again,
     #: to resume). Absent: never started. ``autocode_state`` says which.
     framework_autocode: dict[str, str] = {}
+    #: framework_id -> its title and author, read from the codebook's YAML (the one
+    #: source; ``/codebook/templates`` and the MCP tool read the same loader). Carried
+    #: here because this route is embedded in the HTML export and ``/templates`` is
+    #: not, so the tag sidebar can name a framework offline. Until 25 Nov 2026 the
+    #: sidebar kept its own copy, which missed every codebook added after 10 Mar and
+    #: showed "Yablonski" for Laws of UX. Absent: no bundled YAML has that id.
+    frameworks: dict[str, FrameworkMetaOut] = {}
     #: The quotes AutoCode would code: the ones that count (``analysis_quotes``). The
     #: page's explainer says "AutoCode proposes 18 tags for 24 quotes."
     quote_count: int = 0
@@ -342,8 +354,15 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
             _build_group(uncategorised, 9999, is_default=True),
         )
 
+        frameworks: dict[str, FrameworkMetaOut] = {}
+        for fid in {g.framework_id for g in group_list if g.framework_id}:
+            tmpl = get_template(fid)
+            if tmpl is not None:
+                frameworks[fid] = FrameworkMetaOut(title=tmpl.title, author=tmpl.author)
+
         jobs = db.query(AutoCodeJob).filter_by(project_id=project_id).all()
         return CodebookResponse(
+            frameworks=frameworks,
             framework_quote_totals={
                 fid: len(qs) for fid, qs in framework_quotes.items()
             },

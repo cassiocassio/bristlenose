@@ -100,26 +100,26 @@ class ReviewBoundary extends Component<{ onError: () => void; children: ReactNod
   }
 }
 
-// ── Framework metadata (from codebook YAML files) ────────────────────────
-// The codebook API returns framework_id on groups but no framework-level
-// title/author. This static map provides display names for known frameworks.
-// Falls back to capitalising the framework_id for unknown ones.
+// ── Framework metadata ────────────────────────────────────────────────────
+// Title and author come from the codebook's YAML, sent as `frameworks` on
+// GET /codebook (`routes/codebook.py`). Never copy them here: a list kept in
+// this file until 25 Nov 2026 stopped at 10 Mar and named Laws of UX
+// "Yablonski". The capitalised id is only for a framework whose YAML is gone,
+// or an export made before the field existed.
 
-const FRAMEWORK_META: Record<string, { title: string; author: string }> = {
-  sentiment: { title: "Sentiment", author: "" },
-  norman:    { title: "The Design of Everyday Things", author: "Don Norman" },
-  garrett:   { title: "The Elements of User Experience", author: "Jesse James Garrett" },
-  plato:     { title: "Platonic Ontology & Epistemology", author: "Composite — Vlastos, Fine, Kraut, Sedley" },
-  uxr:       { title: "Bristlenose UXR Codebook", author: "" },
-};
+type FrameworkMeta = CodebookResponse["frameworks"];
 
-function frameworkTitle(id: string, t: (k: string) => string): string {
+function frameworkTitle(
+  id: string, meta: FrameworkMeta, t: (k: string) => string,
+): string {
+  // Sentiment keeps its translated sidebar label rather than its YAML title
+  // ("Emotional & Cognitive Signals"): a deliberate override, as before.
   if (id === "sentiment") return t("tags.frameworkSentiment");
-  return FRAMEWORK_META[id]?.title ?? id.charAt(0).toUpperCase() + id.slice(1);
+  return meta?.[id]?.title ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
 
-function frameworkAuthor(id: string): string {
-  return FRAMEWORK_META[id]?.author ?? "";
+function frameworkAuthor(id: string, meta: FrameworkMeta): string {
+  return meta?.[id]?.author ?? "";
 }
 
 // ── Framework grouping ────────────────────────────────────────────────────
@@ -149,8 +149,8 @@ function groupByFramework(
     if (!map.has(fwId)) {
       map.set(fwId, {
         id: fwId,
-        title: fwId === "_user" ? floorTitle : frameworkTitle(fwId, t),
-        author: fwId === "_user" ? "" : frameworkAuthor(fwId),
+        title: fwId === "_user" ? floorTitle : frameworkTitle(fwId, codebook.frameworks, t),
+        author: fwId === "_user" ? "" : frameworkAuthor(fwId, codebook.frameworks),
         groups: [],
       });
     }

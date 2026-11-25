@@ -116,6 +116,35 @@ describe("buildVisibleFrameworks", () => {
     const floor = fws.find((f) => f.id === "_ungrouped");
     expect(floor?.title).toBe(FLOOR);
   });
+
+  it("names a framework from the server's frameworks map, not a local copy", () => {
+    // Laws of UX showed as "Yablonski" while the sidebar kept its own list.
+    const cb: CodebookResponse = {
+      groups: [group("Choice", "yablonski")],
+      ungrouped: [],
+      all_tag_names: [],
+      frameworks: { yablonski: { title: "Laws of UX", author: "Jon Yablonski" } },
+    };
+    const fw = buildVisibleFrameworks(cb, t, FLOOR, new Set()).find(
+      (f) => f.id === "yablonski",
+    );
+    expect(fw?.title).toBe("Laws of UX");
+    expect(fw?.author).toBe("Jon Yablonski");
+  });
+
+  it("falls back to the capitalised id only when the server sends no name", () => {
+    // An export made before `frameworks` existed, or a codebook whose YAML is gone.
+    const cb: CodebookResponse = {
+      groups: [group("Choice", "yablonski")],
+      ungrouped: [],
+      all_tag_names: [],
+    };
+    const fw = buildVisibleFrameworks(cb, t, FLOOR, new Set()).find(
+      (f) => f.id === "yablonski",
+    );
+    expect(fw?.title).toBe("Yablonski");
+    expect(fw?.author).toBe("");
+  });
 });
 
 // ── mergePendingTags ──────────────────────────────────────────────────────

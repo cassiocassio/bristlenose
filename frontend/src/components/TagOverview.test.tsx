@@ -426,6 +426,12 @@ function codebook(): CodebookResponse {
     ],
     ungrouped: [],
     all_tag_names: [],
+    // As GET /codebook sends them, from each codebook's YAML.
+    frameworks: {
+      sentiment: { title: "Emotional & Cognitive Signals", author: "" },
+      uxr: { title: "Bristlenose UXR Codebook", author: "" },
+      norman: { title: "The Design of Everyday Things", author: "Don Norman" },
+    },
   };
 }
 

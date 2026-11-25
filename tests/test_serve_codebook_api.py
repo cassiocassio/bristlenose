@@ -80,6 +80,7 @@ class TestGetCodebook:
             "all_tag_names",
             "framework_quote_totals",
             "framework_autocode",
+            "frameworks",
             "quote_count",
         }
         # Sentiment group auto-imported + Uncategorised default group
@@ -124,6 +125,33 @@ class TestGetCodebook:
         # confusion has quotes[0] and quotes[1], frustration has quotes[0]
         # unique quotes: {quotes[0], quotes[1]} = 2
         assert friction["total_quotes"] == 2
+
+    def test_every_installed_framework_is_named_from_its_yaml(
+        self, client: TestClient,
+    ) -> None:
+        """The tag sidebar names a codebook from ``frameworks``, never from a copy.
+
+        A list kept in TagSidebar.tsx stopped on 10 Mar 2026, so every codebook
+        added later (Laws of UX among them) showed its capitalised id. Install
+        every bundled codebook and require each one's YAML title and author.
+        """
+        from bristlenose.server.codebook import load_all_templates
+
+        templates = load_all_templates()
+        for tmpl in templates:
+            if tmpl.id == "sentiment":
+                continue  # auto-imported with the project
+            resp = client.post(
+                "/api/projects/1/codebook/import-template",
+                json={"template_id": tmpl.id},
+            )
+            assert resp.status_code == 200, (tmpl.id, resp.text)
+        data = client.get("/api/projects/1/codebook").json()
+        installed = {g["framework_id"] for g in data["groups"] if g["framework_id"]}
+        assert installed == {t.id for t in templates}
+        assert data["frameworks"] == {
+            t.id: {"title": t.title, "author": t.author} for t in templates
+        }
 
     def test_all_tag_names_is_sorted(self, client_with_codebook: TestClient) -> None:
         data = client_with_codebook.get("/api/projects/1/codebook").json()

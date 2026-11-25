@@ -21,8 +21,21 @@ LIMITS = {
     "subtitle": 30,
     "promo": 170,
     "desc": 4000,
+    # The subscription's localisation in App Store Connect (apple-listing-spec.md).
+    "iap_display_name": 35,
+    "iap_description": 55,
 }  # keywords: 100 BYTES, checked below
-PUBLIC = ["name", "subtitle", "promo", "keywords", "desc", "captions"]
+PUBLIC = [
+    "name",
+    "subtitle",
+    "promo",
+    "keywords",
+    "desc",
+    "captions",
+    "iap_group_name",
+    "iap_display_name",
+    "iap_description",
+]
 MARKS = [
     "claude",
     "chatgpt",
@@ -155,6 +168,9 @@ def main():
         "review_notes",
         "captions",
         "copyright",
+        "iap_group_name",
+        "iap_display_name",
+        "iap_description",
     ]:
         v = f.get(k, "")
         if not v:

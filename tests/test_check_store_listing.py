@@ -26,6 +26,9 @@ FIELDS = {
     "support_url": "https://example.com/support.html",
     "review_notes": "Use the test key in Sign-in information. The app downloads a 1.5 GB model.",
     "captions": "One\nTwo\nThree",
+    "iap_group_name": "Bristlenose",
+    "iap_display_name": "Bristlenose Monthly",
+    "iap_description": "Analyse new interview studies",
 }
 
 
@@ -89,3 +92,24 @@ def test_import_services_allowed_in_captions_but_not_in_keywords(tmp_path):
     code, out = run(tmp_path, keywords="zoom,teams,interview")
     assert code == 1
     assert "third-party names" in out
+
+
+def test_subscription_text_must_fit_app_store_connect(tmp_path):
+    # The plan name the paywall shows comes from this field, through the store.
+    code, out = run(tmp_path, iap_display_name="B" * 36)
+    assert code == 1
+    assert "iap_display_name is 36/35 chars" in out
+    code, out = run(tmp_path, iap_description="D" * 56)
+    assert code == 1
+    assert "iap_description is 56/55 chars" in out
+
+
+def test_subscription_text_is_required(tmp_path):
+    fields = {k: v for k, v in FIELDS.items() if k != "iap_display_name"}
+    p = tmp_path / "listing.md"
+    p.write_text("".join(f"## {k}\n\n{v}\n\n" for k, v in fields.items()), encoding="utf-8")
+    r = subprocess.run(
+        [sys.executable, str(SCRIPT), str(p)], capture_output=True, text=True, check=False
+    )
+    assert r.returncode == 1
+    assert "field 'iap_display_name' is missing or empty" in r.stdout

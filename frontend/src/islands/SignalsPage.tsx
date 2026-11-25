@@ -476,7 +476,9 @@ function SparkBars({
   );
 }
 
-function SignalCard({
+/** Exported for the style guide, which draws it on fixture signals
+ *  (islands/styleGuide/organisms/SignalCard.stories.tsx). */
+export function SignalCard({
   signal,
   allPids,
   isSentiment,

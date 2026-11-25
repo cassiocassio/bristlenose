@@ -1,5 +1,9 @@
 /**
- * The style guide's sections, in reading order: foundations, atoms, the quote card.
+ * The style guide's sections, in reading order: foundations, atoms, the quote
+ * card, organisms. Organisms that read or write the open project's state (the
+ * Toolbar island, TOC, tag sidebar, sessions table, minimap) are drawn from
+ * their prop-driven parts, or by the tag specimen, never live: a style guide
+ * must not change the project it is opened in.
  * (Owner's order, 25 Nov 2026: foundations → atoms → quote card → organisms.
  * Tags are drawn by /report/tag-specimen, which the page links to.)
  *
@@ -18,6 +22,10 @@ import * as Feedback from "./atoms/Feedback.stories";
 import * as DataViz from "./atoms/DataViz.stories";
 import * as Controls from "./atoms/Controls.stories";
 import * as QuoteCardStates from "./quoteCard/QuoteCard.stories";
+import * as Toolbar from "./organisms/Toolbar.stories";
+import * as SignalCard from "./organisms/SignalCard.stories";
+import * as AutoCodeReview from "./organisms/AutoCodeReview.stories";
+import * as Shells from "./organisms/Shells.stories";
 
 export const SECTIONS: readonly SpecimenModule[] = [
   Type,
@@ -30,11 +38,15 @@ export const SECTIONS: readonly SpecimenModule[] = [
   DataViz,
   Controls,
   QuoteCardStates,
+  Toolbar,
+  SignalCard,
+  AutoCodeReview,
+  Shells,
 ];
 
 /** Other specimen pages in the same family, drawn from real components too. */
 export const SIBLING_PAGES = [
-  { href: "/report/tag-specimen", label: "Tag specimen", note: "every tag kind and state, in every context that draws one" },
+  { href: "/report/tag-specimen", label: "Tag specimen", note: "every tag kind and state, in every context that draws one: quote card, tag sidebar (with its eye toggle and micro bars), Codebook column, review rows" },
   { href: "/report/picker-specimen", label: "Picker specimen", note: "the person picker on fixture names" },
   { href: "/report/specimen", label: "Grid specimen", note: "the layout frame, measured" },
 ] as const;

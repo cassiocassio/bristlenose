@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import { FocusProvider } from "../contexts/FocusContext";
+import { resetSignalWorkingStore, setSignalWorkingOpen } from "../contexts/SignalWorkingStore";
 import { StyleGuide } from "./StyleGuide";
 import { sectionId, storiesOf } from "./styleGuide/csf";
 import { SECTIONS } from "./styleGuide/sections";
@@ -86,6 +87,28 @@ describe("StyleGuide", () => {
     expect(card("q-sg-search").querySelector("mark")?.textContent?.toLowerCase()).toBe("delivery");
     expect(card("q-sg-restore").querySelector(".badge-restore")).not.toBeNull();
     unmount();
+  });
+
+  it("draws the organisms from their prop-driven parts, counted by the app's own rules", () => {
+    renderAt();
+    expect(document.querySelector(".toolbar .toolbar-btn")).not.toBeNull();
+    expect(document.querySelectorAll(".signal-cards .signal-card")).toHaveLength(2);
+    expect(document.querySelectorAll(".signal-card.bn-selected")).toHaveLength(1);
+    // The metrics (Metric rows) show while the chart is open: the reader's preference, off by default.
+    expect(document.querySelector(".signal-card .signal-card-metrics")).toBeNull();
+    act(() => setSignalWorkingOpen(true));
+    expect(document.querySelectorAll(".signal-card .signal-card-metrics .metric-value").length).toBeGreaterThan(0);
+    act(() => resetSignalWorkingStore());
+    expect(document.querySelector(".threshold-body .threshold-slider .threshold-histogram")).not.toBeNull();
+    // Fixture confidences at the default lines (0.30, 0.70): 7 below, 16 between, 17 at or above.
+    const counts = Array.from(document.querySelectorAll(".threshold-zone-counter-count")).map((n) => n.textContent);
+    expect(counts.join(" ")).toMatch(/7/);
+    expect(counts.join(" ")).toMatch(/17/);
+    expect(document.querySelectorAll(".bn-journey-sep").length).toBeGreaterThan(0);
+    // The dialog opens through the shell, over the page.
+    expect(screen.queryByRole("dialog", { name: "Export the report" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Open the dialog" }));
+    expect(screen.getByRole("dialog", { name: "Export the report" })).toBeTruthy();
   });
 
   it("sets the theme through the app's own functions and puts it back on leaving", async () => {

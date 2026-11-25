@@ -44,6 +44,7 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
+from tests import full_run_lock as _full_run_lock
 
 # Hypothesis profiles (property-based tests; .claude/skills/property-based-testing/).
 # `ci` is derandomised: under a random seed a property can kill a bug on one run
@@ -293,6 +294,12 @@ def pytest_configure(config: pytest.Config) -> None:
         "machine_config: let this test reach the real .env files, user config dir "
         "and credential store (see no_local_llm_config)",
     )
+    # One full local run at a time across sessions and worktrees; fails open.
+    _full_run_lock.configure(config)
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    _full_run_lock.unconfigure(config)
 
 
 class _InMemoryCredentialStore(CredentialStore):

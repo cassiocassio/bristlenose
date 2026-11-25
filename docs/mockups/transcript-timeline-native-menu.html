@@ -1777,6 +1777,9 @@
     </table>
     <p>No new keys.</p>
 
+    <h3>As built, 24 Nov 2026 (0.48.0)</h3>
+    <p>The detail group lists only the levels the session can draw, and the group and its header are left out when only Compact can (the page sends no levels). <code>timeline-state</code> also carries <code>most</code> (<code>BridgeHandler.timelineMost</code>), which View ▸ Timeline Detail uses to dim what the session can't draw. The menu builder takes the page's already-localised lane items (<code>TimelineMenuRequest</code>), and Compact's subtitle names only the lanes the session has.</p>
+
     <h3>What this mockup cannot show</h3>
     <p>The NSMenu is drawn by hand from measured metrics (24 pt rows and a 22 pt check column, <code>PickerMetrics</code>, macOS 27). macOS 15 draws 22 pt rows and a smaller corner radius; the section header's exact type and indent are approximated. Check against a real NSMenu in Diagnostics ▸ Picker Lab before trusting a pixel here.</p>
   </div>

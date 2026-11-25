@@ -1,6 +1,6 @@
 ---
 status: Phases 0–5 built 12–13 Oct 2026 (Phase 4 shipped in 0.38.0); whole-feature review fixed 13 Oct (§5.7). The 9 Nov 2026 amendments are partly built: the tapestry strip's working sweep and the opening-scale taper are; the waiting-row ghost is not
-last-trued: 2026-11-13
+last-trued: 2026-11-25 (tapestry bullets in §2 and Phase 4 item 2 only, against 0.48.0)
 trued-against: HEAD@main plus the uncommitted working tree on 2026-11-10 for §2's ghost amendment, §4.6 and §4.6.1; the rest as of 2026-10-15
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
@@ -218,7 +218,10 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 - The disclosure appears once a row is readable, and the tapestry arrives in
   layers: **turns** with the transcript; **scene colours** about 4 s per hour of
   video later; **sentiment marks** with that session's quotes; **section flags and
-  theme spans** at the barrier. These are real turns, not a skeleton. (Under
+  theme spans** at the barrier. These are real turns, not a skeleton. _(Since 0.48.0,
+  24 Nov 2026, a lane takes room only once its layer has something in it, so an open
+  timeline grows as sentiment, then sections and themes arrive, and the transcript's
+  detail switch gains levels mid-run.)_ (Under
   redaction there is no per-session chain, so scene colours arrive at the barrier.)
 - A fifth layer shipped on 12 Oct 2026 and is the one later-arriving layer the app
   has: **scene strips** (`utils/scene_strip.py`, every frame at 4 fps; the notches
@@ -787,7 +790,9 @@ already anticipates. Independent of the UX; can land before or after phase 2.
    session, `4b1316c1`, and the merge treats it as a fifth layer, `tapestryMerge.ts`.)_ The component is pinned with `colour` null and `strip`
    null (`SessionTapestry.test.tsx`, and the route without either file in
    `test_serve_tapestry.py`); empty `sections`, empty `quotes` and a quote with both
-   `section` and `theme` null are still untried in either test file.
+   `section` and `theme` null are still untried in `test_serve_tapestry.py`. _(The
+   component covers all three since 0.48.0, 24 Nov 2026: `SessionTapestry.test.tsx`'s
+   lane tests.)_
 3. The scale rule, §4.6, in `utils/tapestryScale.ts`.
 4. **The refetch must merge, not replace.** The strip poll already has the rule: a
    poll builds new session objects and `SessionsTable.tsx` keeps the ones the slices

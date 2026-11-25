@@ -221,8 +221,8 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `transcript-edit-shimmer-popover.html` | 7 Nov 2026 | PROPOSED 7 Nov 2026 — decision 26 of `design-transcript-editing.md`: the shimmer while an edited quote is re-analysed and the popover with its diff, both in the transcript only; three owner questions open. |
 | `transcript-quote-gutter.html` | 17 Oct 2026 | PROPOSED 17 Oct 2026 · IMPLEMENTED 17 Oct 2026 — the round-two direction for transcript-to-Quotes/Screens/Discussion marks, margin links and quote lifts; stages 1–3 are built. |
 | `transcript-quote-hooks.html` | 17 Oct 2026 | SANDPIT 16 Oct 2026 · SUPERSEDED 17 Oct 2026 by `transcript-quote-gutter.html` — round one's six undecided quote-finding treatments. |
-| `transcript-timeline-native-menu.html` | 18 Oct 2026 | PROPOSED 18 Oct 2026 · IMPLEMENTED 18 Oct 2026 — the embedded Mac caret raises a real `NSMenu`, with state/action bridge and tested menu builder (`bd3698ea6`, `7435256f4`). |
-| `transcript-timeline-toggle.html` | 17 Oct 2026 | PROPOSED 17 Oct 2026 · IMPLEMENTED 17 Oct 2026 — iteration two's split control and 2/3/5-lane chooser ship as `TimelineSplit.tsx` (`15aa12ad6`). |
+| `transcript-timeline-native-menu.html` | 18 Oct 2026 | PROPOSED 18 Oct 2026 · IMPLEMENTED 18 Oct 2026 — the embedded Mac caret raises a real `NSMenu`, with state/action bridge and tested menu builder (`bd3698ea6`, `7435256f4`). Amended 24 Nov 2026 (0.48.0, `1ae55ae98`, `945e64394`): the menu's detail group lists only levels the session can draw and is left out when only Compact can; `timeline-state` carries `most`. |
+| `transcript-timeline-toggle.html` | 17 Oct 2026 | PROPOSED 17 Oct 2026 · IMPLEMENTED 17 Oct 2026 — iteration two's split control and 2/3/5-lane chooser ship as `TimelineSplit.tsx` (`15aa12ad6`). Amended 24 Nov 2026 (0.48.0, `1ae55ae98`, `945e64394`): the chooser offers only levels the session can draw (none when only Compact can), Compact's hint names only the lanes present, and the reading window draws over every lane with its drag grip underneath. |
 | `transcript-quote-extent.html` | 6 Nov 2026 | PROPOSED 4 Nov 2026 — hovering a quote on the transcript keylines the whole stretch the model considered and lifts only the words the cleaned quote used; the View ▸ Show / Hide Quote Edits item that would reveal it shipped parked behind a flag in `268213225` (`design-quote-edits-view.md`), the drawing itself is not built. |
 | `ingest-refusal-surfaces.html` | 19 Aug 2026 | IMPLEMENTED — ingest refusals surface as named reasons |
 | `ingest-unreadable-files-states.html` | 6 Nov 2026 | PROPOSED 6 Nov 2026 · IMPLEMENTED 6 Nov 2026 — what the row and the popover say for a file in an offered format that could not be used (a refusal with a reason) and for a stray format (left alone, a quiet footer); shipped in the same commit, `849b49dab` (`PipelineSummary.swift`, `ProjectDiagnosticPopover.swift`). |
@@ -373,10 +373,10 @@ _The old sign-in flow's three mockups (`miro-flow.html`, `miro-native-flow.html`
 | `sessions-grid-playground.html` | 6 Aug 2026 | SANDPIT · design settled 6 Aug 2026 — the width-at-three-widths instrument behind the Sessions grid |
 | `sessions-popover-navigation.html` | 14 Aug 2026 | IMPLEMENTED — the native session switcher replaced the embedded left panel (0.25.0) |
 | `session-tapestry.html` | 6 Oct 2026 | *unreviewed* — first sketch of the session timeline (`experiments/session-tapestry/README.md`) |
-| `session-tapestry-scale.html` | 6 Oct 2026 | *unreviewed* — the session timeline's scale rule, from measured transcript rates (`experiments/session-tapestry/README.md`) |
+| `session-tapestry-scale.html` | 6 Oct 2026 | SUPERSEDED 12 Oct 2026 by `docs/design-progressive-lenses.md` §4.6 and `tapestry-zoom-taper.html` — its rule (fit the longest session, clamp to 1–4 s/px) was replaced by fitting the shortest kept session with a short-session taper (`utils/tapestryScale.ts`). |
 | `sessions-timeline-strip.html` | 17 Oct 2026 | IMPLEMENTED 17 Oct 2026 — the session timeline strip, motion and per-visit flags are documented as built (`c1ba9dcfc`) and ship through the session-tapestry implementation. |
 | `tapestry-zoom-scale.html` | 10 Nov 2026 | *unreviewed* — the timeline zoom scale |
-| `tapestry-zoom-taper.html` | 10 Nov 2026 | *unreviewed* — the timeline zoom taper that opens the Sessions grid at a readable scale (`docs/design-progressive-lenses.md` §4.6.1) |
+| `tapestry-zoom-taper.html` | 10 Nov 2026 | IMPLEMENTED 9 Nov 2026 — the timeline zoom taper that opens the Sessions grid at a readable scale (`docs/design-progressive-lenses.md` §4.6.1, `utils/tapestryScale.ts`). |
 
 ## sidebar
 

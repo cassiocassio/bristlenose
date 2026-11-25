@@ -1,4 +1,11 @@
+---
+last-trued: 2026-11-25
+trued-against: HEAD@main on 2026-11-25 (v0.48.0)
+---
+
 # Session tapestry
+
+> **Trued 25 Nov 2026 against 0.48.0.** The 6 Oct scale rule below is kept as the baseline and marked superseded; the lane and draw-order bullets under "In the app" were corrected. Nothing else changed.
 
 An expandable timeline slice under each row of the Sessions grid, showing:
 - section flags
@@ -7,6 +14,8 @@ An expandable timeline slice under each row of the Sessions grid, showing:
 - theme spans
 
 The design mockups are `docs/mockups/session-tapestry.html` (first sketch) and `docs/mockups/session-tapestry-scale.html` (the scale rule, from measured transcript rates).
+
+The same component also draws the transcript's sticky timeline (`islands/TranscriptPage.tsx`), with a Compact/Standard/Full detail switch (`islands/transcript/TimelineSplit.tsx`, mirrored to a native menu on the Mac). Its mockups are `docs/mockups/transcript-timeline-toggle.html` and `docs/mockups/transcript-timeline-native-menu.html`. A lane draws only when the session has something for it (see "Only the lanes a session has" below).
 
 ## Files
 
@@ -29,7 +38,7 @@ The app's preview pane will not open a local page much over 500 KB. That is why 
 
 ## Settled (6 Oct 2026)
 
-- **Scale:** one shared scale per project, fitted to the longest session and held between 1 and 4 s/px. The speaker lane switches from clips to slivers above 2.5 s/px. Zoom runs from that fit down to 0.25 s/px.
+- **Scale:** _(superseded 12 Oct and 9 Nov 2026: the fit is now to the shortest kept session, with a short-session taper, no 1 s/px floor, and zoom down to `min(0.25, fit/4)`; see `docs/design-progressive-lenses.md` §4.6 and §4.6.1 and `utils/tapestryScale.ts`. The 6 Oct rule as written:)_ one shared scale per project, fitted to the longest session and held between 1 and 4 s/px. The speaker lane switches from clips to slivers above 2.5 s/px. Zoom runs from that fit down to 0.25 s/px.
 - **Top lane:** sections, not s08 topics. "Topics" is not a product noun. ~~Each section is flagged at its first quote in the session~~ — since 17 Oct 2026 **every visit** is flagged: a new flag wherever the session's quotes move into another section, in time order, so a participant who returns to the basket is flagged there twice (`section_visits` in `routes/tapestry.py`, the transcript chain's rule). The first visit to a section is the anchor the row's User journey chain links to. The chain itself keeps the report's section order and first arrivals, by design: it is the simple version for comparing across the grid, and the timeline and the transcript carry the messy real path.
 - **Clip colour:** the per-turn scene colour. These are the colour lab's defaults. The pipeline runs steps 1–6; step 7 is a lab handle only (see below):
   1. Crop black bars: drop an edge row or column when 85% of its pixels have luma below 30.
@@ -96,8 +105,8 @@ Designed in `docs/mockups/sessions-timeline-strip.html` (option C of three; the 
 - **Opening from a click animates** (`utils/tapestryMotion.ts`): the slice unfolds (220 ms); the strip's clips spring into the participant lane at its height and the open scale (320 ms, about 8% overshoot); everything else lands in a left-to-right domino, 60 ms plus its place across the visible width × 150 ms; and each word of the row's journey chain flies to its section's first-visit flag (380 ms), crossing where the user's path left the report's order. A revisit's flag has no word and fades in 120 ms later. The chain's arrows fade in place and the chain keeps its space while the timeline is open (its words live in the flags). Closing flies the words home and folds. None of it under reduced motion or `.bn-no-animations`, for Option-click, or for a timeline restored open on return.
 - **One label ink for the screen** (`utils/sceneInk.ts`): names on scene-coloured clips used to alternate dark and white, picked per clip by contrast; now the grid picks the ink most clips prefer, dark on a tie. On the Talismanic study dark won on 281 of 282 clips, its weakest at 4.1:1.
 - **Keyboard flags (6033b0f4, 17 Oct 2026):** an open timeline hides the chain's links, and the flags were mouse-only. Flags are now buttons with one roving Tab stop per timeline (← → move, Return or Space jumps), shared with the transcript's sticky timeline, which draws the same `SessionTapestry`.
-- **Only the lanes a session has (0.48.0, 24 Nov 2026):** a lane with nothing for the whole session (no sections, no team turns, no quotes, no themes) is not drawn and takes no room; Participant always draws. The rule is `utils/sessionLanes.ts`, read by both the timeline and the transcript's 2/3/5 detail switch (web and the Mac menu), so the switch offers only a level the session can draw. From the whole session's data, never the zoom.
-- **Draw order (0.48.0):** the lane-raised or hovered flag is drawn last, so it comes to the front, with a small drop shadow. The reading window and the player's moment draw after every lane, theme chips included; the window's drag grip stays under the bars so the lanes keep their hover. Staffs and the playhead sit on whole pixels plus 0.5, so a flag's left edge is one hairline. The SVG is `overflow: visible`, so a short session's last flag is not cut. Open: the reorder loses `mouseleave` in WebKit when the pointer leaves up or right (review finding 21).
+- **Only the lanes a session has (0.48.0, 24 Nov 2026):** a lane with nothing for the whole session (no sections, no team turns, no quotes, no themes) is not drawn and takes no room; Participant always draws. The rule is `utils/sessionLanes.ts`, read by both the timeline and the transcript's 2/3/5 detail switch (web and the Mac menu), so the switch offers only a level the session can draw. From the whole session's data, never the zoom. When only Compact can draw, the switch offers no detail at all; the Mac's View ▸ Timeline Detail dims the levels the session can't draw, and dims the whole submenu when only Compact can. The reader's chosen level is kept: a session that can draw less shows the lesser level, and the next session that can draw more shows the choice again. Compact's hint names only the lanes present. The time axis always draws, and the themes lane is only as tall as the rows it uses.
+- **Draw order (0.48.0):** the lane-raised or hovered flag is drawn last, so it comes to the front, with a small drop shadow. The reading window and the player's moment draw after every lane, theme chips included; the window's drag grip stays under the sentiment bars and theme chips so they keep their hover and click. It sits over the speaker lane's hit area, as the window always did, so inside the window the speaker lane's hover goes to the grip. Staffs and the hover cursor sit on whole pixels plus 0.5, so a flag's left edge is one hairline (the player's marker is not snapped). The SVG is `overflow: visible`, so a short session's last flag is not cut. Open: the reorder loses `mouseleave` in WebKit when the pointer leaves up or right (review finding 21).
 
 ## Measured
 

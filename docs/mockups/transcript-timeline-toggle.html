@@ -3113,7 +3113,8 @@ table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text
       <h3>The choice is the researcher's now</h3>
       <div id="m-meters"></div>
       <p><b>Standard</b> (sections, speakers, sentiment) is the default: it's the most that stays under a third of a laptop window, and it answers "where am I, who's talking, how did it go".</p>
-      <p>Iteration 1 shed lanes automatically on a short window. With the pulldown, the page no longer second-guesses: if the menu ticks Full, Full is what's drawn. Shedding behind a ticked item would make the menu lie. So the edge case is named, not handled: Full on a 720 px window takes about two fifths, and Standard on a 560 px one about the same. Compact is one click away.</p>
+      <p>Iteration 1 shed lanes automatically on a short window. With the pulldown, the page no longer second-guesses: if the menu ticks Full, Full is what's drawn. Shedding behind a ticked item would make the menu lie. </p>
+      <p><b>As built, 24 Nov 2026 (0.48.0):</b> the rule above still holds, since the menu ticks what is drawn. But a level the session has no data for is no longer listed: the timeline draws the lesser of the choice and what the session can draw, and the detail group is left out when only Compact can. Compact's hint names only the lanes present, the View menu dims the levels it can't draw, and the reading window draws over every lane, flags included, with its drag grip underneath. Rule: <code>frontend/src/utils/sessionLanes.ts</code>.So the edge case is named, not handled: Full on a 720 px window takes about two fifths, and Standard on a 560 px one about the same. Compact is one click away.</p>
       <p>The tapestry's 14 px under the timecodes is room for macOS's overlay scrollbar; with no zoom in the slot there's never a scrollbar, so it could go. A cheap saving, not taken here.</p>
     </aside>
   </div>

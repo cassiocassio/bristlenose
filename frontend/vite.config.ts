@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
@@ -14,6 +14,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["src/test-setup.ts"],
+    // Vitest swaps every CSS import for "" unless it is included here, `?raw` too. The theme's
+    // files are included so a test can read them as text (the keyline lab pins its shipped
+    // values to them); no module imports theme CSS for its styles, so nothing else changes.
+    css: { include: [/bristlenose\/theme\/.*\.css/] },
     // jsdom withholds localStorage/sessionStorage on an OPAQUE origin, and
     // an explicit `url` is the only way to get a real one. Without this,
     // `localStorage` is `undefined` — not empty, undefined — so every
@@ -28,6 +32,12 @@ export default defineConfig({
     port: 5173,
     cors: true,
     origin: "http://localhost:5173",
+    // The default (the workspace root) plus the theme CSS, which the keyline lab's tests read
+    // as text (`?raw`) to pin the lab's shipped values to the shipped files. A `?raw` import
+    // outside `fs.allow` is refused ("Denied ID"); the theme is public CSS the app serves anyway.
+    fs: {
+      allow: [searchForWorkspaceRoot(process.cwd()), path.resolve(__dirname, "../bristlenose/theme")],
+    },
     proxy: {
       "/api": "http://localhost:8484",
       "/report": "http://localhost:8484",

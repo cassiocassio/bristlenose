@@ -1,0 +1,147 @@
+/* Keyline lab page chrome: the frame AROUND the specimens, never on them.
+   Every rule here lays out the lab (handles, swatch grid, readouts, comparison
+   frames); none touches a tag, so what a tag shows is the theme's CSS as the
+   handles have retuned it. Tokens only. Dev-only surface. */
+
+.bn-kl {
+    display: grid;
+    grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
+    gap: var(--bn-space-xl);
+    align-items: start;
+    padding-bottom: var(--bn-space-2xl);
+}
+
+.bn-kl[data-frame] {
+    display: block;
+}
+
+@media (max-width: 52rem) {
+    .bn-kl {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.bn-kl-handles {
+    position: sticky;
+    top: var(--bn-space-md);
+    max-height: calc(100vh - 2 * var(--bn-space-md));
+    overflow-y: auto;
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+}
+
+.bn-kl-handles fieldset {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    margin: 0 0 var(--bn-space-md);
+    padding: var(--bn-space-sm) var(--bn-space-md) var(--bn-space-md);
+}
+
+.bn-kl-handles legend {
+    font-weight: var(--bn-weight-emphasis);
+    padding: 0 var(--bn-space-xs);
+}
+
+.bn-kl-handle {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr) 2.75rem;
+    gap: var(--bn-space-sm);
+    align-items: center;
+    margin-top: var(--bn-space-sm);
+}
+
+.bn-kl-handle input[type="range"] {
+    width: 100%;
+    min-width: 0;
+}
+
+.bn-kl-handle output {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.bn-kl-check {
+    display: flex;
+    gap: var(--bn-space-sm);
+    align-items: center;
+    margin-top: var(--bn-space-sm);
+}
+
+.bn-kl-note {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    margin: var(--bn-space-xs) 0 0;
+}
+
+.bn-kl-warn {
+    color: var(--bn-colour-negative);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.bn-kl-section {
+    margin-bottom: var(--bn-space-xl);
+}
+
+.bn-kl-swatches {
+    display: grid;
+    grid-template-columns: 4.5rem repeat(7, max-content);
+    gap: var(--bn-space-md) var(--bn-space-lg);
+    align-items: start;
+    padding: var(--bn-space-md) var(--bn-space-sm);
+}
+
+.bn-kl-swatch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-xs);
+    align-items: flex-start;
+}
+
+.bn-kl-reading {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-micro);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.bn-kl-table {
+    border-collapse: collapse;
+    font-size: var(--bn-text-label);
+    font-variant-numeric: tabular-nums;
+}
+
+.bn-kl-table th,
+.bn-kl-table td {
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: var(--bn-space-xs) var(--bn-space-md) var(--bn-space-xs) 0;
+    text-align: left;
+}
+
+.bn-kl-compare {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--bn-space-md);
+}
+
+.bn-kl-compare figure {
+    margin: 0;
+}
+
+.bn-kl-compare iframe {
+    width: 100%;
+    height: 26rem;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+}
+
+.bn-kl-css {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    white-space: pre;
+    overflow-x: auto;
+    padding: var(--bn-space-md);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+}

@@ -39,6 +39,7 @@ export default defineConfig({
       "./pages/PickerSpecimenTab": path.resolve(__dirname, "src/pages/specimenTabs.export.tsx"),
       "./pages/TagSpecimenTab": path.resolve(__dirname, "src/pages/specimenTabs.export.tsx"),
       "./pages/StyleGuideTab": path.resolve(__dirname, "src/pages/specimenTabs.export.tsx"),
+      "./pages/KeylineLabTab": path.resolve(__dirname, "src/pages/specimenTabs.export.tsx"),
     },
   },
   build: {

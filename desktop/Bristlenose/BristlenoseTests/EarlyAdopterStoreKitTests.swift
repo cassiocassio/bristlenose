@@ -225,7 +225,7 @@ struct EarlyAdopterStoreKitTests {
     func purchaseIsSeen() async throws {
         await clean()
         let store = try await appStoreStore()
-        await try buy(daysAgo: 0, .renewUntilNow).finish()
+        try await buy(daysAgo: 0, .renewUntilNow).finish()
         await store.refreshAfterPurchase()
         guard case .subscribed = store.state else {
             Issue.record("state after purchase: \(store.state)"); return

@@ -1514,7 +1514,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} на місяць",
-    "trialLead": "Перші {{trial}} — безкоштовно.",
+    "trialLead": "Безкоштовно {{trial}}.",
     "trialDays_one": "{{count}} день",
     "trialDays_few": "{{count}} дні",
     "trialDays_many": "{{count}} днів",

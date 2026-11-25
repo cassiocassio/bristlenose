@@ -1514,7 +1514,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} в месяц",
-    "trialLead": "Первые {{trial}} — бесплатно.",
+    "trialLead": "Бесплатно {{trial}}.",
     "trialDays_one": "{{count}} день",
     "trialDays_few": "{{count}} дня",
     "trialDays_many": "{{count}} дней",
@@ -1536,6 +1536,6 @@
     "failed": "Покупку не удалось завершить. Попробуйте ещё раз чуть позже.",
     "unavailable": "App Store сейчас недоступен. Попробуйте ещё раз чуть позже.",
     "tryAgain": "Повторить",
-    "aiBilling": "Анализ использует ваш собственный аккаунт ИИ (Claude, ChatGPT, Gemini или Azure OpenAI), который поставщик оплачивает отдельно."
+    "aiBilling": "Анализ использует ваш собственный аккаунт ИИ (Claude, ChatGPT, Gemini или Azure OpenAI), за который поставщик выставляет вам отдельный счёт."
   }
 }

@@ -68,6 +68,15 @@ final class SubscriptionStore: ObservableObject {
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result {
                     await transaction.finish()
+                    // An Ask to Buy approval, or a purchase made on another
+                    // Mac, arrives here, and its entitlement lags `finish()`
+                    // as a purchase made in the sheet does: read until it shows.
+                    if transaction.productID == SubscriptionAccess.monthlyProductID,
+                       transaction.revocationDate == nil,
+                       (transaction.expirationDate ?? .distantFuture) > Date() {
+                        await self?.refreshAfterPurchase()
+                        continue
+                    }
                 }
                 await self?.refresh()
             }
@@ -93,8 +102,12 @@ final class SubscriptionStore: ObservableObject {
             }
         }
 
+        // Read now, published with the state below: published here, a trial
+        // purchase flipped the open sheet to the lapsed wording while the
+        // entitlement was still being read.
+        var eligible: Bool?
         if let sub = product?.subscription {
-            introEligible = await sub.isEligibleForIntroOffer
+            eligible = await sub.isEligibleForIntroOffer
         }
 
         var ids: Set<String> = []
@@ -126,6 +139,7 @@ final class SubscriptionStore: ObservableObject {
             since = SubscriptionAccess.earlyAdopterSince(state: newState,
                                                          history: await Self.history() + entitled)
         }
+        if let eligible { introEligible = eligible }
         state = newState
         earlyAdopterSince = since
     }

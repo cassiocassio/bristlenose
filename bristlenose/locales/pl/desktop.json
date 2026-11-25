@@ -1514,7 +1514,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} miesięcznie",
-    "trialLead": "Pierwsze {{trial}} za darmo.",
+    "trialLead": "Za darmo przez {{trial}}.",
     "trialDays_one": "{{count}} dzień",
     "trialDays_few": "{{count}} dni",
     "trialDays_many": "{{count}} dni",

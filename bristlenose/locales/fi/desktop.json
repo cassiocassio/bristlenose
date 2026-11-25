@@ -1412,7 +1412,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} kuukaudessa",
-    "trialLead": "Ensimmäiset {{trial}} ilmaiseksi.",
+    "trialLead": "{{trial}} ilmaiseksi.",
     "trialDays_one": "{{count}} päivä",
     "trialDays_other": "{{count}} päivää",
     "trialBody": "Analysoi tämä tutkimus ja niin monta muuta kuin haluat kokeilun aikana. Projektisi pysyvät luettavina, tilasit tai et.",

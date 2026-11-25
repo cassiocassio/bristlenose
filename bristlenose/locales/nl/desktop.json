@@ -1412,7 +1412,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} per maand",
-    "trialLead": "De eerste {{trial}} gratis.",
+    "trialLead": "{{trial}} gratis.",
     "trialDays_one": "{{count}} dag",
     "trialDays_other": "{{count}} dagen",
     "trialBody": "Analyseer deze studie, en zoveel andere als je wilt tijdens de proefperiode. Je projecten blijven leesbaar, of je je nu abonneert of niet.",

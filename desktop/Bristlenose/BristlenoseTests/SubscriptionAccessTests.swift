@@ -222,11 +222,12 @@ struct SubscriptionAccessTests {
     }
 
     /// The paywall's trial words come from the real locale files: in every
-    /// language the app ships, a 7-day trial resolves to a phrase with the
-    /// number in it, and the lines it is dropped into leave no placeholder
-    /// behind. Catches a missing plural stem (which would fall back to English)
-    /// or a mistyped `{{trial}}`.
-    @MainActor @Test("every language says a 7-day trial, and the sheet's lines fill")
+    /// language the app ships, a 1-, 3- and 7-day trial resolves to a phrase
+    /// with the number in it, and the lines it is dropped into leave no
+    /// placeholder behind. A missing key or plural stem falls back to English
+    /// and would still pass those checks, so every line must also differ from
+    /// its English rendering. Counts 1 and 3 reach the `_one` and `_few` stems.
+    @MainActor @Test("every language words the trial and fills the sheet's lines in its own words")
     func trialWordedInEveryLanguage() {
         let locales = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
@@ -234,22 +235,43 @@ struct SubscriptionAccessTests {
             .appendingPathComponent("bristlenose/locales")
         let i18n = I18n()
         i18n.configure(localesDirectory: locales)
-        i18n.setLocale("en")
-        let english = i18n.plural("desktop.subscription.trialDays", count: 7)
-        #expect(english == "7 days")
-        for code in I18n.supportedLocales.sorted() {
-            i18n.setLocale(code)
-            let days = i18n.plural("desktop.subscription.trialDays", count: 7)
-            #expect(days.contains("7") && !days.contains("trialDays"), "\(code): \(days)")
-            // A missing stem falls back to English and would still read "7 days":
-            // every other language must say it in its own words.
-            if code != "en" { #expect(days != english, "\(code) fell back to English") }
+
+        func lines(_ count: Int) -> [String: String] {
+            let days = i18n.plural("desktop.subscription.trialDays", count: count)
+            var out = ["trialDays": days]
             for key in ["trialLead", "trialTerms"] {
-                let line = i18n.t("desktop.subscription.\(key)", ["trial": days, "price": "£9.99"])
-                #expect(!line.contains("{{") && line.contains("7"), "\(code) \(key): \(line)")
+                out[key] = i18n.t("desktop.subscription.\(key)", ["trial": days, "price": "£9.99"])
             }
-            let price = i18n.t("desktop.subscription.pricePerMonth", ["price": "£9.99"])
-            #expect(price.contains("£9.99") && !price.contains("{{"), "\(code): \(price)")
+            out["pricePerMonth"] = i18n.t("desktop.subscription.pricePerMonth", ["price": "£9.99"])
+            return out
+        }
+
+        for count in [1, 3, 7] {
+            i18n.setLocale("en")
+            let english = lines(count)
+            #expect(english["trialDays"] == (count == 1 ? "1 day" : "\(count) days"))
+            for code in I18n.supportedLocales.sorted() {
+                i18n.setLocale(code)
+                for (key, line) in lines(count) {
+                    #expect(line.contains("\(count)") || key == "pricePerMonth", "\(code) \(key): \(line)")
+                    #expect(!line.contains("{{") && !line.contains("desktop.subscription"), "\(code) \(key): \(line)")
+                    if code != "en" {
+                        #expect(line != english[key], "\(code) \(key) fell back to English: \(line)")
+                    }
+                }
+                // The templates too: a fallen-back English line filled with
+                // this language's day word ("Free for the first 7 Tage") no
+                // longer equals the English rendering, but its template does.
+                if code != "en" {
+                    for key in ["trialLead", "trialTerms", "pricePerMonth"] {
+                        let template = i18n.t("desktop.subscription.\(key)")
+                        i18n.setLocale("en")
+                        let englishTemplate = i18n.t("desktop.subscription.\(key)")
+                        i18n.setLocale(code)
+                        #expect(template != englishTemplate, "\(code) \(key) fell back to English")
+                    }
+                }
+            }
         }
     }
 }

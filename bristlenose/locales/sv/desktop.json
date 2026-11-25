@@ -1412,7 +1412,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} i månaden",
-    "trialLead": "Gratis de första {{trial}}.",
+    "trialLead": "Gratis i {{trial}}.",
     "trialDays_one": "{{count}} dag",
     "trialDays_other": "{{count}} dagar",
     "trialBody": "Analysera den här studien, och så många du vill under provperioden. Dina projekt går att läsa oavsett om du prenumererar eller inte.",

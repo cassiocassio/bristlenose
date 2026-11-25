@@ -1412,7 +1412,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} al mes",
-    "trialLead": "Gratis los primeros {{trial}}.",
+    "trialLead": "Gratis durante {{trial}}.",
     "trialDays_one": "{{count}} día",
     "trialDays_other": "{{count}} días",
     "trialBody": "Analiza este estudio y todos los que quieras durante la prueba. Tus proyectos seguirán siendo legibles te suscribas o no.",

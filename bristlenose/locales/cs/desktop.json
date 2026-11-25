@@ -1494,7 +1494,7 @@
   },
   "subscription": {
     "pricePerMonth": "{{price}} měsíčně",
-    "trialLead": "Prvních {{trial}} zdarma.",
+    "trialLead": "{{trial}} zdarma.",
     "trialDays_one": "{{count}} den",
     "trialDays_few": "{{count}} dny",
     "trialDays_other": "{{count}} dní",

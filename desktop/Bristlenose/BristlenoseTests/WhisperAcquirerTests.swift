@@ -345,7 +345,10 @@ final class RecordingEvents: WhisperAcquisitionEvents {
     func acquisitionProgress(done: Int64, total: Int64, from: WhisperModelAcquirer) { progress.append(done) }
     func acquisitionEnded(_ outcome: WhisperAcquisitionOutcome, from: WhisperModelAcquirer) { self.outcome = outcome }
 
-    func waitForEnd(seconds: Double = 30) async {
+    /// The deadline only turns a hang into a failure, so a green run never pays it. Generous on
+    /// purpose: on the 3-core CI runners these tests wait 15-40 s behind the rest of the suite
+    /// (25 Nov 2026), and 30 s failed the repair tests on most runs.
+    func waitForEnd(seconds: Double = 120) async {
         let deadline = ContinuousClock.now + .seconds(seconds)
         while outcome == nil, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(10)) }
     }

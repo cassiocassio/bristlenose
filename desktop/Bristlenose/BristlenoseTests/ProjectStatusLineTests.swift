@@ -153,7 +153,10 @@ import Testing
     }
 
     @Test func aShimmeringLineStartsWhereALabelDoesWhenStretched() throws {
-        #expect(abs(try inkOffset(.shimmer, named: "shimmer")) <= 0.5)
+        // One pixel, not half a point: the CI runners draw at 1x, where the shimmer's lighter
+        // first column of antialiasing (alpha 36/255 against the label's 79, 25 Nov 2026)
+        // falls under the ink cut-off and reads one point late. Centred is tens of points.
+        #expect(abs(try inkOffset(.shimmer, named: "shimmer")) <= 1)
     }
 
     @Test func aButtonLineStartsWhereALabelDoesWhenStretched() throws {

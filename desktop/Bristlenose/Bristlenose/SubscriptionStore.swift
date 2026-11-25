@@ -164,6 +164,27 @@ final class SubscriptionStore: ObservableObject {
 
     enum PurchaseOutcome: Equatable { case subscribed, cancelled, pending, failed }
 
+    /// After a verified purchase: read the entitlement again until it shows,
+    /// for up to `patience`. Straight after `finish()` the store's own record
+    /// does not list the purchase yet, and about a second later it does
+    /// (measured against the local test store, 25 Nov 2026). A single read
+    /// told a buyer who had just paid that the purchase didn't go through, and
+    /// nothing looked again until the app was next activated: a purchase made
+    /// here is returned to `purchase()`, not delivered through
+    /// `Transaction.updates`. Internal so the StoreKit suite can drive it.
+    func refreshAfterPurchase(patience: Duration = .seconds(5)) async {
+        let deadline = ContinuousClock.now + patience
+        while true {
+            await refresh()
+            if case .subscribed = state { return }
+            if ContinuousClock.now >= deadline {
+                log.error("purchase verified, but no entitlement after \(String(describing: patience), privacy: .public)")
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+    }
+
     func purchase() async -> PurchaseOutcome {
         if Self.refusesSignInPrompts {
             log.error("purchase refused under a test host: it would reach the real App Store")
@@ -175,7 +196,7 @@ final class SubscriptionStore: ObservableObject {
             case .success(let verification):
                 guard case .verified(let t) = verification else { return .failed }
                 await t.finish()
-                await refresh()
+                await refreshAfterPurchase()
                 // Report what the gate will actually do, not what the store said.
                 if case .subscribed = state { return .subscribed }
                 return .failed

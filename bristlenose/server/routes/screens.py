@@ -58,7 +58,14 @@ from bristlenose.screen_text.screens import (
 from bristlenose.server import speaker_slots
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames
-from bristlenose.server.models import ClusterQuote, Project, ScreenArrangement, ScreenCluster
+from bristlenose.server.models import (
+    ClusterQuote,
+    Project,
+    Quote,
+    QuoteEdit,
+    ScreenArrangement,
+    ScreenCluster,
+)
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.server.screen_text_job import session_durations
 from bristlenose.utils.bundled_binary import binary_command
@@ -92,6 +99,19 @@ def _output_dir(request: Request) -> Path | None:
 
 def screens_enabled(request: Request) -> bool:
     return screen_text.wanted(bool(getattr(request.app.state, "dev", False)))
+
+
+def shown_text(db: Session, quotes: list[Quote]) -> dict[int, str]:
+    """Each quote's words as its card shows them: the researcher's latest correction, else the
+    quote. A pin's line goes to words the card highlights, so quotes are matched on these, never
+    on the transcript span around them (25 Nov 2026: a line went to "shopping bag", said in the
+    span and not in the quote, and nothing in the card lit up)."""
+    edits: dict[int, str] = {}
+    if quotes:
+        for e in (db.query(QuoteEdit).filter(QuoteEdit.quote_id.in_([q.id for q in quotes]))
+                  .order_by(QuoteEdit.id)):
+            edits[e.quote_id] = e.edited_text
+    return {q.id: edits.get(q.id) or q.text for q in quotes}
 
 
 def _ident(project_id: int, mtimes: dict[str, int]) -> tuple[Any, ...]:
@@ -326,6 +346,7 @@ def derive_project_screens(
         return base, owner
 
     quotes = speaker_slots.evidence_quotes(db, project_id)
+    shown = shown_text(db, quotes)
     by_session: dict[str, list[dict[str, Any]]] = {}
     codes: dict[str, Counter[str]] = {}
     dom_of: dict[int, str] = {}
@@ -336,7 +357,7 @@ def derive_project_screens(
         by_session.setdefault(q.session_id, []).append({
             "dom_id": dom_id,
             "start": float(q.start_timecode), "end": float(q.end_timecode),
-            "text": q.verbatim_excerpt or q.text,
+            "text": shown[q.id],
         })
         codes.setdefault(q.session_id, Counter())[q.participant_id] += 1
     ident = _ident(project_id, {sid: m for sid, (m, _) in indexes.items()})
@@ -344,7 +365,8 @@ def derive_project_screens(
     # Membership, not names: a rename is applied after the cache and never re-derives.
     members = tuple((ns.key, tuple(sorted(ns.dom_ids))) for ns in named)
     key = (*ident, len(quotes), max((q.id for q in quotes), default=0),
-           max((str(q.last_imported_at) for q in quotes), default=""), members)
+           max((str(q.last_imported_at) for q in quotes), default=""), members,
+           hash(tuple(sorted(shown.items()))))  # a researcher's correction re-matches its quote
     screens = _CACHE.get(key)
     if screens is None:
         with _DERIVE_LOCK:  # one derivation at a time: a second request waits for the first's
@@ -573,12 +595,14 @@ def _has_screens(request: Request, project_id: int, idir: Path, mtimes: dict[str
         try:
             dom_of: dict[int, str] = {}
             by_session: dict[str, list[dict[str, Any]]] = {}
-            for q in speaker_slots.evidence_quotes(db, project_id):
+            quotes = speaker_slots.evidence_quotes(db, project_id)
+            shown = shown_text(db, quotes)
+            for q in quotes:
                 dom_id = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
                 dom_of[q.id] = dom_id
                 by_session.setdefault(q.session_id, []).append({
                     "dom_id": dom_id, "start": float(q.start_timecode),
-                    "end": float(q.end_timecode), "text": q.verbatim_excerpt or q.text})
+                    "end": float(q.end_timecode), "text": shown[q.id]})
             named = _named_screens(db, project_id, dom_of)
         finally:
             db.close()

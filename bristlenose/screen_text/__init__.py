@@ -34,7 +34,8 @@ from typing import Literal
 #: Bump when anything changes what an index holds: it is in every index's cache key.
 #: 4 (25 Nov 2026): a slot is read at its first frame, the frame its still shows; and ``fold``
 #: drops a word-final full stop, which changes the folded lines an index keeps.
-INDEX_VERSION = 4
+#: 5 (25 Nov 2026): an episode lists the samples its runs bridge without reading it (``missed``).
+INDEX_VERSION = 5
 
 # Why something cannot be read, as a case, never a sentence: the SPA and the Mac app say it in the
 # researcher's language, and the raw detail (an exception, ffmpeg's stderr) goes to the log only.

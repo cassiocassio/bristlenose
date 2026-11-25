@@ -599,9 +599,22 @@ sessions (`experiments/screen-text/README.md`, fourth pass):
   2 s later: on three real recordings 50 of 51, 66 of 66 and 6 of 8 slots were a different frame
   from the still, and on project-ikea p3 at 01:52 a menu open for those 2 s pinned a quote to text
   the still does not show. Pinned by `test_the_still_at_a_samples_time_is_the_frame_that_was_read`.
-- **A stop word with a contraction ending is not a rare word**: "what's" is "what", so it cannot
-  pin a quote by itself (a possessive of a real word still can). A full stop that ends a word is
-  folded away ("bed." is "bed"), while one inside a word stays (`ikea.com`, `3.5`).
+- **No line on doubt** (25 Nov 2026, owner: "a matter of not drawing the line if there's doubt").
+  One shared word pins only a line that is that word (a heading, a button): "in Swedish" had
+  pinned to *Swedish Restaurant & Food* and "Oxford Street" to *King Street Hammersmith*. A stop
+  word with a contraction ending ("what's") is never a rare word. A full stop that ends a word is
+  folded away ("bed." is "bed"); one inside a word stays (`ikea.com`, `3.5`).
+- **A line is on a still only if it was read at that moment.** An episode's run bridges one missed
+  sample (OCR flicker), and the index lists the bridged samples (`missed`, index version 5): a
+  heading read at 148 s and 156 s but scrolled away at 152 s was drawn at its old place on the
+  152 s still, over the filter that had moved there.
+- **Quotes are matched on the words their card shows**: the researcher's correction, else the
+  quote, never the transcript span around it (`routes/screens.py` `shown_text`). The span held
+  "shopping bag" where the quote did not, so a line was drawn and nothing in the card lit up.
+- **Measured on project-ikea after these (25 Nov 2026):** 11 pins, every one a run of two or more
+  words in the card's text, by eye all on the line the quote names; 10 quotes placed and
+  unpinned. Open: a section screen's still can miss what its quotes discuss when that moment has
+  under 60% of the screen's most lines (p2's login prompt, 29 lines, against the footer's 66).
 - **47 quotes placed on a screen; 15 pinned by shared words, 8 by meaning, 24 left unpinned.**
 - **Precision 17 of 23** against hand labels, once lines are limited to the web page (no call tiles,
   no browser bars) and page furniture is dropped (a line flagged sticky, or seen on 5+ screens of a

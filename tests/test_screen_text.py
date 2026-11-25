@@ -84,6 +84,21 @@ def test_episodes_bridge_one_missing_sample_and_split_on_a_longer_gap() -> None:
     rec = sti.index_frames(iter(_frames([float(t) for t in seen])), eng)
     [ep] = rec["episodes"]
     assert ep["runs"] == [[0.0, 8.0], [24.0, 24.0]]
+    assert ep["missed"] == [4.0]  # bridged, but not read there
+
+
+def test_a_line_bridged_across_a_moment_is_not_on_that_moments_still() -> None:
+    # project-ikea p2, 25 Nov 2026: a heading read at 148 s and 156 s, scrolled away at 152 s,
+    # was drawn at its old place on the 152 s still, over the filter that had moved there.
+    idx = _session("/gb/en", [("/search", [], 0, 8)])
+    idx["episodes"].append({**_episode("180 items for beds modern white", [0.1, 0.25, 0.3, 0.03], [[0, 8]]),
+                            "missed": [4.0]})
+    # More text at 4 s (the page scrolled into new lines), so 4 s would be the still if it pinned.
+    idx["episodes"] += [_episode(f"filter {i}", [0.1, 0.4 + i * 0.05, 0.2, 0.02], [[4, 4]]) for i in range(5)]
+    q = {"dom_id": "q-p1-1", "start": 1, "end": 7, "text": "beds modern white, floating design"}
+    [screen] = derive_screens([SessionInput("s1", "p1", idx, [q])])
+    [tab] = screen["tabs"]
+    assert tab["t"] != 4.0 and [p["phrase"] for p in tab["pins"]] == ["beds modern white"]
 
 
 def test_a_line_that_moves_is_a_new_episode_at_its_new_place() -> None:
@@ -330,11 +345,19 @@ def test_match_needs_a_content_word_or_a_rare_long_word() -> None:
     assert match("die lieferverfugbarkeit ist", lines, {"lieferverfugbarkeit"})[0] == "lieferverfugbarkeit"
 
 
+def test_one_shared_word_in_a_longer_line_is_doubt_not_a_pin() -> None:
+    # Both drew a line to the wrong place on project-ikea p2 (25 Nov 2026).
+    footer = [_ln("Swedish Restaurant & Food", 0.6, 0.6)]
+    assert match("It asks you to log in and says a greeting in Swedish", footer, {"swedish"}) is None
+    stores = [_ln("King Street Hammersmith, London", 0.7, 0.4)]
+    assert match("Is Greenwich really the closest? What about Oxford Street?", stores, {"street"}) is None
+
+
 def test_a_contracted_stop_word_is_not_a_rare_word() -> None:
     # "what's" has six letters but is "what": it pinned a quote to a menu line (25 Nov 2026).
     said = "ideas, what's new? I've thrown my way to the bed section"
-    menu = [_ln("What's on in store?", 0.0, 0.3)]
-    assert match(said, menu, {"what's", "store"}) is None
+    menu = [_ln("What's", 0.0, 0.3)]  # one word, so only the contraction rule stops it
+    assert match(said, menu, {"what's"}) is None
     page = [_ln("What's new", 0.0, 0.6)]
     assert match(said, page, set()) == ("what's new", page[0])  # the phrase still pins
 

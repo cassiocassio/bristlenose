@@ -15,7 +15,7 @@ from bristlenose.screen_text import INDEX_VERSION
 from bristlenose.screen_text.engine import FakeEngine
 from bristlenose.screen_text.index import cache_key, index_dir
 from bristlenose.server.app import create_app
-from bristlenose.server.models import Quote, SourceFile
+from bristlenose.server.models import Quote, QuoteEdit, SourceFile
 from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.server.screen_text_job import ScreenTextJob
@@ -102,6 +102,35 @@ def test_a_quote_said_on_a_screen_is_pinned_to_the_line_it_shares(project: Path,
     [tab] = screen["tabs"]
     assert tab["session_id"] == "s1" and tab["code"] == q.participant_id
     assert [p["dom_id"] for p in tab["pins"]] == [f"q-{q.participant_id}-{int(q.start_timecode)}"]
+
+
+def test_a_pin_matches_the_words_the_card_shows(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Words said in the transcript span but not in the quote draw no line (nothing in the card
+    would light up); a researcher's correction that says them does (project-ikea, 25 Nov 2026)."""
+    monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    _give_s1_a_video(app, project)
+    q = _first_quote(app)
+    db = app.state.db_factory()
+    try:
+        row = db.get(Quote, q.id)
+        row.verbatim_excerpt = f"{row.text} Then the shopping basket button."
+        db.commit()
+    finally:
+        db.close()
+    _write_index(app, project, [{"text": "Shopping basket", "box": [0.4, 0.5, 0.3, 0.04]}],
+                 q.start_timecode - 4, q.end_timecode + 4)
+    client = AuthTestClient(app)
+    [tab] = client.get("/api/projects/1/screens").json()["screens"][0]["tabs"]
+    assert tab["pins"] == []
+    db = app.state.db_factory()
+    try:
+        db.add(QuoteEdit(quote_id=q.id, edited_text=f"{q.text} The shopping basket."))
+        db.commit()
+    finally:
+        db.close()
+    [tab] = client.get("/api/projects/1/screens").json()["screens"][0]["tabs"]
+    assert [p["phrase"] for p in tab["pins"]] == ["shopping basket"]
 
 
 def test_a_second_quote_in_the_second_is_its_own_pin(project: Path,

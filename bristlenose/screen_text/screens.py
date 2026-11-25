@@ -20,8 +20,10 @@ The rules are the measured ones (``docs/design-screens.md`` §3.5–3.6,
   session — is never a pin target. Browser chrome above the page is cut by position.
 - **A quote is placed** on the screen its time overlaps most (±4 s), and **pinned** to one line on
   that screen's still when it shares a run of two or more words with it (with a content word), or
-  one rare long word. By words only: the sentence model that also matched by meaning is 1.8 GB and
-  does not ship. Measured precision for word pins: 13 right of 16.
+  the line is one rare long word the quote says. By words only: the sentence model that also
+  matched by meaning is 1.8 GB and does not ship. Measured precision for word pins: 13 right of 16
+  (before 25 Nov 2026, when one shared word in a longer line stopped pinning: no line on doubt).
+  A line is on a still only if it was read at that moment, not bridged across it.
 - **The still** for each screen and session is the moment, among those the session spent on it, that
   pins the most of that session's quotes there.
 """
@@ -301,7 +303,8 @@ def _good(phrase: str) -> bool:
 def match(spoken: str, lines: list[dict[str, Any]], rare: set[str],
           tokens: dict[int, list[str]] | None = None) -> tuple[str, dict[str, Any]] | None:
     """The best on-screen line for *spoken*: the longest shared run of words (2+, one a content
-    word), else one rare 6+ letter word; ties go to the larger line. None when nothing matches.
+    word), else a line that is one rare 6+ letter word the quote says; ties go to the larger line.
+    None when nothing matches: no line is drawn on doubt.
 
     *tokens* maps ``id(line)`` to its folded words, so a caller matching many quotes against the
     same lines folds each line once."""
@@ -329,9 +332,12 @@ def match(spoken: str, lines: list[dict[str, Any]], rare: set[str],
                 if k >= 2 and any(_content(x) for x in s[i:i + k]) and k > len(phrase.split()):
                     phrase = " ".join(s[i:i + k])
         if not phrase:
-            hit = [w for w in set(s) & set(t) if _rare_long(w) and w in rare]
-            if hit:
-                phrase = max(hit, key=len)
+            # One word pins only a line that is that word (a heading, a button): in a longer line
+            # it is one word of several, and said in passing ("in Swedish" pinned to "Swedish
+            # Restaurant & Food", "Oxford Street" to "King Street Hammersmith", 25 Nov 2026).
+            words = [x for x in t if any(c.isalpha() for c in x)]
+            if len(words) == 1 and words[0] in sset and _rare_long(words[0]) and words[0] in rare:
+                phrase = words[0]
         if not phrase or not _good(phrase):
             continue
         rank = (len(phrase.split()), ln["box"][2] * ln["box"][3])
@@ -401,9 +407,11 @@ def _session_tabs(
     on_at: dict[float, list[dict[str, Any]]] = {}
 
     def lines_at(t: float) -> list[dict[str, Any]]:
-        # Exactly what the still shows: a line seen up to a sample before is not on it.
+        # Exactly what the still shows: a line seen up to a sample before is not on it, and nor is
+        # one whose run bridges this sample without reading it (it may have scrolled away).
         if t not in on_at:
-            on_at[t] = [e for e in content if _on(e, t, 0.05)]
+            on_at[t] = [e for e in content if _on(e, t, 0.05)
+                        and not any(abs(m - t) <= 0.05 for m in e.get("missed", ()))]
         return on_at[t]
 
     def screen_of(q: dict[str, Any]) -> str | None:

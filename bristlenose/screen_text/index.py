@@ -256,6 +256,11 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
             key = (f, _place(ln["box"]))
             e = episodes.setdefault(key, {"text": ln["text"], "box": ln["box"], "sticky": f in sticky, "runs": []})
             if e["runs"] and t - e["runs"][-1][1] <= 2 * every + 0.01:
+                # The run bridges a sample that did not read the line: kept, so a still at that
+                # moment does not show the line where it last was (the page may have scrolled).
+                missed = [s for s, _ in samples if e["runs"][-1][1] + 0.01 < s < t - 0.01]
+                if missed:
+                    e.setdefault("missed", []).extend(missed)
                 e["runs"][-1][1] = t
             else:
                 e["runs"].append([t, t])

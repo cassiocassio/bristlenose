@@ -558,6 +558,19 @@
     white-space: nowrap;
 }
 
+/* All three states take the button's box: its line height (`normal`, since a
+   button does not inherit one), its block padding and its 1px border, here
+   transparent. The row aligns on baselines, so a slot taller above or below the
+   baseline than the title moved the title and everything under it: measured 3px
+   on a two-line title and 6px on a one-line one as the state changed (25 Nov
+   2026). The padding is `.bn-btn-sm`'s inside `.v2-layout`; change both. */
+.cb-running,
+.cb-applied {
+    line-height: normal;
+    padding-block: 0.25rem;
+    border: 1px solid transparent;
+}
+
 /* Running: muted ink, the house shimmer, and an ellipsis that grows
    ". .. ..." and repeats. Plain words, not a control. */
 .cb-running {
@@ -590,7 +603,7 @@
     font-size: var(--bn-text-caption);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
-    padding: 0.15em 0.55em;
+    padding-inline: 0.55em;
     border-radius: var(--bn-radius-pill);
     background: color-mix(in srgb, var(--bn-codebook-applied) 8%, transparent);
     cursor: default;

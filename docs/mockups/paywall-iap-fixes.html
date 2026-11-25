@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paywall fixes before submission</title>
+<!--
+  The frames are not drawn in CSS. They are PNGs of the SwiftUI sheet rendered
+  by AppKit itself: paywall-iap-fixes/render.swift copies PaywallView.offerBody
+  modifier for modifier ("before") and applies the proposed change ("after"),
+  hosts each in an NSHostingView and caches it to a bitmap at 2x, light and dark.
+  Shipped strings are read from bristlenose/locales/en/desktop.json at render
+  time; proposed strings are in the renderer's `proposed` table.
+  Re-render:  swiftc -O render.swift -o /tmp/probe && /tmp/probe ../../../bristlenose/locales/en/desktop.json .
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --page: light-dark(#f5f5f7, #1c1c1e);
+    --ink: light-dark(#1d1d1f, #f2f2f7);
+    --muted: light-dark(#6e6e73, #a1a1a6);
+    --rule: light-dark(#d2d2d7, #3a3a3c);
+    --frame: light-dark(#ffffff, #2c2c2e);
+    --hatch: light-dark(#e3d7a8, #5a4f2a);
+    --accent: light-dark(#0a64d6, #4ea1ff);
+    --new: light-dark(#fff4d6, #3d3520);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 16px 64px;
+    background: var(--page); color: var(--ink);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  }
+  main { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--muted); margin: 0 0 20px; }
+  .key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .key span::before { content: ""; display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 6px; border-radius: 2px; }
+  .key .k-art::before { background: var(--frame); border: 1px solid var(--rule); }
+  .key .k-com::before { background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); border-left: 2px solid var(--muted); }
+  .toolbar { position: sticky; top: 0; z-index: 2; background: var(--page); padding: 8px 0; border-bottom: 1px solid var(--rule); margin-bottom: 8px; font-size: 13px; }
+  .toolbar button { font: inherit; padding: 3px 10px; border: 1px solid var(--rule); background: var(--frame); color: var(--ink); border-radius: 6px; cursor: pointer; }
+  .toolbar button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+  /* Artefact zone: the rendered sheet and a neutral chrome bar, nothing else. */
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  figure { margin: 0; }
+  .shot { background: var(--frame); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 24px rgb(0 0 0 / .12); }
+  .bar { font: 11px/1 ui-monospace, Menlo, monospace; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--rule); letter-spacing: .02em; }
+  .shot img { display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto; }
+  .shot img.dark-only { display: none; }
+  body.dark .shot img.dark-only { display: block; }
+  body.dark .shot img.light-only { display: none; }
+
+  /* Commentary zone: hatching only in the edge band, never behind text. */
+  .commentary {
+    margin-top: 16px; padding: 14px 16px;
+    border: 7px solid transparent; border-left: 3px solid var(--muted);
+    background:
+      linear-gradient(var(--page), var(--page)) padding-box,
+      repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box;
+  }
+  .commentary .label { font: 11px/1 ui-monospace, Menlo, monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: block; margin-bottom: 8px; }
+  .commentary p, .commentary li { margin: 0 0 8px; }
+  .commentary ul, .commentary ol { padding-left: 20px; margin: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 4px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  th { color: var(--muted); font-weight: 600; }
+  code { font: 12px ui-monospace, Menlo, monospace; }
+  td.new { background: var(--new); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Paywall fixes before submission</h1>
+  <p class="lede">The Mac paywall sheet, before and after four fixes from the 25 Nov App Store review. For approval before any code changes. Rendered by AppKit from the SwiftUI view, not drawn.</p>
+
+  <div class="key"><span class="k-art">Artefact: the sheet as it renders</span><span class="k-com">Commentary: why, and what is new</span></div>
+  <div class="toolbar">Appearance:
+    <button type="button" id="b-light" aria-pressed="true">Light</button>
+    <button type="button" id="b-dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <h2>1 · First Analyse, eligible for the free trial</h2>
+  <div class="pair">
+    <figure><div class="shot"><div class="bar">before · shipped 0.48.0</div>
+      <img class="light-only" src="paywall-iap-fixes/before-trial-light.png" alt="Shipped paywall: bold title Try Bristlenose free for 7 days; the price appears only in grey small print below the buttons.">
+      <img class="dark-only" src="paywall-iap-fixes/before-trial-dark.png" alt="Shipped paywall, dark appearance."></div></figure>
+    <figure><div class="shot"><div class="bar">after · proposed</div>
+      <img class="light-only" src="paywall-iap-fixes/after-trial-light.png" alt="Proposed paywall: Bristlenose Monthly, then £9.99 a month as the large title, then Free for the first 7 days.">
+      <img class="dark-only" src="paywall-iap-fixes/after-trial-dark.png" alt="Proposed paywall, dark appearance."></div></figure>
+  </div>
+  <div class="commentary"><span class="label">Commentary</span>
+    <ul>
+      <li><strong>The billed amount is now the largest pricing element.</strong> Before, "free" was in the title and £9.99 only in footnote grey. Apple's Schedule 2 asks for the billed amount to be the most prominent pricing element; this was the review's most likely rejection.</li>
+      <li><strong>The plan's name is shown</strong> ("Bristlenose Monthly"), which 3.1.2 asks for. It is the display name from App Store Connect, read from StoreKit, not typed.</li>
+      <li><strong>"7 days" is read from the store.</strong> It is the introductory offer's period, formatted by Foundation in the reader's language. If App Store Connect has no free trial, this state is not shown at all: the lapsed layout below appears instead (the gate changes from "eligible" to "eligible <em>and</em> the product has a free-trial offer").</li>
+      <li>Everything under the price is the shipped sheet, in the shipped order, with the shipped words. Nothing else moves.</li>
+    </ul>
+  </div>
+
+  <h2>2 · Not eligible for the trial (lapsed, or trialled before)</h2>
+  <div class="pair">
+    <figure><div class="shot"><div class="bar">before · shipped 0.48.0</div>
+      <img class="light-only" src="paywall-iap-fixes/before-lapsed-light.png" alt="Shipped lapsed paywall: title Subscribe to keep analysing your studies; price only in small print.">
+      <img class="dark-only" src="paywall-iap-fixes/before-lapsed-dark.png" alt="Shipped lapsed paywall, dark appearance."></div></figure>
+    <figure><div class="shot"><div class="bar">after · proposed</div>
+      <img class="light-only" src="paywall-iap-fixes/after-lapsed-light.png" alt="Proposed lapsed paywall: Bristlenose Monthly, £9.99 a month, then Subscribe to keep analysing your studies.">
+      <img class="dark-only" src="paywall-iap-fixes/after-lapsed-dark.png" alt="Proposed lapsed paywall, dark appearance."></div></figure>
+  </div>
+  <div class="commentary"><span class="label">Commentary</span>
+    <ul>
+      <li>Same structure as the trial sheet: name, price, then one line. Your approved line "Subscribe to keep analysing your studies" stays word for word, one size down (headline instead of title).</li>
+      <li>One layout for both states means one code path, so the price can't fall back into the footnote in either.</li>
+    </ul>
+  </div>
+
+  <h2>3 · Ask to Buy: the purchase is waiting for a family organiser</h2>
+  <div class="pair">
+    <figure><div class="shot"><div class="bar">before · shipped 0.48.0</div>
+      <img class="light-only" src="paywall-iap-fixes/before-pending-light.png" alt="Shipped: Waiting for approval. Analysis starts once it is approved.">
+      <img class="dark-only" src="paywall-iap-fixes/before-pending-dark.png" alt="Shipped pending message, dark appearance."></div></figure>
+    <figure><div class="shot"><div class="bar">after · proposed</div>
+      <img class="light-only" src="paywall-iap-fixes/after-pending-light.png" alt="Proposed: Waiting for approval. Once it is approved, press Analyse again.">
+      <img class="dark-only" src="paywall-iap-fixes/after-pending-dark.png" alt="Proposed pending message, dark appearance."></div></figure>
+  </div>
+  <div class="commentary"><span class="label">Commentary</span>
+    <ul>
+      <li><strong>The shipped line promises something the code only sometimes does.</strong> Analysis starts on approval only if this sheet is still open when it arrives. After Not Now, a switch to another window, or a quit, nothing starts. Approval usually takes minutes to hours.</li>
+      <li>Proposed: say what actually happens. The other option is to keep the promise in code (remember the study across closing the sheet and relaunching, start it on approval). That is more code and a new behaviour, which your UX gate would need to approve on its own; the honest copy is the minimum change.</li>
+    </ul>
+  </div>
+
+  <h2>Strings</h2>
+  <div class="commentary"><span class="label">Commentary · string plan</span>
+    <p>Two new keys, two changed. Each is a 21-locale change (<code>scripts/check-locales.py --strict</code>). Highlighted cells are new wording for you to approve.</p>
+    <table>
+      <thead><tr><th>Key <code>desktop.subscription.*</code></th><th>Status</th><th>en</th></tr></thead>
+      <tbody>
+        <tr><td><code>pricePerMonth</code></td><td>new</td><td class="new">{{price}} a month</td></tr>
+        <tr><td><code>trialLead</code></td><td>new</td><td class="new">Free for the first {{trial}}.</td></tr>
+        <tr><td><code>trialTerms</code></td><td>changed: "7 days" becomes <code>{{trial}}</code></td><td>Free for {{trial}}, then {{price}} a month until you cancel. Cancel any time in App Store settings, at least a day before the trial ends to avoid being charged. Your AI provider bills you separately for what the analysis uses.</td></tr>
+        <tr><td><code>pending</code></td><td>changed</td><td class="new">Waiting for approval. Once it is approved, press Analyse again.</td></tr>
+        <tr><td><code>trialTitle</code></td><td>retired</td><td>Try Bristlenose free for 7 days</td></tr>
+        <tr><td><code>lapsedTitle</code></td><td>kept, smaller</td><td>Subscribe to keep analysing your studies</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px">"a month" stays written in the strings: there is one product and it is monthly. A test already pins the period to one month (<code>SubscriptionGateTests.swift:103</code>), so a change in App Store Connect fails a test instead of reaching the sheet.</p>
+  </div>
+
+  <h2>For you to decide</h2>
+  <div class="commentary"><span class="label">Commentary · decisions</span>
+    <ol>
+      <li>Approve the trial layout (name, price as title, trial line).</li>
+      <li>Approve the lapsed layout, with your approved title one size down.</li>
+      <li>Ask to Buy: the honest copy shown here, or keep the promise in code.</li>
+      <li>Approve the four highlighted strings.</li>
+    </ol>
+    <p>Not in this mockup: the "App Store isn't available" sheet (unchanged; it stops appearing once the subscription exists in App Store Connect), and the Terms of Use link, which waits for the EULA research.</p>
+  </div>
+</main>
+<script>
+  const lb = document.getElementById("b-light"), db = document.getElementById("b-dark");
+  function set(dark) {
+    document.body.classList.toggle("dark", dark);
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    lb.setAttribute("aria-pressed", String(!dark)); db.setAttribute("aria-pressed", String(dark));
+  }
+  lb.onclick = () => set(false); db.onclick = () => set(true);
+</script>
+</body>
+</html>

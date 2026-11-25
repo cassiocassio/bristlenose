@@ -26,6 +26,7 @@ import * as Toolbar from "./organisms/Toolbar.stories";
 import * as SignalCard from "./organisms/SignalCard.stories";
 import * as AutoCodeReview from "./organisms/AutoCodeReview.stories";
 import * as Shells from "./organisms/Shells.stories";
+import * as SessionTimeline from "./organisms/SessionTimeline.stories";
 
 export const SECTIONS: readonly SpecimenModule[] = [
   Type,
@@ -39,6 +40,7 @@ export const SECTIONS: readonly SpecimenModule[] = [
   Controls,
   QuoteCardStates,
   Toolbar,
+  SessionTimeline,
   SignalCard,
   AutoCodeReview,
   Shells,

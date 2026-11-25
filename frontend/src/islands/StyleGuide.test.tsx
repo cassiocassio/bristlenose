@@ -111,6 +111,36 @@ describe("StyleGuide", () => {
     expect(screen.getByRole("dialog", { name: "Export the report" })).toBeTruthy();
   });
 
+  it("draws the session timeline in the grid's slice and the transcript's, with the diagnostics", async () => {
+    renderAt();
+    // Lazy, as in the app: wait for the chunks.
+    const slice = (await screen.findByTestId("bn-sg-story-organisms-session-timeline-GridSlice")).querySelector(".bn-tapestry");
+    await vi.waitFor(() => expect(slice?.querySelector(".bn-tapestry-scroll .bn-tapestry-svg")).not.toBeNull());
+    const svg = slice!.querySelector(".bn-tapestry-svg")!;
+    expect(svg.querySelectorAll(".bn-tp-lane")).toHaveLength(5);
+    expect(svg.querySelectorAll(".bn-tp-flag")).toHaveLength(7);
+    expect(svg.querySelectorAll(".bn-tp-bar")).toHaveLength(14);
+    await vi.waitFor(() => expect(slice!.querySelector(".bn-tapestry-scroll > .bn-dx")).not.toBeNull());
+    expect(slice!.querySelector(".bn-dx-headline")?.textContent).toBe(
+      "8% of windows retried · 00:10 with sound but no words · 2 inaudible (00:05)",
+    );
+
+    const timelines = Array.from(document.querySelectorAll(".bn-transcript-timeline"));
+    expect(timelines).toHaveLength(3);
+    await vi.waitFor(() => expect(timelines.every((t) => t.querySelector(".bn-tapestry-svg"))).toBe(true));
+    const laneCounts = timelines.map((t) => t.querySelectorAll(".bn-tp-lane").length);
+    expect(laneCounts[0]).toBeLessThan(laneCounts[1]);
+    expect(laneCounts[1]).toBeLessThan(laneCounts[2]);
+    for (const t of timelines) {
+      expect(t.querySelector(".bn-tp-window")).not.toBeNull();
+      expect(t.querySelector(".bn-tp-player")).not.toBeNull();
+    }
+
+    const diag = await screen.findByTestId("bn-sg-story-organisms-session-timeline-Diagnostics");
+    await vi.waitFor(() => expect(diag.querySelectorAll(".bn-dx")).toHaveLength(2));
+    expect(diag.querySelector(".bn-dx-headline")?.textContent).toBe("Left for Whisper: low confidence under en-GB");
+  });
+
   it("sets the theme through the app's own functions and puts it back on leaving", async () => {
     root().setAttribute("data-color-theme", "default");
     const { unmount } = renderAt("/report/style-guide?palette=edo&appearance=dark&platform=desktop");

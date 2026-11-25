@@ -99,6 +99,9 @@
     gap: var(--bn-space-sm);
 }
 
+/* Full width, for stories whose components fit themselves to their container (the timelines). */
+.bn-sg-stack.bn-sg-fill { align-items: stretch; }
+
 .bn-sg-labelled {
     display: inline-flex;
     flex-direction: column;

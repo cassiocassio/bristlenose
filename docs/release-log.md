@@ -67,9 +67,9 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
-## 0.48.0 — 25 Nov 2026 · Tier 1, CLI channels only (minor — AutoCode tags as it works; the tag sidebar's AutoCode overview and the review pane; quotes keep their paragraphs; one passage, one quote)
+## 0.48.0 — 25 Nov 2026 · Tier 1, all but TestFlight (minor — AutoCode tags as it works; the tag sidebar's AutoCode overview and the review pane; quotes keep their paragraphs; one passage, one quote)
 
-**What shipped.** 150-odd commits since 0.47.0 (CHANGELOG: 5 New, 10 Improved). Tag `v0.48.0` on `8f6bbf414`. Run overnight by a Claude session on the owner's instruction ("cut a release tonight", given before bed with four rulings: 0.48.0 minor; draft and publish the changelog; commit unclaimed work if its tests pass; waive preflight rows that fail for an outside cause, never red tests or a dirty tree). **PyPI, GitHub Release, Homebrew, Snap edge and Copr only. The `.dmg` and TestFlight stay on 0.47.0 (6923)**, for two separate reasons below.
+**What shipped.** 150-odd commits since 0.47.0 (CHANGELOG: 5 New, 10 Improved). Tag `v0.48.0` on `8f6bbf414`. Run overnight by a Claude session on the owner's instruction ("cut a release tonight", given before bed with four rulings: 0.48.0 minor; draft and publish the changelog; commit unclaimed work if its tests pass; waive preflight rows that fail for an outside cause, never red tests or a dirty tree). **Eight of nine channels; TestFlight stays on 0.47.0 (6923).** The `.dmg` followed at 04:50, after the StoreKit suite below was fixed, built from the tag plus that test-only commit.
 
 **Held, and why.**
 - **TestFlight upload held** (`--skip testflight`): 0.48.0 is the first store build carrying the paywall at first Analyse (2fcecac61). The App Store submission session's tracker still has the IAP (`app.bristlenose.subscription.monthly`) and the Paid Apps Agreement as todo, and the paywall session confirmed there is no bypass: a tester would get "The App Store isn't available right now" and could not analyse. Owner's call.
@@ -95,7 +95,9 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 **Verify and close-out.** `verify-channels.sh 0.48.0`: 5 of 9 — PyPI, GitHub, Homebrew, Snap edge, Copr; TestFlight, `.dmg`, `.dmg sha256` held; website ✗ until the deploy. Website deployed from a clean detached worktree of `0dd447d` (four commits: provider set-up docs that match the shipped links, "Azure OpenAI" on the home page, the About nav item dropped at the owner's word in its session); website `main` pushed; the live changelog names 0.48.0. The close-out's CLAUDE.md row stays red by design: the shipping TestFlight build is still 0.47.0 (6923), and the line says so.
 
-**Owed.** EarlyAdopterStoreKitTests isolation (owner of the early-adopter work), then `.dmg` + TestFlight 0.48.0 (a desktop-only rebuild of the tagged version, or a patch). The IAP in App Store Connect before any TestFlight build with the paywall. Fix `test_a_quiet_set_aside…` timing. Defer a shell import to win back first-paint headroom (0.5 kB left). Top up / replace the Gemini key. `copr-cli` not installed (token unverified, 91 days left).
+**The `.dmg`, after the tag.** Root cause of the StoreKit red: a `.renewUntilNow` purchase writes its backdated renewals a beat at a time after the call returns, so one case's renewals landed after the next case's `clearTransactions()`. Each case now re-clears until the history has read empty for half a second (b9c9c6b78): 8 of 8 solo runs green; mutating `history()` to `[]` fails the three positive cases; `refundIsLeftOut` stays green with revoked purchases counted (weak before and after; owed). `main` had meanwhile moved past the tag with one shipped-code commit (9a49c57d5, the tag sidebar's Show pop-up CSS), so the `.dmg` was built in a detached worktree at `v0.48.0` with only the test commit cherry-picked (`58f99e974`; manifest: tree clean): `build-dmg.sh` green including the Swift suite, notarised and stapled, 262 MB, published with `upload-dmg.sh` (sha256 `c995e3ca…`; 0.45.0 reaped). `verify-channels.sh 0.48.0`: **8 of 9**.
+
+**Owed.** TestFlight 0.48.0, once the IAP exists in App Store Connect (the archive must be built from the tag tree the same way). The IAP in App Store Connect before any TestFlight build with the paywall. Fix `test_a_quiet_set_aside…` timing. Defer a shell import to win back first-paint headroom (0.5 kB left). Top up / replace the Gemini key. `copr-cli` not installed (token unverified, 91 days left).
 
 ---
 

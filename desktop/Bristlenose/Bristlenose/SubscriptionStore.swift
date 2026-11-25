@@ -144,9 +144,31 @@ final class SubscriptionStore: ObservableObject {
         return periods
     }
 
+    /// **Under a test host, nothing here can ask for an Apple Account.**
+    /// `purchase()` and `restore()` are the two calls that can raise the
+    /// system's App Store sign-in window, and a test that reaches them gets
+    /// Apple's real store, not `Bristlenose.storekit`: on 25 Nov 2026 a
+    /// `store.purchase()` case in `EarlyAdopterStoreKitTests` put an "Sign in
+    /// to your Apple Account" window on the developer's screen, attributed to
+    /// the Debug app (the log shows an AMS "In App" authentication). A test
+    /// that wants a purchase buys through its `SKTestSession` instead.
+    /// Debug only, so the shipped app can never mistake itself for a test.
+    /// Same detector as the keychain's (`KeychainHelper.isUnderTestHost`).
+    static var refusesSignInPrompts: Bool {
+        #if DEBUG
+        return KeychainHelper.isUnderTestHost
+        #else
+        return false
+        #endif
+    }
+
     enum PurchaseOutcome: Equatable { case subscribed, cancelled, pending, failed }
 
     func purchase() async -> PurchaseOutcome {
+        if Self.refusesSignInPrompts {
+            log.error("purchase refused under a test host: it would reach the real App Store")
+            return .failed
+        }
         guard let product else { return .failed }
         do {
             switch try await product.purchase() {
@@ -172,8 +194,12 @@ final class SubscriptionStore: ObservableObject {
 
     /// Restore Purchases (Guideline 3.1.1 requires it on the paywall).
     func restore() async {
-        do { try await AppStore.sync() } catch {
-            log.error("restore failed: \(error.localizedDescription, privacy: .public)")
+        if Self.refusesSignInPrompts {
+            log.error("restore's AppStore.sync() skipped under a test host: it would ask for an Apple Account")
+        } else {
+            do { try await AppStore.sync() } catch {
+                log.error("restore failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
         await refresh()
     }

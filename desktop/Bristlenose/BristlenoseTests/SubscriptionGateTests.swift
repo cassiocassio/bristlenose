@@ -20,6 +20,15 @@ struct SubscriptionGateTests {
         #expect(g.pending == nil)
     }
 
+    /// `purchase()` and `restore()` reach Apple's real store from a test host
+    /// and put an Apple Account sign-in window on the developer's screen
+    /// (25 Nov 2026). Pinned by the flag, not by calling them: calling them is
+    /// the thing that must never happen here.
+    @Test("under a test host the store refuses the calls that ask for an Apple Account")
+    func testHostNeverPromptsSignIn() {
+        #expect(SubscriptionStore.refusesSignInPrompts)
+    }
+
     @Test("the debug seed switches the channel only in a debug build")
     func debugSeed() {
         let on = ["BRISTLENOSE_DEBUG_SUBSCRIPTION": "1"]

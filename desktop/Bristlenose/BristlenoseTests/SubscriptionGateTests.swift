@@ -128,4 +128,48 @@ struct SubscriptionGateTests {
         #expect(g.pending?.project.id == p.id)
         #expect(runner.state[p.id] == nil)
     }
+
+    // MARK: - Which window shows the paywall
+
+    /// 25 Nov 2026: presenting the sheet made it the key window, the parent
+    /// reported not-key, and a "show only while I am key" getter dismissed the
+    /// sheet it had just shown, again and again.
+    @Test("the window showing the sheet keeps it when it stops being key")
+    func sheetSurvivesTheParentLosingKey() {
+        let g = SubscriptionGate(channel: .developerID)
+        let a = UUID()
+        g.pending = .init(project: project(), clean: false)
+        #expect(g.paywall(for: a, isKey: true) != nil)
+        #expect(g.paywall(for: a, isKey: false) != nil)
+        #expect(g.paywall(for: a, isKey: true) != nil)
+    }
+
+    @Test("a window that is not key does not start showing the sheet")
+    func backgroundWindowDoesNotStart() {
+        let g = SubscriptionGate(channel: .developerID)
+        g.pending = .init(project: project(), clean: false)
+        #expect(g.paywall(for: UUID(), isKey: false) == nil)
+    }
+
+    @Test("two windows never stack two sheets")
+    func secondWindowDoesNotStack() {
+        let g = SubscriptionGate(channel: .developerID)
+        let a = UUID(), b = UUID()
+        g.pending = .init(project: project(), clean: false)
+        #expect(g.paywall(for: a, isKey: true) != nil)
+        #expect(g.paywall(for: b, isKey: true) == nil)
+    }
+
+    @Test("once dismissed, the next paywall goes to whichever window is key")
+    func claimReleasedOnDismiss() {
+        let g = SubscriptionGate(channel: .developerID)
+        let a = UUID(), b = UUID()
+        g.pending = .init(project: project(), clean: false)
+        _ = g.paywall(for: a, isKey: true)
+        g.dismissPaywall()
+        #expect(g.paywall(for: a, isKey: true) == nil)
+        g.pending = .init(project: project(), clean: false)
+        #expect(g.paywall(for: b, isKey: true) != nil)
+        #expect(g.paywall(for: a, isKey: true) == nil)
+    }
 }

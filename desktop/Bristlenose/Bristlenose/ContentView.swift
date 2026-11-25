@@ -463,6 +463,8 @@ struct ContentView: View {
     /// so it sat unstarted until the user clicked away and back. The converse
     /// bit the folder loop: each window is transiently key as it is created.
     @State private var windowIsKey = false
+    /// This window's identity for the paywall claim (see `SubscriptionGate.paywall`).
+    @State private var paywallWindowID = UUID()
     /// In-flight retry task that reloads the detail WebView after a run finishes
     /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
@@ -1289,7 +1291,7 @@ struct ContentView: View {
         ))
         // The paywall, in the key window only so two windows never stack two.
         .sheet(item: Binding(
-            get: { windowIsKey ? subscriptionGate.pending : nil },
+            get: { subscriptionGate.paywall(for: paywallWindowID, isKey: windowIsKey) },
             set: { if $0 == nil { subscriptionGate.dismissPaywall() } }
         )) { _ in
             if let store = subscriptionGate.store {

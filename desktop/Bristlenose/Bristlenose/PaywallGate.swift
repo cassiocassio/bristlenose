@@ -59,14 +59,40 @@ final class SubscriptionGate: ObservableObject {
         return false
     }
 
+    /// The window that is showing the sheet. A window claims it while it is key
+    /// and keeps it until the sheet goes: presenting a sheet makes the sheet
+    /// the key window and the parent reports not-key, so a rule of "show only
+    /// while I am key" dismisses the sheet it just showed, and flashes forever.
+    private var presentingWindow: UUID?
+
+    /// What `window` should present now. Only the key window starts showing the
+    /// sheet, and no second window takes it while one has it, but the window
+    /// that has it keeps it whatever its key state does until `pending` clears.
+    func paywall(for window: UUID, isKey: Bool) -> Pending? {
+        guard let pending else {
+            presentingWindow = nil
+            return nil
+        }
+        if presentingWindow == window { return pending }
+        if presentingWindow == nil, isKey {
+            presentingWindow = window
+            return pending
+        }
+        return nil
+    }
+
     /// The sheet's "Not Now".
-    func dismissPaywall() { pending = nil }
+    func dismissPaywall() {
+        pending = nil
+        presentingWindow = nil
+    }
 
     /// Subscribed while the sheet was up: start what was asked for, with no
     /// second click.
     func resumePending() {
         guard let p = pending else { return }
         pending = nil
+        presentingWindow = nil
         resume?(p.project, p.clean)
     }
 

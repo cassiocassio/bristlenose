@@ -304,7 +304,10 @@ describe("a quote's own paragraphs", () => {
   it("the card's revert hands the paragraphs back to the automatic placing", async () => {
     commitEdit("q1", "a b c", { value: [1] });
     commitEdit("q1", "x", { value: null });
-    expect(snap().edits.q1).toBe("x");
+    // The pipeline's words clear the edit rather than store a copy, which would
+    // pin the quote against re-runs (review 25 Nov, finding 36).
+    expect("q1" in snap().edits).toBe(false);
+    expect(patchEditsMock).toHaveBeenLastCalledWith({ q1: null });
     expect("q1" in snap().breaks).toBe(false);
     await undo();
     expect(snap().breaks.q1).toEqual([1]);
@@ -333,6 +336,47 @@ describe("a quote's own paragraphs", () => {
     expect("q1" in snap().breaks).toBe(false);
     expect(patchBreaksMock).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(getUndoState().undoAction).toBeNull());
+  });
+
+  it("paragraphs alone failing roll back and withdraw the undo", async () => {
+    // A gesture with no words to save is only its breaks: it did not partly land (finding 30).
+    patchBreaksMock.mockRejectedValueOnce(new Error("PATCH /quote-breaks → 500"));
+    commitEdit("q1", null, { value: [0] });
+    await vi.waitFor(() => expect(getUndoState().undoAction).toBeNull());
+    expect("q1" in snap().breaks).toBe(false);
+  });
+
+  it("new words saving and their paragraphs failing go back to automatic, not the old set", async () => {
+    // The old set was placed in the old words, which the server no longer shows (finding 31).
+    initFromQuotes([{ ...quote("q1"), researcher_breaks: [0] }], true);
+    patchBreaksMock.mockRejectedValueOnce(new Error("PATCH /quote-breaks → 500"));
+    commitEdit("q1", "a b c", { value: [1] });
+    await vi.waitFor(() => expect(patchBreaksMock).toHaveBeenCalled());
+    await vi.waitFor(() => expect("q1" in snap().breaks).toBe(false));
+    expect(snap().edits.q1).toBe("a b c");
+  });
+
+  it("paragraphs alone failing keep the set the server still shows", async () => {
+    initFromQuotes([{ ...quote("q1"), researcher_breaks: [0] }], true);
+    patchBreaksMock.mockRejectedValueOnce(new Error("PATCH /quote-breaks → 500"));
+    commitEdit("q1", null, { value: null });
+    await vi.waitFor(() => expect(snap().breaks.q1).toEqual([0]));
+  });
+
+  it("a later gesture's paragraphs do not overtake an earlier one's held behind its words", async () => {
+    // Finding 32: the server must end with the last gesture's breaks.
+    let land!: () => void;
+    patchEditsMock.mockImplementationOnce(() => new Promise<void>((r) => (land = r)));
+    commitEdit("q1", "a b c", { value: [1] });
+    commitEdit("q1", null, { value: [0] });
+    await Promise.resolve();
+    expect(patchBreaksMock).not.toHaveBeenCalled();
+    land();
+    await vi.waitFor(() => expect(patchBreaksMock).toHaveBeenCalledTimes(2));
+    expect(patchBreaksMock.mock.calls.map((c) => c[0].q1)).toEqual([
+      { breaks: [1], text: "a b c" },
+      { breaks: [0], text: "a b c" },
+    ]);
   });
 
   it("a refetch reads the researcher's breaks from the quote", () => {

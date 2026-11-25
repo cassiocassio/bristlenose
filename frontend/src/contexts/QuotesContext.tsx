@@ -376,6 +376,7 @@ export function initHeadingEdits(
 export function resetStore(): void {
   state = emptyState();
   unsettled.clear();
+  breaksInFlight.clear();
   reviewsInFlight.clear();
   searchPeople = undefined;
   lastUsedTag = null;
@@ -907,6 +908,12 @@ function withBreaks(id: string, breaks: number[] | undefined): Updater {
   };
 }
 
+/** Each quote's last breaks write, settled or not, so the next one waits for it. */
+const breaksInFlight = new Map<string, Promise<unknown>>();
+
+/** The words the server hashes breaks against (server/quote_breaks.py). */
+const wordsOf = (t: string) => t.split(/\s+/).filter(Boolean).join(" ");
+
 /** The pipeline's words for a quote (what it reads as with no edit). */
 function pipelineText(domId: string): string {
   const q = state.quotes.find((x) => x.dom_id === domId) ?? state.uncategorised.find((x) => x.dom_id === domId);
@@ -928,6 +935,9 @@ function setQuote(
   record: boolean,
 ): Promise<Landed> {
   if (isExportMode()) return LANDED;
+  // The pipeline's own words are no edit: a revert hands them back as text,
+  // and storing them would pin the quote against re-runs (findings 6, 36).
+  if (text !== undefined && text === pipelineText(domId)) text = undefined;
   const beforeText = state.edits[domId];
   const beforeBreaks = state.breaks[domId];
   // Words the quote already reads as are no write: a revert of a quote whose
@@ -944,20 +954,43 @@ function setQuote(
   // must not roll back the other that saved (review 21 Nov, findings 2 and 9).
   // Words that fail take the breaks back with them, unsent.
   const textWrite = doText ? patchEdits({ [domId]: text ?? null }) : null;
+  // Once new words land, the server stops showing breaks placed in the old
+  // ones, so breaks that then fail go back to automatic, not to the old set
+  // (review 25 Nov, finding 31).
+  let wordsMoved = false;
+  const sameWords = wordsOf(wording) === wordsOf(readsAs(beforeText));
   const textLanded = textWrite
-    ? send(textWrite, [
-        { key: `edits:${domId}`, id: domId, before: withEdit(domId, beforeText), after: withEdit(domId, text) },
-      ])
-    : LANDED;
-  const breaksLanded = send(
-    (textWrite ?? Promise.resolve()).then(() =>
-      patchQuoteBreaks({ [domId]: breaks === undefined ? null : { breaks, text: wording } }),
-    ),
-    [{ key: `breaks:${domId}`, id: domId, before: withBreaks(domId, beforeBreaks), after: withBreaks(domId, breaks) }],
+    ? send(
+        textWrite.then(() => {
+          wordsMoved = !sameWords;
+        }),
+        [{ key: `edits:${domId}`, id: domId, before: withEdit(domId, beforeText), after: withEdit(domId, text) }],
+      )
+    : null;
+  // One quote's breaks reach the server in gesture order: a later gesture's
+  // breaks must not overtake an earlier one's, held back behind its words
+  // (finding 32).
+  const prior = breaksInFlight.get(domId) ?? Promise.resolve();
+  const breaksWrite = Promise.all([prior, textWrite]).then(() =>
+    patchQuoteBreaks({ [domId]: breaks === undefined ? null : { breaks, text: wording } }),
   );
-  const written = Promise.all([textLanded, breaksLanded]).then(([t, b]): Landed =>
-    t === b ? t : "some",
-  );
+  const settled = breaksWrite.catch(() => undefined);
+  breaksInFlight.set(domId, settled);
+  void settled.then(() => {
+    if (breaksInFlight.get(domId) === settled) breaksInFlight.delete(domId);
+  });
+  const breaksLanded = send(breaksWrite, [
+    {
+      key: `breaks:${domId}`,
+      id: domId,
+      before: (s) => withBreaks(domId, wordsMoved ? undefined : beforeBreaks)(s),
+      after: withBreaks(domId, breaks),
+    },
+  ]);
+  // A gesture with no words to save is only its breaks (finding 30).
+  const written = textLanded
+    ? Promise.all([textLanded, breaksLanded]).then(([t, b]): Landed => (t === b ? t : "some"))
+    : breaksLanded;
   if (record) {
     recordGesture(
       "editQuote",

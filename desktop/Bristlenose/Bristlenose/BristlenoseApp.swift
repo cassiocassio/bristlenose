@@ -248,10 +248,22 @@ struct BristlenoseApp: App {
                     // disclosure is unanswered or the build trusts no key, so
                     // an activation that is not due costs a defaults read.
                     // Once per process, for the same reason as the observers below.
+                    // Launch and every activation also note the local day the
+                    // app was opened (`days`, counted only with a yes); a wake
+                    // is not an opening, so it only checks.
                     if newsObservers.isEmpty {
                         let fetcher = newsFetcher
+                        // `sub` reads the subscription (App Store channel only).
+                        let gate = subscriptionGate
+                        fetcher.readSubscription { [weak gate] in gate?.store?.state }
                         let check: @Sendable (Notification) -> Void = { _ in
                             Task { @MainActor in await fetcher.checkIfDue() }
+                        }
+                        let opened: @Sendable (Notification) -> Void = { _ in
+                            Task { @MainActor in
+                                fetcher.recordAppOpened()
+                                await fetcher.checkIfDue()
+                            }
                         }
                         newsObservers = [
                             NSWorkspace.shared.notificationCenter.addObserver(
@@ -259,9 +271,12 @@ struct BristlenoseApp: App {
                                 queue: .main, using: check),
                             NotificationCenter.default.addObserver(
                                 forName: NSApplication.didBecomeActiveNotification, object: nil,
-                                queue: .main, using: check),
+                                queue: .main, using: opened),
                         ]
-                        Task { @MainActor in await fetcher.checkIfDue() }
+                        Task { @MainActor in
+                            fetcher.recordAppOpened()
+                            await fetcher.checkIfDue()
+                        }
                     }
                     // What a landed cloud batch is handed to. The coordinator
                     // is the one app-wide owner of the import store, so it is

@@ -968,7 +968,7 @@
     "ollamaDownloadSize": "~%@ ke stažení",
     "done": "Hotovo",
     "countsChoice": "Odesílat anonymní analytické údaje",
-    "countsExplain": "Informace o verzi a o tom, jak často otevíráte Bristlenose. Žádný identifikátor. Nic z vašich projektů. Lze změnit v Nastavení."
+    "countsExplain": "Informace o verzi, o tom, jak často otevíráte Bristlenose, a zda jste přihlášeni k odběru. Žádný identifikátor. Nic z vašich projektů. Lze změnit v Nastavení."
   },
   "llmSettings": {
     "validation": {
@@ -1488,7 +1488,7 @@
       "checkLabel": "Kontrolovat novinky na bristlenose.app",
       "checkExplain": "Jednou denně. Novinky a komunitní akce se zobrazí v uvítacím okně.",
       "countsLabel": "Odesílat anonymní analytické údaje",
-      "countsExplain": "Informace o verzi a o tom, jak často otevíráte Bristlenose. Žádný identifikátor. Nic z vašich projektů.",
+      "countsExplain": "Informace o verzi, o tom, jak často otevíráte Bristlenose, a zda jste přihlášeni k odběru. Žádný identifikátor. Nic z vašich projektů.",
       "managed": "Spravováno vaší organizací"
     }
   },

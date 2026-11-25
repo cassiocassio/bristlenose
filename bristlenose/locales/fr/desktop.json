@@ -913,7 +913,7 @@
     "ollamaDownloadSize": "~%@ à télécharger",
     "done": "Terminé",
     "countsChoice": "Envoyer des données d’analyse anonymes",
-    "countsExplain": "Les informations de version et la fréquence à laquelle vous ouvrez Bristlenose. Aucun identifiant. Rien de vos projets. Modifiable dans Réglages."
+    "countsExplain": "Les informations de version, la fréquence à laquelle vous ouvrez Bristlenose et si vous avez un abonnement. Aucun identifiant. Rien de vos projets. Modifiable dans Réglages."
   },
   "llmSettings": {
     "validation": {
@@ -1406,7 +1406,7 @@
       "checkLabel": "Rechercher les actualités sur bristlenose.app",
       "checkExplain": "Une fois par jour. Les actualités et les événements de la communauté s’affichent dans la fenêtre de bienvenue.",
       "countsLabel": "Envoyer des données d’analyse anonymes",
-      "countsExplain": "Les informations de version et la fréquence à laquelle vous ouvrez Bristlenose. Aucun identifiant. Rien de vos projets.",
+      "countsExplain": "Les informations de version, la fréquence à laquelle vous ouvrez Bristlenose et si vous avez un abonnement. Aucun identifiant. Rien de vos projets.",
       "managed": "Géré par votre organisation"
     }
   },

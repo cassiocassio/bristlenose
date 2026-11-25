@@ -263,6 +263,190 @@ struct QueryAndState {
 }
 }
 
+// MARK: - Days opened and subscription (v3, D7)
+
+extension NewsCheckTests {
+@Suite("NewsCheck: days and sub")
+struct DaysAndSub {
+    typealias K = NewsTestKit
+
+    /// A state whose last check was in November, so a December check is `month`.
+    private func lastMonth(days: [String] = []) -> NewsCheck.State {
+        NewsCheck.State(lastCheck: K.date(2026, 11, 20), everChecked: true, daysOpened: days)
+    }
+
+    private func query(_ state: NewsCheck.State, consent: NewsCheck.CountsConsent = .yes,
+                       channel: NewsCheck.Channel? = .store,
+                       sub: NewsCheck.SubscriptionFlag? = nil,
+                       today: String = "2026-12-01",
+                       serverNow: Date = K.date(2026, 12, 1)) -> NewsCheck.Query {
+        NewsCheck.query(state: state, consent: consent, appVersion: "0.49.0", channel: channel,
+                        subscription: sub, localDay: today, serverNow: serverNow)
+    }
+
+    private func url(_ query: NewsCheck.Query) -> String {
+        query.url(base: NewsCheck.productionEndpoint)!.absoluteString
+    }
+
+    @Test("Opened several times a day counts that day once; only with a yes")
+    func countedOncePerLocalDate() {
+        var state = NewsCheck.State()
+        for day in ["2026-11-21", "2026-11-21", "2026-11-23", "2026-11-21", "2026-11-23"] {
+            state = NewsCheck.recordAppOpened(state, consent: .yes, localDay: day)
+        }
+        #expect(state.daysOpened == ["2026-11-21", "2026-11-23"])
+        for consent in [NewsCheck.CountsConsent.no, .unanswered] {
+            #expect(NewsCheck.recordAppOpened(.init(), consent: consent, localDay: "2026-11-21")
+                .daysOpened.isEmpty)
+        }
+    }
+
+    @Test("The day is the Mac's local date, not UTC")
+    func localDate() {
+        // 23:30 UTC on 30 Nov is already 1 Dec in Tokyo and still 30 Nov in London.
+        let instant = K.date(2026, 11, 30, 23, 30)
+        #expect(NewsCheck.localDay(instant, in: TimeZone(identifier: "Asia/Tokyo")!) == "2026-12-01")
+        #expect(NewsCheck.localDay(instant, in: TimeZone(identifier: "Europe/London")!) == "2026-11-30")
+    }
+
+    @Test("A month check sends days and sub after w, in the spec's order")
+    func wireOrder() {
+        var state = lastMonth(days: ["2026-11-20", "2026-11-25", "2026-11-28"])
+        state.welcomeSinceCheck = 5
+        #expect(url(query(state, sub: .paying))
+                == "https://bristlenose.app/app/news?s=1&v=0.49.0&ch=store&month=1&w=5&days=3&sub=1")
+    }
+
+    @Test("days counts the dates before today; today belongs to the next report")
+    func todayIsNextReports() {
+        let state = lastMonth(days: ["2026-11-20", "2026-11-30", "2026-12-01"])
+        #expect(query(state).days == 2)
+    }
+
+    @Test("days is capped at 31")
+    func daysCapped() {
+        // 40 distinct days before today (a skipped month folds in).
+        var state = lastMonth()
+        state.daysOpened = (0..<40).map { String(format: "2026-10-%02d", $0 + 1) }
+        #expect(query(state).days == 31)
+        // A month opened every day reports all 31, with today stored beside them.
+        var full = NewsCheck.State()
+        for day in 1...31 {
+            full = NewsCheck.recordAppOpened(full, consent: .yes,
+                                             localDay: String(format: "2026-10-%02d", day))
+        }
+        full = NewsCheck.recordAppOpened(full, consent: .yes, localDay: "2026-11-01")
+        #expect(full.daysOpened.count == NewsCheck.maxDaysStored)
+        full.lastCheck = K.date(2026, 10, 1); full.everChecked = true
+        #expect(query(full, today: "2026-11-01", serverNow: K.date(2026, 11, 1)).days == 31)
+    }
+
+    @Test("days and sub ride only with month")
+    func onlyWithMonth() {
+        let state = NewsCheck.State(lastCheck: K.date(2026, 12, 3), everChecked: true,
+                                    daysOpened: ["2026-12-03", "2026-12-04"])
+        let q = query(state, sub: .paying, today: "2026-12-05", serverNow: K.date(2026, 12, 5))
+        #expect(!q.month && q.days == nil && q.subscription == nil && q.daysBefore == nil)
+        #expect(!url(q).contains("days=") && !url(q).contains("sub="))
+    }
+
+    @Test("The install's first check sends no days, but sub can ride")
+    func notWithFirst() {
+        let state = NewsCheck.State(daysOpened: ["2026-11-28", "2026-12-01"])
+        let q = query(state, sub: .trial)
+        #expect(q.first && q.month)
+        #expect(q.days == nil)
+        #expect(url(q) == "https://bristlenose.app/app/news?s=1&v=0.49.0&ch=store&first=1&month=1&w=0&sub=t")
+    }
+
+    @Test("sub: 1 paying, t in the trial, absent otherwise")
+    func subValues() {
+        typealias F = NewsCheck.SubscriptionFlag
+        #expect(F.from(.subscribed(expires: nil, inTrial: false)) == .paying)
+        #expect(F.from(.subscribed(expires: K.date(2026, 12, 20), inTrial: true)) == .trial)
+        #expect(F.from(.notSubscribed) == nil)
+        #expect(F.from(.storeUnavailable) == nil)
+        #expect(F.from(.unknown) == nil)
+        #expect(F.from(nil) == nil)
+        #expect(url(query(lastMonth(), sub: .paying)).hasSuffix("&sub=1"))
+        #expect(url(query(lastMonth(), sub: .trial)).hasSuffix("&sub=t"))
+        #expect(!url(query(lastMonth(), sub: nil)).contains("sub="))
+    }
+
+    @Test("sub is never sent on the dmg, or by a debug build")
+    func neverOnDmg() {
+        for channel in [NewsCheck.Channel.dmg, nil] as [NewsCheck.Channel?] {
+            let q = query(lastMonth(days: ["2026-11-25"]), channel: channel, sub: .paying)
+            #expect(q.subscription == nil)
+            #expect(!url(q).contains("sub="))
+            #expect(q.days == 1)  // days is not store-only
+        }
+    }
+
+    @Test("Counting off: nothing extra, whatever days and subscription say",
+          arguments: [NewsCheck.CountsConsent.unanswered, .no])
+    func nothingWithoutYes(consent: NewsCheck.CountsConsent) {
+        let q = query(lastMonth(days: ["2026-11-25", "2026-11-26"]), consent: consent, sub: .paying)
+        #expect(!q.carriesCounts)
+        #expect(url(q) == "https://bristlenose.app/app/news?s=1")
+    }
+
+    @Test("A response spends the reported days and keeps today's")
+    func clearedOnResponse() {
+        var state = lastMonth(days: ["2026-11-20", "2026-11-30", "2026-12-01"])
+        let sent = query(state, sub: .paying)
+        #expect(sent.days == 2)
+        // Opened again on a later day while the request was out: kept too.
+        state.daysOpened.append("2026-12-02")
+        let after = NewsCheck.afterResponse(state, sent: sent, serverDate: K.date(2026, 12, 1),
+                                            localNow: K.date(2026, 12, 1))
+        #expect(after.daysOpened == ["2026-12-01", "2026-12-02"])
+        // The next month's report starts from today, so no day is counted twice.
+        let next = query(after, today: "2027-01-02", serverNow: K.date(2027, 1, 2))
+        #expect(next.month && next.days == 2)
+    }
+
+    @Test("The first check closes the period too, without reporting it")
+    func firstClosesPeriod() {
+        let state = NewsCheck.State(daysOpened: ["2026-11-28", "2026-12-01"])
+        let sent = query(state)
+        let after = NewsCheck.afterResponse(state, sent: sent, serverDate: K.date(2026, 12, 1),
+                                            localNow: K.date(2026, 12, 1))
+        #expect(after.daysOpened == ["2026-12-01"])
+    }
+
+    @Test("A check without month leaves the days alone; a bare response drops them")
+    func otherResponses() {
+        let state = NewsCheck.State(lastCheck: K.date(2026, 12, 3), everChecked: true,
+                                    daysOpened: ["2026-12-03", "2026-12-04"])
+        let daily = query(state, today: "2026-12-05", serverNow: K.date(2026, 12, 5))
+        #expect(NewsCheck.afterResponse(state, sent: daily, serverDate: K.date(2026, 12, 5),
+                                        localNow: K.date(2026, 12, 5)).daysOpened
+                == state.daysOpened)
+        #expect(NewsCheck.afterResponse(state, sent: .init(), serverDate: K.date(2026, 12, 5),
+                                        localNow: K.date(2026, 12, 5)).daysOpened.isEmpty)
+    }
+
+    @Test("A month check on the store waits for an unknown subscription; nothing else waits")
+    func awaitsSubscription() {
+        let state = lastMonth(), now = K.date(2026, 12, 1)
+        func waits(_ consent: NewsCheck.CountsConsent = .yes, _ channel: NewsCheck.Channel? = .store,
+                   _ sub: SubscriptionAccess.State? = .unknown,
+                   _ s: NewsCheck.State? = nil) -> Bool {
+            NewsCheck.awaitsSubscription(state: s ?? state, consent: consent, channel: channel,
+                                         subscription: sub, serverNow: now)
+        }
+        #expect(waits())
+        #expect(!waits(.no))
+        #expect(!waits(.yes, .dmg))
+        #expect(!waits(.yes, .store, nil))
+        #expect(!waits(.yes, .store, .notSubscribed))
+        #expect(!waits(.yes, .store, .unknown,
+                       NewsCheck.State(lastCheck: K.date(2026, 12, 1, 1), everChecked: true)))
+    }
+}
+}
+
 // MARK: - The envelope
 
 extension NewsCheckTests {

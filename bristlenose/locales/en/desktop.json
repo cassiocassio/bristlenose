@@ -918,7 +918,7 @@
     "ollamaDownloadSize": "~%@ download",
     "done": "Done",
     "countsChoice": "Send anonymous analytics",
-    "countsExplain": "Version information, and how often you open Bristlenose. No identifier. Nothing from your projects. Change it in Settings."
+    "countsExplain": "Version information, how often you open Bristlenose, and whether you subscribe. No identifier. Nothing from your projects. Change it in Settings."
   },
   "llmSettings": {
     "validation": {
@@ -1411,7 +1411,7 @@
       "checkLabel": "Check bristlenose.app for news",
       "checkExplain": "Once a day. News and community events appear in Welcome.",
       "countsLabel": "Send anonymous analytics",
-      "countsExplain": "Version information, and how often you open Bristlenose. No identifier. Nothing from your projects.",
+      "countsExplain": "Version information, how often you open Bristlenose, and whether you subscribe. No identifier. Nothing from your projects.",
       "managed": "Managed by your organisation"
     }
   },

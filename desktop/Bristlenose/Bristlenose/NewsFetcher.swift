@@ -16,6 +16,8 @@ struct NewsStateKeys {
     var lastCheck: String { prefix + "lastCheck" }
     var everChecked: String { prefix + "everChecked" }
     var welcomeSinceCheck: String { prefix + "welcomeSinceCheck" }
+    /// Local dates the app was opened since the last `month` check (`days`).
+    var daysOpened: String { prefix + "daysOpened" }
     /// Server clock minus Mac clock at the last response.
     var clockOffset: String { prefix + "clockOffset" }
     /// The last verified envelope, stored as received; re-verified on every load.
@@ -38,7 +40,8 @@ struct NewsStateKeys {
 ///
 /// **Ownership.** An app-level object, like `ServeFleet`: a `@StateObject`
 /// in `BristlenoseApp`, which calls `checkIfDue()` once the first window is up
-/// and again on wake and on activation (never on a timer), and hands it to the
+/// and again on wake and on activation (never on a timer), `recordAppOpened()`
+/// at launch and on every activation, and hands it to the
 /// Welcome window, which asks `currentItems()` once per window and calls
 /// `recordWelcomeShown()` once per window, and to Settings ▸ General. Two
 /// windows must share one instance, because the single-flight guard below is
@@ -88,9 +91,18 @@ final class NewsFetcher: ObservableObject {
         var isManaged: (String) -> Bool
         var now: () -> Date
         var timeout: TimeInterval = 10
+        /// The Mac's time zone, for the local dates behind `days`.
+        var timeZone: () -> TimeZone = { .current }
+        /// The app's subscription state, for `sub`. `nil`: no store (a `.dmg`,
+        /// a debug build), so `sub` is never sent. Set by the app through
+        /// `readSubscription(from:)` once its `SubscriptionGate` exists.
+        var subscription: @MainActor () -> SubscriptionAccess.State? = { nil }
+        /// How long a `month` check on the store waits for a store that has not
+        /// answered yet (`NewsCheck.awaitsSubscription`) before going without `sub`.
+        var subscriptionWait: TimeInterval = 20
     }
 
-    private let world: World
+    private var world: World
     private var inFlight = false
     /// Set by a transport failure; the next attempt waits until then.
     private var retryNotBefore: Date?
@@ -154,6 +166,12 @@ final class NewsFetcher: ObservableObject {
     }
     #endif
 
+    /// Where `sub` is read: the app's `SubscriptionGate`, which the app makes
+    /// beside this fetcher, so it is handed over once both exist.
+    func readSubscription(from source: @escaping @MainActor () -> SubscriptionAccess.State?) {
+        world.subscription = source
+    }
+
     // MARK: Switches
 
     var newsEnabled: Bool {
@@ -185,18 +203,37 @@ final class NewsFetcher: ObservableObject {
         guard !inFlight else { return .alreadyInFlight }
         if let retryNotBefore, world.now() < retryNotBefore { return .backingOff }
 
-        let before = loadState()
-        let serverNow = NewsCheck.estimatedServerNow(before, localNow: world.now())
+        var before = loadState()
+        var serverNow = NewsCheck.estimatedServerNow(before, localNow: world.now())
         guard NewsCheck.isDue(before, serverNow: serverNow) else { return .notDue }
+
+        inFlight = true
+        defer { inFlight = false }
+
+        // A launch check that would carry `sub` waits, bounded, for the store's
+        // first answer; past the wait it goes without `sub`.
+        var subscription = world.subscription()
+        if NewsCheck.awaitsSubscription(state: before, consent: countsConsent,
+                                        channel: world.channel, subscription: subscription,
+                                        serverNow: serverNow) {
+            let step: TimeInterval = 0.25
+            var waited: TimeInterval = 0
+            while subscription == .unknown, waited < world.subscriptionWait {
+                try? await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
+                waited += step
+                subscription = world.subscription()
+            }
+            before = loadState()
+            serverNow = NewsCheck.estimatedServerNow(before, localNow: world.now())
+        }
 
         let consent = countsConsent
         let query = NewsCheck.query(state: before, consent: consent,
                                     appVersion: world.appVersion, channel: world.channel,
+                                    subscription: NewsCheck.SubscriptionFlag.from(subscription),
+                                    localDay: NewsCheck.localDay(world.now(), in: world.timeZone()),
                                     serverNow: serverNow)
         guard let url = query.url(base: endpoint) else { return .noEndpoint }
-
-        inFlight = true
-        defer { inFlight = false }
         // The version reaches the host's log in the User-Agent too, so it
         // rides there only with the same yes that puts `v` in the query.
         let result = await Self.fetch(
@@ -248,12 +285,20 @@ final class NewsFetcher: ObservableObject {
         }
     }
 
-    // MARK: Welcome window and clicks
+    // MARK: Welcome window, app opened, and clicks
 
     /// Once per welcome window shown. Counted only while counting is on.
     func recordWelcomeShown() {
         guard newsEnabled else { return }
         saveState(NewsCheck.recordWelcomeShown(loadState(), consent: countsConsent))
+    }
+
+    /// At launch and on every activation (`days`). One entry per local date,
+    /// and only while news is on and counting is a yes.
+    func recordAppOpened() {
+        guard newsEnabled else { return }
+        let day = NewsCheck.localDay(world.now(), in: world.timeZone())
+        saveState(NewsCheck.recordAppOpened(loadState(), consent: countsConsent, localDay: day))
     }
 
     /// After an item's link was clicked. A `news` item then hides for this
@@ -305,7 +350,8 @@ final class NewsFetcher: ObservableObject {
             lastCheck: d.object(forKey: k.lastCheck) as? Date,
             everChecked: d.bool(forKey: k.everChecked),
             welcomeSinceCheck: d.integer(forKey: k.welcomeSinceCheck),
-            clockOffset: d.double(forKey: k.clockOffset))
+            clockOffset: d.double(forKey: k.clockOffset),
+            daysOpened: d.stringArray(forKey: k.daysOpened) ?? [])
     }
 
     private func saveState(_ state: NewsCheck.State) {
@@ -314,6 +360,7 @@ final class NewsFetcher: ObservableObject {
         d.set(state.everChecked, forKey: k.everChecked)
         d.set(state.welcomeSinceCheck, forKey: k.welcomeSinceCheck)
         d.set(state.clockOffset, forKey: k.clockOffset)
+        d.set(state.daysOpened, forKey: k.daysOpened)
     }
 
     private var freshness: NewsCheck.Freshness {

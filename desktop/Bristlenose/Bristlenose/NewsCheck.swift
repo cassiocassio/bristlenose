@@ -6,14 +6,14 @@ import Foundation
 /// function here, so each one is testable on its own. `NewsFetcher` is the
 /// thin shell that does the I/O and calls these.
 ///
-/// Spec: `docs/private/design-news-and-counts.md` (v2) §3 (the request), §4
+/// Spec: `docs/private/design-news-and-counts.md` (v3) §3 (the request), §4
 /// (the file), §7 (settings) and §9 (keys). v1 is **text only**: images,
 /// video and tints in a file are not read.
 ///
 /// Three things this file guarantees, each pinned by `NewsCheckTests`:
 /// 1. **No counts without a yes.** `query(…)` adds `v`, `ch`, `first`,
-///    `month` and `w` only when the person said yes (`CountsConsent.yes`).
-///    Unanswered and no both send the bare `s=1`.
+///    `month`, `w`, `days` and `sub` only when the person said yes
+///    (`CountsConsent.yes`). Unanswered and no both send the bare `s=1`.
 /// 2. **Nothing in the file is parsed before its signature passes**, and an
 ///    old, validly signed file cannot be replayed (`verify(…)`).
 /// 3. **A failing item drops the item, never the screen** (`item(…)`), and
@@ -43,6 +43,12 @@ enum NewsCheck {
     static let maxLocalesPerItem = 30
     /// `news.seen` keeps the most recent ids, at most this many.
     static let maxSeenIDs = 200
+    /// `days` is sent capped to 0–31.
+    static let maxDaysSent = 31
+    /// `news.daysOpened` keeps the most recent local dates, at most this many:
+    /// a full report's 31, plus the check's own day, which belongs to the
+    /// next report (`query(…)`), so a month opened every day reports 31.
+    static let maxDaysStored = maxDaysSent + 1
 
     /// The only place the check ever asks. Validated through
     /// `FeedbackEndpoint.validate` by `NewsFetcher`, the same single gate the
@@ -85,6 +91,19 @@ enum NewsCheck {
         case unanswered, yes, no
     }
 
+    /// `sub` on the wire (spec §3, D7): `1` subscribed and paying, `t` in the
+    /// free trial. Lapsed, never subscribed, not yet known, or no store at all
+    /// (`dmg`, a debug build) is no value, so `sub` is absent.
+    enum SubscriptionFlag: String, Sendable {
+        case paying = "1"
+        case trial = "t"
+
+        static func from(_ state: SubscriptionAccess.State?) -> SubscriptionFlag? {
+            guard case let .subscribed(_, inTrial)? = state else { return nil }
+            return inTrial ? .trial : .paying
+        }
+    }
+
     // MARK: - Local state
 
     /// What the check remembers between runs (persisted by `NewsFetcher`).
@@ -99,6 +118,11 @@ enum NewsCheck {
         /// Mac's clock is only ever used through this, so a wrong Mac clock
         /// cannot book a check to the wrong day or month.
         var clockOffset: TimeInterval = 0
+        /// The distinct **local** calendar dates (`yyyy-MM-dd`, `localDay(…)`)
+        /// the app was launched or brought to the front, while counting was
+        /// on, since the last check that carried `month`. Sorted, at most
+        /// `maxDaysStored`. Only a count of them is ever sent (`days`).
+        var daysOpened: [String] = []
     }
 
     /// The server's clock, estimated from the Mac's and the last measured offset.
@@ -121,14 +145,25 @@ enum NewsCheck {
         var first = false
         var month = false
         var welcome: Int?
+        /// Distinct local days opened since the last `month` check, 0–31.
+        /// Only beside `month`, never beside `first`.
+        var days: Int?
+        /// Only beside `month`, on `ch=store`.
+        var subscription: SubscriptionFlag?
+        /// Not on the wire. On a `month` check, the local date of this check:
+        /// the dates before it are this report's, and a response spends them;
+        /// the check's own day stays for the next report, so no day is
+        /// counted in two months.
+        var daysBefore: String?
 
         /// True when anything beyond `s` rides along.
         var carriesCounts: Bool {
             version != nil || channel != nil || first || month || welcome != nil
+                || days != nil || subscription != nil
         }
 
-        /// In the spec's order: `s`, `v`, `ch`, `first`, `month`, `w`. Flags
-        /// are present only when set (`first=1`), never `first=0`.
+        /// In the spec's order: `s`, `v`, `ch`, `first`, `month`, `w`, `days`,
+        /// `sub`. Flags are present only when set (`first=1`), never `first=0`.
         var queryItems: [URLQueryItem] {
             var items = [URLQueryItem(name: "s", value: String(NewsCheck.querySchema))]
             if let version { items.append(.init(name: "v", value: version)) }
@@ -136,6 +171,8 @@ enum NewsCheck {
             if first { items.append(.init(name: "first", value: "1")) }
             if month { items.append(.init(name: "month", value: "1")) }
             if let welcome { items.append(.init(name: "w", value: String(welcome))) }
+            if let days { items.append(.init(name: "days", value: String(days))) }
+            if let subscription { items.append(.init(name: "sub", value: subscription.rawValue)) }
             return items
         }
 
@@ -149,8 +186,15 @@ enum NewsCheck {
 
     /// The query for this check. With consent anything but `.yes`, it is the
     /// bare `s=1`.
+    ///
+    /// - Parameters:
+    ///   - subscription: the app's subscription now (`SubscriptionFlag.from`).
+    ///     Sent only on a `month` check on `ch=store`.
+    ///   - localDay: today's local date (`localDay(…)`). `days` is sent only
+    ///     with it, on a `month` check that is not the install's `first`.
     static func query(state: State, consent: CountsConsent, appVersion: String,
-                      channel: Channel?, serverNow: Date) -> Query {
+                      channel: Channel?, subscription: SubscriptionFlag? = nil,
+                      localDay: String? = nil, serverNow: Date) -> Query {
         guard consent == .yes else { return Query() }
         var query = Query()
         query.version = isPlainVersion(appVersion) ? appVersion : nil
@@ -158,7 +202,30 @@ enum NewsCheck {
         query.first = !state.everChecked
         query.month = isFirstThisMonth(state, serverNow: serverNow)
         query.welcome = min(max(state.welcomeSinceCheck, 0), maxWelcomeSent)
+        if query.month {
+            if let localDay {
+                query.daysBefore = localDay
+                // The install's first check has no earlier month to report.
+                if !query.first {
+                    let reported = Set(state.daysOpened.filter { $0 < localDay })
+                    query.days = min(reported.count, maxDaysSent)
+                }
+            }
+            if channel == .store { query.subscription = subscription }
+        }
         return query
+    }
+
+    /// Whether the check should wait for the subscription to be known before
+    /// it asks: only when it would send `sub` (a yes, `ch=store`, a `month`
+    /// check) and the store has not answered yet (`.unknown`, at launch,
+    /// before its first refresh). Without the wait, the launch check that
+    /// carries `month` would almost always report a paying install as absent.
+    static func awaitsSubscription(state: State, consent: CountsConsent, channel: Channel?,
+                                   subscription: SubscriptionAccess.State?,
+                                   serverNow: Date) -> Bool {
+        consent == .yes && channel == .store && subscription == .unknown
+            && isFirstThisMonth(state, serverNow: serverNow)
     }
 
     /// First check this UTC calendar month by the server's clock. A server
@@ -194,11 +261,39 @@ enum NewsCheck {
         if sent.carriesCounts {
             if sent.first { next.everChecked = true }
             next.welcomeSinceCheck = max(0, current.welcomeSinceCheck - (sent.welcome ?? 0))
+            // A `month` check closes the period, `first` included (it sends no
+            // `days`, but the next report starts from it). Days recorded since
+            // the query was built are today's or later, so they are kept.
+            if sent.month, let bound = sent.daysBefore {
+                next.daysOpened = current.daysOpened.filter { $0 >= bound }
+            }
         } else {
-            // Views from a time the person had not said yes are not kept for later.
+            // Views and days from a time the person had not said yes are not
+            // kept for later.
             next.welcomeSinceCheck = 0
+            next.daysOpened = []
         }
         return next
+    }
+
+    /// The app was launched or brought to the front on `localDay`. Counted
+    /// once per local date, and only while counting is on.
+    static func recordAppOpened(_ state: State, consent: CountsConsent,
+                                localDay: String) -> State {
+        guard consent == .yes, !state.daysOpened.contains(localDay) else { return state }
+        var next = state
+        next.daysOpened = Array((state.daysOpened + [localDay]).sorted().suffix(maxDaysStored))
+        return next
+    }
+
+    /// A date as the Mac's own calendar day in `timeZone`, `yyyy-MM-dd`, so
+    /// the keys sort as dates. Local, not the server's: `days` is about the
+    /// person's days, not UTC ones.
+    static func localDay(_ date: Date, in timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
     /// One welcome window shown. Counted only while counting is on.

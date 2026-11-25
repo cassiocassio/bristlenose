@@ -913,7 +913,7 @@
     "ollamaDownloadSize": "~%@ indirme",
     "done": "Bitti",
     "countsChoice": "Anonim analiz verilerini gönder",
-    "countsExplain": "Sürüm bilgileri ve Bristlenose'u ne sıklıkla açtığınız. Kimlik yok. Projelerinizden hiçbir şey yok. Ayarlar'dan değiştirilebilir."
+    "countsExplain": "Sürüm bilgileri, Bristlenose'u ne sıklıkla açtığınız ve abone olup olmadığınız. Kimlik yok. Projelerinizden hiçbir şey yok. Ayarlar'dan değiştirilebilir."
   },
   "llmSettings": {
     "validation": {
@@ -1406,7 +1406,7 @@
       "checkLabel": "Haberler için bristlenose.app’i denetle",
       "checkExplain": "Günde bir kez. Haberler ve topluluk etkinlikleri hoş geldiniz penceresinde görünür.",
       "countsLabel": "Anonim analiz verilerini gönder",
-      "countsExplain": "Sürüm bilgileri ve Bristlenose'u ne sıklıkla açtığınız. Kimlik yok. Projelerinizden hiçbir şey yok.",
+      "countsExplain": "Sürüm bilgileri, Bristlenose'u ne sıklıkla açtığınız ve abone olup olmadığınız. Kimlik yok. Projelerinizden hiçbir şey yok.",
       "managed": "Kuruluşunuz tarafından yönetiliyor"
     }
   },

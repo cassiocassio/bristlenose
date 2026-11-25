@@ -913,7 +913,7 @@
     "ollamaDownloadSize": "~%@ nedlasting",
     "done": "Ferdig",
     "countsChoice": "Send anonyme analysedata",
-    "countsExplain": "Versjonsinformasjon og hvor ofte du åpner Bristlenose. Ingen ID. Ingenting fra prosjektene dine. Kan endres i Innstillinger."
+    "countsExplain": "Versjonsinformasjon, hvor ofte du åpner Bristlenose, og om du abonnerer. Ingen ID. Ingenting fra prosjektene dine. Kan endres i Innstillinger."
   },
   "llmSettings": {
     "validation": {
@@ -1406,7 +1406,7 @@
       "checkLabel": "Se etter nyheter på bristlenose.app",
       "checkExplain": "Én gang om dagen. Nyheter og fellesskapsarrangementer vises i velkomstvinduet.",
       "countsLabel": "Send anonyme analysedata",
-      "countsExplain": "Versjonsinformasjon og hvor ofte du åpner Bristlenose. Ingen ID. Ingenting fra prosjektene dine.",
+      "countsExplain": "Versjonsinformasjon, hvor ofte du åpner Bristlenose, og om du abonnerer. Ingen ID. Ingenting fra prosjektene dine.",
       "managed": "Administreres av organisasjonen din"
     }
   },

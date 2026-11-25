@@ -5,19 +5,22 @@ Nothing calls this and nothing should say a number is "enforced by" it. It
 reads recent `ci.yml` runs through `gh` and prints, per run and as medians:
 
   verdict   push → the last BLOCKING job finished (the run's real answer)
-  c1        push → the first finished blocking verdict on a run whose head
-            contains this run's head (differs from `verdict` only when a later
-            run answers first, e.g. after cancellation)
+  c1        push → the first finished blocking verdict on a run of the SAME
+            event whose head contains this run's head (differs from `verdict`
+            only when a later run answers first, e.g. after cancellation; a
+            dispatch that answers a push first is not seen)
   macq      median wait of the macOS cells for a runner
   green     push → run conclusion (what the green tick waits for)
 
 Blocking vs informational is classified BY NAME, because the API does not
 expose `continue-on-error`: on push and pull_request the `test (*,
 macos-latest)` cells are informational (soft-gates.json `ci.yml::test`), and so
-is the `mypy` cell (`ci.yml::gates`, a ratchet). On workflow_dispatch every
-cell is treated as blocking, because release.sh dispatches with strict-macos.
-Attempt 1 only. Green, red and cancelled runs are counted separately, since a
-red test cell skips `e2e` and finishes early for the wrong reason.
+is the `mypy` cell (`ci.yml::gates`, a ratchet) on every event. On
+workflow_dispatch the macOS cells are treated as blocking, because release.sh
+dispatches with strict-macos; a hand dispatch without it is misclassified.
+Attempt 1 only; re-run and unfinished runs are counted, not measured. Green,
+red and cancelled runs are counted separately, since a red test cell skips
+`e2e` and finishes early for the wrong reason.
 
 Plan and metric definitions: the test-speed plan (C1, C3, C4).
 
@@ -58,6 +61,7 @@ def minutes(start: datetime, end: datetime | None) -> float | None:
 
 
 def is_informational(job_name: str, event: str) -> bool:
+    job_name = job_name.split(" / ")[-1]  # a reusable-workflow call prefixes `ci / `
     if job_name == "mypy":
         return True
     return event != "workflow_dispatch" and job_name.endswith("macos-latest)")
@@ -72,14 +76,19 @@ def is_ancestor(old: str, new: str) -> bool | None:
     return None  # a sha this clone doesn't have
 
 
-def measure(event: str, limit: int) -> list[dict[str, Any]]:
+def measure(event: str, limit: int) -> tuple[list[dict[str, Any]], dict[str, int]]:
     runs = gh_json([
         "run", "list", "--workflow", WORKFLOW, "--event", event, "--limit", str(limit),
         "--json", "databaseId,headSha,createdAt,updatedAt,conclusion,status,attempt",
     ])
     rows = []
+    skipped = {"in_progress": 0, "reruns": 0}
     for run in runs:
-        if run["status"] != "completed" or run.get("attempt", 1) != 1:
+        if run["status"] != "completed":
+            skipped["in_progress"] += 1
+            continue
+        if run.get("attempt", 1) != 1:
+            skipped["reruns"] += 1
             continue
         created = ts(run["createdAt"])
         assert created is not None
@@ -104,15 +113,21 @@ def measure(event: str, limit: int) -> list[dict[str, Any]]:
             "green": minutes(created, ts(run["updatedAt"])),
         })
     rows.sort(key=lambda r: r["created"])
+    unknown = 0
     for i, row in enumerate(rows):
         answers = []
         for later in rows[i:]:
             if later["conclusion"] == "cancelled" or later["verdict_at"] is None:
                 continue
-            if later is row or is_ancestor(row["sha"], later["sha"]) is not False:
+            if later is row:
+                answers.append(later["verdict_at"])
+                continue
+            contains = is_ancestor(row["sha"], later["sha"])
+            unknown += contains is None
+            if contains is True:
                 answers.append(later["verdict_at"])
         row["c1"] = minutes(row["created"], min(answers)) if answers else None
-    return rows
+    return rows, {**skipped, "unknown_ancestry": unknown}
 
 
 def med(rows: list[dict[str, Any]], key: str) -> float | None:
@@ -127,8 +142,8 @@ def main() -> int:
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
     try:
-        rows = measure(args.event, args.limit)
-    except (subprocess.SubprocessError, OSError) as exc:
+        rows, not_measured = measure(args.event, args.limit)
+    except (subprocess.SubprocessError, OSError, ValueError) as exc:
         print(f"could not read CI runs through gh: {exc}", file=sys.stderr)
         return 2
     by = {c: [r for r in rows if r["conclusion"] == c] for c in ("success", "failure", "cancelled")}
@@ -136,6 +151,7 @@ def main() -> int:
         "event": args.event,
         "runs": len(rows),
         "counts": {c: len(v) for c, v in by.items()},
+        "not_measured": not_measured,
         "median_green_runs": {k: med(by["success"], k) for k in ("verdict", "c1", "macq", "green")},
         "median_all_runs": {k: med(rows, k) for k in ("verdict", "c1", "macq", "green")},
     }

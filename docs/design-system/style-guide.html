@@ -239,8 +239,11 @@ body {
     color: var(--bn-colour-accent);
 }
 
+/* As atoms/badge.css at rest: dashed outline in the text colour, 0.72 opacity. The pulse
+   and its calming are in the compliance catalogue (atoms/badge.css, tentative tag states). */
 .badge-proposed {
-    border: 1px solid var(--bn-colour-border);
+    opacity: 0.72;
+    border: 1px dashed currentColor;
     background: var(--bn-colour-quote-bg);
     color: var(--bn-colour-badge-text);
     position: relative;

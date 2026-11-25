@@ -60,6 +60,13 @@ def test_fold_matches_search_folding() -> None:
     assert sti.fold("Größe & Straße – Café") == "grosse & strasse cafe"
 
 
+def test_a_full_stop_ends_a_word_but_not_an_address() -> None:
+    assert sti.fold("A sofa bed. Add to shopping bag...") == "a sofa bed add to shopping bag"
+    assert sti.fold("ikea.com/gb/en at 3.5 stars") == "ikea.com/gb/en at 3.5 stars"
+    line = _ln("Sofa bed", 0.1, 0.1)
+    assert match("It's a different category. Sofa bed.", [line], set()) == ("sofa bed", line)
+
+
 # ── Index ────────────────────────────────────────────────────────────────
 
 
@@ -132,14 +139,63 @@ def test_a_real_recording_is_sampled_and_indexed(tmp_path: Path) -> None:
     eng = FakeEngine(lines)
     assert sti.build_index(video, eng, out)
     rec = json.loads(out.read_text(encoding="utf-8"))
-    # ffmpeg's fps filter gives 0, 4, 8 for 13 s (it drops the last part-interval): exactly three,
-    # so a decode that stopped early cannot pass.
-    assert rec["size"] == [320, 180] and rec["samples"] == len(times) == 3
-    assert rec["raw_lines"] == 3
-    assert times == sorted(times) and times[0] < 1.0  # real times from showinfo, in order
+    # 13 s has a frame at or after 0, 4, 8 and 12: exactly four, so a decode that stopped early
+    # cannot pass.
+    assert rec["size"] == [320, 180] and rec["samples"] == len(times) == 4
+    assert rec["raw_lines"] == 4
+    assert times == [0.0, 4.0, 8.0, 12.0]  # one per slot, in order
     assert sti.is_current(out, video, eng)
     calls = len(times)
     assert sti.build_index(video, eng, out) and len(times) == calls  # cached: not read again
+
+
+def _filled(times: list[float]) -> list[tuple[int, float]]:
+    """Which slot (of 4 s) each sampled frame fills, as (slot, the frame's time)."""
+    from fractions import Fraction
+    out, last = [], None
+    for t in times:
+        fill, last = sti.slots_for(Fraction(t), last, Fraction(4))
+        out += [(s, t) for s in fill]
+    return out
+
+
+def test_each_slot_is_filled_once_by_its_first_frame() -> None:
+    # Empty slots take the next frame, as -ss shows it there: 4 and 8 both from 10 s.
+    assert _filled([0.0, 10.0, 12.5]) == [(0, 0.0), (1, 10.0), (2, 10.0), (3, 12.5)]
+    # A size change mid-stream restarts ffmpeg's select, which samples 6 s again in a slot already
+    # read: it fills nothing, and 8 s still gets its own frame (it was shifted a slot late, review).
+    assert _filled([0.0, 4.0, 6.0, 8.0, 12.0]) == [(0, 0.0), (1, 4.0), (2, 8.0), (3, 12.0)]
+    # A picture that starts late does not stand for 0 s; one behind leading audio does.
+    assert _filled([2.3, 4.1]) == [(1, 4.1)]
+    assert _filled([0.02, 4.0]) == [(0, 0.02), (1, 4.0)]
+
+
+def _luma(jpeg: bytes) -> float:
+    gray = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", "pipe:0", "-f", "rawvideo",
+                           "-pix_fmt", "gray", "-"], input=jpeg, capture_output=True, check=True).stdout
+    return sum(gray) / len(gray)
+
+
+@_needs_ffmpeg
+def test_the_still_at_a_samples_time_is_the_frame_that_was_read(tmp_path: Path) -> None:
+    """A pin is drawn on the still, so the still must be the frame its line was read from.
+
+    Each frame is its own grey (frame N is 16 + 8N), at 2 a second, with nothing from 3 to 9.6 s:
+    a slot read late (ffmpeg's fps filter took frame 1.5 s for 0 s) or a slot with no frame of its
+    own (4 s) shows up as a different grey in the still."""
+    pytest.importorskip("fastapi")
+    from bristlenose.server.routes.screens import render_still
+
+    video = tmp_path / "share.mp4"
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i",
+                    "nullsrc=s=64x36:r=2:d=12,geq=lum='16+8*N':cb=128:cr=128,"
+                    "select='not(between(t\\,3\\,9.6))'",
+                    "-fps_mode", "vfr", "-pix_fmt", "yuv420p", str(video)], check=True)
+    read = [(fr.t, sum(fr.bgra[2::4]) / (fr.width * fr.height)) for fr in sti.sample_frames(video)]
+    assert [t for t, _ in read] == [0.0, 4.0, 8.0]
+    for t, grey in read:
+        still = _luma(render_still(tmp_path, "s1", video, t, (0.0, 0.0, 1.0, 1.0), None))
+        assert abs(still - grey) < 4, f"at {t} s the sample read grey {grey:.0f}, the still shows {still:.0f}"
 
 
 @_needs_ffmpeg
@@ -272,6 +328,15 @@ def test_match_needs_a_content_word_or_a_rare_long_word() -> None:
     assert match("I want to go to the shop now", lines, set()) == ("go to the shop", lines[0])
     assert match("it is to the", lines, set()) is None
     assert match("die lieferverfugbarkeit ist", lines, {"lieferverfugbarkeit"})[0] == "lieferverfugbarkeit"
+
+
+def test_a_contracted_stop_word_is_not_a_rare_word() -> None:
+    # "what's" has six letters but is "what": it pinned a quote to a menu line (25 Nov 2026).
+    said = "ideas, what's new? I've thrown my way to the bed section"
+    menu = [_ln("What's on in store?", 0.0, 0.3)]
+    assert match(said, menu, {"what's", "store"}) is None
+    page = [_ln("What's new", 0.0, 0.6)]
+    assert match(said, page, set()) == ("what's new", page[0])  # the phrase still pins
 
 
 def test_safari_with_no_path_is_keyed_by_tab_title() -> None:

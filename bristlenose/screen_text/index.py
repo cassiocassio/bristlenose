@@ -1,6 +1,7 @@
 """One recording in, a screen-text index out.
 
-One ffmpeg pass decodes a frame every ``EVERY`` seconds to raw BGRA on a pipe, with ``showinfo``
+One ffmpeg pass decodes a frame for every ``EVERY``-second slot to raw BGRA on a pipe: the first
+frame at or after the slot's time, which is the frame a still seeked there shows, with ``showinfo``
 giving each frame's real time (never assume the first frame is at 0). Each frame goes to the engine.
 Lines are folded as search folds them. An **episode** is one line at one place, with the runs of time
 it was on screen (one missing sample bridged); a line that moves (the page scrolled) is a new
@@ -24,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -32,6 +34,7 @@ import threading
 import unicodedata
 from collections import deque
 from collections.abc import Callable, Iterator
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -55,11 +58,15 @@ _KEEP = "@./:-_#&+%'"
 
 
 def fold(s: str) -> str:
-    """Fold text as search folds it: lower case, accents off, ß → ss, punctuation to spaces."""
+    """Fold text as search folds it: lower case, accents off, ß → ss, punctuation to spaces.
+
+    A full stop inside a word stays (``ikea.com``, ``3.5``); one that ends a word goes, so "bed."
+    in a sentence is the word "bed" on screen (25 Nov 2026: a quote's "bed." matched no line)."""
     s = s.replace("ß", "ss").replace("’", "'").replace("‘", "'").replace("€", " € ").replace("£", " £ ")
     s = unicodedata.normalize("NFKD", s.lower())
     s = "".join(c for c in s if not unicodedata.combining(c))
     s = "".join(c if c.isalnum() or c in _KEEP or c in "€£" else " " for c in s)
+    s = re.sub(r"\.+(?=\s|$)", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 
 
@@ -102,30 +109,65 @@ def scaled_size(w: int, h: int, max_width: int = MAX_WIDTH) -> tuple[int, int]:
     return max_width, nh - nh % 2
 
 
+#: A picture starting this late after its first slot's time does not stand for that slot (a screen
+#: share joined late); one a few frames in, behind leading audio, does.
+LATE_START = Fraction(1)
+
+
+def slots_for(t: Fraction, last: int | None, step: Fraction) -> tuple[range, int | None]:
+    """The slots a sampled frame at *t* fills after slot *last* (None before the first), and the
+    new last slot. A frame fills its own slot and any empty ones before it, as ``-ss`` would show
+    it there. A slot already filled is not filled again: ffmpeg starts ``select`` afresh when a
+    recording changes size mid-stream, and refilling shifted every later slot a step late."""
+    k = math.floor(t / step)
+    if last is None:
+        return (range(0) if t - k * step >= LATE_START else range(k, k + 1)), k
+    if k <= last:
+        return range(0), last
+    return range(last + 1, k + 1), k
+
+
 def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], bool] = lambda: False
                   ) -> Iterator[Frame]:
-    """Yield a frame every *every* seconds, streamed (an hour of 1080p never sits in memory)."""
+    """Yield a frame for each *every*-second slot, streamed (an hour of 1080p never sits in memory).
+
+    The frame for the slot at T is the first frame at or after T: the frame ``ffmpeg -ss T``
+    decodes, so a still cut at a sample's time shows what was read there. ffmpeg's ``fps`` filter
+    fills a slot with the last frame up to half an interval later instead, which on a screen
+    recording is often a different screen (a menu opened in those two seconds, 25 Nov 2026). A
+    slot no frame starts in (a still screen, recorded at a variable rate) takes the next frame,
+    as ``-ss`` does (``slots_for``)."""
     w, h = scaled_size(*probe_size(video))
     duration = probe_duration(video)
     size = w * h * 4
+    e = f"{every:g}"
+    step = Fraction(e)  # the same width ffmpeg's expression divides by
     proc = subprocess.Popen(
         [binary_command("ffmpeg"), "-nostdin", "-hide_banner", "-loglevel", "info", "-i", str(video), "-an",
-         "-vf", f"fps=1/{every},scale={w}:{h}:flags=area,showinfo",
+         # The first frame of each slot that has one; showinfo then gives each its exact pts.
+         "-vf", f"select='isnan(prev_selected_t)+gt(floor(t/{e})\\,floor(prev_selected_t/{e}))',"
+                f"scale={w}:{h}:flags=area,showinfo",
          # passthrough: the rawvideo muxer is CFR by default and duplicates a leading frame when
          # the video track starts late, a frame showinfo never saw, so times and frames drift.
          "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "bgra", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    times: list[float] = []
+    # Exact times, from the integer pts and the time base: pts_time is printed to six significant
+    # figures, which an hour in is a hundredth of a second, enough to put a frame in the wrong slot.
+    times: list[Fraction] = []
+    base: list[Fraction] = []
     tail: deque[str] = deque(maxlen=12)
     got_time = threading.Condition()
 
     def read_err() -> None:
         assert proc.stderr is not None
         for line in proc.stderr:
-            m = re.search(rb"pts_time:(-?[\d.]+(?:e-?\d+)?)", line)
-            if m:
+            m = re.search(rb"\bpts:\s*(-?\d+)\s+pts_time:", line)
+            tb = re.search(rb"config in time_base:\s*(\d+)/(\d+)", line)
+            if tb and int(tb.group(2)):
+                base.append(Fraction(int(tb.group(1)), int(tb.group(2))))
+            elif m and base:
                 with got_time:
-                    times.append(float(m.group(1)))
+                    times.append(int(m.group(1)) * base[0])
                     got_time.notify_all()
             elif line.strip():
                 tail.append(line.decode("utf-8", "replace").strip())
@@ -135,6 +177,7 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
     reader = threading.Thread(target=read_err, daemon=True)
     reader.start()
     n = 0
+    slot: int | None = None  # the last slot yielded
     try:
         assert proc.stdout is not None
         while True:
@@ -151,17 +194,21 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
 
                 got_time.wait_for(time_ready, timeout=10)
                 if len(times) <= n:
-                    raise RuntimeError(f"no time for frame {n}")
+                    raise RuntimeError(f"no time for frame {n}" + ("" if base else " (no time base)"))
                 t = times[n]
             n += 1
-            yield Frame(width=w, height=h, bgra=buf, t=round(t, 2))
+            fill, slot = slots_for(t, slot, step)
+            for s in fill:
+                if should_stop():  # a long still stretch is many slots from one frame
+                    return
+                yield Frame(width=w, height=h, bgra=buf, t=round(float(s * step), 2))
         # A decode that ends early is not an index: a cut-off file or a decoder error would
         # otherwise be cached as a recording with fewer screens than it has.
         rc = proc.wait(timeout=60)
         reader.join(timeout=5)
         if rc != 0:
             raise RuntimeError(f"ffmpeg exited {rc}: {' | '.join(tail)[-400:]}")
-        last = times[n - 1] if n else None
+        last = float(times[n - 1]) if n else None
         if duration and duration > every and (last is None or last < duration - 2 * every):
             got = f"{last:.0f}" if last is not None else "0"
             raise RuntimeError(f"decoded only {got} s of {duration:.0f} s")

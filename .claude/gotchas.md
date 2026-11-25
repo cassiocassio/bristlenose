@@ -794,6 +794,18 @@ use the runner's return code.
 
 ## Pipeline, data and participant privacy
 
+### FFmpeg's `fps` filter and `-ss` pick DIFFERENT frames for the same time — pair them and the picture lies
+
+`-vf fps=1/4` fills the slot at T with the **last** frame whose time rounds to T, so up to 2 s
+**after** it; showinfo then prints T, not the frame's own time. `ffmpeg -ss T -i video` decodes the
+**first** frame at or after T. On three real recordings, 50 of 51, 66 of 66 and 6 of 8 slots were
+different frames (25 Nov 2026). The Screens lens OCR'd one and showed the other, so a quote was
+pinned to a menu open for those 2 s, over a still that shows no menu. `screen_text/index.py` now
+reads each slot at its first frame (`select`, exact slot from showinfo's integer `pts` and time
+base, since `pts_time` has six significant figures). Anything that reads frames in one pass and
+shows a frame cut with `-ss` later must use the same rule. Check by hashing raw frames from both
+paths, never by looking (most mismatched pairs are visually identical).
+
 ### `attempted == succeeded + failed` is a TAUTOLOGY in most rollups — it cannot catch a silent drop
 
 The obvious guard against "a session vanished" is per-bucket conservation. It is

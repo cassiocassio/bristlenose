@@ -168,8 +168,8 @@ def test_the_job_indexes_each_recording_with_the_engine(project: Path, monkeypat
     while job.running and time.time() < deadline:
         time.sleep(0.05)
     rec = json.loads((index_dir(_out(project)) / "s1.json").read_text(encoding="utf-8"))
-    # ffmpeg's fps filter gives 0 and 4 for 9 s: exactly two.
-    assert rec["engine"] == "fake" and rec["samples"] == len(seen) == 2
+    # 9 s has a frame at or after 0, 4 and 8: exactly three.
+    assert rec["engine"] == "fake" and rec["samples"] == len(seen) == 3
     assert job.failed == {}
 
 

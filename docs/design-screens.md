@@ -593,6 +593,15 @@ sessions (`experiments/screen-text/README.md`, fourth pass):
 
 - **Positions are per moment.** A line's box moves as the page scrolls, so a pin is matched on the
   still it is drawn on, re-read at that moment, not on the episode index.
+- **The still is the frame that was read** (since 25 Nov 2026, index version 4). Each 4-second
+  slot is read at its first frame at or after the slot's time, which is the frame `ffmpeg -ss`
+  cuts the still from. FFmpeg's `fps` filter, used before, filled a slot with the last frame up to
+  2 s later: on three real recordings 50 of 51, 66 of 66 and 6 of 8 slots were a different frame
+  from the still, and on project-ikea p3 at 01:52 a menu open for those 2 s pinned a quote to text
+  the still does not show. Pinned by `test_the_still_at_a_samples_time_is_the_frame_that_was_read`.
+- **A stop word with a contraction ending is not a rare word**: "what's" is "what", so it cannot
+  pin a quote by itself (a possessive of a real word still can). A full stop that ends a word is
+  folded away ("bed." is "bed"), while one inside a word stays (`ikea.com`, `3.5`).
 - **47 quotes placed on a screen; 15 pinned by shared words, 8 by meaning, 24 left unpinned.**
 - **Precision 17 of 23** against hand labels, once lines are limited to the web page (no call tiles,
   no browser bars) and page furniture is dropped (a line flagged sticky, or seen on 5+ screens of a

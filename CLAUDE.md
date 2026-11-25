@@ -162,6 +162,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 - **User folders**: filter with `is_os_metadata()` (`._*`, `.DS_Store`); a dataless (cloud placeholder) file is read with a bound (`fs.ensure_materialised`), never skipped and never narrated (`docs/design-cloud-files.md`); `.ts` is excluded from media extensions on purpose.
 - **Participant data**: `pii_summary.txt`, `llm-calls.jsonl` and the transcription-quality record are re-identification keys, never in an export; `model_copy()` is shallow (clear `words`); only `pii_score_threshold` is wired (PERSON's bar; patterns floor at 0.40); embedded `<script>` JSON escapes `<` `>` `&` (`script_json`); a clean `CredentialStore.set()` proves nothing (`set_verified()`); `record_call` needs three contextvars (`serve_run_context()`).
 - **Codebooks**: identical tag counts across a framework's groups are the tell of invented tags; an authored codebook carries only its author's terms, cited.
+- **Frames**: FFmpeg's `fps` filter fills slot T with a frame up to half an interval later, while `-ss T` decodes the first frame at or after T; a frame read in one pass and a still cut with `-ss` must use the same rule (hash both to check).
 
 **i18n** — [full entries](.claude/gotchas.md#i18n)
 

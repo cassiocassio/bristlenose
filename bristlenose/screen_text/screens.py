@@ -278,6 +278,17 @@ def _content(tok: str) -> bool:
     return len(tok) >= 4 and tok not in STOP and not tok.isdigit()
 
 
+#: A contraction's ending: "what's" is "what" to a reader, however many letters it has.
+_CONTRACTION = re.compile(r"(?:'s|'re|'ve|'ll|'d|'m|n't)$")
+
+
+def _rare_long(word: str) -> bool:
+    """Long enough to pin a quote by itself: 6+ letters, and neither a stop word nor one with a
+    contraction ending ("what's" pinned a quote to "What's on in store?", 25 Nov 2026). A
+    possessive of a real word ("grejsimojs's") still counts."""
+    return len(word) >= 6 and word not in STOP and _CONTRACTION.sub("", word) not in STOP
+
+
 def _good(phrase: str) -> bool:
     w = phrase.split()
     if len(w) >= 3:
@@ -318,7 +329,7 @@ def match(spoken: str, lines: list[dict[str, Any]], rare: set[str],
                 if k >= 2 and any(_content(x) for x in s[i:i + k]) and k > len(phrase.split()):
                     phrase = " ".join(s[i:i + k])
         if not phrase:
-            hit = [w for w in set(s) & set(t) if len(w) >= 6 and w not in STOP and w in rare]
+            hit = [w for w in set(s) & set(t) if _rare_long(w) and w in rare]
             if hit:
                 phrase = max(hit, key=len)
         if not phrase or not _good(phrase):

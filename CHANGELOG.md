@@ -4,14 +4,13 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 **0.48.0** — _25 Nov 2026_
 
-AutoCode now tags while it works: tags appear batch by batch, a first run ends by accepting its most confident share, and the tag sidebar and the Mac sidebar show where it has got to. Quotes keep their paragraphs, a quote is one passage on one point, and the Mac sidebar's divider drags more smoothly.
+AutoCode now tags while it works: tags appear batch by batch, a first run ends by accepting its most confident share, and the tag sidebar shows where it has got to. Quotes keep their paragraphs, a quote is one passage on one point, and the Mac sidebar's divider drags more smoothly.
 
 **New**
 
 - **AutoCode's tags appear as it works.** Each batch is saved and shown as it answers. A first run ends by accepting its most confident 30%, never below 0.70, and a stopped or failed run keeps what it had.
 - **The tag sidebar opens on an AutoCode overview:** each codebook's results, live during a run and remembered per study, with a link to review each one. Two labelled controls select all or none, and show used tags or all of them.
 - **The AutoCode review shows the whole run.** A threshold slider over the confidence histogram re-cuts it, your own decisions are kept, and a decided row slides to its new place. Zone headers stay in view and work from the keyboard, and tentative tags are dashed.
-- **The Mac sidebar shows AutoCode's progress** on the project row, including stopped, failed and partial runs, and AutoCode can be stopped from the menus.
 - **Editing a long quote keeps its paragraphs.** Shift-Return starts a paragraph, Backspace at its start joins it, and Tab saves and stays on the quote.
 - **The Mac app's Help menu has Privacy Policy and Terms of Use.**
 

@@ -291,7 +291,7 @@ nowhere.
 Tag Sidebar
 ├── Header (title + close button)
 ├── Subtitle ("47 tags across 5 frameworks")
-├── Actions (Select all | Clear | Open »)
+├── Actions ("Select: All | None" · "Show:" native mini pop-up, Used / All; 25 Nov 2026)
 ├── Search input
 └── Body
     ├── Codebook Framework (details/summary disclosure)

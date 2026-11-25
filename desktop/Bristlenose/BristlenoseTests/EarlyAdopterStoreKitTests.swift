@@ -62,6 +62,26 @@ struct EarlyAdopterStoreKitTests {
 
     private func ago(_ days: Double) -> Date { Date().addingTimeInterval(-days * day) }
 
+    /// Start from a history that is empty and STAYS empty. A `.renewUntilNow` purchase makes
+    /// StoreKit's test store write its backdated renewals a beat at a time, after the call
+    /// returns, so an earlier case's renewals keep landing after this case's
+    /// `clearTransactions()` (25 Nov 2026: 4 of 6 solo runs read a previous case's 300-day
+    /// run; waiting for one empty read did not help). Clear, and clear again whenever a late
+    /// renewal shows up, until the history has read empty for half a second running.
+    private func clean() async {
+        var quietSince: Date?
+        for _ in 0..<100 {
+            if await SubscriptionStore.history().isEmpty {
+                if let q = quietSince, Date().timeIntervalSince(q) >= 0.5 { return }
+                if quietSince == nil { quietSince = Date() }
+            } else {
+                session.clearTransactions()
+                quietSince = nil
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
     @discardableResult
     private func buy(daysAgo: Double,
                      _ behavior: Product.PurchaseOption.SubscriptionRenewalBehavior) async throws -> Transaction {
@@ -83,6 +103,7 @@ struct EarlyAdopterStoreKitTests {
 
     @Test("the store's history holds every renewal of a long subscription")
     func historyHasTheRenewals() async throws {
+        await clean()
         try await buy(daysAgo: 200, .renewUntilNow)
         let history = await SubscriptionStore.history()
         // A one-week trial, then about six monthly periods.
@@ -92,18 +113,21 @@ struct EarlyAdopterStoreKitTests {
 
     @Test("subscribed since before the deal ended: an early adopter, dated from the first purchase")
     func continuousEarlyAdopter() async throws {
+        await clean()
         try await buy(daysAgo: 300, .renewUntilNow)
         #expect(near(await since(dealEndedDaysAgo: 100), ago(300)))
     }
 
     @Test("subscribed only after the deal ended: no star")
     func newcomer() async throws {
+        await clean()
         try await buy(daysAgo: 20, .renewUntilNow)
         #expect(await since(dealEndedDaysAgo: 100) == nil)
     }
 
     @Test("a 30-day lapse keeps the run, so the star stays")
     func shortLapse() async throws {
+        await clean()
         // A one-week trial, then cancelled: expires about 193 days ago.
         try await buy(daysAgo: 200, .cancelImmediately)
         try await buy(daysAgo: 163, .renewUntilNow)
@@ -112,6 +136,7 @@ struct EarlyAdopterStoreKitTests {
 
     @Test("a 90-day lapse breaks the run: they came back after the deal, so no star")
     func longLapse() async throws {
+        await clean()
         try await buy(daysAgo: 300, .cancelImmediately)
         try await buy(daysAgo: 200, .renewUntilNow)
         #expect(await since(dealEndedDaysAgo: 250) == nil)
@@ -119,6 +144,7 @@ struct EarlyAdopterStoreKitTests {
 
     @Test("a refunded purchase is not part of the history")
     func refundIsLeftOut() async throws {
+        await clean()
         let t = try await buy(daysAgo: 3, .cancelImmediately)
         try session.refundTransaction(identifier: UInt(t.id))
         #expect(await SubscriptionStore.history().isEmpty)

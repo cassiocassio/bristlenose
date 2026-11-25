@@ -104,8 +104,8 @@ def resolve(spec: str, website: Path | None) -> list[Path]:
 
 def label(path: Path, website: Path | None) -> str:
     if website is not None and website in path.parents:
-        return WEBSITE_PREFIX + str(path.relative_to(website))
-    return str(path.relative_to(ROOT))
+        return WEBSITE_PREFIX + path.relative_to(website).as_posix()
+    return path.relative_to(ROOT).as_posix()
 
 
 @functools.lru_cache(maxsize=4)

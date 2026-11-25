@@ -52,9 +52,10 @@ from bristlenose.server.models import (
 )
 from tests.test_autocode_batch_save import _counts, _file_project, _n_in_prompt, _settings
 from tests.test_autocode_engine import _make_batch_result, _patch_llm
-from tests.test_autocode_landing_routes import (  # noqa: F401  (a fixture)
+from tests.test_autocode_landing_routes import (  # noqa: F401  (fixtures)
     BASE,
     _embedded,
+    _export_bundle_stub,
     _live,
     _unfinish,
     seeded,

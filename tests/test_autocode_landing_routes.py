@@ -25,6 +25,19 @@ from tests.test_serve_autocode_api import _FIXTURE_DIR, _import_garrett, _propos
 BASE = "/api/projects/1"
 
 
+@pytest.fixture(autouse=True)
+def _export_bundle_stub(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The export route needs the single-file export build, which is gitignored and
+    which CI's pytest cells never build; without a stub every export read here is a
+    500 (red on every cell of the 0.48.0 strict run). Same stub as the export tests."""
+    from bristlenose.server.routes import export as export_mod
+
+    bundle = tmp_path_factory.mktemp("export-bundle")
+    (bundle / "app.js").write_text("// stub", encoding="utf-8")
+    (bundle / "app.css").write_text("/* stub */", encoding="utf-8")
+    monkeypatch.setattr(export_mod, "_EXPORT_STATIC_DIR", bundle)
+
+
 @pytest.fixture()
 def seeded() -> tuple[TestClient, list[int], list[int]]:
     """Garrett installed, a completed job, one pending proposal per quote at 0.5, 0.6,

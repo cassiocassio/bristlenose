@@ -23,6 +23,11 @@ WHAT IT DOES
 - Every run, full or not, appends one JSON line to
   `~/.cache/bristlenose/pytest-runs.log`. That log is how the test-speed plan
   measures runs per session and how often `-n` is used.
+- The run that holds the lock writes its progress to
+  `~/.cache/bristlenose/pytest-live.txt`, so there is one place to watch a
+  full run whoever started it (`tail -f` it): a header, a progress line every
+  `LIVE_EVERY_S`, each failure as it happens, and a `finished` line. The file
+  is overwritten by the next full run.
 - Skipped entirely when `CI` is set, and on xdist workers (the controller
   holds the lock for its workers).
 """
@@ -39,6 +44,7 @@ from typing import IO, Any
 
 WAIT_LIMIT_S = 1800.0  # serial full run measured 1454 s on 25 Nov 2026
 POLL_S = 2.0
+LIVE_EVERY_S = 5.0
 DEFAULT_MARKEXPR = "not slow"
 
 
@@ -152,6 +158,97 @@ def log_run(log_path: Path, held: Held, *, args: list[str], workers: Any) -> Non
         pass  # a log we cannot write must not fail a test run
 
 
+OUTCOMES = ("passed", "failed", "error", "skipped", "xfailed")
+
+
+@dataclass
+class Live:
+    """The progress file of the run holding the lock."""
+
+    handle: IO[str]
+    started: float = field(default_factory=time.time)
+    total: int | None = None
+    done: int = 0
+    counts: dict[str, int] = field(default_factory=lambda: dict.fromkeys(OUTCOMES, 0))
+    last_write: float = 0.0
+
+
+_LIVE: Live | None = None
+
+
+def live_start(path: Path, *, describe: str) -> Live | None:
+    """Start a fresh progress file; a file we cannot write is no reason to fail a run."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        handle = open(path, "w", encoding="utf-8")  # noqa: SIM115 - held for the run
+    except OSError:
+        return None
+    live = Live(handle=handle)
+    _live_write(live, f"full test run · pid {os.getpid()} · started "
+                      f"{time.strftime('%H:%M:%S', time.localtime(live.started))} · {os.getcwd()}\n"
+                      f"args: {describe}\n")
+    return live
+
+
+def _outcome(report: Any) -> str | None:
+    """One outcome per test: the call phase, or setup when setup didn't pass."""
+    xfail = hasattr(report, "wasxfail")
+    if report.when == "call":
+        if xfail:
+            return "xfailed" if report.skipped else "passed"
+        return str(report.outcome)
+    if report.when == "setup" and not report.passed:
+        if report.skipped:
+            return "xfailed" if xfail else "skipped"
+        return "error"
+    if report.when == "teardown" and report.failed:
+        return "error"
+    return None
+
+
+def live_record(live: Live, report: Any) -> None:
+    outcome = _outcome(report)
+    if outcome is None:
+        return
+    live.counts[outcome] = live.counts.get(outcome, 0) + 1
+    if report.when != "teardown":  # a teardown error is a second report for a test already done
+        live.done += 1
+    if outcome in ("failed", "error"):
+        _live_write(live, f"{outcome.upper()} {report.nodeid}\n")
+    if time.time() - live.last_write >= LIVE_EVERY_S:
+        _live_progress(live)
+
+
+def live_collected(live: Live, n: int) -> None:
+    if n and live.total is None:
+        live.total = n
+        _live_progress(live)
+
+
+def live_finish(live: Live) -> None:
+    _live_progress(live, prefix="finished")
+    try:
+        live.handle.close()
+    except OSError:
+        pass
+
+
+def _live_progress(live: Live, prefix: str = " ") -> None:
+    total = f"{live.total:,}" if live.total else "?"
+    counts = "  ".join(f"{k} {v:,}" for k, v in live.counts.items())
+    _live_write(live, f"{prefix} {live.done:,}/{total}  {counts}  · "
+                      f"{time.time() - live.started:.0f} s\n")
+
+
+def _live_write(live: Live, text: str) -> None:
+    try:
+        live.handle.write(text)
+        live.handle.flush()
+    except (OSError, ValueError):
+        pass  # a progress file we cannot write must not fail a test run
+    live.last_write = time.time()
+
+
 def _holder(lock_path: Path) -> str:
     try:
         text = lock_path.read_text(encoding="utf-8").strip()
@@ -188,15 +285,32 @@ def configure(config: Any) -> None:
         collect_only=bool(getattr(opt, "collectonly", False)),
         markexpr=getattr(opt, "markexpr", DEFAULT_MARKEXPR) or "",
     )
-    held = (acquire(cache_dir() / "pytest.lock", describe=" ".join(sys.argv[1:]))
-            if full else Held(full=False))
+    describe = " ".join(sys.argv[1:])
+    held = acquire(cache_dir() / "pytest.lock", describe=describe) if full else Held(full=False)
     _STASH[id(config)] = held
+    global _LIVE
+    if held.handle is not None:  # only the lock's owner writes the live file
+        _LIVE = live_start(cache_dir() / "pytest-live.txt", describe=describe)
 
 
 def unconfigure(config: Any) -> None:
+    global _LIVE
     held = _STASH.pop(id(config), None)
     if held is None:
         return
+    if _LIVE is not None and held.handle is not None:
+        live_finish(_LIVE)
+        _LIVE = None
     log_run(cache_dir() / "pytest-runs.log", held,
             args=sys.argv[1:], workers=getattr(config.option, "numprocesses", None))
     release(held)
+
+
+def record(report: Any) -> None:
+    if _LIVE is not None:
+        live_record(_LIVE, report)
+
+
+def collected(n: int) -> None:
+    if _LIVE is not None:
+        live_collected(_LIVE, n)

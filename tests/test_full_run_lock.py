@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -180,3 +182,77 @@ def test_conftest_takes_and_releases_the_lock() -> None:
     }
     assert "_full_run_lock.configure(config)" in hooks.get("pytest_configure", "")
     assert "_full_run_lock.unconfigure(config)" in hooks.get("pytest_unconfigure", "")
+    assert "_full_run_lock.record(report)" in hooks.get("pytest_runtest_logreport", "")
+    assert "_full_run_lock.collected(" in hooks.get("pytest_collection_finish", "")
+    assert "_full_run_lock.collected(" in hooks.get("pytest_xdist_node_collection_finished", "")
+
+
+def _report(nodeid: str, when: str, outcome: str, **extra: object) -> SimpleNamespace:
+    return SimpleNamespace(nodeid=nodeid, when=when, outcome=outcome, passed=outcome == "passed",
+                           failed=outcome == "failed", skipped=outcome == "skipped", **extra)
+
+
+def test_the_live_file_counts_each_test_once_and_names_failures(tmp_path: Path) -> None:
+    path = tmp_path / "pytest-live.txt"
+    live = lock.live_start(path, describe="tests/ -n auto")
+    assert live is not None
+    lock.live_collected(live, 5)
+    for r in (
+        _report("t::ok", "setup", "passed"), _report("t::ok", "call", "passed"),
+        _report("t::ok", "teardown", "failed"),               # a second report, same test
+        _report("t::bad", "call", "failed"),
+        _report("t::skip", "setup", "skipped"),
+        _report("t::xf", "call", "skipped", wasxfail="known"),
+        _report("t::broken", "setup", "failed"),
+    ):
+        lock.live_record(live, r)
+    lock.live_finish(live)
+    text = path.read_text(encoding="utf-8")
+    assert text.splitlines()[1] == "args: tests/ -n auto"
+    assert "FAILED t::bad" in text and "ERROR t::broken" in text and "ERROR t::ok" in text
+    assert text.splitlines()[-1].startswith(
+        "finished 5/5  passed 1  failed 1  error 2  skipped 1  xfailed 1  · ")
+
+
+LIVE_CONFTEST = """
+import importlib.util, sys
+import pytest
+spec = importlib.util.spec_from_file_location("frl_under_test", {module!r})
+L = importlib.util.module_from_spec(spec)
+sys.modules["frl_under_test"] = L
+spec.loader.exec_module(L)
+
+def pytest_configure(config): L.configure(config)
+def pytest_unconfigure(config): L.unconfigure(config)
+def pytest_runtest_logreport(report): L.record(report)
+def pytest_collection_finish(session): L.collected(len(session.items))
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_node_collection_finished(node, ids): L.collected(len(ids))
+"""
+
+
+@needs_flock
+@pytest.mark.parametrize("workers", [[], ["-n", "2"]], ids=["serial", "xdist"])
+def test_a_full_run_writes_one_live_file(tmp_path: Path, workers: list[str]) -> None:
+    """End to end in a subprocess: under xdist the reports arrive on the controller."""
+    proj, home = tmp_path / "proj", tmp_path / "home"
+    (proj / "tests").mkdir(parents=True)
+    home.mkdir()
+    (proj / "pytest.ini").write_text("[pytest]\nmarkers = slow\n", encoding="utf-8")
+    (proj / "conftest.py").write_text(
+        LIVE_CONFTEST.format(module=str(TESTS_DIR / "full_run_lock.py")), encoding="utf-8")
+    (proj / "tests" / "test_x.py").write_text(
+        "import pytest\n"
+        "def test_passes(): pass\n"
+        "def test_fails(): assert False\n"
+        "def test_skips(): pytest.skip('no')\n", encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "CI" and not k.startswith("PYTEST_")}
+    env.update(HOME=str(home), USERPROFILE=str(home))
+    subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-m", "not slow",
+                    *workers, "tests"], cwd=proj, env=env, capture_output=True, text=True,
+                   encoding="utf-8", timeout=120, check=False)
+    text = (home / ".cache" / "bristlenose" / "pytest-live.txt").read_text(encoding="utf-8")
+    assert "FAILED tests/test_x.py::test_fails" in text
+    assert text.splitlines()[-1].startswith(
+        "finished 3/3  passed 1  failed 1  error 0  skipped 1  xfailed 0  · ")
+

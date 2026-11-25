@@ -302,6 +302,21 @@ def pytest_unconfigure(config: pytest.Config) -> None:
     _full_run_lock.unconfigure(config)
 
 
+# Progress for ~/.cache/bristlenose/pytest-live.txt (full runs only). Under
+# xdist these fire on the controller, which receives every worker's reports.
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    _full_run_lock.record(report)
+
+
+def pytest_collection_finish(session: pytest.Session) -> None:
+    _full_run_lock.collected(len(session.items))
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_node_collection_finished(node: object, ids: list[str]) -> None:
+    _full_run_lock.collected(len(ids))
+
+
 class _InMemoryCredentialStore(CredentialStore):
     """A keychain that starts empty for every test and forgets afterwards."""
 

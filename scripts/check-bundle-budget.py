@@ -67,7 +67,12 @@ STATIC = ROOT / "bristlenose/server/static"
 # the shell now shares with that lazy page (toast, exportData, a Dialog group)
 # out of the main chunk into three more first-paint files. An empty style-guide
 # page cost ~280 B on its own. The shell-import trim above is still owed.
-BUDGET_BYTES = 224 * 1000
+# Raised 224 -> 226 kB on 25 Nov 2026 for a security fix: i18next 26.0.8 -> 26.7.2
+# (811fe45f4) clears GHSA-6jcc-5g8w-32mx, the only shipped-frontend advisory, and
+# `npm audit --omit=dev` now blocks on it, so the old version is not an option.
+# Measured on one tree, i18next the only difference: 222,849 B -> 225,201 B in the
+# same 38 chunks (+2,352 B). Nothing else moved. The shell-import trim is still owed.
+BUDGET_BYTES = 226 * 1000
 
 # Both forms the entry document uses to make the browser fetch a chunk before
 # first paint. A `<link rel="prefetch">` would NOT belong here; nothing emits

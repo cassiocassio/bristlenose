@@ -945,7 +945,9 @@ describe("SignalsPage", () => {
     expect(body.querySelector("svg")?.getAttribute("data-size")).toBe("s");
     // The chart's dots are the larger size.
     fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
-    expect(screen.getAllByTestId("bn-metric-dots")[0].getAttribute("data-size")).toBe("m");
+    // Await it: a click that lands before the cards' store subscription has run (their first
+    // commit's passive effects, late under load) opens the working one render later.
+    expect((await screen.findAllByTestId("bn-metric-dots"))[0].getAttribute("data-size")).toBe("m");
   });
 
   const LONG_EVIDENCE_QUOTE =
@@ -1199,7 +1201,8 @@ describe("SignalsPage", () => {
     expect(hero.getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(hero);
-    expect(hero.getAttribute("aria-expanded")).toBe("true");
+    // The first click may land before the store subscription; wait for the render it causes.
+    await waitFor(() => expect(hero.getAttribute("aria-expanded")).toBe("true"));
     expect(screen.getByText("2.5×")).toBeTruthy();   // concentration
 
     fireEvent.click(hero);

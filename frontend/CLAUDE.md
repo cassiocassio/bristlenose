@@ -121,11 +121,12 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - Word-level timing data — Whisper captures per-word timestamps (`Word` model: `text`, `start_time`…
 - Speaker role: the moderator's stored role is `"researcher"`, never `"moderator"`.
 
-**Testing and verification** (30) — [full entries](gotchas.md#testing-and-verification)
+**Testing and verification** (31) — [full entries](gotchas.md#testing-and-verification)
 
 - Vitest blanks every CSS import, `?raw` too, unless `test.css.include` lists it; outside `fs.allow` it is "Denied ID".
 - To read a module-level store from the page under `serve --dev`, `import()` of its Vite URL gives a SECOND…
 - A test that waits a fixed time for a measured layout goes flaky when the subtree under it gets heavier.
+- A click right after `waitFor` first sees a component can predate its store subscription: await what the click shows.
 - jsdom keeps focus on a node React moves; browsers drop it to `<body>`. A test of "focus survives a reorder"…
 - `react-hooks/refs` flags a render-time `.map()` whose callback captures a function that reads a ref, even…
 - The search performance test only WARNS — read its line after any matcher change.

@@ -36,11 +36,12 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 
 **The full entries — the incident, the measurement, the fix — are in [`gotchas.md`](gotchas.md), by theme.** Read the theme's section before working in that area; this index is the rule and the tell, nothing more. Add a new gotcha to `gotchas.md` and a headline here.
 
-**Build, bundle size and tooling** (9) — [full entries](gotchas.md#build-bundle-size-and-tooling)
+**Build, bundle size and tooling** (10) — [full entries](gotchas.md#build-bundle-size-and-tooling)
 
 - Bundle size gate — `npm run size` after `npm run build` uses `scripts/check-bundle-budget.py` to measure…
 - Island code-splitting — one dynamic owner per island.
 - The `components/index.ts` barrel is in the always-loaded chunk — a component only lazy islands reach must be…
+- A new lazy page costs first-paint bytes even when none of its code loads at first paint (shared modules split out of main).
 - A green typecheck is a claim about the tree at the moment it ran — and files added afterwards are not in it.
 - `npm run build` runs `tsc -b` which type-checks test files
 - Primary Node version is pinned in `.tool-versions` at the repo root

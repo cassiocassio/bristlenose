@@ -2,7 +2,7 @@ import { Navigate } from "react-router-dom";
 
 /**
  * Export-build stand-in for the dev specimen pages (`SpecimenTab`,
- * `PickerSpecimenTab`, `TagSpecimenTab`).
+ * `PickerSpecimenTab`, `TagSpecimenTab`, `StyleGuideTab`).
  *
  * `vite.export.config.ts` aliases each of those modules to this file, so the specimen
  * islands and their fixtures never enter the exported report's module graph
@@ -19,5 +19,9 @@ export function PickerSpecimenTab() {
 }
 
 export function TagSpecimenTab() {
+  return <Navigate to="/report/" replace />;
+}
+
+export function StyleGuideTab() {
   return <Navigate to="/report/" replace />;
 }

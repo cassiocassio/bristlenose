@@ -337,6 +337,12 @@ private struct DebugMenuContent: View {
         Button("Grid Specimen") { bridgeHandler.menuAction("openSpecimen") }
             .disabled(serveManager.runningPort == nil)
 
+        // The design system drawn by the shipped React components and theme
+        // CSS on fixture data, in the report webview (so the desktop type scale
+        // and Edo are the real ones). Routes the SPA to /report/style-guide.
+        Button("Style Guide") { bridgeHandler.menuAction("openStyleGuide") }
+            .disabled(serveManager.runningPort == nil)
+
         // (Reveal / Open Log / Copy Provenance moved to Section 1 — they ship
         // to every channel now. See DiagnosticsActions.)
 

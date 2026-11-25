@@ -60,7 +60,14 @@ STATIC = ROOT / "bristlenose/server/static"
 # review pane's motion, the tag sidebar overview) had left ~0.28 kB of headroom by
 # 24 Nov, and that day's review-pane and tag-sidebar commits took the rest. Raised
 # to release, not trimmed: finding which shell import to defer is owed, not done.
-BUDGET_BYTES = 223 * 1000
+# Raised 223 -> 224 kB on 25 Nov 2026 for the dev style-guide route
+# (/report/style-guide), owner's call: 222,677 B in 38 chunks -> 223,550 B in 41.
+# None of the style guide's code is fetched at first paint (its chunk is lazy and
+# the first-paint chunks carry none of it); the growth is Rolldown moving modules
+# the shell now shares with that lazy page (toast, exportData, a Dialog group)
+# out of the main chunk into three more first-paint files. An empty style-guide
+# page cost ~280 B on its own. The shell-import trim above is still owed.
+BUDGET_BYTES = 224 * 1000
 
 # Both forms the entry document uses to make the browser fetch a chunk before
 # first paint. A `<link rel="prefetch">` would NOT belong here; nothing emits

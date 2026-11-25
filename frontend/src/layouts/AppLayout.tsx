@@ -820,6 +820,11 @@ function AppShell() {
           // has no native sidebar row, so the menu navigates the SPA directly.
           navigate("/report/specimen");
           break;
+        case "openStyleGuide":
+          // Diagnostics ▸ Style Guide — the design system drawn by the shipped
+          // components (islands/StyleGuide.tsx); no sidebar row, like the above.
+          navigate("/report/style-guide");
+          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);

@@ -19,6 +19,7 @@ import { SignalsTab } from "./pages/SignalsTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
 import { PickerSpecimenTab } from "./pages/PickerSpecimenTab";
 import { TagSpecimenTab } from "./pages/TagSpecimenTab";
+import { StyleGuideTab } from "./pages/StyleGuideTab";
 import { DiscussionTab } from "./pages/DiscussionTab";
 import { ScreensTab } from "./pages/ScreensTab";
 import { isExportMode } from "./utils/exportData";
@@ -70,6 +71,9 @@ export const routes = [
           // Every state of a tag in every context, drawn by the shipped components
           // (islands/TagSpecimen.tsx). Same terms as Specimen.
           { path: "tag-specimen", element: <TagSpecimenTab /> },
+          // The design system drawn by the shipped components and theme CSS
+          // (islands/StyleGuide.tsx; Diagnostics ▸ Style Guide). Same terms as Specimen.
+          { path: "style-guide", element: <StyleGuideTab /> },
           // Discussion lens — the researcher's guide merged with what was asked
           // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.
           { path: "discussion", element: <DiscussionTab /> },

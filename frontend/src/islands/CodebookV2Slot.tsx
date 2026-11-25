@@ -81,7 +81,7 @@ export function CodebookSlot({
       <span className="cb-running bn-thinking-shimmer" data-testid={testId}>
         {t("codebook.autocodeRunning")}
         {/* The ellipsis grows ". .. ..." and repeats; frozen it reads "...". The dots
-            fade rather than appear, so the slot's width holds still. */}
+            step by visibility, so the slot's width holds still. */}
         <span className="cb-dots" aria-hidden="true">
           <i>.</i>
           <i>.</i>

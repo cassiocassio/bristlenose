@@ -582,8 +582,12 @@
     color: var(--bn-shimmer-base);
 }
 .cb-dots i { font-style: normal; }
-/* The dots fade by opacity, never display, so the slot's width holds still.
-   Frozen (animation off, reduced motion) the ellipsis reads as a plain "...". */
+/* The dots step by visibility, never display, so the slot's width holds still.
+   Not opacity: in Chromium a dot whose opacity animates is painted apart from
+   the span and drops out of the shimmer's text clip, and with its fill
+   transparent it never shows, so Chrome read "AutoCoding." for ever (measured
+   25 Nov 2026; WebKit drew them). Frozen (animation off, reduced motion) the
+   ellipsis reads as a plain "...". */
 @media (prefers-reduced-motion: no-preference) {
     :root:not([data-analysis-animation="off"]) .cb-dots i:nth-child(2) {
         animation: cb-dot2 1.5s steps(1, end) infinite;
@@ -592,8 +596,8 @@
         animation: cb-dot3 1.5s steps(1, end) infinite;
     }
 }
-@keyframes cb-dot2 { 0% { opacity: 0; } 33.33%, 100% { opacity: 1; } }
-@keyframes cb-dot3 { 0% { opacity: 0; } 66.67%, 100% { opacity: 1; } }
+@keyframes cb-dot2 { 0% { visibility: hidden; } 33.33%, 100% { visibility: visible; } }
+@keyframes cb-dot3 { 0% { visibility: hidden; } 66.67%, 100% { visibility: visible; } }
 
 /* Applied: a status badge (pill radius, not interactive). Body font, never the
    tag pill's mono, so it cannot read as a tag called "Applied". */

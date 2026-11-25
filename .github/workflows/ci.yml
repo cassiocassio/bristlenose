@@ -518,19 +518,20 @@ jobs:
         working-directory: frontend
         run: npm run typecheck
 
-      - name: Audit frontend dependencies for known vulnerabilities
-        # Informational — flags known CVEs in the log but doesn't block
-        # the build. Production deps are the future blocking gate;
-        # full audit (incl. dev deps like Vite) is informational because
-        # dev deps execute during build and produce shipped artifacts.
+      - name: Audit shipped frontend dependencies for known vulnerabilities
+        # Blocking since the 25 Nov 2026 dep review: these packages ship in
+        # every report and export, so an advisory against one is ours to act
+        # on before a release, not news. Clean on that date after i18next
+        # moved to 26.7.2 (GHSA-6jcc-5g8w-32mx).
+        working-directory: frontend
+        run: npm audit --omit=dev
+      - name: Audit all frontend dependencies for known vulnerabilities
+        # Informational: build-time tools (Vite and friends) run on the
+        # build machine and are noisy (22 advisories on 25 Nov 2026).
+        # Disposition in docs/testing/soft-gates.json.
         continue-on-error: true
         working-directory: frontend
-        run: |
-          echo "=== Production dependencies ==="
-          npm audit --omit=dev
-          echo ""
-          echo "=== All dependencies (including build-time) ==="
-          npm audit || true
+        run: npm audit
 
       - name: Generate frontend SBOM
         continue-on-error: true

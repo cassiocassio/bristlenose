@@ -14,7 +14,7 @@
     "size": "python3 ../scripts/check-bundle-budget.py"
   },
   "dependencies": {
-    "i18next": "^26.0.8",
+    "i18next": "^26.7.2",
     "i18next-browser-languagedetector": "^8.2.1",
     "lodash.deburr": "4.1.0",
     "lucide-react": "1.49.0",

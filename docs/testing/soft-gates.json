@@ -1,11 +1,11 @@
 {
   "_policy": "Every continue-on-error in a workflow carries a disposition: ratchet (a number that may not rise), expires (a date by which someone must decide again), or conditional (soft here, hard somewhere that matters). Enforced by scripts/check-gate-policy.py. Reasoning: docs/testing/gaps.md G3/G4.",
   "gates": {
-    "ci.yml::frontend-lint-type-test::Audit frontend dependencies for known vulnerabilities": {
+    "ci.yml::frontend-lint-type-test::Audit all frontend dependencies for known vulnerabilities": {
       "disposition": "expires",
-      "expires": "2026-11-30",
+      "expires": "2027-02-28",
       "review_with": "TODO.md quarterly dep review",
-      "why": "Same as the Python audit, and additionally noisy because the full audit includes dev deps like Vite that never ship."
+      "why": "Build-time tools (Vite and friends) run on the build machine, not in what ships, and are noisy: 22 advisories on the 25 Nov 2026 review. The shipped-dependency audit was split out and made blocking that day. At the next review, decide whether any of these has sat unaddressed long enough to matter."
     },
     "ci.yml::frontend-lint-type-test::Generate frontend SBOM": {
       "disposition": "expires",
@@ -19,9 +19,9 @@
     },
     "ci.yml::supply-chain::Audit dependencies for known vulnerabilities": {
       "disposition": "expires",
-      "expires": "2026-11-30",
+      "expires": "2027-02-28",
       "review_with": "TODO.md quarterly dep review",
-      "why": "Upstream CVEs are not ours to fix on demand, so a failure here is news rather than a defect. The date is the next quarterly dep review; the decision then is whether anything found has sat unaddressed."
+      "why": "Upstream CVEs are not ours to fix on demand, so a failure here is news rather than a defect. Reviewed 25 Nov 2026: pip-audit clean on CI that day, so nothing had sat unaddressed; re-dated to the next quarterly review. Promote it if it stays clean through two reviews."
     },
     "ci.yml::supply-chain::Generate Python SBOM": {
       "disposition": "expires",

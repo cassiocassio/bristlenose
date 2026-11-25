@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 11279
+        "tests": 11284
       },
       {
         "basis": "test files",
@@ -35,7 +35,7 @@
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3448
+        "tests": 3482
       },
       {
         "basis": "spec files",
@@ -393,8 +393,8 @@
               {
                 "colour": "soft",
                 "is_gate": false,
-                "name": "Audit frontend dependencies for known vulnerabilities",
-                "piped": true,
+                "name": "Audit all frontend dependencies for known vulnerabilities",
+                "piped": false,
                 "runs_tests": false
               },
               {

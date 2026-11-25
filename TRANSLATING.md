@@ -9,6 +9,8 @@ Bristlenose uses [Weblate](https://hosted.weblate.org/projects/bristlenose/) for
 3. Translate strings — Weblate shows the English source, context, and glossary suggestions
 4. Your translations are submitted as pull requests for review
 
+By translating, you agree to the [Contributor Licence Agreement](CONTRIBUTING.md#contributor-licence-agreement): you keep the copyright in your translations and license them to the project, including for the Mac App Store edition.
+
 ## Components
 
 Each component maps to a namespace file in `bristlenose/locales/`:

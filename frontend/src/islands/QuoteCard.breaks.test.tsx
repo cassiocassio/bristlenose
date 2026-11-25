@@ -5,6 +5,7 @@ import { _resetDisplayPrefs, setDisplayPref } from "../contexts/DisplayPrefsStor
 import { parseQuery } from "../utils/searchMatch";
 import type { QuoteResponse } from "../utils/types";
 import type { BreaksChange } from "../hooks/useCropEdit";
+import { _resetPlatformCache } from "../utils/platform";
 
 // The break algorithm belongs to another session and its output will keep
 // changing, so this file never asserts what it returns: it hands the card
@@ -304,6 +305,53 @@ describe("QuoteCard — paragraphs typed while editing", () => {
     key("Enter", { keyCode: 229 });
     expect(document.querySelector(".quote-card.editing")).not.toBeNull();
     expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
+  it("a paste over a selection across paragraphs is refused, as typing over it is (finding 33)", () => {
+    const exec = vi.fn(() => true);
+    const had = Object.getOwnPropertyDescriptor(document, "execCommand");
+    Object.defineProperty(document, "execCommand", { value: exec, configurable: true });
+    try {
+      renderEditing();
+      const paste = () =>
+        fireEvent.paste(textEl(), { clipboardData: { getData: () => "pasted words" } });
+      const [first, second] = blockEls().map((b) => b.querySelector(".crop-editable")!.firstChild!);
+      const r = document.createRange();
+      r.setStart(first, 2);
+      r.setEnd(second, 2);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(r);
+      paste();
+      expect(exec).not.toHaveBeenCalled();
+      caretIn(1, 1);
+      paste();
+      expect(exec).toHaveBeenCalledExactlyOnceWith("insertText", false, "pasted words");
+    } finally {
+      if (had) Object.defineProperty(document, "execCommand", had);
+      else delete (document as { execCommand?: unknown }).execCommand;
+    }
+  });
+
+  it("⌘A selects the paragraph's words; on the Mac Ctrl-A stays the text system's (finding 35)", () => {
+    const platform = Object.getOwnPropertyDescriptor(Navigator.prototype, "platform");
+    Object.defineProperty(navigator, "platform", { value: "MacIntel", configurable: true });
+    _resetPlatformCache();
+    try {
+      renderEditing();
+      const selected = () => window.getSelection()!.toString();
+      caretIn(1, 1);
+      key("a", { ctrlKey: true });
+      expect(selected()).toBe("");
+      key("a", { metaKey: true });
+      expect(selected()).toBe("three four");
+      caretIn(0, 1);
+      key("ф", { metaKey: true, code: "KeyA" }); // a Cyrillic layout's A key
+      expect(selected()).toBe("one two");
+    } finally {
+      delete (navigator as { platform?: string }).platform;
+      if (platform) Object.defineProperty(Navigator.prototype, "platform", platform);
+      _resetPlatformCache();
+    }
   });
 
   it("with Break long paragraphs off, a paragraph placed where the automatic one would go is kept", () => {

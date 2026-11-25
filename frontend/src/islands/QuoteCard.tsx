@@ -34,6 +34,7 @@ import { getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
 import { reportHref } from "../utils/reportHref";
 import { featureFlags } from "../utils/featureFlags";
+import { isMac } from "../utils/platform";
 import { highlightTerms } from "../utils/highlight";
 import {
   autoBreaks,
@@ -41,6 +42,7 @@ import {
   caretAtPoint,
   clampCaret,
   judgeInput,
+  rangeKeepsSurface,
   setBracketsVisible as showBrackets,
 } from "../utils/quoteEditSurface";
 import { useDisplayBreaks } from "../contexts/DisplayPrefsStore";
@@ -145,6 +147,18 @@ interface QuoteCardProps {
   /** Whether to show the "[When asked…]" researcher-context line. Default true. The Screens lens
    *  passes false: the owner, 15 Oct 2026, "interesting but new… hide here for the moment". */
   showResearcherContext?: boolean;
+}
+
+/**
+ * ⌘A on the Mac, Ctrl-A elsewhere: on the Mac, Ctrl-A is the text system's
+ * "start of paragraph" and stays native (review 25 Nov, finding 35). The A is
+ * the letter on Latin layouts (AZERTY's sits on KeyQ) and the key's place on
+ * others, where `key` is a Cyrillic or Greek letter.
+ */
+function isSelectAll(e: React.KeyboardEvent): boolean {
+  const a = e.key.toLowerCase() === "a" || (e.code === "KeyA" && !/^[a-z]$/i.test(e.key));
+  const mod = isMac() ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
+  return a && mod && !e.altKey && !e.shiftKey;
 }
 
 export function QuoteCard({
@@ -511,7 +525,7 @@ export function QuoteCard({
         stayOnCard(card);
       } else if (e.key === "Tab") {
         commitAndStay(e);
-      } else if (e.key.toLowerCase() === "a" && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+      } else if (isSelectAll(e)) {
         // Select All takes the paragraph's typed text: a selection across the
         // quote marks, trimmed words or paragraphs cannot be typed over.
         const sel = window.getSelection();
@@ -540,8 +554,14 @@ export function QuoteCard({
 
   // A paste is plain text, on one line: pasted markup would bring another
   // page's paragraphs and styling into the quote.
+  // It replaces only what typing could: a selection across paragraphs, quote
+  // marks or trimmed words is refused, as typing over it is (finding 33).
   const handleEditPaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
+    const host = editHostRef.current;
+    const sel = window.getSelection();
+    if (!host || !sel || sel.rangeCount === 0 || !rangeKeepsSurface(host, sel.getRangeAt(0))) return;
+    clampCaret(host);
     const text = e.clipboardData.getData("text/plain").replace(/\s+/g, " ");
     if (text && typeof document.execCommand === "function") document.execCommand("insertText", false, text);
   }, []);

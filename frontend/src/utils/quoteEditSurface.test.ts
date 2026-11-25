@@ -6,6 +6,7 @@ import {
   clampCaret,
   draw,
   judgeInput,
+  rangeKeepsSurface,
   read,
   sameBreaks,
   type EditModel,
@@ -134,15 +135,63 @@ describe("keeping the surface whole (review 21 Nov)", () => {
     expect(el?.closest(".crop-editable")).toBe(runs(host)[0]);
   });
 
-  it("numbers paragraphs as read() does when one has been emptied", () => {
+  // An emptied paragraph as Chromium and WebKit leave it: the run is removed
+  // once all its text is deleted (probed 25 Nov), so the block holds a <br>.
+  const emptyMiddle = () => {
     const host = drawn({ words: words("a b c d e f"), breaks: [1, 3], cropStart: 0, cropEnd: 6 });
     document.body.append(host);
-    const [, middle, last] = runs(host);
-    middle.textContent = "";
+    const middle = host.querySelectorAll(":scope > .bn-block")[1];
+    middle.replaceChildren(document.createElement("br"));
+    return { host, middle };
+  };
+
+  it("numbers paragraphs as read() does when one has been emptied", () => {
+    const { host, middle } = emptyMiddle();
+    const last = runs(host)[1];
     caretAt(last.firstChild!, 0);
     expect(caretPlace(host)).toMatchObject({ block: 1, empty: false, atStart: true });
     caretAt(middle, 0);
     expect(caretPlace(host)).toMatchObject({ block: 1, empty: true });
     expect(read(host).breaks).toEqual([1]);
+  });
+
+  it("leaves the caret in an emptied paragraph, so retyping it stays there (finding 28)", () => {
+    const { host, middle } = emptyMiddle();
+    caretAt(middle, 0);
+    clampCaret(host);
+    expect(window.getSelection()!.getRangeAt(0).startContainer).toBe(middle);
+    expect(judgeInput(host, input("insertText", { data: "n" }))).toBe("allow");
+    middle.prepend(document.createTextNode("new words"));
+    expect(read(host).words.join(" ")).toBe("a b new words e f");
+    expect(read(host).breaks).toEqual([1, 3]);
+  });
+
+  it("refuses the delete half of a drag that moves words (finding 34)", () => {
+    const host = twoBlocks();
+    select(runs(host)[0].firstChild!, 0, runs(host)[0].firstChild!, 1);
+    expect(judgeInput(host, input("deleteByDrag"))).toBe("refuse");
+  });
+
+  it("a range a paste may replace stays in one paragraph and takes no island (finding 33)", () => {
+    const host = twoBlocks();
+    const [first, second] = runs(host);
+    const range = (a: Node, ao: number, b: Node, bo: number) => {
+      const r = document.createRange();
+      r.setStart(a, ao);
+      r.setEnd(b, bo);
+      return r;
+    };
+    expect(rangeKeepsSurface(host, range(first.firstChild!, 0, first.firstChild!, 1))).toBe(true);
+    expect(rangeKeepsSurface(host, range(first.firstChild!, 2, second.firstChild!, 1))).toBe(false);
+    expect(rangeKeepsSurface(host, range(host.querySelector(".bn-block")!, 0, first.firstChild!, 1))).toBe(false);
+  });
+
+  it("hides the islands from screen readers while the words are edited, and only then (finding 40)", () => {
+    const m = { words: words("a b c d e"), breaks: [], cropStart: 1, cropEnd: 4 };
+    const islands = (h: HTMLElement) => Array.from(h.querySelectorAll('[contenteditable="false"]'));
+    const text = drawn(m);
+    expect(islands(text).length).toBeGreaterThan(0);
+    expect(islands(text).every((n) => n.getAttribute("aria-hidden") === "true")).toBe(true);
+    expect(drawn(m, "crop").querySelector('[aria-hidden="true"]')).toBeNull();
   });
 });

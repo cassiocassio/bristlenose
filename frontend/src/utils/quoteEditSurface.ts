@@ -367,9 +367,18 @@ export function firstTyped(m: EditModel, bi: number): number {
 
 // ── Keeping the surface whole ───────────────────────────────────────────
 
-/** The caret's run, or null when it sits outside the typed text. */
-function runAt(node: Node): Element | null {
-  return (node instanceof Element ? node : node.parentElement)?.closest(".crop-editable") ?? null;
+/**
+ * Whether text typed at this node is read back as the words being kept: inside
+ * the typed run, or in a paragraph the researcher has emptied. The engines
+ * remove a run once all its text is deleted, and moving the caret out of that
+ * paragraph would type into the next one (review 25 Nov, finding 28). Text in
+ * a paragraph with no run and no trimmed words reads back as typed.
+ */
+export function typedPlace(node: Node): boolean {
+  const el = node instanceof Element ? node : node.parentElement;
+  if (el?.closest(".crop-editable")) return true;
+  const block = el?.closest(".bn-block");
+  return !!block && !block.querySelector(".crop-editable, .excluded");
 }
 
 /**
@@ -384,7 +393,7 @@ export function clampCaret(host: HTMLElement): void {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
   const caret = sel.getRangeAt(0);
-  if (!host.contains(caret.startContainer) || runAt(caret.startContainer)) return;
+  if (!host.contains(caret.startContainer) || typedPlace(caret.startContainer)) return;
   const runs = Array.from(host.querySelectorAll(".crop-editable"));
   if (runs.length === 0) return;
   const startEl = caret.startContainer instanceof Element ? caret.startContainer : caret.startContainer.parentElement;
@@ -431,6 +440,9 @@ export function judgeInput(host: HTMLElement, e: InputEvent): InputVerdict {
   if (e.isComposing || t.includes("Composition")) return "allow";
   if (t === "insertParagraph" || t === "insertLineBreak") return "refuse";
   if (t.startsWith("insertFrom") && t !== "insertFromPaste") return "refuse"; // drop, yank, quotation
+  // A drag that moves words is a delete here and a drop there; the drop is
+  // refused, so the delete must be too, or the words vanish (finding 34).
+  if (t === "deleteByDrag") return "refuse";
   if (t.startsWith("format")) return "refuse";
   if (t.startsWith("history")) return "allow";
   const ranges: AbstractRange[] = e.getTargetRanges?.() ?? [];
@@ -440,15 +452,21 @@ export function judgeInput(host: HTMLElement, e: InputEvent): InputVerdict {
     const r = document.createRange();
     r.setStart(sr.startContainer, sr.startOffset);
     r.setEnd(sr.endContainer, sr.endOffset);
-    const blockOf = (n: Node) => (n instanceof Element ? n : n.parentElement)?.closest(".bn-block") ?? null;
-    if (blockOf(r.startContainer) !== blockOf(r.endContainer)) return "refuse";
-    if (!r.collapsed) {
-      for (const island of Array.from(host.querySelectorAll('[contenteditable="false"]'))) {
-        if (r.intersectsNode(island)) return "refuse";
-      }
-    } else if (t.startsWith("insert") && !runAt(r.startContainer)) {
-      return "retype";
-    }
+    if (!rangeKeepsSurface(host, r)) return "refuse";
+    if (r.collapsed && t.startsWith("insert") && !typedPlace(r.startContainer)) return "retype";
   }
   return "allow";
+}
+
+/**
+ * Whether replacing this range keeps the surface whole: it stays in one
+ * paragraph and takes no quote mark, bracket or trimmed word with it. The
+ * paste handler asks too, because a paste inserts by `execCommand`, which
+ * Chromium sends through no `beforeinput` (finding 33).
+ */
+export function rangeKeepsSurface(host: HTMLElement, r: Range): boolean {
+  const blockOf = (n: Node) => (n instanceof Element ? n : n.parentElement)?.closest(".bn-block") ?? null;
+  if (blockOf(r.startContainer) !== blockOf(r.endContainer)) return false;
+  if (r.collapsed) return true;
+  return !Array.from(host.querySelectorAll('[contenteditable="false"]')).some((n) => r.intersectsNode(n));
 }

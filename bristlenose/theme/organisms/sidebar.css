@@ -690,26 +690,15 @@
     color: var(--bn-colour-muted);
 }
 
-/* A small pop-up: the house select (organisms/settings.css .bn-locale-select), at the
-   row's caption size. */
+/* The system's own pop-up button, at the smallest size it draws (owner, 25 Nov 2026).
+   No border, background, radius, padding or outline here: any one of them turns the
+   native control off and leaves a hand-drawn box. WebKit picks the control size from the
+   font size (13px and up regular, 11-12px small, under 11px mini), so the micro stop
+   (9.6px web, 10px desktop) gets the mini control; the focus ring is the system's too. */
 .tag-sidebar-show {
     font-family: var(--bn-font-body);
-    font-size: var(--bn-text-caption);
-    color: var(--bn-colour-text);
-    background: var(--bn-colour-bg);
-    border: 1px solid var(--bn-colour-border);
-    border-radius: var(--bn-radius-sm);
-    padding: 0 var(--bn-space-xs);
+    font-size: var(--bn-text-micro);
     cursor: pointer;
-}
-
-.tag-sidebar-show:hover {
-    border-color: var(--bn-colour-border-hover);
-}
-
-.tag-sidebar-show:focus-visible {
-    outline: 2px solid var(--bn-colour-accent);
-    outline-offset: 1px;
 }
 
 .tag-sidebar-body {

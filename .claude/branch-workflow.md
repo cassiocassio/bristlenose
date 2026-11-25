@@ -54,7 +54,7 @@ When the user says "let's switch to branch X" or similar, **automatically run th
 1. **Check for uncommitted changes** — `git status`
    - If changes exist, commit them with a descriptive message (ask user for message if unclear)
    - Never leave uncommitted work when switching branches
-2. **Run tests** — `.venv/bin/python -m pytest tests/`
+2. **Run tests** — `.venv/bin/python -m pytest tests/ -n auto`
    - If tests fail, warn the user before proceeding
 3. **Run linter** — `.venv/bin/ruff check .`
    - If lint errors, fix them or warn before proceeding

@@ -215,7 +215,7 @@ Ask the user:
 If yes:
 ```bash
 cd /Users/cassio/Code/bristlenose
-.venv/bin/python -m pytest tests/
+.venv/bin/python -m pytest tests/ -n auto
 ```
 
 If tests fail, warn the user but continue — the merge already landed, so test failures may be pre-existing. Note which tests failed.

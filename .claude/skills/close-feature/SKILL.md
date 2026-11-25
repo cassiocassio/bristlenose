@@ -33,7 +33,7 @@ git branch --show-current
 Otherwise, run the gate — nothing else in this block, so the exit status is the checks', not a logger's:
 
 ```bash
-.venv/bin/python -m pytest tests/
+.venv/bin/python -m pytest tests/ -n auto
 .venv/bin/ruff check .
 ```
 

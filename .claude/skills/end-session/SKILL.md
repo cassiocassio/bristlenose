@@ -63,7 +63,7 @@ If code files were changed:
    {"head_sha": "<40-char sha reviewed>", "completed_at": "<UTC ISO>", "by": "usual-suspects", "scope": "<what was reviewed>"}
    ```
 
-1. **Run tests** — `.venv/bin/python -m pytest tests/` (deselects the paid `slow` marker via `addopts` — do **not** add `-m slow` here, it bills the account and is not a close-out gate)
+1. **Run tests** — `.venv/bin/python -m pytest tests/ -n auto` (parallel, ~3 min; deselects the paid `slow` marker via `addopts` — do **not** add `-m slow` here, it bills the account and is not a close-out gate)
 2. **Run linter** — `.venv/bin/ruff check .` (whole repo, not just `bristlenose/`)
 3. If frontend files changed: `cd frontend && npm run build` (tsc catches type errors Vitest doesn't)
 4. If `desktop/` files changed: `desktop/scripts/test-swift.sh` (~3 min; exits 0 green, 1 red, 3 compile break)

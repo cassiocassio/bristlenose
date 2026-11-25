@@ -43,7 +43,7 @@ Done. You can now run the pipeline or the dev server.
 
 ```bash
 # Python
-.venv/bin/python -m pytest tests/           # ~9,000 tests; free, never calls a paid LLM (`-m slow` opts in)
+.venv/bin/python -m pytest tests/ -n auto   # ~9,000 tests, in parallel; free, never calls a paid LLM (`-m slow` opts in)
 .venv/bin/ruff check .                      # lint (entire repo, not just bristlenose/)
 .venv/bin/ruff check --fix .                # lint + auto-fix
 .venv/bin/mypy bristlenose/                 # type check (informational, not gated)
@@ -59,7 +59,7 @@ npm run build                                # tsc type-check + Vite build
 ## Before committing
 
 ```bash
-.venv/bin/python -m pytest tests/            # 1. All Python tests pass
+.venv/bin/python -m pytest tests/ -n auto    # 1. All Python tests pass
 .venv/bin/ruff check .                       # 2. No lint errors (whole repo — CI checks tests/ too)
 cd frontend && npm run build && npm test     # 3. Frontend types + tests
 ```

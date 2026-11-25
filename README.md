@@ -405,7 +405,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~9,000 Python tests; frontend has 3,000+ Vitest tests (`npm test` in frontend/)
+.venv/bin/python -m pytest tests/ -n auto    # ~9,000 Python tests; frontend has 3,000+ Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```

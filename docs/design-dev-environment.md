@@ -116,7 +116,7 @@ build-desktop:
     desktop/scripts/build-all.sh
 
 test:
-    .venv/bin/python -m pytest tests/
+    .venv/bin/python -m pytest tests/ -n auto
 
 lint:
     .venv/bin/ruff check .

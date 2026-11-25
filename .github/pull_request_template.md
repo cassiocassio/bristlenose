@@ -26,7 +26,7 @@
 - [ ] I understand the code I am submitting.
 - [ ] I have added tests that prove the fix or feature works.
 - [ ] I have run this code locally and verified it does what the description says.
-- [ ] `pytest tests/` and `ruff check .` (the whole repo, as CI does) pass locally.
+- [ ] `pytest tests/ -n auto` and `ruff check .` (the whole repo, as CI does) pass locally.
 - [ ] Documentation was updated where necessary.
 - [ ] Any new user-facing string is in every locale file (see CLAUDE.md § i18n), or I've said below why not.
 - [ ] I have read the [contributing guidelines](https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md) and agree to the Contributor Licence Agreement in it.

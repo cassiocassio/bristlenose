@@ -37,7 +37,7 @@ import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
 import { ProposalZoneList } from "./ProposalZoneList";
 import { Icon } from "./Icon";
-import { RollingNumber } from "./RollingNumber";
+import { ZoneCounters } from "./ZoneCounters";
 import { captureLayout, playLayout } from "../utils/reviewMotion";
 import type { Layout } from "../utils/reviewMotion";
 
@@ -413,26 +413,11 @@ export function ThresholdReviewModal({
               </DualThresholdSlider>
 
               {/* Zone counters */}
-              <div className="threshold-zone-counters">
-                <span className="threshold-zone-counter threshold-zone-counter--exclude">
-                  {t("autocode.review.zoneExclude")}{" "}
-                  <span className="threshold-zone-counter-count">
-                    <RollingNumber value={excluded.length} />
-                  </span>
-                </span>
-                <span className="threshold-zone-counter threshold-zone-counter--tentative">
-                  {t("autocode.review.zoneTentative")}{" "}
-                  <span className="threshold-zone-counter-count">
-                    <RollingNumber value={tentative.length} />
-                  </span>
-                </span>
-                <span className="threshold-zone-counter threshold-zone-counter--accept">
-                  {t("autocode.review.zoneAccept")}{" "}
-                  <span className="threshold-zone-counter-count">
-                    <RollingNumber value={accepted.length} />
-                  </span>
-                </span>
-              </div>
+              <ZoneCounters
+                excluded={excluded.length}
+                tentative={tentative.length}
+                accepted={accepted.length}
+              />
 
               {/* Zone lists */}
               <ProposalZoneList

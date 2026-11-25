@@ -842,7 +842,9 @@ export function liveProposals(frameworkId: string): { id: number; tag_definition
 
 // ── D8: the pulse schedule ───────────────────────────────────────────────
 
-function setPulse(state: "pulse" | "calm" | null): void {
+/** Exported for the Tag Specimen page (islands/TagSpecimen.tsx), which sets the pulse through
+ *  this same switch so its pulse, calm and still are the ones a landing run shows. */
+export function setPulse(state: "pulse" | "calm" | null): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const now = root.getAttribute("data-autocode-tentative");

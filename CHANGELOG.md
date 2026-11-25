@@ -25,7 +25,6 @@ AutoCode now tags while it works: tags appear batch by batch, a first run ends b
 - **Provider links go to each provider's current pages,** for keys, billing and pricing, in the app, the CLI and the docs.
 - **Discussion summaries and questions are in sentence case,** with the original kept as written.
 - **Your guide's file name is a plain label,** with a Change… button beside it.
-- **The Mac analytics switch reads "Send anonymous analytics",** with a "What's sent?" link.
 - **Small text in positive and warning colours is readable** (4.5:1) on the inspector tint in every palette.
 
 

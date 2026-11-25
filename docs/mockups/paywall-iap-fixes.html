@@ -148,7 +148,7 @@
         <tr><td><code>lapsedBody</code></td><td>changed (yours, 25 Nov)</td><td class="new">Your existing projects are all still here, and you can read, edit and export them.</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:10px">"a month" stays written in the strings: there is one product and it is monthly. A test already pins the period to one month (<code>SubscriptionGateTests.swift:103</code>), so a change in App Store Connect fails a test instead of reaching the sheet.</p>
+    <p style="margin-top:10px">"a month" stays written in the strings: there is one product and it is monthly. A test pins the period to one month in the local StoreKit file (<code>SubscriptionGateTests.swift:103</code>); it cannot see App Store Connect, so the monthly period there has to be set by hand to match. <em>Corrected 25 Nov: this said a test would catch a change in App Store Connect.</em></p>
   </div>
 
   <h2>For you to decide</h2>

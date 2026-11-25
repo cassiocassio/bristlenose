@@ -202,4 +202,54 @@ struct SubscriptionAccessTests {
     func readingAlwaysAllowed() {
         #expect(SubscriptionAccess.canOpenProjects(.notSubscribed, channel: .appStoreOrTestFlight))
     }
+
+    // MARK: - The free trial, as the paywall says it
+
+    @Test("a trial set in days or weeks is said in days; months and years are not")
+    func trialDays() {
+        #expect(SubscriptionAccess.trialDays(unit: .day, value: 7) == 7)
+        #expect(SubscriptionAccess.trialDays(unit: .week, value: 1) == 7)
+        #expect(SubscriptionAccess.trialDays(unit: .week, value: 2) == 14)
+        #expect(SubscriptionAccess.trialDays(unit: .month, value: 1) == nil)
+        #expect(SubscriptionAccess.trialDays(unit: .year, value: 1) == nil)
+        #expect(SubscriptionAccess.trialDays(unit: .day, value: 0) == nil)
+    }
+
+    @Test("a month-long trial falls back to Foundation's words")
+    func trialLengthFallback() {
+        #expect(SubscriptionAccess.trialLength(unit: .month, value: 1, localeIdentifier: "en") == "1 month")
+        #expect(SubscriptionAccess.trialLength(unit: .month, value: 0, localeIdentifier: "en") == nil)
+    }
+
+    /// The paywall's trial words come from the real locale files: in every
+    /// language the app ships, a 7-day trial resolves to a phrase with the
+    /// number in it, and the lines it is dropped into leave no placeholder
+    /// behind. Catches a missing plural stem (which would fall back to English)
+    /// or a mistyped `{{trial}}`.
+    @MainActor @Test("every language says a 7-day trial, and the sheet's lines fill")
+    func trialWordedInEveryLanguage() {
+        let locales = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("bristlenose/locales")
+        let i18n = I18n()
+        i18n.configure(localesDirectory: locales)
+        i18n.setLocale("en")
+        let english = i18n.plural("desktop.subscription.trialDays", count: 7)
+        #expect(english == "7 days")
+        for code in I18n.supportedLocales.sorted() {
+            i18n.setLocale(code)
+            let days = i18n.plural("desktop.subscription.trialDays", count: 7)
+            #expect(days.contains("7") && !days.contains("trialDays"), "\(code): \(days)")
+            // A missing stem falls back to English and would still read "7 days":
+            // every other language must say it in its own words.
+            if code != "en" { #expect(days != english, "\(code) fell back to English") }
+            for key in ["trialLead", "trialTerms"] {
+                let line = i18n.t("desktop.subscription.\(key)", ["trial": days, "price": "£9.99"])
+                #expect(!line.contains("{{") && line.contains("7"), "\(code) \(key): \(line)")
+            }
+            let price = i18n.t("desktop.subscription.pricePerMonth", ["price": "£9.99"])
+            #expect(price.contains("£9.99") && !price.contains("{{"), "\(code): \(price)")
+        }
+    }
 }

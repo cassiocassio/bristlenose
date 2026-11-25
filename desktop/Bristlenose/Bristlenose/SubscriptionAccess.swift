@@ -145,4 +145,49 @@ enum SubscriptionAccess {
         guard let dealEnds else { return start }
         return start < dealEnds ? start : nil
     }
+
+    // MARK: - The free trial, as the paywall says it
+
+    /// A subscription period's unit, mirrored from StoreKit's
+    /// `Product.SubscriptionPeriod.Unit` so this file stays StoreKit-free.
+    enum PeriodUnit: Equatable { case day, week, month, year }
+
+    /// The free trial as a number of days, for a trial set in days or weeks
+    /// (a week is said in days, as the copy has always read); nil for a month
+    /// or a year, or a non-positive length. The paywall words the days with
+    /// the `desktop.subscription.trialDays` plural, so each language says it
+    /// its own way (Foundation's formatter says "7 døgn" in Norwegian).
+    ///
+    /// The paywall reads the trial from the store rather than typing "7 days"
+    /// into the strings, so the sheet can only ever promise the trial App Store
+    /// Connect actually offers (guideline 3.1.2; mockup
+    /// `docs/mockups/paywall-iap-fixes.html`, approved 25 Nov 2026).
+    static func trialDays(unit: PeriodUnit, value: Int) -> Int? {
+        guard value > 0 else { return nil }
+        switch unit {
+        case .day: return value
+        case .week: return value * 7
+        case .month, .year: return nil
+        }
+    }
+
+    /// The fallback for a trial of months or years, which the product does not
+    /// offer today: Foundation's own words in the app's language ("1 month").
+    static func trialLength(unit: PeriodUnit, value: Int, localeIdentifier: String) -> String? {
+        guard value > 0 else { return nil }
+        let f = DateComponentsFormatter()
+        f.unitsStyle = .full
+        f.maximumUnitCount = 1
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: localeIdentifier)
+        f.calendar = calendar
+        var parts = DateComponents()
+        switch unit {
+        case .day: f.allowedUnits = [.day]; parts.day = value
+        case .week: f.allowedUnits = [.day]; parts.day = value * 7
+        case .month: f.allowedUnits = [.month]; parts.month = value
+        case .year: f.allowedUnits = [.year]; parts.year = value
+        }
+        return f.string(from: parts)
+    }
 }

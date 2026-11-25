@@ -18,8 +18,21 @@ struct PaywallView: View {
     static let privacyURL = URL(string: "https://bristlenose.app/privacy.html")!
     static let manageURL = URL(string: "https://apps.apple.com/account/subscriptions")!
 
-    private var trial: Bool { store.introEligible }
+    /// The free trial in words ("7 days"), read from the product's own offer,
+    /// or nil when there is no free trial to promise.
+    private var trialLength: String? {
+        guard let t = store.freeTrial else { return nil }
+        if let days = SubscriptionAccess.trialDays(unit: t.unit, value: t.value) {
+            return i18n.plural("desktop.subscription.trialDays", count: days)
+        }
+        return SubscriptionAccess.trialLength(unit: t.unit, value: t.value,
+                                              localeIdentifier: i18n.locale)
+    }
+    /// The trial wording only when this account may take it AND the product
+    /// offers one: eligibility alone would promise a trial that may not exist.
+    private var trial: Bool { store.introEligible && trialLength != nil }
     private var price: String { store.product?.displayPrice ?? "" }
+    private var planName: String { store.product?.displayName ?? "" }
 
     private var unavailable: Bool { store.state == .storeUnavailable }
 
@@ -59,10 +72,24 @@ struct PaywallView: View {
         }
     }
 
+    /// The plan's name and the billed amount lead, the amount as the title:
+    /// Schedule 2 asks for the billed amount to be the most prominent pricing
+    /// element, so "free" is never larger than the price. Mockup
+    /// `docs/mockups/paywall-iap-fixes.html`, approved 25 Nov 2026.
     private var offerBody: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(i18n.t(trial ? "desktop.subscription.trialTitle" : "desktop.subscription.lapsedTitle"))
-                .font(.title2.bold())
+            VStack(alignment: .leading, spacing: 4) {
+                if !planName.isEmpty {
+                    Text(planName).font(.headline).foregroundStyle(.secondary)
+                }
+                Text(i18n.t("desktop.subscription.pricePerMonth", ["price": price]))
+                    .font(.title2.bold())
+                Text(trial
+                     ? i18n.t("desktop.subscription.trialLead", ["trial": trialLength ?? ""])
+                     : i18n.t("desktop.subscription.lapsedTitle"))
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if trial {
                 Text(i18n.t("desktop.subscription.aiBilling"))
                     .foregroundStyle(.secondary)
@@ -89,7 +116,7 @@ struct PaywallView: View {
             }
 
             Text(i18n.t(trial ? "desktop.subscription.trialTerms" : "desktop.subscription.renewTerms",
-                        ["price": price]))
+                        ["price": price, "trial": trialLength ?? ""]))
                 .font(.footnote).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 

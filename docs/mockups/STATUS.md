@@ -38,7 +38,7 @@ state is still evidenced, the day is not.
 | `multi-mac-draft-recovery.html` | 28 Oct 2026 | PROPOSED — recovery disclosure and copy separation within the existing status popover; the illustrated reader is not implemented or approved to ship. |
 | `multi-mac-study.html` | 27 Oct 2026 | PARKED — historical full N-Mac/version-choice exploration; not the sequential v1 build target and not shipped. |
 | `multi-mac-v1-guards.html` | 27 Oct 2026 | PROPOSED — reduced enforced-lock review aid; warning-only comparisons are historical and do not authorise release. The optional reader remains deferred and unshipped. |
-| `paywall-iap-fixes.html` | 25 Nov 2026 | PROPOSED 25 Nov 2026 — paywall 3.1.2 fixes (price prominence, plan name, trial from StoreKit, Ask to Buy copy; owner reworded the lapsed lines); awaiting owner approval |
+| `paywall-iap-fixes.html` | 25 Nov 2026 | PROPOSED 25 Nov 2026 · IMPLEMENTED 25 Nov 2026 — owner approved all four; price leads, plan name shown, trial length from StoreKit worded by the `trialDays` plural, Ask to Buy says to press Analyse again |
 | `study-startup-refusal.html` | 28 Oct 2026 | PROPOSED — reuses native failure row/popover/unavailable patterns for reduced startup refusal; source review clean after accurate heading/details-toggle fixes. Visual inspection blocked by browser policy; owner approval pending. No production UX wiring. |
 
 ## analysis

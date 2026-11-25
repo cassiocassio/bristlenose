@@ -37,5 +37,8 @@
     "tagBest": "最佳質素",
     "foreshadow": "這些模型透過 **Ollama** 執行，這是你接下來要設定的免費軟件。",
     "failNoInternet": "沒有網際網絡連線。請檢查你的網絡後再試一次。"
+  },
+  "subscription": {
+    "trialDays_other": "{{count}} 日"
   }
 }

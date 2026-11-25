@@ -23,6 +23,26 @@ final class SubscriptionStore: ObservableObject {
     /// Whether this Apple Account can still take the free trial (Apple allows
     /// one per account). Decides which wording the paywall uses.
     @Published private(set) var introEligible = false
+
+    /// The product's free-trial period as `SubscriptionAccess` takes it, or nil
+    /// when App Store Connect offers no free trial (an introductory offer that
+    /// is a discounted price, not free, is also nil). Eligibility alone is not
+    /// enough to promise a trial: `isEligibleForIntroOffer` answers for the
+    /// account and the group, whatever the product offers.
+    var freeTrial: (unit: SubscriptionAccess.PeriodUnit, value: Int)? {
+        guard let offer = product?.subscription?.introductoryOffer,
+              offer.paymentMode == .freeTrial else { return nil }
+        let unit: SubscriptionAccess.PeriodUnit
+        switch offer.period.unit {
+        case .day: unit = .day
+        case .week: unit = .week
+        case .month: unit = .month
+        case .year: unit = .year
+        @unknown default: return nil
+        }
+        return (unit, offer.period.value * max(offer.periodCount, 1))
+    }
+
     /// When this person became an early adopter (the start of their unbroken
     /// run of subscription), or nil if they are not one. Drives the
     /// early-adopter star; the rule is `SubscriptionAccess.earlyAdopterSince`.

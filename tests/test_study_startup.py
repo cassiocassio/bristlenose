@@ -207,7 +207,10 @@ def test_a_set_aside_by_another_mac_says_so(tmp_path, this_mac):
 def test_a_quiet_set_aside_from_an_older_build_is_the_ordinary_flow(tmp_path, monkeypatch):
     out = tmp_path / "output"
     _set_aside(out, owner=None)
-    monkeypatch.setattr("bristlenose.utils.output_backup._QUIET_S", 0.0)
+    # Negative, not 0.0: on Windows a file's timestamp can sit a few ms ahead of
+    # time.time(), so "now - newest >= 0" read false and the quiet set-aside was
+    # refused (strict CI on windows-latest, 25 Nov 2026; green on the re-run).
+    monkeypatch.setattr("bristlenose.utils.output_backup._QUIET_S", -60.0)
     assert startup_refusal(out) is None
 
 

@@ -74,7 +74,7 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - The calm phase of the tentative pulse (D8) is a registered property inside a running keyframe — check it by eye in the Mac web view.
 - Hidden-group tag UX — when a codebook group is eye-toggled off, TagInput autocomplete shows a grey closed-eye…
 
-**Dialogs, accessibility, CSS and scroll** (14) — [full entries](gotchas.md#dialogs-accessibility-css-and-scroll)
+**Dialogs, accessibility, CSS and scroll** (16) — [full entries](gotchas.md#dialogs-accessibility-css-and-scroll)
 
 - A `<button>` is one unbreakable box even at `display: inline`, so it must not wrap inside running text.
 - `.bn-btn-sm` / `.bn-btn-lg` are SCOPED, so they silently do nothing outside `.v2-layout` / `.section-heading`…
@@ -90,6 +90,8 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - A custom property set on a big subtree…
 - Build the next state outside the `setState` updater, then merge inside it.
 - A lazy component that has to suspend costs at least 300 ms on its first visit, whatever its chunk costs…
+- A keyed reorder that moves the hovered SVG node loses its `mouseleave` in WebKit, so the hover state sticks.
+- In an SVG, a mark that says "you are here" draws after every lane, and its drag handle draws underneath them.
 
 **Persistence, store writes and transport** (7) — [full entries](gotchas.md#persistence-store-writes-and-transport)
 

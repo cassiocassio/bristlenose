@@ -87,6 +87,7 @@ struct NewsFetcherTests {
     }
 
     private func fetcher(answered: Bool = true, managed: Set<String> = [],
+                         isManaged: ((String) -> Bool)? = nil,
                          endpoint: URL? = NewsCheck.productionEndpoint,
                          channel: NewsCheck.Channel? = .store,
                          keyring: NewsCheck.Keyring? = nil,
@@ -106,7 +107,7 @@ struct NewsFetcherTests {
             keys: .production,
             interfaceLanguage: { "en" },
             firstRunAnswered: { answered },
-            isManaged: { managed.contains($0) },
+            isManaged: isManaged ?? { managed.contains($0) },
             now: { clock.now },
             timeout: 5,
             timeZone: { TimeZone(identifier: "UTC")! },
@@ -262,13 +263,59 @@ struct NewsFetcherTests {
     func serverClock() async {
         defer { cleanUp() }
         defaults.set(true, forKey: NewsPreferences.countsKey)
-        clock.now = K.date(2025, 12, 12)  // the Mac is a year slow
+        clock.now = K.date(2026, 12, 10)  // the Mac is two days slow
         let f = fetcher()
         armFile(date: K.date(2026, 12, 12))
-        #expect(await f.checkIfDue() == .accepted)  // the file's dates are judged by the server
+        #expect(await f.checkIfDue() == .accepted)
         #expect(defaults.object(forKey: NewsStateKeys.production.lastCheck) as? Date == K.date(2026, 12, 12))
-        clock.now = K.date(2026 - 1, 12, 12, 18)
+        clock.now = K.date(2026, 12, 10, 18)
         #expect(await f.checkIfDue() == .notDue)
+    }
+
+    @Test("A Date header a year off either way is not believed: the Mac's clock books the check",
+          arguments: [-365.0, 365.0])
+    func farOffDateIgnored(daysOff: Double) async {
+        defer { cleanUp() }
+        let f = fetcher()
+        armFile(date: clock.now.addingTimeInterval(daysOff * 86_400))
+        #expect(await f.checkIfDue() == .accepted)  // judged by the Mac's clock, 12 Dec
+        #expect(defaults.object(forKey: NewsStateKeys.production.lastCheck) as? Date == clock.now)
+        #expect(defaults.double(forKey: NewsStateKeys.production.clockOffset) == 0)
+        clock.now = K.date(2026, 12, 12, 18)
+        #expect(await f.checkIfDue() == .notDue)
+    }
+
+    @Test("An expired file is not revived by a Date from when it was valid")
+    func expiredNotRevivedByPastDate() async {
+        defer { cleanUp() }
+        // No replay floor yet (a new install). The file expired on 5 Dec.
+        let f = fetcher()
+        let old = K.payload(issued: K.date(2026, 11, 20), expires: K.date(2026, 12, 5))
+        armFile(old, date: K.date(2026, 12, 1))
+        #expect(await f.checkIfDue() == .rejected(.expired))
+        #expect(f.items.isEmpty)
+    }
+
+    @Test("An early Date does not bring back an item that ended before the newest file")
+    func itemsNeverJudgedBeforeNewestFile() async {
+        defer { cleanUp() }
+        // Issued on 12 Dec; its item ended at 18:00 on 11 Dec, so it is not shown.
+        let payload = K.payload(issued: K.date(2026, 12, 12, 9), expires: K.date(2026, 12, 31),
+                                items: [K.item(from: K.date(2026, 12, 1), until: K.date(2026, 12, 11, 18))])
+        let f = fetcher()
+        armFile(payload)
+        #expect(await f.checkIfDue() == .accepted)
+        #expect(f.items.isEmpty)
+        // The next day the same file comes back with a believable but early
+        // Date (36 hours behind), which moves the estimated clock to 11 Dec.
+        clock.now = K.date(2026, 12, 13)
+        armFile(payload, date: K.date(2026, 12, 11, 12))
+        #expect(await f.checkIfDue() == .accepted)
+        #expect(NewsCheck.estimatedServerNow(
+            .init(clockOffset: defaults.double(forKey: NewsStateKeys.production.clockOffset)),
+            localNow: clock.now) == K.date(2026, 12, 11, 12))
+        #expect(f.currentItems().isEmpty)
+        #expect(f.items.isEmpty)
     }
 
     @Test("Two checks at once make one request")
@@ -465,6 +512,116 @@ struct NewsFetcherTests {
         box.state = .subscribed(expires: nil, inTrial: false)
         #expect(await outcome == .accepted)
         #expect(query()["sub"] == "1")
+    }
+
+    @Test("News switched off during the wait for the store: no request at all")
+    func newsOffDuringWait() async {
+        defer { cleanUp() }
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        armFile()
+        let defaults = self.defaults
+        final class Calls: @unchecked Sendable { var n = 0 }
+        let calls = Calls()
+        let f = fetcher(subscription: {
+            calls.n += 1
+            if calls.n == 3 { defaults.set(false, forKey: NewsPreferences.enabledKey) }
+            return .unknown
+        }, subscriptionWait: 1.5)
+        #expect(await f.checkIfDue() == .newsOff)
+        // Waited as long as a request that did happen would take to be recorded.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(NewsStub.seen.isEmpty)
+        #expect(defaults.object(forKey: NewsStateKeys.production.lastCheck) == nil)
+    }
+
+    @Test("A managed news-off arriving during the wait also stops the request")
+    func managedOffDuringWait() async {
+        defer { cleanUp() }
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        armFile()
+        final class Managed: @unchecked Sendable { var keys: Set<String> = [] }
+        let managed = Managed()
+        let defaults = self.defaults
+        final class Calls: @unchecked Sendable { var n = 0 }
+        let calls = Calls()
+        let session = CloudNetworking.makeSession(delegate: LLMValidator.RefuseRedirects(),
+                                                  protocolClasses: [NewsStub.self])
+        sessions.all.append(session)
+        let clock = self.clock
+        let f = NewsFetcher(world: .init(
+            defaults: defaults, session: session, endpoint: NewsCheck.productionEndpoint,
+            policy: .init(keyring: K.keyring(["k1": k1, "k0": k0]), requiredEnv: "prod"),
+            channel: .store, appVersion: "0.47.0", keys: .production,
+            interfaceLanguage: { "en" }, firstRunAnswered: { true },
+            isManaged: { managed.keys.contains($0) }, now: { clock.now }, timeout: 5,
+            timeZone: { TimeZone(identifier: "UTC")! },
+            subscription: {
+                calls.n += 1
+                if calls.n == 3 {
+                    // What a profile's <false/> looks like through UserDefaults.
+                    defaults.set(false, forKey: NewsPreferences.enabledKey)
+                    managed.keys.insert(NewsPreferences.enabledKey)
+                }
+                return .unknown
+            },
+            subscriptionWait: 1.5))
+        #expect(await f.checkIfDue() == .newsOff)
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(NewsStub.seen.isEmpty)
+    }
+
+    @Test("Turning analytics off, or news off, clears the stored days and views at once")
+    func offClearsCounts() async {
+        defer { cleanUp() }
+        let keys = NewsStateKeys.production
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        let f = fetcher()
+        f.recordAppOpened()
+        f.recordWelcomeShown()
+        #expect(defaults.stringArray(forKey: keys.daysOpened) == ["2026-12-12"])
+        #expect(defaults.integer(forKey: keys.welcomeSinceCheck) == 1)
+        // Settings ▸ General: the analytics switch off.
+        NewsPreferences.recordCountsAnswer(false, in: defaults, isForced: { _ in false })
+        f.countsSwitchChanged()
+        #expect(defaults.object(forKey: keys.daysOpened) == nil)
+        #expect(defaults.object(forKey: keys.welcomeSinceCheck) == nil)
+        #expect(NewsStub.seen.isEmpty)
+
+        // News off, with analytics still a yes.
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        f.recordAppOpened()
+        f.recordWelcomeShown()
+        #expect(defaults.integer(forKey: keys.welcomeSinceCheck) == 1)
+        defaults.set(false, forKey: NewsPreferences.enabledKey)
+        f.newsSwitchChanged()
+        #expect(defaults.object(forKey: keys.daysOpened) == nil)
+        #expect(defaults.object(forKey: keys.welcomeSinceCheck) == nil)
+    }
+
+    @Test("A managed analytics-off clears the stored days and views at the next launch or activation")
+    func managedOffClearsCounts() {
+        defer { cleanUp() }
+        let keys = NewsStateKeys.production
+        defaults.set(true, forKey: NewsPreferences.countsKey)
+        let f = fetcher()
+        f.recordAppOpened()
+        f.recordWelcomeShown()
+        #expect(defaults.integer(forKey: keys.welcomeSinceCheck) == 1)
+        // A relaunch under a profile that manages news.counts.
+        _ = fetcher(managed: [NewsPreferences.countsKey])
+        #expect(defaults.object(forKey: keys.daysOpened) == nil)
+        #expect(defaults.object(forKey: keys.welcomeSinceCheck) == nil)
+        // And while running: the profile arrives, then the app is activated.
+        final class Managed: @unchecked Sendable { var keys: Set<String> = [] }
+        let managed = Managed()
+        let running = fetcher(isManaged: { managed.keys.contains($0) })
+        running.recordAppOpened()
+        running.recordWelcomeShown()
+        #expect(defaults.integer(forKey: keys.welcomeSinceCheck) == 1)
+        managed.keys.insert(NewsPreferences.countsKey)
+        running.recordAppOpened()
+        #expect((defaults.stringArray(forKey: keys.daysOpened) ?? []).isEmpty)
+        #expect(defaults.integer(forKey: keys.welcomeSinceCheck) == 0)
     }
 
     @Test("A store that never answers holds the check only as long as the wait, then no sub")

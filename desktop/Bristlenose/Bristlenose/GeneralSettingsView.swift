@@ -132,6 +132,7 @@ struct GeneralSettingsView: View {
                             NewsPreferences.recordCountsAnswer(on, in: .standard,
                                                                isForced: NewsPreferences.isManaged)
                             countsStored = on
+                            SettingsWindow.shared.newsFetcher?.countsSwitchChanged()
                         })
                 }
             }

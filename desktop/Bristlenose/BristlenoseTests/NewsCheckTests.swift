@@ -169,22 +169,81 @@ struct QueryAndState {
         #expect(NewsCheck.isFirstThisMonth(lastYear, serverNow: K.date(2026, 12, 10)))
     }
 
-    @Test("A wrong Mac clock: days and months follow the server's clock")
+    @Test("A Mac clock a little wrong: days and months follow the server's clock")
     func wrongMacClock() {
-        // The Mac is a year slow. The last response measured the offset.
-        let serverLast = K.date(2026, 11, 15)
-        let macLast = K.date(2025, 11, 15)
+        // The Mac is two days slow (within the 3-day allowance). The last
+        // response measured the offset.
+        let serverLast = K.date(2026, 11, 28)
+        let macLast = K.date(2026, 11, 26)
         let state = NewsCheck.afterResponse(.init(), sent: .init(), serverDate: serverLast,
                                             localNow: macLast)
         #expect(state.lastCheck == serverLast)
-        // Seventeen days on, by the Mac's (wrong) clock: the server is in December.
-        let macNow = K.date(2025, 12, 2)
+        // Four days on, by the Mac's (slow) clock: the server is in December.
+        let macNow = K.date(2026, 11, 30)
         let serverNow = NewsCheck.estimatedServerNow(state, localNow: macNow)
         #expect(NewsCheck.utcMonth(serverNow) == DateComponents(year: 2026, month: 12))
         #expect(NewsCheck.isDue(state, serverNow: serverNow))
         #expect(NewsCheck.isFirstThisMonth(state, serverNow: serverNow))
-        // Without the offset the Mac's clock would have said "same month, last year".
+        // Without the offset the Mac's clock would have said "same month".
         #expect(!NewsCheck.isFirstThisMonth(state, serverNow: macNow))
+    }
+
+    @Test("A Date header far in the past or the future is not believed: the Mac's clock is used",
+          arguments: [-400.0, -4.0, 4.0, 400.0])
+    func farOffDateIgnored(daysOff: Double) {
+        let macNow = K.date(2026, 12, 12)
+        let header = macNow.addingTimeInterval(daysOff * 86_400)
+        #expect(NewsCheck.trustedServerDate(header, localNow: macNow) == nil)
+        let earlier = NewsCheck.State(lastCheck: K.date(2026, 12, 10), clockOffset: 3_600,
+                                      latestServerDate: K.date(2026, 12, 10))
+        let after = NewsCheck.afterResponse(earlier, sent: .init(), serverDate: header,
+                                            localNow: macNow)
+        #expect(after.lastCheck == macNow)
+        #expect(after.clockOffset == 0)
+        #expect(after.latestServerDate! <= macNow.addingTimeInterval(NewsCheck.maxClockSkew))
+        #expect(NewsCheck.estimatedServerNow(after, localNow: macNow) == macNow)
+        // Within the allowance it is believed.
+        let near = macNow.addingTimeInterval(2.5 * 86_400 * (daysOff < 0 ? -1 : 1))
+        #expect(NewsCheck.trustedServerDate(near, localNow: macNow) == near)
+    }
+
+    @Test("A stored offset past the allowance is ignored")
+    func oldFarOffset() {
+        let state = NewsCheck.State(clockOffset: 365 * 86_400)
+        #expect(NewsCheck.estimatedServerNow(state, localNow: K.date(2026, 12, 1))
+                == K.date(2026, 12, 1))
+    }
+
+    @Test("A Date held at a month's last hour, or flipped a month, does not send month daily")
+    func alternatingMonths() {
+        // The worst case the 3-day allowance leaves: the Mac's clock is near a
+        // month end, and every response says "30 November, 23:00", so each
+        // next day's estimate lands in December. Only one month is reported.
+        let pinned = K.date(2026, 11, 30, 23)
+        var state = NewsCheck.State(lastCheck: K.date(2026, 11, 27), everChecked: true,
+                                    latestServerDate: K.date(2026, 11, 27))
+        var months = 0
+        for day in [28, 29, 30, 31, 32, 33] {  // 28 November to 3 December, noon
+            let mac = K.date(2026, 11, 28).addingTimeInterval(Double(day - 28) * 86_400)
+            let serverNow = NewsCheck.estimatedServerNow(state, localNow: mac)
+            #expect(NewsCheck.isDue(state, serverNow: serverNow))
+            let sent = NewsCheck.query(state: state, consent: .yes, appVersion: "0.47.0",
+                                       channel: .store, localDay: NewsCheck.localDay(
+                                        mac, in: TimeZone(identifier: "UTC")!),
+                                       serverNow: serverNow)
+            if sent.month { months += 1 }
+            #expect(NewsCheck.trustedServerDate(pinned, localNow: mac) != nil)
+            state = NewsCheck.afterResponse(state, sent: sent, serverDate: pinned, localNow: mac)
+        }
+        #expect(months == 1)
+        // And mid-month, a Date a month away is simply not believed.
+        let mid = NewsCheck.State(lastCheck: K.date(2026, 11, 15), everChecked: true,
+                                  latestServerDate: K.date(2026, 11, 15))
+        let flipped = NewsCheck.afterResponse(mid, sent: .init(),
+                                              serverDate: K.date(2026, 12, 16),
+                                              localNow: K.date(2026, 11, 16))
+        #expect(!NewsCheck.isFirstThisMonth(
+            flipped, serverNow: NewsCheck.estimatedServerNow(flipped, localNow: K.date(2026, 11, 17))))
     }
 
     @Test("A server clock behind the last check claims no new month")
@@ -683,6 +742,37 @@ struct FieldRules {
         #expect(item.title == "[Click](https://evil.example)")
         #expect(item.text == "See **this** [here](https://evil.example/x) now")
         #expect(item.more == nil)
+    }
+
+    @Test("Every format (Cf) character is stripped except the zero-width joiner")
+    func formatCharacters() {
+        #expect(NewsCheck.sanitize("soft\u{00AD}hyphen") == "softhyphen")
+        #expect(NewsCheck.sanitize("a\u{206A}b\u{206F}c") == "abc")
+        #expect(NewsCheck.sanitize("x\u{FFF9}y\u{FFFA}z\u{FFFB}") == "xyz")
+        #expect(NewsCheck.sanitize("\u{0600}\u{110BD}\u{1D173}ok") == "ok")
+        #expect(NewsCheck.sanitize("\u{202D}\u{2067}r\u{200C}") == "r")
+        // The joiner holds emoji sequences together, so it stays.
+        #expect(NewsCheck.sanitize("\u{1F469}\u{200D}\u{1F4BB}") == "\u{1F469}\u{200D}\u{1F4BB}")
+    }
+
+    @Test("Stacked combining marks: each field is capped in scalars as well as characters")
+    func combiningMarksCapped() throws {
+        let tower = "x" + String(repeating: "\u{0301}", count: 100)  // one character, 101 scalars
+        #expect(tower.count == 1)
+        func shownTitle(_ title: String) throws -> NewsItem? {
+            try shown(K.item(text: ["en": ["title": title, "text": "Body", "link": "Details"]]))
+        }
+        // Four towers are four characters, well under the 80 cap, and 404 scalars:
+        // over the 320 (4 x 80) scalar cap, so the item is dropped.
+        #expect(try shownTitle(String(repeating: tower, count: 4)) == nil)
+        #expect(try shownTitle(String(repeating: tower, count: 3)) != nil)
+        // The link (cap 40, 160 scalars): two towers drop it.
+        #expect(try shown(K.item(text: ["en": ["title": "T", "text": "Body",
+                                               "link": tower + tower]])) == nil)
+        #expect(!NewsCheck.fits(String(repeating: "e\u{0301}", count: 41), cap: 40))
+        #expect(NewsCheck.fits(String(repeating: "e\u{0301}", count: 40), cap: 40))
+        #expect(NewsCheck.fits(String(repeating: "\u{0301}", count: 160), cap: 40))
+        #expect(!NewsCheck.fits(String(repeating: "\u{0301}", count: 161), cap: 40))
     }
 
     @Test("Bidi and zero-width characters are stripped; newlines become spaces")

@@ -20,6 +20,8 @@ struct NewsStateKeys {
     var daysOpened: String { prefix + "daysOpened" }
     /// Server clock minus Mac clock at the last response.
     var clockOffset: String { prefix + "clockOffset" }
+    /// The latest believed server `Date`; only moves forward (`month`).
+    var latestServerDate: String { prefix + "latestServerDate" }
     /// The last verified envelope, stored as received; re-verified on every load.
     var envelope: String { prefix + "envelope" }
     var maxIssued: String { prefix + "maxIssued" }
@@ -106,6 +108,8 @@ final class NewsFetcher: ObservableObject {
     private var inFlight = false
     /// Set by a transport failure; the next attempt waits until then.
     private var retryNotBefore: Date?
+    /// A `Date` header too far from the Mac's clock is logged once a process.
+    private var loggedUnbelievedDate = false
     /// How long a transport failure holds the next attempt off. The flags are
     /// kept meanwhile, so nothing is lost by waiting.
     static let transportBackoff: TimeInterval = 30 * 60
@@ -113,6 +117,7 @@ final class NewsFetcher: ObservableObject {
 
     init(world: World) {
         self.world = world
+        dropCountsIfOff()
         reloadFromCache()
     }
 
@@ -182,10 +187,28 @@ final class NewsFetcher: ObservableObject {
         NewsPreferences.countsConsent(in: world.defaults, isForced: world.isManaged)
     }
 
-    /// Call when the news switch changes. Off deletes the cached file at once.
+    /// Call when the news switch changes. Off deletes the cached file and the
+    /// stored counts at once.
     func newsSwitchChanged() {
         if !newsEnabled { deleteCache() }
+        dropCountsIfOff()
         reloadFromCache()
+    }
+
+    /// Call when the analytics switch changes. Off deletes the stored counts
+    /// (days opened, welcome views) at once, not at the next response.
+    func countsSwitchChanged() {
+        dropCountsIfOff()
+    }
+
+    /// With news off or counting anything but a yes (the person's switch or a
+    /// managed preference), nothing counted is kept. Also run at launch and at
+    /// every check and record, which is how a managed preference that arrives
+    /// while the app runs takes effect.
+    private func dropCountsIfOff() {
+        guard !newsEnabled || countsConsent != .yes else { return }
+        world.defaults.removeObject(forKey: world.keys.daysOpened)
+        world.defaults.removeObject(forKey: world.keys.welcomeSinceCheck)
     }
 
     // MARK: The check
@@ -193,6 +216,7 @@ final class NewsFetcher: ObservableObject {
     /// At launch or wake. Makes at most one request per server-UTC day.
     @discardableResult
     func checkIfDue() async -> Outcome {
+        dropCountsIfOff()
         guard newsEnabled else {
             deleteCache()
             return .newsOff
@@ -223,6 +247,13 @@ final class NewsFetcher: ObservableObject {
                 waited += step
                 subscription = world.subscription()
             }
+            // The switches may have changed during the wait: off means no
+            // request at all, and nothing counted is kept.
+            dropCountsIfOff()
+            guard newsEnabled else {
+                deleteCache()
+                return .newsOff
+            }
             before = loadState()
             serverNow = NewsCheck.estimatedServerNow(before, localNow: world.now())
         }
@@ -248,10 +279,16 @@ final class NewsFetcher: ObservableObject {
             return .transportFailure
         }
         retryNotBefore = nil
+        let arrived = world.now()
+        if serverDate != nil, NewsCheck.trustedServerDate(serverDate, localNow: arrived) == nil,
+           !loggedUnbelievedDate {
+            loggedUnbelievedDate = true
+            Self.log.info("news response Date is more than 3 days from the Mac's clock; using the Mac's")
+        }
         // Any HTTP response reached the log: the flags are spent. Re-read the
         // state so views recorded during the request are kept.
         let after = NewsCheck.afterResponse(loadState(), sent: query, serverDate: serverDate,
-                                            localNow: world.now())
+                                            localNow: arrived)
         saveState(after)
 
         // News was switched off while the request was out: the flags are
@@ -269,7 +306,8 @@ final class NewsFetcher: ObservableObject {
         let verification = NewsCheck.verify(
             envelope: body, policy: world.policy, revoked: revoked,
             freshness: freshness,
-            now: serverDate ?? NewsCheck.estimatedServerNow(after, localNow: world.now()))
+            // The believed `Date`, or the Mac's clock (`afterResponse`).
+            now: NewsCheck.estimatedServerNow(after, localNow: arrived))
         recordRevocations(verification.newRevocations)
         switch verification.result {
         case .failure(let reason):
@@ -289,6 +327,7 @@ final class NewsFetcher: ObservableObject {
 
     /// Once per welcome window shown. Counted only while counting is on.
     func recordWelcomeShown() {
+        dropCountsIfOff()
         guard newsEnabled else { return }
         saveState(NewsCheck.recordWelcomeShown(loadState(), consent: countsConsent))
     }
@@ -296,6 +335,7 @@ final class NewsFetcher: ObservableObject {
     /// At launch and on every activation (`days`). One entry per local date,
     /// and only while news is on and counting is a yes.
     func recordAppOpened() {
+        dropCountsIfOff()
         guard newsEnabled else { return }
         let day = NewsCheck.localDay(world.now(), in: world.timeZone())
         saveState(NewsCheck.recordAppOpened(loadState(), consent: countsConsent, localDay: day))
@@ -325,7 +365,10 @@ final class NewsFetcher: ObservableObject {
         guard newsEnabled,
               let envelope = world.defaults.data(forKey: world.keys.envelope)
         else { return [] }
-        let serverNow = NewsCheck.estimatedServerNow(loadState(), localNow: world.now())
+        // Never earlier than the newest verified file's `issued`: a clock set
+        // back cannot bring an item past its `until` back.
+        let serverNow = NewsCheck.notBeforeNewestFile(
+            NewsCheck.estimatedServerNow(loadState(), localNow: world.now()), freshness)
         let verification = NewsCheck.verify(envelope: envelope, policy: world.policy,
                                             revoked: revoked, freshness: freshness,
                                             now: serverNow)
@@ -351,7 +394,8 @@ final class NewsFetcher: ObservableObject {
             everChecked: d.bool(forKey: k.everChecked),
             welcomeSinceCheck: d.integer(forKey: k.welcomeSinceCheck),
             clockOffset: d.double(forKey: k.clockOffset),
-            daysOpened: d.stringArray(forKey: k.daysOpened) ?? [])
+            daysOpened: d.stringArray(forKey: k.daysOpened) ?? [],
+            latestServerDate: d.object(forKey: k.latestServerDate) as? Date)
     }
 
     private func saveState(_ state: NewsCheck.State) {
@@ -361,6 +405,7 @@ final class NewsFetcher: ObservableObject {
         d.set(state.welcomeSinceCheck, forKey: k.welcomeSinceCheck)
         d.set(state.clockOffset, forKey: k.clockOffset)
         d.set(state.daysOpened, forKey: k.daysOpened)
+        d.set(state.latestServerDate, forKey: k.latestServerDate)
     }
 
     private var freshness: NewsCheck.Freshness {

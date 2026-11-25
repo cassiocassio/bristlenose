@@ -39,8 +39,10 @@ enum NewsKeys {
     /// Whether this build can ever accept a news file. While it can't (today:
     /// the production keys are empty), the app also shows NO news or counts
     /// controls: no first-run checkbox, no Settings rows. A switch for
-    /// something that never happens is an offer the build can't keep, and
-    /// the store build's declarations ("Data Not Collected") stay true.
+    /// something that never happens is an offer the build can't keep. The
+    /// privacy manifest already declares Product Interaction and Purchase
+    /// History (linked, analytics, not tracking) for the build that carries
+    /// keys; the App Store privacy label changes with that build's submission.
     static var isLive: Bool {
         #if DEBUG
         NewsCheck.mayRequest(with: stagingKeyring)

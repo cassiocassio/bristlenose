@@ -49,6 +49,11 @@ enum NewsCheck {
     /// a full report's 31, plus the check's own day, which belongs to the
     /// next report (`query(…)`), so a month opened every day reports 31.
     static let maxDaysStored = maxDaysSent + 1
+    /// A response's `Date` further than this from the Mac's clock is not
+    /// believed: whoever terminates TLS can write that header, and a far-off
+    /// one would revive an expired file or flip the month on every check. The
+    /// Mac's clock is used instead.
+    static let maxClockSkew: TimeInterval = 3 * 86_400
 
     /// The only place the check ever asks. Validated through
     /// `FeedbackEndpoint.validate` by `NewsFetcher`, the same single gate the
@@ -123,11 +128,33 @@ enum NewsCheck {
         /// on, since the last check that carried `month`. Sorted, at most
         /// `maxDaysStored`. Only a count of them is ever sent (`days`).
         var daysOpened: [String] = []
+        /// The latest believed server `Date` ever seen. Only moves forward, so
+        /// a `Date` that steps back a month cannot make the next check a
+        /// `month` check again.
+        var latestServerDate: Date?
     }
 
-    /// The server's clock, estimated from the Mac's and the last measured offset.
+    /// The server's clock, estimated from the Mac's and the last measured
+    /// offset. An offset past `maxClockSkew` is never stored; one read back
+    /// from older state is ignored.
     static func estimatedServerNow(_ state: State, localNow: Date) -> Date {
-        localNow.addingTimeInterval(state.clockOffset)
+        guard abs(state.clockOffset) <= maxClockSkew else { return localNow }
+        return localNow.addingTimeInterval(state.clockOffset)
+    }
+
+    /// The response's `Date`, if it is within `maxClockSkew` of the Mac's
+    /// clock; `nil` (use the Mac's clock) if it is absent or further off.
+    static func trustedServerDate(_ header: Date?, localNow: Date) -> Date? {
+        guard let header, abs(header.timeIntervalSince(localNow)) <= maxClockSkew
+        else { return nil }
+        return header
+    }
+
+    /// "Now" for judging a verified file's items: never earlier than the
+    /// newest verified file's `issued`, so a clock set back (a believed but
+    /// early `Date`) cannot bring back an item whose `until` has passed.
+    static func notBeforeNewestFile(_ now: Date, _ freshness: Freshness) -> Date {
+        max(now, freshness.maxIssued ?? now)
     }
 
     /// At most one check per UTC day as the server sees it. Never on a timer:
@@ -229,11 +256,13 @@ enum NewsCheck {
     }
 
     /// First check this UTC calendar month by the server's clock. A server
-    /// clock that has gone *backwards* past the last check makes no claim.
+    /// clock that has gone *backwards* past the last check, or past the latest
+    /// server date ever believed, makes no claim.
     static func isFirstThisMonth(_ state: State, serverNow: Date) -> Bool {
         guard let last = state.lastCheck else { return true }
-        guard serverNow > last else { return false }
-        return utcMonth(last) != utcMonth(serverNow)
+        let floor = max(last, state.latestServerDate ?? last)
+        guard serverNow > floor else { return false }
+        return utcMonth(floor) != utcMonth(serverNow)
     }
 
     // MARK: - State transitions
@@ -248,16 +277,33 @@ enum NewsCheck {
     ///     views recorded during the request are kept.
     ///   - sent: the query that went out.
     ///   - serverDate: the response's `Date` header, if it had a usable one.
+    ///     Believed only within `maxClockSkew` of `localNow`; further off, the
+    ///     Mac's clock is used and the stored offset is reset.
     ///   - localNow: the Mac's clock when the response arrived.
     static func afterResponse(_ current: State, sent: Query, serverDate: Date?,
                               localNow: Date) -> State {
         var next = current
-        if let serverDate {
-            next.clockOffset = serverDate.timeIntervalSince(localNow)
-            next.lastCheck = serverDate
+        // The clock this check's query was judged by.
+        let estimate = estimatedServerNow(current, localNow: localNow)
+        let checked: Date
+        if let trusted = trustedServerDate(serverDate, localNow: localNow) {
+            next.clockOffset = trusted.timeIntervalSince(localNow)
+            checked = trusted
+        } else if serverDate != nil {
+            next.clockOffset = 0
+            checked = localNow
         } else {
-            next.lastCheck = estimatedServerNow(current, localNow: localNow)
+            checked = estimate
         }
+        next.lastCheck = checked
+        // The high-water mark covers the estimate too: a `Date` pinned to a
+        // month's last hour would otherwise make every next day's estimate a
+        // new month. Each value is within `maxClockSkew` of the Mac's clock,
+        // so a mark further ahead than that means the Mac's own clock was set
+        // back; it starts again from this check.
+        var latest = max(checked, estimate, current.latestServerDate ?? checked)
+        if latest > localNow.addingTimeInterval(maxClockSkew) { latest = checked }
+        next.latestServerDate = latest
         if sent.carriesCounts {
             if sent.first { next.everChecked = true }
             next.welcomeSinceCheck = max(0, current.welcomeSinceCheck - (sent.welcome ?? 0))
@@ -466,6 +512,10 @@ enum NewsCheck {
         guard decoded.expires > decoded.issued,
               decoded.expires <= decoded.issued.addingTimeInterval(maxLifetime)
         else { return fail(.lifetimeTooLong) }
+        // No floor is needed here: a file that passed the replay check has
+        // `issued >= maxIssued`, and `expires > issued`, so a `now` raised to
+        // `maxIssued` could never change this answer. The floor bites on the
+        // items' windows (`NewsFetcher.currentItems`).
         guard decoded.expires > now else { return fail(.expired) }
 
         let items = (decoded.items ?? []).prefix(maxItems).compactMap(\.item)
@@ -546,6 +596,15 @@ enum NewsCheck {
     /// Caps in characters. There is no `kind`: the eyebrow comes from the
     /// app-owned `tone` (a localised key), and a `kind` in a file is ignored.
     static let fieldCaps = (title: 80, text: 200, more: 200, link: 40)
+    /// Each field is also capped at this many Unicode scalars per character
+    /// of its cap, so stacked combining marks (one character, any height)
+    /// cannot overflow a card.
+    static let scalarsPerCharacter = 4
+
+    /// Within a field's character cap and its scalar cap.
+    static func fits(_ text: String, cap: Int) -> Bool {
+        text.count <= cap && text.unicodeScalars.count <= cap * scalarsPerCharacter
+    }
 
     /// What decides whether an item shows on this Mac today.
     struct DisplayContext: Sendable {
@@ -603,7 +662,7 @@ enum NewsCheck {
         var more: String?
         if let rawMore = copy.more {
             let cleaned = sanitize(rawMore)
-            guard cleaned.count <= caps.more else { return nil }
+            guard fits(cleaned, cap: caps.more) else { return nil }
             more = cleaned.isEmpty ? nil : cleaned
         }
         guard let href = validateLink(raw.href) else { return nil }
@@ -614,15 +673,19 @@ enum NewsCheck {
     }
 
     /// A required text field: sanitised, non-empty, within its cap (in
-    /// characters). Over the cap drops the item; it is never cut mid-word here.
+    /// characters, and in scalars: `fits`). Over the cap drops the item; it
+    /// is never cut mid-word here.
     private static func field(_ raw: String, cap: Int) -> String? {
         let cleaned = sanitize(raw)
-        guard !cleaned.isEmpty, cleaned.count <= cap else { return nil }
+        guard !cleaned.isEmpty, fits(cleaned, cap: cap) else { return nil }
         return cleaned
     }
 
-    /// Removes bidirectional controls, zero-width characters and tag
-    /// characters, turns line breaks (control characters such as newlines and
+    /// Removes every format character (Unicode category Cf: bidirectional
+    /// controls, zero-width characters, the soft hyphen, interlinear
+    /// annotation marks, the deprecated format controls) except the
+    /// zero-width joiner, which emoji sequences need, and the tag
+    /// characters; turns line breaks (control characters such as newlines and
     /// tabs, and the Unicode line and paragraph separators) into spaces, and
     /// trims. Nothing else changes: Markdown stays literal (the card draws it
     /// with `Text(verbatim:)`).
@@ -639,17 +702,15 @@ enum NewsCheck {
 
     private static func isInvisibleFormatting(_ scalar: Unicode.Scalar) -> Bool {
         switch scalar.value {
-        case 0x061C,           // Arabic letter mark
-             0x180E,           // Mongolian vowel separator
-             0x200B...0x200F,  // zero-width space/non-joiner/joiner, LRM, RLM
-             0x202A...0x202E,  // LRE, RLE, PDF, LRO, RLO
-             0x2060...0x2064,  // word joiner, invisible operators
-             0x2066...0x2069,  // LRI, RLI, FSI, PDI
-             0xFEFF,           // zero-width no-break space / BOM
-             0xE0000...0xE007F: // tag characters (invisible; can carry hidden text)
+        case 0x200D:            // zero-width joiner: kept, emoji sequences need it
+            return false
+        case 0x180E,            // Mongolian vowel separator (Cf before Unicode 6.3)
+             0xE0000...0xE007F: // tag characters, assigned or not (can carry hidden text)
             return true
         default:
-            return false
+            // Cf: U+00AD, U+061C, U+200B-200F, U+202A-202E, U+2060-2064,
+            // U+2066-206F, U+FEFF, U+FFF9-FFFB, and the rest of the category.
+            return scalar.properties.generalCategory == .format
         }
     }
 

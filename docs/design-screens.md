@@ -138,8 +138,8 @@ board on real data.
     longer white on accent (1.4.3).
   - **At rest:** addresses lose query strings (localhost, IPs, intranet hosts and any slashed
     path included) and every fragment but an app route without a percent-encoded value; chrome
-    is not stored where there are dense frames to find it (§4.3); `INDEX_VERSION` 3, and an index
-    from an older version is deleted with its stills at serve start and at each pass, as are
+    is not stored where there are dense frames to find it (§4.3); an index from an older
+    `INDEX_VERSION` is deleted with its stills at serve start and at each pass, as are
     stills from before they were named by session.
   - **Still owed** (none blocks release; each is recorded where it belongs): no "On screen: …"
     text per pinned card (a screen-reader user cannot tell which line a quote is about); no narrow-width layout (1.4.10) —
@@ -587,9 +587,11 @@ per session, deferring while a run is in progress. Never on the pipeline's path.
 ### 3.5 Pinning a quote to an element
 
 A quote is placed on a screen by its timecode. It is pinned to one line of on-screen text when it
-shares a run of words with it (two or more, with a content word, or one rare word), or failing that
-when a multilingual sentence model (LaBSE) says they mean the same thing. Measured on the three
-sessions (`experiments/screen-text/README.md`, fourth pass):
+shares a run of words with it (two or more, with a content word), or when the line is one rare word
+the quote says; the rules since 25 Nov 2026 are the first bullets below. Where no words are shared,
+the spike also tried a multilingual sentence model (LaBSE) for lines that mean the same thing,
+measured on three sessions (`experiments/screen-text/README.md`, fourth pass, in the bullets from
+"47 quotes placed" on):
 
 - **Positions are per moment.** A line's box moves as the page scrolls, so a pin is matched on the
   still it is drawn on, re-read at that moment, not on the episode index.

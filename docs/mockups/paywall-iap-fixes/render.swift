@@ -27,6 +27,8 @@ let proposed: [String: String] = [
     "trialLead": "Free for the first {{trial}}.",
     "trialTerms": "Free for {{trial}}, then {{price}} a month until you cancel. Cancel any time in App Store settings, at least a day before the trial ends to avoid being charged. Your AI provider bills you separately for what the analysis uses.",
     "pending": "Waiting for approval. Once it is approved, press Analyse again.",
+    "lapsedTitle": "Subscribe to do further analysis and studies",
+    "lapsedBody": "Your existing projects are all still here, and you can read, edit and export them.",
 ]
 
 func t(_ key: String, _ vars: [String: String] = [:], new: Bool = false) -> String {
@@ -81,7 +83,7 @@ struct Proposed: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(planName).font(.headline).foregroundStyle(.secondary)
                 Text(t("pricePerMonth", ["price": price], new: true)).font(.title2.bold())
-                Text(trial ? t("trialLead", ["trial": trialLength], new: true) : t("lapsedTitle"))
+                Text(trial ? t("trialLead", ["trial": trialLength], new: true) : t("lapsedTitle", new: true))
                     .font(.headline)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -89,7 +91,7 @@ struct Proposed: View {
                 Text(t("aiBilling")).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Text(t(trial ? "trialBody" : "lapsedBody")).fixedSize(horizontal: false, vertical: true)
+            Text(trial ? t("trialBody") : t("lapsedBody", new: true)).fixedSize(horizontal: false, vertical: true)
             if let message {
                 Text(message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }

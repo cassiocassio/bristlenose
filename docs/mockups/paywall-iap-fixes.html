@@ -106,12 +106,13 @@
       <img class="light-only" src="paywall-iap-fixes/before-lapsed-light.png" alt="Shipped lapsed paywall: title Subscribe to keep analysing your studies; price only in small print.">
       <img class="dark-only" src="paywall-iap-fixes/before-lapsed-dark.png" alt="Shipped lapsed paywall, dark appearance."></div></figure>
     <figure><div class="shot"><div class="bar">after · proposed</div>
-      <img class="light-only" src="paywall-iap-fixes/after-lapsed-light.png" alt="Proposed lapsed paywall: Bristlenose Monthly, £9.99 a month, then Subscribe to keep analysing your studies.">
+      <img class="light-only" src="paywall-iap-fixes/after-lapsed-light.png" alt="Proposed lapsed paywall: Bristlenose Monthly, £9.99 a month, then Subscribe to do further analysis and studies.">
       <img class="dark-only" src="paywall-iap-fixes/after-lapsed-dark.png" alt="Proposed lapsed paywall, dark appearance."></div></figure>
   </div>
   <div class="commentary"><span class="label">Commentary</span>
     <ul>
-      <li>Same structure as the trial sheet: name, price, then one line. Your approved line "Subscribe to keep analysing your studies" stays word for word, one size down (headline instead of title).</li>
+      <li>Same structure as the trial sheet: name, price, then one line, one size down from the title (headline).</li>
+      <li>Your wording, 25 Nov: "Subscribe to do further analysis and studies" (was "Subscribe to keep analysing your studies"), and "Your existing projects are all still here…" (was "Your analysed projects…").</li>
       <li>One layout for both states means one code path, so the price can't fall back into the footnote in either.</li>
     </ul>
   </div>
@@ -134,7 +135,7 @@
 
   <h2>Strings</h2>
   <div class="commentary"><span class="label">Commentary · string plan</span>
-    <p>Two new keys, two changed. Each is a 21-locale change (<code>scripts/check-locales.py --strict</code>). Highlighted cells are new wording for you to approve.</p>
+    <p>Two new keys, four changed. Each is a 21-locale change (<code>scripts/check-locales.py --strict</code>). Highlighted cells are new wording for you to approve.</p>
     <table>
       <thead><tr><th>Key <code>desktop.subscription.*</code></th><th>Status</th><th>en</th></tr></thead>
       <tbody>
@@ -143,7 +144,8 @@
         <tr><td><code>trialTerms</code></td><td>changed: "7 days" becomes <code>{{trial}}</code></td><td>Free for {{trial}}, then {{price}} a month until you cancel. Cancel any time in App Store settings, at least a day before the trial ends to avoid being charged. Your AI provider bills you separately for what the analysis uses.</td></tr>
         <tr><td><code>pending</code></td><td>changed</td><td class="new">Waiting for approval. Once it is approved, press Analyse again.</td></tr>
         <tr><td><code>trialTitle</code></td><td>retired</td><td>Try Bristlenose free for 7 days</td></tr>
-        <tr><td><code>lapsedTitle</code></td><td>kept, smaller</td><td>Subscribe to keep analysing your studies</td></tr>
+        <tr><td><code>lapsedTitle</code></td><td>changed (yours, 25 Nov), one size smaller</td><td class="new">Subscribe to do further analysis and studies</td></tr>
+        <tr><td><code>lapsedBody</code></td><td>changed (yours, 25 Nov)</td><td class="new">Your existing projects are all still here, and you can read, edit and export them.</td></tr>
       </tbody>
     </table>
     <p style="margin-top:10px">"a month" stays written in the strings: there is one product and it is monthly. A test already pins the period to one month (<code>SubscriptionGateTests.swift:103</code>), so a change in App Store Connect fails a test instead of reaching the sheet.</p>
@@ -153,9 +155,9 @@
   <div class="commentary"><span class="label">Commentary · decisions</span>
     <ol>
       <li>Approve the trial layout (name, price as title, trial line).</li>
-      <li>Approve the lapsed layout, with your approved title one size down.</li>
+      <li>Approve the lapsed layout, with your new wording one size below the price.</li>
       <li>Ask to Buy: the honest copy shown here, or keep the promise in code.</li>
-      <li>Approve the four highlighted strings.</li>
+      <li>Approve the six highlighted strings.</li>
     </ol>
     <p>Not in this mockup: the "App Store isn't available" sheet (unchanged; it stops appearing once the subscription exists in App Store Connect), and the Terms of Use link, which waits for the EULA research.</p>
   </div>

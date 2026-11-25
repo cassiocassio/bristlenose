@@ -19,8 +19,9 @@ is the `mypy` cell (`ci.yml::gates`, a ratchet) on every event. On
 workflow_dispatch the macOS cells are treated as blocking, because release.sh
 dispatches with strict-macos; a hand dispatch without it is misclassified.
 Attempt 1 only; re-run and unfinished runs are counted, not measured. Green,
-red and cancelled runs are counted separately, since a red test cell skips
-`e2e` and finishes early for the wrong reason.
+red and cancelled runs are counted separately. Until e2e stopped needing the
+test matrix (25 Nov 2026) a red test cell skipped e2e, so red-run medians from
+before that date finish early for the wrong reason.
 
 Plan and metric definitions: the test-speed plan (C1, C3, C4).
 

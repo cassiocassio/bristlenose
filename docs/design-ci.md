@@ -92,11 +92,8 @@ The patterns here are standard CI practice, not local invention:
 ## Job structure
 
 ```
-lint ──────────────┐
-                   ├──► e2e
-test (10 cells) ───┘
-                   │
-frontend ──────────┘
+frontend-lint-type-test ──► e2e
+test (10 cells)
 
 package ───────────────  (wheel + sdist, publishes nothing — added 8 Aug)
 mac-build.yml ─────────  (separate workflow: Debug build + Swift suite, macos-26 and macos-15)
@@ -111,14 +108,16 @@ Jobs in `ci.yml`, plus the shipped Mac workflow:
 | `supply-chain` | ubuntu, Python 3.12 | — | No — audit + SBOM, both informational |
 | `test` | 5 Python × 2 OS (10 cells) | — | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
 | `frontend-lint-type-test` | ubuntu, Node from `.tool-versions` (24) | — | Yes |
-| `e2e` | ubuntu, Python 3.12 + Node 24 | `test` + `frontend` | Yes |
+| `e2e` | ubuntu, Python 3.12 + Node 24 | `frontend` (not `test`, since 25 Nov 2026) | Yes |
 | `release-suites` | ubuntu | — | Yes — the release chain's own suites: the driver, verify and its fault-injection scenarios, the preflight and doc gates, the sink, the dmg lane, the guest matrix, and the board and History in Python (the list is the loop in `ci.yml`). No network, no keys, no release; a few minutes. Added 28 Aug 2026, and its first run found two defects invisible on macOS |
 | `package` | ubuntu | — | Yes — wheel + sdist + `twine check` + an assertion the React SPA is inside the wheel |
 | `mac-build.yml` *(separate workflow)* | macos-26, and macos-15 with Xcode 26.3 selected | — | path-filtered to `desktop/**`; compiles the **Debug** configuration **and runs the Swift suite** (`test-swift.sh`), no signing. The macos-15 leg selects Xcode 26.3 because the image's default 16.4 cannot compile the macOS 26 APIs now in use |
 | `mac-release-archive.yml` *(separate workflow, since 8 Oct 2026)* | macos-26 | — | path-filtered to `desktop/**`, plus `workflow_dispatch`; archives the **Release** configuration twice, unsigned (App Store, and Developer-ID with `DEVELOPER_ID_BETA`) via `desktop/scripts/check-release-archive.sh`, because nothing else compiles Release before release night. Cannot rehearse signing (an ad-hoc archive needs a provisioning profile). Advisory: in the preflight's `WF_ADVISORY` streak |
 
 Every gate cell, `supply-chain`, `test` and `frontend` run in parallel. `e2e`
-waits for `test` and `frontend`. **`test` deliberately does not wait for the
+waits for `frontend` only: it took no artifact from `test`, and waiting for the
+matrix queued it behind the macOS cells (25 Nov 2026,
+`tests/test_ci_workflow_shape.py`). **`test` deliberately does not wait for the
 gates** — gating the suite on the linters means a trivial ruff error hides every
 test result, which is the masking the matrix split exists to remove, moved up a
 level. `release.yml` gates on the *workflow's* conclusion, so every job must

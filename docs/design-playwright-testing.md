@@ -243,7 +243,7 @@ e2e/
 
 ### CI integration
 
-The `e2e` job in `.github/workflows/ci.yml` runs after the Python and frontend jobs pass. It installs Python `[dev,serve]` extras, builds the frontend, installs Playwright browsers (`chromium`, `webkit` with system deps), and runs all tests. On failure, the HTML report is uploaded as a GitHub Actions artifact (7-day retention).
+The `e2e` job in `.github/workflows/ci.yml` runs after the frontend job passes (not after the Python matrix, since 25 Nov 2026). It installs Python `[dev,serve]` extras, builds the frontend, installs Playwright browsers (`chromium`, `webkit` with system deps), and runs all tests. On failure, the HTML report is uploaded as a GitHub Actions artifact (7-day retention).
 
 ## Resolved decisions (from open questions)
 

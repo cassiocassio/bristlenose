@@ -555,7 +555,14 @@ jobs:
         run: npm run size
 
   e2e:
-    needs: [test, frontend-lint-type-test]
+    # Not `needs: test`. e2e installs from source and builds its own frontend,
+    # and takes no artifact from the matrix, so waiting for it only queued e2e
+    # behind the slowest cell: on a push, a macOS cell that waited ~40 min for
+    # a runner. It still waits for the frontend gate, so a frontend type error
+    # isn't reported twice. The run still fails if any blocking job fails, and
+    # e2e now also runs when a test cell is red. Pinned by
+    # tests/test_ci_workflow_shape.py.
+    needs: [frontend-lint-type-test]
     runs-on: ubuntu-latest
     # Fail fast instead of burning the default 6h job ceiling. A hung
     # Playwright download (see the install step) once stalled this job for

@@ -57,7 +57,7 @@ CONTEXT = b"bristlenose-news-v1\n"
 #: Mirrors ``NewsKeys.productionK1`` / ``productionK0`` in ``NewsKeys.swift``,
 #: pinned by ``tests/test_sign_news.py``. EMPTY until the owner generates keys:
 #: until then the app accepts no file.
-PUBLIC_KEYS: dict[str, str] = {"k1": "", "k0": ""}
+PUBLIC_KEYS: dict[str, str] = {"k1": "+jCA1SYBnaID8ArXG6iyndpvlSMM4cy7OCYYiE53hzA=", "k0": "lJxaisxLyyGCH/bHKY59I21nm5VdecrkrbwfQ3KHKj4="}
 
 MAX_LIFETIME = dt.timedelta(days=45)
 #: The signer is stricter than the app (which allows 2 days ahead), so a file

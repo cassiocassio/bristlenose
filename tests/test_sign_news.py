@@ -320,11 +320,17 @@ def _two_keys(tmp_path):
 
 
 def _copies(tmp_path):
+    """Copies of the two files with the production keys blanked, as before set-keys ran."""
+    swift_text = re.sub(r'(static let productionK[01] = )"[^"]*"', r'\1""',
+                        SWIFT_KEYS.read_text(encoding="utf-8"))
+    script_text = re.sub(r'^PUBLIC_KEYS: dict\[str, str\] = .*$',
+                         'PUBLIC_KEYS: dict[str, str] = {"k1": "", "k0": ""}',
+                         (REPO / "scripts" / "sign-news.py").read_text(encoding="utf-8"),
+                         count=1, flags=re.M)
     swift = tmp_path / "NewsKeys.swift"
-    swift.write_text(SWIFT_KEYS.read_text(encoding="utf-8"), encoding="utf-8")
+    swift.write_text(swift_text, encoding="utf-8")
     script = tmp_path / "sign-news.py"
-    script.write_text((REPO / "scripts" / "sign-news.py").read_text(encoding="utf-8"),
-                      encoding="utf-8")
+    script.write_text(script_text, encoding="utf-8")
     return swift, script
 
 

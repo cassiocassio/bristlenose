@@ -27,9 +27,9 @@ enum NewsKeys {
     static let backupKID = "k0"
 
     /// Base64 of the raw 32-byte public key. **EMPTY: no file is accepted.**
-    static let productionK1 = ""
+    static let productionK1 = "+jCA1SYBnaID8ArXG6iyndpvlSMM4cy7OCYYiE53hzA="
     /// Base64 of the raw 32-byte public key. **EMPTY: no revocation possible.**
-    static let productionK0 = ""
+    static let productionK0 = "lJxaisxLyyGCH/bHKY59I21nm5VdecrkrbwfQ3KHKj4="
 
     static var productionKeyring: NewsCheck.Keyring {
         NewsCheck.Keyring(base64Keys: [activeKID: productionK1, backupKID: productionK0],

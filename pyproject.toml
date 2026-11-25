@@ -42,7 +42,6 @@ dependencies = [
     # untested major (it is expected to be safe: no WebSocket route, uvicorn
     # picks its sans-I/O impl). Lift after one green CI run on main without it.
     "websockets<17",
-    "pysrt>=1.1",
     "webvtt-py>=0.5",
     "python-docx>=1.1",
     "presidio-analyzer>=2.2.362",

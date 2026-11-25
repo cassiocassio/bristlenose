@@ -69,15 +69,12 @@ END_FRAMEWORK = "<!-- END AUTO: framework-libs -->"
 
 # Override the Licence cell for packages whose pip metadata is unhelpful.
 # pip-licenses returns whatever the wheel declared in its metadata, which
-# for some packages is the full licence body (tiktoken) or an unversioned
-# "GPL" string (pysrt). Keys are PEP 503-normalised distribution names.
+# for some packages is the full licence body (tiktoken). Keys are PEP
+# 503-normalised distribution names.
 LICENSE_OVERRIDES: dict[str, str] = {
     # tiktoken's wheel embeds the entire MIT licence text in the License
     # field; without an override it spans 22 lines and breaks the table.
     "tiktoken": "MIT",
-    # pysrt declares "GNU General Public License (GPL)" without a version;
-    # the upstream repo is GPL-3.0-or-later, which is AGPL-3.0 compatible.
-    "pysrt": "GPL-3.0-or-later",
 }
 
 # Hard-coded "obviously not shipped" set on top of the spec excludes.

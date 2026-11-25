@@ -397,7 +397,7 @@ values, and the comments beside the pinned ones for why they are capped.
   decoder; `mlx` + `mlx-whisper` on Apple Silicon (the `apple` extra); `huggingface-hub<2`
   for model downloads; FFmpeg and ffprobe as external binaries.
 - **Voice pass (optional `voice` extra):** `onnxruntime` and `kaldi-native-fbank`.
-- **Subtitles and documents:** `pysrt`, `webvtt-py`, `python-docx`, `openpyxl`.
+- **Subtitles and documents:** `webvtt-py`, `python-docx`, `openpyxl` (SRT is read by our own parser in `stages/s03_parse_subtitles.py`).
 - **PII:** `presidio-analyzer`, `presidio-anonymizer` with spaCy's `en_core_web_lg`
   weights (acquired on demand on the Mac, via `spacy download` on the CLI).
 - **LLM SDKs:** `anthropic` (>=1, <2), `openai`, `google-genai`; optional `any-llm-sdk` with

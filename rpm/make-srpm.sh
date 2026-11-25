@@ -149,30 +149,33 @@ mkdir -p "$WORK/vendor"
 # PASS A — the sdist-only dependencies, built here.
 #
 # `--only-binary=:all:` below cannot install what PyPI publishes as an sdist and
-# nothing else, and pysrt is exactly that (1.1.2: sdist, no wheel). It is pure
-# Python, so building it locally yields `py3-none-any`, which satisfies every
-# arch — the thing that is NOT true of a compiled extension, and the whole
-# reason pass B exists.
+# nothing else. A pure-Python sdist built locally yields `py3-none-any`, which
+# satisfies every arch — the thing that is NOT true of a compiled extension,
+# and the whole reason pass B exists. The list is empty since 25 Nov 2026,
+# when pysrt (sdist-only, and GPL-3.0) was replaced by our own SRT reader; the
+# pass stays so the next sdist-only dependency has somewhere to go.
 #
 # This list is deliberately explicit rather than derived. When a new dependency
 # is sdist-only, pass B fails naming it, and the choice — add it here if pure
 # Python, or reconsider the dependency if it compiles — is one a human should
 # make. A compiled sdist added here would silently reintroduce the arch bug.
-BN_SDIST_ONLY=("pysrt>=1.1")
+BN_SDIST_ONLY=()
 echo "    pass A: ${#BN_SDIST_ONLY[@]} sdist-only package(s) built locally"
-"$BN_PYTHON" -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir --no-deps \
-    "${BN_SDIST_ONLY[@]}"
-for _w in "${BN_SDIST_ONLY[@]}"; do
-    _n="${_w%%[<>=!]*}"
-    ls "$WORK/vendor/${_n//-/_}"-*-py3-none-any.whl >/dev/null 2>&1 \
-        || ls "$WORK/vendor/${_n}"-*-py3-none-any.whl >/dev/null 2>&1 \
-        || { echo "error: $_n did not build to py3-none-any — it is not pure Python," >&2
-             echo "       so vendoring it here would ship the builder's arch." >&2; exit 1; }
-done
+if [ "${#BN_SDIST_ONLY[@]}" -gt 0 ]; then
+    "$BN_PYTHON" -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir --no-deps \
+        "${BN_SDIST_ONLY[@]}"
+    for _w in "${BN_SDIST_ONLY[@]}"; do
+        _n="${_w%%[<>=!]*}"
+        ls "$WORK/vendor/${_n//-/_}"-*-py3-none-any.whl >/dev/null 2>&1 \
+            || ls "$WORK/vendor/${_n}"-*-py3-none-any.whl >/dev/null 2>&1 \
+            || { echo "error: $_n did not build to py3-none-any — it is not pure Python," >&2
+                 echo "       so vendoring it here would ship the builder's arch." >&2; exit 1; }
+    done
+fi
 
 # PASS B — everything else, for the TARGET platform, satisfying pass A from
-# --find-links so pip does not try to fetch pysrt from an index that has no
-# wheel for it.
+# --find-links so pip does not try to fetch an sdist-only package from an index
+# that has no wheel for it.
 echo "    pass B: the rest, as x86_64 wheels"
 # The extras the RPM ships. `voice` is the speaker voice pass (stage 5b:
 # kaldi-native-fbank, plus the onnxruntime faster-whisper already brings); it

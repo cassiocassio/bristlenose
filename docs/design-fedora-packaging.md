@@ -431,7 +431,8 @@ Source1: bristlenose-vendor-%{version}.tar.gz                               (213
 pip wheel --wheel-dir=vendor "bristlenose[serve]==$(VERSION)"
 ```
 
-`pip wheel` rather than `pip download` deliberately: `pysrt` publishes only an sdist, and
+`pip wheel` rather than `pip download` deliberately: `pysrt` (a dependency until 25 Nov 2026,
+when our own SRT reader replaced it) published only an sdist, and
 `pip download` leaves it as a `.tar.gz`. Installing that in `mock` would trigger a PEP 517
 isolated build, which reaches for `setuptools` **from the network**. `pip wheel` builds it
 to a wheel up front, so `%build` sees wheels only and never needs an index.

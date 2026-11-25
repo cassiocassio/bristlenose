@@ -109,7 +109,6 @@ procurement; under-listing would be a compliance risk.
 | `catalogue` | 2.0.10 | MIT License | <https://github.com/explosion/catalogue> |
 | `certifi` | 2026.11.20 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
-| `chardet` | 7.7.0 | 0BSD | <https://github.com/chardet/chardet> |
 | `charset-normalizer` | 3.5.3 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
 | `click` | 8.5.1 | BSD-3-Clause | <https://github.com/pallets/click/> |
 | `cloudpathlib` | 0.26.0 | MIT License | <https://github.com/drivendataorg/cloudpathlib> |
@@ -180,7 +179,6 @@ procurement; under-listing would be a compliance risk.
 | `pyobjc-framework-CoreML` | 13.1 | MIT | <https://github.com/ronaldoussoren/pyobjc> |
 | `pyobjc-framework-Quartz` | 13.1 | MIT | <https://github.com/ronaldoussoren/pyobjc> |
 | `pyobjc-framework-Vision` | 13.1 | MIT | <https://github.com/ronaldoussoren/pyobjc> |
-| `pysrt` | 1.1.2 | GPL-3.0-or-later | <https://github.com/byroot/pysrt> |
 | `python-docx` | 1.2.0 | MIT License | <https://github.com/python-openxml/python-docx> |
 | `python-dotenv` | 1.2.4 | BSD-3-Clause | <https://github.com/theskumar/python-dotenv> |
 | `python-multipart` | 0.0.34 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
@@ -282,14 +280,6 @@ gets a yes/no with reasoning rather than silence.
   easier to grep but harder to read. Will add if a procurement
   reviewer specifically asks; trivial to drive from the same
   `pip-licenses --format=json` output the auto section uses.
-- **`pysrt` GPL aggregation question.** `pysrt` ships under "GNU General
-  Public License (GPL)" without a version in its wheel metadata; the
-  upstream repo is GPL-3.0-or-later. Used in `bristlenose/stages/s03_parse_subtitles.py`.
-  Bristlenose's overall licence is AGPL-3.0-only, which is a strict
-  superset of GPL-3.0-or-later, so the combined work's licence
-  position is unchanged. The `LICENSE_OVERRIDES` map in
-  `scripts/generate-third-party-binaries.py` declares the version
-  explicitly so the auto table doesn't carry the unversioned label.
 
 ## See also
 

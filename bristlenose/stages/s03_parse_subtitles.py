@@ -18,7 +18,6 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from bristlenose.models import (
     CLOUD_TRANSCRIPT_SOURCE,
@@ -302,25 +301,81 @@ def parse_subtitle_file(input_file: InputFile) -> list[TranscriptSegment]:
     raise ValueError(f"Not a subtitle file: {input_file.file_type}")
 
 
-# One SRT time, as loosely as pysrt reads a well-formed one (``0:0:3,0``,
-# a dot for the comma), but every component digits.
+# One SRT time, loosely (``0:0:3,0``, a dot for the comma), but every
+# component digits.
 _SRT_TIME = r"\d{1,2}:\d{1,2}:\d{1,2}[,.]\d{1,3}"
 _SRT_TIMING_RE = re.compile(rf"^\s*{_SRT_TIME}\s*-->\s*{_SRT_TIME}(?:\s.*)?$")
+_SRT_TIME_SEP_RE = re.compile(r"[:.,]")
+_LEADING_DIGITS_RE = re.compile(r"\d+")
 
 
-def _srt_cues(path: Path) -> list[Any]:
+@dataclass(frozen=True)
+class _SrtCue:
+    start: float  # seconds
+    end: float
+    text: str  # the cue's lines, joined with "\n"
+
+
+def _srt_component(part: str) -> int:
+    """One time component: its leading digits, or 0 when it has none."""
+    try:
+        return int(part)
+    except ValueError:
+        digits = _LEADING_DIGITS_RE.match(part)
+        return int(digits.group()) if digits else 0
+
+
+def _srt_seconds(stamp: str) -> float | None:
+    """``H:M:S,ms`` as seconds, or None when it is not four components.
+
+    The milliseconds are the digits as written, so ``0:0:3,5`` is 3.005 s,
+    which is how the cues in existing projects were read until 25 Nov 2026
+    (pysrt) and therefore what their caches hold.
+    """
+    parts = _SRT_TIME_SEP_RE.split(stamp.strip())
+    if len(parts) != 4:
+        return None
+    hours, minutes, seconds, millis = (_srt_component(p) for p in parts)
+    return hours * 3600 + minutes * 60 + seconds + millis / 1000
+
+
+def _srt_cue(block: list[str]) -> _SrtCue | None:
+    """One cue from its non-blank lines, or None when its timing will not read.
+
+    Reads a block exactly as pysrt 1.1.2's ``SubRipItem.from_lines`` did, so
+    replacing it (GPL-3.0, which the App Store build cannot carry) changes no
+    output for the same bytes and ``SUBTITLE_PARSER_VERSION`` stays put: an
+    optional index line, then the timing, with anything after the end time
+    up to its first space taken as part of it, then the text.
+    """
+    if len(block) < 2:
+        return None
+    lines = [line.rstrip() for line in block]
+    if "-->" not in lines[0]:
+        lines.pop(0)  # the index
+    timing = lines[0]
+    if not _SRT_TIMING_RE.match(timing):
+        return None
+    halves = timing.split("-->")
+    if len(halves) != 2:
+        return None
+    start = _srt_seconds(halves[0])
+    end = _srt_seconds(halves[1].lstrip().split(" ", 1)[0])
+    if start is None or end is None:
+        return None
+    return _SrtCue(start=start, end=end, text="\n".join(lines[1:]))
+
+
+def _srt_cues(path: Path) -> list[_SrtCue]:
     """The cues of an SRT file, skipping any whose timing will not read.
 
-    pysrt reads a time component that is not digits as 0, so ``00:00:aa,000``
+    A time component that is not digits once read as 0, so ``00:00:aa,000``
     put a cue at 0:00, where the merge pass then folded the speaker's next cue
-    into it; a timing line it cannot split drops the cue with nothing said
-    (R124). Blocks are split as ``pysrt.stream`` splits them, each timing is
-    checked first, and the skipped cues are said once per file.
+    into it; a timing line that could not be split dropped the cue with
+    nothing said (R124). Blocks are split at blank lines, each timing is
+    checked, and the skipped cues are said once per file.
     """
-    from pysrt import SubRipItem
-    from pysrt.srtexc import Error as SrtError
-
-    cues: list[Any] = []
+    cues: list[_SrtCue] = []
     skipped: list[int] = []  # the cue's place in the file, never its text
     block: list[str] = []
     seen = 0
@@ -331,14 +386,11 @@ def _srt_cues(path: Path) -> list[Any]:
         if not block:
             continue
         seen += 1
-        # A timing is the first line, or the second after an index.
-        timing = block[0] if "-->" in block[0] or len(block) < 2 else block[1]
-        try:
-            if not _SRT_TIMING_RE.match(timing):
-                raise SrtError(timing)
-            cues.append(SubRipItem.from_lines(block))
-        except SrtError:
+        cue = _srt_cue(block)
+        if cue is None:
             skipped.append(seen)
+        else:
+            cues.append(cue)
         block = []
     if skipped:
         logger.warning(
@@ -354,18 +406,8 @@ def _parse_srt(path: Path) -> list[TranscriptSegment]:
     segments: list[TranscriptSegment] = []
 
     for sub in subs:
-        start = (
-            sub.start.hours * 3600
-            + sub.start.minutes * 60
-            + sub.start.seconds
-            + sub.start.milliseconds / 1000
-        )
-        end = (
-            sub.end.hours * 3600
-            + sub.end.minutes * 60
-            + sub.end.seconds
-            + sub.end.milliseconds / 1000
-        )
+        start = sub.start
+        end = sub.end
         text = _clean_subtitle_text(sub.text)
         speaker = _extract_speaker(text)
         if speaker:

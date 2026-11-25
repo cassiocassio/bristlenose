@@ -182,7 +182,7 @@ fi
 %{buildroot}%{bn_prefix}/bin/python -c "
 import importlib
 for m in ('faster_whisper','ctranslate2','presidio_analyzer','presidio_anonymizer',
-          'spacy','anthropic','openai','google.genai','fastapi','av','webvtt','pysrt','docx'):
+          'spacy','anthropic','openai','google.genai','fastapi','av','webvtt','docx'):
     importlib.import_module(m)
 print('imports OK')"
 # The voice pass's runtime: the same onnxruntime faster-whisper's Silero VAD

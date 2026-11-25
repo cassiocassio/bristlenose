@@ -68,7 +68,7 @@ This is the contract that lets the commercial Mac product, the free cross-platfo
 | `typer[all]` + `rich` | ~8 MB | CLI chrome and progress |
 | `jinja2` | ~1 MB | HTML rendering |
 | `pyyaml` | ~1 MB | Config and codebook formats |
-| `pysrt`, `webvtt-py`, `python-docx` | ~3 MB | Subtitle + document parsing |
+| `webvtt-py`, `python-docx` | ~3 MB | Subtitle + document parsing |
 | `anthropic`, `openai`, `google-genai` SDKs | ~15 MB combined | User picks a provider at runtime; all three ship because switching is per-project |
 | React bundle (static HTML/JS/CSS) | ~2 MB gzipped | Built at release time, shipped as assets |
 

@@ -97,6 +97,8 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 **The `.dmg`, after the tag.** Root cause of the StoreKit red: a `.renewUntilNow` purchase writes its backdated renewals a beat at a time after the call returns, so one case's renewals landed after the next case's `clearTransactions()`. Each case now re-clears until the history has read empty for half a second (b9c9c6b78): 8 of 8 solo runs green; mutating `history()` to `[]` fails the three positive cases; `refundIsLeftOut` stays green with revoked purchases counted (weak before and after; owed). `main` had meanwhile moved past the tag with one shipped-code commit (9a49c57d5, the tag sidebar's Show pop-up CSS), so the `.dmg` was built in a detached worktree at `v0.48.0` with only the test commit cherry-picked (`58f99e974`; manifest: tree clean): `build-dmg.sh` green including the Swift suite, notarised and stapled, 262 MB, published with `upload-dmg.sh` (sha256 `c995e3ca…`; 0.45.0 reaped). `verify-channels.sh 0.48.0`: **8 of 9**.
 
+**TestFlight hold, measured.** App Store Connect API at 05:00 (read-only, the release key): `GET /v1/apps/{id}/subscriptionGroups` 200 with no groups, `GET /v1/apps/{id}/inAppPurchasesV2` 200 with 0 items. StoreKit would find no `app.bristlenose.subscription.monthly`, so every tester would hit the store-unavailable paywall at Analyse.
+
 **Owed.** TestFlight 0.48.0, once the IAP exists in App Store Connect (the archive must be built from the tag tree the same way). The IAP in App Store Connect before any TestFlight build with the paywall. Fix `test_a_quiet_set_aside…` timing. Defer a shell import to win back first-paint headroom (0.5 kB left). Top up / replace the Gemini key. `copr-cli` not installed (token unverified, 91 days left).
 
 ---

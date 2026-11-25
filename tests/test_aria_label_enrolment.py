@@ -67,6 +67,14 @@ _DEV_ONLY = frozenset({
     # (or serve --dev): diagnostic chrome, English by decision, row "Developer /
     # diagnostic chrome" of the same table.
     "components/TranscriptionDiagnostics.tsx",
+    # The tag specimen, style guide and keyline lab are routed "on the same terms
+    # as Specimen" (router.tsx): no sidebar row, reached by URL or the DEBUG-only
+    # Diagnostics menu, and aliased out of the export build (specimenTabs.export.tsx).
+    "islands/TagSpecimen.tsx",
+    "islands/StyleGuide.tsx",
+    "islands/KeylineLab.tsx",
+    # A style-guide story: its "Checkout" names the fixture's example section.
+    "islands/styleGuide/organisms/SignalCard.stories.tsx",
 })
 # The Screens lens left this set on 14 Oct 2026, when it left Diagnostics for the main app: its
 # labels, and its navigator's rail button in AppLayout, are `screens.*` keys now.

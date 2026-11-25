@@ -28,6 +28,20 @@ one the Welcome animation. Vision OCR fails inside a 27 guest and works in 26.6 
 the host, so the Screens lens cannot be OCR'd in the guest. `README.md` and
 `COVERAGE.md` there are the spike's record and stay where they are.
 
+**The Screen Recording grant lapses every 30 days, and the walk does not halt at the
+prompt.** macOS 27 records the grant with a re-ask date in
+`~/Library/Group Containers/group.com.apple.replayd/ScreenCaptureApprovals.plist`
+(`kScreenCapturePrivacyHintPolicy` 2592000 s, `kScreenCapturePrivacyHintDate`). The base
+was granted on 20 Oct 2026, so the re-ask fell due on 19 Nov 12:31. A frozen base
+re-asks in every clone after that date. The system prompt is invisible to the walker's
+accessibility tree, but it takes key focus away from the app. Captures still succeed;
+from Settings on, no Bristlenose window is key, ⌘W misses Settings, File ▸ New Project
+opens a second main window, and the walk halts at step 12 with Add Files dimmed. Every
+walk from the night of 19 Nov did this, on 0.46.0 and 0.47.0 alike; the walk at 02:13 on
+19 Nov, before the date, completed. The tell is a grey close button in the Settings captures
+(red when key). The fix is to answer the prompt once in the base and freeze it again,
+every 30 days (diagnosed 24 Nov 2026).
+
 ## Decisions (settled 20 Oct 2026)
 
 1. The walk is a second job in `desktop/scripts/guest-matrix.sh`, after the Swift

@@ -263,7 +263,7 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 - `--bn-colour-danger` and `--bn-colour-success` are not in `tokens.css`
 - Font-weight tokens — the body tiers, and two of them do not render as the ladder promises.
 
-**Interaction, controls and motion** (8) — [full entries](gotchas.md#interaction-controls-and-motion)
+**Interaction, controls and motion** (9) — [full entries](gotchas.md#interaction-controls-and-motion)
 
 - A control's label is never cut, by an ellipsis or by its container: no widths, rows wrap, only `data-truncates="user-content"` may ellipsize (`docs/design-control-labels.md`)…
 - Arrival flash: the SPA writes `data-arrived`, never a class; the keyframe names only a `from`; the…
@@ -273,6 +273,7 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 - Toolbar button dual-class pattern — tag filter and view switcher buttons use dual classes…
 - Pencil icon convention for inline editing — an affordance is hidden at rest and revealed by…
 - A `prefers-reduced-motion` block is a *set*, not a checkbox — add a transition, add its selector…
+- A native `<select>` stays native only while nothing styles its box; WebKit sizes it from its font (under 11px is mini).
 
 **Static render, Jinja2 and report JS** (19) — [full entries](gotchas.md#static-render-jinja2-and-report-js)
 

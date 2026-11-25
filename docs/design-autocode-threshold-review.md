@@ -129,8 +129,7 @@ When the proposal count is small enough, each bar is composed of **individual sq
 - Two thumb handles on a shared horizontal track, aligned to the histogram x-axis
 - Step granularity: 0.05 (matches histogram bins)
 - Minimum gap between handles: 0.05
-- Track colouring: grey (0→lower), amber (lower→upper), green (upper→1.0)
-- Each handle shows its value as a label (e.g. "0.30", "0.70")
+- **As built (24 Nov 2026, owner): a Levels control, modelled on Pixelmator's.** The histogram sits inside the slider's box; each threshold is a pointer under it with its value inside (two decimals in the locale's own decimal mark, `confidenceText`), and a dotted guide rises from it through the histogram, orange for the lower line and green for the upper. The histogram's ground stays plain and its squares keep their bin geometry: the colour is in the pointers, not in zone bands (owner ruling; `docs/mockups/autocode-levels-slider.html`, frame B)
 - **Defaults:** lower = 0.30, upper = 0.70
 - Arrow keys on focused handle: move by 0.05 step
 
@@ -156,7 +155,9 @@ Each row shows: timecode (linked to transcript), speaker badge, quote text, tag 
 
 **Decided rows are listed (Phase 2, D39).** Accepted and Excluded list proposals already decided, not only pending ones the sliders would move there, so ✗ on an accepted row excludes it and ✓ on an excluded row accepts it. On a decided row the button sends the explicit override (D34); either way the row becomes the researcher's pinned decision.
 
-Rows are grouped by session ID with session headers, same as the current triage table.
+Rows are grouped by session ID with session headers, same as the current triage table, sessions in number order (s2 before s10).
+
+**As built (24 Nov 2026):** each zone's header is a button (`aria-expanded`, `aria-controls`) and sticks to the top of the list while its rows scroll; a closed zone is `inert`. A tentative tag in the list carries the dashed outline it has on a quote card. A **Word wrap** checkbox in the footer, off by default, shows each quote whole instead of one line.
 
 ### Footer
 
@@ -173,12 +174,12 @@ The tentative zone proposals stay as `pending` — not committed by Apply. They 
 
 When the researcher clicks Accept or Deny on an individual row, the API is called right away. This means:
 - Per-row decisions persist even if the dialog is closed without Apply
-- The row fades out (200 ms) and comes back in the zone the decision put it in, pinned (Phase 2; it used to leave the dialog)
+- The row dims while the call is in flight, then glides to the zone the decision put it in, pinned, while the rows around both places move to close the gap and make room; into a closed zone a copy flies towards its header and fades, and the counts roll like an odometer (24 Nov 2026, `utils/reviewMotion.ts`, `components/RollingNumber.tsx`; none of it under reduced motion). A row takes one decision at a time, and focus moves to the same button on the next row (it used to leave the dialog, then to fade out for 200 ms)
 - A pending row sends an ordinary accept or deny. A decided row sends `{"override": true, "expected_status": <the status it was shown in>}` (D34, D44); decided differently since (on a quote card), the server refuses it with the same 409
 - A 409 (`proposal_accepted` / `proposal_denied`) means the row was decided elsewhere: the dialog reads the run again and draws that row as the server holds it (D44), saying so when it went the other way from the click (N33)
 - Closing after a row call that saved tells the caller (`onClose(changed)`), which raises `codebook-changed` and `bn:tags-changed` as Apply does, so quote cards and the tag sidebar drop a tag an override removed (D42)
 - A failure toasts and puts the row back as it was (R5); a 404 removes it
-- The histogram does NOT change on per-row actions (it's a fixed reference for the distribution shape)
+- The histogram does NOT change on per-row actions (it's a fixed reference for the distribution shape). So after a few decisions its blocks, placed by confidence, no longer add up to the counters, which follow outcomes: on the trial project 12 decisions explained the whole gap. The owner saw it and parked it (25 Nov 2026, "a problem for another day")
 - The zone counters and the subtitle's counts update
 
 ### Slider changes are purely visual

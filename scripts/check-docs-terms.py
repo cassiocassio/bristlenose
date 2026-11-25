@@ -130,7 +130,7 @@ def main(argv: list[str]) -> int:
             for n, line in prose_lines(path):
                 for canonical, pattern in rules:
                     for m in pattern.finditer(line):
-                        print(f"{path}:{n}: '{m.group(0)}' should be '{canonical}'")
+                        print(f"{path.as_posix()}:{n}: '{m.group(0)}' should be '{canonical}'")
                         hits += 1
     if hits:
         print(

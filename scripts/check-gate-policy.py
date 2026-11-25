@@ -16,8 +16,9 @@ docs/testing/soft-gates.json:
                For debt too large to fix now and too easy to grow.
   expires      A date by which somebody must decide again. For things outside
                our control, where "fix it" is not the available action.
-  conditional  Soft here, hard somewhere that matters. The macOS matrix is the
-               model: informational on a push, blocking on a release tag.
+  conditional  Soft here, hard somewhere that matters. No gate uses it today:
+               the macOS matrix was the model until 25 Nov 2026, when it left
+               pushes and became blocking wherever it runs.
 
 This file fails when a soft gate has no disposition, when an `expires` date has
 passed, when a `ratchet` names a metric that does not exist, or when the

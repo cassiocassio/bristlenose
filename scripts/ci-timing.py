@@ -13,11 +13,12 @@ reads recent `ci.yml` runs through `gh` and prints, per run and as medians:
   green     push → run conclusion (what the green tick waits for)
 
 Blocking vs informational is classified BY NAME, because the API does not
-expose `continue-on-error`: on push and pull_request the `test (*,
-macos-latest)` cells are informational (soft-gates.json `ci.yml::test`), and so
-is the `mypy` cell (`ci.yml::gates`, a ratchet) on every event. On
-workflow_dispatch the macOS cells are treated as blocking, because release.sh
-dispatches with strict-macos; a hand dispatch without it is misclassified.
+expose `continue-on-error`: the `mypy` cell (`ci.yml::gates`, a ratchet) is
+informational on every event. Before 25 Nov 2026 the `test (*, macos-latest)`
+cells also ran, informational, on push and pull_request; they are still
+classed informational there so older runs measure the same way, and since then
+they don't run on a push at all. Scheduled (nightly) runs are their own event,
+so they never enter the push medians.
 Attempt 1 only; re-run and unfinished runs are counted, not measured. Green,
 red and cancelled runs are counted separately. Until e2e stopped needing the
 test matrix (25 Nov 2026) a red test cell skipped e2e, so red-run medians from

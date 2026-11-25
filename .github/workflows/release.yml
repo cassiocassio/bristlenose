@@ -16,8 +16,9 @@ permissions:
 
 jobs:
   # Run the full CI suite first — don't publish a broken release. strict-macos
-  # makes the macOS cells BLOCKING here (they are informational on daily pushes):
-  # a release gate must certify the platform the Mac channels actually ship to.
+  # puts the macOS cells in the matrix here, blocking (pushes skip them; the
+  # nightly runs them): a release gate must certify the platform the Mac
+  # channels actually ship to.
   ci:
     uses: ./.github/workflows/ci.yml
     with:

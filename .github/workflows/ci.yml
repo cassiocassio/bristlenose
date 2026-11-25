@@ -9,10 +9,10 @@ on:
     inputs:
       strict-macos:
         description: >-
-          Fail the run when a macOS test cell fails. Daily pushes leave this
-          off (macOS stays informational); release.yml passes true, because a
+          Run the macOS test cells (and block on them). Pushes leave this off,
+          so they run Linux and Windows only; release.yml passes true, because a
           release gate that ignores the platform Homebrew/pip Mac users run on
-          is certifying the wrong thing.
+          is certifying the wrong thing. The nightly schedule runs macOS too.
         type: boolean
         required: false
         default: false
@@ -21,10 +21,19 @@ on:
   workflow_dispatch:
     inputs:
       strict-macos:
-        description: 'Fail the run on macOS test failures (release-gate mode)'
+        description: 'Run the macOS test cells and block on them (release-gate mode)'
         type: boolean
         required: false
         default: false
+  # Nightly, the whole workflow on main, macOS cells included and blocking: the
+  # full-matrix backstop now that pushes skip macOS (25 Nov 2026). A red
+  # scheduled run emails whoever last edited this cron line. It warns early; the
+  # release gate is still the strict run, which runs every macOS cell itself.
+  schedule:
+    # 09:23 UTC: clear of the evening-London release window (none of the last
+    # twelve release runs started between 08:20 and 11:56 UTC), and a red
+    # run's email lands in the working day.
+    - cron: '23 9 * * *'
 
 # Silence the per-step "actions/checkout@v4 is running on Node 20"
 # deprecation chatter and run JS actions on Node 24 ahead of the June
@@ -132,18 +141,20 @@ jobs:
     # still has to be green before a tag can publish.
     runs-on: ${{ matrix.os }}
     timeout-minutes: 65
-    # macOS is informational on daily pushes (catches platform bugs without
-    # blocking merges) but BLOCKING when strict-macos is passed — release.yml
-    # passes it, so "CI green" on a release means green on both platforms.
-    # It used to mean "green on Linux" for a Mac-first product: every macOS
-    # cell could fail and needs:ci still let publish run. The macOS cells are
-    # the only automated coverage the Homebrew/pip-on-Mac audience has — the
-    # human walk covers the .app, nobody hand-tests the Mac CLI.
+    # macOS cells run only where they block: the release paths (release.yml
+    # and release.sh pass strict-macos) and the nightly schedule. Until 25 Nov
+    # 2026 they also ran on every push as informational cells, five of them,
+    # each waiting ~40 min for a runner and competing with the release's own
+    # strict run. So the job has no continue-on-error: wherever a cell runs, it
+    # counts. The macOS cells are the only automated coverage the
+    # Homebrew/pip-on-Mac audience has — the human walk covers the .app,
+    # nobody hand-tests the Mac CLI.
     #
-    # Expression note: on push/PR events the inputs context is empty, so
-    # `inputs.strict-macos != true` is `null != true` → true → informational.
-    # Via workflow_call/dispatch with strict-macos: true it is false → blocking.
-    continue-on-error: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}
+    # Expression note: the matrix consults the INPUT, not github.event_name,
+    # because inside a workflow_call from release.yml github.event_name is the
+    # caller's (`push`, of a tag). On push/PR the inputs context is empty, so
+    # `inputs.strict-macos == true` is false and macOS is left out. Pinned by
+    # tests/test_ci_workflow_shape.py and check-release-ready.sh's publish gate.
 
     strategy:
       fail-fast: false
@@ -178,7 +189,7 @@ jobs:
         # cut from ANTICIPATED first — those are a hedge; the shipped ones are
         # code somebody is running today.
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        os: [ubuntu-latest, macos-latest]
+        os: ${{ fromJSON((inputs.strict-macos == true || github.event_name == 'schedule') && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -557,8 +568,8 @@ jobs:
   e2e:
     # Not `needs: test`. e2e installs from source and builds its own frontend,
     # and takes no artifact from the matrix, so waiting for it only queued e2e
-    # behind the slowest cell: on a push, a macOS cell that waited ~40 min for
-    # a runner. It still waits for the frontend gate, so a frontend type error
+    # behind the slowest cell: until 25 Nov 2026, a macOS cell on every push
+    # that waited ~40 min for a runner; still the macOS cells on strict runs. It still waits for the frontend gate, so a frontend type error
     # isn't reported twice. The run still fails if any blocking job fails, and
     # e2e now also runs when a test cell is red. Pinned by
     # tests/test_ci_workflow_shape.py.

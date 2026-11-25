@@ -77,7 +77,7 @@ This is small — ~20 lines in `app.py`, plus the CLAUDE.md wording pass.
 | `desktop/scripts/check-logging-hygiene.sh` | `build-all.sh` step 1a | Swift logger calls leaking credentials |
 | `desktop/scripts/check-bundle-manifest.sh` | `build-all.sh` step 1b (just landed) | **source→spec** datas coverage |
 | `desktop/scripts/check-release-binary.sh` | `build-all.sh` post-export | Dev env-var literals + `get-task-allow` in Mach-Os |
-| `.github/workflows/ci.yml` | GitHub Actions | pytest + ruff, on ubuntu + macos-latest (macOS is `continue-on-error: true`) |
+| `.github/workflows/ci.yml` | GitHub Actions | pytest + ruff, on ubuntu (pushes) and ubuntu + macos-latest (nightly and release runs, blocking, since 25 Nov 2026) |
 | `.github/workflows/install-test.yml` | GitHub Actions | Post-install smoke (pip install + import) |
 | `pytest` | unit tests | Source-level; doesn't see the bundle |
 

@@ -572,7 +572,9 @@ elif ! git branch -r --contains "$SHA" 2>/dev/null | grep -q origin; then
 else
     # gh's built-in --jq, so no external jq dependency. `.[0] // {}` keeps an
     # empty run list from crashing the filter; the result is a bare "|".
-    RUN=$(gh run list --commit "$SHA" --workflow "$WF_CI" --limit 1 \
+    # --event push: since 25 Nov 2026 ci.yml also runs nightly on main, and a
+    # red or in-progress nightly at HEAD must not stand in for the push run.
+    RUN=$(gh run list --commit "$SHA" --workflow "$WF_CI" --event push --limit 1 \
           --json conclusion,status \
           --jq '.[0] // {} | "\(.status // "")|\(.conclusion // "")"' 2>/dev/null \
           || echo "QUERY_FAILED")
@@ -635,8 +637,9 @@ fi
 #
 # So the gate moved from a click to the job graph, and THAT is what this row
 # now asserts: publish `needs: build` needs `ci`, and release.yml invokes ci.yml
-# with strict-macos: true. PyPI cannot receive a version whose full matrix, e2e
-# and strict macOS suite did not pass on the tagged commit. If that chain is
+# with strict-macos: true, which puts the macOS cells in its matrix, blocking.
+# PyPI cannot receive a version whose full matrix, e2e and strict macOS suite
+# did not pass on the tagged commit. If that chain is
 # ever broken, a tag push publishes untested code — which is the thing the hold
 # was standing in for, and is worth failing over.
 head_ "Publish gate"
@@ -676,13 +679,28 @@ if "ci" not in needs(rel.get("build", {})):
 if rel.get("ci", {}).get("with", {}).get(STRICT) is not True:
     sys.exit(f"{REL_WF} does not invoke {CI_WF} with {STRICT}: true")
 
-# The property "strict means macOS BLOCKS" is implemented in ci.yml, by a
-# continue-on-error expression that must consult the input. A bare `true`
-# there disarms the whole chain while every string above still matches.
-coe = str(ci.get("test", {}).get("continue-on-error", ""))
-if STRICT not in coe:
-    sys.exit(f"{CI_WF} test.continue-on-error does not consult {STRICT}: {coe!r}")
-print(f"publish -> build -> ci, and {CI_WF} honours {STRICT}")
+# The property "strict means macOS RUNS and BLOCKS" is implemented in ci.yml
+# by two things (since 25 Nov 2026, when pushes stopped running macOS): the
+# matrix `os` expression must consult the input and name the macOS runner, and
+# the test job must carry no continue-on-error at all. Either alone can disarm
+# the chain while every string above still matches: an `os` list without
+# macOS skips the cells, a bare `continue-on-error: true` makes them soft.
+# Compared for EQUALITY with the one expression that does this, not searched
+# for substrings: `== false`, swapped branches, a matrix `exclude:` or a soft
+# step all keep the right words while disarming macOS (review, 25 Nov 2026).
+test = ci.get("test", {})
+coe = test.get("continue-on-error")
+if coe not in (None, False):
+    sys.exit(f"{CI_WF} test has continue-on-error {coe!r}: a strict run would not block")
+soft_steps = [s.get("name", "?") for s in test.get("steps", []) if s.get("continue-on-error")]
+if soft_steps:
+    sys.exit(f"{CI_WF} test has soft steps {soft_steps}: a strict run would not block")
+matrix = test.get("strategy", {}).get("matrix", {})
+want = ("${{ fromJSON((inputs." + STRICT + " == true || github.event_name == 'schedule') && "
+        "'[\"ubuntu-latest\",\"macos-latest\"]' || '[\"ubuntu-latest\"]') }}")
+if set(matrix) != {"python-version", "os"} or matrix.get("os") != want:
+    sys.exit(f"{CI_WF} test matrix is not the strict-macos shape: {matrix!r}")
+print(f"publish -> build -> ci, and {CI_WF} runs macOS, blocking, under {STRICT}")
 GATEPY
         ); _gate_rc=$?
         case "$_gate_rc" in

@@ -57,6 +57,8 @@ CI is not a quality gate for perfection. Steps that enforce correctness (ruff, p
 
 **macOS as signal on pushes, gate on releases.** macOS runners cost 10× Linux and surface platform-specific issues that rarely block a pure-Python change. On daily pushes the macOS test cells run `continue-on-error` — a failure shows yellow, not red; investigate, don't hold a merge. **On release runs they block**: `ci.yml` takes a `strict-macos` input (workflow_call + workflow_dispatch) and `release.yml` passes `true`, because a release gate that certifies only Linux is certifying the wrong platform for a Mac-first product — the macOS cells are the sole automated coverage the Homebrew/pip-on-Mac audience has, and the Mac artefacts themselves never pass through CI at all. (Changed 14 Aug 2026; the unconditional informational rule below this point in older text is the pre-change world.)
 
+**Superseded 25 Nov 2026: macOS off pushes, blocking wherever it runs.** The paragraph above is the old position. Five informational macOS cells per push each waited ~40 min for a runner and competed with the release's own strict run (`scripts/ci-timing.py`, 25 Nov baseline). They now run only nightly (`schedule`) and under `strict-macos`, with no `continue-on-error`, so the conditional soft gate is gone from `docs/testing/soft-gates.json`. A red nightly emails whoever last edited the cron line; it warns early, and the release gate is still the strict run. Pinned by `tests/test_ci_workflow_shape.py` and `check-release-ready.sh`'s publish gate.
+
 **The matrix is 5 Python × 2 OS since 28 Aug 2026**, when 3.14 was added — the Fedora Copr bundles it and `requires-python` has no ceiling, so pipx users were already there. Not every cell tracks a channel: 3.10 (the floor), 3.12 (Homebrew, Snap, the sidecar) and 3.14 (the Copr) are *shipped*; 3.11 and 3.13 are a *hedge* for whatever a pipx user happens to have. `docs/design-deployment-targets.md` has the interpreter-per-channel map.
 
 **`fail-fast: false` on the test matrix.** A Python 3.10 failure doesn't predict a 3.13 failure. Let all cells finish so you see the full picture in one push, not across three retry cycles.
@@ -106,7 +108,7 @@ Jobs in `ci.yml`, plus the shipped Mac workflow:
 |-----|---------|------------|-----------|
 | `gates` | ubuntu, Python 3.12 — **one matrix cell per gate**, `fail-fast: false` | — | Yes, per cell (mypy soft) |
 | `supply-chain` | ubuntu, Python 3.12 | — | No — audit + SBOM, both informational |
-| `test` | 5 Python × 2 OS (10 cells) | — | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
+| `test` | 5 Python × ubuntu on push; × 2 OS (10 cells) nightly and on release runs | — | Yes. macOS runs only nightly and under `strict-macos`, and blocks wherever it runs (since 25 Nov 2026) |
 | `frontend-lint-type-test` | ubuntu, Node from `.tool-versions` (24) | — | Yes |
 | `e2e` | ubuntu, Python 3.12 + Node 24 | `frontend` (not `test`, since 25 Nov 2026) | Yes |
 | `release-suites` | ubuntu | — | Yes — the release chain's own suites: the driver, verify and its fault-injection scenarios, the preflight and doc gates, the sink, the dmg lane, the guest matrix, and the board and History in Python (the list is the loop in `ci.yml`). No network, no keys, no release; a few minutes. Added 28 Aug 2026, and its first run found two defects invisible on macOS |
@@ -262,7 +264,7 @@ Mechanics worth knowing: a job-level `permissions:` block *fully replaces* the t
 
 **Why 3.10–3.14?** `pyproject.toml` declares `requires-python = ">=3.10"`. Testing the floor (3.10) and ceiling (3.13) catches compatibility boundaries. The middle versions (3.11, 3.12) catch deprecation-cycle issues where a feature is warned in N and removed in N+1.
 
-**Why macOS is `continue-on-error`?** The desktop app builds separately (Xcode). The Python package ships via PyPI/Homebrew/Snap, all Linux-built. macOS CI catches platform-specific test failures (path handling, FFmpeg behaviour, signal handling) but these rarely block a pure-Python change.
+**Why macOS was `continue-on-error`?** (Until 25 Nov 2026; it now runs only nightly and on release runs, blocking. See the superseded note above.) The desktop app builds separately (Xcode). The Python package ships via PyPI/Homebrew/Snap, all Linux-built. macOS CI catches platform-specific test failures (path handling, FFmpeg behaviour, signal handling) but these rarely block a pure-Python change.
 
 **Why `fail-fast: false`?** Version compatibility failures are independent — a 3.10 issue (removed API) and a 3.13 issue (new deprecation) are unrelated. Running all cells to completion gives the full picture.
 
@@ -285,7 +287,7 @@ These run with `continue-on-error: true`. They appear as yellow warnings, not re
 | pip-audit | `supply-chain` | **expires** 2026-11-30 | Transitive deps (torch, protobuf) frequently have unfixed advisories; the date is the next quarterly dep review |
 | npm audit | `frontend` | **expires** 2026-11-30 | Dev dep CVEs (Vite ecosystem) rarely actionable |
 | SBOM generation | `supply-chain`, `frontend` | **expires** 2027-03-01 | Compliance artifact; generation failures shouldn't block |
-| macOS test cells | `test` | **conditional** | Informational on a push, blocking on a release tag (`strict-macos`) — the model the other four are measured against |
+| ~~macOS test cells~~ | `test` | removed 25 Nov 2026 | No longer soft: off pushes, blocking nightly and on release runs |
 
 **Promotion path — superseded 3 Sep 2026 by a disposition, and this is why.**
 This section used to say "promote to blocking once pre-existing errors are
@@ -348,7 +350,7 @@ Audit of what the project uses vs what CI actually tests (Apr 2026).
 |-----|----------|----------|
 | **Swift desktop app — no CI at all** | High | Fix: add `desktop-build` job (see plan below). The product going to the App Store has zero build verification |
 | **Windows — 3 code paths, never tested** | Low | Accept. Windows is Won't for 100-day scope. Code paths are defensive (`platform.system()` checks in ingest, Ollama, clips). No Windows runner until there's a Windows release plan |
-| **macOS Python tests — informational** | Medium | Accept. macOS failures show as yellow warnings. Promoting to blocking would gate every push on the 10× cost runners for a pure-Python package that ships via Linux-built PyPI/Homebrew/Snap. Revisit when desktop app integration tests exist |
+| **macOS Python tests — informational** (until 25 Nov 2026; now off pushes, blocking nightly) | Medium | Accept. macOS failures show as yellow warnings. Promoting to blocking would gate every push on the 10× cost runners for a pure-Python package that ships via Linux-built PyPI/Homebrew/Snap. Revisit when desktop app integration tests exist |
 | **Snap arm64 — declared, never built** | Low | Accept. No arm64 Snap users. `snapcraft.yaml` declares it for future use |
 | **Homebrew install — weekly only** | Low | Accept. Formula changes are rare and triggered by releases. Weekly cadence is sufficient |
 | **Firefox — not in Playwright browsers** | Low | Accept. WebKit (Safari engine) + Chromium covers the two browser engines users actually encounter. Firefox shares no engine with either |

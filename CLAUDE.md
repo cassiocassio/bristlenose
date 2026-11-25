@@ -240,8 +240,9 @@ open-ended. **Every soft gate declares a disposition** in
   Built for mypy's 238 errors (3 Sep 2026), now held at a ceiling of 0.
 - **expires** — a date by which somebody decides again. For things outside our
   control, where "fix it" is not the available action (upstream CVE feeds).
-- **conditional** — soft here, hard where it matters. The macOS matrix is the
-  model: informational on a push, blocking on a release tag.
+- **conditional** — soft here, hard where it matters. The macOS matrix was the
+  model until 25 Nov 2026, when it stopped running on pushes at all: it now runs
+  only nightly and on the release paths, where it blocks, so it is no longer soft. No gate uses `conditional` today.
 
 **Why it is mechanical and not a convention:** `docs/design-ci.md` wrote
 *"informational initially — promote to blocking once stable"*, the promotion

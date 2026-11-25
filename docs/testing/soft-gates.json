@@ -27,11 +27,6 @@
       "disposition": "expires",
       "expires": "2027-03-01",
       "why": "Artifact generation, not a correctness check: a failure means no SBOM was published, which matters for the verifiable-security-claim track and nothing else. Revisit when that track needs the SBOM to be reliable."
-    },
-    "ci.yml::test": {
-      "disposition": "conditional",
-      "hard_when": "release.yml calls ci.yml with strict-macos: true",
-      "why": "The best pattern in the tree and the model for the rest: the same suite is informational on a push and blocking on a tag, so cost is paid where it buys something. Needs no expiry \u2014 it is already hard where it counts."
     }
   }
 }

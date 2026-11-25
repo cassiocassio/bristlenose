@@ -187,7 +187,7 @@ The release pipeline spans **three repos/workflows** and runs **seven** jobs:
 ```
 bristlenose repo (release.yml) — triggered by v* tag
 ├─ ci           → full suite via workflow_call to ci.yml, WITH strict-macos: true
-│                 (macOS test cells BLOCK here; informational on daily pushes)
+│                 (macOS test cells run and BLOCK here; pushes skip them, the nightly runs them)
 ├─ build        → sdist + wheel (python -m build), SBOMs, attestation
 ├─ publish      → PUBLISHES to PyPI. No hold, no approval, nothing waits
 │                 for a human (the required-reviewer hold went 23 Aug 2026).
@@ -257,8 +257,9 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
 - **Ruff**: hard gate
 - **pytest**: hard gate — and on **release runs** the macOS matrix cells are
   **blocking** too (`ci.yml`'s `strict-macos` input, passed `true` by
-  `release.yml`; informational on daily pushes). A release green certifies both
-  platforms; a push green certifies Linux.
+  `release.yml`). Pushes skip the macOS cells and the nightly runs them, blocking
+  (since 25 Nov 2026). A release green certifies both platforms; a push green
+  certifies Linux.
 - **mypy**: soft — and *soft with a disposition*, not soft indefinitely. Its
   `continue-on-error` is registered in `docs/testing/soft-gates.json` as a
   **ratchet** on `mypy_errors`: the count may not rise. The ceiling is

@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 10945
+        "tests": 11279
       },
       {
         "basis": "test files",
-        "files": 227,
+        "files": 244,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -30,12 +30,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 271,
+        "files": 277,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3352
+        "tests": 3448
       },
       {
         "basis": "spec files",
@@ -299,7 +299,7 @@
           {
             "calls": null,
             "id": "test",
-            "job_colour": "conditional: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}",
+            "job_colour": "hard",
             "notable_steps": [
               {
                 "colour": "hard",
@@ -446,7 +446,8 @@
           "push [main]",
           "pull_request [main]",
           "workflow_call",
-          "workflow_dispatch"
+          "workflow_dispatch",
+          "schedule (23 9 * * *)"
         ]
       },
       {

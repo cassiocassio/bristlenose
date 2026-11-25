@@ -67,6 +67,38 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.48.0 — 25 Nov 2026 · Tier 1, CLI channels only (minor — AutoCode tags as it works; the tag sidebar's AutoCode overview and the review pane; quotes keep their paragraphs; one passage, one quote)
+
+**What shipped.** 150-odd commits since 0.47.0 (CHANGELOG: 5 New, 10 Improved). Tag `v0.48.0` on `8f6bbf414`. Run overnight by a Claude session on the owner's instruction ("cut a release tonight", given before bed with four rulings: 0.48.0 minor; draft and publish the changelog; commit unclaimed work if its tests pass; waive preflight rows that fail for an outside cause, never red tests or a dirty tree). **PyPI, GitHub Release, Homebrew, Snap edge and Copr only. The `.dmg` and TestFlight stay on 0.47.0 (6923)**, for two separate reasons below.
+
+**Held, and why.**
+- **TestFlight upload held** (`--skip testflight`): 0.48.0 is the first store build carrying the paywall at first Analyse (2fcecac61). The App Store submission session's tracker still has the IAP (`app.bristlenose.subscription.monthly`) and the Paid Apps Agreement as todo, and the paywall session confirmed there is no bypass: a tester would get "The App Store isn't available right now" and could not analyse. Owner's call.
+- **Both Mac builds skipped** (`--skip build-all --skip build-dmg --skip dmg`): `EarlyAdopterStoreKitTests` (22 Nov, team-signed hosts only since 24 Nov) is red on this Mac — build-all failed it twice in a row on different cases (`refundIsLeftOut`, then `shortLapse`), and alone it failed 1 run in 3. It is not slow settling: re-reading for 2 s, then waiting for an empty history before each case, still failed 3 of 5 and 4 of 6 (`newcomer`, `refundIsLeftOut`). Transactions from one case stay visible to the next inside the test process. The changes were reverted. Not waived: the owner's rule excluded red tests, and the suite gates both the store build and the `.dmg`.
+
+**Before the run (the tree and the sessions).** Sessions asked to commit; the timeline session first held its work at the owner's word, then committed it (945e64394) when the owner said it should ship. Committed unclaimed work after its tests: store-listing caption allowlist, review-agent truing, an Xcode pbxproj re-sort (sorted-line diff empty), launch.json, research-agent docs, mockups. Left untracked on purpose: `experiments/spy/` (holds a `.keys/` folder), `docs/mockups/form-layout-v2*` (screenshots not vetted), a stray `desktop/Bristlenose/.build` log. A first plan to release from a `git clone --local` (while the timeline work was held) was dropped once the tree was clean.
+
+**Builds and gates — every stop.**
+1. Preflight NOT READY ×5: main CI red at `a8087ddb` (origin was 111 behind); `smart-open` 9→10 major; ratchet; providers live. Fixes: three gates proven (d954ce7e5; check-provider-links needed a test pinning its exit, mutant caught); slow ceiling 12→14 with reason; smart-open accepted (weasel only, imports checked; bec9b2ef8); mockup register rows (8b98eb5f0); channel-scenarios close-out stub (673e5609c, red since 21 Nov); Windows paths in check-docs-terms (fec48a4ea). Providers live waived: Gemini key rejected.
+2. build-all ✗ `check-release-binary.sh`: `BRISTLENOSE_DEBUG_SUBSCRIPTION` in the Release Mach-O. `#if DEBUG` (203e06435). A real gate on a real defect.
+3. Changelog trued twice mid-run (the analytics switch and the Mac sidebar's AutoCode lines are hidden by default: `NewsKeys` production keys empty; `BristlenoseAppKitSidebar` off). The run was stopped by hand to do it; `release.sh retry build-all` cleared the unrecorded step.
+4. Strict CI ✗ on 6f7b61ea: nine AutoCode export tests needed the gitignored export bundle on every cell; provider-links labels used `\` on Windows; first-paint bundle 222,533 B over 222 kB → 223 kB with reason (8f6bbf414).
+5. build-all ✗ ×2 — the StoreKit suite above.
+6. Strict CI ✗ on 8f6bbf41: Windows only, `test_a_quiet_set_aside_from_an_older_build_is_the_ordinary_flow` (`_QUIET_S` patched to 0.0; NTFS timestamps can sit a few ms ahead of `time.time()`). Passed on the previous Windows run. Re-ran the failed job: green (attempt 2, the Windows job alone, ~15 min); the test's window is now negative (committed after the tag).
+
+**Run times (measured, GMT, 25 Nov).** build-all 533 s (the one green build) · build-dmg 683 s · strict CI on 8f6bbf41 dispatched 00:51, attempt 1 done ~02:45 (red on Windows only), attempt 2 green ~03:10 (macOS cells queued behind superseded runs until those were cancelled at 01:45) · tag push 2 s at 03:12 · PyPI 200 at 04:04, 52 min after the tag (the tag's own strict CI).
+
+**Tricky things.**
+- **Pushes from a release session queue a full CI run per commit, and macOS runners serve them one at a time.** Six pushes tonight left the strict run's macOS cells queued behind five runs for superseded commits. The tell: strict jobs all green but five `macos-latest` cells `queued` for 30+ min while one stale cell runs. Cancel the superseded runs early.
+- **A test that patches a time window to 0.0 is a timing test.** On Windows the comparison can go negative by a few ms.
+- **Tests that read `/export` need the export-bundle stub**: `static-export/` is gitignored; locally the build exists, so they pass here and fail on every CI cell.
+- **The skill's "nothing shipped is visible" check found two changelog lines describing hidden features** (flags off by default). Worth a rule: before a New/Improved line about the Mac app, find the flag.
+
+**Verify and close-out.** `verify-channels.sh 0.48.0`: 5 of 9 — PyPI, GitHub, Homebrew, Snap edge, Copr; TestFlight, `.dmg`, `.dmg sha256` held; website ✗ until the deploy. Website deployed from a clean detached worktree of `0dd447d` (four commits: provider set-up docs that match the shipped links, "Azure OpenAI" on the home page, the About nav item dropped at the owner's word in its session); website `main` pushed; the live changelog names 0.48.0. The close-out's CLAUDE.md row stays red by design: the shipping TestFlight build is still 0.47.0 (6923), and the line says so.
+
+**Owed.** EarlyAdopterStoreKitTests isolation (owner of the early-adopter work), then `.dmg` + TestFlight 0.48.0 (a desktop-only rebuild of the tagged version, or a patch). The IAP in App Store Connect before any TestFlight build with the paywall. Fix `test_a_quiet_set_aside…` timing. Defer a shell import to win back first-paint headroom (0.5 kB left). Top up / replace the Gemini key. `copr-cli` not installed (token unverified, 91 days left).
+
+---
+
 ## 0.47.0 — 20 Nov 2026 · Tier 1 (minor — Zoom import on for everyone; a study's AI use counted and priced; a failed run says why in the sidebar; agents answer more carefully; a headless run no longer starts the server)
 
 **What shipped.** 379 commits since 0.46.0 (CHANGELOG: 7 New, 9 Improved, 6 Fixed). Build 6923, tag `v0.47.0` on `36a1b927a`. The store build embeds the Background Assets Whisper extension (`BN_BA_WHISPER=1`, the store row's first run with it).

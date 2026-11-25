@@ -1,6 +1,14 @@
+---
+status: mixed
+last-trued: 2026-11-25
+trued-against: HEAD@main (474249430) on 2026-11-25
+---
+
 # Quote Editing Redesign
 
 _Design document — Feb 2026, iteration 3_
+
+> **Trued 25 Nov 2026 (paragraphs and the edit surface).** The React card ships this design (`frontend/src/hooks/useCropEdit.ts`, `frontend/src/utils/quoteEditSurface.ts`, `frontend/src/islands/QuoteCard.tsx`, `theme/molecules/editable-text.css`). **§12, §12a and Bug 10 are current** (21–25 Nov 2026, two review rounds). The rest of the body was written against the Feb 2026 vanilla mockup and is kept as the design's reasoning; where it and the code differ, §12a and the code win. Known differences: the quote marks and brackets are now `contenteditable="false"` islands *inside* one editable host, one `.bn-block` per paragraph (§3, Rendering modes, CSS classes: see §12a and `bristlenose/theme/CSS-REFERENCE.md`); there is no "Keeping X of Y words" status bar (§4.4, §10.6) and no `activeCard` (§10, §15: each card closes on its own outside pointer-down); Revert also clears the researcher's paragraphs (§13); most of Accessibility is not built. Not re-checked: Timecode identity, Data model, Open questions.
 
 ---
 
@@ -63,7 +71,7 @@ Standard browser contenteditable behaviour. The user can:
 - Select text with mouse or keyboard for copy/paste
 - Add `[bracketed context]` anywhere
 
-The contenteditable span sits between the two bracket handles. The brackets are separate DOM elements — they are not inside the editable region.
+The contenteditable span sits between the two bracket handles. The brackets are separate DOM elements — they are not inside the editable region. _(As built since 21 Nov 2026: one editable host holds every paragraph, and the quote marks, brackets and trimmed words are `contenteditable="false"` islands inside it; §12a.)_
 
 ### 4. Crop handles — drag interaction
 
@@ -222,7 +230,7 @@ An undo button (`↩`) appears at the former pencil icon position (`right: 3.35r
 - The user is hovering over the quote card (fades in, like the hide button)
 - The quote is NOT currently in edit mode
 
-Click → reverts to `state.originalText`. Clears all edits and crops in one action. No partial undo — it's all or nothing.
+Click → reverts to `state.originalText`. Clears all edits and crops in one action. No partial undo — it's all or nothing. _(Since 21 Nov 2026 the button also shows on a quote whose only change is its own paragraphs, and Revert hands those back to the automatic placing too; it clears the edit rather than storing the pipeline's words, so it does not pin the quote. §12a.)_
 
 **Rationale (all-or-nothing):** Partial undo (undo just the crop, keep the text edits) adds complexity for minimal benefit. The common case is "I cropped too aggressively, give me the original back." The undo button does exactly that.
 
@@ -340,7 +348,7 @@ All tokens have `light-dark()` variants for dark mode.
 
 ## Bugs fixed during development (and their causes)
 
-These are documented here because the same patterns will recur in the production React implementation.
+These are documented here because the same patterns recur in the production React implementation (Bug 10 is one).
 
 ### 1. Bracket drag didn't work at all (orphaned listeners)
 
@@ -461,6 +469,8 @@ Add `crop_start_word` and `crop_end_word` to `QuoteEdit`. The UI can reconstruct
 
 ## Accessibility
 
+> **Mostly not built (25 Nov 2026).** Built: the undo button's `aria-label`, the strikethrough-plus-grey treatment, and (21 Nov) the quote marks, brackets, ellipses and trimmed words hidden from screen readers while the words are edited. Not built: focusable `role="slider"` handles, arrow-key trimming, the crop-state announcement, and any keyboard way to start editing or trimming (review log finding 27, parked for an owner ruling on the keyboard model now that Tab commits). The list as designed:
+
 - Crop handles: `tabindex="0"`, `role="slider"`, `aria-valuemin/max/now`, `aria-label="Trim start/end of quote"`
 - Keyboard: Arrow keys move crop boundary word-by-word (following `DualThresholdSlider.tsx` pattern)
 - Screen reader: announce crop state — "Showing words 3 through 12 of 15"
@@ -500,6 +510,8 @@ Add `crop_start_word` and `crop_end_word` to `QuoteEdit`. The UI can reconstruct
 ---
 
 ## Files affected (future production implementation)
+
+> **Superseded: built differently.** There is no `CropHandles.tsx`. The as-built files are `frontend/src/hooks/useCropEdit.ts` (modes and commit), `frontend/src/utils/quoteEditSurface.ts` (draws and reads the edit surface, guards input), `frontend/src/islands/QuoteCard.tsx` (keys, focus, the editable host), `frontend/src/contexts/QuotesContext.tsx` (`commitEdit`: words and paragraphs as one gesture), `bristlenose/server/quote_breaks.py` and `theme/molecules/editable-text.css`. The plan as written:
 
 | File | Change |
 |------|--------|

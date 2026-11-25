@@ -1,6 +1,14 @@
+---
+status: mixed
+last-trued: 2026-11-25
+trued-against: HEAD@main (474249430) on 2026-11-25
+---
+
+> **Trued 25 Nov 2026 (the line-break overlay only).** The researcher's half of §3.4 shipped in 0.48.0 (commit "quote editing keeps its paragraphs; shift-return starts one, tab commits and stays", migration 026, `server/quote_breaks.py`, `PATCH …/quote-breaks`) and its review fixes after it. The status line, §3.4, §8, §10.3, §14 C and D and §15's phase table described it as unbuilt or guessed at; each now carries a dated note, with the original wording kept as the baseline. Anchors, the journal, rebase and transcript editing (§3.1–§3.3, §4, phases 5–7) are still a proposal and were not re-checked.
+
 # Quote anchor — a coordinate system between quotes and transcripts
 
-**Status:** proposal, 3 Nov 2026. No code. It **extends** [design-transcript-editing.md](design-transcript-editing.md) decision 3 ("the keystone is a persisted word-range anchor") and step 1 of its order of work ("one word-range type, and one edit record"); it does not replace them. Where this note and that one disagree, that one is the spec until the owner says otherwise.
+**Status:** proposal, 3 Nov 2026. _(25 Nov 2026: the researcher's line-break overlay, §3.4, is built and shipped in 0.48.0; the anchors, the journal and rebase are still a proposal.)_ It **extends** [design-transcript-editing.md](design-transcript-editing.md) decision 3 ("the keystone is a persisted word-range anchor") and step 1 of its order of work ("one word-range type, and one edit record"); it does not replace them. Where this note and that one disagree, that one is the spec until the owner says otherwise.
 
 **Scope (3 Nov 2026, owner).** Transcript-side editing (corrections, strikes and their undo) is **not before the 24 Nov 2026 submission**: the editing design already marks it GA-gating, about 2027, and its undo rules (decisions 17 and 26) make it large. Line breaks are **presentation**, stored apart from the words (§8). §15 sets the order of work; §3.3 and §4.3 are reserved for the later editing work and are not part of the first phase. The v1 setting, a single "Break long paragraphs" switch computed when the quote is drawn, with nothing stored, is specified in [design-display-preferences.md](design-display-preferences.md); this note is the path beyond it.
 
@@ -112,6 +120,8 @@ quote_breaks             -- one row per quote that has breaks; absent means none
   verify       TEXT        -- short hash of the quote's resolved wording the breaks were made against
   created_at   DATETIME
 ```
+
+> **As built (21–25 Nov 2026).** The sketch above is the baseline; what shipped differs: rows are only ever `researcher` (automatic breaks are computed at draw time by `utils/breakParagraphs.ts` and never stored); only level 2 (thought) is written, level 1 is reserved; `verify` is the first 16 characters of the sha256 of the space-normalised words, and the row has its own `id`. There is no single shared tokeniser: the server splits with `str.split()` and the browser with `/\s+/`, which differ on a few rare characters (`quote_breaks.py` docstring). A row whose `verify` no longer matches is **kept and skipped on read**, with a `quote_breaks_not_shown` log line (ids only), not dropped; rows are deleted only with a stale quote or by a `null` PATCH. Behaviour and keys: `design-quote-editing.md` §12a.
 
 `after_word_index` counts words in the quote's **own** resolved wording (the pipeline's text, or the researcher's edit if there is one), tokenised by one shared function. It needs no anchor and no transcript. This is the `TranscriptLayoutEdit` pattern (a position plus a `verify`): when the wording changes and `verify` no longer matches, `auto` breaks are recomputed and `researcher` breaks are dropped without a message. Nothing about it pins a quote or mints a durable id, and no `\n` enters `Quote.text`.
 
@@ -231,13 +241,13 @@ Each row is a scenario, what the model does, the invariant that decides it, and 
 - **Ellipsis fidelity is enforced by I5**, not by a prompt instruction.
 - **Breaks are presentation, not wording** (owner, 3 Nov 2026: trimming at the Quotes stage is for presentation and to clear the researcher's head; fixing the transcript is a correction to the source, a different kind of edit with different undo). So they are stored **apart from the words**, in the overlay of §3.4, never as `\n` in `Quote.text` or in a `QuoteEdit`. This reverses the earlier recommendation in this note, which stored breaks as characters.
 - **Why the overlay beats characters in the text:**
-  1. *No pin, no "edited" mark.* A `QuoteEdit` pins a quote against re-extraction and mints a durable id; adding line breaks must not do that.
-  2. *No clash with decision #30.* A change in spacing only is already "no edit". The card separates the breaks from the words on commit: words unchanged, so no text edit; breaks recorded in the overlay. (I saw #30 on `EditableText` and in the transcript-edit steps, not on the quote path; confirm before building.)
+  1. *No pin, no "edited" mark.* A `QuoteEdit` pins a quote against re-extraction and mints a durable id; adding line breaks must not do that. _(As built: no pin; but a quote with only its own paragraphs does show the Revert arrow, the one way back to automatic paragraphs.)_
+  2. *No clash with decision #30.* A change in spacing only is already "no edit". The card separates the breaks from the words on commit: words unchanged, so no text edit; breaks recorded in the overlay. (I saw #30 on `EditableText` and in the transcript-edit steps, not on the quote path; confirm before building.) _Confirmed 21 Nov 2026: a paragraphs-only commit writes no `QuoteEdit`, pinned by a store test and the e2e `quote-paragraphs.spec.ts`._
   3. *Nothing downstream sees a `\n`.* Search, chat and MCP grounding, the AutoCode and signal prompts, the gutter's matcher and CSV never receive one, which retires assumption 9 of §14. Each export adds breaks in its own way from the overlay: a soft break in a Miro sticky, a newline in a cell.
   4. *It is the house pattern* (`TranscriptLayoutEdit`: a position and a `verify`).
-- **Two sources, one shape.** `auto` rows come from placement rules; `researcher` rows come from a hand edit, and win over `auto` until the wording changes. Revert of a quote edit removes the researcher's text edit and leaves the breaks alone; a separate control clears the researcher's breaks.
+- **Two sources, one shape.** `auto` rows come from placement rules; `researcher` rows come from a hand edit, and win over `auto` until the wording changes. Revert of a quote edit removes the researcher's text edit and leaves the breaks alone; a separate control clears the researcher's breaks. _(Superseded 21 Nov 2026, owner's v1: there are no `auto` rows, and Revert clears the words and the researcher's paragraphs together; there is no separate control. To revisit after use: `design-quote-editing.md` §12a.)_
 - **Placement inputs by phase.** The first phase uses text alone: sentence ends, `...` runs, and line length. Timing (gap duration, `D` versus `N`) needs the anchor and comes with it (§15). Breaks are whitespace, so they never touch `ops`.
-- **Every surface that draws a quote asks one primitive**, `QuoteText`, which takes the resolved wording and the overlay and decides how to draw them (a half-line gap for level 2, a line break for level 1, nothing when the preference is off). The Quotes card, the Screens card (same card), Discussion, Signals evidence and the Dashboard migrate one at a time (§15).
+- **Every surface that draws a quote asks one primitive**, `QuoteText`, which takes the resolved wording and the overlay and decides how to draw them (a half-line gap for level 2, a line break for level 1, nothing when the preference is off). The Quotes card, the Screens card (same card), Discussion, Signals evidence and the Dashboard migrate one at a time (§15). _(Not built as one primitive: `QuoteCard` draws the overlay and the automatic blocks itself; Signals evidence and the Uncategorised floor call `breakIntoBlocks` and do not read the overlay yet.)_
 
 ## 9. Measure first
 
@@ -250,7 +260,7 @@ Each row is a scenario, what the model does, the invariant that decides it, and 
 
 1. **A researcher cuts the middle out of a quote and writes no ellipsis** (row 5). Nudge, insert, or allow?
 2. **Two kinds of omission, one mark?** `...` today means "filler removed". A cut of substance is the editorial convention `[...]`. Do `D` and `N` show differently?
-3. ~~Line breaks: characters in the text, or an overlay?~~ **Settled 3 Nov 2026 (owner's presentation-versus-source cut): an overlay, §3.4 and §8.** Still open inside it: how a hand-typed break in the card is separated from the words on commit, and whether the overlay is also shown in the Signals evidence bullet, where a half-line gap may not fit. _21 Nov 2026 (owner):_ a researcher's own breaks still show with Break long paragraphs off; only the automatic ones follow the setting. The proposal for typing and committing breaks is the live mockup `docs/mockups/quote-edit-breaks.html`.
+3. ~~Line breaks: characters in the text, or an overlay?~~ **Settled 3 Nov 2026 (owner's presentation-versus-source cut): an overlay, §3.4 and §8.** Still open inside it: ~~how a hand-typed break in the card is separated from the words on commit~~ (built 21 Nov 2026: the edit surface reads words plus break positions, `utils/quoteEditSurface.ts`), and whether the overlay is also shown in the Signals evidence bullet, where a half-line gap may not fit. _21 Nov 2026 (owner):_ a researcher's own breaks still show with Break long paragraphs off; only the automatic ones follow the setting. The proposal for typing and committing breaks is the live mockup `docs/mockups/quote-edit-breaks.html`.
 4. **θ for rebase and for an aligned excerpt** (§4.1, §4.3), and the `D`/`N` length threshold, are measured, not guessed (§9).
 5. **Does a quote the model omits keep its row** when it is curated? (§4.2 assumes yes; the importer's stale-quote rule decides.)
 
@@ -320,8 +330,8 @@ Ellipses mark excised material and are an ethics matter (not hesitations); the r
 
 **C. Assumptions I made and have not verified**
 
-1. The quote card's edit path (`useCropEdit`, hybrid mode) is where typed breaks are lost. **I read only `EditableText`.** The three causes I listed are hypotheses with no reproduction.
-2. Decision #30 (a spacing-only edit is no edit) applies to quote edits. I saw it on `EditableText` and in the transcript-edit steps, not on the quote path.
+1. The quote card's edit path (`useCropEdit`, hybrid mode) is where typed breaks are lost. **I read only `EditableText`.** The three causes I listed are hypotheses with no reproduction. _Resolved 21 Nov 2026: none of the three; both edit modes drew the quote as one run, so a typed break was folded into a space on commit._
+2. Decision #30 (a spacing-only edit is no edit) applies to quote edits. I saw it on `EditableText` and in the transcript-edit steps, not on the quote path. _Confirmed 21 Nov 2026 (`useCropEdit` compares the words)._
 3. An edited quote is pinned and minted a durable id. I took this from the July doc (citing `importer.py:2667`), which I did not read.
 4. Anchors can be computed in the importer from data already in the database, with no pipeline change. This fails for a session with no word timings.
 5. `verbatim_excerpt` is usually present and usually an exact substring. The gutter note says it is not found for 24%, which I read as "the model tidied it".
@@ -336,11 +346,13 @@ Ellipses mark excised material and are an ethics matter (not hesitations); the r
 
 **D. Things I said that turned out wrong, so they are not relied on**
 
-That ellipses were hesitations (corrected by you); that the pause rule should discount excision gaps (you suspect they are always significant; now a lab toggle); that a break-only edit would be cancelled by decision #30 (a hypothesis only).
+That ellipses were hesitations (corrected by you); that the pause rule should discount excision gaps (you suspect they are always significant; now a lab toggle); that a break-only edit would be cancelled by decision #30 (a hypothesis only; it is not: the breaks go to the overlay and no text edit is written).
 
 ## 15. Phasing (3 Nov 2026)
 
 Which of these lands before the 24 Nov 2026 submission is the owner's call; each phase is complete without the next. The "beta means almost no new features" rule comes from the maintainer's notes, and the owner has called this work a big win, so it is listed here as a choice and not assumed.
+
+> **Status, 25 Nov 2026:** phase 0 done (the cause above, §14 C.1); phase 1 shipped in 0.48.0 without the `QuoteText` primitive (the overlay, the card's commit, the on/off setting from `design-display-preferences.md`, the half-line gap); phase 2 shipped differently, as placement computed at draw time with no `auto` rows (`utils/breakParagraphs.ts`); phase 3 partly: Screens and Discussion draw `QuoteCard`, so they show both; Signals evidence and the Uncategorised floor follow the setting but not the researcher's paragraphs; the Dashboard stays unbroken on purpose. Phases 4–7 are not built.
 
 | Phase | What | Needs | Not needed | Proves |
 |---|---|---|---|---|

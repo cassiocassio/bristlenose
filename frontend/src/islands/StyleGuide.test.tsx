@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+import { FocusProvider } from "../contexts/FocusContext";
 import { StyleGuide } from "./StyleGuide";
 import { sectionId, storiesOf } from "./styleGuide/csf";
 import { SECTIONS } from "./styleGuide/sections";
@@ -10,7 +11,10 @@ const root = () => document.documentElement;
 function renderAt(url = "/report/style-guide") {
   return render(
     <MemoryRouter initialEntries={[url]}>
-      <StyleGuide />
+      {/* AppLayout provides the focus store in the app; the quote cards read it. */}
+      <FocusProvider>
+        <StyleGuide />
+      </FocusProvider>
     </MemoryRouter>,
   );
 }
@@ -68,6 +72,20 @@ describe("StyleGuide", () => {
     expect(document.querySelector(".confirm-dialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show the confirmation cards" }));
     expect(document.querySelectorAll(".confirm-dialog")).toHaveLength(4);
+  });
+
+  it("draws the quote card in its states, focus and selection through the app's focus store", () => {
+    const { unmount } = renderAt();
+    const card = (id: string) => document.getElementById(id) as HTMLElement;
+    expect(document.querySelectorAll(".quote-group .quote-card").length).toBeGreaterThanOrEqual(9);
+    expect(card("q-sg-starred").classList.contains("starred")).toBe(true);
+    expect(card("q-sg-focused").classList.contains("bn-focused")).toBe(true);
+    expect(card("q-sg-selected-1").classList.contains("bn-selected")).toBe(true);
+    expect(card("q-sg-selected-2").classList.contains("bn-selected")).toBe(true);
+    expect(card("q-sg-rest-1").classList.contains("bn-focused")).toBe(false);
+    expect(card("q-sg-search").querySelector("mark")?.textContent?.toLowerCase()).toBe("delivery");
+    expect(card("q-sg-restore").querySelector(".badge-restore")).not.toBeNull();
+    unmount();
   });
 
   it("sets the theme through the app's own functions and puts it back on leaving", async () => {

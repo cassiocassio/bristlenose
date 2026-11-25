@@ -1,5 +1,5 @@
 /**
- * The style guide's sections, in reading order: foundations, then atoms.
+ * The style guide's sections, in reading order: foundations, atoms, the quote card.
  * (Owner's order, 25 Nov 2026: foundations → atoms → quote card → organisms.
  * Tags are drawn by /report/tag-specimen, which the page links to.)
  *
@@ -17,6 +17,7 @@ import * as Icons from "./atoms/Icons.stories";
 import * as Feedback from "./atoms/Feedback.stories";
 import * as DataViz from "./atoms/DataViz.stories";
 import * as Controls from "./atoms/Controls.stories";
+import * as QuoteCardStates from "./quoteCard/QuoteCard.stories";
 
 export const SECTIONS: readonly SpecimenModule[] = [
   Type,
@@ -28,6 +29,7 @@ export const SECTIONS: readonly SpecimenModule[] = [
   Feedback,
   DataViz,
   Controls,
+  QuoteCardStates,
 ];
 
 /** Other specimen pages in the same family, drawn from real components too. */

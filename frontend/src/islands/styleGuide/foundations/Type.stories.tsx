@@ -6,10 +6,11 @@
  * shows the SF ladder from `tokens-desktop.css`, with no copy of either here.
  */
 
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { SectionHeading } from "../../../components/SectionHeading";
 import type { SpecimenMeta, SpecimenStory } from "../csf";
+import { useMeasured } from "../measure";
 import { tokensWithPrefix } from "../themeTokens";
 
 export default {
@@ -24,41 +25,8 @@ export const __namedExportsOrder = ["Ladder", "Weights", "Headings"] as const;
 
 const SAMPLE = "Researchers keep the report they own";
 
-interface Measured {
-  size: string;
-  lineHeight: string;
-  weight: string;
-  family: string;
-}
-
-/** Computed values of the element the ref lands on, re-read when `deps` change. */
-function useMeasured<T extends HTMLElement>(deps: unknown[]): [React.RefObject<T | null>, Measured | null] {
-  const ref = useRef<T>(null);
-  const [m, setM] = useState<Measured | null>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const read = () => {
-      const cs = getComputedStyle(el);
-      setM({
-        size: cs.fontSize,
-        lineHeight: cs.lineHeight,
-        weight: cs.fontWeight,
-        family: cs.fontFamily.split(",")[0].replace(/["']/g, "").trim(),
-      });
-    };
-    read();
-    // The theme attributes on <html> change under us when the controls move.
-    const mo = new MutationObserver(read);
-    mo.observe(document.documentElement, { attributes: true });
-    return () => mo.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return [ref, m];
-}
-
 function Row({ token, style, children }: { token: string; style: CSSProperties; children: ReactNode }) {
-  const [ref, m] = useMeasured<HTMLParagraphElement>([token]);
+  const [ref, m] = useMeasured<HTMLParagraphElement>(undefined, [token]);
   return (
     <div className="bn-sg-row" data-testid={`bn-sg-type-${token}`}>
       <code className="bn-sg-token">{token}</code>

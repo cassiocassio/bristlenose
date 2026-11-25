@@ -165,6 +165,13 @@ run_one() {
     sb="$WORK/$id/repo"; site="$WORK/$id/site"; world="$WORK/$id/world"
     new_repo "$sb" >/dev/null; new_repo "$site" >/dev/null; mkdir -p "$world" "$sb/scripts" "$sb/bristlenose"
     cp "$ROOT/scripts/release.sh" "$ROOT/scripts/verify-channels.sh" "$ROOT/scripts/project.conf" "$sb/scripts/"
+    # `release.sh verify` folds check-release-closeout.sh into its exit (932dc41d6).
+    # These scenarios judge channels and holds, not the close-out, which reads a
+    # release log, CLAUDE.md and the live website the sandbox does not have; absent,
+    # the call failed and every clean scenario read exit 1. A stub that passes keeps
+    # each scenario's exit about its channels.
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$sb/scripts/check-release-closeout.sh"
+    chmod +x "$sb/scripts/check-release-closeout.sh"
     printf '__version__ = "%s"\n' "$v" > "$sb/bristlenose/__init__.py"
     case "$(get budget)" in "") ;; *)
         sed -i.bak "s/^WINGET_BUDGET_HOURS=.*/WINGET_BUDGET_HOURS=$(get budget)/" "$sb/scripts/project.conf" ;; esac

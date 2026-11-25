@@ -19,6 +19,12 @@ Commands::
                                       items for the 1st Tuesdays (08:00-09:00)
                                       and 3rd Tuesdays (17:30-18:30),
                                       Europe/London
+    set-keys --k1 <b64> --k0 <b64>    write the two PUBLIC keys into NewsKeys.swift
+                                      and PUBLIC_KEYS here (once; refuses if set)
+    publish --key <file> --from 2026-12-15 --count N --site <website repo>
+                                      build the office-hours file, sign it with k1,
+                                      verify it as the app would, and write it to
+                                      <site>/content/app/news
 
 The private key never belongs in the repo, a syncing password manager or the
 cloud (spec §9). ``keygen`` refuses to write inside this repository.
@@ -31,6 +37,7 @@ import base64
 import datetime as dt
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -264,6 +271,75 @@ def office_hours_item(day: dt.date) -> dict:
 # --- CLI -------------------------------------------------------------------
 
 
+# --- going live --------------------------------------------------------------
+
+SWIFT_KEYS = REPO_ROOT / "desktop/Bristlenose/Bristlenose/NewsKeys.swift"
+#: The empty PUBLIC_KEYS assignment, matched at the start of a line so this
+#: pattern's own source text never counts as a second match.
+KEYS_LINE = re.compile(r'^PUBLIC_KEYS: dict\[str, str\] = \{"k1": "", "k0": ""\}$', re.M)
+
+
+def set_keys(k1: str, k0: str, *, swift_path: Path = SWIFT_KEYS,
+             script_path: Path | None = None) -> None:
+    """Write the two public keys into the app and into this script, once.
+
+    Both must be base64 of 32 bytes and differ. Refuses when either place is
+    already set: changing a key the app trusts is a rotation, not a setup."""
+    for name, b64 in (("k1", k1), ("k0", k0)):
+        try:
+            load_public(b64)
+        except NewsError as exc:
+            raise NewsError(f"{name}: {exc}") from exc
+    if k1 == k0:
+        raise NewsError("k1 and k0 must be different keys")
+    script_path = script_path or Path(__file__).resolve()
+    swift = swift_path.read_text(encoding="utf-8")
+    script = script_path.read_text(encoding="utf-8")
+    empty_k1 = 'static let productionK1 = ""'
+    empty_k0 = 'static let productionK0 = ""'
+    if swift.count(empty_k1) != 1 or swift.count(empty_k0) != 1:
+        raise NewsError(f"{swift_path.name}: the production keys are not both empty")
+    if len(KEYS_LINE.findall(script)) != 1:
+        raise NewsError(f"{script_path.name}: PUBLIC_KEYS is not empty")
+    swift = swift.replace(empty_k1, f'static let productionK1 = "{k1}"')
+    swift = swift.replace(empty_k0, f'static let productionK0 = "{k0}"')
+    script = KEYS_LINE.sub(f'PUBLIC_KEYS: dict[str, str] = {{"k1": "{k1}", "k0": "{k0}"}}', script)
+    swift_path.write_text(swift, encoding="utf-8")
+    script_path.write_text(script, encoding="utf-8")
+
+
+def office_hours_payload(start: dt.date, count: int, *, now: dt.datetime,
+                         env: str = "prod") -> bytes:
+    """A complete payload: the office-hours items, issued now, expiring in 44
+    days (one under the app's 45-day limit, so a slow clock still accepts it)."""
+    items = [office_hours_item(day) for day in office_hours_dates(start, count)]
+    payload = {
+        "schema": 1,
+        "env": env,
+        "issued": format_time(now),
+        "expires": format_time(now + MAX_LIFETIME - dt.timedelta(days=1)),
+        "items": items,
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def publish(key: Path, start: dt.date, count: int, site: Path,
+            *, now: dt.datetime | None = None, public_b64: str | None = None) -> Path:
+    """Sign the office-hours file with k1, verify it as the app would against
+    the committed public key, and write it where the website serves it."""
+    current = now or now_utc()
+    target_dir = site / "content" / "app"
+    if not (target_dir / ".htaccess").is_file():
+        raise NewsError(f"{target_dir} has no .htaccess: is {site} the website repo?")
+    envelope = sign_bytes(load_private(key), "k1",
+                          office_hours_payload(start, count, now=current), now=current)
+    b64 = public_b64 if public_b64 is not None else PUBLIC_KEYS.get("k1", "")
+    verify_envelope(envelope, load_public(b64), now=current)
+    out = target_dir / "news"
+    out.write_text(json.dumps(envelope) + "\n", encoding="utf-8")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -283,6 +359,16 @@ def main(argv: list[str] | None = None) -> int:
     who.add_argument("--pub")
     who.add_argument("--kid", help="use PUBLIC_KEYS[kid]")
     p_verify.add_argument("--in", dest="inp", type=Path, required=True)
+
+    p_keys = sub.add_parser("set-keys", help="write the public keys into the app, once")
+    p_keys.add_argument("--k1", required=True)
+    p_keys.add_argument("--k0", required=True)
+
+    p_pub = sub.add_parser("publish", help="sign the office-hours file into the website")
+    p_pub.add_argument("--key", type=Path, required=True, help="the k1 private key file")
+    p_pub.add_argument("--from", dest="start", required=True, help="YYYY-MM-DD")
+    p_pub.add_argument("--count", type=int, default=4)
+    p_pub.add_argument("--site", type=Path, required=True, help="the website repo")
 
     p_hours = sub.add_parser("office-hours", help="print office-hours items as JSON")
     p_hours.add_argument("--from", dest="start", required=True, help="YYYY-MM-DD")
@@ -306,6 +392,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ok: kid {envelope.get('kid')}, env {decoded.get('env')}, "
                   f"issued {decoded['issued']}, expires {decoded['expires']}, "
                   f"{len(decoded.get('items') or [])} items")
+        elif args.command == "set-keys":
+            set_keys(args.k1, args.k0)
+            print("keys set in NewsKeys.swift and sign-news.py; run tests/test_sign_news.py")
+        elif args.command == "publish":
+            if args.count < 1:
+                raise NewsError("--count must be at least 1")
+            out = publish(args.key, dt.date.fromisoformat(args.start), args.count, args.site)
+            print(f"wrote {out}: signed with k1 and verified; deploy the website to publish")
         elif args.command == "office-hours":
             if args.count < 1:
                 raise NewsError("--count must be at least 1")

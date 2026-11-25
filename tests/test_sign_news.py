@@ -308,3 +308,79 @@ if __name__ == "__main__":
     FIXTURE.write_text(json.dumps(build_fixture(), indent=2, ensure_ascii=False) + "\n",
                        encoding="utf-8")
     print(f"wrote {FIXTURE}")
+
+
+# --- going live: set-keys and publish -----------------------------------------
+
+
+def _two_keys(tmp_path):
+    p1, k1 = sn.keygen(tmp_path / "k1", "k1")
+    p0, k0 = sn.keygen(tmp_path / "k0", "k0")
+    return p1, k1, k0
+
+
+def _copies(tmp_path):
+    swift = tmp_path / "NewsKeys.swift"
+    swift.write_text(SWIFT_KEYS.read_text(encoding="utf-8"), encoding="utf-8")
+    script = tmp_path / "sign-news.py"
+    script.write_text((REPO / "scripts" / "sign-news.py").read_text(encoding="utf-8"),
+                      encoding="utf-8")
+    return swift, script
+
+
+def test_set_keys_writes_both_places_once(tmp_path):
+    _, k1, k0 = _two_keys(tmp_path)
+    swift, script = _copies(tmp_path)
+    sn.set_keys(k1, k0, swift_path=swift, script_path=script)
+    found = dict(re.findall(r'static let production(K[01]) = "([^"]*)"',
+                            swift.read_text(encoding="utf-8")))
+    assert found == {"K1": k1, "K0": k0}
+    assert f'{{"k1": "{k1}", "k0": "{k0}"}}' in script.read_text(encoding="utf-8")
+    with pytest.raises(sn.NewsError, match="not both empty"):
+        sn.set_keys(k1, k0, swift_path=swift, script_path=script)
+
+
+def test_set_keys_refuses_bad_or_equal_keys(tmp_path):
+    _, k1, _ = _two_keys(tmp_path)
+    swift, script = _copies(tmp_path)
+    before = swift.read_text(encoding="utf-8")
+    with pytest.raises(sn.NewsError, match="k0"):
+        sn.set_keys(k1, "not-a-key", swift_path=swift, script_path=script)
+    with pytest.raises(sn.NewsError, match="different"):
+        sn.set_keys(k1, k1, swift_path=swift, script_path=script)
+    assert swift.read_text(encoding="utf-8") == before
+
+
+def _site(tmp_path):
+    app = tmp_path / "site" / "content" / "app"
+    app.mkdir(parents=True)
+    (app / ".htaccess").write_text("# test\n", encoding="utf-8")
+    return tmp_path / "site"
+
+
+def test_publish_writes_a_file_the_app_would_accept(tmp_path):
+    key, k1, _ = _two_keys(tmp_path)
+    site = _site(tmp_path)
+    out = sn.publish(key, dt.date(2026, 12, 15), 2, site, now=NOW, public_b64=k1)
+    assert out == site / "content" / "app" / "news"
+    envelope = json.loads(out.read_text(encoding="utf-8"))
+    assert envelope["kid"] == "k1"
+    decoded = sn.verify_envelope(envelope, sn.load_public(k1), now=NOW)
+    assert decoded["env"] == "prod"
+    assert [i["id"] for i in decoded["items"]] == ["office-hours-2026-12-15",
+                                                  "office-hours-2027-01-05"]
+    assert sn.parse_time(decoded["expires"]) - sn.parse_time(decoded["issued"]) < sn.MAX_LIFETIME
+
+
+def test_publish_refuses_a_key_the_app_does_not_trust(tmp_path):
+    key, _, k0 = _two_keys(tmp_path)
+    site = _site(tmp_path)
+    with pytest.raises(sn.NewsError, match="bad signature"):
+        sn.publish(key, dt.date(2026, 12, 15), 2, site, now=NOW, public_b64=k0)
+    assert not (site / "content" / "app" / "news").exists()
+
+
+def test_publish_refuses_a_folder_that_is_not_the_website(tmp_path):
+    key, k1, _ = _two_keys(tmp_path)
+    with pytest.raises(sn.NewsError, match="website repo"):
+        sn.publish(key, dt.date(2026, 12, 15), 2, tmp_path, now=NOW, public_b64=k1)

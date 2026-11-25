@@ -1,13 +1,14 @@
 ---
 status: current
-last-trued: 2026-09-03
-trued-against: ci.yml after the gates-matrix split; mac-build.yml on macos-26 running the Swift suite; the ratchet / gate-policy / gate-proofs gates
+last-trued: 2026-11-25
+trued-against: origin/main@fef627056 (e2e off the test matrix, macOS nightly + release only, shipped npm audit blocking); body below §Maintenance only partly trued
 ---
 
 # CI architecture
 
 ## Changelog
 
+- _2026-11-25_ — **macOS leaves pushes; e2e stops waiting; the shipped npm audit blocks.** `e2e` needs only `frontend-lint-type-test` ("ci: e2e stops waiting for the test matrix"). The macOS `test` cells run only nightly (cron `23 9 * * *`) and under `strict-macos`, and block wherever they run ("ci: macOS cells leave pushes, run nightly and on releases, and always block"): push → blocking verdict was a 62.6 min median, almost all of it macOS runner wait. `npm audit --omit=dev` is its own blocking step; `pip-audit` and the full `npm audit` are re-dated to 2027-02-28 ("dep review: shipped npm audit blocks, i18next 26.7.2, audits re-dated"). Trued in place: §Philosophy, `### test`, the frontend and informational tables, Coverage, Known gaps, Maintenance. Not trued: the job-structure diagram (no `test-windows`, `gates`, `supply-chain`) and line references elsewhere.
 - _2026-09-03_ — **the `lint` job described here no longer exists.** It was
   seven sequential steps, and a failing step SKIPPED the rest — which is how the
   inventory gate's first CI appearance returned "skipped" and proved nothing
@@ -43,7 +44,7 @@ trued-against: ci.yml after the gates-matrix split; mac-build.yml on macos-26 ru
 
 CI exists to catch regressions before they reach users. It answers one question per push: "did this change break anything we already had working?"
 
-CI is not a quality gate for perfection. Steps that enforce correctness (ruff, pytest, tsc, man page version) block the build. Steps that surface information (mypy, pip-audit, npm audit, ESLint) run but don't block — they show regressions in the log without preventing a merge. The distinction matters: blocking steps must be fixable by the author; informational steps often flag issues in third-party dependencies that can't be resolved immediately.
+CI is not a quality gate for perfection. Steps that enforce correctness (ruff, pytest, tsc, man page version) block the build. Steps that surface information (pip-audit, the full npm audit including build-time deps, the SBOMs) run but don't block. _(Until 2026: mypy and ESLint were on this list too; ESLint has blocked since 30 Jun 2026, mypy is held by a ratchet at 0, and the shipped-dependency `npm audit --omit=dev` has blocked since 25 Nov 2026.)_ — they show regressions in the log without preventing a merge. The distinction matters: blocking steps must be fixable by the author; informational steps often flag issues in third-party dependencies that can't be resolved immediately.
 
 ## Philosophy
 
@@ -150,9 +151,9 @@ EU CRA).
 
 ### test
 
-8 matrix cells: Python 3.10, 3.11, 3.12, 3.13 × ubuntu-latest, macos-latest.
+On pushes and PRs: 5 cells, Python 3.10–3.14 × ubuntu-latest, plus the separate blocking `test-windows` job (3.12). Nightly (`schedule`) and on release runs (`strict-macos`): the same 5 × macos-latest as well, blocking. _(Was 8 cells, 3.10–3.13 × ubuntu + macOS, every push; the macOS half was informational until 25 Nov 2026.)_
 
-Each cell installs `.[dev,serve]` and runs `pytest --tb=short -q -m "not slow"`. Coverage is collected on all cells but only uploaded from ubuntu/3.12 (the canonical cell).
+Each cell installs `.[dev,serve]` and runs `pytest --tb=short -q -m "not slow"`. Every cell runs with `-n auto`; coverage runs only in ubuntu/3.12 (the canonical cell).
 
 pip cache is enabled (`cache: pip` on `setup-python`) to avoid re-downloading wheels across runs.
 
@@ -164,11 +165,12 @@ Single ubuntu job, Node from `.tool-versions` (24). Runs the full frontend quali
 |------|-----------|-----|
 | ESLint | **Yes** | Blocking gate — the 84 pre-existing problems were cleared to zero 30 Jun 2026 |
 | TypeScript typecheck | Yes | Type errors are bugs |
-| npm audit | No — **expires 2026-11-30** | Dev-dep CVEs (Vite ecosystem) rarely actionable. "Production deps will become blocking" stood here undated until 3 Sep 2026; it now carries a review date in [testing/soft-gates.json](testing/soft-gates.json) instead of an intention |
+| npm audit, shipped deps (`--omit=dev`) | **Yes** (since 25 Nov 2026) | These ship in every report and export; an advisory is ours to act on before a release. Promoted at the 25 Nov dep review after i18next 26.7.2 cleared the one advisory |
+| npm audit, all deps | No — **expires 2027-02-28** | Build-time CVEs (Vite ecosystem) rarely actionable. "Production deps will become blocking" stood here undated until 3 Sep 2026, then carried a review date in [testing/soft-gates.json](testing/soft-gates.json); the production half was promoted 25 Nov 2026 |
 | SBOM generation + upload | No | Compliance artifact |
 | Vitest | Yes | Unit/integration tests — count lives in [testing/inventory.md](testing/inventory.md), which is generated. It said ~1265 here and was 1720 by 3 Sep 2026; a suite size restated in prose is a number that rots |
 | Vite build | Yes | Build errors are shipping errors |
-| Bundle budget | Yes | First-paint gate, 222 kB gzip — `scripts/check-bundle-budget.py` (`npm run size`). Replaced size-limit's per-chunk globs on 5 Sep 2026; the ceiling was 220 kB until 4 Oct |
+| Bundle budget | Yes | First-paint gate — `scripts/check-bundle-budget.py` (`npm run size`), whose comment holds the ceiling and the reason for each raise (226 kB gzip on 25 Nov 2026, for the i18next security fix). Replaced size-limit's per-chunk globs on 5 Sep 2026; the ceiling was 220 kB until 4 Oct |
 
 ### e2e
 
@@ -283,9 +285,9 @@ These run with `continue-on-error: true`. They appear as yellow warnings, not re
 
 | Step | Job | Disposition | Why informational |
 |------|-----|-------------|-------------------|
-| mypy | `gates` | **ratchet** | 239 errors. Too large to fix now, too easy to grow — the count is held instead |
-| pip-audit | `supply-chain` | **expires** 2026-11-30 | Transitive deps (torch, protobuf) frequently have unfixed advisories; the date is the next quarterly dep review |
-| npm audit | `frontend` | **expires** 2026-11-30 | Dev dep CVEs (Vite ecosystem) rarely actionable |
+| mypy | `gates` | **ratchet** | Ceiling 0 (`ratchet.json`); it was 239 errors on 3 Sep 2026, too large to fix then and too easy to grow, so the count was held instead |
+| pip-audit | `supply-chain` | **expires** 2027-02-28 | Transitive deps (torch, protobuf) frequently have unfixed advisories; the date is the next quarterly dep review (clean at the 25 Nov 2026 review) |
+| npm audit, all deps | `frontend` | **expires** 2027-02-28 | Build-time CVEs (Vite ecosystem) rarely actionable. The shipped-deps audit left this table 25 Nov 2026: it blocks |
 | SBOM generation | `supply-chain`, `frontend` | **expires** 2027-03-01 | Compliance artifact; generation failures shouldn't block |
 | ~~macOS test cells~~ | `test` | removed 25 Nov 2026 | No longer soft: off pushes, blocking nightly and on release runs |
 
@@ -337,10 +339,10 @@ Audit of what the project uses vs what CI actually tests (Apr 2026).
 
 | Area | CI coverage |
 |------|------------|
-| Python (Linux) | 4 versions (3.10–3.13), blocking, coverage, SBOM |
+| Python (Linux) | 5 versions (3.10–3.14), blocking, coverage, SBOM; Windows 3.12 blocking; macOS nightly and on release runs |
 | React/TypeScript frontend | ESLint, tsc, Vitest, build, bundle size gate |
 | E2E integration | Playwright layers 1–3, Chromium + WebKit |
-| Dependency security | pip-audit, npm audit, CodeQL (informational) |
+| Dependency security | shipped-deps npm audit (blocking); pip-audit, full npm audit, CodeQL (informational) |
 | Locale parity | `i18n-check.yml` validates key coverage across 21 full locales (+ the `zh-Hant-HK` override fork), non-strict — missing keys are warnings, not failures |
 | Install methods (Linux) | pip, pipx smoke tests on push |
 
@@ -348,9 +350,9 @@ Audit of what the project uses vs what CI actually tests (Apr 2026).
 
 | Gap | Severity | Decision |
 |-----|----------|----------|
-| **Swift desktop app — no CI at all** | High | Fix: add `desktop-build` job (see plan below). The product going to the App Store has zero build verification |
-| **Windows — 3 code paths, never tested** | Low | Accept. Windows is Won't for 100-day scope. Code paths are defensive (`platform.system()` checks in ingest, Ollama, clips). No Windows runner until there's a Windows release plan |
-| **macOS Python tests — informational** (until 25 Nov 2026; now off pushes, blocking nightly) | Medium | Accept. macOS failures show as yellow warnings. Promoting to blocking would gate every push on the 10× cost runners for a pure-Python package that ships via Linux-built PyPI/Homebrew/Snap. Revisit when desktop app integration tests exist |
+| ~~**Swift desktop app — no CI at all**~~ | ~~High~~ | **Closed 3 Sep 2026:** `mac-build.yml` builds and runs the Swift suite (path-filtered to `desktop/**`). Original: "Fix: add `desktop-build` job (see plan below). The product going to the App Store has zero build verification" |
+| ~~**Windows — 3 code paths, never tested**~~ | ~~Low~~ | **Closed 5 Oct 2026:** the `test-windows` job (3.12) blocks on every push. Original: "Accept. Windows is Won't for 100-day scope… No Windows runner until there's a Windows release plan" |
+| **macOS Python tests — informational** (until 25 Nov 2026; now off pushes, blocking nightly) | Medium | **Decided 25 Nov 2026:** no yellow any more. The macOS cells block wherever they run, which is nightly and on release runs, never on a push; a push green no longer covers macOS, and that is the trade accepted for a push verdict in minutes rather than an hour. _Original decision: "Accept. macOS failures show as yellow warnings. Promoting to blocking would gate every push on the 10× cost runners… Revisit when desktop app integration tests exist"_ |
 | **Snap arm64 — declared, never built** | Low | Accept. No arm64 Snap users. `snapcraft.yaml` declares it for future use |
 | **Homebrew install — weekly only** | Low | Accept. Formula changes are rare and triggered by releases. Weekly cadence is sufficient |
 | **Firefox — not in Playwright browsers** | Low | Accept. WebKit (Safari engine) + Chromium covers the two browser engines users actually encounter. Firefox shares no engine with either |
@@ -457,14 +459,14 @@ Decision tree:
 - **Every third-party action stays SHA-pinned and every workflow keeps a `permissions:` block** ([Least privilege and supply-chain pinning](#least-privilege-and-supply-chain-pinning)). A new `uses:` on a moving tag, or a new workflow with no permissions block, is a regression.
 - **Every job declares `timeout-minutes`** ([Timeouts and external-download resilience](#timeouts-and-external-download-resilience)).
 
-**Quarterly dependency review (next: May 2026).** `pip list --outdated`, bump for security and features. Check pip-audit and npm audit output for newly actionable advisories.
+**Quarterly dependency review (last: 25 Nov 2026, audit part; next due by 28 Feb 2027, when the soft-gate dates expire).** `pip list --outdated`, bump for security and features. Check pip-audit and npm audit output for newly actionable advisories.
 
 **Python EOL dates.** 3.10 reaches EOL October 2026. Decision: drop from matrix before launch or keep as floor? If dropping, update `requires-python` in `pyproject.toml` and remove from matrix simultaneously.
 
 **Runner image updates.** GitHub periodically updates `ubuntu-latest` and `macos-latest` base images. These can break FFmpeg availability, system Python, or native lib paths. If a previously-green macOS cell goes red after a runner update, check the [GitHub Actions runner images changelog](https://github.com/actions/runner-images/releases).
 
-**Promoting informational → blocking.** Review quarterly. When a step's pre-existing error count reaches zero, promote it. Current candidates and their error counts:
+**Promoting informational → blocking.** Review quarterly. When a step's pre-existing error count reaches zero, promote it. _(Superseded: ESLint was promoted 30 Jun 2026 and mypy is held at a ratchet ceiling of 0, so no candidate is left; §Informational steps lists what is still soft.)_ Candidates when this was written:
 - mypy: 9 errors (third-party SDK types)
 - ESLint: 84 problems (jsx-a11y, react-hooks)
 
-**CI minutes budget.** Public repo — Linux minutes are free. macOS minutes consume from the 2,000 free minutes/month at 10× rate. At current push volume (1–3/day) this is well within budget. Monitor if push frequency increases significantly.
+**CI minutes budget.** Public repo — Linux minutes are free. Standard macOS runners are free on a public repo too (see above); the cost that mattered was queueing, ~40 min a cell, which is why macOS left pushes on 25 Nov 2026. _(Originally: "macOS minutes consume from the 2,000 free minutes/month at 10× rate.")_

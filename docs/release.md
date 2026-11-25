@@ -259,7 +259,7 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
   **blocking** too (`ci.yml`'s `strict-macos` input, passed `true` by
   `release.yml`). Pushes skip the macOS cells and the nightly runs them, blocking
   (since 25 Nov 2026). A release green certifies both platforms; a push green
-  certifies Linux.
+  certifies Linux and Windows (3.12).
 - **mypy**: soft — and *soft with a disposition*, not soft indefinitely. Its
   `continue-on-error` is registered in `docs/testing/soft-gates.json` as a
   **ratchet** on `mypy_errors`: the count may not rise. The ceiling is

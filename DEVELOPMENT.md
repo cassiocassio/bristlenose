@@ -43,16 +43,19 @@ Done. You can now run the pipeline or the dev server.
 
 ```bash
 # Python
-.venv/bin/python -m pytest tests/ -n auto   # ~9,000 tests, in parallel; free, never calls a paid LLM (`-m slow` opts in)
+.venv/bin/python -m pytest tests/ -n auto   # whole suite, in parallel (~3 min; ~24 serially); free, never calls a paid LLM (`-m slow` opts in)
+.venv/bin/python -m pytest tests/test_x.py -q   # while iterating: the file you touched, or --lf for the last failures
 .venv/bin/ruff check .                      # lint (entire repo, not just bristlenose/)
 .venv/bin/ruff check --fix .                # lint + auto-fix
-.venv/bin/mypy bristlenose/                 # type check (informational, not gated)
+.venv/bin/mypy bristlenose/                 # type check (gated: the CI ratchet holds errors at 0)
 
 # Frontend
 cd frontend
 npm test                                     # Vitest (3,000+ tests)
 npm run build                                # tsc type-check + Vite build
 ```
+
+**One full run at a time.** A second full run, from any terminal or worktree, waits for the first and says so (`tests/full_run_lock.py`; it gives up waiting after 30 minutes). A file, `-k` or `--lf` run never waits. To watch a full run: `tail -f ~/.cache/bristlenose/pytest-live.txt`; every run also appends a line to `~/.cache/bristlenose/pytest-runs.log`.
 
 **Important:** Always run `npm run build` before committing frontend changes — `tsc -b` catches type errors that Vitest's looser context misses.
 

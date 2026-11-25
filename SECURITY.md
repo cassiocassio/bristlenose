@@ -27,7 +27,7 @@ The desktop app is distributed through the Mac App Store. Every Mach-O in the bu
 
 The Hardened Runtime entitlement table requests **one** entitlement: `com.apple.security.cs.disable-library-validation`. This is empirically required, not defensive. Apple's bundled `Python.framework` carries an internal code signature that AMFI's library-validation check reads at `dlopen` time, distinct from the per-binary signatures we apply during build. The framework's nested signature does not match our Team ID, so dyld would refuse to load it without the entitlement. Disabling library validation is the standard pattern for embedded-Python apps on macOS — Apple Developer Support documents it explicitly. The mitigation: every binary in the bundle is signed by us under one identity, the rest of Hardened Runtime remains enabled (no `allow-jit`, no `allow-unsigned-executable-memory`, no `allow-dyld-environment-variables`), and the App Sandbox (when enabled) constrains the process. The specific framework path that triggers the requirement is documented in `desktop/bristlenose-sidecar.entitlements`.
 
-The build pipeline lives in `desktop/scripts/build-all.sh`. Pre-archive gates scan every Mach-O for the `BRISTLENOSE_DEV_*` developer-only environment variable references and reject any binary carrying the `get-task-allow` debugger entitlement. SHA256-pinned downloads (FFmpeg/ffprobe from evermeet.cx) and a sign-manifest emitted on every build give per-binary supply-chain provenance.
+The build pipeline lives in `desktop/scripts/build-all.sh`. Pre-archive gates scan every Mach-O for the `BRISTLENOSE_DEV_*` developer-only environment variable references and reject any binary carrying the `get-task-allow` debugger entitlement. SHA256-pinned downloads (FFmpeg/ffprobe from ffmpeg.martin-riedl.de) and a sign-manifest emitted on every build give per-binary supply-chain provenance.
 
 Privacy manifests cover the entire bundle: `Contents/Resources/PrivacyInfo.xcprivacy` for the SwiftUI host and FFmpeg, and `Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy` for the embedded Python runtime and its native extensions. Both declare `NSPrivacyTracking = false`, an empty `NSPrivacyCollectedDataTypes`, and the specific required-reason API categories triggered by bundled code. The build pipeline rejects any release archive that's missing either manifest or fails `plutil -lint`.
 
@@ -255,11 +255,11 @@ These files persist until you delete them. Bristlenose does not automatically cl
 
 Bristlenose uses automated scanning to detect known vulnerabilities in dependencies:
 
-- **Python** — `pip-audit` runs on every CI build
-- **JavaScript** — `npm audit` runs on every CI build
+- **Python** — `pip-audit` runs on every CI build (informational: a finding is reported, not blocking)
+- **JavaScript** — `npm audit` runs on every CI build; for the dependencies that ship in the app and in reports (`npm audit --omit=dev`) a finding fails the build, and the full audit including build-time tools is informational
 - **Static analysis** — CodeQL (`security-extended` suite) runs on every push and weekly
 - **Dependency updates** — Dependabot opens PRs weekly for both Python and JavaScript dependencies
-- **Secret scanning** — gitleaks pre-commit hook locally; GitHub server-side scanning on the remote
+- **Secret scanning** — gitleaks pre-commit hook locally and in CI on every push and pull request; GitHub server-side scanning on the remote
 
 **Remediation targets:**
 
@@ -269,7 +269,7 @@ Bristlenose uses automated scanning to detect known vulnerabilities in dependenc
 | High | Patch within 30 days | Patch within 30 days if fix available; track in pinned issue if not |
 | Medium/Low | Next scheduled release | Review quarterly |
 
-Transitive dependencies with no upstream fix (e.g. advisories in torch or protobuf that only affect training workloads, not Bristlenose's inference-only usage) are documented with justification in CI configuration via `--ignore-vuln` comments.
+Transitive dependencies with no upstream fix (e.g. advisories in torch or protobuf that only affect training workloads, not Bristlenose's inference-only usage) are reviewed at the quarterly dependency review. None is suppressed today.
 
 **SBOM:** CycloneDX Software Bills of Materials for both Python and JavaScript are generated on every CI build and available as build artifacts.
 

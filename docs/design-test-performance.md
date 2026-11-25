@@ -1,4 +1,15 @@
+---
+status: current
+last-trued: 2026-11-25
+trued-against: origin/main@fef627056
+---
+
 # Test performance — the CI critical path is 5× longer than it needs to be
+
+> **25 Nov 2026 post-script.** The August body below stands as measured. Three things moved since:
+> (1) **the local gate is `pytest tests/ -n auto`** — 24.2 min serial against 2.7 min parallel over the same 11,112 node ids, outcomes identical; a second full run queues behind the first (`tests/full_run_lock.py`, fails open after 30 min), every run logs to `~/.cache/bristlenose/pytest-runs.log`, and the run holding the lock writes live progress to `pytest-live.txt` there.
+> (2) **The CI projection below held for the cells but not for the verdict.** By November push → blocking verdict was a 62.6 min median, nearly all of it *waiting for a macOS runner* (~37–40 min a cell), not running: a job's wall time includes its runner wait. `scripts/ci-timing.py` measures that wait. macOS cells left pushes on 25 Nov (nightly and release runs, blocking), and the replayed push → verdict is ~14 min (estimate; the live median is owed).
+> (3) **The optional `e2e` change below shipped** ("ci: e2e stops waiting for the test matrix"). `pytest-xdist` has been in the `dev` extra since `1c8fd3ee`, so the "not currently installed" note and the Reproduce section's `pip install` are history.
 
 **Status:** **applied 28 Aug 2026** (`1c8fd3ee`), and the projection held. Measured on the
 identical selection before and after: **454.77s → 67.16s, 6.8×**, with exact parity —
@@ -27,7 +38,7 @@ From the last green run before measuring (`32602750413`), job-level:
 
 Step-level on the slowest and fastest cells shows install is *not* the problem — it's 44 s on both. It's all in `Run tests`: **31 m 13 s** on 3.10 against **13 m 40 s** on 3.13.
 
-`e2e` declares `needs: [test, frontend-lint-type-test]`, so it waits on the slowest cell. The frontend job finished at 22:34:46 and e2e started at 23:06:57 — **32 minutes idle.**
+`e2e` declared `needs: [test, frontend-lint-type-test]` (until 25 Nov 2026), so it waited on the slowest cell. The frontend job finished at 22:34:46 and e2e started at 23:06:57 — **32 minutes idle.**
 
 ## Lever 1 — coverage is paid 8 times and used once
 
@@ -99,7 +110,7 @@ Fixed by wrapping each in `sorted()` — the pattern the same file already used 
 2. **`COVERAGE_CORE=sysmon`** in the env of that cell.
 3. **`pytest-xdist>=3.8`** in the `dev` extra of `pyproject.toml`, and `-n auto` on the test command.
 
-Optional, structural: `e2e`'s `needs: [test, …]` waits on the slowest cell. Once the cells are ~5 minutes this stops mattering, but it is why the frontend job idles for 32 minutes today.
+Optional, structural (✅ shipped 25 Nov 2026, "ci: e2e stops waiting for the test matrix"): `e2e`'s `needs: [test, …]` waits on the slowest cell. Once the cells are ~5 minutes this stops mattering (it didn't: runner wait, not run time, kept it mattering — see the post-script), but it is why the frontend job idles for 32 minutes today.
 
 ## Projected
 

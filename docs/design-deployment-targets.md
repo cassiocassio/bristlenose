@@ -79,7 +79,7 @@ x86_64 box is not evidence about how transcription behaves on a real one.
 - `ffmpeg-free` decodes everything the pipeline needs (§2 of the Fedora doc)
 
 **NOT verified there, and do not assume it:** the pytest suite has never been
-run on Fedora or on Python 3.14. `requires-python` allows 3.10+, and the
+run on Fedora. (On Python 3.14 it has run in CI, on Ubuntu, since 28 Aug 2026.) `requires-python` allows 3.10+, and the
 vendored wheels resolve for cp314, but that is an install-time fact, not a
 test-suite one.
 
@@ -156,7 +156,7 @@ snap list 2>/dev/null || echo "snap: absent"
 git clone https://github.com/<user>/bristlenose.git /tmp/bn && cd /tmp/bn
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev,serve]'
-.venv/bin/python -m pytest tests/ -x --tb=short 2>&1 | tail -20
+.venv/bin/python -m pytest tests/ -n auto -x --tb=short 2>&1 | tail -20
 .venv/bin/ruff check .
 
 # Frontend (needs node)

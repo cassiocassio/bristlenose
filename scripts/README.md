@@ -153,7 +153,7 @@ node scripts/test-release-board-dom.js
 | [`perf-history.sh`](perf-history.sh) | Table of results from `e2e/.perf-history.jsonl`. |
 | [`perf-breakdown.py`](perf-breakdown.py) | Per-stage wall-time and LLM-time for one completed run. |
 | [`compare-runs.py`](compare-runs.py) · [`compare-render.sh`](compare-render.sh) | Diff two pipeline runs; diff a render against its baseline. |
-| [`ci-timing.py`](ci-timing.py) | How long CI makes a change wait: per run and as medians, push → blocking verdict, push → first verdict that contains it, macOS runner wait, push → green. Classifies blocking vs informational jobs by name (the API hides `continue-on-error`) and counts green, red and cancelled runs separately. A **measurement, not a gate**: nothing calls it, and no doc may say a number is enforced by it. `--event workflow_dispatch` for the release gate's runs. |
+| [`ci-timing.py`](ci-timing.py) | How long CI makes a change wait: per run and as medians, push → blocking verdict, push → first verdict that contains it, macOS runner wait, push → green. Classifies blocking vs informational jobs by name (the API hides `continue-on-error`) and counts green, red and cancelled runs separately. A **measurement, not a gate**: nothing calls it, and no doc may say a number is enforced by it. `--event workflow_dispatch` for the release gate's runs. Since 25 Nov 2026 push runs have no macOS cells, so the macOS wait shows only under `--event workflow_dispatch`; the nightly `schedule` runs are not selectable yet. |
 
 ## Fixtures, corpora and generated assets
 

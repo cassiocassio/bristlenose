@@ -14,9 +14,10 @@ trued-against: main working tree on 2026-10-25 — initial-load budget and Sessi
 wider context.
 
 The **bundle budget** is a separate, pre-merge gate: `scripts/check-bundle-budget.py`
-in `ci.yml`'s *Check bundle size* step, ceiling **224 kB** gzipped first paint
-(raised from 220 on 4 Oct for report undo, to 223 at the 0.48.0 cut and to 224
-on 25 Nov 2026 for the style-guide route; each reason is in the script's comment,
+in `ci.yml`'s *Check bundle size* step, ceiling **226 kB** gzipped first paint
+(raised from 220 on 4 Oct for report undo, to 223 at the 0.48.0 cut, to 224
+on 25 Nov 2026 for the style-guide route, and to 226 the same day for the
+i18next 26.7.2 security fix; each reason is in the script's comment,
 and 25 Nov measured 223,546 B in 41 chunks). First paint measured **192,704 B
 (19 chunks) at `bd9a7f7d`**, 29.3 kB under the ceiling, after the 4 Oct moves
 in § Moves made. What is still on first paint that need not be, and whether to

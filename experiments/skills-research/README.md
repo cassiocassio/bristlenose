@@ -298,8 +298,36 @@ measured need: in-repo reviewers already grep across files. Not adopted
    Both are the "prove the mutation landed / a verdict the shell cannot
    withhold" family already in `CLAUDE.md`.
 
+## Follow-up: the November gap review (21–24 Nov 2026)
+
+A second pass asked a narrower question: for the failure classes each of our
+agents owns, what do public skills check that ours don't? Seven research passes,
+one per area, read 45 skills in full at pinned commits. They added 74 rows to
+`register.md`, which now records every skill read for the agents and what
+became of it. From those rows came 32 proposed edits, at most three per agent.
+Each was checked against the others, then judged for size under the
+/usual-suspects precondition rule. None was rejected outright; one was merged
+into another and twelve were cut down.
+
+What has landed is the fact fixes, in `2d513180e`. These were mostly our own
+prompts asserting things that had stopped being true:
+- a "local-first" framing the project has ruled out;
+- an old serve port and a port-allocation scheme removed in April;
+- an escaping fix that does not escape `<`;
+- six locales where there are 22;
+- a removed package path;
+- WCAG 2.1 where 2.2 applies;
+- a private-API test that cannot fail.
+
+The additions that change what a busy lane flags wait for one benchmarked
+batch. The 14-case set's two possibly contaminated cases (T1, S1) are replaced
+first. The smaller additions are tested with hand-made probe diffs, because the
+set has no security, test-placement or docs case.
+
 ## Files
 
+- `register.md`: every third-party skill read for the review agents, its pin,
+  licence, decision and where it landed.
 - `benchmark/PROTOCOL.md`, `JUDGE.md`, `cases-table.md`: the method and the 14 cases.
 - **Not here:** every arm's raw findings, the judges' scores and the label
   mappings. They are in the maintainer's private notes, outside the public tree.

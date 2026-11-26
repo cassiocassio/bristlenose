@@ -101,17 +101,17 @@ def feedback_csv(d: Path, rows):
 def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
     marker = "SECRET-MESSAGE-TEXT-9f2"
     (tmp_path / "bn-counts").mkdir()
-    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-11-26T20:16:13Z ok files=8 lines=3995 news=5 rewrote=x\n")
-    feedback_csv(tmp_path, [f"2026-11-05 10:00:00,0.43.0,neutral,{marker},feedback", "2026-11-04 09:00:00,0.43.0,hate,x,problem",
-                            "2026-10-01 09:00:00,0.40.0,love,y,", "2026-10-02 09:00:00,0.40.0,weird-value,z,",
-                            "2026-06-09 03:00:00,0.19.0,like,old row with four columns"])
+    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok files=3 lines=100 news=1 rewrote=x\n")
+    feedback_csv(tmp_path, [f"2026-01-05 10:00:00,0.43.0,neutral,{marker},feedback", "2026-01-04 09:00:00,0.43.0,hate,x,problem",
+                            "2025-12-01 09:00:00,0.40.0,love,y,", "2025-12-02 09:00:00,0.40.0,weird-value,z,",
+                            "2025-06-09 03:00:00,0.19.0,like,old row with four columns"])
     out = run_remote(tmp_path)
     d = hl.parse_host_output(out)
     assert d is not None, out
     assert (d["neutral"], d["hate"], d["love"], d["like"], d["other"], d["dislike"]) == (1, 1, 1, 1, 1, 0)
     assert d["total"] == 5 and d["problems"] == 1
-    assert d["heartbeat_epoch"] == 1795724173 and d["news_status"] == 0 and d["news_expires_epoch"] == 0
-    assert d["newest_epoch"] == 1793872800                                           # 2026-11-05 10:00:00 UTC
+    assert d["heartbeat_epoch"] == 1767323045 and d["news_status"] == 0 and d["news_expires_epoch"] == 0
+    assert d["newest_epoch"] == 1767607200                                           # 2026-01-05 10:00:00 UTC
     assert marker not in out
 
 

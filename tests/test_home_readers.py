@@ -193,8 +193,8 @@ def test_launch_ok_and_no_data_and_unexpected(tmp_path):
 
 # ---- the host read ---------------------------------------------------------------------------------
 
-GOOD = {"heartbeat_epoch": NOW - 79200, "news_status": 200, "news_expires_epoch": NOW + 43 * 86400, "hate": 2, "dislike": 6,
-        "neutral": 21, "like": 5, "love": 2, "other": 0, "total": 36, "problems": 5, "newest_epoch": NOW - 21 * 86400}
+GOOD = {"heartbeat_epoch": NOW - 79200, "news_status": 200, "news_expires_epoch": NOW + 43 * 86400, "hate": 1, "dislike": 3,
+        "neutral": 9, "like": 4, "love": 2, "other": 0, "total": 19, "problems": 2, "newest_epoch": NOW - 21 * 86400}
 
 
 def host_text(**over):
@@ -206,8 +206,8 @@ def test_host_output_parsed_strictly():
     assert hl.parse_host_output(host_text()) == GOOD
     assert hl.parse_host_output(host_text() + "evil=1\n") is None                 # unknown key
     assert hl.parse_host_output(host_text() + "hate=3\n") is None                  # duplicate
-    assert hl.parse_host_output(host_text().replace("hate=2", "hate=two")) is None   # not digits
-    assert hl.parse_host_output(host_text().replace("hate=2\n", "")) is None       # a key missing
+    assert hl.parse_host_output(host_text().replace("hate=1", "hate=two")) is None   # not digits
+    assert hl.parse_host_output(host_text().replace("hate=1\n", "")) is None       # a key missing
     assert hl.parse_host_output("Welcome to the host\n" + host_text()) is None     # a banner is not output
     assert hl.parse_host_output(host_text() + "x" * 5000) is None                  # oversize
     assert hl.parse_host_output("") is None and hl.parse_host_output(None) is None
@@ -243,8 +243,8 @@ def test_feedback_counts_the_five_ratings_and_carries_no_message_text(tmp_path):
     put_host(tmp_path)
     p = hl.read_feedback(tmp_path)
     bars = p["body"][1]
-    assert [(i["l"], i["n"]) for i in bars["items"]] == [("hate", 2), ("dislike", 6), ("neutral", 21), ("like", 5), ("love", 2)]
-    assert "hate 2" in bars["aria"] and p["as_of"] == NOW - 1800
+    assert [(i["l"], i["n"]) for i in bars["items"]] == [("hate", 1), ("dislike", 3), ("neutral", 9), ("like", 4), ("love", 2)]
+    assert "hate 1" in bars["aria"] and p["as_of"] == NOW - 1800
     assert '"message"' not in json.dumps(p)           # no field for message text exists, by construction
 
 

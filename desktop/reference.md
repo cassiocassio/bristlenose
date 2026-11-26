@@ -159,7 +159,7 @@ no `case` for it), and was removed 30 Jul 2026 — see the note at
 | Sandbox | Debug: `ENABLE_APP_SANDBOX = YES` (so Export/WKWebView sandbox behaviour is real in dev builds); Release: `NO` | On, with a minimal entitlement set enumerated by the C0 spike |
 | Hardened Runtime | Off | `--options=runtime` at codesign time |
 | Signing | Xcode automatic (ad-hoc / dev identity) | Apple Distribution cert + per-binary signing of every dylib/so/framework inside the PyInstaller bundle |
-| FFmpeg | User-installed, found via `$PATH` | Bundled at `Contents/Resources/bin/ffmpeg`, trimmed codecs |
+| FFmpeg | User-installed, found via `$PATH` | Bundled at `Contents/Resources/ffmpeg` (and `ffprobe`): our LGPL-2.1 build from pinned sources, `desktop/scripts/build-ffmpeg-lgpl.sh` |
 | Whisper model | User-installed or downloaded by the CLI | Background download from launch into the container's Hugging Face cache (see above) |
 | Keychain access (Python side) | `/usr/bin/security` CLI via subprocess (works fine under non-sandboxed CLI Mac distros; blocked under App Sandbox) | **Not reached** — Swift host fetches keys via Security.framework at sidecar launch and injects as `BRISTLENOSE_*_API_KEY` env vars (C3, Apr 2026). `credentials_macos.py` stays as-is for CLI Mac users; sandboxed sidecar never reaches it because env vars satisfy the fallback chain earlier. |
 | Ollama integration | Shells out to `ollama` binary | HTTP-only detection against user-configured `localURL` |

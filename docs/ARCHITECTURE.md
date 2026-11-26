@@ -320,8 +320,8 @@ chain of smaller scripts. At a level you can follow:
    every runtime-data directory under `bristlenose/` is declared in the PyInstaller spec
    (PyInstaller only traces `.py` imports; data files must be listed explicitly).
 2. **Build + sign the sidecar** (`ensure-sidecar.sh`, which drives `fetch-ffmpeg.sh` +
-   `build-sidecar.sh` + `sign-ffmpeg.sh` + `sign-sidecar.sh`): download the SHA-pinned
-   static FFmpeg/ffprobe, run PyInstaller against a clean from-scratch venv, then codesign
+   `build-sidecar.sh` + `sign-ffmpeg.sh` + `sign-sidecar.sh`): build the LGPL
+   FFmpeg/ffprobe from SHA-pinned source tarballs (once; cached), run PyInstaller against a clean from-scratch venv, then codesign
    every Mach-O — hundreds of `.so`/`.dylib` files, the FFmpeg binaries, and the framework
    — under one Apple Distribution identity.
 3. **Self-test + inventory** (`doctor --self-test`) — spawn the just-built sidecar and

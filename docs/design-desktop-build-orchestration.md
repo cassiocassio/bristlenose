@@ -115,7 +115,7 @@ Automation lives on the bundle loop. **Release lives only in `build-all.sh`** (t
 
 | Layer | Rebuild trigger | Output-side check on skip | Cost when triggered | When not |
 |---|---|---|---|---|
-| **ffmpeg** | `ffmpeg` + `ffprobe` *presence* in `Resources/` (the **model is deliberately not checked** — it's first-run-downloaded, not built here) | n/a | one-time download | stat |
+| **ffmpeg** | `ffmpeg` + `ffprobe` in `Resources/` are this recipe's LGPL build (`fetch-ffmpeg.sh --check` reads their embedded version and configure strings; the **model is deliberately not checked** — it's first-run-downloaded, not built here) | n/a | one-time build (~4 min), then from `desktop/build/ffmpeg-cache/` | strings (until 25 Nov 2026: presence, a one-time download) |
 | **F · frontend** | frontend slice of `sidecar_source_hash` ≠ `.frontend-stamp` | `server/static/index.html` present + non-empty | `npm run build`, ~10–30s | skip |
 | **V · venv** | venv missing (`! -x $PYTHON`), OR `pyproject.toml` hash + `.venv-sidecar` **installed-manifest** (`pip freeze --exclude-editable`) ≠ `.deps-stamp`, OR `.deps-ok` sentinel absent | `.deps-ok` sentinel exists (written only after install **and** `PyInstaller --version` pass) | recreate venv + pip, minutes | skip (reuse) |
 | **P · PyInstaller** | full `sidecar_source_hash` ≠ `.source-stamp`, OR V rebuilt, OR **F rebuilt** (any F rebuild cascades — not merely "F output missing"), OR bundle missing | sidecar binary present + executable. _(The planned in-bundle `server/static/index.html` assertion was never implemented — see §Core principle.)_ | PyInstaller **`--clean`**, ~tens of sec | skip |
@@ -153,7 +153,9 @@ ensure-sidecar.sh [--force] [--dry-run]
   0. BRISTLENOSE_ALLOW_STALE_SIDECAR=1 → log + exit 0   (escape hatch)
   0. BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 → log + exit 0   (fast schemes; see wiring)
   0b. Distribution guard: real SIGN_IDENTITY without _BRISTLENOSE_RELEASE=1 → exit 1
-  1. ffmpeg/ffprobe presence → fetch-ffmpeg.sh if missing   (model is NOT checked)
+  1. ffmpeg/ffprobe presence → fetch-ffmpeg.sh if missing, or if `fetch-ffmpeg.sh --check`
+     says they are not the pinned LGPL build (since 25 Nov 2026); a fetch forces the re-sign
+     (model is NOT checked)
   2. identity transition (.sign-stamp identity != SIGN_IDENTITY) → force a clean P
   3. build-sidecar.sh [--force]        # F + V + P, each gated + output-checked
                                        # (preconditions live HERE, not in ensure)
@@ -163,7 +165,8 @@ ensure-sidecar.sh [--force] [--dry-run]
       # sandbox-signed binary aborts standalone (exit 133). Attempting this
       # post-sign is exactly how the check sat dead 14 Jul → 14 Aug 2026 —
       # do not "tidy" it downstream. build-all step 2a asserts the stamp.
-  4. sign IF (P rebuilt OR identity changed OR ffmpeg fetched OR deep-verify fails):
+  4. sign IF (P rebuilt OR identity changed OR ffmpeg fetched OR deep-verify fails
+             OR ffmpeg/ffprobe unsigned or without app-sandbox — `_ffmpeg_signed`, since 25 Nov 2026):
         sign-ffmpeg.sh   ;   sign-sidecar.sh      # BOTH — ffmpeg is a bundled Mach-O too
         -> codesign --verify --deep --strict; write .sign-stamp atomically
   -> event-by-event lines to desktop/build/ensure-sidecar.log (NOT the structured
@@ -172,7 +175,7 @@ ensure-sidecar.sh [--force] [--dry-run]
 
 - **Shell**: `ensure-sidecar.sh` stays **bash-3.2-safe** (it runs as an Xcode build phase under `/bin/bash`); it shells out to `sign-sidecar.sh` as a child. **The child does NOT keep its own shebang** — an earlier revision of this line said it did, and that is exactly the trap. All three child invocations are bare `bash "$SCRIPT_DIR/<child>.sh"` — `ensure-sidecar.sh:139` (build-sidecar), `:198` (sign-ffmpeg), `:199` (sign-sidecar) — shifted by step 3a's insertion — which **overrides** each child's `#!/usr/bin/env bash` and resolves to the first `bash` on PATH. Under Xcode's stripped PATH that is `/bin/bash` 3.2, and `sign-sidecar.sh` needs 4.3+. The requirement is met only by the Homebrew-prefix PATH prepend at the top of both scripts — remove the prepend, or "tidy" the invocation, and signing breaks in-phase while working fine from a login shell.
 - **Distribution guard**: if `SIGN_IDENTITY != "-"` (a real identity) ensure refuses to proceed unless invoked via `build-all.sh` (an env flag `_BRISTLENOSE_RELEASE=1`) — Distribution signing is never auto-invoked from the IDE inner loop. The Release-config Cmd+R/Archive path therefore ad-hoc-signs for *local validation only*; the shipping artifact comes from `build-all.sh`.
-- **ffmpeg sign-state**: a `.sign-stamp` covering ffmpeg/ffprobe, re-signed on identity change / fetch / verify-fail — independent of the sidecar P gate (ffmpeg never changes when Python does).
+- **ffmpeg sign-state**: a `.sign-stamp` covering ffmpeg/ffprobe, re-signed on identity change / fetch / verify-fail, and (since 25 Nov 2026) whenever `codesign --verify` fails on them or their entitlements lack app-sandbox — independent of the sidecar P gate (ffmpeg never changes when Python does).
 
 ## Xcode wiring
 
@@ -195,7 +198,7 @@ One orchestration *script*, but **two non-equivalent doors** — and the plan is
 
 - **Cmd+R (Debug)** → `ensure-sidecar.sh` ad-hoc-signs (`-`) for **local validation only**. **IDE Archive (Release) no longer runs ensure at all** — the phase `exit 0`s for `CONFIGURATION = Release` (see §Xcode wiring). IDE-Archive remains explicitly a **non-shipping** path.
 - **`build-all.sh --force` (the only shipping path)** → runs every preflight (identity/profile/notary preflight, logging-hygiene, bundle-manifest), then `ensure-sidecar.sh --force` (with `_BRISTLENOSE_RELEASE=1` + Distribution `SIGN_IDENTITY`) — **which contains the self-test, pre-sign** — then step 2a *asserts* the `.selftest-stamp` matches the bundle (exit 1 on absent/stale), then inventory-staleness, archive/export/verify. The collapse replaced only build-all's steps 2–4 (parallel fetch+build+sign) with `ensure-sidecar.sh --force`; the surrounding steps stayed verbatim — **though the step list has since grown**: 1a-bis (appearance-seam gate), 2c (App Store §2.5.2 string scan), 2d (`.mcpb` build + check). Don't treat the old "1/1a/1b/2a/2b and 5–10" enumeration as current; read `build-all.sh`.
-  - **Concurrency was never implemented.** This line used to claim ensure "preserves the fetch-ffmpeg ‖ build-sidecar concurrency internally (background the fetch)". It doesn't — the fetch runs synchronously at step 1, the build at step 3, and there is no `&`/`wait` anywhere in `ensure-sidecar.sh`. In practice this costs nothing, because the fetch is a one-time download that no-ops on every subsequent run; but the parallelism the collapse was supposed to preserve is simply gone.
+  - **Concurrency was never implemented.** This line used to claim ensure "preserves the fetch-ffmpeg ‖ build-sidecar concurrency internally (background the fetch)". It doesn't — the fetch runs synchronously at step 1, the build at step 3, and there is no `&`/`wait` anywhere in `ensure-sidecar.sh`. In practice this costs nothing, because the fetch is a one-time step (a download until 25 Nov 2026, a ~4 min build since, cached) that no-ops on every subsequent run; but the parallelism the collapse was supposed to preserve is simply gone.
 
 ## Instrumentation (explicit goal)
 

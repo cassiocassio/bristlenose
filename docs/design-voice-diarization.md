@@ -734,7 +734,8 @@ reaches the model. A port that pads the way the code *reads* scores 0.89 on
 - **Website:** no change. `content/terms.html` says AGPL-3.0 governs "the
   software itself" and lists no third-party licences. The bundle already ships
   LGPL ffmpeg and the GPL-with-exception PyInstaller bootloader under the same
-  wording.
+  wording. _(25 Nov 2026: the FFmpeg was in fact a GPL build, wrongly inventoried
+  as LGPL; an LGPL build of our own replaced it that day.)_
 - **Snap:** `snap/snapcraft.yaml` still declares `license: AGPL-3.0-only`,
   while the snap now ships the `voice` extra (`09876530`). That field needs the
   same compound expression the RPM's `License:` now carries. _Moot under

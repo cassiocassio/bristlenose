@@ -213,7 +213,7 @@ build-all.sh ──────────────── App Store / TestFl
   ├─ test-swift.sh                     (step 1c)
   ├─ check-bundle-manifest.sh          (before the slow build)
   ├─ ensure-sidecar.sh
-  │    ├─ fetch-ffmpeg.sh
+  │    ├─ fetch-ffmpeg.sh ─── build-ffmpeg-lgpl.sh   (only on a cache miss)
   │    ├─ build-sidecar.sh ─── sidecar-source-hash.sh
   │    ├─ doctor --self-test   (PRE-SIGN, on rebuild → .selftest-stamp)
   │    ├─ sign-ffmpeg.sh
@@ -265,7 +265,8 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | `build-sidecar.sh` | PyInstaller `--onedir` of `bristlenose serve` → `Resources/bristlenose-sidecar/`. Per-layer incremental; `--force` (releases) recreates `.venv-sidecar` so the dep closure is clean. **Needs the frontend pre-built** — it bundles `bristlenose/server/static/` but doesn't run `npm run build`. Prereq: `python3.12` on `PATH`. |
 | `ensure-sidecar.sh` | Orchestrates build + **pre-sign `doctor --self-test`** + sign + deep-verify. The self-test runs between build and sign because that is the *only* window it can: sign-sidecar applies `app-sandbox` unconditionally (ASC requires it on nested executables) and a sandbox-signed binary aborts standalone (exit 133) — attempting it post-sign is how the check sat dead 14 Jul → 14 Aug. Writes `.bristlenose-sidecar.selftest-stamp` beside `.sign-stamp`; build-all's step 2a asserts it. The Xcode phase calls this, which is why a plain Cmd+R self-heals a stale bundle. |
 | `sign-sidecar.sh` | Signs every Mach-O (240+) leaf-first via a `wait -n` pool — not `xargs -P`, which drops child exit codes on BSD. |
-| `fetch-ffmpeg.sh` | Pinned-SHA256 static `ffmpeg` + `ffprobe` (arm64). Gitignored output; doesn't follow worktrees. |
+| `fetch-ffmpeg.sh` | Installs the LGPL `ffmpeg` + `ffprobe` (arm64, static) that `build-ffmpeg-lgpl.sh` builds from SHA256-pinned sources: about 4 minutes the first time, then from `desktop/build/ffmpeg-cache/`. `--check` says whether `Resources/` holds this recipe's build; `ensure-sidecar.sh` refetches and re-signs when it doesn't. Gitignored output; doesn't follow worktrees. |
+| `build-ffmpeg-lgpl.sh` | The FFmpeg recipe: pinned tarballs (FFmpeg, libass, FreeType, FriBidi, HarfBuzz, dav1d), hash-pinned meson/ninja/pkgconf in a cache venv, and gates on the result (no GPL flag, OS-only links, no home path, the filters and encoders the app uses). Needs `python3.12`. |
 | `sign-ffmpeg.sh` | Signs those two (separate from the sidecar: single Mach-O, no entitlements). |
 | `generate-build-info.sh` | Writes `GeneratedBuildInfo.swift` (gitignored) from git state. |
 | `check-bundle-manifest.sh [root]` | Every runtime-data dir under `bristlenose/` is covered by a `datas` entry in the spec — catches "in source, missing from bundle" before the 3-min build. |

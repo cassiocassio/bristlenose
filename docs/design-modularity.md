@@ -145,7 +145,7 @@ model with an actionable message.
 
 | Component | Size | Acquisition (Mac) | Acquisition (CLI) |
 |---|---|---|---|
-| FFmpeg + ffprobe (trimmed: h264/aac/opus/prores) | ~25 MB | **Bundled in `.app`** at `Contents/Resources/{ffmpeg,ffprobe}` (siblings of the sidecar dir) | User installs via Homebrew/apt/dnf |
+| FFmpeg + ffprobe (our LGPL static build, `build-ffmpeg-lgpl.sh`: full native codec set plus dav1d and libass; until 25 Nov 2026 martin-riedl.de's GPL build, ~61 MB) | ~25 MB each | **Bundled in `.app`** at `Contents/Resources/{ffmpeg,ffprobe}` (siblings of the sidecar dir) | User installs via Homebrew/apt/dnf |
 | FFmpeg + ffprobe (kitchen-sink, all codecs) | ~70 MB | Not used — trimmed build is enough | System install on CLI |
 
 **Path lookup function** (single-source): `bristlenose.utils.bundled_binary.bundled_binary_path(name)` resolves in three branches — env var `BRISTLENOSE_<NAME>` (e.g. `BRISTLENOSE_FFMPEG`, `BRISTLENOSE_FFPROBE`) → bundle-relative `Contents/Resources/<name>` when `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` → `shutil.which(name)`. Swift's `BristlenoseShared.bundledBinaryEnvironment(for:)` injects the env vars at sidecar spawn time (mirrors the certifi/SSL pattern). CLI falls through to `shutil.which`; desktop sidecar takes the env-var branch under sandbox. No platform branching in the call sites. Shipped `bundled-binary-helper` merge `670a002`.
@@ -245,7 +245,7 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 | `[serve]` deps | Bundled | Bundled | Formula | `[serve]` extra | Snap base |
 | MLX + mlx-whisper | Bundled | Bundled | Formula (`[apple]` default) | `[apple]` extra | — |
 | faster-whisper + ctranslate2 | **Excluded from bundle** | Excluded | Formula | Base install | Snap base |
-| FFmpeg | Bundled (trimmed) | Bundled (trimmed) | Bottle dep | User install | Snap connection |
+| FFmpeg | Bundled (LGPL build) | Bundled (LGPL build) | Bottle dep | User install | Snap connection |
 | Whisper small.en | Bundled or Essential Background Asset | Essential Background Asset | `huggingface_hub` on first use | Same | Same |
 | Whisper medium / large-v3-turbo | Non-Essential Background Asset | Non-Essential Background Asset | Same | Same | Same |
 | presidio + spaCy (code) | Bundled | Bundled | base install | base install | Same |
@@ -314,7 +314,7 @@ This is how Apple's own apps behave — Logic Pro ships with a basic sound libra
 
 | Tier | Component | Size | Acquisition | When |
 |---|---|---|---|---|
-| **0** (install-time) | Python runtime, bristlenose core, provider SDKs, React bundle, FFmpeg (trimmed), UI locales | ~100 MB | Bundled in `.app` | At App Store / TestFlight install |
+| **0** (install-time) | Python runtime, bristlenose core, provider SDKs, React bundle, FFmpeg (LGPL build), UI locales | ~100 MB | Bundled in `.app` | At App Store / TestFlight install |
 | **1** (BA Essential) | Whisper `small.en` if UI locale is English, `small` multilingual otherwise | ~460 MB | [Background Assets — Essential](https://developer.apple.com/documentation/BackgroundAssets/downloading-essential-assets-in-the-background) | In parallel with install; app launches when ready |
 | **2** (BA Non-Essential, auto-triggered) | Opposite-locale Whisper (e.g. `small` if English Tier 1, `small.en` if not), presidio+spaCy for PII if user enabled it pre-first-launch | ~600 MB each | Background Assets — Non-Essential, system-scheduled | Trickled over minutes-to-hours post-install, good Wi-Fi, opportune times |
 | **3** (on-demand, user-initiated) | `medium`, `large-v3-turbo` Whisper models | 1.5 GB each | Background Assets — Non-Essential, manually queued | User toggles in Settings → "Use larger model" |
@@ -387,7 +387,7 @@ Acquiring optional components over a network is a nightmare of partial states. T
 - **Endpoint dead.** Apple BA CDN regional outage, HuggingFace down, our own CDN gone (we don't have one — Apple-hosted protects us here).
 - **Endpoint exists but returns 5xx.** Transient overload. Retry later.
 - **Endpoint exists but returns 4xx.** Resource missing, renamed, requires new auth, deprecated path.
-- **TLS cert expired on endpoint side.** Rare for Apple, common for self-hosted. If our `fetch-ffmpeg.sh` URL's cert expires, fetch script breaks.
+- **TLS cert expired on endpoint side.** Rare for Apple, common for self-hosted. If a source host's cert in `build-ffmpeg-lgpl.sh` expires, a cold-cache FFmpeg build breaks (a warm cache never reaches them).
 - **Edge propagation delay.** Newly published asset hasn't reached every CDN node. User in region X gets 404; user in region Y is fine.
 
 ### Resource problems (the file itself)

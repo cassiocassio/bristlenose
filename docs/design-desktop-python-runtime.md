@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-10-13
-previous-trued: 2026-09-04
+last-trued: 2026-11-26
+previous-trued: 2026-10-13
 trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
@@ -13,6 +13,7 @@ _Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026
 
 ## Changelog
 
+- _2026-11-26_ — trued for the LGPL FFmpeg (`--topic ffmpeg`): the `fetch-ffmpeg.sh` bullet and §C5 now describe our own build from six pinned source tarballs (`build-ffmpeg-lgpl.sh`) instead of martin-riedl.de's GPL download; the grandchild-entitlements bullet marked landed; the CVE cadence names the statically linked libraries; the privacy-manifest re-audit trigger marked as fired. Anchors: `desktop/scripts/build-ffmpeg-lgpl.sh`, `THIRD-PARTY-BINARIES.md`.
 - _2026-10-13_ — trued up: the 28 Apr "entire supervisor path survives the sandbox" claim corrected (orphan attach exec'd `/bin/ps` until 12 Oct 2026); the untested-under-sandbox list and the first open question marked answered; the renamed-folder measurement recorded. Anchors: `ac1415fc`, `desktop/CLAUDE.md` renamed-folder entry.
 - _2026-09-20_ — corrected the §shipped-state bullet that listed presidio / spaCy among the sidecar's PyInstaller excludes. They have been bundled since 12 Sep 2026 (commit "bundle presidio and spaCy; the weights still download"); only `en_core_web_lg` is excluded, as data. Anchors: `desktop/bristlenose-sidecar.spec:248-258`.
 - _2026-09-04_ — trued for the two-keychain change (`--topic keychain`): §Credential flow step 2 writes **both** the data-protection keychain and a login-keychain copy the CLI reads, both read back; the resource-resolution bullet says so; the sidecar still needs no keychain entitlement but is no longer the only consumer. Two "deferred" claims about credential-bearing scripts were false: the Developer ID `.dmg` has been a live channel since August (`build-dmg.sh`, notarised, stapled) and TestFlight uploads authenticate with the App Store Connect API key, not an app-specific password — both marked with dated post-scripts, bodies kept. `fetch-ffmpeg.sh` downloads from `ffmpeg.martin-riedl.de`, not evermeet.cx. Two commits on 3 Sep had edited the body without a changelog line; recorded here.
@@ -110,7 +111,7 @@ Implications:
 ### What wasn't tested
 
 - **App Sandbox.** ~~Hardened Runtime fires without the sandbox; the sandbox only engages when the parent `.app` opts in. Track A will re-exercise the MVP flow with sandbox on and enumerate file/network/bookmark entitlements from Console `deny(1) …` entries.~~ **Updated 1 May 2026:** Track A has now exercised the MVP flow with sandbox on for Debug builds — A1 (29 Apr) added the `app-sandbox` + `inherit` baseline and cleared the bookmark XPC deny via `files.user-selected.read-write`; A1c (30 Apr) verified bundled-sidecar spawn under inherited sandbox and surfaced the `network-bind` deny on 9131; A2 (1 May, this branch) granted `network.server` and verified `bind()` succeeds. Beats 1 + 3 reachable end-to-end under sandbox-on Debug. ~~**Still not tested under sandbox-on:** beats 6+ (pipeline run — gated by an unrelated stale code path in `PipelineRunner.findBristlenoseBinary()` that wasn't migrated to `SidecarMode.resolve()` when C1 landed); FFmpeg subprocess; Whisper model download; LLM call telemetry path; Release config sandbox flip.~~ _All exercised since: Release sandbox flipped 2 Jul 2026 (entitlement table above), and every TestFlight build from 0.20.0 runs the full pipeline sandboxed. Two things the sandbox was found to refuse that nothing here predicted: `Process()` exec of `/bin/ps` (orphan attach, fixed 12 Oct 2026) and `/usr/bin/security` (the CLI keychain path, `design-keychain.md`). Measured 13 Oct 2026: a security-scoped extension follows a same-volume Finder rename of the granted folder, and the bookmark minted at the new path resolves from a cold relaunch._
-- **Grandchildren.** FFmpeg launched by Python launched by Swift — signed separately per C2; their entitlement requirements will be audited when the trimmed FFmpeg build lands.
+- **Grandchildren.** FFmpeg launched by Python launched by Swift — signed separately per C2 with `bristlenose-ffmpeg.entitlements` (app-sandbox + inherit) by `sign-ffmpeg.sh`. _(This said the requirements "will be audited when the trimmed FFmpeg build lands"; our own build landed 25 Nov 2026, an LGPL build with the full native codec set rather than a trimmed one, and takes the same two entitlements.)_
 - **Actual transcription.** The spike exercised `bristlenose serve` only — DB init, static routing, auth middleware. MLX inference was not run. If mlx-whisper turns out to need an extra key at model-load time, it'll surface in C1 when the integration test harness runs a real 10 s clip through.
 
 ## Spike bundle layout
@@ -248,7 +249,7 @@ Four-script chain, orchestrated by `desktop/scripts/build-all.sh`:
 
 - `build-sidecar.sh` — PyInstaller `--onedir` only.
 - `sign-sidecar.sh` — parallel inner-Mach-O sign, sequential outer sign, strict + deep verify, SHA256 manifest. Inner loop is a bash `wait -n` job pool, **not `xargs -P`**: BSD `xargs` on macOS drops child exit codes under concurrent jobs, so a single failed codesign would be masked in interleaved stderr (the script would "succeed" while shipping an unsigned dylib). Requires bash 4.3+ for `wait -n`; Apple's default `/bin/bash` is 3.2, so the shebang is `#!/usr/bin/env bash` + a Homebrew bash in `$PATH`.
-- `fetch-ffmpeg.sh` — SHA256-pinned FFmpeg 8.1 download (arm64 static builds from `ffmpeg.martin-riedl.de` — this line said evermeet.cx until 4 Sep 2026; the pinned SHA256s are recorded in `THIRD-PARTY-BINARIES.md`). Cache under `desktop/build/ffmpeg-cache/`. Mismatched SHA256 fails closed — supply-chain-attack defence.
+- `fetch-ffmpeg.sh` — installs FFmpeg 8.1.3 built by `build-ffmpeg-lgpl.sh`: an LGPL-2.1, static arm64 build from six SHA256-pinned source tarballs (FFmpeg, libass, FreeType, FriBidi, HarfBuzz, dav1d; the pins are also in `THIRD-PARTY-BINARIES.md`). A mismatched tarball fails closed, and the build refuses a binary configured with a GPL, nonfree or version3 flag or linking outside the OS. Built once, then from `desktop/build/ffmpeg-cache/`. _Until 25 Nov 2026 this downloaded martin-riedl.de's GPL build (x264, x265), pinned by SHA256; before 4 Sep 2026 this line said evermeet.cx. A GPL binary can't ship under Apple's EULA, and no reputable source publishes a static LGPL arm64 build with libass._
 - `sign-ffmpeg.sh` — signs the two FFmpeg siblings with the same identity and Hardened Runtime. Notarisation rejects the outer bundle otherwise.
 
 ### `codesign --force` entitlement trap
@@ -431,7 +432,7 @@ while IFS= read -r f; do nm -u "$f" 2>/dev/null | awk -v F="$f" '{print F"\t"$NF
 
 - Sandbox flip (Track A): file-access entitlements may bring new required-reason API categories into scope.
 - Dependency upgrades adding new symbol families (`pip install --upgrade torch` etc.). A periodic `nm`-vs-reason-codes regression script is parked as a low-priority follow-up — would catch this class automatically rather than relying on next-upload App Store rejection.
-- New bundled binaries (e.g. a custom-built FFmpeg with different codec set).
+- New bundled binaries (e.g. a custom-built FFmpeg with different codec set). _(Fired 25 Nov 2026: the bundled FFmpeg is now our own LGPL build, `build-ffmpeg-lgpl.sh`. The privacy-manifest re-audit for it is owed.)_
 
 **Out of scope (post-alpha):**
 
@@ -442,13 +443,13 @@ while IFS= read -r f; do nm -u "$f" 2>/dev/null | awk -v F="$f" '{print F"\t"$NF
 
 `THIRD-PARTY-BINARIES.md` at the repo root is the canonical inventory of everything non-Bristlenose that ships in `Bristlenose.app/Contents/Resources/`. Three sections:
 
-1. **Native binaries (hand-curated)** — FFmpeg, ffprobe, `Python.framework`, the PyInstaller bootloader. Origin URL, version, SHA256 (where pinned in `desktop/scripts/fetch-ffmpeg.sh`), and licence per row.
+1. **Native binaries (hand-curated)** — FFmpeg, ffprobe, `Python.framework`, the PyInstaller bootloader. Origin URL, version, SHA256 (FFmpeg's source tarballs are pinned in `desktop/scripts/build-ffmpeg-lgpl.sh`), and licence per row.
 2. **Python wheels (auto-generated)** — every package the venv install pulls in, minus the PyInstaller spec excludes (parsed from `desktop/bristlenose-sidecar.spec`) minus an obvious-tooling deny-list. Regenerated by `scripts/generate-third-party-binaries.py` (requires the `[release]` extra: `pip install -e '.[dev,serve,apple,release]'`).
 3. **First-run downloads** — Whisper model from HuggingFace; verification delegated to `hf_hub_download`'s built-in SHA chain.
 
 The Python-wheel section is **slightly over-inclusive** by design: a small number of transitive deps of excluded packages (e.g. some spaCy dependencies) remain in the venv even though PyInstaller's modulegraph won't pull them into the bundle. Over-estimating is the safer error direction for procurement-readiness. Rerun `scripts/generate-third-party-binaries.py --check` before each release; CI can wire the `--check` flag to fail the build when the file is stale relative to the venv.
 
-**CVE-monitoring cadence.** Dependabot auto-PRs known CVEs against Python deps; the FFmpeg security mailing list covers the native side; a quarterly manual review (`pip list --outdated` + `pip-licenses` re-run) covers everything else. No automated gate beyond Dependabot; the cadence is the gate.
+**CVE-monitoring cadence.** Dependabot auto-PRs known CVEs against Python deps; the FFmpeg security mailing list covers the native side, together with the advisories of the five libraries statically linked into it since 25 Nov 2026 (libass, FreeType, FriBidi, HarfBuzz, dav1d: bump the pins in `build-ffmpeg-lgpl.sh`); a quarterly manual review (`pip list --outdated` + `pip-licenses` re-run) covers everything else. No automated gate beyond Dependabot; the cadence is the gate.
 
 **Deferred (honest disclosure):** wheel hash pinning (`pip install --require-hashes`) and CycloneDX SBOM emission. Both have a stated path forward in `THIRD-PARTY-BINARIES.md` §"Deferred decisions". Flagging them here so a procurement reviewer asking the questions gets a yes/no with reasoning rather than silence.
 

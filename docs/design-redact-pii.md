@@ -695,7 +695,7 @@ Publish the inner `en_core_web_lg-<version>/` directory — the loadable unit, w
 contains **no `.py` at all**, and shipping only it is what makes the payload
 literally zero-Python rather than merely zero-native-code. RawCull uses GitHub
 Releases; `bristlenose.app` is the alternative. Then **pin the SHA-256 in Swift and
-verify before unpack**, the same mechanism as `fetch-ffmpeg.sh`'s `FFMPEG_SHA256`.
+verify before unpack**, the same mechanism as `build-ffmpeg-lgpl.sh`'s per-tarball SHA-256 pins.
 This is not optional dressing: the origin is ours, Apple signs nothing in the pack,
 and the sidecar carries `cs.disable-library-validation`, so there is no OS backstop.
 Unpack to a temp directory inside the container, atomic-rename into place, write a

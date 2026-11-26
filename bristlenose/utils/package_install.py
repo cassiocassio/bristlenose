@@ -50,14 +50,15 @@ class HostedInstallRefusedError(FrozenSidecarError):
 def installs_forbidden() -> bool:
     """True when this process runs inside the Mac app, where nothing may be installed.
 
-    Two independent signals, so one missing still refuses: the desktop host's
-    sentinel, and ``APP_SANDBOX_CONTAINER_ID``, which macOS itself sets in an
-    App Sandbox process. Deliberately not ``sys.frozen``: the Windows winget
-    build is a frozen CLI, and it installs Ollama with winget on purpose.
+    The desktop host's sentinel, which every sidecar spawn sets
+    (``BristlenoseShared.childEnvironment``). Deliberately not ``sys.frozen``:
+    the Windows winget build is a frozen CLI, and it installs Ollama with winget
+    on purpose. Deliberately not ``APP_SANDBOX_CONTAINER_ID`` either: the host
+    builds the sidecar's environment from an allowlist that leaves it out, so it
+    would guard nothing there, while a CLI run from a sandboxed terminal app
+    inherits it and would lose its installers.
     """
-    return os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1" or bool(
-        os.environ.get("APP_SANDBOX_CONTAINER_ID")
-    )
+    return os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1"
 
 
 def refuse_install_when_hosted(what: str) -> None:

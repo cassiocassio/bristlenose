@@ -7,9 +7,9 @@ for the CLI (``brew install ollama``, ``curl … | sh``, ``sudo snap install``,
 sandboxed sidecar only because nothing in serve happened to call them.
 
 Each entry point is called twice with ``subprocess`` replaced by a recorder:
-hosted (the desktop sentinel, or macOS's own ``APP_SANDBOX_CONTAINER_ID``),
-where nothing may be launched at all; and as the CLI, where the installer must
-still be launched exactly as before.
+hosted (the desktop sentinel), where nothing may be launched at all; and as
+the CLI, where the installer must still be launched exactly as before. A
+sweep at the end holds the invariant for installers nobody has written yet.
 """
 
 from __future__ import annotations
@@ -29,10 +29,11 @@ from bristlenose.preflight import ffmpeg
 from bristlenose.utils import package_install
 from bristlenose.utils.package_install import HostedInstallRefusedError
 
-_HOST_SIGNALS = {
-    "desktop-sentinel": ("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1"),
-    "app-sandbox": ("APP_SANDBOX_CONTAINER_ID", "app.bristlenose"),
-}
+_SENTINEL = "_BRISTLENOSE_HOSTED_BY_DESKTOP"
+#: macOS sets this in a sandboxed process. It is NOT a hosted signal: the host's
+#: allowlisted child environment leaves it out, and a CLI run from a sandboxed
+#: terminal app inherits it. Set in the CLI cases to keep that true.
+_MACOS_SANDBOX_VAR = "APP_SANDBOX_CONTAINER_ID"
 
 _OLLAMA_METHODS = ("brew", "snap", "curl", "winget")
 
@@ -63,19 +64,18 @@ def recorder(monkeypatch: pytest.MonkeyPatch) -> _Recorder:
     return rec
 
 
+@pytest.fixture(params=["plain-terminal", "sandboxed-terminal"])
+def cli(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(_SENTINEL, raising=False)
+    if request.param == "sandboxed-terminal":
+        monkeypatch.setenv(_MACOS_SANDBOX_VAR, "com.example.terminal")
+    else:
+        monkeypatch.delenv(_MACOS_SANDBOX_VAR, raising=False)
+
+
 @pytest.fixture
-def cli(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name, _value in _HOST_SIGNALS.values():
-        monkeypatch.delenv(name, raising=False)
-
-
-@pytest.fixture(params=sorted(_HOST_SIGNALS))
-def hosted(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
-    for name, _value in _HOST_SIGNALS.values():
-        monkeypatch.delenv(name, raising=False)
-    name, value = _HOST_SIGNALS[request.param]
-    monkeypatch.setenv(name, value)
-    return str(request.param)
+def hosted(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(_SENTINEL, "1")
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ def _spacy_model_missing(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.parametrize("method", [*_OLLAMA_METHODS, None])
 def test_hosted_install_ollama_launches_nothing(
-    recorder: _Recorder, hosted: str, method: str | None, monkeypatch: pytest.MonkeyPatch,
+    recorder: _Recorder, hosted: None, method: str | None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(ollama, "get_install_method", lambda: "brew")
     with pytest.raises(HostedInstallRefusedError):
@@ -118,14 +118,14 @@ def test_hosted_install_ollama_launches_nothing(
     assert recorder.argvs == []
 
 
-def test_hosted_install_mlx_launches_nothing(recorder: _Recorder, hosted: str) -> None:
+def test_hosted_install_mlx_launches_nothing(recorder: _Recorder, hosted: None) -> None:
     with pytest.raises(HostedInstallRefusedError):
         doctor_fixes.install_mlx()
     assert recorder.argvs == []
 
 
 def test_hosted_ffmpeg_preflight_does_not_offer_brew(
-    recorder: _Recorder, hosted: str, ffmpeg_missing_on_a_brew_mac: None,
+    recorder: _Recorder, hosted: None, ffmpeg_missing_on_a_brew_mac: None,
 ) -> None:
     """The offer itself is withheld, so the user gets the plain abort, not a refusal."""
     with pytest.raises(ffmpeg.FfmpegPreflightAbortedError):
@@ -133,22 +133,29 @@ def test_hosted_ffmpeg_preflight_does_not_offer_brew(
     assert recorder.argvs == []
 
 
-def test_hosted_brew_install_ffmpeg_launches_nothing(recorder: _Recorder, hosted: str) -> None:
+def test_hosted_brew_install_ffmpeg_launches_nothing(recorder: _Recorder, hosted: None) -> None:
     with pytest.raises(HostedInstallRefusedError):
         ffmpeg._run_brew_install(_quiet_console(), None)
     assert recorder.argvs == []
 
 
 def test_hosted_spacy_download_launches_nothing(
-    recorder: _Recorder, hosted: str, monkeypatch: pytest.MonkeyPatch,
+    recorder: _Recorder, hosted: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _spacy_model_missing(monkeypatch)
-    # The sentinel is caught first by the older `_is_frozen_sidecar` refusal (its
-    # base-class error); only macOS's own signal reaches the shellout's guard.
-    expected = (
-        HostedInstallRefusedError if hosted == "app-sandbox" else package_install.FrozenSidecarError
-    )
-    with pytest.raises(expected):
+    with pytest.raises(package_install.FrozenSidecarError):
+        package_install.ensure_spacy_model("en_core_web_lg")
+    assert recorder.argvs == []
+
+
+def test_hosted_spacy_shellout_guard_stands_alone(
+    recorder: _Recorder, hosted: None, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The older `_is_frozen_sidecar` refusal fires first; the shellout's own guard
+    must still hold if that one is ever narrowed (it answers a different question)."""
+    _spacy_model_missing(monkeypatch)
+    monkeypatch.setattr(package_install, "_is_frozen_sidecar", lambda: False)
+    with pytest.raises(HostedInstallRefusedError):
         package_install.ensure_spacy_model("en_core_web_lg")
     assert recorder.argvs == []
 

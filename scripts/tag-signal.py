@@ -19,7 +19,9 @@ Usage
 Why the opening is fiddly
 -------------------------
 SQLite's ``mode=ro`` on a cleanly closed WAL database creates empty ``-wal``
-and ``-shm`` files beside it (measured 26 Nov 2026), which changes the folder
+and ``-shm`` files beside it with Homebrew's SQLite 3.53.3 on the Mac (measured
+26 Nov 2026; Debian's 3.46.1 and Fedora's 3.47.2 on Linux create nothing, and
+which of version or OS decides was not isolated), which changes the folder
 the Mac app's locate flow compares by modification time. So a database with no
 WAL, or an empty one, is opened ``immutable=1`` (it creates nothing); one with
 frames in its WAL (the app has it open, or crashed) is opened ``mode=ro``.

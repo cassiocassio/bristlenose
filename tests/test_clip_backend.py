@@ -206,6 +206,11 @@ class TestSubtitleMux:
         assert "0:v:0?" not in args and "0:a:0?" in args
 
 
+_SUBS = " .. subtitles  V->V  Render text subtitles\n"
+_SCALE = " .. scale  V->V  Scale\n"
+_X264 = " V....D libx264  H.264\n"
+_VT = " V....D h264_videotoolbox  VideoToolbox H.264 Encoder (codec h264)\n"
+_PROBE_5K = '{"streams": [{"width": 5120, "height": 2880, "sample_aspect_ratio": "1:1"}]}'
 _PROBE_1280 = '{"streams": [{"width": 1280, "height": 720, "sample_aspect_ratio": "1:1"}]}'
 
 
@@ -240,32 +245,34 @@ class TestBurnSubtitles:
 
         return [Cue(0.0, 2.0, "p1", "white", ("Hello.",))]
 
-    def test_can_burn_needs_libass_and_x264(self) -> None:
+    @pytest.mark.parametrize(("filters", "encoders", "expected"), [
+        (_SUBS, _X264, "libx264"),
+        (_SUBS, _VT, "h264_videotoolbox"),  # the Mac app's LGPL build
+        (_SUBS, _X264 + _VT, "libx264"),  # x264 wherever it exists
+        (_SCALE, _X264 + _VT, None),  # Homebrew's: no libass filter
+        (_SUBS, " V....D libopenh264  OpenH264\n", None),
+    ])
+    def test_burn_encoder_needs_libass_and_an_h264_encoder(
+        self, filters: str, encoders: str, expected: str | None,
+    ) -> None:
         from bristlenose.server import clip_backend
 
-        def fake(filters: str, encoders: str):  # type: ignore[no-untyped-def]
-            outs = iter([MagicMock(stdout=filters, returncode=0),
-                         MagicMock(stdout=encoders, returncode=0)])
-            return lambda *a, **k: next(outs)
-
-        yes = (" .. subtitles  V->V  Render text subtitles\n", " V....D libx264  H.264\n")
-        no = (" .. scale  V->V  Scale\n", " V....D libx264  H.264\n")
-        for (filters, encoders), expected in ((yes, True), (no, False)):
-            clip_backend._can_burn.cache_clear()
-            with patch("bristlenose.server.clip_backend.subprocess.run", fake(filters, encoders)):
-                assert clip_backend._can_burn("/x/ffmpeg") is expected
-        clip_backend._can_burn.cache_clear()
+        outs = iter([MagicMock(stdout=filters, returncode=0),
+                     MagicMock(stdout=encoders, returncode=0)])
+        clip_backend._burn_encoder.cache_clear()
+        with patch("bristlenose.server.clip_backend.subprocess.run", lambda *a, **k: next(outs)):
+            assert clip_backend._burn_encoder("/x/ffmpeg") == expected
+        clip_backend._burn_encoder.cache_clear()
 
     def test_a_probe_that_did_not_run_is_not_remembered(self) -> None:
         """A timeout, or an ffmpeg that exits 133, is not the answer "no"."""
         from bristlenose.server import clip_backend
 
-        clip_backend._can_burn.cache_clear()
-        good = (" .. subtitles  V->V  Render text subtitles\n", " V....D libx264  H.264\n")
+        clip_backend._burn_encoder.cache_clear()
         calls = iter([
             subprocess.TimeoutExpired("ffmpeg", 30),
-            MagicMock(stdout=good[0], returncode=0),
-            MagicMock(stdout=good[1], returncode=0),
+            MagicMock(stdout=_SUBS, returncode=0),
+            MagicMock(stdout=_X264, returncode=0),
         ])
 
         def run(*a, **k):  # type: ignore[no-untyped-def]
@@ -278,9 +285,13 @@ class TestBurnSubtitles:
                 patch("bristlenose.server.clip_backend.subprocess.run", side_effect=run):
             assert FFmpegBackend().can_burn_subtitles() is False
             assert FFmpegBackend().can_burn_subtitles() is True
-        clip_backend._can_burn.cache_clear()
+        clip_backend._burn_encoder.cache_clear()
 
-    def test_burn_command_and_cleanup(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(("encoder", "args"), [
+        ("libx264", "-c:v libx264 -crf 18 -preset veryfast -pix_fmt yuv420p"),
+        ("h264_videotoolbox", "-c:v h264_videotoolbox -q:v 75 -g 250 -allow_sw 1 -pix_fmt yuv420p"),
+    ])
+    def test_burn_command_and_cleanup(self, tmp_path: Path, encoder: str, args: str) -> None:
         clip = tmp_path / "clip.mp4"
         clip.write_bytes(b"clip")
         out = tmp_path / "clip (subtitled).mp4"
@@ -298,14 +309,15 @@ class TestBurnSubtitles:
             Path(cmd[-1]).write_bytes(b"burned")
             return MagicMock(returncode=0, stdout="", stderr="")
 
-        with patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value=encoder), \
+                patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
             result = FFmpegBackend().burn_subtitles(clip, self._cues(), out)
         assert result == out
         assert "Style: Default,Inter Medium,48," in str(seen["ass"])
         assert "scale=1280:720,setsar=1,subtitles=" in str(seen["vf"])
         assert seen["font"] is True  # the bundled face is what libass reads
         joined = " ".join(seen["cmd"])  # type: ignore[arg-type]
-        assert "-c:v libx264" in joined and "-c:a copy" in joined
+        assert args in joined and "-c:a copy -movflags +faststart" in joined
         assert not Path(str(seen["tmp"])).exists()  # temp folder removed
 
     def test_burns_from_a_temp_folder_whose_path_needs_escaping(
@@ -335,7 +347,8 @@ class TestBurnSubtitles:
             Path(cmd[-1]).write_bytes(b"burned")
             return MagicMock(returncode=0, stdout="", stderr="")
 
-        with patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value="libx264"), \
+                patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
             assert FFmpegBackend().burn_subtitles(clip, self._cues(), out) == out
         assert seen["vf"].endswith("subtitles=subtitles.ass:fontsdir=.")  # type: ignore[union-attr]
         assert Path(str(seen["cwd"])) == awkward / "bn-burn-x"
@@ -349,8 +362,57 @@ class TestBurnSubtitles:
                 return MagicMock(returncode=0, stdout=_PROBE_1280, stderr="")
             return MagicMock(returncode=1, stdout="", stderr="No such filter: 'subtitles'")
 
-        with patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value="libx264"), \
+                patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
             assert FFmpegBackend().burn_subtitles(clip, self._cues(), tmp_path / "o.mp4") is None
+
+    @pytest.mark.parametrize(("encoder", "scale"), [
+        ("h264_videotoolbox", "scale=4096:2304,"),  # VideoToolbox refuses a side over 4096
+        ("libx264", "scale=5120:2880,"),
+    ])
+    def test_a_5k_recording_is_scaled_to_fit_videotoolbox(
+        self, tmp_path: Path, encoder: str, scale: str,
+    ) -> None:
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+        seen: dict[str, str] = {}
+
+        def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+            if "-show_entries" in cmd:
+                return MagicMock(returncode=0, stdout=_PROBE_5K, stderr="")
+            seen["vf"] = cmd[cmd.index("-vf") + 1]
+            seen["ass"] = (Path(kwargs["cwd"]) / "subtitles.ass").read_text(encoding="utf-8")
+            Path(cmd[-1]).write_bytes(b"burned")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value=encoder), \
+                patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+            assert FFmpegBackend().burn_subtitles(clip, self._cues(), tmp_path / "o.mp4") is not None
+        assert seen["vf"].startswith(scale)
+        # The text is laid out for the frame it is drawn on, not the source's.
+        assert f"PlayResX: {scale[6:10]}" in seen["ass"]
+
+    @pytest.mark.parametrize(("size", "expected"), [
+        ((5120, 2880), (4096, 2304)),
+        ((2880, 5120), (2304, 4096)),  # portrait
+        ((6016, 3384), (4096, 2304)),
+        ((4096, 4096), (4096, 4096)),  # at the limit: untouched
+        ((1280, 720), (1280, 720)),
+    ])
+    def test_fit_to_encoder(self, size: tuple[int, int], expected: tuple[int, int]) -> None:
+        from bristlenose.server.clip_backend import fit_to_encoder
+
+        assert fit_to_encoder(*size, "h264_videotoolbox") == expected
+        assert fit_to_encoder(*size, "libx264") == size
+
+    def test_no_encoder_runs_nothing(self, tmp_path: Path) -> None:
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+        run = MagicMock()
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value=None), \
+                patch("bristlenose.server.clip_backend.subprocess.run", run):
+            assert FFmpegBackend().burn_subtitles(clip, self._cues(), tmp_path / "o.mp4") is None
+        run.assert_not_called()
 
     def test_bundled_font_ships_with_its_licence(self) -> None:
         from bristlenose.server.clip_backend import BURN_FONT

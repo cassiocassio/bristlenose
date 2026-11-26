@@ -103,8 +103,21 @@ fi
 
 # --- 1. ffmpeg / ffprobe presence (model is first-run-downloaded, not here) ---
 ffmpeg_fetched=0
-if [ ! -x "$DIST/ffmpeg" ] || [ ! -x "$DIST/ffprobe" ]; then
-    _say "ffmpeg/ffprobe missing — fetching"
+# Signed, and with the sandbox entitlement sign-ffmpeg.sh gives them (App Store
+# Connect rejects a nested executable without it). Herestring, not a pipe: under
+# pipefail `codesign | grep -q` can read a found match as a failure.
+_ffmpeg_signed() {
+    local bin ents
+    for bin in "$DIST/ffmpeg" "$DIST/ffprobe"; do
+        codesign --verify --strict "$bin" >/dev/null 2>&1 || return 1
+        ents="$(codesign -d --entitlements - "$bin" 2>&1)" || return 1
+        grep -q "com.apple.security.app-sandbox" <<<"$ents" || return 1
+    done
+}
+# Present is not enough: a binary from another recipe (the GPL build shipped until
+# 25 Nov 2026, or an older BUILD_REV) is replaced, and the fetch forces a re-sign.
+if [ ! -x "$DIST/ffmpeg" ] || [ ! -x "$DIST/ffprobe" ] || ! "$SCRIPT_DIR/fetch-ffmpeg.sh" --check; then
+    _say "ffmpeg/ffprobe missing or not the pinned LGPL build — fetching"
     if [ "$DRY_RUN" = 0 ]; then
         "$SCRIPT_DIR/fetch-ffmpeg.sh" >>"$LOG" 2>&1 || { echo "error: fetch-ffmpeg.sh failed (see $LOG)" >&2; exit 1; }
         ffmpeg_fetched=1
@@ -220,6 +233,10 @@ elif [ "$identity_changed" = 1 ]; then need_s=1; s_reason="identity changed"
 elif [ "$ffmpeg_fetched" = 1 ]; then need_s=1; s_reason="ffmpeg fetched"
 elif [ "$DRY_RUN" = 0 ] && ! codesign --verify --deep --strict "$BUNDLE_BIN" >/dev/null 2>&1; then
     need_s=1; s_reason="deep-verify failed"
+elif [ "$DRY_RUN" = 0 ] && ! _ffmpeg_signed; then
+    # A fetch whose run then failed (or a hand-run fetch-ffmpeg.sh) leaves the
+    # binaries unsigned, and the flag above lives only in that run.
+    need_s=1; s_reason="ffmpeg unsigned"
 fi
 
 if [ "$need_s" = 1 ] && [ "$DRY_RUN" = 0 ]; then

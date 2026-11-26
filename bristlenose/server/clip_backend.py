@@ -32,14 +32,46 @@ BURN_FONT = Path(__file__).resolve().parent.parent / "data" / "fonts" / "Inter-M
 _BURN_TIMEOUT_SECONDS = 600
 
 
-@functools.lru_cache(maxsize=4)
-def _can_burn(ffmpeg: str) -> bool:
-    """Whether this ffmpeg can burn subtitles: libass's filter and x264.
+#: The H.264 encoders a burn can use, best first, with the arguments for each.
+#: libx264 wherever it exists (Linux distro builds, a researcher's own ffmpeg);
+#: otherwise VideoToolbox, which is what the Mac app has: its bundled ffmpeg is
+#: an LGPL build, and x264 is GPL. Measured 25 Nov 2026 against x264's CRF 18,
+#: on a 30 s Retina screen recording and a 720p interview: ``-q:v 75`` scored
+#: within 0.2 VMAF, at 1.4 and 0.95 times the size. ``-g 250`` is x264's own
+#: keyframe interval; without it VideoToolbox takes libavcodec's 12 frames and
+#: the screen recording came out 6 times x264's size for the same picture.
+#: ``-allow_sw`` lets Apple's software encoder stand in where there is no media
+#: engine (a virtual machine); on real hardware it changed no byte.
+_BURN_ENCODERS: dict[str, tuple[str, ...]] = {
+    "libx264": ("-c:v", "libx264", "-crf", "18", "-preset", "veryfast"),
+    "h264_videotoolbox": ("-c:v", "h264_videotoolbox", "-q:v", "75", "-g", "250", "-allow_sw", "1"),
+}
 
-    Homebrew's ffmpeg has neither the ``subtitles`` filter nor libass
-    (measured 29 Sep 2026); the macOS app's bundled build and Linux distro
-    builds have both. A probe that fails to run raises rather than returning
-    False, so ``lru_cache`` keeps only real answers — one slow start must not
+
+#: The longest side each encoder takes. VideoToolbox's H.264 refuses a frame
+#: wider or taller than 4096 (measured 25 Nov 2026: 4096x4096 encodes, 4112x2304
+#: and a 5K 5120x2880 screen recording exit 187), so a burn scales down to fit.
+_MAX_SIDE: dict[str, int] = {"h264_videotoolbox": 4096}
+
+
+def fit_to_encoder(width: int, height: int, encoder: str) -> tuple[int, int]:
+    """``width`` x ``height`` scaled down, aspect kept and sides even, to fit ``encoder``."""
+    limit = _MAX_SIDE.get(encoder)
+    if limit is None or max(width, height) <= limit:
+        return width, height
+    factor = limit / max(width, height)
+    return max(2, int(width * factor) // 2 * 2), max(2, int(height * factor) // 2 * 2)
+
+
+@functools.lru_cache(maxsize=4)
+def _burn_encoder(ffmpeg: str) -> str | None:
+    """The encoder this ffmpeg burns subtitles with, or None if it can't.
+
+    Needs libass's ``subtitles`` filter and one of ``_BURN_ENCODERS``.
+    Homebrew's ffmpeg has no ``subtitles`` filter (measured 29 Sep 2026); the
+    macOS app's bundled build has it with VideoToolbox, and Linux distro builds
+    have it with x264. A probe that fails to run raises rather than returning
+    None, so ``lru_cache`` keeps only real answers — one slow start must not
     read as "can't burn" until the server restarts.
     """
     runs = [
@@ -52,9 +84,9 @@ def _can_burn(ffmpeg: str) -> bool:
         if run.returncode != 0:
             raise OSError(f"{ffmpeg} exited {run.returncode}")
     filters, encoders = runs[0].stdout, runs[1].stdout
-    has_filter = re.search(r"^\s*\S*\s+subtitles\s", filters, flags=re.M) is not None
-    has_x264 = re.search(r"\slibx264\s", encoders) is not None
-    return has_filter and has_x264
+    if re.search(r"^\s*\S*\s+subtitles\s", filters, flags=re.M) is None:
+        return None
+    return next((name for name in _BURN_ENCODERS if re.search(rf"\s{name}\s", encoders)), None)
 
 
 @runtime_checkable
@@ -212,15 +244,18 @@ class FFmpegBackend:
         return None
 
     def can_burn_subtitles(self) -> bool:
-        """Whether the ffmpeg in use has libass's filter and the x264 encoder."""
+        """Whether the ffmpeg in use has libass's filter and an H.264 encoder."""
+        return self._burn_encoder() is not None
+
+    def _burn_encoder(self) -> str | None:
         ffmpeg = bundled_binary_path("ffmpeg")
         if ffmpeg is None:
-            return False
+            return None
         try:
-            return _can_burn(str(ffmpeg))
+            return _burn_encoder(str(ffmpeg))
         except (OSError, subprocess.TimeoutExpired):
             logger.warning("Could not ask %s whether it can burn subtitles", ffmpeg, exc_info=True)
-            return False
+            return None
 
     def burn_subtitles(self, clip: Path, cues: list[Cue], output: Path) -> Path | None:
         """Write a copy of ``clip`` with ``cues`` drawn into the picture.
@@ -228,13 +263,18 @@ class FFmpegBackend:
         The "for slides" export: text in the pixels plays anywhere, including
         PowerPoint, Keynote and a Teams screen share, where a subtitle track is
         ignored or needs a manual step. Re-encodes the video with x264 (CRF 18)
-        and copies the audio. The ``.ass`` file and the bundled font go in a
+        where this ffmpeg has it, else VideoToolbox (``_BURN_ENCODERS``), and
+        copies the audio. The ``.ass`` file and the bundled font go in a
         private temp folder that ffmpeg runs in, so the filter graph names them
         relatively — no path that needs escaping reaches it (a Windows drive path
         always would) — and nothing is left in the researcher's clips folder.
         """
         from bristlenose.server.clip_subtitles import to_ass
 
+        encoder = self._burn_encoder()
+        if encoder is None:
+            logger.warning("This ffmpeg can't burn subtitles; not burning %s", clip.name)
+            return None
         try:
             ffmpeg = binary_command("ffmpeg")
             ffprobe = binary_command("ffprobe")
@@ -246,7 +286,7 @@ class FFmpegBackend:
                  "-of", "json", str(clip)],
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
             )
-            width, height = display_size(json.loads(probe.stdout))
+            width, height = fit_to_encoder(*display_size(json.loads(probe.stdout)), encoder)
         except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError):
             logger.warning("Could not read the frame size of %s; not burning", clip.name)
             return None
@@ -271,7 +311,7 @@ class FFmpegBackend:
                     # capture otherwise fails to open the encoder.
                     "-vf",
                     f"scale={width}:{height},setsar=1,subtitles={ass.name}:fontsdir=.",
-                    "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+                    *_BURN_ENCODERS[encoder],
                     "-pix_fmt", "yuv420p",
                     "-c:a", "copy", "-movflags", "+faststart",
                     "-y", str(output.absolute()),

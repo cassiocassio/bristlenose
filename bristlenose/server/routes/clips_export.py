@@ -681,8 +681,9 @@ class ClipStartResponse(BaseModel):
     #: across a reload knows by it that the server's one export is still the one it started.
     job_id: str | None = None
     pii_warning: bool = False
-    # Burn-in was asked for but this ffmpeg can't do it (no libass/x264 —
-    # Homebrew's build). The clips and their .vtt files are still made.
+    # Burn-in was asked for but this ffmpeg can't do it (no libass filter, as in
+    # Homebrew's build, or no H.264 encoder it knows). The clips and their .vtt
+    # files are still made.
     burn_unavailable: bool = False
 
 

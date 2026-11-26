@@ -24,13 +24,39 @@ excludes. Three counts, one artefact to hand over.
 ## Native binaries (hand-curated)
 
 These are signed under our Apple Distribution identity (Team ID
-`Z56GZVA2QB`) at build time. Origin URLs and SHA256 sums are pinned in
-`desktop/scripts/fetch-ffmpeg.sh`; downloads are verified before signing.
+`Z56GZVA2QB`) at build time.
+
+**FFmpeg is built by us, from source.** `desktop/scripts/build-ffmpeg-lgpl.sh`
+(called by `fetch-ffmpeg.sh`) downloads the six release tarballs below, checks
+each against the SHA256 pinned in the script, and builds one static arm64
+`ffmpeg` and `ffprobe` that link only macOS's own libraries. It is an
+LGPL-2.1-or-later build: no `--enable-gpl`, `--enable-nonfree` or
+`--enable-version3`, and the script refuses to hand over a binary whose embedded
+configure line has one, that links outside `/usr/lib` and `/System/Library`, or
+that lacks the `subtitles` filter, the VideoToolbox H.264 encoder or dav1d. The
+complete corresponding source is those six tarballs, unmodified, plus that
+script. The binaries are not bit-reproducible across Xcode versions, so the
+pins are on the sources; `fetch-ffmpeg.sh` prints the binaries' SHA256 when it
+installs them.
+
+Until 25 Nov 2026 the app bundled martin-riedl.de's static build, a **GPL**
+build (`--enable-gpl --enable-libx264 --enable-libx265`; the binary on disk
+reported 8.0.1 although the script pinned an 8.1 zip), which this table
+wrongly listed as LGPL-2.1+. A GPL binary can't ship under Apple's EULA, and no
+reputable source publishes a static LGPL macOS arm64 build with libass, hence
+the build. Clip export's burnt-in subtitles, the one feature that used x264,
+now encode with Apple's VideoToolbox in the app (`h264_videotoolbox`); the CLI
+keeps x264 wherever the system FFmpeg has it.
 
 | Binary | Version | Origin | SHA256 | Licence |
 |---|---|---|---|---|
-| `ffmpeg` | 8.1 | <https://ffmpeg.martin-riedl.de/download/macos/arm64/1774549676_8.1/ffmpeg.zip> | `cc3a7e0cce36c5eca6c17eeb93830984c657637a8e710dc98f19c8051201fa3a` | GPL-2.0-or-later: built with `--enable-gpl --enable-libx264 --enable-libx265` (read from the bundled binaries' build strings, 25 Nov 2026; this table said LGPL-2.1+ until then). An LGPL build is planned |
-| `ffprobe` | 8.1 | <https://ffmpeg.martin-riedl.de/download/macos/arm64/1774549676_8.1/ffprobe.zip> | `fd2e6b7fad9c9aa2bec17c0d7211b5afcc00b4b5c9b63c120985e80c3c198af6` | GPL-2.0-or-later: built with `--enable-gpl --enable-libx264 --enable-libx265` (read from the bundled binaries' build strings, 25 Nov 2026; this table said LGPL-2.1+ until then). An LGPL build is planned |
+| `ffmpeg` | 8.1.3 (`8.1.3-bristlenose-lgpl-1`) | Built by `desktop/scripts/build-ffmpeg-lgpl.sh` from <https://ffmpeg.org/releases/ffmpeg-8.1.3.tar.xz> | source tarball `7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3` | LGPL-2.1-or-later. Configure: `--disable-autodetect --disable-network --disable-indevs --enable-indev=lavfi --disable-outdevs --enable-videotoolbox --enable-audiotoolbox --enable-zlib --enable-bzlib --enable-iconv --enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libfribidi --enable-libdav1d`, static, no ffplay |
+| `ffprobe` | 8.1.3 (`8.1.3-bristlenose-lgpl-1`) | the same build | the same | LGPL-2.1-or-later, the same configure line |
+| libass, statically linked into both (the `subtitles` filter) | 0.17.5 | <https://github.com/libass/libass/releases/download/0.17.5/libass-0.17.5.tar.xz> | `2dca25c0e0c837ddf00b52011b3f82cac1e4ddd3ad018227806b0c2288864acc` | ISC |
+| FreeType, statically linked (libass's rasteriser) | 2.14.3 | <https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.xz> | `36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f` | FreeType Licence (FTL), chosen from its FTL-or-GPL-2.0 dual licence |
+| FriBidi, statically linked (libass's bidirectional text) | 1.0.18 | <https://github.com/fribidi/fribidi/releases/download/v1.0.18/fribidi-1.0.18.tar.xz> | `1de5e8073d035388b71d0b2d452b1da1f8caeea8a7702997b401fe1b6250727f` | LGPL-2.1-or-later |
+| HarfBuzz, statically linked (libass's shaper) | 15.1.0 | <https://github.com/harfbuzz/harfbuzz/releases/download/15.1.0/harfbuzz-15.1.0.tar.xz> | `0fc7c565443a5f4be7da65ac5ee5bd737d9b158dc908708b7689a0a5796b0c8d` | MIT ("Old MIT") |
+| dav1d, statically linked (AV1 decoding) | 1.5.5 | <https://downloads.videolan.org/pub/videolan/dav1d/1.5.5/dav1d-1.5.5.tar.xz> | `ca96b1d0ba3f01f55de7231d775892b64994ba061aaeeaaa4f662a390b3abf9e` | BSD-2-Clause |
 | `Python.framework` | 3.12.x | Copied from the build runner's installed Python (today: developer's local `python3.12`; a future GitHub Actions desktop-build job would use `actions/setup-python@v5` which is `python-build-standalone`) | _captured per build in `desktop/build/sign-manifest.json`_ | Python Software Foundation Licence |
 | PyInstaller bootloader (`bristlenose-sidecar` outer binary) | 6.x | <https://pyinstaller.org> | _captured per build in `desktop/build/sign-manifest.json`_ | GPL-2.0-or-later WITH PyInstaller-bootloader-exception (proprietary apps may embed the bootloader; see <https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt>) |
 | ONNX Runtime Python binding (`onnxruntime/capi/onnxruntime_pybind11_state.so`, the voice pass) | as resolved in `.venv-sidecar` (its wheel row is in the auto block below) | <https://github.com/microsoft/onnxruntime> | _signed per build; listed in `desktop/build/sign-manifest.json`_ | MIT; statically links Abseil, Protobuf, flatbuffers, cpuinfo, Eigen and more — the package's `ThirdPartyNotices.txt` lists them, none is GPL-only, and it ships in the bundle at `_internal/onnxruntime/` beside `LICENSE` (the spec refuses to build without them). The package's C library `libonnxruntime.<ver>.dylib` is **not** shipped: the binding links the runtime statically, and the spec drops it |
@@ -283,7 +309,8 @@ gets a yes/no with reasoning rather than silence.
 
 ## See also
 
-- `desktop/scripts/fetch-ffmpeg.sh` — pinned-SHA download with verify-on-fetch.
+- `desktop/scripts/build-ffmpeg-lgpl.sh` — the LGPL FFmpeg build: pinned-SHA source tarballs, the configure line, and the gates on what it produces.
+- `desktop/scripts/fetch-ffmpeg.sh` — installs that build into `Resources/` (from `desktop/build/ffmpeg-cache/` after the first build); `--check` tells `ensure-sidecar.sh` whether the installed copy is this recipe's.
 - `desktop/scripts/sign-sidecar.sh` — emits per-binary
   `desktop/build/sign-manifest.json` with SHA256 of every signed
   Mach-O.

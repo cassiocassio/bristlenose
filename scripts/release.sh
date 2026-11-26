@@ -1825,9 +1825,11 @@ cmd_run() {
     _probe 30 "dmg remote ssh (BatchMode)" ssh -o BatchMode=yes -o ConnectTimeout=15 "${BRISTLENOSE_DMG_REMOTE%%:*}" true
     printf '    %b·%b Finder automation (create-dmg drives it) — a permission dialog may appear once\n' "$D" "$N"
     _probe 20 "Finder automation (TCC)" osascript -e 'tell application "Finder" to count windows'
-    [ -x "$ROOT/desktop/Bristlenose/Resources/ffmpeg" ] && [ -x "$ROOT/desktop/Bristlenose/Resources/ffprobe" ] \
-        || die "bundled ffmpeg/ffprobe missing — run desktop/scripts/fetch-ffmpeg.sh first; a release run must never reach for the network here"
-    printf '    %b✓%b bundled ffmpeg + ffprobe present\n' "$G" "$N"
+    # Present is not enough: a GPL build (shipped until 25 Nov 2026) or an older
+    # BUILD_REV would send ensure-sidecar to download and compile mid-release.
+    "$ROOT/desktop/scripts/fetch-ffmpeg.sh" --check \
+        || die "bundled ffmpeg/ffprobe missing or not the pinned LGPL build — run desktop/scripts/fetch-ffmpeg.sh first; a release run must never reach for the network here"
+    printf '    %b✓%b bundled ffmpeg + ffprobe are the pinned LGPL build\n' "$G" "$N"
     _slp=$(pmset -g 2>/dev/null | awk '$1=="sleep"{print $2; exit}')
     [ -n "$_slp" ] && [ "$_slp" != "0" ] \
         && printf '    %b⚠ system sleep is %s min — the run holds caffeinate -i (idle), but a CLOSED LID still sleeps%b\n' "$Y" "$_slp" "$N"

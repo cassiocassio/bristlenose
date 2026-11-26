@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Generator
 from pathlib import Path
 
 from sqlalchemy import create_engine, event, inspect
-from sqlalchemy.engine import URL, Engine
+from sqlalchemy.engine import URL, Engine, make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -124,12 +125,38 @@ def get_engine(
             poolclass=StaticPool,
             hide_parameters=True,
         )
+    _make_owner_only(url)
     engine = create_engine(
         url, connect_args={"check_same_thread": False}, hide_parameters=True,
     )
     if study_output_dir is not None:
         _bind_under_settle_lock(engine, study_output_dir)
     return engine
+
+
+def _make_owner_only(url: str | URL) -> None:
+    """Create a SQLite database file 0o600, or tighten one an older version left at the umask.
+
+    It holds participant names and every quote, like ``people.yaml`` and the transcripts,
+    which are written owner-only. SQLite gives the ``-wal`` and ``-shm`` it creates the main
+    file's mode, so only ones already on disk need tightening here.
+    """
+    from bristlenose.utils.fs import open_private
+
+    parsed = make_url(url)
+    if not parsed.drivername.startswith("sqlite") or parsed.database in (None, "", ":memory:"):
+        return
+    db_path = Path(parsed.database)
+    if not db_path.exists():
+        os.close(open_private(db_path, os.O_WRONLY | os.O_CREAT))
+        return
+    for path in (db_path, Path(f"{db_path}-wal"), Path(f"{db_path}-shm")):
+        if not path.exists():
+            continue
+        try:
+            os.chmod(path, 0o600)
+        except OSError as exc:  # someone else's file, a read-only volume: still open it
+            logger.warning("Could not make %s readable by its owner only: %s", path, exc)
 
 
 _BOUND = "bristlenose_bound"

@@ -34,10 +34,33 @@ struct PaywallView: View {
     private var price: String { store.product?.displayPrice ?? "" }
     private var planName: String { store.product?.displayName ?? "" }
 
-    private var unavailable: Bool { store.state == .storeUnavailable }
+    /// Which of the sheet's two faces to show.
+    enum Face: Equatable {
+        case offer, unavailable
+
+        /// The offer needs the product: without it the title read "/month"
+        /// with no price and Subscribe could not be pressed (review, 25 Nov
+        /// 2026). No product is the store-unavailable face, whatever the
+        /// state says, so the sheet always offers Try Again or a working
+        /// Subscribe.
+        static func of(_ state: SubscriptionAccess.State, productLoaded: Bool) -> Face {
+            state == .storeUnavailable || !productLoaded ? .unavailable : .offer
+        }
+    }
 
     var body: some View {
-        if unavailable { unavailableBody } else { offerBody }
+        Group {
+            switch Face.of(store.state, productLoaded: store.product != nil) {
+            case .unavailable: unavailableBody
+            case .offer: offerBody
+            }
+        }
+        // Here, not on each face: Try Again that finds the product and a
+        // subscription at once swaps the face, and a new face's `.onChange`
+        // never sees the change that put it on screen.
+        .onChange(of: store.state) { _, new in
+            if case .subscribed = new { onSubscribed() }
+        }
     }
 
     /// The store cannot be reached and nothing on record says this person has
@@ -67,9 +90,6 @@ struct PaywallView: View {
         }
         .padding(24)
         .frame(width: 460)
-        .onChange(of: store.state) { _, new in
-            if case .subscribed = new { onSubscribed() }
-        }
     }
 
     /// The plan's name and the billed amount lead, the amount as the title:
@@ -131,9 +151,6 @@ struct PaywallView: View {
         }
         .padding(24)
         .frame(width: 460)
-        .onChange(of: store.state) { _, new in
-            if case .subscribed = new { onSubscribed() }
-        }
     }
 
     private func buy() async {

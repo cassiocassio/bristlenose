@@ -302,13 +302,16 @@ new section authoritative.
 
 # Integration with existing machinery
 
-- **`/end-session` Phase 2 step 6:** invoke `design-doc-review` on any
-  design doc touched in-session. If B/C, offer `/true-the-docs --doc`.
+- **`/end-session` Phase 2 step 6:** intended to invoke `design-doc-review`
+  on any design doc touched in-session, and if B/C, offer
+  `/true-the-docs --doc`. **Not wired (checked 26 Nov 2026):** step 6 only
+  asks the session to check its design docs by hand; no agent runs.
   **Never auto-archive at session-end** — fatigue biases "yes" on
   prompts; archival requires explicit `--doc` invocation.
 - **`/usual-suspects`:** add a row to the agent-selection table —
   invoke `design-doc-review` when design docs were touched AND
-  implementation scope overlaps doc scope.
+  implementation scope overlaps doc scope. **Not wired either:** the row
+  is proposal US-3 in the Nov 2026 skills review, not yet landed.
 - **Co-trigger with `user-documentation-review`:** user-facing text changes
   (README, man page, help, locales) signal that design docs behind
   that code probably drifted too. `design-doc-review` fires in the

@@ -269,8 +269,8 @@ These apply when reviewing desktop/ Swift code or build/signing configuration:
 - **Entitlement hygiene** — never use `NSAppleScript` (blocked, Apple rejects
   the entitlement). Never depend on temporary exception entitlements (App Review
   rejects them retroactively, sometimes after 15 successful submissions)
-- **Build numbers** — `CFBundleVersion` must strictly increment. Both Sparkle
-  and App Store Connect require this. Flag `CFBundleVersion = 1` as a default
+- **Build numbers** — `CFBundleVersion` must strictly increment. App Store
+  Connect requires this. Flag `CFBundleVersion = 1` as a default
 - **Quarantine xattr** — App Store Connect rejects bundles with
   `com.apple.quarantine` on any file. Flag downloaded binaries that haven't
   had the xattr stripped

@@ -320,8 +320,9 @@ finding. It does **not** satisfy the HIG citation rule — the corpus at
 Hudson) is the concurrency specialist and **outranks swiftui-pro on concurrency
 questions**. They genuinely disagree in one place: swiftui-pro says *never* use
 GCD; swift-concurrency-pro allows it in low-level, interop, and perf-critical
-synchronous code and says not to flag it. There are ~16 GCD call sites in the
-shipping Swift source — an agent applying swiftui-pro alone would flag them all.
+synchronous code and says not to flag it. The shipping Swift source has dozens
+of GCD call sites (48 lines in 27 files outside the tests, 26 Nov 2026) — an
+agent applying swiftui-pro alone would flag them all.
 Take the specialist's line.
 
 `swiftui-pro` is a **knowledge source, not a reviewer persona** — it does not

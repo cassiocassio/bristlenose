@@ -111,7 +111,7 @@ def test_a_run_that_stopped_early_or_was_one_file_is_not_a_result_and_never_gree
     p = hl.read_tests(partial, tmp_path / "out")
     assert "5 failed" in p["body"][0]["items"][0]["text"] and p["as_of"] == NOW - 7200         # still the last COMPLETE run
     assert any("did not complete (ran 400 of 3,000)" in f for f in p["facts"])
-    assert json.loads((tmp_path / "out" / "tests.json").read_text())["finished"]["ran"] == 11222   # the cache was not overwritten
+    assert json.loads((tmp_path / "out" / "tests.json").read_text(encoding="utf-8"))["finished"]["ran"] == 11222   # the cache was not overwritten
 
 
 def test_a_partial_run_with_nothing_cached_is_no_data_not_a_green_pill(tmp_path):
@@ -362,7 +362,7 @@ def write_counts(d: Path, heartbeat=True, header=True, daily=None):
     (d / "counts.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
     (d / "monthly.csv").write_text("month,ch,sub,days,installs\n", encoding="utf-8")
     if heartbeat:
-        (d / "heartbeat").write_text(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " ok files=1 lines=1 news=1 rewrote=x\n")
+        (d / "heartbeat").write_text(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " ok files=1 lines=1 news=1 rewrote=x\n", encoding="utf-8")
 
 
 def test_installs_without_the_website_repo_is_no_data_with_a_fixed_reason(tmp_path):

@@ -115,7 +115,7 @@ def feedback_csv(d: Path, rows):
 def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
     marker = "SECRET-MESSAGE-TEXT-9f2"
     (tmp_path / "bn-counts").mkdir()
-    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok files=3 lines=100 news=1 rewrote=x\n")
+    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok files=3 lines=100 news=1 rewrote=x\n", encoding="utf-8")
     feedback_csv(tmp_path, [f"2026-01-05 10:00:00,0.43.0,neutral,{marker},feedback", "2026-01-04 09:00:00,0.43.0,hate,x,problem",
                             "2025-12-01 09:00:00,0.40.0,love,y,", "2025-12-02 09:00:00,0.40.0,weird-value,z,",
                             "2025-06-09 03:00:00,0.19.0,like,old row with four columns"])
@@ -131,7 +131,7 @@ def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
 
 def test_a_csv_error_part_way_fails_the_whole_read_instead_of_printing_partial_counts(tmp_path):
     (tmp_path / "bn-counts").mkdir()
-    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok\n")
+    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok\n", encoding="utf-8")
     feedback_csv(tmp_path, ["2026-01-05 10:00:00,0.43.0,neutral,fine,feedback", "2026-01-06 10:00:00,0.43.0,love," + "x" * 200000 + ",feedback"])
     code = home.REMOTE_PY.replace("https://bristlenose.app/app/news", "http://127.0.0.1:9/never")
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60,
@@ -179,27 +179,27 @@ def test_ci_json_keeps_only_the_five_fields_a_stranger_cannot_write(tmp_path):
     rows = [{"conclusion": "success", "status": "completed", "createdAt": "2026-11-26T20:00:00Z", "headSha": "7c7c79e",
              "event": "push", "displayTitle": "<script>alert(1)</script>", "headBranch": "main"}]
     home.record_ci(tmp_path, "ok", json.dumps(rows).encode())
-    saved = json.loads((tmp_path / "ci.json").read_text())
+    saved = json.loads((tmp_path / "ci.json").read_text(encoding="utf-8"))
     assert set(saved["runs"][0]) == {"conclusion", "status", "createdAt", "headSha", "event"}
     home.record_ci(tmp_path, "failed", b"garbage")
     home.record_ci(tmp_path, "ok", b"not json")
-    assert json.loads((tmp_path / "ci.json").read_text()) == saved                 # a bad read leaves the old file
+    assert json.loads((tmp_path / "ci.json").read_text(encoding="utf-8")) == saved                 # a bad read leaves the old file
 
 
 @pytest.mark.parametrize("junk", [b"null", b"5", b"[]", b'{"a": 1}', b"not json", b'[{"event": "pull_request", "conclusion": "success"}]'])
 def test_a_bad_gh_answer_leaves_the_last_good_ci_file_alone(tmp_path, junk):
     good = [{"conclusion": "success", "status": "completed", "createdAt": "2026-11-26T20:00:00Z", "headSha": "7c7c79e", "event": "push"}]
     home.record_ci(tmp_path, "ok", json.dumps(good).encode())
-    before = (tmp_path / "ci.json").read_text()
+    before = (tmp_path / "ci.json").read_text(encoding="utf-8")
     home.record_ci(tmp_path, "ok", junk)                       # must neither raise nor wipe the cache
-    assert (tmp_path / "ci.json").read_text() == before
+    assert (tmp_path / "ci.json").read_text(encoding="utf-8") == before
 
 
 def test_pull_requests_are_never_recorded_as_ci_on_main(tmp_path):
     rows = [{"conclusion": "failure", "status": "completed", "createdAt": "2026-11-26T21:00:00Z", "headSha": "abcdef0", "event": "pull_request"},
             {"conclusion": "success", "status": "completed", "createdAt": "2026-11-26T20:00:00Z", "headSha": "7c7c79e", "event": "push"}]
     home.record_ci(tmp_path, "ok", json.dumps(rows).encode())
-    assert [r["event"] for r in json.loads((tmp_path / "ci.json").read_text())["runs"]] == ["push"]
+    assert [r["event"] for r in json.loads((tmp_path / "ci.json").read_text(encoding="utf-8"))["runs"]] == ["push"]
 
 
 def run_names(c, monkeypatch, now):
@@ -234,12 +234,12 @@ def test_files_are_written_private_and_atomically(tmp_path):
 
 def test_a_symlink_at_the_target_is_not_followed(tmp_path):
     victim = tmp_path / "victim"
-    victim.write_text("keep")
+    victim.write_text("keep", encoding="utf-8")
     link = tmp_path / "d" / "home.html"
     link.parent.mkdir()
     link.symlink_to(victim)
     hl.atomic_write(link, "page")                       # os.replace swaps the link itself; the target is untouched
-    assert victim.read_text() == "keep" and not link.is_symlink()
+    assert victim.read_text(encoding="utf-8") == "keep" and not link.is_symlink()
 
 
 # ---- when a job runs --------------------------------------------------------------------------------------

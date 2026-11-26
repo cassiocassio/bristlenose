@@ -133,7 +133,7 @@ describe("buildVisibleFrameworks", () => {
   });
 
   it("falls back to the capitalised id only when the server sends no name", () => {
-    // An export made before `frameworks` existed, or a codebook whose YAML is gone.
+    // An installed framework id that no bundled YAML has: the server leaves it out.
     const cb: CodebookResponse = {
       groups: [group("Choice", "yablonski")],
       ungrouped: [],
@@ -144,6 +144,21 @@ describe("buildVisibleFrameworks", () => {
     );
     expect(fw?.title).toBe("Yablonski");
     expect(fw?.author).toBe("");
+  });
+
+  it("keeps Sentiment's translated label even though the server sends its YAML title", () => {
+    // The override is deliberate: the YAML title is English in every locale.
+    const cb: CodebookResponse = {
+      groups: [group("Sentiment", "sentiment")],
+      ungrouped: [],
+      all_tag_names: [],
+      frameworks: { sentiment: { title: "Emotional & Cognitive Signals", author: "" } },
+    };
+    const fw = buildVisibleFrameworks(cb, t, FLOOR, new Set()).find(
+      (f) => f.id === "sentiment",
+    );
+    expect(fw?.title).toBe(t("tags.frameworkSentiment"));
+    expect(fw?.title).not.toBe("Emotional & Cognitive Signals");
   });
 });
 

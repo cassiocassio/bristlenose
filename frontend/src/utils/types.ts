@@ -228,10 +228,11 @@ export interface CodebookResponse {
    *  summing per-group totals double-counts a quote tagged in two groups. */
   framework_quote_totals?: Record<string, number>;
   /** framework_id -> where its AutoCode stands (`routes/codebook.py` `autocode_state`).
-   *  Absent: never started. Optional: an export made before 24 Nov 2026 lacks it. */
+   *  Absent: never started. The server always sends the map; optional so fixtures may omit it. */
   framework_autocode?: Record<string, AutoCodeRunState>;
   /** framework_id -> its title and author, from the codebook's YAML. Absent for an id
-   *  no bundled YAML has. Optional: an export made before 25 Nov 2026 lacks it. */
+   *  no bundled YAML has. The server always sends the map; optional so fixtures may omit it
+   *  (an HTML export inlines its own bundle, so new code never reads an old export's JSON). */
   frameworks?: Record<string, { title: string; author: string }>;
   /** The quotes AutoCode would code (the ones that count), for the page's explainer. */
   quote_count?: number;

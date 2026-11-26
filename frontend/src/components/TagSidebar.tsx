@@ -104,8 +104,9 @@ class ReviewBoundary extends Component<{ onError: () => void; children: ReactNod
 // Title and author come from the codebook's YAML, sent as `frameworks` on
 // GET /codebook (`routes/codebook.py`). Never copy them here: a list kept in
 // this file until 25 Nov 2026 stopped at 10 Mar and named Laws of UX
-// "Yablonski". The capitalised id is only for a framework whose YAML is gone,
-// or an export made before the field existed.
+// "Yablonski". The capitalised id is only for an installed framework id that
+// no bundled YAML has, which the server leaves out of the map. (An HTML export
+// carries its own copy of this bundle, so an old export never reaches here.)
 
 type FrameworkMeta = CodebookResponse["frameworks"];
 
@@ -114,7 +115,7 @@ function frameworkTitle(
 ): string {
   // Sentiment keeps its translated sidebar label rather than its YAML title
   // ("Emotional & Cognitive Signals"): a deliberate override, as before.
-  if (id === "sentiment") return t("tags.frameworkSentiment");
+  if (id === SENTIMENT_ID) return t("tags.frameworkSentiment");
   return meta?.[id]?.title ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
 

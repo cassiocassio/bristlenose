@@ -135,9 +135,10 @@ class TestGetCodebook:
         added later (Laws of UX among them) showed its capitalised id. Install
         every bundled codebook and require each one's YAML title and author.
         """
-        from bristlenose.server.codebook import load_all_templates
+        from bristlenose.server.codebook import list_available_templates
 
-        templates = load_all_templates()
+        # Only enabled templates: import refuses a parked (``enabled: false``) one.
+        templates = list_available_templates()
         for tmpl in templates:
             if tmpl.id == "sentiment":
                 continue  # auto-imported with the project

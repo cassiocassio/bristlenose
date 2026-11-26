@@ -313,4 +313,15 @@ struct SubscriptionEntitlementTests {
         #expect(SubscriptionAccess.state(entitlements: [], productLoaded: true) == .notSubscribed)
         #expect(SubscriptionAccess.state(entitlements: [], productLoaded: false) == .storeUnavailable)
     }
+
+    @Test("entitlements that fail verification are said in one log line, with their products")
+    func unverifiedNotice() {
+        let e = entitlement(expires: nil)
+        let line = SubscriptionAccess.unverifiedNotice([
+            .verified(e), .unverified(productID: id), .unverified(productID: "other"),
+        ])
+        #expect(line == "entitlements ignored, failed verification: count=2 products=\(id),other")
+        #expect(SubscriptionAccess.unverifiedNotice([.verified(e)]) == nil)
+        #expect(SubscriptionAccess.unverifiedNotice([]) == nil)
+    }
 }

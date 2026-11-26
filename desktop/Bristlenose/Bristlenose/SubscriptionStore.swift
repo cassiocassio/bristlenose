@@ -198,6 +198,9 @@ final class SubscriptionStore: ObservableObject {
         }
 
         let rows = await reads.entitlements()
+        if let notice = SubscriptionAccess.unverifiedNotice(rows) {
+            log.notice("\(notice, privacy: .public)")
+        }
         let listed = rows.compactMap { row -> SubscriptionAccess.Entitlement? in
             if case .verified(let e) = row { return e }
             return nil
@@ -298,7 +301,10 @@ final class SubscriptionStore: ObservableObject {
         do {
             switch try await product.purchase() {
             case .success(let verification):
-                guard case .verified(let t) = verification else { return .failed }
+                guard case .verified(let t) = verification else {
+                    log.notice("purchase returned a transaction that failed verification")
+                    return .failed
+                }
                 await t.finish()
                 // The verified transaction is the entitlement. The store's own
                 // record lists it about a second later, and reading that record

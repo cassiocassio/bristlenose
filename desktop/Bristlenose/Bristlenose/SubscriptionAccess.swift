@@ -75,7 +75,9 @@ enum SubscriptionAccess {
     }
 
     /// What one row of `Transaction.currentEntitlements` turned out to be.
-    /// An unverified row grants nothing.
+    /// An unverified row grants nothing, but it is not silent either: a row
+    /// that fails verification is the one clue to a broken receipt or a
+    /// tampered store, so it is counted into one log line.
     enum EntitlementRead: Equatable {
         case verified(Entitlement)
         case unverified(productID: String)
@@ -107,6 +109,17 @@ enum SubscriptionAccess {
               !current.contains(where: { $0.productID == purchase.productID }),
               (purchase.expires ?? .distantFuture) > now else { return current }
         return current + [purchase]
+    }
+
+    /// The one log line for entitlements that failed verification, or nil
+    /// when every row verified.
+    static func unverifiedNotice(_ reads: [EntitlementRead]) -> String? {
+        let ids = reads.compactMap { read -> String? in
+            if case .unverified(let id) = read { return id }
+            return nil
+        }
+        guard !ids.isEmpty else { return nil }
+        return "entitlements ignored, failed verification: count=\(ids.count) products=\(ids.joined(separator: ","))"
     }
 
     /// Starting an analysis (a paid LLM run on new recordings).

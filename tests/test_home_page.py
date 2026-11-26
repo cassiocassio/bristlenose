@@ -36,7 +36,8 @@ def hostile_panels():
     p.append(bad)
     p.append(hl.panel("exp", "Things that expire", stateless=True, body=[{"kind": "expiries", "rows": [
         {"what": "soon", "epoch": NOW + 30 * 86400 + 3600}, {"what": "later", "epoch": NOW + 100 * 86400 + 3600},
-        {"what": "past", "epoch": NOW - 86400}, {"what": "unknown", "epoch": None}]}]))
+        {"what": "past", "epoch": NOW - 86400}, {"what": "unknown", "epoch": None},
+        {"what": "summer", "epoch": 1776643199}]}]))      # 2026-04-19 23:59:59 UTC: must read 19 Apr, not 20 Apr (London is UTC+1 then)
     return p
 
 

@@ -40,7 +40,7 @@
     return null;
   }
 
-  var LONDON_DATE = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short", year: "numeric" });
+  var UTC_DATE = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });   // a date-only expiry is a UTC date: London time would roll 23:59 UTC over to the next day in summer
   var LONDON_TIME = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   /* ---- body renderers: one per kind the panels use ---- */
@@ -146,7 +146,7 @@
       (b.rows || []).forEach(function (r) {
         var tr = document.createElement("tr"), what = el("td", null, r.what), date = el("td"), days = el("td", "n");
         if (typeof r.epoch === "number" && isFinite(r.epoch)) {
-          date.textContent = LONDON_DATE.format(new Date(r.epoch * 1000));
+          date.textContent = UTC_DATE.format(new Date(r.epoch * 1000));
           days.setAttribute("data-epoch", String(r.epoch));
         } else { date.textContent = "unknown"; days.textContent = "? unknown"; }
         tr.appendChild(what); tr.appendChild(date); tr.appendChild(days); t.appendChild(tr);

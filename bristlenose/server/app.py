@@ -75,6 +75,14 @@ _STATIC_DIR = Path(__file__).parent / "static"
 # Repo root — two levels up from bristlenose/server/app.py
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
+#: On every token-bearing HTML page: no other site may frame it. The token comes from the
+#: HTML, so a framed report is fully authenticated and an overlay could steer its clicks.
+#: 'self', not 'none': the style guide and keyline lab frame /report/ pages themselves.
+_FRAME_HEADERS: dict[str, str] = {
+    "Content-Security-Policy": "frame-ancestors 'self'",
+    "X-Frame-Options": "SAMEORIGIN",
+}
+
 
 def _schedule_missing_signal_snapshot(
     app: FastAPI,
@@ -482,7 +490,9 @@ def create_app(
 
         @app.get("/chat-lens", include_in_schema=False)
         def _chat_lens() -> HTMLResponse:
-            return HTMLResponse(build_chat_lens_html(app.state.auth_token))
+            return HTMLResponse(
+                build_chat_lens_html(app.state.auth_token), headers=_FRAME_HEADERS
+            )
 
     # Dev API router (/api/dev/*, incl. the Run Inspector). Mounted under
     # `serve --dev` OR when `_BRISTLENOSE_DEV_ENDPOINTS=1` — the latter is set
@@ -953,7 +963,7 @@ def _spa_response(html: str, auth_token: str) -> HTMLResponse:
     on another loopback port gets this cookie sent too; the middleware honours
     it only for the SPA's own GETs (``_is_own_navigation`` in middleware.py).
     """
-    response = HTMLResponse(html)
+    response = HTMLResponse(html, headers=_FRAME_HEADERS)
     if auth_token:
         response.set_cookie(
             key=AUTH_COOKIE_NAME,

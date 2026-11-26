@@ -411,3 +411,23 @@ class TestDevAdminCrossSiteWrites:
     def test_admin_get_from_another_site_still_reads(self, raw_client: TestClient) -> None:
         resp = raw_client.get("/admin/", headers={"sec-fetch-site": "cross-site"})
         assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Token-bearing HTML may be framed only by its own origin
+# ---------------------------------------------------------------------------
+
+
+class TestFrameHeaders:
+    """A framed report is fully authenticated (the token is in the HTML)."""
+
+    @pytest.mark.parametrize("path", ["/report/", "/report/quotes", "/chat-lens"])
+    def test_token_bearing_pages_refuse_foreign_frames(
+        self, raw_client: TestClient, token: str, path: str
+    ) -> None:
+        resp = raw_client.get(path)
+        assert resp.status_code == 200
+        assert token in resp.text, "pick a page that carries the token"
+        # 'self', not 'none': the style guide and keyline lab frame /report/ pages.
+        assert resp.headers["content-security-policy"] == "frame-ancestors 'self'"
+        assert resp.headers["x-frame-options"] == "SAMEORIGIN"

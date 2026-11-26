@@ -1152,6 +1152,9 @@ class TestProdIntercept:
         assert "This folder hasn’t been analysed yet" in resp.text
         # SPA root must NOT mount
         assert 'id="bn-app-root"' not in resp.text
+        # It sets the auth cookie like the SPA, so only its own origin may frame it.
+        assert resp.headers["content-security-policy"] == "frame-ancestors 'self'"
+        assert resp.headers["x-frame-options"] == "SAMEORIGIN"
 
     def test_desktop_never_run_page_sees_the_interviews_in_the_project(
         self, prod_app_factory, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

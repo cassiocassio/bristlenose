@@ -191,12 +191,14 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
    A name the pipeline found, not yet a person's yes
    (`session_speakers.name_confirmed`): one dotted ring round the whole split
    badge, and the name in grey that darkens on hover. Saying yes in the picker
-   makes both solid. The halves lose their own borders so the ring is the only
+   makes both solid. The ring is the tentative keyline every proposal wears
+   (--bn-tentative-keyline in tokens.css; owner, 26 Nov 2026), without the tag's
+   fade or pulse. The halves lose their own borders so the ring is the only
    line — the `--split` qualifier matches the specificity of the
    `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
    so a code-only badge keeps no solid edge inside the dashes. */
 .bn-person-proposed .bn-speaker-badge--split {
-    border: 1px dashed currentColor;
+    border: var(--bn-tentative-keyline);
 }
 
 .bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-code,

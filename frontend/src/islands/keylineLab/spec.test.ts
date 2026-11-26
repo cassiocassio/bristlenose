@@ -13,10 +13,16 @@ import { describe, expect, it } from "vitest";
 
 import badgeCss from "../../../../bristlenose/theme/atoms/badge.css?raw";
 import reviewCss from "../../../../bristlenose/theme/molecules/threshold-review.css?raw";
+import personCss from "../../../../bristlenose/theme/molecules/person-badge.css?raw";
 import tokensCss from "../../../../bristlenose/theme/tokens.css?raw";
 import { CONSUMERS, FILES, SHIPPED, TOKENS, dropInCss, isShipped, maskUrl, parseSpec, ruleEdits, type Edit } from "./spec";
 
-const SOURCES: Record<string, string> = { [FILES.tokens]: tokensCss, [FILES.badge]: badgeCss, [FILES.review]: reviewCss };
+const SOURCES: Record<string, string> = {
+  [FILES.tokens]: tokensCss,
+  [FILES.badge]: badgeCss,
+  [FILES.review]: reviewCss,
+  [FILES.person]: personCss,
+};
 
 /** Comparable form: numbers as numbers ("0.50" is "0.5"), whitespace collapsed, no `!important` spacing. */
 function norm(v: string): string {
@@ -77,7 +83,7 @@ describe("keyline lab spec", () => {
     }
   });
 
-  it("the three surfaces and both pulses draw the tokens, and keep no copy of their values", () => {
+  it("every surface and both pulses draw the tokens, and keep no copy of their values", () => {
     for (const c of CONSUMERS) {
       const body = ruleBody(SOURCES[c.file], c.selector);
       for (const [prop, value] of Object.entries(c.decls)) expect({ rule: c.selector, prop, value: body[prop] }).toEqual({ rule: c.selector, prop, value });
@@ -97,7 +103,7 @@ describe("keyline lab spec", () => {
     // Each token is declared once, in tokens.css, and nowhere else in the two consumers.
     for (const name of Object.values(TOKENS)) {
       expect(tokenValues(tokensCss, name)).toHaveLength(1);
-      expect(tokenValues(badgeCss + reviewCss, name)).toEqual([]);
+      expect(tokenValues(badgeCss + reviewCss + personCss, name)).toEqual([]);
     }
   });
 

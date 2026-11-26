@@ -77,6 +77,7 @@ export const FILES = {
   tokens: "bristlenose/theme/tokens.css",
   badge: "bristlenose/theme/atoms/badge.css",
   review: "bristlenose/theme/molecules/threshold-review.css",
+  person: "bristlenose/theme/molecules/person-badge.css",
 } as const;
 export type ThemeFile = (typeof FILES)[keyof typeof FILES];
 
@@ -90,11 +91,14 @@ export const TOKENS = {
   pulseHigh: "--bn-tentative-pulse-high",
 } as const;
 
-/** What each surface's shipped rule says: the tokens, never a copy of their values. */
+/** What each surface's shipped rule says: the tokens, never a copy of their values. The
+ *  proposed-name ring on people badges draws the keyline too (owner, 26 Nov 2026); the lab
+ *  has no people badge on the page, so it follows the token without a handle of its own. */
 export const CONSUMERS: Array<{ file: ThemeFile; selector: string; decls: Record<string, string> }> = [
   { file: FILES.badge, selector: SELECTORS.quote, decls: { opacity: `var(${TOKENS.opacity})`, border: `var(${TOKENS.keyline})` } },
   { file: FILES.review, selector: SELECTORS.counter, decls: { border: `var(${TOKENS.keyline})` } },
   { file: FILES.review, selector: SELECTORS.row, decls: { border: `var(${TOKENS.keyline})` } },
+  { file: FILES.person, selector: ".bn-person-proposed .bn-speaker-badge--split", decls: { border: `var(${TOKENS.keyline})` } },
 ];
 
 /** One change to the shipped theme: a token's value where it is declared, declarations on a

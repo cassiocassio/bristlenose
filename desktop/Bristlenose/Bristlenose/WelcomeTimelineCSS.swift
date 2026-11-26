@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–487 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–489 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -330,7 +330,9 @@ enum WelcomeTimelineCSS {
     /* Tentative — what a proposal wears while nobody has decided it: an AutoCode
        tag on a quote card or in Screens (atoms/badge.css .badge-proposed), the
        review dialog's tentative counter and a row's tag that Apply would leave
-       tentative (molecules/threshold-review.css). One line for all three:
+       tentative (molecules/threshold-review.css), and a name the pipeline
+       proposed and nobody has confirmed (molecules/person-badge.css
+       .bn-person-proposed, keyline only, owner 26 Nov). One line for all four:
        dotted, not dashed, because the dots are less aggressive (owner, 25 Nov
        2026, set in the keyline lab at /report/keyline-lab, which tunes these
        tokens in place). currentColor resolves on the element that draws the

@@ -2257,7 +2257,8 @@ means), so they cannot disagree.
   Escape also clears the search); Escape or a choice returns focus to the badge.
   The proposed ring is `.bn-person-proposed` in `molecules/person-badge.css`,
   its own class: borrowing AutoCode's `.badge-proposed` drew two rings and a
-  pulse. An exported report draws every name plain and opens no picker.
+  pulse. It shares the line itself, though: the `--bn-tentative-keyline` token,
+  dotted (owner, 26 Nov 2026; it had drawn dashed while this doc said dotted). An exported report draws every name plain and opens no picker.
   A name row has no key handler of its own, on purpose: the list's handler
   owns arrows, Enter, Space and type-to-jump, and a row handler as well chose
   twice on Space (a scoped eslint-disable says so).

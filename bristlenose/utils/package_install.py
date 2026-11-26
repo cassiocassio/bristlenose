@@ -37,6 +37,36 @@ class FrozenSidecarError(PackageInstallError):
     """Raised when an install is attempted from inside the read-only desktop sidecar."""
 
 
+class HostedInstallRefusedError(FrozenSidecarError):
+    """Raised when an installer (brew, pip, curl | sh, snap, winget) would run in the Mac app.
+
+    App Store guideline 2.5.2: an app may not download or install code. Every
+    installer shellout in ``bristlenose/`` calls :func:`refuse_install_when_hosted`
+    first, so the sandboxed sidecar refuses by construction rather than by the
+    accident of nothing in serve calling it (``tests/test_hosted_installers_refused.py``).
+    """
+
+
+def installs_forbidden() -> bool:
+    """True when this process runs inside the Mac app, where nothing may be installed.
+
+    Two independent signals, so one missing still refuses: the desktop host's
+    sentinel, and ``APP_SANDBOX_CONTAINER_ID``, which macOS itself sets in an
+    App Sandbox process. Deliberately not ``sys.frozen``: the Windows winget
+    build is a frozen CLI, and it installs Ollama with winget on purpose.
+    """
+    return os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1" or bool(
+        os.environ.get("APP_SANDBOX_CONTAINER_ID")
+    )
+
+
+def refuse_install_when_hosted(what: str) -> None:
+    """Raise :class:`HostedInstallRefusedError` before ``what`` is installed inside the Mac app."""
+    if installs_forbidden():
+        logger.warning("install refused inside the Mac app: %s", what)
+        raise HostedInstallRefusedError(f"cannot install {what} from inside the Mac app")
+
+
 def _is_frozen_sidecar() -> bool:
     # PyInstaller sets ``sys.frozen``; the desktop host also sets an explicit sentinel
     # so a non-PyInstaller build (or a Nuitka swap) keeps the guard.
@@ -91,6 +121,8 @@ def ensure_spacy_model(model_name: str) -> None:
             "add it to the PyInstaller datas list at build time."
         )
 
+    # `spacy download` is `pip install` of the model's wheel.
+    refuse_install_when_hosted(f"the spaCy model {model_name!r}")
     logger.info("ensure_spacy_model: downloading %s", model_name)
     try:
         subprocess.run(

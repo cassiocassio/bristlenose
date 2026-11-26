@@ -34,6 +34,7 @@ from bristlenose.i18n import t
 from bristlenose.preflight import PreflightAbortedError
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.package_install import installs_forbidden, refuse_install_when_hosted
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -173,6 +174,7 @@ def _run_brew_install(
     console: Console, status: Status | None
 ) -> None:
     """Shell out to ``brew install ffmpeg``, letting brew print natively (Option B)."""
+    refuse_install_when_hosted("FFmpeg")
     if status is not None:
         status.stop()
     t0 = time.perf_counter()
@@ -234,6 +236,8 @@ def preflight_ffmpeg(
 
     if (
         allow_install
+        # Never offered inside the Mac app (2.5.2); `_run_brew_install` refuses too.
+        and not installs_forbidden()
         and distro == "macos"
         and _brew_writable_prefix() is not None
         and _confirm_brew_install(console)

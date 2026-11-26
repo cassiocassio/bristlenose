@@ -469,10 +469,14 @@ def install_mlx() -> bool:
     """Install MLX and mlx-whisper via pip.
 
     Runs a subprocess with stdout/stderr forwarded so the user sees progress.
-    Returns ``True`` on success.
+    Returns ``True`` on success. Raises ``HostedInstallRefusedError`` inside the Mac
+    app (App Store guideline 2.5.2).
     """
     import subprocess
 
+    from bristlenose.utils.package_install import refuse_install_when_hosted
+
+    refuse_install_when_hosted("MLX")
     cmd, _display = get_mlx_install_command()
     try:
         result = subprocess.run(cmd)

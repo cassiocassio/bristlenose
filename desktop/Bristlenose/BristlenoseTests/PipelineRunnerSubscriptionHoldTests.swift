@@ -70,10 +70,39 @@ struct PipelineRunnerSubscriptionHoldTests {
         var clock = Persist.now
         rig.runner.queueJournal.now = { clock }
         await rig.runner.restoreQueue(from: journal, index: rig.index)
+        #expect(Persist.ids(journal) == [x.id])
         clock = Persist.now.addingTimeInterval(QueueRestorePolicy.window + 1)
         subscribe(store)
-        try? await Task.sleep(for: .milliseconds(100))
+        // As long as the sibling waits for a start that does happen.
+        await until { !rig.launches.isEmpty }
         #expect(rig.launches.isEmpty)
+        #expect(Persist.ids(journal).isEmpty, "a lapsed study stayed in the saved queue")
+    }
+
+    /// Review, 26 Nov 2026: Subscribe from the sheet started the held queue
+    /// before the study the researcher had just paid to analyse.
+    @Test func whatTheResearcherAskedForStartsBeforeTheHeldQueue() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (gate, store) = await lapsedGate()
+        rig.runner.subscriptionGate = gate
+        gate.resume = { [weak runner = rig.runner] project, clean in runner?.start(project: project, clean: clean) }
+        let x = Persist.study(rig, "X"), y = Persist.study(rig, "Y")
+        let journal = InMemoryRunQueueStore(PersistedRunQueue(entries: [
+            .init(projectID: x.id, clean: false, enqueuedAt: Persist.now, studyID: nil, inFlight: false),
+        ]))
+        rig.runner.queueJournal.now = { Persist.now }
+        await rig.runner.restoreQueue(from: journal, index: rig.index)
+        rig.runner.start(project: y)          // the researcher's Analyse: the sheet goes up
+        #expect(gate.pending?.project.id == y.id)
+
+        subscribe(store)                      // bought; the sheet has not resumed yet
+        await until { !rig.launches.isEmpty }
+        #expect(rig.launches.isEmpty, "the held queue started while the sheet was still up")
+
+        gate.resumePending()                  // the sheet's onSubscribed
+        await until { rig.runner.state[x.id] == .queued(position: 1) }
+        #expect(rig.launches.map(\.project.id) == [y.id])
+        #expect(rig.runner.state[x.id] == .queued(position: 1))
     }
 
     @Test func aHeldWhisperReRunIsStillOwedAndStartsWhenTheSubscriptionIsBack() async throws {

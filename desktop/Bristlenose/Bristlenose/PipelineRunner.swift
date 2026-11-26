@@ -2122,16 +2122,21 @@ final class PipelineRunner: ObservableObject {
     /// Start again what the subscription check held, now that it may pass: a
     /// restored queue's studies in their order, then the Whisper re-runs. Each
     /// study is read again from the sidebar (the one held may be gone, or
-    /// moved), and a queued study still has to be inside the restore window.
-    /// A study held again stays held.
+    /// moved), a queued study still has to be inside the restore window, and a
+    /// re-run still has to be owed. A study held again stays held. Nothing
+    /// starts while a study is waiting on the paywall: what the researcher
+    /// asked for goes first, and the gate calls this again once it has.
     func retryHeldStarts() {
+        if subscriptionGate?.pending != nil { return }
         let queued = queueJournal.heldForSubscription
         let reruns = whisperRerunsHeld
         guard !queued.isEmpty || !reruns.isEmpty else { return }
-        queueJournal.heldForSubscription = []
         whisperRerunsHeld = []
         let projects = projectIndex?.projects ?? []
         for entry in queued {
+            // Out of the held list only as it is handled: a journal write
+            // during an earlier study's spawn still carries the rest (N45).
+            queueJournal.heldForSubscription.removeAll { $0.projectID == entry.projectID }
             let project = projects.first { $0.id == entry.projectID }
             let decision = QueueRestorePolicy.decide(
                 entry, now: queueJournal.now(), project: project,
@@ -2145,14 +2150,18 @@ final class PipelineRunner: ObservableObject {
                 }
                 continue
             }
+            // As at the restore: the run Quit interrupted reads "Resuming…".
+            if entry.inFlight { resumingAfterQuit.insert(project.id) }
             let outcome = start(
                 project: project, clean: entry.clean,
                 requested: .init(at: entry.enqueuedAt, studyID: entry.studyID ?? project.studyID),
                 origin: .automatic
             )
+            resumingAfterQuit.remove(project.id)
             if outcome == .heldForSubscription { queueJournal.heldForSubscription.append(entry) }
         }
-        for id in reruns {
+        let stillWaiting = Set(projectsWaitingForWhisper)
+        for id in reruns where stillWaiting.contains(id) {
             guard let project = projects.first(where: { $0.id == id }) else { continue }
             if start(project: project, origin: .automatic) == .heldForSubscription {
                 whisperRerunsHeld.insert(id)

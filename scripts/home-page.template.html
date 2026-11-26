@@ -23,7 +23,7 @@ __BOARD_TOKENS__
   html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.35 var(--font)}
   .screen{padding:8px;display:grid;gap:8px;max-width:1280px;margin:0 auto}
   a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} a:hover{text-decoration-style:solid;color:var(--now)}
-  a:focus-visible,summary:focus-visible{outline:2px solid var(--now);outline-offset:2px;border-radius:3px}
+  a:focus-visible{outline:2px solid var(--now);outline-offset:2px;border-radius:3px}
   .top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
   .top h1{margin:0;font-size:14px;font-weight:600}
   .m{color:var(--mute);font-size:11px}
@@ -36,7 +36,7 @@ __BOARD_TOKENS__
   .banner{background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:8px;padding:6px 12px;color:var(--warn)}
   .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .span2{grid-column:span 2}
-  @media(max-width:920px){.grid{grid-template-columns:1fr}.span2{grid-column:auto}.two{grid-template-columns:1fr!important}}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}.span2{grid-column:auto}}
   .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px 6px;display:flex;flex-direction:column;gap:6px;min-width:0}
   .panel[data-state="old"]{border-color:var(--warn-bd)} .panel[data-state="unknown"]{border-color:var(--unknown-bd)}
   .ph{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-height:18px}
@@ -53,7 +53,7 @@ __BOARD_TOKENS__
   .st{flex:1;min-width:58px;display:flex;flex-direction:column;align-items:center;position:relative}
   .st::before{content:"";position:absolute;top:9px;left:0;right:0;height:4px;background:var(--rule2)}
   .st:first-child::before{left:50%} .st:last-child::before{right:50%}
-  .st i{position:relative;z-index:1;width:14px;height:14px;border-radius:50%;border:3px solid var(--skip);background:var(--panel);margin-top:4px}
+  .st i{position:relative;z-index:1;width:14px;height:14px;border-radius:50%;border:3px solid var(--mute);background:var(--panel);margin-top:4px}
   .st.ok i{border-color:var(--ok);background:var(--ok)} .st.bad i{border-color:var(--bad);background:var(--bad)}
   .st b{font-size:10.5px;font-weight:500;margin-top:5px;text-align:center;white-space:nowrap}
   .st small{font:9.5px var(--mono);color:var(--mute)}
@@ -64,8 +64,8 @@ __BOARD_TOKENS__
   svg{width:100%;height:auto;display:block} svg text{fill:var(--mute);font:9.5px var(--mono)}
   .gl{stroke:var(--rule);stroke-width:1}
   .why{font-size:10.5px;color:var(--warn);margin-top:auto;padding-top:4px;border-top:1px solid var(--rule)}
-  .why::before{content:"\25B2  ";font-size:8px;vertical-align:1px}
-  .why.unknown{color:var(--unknown)} .why.unknown::before{content:"?  ";font-size:10px;vertical-align:0}
+  .why::before{content:"\25B2  ";content:"\25B2  " / "";font-size:8px;vertical-align:1px}
+  .why.unknown{color:var(--unknown)} .why.unknown::before{content:"?  ";content:"?  " / "";font-size:10px;vertical-align:0}
   .src{font-size:10px;color:var(--mute);padding-top:2px}
   code{font:10px var(--mono)}
 </style>

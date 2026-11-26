@@ -53,14 +53,14 @@ ok("a javascript: link is plain text", !panel("evil").querySelector("h2 a") && /
 ok("a hostile title is text, not markup", panel("evil").querySelector("h2").textContent.includes("<img src=x onerror=alert(1)>") && !d.querySelector("img"));
 ok("a hostile fact is text", /<\/script><script>alert\(2\)<\/script>/.test(panel("evil").textContent));
 const exp = Array.from(d.querySelectorAll("td.n")).map(td => td.textContent);
-ok("expiry rows: soon, later, expired, unknown", JSON.stringify(exp) === JSON.stringify(["▲ 30", "100", "▲ expired", "? unknown"]), JSON.stringify(exp));
+ok("expiry rows: soon, later, expired, unknown", JSON.stringify(exp) === JSON.stringify(["▲ 30 · soon", "100", "▲ expired", "? unknown"]), JSON.stringify(exp));
 ok("page age is fresh now", d.getElementById("stale24").hidden === true && /^page built/.test(d.getElementById("built").textContent), d.getElementById("built").textContent);
 // the clock moves on: looked at again two hours later, the fresh panel (limit 1 h) is old, with no reload
 w.__setNow(NOW + 2 * 3600 * 1000); d.dispatchEvent(new w.Event("visibilitychange"));
 ok("a page left open turns old when looked at again", panel("fresh").getAttribute("data-state") === "old", panel("fresh").getAttribute("data-state"));
-ok("and a 30-day-plus-an-hour expiry has lost a day after two hours (floor)", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0] === "▲ 29", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0]);
+ok("and a 30-day-plus-an-hour expiry has lost a day after two hours (floor)", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0] === "▲ 29 · soon", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0]);
 w.__setNow(NOW + 3 * 86400 * 1000); w.dispatchEvent(new w.Event("focus"));
 ok("three days later the page itself is stale", d.getElementById("stale24").hidden === false);
-ok("and a 30-day expiry has lost three days", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0] === "▲ 27", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0]);
+ok("and a 30-day expiry has lost three days", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0] === "▲ 27 · soon", Array.from(d.querySelectorAll("td.n")).map(td => td.textContent)[0]);
 console.log(passes + " passed, " + fails + " failed");
 process.exit(fails ? 1 : 0);

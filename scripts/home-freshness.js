@@ -43,7 +43,9 @@
   function freshness(panel, nowMs) {
     var nowS = nowMs / 1000;
     if (panel.stateless) return { state: "link", words: "", note: null };
+    if (!isNum(nowMs)) return { state: "unknown", words: "? clock unreadable", note: null };
     if (panel.status === "nodata") return { state: "nodata", words: "no data", note: null };
+    if (panel.status !== "ok" && panel.status !== "unknown") return { state: "unknown", words: "? unrecognised status", note: null };
     var label = panel.as_of_label || "as of";
     var hasAsOf = isNum(panel.as_of);
     if (panel.status === "unknown") {

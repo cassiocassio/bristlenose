@@ -82,7 +82,7 @@ def test_release_link_exists_only_when_the_board_page_does(tmp_path):
 
 def test_parse_finished_reads_the_real_line_and_nothing_else():
     d = hl.parse_finished("started 19:34:40\n  11,177/11,222  passed 11,160\n" + FINISHED + "\n")
-    assert d == {"ran": 11222, "total": 11222, "passed": 11205, "failed": 5, "error": 0, "skipped": 5, "xfailed": 7, "seconds": 210}
+    assert d == {"ran": 11222, "total": 11222, "passed": 11205, "failed": 5, "error": 0, "skipped": 5, "xfailed": 7, "seconds": 210, "complete": True}
     assert hl.parse_finished("started 19:34:40\n  11,177/11,222  passed 11,160") is None
     assert hl.parse_finished("finished 11,222/11,222 passed lots") is None
 
@@ -104,10 +104,39 @@ def test_tests_the_last_finished_result_survives_pytest_wiping_the_file(tmp_path
     assert any("in progress" in f for f in p["facts"])
 
 
+def test_a_run_that_stopped_early_or_was_one_file_is_not_a_result_and_never_green(tmp_path):
+    complete = write(tmp_path / "live.txt", FINISHED + "\n", NOW - 7200)
+    hl.read_tests(complete, tmp_path / "out")                                       # a real full run is cached
+    partial = write(tmp_path / "live.txt", "finished 400/3,000  passed 400  failed 0  error 0  skipped 0  xfailed 0  · 30 s\n", NOW - 60)
+    p = hl.read_tests(partial, tmp_path / "out")
+    assert "5 failed" in p["body"][0]["items"][0]["text"] and p["as_of"] == NOW - 7200         # still the last COMPLETE run
+    assert any("did not complete (ran 400 of 3,000)" in f for f in p["facts"])
+    assert json.loads((tmp_path / "out" / "tests.json").read_text())["finished"]["ran"] == 11222   # the cache was not overwritten
+
+
+def test_a_partial_run_with_nothing_cached_is_no_data_not_a_green_pill(tmp_path):
+    partial = write(tmp_path / "live.txt", "finished 5/9,999  passed 5  failed 0  error 0  skipped 0  xfailed 0  · 1 s\n", NOW)
+    assert hl.read_tests(partial, tmp_path / "out")["status"] == "nodata"
+
+
+def test_a_cache_with_missing_keys_is_no_data_not_a_crash(tmp_path):
+    live = write(tmp_path / "live.txt", "started 20:01:00\n", NOW)
+    write(tmp_path / "out" / "tests.json", json.dumps({"finished": {"ran": 1}, "as_of": 5}))
+    assert hl.read_tests(live, tmp_path / "out")["status"] == "nodata"
+    write(tmp_path / "out" / "tests.json", '{"finished": {"passed": 1, "failed": 0, "error": 0, "skipped": 0, "seconds": 1}, "as_of": NaN}')
+    assert hl.read_tests(live, tmp_path / "out")["status"] == "nodata"               # NaN is not JSON and is refused
+
+
 def test_tests_nothing_finished_and_nothing_cached_is_no_data(tmp_path):
     live = write(tmp_path / "live.txt", "started 20:01:00\n", NOW)
     assert hl.read_tests(live, tmp_path / "out")["status"] == "nodata"
     assert hl.read_tests(tmp_path / "absent.txt", tmp_path / "out")["status"] == "nodata"
+
+
+def test_tests_when_git_cannot_be_read_it_says_so_instead_of_staying_silent(tmp_path):
+    live = write(tmp_path / "live.txt", FINISHED + "\n", NOW - 3600)
+    assert any("Could not read the latest commit time" in f for f in hl.read_tests(live, tmp_path / "o", head_commit_epoch=None)["facts"])
+    assert not any("commit" in f for f in hl.read_tests(live, tmp_path / "o2")["facts"])          # not asked: no claim either way
 
 
 def test_tests_says_when_commits_are_newer_than_the_run(tmp_path):
@@ -129,6 +158,23 @@ def test_ci_uses_the_newest_completed_run_and_skips_one_in_progress(tmp_path):
     write(tmp_path / "out" / "ci.json", ci_runs(run("success", created="2026-11-26T18:00:00Z"), run("", status="in_progress", created="2026-11-26T20:30:00Z")))
     pills = hl.read_tests(live, tmp_path / "out")["body"][0]["items"]
     assert "CI on main: success (7c7c79e" in pills[1]["text"] and pills[1]["tone"] == "ok"
+
+
+def test_ci_run_shows_its_own_age_and_is_compared_with_the_latest_commit(tmp_path):
+    live = write(tmp_path / "live.txt", FINISHED + "\n", NOW)
+    write(tmp_path / "out" / "ci.json", ci_runs(run("success", created="2026-11-26T18:00:00Z")))
+    created = hl.iso_z_to_epoch("2026-11-26T18:00:00Z")
+    p = hl.read_tests(live, tmp_path / "out", head_commit_epoch=created + 3600)
+    assert {"kind": "age", "label": "CI run", "epoch": created} in p["body"]
+    assert any("newer than this CI run" in f for f in p["facts"])
+
+
+def test_ci_event_none_is_left_out_not_printed(tmp_path):
+    live = write(tmp_path / "live.txt", FINISHED + "\n", NOW)
+    r = run("success")
+    r["event"] = None
+    write(tmp_path / "out" / "ci.json", ci_runs(r))
+    assert "None" not in hl.read_tests(live, tmp_path / "out")["body"][0]["items"][1]["text"]
 
 
 def test_ci_cancelled_is_neither_green_nor_red_and_a_failure_is_red(tmp_path):
@@ -234,9 +280,11 @@ def test_host_failed_attempt_is_unknown_with_a_fixed_string_and_keeps_the_last_g
     assert p["status"] == "unknown" and p["error"] == "host unreachable" and p["as_of"] == NOW - 79200
 
 
-def test_host_state_with_an_error_we_do_not_know_is_refused(tmp_path):
+def test_host_state_with_an_error_we_do_not_know_is_refused_as_unreadable(tmp_path):
     put_host(tmp_path, error="ssh: connect to host stranger@evil.example port 22")
-    assert hl.read_host(tmp_path)["status"] == "nodata"
+    p = hl.read_host(tmp_path)
+    assert p["status"] == "unknown" and p["error"] == hl.ERR["unreadable"]
+    assert "stranger" not in json.dumps(p)
 
 
 def test_feedback_counts_the_five_ratings_and_carries_no_message_text(tmp_path):
@@ -271,9 +319,10 @@ def test_expiries_rows_sorted_news_row_from_the_host_and_a_bad_date_stays_listed
     put_host(tmp_path)
     p = hl.read_expiries([{"what": "Copr token", "date": "2027-02-23"}, {"what": "Broken", "date": "soon"}], tmp_path)
     rows = p["body"][0]["rows"]
-    assert p["stateless"] is True
+    assert p["stateless"] is False and p["as_of"] == NOW - 1800 and p["max_age"] == 36 * 3600     # the news row's age is not hidden
     assert [r["what"] for r in rows] == ["News file (re-sign and redeploy)", "Copr token", "Broken"]
     assert rows[0]["epoch"] == GOOD["news_expires_epoch"] and rows[-1]["epoch"] is None
+    assert rows[1]["epoch"] == hl.iso_z_to_epoch("2027-02-23T23:59:59Z")          # a date-only expiry is the END of that day
 
 
 def test_expiries_without_a_host_read_keeps_the_news_row_as_unknown(tmp_path):
@@ -356,3 +405,114 @@ def test_installs_many_unreadable_rows_is_unknown_not_a_smaller_number(tmp_path)
     write_counts(tmp_path / "c", daily=bad + ["2026-11-09,,,50,0,0,0,0"])
     p = hl.read_installs(WEBSITE, tmp_path / "c")
     assert p["status"] == "unknown"
+
+
+# ---- one rule for everything fed by host.json -------------------------------------------------------
+
+def test_no_host_file_yet_is_no_data_but_no_host_configured_is_unknown_not_configured(tmp_path):
+    for read in (hl.read_host, hl.read_feedback):
+        assert read(tmp_path)["status"] == "nodata"
+        p = read(tmp_path, configured=False)
+        assert p["status"] == "unknown" and p["error"] == hl.ERR["unconfigured"]
+
+
+@pytest.mark.parametrize("junk", ["not json", "[]", '{"last_good": {"fetched_at": 1, "data": {}}, "last_attempt": {"at": 1, "error": null}}',
+                                  '{"last_good": null, "last_attempt": 5}'])
+def test_a_host_file_that_exists_but_cannot_be_trusted_is_unknown_not_no_data(tmp_path, junk):
+    write(tmp_path / "host.json", junk)
+    for read in (hl.read_host, hl.read_feedback):
+        p = read(tmp_path)
+        assert p["status"] == "unknown" and p["error"] == hl.ERR["unreadable"]
+
+
+def test_a_missing_host_heartbeat_is_unknown_never_1970(tmp_path):
+    put_host(tmp_path, data=dict(GOOD, heartbeat_epoch=0))
+    p = hl.read_host(tmp_path)
+    assert p["status"] == "unknown" and p["as_of"] is None
+
+
+def test_host_shows_a_bad_pill_when_the_news_endpoint_answers_badly_and_says_so_when_unread(tmp_path):
+    put_host(tmp_path, data=dict(GOOD, news_status=500))
+    pill = hl.read_host(tmp_path)["body"][0]["items"][0]
+    assert pill["tone"] == "bad" and "answers 500" in pill["text"]
+    put_host(tmp_path, data=dict(GOOD, news_status=0))
+    assert any("could not be read" in f for f in hl.read_host(tmp_path)["facts"])
+
+
+def test_the_news_expiry_is_unknown_when_the_last_host_read_failed(tmp_path):
+    put_host(tmp_path, error="timeout")
+    p = hl.read_expiries([], tmp_path)
+    assert p["body"][0]["rows"] == [{"what": "News file (re-sign and redeploy)", "epoch": None}] and p["stateless"] is True
+
+
+def test_running_home_again_is_only_offered_when_the_pull_itself_is_old(tmp_path):
+    put_host(tmp_path, fetched=NOW - 600)                                      # pulled ten minutes ago: re-running cannot help
+    assert hl.read_host(tmp_path, now=NOW)["refreshable"] is False and hl.read_feedback(tmp_path, now=NOW)["refreshable"] is False
+    put_host(tmp_path, fetched=NOW - 7200)                                     # a stale copy: re-running can
+    assert hl.read_host(tmp_path, now=NOW)["refreshable"] is True and hl.read_feedback(tmp_path, now=NOW)["refreshable"] is True
+
+
+# ---- release: a verify for another version, and an old board ----------------------------------------------
+
+def test_release_a_verify_for_another_version_is_not_a_verify_of_this_one(tmp_path):
+    m = board(batches=1, states={"pypi": "ok"})
+    m["channels"]["version_mismatch"] = True
+    write(tmp_path / "release" / "board.json", json.dumps(m))
+    p = hl.read_release(tmp_path)
+    assert any("not verified" in f and "different version" in f for f in p["facts"])
+    assert all(s["state"] != "ok" for s in p["body"][1]["items"])
+
+
+def test_release_says_when_the_board_is_not_for_the_current_version(tmp_path):
+    write(tmp_path / "release" / "board.json", json.dumps(board()))
+    assert any("current version is 0.49.0" in f for f in hl.read_release(tmp_path, current_version="0.49.0")["facts"])
+    assert not any("current version" in f for f in hl.read_release(tmp_path, current_version="0.48.0")["facts"])
+
+
+def test_release_station_label_carries_each_stations_note_so_could_not_look_is_not_not_verified(tmp_path):
+    write(tmp_path / "release" / "board.json", json.dumps(board(batches=1, states={"snap": "unreachable", "testflight": "skipped", "pypi": "ok"})))
+    aria = hl.read_release(tmp_path)["body"][1]["aria"]
+    assert "snap could not look" in aria and "testflight skipped" in aria and "pypi ok" in aria
+
+
+# ---- bugs ------------------------------------------------------------------------------------------------------
+
+def test_the_bug_chart_label_says_the_true_direction_and_dates():
+    assert hl.trend_words([34, 17], ["16 Nov", "20 Nov"]) == "Open bugs fell from 34 to 17 between 16 Nov and 20 Nov"
+    assert hl.trend_words([10, 14], ["a", "b"]).startswith("Open bugs rose from 10 to 14")
+    assert hl.trend_words([17, 17], ["16 Nov", "16 Nov"]) == "Open bugs stayed at 17 on 16 Nov"
+
+
+def test_the_bug_chart_top_covers_the_biggest_earlier_value(tmp_path):
+    write(tmp_path / "state.json", state(["fixed"] * 2 + ["decision"], history=[{"t": "2026-11-01T00:00", "open": 9}]))
+    assert hl.read_bugs(tmp_path)["body"][0]["top"] == 9                  # more bugs once than there are now: not clipped
+
+
+def test_a_headline_number_is_not_a_second_link_to_the_title_page(tmp_path):
+    write(tmp_path / "state.json", state(["fixed", "decision"]))
+    write(tmp_path / "campaign.html", "<html>")
+    p = hl.read_bugs(tmp_path)
+    assert p["link"] and all("link" not in k for k in p["body"][1]["items"])
+
+
+@needs_website
+def test_installs_active_installs_counts_only_opted_in_rows_like_the_dashboard_it_links_to(tmp_path):
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    write_counts(tmp_path / "c", daily=[f"{today},,,50,0,3,0,0", f"{today},store,0.48,6,1,1,2,0"])
+    p = hl.read_installs(WEBSITE, tmp_path / "c")
+    assert p["body"][0]["items"][2]["n"] == 1          # the bare row's month=3 is not an install
+
+
+@needs_website
+def test_installs_running_home_again_is_only_offered_when_our_copy_of_the_counts_is_old(tmp_path):
+    write_counts(tmp_path / "c")
+    assert hl.read_installs(WEBSITE, tmp_path / "c")["refreshable"] is False                  # pulled a moment ago: the host job stopped
+    assert hl.read_installs(WEBSITE, tmp_path / "c", now=time.time() + 7 * 3600)["refreshable"] is True
+
+
+@needs_website
+def test_installs_headline_number_is_not_a_second_link_to_the_title_page(tmp_path):
+    write_counts(tmp_path / "c")
+    write(tmp_path / "c" / "dashboard.html", "<html>")
+    p = hl.read_installs(WEBSITE, tmp_path / "c")
+    assert p["link"] and all("link" not in k for k in p["body"][0]["items"])

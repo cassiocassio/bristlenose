@@ -4,7 +4,9 @@
  */
 (function () {
   "use strict";
-  var DATA = JSON.parse(document.getElementById("home-data").textContent);
+  var DATA;
+  try { DATA = JSON.parse(document.getElementById("home-data").textContent); }
+  catch (e) { document.getElementById("sum").textContent = "? the page data could not be read"; return; }
   var H = window.HomeFreshness;
   var SVGNS = "http://www.w3.org/2000/svg";
   var panelEls = [];
@@ -82,11 +84,12 @@
       var all = pts.map(function (p) { return num(p.all); }), opt = pts.map(function (p) { return num(p.opt); });
       s.appendChild(svg("path", { d: path(all, opt), fill: "var(--s-a)", "fill-opacity": ".55" }));
       s.appendChild(svg("path", { d: path(opt, null), fill: "var(--s-b)", "fill-opacity": ".85" }));
+      s.appendChild(svg("path", { d: "M" + all.map(function (v, i) { return x(i).toFixed(1) + " " + y(v).toFixed(1); }).join(" L"), fill: "none", stroke: "var(--s-a)", "stroke-width": "1.5" }));
       s.appendChild(svg("path", { d: "M" + opt.map(function (v, i) { return x(i).toFixed(1) + " " + y(v).toFixed(1); }).join(" L"), fill: "none", stroke: "var(--ink)", "stroke-width": "1.5" }));
       s.appendChild(svgText(0, y(top) + 3, Math.round(top))); s.appendChild(svgText(0, y(0) + 3, "0"));
       s.appendChild(svgText(L, Hh - 4, b.first_label || "")); s.appendChild(svgText(W - R, Hh - 4, b.last_label || "", "end"));
       var w = el("div"); w.appendChild(s);
-      w.appendChild(el("div", "m", "■ opted in (lower)  ■ not opted in (upper) · the line is the opted-in edge"));
+      w.appendChild(el("div", "m", "■ opted in (lower)  ■ not opted in (upper) · the black line is the opted-in edge"));
       return w;
     },
     line: function (b) {          /* one series, optional straight-line plan */
@@ -138,7 +141,7 @@
     },
     expiries: function (b) {      /* rows carry their own epoch; days left is worked out in the page, from the clock */
       var t = document.createElement("table"), hr = document.createElement("tr");
-      ["What", "Date", "Days"].forEach(function (h) { var th = el("th", null, h); th.scope = "col"; hr.appendChild(th); });
+      ["What", "Date", "Days left"].forEach(function (h) { var th = el("th", null, h); th.scope = "col"; hr.appendChild(th); });
       t.appendChild(hr);
       (b.rows || []).forEach(function (r) {
         var tr = document.createElement("tr"), what = el("td", null, r.what), date = el("td"), days = el("td", "n");
@@ -169,26 +172,46 @@
   function paintExpiries(nowMs) {
     document.querySelectorAll("td[data-epoch]").forEach(function (td) {
       var left = Math.floor((Number(td.getAttribute("data-epoch")) * 1000 - nowMs) / 86400000);
-      td.textContent = left < 0 ? "▲ expired" : left < 60 ? "▲ " + left : String(left);
+      td.textContent = "";
+      if (left < 60) {
+        var mark = el("span", null, "▲ "); mark.setAttribute("aria-hidden", "true"); td.appendChild(mark);
+        td.appendChild(document.createTextNode(left < 0 ? "expired" : left + " · soon"));
+      } else { td.textContent = String(left); }
     });
+  }
+
+  function buildPanel(p) {
+    var sec = el("section", "panel" + (p.span === 2 ? " span2" : ""));
+    sec.setAttribute("data-id", String(p.id));
+    var ph = el("div", "ph"), h = el("h2", "cap");
+    var href = p.link ? safeHref(p.link) : null;
+    if (href) { var a = el("a", null, p.title); a.href = href; if (p.link_note) a.title = p.link_note; h.appendChild(a); } else { h.textContent = String(p.title); }
+    ph.appendChild(h);
+    var fr = el("span", "fresh"); ph.appendChild(fr); sec.appendChild(ph);
+    var frag = document.createDocumentFragment(), drew = true;
+    try {
+      (p.body || []).forEach(function (b) { var f = BODY[b.kind]; if (!f) throw new Error("unknown body kind"); frag.appendChild(f(b)); });
+    } catch (e) { drew = false; }
+    if (drew) sec.appendChild(frag); else sec.appendChild(el("div", "m", "? could not draw this panel"));
+    (p.facts || []).forEach(function (t) { sec.appendChild(el("div", "m", t)); });
+    var why = el("div", "why"); why.hidden = true; sec.appendChild(why);
+    if (p.src) sec.appendChild(el("div", "src", p.src));
+    return { p: p, sec: sec, fr: fr, why: why };
   }
 
   function build() {
     var grid = document.getElementById("grid");
     DATA.panels.forEach(function (p) {
-      var sec = el("section", "panel" + (p.span === 2 ? " span2" : ""));
-      sec.setAttribute("data-id", String(p.id));
-      var ph = el("div", "ph"), h = el("h2", "cap");
-      var href = p.link ? safeHref(p.link) : null;
-      if (href) { var a = el("a", null, p.title); a.href = href; if (p.link_note) a.title = p.link_note; h.appendChild(a); } else { h.textContent = p.title; }
-      ph.appendChild(h);
-      var fr = el("span", "fresh"); ph.appendChild(fr); sec.appendChild(ph);
-      (p.body || []).forEach(function (b) { var f = BODY[b.kind]; if (f) sec.appendChild(f(b)); });
-      (p.facts || []).forEach(function (t) { sec.appendChild(el("div", "m", t)); });
-      var why = el("div", "why"); why.hidden = true; sec.appendChild(why);
-      if (p.src) sec.appendChild(el("div", "src", p.src));
-      grid.appendChild(sec);
-      panelEls.push({ p: p, sec: sec, fr: fr, why: why });
+      var e;
+      try { e = buildPanel(p); }
+      catch (err) {
+        var sec = el("section", "panel"), ph = el("div", "ph"), h = el("h2", "cap", "panel"), fr = el("span", "fresh");
+        ph.appendChild(h); ph.appendChild(fr); sec.appendChild(ph); sec.appendChild(el("div", "m", "? could not draw this panel"));
+        var why = el("div", "why"); why.hidden = true; sec.appendChild(why);
+        e = { p: { status: "unknown" }, sec: sec, fr: fr, why: why };
+      }
+      grid.appendChild(e.sec);
+      panelEls.push(e);
     });
   }
 
@@ -209,9 +232,10 @@
     if (c.old) parts.push(c.old + " old");
     if (c.unknown) parts.push(c.unknown + " unknown");
     if (c.nodata) parts.push(c.nodata + " no data");
-    var s = document.getElementById("sum");
-    s.textContent = parts.join(" · ");
-    s.className = "pill " + (c.unknown ? "unknown" : c.old ? "warn" : c.nodata ? "" : "ok");
+    var s = document.getElementById("sum"), next = parts.join(" · ");
+    var cls = "pill " + (c.unknown ? "unknown" : c.old ? "warn" : c.nodata ? "" : "ok");
+    if (s.textContent !== next) s.textContent = next;     // a live region: rewriting identical text makes screen readers repeat it
+    if (s.className !== cls) s.className = cls;
     document.getElementById("again").hidden = !c.runAgain;
     var pa = H.pageAge(DATA.built_at, now);
     document.getElementById("built").textContent = pa.words;

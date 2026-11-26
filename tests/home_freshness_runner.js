@@ -16,7 +16,7 @@ function check(name, got, want) {
   const a = JSON.stringify(got), b = JSON.stringify(want);
   if (a !== b) { bad++; console.log("FAIL " + name + "\n  got  " + a + "\n  want " + b); }
 }
-T.freshness.forEach(c => check("freshness: " + c.name, H.freshness(build(c.panel), nowMs), c.expect));
+T.freshness.forEach(c => check("freshness: " + c.name, H.freshness(build(c.panel), c.now_raw === "NaN" ? NaN : nowMs), c.expect));
 T.summary.forEach(c => check("summary: " + c.name, H.summary(c.panels.map(build), nowMs), c.expect));
 T.page.forEach(c => check("page: " + c.name, H.pageAge(c.built_at_offset === null ? null : T.now_s + c.built_at_offset, nowMs), c.expect));
 console.log((T.freshness.length + T.summary.length + T.page.length - bad) + " passed, " + bad + " failed");

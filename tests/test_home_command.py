@@ -49,6 +49,20 @@ def test_the_ssh_argv_is_exactly_the_hardened_option_set_then_the_alias_then_the
         assert must in opts, must
 
 
+def test_gh_is_pinned_to_this_repository_not_to_whatever_directory_home_was_run_from(tmp_path):
+    argv = home.job_argv(cfg(tmp_path))["ci"]["argv"]
+    assert argv[argv.index("-R") + 1] == home.GH_REPO == "cassiocassio/bristlenose"
+    assert "--json" in argv and argv[argv.index("--json") + 1] == "conclusion,status,createdAt,headSha,event"
+
+
+def test_ssh_never_reuses_a_multiplexed_connection(tmp_path):
+    assert "ControlPath=none" in home.job_argv(cfg(tmp_path))["host"]["argv"]
+
+
+def test_the_remote_python_runs_isolated_on_the_shared_account():
+    assert home.REMOTE_CMD.startswith("python3 -I -c '")
+
+
 def test_without_a_host_alias_there_is_no_host_job(tmp_path):
     assert "host" not in home.job_argv(cfg(tmp_path, alias=None))
 
@@ -115,13 +129,25 @@ def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
     assert marker not in out
 
 
+def test_a_csv_error_part_way_fails_the_whole_read_instead_of_printing_partial_counts(tmp_path):
+    (tmp_path / "bn-counts").mkdir()
+    (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok\n")
+    feedback_csv(tmp_path, ["2026-01-05 10:00:00,0.43.0,neutral,fine,feedback", "2026-01-06 10:00:00,0.43.0,love," + "x" * 200000 + ",feedback"])
+    code = home.REMOTE_PY.replace("https://bristlenose.app/app/news", "http://127.0.0.1:9/never")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60,
+                       env={"HOME": str(tmp_path), "PATH": os.environ["PATH"]})
+    assert r.returncode != 0, "the counts would have stopped at 1 row and looked complete"
+    assert hl.parse_host_output(r.stdout) is None
+
+
 def test_the_remote_command_with_no_files_still_prints_parseable_zeros(tmp_path):
     d = hl.parse_host_output(run_remote(tmp_path))
     assert d is not None and d["total"] == 0 and d["heartbeat_epoch"] == 0
 
 
 def test_the_remote_command_has_no_single_quote_and_nothing_interpolated():
-    assert "'" not in home.REMOTE_PY        # the command is wrapped in single quotes for the remote shell
+    for ch in ("'", "\\", "!", "$", "`"):          # wrapped in single quotes for the remote shell; these would be read by fish/csh/zsh
+        assert ch not in home.REMOTE_PY, ch
 
 
 # ---- recording what a job did ---------------------------------------------------------------------------
@@ -158,6 +184,45 @@ def test_ci_json_keeps_only_the_five_fields_a_stranger_cannot_write(tmp_path):
     home.record_ci(tmp_path, "failed", b"garbage")
     home.record_ci(tmp_path, "ok", b"not json")
     assert json.loads((tmp_path / "ci.json").read_text()) == saved                 # a bad read leaves the old file
+
+
+@pytest.mark.parametrize("junk", [b"null", b"5", b"[]", b'{"a": 1}', b"not json", b'[{"event": "pull_request", "conclusion": "success"}]'])
+def test_a_bad_gh_answer_leaves_the_last_good_ci_file_alone(tmp_path, junk):
+    good = [{"conclusion": "success", "status": "completed", "createdAt": "2026-11-26T20:00:00Z", "headSha": "7c7c79e", "event": "push"}]
+    home.record_ci(tmp_path, "ok", json.dumps(good).encode())
+    before = (tmp_path / "ci.json").read_text()
+    home.record_ci(tmp_path, "ok", junk)                       # must neither raise nor wipe the cache
+    assert (tmp_path / "ci.json").read_text() == before
+
+
+def test_pull_requests_are_never_recorded_as_ci_on_main(tmp_path):
+    rows = [{"conclusion": "failure", "status": "completed", "createdAt": "2026-11-26T21:00:00Z", "headSha": "abcdef0", "event": "pull_request"},
+            {"conclusion": "success", "status": "completed", "createdAt": "2026-11-26T20:00:00Z", "headSha": "7c7c79e", "event": "push"}]
+    home.record_ci(tmp_path, "ok", json.dumps(rows).encode())
+    assert [r["event"] for r in json.loads((tmp_path / "ci.json").read_text())["runs"]] == ["push"]
+
+
+def run_names(c, monkeypatch, now):
+    ran = []
+    monkeypatch.setattr(home, "run", lambda argv, timeout: (ran.append(argv[0]) or ("failed", b"")))
+    home.run_jobs(c, offline=False, now=now, say=lambda *_: None)
+    return ran
+
+
+def test_after_a_failed_host_read_the_next_run_tries_again_at_once(tmp_path, monkeypatch):
+    """host.json is rewritten on every attempt, so its file time must NOT be the freshness mark: the last GOOD fetch is."""
+    c = cfg(tmp_path)
+    (tmp_path / "out").mkdir()
+    home.record_host(tmp_path / "out", "ok", GOOD.encode(), NOW - 7200.0)           # last good: two hours ago
+    home.record_host(tmp_path / "out", "failed", b"", NOW - 60.0)                    # a failed attempt a minute ago (file mtime: now)
+    assert "ssh" in run_names(c, monkeypatch, NOW)
+
+
+def test_a_recent_good_host_read_is_not_repeated(tmp_path, monkeypatch):
+    c = cfg(tmp_path)
+    (tmp_path / "out").mkdir()
+    home.record_host(tmp_path / "out", "ok", GOOD.encode(), NOW - 100.0)
+    assert "ssh" not in run_names(c, monkeypatch, NOW)
 
 
 def test_files_are_written_private_and_atomically(tmp_path):
@@ -226,7 +291,7 @@ def test_a_reader_that_raises_or_exits_becomes_one_unknown_panel_not_the_end_of_
         raise SystemExit(2)
     for fn in (boom, bye):
         p = home.guarded("x", "X", fn)
-        assert p["status"] == "unknown" and p["error"] == hl.ERR["failed"] and "secret" not in json.dumps(p)
+        assert p["status"] == "unknown" and p["error"] == hl.ERR["reader"] and "secret" not in json.dumps(p)
     assert home.guarded("ok", "OK", lambda: {"id": "ok"}) == {"id": "ok"}
 
 

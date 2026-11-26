@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -30,6 +31,8 @@ ERR = {
     "unreachable": "host unreachable",
     "timeout": "timed out",
     "failed": "the refresh job failed",
+    "reader": "this panel could not be read",
+    "unconfigured": "no host is configured",
 }
 
 
@@ -138,7 +141,7 @@ def _dashboard_module(website_repo: Path):
     return _load_module(website_repo / "scripts" / "counts-dashboard.py", "counts_dashboard_for_home")
 
 
-def read_installs(website_repo: Path, counts_dir: Path) -> dict:
+def read_installs(website_repo: Path, counts_dir: Path, now: float | None = None) -> dict:
     """Panel 1, from the CSVs `counts-refresh.sh` pulled, through the website repo's own loader (one
     copy of the parsing and of its hostile-value rules). The loader can raise SystemExit on a wrong
     header: that is caught here as `unknown`, not allowed to end the whole run."""
@@ -160,6 +163,9 @@ def read_installs(website_repo: Path, counts_dir: Path) -> dict:
     if d.heartbeat is None:
         return unknown(pid, title, "unexpected", link=link, **common)
     as_of = d.heartbeat.timestamp()
+    # running home again can only help if our COPY is stale; a recent pull of an old heartbeat means the host job stopped
+    pulled = mtime(counts_dir / "heartbeat")
+    common = dict(common, refreshable=not (pulled is not None and (now if now is not None else time.time()) - pulled < 6 * 3600))
     rows = len(d.daily) + len(d.monthly)
     if not d.daily:
         return nodata(pid, title, link=link, as_of=as_of, **common)
@@ -176,8 +182,8 @@ def read_installs(website_repo: Path, counts_dir: Path) -> dict:
         return sum(r["checks"] for r in d.daily if r["date"] == x and r["ch"])
 
     month_key = last.strftime("%Y-%m")
-    active = sum(r["month"] for r in d.daily if r["date"].strftime("%Y-%m") == month_key)
-    kpis = [{"n": day_all(last), "l": f"checks on {last.day} {last.strftime('%b')}", "link": link},
+    active = sum(r["month"] for r in d.daily if r["ch"] and r["date"].strftime("%Y-%m") == month_key)
+    kpis = [{"n": day_all(last), "l": f"checks on {last.day} {last.strftime('%b')}"},
             {"n": day_opt(last), "l": "of them opted in"},
             {"n": active, "l": f"active installs, {last.strftime('%b')}"}]
     body = [{"kind": "kpis", "items": kpis}]
@@ -233,11 +239,16 @@ def iso_z_to_epoch(s) -> float | None:
     return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
 
 
+def _refuse_constant(name):
+    raise ValueError(name)
+
+
 def read_json(path: Path):
-    """The parsed file, or None when it is absent, unreadable or not JSON. Never raises."""
+    """The parsed file, or None when it is absent, unreadable or not JSON. NaN and Infinity are not
+    JSON and are refused (they would pass a float check and then break the page). Never raises."""
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        return json.loads(Path(path).read_text(encoding="utf-8"), parse_constant=_refuse_constant)
+    except (OSError, ValueError, RecursionError):
         return None
 
 
@@ -253,11 +264,12 @@ def mtime(path: Path) -> float | None:
 _VERSION = re.compile(r"^\d+\.\d+\.\d+$")
 
 
-def read_release(out_dir: Path) -> dict:
+def read_release(out_dir: Path, current_version: str | None = None) -> dict:
     """From the release board's own model, written by `release-board.py --out <out_dir>/release`.
     `as_of` is the board's `header.newest_source`, never its `generated` (which is the moment the
-    model was built, so it would make every release look fresh forever). With no verify batch the
-    channels are NOT VERIFIED, said in words, never a count of fine ones."""
+    model was built, so it would make every release look fresh forever). With no verify batch, or a
+    verify recorded for a different version, the channels are NOT VERIFIED, said in words, never a
+    count of fine ones."""
     pid, title = "release", "Release"
     common = {"span": 2, "as_of_label": "run", "max_age": 30 * 86400, "refreshable": False,
               "src": "The release board's own model (no network). Open the board for the run picker and replay."}
@@ -287,17 +299,22 @@ def read_release(out_dir: Path) -> dict:
             else:
                 stations.append({"name": name, "state": "bad", "note": "not ok"})
         batches = channels.get("batches") or 0
+        mismatch = bool(channels.get("version_mismatch"))
         phase = str(model.get("phase") or "")
     except (KeyError, TypeError, ValueError, AttributeError):
         return unknown(pid, title, "unexpected", link=link, **common)
     facts = []
-    if not batches:
-        facts.append(f"Channels not verified for {version}: no verify batch is recorded for this run.")
+    if not batches or mismatch:
+        why = "the last verify was for a different version" if mismatch else "no verify batch is recorded for this run"
+        facts.append(f"Channels not verified for {version}: {why}.")
+        stations = [{"name": s_["name"], "state": "", "note": s_.get("note", "")} for s_ in stations]
     else:
         facts.append(f"{verified} of {len(cards)} channels verified (the rest are not ok, skipped or could not be looked at).")
-    body = [{"kind": "text", "text": f"{version} · {phase}"},
+    if current_version and current_version != version:
+        facts.append(f"This board is for {version}; the current version is {current_version}.")
+    body = [{"kind": "text", "text": f"{version} \u00b7 {phase}"},
             {"kind": "stations", "items": stations,
-             "aria": "Release channels: " + ", ".join(f"{s['name']} {s['state'] or 'not verified'}" for s in stations)}]
+             "aria": "Release channels: " + ", ".join(f"{s_['name']} {s_.get('note') or s_['state'] or 'not verified'}" for s_ in stations)}]
     return panel(pid, title, link=link, as_of=as_of, body=body, facts=facts, **common)
 
 
@@ -309,6 +326,9 @@ _FINISHED = re.compile(r"^finished\s+([\d,]+)/([\d,]+)\s+passed\s+([\d,]+)\s+fai
 
 def _n(s: str) -> int:
     return int(s.replace(",", ""))
+
+
+_UNSET = object()   # "the caller did not look at git" (tests), as distinct from None = "looked and could not read"
 
 
 def parse_finished(text: str) -> dict | None:
@@ -325,7 +345,7 @@ def parse_finished(text: str) -> dict | None:
         return None
     t = [_n(g) for g in m.groups()]
     return {"ran": t[0], "total": t[1], "passed": t[2], "failed": t[3], "error": t[4], "skipped": t[5],
-            "xfailed": t[6], "seconds": t[7]}
+            "xfailed": t[6], "seconds": t[7], "complete": t[0] == t[1] and t[1] > 0}
 
 
 def newest_completed_ci(ci: dict | None) -> dict | None:
@@ -339,13 +359,15 @@ def newest_completed_ci(ci: dict | None) -> dict | None:
     return max(runs, key=lambda r: iso_z_to_epoch(r["createdAt"])) if runs else None
 
 
-def read_tests(live_file: Path, out_dir: Path, head_commit_epoch: float | None = None) -> dict:
-    """The last FULL pytest run (pytest wipes the live file when a run starts, so the last finished
-    line is kept in tests.json) and the newest completed CI run (`ci.json`, written by the gh job).
-    The verdict is in words, never a bare green: five failures read '5 failed'."""
+def read_tests(live_file: Path, out_dir: Path, head_commit_epoch=_UNSET) -> dict:
+    """The last COMPLETE pytest run (pytest wipes the live file when a run starts, and writes a
+    `finished` line even for a run stopped early or a single file, so only ran == total counts; the last
+    complete result is kept in tests.json) and the newest completed CI run (`ci.json`, written by the gh
+    job). The verdict is in words, never a bare green: five failures read '5 failed'.
+    `head_commit_epoch`: omit it to skip the commit comparison; None means git could not be read."""
     pid, title = "tests", "Tests and CI"
     common = {"as_of_label": "run", "max_age": 24 * 3600, "refreshable": False,
-              "src": "The last full pytest run (the live results file) and the newest completed CI run on main."}
+              "src": "The last complete pytest run (the live results file) and the newest completed CI run on main."}
     cache = Path(out_dir) / "tests.json"
     live_m = mtime(live_file)
     finished = None
@@ -354,34 +376,50 @@ def read_tests(live_file: Path, out_dir: Path, head_commit_epoch: float | None =
     except OSError:
         pass
     facts = []
-    if finished is not None and live_m is not None:
-        saved = {"finished": finished, "as_of": live_m}
+    if finished is not None and finished["complete"] and live_m is not None:
         try:
-            atomic_write(cache, json.dumps(saved))
+            atomic_write(cache, json.dumps({"finished": finished, "as_of": live_m}))
         except OSError:
             pass
         as_of = live_m
     else:
+        if finished is not None and not finished["complete"]:
+            facts.append(f"The latest run did not complete (ran {finished['ran']:,} of {finished['total']:,}): "
+                         "showing the last complete run.")
+        else:
+            facts.append("A test run is in progress: showing the last complete run.")
         saved = read_json(cache)
-        if not isinstance(saved, dict) or not isinstance(saved.get("finished"), dict) or not isinstance(saved.get("as_of"), (int, float)):
-            return nodata(pid, title, **common)
-        finished, as_of = saved["finished"], float(saved["as_of"])
-        facts.append("A test run is in progress or ended early: this is the last run that finished.")
+        fin = saved.get("finished") if isinstance(saved, dict) else None
+        need = ("passed", "failed", "error", "skipped", "seconds")
+        if (not isinstance(fin, dict) or not all(isinstance(fin.get(k), int) for k in need)
+                or not isinstance(saved.get("as_of"), (int, float)) or saved["as_of"] != saved["as_of"]):
+            return nodata(pid, title, facts=facts, **common)
+        finished, as_of = fin, float(saved["as_of"])
     bad = finished["failed"] + finished["error"]
     pills = [{"text": f"pytest: {finished['passed']:,} passed, {finished['failed']} failed"
                       f"{', ' + str(finished['error']) + ' errors' if finished['error'] else ''}, "
                       f"{finished['skipped']} skipped ({finished['seconds']} s)",
               "tone": "bad" if bad else "ok"}]
+    body = [{"kind": "pills", "items": pills}]
     ci = newest_completed_ci(read_json(Path(out_dir) / "ci.json"))
+    ci_epoch = None
     if ci is None:
         facts.append("CI status has not been read.")
     else:
         c = ci["conclusion"]
         tone = "ok" if c == "success" else "bad" if c == "failure" else ""
-        pills.append({"text": f"CI on main: {c} ({ci['headSha'][:7]}, {ci.get('event', 'run')})", "tone": tone})
-    if head_commit_epoch is not None and head_commit_epoch > as_of + 60:
-        facts.append("There are commits newer than this test run.")
-    return panel(pid, title, as_of=as_of, body=[{"kind": "pills", "items": pills}], facts=facts, **common)
+        event = ci.get("event")
+        pills.append({"text": f"CI on main: {c} ({ci['headSha'][:7]}{', ' + event if isinstance(event, str) and event else ''})", "tone": tone})
+        ci_epoch = iso_z_to_epoch(ci["createdAt"])
+        body.append({"kind": "age", "label": "CI run", "epoch": ci_epoch})
+    if head_commit_epoch is None:
+        facts.append("Could not read the latest commit time, so the runs cannot be compared with it.")
+    elif head_commit_epoch is not _UNSET:
+        if head_commit_epoch > as_of + 60:
+            facts.append("There are commits newer than this test run.")
+        if ci_epoch is not None and head_commit_epoch > ci_epoch + 60:
+            facts.append("There are commits newer than this CI run.")
+    return panel(pid, title, as_of=as_of, body=body, facts=facts, **common)
 
 
 # ---- panel 5: bug campaign ----------------------------------------------------------
@@ -389,6 +427,15 @@ def read_tests(live_file: Path, out_dir: Path, head_commit_epoch: float | None =
 # Copied from docs/private/bug-campaign/render.py (a script, not importable). tests/test_home_readers.py
 # compares this set with that file's line whenever the file is present, so the two cannot drift quietly.
 BUG_DONE = {"fixed", "already-fixed", "dropped", "filed"}
+
+
+def trend_words(series: list, labels: list) -> str:
+    """What the line did, in the right direction: 'fell', 'rose' or 'stayed at', over the real dates."""
+    a, b = series[0], series[-1]
+    span = f"on {labels[0]}" if labels[0] == labels[-1] else f"between {labels[0]} and {labels[-1]}"
+    if a == b:
+        return f"Open bugs stayed at {a} {span}"
+    return f"Open bugs {'fell' if b < a else 'rose'} from {a} to {b} {span}"
 
 
 def read_bugs(campaign_dir: Path) -> dict:
@@ -415,10 +462,10 @@ def read_bugs(campaign_dir: Path) -> dict:
     as_of = mtime(f)
     waiting = statuses.count("decision")
     owner = statuses.count("owner")
-    kpis = [{"n": done, "of": total, "l": f"done ({statuses.count('fixed')} fixed, {statuses.count('already-fixed')} already fixed)", "link": link},
+    kpis = [{"n": done, "of": total, "l": f"done ({statuses.count('fixed')} fixed, {statuses.count('already-fixed')} already fixed)"},
             {"n": waiting, "l": "waiting on a design decision"}, {"n": owner, "l": "owner-only"}]
-    body = [{"kind": "line", "points": series, "top": total, "plan": True, "first_label": labels[0], "last_label": labels[-1],
-             "aria": f"Open bugs fell from {series[0]} to {series[-1]} between {labels[0]} and {labels[-1]}"},
+    body = [{"kind": "line", "points": series, "top": max([total] + series), "plan": True, "first_label": labels[0], "last_label": labels[-1],
+             "aria": trend_words(series, labels)},
             {"kind": "kpis", "items": kpis}]
     return panel(pid, title, link=link, as_of=as_of, body=body, **common)
 
@@ -454,13 +501,14 @@ def read_launch(launch_dir: Path) -> dict:
 
 HOST_KEYS = ("heartbeat_epoch", "news_status", "news_expires_epoch", "hate", "dislike", "neutral", "like", "love",
              "other", "total", "problems", "newest_epoch")
-_INT = re.compile(r"^\d{1,12}$")
+_INT = re.compile(r"[0-9]{1,12}")
+_PULL_FRESH = 3600           # a host read newer than this was just made: running home again cannot make it fresher
 
 
 def parse_host_output(text: str) -> dict | None:
-    """The host's `key=value` lines, strictly: at most 4 KB, known keys only, values are plain
-    digits. Anything else is None, and the caller records 'unexpected' - the text itself, which
-    a compromised host could shape, is never kept or shown."""
+    """The host's `key=value` lines, strictly: at most 4 KB, known keys only, values plain ASCII digits.
+    Anything else is None, and the caller records 'unexpected' - the text itself, which a compromised
+    host could shape, is never kept or shown."""
     if not isinstance(text, str) or len(text.encode("utf-8", "replace")) > 4096:
         return None
     out = {}
@@ -468,59 +516,97 @@ def parse_host_output(text: str) -> dict | None:
         if not line.strip():
             continue
         k, sep, v = line.partition("=")
-        if not sep or k not in HOST_KEYS or k in out or not _INT.match(v):
+        if not sep or k not in HOST_KEYS or k in out or not _INT.fullmatch(v):
             return None
         out[k] = int(v)
     return out if all(k in out for k in HOST_KEYS) else None
 
 
-def read_host_state(out_dir: Path) -> dict | None:
-    """host.json: {"last_good": {"fetched_at": s, "data": {...}} | null, "last_attempt": {"at": s, "error": key|null}}."""
-    s = read_json(Path(out_dir) / "host.json")
-    if not isinstance(s, dict):
-        return None
-    lg, la = s.get("last_good"), s.get("last_attempt")
-    if lg is not None and not (isinstance(lg, dict) and isinstance(lg.get("fetched_at"), (int, float)) and isinstance(lg.get("data"), dict)):
-        return None
+def host_state(out_dir: Path) -> tuple[str, dict | None]:
+    """('absent', None) before the first read; ('bad', None) when host.json exists but cannot be trusted;
+    ('ok', {"last_good": ..., "last_attempt": ...}). host.json: last_good = {"fetched_at": s, "data": {...}}
+    or null; last_attempt = {"at": s, "error": key | null}."""
+    f = Path(out_dir) / "host.json"
+    if not f.exists():
+        return "absent", None
+    s_ = read_json(f)
+    if not isinstance(s_, dict):
+        return "bad", None
+    lg, la = s_.get("last_good"), s_.get("last_attempt")
+    if lg is not None:
+        d = lg.get("data") if isinstance(lg, dict) else None
+        if (not isinstance(lg.get("fetched_at"), (int, float)) or not isinstance(d, dict)
+                or not all(isinstance(d.get(k), int) and not isinstance(d.get(k), bool) for k in HOST_KEYS)):
+            return "bad", None
     if not isinstance(la, dict) or (la.get("error") is not None and la["error"] not in ERR):
-        return None
-    return {"last_good": lg, "last_attempt": la}
+        return "bad", None
+    return "ok", {"last_good": lg, "last_attempt": la}
 
 
-def read_host(out_dir: Path) -> dict:
+def read_host_state(out_dir: Path) -> dict | None:
+    return host_state(out_dir)[1]
+
+
+def _host_gate(pid: str, title: str, out_dir: Path, configured: bool, common: dict):
+    """One rule for every panel fed by host.json: no file yet is NO DATA (no host configured is unknown,
+    'not configured'); a file that exists but cannot be read is unknown. Returns (panel_or_None, state)."""
+    kind, st = host_state(out_dir)
+    if kind == "absent":
+        return (nodata(pid, title, **common) if configured else unknown(pid, title, "unconfigured", **common)), None
+    if kind == "bad":
+        return unknown(pid, title, "unreadable", **common), None
+    return None, st
+
+
+def _pull_refreshable(st: dict, now: float | None) -> bool:
+    lg = st["last_good"]
+    return not (lg and (now if now is not None else time.time()) - lg["fetched_at"] < _PULL_FRESH)
+
+
+def read_host(out_dir: Path, configured: bool = True, now: float | None = None) -> dict:
     pid, title = "host", "Host health"
     common = {"as_of_label": "counted", "max_age": 36 * 3600, "refreshable": True,
               "src": "One SSH read: the counts job's heartbeat and what the live /app/news answers."}
-    st = read_host_state(out_dir)
-    if st is None:
-        return nodata(pid, title, **common)
+    early, st = _host_gate(pid, title, out_dir, configured, common)
+    if early:
+        return early
+    common = dict(common, refreshable=_pull_refreshable(st, now))
     lg, err = st["last_good"], st["last_attempt"]["error"]
     data = lg["data"] if lg else None
-    as_of = float(data["heartbeat_epoch"]) if data else None
+    as_of = float(data["heartbeat_epoch"]) if data and data["heartbeat_epoch"] else None
     body, facts = [], []
     if data:
-        facts.append(f"/app/news answers {data['news_status']}." if data["news_status"] else "/app/news could not be read from the host.")
-        body.append({"kind": "expiries", "rows": [{"what": "News file expires", "epoch": data["news_expires_epoch"] or None}]})
+        ns = data["news_status"]
+        if ns == 200:
+            facts.append("/app/news answers 200.")
+        elif ns:
+            body.append({"kind": "pills", "items": [{"text": f"/app/news answers {ns}", "tone": "bad"}]})
+        else:
+            facts.append("/app/news could not be read from the host.")
     if err:
         return unknown(pid, title, err, as_of=as_of, body=body, facts=facts, **common)
     if not data:
         return nodata(pid, title, **common)
+    if as_of is None:
+        return unknown(pid, title, "unexpected", body=body, facts=facts + ["The host has no counts heartbeat."], **common)
     return panel(pid, title, as_of=as_of, body=body, facts=facts, **common)
 
 
 RATINGS = ("hate", "dislike", "neutral", "like", "love")
 
 
-def read_feedback(out_dir: Path) -> dict:
+def read_feedback(out_dir: Path, configured: bool = True, now: float | None = None) -> dict:
     """Counts computed on the host: messages never reach this Mac. Zero ratings is NO DATA."""
     pid, title = "feedback", "User feedback"
     common = {"as_of_label": "pulled", "max_age": 36 * 3600, "refreshable": True,
               "src": "Rating counts from the host's feedback file. The messages stay on the host."}
-    st = read_host_state(out_dir)
-    if st is None or st["last_good"] is None:
-        err = st["last_attempt"]["error"] if st else None
-        return unknown(pid, title, err, **common) if err else nodata(pid, title, **common)
+    early, st = _host_gate(pid, title, out_dir, configured, common)
+    if early:
+        return early
+    common = dict(common, refreshable=_pull_refreshable(st, now))
     lg, err = st["last_good"], st["last_attempt"]["error"]
+    if lg is None:
+        return unknown(pid, title, err, **common) if err else nodata(pid, title, **common)
     d = lg["data"]
     if not d["total"]:
         return nodata(pid, title, **common)
@@ -541,27 +627,31 @@ def read_feedback(out_dir: Path) -> dict:
 
 # ---- panel 8: things that expire ---------------------------------------------------------
 
-def read_expiries(config_list: list, out_dir: Path) -> dict:
+def read_expiries(config_list: list, out_dir: Path, now: float | None = None) -> dict:
     """Dated items from the machine-local config, plus the news file's expiry as the HOST last read it
-    (one source: the repo's copy can differ until a deploy). Days left are worked out in the page,
-    from the clock. A row with no date says unknown; it never drops out of the list."""
+    (one source: the repo's copy can differ until a deploy). A date-only expiry means the END of that
+    day. Days left are worked out in the page, from the clock. A row with no date says unknown; it
+    never drops out of the list, and the news row is unknown whenever the last host read failed.
+    With a good host read the panel carries that read's age; without one it makes no age claim."""
     pid, title = "expiries", "Things that expire"
     rows = []
     for item in config_list if isinstance(config_list, list) else []:
         try:
             d = datetime.strptime(item["date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            rows.append({"what": str(item["what"]), "epoch": d.timestamp()})
+            rows.append({"what": str(item["what"]), "epoch": d.timestamp() + 86399})
         except (KeyError, TypeError, ValueError):
             rows.append({"what": str(item.get("what", "?")) if isinstance(item, dict) else "?", "epoch": None})
-    st = read_host_state(out_dir)
-    news = None
-    if st and st["last_good"]:
+    _kind, st = host_state(out_dir)
+    news, kw = None, {"stateless": True}
+    if st and st["last_good"] and not st["last_attempt"]["error"]:
         news = st["last_good"]["data"].get("news_expires_epoch") or None
+        kw = {"stateless": False, "as_of": float(st["last_good"]["fetched_at"]), "as_of_label": "read", "max_age": 36 * 3600,
+              "refreshable": _pull_refreshable(st, now)}
     rows.append({"what": "News file (re-sign and redeploy)", "epoch": news})
     rows.sort(key=lambda r: (r["epoch"] is None, r["epoch"] or 0))
-    return panel(pid, title, stateless=True, body=[{"kind": "expiries", "rows": rows}],
+    return panel(pid, title, body=[{"kind": "expiries", "rows": rows}],
                  facts=["After the news file expires every installed app ignores it."],
-                 src="Dates from the private config; the news file's expiry from the last host read.")
+                 src="Dates from the private config; the news file's expiry from the last host read.", **kw)
 
 
 # ---- panel 2: website visitors (a link only) ------------------------------------------------

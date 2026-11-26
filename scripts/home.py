@@ -44,7 +44,7 @@ _SAFE = re.compile(r"^[A-Za-z0-9._/-]+$")
 # expiry, and the feedback RATING COUNTS. The messages are never printed, so they never leave the host.
 # No single quote may appear inside it (it is wrapped in single quotes for the remote shell).
 REMOTE_PY = (
-    "import calendar,csv,json,os,time,base64,urllib.request\n"
+    "import calendar,csv,json,os,time,base64,urllib.error,urllib.request\n"
     "h=os.path.expanduser(\"~\")\n"
     "def z(s):\n"
     " return calendar.timegm(time.strptime(s,\"%Y-%m-%dT%H:%M:%SZ\"))\n"
@@ -58,31 +58,36 @@ REMOTE_PY = (
     " r=urllib.request.urlopen(\"https://bristlenose.app/app/news\",timeout=10)\n"
     " st=r.status\n"
     " ex=z(json.loads(base64.b64decode(json.loads(r.read(20000))[\"payload\"]))[\"expires\"])\n"
+    "except urllib.error.HTTPError as e:\n"
+    " st=e.code\n"
     "except Exception:\n"
     " pass\n"
     "c={k:0 for k in (\"hate\",\"dislike\",\"neutral\",\"like\",\"love\",\"other\",\"total\",\"problems\",\"newest_epoch\")}\n"
     "try:\n"
-    " for row in csv.DictReader(open(h+\"/bristlenose.app/data/feedback.csv\",encoding=\"utf-8\",errors=\"replace\")):\n"
-    "  v=(row.get(\"rating\") or \"\")\n"
-    "  c[v if v in (\"hate\",\"dislike\",\"neutral\",\"like\",\"love\") else \"other\"]+=1\n"
-    "  c[\"total\"]+=1\n"
-    "  c[\"problems\"]+=1 if row.get(\"kind\")==\"problem\" else 0\n"
-    "  try:\n"
-    "   c[\"newest_epoch\"]=max(c[\"newest_epoch\"],calendar.timegm(time.strptime((row.get(\"time\") or \"\")[:19],\"%Y-%m-%d %H:%M:%S\")))\n"
-    "  except Exception:\n"
-    "   pass\n"
-    "except Exception:\n"
-    " pass\n"
+    " f=open(h+\"/bristlenose.app/data/feedback.csv\",encoding=\"utf-8\",errors=\"replace\")\n"
+    "except FileNotFoundError:\n"
+    " f=None\n"
+    "for row in (csv.DictReader(f) if f else []):\n"
+    " v=(row.get(\"rating\") or \"\")\n"
+    " c[v if v in (\"hate\",\"dislike\",\"neutral\",\"like\",\"love\") else \"other\"]+=1\n"
+    " c[\"total\"]+=1\n"
+    " c[\"problems\"]+=1 if row.get(\"kind\")==\"problem\" else 0\n"
+    " try:\n"
+    "  c[\"newest_epoch\"]=max(c[\"newest_epoch\"],calendar.timegm(time.strptime((row.get(\"time\") or \"\")[:19],\"%Y-%m-%d %H:%M:%S\")))\n"
+    " except ValueError:\n"
+    "  pass\n"
     "print(\"heartbeat_epoch=%d\"%hb());print(\"news_status=%d\"%st);print(\"news_expires_epoch=%d\"%ex)\n"
     "for k in (\"hate\",\"dislike\",\"neutral\",\"like\",\"love\",\"other\",\"total\",\"problems\",\"newest_epoch\"):\n"
     " print(\"%s=%d\"%(k,c[k]))\n"
 )
-REMOTE_CMD = "python3 -c '" + REMOTE_PY + "'"
+REMOTE_CMD = "python3 -I -c '" + REMOTE_PY + "'"       # -I: no user site-packages or PYTHON* variables on a shared account
 assert "'" not in REMOTE_PY
 
 SSH_OPTIONS = ["-a", "-x", "-T", "-o", "BatchMode=yes", "-o", "ClearAllForwardings=yes",
-               "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10"]
+               "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-o", "ControlPath=none"]
 
+
+GH_REPO = "cassiocassio/bristlenose"      # pinned: gh otherwise reads the repository from the directory home was run in
 
 # ---- configuration -----------------------------------------------------------------------------
 
@@ -128,7 +133,10 @@ def run(argv: list[str], timeout: float) -> tuple[str, bytes]:
             os.killpg(p.pid, signal.SIGKILL)
         except OSError:
             pass
-        p.communicate()
+        try:
+            p.communicate(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass                                       # something still holds the pipe: abandon it
         return "timeout", b""
     return ("ok" if p.returncode == 0 else "failed"), out
 
@@ -141,7 +149,7 @@ def job_argv(cfg: dict) -> dict:
                     "net": False, "timeout": 120, "fresh_for": 0},
         "counts": {"argv": [str(web / "scripts" / "counts-refresh.sh"), "--no-open"],
                    "net": True, "timeout": 120, "fresh_for": 6 * 3600},
-        "ci": {"argv": ["gh", "run", "list", "--workflow", "ci.yml", "--branch", "main", "--limit", "5",
+        "ci": {"argv": ["gh", "run", "list", "-R", GH_REPO, "--workflow", "ci.yml", "--branch", "main", "--limit", "5",
                         "--json", "conclusion,status,createdAt,headSha,event"],
                "net": True, "timeout": 20, "fresh_for": 900},
     }
@@ -174,23 +182,32 @@ def record_host(out: Path, status: str, stdout: bytes, now: float) -> None:
 
 
 def record_ci(out: Path, status: str, stdout: bytes) -> None:
-    """ci.json keeps only the five fields the panel reads (no titles, no branch names: strangers type those)."""
+    """ci.json keeps only the five fields the panel reads (no titles, no branch names: strangers type those),
+    and only runs that are not pull requests. Output that is not a non-empty list of runs leaves the
+    old file alone: a bad read must not turn 'CI success' into 'not read'."""
     if status != "ok":
         return
     try:
         rows = json.loads(stdout.decode("utf-8", "replace"))
-        keep = [{k: r.get(k) for k in ("conclusion", "status", "createdAt", "headSha", "event")} for r in rows if isinstance(r, dict)]
-    except (ValueError, AttributeError):
+    except ValueError:
         return
-    hl.atomic_write(out / "ci.json", json.dumps({"runs": keep}))
+    if not isinstance(rows, list):
+        return
+    keep = [{k: r.get(k) for k in ("conclusion", "status", "createdAt", "headSha", "event")}
+            for r in rows if isinstance(r, dict) and r.get("event") != "pull_request"]
+    if keep:
+        hl.atomic_write(out / "ci.json", json.dumps({"runs": keep}))
 
 
 def run_jobs(cfg: dict, offline: bool, now: float, say=print) -> None:
     out = cfg["out"]
     marks = {"release": out / "release" / "board.json", "counts": cfg["counts_dir"] / "heartbeat",
              "ci": out / "ci.json", "host": out / "host.json"}
+    hs = hl.read_host_state(out)
+    host_mark = hs["last_good"]["fetched_at"] if hs and hs["last_good"] else None   # a failed read must not stop the next retry
     for name, job in job_argv(cfg).items():
-        if not should_run(job, hl.mtime(marks[name]), now, offline):
+        mark = host_mark if name == "host" else hl.mtime(marks[name])
+        if not should_run(job, mark, now, offline):
             say(f"  {name}: {'skipped (offline)' if offline and job['net'] else 'fresh enough'}")
             continue
         status, stdout = run(job["argv"], job["timeout"])
@@ -211,29 +228,36 @@ def guarded(pid: str, title: str, fn) -> dict:
     try:
         return fn()
     except (SystemExit, Exception):  # noqa: BLE001
-        return hl.unknown(pid, title, "failed")
+        return hl.unknown(pid, title, "reader")
 
 
 def head_commit_epoch() -> float | None:
-    status, out = run(["git", "-C", str(ROOT), "log", "-1", "--format=%ct", "main"], 10)
+    status, out = run(["git", "-C", str(ROOT), "log", "-1", "--format=%ct", "main", "--"], 10)
     try:
         return float(out.decode().strip()) if status == "ok" else None
     except ValueError:
         return None
 
 
+def current_version() -> str | None:
+    m = re.search(r'__version__\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', (ROOT / "bristlenose" / "__init__.py").read_text(encoding="utf-8")) \
+        if (ROOT / "bristlenose" / "__init__.py").exists() else None
+    return m.group(1) if m else None
+
+
 def read_panels(cfg: dict) -> list[dict]:
     out = cfg["out"]
+    host_on = cfg.get("host_alias") is not None
     return [
         guarded("installs", "Installs calling home", lambda: hl.read_installs(cfg["website_repo"], cfg["counts_dir"])),
         guarded("visitors", "Website visitors", hl.read_visitors),
-        guarded("release", "Release", lambda: hl.read_release(out)),
+        guarded("release", "Release", lambda: hl.read_release(out, current_version())),
         guarded("tests", "Tests and CI", lambda: hl.read_tests(PYTEST_LIVE, out, head_commit_epoch())),
         guarded("bugs", "Bug campaign", lambda: hl.read_bugs(cfg["private"] / "bug-campaign")),
-        guarded("feedback", "User feedback", lambda: hl.read_feedback(out)),
+        guarded("feedback", "User feedback", lambda: hl.read_feedback(out, host_on)),
         guarded("launch", "App Store launch", lambda: hl.read_launch(cfg["private"] / "app-store-launch")),
         guarded("expiries", "Things that expire", lambda: hl.read_expiries(cfg["expiries"], out)),
-        guarded("host", "Host health", lambda: hl.read_host(out)),
+        guarded("host", "Host health", lambda: hl.read_host(out, host_on)),
     ]
 
 

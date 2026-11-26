@@ -1,30 +1,42 @@
 """The Mac app's Help menu links the privacy policy in every build, unconditionally.
 
 App Store Review Guideline 5.1.1(i) wants the privacy policy reachable inside the
-app. Only one link satisfies that. `NewsPreferences.privacyURL` renders only when
-`NewsKeys.isLive`, and the paywall's link shows only at the paywall. So the
-guarantee is **Help ▸ Privacy Policy** (`HelpMenuContent` in `MenuCommands.swift`,
-added 21 Nov 2026 in 2fcecac61).
+app. Only one link does that in every build. `NewsPreferences.privacyURL` renders
+only when `NewsKeys.isLive`, and the paywall's link shows only at the paywall. So
+the guarantee is **Help ▸ Privacy Policy** (`HelpMenuContent` in
+`MenuCommands.swift`, added 21 Nov 2026 in 2fcecac61).
 
-Nothing else pins it. The menu is a private SwiftUI view with no test seam, and
-the most natural edit to break it is to wrap the button in an `if` or `#if`
-("only on the App Store build", "only once news is live"). It would compile, and
-the review would fail. So this test reads the source and checks that the button:
+The menu is a private SwiftUI view with no test seam, and the likely way to break
+it is a plausible edit that compiles: wrap the button in an `if` or `#if` ("only
+on the App Store build", "only once news is live"), or give it a `.disabled`. So
+this test reads the source and pins the **exact shape** that is known to be
+unconditional. Anything else goes red, harmless refactors included, because for
+an App Review guarantee a false red is the cheap failure. What it pins:
 
-1. exists, with its key, and opens the policy URL;
-2. sits at the top level of `HelpMenuContent.body`, so no `if`, `Group`, or other
-   block wraps it, and no `#if` is open around it;
-3. carries no `.disabled(` or `.hidden(` modifier;
-4. is reached, because `CommandGroup(replacing: .help)` with `HelpMenuContent` sits
-   at the top level of the menu's `Commands.body` as well.
+1. `MenuCommands.body` has `CommandGroup(replacing: .help)` as a top-level
+   statement, outside any `#if`, and builds `HelpMenuContent(` directly inside it.
+2. `HelpMenuContent.body` has the privacy button as a top-level statement, outside
+   any `#if`, with no modifiers. Its action is exactly
+   `Self.open("https://bristlenose.app/privacy.html")`.
+3. `HelpMenuContent.open` still hands the URL to `NSWorkspace.shared.open(url)`.
 
-If you restructure the menu *without* making the link conditional, update this
-test. If you make it conditional, put an unconditional link somewhere else first.
+Nesting is read from indentation, which Xcode keeps consistent in this file
+(`if`/`Group` bodies are indented; `#if` blocks are not, so directives are counted
+instead). That avoids parsing Swift. The known blind spot is a mis-indented
+wrapper (`if x {` with the button left unindented), which Xcode re-indents on
+paste. The check stops at `MenuCommands.body`: whether the app installs
+`MenuCommands` at all (`BristlenoseApp.swift`, `.commands { … }`) is outside it.
+
+If you restructure the menu without making the link conditional, update this
+test. If you make it conditional, add an unconditional link somewhere else first.
+The locale strings are pinned separately, in every full locale, by
+`test_swift_i18n_keys_resolve.py`.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -34,120 +46,126 @@ _MENU_COMMANDS = _ROOT / "desktop/Bristlenose/Bristlenose/MenuCommands.swift"
 
 PRIVACY_KEY = "desktop.menu.help.privacyPolicy"
 PRIVACY_URL = "https://bristlenose.app/privacy.html"
-_BUTTON = f'Button(i18n.t("{PRIVACY_KEY}"))'
+_BUTTON_HEAD = re.compile(
+    r'Button\(i18n\.t\("' + re.escape(PRIVACY_KEY) + r'"\)(, systemImage: "[^"]*")?\) \{'
+)
+_ACTION = f'Self.open("{PRIVACY_URL}")'
+_HELP_GROUP = "CommandGroup(replacing: .help) {"
+
+# One message per check, so each mutant below can assert the check it targets.
+NO_TABS = "MenuCommands.swift indents with tabs; this test reads 4-space indentation"
+NO_MENU_BODY = "no `struct MenuCommands` with a `var body: some Commands`"
+NO_GROUP = "MenuCommands.body has no `CommandGroup(replacing: .help)`"
+GROUP_NESTED = "the Help CommandGroup is nested inside a block in MenuCommands.body"
+GROUP_IN_IF = "the Help CommandGroup sits inside an `#if`"
+GROUP_CONTENT = "the Help CommandGroup no longer builds HelpMenuContent( as its first line"
+NO_HELP_BODY = "no `struct HelpMenuContent` with a `var body: some View`"
+NO_BUTTON = f"HelpMenuContent.body has no button with key {PRIVACY_KEY}"
+BUTTON_NESTED = "the privacy button is nested inside a block (an `if`, a `Group`…)"
+BUTTON_IN_IF = "the privacy button sits inside an `#if`"
+BUTTON_SHAPE = "the privacy button no longer reads `Button(i18n.t(key)) {`"
+ACTION_SHAPE = f"the privacy button's action is no longer exactly {_ACTION}"
+MODIFIERS = "the privacy button carries a modifier or a postfix `#if`"
+SINK = "HelpMenuContent.open no longer calls NSWorkspace.shared.open(url)"
 
 
-def _blank(source: str) -> tuple[str, str]:
-    """Return (code, structure), both the same length as `source`.
-
-    `code` has comments blanked to spaces, with string literals kept. `structure`
-    also blanks string-literal contents, so a brace or `#if` inside a string or
-    comment never counts.
-    """
-    code: list[str] = []
-    structure: list[str] = []
-    i, n = 0, len(source)
-    while i < n:
-        two = source[i : i + 2]
-        if two == "//":
-            j = source.find("\n", i)
-            j = n if j == -1 else j
-            code.append(" " * (j - i))
-            structure.append(" " * (j - i))
-            i = j
-        elif two == "/*":
-            j = source.find("*/", i + 2)
-            j = n if j == -1 else j + 2
-            gap = re.sub(r"[^\n]", " ", source[i:j])
-            code.append(gap)
-            structure.append(gap)
-            i = j
-        elif source[i] == '"':
-            j = i + 1
-            while j < n and source[j] != '"':
-                j += 2 if source[j] == "\\" else 1
-            j = min(j + 1, n)
-            code.append(source[i:j])
-            structure.append('"' + " " * (j - i - 2) + '"' if j - i >= 2 else source[i:j])
-            i = j
-        else:
-            code.append(source[i])
-            structure.append(source[i])
-            i += 1
-    return "".join(code), "".join(structure)
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
 
 
-def _depth(structure: str, pos: int) -> int:
-    head = structure[:pos]
-    return head.count("{") - head.count("}")
+def _is_code(line: str) -> bool:
+    stripped = line.strip()
+    return bool(stripped) and not stripped.startswith("//")
 
 
-def _open_ifs(structure: str, pos: int) -> int:
-    head = structure[:pos]
-    return len(re.findall(r"#if\b", head)) - len(re.findall(r"#endif\b", head))
-
-
-def _matching_brace(structure: str, open_pos: int) -> int:
+def _open_ifs(lines: list[str], upto: int) -> int:
     depth = 0
-    for k in range(open_pos, len(structure)):
-        if structure[k] == "{":
+    for line in lines[:upto]:
+        stripped = line.strip()
+        if re.match(r"#if\b", stripped):
             depth += 1
-        elif structure[k] == "}":
+        elif re.match(r"#endif\b", stripped):
             depth -= 1
-            if depth == 0:
-                return k
-    raise AssertionError("unbalanced braces in MenuCommands.swift")
+    return depth
 
 
-def _body_start(code: str, structure: str, after: int, signature: str) -> int:
-    """Index just inside the `{` of the first `signature {` at or after `after`."""
-    pos = code.find(signature, after)
-    assert pos != -1, f"`{signature}` not found in MenuCommands.swift"
-    brace = structure.find("{", pos + len(signature))
-    return brace + 1
+def _block(lines: list[str], header: str, start: int = 0) -> tuple[int, int] | None:
+    """(header line, closing-brace line) of the first line from `start` matching
+    `header`, closed by the first later `}` at the header's own indentation."""
+    pattern = re.compile(header)
+    for i in range(start, len(lines)):
+        if pattern.match(lines[i]):
+            for j in range(i + 1, len(lines)):
+                if lines[j].strip() == "}" and _indent(lines[j]) == _indent(lines[i]):
+                    return i, j
+            return None
+    return None
+
+
+def _body(lines: list[str], struct: str, body: str) -> tuple[int, int] | None:
+    outer = _block(lines, rf"^(private )?struct {struct}\b")
+    if outer is None:
+        return None
+    inner = _block(lines, rf"^ +var body: some {body} \{{$", outer[0])
+    if inner is None or inner[1] > outer[1]:
+        return None
+    return inner
 
 
 def privacy_link_problems(source: str) -> list[str]:
     """Every reason the Help menu's privacy link is missing or conditional."""
-    code, structure = _blank(source)
+    lines = source.splitlines()
+    if any(line.startswith("\t") for line in lines):
+        return [NO_TABS]
     problems: list[str] = []
 
-    # The Help menu reaches the menu bar unconditionally.
-    group = code.find("CommandGroup(replacing: .help)")
-    app_info = code.find("CommandGroup(replacing: .appInfo)")
-    if group == -1:
-        problems.append("no `CommandGroup(replacing: .help)`")
+    menu = _body(lines, "MenuCommands", "Commands")
+    if menu is None:
+        problems.append(NO_MENU_BODY)
     else:
-        if app_info != -1 and _depth(structure, group) != _depth(structure, app_info):
-            problems.append("the Help CommandGroup is nested inside a block")
-        if _open_ifs(structure, group):
-            problems.append("the Help CommandGroup sits inside an `#if`")
-        brace = structure.find("{", group)
-        inner = code[brace : _matching_brace(structure, brace)]
-        if "HelpMenuContent(" not in inner:
-            problems.append("the Help CommandGroup no longer builds HelpMenuContent")
+        start, end = menu
+        top = _indent(lines[start]) + 4
+        hits = [k for k in range(start + 1, end) if lines[k].strip() == _HELP_GROUP]
+        if not hits:
+            problems.append(NO_GROUP)
+        else:
+            k = hits[0]
+            if _indent(lines[k]) != top:
+                problems.append(GROUP_NESTED)
+            if _open_ifs(lines, k):
+                problems.append(GROUP_IN_IF)
+            first = lines[k + 1]
+            inside = _indent(lines[k]) + 4
+            if not (first.strip().startswith("HelpMenuContent(") and _indent(first) == inside):
+                problems.append(GROUP_CONTENT)
 
-    # The button, at the top level of HelpMenuContent.body.
-    struct = code.find("struct HelpMenuContent")
-    if struct == -1:
-        return [*problems, "no `struct HelpMenuContent`"]
-    body = _body_start(code, structure, struct, "var body: some View")
-    body_end = _matching_brace(structure, body - 1)
-    button = code.find(_BUTTON, body, body_end)
-    if button == -1:
-        return [*problems, f"HelpMenuContent.body has no `{_BUTTON}`"]
-    if _depth(structure, button) != _depth(structure, body):
-        problems.append("the privacy button is nested inside a block (an `if`, a `Group`…)")
-    if _open_ifs(structure, button):
-        problems.append("the privacy button sits inside an `#if`")
+    help_struct = _block(lines, r"^(private )?struct HelpMenuContent\b")
+    help_body = _body(lines, "HelpMenuContent", "View")
+    if help_struct is None or help_body is None:
+        return [*problems, NO_HELP_BODY]
+    start, end = help_body
+    top = _indent(lines[start]) + 4
+    hits = [k for k in range(start + 1, end) if _is_code(lines[k]) and PRIVACY_KEY in lines[k]]
+    if not hits:
+        problems.append(NO_BUTTON)
+    else:
+        k = hits[0]
+        if _indent(lines[k]) != top:
+            problems.append(BUTTON_NESTED)
+        if _open_ifs(lines, k):
+            problems.append(BUTTON_IN_IF)
+        if not _BUTTON_HEAD.fullmatch(lines[k].strip()):
+            problems.append(BUTTON_SHAPE)
+        action, close = lines[k + 1 : k + 3] if k + 2 < len(lines) else ("", "")
+        if action.strip() != _ACTION or close.rstrip() != " " * _indent(lines[k]) + "}":
+            problems.append(ACTION_SHAPE)
+        following = next((ln for ln in lines[k + 3 :] if _is_code(ln)), "")
+        if re.match(r"\s*(\.|#if\b)", following):
+            problems.append(MODIFIERS)
 
-    action_open = structure.find("{", button + len(_BUTTON))
-    action_close = _matching_brace(structure, action_open)
-    if f'Self.open("{PRIVACY_URL}")' not in code[action_open:action_close]:
-        problems.append(f"the privacy button does not open {PRIVACY_URL}")
-    trailing = code[action_close + 1 :].lstrip()
-    if re.match(r"\.(disabled|hidden)\(", trailing):
-        problems.append("the privacy button is disabled or hidden by a modifier")
+    struct_lines = lines[help_struct[0] : help_struct[1]]
+    if not any(_is_code(ln) and "NSWorkspace.shared.open(url)" in ln for ln in struct_lines):
+        problems.append(SINK)
     return problems
 
 
@@ -159,43 +177,150 @@ def test_help_menu_links_the_privacy_policy_unconditionally() -> None:
     )
 
 
-# The gate must be able to fail. Each mutation is a plausible edit that would
-# lose the unconditional link; the real source must pass and each mutant must not.
-_ORIGINAL_BLOCK = f"""        Button(i18n.t("{PRIVACY_KEY}")) {{
-            Self.open("{PRIVACY_URL}")
-        }}
-"""
+# The gate must be able to fail, check by check. Each mutant is a plausible edit
+# to the real source, and must trip exactly the check it targets.
 
-_MUTATIONS = {
-    "wrapped in if": (
-        "        if NewsKeys.isLive {\n" + _ORIGINAL_BLOCK + "        }\n"
-    ),
-    "wrapped in #if": "        #if APPSTORE\n" + _ORIGINAL_BLOCK + "        #endif\n",
-    "disabled": _ORIGINAL_BLOCK.rstrip("\n") + "\n        .disabled(true)\n",
-    "wrong url": _ORIGINAL_BLOCK.replace(PRIVACY_URL, "https://bristlenose.app/docs/"),
-    "removed": "",
-    "commented out": "".join(f"// {line}\n" for line in _ORIGINAL_BLOCK.splitlines()),
+def _source() -> list[str]:
+    return _MENU_COMMANDS.read_text(encoding="utf-8").splitlines()
+
+
+def _button_at(lines: list[str]) -> int:
+    start, end = _body(lines, "HelpMenuContent", "View") or (0, 0)
+    return next(k for k in range(start, end) if PRIVACY_KEY in lines[k])
+
+
+def _group_at(lines: list[str]) -> int:
+    return next(k for k, ln in enumerate(lines) if ln.strip() == _HELP_GROUP)
+
+
+def _wrap(lines: list[str], k: int, n: int, head: str, tail: str, indent: bool) -> list[str]:
+    pad = " " * _indent(lines[k])
+    body = ["    " + ln if indent else ln for ln in lines[k : k + n]]
+    return [*lines[:k], pad + head, *body, pad + tail, *lines[k + n :]]
+
+
+def _m_button_if(ls: list[str]) -> list[str]:
+    return _wrap(ls, _button_at(ls), 3, "if NewsKeys.isLive {", "}", indent=True)
+
+
+def _m_button_hash_if(ls: list[str]) -> list[str]:
+    return _wrap(ls, _button_at(ls), 3, "#if APPSTORE", "#endif", indent=False)
+
+
+def _m_button_removed(ls: list[str]) -> list[str]:
+    k = _button_at(ls)
+    return ls[:k] + ls[k + 3 :]
+
+
+def _m_button_commented(ls: list[str]) -> list[str]:
+    k = _button_at(ls)
+    return [*ls[:k], *("// " + ln for ln in ls[k : k + 3]), *ls[k + 3 :]]
+
+
+def _m_button_label_form(ls: list[str]) -> list[str]:
+    k = _button_at(ls)
+    return [*ls[:k], ls[k].replace('"))', '"), role: nil)'), *ls[k + 1 :]]
+
+
+def _m_action_if(ls: list[str]) -> list[str]:
+    return _wrap(ls, _button_at(ls) + 1, 1, "if NewsKeys.isLive {", "}", indent=True)
+
+
+def _m_wrong_url(ls: list[str]) -> list[str]:
+    k = _button_at(ls) + 1
+    return [*ls[:k], ls[k].replace(PRIVACY_URL, "https://bristlenose.app/docs/"), *ls[k + 1 :]]
+
+
+def _m_disabled(ls: list[str]) -> list[str]:
+    k = _button_at(ls) + 3
+    return [*ls[:k], "        .disabled(true)", *ls[k:]]
+
+
+def _m_shortcut_then_disabled(ls: list[str]) -> list[str]:
+    k = _button_at(ls) + 3
+    return [*ls[:k], '        .keyboardShortcut("p")', "        .disabled(true)", *ls[k:]]
+
+
+def _m_postfix_hash_if(ls: list[str]) -> list[str]:
+    k = _button_at(ls) + 3
+    return [*ls[:k], "        #if APPSTORE", "        .disabled(true)", "        #endif", *ls[k:]]
+
+
+def _m_decoy_struct(ls: list[str]) -> list[str]:
+    # A same-prefix struct keeps the button while the real one loses it.
+    k = _button_at(ls)
+    decoy = ["private struct HelpMenuContentOld: View {", "    var body: some View {",
+             *ls[k : k + 3], "    }", "}", ""]
+    cut = ls[:k] + ls[k + 3 :]
+    s = next(i for i, ln in enumerate(cut) if ln.startswith("private struct HelpMenuContent:"))
+    return [*cut[:s], *decoy, *cut[s:]]
+
+
+def _m_sink_gutted(ls: list[str]) -> list[str]:
+    return [ln.replace("NSWorkspace.shared.open(url)", "_ = url") for ln in ls]
+
+
+def _m_group_if(ls: list[str]) -> list[str]:
+    return _wrap(ls, _group_at(ls), 3, "if showsHelp {", "}", indent=True)
+
+
+def _m_group_hash_if(ls: list[str]) -> list[str]:
+    return _wrap(ls, _group_at(ls), 3, "#if !APPSTORE", "#endif", indent=False)
+
+
+def _m_group_inner_if(ls: list[str]) -> list[str]:
+    return _wrap(ls, _group_at(ls) + 1, 1, "if showsHelp {", "}", indent=True)
+
+
+def _m_group_to_child(ls: list[str]) -> list[str]:
+    # Moved into a child Commands struct, called conditionally from the body.
+    k = _group_at(ls)
+    group = ls[k : k + 3]
+    call = ["        if showsHelp {", "            HelpCommands()", "        }"]
+    child = ["struct HelpCommands: Commands {", "    var body: some Commands {",
+             *group, "    }", "}", ""]
+    out = [*ls[:k], *call, *ls[k + 3 :]]
+    s = next(i for i, ln in enumerate(out) if ln.startswith("private struct HelpMenuContent:"))
+    return [*out[:s], *child, *out[s:]]
+
+
+def _m_menu_renamed(ls: list[str]) -> list[str]:
+    return [ln.replace("struct MenuCommands:", "struct MainMenuCommands:") for ln in ls]
+
+
+def _m_help_renamed(ls: list[str]) -> list[str]:
+    return [ln.replace("struct HelpMenuContent:", "struct HelpMenuItems:") for ln in ls]
+
+
+def _m_tabs(ls: list[str]) -> list[str]:
+    return [ln.replace("    ", "\t") for ln in ls]
+
+
+_MUTANTS: dict[str, tuple[Callable[[list[str]], list[str]], list[str]]] = {
+    "button in if": (_m_button_if, [BUTTON_NESTED]),
+    "button in #if": (_m_button_hash_if, [BUTTON_IN_IF]),
+    "button removed": (_m_button_removed, [NO_BUTTON]),
+    "button commented out": (_m_button_commented, [NO_BUTTON]),
+    "button header changed": (_m_button_label_form, [BUTTON_SHAPE]),
+    "action in if": (_m_action_if, [ACTION_SHAPE]),
+    "wrong url": (_m_wrong_url, [ACTION_SHAPE]),
+    "disabled": (_m_disabled, [MODIFIERS]),
+    "shortcut then disabled": (_m_shortcut_then_disabled, [MODIFIERS]),
+    "postfix #if": (_m_postfix_hash_if, [MODIFIERS]),
+    "same-prefix decoy struct": (_m_decoy_struct, [NO_BUTTON]),
+    "open() gutted": (_m_sink_gutted, [SINK]),
+    "help group in if": (_m_group_if, [GROUP_NESTED]),
+    "help group in #if": (_m_group_hash_if, [GROUP_IN_IF]),
+    "help content in if": (_m_group_inner_if, [GROUP_CONTENT]),
+    "help group moved to a child, called in if": (_m_group_to_child, [NO_GROUP]),
+    "MenuCommands renamed": (_m_menu_renamed, [NO_MENU_BODY]),
+    "HelpMenuContent renamed": (_m_help_renamed, [NO_HELP_BODY]),
+    "tab indentation": (_m_tabs, [NO_TABS]),
 }
 
 
-@pytest.mark.parametrize("name", sorted(_MUTATIONS))
+@pytest.mark.parametrize("name", sorted(_MUTANTS))
 def test_gate_catches(name: str) -> None:
-    source = _MENU_COMMANDS.read_text(encoding="utf-8")
-    assert source.count(_ORIGINAL_BLOCK) == 1, (
-        "the privacy button's block changed shape; update _ORIGINAL_BLOCK"
-    )
-    mutant = source.replace(_ORIGINAL_BLOCK, _MUTATIONS[name])
-    assert privacy_link_problems(mutant), f"mutation {name!r} went unnoticed"
-
-
-def test_gate_catches_help_menu_wrapped_in_if() -> None:
-    source = _MENU_COMMANDS.read_text(encoding="utf-8")
-    group = "        CommandGroup(replacing: .help) {"
-    assert source.count(group) == 1
-    mutant = source.replace(group, "        if showsHelp {\n" + group, 1)
-    # Close the `if` after the group's own closing brace.
-    start = mutant.index(group)
-    _code, structure = _blank(mutant)
-    close = _matching_brace(structure, structure.index("{", start))
-    mutant = mutant[: close + 1] + "\n        }" + mutant[close + 1 :]
-    assert privacy_link_problems(mutant), "a conditional Help menu went unnoticed"
+    mutate, expected = _MUTANTS[name]
+    mutant = "\n".join(mutate(_source())) + "\n"
+    assert privacy_link_problems(mutant) == expected

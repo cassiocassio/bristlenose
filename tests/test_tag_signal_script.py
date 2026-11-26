@@ -98,6 +98,34 @@ def _make_study(
     return root
 
 
+def _leave_empty_wal(db: Path, *, shm: bool) -> None:
+    """Leave the closed *db* with a zero-length ``-wal``, and a ``-shm`` if *shm*.
+
+    That is what a plain ``mode=ro`` visit leaves with Homebrew's SQLite 3.53.3
+    on the Mac (measured 26 Nov 2026), but Debian's 3.46.1 and Fedora's 3.47.2
+    create no file for that visit, so the state is built here rather than by a
+    visit: a writer's TRUNCATE checkpoint empties its WAL beside a real
+    ``-shm``, whose bytes are kept. Closing the writer deletes both files with
+    most builds (Apple's SQLite keeps them), so afterwards the empty ``-wal``
+    is always written back, and the ``-shm`` is written back or removed.
+    """
+    wal, shm_path = db.with_name(db.name + "-wal"), db.with_name(db.name + "-shm")
+    conn = sqlite3.connect(db)
+    try:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchall()
+        assert wal.stat().st_size == 0
+        shm_bytes = shm_path.read_bytes()
+    finally:
+        conn.close()
+    wal.write_bytes(b"")
+    if shm:
+        shm_path.write_bytes(shm_bytes)
+    else:
+        shm_path.unlink(missing_ok=True)
+    assert wal.stat().st_size == 0
+    assert shm_path.exists() is shm
+
+
 def _snapshot(folder: Path, *, shm_content: bool = True) -> dict[str, tuple]:
     """Listing, size, mtime and bytes of every file under *folder*.
 
@@ -252,7 +280,9 @@ def test_folder_names_with_uri_characters_open_the_right_database(tmp_path: Path
     # Built under a plain name (SQLAlchemy's URL parser would read the '?' as a
     # query), then renamed to the awkward one.
     built = _make_study(tmp_path / "plain", [("garrett", "user need", "accepted", "researcher")])
-    study = built.rename(tmp_path / "Q3 study? #2 100%")
+    # Windows refuses '?' in a file name; '#' and '%' still need encoding there.
+    name = "Q3 study #2 100%" if sys.platform == "win32" else "Q3 study? #2 100%"
+    study = built.rename(tmp_path / name)
     counts, _s, _t, read = tag_signal.count([study])
     assert read == 1
     assert counts
@@ -271,10 +301,8 @@ def test_csv_output_carries_an_as_of_date(tmp_path: Path) -> None:
 def test_an_empty_wal_left_by_another_reader_is_left_untouched(tmp_path: Path) -> None:
     study = _make_study(tmp_path / "study", [("garrett", "user need", "accepted", "researcher")])
     db = study / ".bristlenose" / "bristlenose.db"
-    # A plain mode=ro visit leaves an empty -wal and a -shm behind.
-    sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True).execute("SELECT 1").fetchall()
-    assert (study / ".bristlenose" / "bristlenose.db-wal").stat().st_size == 0
-    assert (study / ".bristlenose" / "bristlenose.db-shm").exists()
+    # The state a plain mode=ro visit leaves on the Mac: an empty -wal and a -shm.
+    _leave_empty_wal(db, shm=True)
     before = _snapshot(study)
 
     counts, *_ = tag_signal.count([study])
@@ -331,6 +359,9 @@ def test_a_database_without_alembic_version_is_skipped(
     assert "open it in Bristlenose once" in capsys.readouterr().err
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="chmod(0) cannot make a file unreadable on Windows"
+)
 def test_an_unreadable_study_is_skipped_and_the_run_carries_on(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -366,9 +397,7 @@ def test_an_empty_wal_without_a_shm_is_still_read_and_nothing_is_created(
 ) -> None:
     study = _make_study(tmp_path / "study", [("garrett", "user need", "accepted", "researcher")])
     db = study / ".bristlenose" / "bristlenose.db"
-    sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True).execute("SELECT 1").fetchall()
-    db.with_name("bristlenose.db-shm").unlink()
-    assert db.with_name("bristlenose.db-wal").stat().st_size == 0
+    _leave_empty_wal(db, shm=False)
     before = _snapshot(study)
 
     counts, _s, _t, read = tag_signal.count([study])

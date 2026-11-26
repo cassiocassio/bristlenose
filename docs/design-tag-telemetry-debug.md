@@ -64,7 +64,9 @@ For an open study the main file and `-wal` are untouched too; only SQLite's
 shared-memory `-shm` index changes, as it does for every reader, the app's
 included. Run it with the app closed for a guaranteed untouched folder.
 SQLite's `mode=ro` is not enough: on a cleanly closed WAL database it creates empty `-wal` and
-`-shm` files beside it (measured 26 Nov 2026), which would change the folder
+`-shm` files beside it with Homebrew's SQLite 3.53.3 on the Mac (measured 26 Nov
+2026; Debian's 3.46.1 and Fedora's 3.47.2 on Linux create nothing, and which of
+version or OS decides was not isolated), which would change the folder
 the Mac's locate flow compares by modification time. So:
 
 - if there is no `-wal`, or it is empty, the database is opened `immutable=1`

@@ -912,7 +912,7 @@
     "useOllama": "Usa il modello Ollama sul dispositivo",
     "ollamaDownloadSize": "~%@ di download",
     "done": "Fine",
-    "countsChoice": "Invia analisi anonime",
+    "countsChoice": "Invia analisi",
     "countsExplain": "Le informazioni sulla versione, la frequenza di apertura di Bristlenose e se è attivo un abbonamento. Nessun identificativo. Niente dai progetti. Modificabile in Impostazioni."
   },
   "llmSettings": {
@@ -1405,7 +1405,7 @@
     "settings": {
       "checkLabel": "Cerca novità su bristlenose.app",
       "checkExplain": "Una volta al giorno. Le novità e gli eventi della community compaiono nella finestra di benvenuto.",
-      "countsLabel": "Invia analisi anonime",
+      "countsLabel": "Invia analisi",
       "countsExplain": "Le informazioni sulla versione, la frequenza di apertura di Bristlenose e se è attivo un abbonamento. Nessun identificativo. Niente dai progetti.",
       "managed": "Gestito dalla tua organizzazione"
     }

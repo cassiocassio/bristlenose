@@ -912,7 +912,7 @@
     "useOllama": "Utilitza un model d'Ollama al dispositiu",
     "ollamaDownloadSize": "~%@ de baixada",
     "done": "Fet",
-    "countsChoice": "Envia anàlisis anònimes",
+    "countsChoice": "Envia anàlisis",
     "countsExplain": "La informació de la versió, amb quina freqüència obres Bristlenose i si et subscrius. Cap identificador. Res dels teus projectes. Es pot canviar a Configuració."
   },
   "llmSettings": {
@@ -1405,7 +1405,7 @@
     "settings": {
       "checkLabel": "Comprova si hi ha novetats a bristlenose.app",
       "checkExplain": "Un cop al dia. Les novetats i els esdeveniments de la comunitat apareixen a la finestra de benvinguda.",
-      "countsLabel": "Envia anàlisis anònimes",
+      "countsLabel": "Envia anàlisis",
       "countsExplain": "La informació de la versió, amb quina freqüència obres Bristlenose i si et subscrius. Cap identificador. Res dels teus projectes.",
       "managed": "Gestionat per la teva organització"
     }

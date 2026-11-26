@@ -968,7 +968,7 @@
     "useOllama": "Użyj modelu Ollama na urządzeniu",
     "ollamaDownloadSize": "~%@ do pobrania",
     "done": "Gotowe",
-    "countsChoice": "Wysyłaj anonimowe dane analityczne",
+    "countsChoice": "Wysyłaj dane analityczne",
     "countsExplain": "Informacje o wersji, o tym, jak często otwierasz Bristlenose, i o tym, czy masz subskrypcję. Bez identyfikatora. Nic z Twoich projektów. Możesz to zmienić w Ustawieniach."
   },
   "llmSettings": {
@@ -1507,7 +1507,7 @@
     "settings": {
       "checkLabel": "Sprawdzaj aktualności w bristlenose.app",
       "checkExplain": "Raz dziennie. Aktualności i wydarzenia społeczności pojawiają się w oknie powitalnym.",
-      "countsLabel": "Wysyłaj anonimowe dane analityczne",
+      "countsLabel": "Wysyłaj dane analityczne",
       "countsExplain": "Informacje o wersji, o tym, jak często otwierasz Bristlenose, i o tym, czy masz subskrypcję. Bez identyfikatora. Nic z Twoich projektów.",
       "managed": "Zarządzane przez Twoją organizację"
     }

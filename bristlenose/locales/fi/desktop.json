@@ -912,7 +912,7 @@
     "useOllama": "Käytä Ollama-mallia laitteella",
     "ollamaDownloadSize": "~%@ lataus",
     "done": "Valmis",
-    "countsChoice": "Lähetä anonyymiä analytiikkaa",
+    "countsChoice": "Lähetä analytiikkaa",
     "countsExplain": "Versiotiedot, kuinka usein avaat Bristlenosen ja onko sinulla tilaus. Ei tunnistetta. Ei mitään projekteistasi. Muuta asetuksissa."
   },
   "llmSettings": {
@@ -1405,7 +1405,7 @@
     "settings": {
       "checkLabel": "Tarkista uutiset bristlenose.appista",
       "checkExplain": "Kerran päivässä. Uutiset ja yhteisön tapahtumat näkyvät tervetuloikkunassa.",
-      "countsLabel": "Lähetä anonyymiä analytiikkaa",
+      "countsLabel": "Lähetä analytiikkaa",
       "countsExplain": "Versiotiedot, kuinka usein avaat Bristlenosen ja onko sinulla tilaus. Ei tunnistetta. Ei mitään projekteistasi.",
       "managed": "Organisaatiosi hallinnoima"
     }

@@ -912,7 +912,7 @@
     "useOllama": "Gebruik Ollama-model op apparaat",
     "ollamaDownloadSize": "~%@ download",
     "done": "Klaar",
-    "countsChoice": "Anonieme analysegegevens versturen",
+    "countsChoice": "Analysegegevens versturen",
     "countsExplain": "Versie-informatie, hoe vaak je Bristlenose opent en of je een abonnement hebt. Geen ID. Niets uit je projecten. Wijzig dit in Instellingen."
   },
   "llmSettings": {
@@ -1405,7 +1405,7 @@
     "settings": {
       "checkLabel": "Zoek naar nieuws op bristlenose.app",
       "checkExplain": "Eén keer per dag. Nieuws en communityevenementen verschijnen in het welkomstvenster.",
-      "countsLabel": "Anonieme analysegegevens versturen",
+      "countsLabel": "Analysegegevens versturen",
       "countsExplain": "Versie-informatie, hoe vaak je Bristlenose opent en of je een abonnement hebt. Geen ID. Niets uit je projecten.",
       "managed": "Beheerd door je organisatie"
     }

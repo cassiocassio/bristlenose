@@ -444,6 +444,24 @@ class TestDevAdminCrossSiteWrites:
 class TestFrameHeaders:
     """A framed report is fully authenticated (the token is in the HTML)."""
 
+    @pytest.fixture()
+    def app(self, tmp_path: Path):
+        """The file's app, with a stub bundle so ``/report/*`` serves the SPA.
+
+        The CI ``test`` job builds no frontend, and without ``static/index.html``
+        ``_mount_prod_report`` answers every ``/report/*`` with its fail-loud
+        500 page. The stub needs a ``</head>``: the token is injected before it.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text(
+            '<!doctype html><html><head></head><body>'
+            '<div id="bn-app-root" data-project-id="1"></div>'
+            "</body></html>", encoding="utf-8"
+        )
+        with patch("bristlenose.server.app._STATIC_DIR", static_dir):
+            return create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+
     @pytest.mark.parametrize("path", ["/report/", "/report/quotes", "/chat-lens"])
     def test_token_bearing_pages_refuse_foreign_frames(
         self, raw_client: TestClient, token: str, path: str

@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–471 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–487 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -326,6 +326,22 @@ enum WelcomeTimelineCSS {
     --bn-arrival-colour: var(--bn-colour-highlight);
     --bn-arrival-duration: 5s;
     --bn-arrival-easing: ease-out;
+
+    /* Tentative — what a proposal wears while nobody has decided it: an AutoCode
+       tag on a quote card or in Screens (atoms/badge.css .badge-proposed), the
+       review dialog's tentative counter and a row's tag that Apply would leave
+       tentative (molecules/threshold-review.css). One line for all three:
+       dotted, not dashed, because the dots are less aggressive (owner, 25 Nov
+       2026, set in the keyline lab at /report/keyline-lab, which tunes these
+       tokens in place). currentColor resolves on the element that draws the
+       line, so each tag keeps its own ink. The tag rests at the opacity; while a
+       run lands it breathes down to the pulse low and up to the pulse high, then
+       calms back to rest (D8, docs/design-autocode-landing-plan.md). The counter
+       pulses between the same two. */
+    --bn-tentative-keyline: 1px dotted currentColor;
+    --bn-tentative-opacity: 0.72;
+    --bn-tentative-pulse-low: 0.5;
+    --bn-tentative-pulse-high: 0.78;
 
     /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
        Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
@@ -1943,7 +1959,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/atoms/badge.css — lines 1–373 ════ */
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–375 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
 /* Every tag is one weight, separated from its kind by colour, not weight:
@@ -2106,21 +2122,23 @@ body.hide-ai-tags .badge-ai { display: none; }
     color: var(--bn-colour-accent);
 }
 
-/* Proposed badge — dashed border (AutoCode). The review dialog's tentative counter
-   (molecules/threshold-review.css) keeps this keyframe: it pulses as it always has, except
-   under reduced motion or with the analysis animation off. */
+/* Proposed badge — the tentative keyline (AutoCode). Line, opacity and pulse are the
+   --bn-tentative-* tokens in tokens.css; this atom and molecules/threshold-review.css draw
+   them and keep no copy. The review dialog's tentative counter keeps this keyframe: it pulses
+   as it always has, except under reduced motion or with the analysis animation off. */
 @keyframes bn-proposed-pulse {
-    0%   { opacity: 0.50; }
-    50%  { opacity: 0.78; }
-    100% { opacity: 0.50; }
+    0%   { opacity: var(--bn-tentative-pulse-low); }
+    50%  { opacity: var(--bn-tentative-pulse-high); }
+    100% { opacity: var(--bn-tentative-pulse-low); }
 }
 
 /* D8 (docs/design-autocode-landing-plan.md): a tentative tag pulses while a run lands and for a
-   minute after, then calms to a still dashed outline over 30 s; at rest it is still. The
+   minute after, then calms to a still dotted outline over 30 s; at rest it is still. The
    playback store (contexts/AutoCodePlayback.ts) sets `data-autocode-tentative` on the root:
    "pulse", then "calm", then nothing. The pulse is one keyframe whose depth is a registered
    property, so calming eases the swing down to the still opacity without restarting it: at
-   depth 1 it is the shipped 0.50 to 0.78, at depth 0 it holds 0.72, the still outline. The
+   depth 1 it swings between the pulse low and high, at depth 0 it holds the resting opacity
+   (the --bn-tentative-* tokens). The
    property does not inherit, so the 30 s transition restyles the proposed badges only, never the
    page under the root (frontend/gotchas.md, custom properties in WebKit). No pulse under reduced
    motion or with the app's "Show animation while analysing" off (as atoms/shimmer.css). */
@@ -2131,14 +2149,14 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 @keyframes bn-proposed-breathe {
-    0%   { opacity: calc(0.72 - 0.22 * var(--bn-proposed-pulse-depth)); }
-    50%  { opacity: calc(0.72 + 0.06 * var(--bn-proposed-pulse-depth)); }
-    100% { opacity: calc(0.72 - 0.22 * var(--bn-proposed-pulse-depth)); }
+    0%   { opacity: calc(var(--bn-tentative-opacity) + (var(--bn-tentative-pulse-low) - var(--bn-tentative-opacity)) * var(--bn-proposed-pulse-depth)); }
+    50%  { opacity: calc(var(--bn-tentative-opacity) + (var(--bn-tentative-pulse-high) - var(--bn-tentative-opacity)) * var(--bn-proposed-pulse-depth)); }
+    100% { opacity: calc(var(--bn-tentative-opacity) + (var(--bn-tentative-pulse-low) - var(--bn-tentative-opacity)) * var(--bn-proposed-pulse-depth)); }
 }
 
 .badge-proposed {
-    opacity: 0.72;
-    border: 1px dashed currentColor;
+    opacity: var(--bn-tentative-opacity);
+    border: var(--bn-tentative-keyline);
     cursor: pointer;
     position: relative;
 }

@@ -1,7 +1,8 @@
 /**
  * Retune the shipped theme in place: find the rules the lab's edits name in the
  * loaded stylesheets (the theme CSS the app links), change their declarations
- * through the CSSOM, and put every one back on `restore()`.
+ * through the CSSOM, and put every one back on `restore()`. A token is changed
+ * where it is declared: the `:root` rules that carry it (in `tokens.css`).
  *
  * No copy of a selector or a rule body lives here. A rule the lab cannot find is
  * reported, not invented: if the theme renames `.badge-proposed`, the lab says so
@@ -12,12 +13,10 @@ import type { Edit } from "./spec";
 
 type Parent = CSSStyleSheet | CSSGroupingRule;
 
-/** `CSSRule.KEYFRAMES_RULE`, written out: the constant is deprecated in the DOM typings. */
-const KEYFRAMES_RULE = 7;
-
 interface Found {
   styles: Map<string, CSSStyleRule[]>;
-  keyframes: Map<string, CSSKeyframesRule[]>;
+  /** Custom property name → the rules that declare it. */
+  tokens: Map<string, CSSStyleRule[]>;
 }
 
 /** Selector text as engines serialise it varies (quotes, spaces): compare a normal form. */
@@ -40,10 +39,9 @@ function walk(p: Parent, found: Found): void {
     if (rule instanceof CSSStyleRule) {
       const key = normalSelector(rule.selectorText);
       found.styles.set(key, [...(found.styles.get(key) ?? []), rule]);
-    } else if (rule.type === KEYFRAMES_RULE) {
-      // By type, not instanceof: jsdom's CSSOM has the rule but not the global constructor.
-      const kf = rule as CSSKeyframesRule;
-      found.keyframes.set(kf.name, [...(found.keyframes.get(kf.name) ?? []), kf]);
+      for (const prop of Array.from(rule.style)) {
+        if (prop.startsWith("--")) found.tokens.set(prop, [...(found.tokens.get(prop) ?? []), rule]);
+      }
     } else if ("cssRules" in rule) {
       walk(rule as CSSGroupingRule, found);
     }
@@ -51,7 +49,7 @@ function walk(p: Parent, found: Found): void {
 }
 
 function findAll(doc: Document): Found {
-  const found: Found = { styles: new Map(), keyframes: new Map() };
+  const found: Found = { styles: new Map(), tokens: new Map() };
   for (const sheet of Array.from(doc.styleSheets)) walk(sheet, found);
   return found;
 }
@@ -63,13 +61,8 @@ function setDecls(style: CSSStyleDeclaration, decls: Record<string, string>): vo
   }
 }
 
-function keyText(k: CSSKeyframeRule): string {
-  // Engines write "0%" or "from"; the theme writes percentages.
-  return k.keyText.replace(/^from$/, "0%").replace(/^to$/, "100%");
-}
-
 export class ThemeRuleEditor {
-  private saved = new Map<CSSStyleRule | CSSKeyframeRule, string>();
+  private saved = new Map<CSSStyleRule, string>();
   private inserted: Array<{ parent: Parent; rule: CSSRule }> = [];
 
   constructor(private doc: Document = document) {}
@@ -87,16 +80,14 @@ export class ThemeRuleEditor {
           this.save(r);
           setDecls(r.style, e.decls);
         }
-      } else if (e.kind === "keyframes") {
-        const rules = found.keyframes.get(e.name) ?? [];
-        if (rules.length === 0) missing.push(`@keyframes ${e.name}`);
-        for (const kf of rules) {
-          for (const k of Array.from(kf.cssRules) as CSSKeyframeRule[]) {
-            const frame = e.frames.find(([key]) => key === keyText(k));
-            if (!frame) continue;
-            this.save(k);
-            setDecls(k.style, frame[1]);
-          }
+      } else if (e.kind === "token") {
+        // The declaring rule only: a token set on a surface's own rule (an unlinked surface)
+        // arrives as a "style" edit, so it never counts here.
+        const rules = (found.tokens.get(e.name) ?? []).filter((r) => normalSelector(r.selectorText) === ":root");
+        if (rules.length === 0) missing.push(e.name);
+        for (const r of rules) {
+          this.save(r);
+          setDecls(r.style, { [e.name]: e.value });
         }
       } else {
         const anchors = found.styles.get(normalSelector(e.after)) ?? [];
@@ -125,7 +116,7 @@ export class ThemeRuleEditor {
     this.saved.clear();
   }
 
-  private save(rule: CSSStyleRule | CSSKeyframeRule): void {
+  private save(rule: CSSStyleRule): void {
     if (!this.saved.has(rule)) this.saved.set(rule, rule.style.cssText);
   }
 }

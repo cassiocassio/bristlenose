@@ -64,7 +64,7 @@ describe("Badge", () => {
 
   // ── Proposed variant ──────────────────────────────────────────────────
 
-  it("proposed: renders badge with dashed-border class", () => {
+  it("proposed: renders badge with the tentative-keyline class", () => {
     render(<Badge text="Frustration" variant="proposed" data-testid="p" />);
     expect(screen.getByTestId("p")).toHaveClass("badge-proposed");
   });

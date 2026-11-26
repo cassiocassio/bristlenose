@@ -160,21 +160,23 @@ body.hide-ai-tags .badge-ai { display: none; }
     color: var(--bn-colour-accent);
 }
 
-/* Proposed badge — dashed border (AutoCode). The review dialog's tentative counter
-   (molecules/threshold-review.css) keeps this keyframe: it pulses as it always has, except
-   under reduced motion or with the analysis animation off. */
+/* Proposed badge — the tentative keyline (AutoCode). Line, opacity and pulse are the
+   --bn-tentative-* tokens in tokens.css; this atom and molecules/threshold-review.css draw
+   them and keep no copy. The review dialog's tentative counter keeps this keyframe: it pulses
+   as it always has, except under reduced motion or with the analysis animation off. */
 @keyframes bn-proposed-pulse {
-    0%   { opacity: 0.50; }
-    50%  { opacity: 0.78; }
-    100% { opacity: 0.50; }
+    0%   { opacity: var(--bn-tentative-pulse-low); }
+    50%  { opacity: var(--bn-tentative-pulse-high); }
+    100% { opacity: var(--bn-tentative-pulse-low); }
 }
 
 /* D8 (docs/design-autocode-landing-plan.md): a tentative tag pulses while a run lands and for a
-   minute after, then calms to a still dashed outline over 30 s; at rest it is still. The
+   minute after, then calms to a still dotted outline over 30 s; at rest it is still. The
    playback store (contexts/AutoCodePlayback.ts) sets `data-autocode-tentative` on the root:
    "pulse", then "calm", then nothing. The pulse is one keyframe whose depth is a registered
    property, so calming eases the swing down to the still opacity without restarting it: at
-   depth 1 it is the shipped 0.50 to 0.78, at depth 0 it holds 0.72, the still outline. The
+   depth 1 it swings between the pulse low and high, at depth 0 it holds the resting opacity
+   (the --bn-tentative-* tokens). The
    property does not inherit, so the 30 s transition restyles the proposed badges only, never the
    page under the root (frontend/gotchas.md, custom properties in WebKit). No pulse under reduced
    motion or with the app's "Show animation while analysing" off (as atoms/shimmer.css). */
@@ -185,14 +187,14 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 @keyframes bn-proposed-breathe {
-    0%   { opacity: calc(0.72 - 0.22 * var(--bn-proposed-pulse-depth)); }
-    50%  { opacity: calc(0.72 + 0.06 * var(--bn-proposed-pulse-depth)); }
-    100% { opacity: calc(0.72 - 0.22 * var(--bn-proposed-pulse-depth)); }
+    0%   { opacity: calc(var(--bn-tentative-opacity) + (var(--bn-tentative-pulse-low) - var(--bn-tentative-opacity)) * var(--bn-proposed-pulse-depth)); }
+    50%  { opacity: calc(var(--bn-tentative-opacity) + (var(--bn-tentative-pulse-high) - var(--bn-tentative-opacity)) * var(--bn-proposed-pulse-depth)); }
+    100% { opacity: calc(var(--bn-tentative-opacity) + (var(--bn-tentative-pulse-low) - var(--bn-tentative-opacity)) * var(--bn-proposed-pulse-depth)); }
 }
 
 .badge-proposed {
-    opacity: 0.72;
-    border: 1px dashed currentColor;
+    opacity: var(--bn-tentative-opacity);
+    border: var(--bn-tentative-keyline);
     cursor: pointer;
     position: relative;
 }

@@ -190,7 +190,7 @@
 }
 
 .threshold-zone-counter--tentative {
-    border: 1px dashed currentColor;
+    border: var(--bn-tentative-keyline);
 }
 
 /* The counter pulses as it always has, but not under reduced motion or with the app's "Show
@@ -310,11 +310,11 @@
     text-overflow: clip;
 }
 
-/* A tag Apply would leave tentative: the tentative tag's dashed outline
-   (atoms/badge.css .badge-proposed), without its fade or its pulse, which in a list of
+/* A tag Apply would leave tentative: the tentative tag's keyline (the --bn-tentative-keyline
+   token, as atoms/badge.css .badge-proposed draws it), without its fade or its pulse, which in a list of
    rows would breathe under the text being read (owner, 24 Nov 2026). */
 .badge.threshold-tag-tentative {
-    border: 1px dashed currentColor;
+    border: var(--bn-tentative-keyline);
 }
 
 /* Figures throughout this molecule: body face, tabular numerals (docs/design-monospace-roles.md §4). */

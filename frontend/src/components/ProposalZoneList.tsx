@@ -215,7 +215,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
           </td>
           <td className="report-tag">
             <span
-              // A tag Apply would leave tentative wears the tentative tag's dashed
+              // A tag Apply would leave tentative wears the tentative tag's dotted
               // outline, without its fade or its pulse (owner, 24 Nov 2026).
               className={[
                 "badge",

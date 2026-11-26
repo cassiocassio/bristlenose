@@ -18,7 +18,7 @@ describe("TagSpecimen", () => {
     expect(document.querySelector(".tag-sidebar .tag-micro-bar-tentative")).not.toBeNull();
     // CodebookGroupColumn.
     expect(document.querySelector(".v2-groups .codebook-group")).not.toBeNull();
-    // The review dialog's counters and its tentative row's dashed tag.
+    // The review dialog's counters and its tentative row's dotted tag.
     expect(document.querySelector(".threshold-zone-counter--tentative")).not.toBeNull();
     expect(document.querySelector(".threshold-tag-tentative")).not.toBeNull();
   });

@@ -80,7 +80,7 @@ export const CHIP_WAIT_MS = 20_000;
 /** How long the overlay is kept after the run's end hands over, so every view has read the
  *  ordinary data again before it goes. */
 export const HANDOVER_GRACE_MS = 10_000;
-/** D8: tentative tags pulse during a run and for a minute after, then calm to a still dashed
+/** D8: tentative tags pulse during a run and for a minute after, then calm to a still dotted
  *  outline over 30 s (atoms/badge.css, `data-autocode-tentative`). */
 export const PULSE_AFTER_MS = 60_000;
 export const CALM_MS = 30_000;
@@ -856,7 +856,7 @@ export function setPulse(state: "pulse" | "calm" | null): void {
 }
 
 /** Tentative tags pulse while a run lands and for a minute after, then calm over 30 s to a still
- *  dashed outline (D8). The CSS gates the motion itself on reduced motion and the analysis
+ *  dotted outline (D8). The CSS gates the motion itself on reduced motion and the analysis
  *  animation setting. */
 function updatePulse(): void {
   if (isExportMode()) return;

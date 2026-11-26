@@ -4,8 +4,8 @@
  * Drawn by ThresholdReviewModal under the histogram, and by the Tag Specimen
  * page (islands/TagSpecimen.tsx), so the specimen shows the counters through the
  * code the dialog ships rather than a copy of its markup. The Tentative counter
- * wears the tentative tag's dashed outline and pulses
- * (molecules/threshold-review.css).
+ * wears the tentative tag's dotted outline and pulses
+ * (the --bn-tentative-* tokens, drawn by molecules/threshold-review.css).
  */
 
 import { useTranslation } from "react-i18next";

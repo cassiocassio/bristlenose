@@ -1038,7 +1038,7 @@ describe("ThresholdReviewModal", () => {
       expect(headers).toEqual(["Session 2", "Session 3", "Session 10"]);
     });
 
-    it("draws a tentative tag with the dashed outline, and only there", async () => {
+    it("draws a tentative tag with the tentative outline, and only there", async () => {
       await show([
         makeProposal({ id: 1, confidence: 0.5 }),
         makeProposal({ id: 2, confidence: 0.9 }),

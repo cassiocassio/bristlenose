@@ -2,15 +2,19 @@
  * The keyline lab's spec: every handle, and the shipped CSS each one maps to.
  *
  * Colour-lab rule ("retune in the lab, then change both"): each handle is one
- * value in a shipped rule. `ruleEdits(SHIPPED)` is, declaration for
- * declaration, what `atoms/badge.css` and `molecules/threshold-review.css` say
- * today; `keylineLab/spec.test.ts` reads both files and fails when they part.
+ * value in the shipped theme. The keyline is four tokens in `tokens.css`
+ * (`--bn-tentative-keyline`, `-opacity`, `-pulse-low`, `-pulse-high`) and the
+ * three surfaces below draw them, keeping no copy (`CONSUMERS`). So
+ * `ruleEdits(SHIPPED)` is the four token values plus the hover rule, and
+ * `keylineLab/spec.test.ts` reads the three files and fails when they part.
  * Change the CSS and SHIPPED together.
  *
  * Three surfaces carry the tentative keyline:
  *   quote    `.badge-proposed`                    every tentative tag (quote cards, Screens)
  *   row      `.badge.threshold-tag-tentative`     the review dialog's tentative rows
  *   counter  `.threshold-zone-counter--tentative` the review dialog's tentative counter
+ * A linked surface follows the tokens. An unlinked one gets its own value of the
+ * token, declared on its rule, which is how the theme would scope it too.
  *
  * Techniques. `dashed`, `dotted` and `solid` are the CSS border styles: the
  * browser decides dash length, and Chromium and WebKit decide differently,
@@ -46,7 +50,7 @@ export interface LabSpec {
 }
 
 const SHIPPED_LINE: Keyline = {
-  technique: "dashed",
+  technique: "dotted",
   width: 1,
   dash: 3,
   gap: 3,
@@ -55,7 +59,8 @@ const SHIPPED_LINE: Keyline = {
   strength: 100,
 };
 
-/** Today's spec, as shipped (25 Nov 2026). The test pins it to the CSS files. */
+/** Today's spec, as shipped (dotted since 25 Nov 2026, the owner's pick in this lab).
+ *  The test pins it to the CSS files. */
 export const SHIPPED: LabSpec = {
   quote: { line: SHIPPED_LINE, rest: 0.72, trough: 0.5, peak: 0.78, hover: 1 },
   row: { linked: true, line: SHIPPED_LINE },
@@ -69,6 +74,7 @@ export const SELECTORS: Record<Surface, string> = {
 };
 
 export const FILES = {
+  tokens: "bristlenose/theme/tokens.css",
   badge: "bristlenose/theme/atoms/badge.css",
   review: "bristlenose/theme/molecules/threshold-review.css",
 } as const;
@@ -76,10 +82,26 @@ export type ThemeFile = (typeof FILES)[keyof typeof FILES];
 
 const FILE_OF: Record<Surface, ThemeFile> = { quote: FILES.badge, row: FILES.review, counter: FILES.review };
 
-/** One change to the shipped theme: declarations on a rule, a keyframes rewrite, or a new rule. */
+/** The tentative keyline's tokens, declared in `tokens.css`. */
+export const TOKENS = {
+  keyline: "--bn-tentative-keyline",
+  opacity: "--bn-tentative-opacity",
+  pulseLow: "--bn-tentative-pulse-low",
+  pulseHigh: "--bn-tentative-pulse-high",
+} as const;
+
+/** What each surface's shipped rule says: the tokens, never a copy of their values. */
+export const CONSUMERS: Array<{ file: ThemeFile; selector: string; decls: Record<string, string> }> = [
+  { file: FILES.badge, selector: SELECTORS.quote, decls: { opacity: `var(${TOKENS.opacity})`, border: `var(${TOKENS.keyline})` } },
+  { file: FILES.review, selector: SELECTORS.counter, decls: { border: `var(${TOKENS.keyline})` } },
+  { file: FILES.review, selector: SELECTORS.row, decls: { border: `var(${TOKENS.keyline})` } },
+];
+
+/** One change to the shipped theme: a token's value where it is declared, declarations on a
+ *  rule, or a new rule. */
 export type Edit =
+  | { kind: "token"; file: ThemeFile; name: string; value: string }
   | { kind: "style"; file: ThemeFile; selector: string; decls: Record<string, string> }
-  | { kind: "keyframes"; file: ThemeFile; name: string; frames: Array<[string, Record<string, string>]> }
   | { kind: "new"; file: ThemeFile; selector: string; after: string; decls: Record<string, string> };
 
 export interface Env {
@@ -94,6 +116,11 @@ export function lineOf(spec: LabSpec, surface: Surface): Keyline {
   if (surface === "row" && spec.row.linked) return spec.quote.line;
   if (surface === "counter" && spec.counter.linked) return spec.quote.line;
   return spec[surface].line;
+}
+
+/** The counter's effective pulse: linked, it pulses between the tentative tag's two. */
+export function counterPulse(spec: LabSpec): { trough: number; peak: number } {
+  return spec.counter.linked ? { trough: spec.quote.trough, peak: spec.quote.peak } : spec.counter;
 }
 
 /** A number as the theme writes one: no trailing zeros, at most two places. */
@@ -128,18 +155,20 @@ export function maskUrl(line: Keyline, env: Env): string {
   return `url("data:image/svg+xml,${escaped}")`;
 }
 
-function lineEdits(surface: Surface, line: Keyline, env: Env): Edit[] {
+/** A keyline as the value of `--bn-tentative-keyline`. Drawn keeps the 1px edge, transparent,
+ *  so the tag is the size it is today, and draws over it in a `::before`. */
+export function lineValue(line: Keyline): string {
+  return line.technique === "drawn" ? "1px solid transparent" : `${px(line.width)} ${line.technique} ${inkColour(line)}`;
+}
+
+function drawnEdits(surface: Surface, line: Keyline, env: Env): Edit[] {
+  if (line.technique !== "drawn") return [];
   const selector = SELECTORS[surface];
   const file = FILE_OF[surface];
-  if (line.technique !== "drawn") {
-    return [{ kind: "style", file, selector, decls: { border: `${px(line.width)} ${line.technique} ${inkColour(line)}` } }];
-  }
-  // Keep the shipped 1px edge, so the tag is the size it is today, and draw over it.
-  const decls: Record<string, string> = { border: "1px solid transparent" };
-  if (surface !== "quote") decls.position = "relative"; // .badge-proposed already has it
   const mask = `${maskUrl(line, env)} 0 0 / 100% 100% no-repeat`;
   return [
-    { kind: "style", file, selector, decls },
+    // .badge-proposed already has position: relative.
+    ...(surface === "quote" ? [] : [{ kind: "style" as const, file, selector, decls: { position: "relative" } }]),
     {
       kind: "new",
       file,
@@ -159,47 +188,38 @@ function lineEdits(surface: Surface, line: Keyline, env: Env): Edit[] {
   ];
 }
 
-const DEPTH = "var(--bn-proposed-pulse-depth)";
-
-/** `calc(rest - swing * depth)`, written the way badge.css writes it. */
-function swing(rest: number, to: number): string {
-  const d = to - rest;
-  return `calc(${num(rest)} ${d < 0 ? "-" : "+"} ${num(Math.abs(d))} * ${DEPTH})`;
+/** A review surface: unlinked, its own token values on its rule; drawn, its `::before`. */
+function surfaceEdits(spec: LabSpec, surface: "row" | "counter", env: Env): Edit[] {
+  const own: Record<string, string> = {};
+  if (!spec[surface].linked) {
+    own[TOKENS.keyline] = lineValue(spec[surface].line);
+    if (surface === "counter") {
+      own[TOKENS.pulseLow] = num(spec.counter.trough);
+      own[TOKENS.pulseHigh] = num(spec.counter.peak);
+    }
+  }
+  const local: Edit[] = Object.keys(own).length
+    ? [{ kind: "style", file: FILE_OF[surface], selector: SELECTORS[surface], decls: own }]
+    : [];
+  return [...local, ...drawnEdits(surface, lineOf(spec, surface), env)];
 }
 
 /** Every change the spec makes to the shipped theme, in file order. */
 export function ruleEdits(spec: LabSpec, env: Env = DEFAULT_ENV): Edit[] {
   const q = spec.quote;
-  const quoteLine = lineEdits("quote", q.line, env);
-  const [quoteBase, ...quoteNew] = quoteLine;
+  const token = (name: string, value: string): Edit => ({ kind: "token", file: FILES.tokens, name, value });
   return [
+    // tokens.css
+    token(TOKENS.keyline, lineValue(q.line)),
+    token(TOKENS.opacity, num(q.rest)),
+    token(TOKENS.pulseLow, num(q.trough)),
+    token(TOKENS.pulseHigh, num(q.peak)),
     // atoms/badge.css
-    {
-      kind: "keyframes",
-      file: FILES.badge,
-      name: "bn-proposed-pulse",
-      frames: [
-        ["0%", { opacity: num(spec.counter.trough) }],
-        ["50%", { opacity: num(spec.counter.peak) }],
-        ["100%", { opacity: num(spec.counter.trough) }],
-      ],
-    },
-    {
-      kind: "keyframes",
-      file: FILES.badge,
-      name: "bn-proposed-breathe",
-      frames: [
-        ["0%", { opacity: swing(q.rest, q.trough) }],
-        ["50%", { opacity: swing(q.rest, q.peak) }],
-        ["100%", { opacity: swing(q.rest, q.trough) }],
-      ],
-    },
-    quoteBase.kind === "style" ? { ...quoteBase, decls: { opacity: num(q.rest), ...quoteBase.decls } } : quoteBase,
-    ...quoteNew,
+    ...drawnEdits("quote", q.line, env),
     { kind: "style", file: FILES.badge, selector: ".badge-proposed:hover", decls: { opacity: `${num(q.hover)} !important` } },
     // molecules/threshold-review.css
-    ...lineEdits("counter", lineOf(spec, "counter"), env),
-    ...lineEdits("row", lineOf(spec, "row"), env),
+    ...surfaceEdits(spec, "counter", env),
+    ...surfaceEdits(spec, "row", env),
   ];
 }
 
@@ -208,20 +228,21 @@ function block(selector: string, decls: Record<string, string>, indent = ""): st
   return `${indent}${selector} {\n${body}\n${indent}}`;
 }
 
-/** The edits as CSS to drop into the two files, grouped by file. */
+/** The edits as CSS to drop into the theme, grouped by file. */
 export function dropInCss(spec: LabSpec, env: Env = DEFAULT_ENV): string {
   const edits = ruleEdits(spec, env);
   const out: string[] = [];
   for (const file of Object.values(FILES)) {
     out.push(`/* ── ${file.replace("bristlenose/theme/", "")} ── */`);
-    for (const e of edits.filter((x) => x.file === file)) {
+    const mine = edits.filter((x) => x.file === file);
+    const tokens = mine.flatMap((e) => (e.kind === "token" ? [[e.name, e.value] as const] : []));
+    if (tokens.length) out.push(`/* in :root, these tokens */\n${block(":root", Object.fromEntries(tokens))}`);
+    for (const e of mine) {
+      if (e.kind === "token") continue;
       if (e.kind === "style") {
         out.push(`/* in the shipped rule, these lines (its other lines stay) */\n${block(e.selector, e.decls)}`);
-      } else if (e.kind === "new") {
-        out.push(`/* new rule, after ${e.after} */\n${block(e.selector, e.decls)}`);
       } else {
-        const frames = e.frames.map(([k, d]) => block(k, d, "    ")).join("\n");
-        out.push(`/* the whole keyframe */\n@keyframes ${e.name} {\n${frames}\n}`);
+        out.push(`/* new rule, after ${e.after} */\n${block(e.selector, e.decls)}`);
       }
     }
   }

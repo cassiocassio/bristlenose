@@ -1,15 +1,16 @@
 /**
- * KeylineLab — tune the dashed keyline of a tentative (AutoCode-proposed) tag.
+ * KeylineLab — tune the keyline of a tentative (AutoCode-proposed) tag.
  *
  * The rule (the owner's, 25 Nov 2026): every example and every handle drives
  * the exact current code path. So nothing here draws a tag. The tags are the
  * shipped `Badge` (one tentative tag on every codebook fill) and the whole Tag
  * specimen (`TagSpecimen`: QuoteCard, the sidebar, the Codebook, the review
- * dialog) on its fixtures; the handles retune the shipped rules themselves, in
- * the loaded theme stylesheet, through the CSSOM (`keylineLab/themeRules.ts`),
- * and put them back when the page goes. Each handle is one value in
- * `atoms/badge.css` or `molecules/threshold-review.css` (`keylineLab/spec.ts`),
- * and the page prints the chosen values as CSS to drop into those two files.
+ * dialog) on its fixtures; the handles retune the shipped theme itself, in
+ * the loaded stylesheet, through the CSSOM (`keylineLab/themeRules.ts`), and
+ * put it back when the page goes. Most handles are one of the four
+ * `--bn-tentative-*` tokens in `tokens.css`, which `atoms/badge.css` and
+ * `molecules/threshold-review.css` draw (`keylineLab/spec.ts`); the page prints
+ * the chosen values as CSS to drop into those files.
  * Colour-lab pattern: retune here, then change both the CSS and `SHIPPED`.
  *
  * Why a sibling of /report/tag-specimen and not handles on it: the specimen is
@@ -38,6 +39,7 @@ import { reading, resolve, surround, type Reading, type Rgba } from "./keylineLa
 import {
   DEFAULT_ENV,
   SHIPPED,
+  counterPulse,
   dropInCss,
   isShipped,
   lineOf,
@@ -128,8 +130,8 @@ function measure(root: HTMLElement, spec: LabSpec): void {
     "quote-peak": worst(quoteEls, q.line, q.peak),
     "quote-hover": worst(quoteEls, q.line, q.hover),
     "row-rest": worst(rowEls, lineOf(spec, "row"), 1),
-    "counter-trough": worst(counterEls, lineOf(spec, "counter"), spec.counter.trough),
-    "counter-peak": worst(counterEls, lineOf(spec, "counter"), spec.counter.peak),
+    "counter-trough": worst(counterEls, lineOf(spec, "counter"), counterPulse(spec).trough),
+    "counter-peak": worst(counterEls, lineOf(spec, "counter"), counterPulse(spec).peak),
   };
   for (const [key, text] of Object.entries(cells)) {
     const cell = root.querySelector(`[data-kl-cell="${key}"]`);
@@ -216,7 +218,7 @@ function LineHandles({ line, onChange, id }: { line: Keyline; onChange: (l: Keyl
     <>
       <Choice
         label="Technique"
-        css="border-style, or a masked ::before for Drawn"
+        css="--bn-tentative-keyline's style, or a masked ::before for Drawn"
         value={line.technique}
         options={[["dashed", "Dashed (CSS border)"], ["dotted", "Dotted (CSS border)"], ["drawn", "Drawn dash (SVG mask)"], ["solid", "Solid (reference)"]]}
         onChange={(v) => set("technique", v)}
@@ -256,9 +258,9 @@ function Handles({ spec, onChange }: { spec: LabSpec; onChange: (s: LabSpec) => 
           <code>.badge-proposed</code>, atoms/badge.css: quote cards, Screens.
         </p>
         <LineHandles line={q.line} onChange={(line) => setQ({ line })} id="quote" />
-        <Slider label="At rest" css=".badge-proposed opacity, and the keyframe's still point" value={q.rest} min={0.3} max={1} step={0.01} onChange={(rest) => setQ({ rest })} testId="bn-kl-quote-rest" />
-        <Slider label="Pulse low" css="bn-proposed-breathe 0%/100% at depth 1" value={q.trough} min={0.2} max={1} step={0.01} onChange={(trough) => setQ({ trough })} testId="bn-kl-quote-trough" />
-        <Slider label="Pulse high" css="bn-proposed-breathe 50% at depth 1" value={q.peak} min={0.2} max={1} step={0.01} onChange={(peak) => setQ({ peak })} testId="bn-kl-quote-peak" />
+        <Slider label="At rest" css="--bn-tentative-opacity" value={q.rest} min={0.3} max={1} step={0.01} onChange={(rest) => setQ({ rest })} testId="bn-kl-quote-rest" />
+        <Slider label="Pulse low" css="--bn-tentative-pulse-low (the counter's too)" value={q.trough} min={0.2} max={1} step={0.01} onChange={(trough) => setQ({ trough })} testId="bn-kl-quote-trough" />
+        <Slider label="Pulse high" css="--bn-tentative-pulse-high (the counter's too)" value={q.peak} min={0.2} max={1} step={0.01} onChange={(peak) => setQ({ peak })} testId="bn-kl-quote-peak" />
         <Slider label="Hover" css=".badge-proposed:hover opacity (!important)" value={q.hover} min={0.3} max={1} step={0.01} onChange={(hover) => setQ({ hover })} testId="bn-kl-quote-hover" />
       </fieldset>
       <fieldset>
@@ -278,12 +280,21 @@ function Handles({ spec, onChange }: { spec: LabSpec; onChange: (s: LabSpec) => 
           <code>.threshold-zone-counter--tentative</code>: pulses whenever the dialog is open.
         </p>
         <label className="bn-kl-check">
-          <input type="checkbox" checked={spec.counter.linked} onChange={(e) => setCounter({ linked: e.target.checked, line: q.line })} data-testid="bn-kl-counter-linked" />
-          Same keyline as the tentative tag
+          <input
+            type="checkbox"
+            checked={spec.counter.linked}
+            onChange={(e) => setCounter({ linked: e.target.checked, line: q.line, trough: q.trough, peak: q.peak })}
+            data-testid="bn-kl-counter-linked"
+          />
+          Same keyline and pulse as the tentative tag
         </label>
-        {!spec.counter.linked && <LineHandles line={spec.counter.line} onChange={(line) => setCounter({ line })} id="counter" />}
-        <Slider label="Pulse low" css="bn-proposed-pulse 0%/100%" value={spec.counter.trough} min={0.2} max={1} step={0.01} onChange={(trough) => setCounter({ trough })} testId="bn-kl-counter-trough" />
-        <Slider label="Pulse high" css="bn-proposed-pulse 50%" value={spec.counter.peak} min={0.2} max={1} step={0.01} onChange={(peak) => setCounter({ peak })} testId="bn-kl-counter-peak" />
+        {!spec.counter.linked && (
+          <>
+            <LineHandles line={spec.counter.line} onChange={(line) => setCounter({ line })} id="counter" />
+            <Slider label="Pulse low" css="its own --bn-tentative-pulse-low" value={spec.counter.trough} min={0.2} max={1} step={0.01} onChange={(trough) => setCounter({ trough })} testId="bn-kl-counter-trough" />
+            <Slider label="Pulse high" css="its own --bn-tentative-pulse-high" value={spec.counter.peak} min={0.2} max={1} step={0.01} onChange={(peak) => setCounter({ peak })} testId="bn-kl-counter-peak" />
+          </>
+        )}
       </fieldset>
       <button type="button" className="bn-btn bn-btn-secondary" onClick={() => onChange(SHIPPED)} data-testid="bn-kl-reset">
         Back to shipped
@@ -493,9 +504,9 @@ function Lab({ params, setParams }: { params: URLSearchParams; setParams: Return
       <div>
         <h1>Keyline lab</h1>
         <p className="bn-kl-note">
-          The dashed outline that says "the machine suggested this; you haven't decided". Every tag here is a
-          shipped component on fixture data; the handles retune the shipped rules in the loaded theme while this
-          page is open, and put them back when it closes. Hover a tag for its hover state; the Tag specimen's
+          The outline that says "the machine suggested this; you haven't decided". Every tag here is a
+          shipped component on fixture data; the handles retune the shipped tokens and rules in the loaded theme
+          while this page is open, and put them back when it closes. Hover a tag for its hover state; the Tag specimen's
           Pulse, Calm and Still buttons below drive the pulse.
         </p>
         <p className="bn-kl-warn" data-kl-missing="" hidden data-testid="bn-kl-missing" />

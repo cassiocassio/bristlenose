@@ -75,8 +75,8 @@ export const routes = [
           // The design system drawn by the shipped components and theme CSS
           // (islands/StyleGuide.tsx; Diagnostics ▸ Style Guide). Same terms as Specimen.
           { path: "style-guide", element: <StyleGuideTab /> },
-          // Tune the tentative tag's dashed keyline on the shipped components, retuning the
-          // shipped rules while open (islands/KeylineLab.tsx). Same terms as Specimen.
+          // Tune the tentative tag's keyline on the shipped components, retuning the
+          // shipped tokens and rules while open (islands/KeylineLab.tsx). Same terms as Specimen.
           { path: "keyline-lab", element: <KeylineLabTab /> },
           // Discussion lens — the researcher's guide merged with what was asked
           // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.

@@ -227,7 +227,7 @@ DOM top-to-bottom (see `frontend/src/islands/QuoteCard.tsx`):
 - **Split speaker badge** (`PersonBadge`) — two-tone lozenge: mono gray code half + body-font
   white name half; code-only when name == code. Not per-speaker colour-coded.
 - **Tags** (`.badges`): sentiment badge (`.badge-ai`, solid sentiment colour, mono),
-  user/theme tags (`.badge-user`, solid fill), **proposed tags (`.badge-proposed`, dashed
+  user/theme tags (`.badge-user`, solid fill), **proposed tags (`.badge-proposed`, dotted
   transparent, pulsing)**, and a dashed `+` add affordance.
 - **Controls top-right** (absolute, in `padding-right: 4.5rem`): **star** (always visible,
   gold when starred), **hide** (eye-slash, opacity 0 → 1 on hover), **undo** (on edit).

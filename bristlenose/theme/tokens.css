@@ -316,6 +316,22 @@
     --bn-arrival-duration: 5s;
     --bn-arrival-easing: ease-out;
 
+    /* Tentative — what a proposal wears while nobody has decided it: an AutoCode
+       tag on a quote card or in Screens (atoms/badge.css .badge-proposed), the
+       review dialog's tentative counter and a row's tag that Apply would leave
+       tentative (molecules/threshold-review.css). One line for all three:
+       dotted, not dashed, because the dots are less aggressive (owner, 25 Nov
+       2026, set in the keyline lab at /report/keyline-lab, which tunes these
+       tokens in place). currentColor resolves on the element that draws the
+       line, so each tag keeps its own ink. The tag rests at the opacity; while a
+       run lands it breathes down to the pulse low and up to the pulse high, then
+       calms back to rest (D8, docs/design-autocode-landing-plan.md). The counter
+       pulses between the same two. */
+    --bn-tentative-keyline: 1px dotted currentColor;
+    --bn-tentative-opacity: 0.72;
+    --bn-tentative-pulse-low: 0.5;
+    --bn-tentative-pulse-high: 0.78;
+
     /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
        Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
        §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)

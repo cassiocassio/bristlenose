@@ -467,7 +467,7 @@ export function TagSpecimen() {
 
       <Context
         title="AutoCode review dialog"
-        note="ZoneCounters and ProposalZoneList in the dialog's own body: a tentative row's tag is dashed and still; a decision you made carries a pin."
+        note="ZoneCounters and ProposalZoneList in the dialog's own body: a tentative row's tag is dotted and still; a decision you made carries a pin."
         selector=".threshold-tag-tentative"
         version={version}
       >

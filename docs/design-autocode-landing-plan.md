@@ -39,7 +39,7 @@ mockup (noted per phase).
 | D5 | Default cut after a run, then the researcher judges the result: **the hybrid**. Accept the most confident 30% of the run's proposals, never below 0.70; exclude below 0.30 (closed with Phase 0a, below). |
 | D6 | Tags are accepted **live, batch by batch, on the server**, against a running estimate of the 30% cut: as each batch is saved the cut is re-estimated from every proposal so far (never below 0.70, and not below 0.80 until 25 proposals have landed). When the run ends the exact cut is known and a small top-up accepts what the estimate missed. An accepted tag is never taken back. The page only plays back what the server decided. |
 | D7 | Live landing: tags land on the quote cards, the tag sidebar and the Codebook lens as batches arrive; accepted tags flash, tentative ones appear quietly; the histograms grow. |
-| D8 | Tentative tags pulse during a run and for one minute after, then calm to a still dashed outline over 30 s. No pulse under reduced motion. |
+| D8 | Tentative tags pulse during a run and for one minute after, then calm to a still dashed outline over 30 s. No pulse under reduced motion. **Dotted since 25 Nov 2026** (owner, in the keyline lab: the dots are less aggressive); line, opacity and pulse are the `--bn-tentative-*` tokens in `tokens.css`. |
 | D9 | The researcher stays where they are when AutoCode starts. |
 | D10 | A filtered Quotes list takes new matches live, in place. |
 | D11 | The CLI pop-up says done only after the last tag has landed on screen. |

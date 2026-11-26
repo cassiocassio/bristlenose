@@ -299,6 +299,22 @@ struct SubscriptionEntitlementTests {
         #expect(SubscriptionAccess.including(bought, in: [listed], now: now) == [listed])
     }
 
+    /// Review, 26 Nov 2026: one helper served both the store's record and a
+    /// purchase taken ahead of it, and its expiry check dropped rows the store
+    /// still lists, a billing grace period's among them, locking out a payer.
+    @Test("a row the store's record lists counts whatever its expiry date says")
+    func recordRowIsNotSecondGuessed() {
+        // Against the real clock: the row's own date is an hour gone.
+        let lapsedDate = Date().addingTimeInterval(-3600)
+        let row = SubscriptionAccess.entitlement(productID: id, revoked: false, start: lapsedDate.addingTimeInterval(-86_400),
+                                                 expires: lapsedDate, inTrial: false)
+        #expect(row?.expires == lapsedDate)
+        #expect(SubscriptionAccess.state(entitlements: [row].compactMap { $0 }, productLoaded: true)
+                == .subscribed(expires: lapsedDate))
+        #expect(SubscriptionAccess.entitlement(productID: id, revoked: true, start: now, expires: nil, inTrial: false) == nil)
+        #expect(SubscriptionAccess.entitlement(productID: "other", revoked: false, start: now, expires: nil, inTrial: false) == nil)
+    }
+
     @Test("a purchase past its own expiry counts for nothing")
     func expiredPurchase() {
         let old = entitlement(expires: now.addingTimeInterval(-1))

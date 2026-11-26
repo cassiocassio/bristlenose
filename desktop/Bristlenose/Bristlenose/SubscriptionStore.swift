@@ -79,20 +79,19 @@ final class SubscriptionStore: ObservableObject {
         )
     }
 
-    /// Each `refresh()` takes the next number; only the newest publishes.
-    /// Refreshes overlap (launch, activation, `Transaction.updates`, a
-    /// purchase), and an older one that comes back last, say one that read
-    /// the entitlements before a purchase landed, would otherwise put the
-    /// state back. Not serialised: a refresh stalled on `Product.products`
-    /// must not hold up the ones behind it. A refresh begun before a purchase
-    /// cannot undo it either: it reads `verifiedPurchase` after its awaits.
+    /// Each `refresh()` takes the next number, and publishes only if no
+    /// newer one has published already. Refreshes overlap (launch, activation,
+    /// `Transaction.updates`, a purchase): an older one that comes back after
+    /// a newer one has published would put the state back, so it is dropped.
+    /// An older one that finishes while a newer one is still reading does
+    /// publish, so a caller reading `state` after `await refresh()` reads an
+    /// answer at least as fresh as its call. Not serialised, and nothing
+    /// waits: a refresh stalled on `Product.products` holds up no other. A
+    /// refresh begun before a purchase cannot undo it either: it reads
+    /// `verifiedPurchase` after its awaits.
     private var generation = 0
     /// The newest generation that has published.
     private var publishedGeneration = 0
-    /// Refreshes that lost to a newer one, waiting for it to publish: a caller
-    /// reads `state` straight after `await refresh()` (Restore, Try Again),
-    /// and must read an answer at least as fresh as its own call.
-    private var outpaced: [(generation: Int, token: UUID, done: CheckedContinuation<Void, Never>)] = []
 
     /// The purchase this app last saw verified, counted as an entitlement
     /// until the store's own record lists it (`SubscriptionAccess.including`).
@@ -144,12 +143,12 @@ final class SubscriptionStore: ObservableObject {
     deinit { updates?.cancel() }
 
     /// A verified transaction as an entitlement to the product, or nil when
-    /// it is another product's, refunded, or already expired.
-    nonisolated static func entitlement(_ t: Transaction, now: Date = Date()) -> SubscriptionAccess.Entitlement? {
-        guard t.productID == SubscriptionAccess.monthlyProductID, t.revocationDate == nil,
-              (t.expirationDate ?? .distantFuture) > now else { return nil }
-        return .init(productID: t.productID, start: t.purchaseDate, expires: t.expirationDate,
-                     inTrial: t.offer?.type == .introductory)
+    /// it is another product's or refunded (`SubscriptionAccess.entitlement`:
+    /// no expiry check, so a grace-period row in the store's record counts).
+    nonisolated static func entitlement(_ t: Transaction) -> SubscriptionAccess.Entitlement? {
+        SubscriptionAccess.entitlement(productID: t.productID, revoked: t.revocationDate != nil,
+                                       start: t.purchaseDate, expires: t.expirationDate,
+                                       inTrial: t.offer?.type == .introductory)
     }
 
     /// Take the entitlement from a verified transaction, now, rather than
@@ -157,7 +156,9 @@ final class SubscriptionStore: ObservableObject {
     /// grants nothing. Internal so the StoreKit suite can drive it.
     @discardableResult
     func accept(_ transaction: Transaction) -> Bool {
-        guard let e = Self.entitlement(transaction) else { return false }
+        // Ahead of the store's record, a transaction counts only until its own
+        // expiry: `Transaction.updates` also replays old ones.
+        guard let e = Self.entitlement(transaction), (e.expires ?? .distantFuture) > Date() else { return false }
         accept(e)
         return true
     }
@@ -220,9 +221,8 @@ final class SubscriptionStore: ObservableObject {
                                                          history: await reads.history() + current)
         }
 
-        guard mine == generation else {
-            log.debug("refresh superseded by a newer one; not published")
-            await newerPublish(after: mine)
+        guard mine > publishedGeneration else {
+            log.debug("refresh older than the state already published; dropped")
             return
         }
         if listed.contains(where: { $0.productID == verifiedPurchase?.productID }) {
@@ -231,31 +231,7 @@ final class SubscriptionStore: ObservableObject {
         if let eligible { introEligible = eligible }
         state = newState
         earlyAdopterSince = since
-        published(mine)
-    }
-
-    private func published(_ generation: Int) {
-        publishedGeneration = generation
-        let ready = outpaced.filter { $0.generation <= generation }
-        outpaced.removeAll { $0.generation <= generation }
-        ready.forEach { $0.done.resume() }
-    }
-
-    /// Wait until a refresh newer than `generation` has published, for up to
-    /// `patience`: bounded, so a newer refresh stalled on `Product.products`
-    /// does not hold this caller for ever.
-    private func newerPublish(after generation: Int, patience: Duration = .seconds(10)) async {
-        guard publishedGeneration < generation else { return }
-        let token = UUID()
-        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
-            outpaced.append((generation, token, done))
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: patience)
-                guard let self, let i = self.outpaced.firstIndex(where: { $0.token == token }) else { return }
-                self.log.notice("refresh outpaced, and the newer one has not published after \(String(describing: patience), privacy: .public)")
-                self.outpaced.remove(at: i).done.resume()
-            }
-        }
+        publishedGeneration = mine
     }
 
     /// Every period of the subscription in the store's history, from

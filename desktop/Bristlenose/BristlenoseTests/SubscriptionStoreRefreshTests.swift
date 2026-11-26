@@ -88,24 +88,23 @@ struct SubscriptionStoreRefreshTests {
 
     /// Seen in the StoreKit suite, 26 Nov 2026: the store's own launch refresh
     /// began just after the caller's, so the caller's returned unpublished and
-    /// it read `.unknown`. Restore and Try Again read `state` this way.
-    @Test("a refresh that a newer one overtakes returns only once the newer one has published")
-    func outpacedRefreshWaitsForTheNewer() async {
-        let script = Script([[], [.verified(live)]], holds: [0, 1])
+    /// it read `.unknown`. Restore and Try Again read `state` this way. And a
+    /// newer refresh stalled on the store must not hold back an answer that
+    /// has arrived (review, 26 Nov 2026).
+    @Test("an older refresh that finishes while a newer one is still reading publishes, and waits for nothing")
+    func olderFinishesFirst() async {
+        let script = Script([[.verified(live)], []], holds: [0, 1])
         let s = store(script)
-        final class Flag { var done = false }
-        let olderDone = Flag()
-        let older = Task { @MainActor in await s.refresh(); olderDone.done = true }
+        let older = Task { await s.refresh() }
         await until { script.waiting == 1 }
         let newer = Task { await s.refresh() }
         await until { script.waiting == 2 }
         script.release(call: 0)
-        try? await Task.sleep(for: .milliseconds(100))
-        #expect(!olderDone.done, "the overtaken refresh returned before any answer as fresh as its call")
-        script.release(call: 1)
-        await older.value
+        await older.value   // returns although the newer one is still stalled
         #expect(s.state == .subscribed(expires: live.expires, inTrial: true))
+        script.release(call: 1)
         await newer.value
+        #expect(s.state == .storeUnavailable, "the newer answer still lands after it")
     }
 
     @Test("a verified purchase reads as subscribed before the store's record lists it")

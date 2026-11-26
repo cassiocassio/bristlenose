@@ -83,6 +83,19 @@ enum SubscriptionAccess {
         case unverified(productID: String)
     }
 
+    /// A verified transaction as an entitlement to the product, or nil for
+    /// another product or a refund. **No expiry check**: StoreKit's own
+    /// `currentEntitlements` is trusted as it lists it, which includes a
+    /// billing grace period whose transaction `expirationDate` is already past,
+    /// and the seconds before a renewal is listed (see `State.subscribed`).
+    /// Only a purchase taken ahead of that record (`including`) is bounded by
+    /// its own expiry.
+    static func entitlement(productID: String, revoked: Bool, start: Date, expires: Date?,
+                            inTrial: Bool) -> Entitlement? {
+        guard productID == monthlyProductID, !revoked else { return nil }
+        return Entitlement(productID: productID, start: start, expires: expires, inTrial: inTrial)
+    }
+
     /// The state the store's reads add up to.
     static func state(entitlements: [Entitlement], productLoaded: Bool) -> State {
         var ids: Set<String> = []

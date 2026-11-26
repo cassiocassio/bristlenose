@@ -886,6 +886,16 @@ for m in "$HOST_MANIFEST" "$SIDECAR_MANIFEST"; do
 done
 bn_gate f ok "Privacy manifests" "host + sidecar present, lint-clean"
 
+# The bundled ffmpeg/ffprobe must be LGPL-2.1+: the app ships under Apple's EULA,
+# which a GPL binary can't go out under. Read from the exported app, not
+# Resources/: until 25 Nov 2026 the bundle carried a GPL build (x264, x265) and
+# nothing looked. For app-store this is the archive's .app, which the .pkg wraps.
+"$SCRIPT_DIR/check-ffmpeg-licence.sh" \
+    "$EXPORTED_APP/Contents/Resources/ffmpeg" "$EXPORTED_APP/Contents/Resources/ffprobe" \
+    >"$DESKTOP_DIR/build/ffmpeg-licence.log" 2>&1 \
+    || { echo "error: the bundled FFmpeg is not an LGPL-2.1+ build:" >&2; cat "$DESKTOP_DIR/build/ffmpeg-licence.log" >&2; exit 1; }
+bn_gate g ok "FFmpeg licence" "ffmpeg + ffprobe LGPL-2.1+, no GPL/x264/x265"
+
 SIGN_MANIFEST="$DESKTOP_DIR/build/sign-manifest.json"
 if [ "$SKIP_NOTARISE" = "0" ]; then
     bn_meta done_title="✓ Bristlenose.app notarised and stapled"

@@ -222,7 +222,8 @@ build-all.sh ──────────────── App Store / TestFl
   ├─ check-sidecar-appstore-strings.sh ─ …-strings.py
   ├─ build-mcpb.sh ─── check-mcpb.sh
   ├─ ../../scripts/generate-third-party-binaries.py --check   (step 2b, signed only)
-  └─ check-release-binary.sh
+  ├─ check-release-binary.sh
+  └─ check-ffmpeg-licence.sh           (step 10, on the exported app's ffmpeg + ffprobe)
 
 build-dmg.sh ──────────────── Developer-ID .dmg
   ├─ test-swift.sh --green-here        (skips the suite if build-all passed it on this tree, this run)
@@ -278,6 +279,7 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | Script | Asserts |
 |---|---|
 | `build-all.sh` | — (the chain itself) |
+| `check-ffmpeg-licence.sh <binary>...` | Each binary is an LGPL-2.1+ FFmpeg: its embedded configure line has no `--enable-gpl`, `--enable-nonfree`, `--enable-version3`, x264 or x265, and every `lib… license:` string says "LGPL version 2.1 or later". Reads `strings`, because a sandbox-signed ffmpeg prints nothing outside the app (so no `-buildconf`); unreadable fails. `build-all.sh` step 10 runs it on the exported app; `fetch-ffmpeg.sh --check` uses it for its licence half. Fixtures: `tests/test_ffmpeg_lgpl_recipe.py`. |
 | `check-release-binary.sh <archive\|app\|binary>` | No `BRISTLENOSE_DEV_*` escape-hatch literals survive in the Release Mach-O — they live under `#if DEBUG`. |
 | `check-logging-hygiene.sh [root]` | No Swift `Logger` interpolates a credential-shaped identifier without a `privacy:` marker; no `print()` dumps env. |
 | `check-appearance-seam.sh` | The light/dark mapping isn't re-derived outside `AppAppearance.swift`; panels call `adoptHostAppearance()`; `AppDelegate` still calls `beginApplying()`. |

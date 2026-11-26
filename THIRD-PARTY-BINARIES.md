@@ -37,7 +37,11 @@ that lacks the `subtitles` filter, the VideoToolbox H.264 encoder or dav1d. The
 complete corresponding source is those six tarballs, unmodified, plus that
 script. The binaries are not bit-reproducible across Xcode versions, so the
 pins are on the sources; `fetch-ffmpeg.sh` prints the binaries' SHA256 when it
-installs them.
+installs them. A signed `build-all.sh` then reads the copies inside the exported
+app with `check-ffmpeg-licence.sh` and stops if either was configured with
+`--enable-gpl`, `--enable-nonfree`, `--enable-version3`, x264 or x265, or if any
+of its libraries' embedded licence strings says anything but "LGPL version 2.1
+or later".
 
 Until 25 Nov 2026 the app bundled martin-riedl.de's static build, a **GPL**
 build (`--enable-gpl --enable-libx264 --enable-libx265`; the binary on disk
@@ -311,6 +315,7 @@ gets a yes/no with reasoning rather than silence.
 
 - `desktop/scripts/build-ffmpeg-lgpl.sh` — the LGPL FFmpeg build: pinned-SHA source tarballs, the configure line, and the gates on what it produces.
 - `desktop/scripts/fetch-ffmpeg.sh` — installs that build into `Resources/` (from `desktop/build/ffmpeg-cache/` after the first build); `--check` tells `ensure-sidecar.sh` whether the installed copy is this recipe's.
+- `desktop/scripts/check-ffmpeg-licence.sh` — the licence gate on the bundled ffmpeg/ffprobe, run by `build-all.sh` on the exported app and by `fetch-ffmpeg.sh --check`.
 - `desktop/scripts/sign-sidecar.sh` — emits per-binary
   `desktop/build/sign-manifest.json` with SHA256 of every signed
   Mach-O.

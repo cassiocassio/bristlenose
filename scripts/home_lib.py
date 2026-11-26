@@ -13,6 +13,7 @@ import base64
 import hashlib
 import importlib.util
 import json
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -207,6 +208,18 @@ def read_installs(website_repo: Path, counts_dir: Path) -> dict:
     return panel(pid, title, link=link, as_of=as_of, body=body, facts=facts, **common)
 
 
+def atomic_write(path: Path, text: str) -> None:
+    """0600, atomic (temp file in the same directory, then os.replace), never through a symlink."""
+    path = Path(path)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    tmp = path.with_name("." + path.name + f".{os.getpid()}.tmp")
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    os.chmod(str(tmp), 0o600)
+    os.replace(str(tmp), str(path))
+
+
 # ---- shared helpers for the other readers -------------------------------------
 
 ISO_Z = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
@@ -344,10 +357,7 @@ def read_tests(live_file: Path, out_dir: Path, head_commit_epoch: float | None =
     if finished is not None and live_m is not None:
         saved = {"finished": finished, "as_of": live_m}
         try:
-            Path(out_dir).mkdir(parents=True, exist_ok=True)
-            tmp = cache.with_suffix(".tmp")
-            tmp.write_text(json.dumps(saved), encoding="utf-8")
-            tmp.replace(cache)
+            atomic_write(cache, json.dumps(saved))
         except OSError:
             pass
         as_of = live_m
@@ -489,7 +499,7 @@ def read_host(out_dir: Path) -> dict:
     as_of = float(data["heartbeat_epoch"]) if data else None
     body, facts = [], []
     if data:
-        facts.append(f"/app/news answers {data['news_status']}.")
+        facts.append(f"/app/news answers {data['news_status']}." if data["news_status"] else "/app/news could not be read from the host.")
         body.append({"kind": "expiries", "rows": [{"what": "News file expires", "epoch": data["news_expires_epoch"] or None}]})
     if err:
         return unknown(pid, title, err, as_of=as_of, body=body, facts=facts, **common)

@@ -63,6 +63,52 @@ enum SubscriptionAccess {
         return productLoaded ? .notSubscribed : .storeUnavailable
     }
 
+    // MARK: - Entitlements, as read from the store
+
+    /// One live entitlement to the product, StoreKit-free: a verified,
+    /// unrevoked transaction's dates and whether it is the free trial.
+    struct Entitlement: Equatable {
+        let productID: String
+        let start: Date
+        let expires: Date?
+        let inTrial: Bool
+    }
+
+    /// What one row of `Transaction.currentEntitlements` turned out to be.
+    /// An unverified row grants nothing.
+    enum EntitlementRead: Equatable {
+        case verified(Entitlement)
+        case unverified(productID: String)
+    }
+
+    /// The state the store's reads add up to.
+    static func state(entitlements: [Entitlement], productLoaded: Bool) -> State {
+        var ids: Set<String> = []
+        var expirations: [String: Date] = [:]
+        var trials: Set<String> = []
+        for e in entitlements {
+            ids.insert(e.productID)
+            if let end = e.expires { expirations[e.productID] = end }
+            if e.inTrial { trials.insert(e.productID) }
+        }
+        return state(entitledProductIDs: ids, expirations: expirations,
+                     trialProductIDs: trials, productLoaded: productLoaded)
+    }
+
+    /// The entitlements with a purchase this app has just seen verified added,
+    /// while the store's own record does not list it yet. Straight after a
+    /// purchase `currentEntitlements` lags by about a second (measured against
+    /// the local test store, 25 Nov 2026), and a read in that gap told a buyer
+    /// who had just been charged that the purchase failed. The verified
+    /// transaction is the evidence; it counts until its own expiry. Nothing is
+    /// added once the store lists the product itself.
+    static func including(_ purchase: Entitlement?, in current: [Entitlement], now: Date) -> [Entitlement] {
+        guard let purchase,
+              !current.contains(where: { $0.productID == purchase.productID }),
+              (purchase.expires ?? .distantFuture) > now else { return current }
+        return current + [purchase]
+    }
+
     /// Starting an analysis (a paid LLM run on new recordings).
     static func canStartAnalysis(_ state: State, channel: DistributionChannel) -> Bool {
         guard channel == .appStoreOrTestFlight else { return true }

@@ -217,18 +217,23 @@ struct EarlyAdopterStoreKitTests {
     // the test session instead and check what the app's store makes of it.
 
     /// `purchase()`'s own sequence after a verified transaction: finish it,
-    /// then `refreshAfterPurchase()`. Straight after `finish()` a single
-    /// `refresh()` reads not subscribed (measured 25 Nov 2026), so `purchase()`
-    /// told a buyer who had just paid that it failed; this fails if
-    /// `refreshAfterPurchase` goes back to reading once.
+    /// then take the entitlement from the transaction (`accept`), then refresh.
+    /// Straight after `finish()` the store's record does not list the purchase
+    /// (measured 25 Nov 2026), so reading the record alone told a buyer who
+    /// had just paid that it failed.
     @Test("a finished purchase reads as subscribed, so a buyer is never told it failed")
     func purchaseIsSeen() async throws {
         await clean()
         let store = try await appStoreStore()
-        try await buy(daysAgo: 0, .renewUntilNow).finish()
-        await store.refreshAfterPurchase()
+        let t = try await session.buyProduct(identifier: id)
+        await t.finish()
+        #expect(store.accept(t), "a live purchase of the product is an entitlement")
         guard case .subscribed = store.state else {
-            Issue.record("state after purchase: \(store.state)"); return
+            Issue.record("state straight after the purchase: \(store.state)"); return
+        }
+        await store.refresh()
+        guard case .subscribed = store.state else {
+            Issue.record("state after the refresh that follows: \(store.state)"); return
         }
     }
 

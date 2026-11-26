@@ -275,3 +275,42 @@ struct SubscriptionAccessTests {
         }
     }
 }
+
+@Suite("Entitlements as the store reads them")
+struct SubscriptionEntitlementTests {
+
+    private let id = SubscriptionAccess.monthlyProductID
+    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+
+    private func entitlement(expires: Date?) -> SubscriptionAccess.Entitlement {
+        .init(productID: id, start: now.addingTimeInterval(-60), expires: expires, inTrial: false)
+    }
+
+    @Test("a verified purchase counts while the store's record does not list it yet")
+    func purchaseCountsBeforeTheRecord() {
+        let bought = entitlement(expires: now.addingTimeInterval(3600))
+        #expect(SubscriptionAccess.including(bought, in: [], now: now) == [bought])
+    }
+
+    @Test("once the record lists the product, the purchase is not added twice")
+    func recordWins() {
+        let bought = entitlement(expires: now.addingTimeInterval(3600))
+        let listed = entitlement(expires: now.addingTimeInterval(7200))
+        #expect(SubscriptionAccess.including(bought, in: [listed], now: now) == [listed])
+    }
+
+    @Test("a purchase past its own expiry counts for nothing")
+    func expiredPurchase() {
+        let old = entitlement(expires: now.addingTimeInterval(-1))
+        #expect(SubscriptionAccess.including(old, in: [], now: now).isEmpty)
+    }
+
+    @Test("entitlements add up to the same states as before")
+    func stateFromEntitlements() {
+        let e = SubscriptionAccess.Entitlement(productID: id, start: now, expires: now, inTrial: true)
+        #expect(SubscriptionAccess.state(entitlements: [e], productLoaded: false)
+                == .subscribed(expires: now, inTrial: true))
+        #expect(SubscriptionAccess.state(entitlements: [], productLoaded: true) == .notSubscribed)
+        #expect(SubscriptionAccess.state(entitlements: [], productLoaded: false) == .storeUnavailable)
+    }
+}

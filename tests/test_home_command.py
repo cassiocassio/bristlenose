@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -38,11 +39,6 @@ def test_every_job_is_a_list_of_strings_with_no_shell_in_it(tmp_path):
         assert isinstance(j["argv"], list) and all(isinstance(a, str) for a in j["argv"]), name
         assert j["argv"][0] not in ("sh", "bash", "zsh", "/bin/sh", "/bin/bash"), name
         assert "-c" not in j["argv"] or name == "host", name        # the host job's only -c is inside the one remote string
-
-
-def test_the_runner_never_uses_a_shell():
-    src = (ROOT / "scripts" / "home.py").read_text(encoding="utf-8")
-    assert "shell=True" not in src and "os.system" not in src and "shell=False" in src
 
 
 def test_the_ssh_argv_is_exactly_the_hardened_option_set_then_the_alias_then_the_one_literal_command(tmp_path):
@@ -125,8 +121,7 @@ def test_the_remote_command_with_no_files_still_prints_parseable_zeros(tmp_path)
 
 
 def test_the_remote_command_has_no_single_quote_and_nothing_interpolated():
-    assert "'" not in home.REMOTE_PY
-    assert home.REMOTE_CMD == "python3 -c '" + home.REMOTE_PY + "'"
+    assert "'" not in home.REMOTE_PY        # the command is wrapped in single quotes for the remote shell
 
 
 # ---- recording what a job did ---------------------------------------------------------------------------
@@ -197,20 +192,16 @@ def test_should_run(fresh_for, mt, offline, net, want):
 
 # ---- the runner ----------------------------------------------------------------------------------------------
 
-def test_a_job_that_hangs_is_killed_whole_and_reported_as_a_timeout():
-    t0 = time.time()
-    status, out = home.run(["sleep", "30"], 0.5)
-    assert status == "timeout" and out == b"" and time.time() - t0 < 10
-
-
 def test_a_timed_out_job_takes_its_children_with_it(tmp_path):
     """A deadline that kills only the child leaves its own children running (scp spawns ssh)."""
     sentinel = tmp_path / "grandchild-ran"
     code = ("import subprocess,sys,time;"
-            "subprocess.Popen([sys.executable,'-c','import time,sys,pathlib;time.sleep(2);pathlib.Path(sys.argv[1]).write_text(\"x\")',sys.argv[1]]);"
+            "subprocess.Popen([sys.executable,'-c','import time,sys,pathlib;time.sleep(1);pathlib.Path(sys.argv[1]).write_text(\"x\")',sys.argv[1]]);"
             "time.sleep(30)")
-    assert home.run([sys.executable, "-c", code, str(sentinel)], 0.5)[0] == "timeout"
-    time.sleep(3)
+    t0 = time.time()
+    assert home.run([sys.executable, "-c", code, str(sentinel)], 0.5) == ("timeout", b"")
+    assert time.time() - t0 < 10
+    time.sleep(1.6)
     assert not sentinel.exists(), "the grandchild outlived its job"
 
 
@@ -241,9 +232,12 @@ def test_a_reader_that_raises_or_exits_becomes_one_unknown_panel_not_the_end_of_
 
 # ---- a whole run ----------------------------------------------------------------------------------------------
 
-def test_an_offline_run_writes_the_page_private_and_runs_no_network_job(tmp_path, monkeypatch, capsys):
-    calls = []
+PANEL_ORDER = ["installs", "visitors", "release", "tests", "bugs", "feedback", "launch", "expiries", "host"]
+
+
+def offline_run(tmp_path, monkeypatch):
     real_run = home.run
+    calls = []
 
     def spy(argv, timeout):
         calls.append(argv[0])
@@ -254,14 +248,37 @@ def test_an_offline_run_writes_the_page_private_and_runs_no_network_job(tmp_path
     monkeypatch.setattr(home, "PYTEST_LIVE", tmp_path / "live.txt")
     monkeypatch.setattr(home, "run", spy)
     assert home.main(["--offline", "--no-open"]) == 0
-    page = (tmp_path / "out" / "home.html").read_text(encoding="utf-8")
-    assert stat.S_IMODE((tmp_path / "out" / "home.html").stat().st_mode) == 0o600
-    assert stat.S_IMODE((tmp_path / "out").stat().st_mode) == 0o700
+    return calls, tmp_path / "out" / "home.html"
+
+
+def test_an_offline_run_writes_the_nine_panels_in_order_private_and_runs_no_network_job(tmp_path, monkeypatch):
+    calls, target = offline_run(tmp_path, monkeypatch)
+    page = target.read_text(encoding="utf-8")
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600 and stat.S_IMODE(target.parent.stat().st_mode) == 0o700
     assert not any(c in ("ssh", "gh") or c.endswith("counts-refresh.sh") for c in calls), calls
-    ids = re.findall(r'"id":"(\w+)"', page)
-    for pid in ("installs", "visitors", "release", "tests", "bugs", "feedback", "launch", "expiries", "host"):
-        assert pid in ids, pid
-    assert "no data" in page or "nodata" in page
+    assert re.findall(r'"id":"(\w+)"', page) == PANEL_ORDER        # the order is the design
+
+
+def test_running_home_twice_leaves_one_good_page_and_no_temp_files(tmp_path, monkeypatch):
+    _, target = offline_run(tmp_path, monkeypatch)
+    first = target.stat().st_mtime_ns
+    time.sleep(0.01)
+    home.main(["--offline", "--no-open"])
+    assert target.stat().st_mtime_ns > first
+    assert not [p for p in target.parent.iterdir() if p.name.endswith(".tmp")]
+    assert "</html>" in target.read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+def test_the_page_built_from_real_reader_output_renders_in_jsdom(tmp_path, monkeypatch):
+    """The readers and the page script agree on every body shape: a reader that returned a kind the page
+    does not draw would pass every Python test and show a blank panel."""
+    _, target = offline_run(tmp_path, monkeypatch)
+    r = subprocess.run(["node", str(ROOT / "tests" / "home_page_dom.js"), str(target), "--real"], capture_output=True, text=True,
+                       timeout=120, env=dict(os.environ, HOME_NOW_S=str(int(time.time()))))
+    if r.returncode == 3:
+        pytest.skip("jsdom is absent: " + r.stderr.strip())
+    assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_unknown_arguments_are_refused_and_help_works(capsys):

@@ -3,14 +3,12 @@
 Design: docs/private/design-home-dashboard.md section 5. The page opens from file:// and its data is
 third-party-influenced (a release verdict, CI output, a rating a stranger typed).
 """
-import importlib.util
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -126,69 +124,3 @@ def test_the_page_run_in_jsdom_shows_what_a_person_would_see(tmp_path):
         pytest.skip("jsdom is absent: " + r.stderr.strip())
     assert r.returncode == 0, r.stdout + r.stderr
     assert "0 failed" in r.stdout, r.stdout
-
-
-# ---- the Installs reader ---------------------------------------------------
-
-WEBSITE = Path.home() / "Code" / "bristlenose-website"
-needs_website = pytest.mark.skipif(not (WEBSITE / "scripts" / "counts-dashboard.py").exists(),
-                                   reason="the website repo is not on this machine")
-
-
-def write_counts(d: Path, heartbeat=True, header=True, daily=None):
-    d.mkdir(parents=True, exist_ok=True)
-    rows = ["date,ch,v,checks,first,month,welcome,other"] if header else ["wrong,header"]
-    last = time.gmtime()
-    today = f"{last.tm_year}-{last.tm_mon:02d}-{last.tm_mday:02d}"
-    rows += daily or [f"{today},,,50,0,0,0,0", f"{today},store,0.48,6,1,1,2,0"]
-    (d / "counts.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
-    (d / "monthly.csv").write_text("month,ch,sub,days,installs\n", encoding="utf-8")
-    if heartbeat:
-        (d / "heartbeat").write_text(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " ok files=1 lines=1 news=1 rewrote=x\n")
-
-
-def test_installs_without_the_website_repo_is_no_data_with_a_fixed_reason(tmp_path):
-    p = hl.read_installs(tmp_path / "nowhere", tmp_path / "counts")
-    assert p["status"] == "nodata" and p["error"] == hl.ERR["missing_tool"] and p["body"] == []
-
-
-@needs_website
-def test_installs_ok_reads_the_heartbeat_as_its_time_and_never_the_clock(tmp_path):
-    write_counts(tmp_path / "c")
-    p = hl.read_installs(WEBSITE, tmp_path / "c")
-    assert p["status"] == "ok" and p["as_of_label"] == "counted" and p["max_age"] == 36 * 3600
-    assert abs(p["as_of"] - time.time()) < 5          # the heartbeat we just wrote
-    k = p["body"][0]["items"]
-    assert (k[0]["n"], k[1]["n"]) == (56, 6)
-
-
-@needs_website
-def test_installs_no_files_is_no_data_not_zero(tmp_path):
-    p = hl.read_installs(WEBSITE, tmp_path / "empty")
-    assert p["status"] == "nodata" and not p["body"]
-
-
-@needs_website
-def test_installs_wrong_header_is_unknown_and_does_not_end_the_run(tmp_path):
-    write_counts(tmp_path / "c", header=False)
-    p = hl.read_installs(WEBSITE, tmp_path / "c")        # the loader raises SystemExit here
-    assert p["status"] == "unknown" and p["error"] == hl.ERR["unexpected"]
-
-
-@needs_website
-def test_installs_missing_heartbeat_is_no_data(tmp_path):
-    write_counts(tmp_path / "c", heartbeat=False)
-    assert hl.read_installs(WEBSITE, tmp_path / "c")["status"] == "nodata"
-
-
-@needs_website
-def test_installs_many_unreadable_rows_is_unknown_not_a_smaller_number(tmp_path):
-    bad = [f"2026-11-0{i},,,x,0,0,0,0" for i in range(1, 8)]
-    write_counts(tmp_path / "c", daily=bad + ["2026-11-09,,,50,0,0,0,0"])
-    p = hl.read_installs(WEBSITE, tmp_path / "c")
-    assert p["status"] == "unknown"
-
-
-def test_the_module_loads_without_side_effects():
-    spec = importlib.util.spec_from_file_location("hl2", ROOT / "scripts" / "home_lib.py")
-    assert spec and spec.loader

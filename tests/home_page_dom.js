@@ -22,6 +22,17 @@ function open(offsetMs) {
   return dom;
 }
 const dom = open(0), w = dom.window, d = w.document;
+if (process.argv[3] === "--real") {
+  // A page built from the real readers: it must run, draw all nine panels with a heading, and show no leaked JS values.
+  ok("no script error", errors.length === 0, errors.join(" | "));
+  ok("nine panels", d.querySelectorAll("section.panel").length === 9, String(d.querySelectorAll("section.panel").length));
+  ok("each has an h2", d.querySelectorAll("section.panel > .ph > h2").length === 9);
+  const visible = d.querySelector("header.top").textContent + d.getElementById("grid").textContent;   // not the inlined script text
+  ok("nothing rendered as undefined or [object Object] or NaN", !/undefined|\[object Object\]|NaN/.test(visible), (visible.match(/.{0,30}(undefined|\[object Object\]|NaN).{0,30}/) || [""])[0]);
+  ok("the summary says something", d.getElementById("sum").textContent.length > 0);
+  console.log(passes + " passed, " + fails + " failed");
+  process.exit(fails ? 1 : 0);
+}
 const panel = (id) => d.querySelector('section[data-id="' + id + '"]');
 ok("no script error", errors.length === 0, errors.join(" | "));
 ok("three scripts only (data, freshness, page): nothing the data typed became a script", d.scripts.length === 3, "scripts=" + d.scripts.length);

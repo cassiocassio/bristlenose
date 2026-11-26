@@ -449,7 +449,8 @@ class Activity(unittest.TestCase):
         self.assertNotRegex(tpl, r"--(ok|warn|bad|unknown|skip|now|hatch)\s*:", "a palette token is defined in the template")
         html = rb.render_html({"version": "0.0.0"}, TEMPLATE)
         self.assertNotIn("__BOARD_TOKENS__", html)
-        for token in ("--ok:#217a46", '--unknown:#6b5bd2', ':root:not([data-theme="light"])', ':root[data-theme="dark"]'):
+        # structure only: the VALUES are held by tests/test_home_tokens.py, so a palette tune costs one test, not two
+        for token in ("--ok:", "--unknown:", ':root:not([data-theme="light"])', ':root[data-theme="dark"]'):
             self.assertIn(token, html, token)
 
     def test_a_normal_run_never_leaves_the_first_bracket(self):

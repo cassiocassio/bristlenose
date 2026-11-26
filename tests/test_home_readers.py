@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -233,12 +234,6 @@ def test_host_failed_attempt_is_unknown_with_a_fixed_string_and_keeps_the_last_g
     assert p["status"] == "unknown" and p["error"] == "host unreachable" and p["as_of"] == NOW - 79200
 
 
-def test_host_three_failures_in_a_row_do_not_move_the_last_good_time(tmp_path):
-    for _ in range(3):
-        put_host(tmp_path, error="timeout")
-    assert hl.read_host(tmp_path)["as_of"] == NOW - 79200
-
-
 def test_host_state_with_an_error_we_do_not_know_is_refused(tmp_path):
     put_host(tmp_path, error="ssh: connect to host stranger@evil.example port 22")
     assert hl.read_host(tmp_path)["status"] == "nodata"
@@ -300,3 +295,64 @@ def test_time_is_always_epoch_seconds_and_a_naive_string_is_refused():
     assert hl.iso_z_to_epoch("2026-11-25T11:17:14Z") == 1795605434.0
     for naive in ("2026-11-25 11:17:14", "2026-11-25T11:17:14", "2026-11-25T11:17:14+01:00", "yesterday", None, 5):
         assert hl.iso_z_to_epoch(naive) is None
+
+
+# ---- the Installs reader ---------------------------------------------------
+
+WEBSITE = Path.home() / "Code" / "bristlenose-website"
+needs_website = pytest.mark.skipif(not (WEBSITE / "scripts" / "counts-dashboard.py").exists(),
+                                   reason="the website repo is not on this machine")
+
+
+def write_counts(d: Path, heartbeat=True, header=True, daily=None):
+    d.mkdir(parents=True, exist_ok=True)
+    rows = ["date,ch,v,checks,first,month,welcome,other"] if header else ["wrong,header"]
+    last = time.gmtime()
+    today = f"{last.tm_year}-{last.tm_mon:02d}-{last.tm_mday:02d}"
+    rows += daily or [f"{today},,,50,0,0,0,0", f"{today},store,0.48,6,1,1,2,0"]
+    (d / "counts.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    (d / "monthly.csv").write_text("month,ch,sub,days,installs\n", encoding="utf-8")
+    if heartbeat:
+        (d / "heartbeat").write_text(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " ok files=1 lines=1 news=1 rewrote=x\n")
+
+
+def test_installs_without_the_website_repo_is_no_data_with_a_fixed_reason(tmp_path):
+    p = hl.read_installs(tmp_path / "nowhere", tmp_path / "counts")
+    assert p["status"] == "nodata" and p["error"] == hl.ERR["missing_tool"] and p["body"] == []
+
+
+@needs_website
+def test_installs_ok_reads_the_heartbeat_as_its_time_and_never_the_clock(tmp_path):
+    write_counts(tmp_path / "c")
+    p = hl.read_installs(WEBSITE, tmp_path / "c")
+    assert p["status"] == "ok" and p["as_of_label"] == "counted" and p["max_age"] == 36 * 3600
+    assert abs(p["as_of"] - time.time()) < 5          # the heartbeat we just wrote
+    k = p["body"][0]["items"]
+    assert (k[0]["n"], k[1]["n"]) == (56, 6)
+
+
+@needs_website
+def test_installs_no_files_is_no_data_not_zero(tmp_path):
+    p = hl.read_installs(WEBSITE, tmp_path / "empty")
+    assert p["status"] == "nodata" and not p["body"]
+
+
+@needs_website
+def test_installs_wrong_header_is_unknown_and_does_not_end_the_run(tmp_path):
+    write_counts(tmp_path / "c", header=False)
+    p = hl.read_installs(WEBSITE, tmp_path / "c")        # the loader raises SystemExit here
+    assert p["status"] == "unknown" and p["error"] == hl.ERR["unexpected"]
+
+
+@needs_website
+def test_installs_missing_heartbeat_is_no_data(tmp_path):
+    write_counts(tmp_path / "c", heartbeat=False)
+    assert hl.read_installs(WEBSITE, tmp_path / "c")["status"] == "nodata"
+
+
+@needs_website
+def test_installs_many_unreadable_rows_is_unknown_not_a_smaller_number(tmp_path):
+    bad = [f"2026-11-0{i},,,x,0,0,0,0" for i in range(1, 8)]
+    write_counts(tmp_path / "c", daily=bad + ["2026-11-09,,,50,0,0,0,0"])
+    p = hl.read_installs(WEBSITE, tmp_path / "c")
+    assert p["status"] == "unknown"

@@ -1,0 +1,489 @@
+{
+ "now_s": 1795737600,
+ "freshness": [
+  {
+   "name": "fresh, 4 minutes",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -240
+   },
+   "expect": {
+    "state": "fresh",
+    "words": "pulled 4 min ago",
+    "note": null
+   }
+  },
+  {
+   "name": "fresh, seconds old",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -20
+   },
+   "expect": {
+    "state": "fresh",
+    "words": "pulled just now",
+    "note": null
+   }
+  },
+  {
+   "name": "exactly at the limit is fresh",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -3600
+   },
+   "expect": {
+    "state": "fresh",
+    "words": "pulled 1 h ago",
+    "note": null
+   }
+  },
+  {
+   "name": "one second past the limit is old",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -3601
+   },
+   "expect": {
+    "state": "old",
+    "words": "▲ old · pulled 1 h ago",
+    "note": null
+   }
+  },
+  {
+   "name": "old pull, refreshable",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -7200
+   },
+   "expect": {
+    "state": "old",
+    "words": "▲ old · pulled 2 h ago",
+    "note": null
+   }
+  },
+  {
+   "name": "source-old, not refreshable",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "changed",
+    "max_age": 259200,
+    "refreshable": false,
+    "as_of_offset": -864000
+   },
+   "expect": {
+    "state": "old",
+    "words": "▲ old · changed 10 days ago",
+    "note": "Refreshing will not change this: the data itself has not changed."
+   }
+  },
+  {
+   "name": "47 hours counts hours",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 99999999,
+    "refreshable": true,
+    "as_of_offset": -169200
+   },
+   "expect": {
+    "state": "fresh",
+    "words": "pulled 47 h ago",
+    "note": null
+   }
+  },
+  {
+   "name": "48 hours counts days",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 99999999,
+    "refreshable": true,
+    "as_of_offset": -172800
+   },
+   "expect": {
+    "state": "fresh",
+    "words": "pulled 2 days ago",
+    "note": null
+   }
+  },
+  {
+   "name": "no data beats a fresh timestamp",
+   "panel": {
+    "status": "nodata",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -10
+   },
+   "expect": {
+    "state": "nodata",
+    "words": "no data",
+    "note": null
+   }
+  },
+  {
+   "name": "could not ask, last good known",
+   "panel": {
+    "status": "unknown",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": -79200
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? could not ask · data from 22 h ago",
+    "note": null
+   }
+  },
+  {
+   "name": "could not ask, nothing known",
+   "panel": {
+    "status": "unknown",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": null
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? could not ask",
+    "note": null
+   }
+  },
+  {
+   "name": "could not ask with a future as_of",
+   "panel": {
+    "status": "unknown",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": 9999
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? could not ask",
+    "note": null
+   }
+  },
+  {
+   "name": "missing as_of is unknown, not fresh",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": null
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? no timestamp",
+    "note": null
+   }
+  },
+  {
+   "name": "non-numeric as_of is unknown",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_raw": "yesterday"
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? no timestamp",
+    "note": null
+   }
+  },
+  {
+   "name": "NaN as_of is unknown",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_raw": "NaN"
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? no timestamp",
+    "note": null
+   }
+  },
+  {
+   "name": "ten minutes in the future is unknown",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": 600
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? timestamp is in the future",
+    "note": null
+   }
+  },
+  {
+   "name": "two minutes in the future is tolerated",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 3600,
+    "refreshable": true,
+    "as_of_offset": 120
+   },
+   "expect": {
+    "state": "fresh",
+    "words": "pulled just now",
+    "note": null
+   }
+  },
+  {
+   "name": "missing age limit is unknown",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": null,
+    "refreshable": true,
+    "as_of_offset": -10
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? no age limit set",
+    "note": null
+   }
+  },
+  {
+   "name": "zero age limit is unknown",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": 0,
+    "refreshable": true,
+    "as_of_offset": -10
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? no age limit set",
+    "note": null
+   }
+  },
+  {
+   "name": "negative age limit is unknown",
+   "panel": {
+    "status": "ok",
+    "as_of_label": "pulled",
+    "max_age": -5,
+    "refreshable": true,
+    "as_of_offset": -10
+   },
+   "expect": {
+    "state": "unknown",
+    "words": "? no age limit set",
+    "note": null
+   }
+  },
+  {
+   "name": "a link-only panel has no state",
+   "panel": {
+    "stateless": true,
+    "status": "ok"
+   },
+   "expect": {
+    "state": "link",
+    "words": "",
+    "note": null
+   }
+  }
+ ],
+ "summary": [
+  {
+   "name": "mixed page",
+   "panels": [
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": -10
+    },
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": -10
+    },
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": -7200
+    },
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 259200,
+     "refreshable": false,
+     "as_of_offset": -864000
+    },
+    {
+     "status": "unknown",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": -5
+    },
+    {
+     "status": "nodata",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true
+    },
+    {
+     "stateless": true
+    }
+   ],
+   "expect": {
+    "fresh": 2,
+    "old": 2,
+    "unknown": 1,
+    "nodata": 1,
+    "runAgain": true
+   }
+  },
+  {
+   "name": "only a source-old panel: running home again cannot help",
+   "panels": [
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": -10
+    },
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 259200,
+     "refreshable": false,
+     "as_of_offset": -864000
+    }
+   ],
+   "expect": {
+    "fresh": 1,
+    "old": 1,
+    "unknown": 0,
+    "nodata": 0,
+    "runAgain": false
+   }
+  },
+  {
+   "name": "everything fresh",
+   "panels": [
+    {
+     "status": "ok",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": -10
+    }
+   ],
+   "expect": {
+    "fresh": 1,
+    "old": 0,
+    "unknown": 0,
+    "nodata": 0,
+    "runAgain": false
+   }
+  },
+  {
+   "name": "an unknown (host down) panel can be helped by running again",
+   "panels": [
+    {
+     "status": "unknown",
+     "as_of_label": "pulled",
+     "max_age": 3600,
+     "refreshable": true,
+     "as_of_offset": null
+    }
+   ],
+   "expect": {
+    "fresh": 0,
+    "old": 0,
+    "unknown": 1,
+    "nodata": 0,
+    "runAgain": true
+   }
+  }
+ ],
+ "page": [
+  {
+   "name": "just built",
+   "built_at_offset": -30,
+   "expect": {
+    "words": "page built just now",
+    "stale": false
+   }
+  },
+  {
+   "name": "three hours",
+   "built_at_offset": -10800,
+   "expect": {
+    "words": "page built 3 h ago",
+    "stale": false
+   }
+  },
+  {
+   "name": "exactly a day is not yet stale",
+   "built_at_offset": -86400,
+   "expect": {
+    "words": "page built 24 h ago",
+    "stale": false
+   }
+  },
+  {
+   "name": "a day and a second is stale",
+   "built_at_offset": -86401,
+   "expect": {
+    "words": "page built 24 h ago",
+    "stale": true
+   }
+  },
+  {
+   "name": "missing build time",
+   "built_at_offset": null,
+   "expect": {
+    "words": "page age unknown",
+    "stale": true
+   }
+  },
+  {
+   "name": "build time in the future",
+   "built_at_offset": 3600,
+   "expect": {
+    "words": "page age unknown",
+    "stale": true
+   }
+  }
+ ]
+}

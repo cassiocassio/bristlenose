@@ -449,7 +449,7 @@ class Activity(unittest.TestCase):
         self.assertNotRegex(tpl, r"--(ok|warn|bad|unknown|skip|now|hatch)\s*:", "a palette token is defined in the template")
         html = rb.render_html({"version": "0.0.0"}, TEMPLATE)
         self.assertNotIn("__BOARD_TOKENS__", html)
-        for token in ("--ok:#2e9e5b", '--unknown:#6b5bd2', ':root:not([data-theme="light"])', ':root[data-theme="dark"]'):
+        for token in ("--ok:#217a46", '--unknown:#6b5bd2', ':root:not([data-theme="light"])', ':root[data-theme="dark"]'):
             self.assertIn(token, html, token)
 
     def test_a_normal_run_never_leaves_the_first_bracket(self):

@@ -2,7 +2,9 @@
    Moved verbatim out of scripts/release-board.template.html (26 Nov 2026). Both inline this
    file at render time (scripts/release-board.py: render_html; scripts/home.py). Edit the
    palette HERE only. The dark tokens still appear twice below (system preference and the manual
-   override), because CSS cannot share a block between two selectors; the tests keep them equal. */
+   override), because CSS cannot share a block between two selectors; the tests keep them equal.
+   Light --mute, --ok, --warn and --now were darkened on 26 Nov 2026 so small text on the panel and on
+   the -bg tints reaches 4.5:1 (the originals measured 2.4 to 3.4); tests/test_home_tokens.py holds that. */
   /* ── Palette ──────────────────────────────────────────────────────────
      Two axes, because a release station answers two questions at once:
      WHAT HAPPENED (ok / warn / bad / unknown / skip) and WHEN (now / ahead /
@@ -18,14 +20,14 @@
      one vocabulary, two renderings. */
   :root{
     --bg:#f4f4f2; --panel:#fff; --panel-2:#fafaf8;
-    --ink:#1d1d1f; --ink-2:#5b5b60; --mute:#8a8a8e;
+    --ink:#1d1d1f; --ink-2:#5b5b60; --mute:#6f6f74;
     --rule:#e3e3e0; --rule2:#cfcfcc; --soft:#d9d9d6;
-    --ok:#2e9e5b;      --ok-bg:#eaf6ee;      --ok-bd:#cfe9d8;
-    --warn:#d9930d;    --warn-bg:#fff8e8;    --warn-bd:#f3dfa5;
+    --ok:#217a46;      --ok-bg:#eaf6ee;      --ok-bd:#cfe9d8;
+    --warn:#97600a;    --warn-bg:#fff8e8;    --warn-bd:#f3dfa5;
     --bad:#d0342c;     --bad-bg:#fff1f0;     --bad-bd:#f1c9c6;
     --unknown:#6b5bd2; --unknown-bg:#f0edfd; --unknown-bd:#d5cdf5;
     --skip:#b9b9b7;    --skip-bg:#f3f3f1;    --skip-bd:#d9d9d6;
-    --now:#0a66ff; --now-rgb:10,102,255;     --now-bg:#e9f0ff;     --now-bd:#bcd0ff;
+    --now:#0a5ce6; --now-rgb:10,92,230;       --now-bg:#e9f0ff;     --now-bd:#bcd0ff;
     --hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
     --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
   /* System by default; the toggle is an OVERRIDE. The :not([data-theme="light"])

@@ -29,7 +29,7 @@ all.
 | `docs/design-dashboard-widgets/design-police.md` | Live, scoped to widgets | **The method.** Two-outcome rule (refactor to an atom / flex-and-log), the mirror rule, the Lucide icon policy, the delta-ledger format. Generalise scope; change nothing else. |
 | `docs/design-system/INVENTORY.md` | Live, drifted (3 files missing) | The CSS surface catalogue. Becomes **generated**, not hand-maintained (Phase 2). |
 | `docs/design-react-component-library.md` | Marked *Complete (Feb 2026)* | The 16-primitive dictionary + coverage matrix. **Not complete** — ~25 page-local components never entered it. Reopen and extend (Phase 5). |
-| `docs/design-system/style-guide.html` | Live, 78KB | The visual catalogue. Has a fatal flaw — it **re-declares tokens as a hardcoded subset** in its own `<style>` block, so it drifts from `theme/` silently. Fix by importing the real CSS (Phase 2). |
+| `docs/design-system/style-guide.html` | **Superseded 25 Nov 2026**, now a stub | Was the visual catalogue, with the fatal flaw that it **re-declared tokens as a hardcoded subset** and drifted from `theme/` silently. Replaced by the `/report/style-guide` route (`frontend/src/islands/StyleGuide.tsx`), which draws shipped components with the shipped theme CSS; the stub says where the old page is in git. |
 | `docs/design-system/icon-catalog.html` | Feb 2026, stale | Already structured as exactly the three drifting layers (*Inline SVG / Unicode / CSS pseudo-element*). It diagnosed the icon problem five months before design-police named it. **Revive as the icon migration tracker** (Phase 3). |
 | `typography.html`, `typography-stress-bench.html`, `buttons.html` | Live | Per-domain specimens. Fold into the catalogue's tier pages. |
 | `_discover_design_files()` — `bristlenose/server/routes/dev.py:274` | Live | Auto-lists `docs/design-system/*.html` in About→Design. **Free distribution** — any new catalogue page appears in-app with zero wiring. Note the non-recursive glob (subfolders vanish). |
@@ -92,6 +92,9 @@ none of either.*
 **C. The catalogue drifts because it re-declares the system.** `style-guide.html` opens
 with `/* Bristlenose design tokens (subset for this guide) */` and hardcodes them. A
 catalogue that copies the system cannot audit the system.
+_Resolved 25 Nov 2026 (`f142563e4`): the catalogue is now the `/report/style-guide` route, which
+reads its tokens from the loaded stylesheets and renders the shipped components on fixture data,
+so it cannot drift from `theme/`. `style-guide.html` is a stub pointing to it._
 
 **D. The Figma "mirror" is not a mirror.** `design-figma-setup.md` states its tokens
 mirror the CSS. They don't:
@@ -323,6 +326,13 @@ findings are transcribed here at the start of Phase 0 so the ledger is the singl
 and its four note files beside it, researched 24 Nov 2026. Prices and versions are as of
 that date. Every threshold below is a proposal: the research found no published framework
 for scoping this kind of spike.*
+
+**Since this plan (25 Nov 2026):** a component catalogue now exists as a route, not Storybook,
+by the owner's call: `/report/style-guide` (dev-only, lazy, aliased out of the export build),
+foundations, atoms, quote-card states and organisms in Default and Edo, light and dark, web and
+desktop type scales. Its sections are CSF 3 modules (`frontend/src/islands/styleGuide/**/*.stories.tsx`,
+`csf.ts`), so step 3 can point Storybook at the same files rather than write stories from
+scratch, and the route's own iframe matrix is a ready target for step 1's screenshots.
 
 ### The question is which layer is missing
 

@@ -186,7 +186,12 @@ class TestExportData:
 
     def test_has_codebook(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "groups" in data["endpoints"]["/codebook"]
+        codebook = data["endpoints"]["/codebook"]
+        assert "groups" in codebook
+        # The exported navigator and tag sidebar name codebooks from this map;
+        # the templates route is not embedded. A value, not the key: the key is
+        # always there (default {}), so "in" could not fail.
+        assert codebook["frameworks"]["sentiment"]["title"]
 
     def test_has_analysis(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)

@@ -530,14 +530,17 @@ export function buildBooks(
   // project, which is exactly what "installed" means. Driven off the CODEBOOK,
   // not the template list — `/codebook/templates` is SERVER_ONLY, so in an
   // export it is absent, and a navigator that listed nothing there would leave
-  // the reader with a lens they cannot navigate (Q14).
+  // the reader with a lens they cannot navigate (Q14). Title and author come
+  // from `codebook.frameworks` first: it is the same YAML the templates carry,
+  // and it is embedded in an export, where the templates are not. Without it an
+  // exported navigator showed ids and filed every codebook under Default.
   const byId = new Map((templates?.templates ?? []).map((t) => [t.id, t]));
   for (const fid of installed) {
-    const tpl = byId.get(fid);
-    const author = tpl?.author ?? "";
+    const meta = codebook.frameworks?.[fid] ?? byId.get(fid);
+    const author = meta?.author ?? "";
     rows.push({
       id: fid,
-      title: tpl?.title ?? fid,
+      title: meta?.title ?? fid,
       provenance:
         author ||
         i18n.t(fid === "sentiment" ? "codebook.onByDefault" : "codebook.availableByDefault"),

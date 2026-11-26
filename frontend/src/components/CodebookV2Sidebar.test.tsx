@@ -621,11 +621,31 @@ describe("buildBooks", () => {
   it("still lists installed codebooks when the catalogue is unavailable", () => {
     // Q14: `/codebook/templates` is SERVER_ONLY, so it is absent from an
     // export. Driving the rows off the CODEBOOK rather than the template list
-    // means the reader can still navigate — with ids for titles, which is
-    // worse than names and far better than an empty navigator.
+    // means the reader can still navigate. With no `frameworks` either (an id
+    // no bundled YAML has) the title is the id: worse than a name, far better
+    // than an empty navigator.
     const rows = build(null);
     expect(rows.map((r) => r.id).sort()).toEqual(["", "nielsen", "sentiment"]);
     expect(byId(rows, "nielsen").title).toBe("nielsen");
+  });
+
+  it("names and files codebooks from `frameworks` in an export, where there is no catalogue", () => {
+    // An exported navigator once showed "nielsen" with no author, and since
+    // built-in is derived from an absent author, filed it under Default.
+    const rows = buildBooks(
+      {
+        ...codebook,
+        frameworks: {
+          nielsen: { title: "10 Usability Heuristics", author: "Jakob Nielsen" },
+          sentiment: { title: "Emotional & Cognitive Signals", author: "" },
+        },
+      },
+      null, {}, "Ikea",
+    );
+    expect(byId(rows, "nielsen").title).toBe("10 Usability Heuristics");
+    expect(byId(rows, "nielsen").provenance).toBe("Jakob Nielsen");
+    expect(byId(rows, "nielsen").builtIn).toBe(false);
+    expect(byId(rows, "sentiment").builtIn).toBe(true);
   });
 });
 

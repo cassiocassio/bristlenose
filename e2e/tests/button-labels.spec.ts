@@ -264,9 +264,18 @@ for (const locale of ['en', 'ru', 'ca', 'pl']) {
 // Phase 6). The smoke fixture has no AutoCode run (making one is a paid call), so the codebook
 // read gains two codebooks and the overview's read answers for them: every control drawn is the
 // real one. Its writes are answered here, so the fixture's database is never written.
+// Nielsen's title and Plato's author are the longest in the bundled YAML, and the sidebar names a
+// codebook from `frameworks`, so each book carries its real entry: without one the walk measured
+// the short fallback ("Uxr") instead of the longest title a researcher sees.
 const OVERVIEW_BOOKS = [
-  { fw: 'uxr', group: 'Trust and credibility', tags: ['credibility', 'risk', 'proof'] },
-  { fw: 'norman', group: 'Affordances and signifiers', tags: ['signifier', 'mapping'] },
+  {
+    fw: 'nielsen', title: '10 Usability Heuristics for User Interface Design', author: 'Jakob Nielsen',
+    group: 'Visibility of system status', tags: ['status', 'feedback', 'progress'],
+  },
+  {
+    fw: 'plato', title: 'Platonic Ontology & Epistemology', author: 'Composite — Vlastos, Fine, Kraut, Sedley',
+    group: 'Theory of Forms', tags: ['form', 'participation'],
+  },
 ];
 for (const locale of ['en', 'de', 'ru', 'pl', 'ja', 'ko']) {
   test(`no truncated button label — tag overview, open and split, in ${locale}`, async ({ page }) => {
@@ -278,6 +287,11 @@ for (const locale of ['en', 'de', 'ru', 'pl', 'ja', 'ko']) {
         total_quotes: 0, is_default: false, framework_id: b.fw,
         tags: b.tags.map((name, j) => ({ id: 90000 + i * 10 + j, name, count: 0, colour_index: j })),
       }));
+      // Merge, never replace: the real read already names sentiment.
+      body.frameworks = {
+        ...body.frameworks,
+        ...Object.fromEntries(OVERVIEW_BOOKS.map((b) => [b.fw, { title: b.title, author: b.author }])),
+      };
       await route.fulfill({ response, json: body });
     });
     await page.route(/\/api\/projects\/\d+\/tag-overview$/, async (route) => {
@@ -305,6 +319,8 @@ for (const locale of ['en', 'de', 'ru', 'pl', 'ja', 'ko']) {
     await handle.focus();
     await page.keyboard.press('Home');
     await expect(page.locator('[data-testid="bn-tag-overview-book"]')).toHaveCount(2);
+    // The walk measures the longest real title, not a fallback.
+    await expect(page.getByText(OVERVIEW_BOOKS[0].title).first()).toBeVisible();
     await expect(page.locator('.layout[data-animating]')).toHaveCount(0);
     const cuts = await truncatedControls(page);
     expect(cuts, describeCuts(cuts)).toEqual([]);

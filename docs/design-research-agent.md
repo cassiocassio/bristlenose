@@ -397,10 +397,14 @@ so the thinking isn't lost; none of it is a requirement yet.
 - **Hidden quotes come from `export_core`, not from the report payload**
   (found 23 Nov 2026). Miro, FigJam, CSV and clips select through
   `export_core._load_all_visible` / `_resolve_quote_ids`, which drop hidden
-  quotes even from an explicit selection. The HTML export does not: it embeds
-  the whole `/quotes` payload, hidden quotes included with `is_hidden: true`,
-  and the "N hidden quotes" badge (`Counter`, not gated by `isExportMode()`)
-  lets a reader open their previews. Publish must take the first path.
+  quotes even from an explicit selection. The lenses' own payloads carry
+  hidden quotes flagged `is_hidden`, so the app can un-hide them. The HTML
+  export embedded those payloads as they were until 25 Nov 2026, when
+  `_drop_hidden_quotes` (`routes/export.py`) started removing them
+  (`docs/design-export-html.md` Decision 8). Publish should select through
+  `export_core`, not strip the payloads afterwards. The three-version choice
+  for Export Report (Starred only, All except hidden, Everything) is in 100days
+  §4. Publish offers only the first two.
 - **Build constraints from the 22 Nov 2026 review** (recorded, not drawn):
   - Research agents and published projects are identified by ids the research
     agent issues, bound to the publisher's directory identity; never by name or

@@ -45,7 +45,8 @@ transcript they can jump to each, landing on the thing itself.
   Screens mark the paragraph where the screen starts.
 - **Clicks.** Text is never a link: a click is the caret. Marks and margin titles are the links.
 - **Hidden quotes** draw in grey (text, mark, title). Following one into the Quotes lens un-hides it
-  (the researcher's deliberate choice; undoable).
+  (the researcher's deliberate choice; undoable). An export has none: it leaves hidden quotes out,
+  so their words read as plain speech there (`docs/design-export-html.md` Decision 8, 25 Nov 2026).
 - **Narrow** (<800px): the gutter stays; the margin's titles and thumbnails drop under the text.
 
 ## The data (measured)
@@ -99,7 +100,8 @@ transcript they can jump to each, landing on the thing itself.
   has landed, `reveal` is taken off the address (`dropRevealFromAddress`, `history.replaceState`),
   so Back to the lens or a reload cannot un-hide a quote hidden since. A `reveal` not in the report
   scrolls to the group and says so in the console. In an export a hidden quote cannot be un-hidden,
-  so its link carries no `reveal`.
+  so its link carries no `reveal`. (Since 25 Nov 2026 an export carries no hidden quote at all; the
+  guard stays as a second line, as the hidden-quotes counter's export gate does.)
   Signals' location heading and the Dashboard's section, theme and stat links use the same address,
   which also ends their silent no-op under By session grouping.
 - **Screens:** `/report/screens/?screen=<ref>&session=<sid>` (`islands/screens/screenModel.ts`). The

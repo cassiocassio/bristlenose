@@ -11,6 +11,7 @@
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { PlayerContext } from "../contexts/PlayerContext";
+import { isExportMode } from "../utils/exportData";
 import { Icon } from "./Icon";
 
 export interface CounterItem {
@@ -53,7 +54,10 @@ export function Counter({
 }: CounterProps) {
   const { t } = useTranslation();
   const playerCtx = useContext(PlayerContext);
-  if (count === 0) return null;
+  // A file cannot un-hide, and the export leaves hidden quotes out of its embed
+  // (export.py _drop_hidden_quotes). One gate here holds for every lens that
+  // draws a counter (Quotes, Discussion, Screens) if one ever reaches the store.
+  if (count === 0 || isExportMode()) return null;
 
   // `t` was already in scope and used for every other string in this component
   // — the header, "Unhide all", the per-item labels. This one line hand-rolled

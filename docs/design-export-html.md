@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-28
-trued-against: HEAD@main (d314e3b7) on 2026-09-28
+last-trued: 2026-11-25
+trued-against: HEAD@main (120fcd7d8) on 2026-11-25
 ---
 
 # HTML Export — Design Document
@@ -27,6 +27,12 @@ trued-against: HEAD@main (d314e3b7) on 2026-09-28
 
 ## Changelog
 
+- _2026-11-25_ — hidden quotes are no longer exported (Decision 8). Until today the
+  file embedded `/quotes` with every hidden quote flagged `is_hidden`, and the
+  hidden-quotes counter let its reader open them; the transcripts drew them in grey.
+  Anchors: `_drop_hidden_quotes` in `bristlenose/server/routes/export.py`, the
+  `isExportMode()` gate on `Counter` in `frontend/src/islands/QuoteGroup.tsx`,
+  `tests/test_export_hidden_quotes.py`.
 - _2026-08-22_ — trued up: rewrote §"Open questions" item 1, which summarised the
   export as fully read-only from 26 Jul while three mutation paths stayed live
   until 20 Aug (`denyProposedTag` ungated, five `export.css` selectors matching
@@ -271,6 +277,7 @@ The export transcript renderer reuses these formatters. New work: human-readable
 4. **Moderator names preserved.** They're the research team, not subjects.
 5. **Role titles removed when anonymised.** "The one manager in the study" narrows the person down. **Implemented 25 Aug 2026** — `_anonymise_data` now blanks `role` alongside the names for `p*` codes, pinned by `test_anonymise_strips_participant_job_titles`. Participant-side only: moderators and observers keep their titles, because the boundary is the participant line and they are named anyway (`design-people.md` §E decision 2).
 6. **ExportDialog project ID.** Current code hardcodes `1` at line 70. _(Superseded: `ExportDialog` uses `useProjectId()`.)_ All new endpoints must use correct project ID from route params.
+8. **Hidden quotes are not exported** (owner, 25 Nov 2026), as Miro, FigJam, CSV, clips and Screens already leave them out through `export_core`. Hiding is curation, not redaction: the transcripts keep every word, so a hidden quote's words stay there as speech, unmarked. What goes is the quote: from the quote lists, the dashboard's featured candidates, the discussion record, and each transcript's marks and margin entries (`_drop_hidden_quotes`, run before anonymisation). The hidden-quotes counter (`components/Counter.tsx`, drawn by Quotes, Discussion and Screens) returns nothing under `isExportMode()`, in case one ever reaches the store. A section or theme left with no quote is dropped with its dashboard link. Coverage and the Sessions journey still count a hidden quote's passage, as the app does (owner, 22 Oct 2026); whether a file should is an open owner question in 100days §4. A choice of three versions (Starred only, All except hidden, Everything) is a further enhancement in 100days §4.
 7. **Folder name uses `safe_filename()`** (from `bristlenose/utils/text.py`) — preserves spaces and case: `"Acme Onboarding Research"` not `"acme-onboarding-research"`. `slugify()` would lowercase and hyphenate.
 
 ---

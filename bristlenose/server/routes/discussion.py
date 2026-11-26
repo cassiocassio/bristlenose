@@ -9,7 +9,8 @@ row's id (``dom_id``), the key the SPA's quotes store uses, and an edited quote
 shows its edit. A hidden quote is sent, not left out: the lens hides it from the
 store, so hiding and unhiding there shows at once and its hidden-quotes counter
 can bring it back (decided 19 Oct 2026, design-discussion-lens-plan.md §3). The
-Quotes lens's own payload carries hidden quotes the same way.
+Quotes lens's own payload carries hidden quotes the same way. The HTML
+export removes them from both (``export._drop_hidden_quotes``).
 
 The payload carries speaker codes, never names (plan §9.C): the SPA resolves
 names from ``/sessions``, which an anonymised export already blanks.

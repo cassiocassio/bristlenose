@@ -305,6 +305,118 @@ def _strip_filesystem_paths(endpoints: dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Hidden quotes
+# ---------------------------------------------------------------------------
+
+def _drop_hidden_quotes(endpoints: dict[str, Any]) -> None:
+    """Leave the researcher's hidden quotes out of the file (owner, 25 Nov 2026).
+
+    Every other export (Miro, FigJam, CSV, clips, Screens) chooses its quotes
+    through ``export_core``, which leaves hidden ones out. This one embeds the
+    lenses' own payloads, and those carry a hidden quote flagged, so the app can
+    un-hide it. A file cannot un-hide, and the hidden-quotes counter let its
+    reader open every quote the researcher had set aside. So each one is removed
+    wherever a payload holds it: the quote lists, the dashboard's featured
+    candidates, the discussion record, the parked moderator-question keys, and
+    each transcript's annotations and marks. A section or theme left with no
+    quote goes, with its dashboard link. The transcript keeps the words, as it
+    keeps every other unquoted passage: only the quote mark goes. Signals, the
+    codebook counts and the tapestry already count no hidden quote (a signal
+    card's written prose stays as it was generated: design-signals-follow-hide.md).
+    Coverage and the session journey still count a hidden quote's passage, as
+    the app does (owner, 22 Oct 2026: Sessions keeps it as the record).
+    Mutates ``endpoints`` in place.
+    """
+    from bristlenose.server.heading_names import section_anchor, theme_anchor
+    from bristlenose.server.routes.transcript import _highlight_quoted_text
+
+    quotes = endpoints.get("/quotes") or {}
+    hidden: set[str] = set()
+    starred_hidden: set[str] = set()
+
+    def keep(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        kept = []
+        for q in rows:
+            if q.get("is_hidden"):
+                hidden.add(q["dom_id"])
+                if q.get("is_starred"):
+                    starred_hidden.add(q["dom_id"])
+            else:
+                kept.append(q)
+        return kept
+
+    # A section or theme whose every quote is hidden goes too: the lens would draw nothing
+    # there, and its label and description, written over those quotes, would stay in the file.
+    emptied: set[str] = set()
+    for group_key, id_key, anchor in (
+        ("sections", "cluster_id", section_anchor), ("themes", "theme_id", theme_anchor),
+    ):
+        groups = quotes.get(group_key, [])
+        for group in groups:
+            had = bool(group.get("quotes"))
+            group["quotes"] = keep(group.get("quotes", []))
+            if had and not group["quotes"]:
+                emptied.add(anchor(group[id_key]))
+        if group_key in quotes:
+            quotes[group_key] = [
+                g for g in groups if g.get("quotes") or anchor(g[id_key]) not in emptied
+            ]
+    for bucket_key in ("uncategorised", "unjoined"):
+        if bucket_key in quotes:
+            quotes[bucket_key] = keep(quotes[bucket_key])
+    if quotes:
+        quotes["total_quotes"] = max(0, quotes.get("total_quotes", 0) - len(hidden))
+        quotes["total_starred"] = max(0, quotes.get("total_starred", 0) - len(starred_hidden))
+        quotes["total_hidden"] = 0
+        quotes["total_uncategorised"] = len(quotes.get("uncategorised", []))
+
+    dashboard = endpoints.get("/dashboard") or {}
+    if "featured_quotes" in dashboard:
+        dashboard["featured_quotes"] = [
+            q for q in dashboard["featured_quotes"]
+            if not q.get("is_hidden") and q.get("dom_id") not in hidden
+        ]
+    stats = dashboard.get("stats") or {}
+    for nav_key, count_key in (("sections", "sections_count"), ("themes", "themes_count")):
+        if nav_key not in dashboard:
+            continue
+        before = len(dashboard[nav_key])
+        dashboard[nav_key] = [n for n in dashboard[nav_key] if n.get("anchor") not in emptied]
+        if count_key in stats:
+            stats[count_key] = max(0, stats[count_key] - (before - len(dashboard[nav_key])))
+
+    record = (endpoints.get("/discussion") or {}).get("record")
+    if record and "quotes" in record:
+        record["quotes"] = [q for q in record["quotes"] if q.get("dom_id") not in hidden]
+
+    for key in [k for k in endpoints if k.startswith("/quotes/") and k.endswith("/moderator-question")]:
+        if key.split("/")[2] in hidden:
+            del endpoints[key]
+
+    for key, tx in endpoints.items():
+        if not key.startswith("/transcripts/") or not tx:
+            continue
+        annotations: dict[str, Any] = tx.get("annotations", {})
+        gone = {qid for qid, ann in annotations.items() if ann.get("is_hidden") or qid in hidden}
+        if not gone:
+            continue
+        for qid in gone:
+            del annotations[qid]
+        for seg in tx.get("segments", []):
+            ids = seg.get("quote_ids", [])
+            if not gone.intersection(ids):
+                continue
+            left = [qid for qid in ids if qid not in gone]
+            seg["quote_ids"] = left
+            seg["is_quoted"] = bool(left)
+            # The marks as the transcript route draws them for these quotes alone.
+            seg["html_text"] = _highlight_quoted_text(
+                seg.get("text", ""),
+                [(qid, annotations[qid].get("verbatim_excerpt", "")) for qid in left if qid in annotations],
+            ) if left else None
+
+
+# ---------------------------------------------------------------------------
 # Logo embedding
 # ---------------------------------------------------------------------------
 
@@ -616,6 +728,9 @@ def export_report(
 
     # --- Strip absolute filesystem paths (security: leaks username/dir structure) ---
     _strip_filesystem_paths(endpoints)
+
+    # --- Leave hidden quotes out, as every other export does ---
+    _drop_hidden_quotes(endpoints)
 
     # --- Anonymise if requested ---
     if anonymise:

@@ -1285,7 +1285,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   const ann = annotations[qid];
                   const shown = segAnnotations.find((a) => a.quoteId === qid);
                   const anchor = ann?.anchor ?? "";
-                  // An export cannot un-hide: a hidden quote's link leads to its group only.
+                  // An export cannot un-hide: a hidden quote's link leads to its group only. Since
+                  // 25 Nov 2026 an export carries no hidden quote (export.py _drop_hidden_quotes);
+                  // this stays as a second line, should one ever reach it.
                   const reveal = isExportMode() && isHidden(qid) ? undefined : qid;
                   const href = anchor ? quotesHref(anchor, reveal) : undefined;
                   const follow = (e: React.MouseEvent) => followInApp(e, quotesPath(anchor, reveal), backTo(seg));

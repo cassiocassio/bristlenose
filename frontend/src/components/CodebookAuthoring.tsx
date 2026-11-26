@@ -808,7 +808,13 @@ export function MergeConfirm({
         body={
           <span
             dangerouslySetInnerHTML={{
-              __html: t("codebook.mergeBody", { source: pending.source.name, target: pending.target.name }),
+              // Tag names are user data and the global config turns escaping off (React
+              // escapes JSX): this string goes to innerHTML, so escape here.
+              __html: t("codebook.mergeBody", {
+                source: pending.source.name,
+                target: pending.target.name,
+                interpolation: { escapeValue: true },
+              }),
             }}
           />
         }

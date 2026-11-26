@@ -429,6 +429,37 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         #expect(ev.outcome == .failed(cause: nil))
     }
 
+    /// The system cancelled the request and nobody here asked: a failure (so the model falls back
+    /// and the pill stays), not a Stop. Our own Stop is `stopCancelsTheAttemptAndEndsAsStopped`.
+    @Test func aSystemCancelIsAFailureNotAStop() async throws {
+        for error: Error in [NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled), CancellationError()] {
+            let (a, _, ev) = try make([.throwError(error)])
+            _ = a.start(events: ev)
+            await ev.waitForEnd()
+            #expect(ev.outcome == .failed(cause: nil), "\(error)")
+        }
+    }
+
+    /// An attempt given up before the first byte (a system cancel, or the watchdog) waits on the
+    /// bounded remove; the researcher's Stop pressed during that wait still ends as a Stop, not a
+    /// failure that would start a fallback.
+    @Test(arguments: [false, true])
+    func aStopDuringTheCleanupAfterAGiveUpIsAStop(watchdog: Bool) async throws {
+        let cancel = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        let (a, adapter, ev) = try make([watchdog ? .hangIgnoringCancel : .throwError(cancel)],
+                                        silence: .milliseconds(300), complete: false)
+        adapter.removeDelay = .milliseconds(1500)  // longer than the wait below can take to notice
+        _ = a.start(events: ev)
+        let deadline = ContinuousClock.now + .seconds(120)
+        while adapter.removeCalls == 0, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(adapter.removeCalls == 1, "the cleanup is under way")
+        #expect(adapter.removesFinished == 0, "and not finished: Stop lands inside it")
+        a.stop()
+        await ev.waitForEnd()
+        adapter.release()
+        #expect(ev.outcome == .stopped)
+    }
+
     @Test func offlineAtStartIsAFailure() async throws {
         // `assetPack(withID:)` itself throws when the server cannot be reached.
         let (a, _, ev) = try make([.throwError(NSError(domain: "ManagedBackgroundAssetsXPC.ErrorCoding", code: 1))])
@@ -692,8 +723,10 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(fetch.startCalls == 1)
     }
 
-    /// The system cancelled it (nobody here asked): that is NOT the researcher's Stop, so it is
-    /// not remembered and the next opportunity (launch, run, Download Now) tries again.
+    /// An acquirer that ends `.stopped` when nobody here asked: that is NOT the researcher's Stop,
+    /// so it is not remembered and the next opportunity (launch, run, Download Now) tries again.
+    /// A defensive rule: no real acquirer ends this way today (Background Assets reports a system
+    /// cancel as a failure, `aSystemCancelIsAFailureNotAStop`).
     @Test func aCancelThatWasNotOursIsNotRememberedAsAStop() {
         let ba = FakeAcquirer(); ba.kind = .backgroundAssets
         let d = defaults()
@@ -705,11 +738,6 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(WhisperDownloadModel.autoStart(
             phase: .missing, freeBytes: nil, stoppedByUser: d.bool(forKey: "whisperDownloadStoppedByUser"),
             hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) == .start)
-        // No fallback and no pill for it; Download Now in Settings asks Background Assets again.
-        #expect(ba.startCalls == 1)
-        #expect(!m.isPillVisible)
-        m.downloadNow()
-        #expect(ba.startCalls == 2)
     }
 
     @Test func aStopWeAskedForIsNotDoubleCounted() {

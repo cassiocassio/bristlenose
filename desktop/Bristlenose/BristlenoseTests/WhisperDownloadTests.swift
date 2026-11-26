@@ -425,6 +425,43 @@ import Testing
         #expect(WhisperFailureCause.lineKey(for: .disk) == "desktop.modelDownload.causeDisk")
         #expect(WhisperFailureCause.lineKey(for: nil) == "desktop.transcriptionSettings.whisperFailed")
     }
+
+    /// The popover says what to do where the title and Retry alone don't: a certificate needs
+    /// another network, an unnamed failure gets Retry or later. A dropped connection and a full
+    /// disk carry no hint (owner, 26 Nov 2026).
+    @Test func aHintOnlyWhereTheTitleAndRetryDontSayWhatToDo() {
+        #expect(WhisperFailureCause.hintKey(for: nil) == "desktop.modelDownload.failedHint")
+        #expect(WhisperFailureCause.hintKey(for: .certificate) == "desktop.modelDownload.causeCertificateHint")
+        #expect(WhisperFailureCause.hintKey(for: .network) == nil)
+        #expect(WhisperFailureCause.hintKey(for: .disk) == nil)
+    }
+}
+
+/// The unnamed failure's popover, in the owner's words (26 Nov 2026).
+@Suite @MainActor struct WhisperFailedStringsTests {
+    @Test func theUnnamedFailureReadsTheOwnersWords() throws {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
+        i18n.setLocale("en")
+        #expect(i18n.t(WhisperFailureCause.titleKey(for: nil)) == "Whisper didn’t download")
+        #expect(i18n.t(WhisperFailureCause.lineKey(for: nil)) == "The download didn’t finish.")
+        #expect(i18n.t(try #require(WhisperFailureCause.hintKey(for: nil)))
+                == "Retry, or download later in Transcription Settings.")
+    }
+
+    /// The full-disk popover says what to do, with the floor unchanged at 10 GB (owner, 26 Nov 2026).
+    @Test func theFullDiskBodySaysWhatToDo() throws {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
+        i18n.setLocale("en")
+        #expect(WhisperDownloadModel.autoStartFloorBytes == 10_000_000_000)
+        // The pill formats the floor with the Mac's own byte format, so the test does too.
+        let floor = ByteCountFormatter.string(fromByteCount: WhisperDownloadModel.autoStartFloorBytes, countStyle: .file)
+        #expect(i18n.t("desktop.modelDownload.lowDiskBody",
+                       ["floor": floor, "size": i18n.t("desktop.modelDownload.askSize")])
+                == "Bristlenose recommends \(floor) free space. The Whisper speech model needs 1.6 GB. "
+                   + "Free up some space, then click Download Now in Transcription Settings.")
+    }
 }
 
 /// The size question's strings exist in English and the size reaches the body.

@@ -129,8 +129,8 @@ struct WhisperDownloadDetail: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if model.failureCause == .certificate {
-                    Text(i18n.t("desktop.modelDownload.causeCertificateHint"))
+                if let hint = WhisperFailureCause.hintKey(for: model.failureCause) {
+                    Text(i18n.t(hint))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

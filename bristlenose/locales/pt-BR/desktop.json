@@ -1361,6 +1361,7 @@
   "modelDownload": {
     "title": "Baixando o Whisper",
     "failedTitle": "O Whisper não foi baixado",
+    "failedHint": "Tente novamente ou baixe-o depois nos ajustes de Transcrição.",
     "why": "Para as suas próximas gravações. O Whisper lida melhor com áudio ruim, pessoas falando ao mesmo tempo e grupos maiores.",
     "stop": "Parar",
     "causeDisk": "Este Mac não tem espaço livre suficiente.",
@@ -1373,7 +1374,7 @@
     "askSize": "1,6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "O Bristlenose recomenda {{floor}} de espaço livre. O modelo de fala Whisper precisa de {{size}}. Libere espaço e clique em “Baixar agora” nos ajustes de Transcrição.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

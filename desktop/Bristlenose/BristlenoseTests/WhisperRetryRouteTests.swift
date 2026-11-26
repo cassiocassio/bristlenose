@@ -174,6 +174,30 @@ import Testing
         #expect(stamp.verifiedFingerprint == nil)
     }
 
+    /// The system cancels the Background Assets request (nobody here asked), through the real
+    /// acquirer: this launch falls to Hugging Face at once and the pill stays, instead of the pill
+    /// vanishing with nothing said; a failure of that fetch then offers Retry.
+    @Test func aSystemCancelFallsBackAndThePillStays() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-ba-cancel-\(UUID().uuidString)/large-v3-turbo")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let adapter = FakeAdapter([.throwError(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled))], dir: dir)
+        let ba = BackgroundAssetsAcquirer(
+            adapter: adapter, manifest: .largeV3Turbo, silenceLimit: .seconds(60),
+            verify: { _, _ in .ok }, stamp: MemoryStamp(), servesChosenModel: { true })
+        let fetch = FakeAcquirer()
+        let d = scratchDefaults()
+        let m = model(d) { usable in usable ? ba as WhisperModelAcquirer : fetch }
+
+        m.downloadNow()
+        await waitUntil { fetch.startCalls == 1 }
+        #expect(fetch.startCalls == 1, "a system cancel falls to the fetch for this launch")
+        #expect(m.phase == .downloading && m.isPillVisible)
+        #expect(!d.bool(forKey: Self.stoppedKey), "not remembered as the researcher's Stop")
+        fetch.end(.failed(cause: nil))
+        #expect(offersRetry(m))
+    }
+
     /// Waits on a fake's counter (`RecordingEvents.waitForEnd` waits on an acquirer's outcome,
     /// which the model, not the test, receives here). The deadline only turns a hang into a failed
     /// expectation; a green run never pays it.

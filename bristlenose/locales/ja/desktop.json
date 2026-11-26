@@ -1311,6 +1311,7 @@
   "modelDownload": {
     "title": "Whisper をダウンロード中",
     "failedTitle": "Whisper をダウンロードできませんでした",
+    "failedHint": "再試行するか、あとから「文字起こし」の設定でダウンロードしてください。",
     "why": "次の録音のために。Whisper は、音質の悪い音声、話し声の重なり、大人数の会話にも強いモデルです。",
     "stop": "停止",
     "causeDisk": "この Mac の空き容量が足りません。",
@@ -1323,7 +1324,7 @@
     "askSize": "1.6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose では{{floor}}の空き容量をおすすめします。Whisper 音声モデルには{{size}}が必要です。空き容量を増やしてから、「文字起こし」の設定で「今すぐダウンロード」をクリックしてください。",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

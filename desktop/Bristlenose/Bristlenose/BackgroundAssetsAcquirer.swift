@@ -193,10 +193,17 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         // The one repair: a pack that arrives wrong is removed and asked for again, once.
         for attempt in 1...2 {
             switch await ensureWithWatchdog() {
-            case .cancelled:
+            case .cancelled where stopRequested:
                 return .stopped
-            case .failed:
+            case .cancelled:
+                // The system cancelled it; nobody here asked. A failure, so this launch falls to
+                // Hugging Face and the pill stays, rather than vanishing with nothing said (owner,
+                // 26 Nov 2026, reversing the 16 Nov "not a Stop, no fallback, no pill").
+                Self.logger.error("whisper pack request cancelled by the system")
                 return .failed(cause: nil)
+            case .failed:
+                // A Stop pressed while a given-up attempt cleans up is still the researcher's Stop.
+                return stopRequested ? .stopped : .failed(cause: nil)
             case .arrived:
                 break
             }
@@ -238,11 +245,16 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         }
         let adapter = self.adapter
         let limit = silenceLimit
+        let log = Self.logger
         let ensureTask = Task.detached {
             do {
                 try await adapter.ensure(report: report)
                 race.finish(.arrived)
             } catch {
+                // Domain and code, so a build in the field says what a system cancel or failure
+                // really is (design doc §11: "what a system cancel looks like" is owed).
+                let ns = error as NSError
+                log.error("whisper pack request ended: \(ns.domain, privacy: .public) \(ns.code, privacy: .public)")
                 race.finish(whisperEnsureWasCancelled(error) ? .cancelled : .failed)
             }
         }

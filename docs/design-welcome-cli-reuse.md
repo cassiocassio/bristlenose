@@ -64,12 +64,12 @@ two — and the page lives in the website repo, so it cannot be fixed from here.
 
 The telemetry one is the only one with a clock on it. Both privacy pages make an
 absolute claim — *"no usage tracking"*, and what leaves the machine *"only in
-these cases"* — which is **true today**: `BRISTLENOSE_TELEMETRY_ENABLED` defaults
-`True` and the endpoint ships in the `/api/health` payload, but nothing sends
-anything (verified 21 Sep 2026: `DEFAULT_TELEMETRY_URL` appears only in its own
-default literal in `frontend/src/utils/health.ts`, no `fetch`, nothing in Swift or
-Python). Telemetry Phase 2 would make that sentence false silently, on a page in
-another repo that nobody editing a sender would think to open.
+these cases"* — which is **true today**: nothing sends anything (verified 21 Sep
+2026), and since 26 Nov 2026 the unused `BRISTLENOSE_TELEMETRY_ENABLED` switch and
+the endpoint in the `/api/health` payload are gone too
+(`docs/design-tag-telemetry-debug.md`). Telemetry Phase 2 would make that sentence
+false silently, on a page in another repo that nobody editing a sender would think
+to open.
 
 **Two truing notes for whoever reads the table in §1a next:**
 

@@ -100,8 +100,6 @@ All calls are **fire-and-forget promises**.  The JS modules don't `await` them.
 - `links.github_issues_url`
 - `feedback.enabled`
 - `feedback.url`
-- `telemetry.enabled`
-- `telemetry.url`
 
 This payload is shared by serve mode and export mode (embedded in `BRISTLENOSE_EXPORT.health`).
 
@@ -110,20 +108,18 @@ Default values:
 - `links.github_issues_url` = `https://github.com/cassiocassio/bristlenose/issues/new`
 - `feedback.enabled` = `true`
 - `feedback.url` = `https://bristlenose.app/feedback.php`
-- `telemetry.enabled` = `true`
-- `telemetry.url` = `https://bristlenose.app/telemetry.php` (prod) or `/api/dev/telemetry` (dev mode, relative → local stub)
+
+There is no `telemetry` block (removed 26 Nov 2026, with `BRISTLENOSE_TELEMETRY_ENABLED` / `_URL`): nothing sends tag telemetry, and the signal is counted locally by `scripts/tag-signal.py` (`docs/design-tag-telemetry-debug.md`).
 
 Optional env overrides:
 
 - `BRISTLENOSE_GITHUB_ISSUES_URL`
 - `BRISTLENOSE_FEEDBACK_ENABLED` (`1/true/yes/on` truthy; everything else false)
 - `BRISTLENOSE_FEEDBACK_URL`
-- `BRISTLENOSE_TELEMETRY_ENABLED`
-- `BRISTLENOSE_TELEMETRY_URL`
 
 ### Dev telemetry stub (`--dev` only)
 
-`bristlenose serve --dev` mounts `POST/GET/DELETE /api/dev/telemetry`, a stand-in for the production `telemetry.php` that appends to a JSONL file under the temp directory (spec: `docs/methodology/tag-rejections-are-great.md`). [full entry](gotchas.md#route-notes-from-the-layout-tree)
+`bristlenose serve --dev` mounts `POST/GET/DELETE /api/dev/telemetry`, a local stand-in where a future sender would be exercised first (no public endpoint exists), that appends to a JSONL file under the temp directory (spec: `docs/methodology/tag-rejections-are-great.md`). [full entry](gotchas.md#route-notes-from-the-layout-tree)
 
 ## Patterns to follow
 

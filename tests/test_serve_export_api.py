@@ -165,8 +165,8 @@ class TestExportData:
             data["health"]["feedback"]["url"]
             == "https://bristlenose.app/feedback.php"
         )
-        assert data["health"]["telemetry"]["enabled"] is True
-        assert "url" in data["health"]["telemetry"]
+        # An export advertises no telemetry endpoint (removed 26 Nov 2026).
+        assert "telemetry" not in data["health"]
 
     def test_has_dashboard(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)

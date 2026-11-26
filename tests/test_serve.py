@@ -69,45 +69,27 @@ class TestHealthEndpoint:
         assert data["feedback"]["enabled"] is False
         assert data["feedback"]["url"] == "https://example.com/feedback"
 
-    def test_telemetry_dev_default_points_at_local_stub(
+    @pytest.mark.parametrize("dev", [True, False])
+    def test_advertises_no_telemetry_endpoint(
         self,
-        client: TestClient,
+        dev: bool,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """In dev mode, health advertises the local /api/dev/telemetry stub."""
-        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_ENABLED", raising=False)
-        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_URL", raising=False)
-        data = client.get("/api/health").json()
-        assert data["telemetry"]["enabled"] is True
-        assert data["telemetry"]["url"] == "/api/dev/telemetry"
+        """Nothing sends tag telemetry, so health advertises no endpoint or switch.
 
-    def test_telemetry_non_dev_default_points_at_production(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Without --dev, health advertises the production PHP endpoint."""
-        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_ENABLED", raising=False)
-        monkeypatch.delenv("BRISTLENOSE_TELEMETRY_URL", raising=False)
-        app = create_app(dev=False, db_url="sqlite://")
-        non_dev_client = AuthTestClient(app)
-        data = non_dev_client.get("/api/health").json()
-        assert data["telemetry"]["enabled"] is True
-        assert data["telemetry"]["url"] == "https://bristlenose.app/telemetry.php"
-
-    def test_respects_telemetry_env_overrides(
-        self,
-        client: TestClient,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        monkeypatch.setenv("BRISTLENOSE_TELEMETRY_ENABLED", "false")
+        Even with the old environment variables set: they no longer exist.
+        docs/design-tag-telemetry-debug.md §4.
+        """
+        monkeypatch.setenv("BRISTLENOSE_TELEMETRY_ENABLED", "true")
         monkeypatch.setenv("BRISTLENOSE_TELEMETRY_URL", "https://example.com/telemetry.php")
-        data = client.get("/api/health").json()
-        assert data["telemetry"]["enabled"] is False
-        assert data["telemetry"]["url"] == "https://example.com/telemetry.php"
+        app = create_app(dev=dev, db_url="sqlite://")
+        data = AuthTestClient(app).get("/api/health").json()
+        assert "telemetry" not in data
+        assert "telemetry.php" not in str(data)
 
 
 class TestDevTelemetryStub:
-    """The /api/dev/telemetry stub — stands in for bristlenose.app/telemetry.php."""
+    """The /api/dev/telemetry stub: a local stand-in, mounted only under --dev."""
 
     @pytest.fixture(autouse=True)
     def _clean_jsonl(self, client: TestClient) -> None:

@@ -1094,7 +1094,7 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
     # browser form, the native sheet (which reads /api/health), and the React
     # modal all agree. Help is the docs site; "report a bug" (GitHub) is a
     # separate footer affordance, not Help.
-    health = build_health_payload(dev=bool(getattr(app.state, "dev", False)))
+    health = build_health_payload()
     feedback = health["feedback"]
     help_url = os.environ.get("BRISTLENOSE_HELP_URL", DEFAULT_HELP_URL)
     html_str = render_page(

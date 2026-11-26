@@ -17,8 +17,6 @@ router = APIRouter(prefix="/api")
 DEFAULT_GITHUB_ISSUES_URL = "https://github.com/cassiocassio/bristlenose/issues/new"
 DEFAULT_FEEDBACK_URL = "https://bristlenose.app/feedback.php"
 DEFAULT_HELP_URL = "https://bristlenose.app/docs/"
-DEFAULT_TELEMETRY_URL = "https://bristlenose.app/telemetry.php"
-DEV_TELEMETRY_URL = "/api/dev/telemetry"
 
 #: The agent-surface contract this build speaks.
 #:
@@ -46,12 +44,12 @@ def _bool_env(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def build_health_payload(*, dev: bool = False) -> dict[str, object]:
+def build_health_payload() -> dict[str, object]:
+    # No telemetry block (removed 26 Nov 2026): nothing sends tag telemetry,
+    # and a block advertising an endpoint that is on by default is a switch
+    # nobody has declared. docs/design-tag-telemetry-debug.md.
     feedback_enabled = _bool_env("BRISTLENOSE_FEEDBACK_ENABLED", True)
     feedback_url = os.environ.get("BRISTLENOSE_FEEDBACK_URL", DEFAULT_FEEDBACK_URL)
-    telemetry_enabled = _bool_env("BRISTLENOSE_TELEMETRY_ENABLED", True)
-    telemetry_default = DEV_TELEMETRY_URL if dev else DEFAULT_TELEMETRY_URL
-    telemetry_url = os.environ.get("BRISTLENOSE_TELEMETRY_URL", telemetry_default)
     github_issues_url = os.environ.get(
         "BRISTLENOSE_GITHUB_ISSUES_URL",
         DEFAULT_GITHUB_ISSUES_URL,
@@ -65,10 +63,6 @@ def build_health_payload(*, dev: bool = False) -> dict[str, object]:
         "feedback": {
             "enabled": feedback_enabled,
             "url": feedback_url,
-        },
-        "telemetry": {
-            "enabled": telemetry_enabled,
-            "url": telemetry_url,
         },
     }
 
@@ -107,8 +101,7 @@ def _project_key_or_none(request: Request) -> str | None:
 @router.get("/health")
 def health(request: Request) -> dict[str, object]:
     """Return server status and version."""
-    dev = bool(getattr(request.app.state, "dev", False))
-    payload = build_health_payload(dev=dev)
+    payload = build_health_payload()
     # MCP status for the desktop host. `mounted` lets the Connect Agent sheet
     # say "not available in this build" instead of handing out an address
     # that 404s — the mount is optional (the `mcp` extra), and only the

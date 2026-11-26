@@ -12,10 +12,6 @@ const HEALTH: HealthResponse = {
     enabled: true,
     url: "https://example.com/feedback",
   },
-  telemetry: {
-    enabled: true,
-    url: "https://example.com/telemetry",
-  },
 };
 
 describe("Footer", () => {

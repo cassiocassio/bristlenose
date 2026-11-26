@@ -393,9 +393,10 @@ def _oxford_list(parts: list[str]) -> str:
 # Alpha telemetry stub
 # ---------------------------------------------------------------------------
 #
-# Stands in for the real PHP endpoint at bristlenose.app/telemetry.php during
-# Swift + React development.  Accepts the same batched payload the real
-# endpoint will accept and appends one JSON line per event to a local file.
+# A local stand-in for a tag-telemetry endpoint, where a future sender would
+# be exercised first. Nothing sends to it today, and no public endpoint
+# exists (docs/design-tag-telemetry-debug.md). Accepts the spec's batched
+# four-field payload and appends one JSON line per event to a local file.
 # Dev-only: mounted only when ``bristlenose serve --dev`` is active.
 #
 # The path is PID-scoped so (a) concurrent test runners don't clobber each
@@ -435,7 +436,7 @@ def _dev_telemetry_path() -> _Path:
 def dev_telemetry_post(batch: TelemetryBatchIn) -> dict[str, object]:
     """Append a batch of telemetry events to a local JSONL file.
 
-    Same request shape as the real ``telemetry.php`` endpoint:
+    The spec's Level 0 request shape:
     ``{"events": [{"tag_id", "prompt_version", "event_type", "researcher_id"}, ...]}``.
     Rejects unknown fields and batches larger than
     ``_TELEMETRY_MAX_EVENTS_PER_BATCH``. Returns the JSONL path so the

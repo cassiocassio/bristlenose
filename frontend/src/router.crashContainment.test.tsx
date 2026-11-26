@@ -745,7 +745,6 @@ describe("a whole-report crash", () => {
             version: "9.9.9",
             links: { github_issues_url: "" },
             feedback: { enabled, url: enabled ? "https://example.test/feedback.php" : "" },
-            telemetry: { enabled: false, url: "" },
           }
         : { quotes: [], sessions: [], tags: [] };
       return new Response(JSON.stringify(body), {
@@ -783,7 +782,6 @@ describe("a whole-report crash", () => {
             version: "9.9.9",
             links: { github_issues_url: "https://example.test/issues" },
             feedback: { enabled: true, url: "https://example.test/feedback.php" },
-            telemetry: { enabled: false, url: "" },
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );

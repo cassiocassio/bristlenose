@@ -8,6 +8,7 @@ import {
   judgeInput,
   rangeKeepsSurface,
   read,
+  replaceRange,
   sameBreaks,
   type EditModel,
 } from "./quoteEditSurface";
@@ -111,15 +112,29 @@ describe("keeping the surface whole (review 21 Nov)", () => {
     expect(judgeInput(host, input("insertText", { data: "x" }))).toBe("allow");
   });
 
-  it("refuses a delete that would take a quote mark, or run two paragraphs together", () => {
+  it("a selection over a quote mark or a paragraph break is typed over or deleted by the card", () => {
     const host = twoBlocks();
     const [first, second] = runs(host);
     select(host.querySelector(".bn-block")!, 0, first.firstChild!, 1); // over the opening mark
-    expect(judgeInput(host, input("deleteWordBackward"))).toBe("refuse");
+    expect(judgeInput(host, input("deleteWordBackward"))).toBe("replace");
     select(first.firstChild!, 2, second.firstChild!, 1); // across the paragraph break
-    expect(judgeInput(host, input("deleteContentBackward"))).toBe("refuse");
+    expect(judgeInput(host, input("deleteContentBackward"))).toBe("replace");
+    expect(judgeInput(host, input("insertText", { data: "x" }))).toBe("replace");
+    expect(judgeInput(host, input("deleteByDrag"))).toBe("refuse");
     select(first.firstChild!, 0, first.firstChild!, 1); // inside the typed text
     expect(judgeInput(host, input("deleteContentBackward"))).toBe("allow");
+  });
+
+  it("a word delete from a caret that would take a quote mark is still refused", () => {
+    const host = twoBlocks();
+    const [first] = runs(host);
+    caretAt(first.firstChild!, 1);
+    const over = document.createRange();
+    over.setStart(host.querySelector(".bn-block")!, 0);
+    over.setEnd(first.firstChild!, 1);
+    const e = input("deleteWordBackward");
+    Object.defineProperty(e, "getTargetRanges", { value: () => [over] });
+    expect(judgeInput(host, e)).toBe("refuse");
   });
 
   it("text typed outside the typed run is moved into it, and the caret is kept there", () => {
@@ -193,5 +208,93 @@ describe("keeping the surface whole (review 21 Nov)", () => {
     expect(islands(text).length).toBeGreaterThan(0);
     expect(islands(text).every((n) => n.getAttribute("aria-hidden") === "true")).toBe(true);
     expect(drawn(m, "crop").querySelector('[aria-hidden="true"]')).toBeNull();
+  });
+});
+
+// ── A selection typed over, deleted or cut (owner, 26 Nov 2026) ──
+
+describe("replacing a selection", () => {
+  const opts = { mode: "hybrid" as const, leftEllipsis: false, rightEllipsis: false, bracketsVisible: false };
+  const host = (m: EditModel) => {
+    const h = drawn(m);
+    document.body.append(h);
+    return h;
+  };
+  const runs = (h: HTMLElement) => Array.from(h.querySelectorAll(".crop-editable"));
+  const blocks = (h: HTMLElement) => Array.from(h.querySelectorAll(":scope > .bn-block"));
+  const marks = (h: HTMLElement) => h.querySelectorAll(".bn-mark").length;
+  const range = (sn: Node, so: number, en: Node, eo: number) => {
+    const r = document.createRange();
+    r.setStart(sn, so);
+    r.setEnd(en, eo);
+    return r;
+  };
+
+  it("a delete across a paragraph break takes the selected words and joins the paragraphs", () => {
+    const h = host({ words: words("a b c d"), breaks: [1], cropStart: 0, cropEnd: 4 });
+    const [first, second] = runs(h);
+    const out = replaceRange(h, range(first.firstChild!, 2, second.firstChild!, 1), "", opts)!;
+    expect(out.model).toEqual({ words: ["a", "d"], breaks: [], cropStart: 0, cropEnd: 2 });
+    expect(out.removed).toBe("b\nc");
+    expect(out.joined).toBe(true);
+    expect(read(h)).toEqual(out.model);
+    expect(blocks(h)).toHaveLength(1);
+    expect(marks(h)).toBe(2);
+    const caret = window.getSelection()!.getRangeAt(0);
+    expect(caret.startContainer).toBe(runs(h)[0].firstChild);
+    expect(caret.startOffset).toBe("a ".length);
+  });
+
+  it("typing over a selection that takes in a quote mark replaces the words and keeps the mark", () => {
+    const h = host({ words: words("a b c d"), breaks: [1], cropStart: 0, cropEnd: 4 });
+    const [first] = runs(h);
+    const out = replaceRange(h, range(blocks(h)[0], 0, first.firstChild!, 1), "X", opts)!;
+    expect(out.model).toEqual({ words: ["X", "b", "c", "d"], breaks: [1], cropStart: 0, cropEnd: 4 });
+    expect(out.joined).toBe(false);
+    expect(marks(h)).toBe(2);
+  });
+
+  it("a selection that ends at a paragraph's very start, as a triple-click's does, leaves that paragraph", () => {
+    const h = host({ words: words("a b c d"), breaks: [1], cropStart: 0, cropEnd: 4 });
+    const [first] = runs(h);
+    const out = replaceRange(h, range(first.firstChild!, 0, blocks(h)[1], 0), "X", opts)!;
+    expect(out.model.words).toEqual(["X", "c", "d"]);
+    expect(out.model.breaks).toEqual([0]);
+    expect(out.joined).toBe(false);
+  });
+
+  it("trimmed words in the selection stay, and stay trimmed", () => {
+    const h = host({ words: words("a b c d e"), breaks: [], cropStart: 1, cropEnd: 4 });
+    const b = blocks(h)[0];
+    const out = replaceRange(h, range(b, 0, b, b.childNodes.length), "Z", opts)!;
+    expect(out.model).toEqual({ words: ["a", "Z", "e"], breaks: [], cropStart: 1, cropEnd: 2 });
+    expect(out.removed).toBe("b c d");
+    expect(h.querySelectorAll(".excluded")).toHaveLength(2);
+  });
+
+  it("deleting whole paragraphs leaves an empty one to type in, which read() drops", () => {
+    const h = host({ words: words("a b c d e f"), breaks: [1, 3], cropStart: 0, cropEnd: 6 });
+    const [, second, third] = runs(h);
+    const out = replaceRange(h, range(second.firstChild!, 0, third.firstChild!, 3), "", opts)!;
+    expect(out.removed).toBe("c d\ne f");
+    expect(blocks(h)).toHaveLength(2);
+    const empty = blocks(h)[1];
+    expect(empty.querySelector(".crop-editable br")).not.toBeNull();
+    expect(empty.querySelector(".bn-mark")).not.toBeNull(); // the closing mark stays with the last paragraph
+    expect(read(h)).toEqual({ words: ["a", "b"], breaks: [], cropStart: 0, cropEnd: 2 });
+    const caret = window.getSelection()!.getRangeAt(0).startContainer;
+    expect(caret).toBe(empty.querySelector(".crop-editable"));
+    empty.querySelector(".crop-editable")!.prepend("x y");
+    expect(read(h).words).toEqual(["a", "b", "x", "y"]);
+    expect(read(h).breaks).toEqual([1]);
+  });
+
+  it("deleting every word keeps the quote marks and a place to type", () => {
+    const h = host({ words: words("a b c d"), breaks: [1], cropStart: 0, cropEnd: 4 });
+    const out = replaceRange(h, range(h, 0, h, h.childNodes.length), "", opts)!;
+    expect(out.model.words).toEqual([]);
+    expect(blocks(h)).toHaveLength(1);
+    expect(marks(h)).toBe(2);
+    expect(h.querySelector(".crop-editable br")).not.toBeNull();
   });
 });

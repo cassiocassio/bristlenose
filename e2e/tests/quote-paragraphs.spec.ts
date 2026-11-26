@@ -148,3 +148,92 @@ test('a paragraph emptied and retyped keeps its words in that paragraph', async 
     await putBack(page, baseURL!, domId);
   }
 });
+
+/** Select from paragraph `a`'s `ao`th word end to paragraph `b`'s `bo`th word end (0: its start). */
+async function selectAcross(page: Page, domId: string, a: number, ao: number, b: number, bo: number): Promise<void> {
+  await page.evaluate(
+    ([id, pa, wa, pb, wb]) => {
+      const run = (i: number) =>
+        document.querySelectorAll(`blockquote[id="${id}"] .quote-text .bn-block`)[i].querySelector('.crop-editable')!
+          .firstChild!;
+      const at = (node: Node, k: number) => {
+        const t = node.textContent ?? '';
+        let x = 0;
+        for (let i = 0; i < k; i++) x = t.indexOf(' ', x + 1);
+        return k === 0 ? 0 : x < 0 ? t.length : x;
+      };
+      const r = document.createRange();
+      const x = run(pa as number);
+      const y = run(pb as number);
+      r.setStart(x, at(x, wa as number));
+      r.setEnd(y, at(y, wb as number));
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+    },
+    [domId, a, ao, b, bo],
+  );
+}
+
+test('Delete, typing and cut over a selection across a paragraph break act on it (26 Nov)', async ({ page, baseURL }) => {
+  // These used to be refused: nothing happened, and a cut left the words in
+  // place and on the clipboard. Now they act on the selected words and join
+  // the paragraphs, and the quote marks stay.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const { domId, card, text } = await pickQuote(page, baseURL!);
+  const original = ((await text.textContent()) ?? '').replace(/[“”]/g, '').trim().split(/\s+/);
+  const twoParagraphs = async () => {
+    await text.click();
+    await expect(card).toHaveClass(/editing/);
+    await caretAfterWord(page, domId, 0, 3);
+    await page.keyboard.press('Shift+Enter');
+    await expect(text.locator('.bn-block')).toHaveCount(2);
+  };
+  const marks = () => text.locator('.bn-mark');
+  try {
+    // Backspace over words 3 to 5 (across the break): words 3, 4 and 5 go, one paragraph is left.
+    await twoParagraphs();
+    await selectAcross(page, domId, 0, 2, 1, 2);
+    await page.keyboard.press('Backspace');
+    await expect(text.locator('.bn-block')).toHaveCount(1);
+    await expect(marks()).toHaveCount(2);
+    // Typing over a selection that runs into the closing quote mark replaces the words to the end.
+    await page.evaluate((id) => {
+      const block = document.querySelector(`blockquote[id="${id}"] .quote-text .bn-block`)!;
+      const run = block.querySelector('.crop-editable')!.firstChild!;
+      const r = document.createRange();
+      r.setStart(run, (run.textContent ?? '').indexOf(' ') + 1);
+      r.setEnd(block, block.childNodes.length);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+    }, domId);
+    await page.keyboard.type('end');
+    await expect(marks()).toHaveCount(2);
+    await page.keyboard.press('Enter');
+    const want = [original[0], 'end'].join(' ');
+    await expect.poll(async () => (await serverQuote(page, baseURL!, domId))?.edited_text).toBe(want);
+    await putBack(page, baseURL!, domId);
+
+    // Cut across the break: the words leave the quote and are what the clipboard gets.
+    await page.reload();
+    await waitForPageReady(page);
+    await twoParagraphs();
+    await selectAcross(page, domId, 0, 2, 1, 1);
+    // A script cannot run the native ⌘X (it needs a user gesture), so the cut
+    // event the engine would send is sent here, with its own clipboard data.
+    const cut = await page.evaluate((id) => {
+      const data = new DataTransfer();
+      const e = new ClipboardEvent('cut', { clipboardData: data, bubbles: true, cancelable: true });
+      const taken = !document.querySelector(`blockquote[id="${id}"] .quote-text`)!.dispatchEvent(e);
+      return { taken, text: data.getData('text/plain') };
+    }, domId);
+    expect(cut).toEqual({ taken: true, text: `${original[2]}\n${original[3]}` });
+    await expect(text.locator('.bn-block')).toHaveCount(1);
+    await page.keyboard.press('Enter');
+    const left = [original[0], original[1], ...original.slice(4)].join(' ');
+    await expect.poll(async () => (await serverQuote(page, baseURL!, domId))?.edited_text).toBe(left);
+    expect(errors).toEqual([]);
+  } finally {
+    await putBack(page, baseURL!, domId);
+  }
+});

@@ -59,11 +59,15 @@ export function sameBreaks(a: number[] | null, b: number[] | null): boolean {
 
 // ── Drawing ─────────────────────────────────────────────────────────────
 
-interface DrawOptions {
+export interface DrawOptions {
   mode: "hybrid" | "crop";
   leftEllipsis: boolean;
   rightEllipsis: boolean;
   bracketsVisible: boolean;
+  /** Draw an empty paragraph before this one (at the end when past the last): a selection deleted it all. */
+  emptyAt?: number;
+  /** This paragraph, if it has no typed words, gets an empty run to hold the caret. */
+  holdCaret?: number;
 }
 
 function el(tag: string, cls: string, text?: string): HTMLElement {
@@ -104,6 +108,8 @@ export function draw(host: HTMLElement, m: EditModel, o: DrawOptions): void {
   host.replaceChildren();
   const { words, cropStart, cropEnd } = m;
   const ranges = blockRanges(words.length, m.breaks);
+  // An emptied paragraph is no range of words: it is drawn from [-1, -1].
+  if (o.emptyAt !== undefined) ranges.splice(Math.min(o.emptyAt, ranges.length), 0, [-1, -1]);
   const last = ranges.length - 1;
   ranges.forEach(([s, e], bi) => {
     const block = el("span", "bn-block");
@@ -133,6 +139,12 @@ export function draw(host: HTMLElement, m: EditModel, o: DrawOptions): void {
         }
         block.append(region);
       }
+    } else if (o.mode === "hybrid" && bi === o.holdCaret) {
+      // No typed words left: an empty run holds the caret, with the <br> the
+      // engines put in an emptied line, so what is typed reads back as typed.
+      const run = el("span", "crop-editable");
+      run.append(document.createElement("br"));
+      block.append(run);
     }
     if (cropEnd < words.length && cropEnd - 1 >= s && cropEnd - 1 < e) block.append(anchor(handle("end", o.bracketsVisible), "end"));
     // Trailing excluded words, each carrying its own space before.
@@ -420,8 +432,12 @@ export function clampCaret(host: HTMLElement): void {
   sel.addRange(target);
 }
 
-/** An input the browser would make outside the model: refuse it. */
-export type InputVerdict = "allow" | "refuse" | "retype";
+/**
+ * An input the browser would make outside the model: refuse it. A selection
+ * that reaches past one paragraph's words is typed over or deleted by the
+ * card instead ("replace", `replaceRange`).
+ */
+export type InputVerdict = "allow" | "refuse" | "retype" | "replace";
 
 /**
  * Judge an input before the browser makes it (a native `beforeinput`; React's
@@ -445,8 +461,16 @@ export function judgeInput(host: HTMLElement, e: InputEvent): InputVerdict {
   if (t === "deleteByDrag") return "refuse";
   if (t.startsWith("format")) return "refuse";
   if (t.startsWith("history")) return "allow";
-  const ranges: AbstractRange[] = e.getTargetRanges?.() ?? [];
   const sel = window.getSelection();
+  // Something selected across a paragraph break, a quote mark or a trimmed
+  // word: typing replaces it and a delete deletes it, as anywhere else; the
+  // card does it on the words alone. A word or line delete from a caret
+  // that would cross one is still refused.
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed && (t === "insertText" || t.startsWith("delete"))) {
+    const r = sel.getRangeAt(0);
+    if (host.contains(r.commonAncestorContainer) && !rangeKeepsSurface(host, r)) return "replace";
+  }
+  const ranges: AbstractRange[] = e.getTargetRanges?.() ?? [];
   if (ranges.length === 0 && sel && sel.rangeCount > 0) ranges.push(sel.getRangeAt(0));
   for (const sr of ranges) {
     const r = document.createRange();
@@ -469,4 +493,141 @@ export function rangeKeepsSurface(host: HTMLElement, r: Range): boolean {
   if (blockOf(r.startContainer) !== blockOf(r.endContainer)) return false;
   if (r.collapsed) return true;
   return !Array.from(host.querySelectorAll('[contenteditable="false"]')).some((n) => r.intersectsNode(n));
+}
+
+// ── Replacing a selection ───────────────────────────────────────────────
+
+/** The typed text under `n`: the islands left out, a line break or block a space (as `blockTokens`). */
+function typedOf(n: Node): string {
+  let s = "";
+  const walk = (x: Node) => {
+    if (isIsland(x)) return;
+    if (x.nodeType === Node.TEXT_NODE) {
+      s += x.textContent ?? "";
+      return;
+    }
+    const isBlock = x instanceof HTMLElement && BLOCK_TAGS.has(x.tagName);
+    if (isBlock) s += " ";
+    x.childNodes.forEach(walk);
+    if (isBlock) s += " ";
+  };
+  n.childNodes.forEach(walk);
+  return s;
+}
+
+type Point = [Node, number];
+
+/** The typed text of `block` between two points (its own start and end when left out). */
+function typedBetween(block: Element, from?: Point, to?: Point): string {
+  const r = document.createRange();
+  r.selectNodeContents(block);
+  if (from) r.setStart(from[0], from[1]);
+  if (to) r.setEnd(to[0], to[1]);
+  const holder = document.createElement("span");
+  holder.append(r.cloneContents());
+  return typedOf(holder);
+}
+
+const wordsOf = (s: string) => s.split(/\s+/).filter(Boolean);
+
+export interface Replaced {
+  model: EditModel;
+  /** The typed words the range held, a paragraph a line: what a cut puts on the clipboard. */
+  removed: string;
+  /** The range crossed a paragraph break, so paragraphs were joined. */
+  joined: boolean;
+}
+
+/**
+ * Replace what a range selects with `text` (empty for a delete), on the typed
+ * words only: the quote marks, brackets and trimmed words in it stay, and the
+ * paragraphs it spans become one. A range that ends at the very start of a
+ * paragraph, as a triple-click's does, takes none of that paragraph and leaves
+ * its break. Redraws the surface and puts the caret after the inserted text.
+ * Native undo does not reach across the redraw, as for Shift-Return.
+ */
+export function replaceRange(host: HTMLElement, r: Range, text: string, o: DrawOptions): Replaced | null {
+  const blocks = Array.from(host.querySelectorAll(":scope > .bn-block"));
+  if (blocks.length === 0) return null;
+  const blockAt = ([node, offset]: Point) => {
+    const i = blocks.findIndex((b) => {
+      const all = document.createRange();
+      all.selectNodeContents(b);
+      return all.comparePoint(node, offset) <= 0;
+    });
+    return i < 0 ? blocks.length - 1 : i;
+  };
+  const from: Point = [r.startContainer, r.startOffset];
+  let to: Point = [r.endContainer, r.endOffset];
+  const a = blockAt(from);
+  let b = blockAt(to);
+  if (b > a && typedBetween(blocks[b], undefined, to).trim() === "") {
+    b -= 1;
+    to = [blocks[b], blocks[b].childNodes.length];
+  }
+  const pre = typedBetween(blocks[a], undefined, from);
+  const post = typedBetween(blocks[b], to, undefined);
+  const removed = blocks
+    .slice(a, b + 1)
+    .map((blk, k) => wordsOf(typedBetween(blk, k === 0 ? from : undefined, a + k === b ? to : undefined)).join(" "))
+    .filter(Boolean)
+    .join("\n");
+
+  // Each paragraph as trimmed words before, typed words, trimmed words after.
+  let seenTyped = false;
+  const parts = blocks.map((blk) => {
+    const p = { lead: [] as string[], words: [] as string[], trail: [] as string[] };
+    for (const t of blockTokens(blk)) {
+      if (!t.excluded) {
+        seenTyped = true;
+        p.words.push(t.word);
+      } else (seenTyped ? p.trail : p.lead).push(t.word);
+    }
+    return p;
+  });
+  const span = parts.slice(a, b + 1);
+  const merged = {
+    lead: span.flatMap((p) => p.lead),
+    words: wordsOf(pre + text + post),
+    trail: span.flatMap((p) => p.trail),
+  };
+  const out = [...parts.slice(0, a), merged, ...parts.slice(b + 1)];
+
+  const words: string[] = [];
+  const breaks: number[] = [];
+  let cropStart = 0;
+  let included = 0;
+  let mergedAt = 0;
+  out.forEach((p, i) => {
+    const toks = [...p.lead, ...p.words, ...p.trail];
+    if (i === a) mergedAt = breaks.length + (words.length > 0 ? 1 : 0);
+    if (toks.length === 0) return;
+    if (words.length > 0) breaks.push(words.length - 1);
+    cropStart += p.lead.length;
+    included += p.words.length;
+    words.push(...toks);
+  });
+  const model: EditModel = { words, breaks, cropStart, cropEnd: cropStart + included };
+
+  const mergedDrawn = merged.lead.length + merged.words.length + merged.trail.length > 0;
+  const emptyAt = mergedDrawn || words.length === 0 ? undefined : mergedAt;
+  const at = words.length === 0 ? 0 : mergedAt;
+  draw(host, model, { ...o, emptyAt, holdCaret: at });
+
+  const run = host.querySelectorAll(":scope > .bn-block")[at]?.querySelector(".crop-editable");
+  if (run) {
+    const head = wordsOf(pre + text);
+    let offset = head.join(" ").length + (head.length > 0 && /\s$/.test(pre + text) ? 1 : 0);
+    const node = run.firstChild;
+    const c = document.createRange();
+    if (node?.nodeType === Node.TEXT_NODE) {
+      offset = Math.min(offset, node.textContent?.length ?? 0);
+      c.setStart(node, offset);
+    } else c.setStart(run, 0);
+    c.collapse(true);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(c);
+  }
+  return { model, removed, joined: b > a };
 }

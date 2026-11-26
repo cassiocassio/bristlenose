@@ -307,25 +307,77 @@ describe("QuoteCard — paragraphs typed while editing", () => {
     expect(onEditCommit).not.toHaveBeenCalled();
   });
 
-  it("a paste over a selection across paragraphs is refused, as typing over it is (finding 33)", () => {
+  /** Select from paragraph `a`'s typed text at `ao` to paragraph `b`'s at `bo`. */
+  const selectAcross = (a: number, ao: number, b: number, bo: number) => {
+    const [x, y] = [a, b].map((i) => blockEls()[i].querySelector(".crop-editable")!.firstChild!);
+    const r = document.createRange();
+    r.setStart(x, ao);
+    r.setEnd(y, bo);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(r);
+  };
+
+  it("⌘X across a paragraph break cuts the selected words and joins the paragraphs (26 Nov)", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    selectAcross(0, "one ".length, 1, "three".length);
+    const setData = vi.fn();
+    const cut = fireEvent.cut(textEl(), { clipboardData: { setData } });
+    expect(cut).toBe(false); // the card cut it, not the browser
+    expect(setData).toHaveBeenCalledExactlyOnceWith("text/plain", "two\nthree");
+    expect(blockEls()).toHaveLength(1);
+    key("Enter");
+    expect(onEditCommit.mock.calls[0][1]).toBe("one four");
+  });
+
+  it("⌘X inside one paragraph's words is the browser's own", () => {
+    renderEditing();
+    selectAcross(1, 0, 1, "three".length);
+    const setData = vi.fn();
+    expect(fireEvent.cut(textEl(), { clipboardData: { setData } })).toBe(true);
+    expect(setData).not.toHaveBeenCalled();
+  });
+
+  it("Delete and typing over a selection across paragraphs act on it (26 Nov)", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    const beforeInput = (inputType: string, data?: string) =>
+      textEl().dispatchEvent(new InputEvent("beforeinput", { inputType, data, cancelable: true, bubbles: true }));
+    selectAcross(0, "one ".length, 1, "three ".length);
+    expect(beforeInput("deleteContentBackward")).toBe(false);
+    expect(blockEls()).toHaveLength(1);
+    key("Enter");
+    expect(onEditCommit.mock.calls[0][1]).toBe("one four");
+  });
+
+  it("typing over a selection across paragraphs replaces it", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditing({ onEditCommit });
+    selectAcross(0, "one ".length, 1, "three".length);
+    const e = new InputEvent("beforeinput", { inputType: "insertText", data: "X", cancelable: true, bubbles: true });
+    expect(textEl().dispatchEvent(e)).toBe(false);
+    key("Enter");
+    expect(onEditCommit.mock.calls[0][1]).toBe("one X four");
+  });
+
+  it("a paste over a selection across paragraphs replaces it, as typing does (findings 29, 33)", () => {
+    const onEditCommit = vi.fn<Commit>();
     const exec = vi.fn(() => true);
     const had = Object.getOwnPropertyDescriptor(document, "execCommand");
     Object.defineProperty(document, "execCommand", { value: exec, configurable: true });
     try {
-      renderEditing();
+      renderEditing({ onEditCommit });
       const paste = () =>
         fireEvent.paste(textEl(), { clipboardData: { getData: () => "pasted words" } });
-      const [first, second] = blockEls().map((b) => b.querySelector(".crop-editable")!.firstChild!);
-      const r = document.createRange();
-      r.setStart(first, 2);
-      r.setEnd(second, 2);
-      window.getSelection()!.removeAllRanges();
-      window.getSelection()!.addRange(r);
+      selectAcross(0, "one ".length, 1, "three".length);
       paste();
-      expect(exec).not.toHaveBeenCalled();
-      caretIn(1, 1);
+      expect(exec).not.toHaveBeenCalled(); // the card replaced it, on the words
+      expect(blockEls()).toHaveLength(1);
+      caretIn(0, 0);
       paste();
       expect(exec).toHaveBeenCalledExactlyOnceWith("insertText", false, "pasted words");
+      key("Enter");
+      expect(onEditCommit.mock.calls[0][1]).toBe("one pasted words four");
     } finally {
       if (had) Object.defineProperty(document, "execCommand", had);
       else delete (document as { execCommand?: unknown }).execCommand;

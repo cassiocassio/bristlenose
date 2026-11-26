@@ -354,6 +354,7 @@ export function QuoteCard({
   // The caret is kept inside the typed text, and an input that would delete a
   // quote mark or a trimmed word, or run two paragraphs together, is refused.
 
+  const { replaceSelection } = crop;
   useEffect(() => {
     const host = editHostRef.current;
     if (crop.mode !== "hybrid" || !host) return;
@@ -361,7 +362,9 @@ export function QuoteCard({
       const verdict = judgeInput(host, e);
       if (verdict === "allow") return;
       e.preventDefault();
-      if (verdict === "retype" && e.data && typeof document.execCommand === "function") {
+      if (verdict === "replace") {
+        replaceSelection(host, e.inputType === "insertText" ? (e.data ?? "") : "", bracketsVisible);
+      } else if (verdict === "retype" && e.data && typeof document.execCommand === "function") {
         clampCaret(host);
         document.execCommand("insertText", false, e.data);
       }
@@ -375,7 +378,7 @@ export function QuoteCard({
       host.removeEventListener("beforeinput", onBeforeInput);
       document.removeEventListener("selectionchange", onSelectionChange);
     };
-  }, [crop.mode]);
+  }, [crop.mode, replaceSelection, bracketsVisible]);
 
   // ── Click-outside → commit ──────────────────────────────────────────
 
@@ -554,17 +557,41 @@ export function QuoteCard({
 
   // A paste is plain text, on one line: pasted markup would bring another
   // page's paragraphs and styling into the quote.
-  // It replaces only what typing could: a selection across paragraphs, quote
-  // marks or trimmed words is refused, as typing over it is (finding 33).
-  const handleEditPaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const host = editHostRef.current;
-    const sel = window.getSelection();
-    if (!host || !sel || sel.rangeCount === 0 || !rangeKeepsSurface(host, sel.getRangeAt(0))) return;
-    clampCaret(host);
-    const text = e.clipboardData.getData("text/plain").replace(/\s+/g, " ");
-    if (text && typeof document.execCommand === "function") document.execCommand("insertText", false, text);
-  }, []);
+  // Over a selection across paragraphs, quote marks or trimmed words it
+  // replaces the selected words, as typing does (findings 29 and 33).
+  const handleEditPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault();
+      const host = editHostRef.current;
+      const sel = window.getSelection();
+      if (!host || !sel || sel.rangeCount === 0) return;
+      const text = e.clipboardData.getData("text/plain").replace(/\s+/g, " ");
+      if (!rangeKeepsSurface(host, sel.getRangeAt(0))) {
+        replaceSelection(host, text, bracketsVisible);
+        return;
+      }
+      clampCaret(host);
+      if (text && typeof document.execCommand === "function") document.execCommand("insertText", false, text);
+    },
+    [replaceSelection, bracketsVisible],
+  );
+
+  // ⌘X over a selection the browser would cut through a quote mark, a trimmed
+  // word or a paragraph break: the selected words go to the clipboard and
+  // leave the quote. The browser copies before it asks to delete, so a refused
+  // delete used to leave the words in place and on the clipboard too.
+  const handleEditCut = useCallback(
+    (e: React.ClipboardEvent) => {
+      const host = editHostRef.current;
+      const sel = window.getSelection();
+      if (!host || !sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+      if (rangeKeepsSurface(host, sel.getRangeAt(0))) return; // the browser's own cut
+      e.preventDefault();
+      const removed = replaceSelection(host, "", bracketsVisible);
+      if (removed) e.clipboardData.setData("text/plain", removed);
+    },
+    [replaceSelection, bracketsVisible],
+  );
 
   const handleEditBlur = useCallback(() => {
     crop.blurTimeoutRef.current = setTimeout(() => {
@@ -719,6 +746,7 @@ export function QuoteCard({
           suppressContentEditableWarning
           onKeyDown={crop.mode === "hybrid" ? handleEditKeyDown : undefined}
           onPaste={crop.mode === "hybrid" ? handleEditPaste : undefined}
+          onCut={crop.mode === "hybrid" ? handleEditCut : undefined}
           onBlur={crop.mode === "hybrid" ? handleEditBlur : undefined}
           onClick={handleQuoteTextClick}
         />

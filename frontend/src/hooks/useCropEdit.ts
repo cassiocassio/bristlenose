@@ -27,6 +27,7 @@ import {
   firstTyped,
   placeCaret,
   read,
+  replaceRange,
   sameBreaks,
   type EditModel,
 } from "../utils/quoteEditSurface";
@@ -110,6 +111,12 @@ export interface UseCropEditReturn {
    * key must not reach the browser) or null (not at a paragraph edge).
    */
   joinAtCaret: (host: HTMLElement, dir: -1 | 1, bracketsVisible: boolean) => "joined" | "edge" | null;
+  /**
+   * Type over or delete (`text` empty) the selection, on the typed words only,
+   * joining the paragraphs it spans. The words it took, a paragraph a line, or
+   * null when there was nothing to act on.
+   */
+  replaceSelection: (host: HTMLElement, text: string, bracketsVisible: boolean) => string | null;
 }
 
 // Minimum pointer movement (px) before a bracket click becomes a drag.
@@ -323,6 +330,24 @@ export function useCropEdit({
     [hasLeftCrop, hasRightCrop],
   );
 
+  const replaceSelection = useCallback(
+    (host: HTMLElement, text: string, bracketsVisible: boolean): string | null => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+      const out = replaceRange(host, sel.getRangeAt(0), text, {
+        mode: "hybrid",
+        leftEllipsis: hasLeftCrop,
+        rightEllipsis: hasRightCrop,
+        bracketsVisible,
+      });
+      if (!out) return null;
+      model.current = out.model;
+      if (out.joined) touched.current = true;
+      return out.removed;
+    },
+    [hasLeftCrop, hasRightCrop],
+  );
+
   // ── Bracket drag ────────────────────────────────────────────────────
 
   const handleBracketPointerDown = useCallback(
@@ -461,5 +486,6 @@ export function useCropEdit({
     drawSurface,
     splitAtCaret,
     joinAtCaret,
+    replaceSelection,
   };
 }

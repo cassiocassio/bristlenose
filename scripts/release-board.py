@@ -59,6 +59,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = ROOT / "scripts" / "release-board.template.html"
+TOKENS = ROOT / "scripts" / "board-tokens.css"   # the shared palette, inlined at render (also used by scripts/home.py)
 
 # The .dmg validity window. The number lives in AlphaBuild.swift (the app
 # enforces it); this mirror exists so the board can draw the clock, and
@@ -1290,10 +1291,19 @@ def board_frames(root: Path, version: str) -> list[dict]:
     return out
 
 
+def board_tokens() -> str:
+    """The shared palette, minus its header comment, exactly as the template used to carry it."""
+    css = TOKENS.read_text(encoding="utf-8")
+    return css.split("*/\n", 1)[1].rstrip("\n")
+
+
 def render_html(model: dict, template: Path) -> str:
     tpl = template.read_text(encoding="utf-8")
     if "__BOARD_JSON__" not in tpl:
         raise RuntimeError(f"template {template} carries no __BOARD_JSON__ marker")
+    if "__BOARD_TOKENS__" not in tpl:
+        raise RuntimeError(f"template {template} carries no __BOARD_TOKENS__ marker")
+    tpl = tpl.replace("__BOARD_TOKENS__", board_tokens(), 1)
     return tpl.replace("__BOARD_JSON__", inline_json(model), 1)
 
 

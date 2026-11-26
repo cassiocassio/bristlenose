@@ -1861,6 +1861,10 @@ class Pipeline:
         #: for sessions Whisper transcribed. Recorded as ``(set)`` in the
         #: transcript header, never as a detection.
         self._pinned_languages: dict[str, str] = {}
+        #: session_id -> (engine, model) for sessions transcribed this run, as
+        #: ``SessionTranscription`` reports them; written to the session's
+        #: transcribe record (D6). A cached session keeps the record it has.
+        self._transcription_engines: dict[str, tuple[str, str | None]] = {}
         #: The run's transcription engine, chosen at the Whisper preflight so
         #: the preflight and stage 5 agree (``s05_transcribe.decide_engine``).
         #: None until then; stage 5 decides for itself if nothing pinned it.
@@ -2803,9 +2807,13 @@ class Pipeline:
                             # caches the stage whole (`mark_session_failed`).
                             mark_session_failed(manifest, _M_STAGE_TRANSCRIBE, sid)
                             continue
+                        _engine, _engine_model = self._transcription_engines.get(
+                            sid, (None, None),
+                        )
                         mark_session_complete(
                             manifest, _M_STAGE_TRANSCRIBE, sid,
                             input_hash=_tx_session_fps.get(sid),
+                            engine=_engine, engine_model=_engine_model,
                         )
                     # A session whose only transcript failed to parse produced
                     # nothing, so the loop above never saw it. Unrecorded, the
@@ -5274,6 +5282,7 @@ class Pipeline:
                 analysed=analysed_before,
             ),
             languages=lambda: (self._detected_languages, self._pinned_languages),
+            engines=lambda: self._transcription_engines,
             fingerprint=_segments_fingerprint,
             assign_codes=_assign_session_codes,
             tx_fingerprints=tx_fingerprints,
@@ -5565,6 +5574,12 @@ class Pipeline:
                 session_segments[done.session_id] = done.segments
                 if done.detected_language:
                     self._detected_languages[done.session_id] = done.detected_language
+                if done.engine is not None:
+                    self._transcription_engines[done.session_id] = (
+                        done.engine, done.engine_model,
+                    )
+                else:
+                    self._transcription_engines.pop(done.session_id, None)
                 if quality_output_dir is not None:
                     from bristlenose.transcription_quality import remove_record, write_record
 

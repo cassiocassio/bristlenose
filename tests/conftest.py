@@ -79,13 +79,14 @@ class AuthTestClient(TestClient):
             self.headers = httpx.Headers({"authorization": f"Bearer {token}"})
 
 
-def iter_transcribe_from(fake: Any) -> Any:
+def iter_transcribe_from(fake: Any, engine_for: Any = None) -> Any:
     """Turn a ``transcribe_sessions``-shaped fake into the generator the
     pipeline consumes (``iter_transcribe_sessions``, one session at a time).
 
     ``fake(sessions, settings, **kw)`` returns ``(results, languages, outcome)``;
     each session it names comes back as a ``SessionTranscription``, failures
-    matched to their session from ``outcome.failed``.
+    matched to their session from ``outcome.failed``. ``engine_for(sid)``, when
+    given, is the ``(engine, model)`` a session that did not fail reports.
     """
     from bristlenose.stages.s05_transcribe import SessionTranscription
 
@@ -93,7 +94,13 @@ def iter_transcribe_from(fake: Any) -> Any:
         results, languages, outcome = fake(sessions, settings, **kw)
         failures = {f.session_id: f for f in outcome.failed}
         for sid, segments in results.items():
-            yield SessionTranscription(sid, segments, languages.get(sid), failures.get(sid))
+            engine, model = (
+                engine_for(sid) if engine_for and sid not in failures else (None, None)
+            )
+            yield SessionTranscription(
+                sid, segments, languages.get(sid), failures.get(sid),
+                engine=engine, engine_model=model,
+            )
 
     return _iter
 

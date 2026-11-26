@@ -442,6 +442,65 @@ def test_after_an_engine_level_exit_later_sessions_skip_the_helper(tmp_path: Pat
     assert [d.failure.cause.code for d in done] == ["helper_exit_3", "helper_unavailable"]
 
 
+# ---------------------------------------------------------------------------
+# The engine of record (D6): what produced the session's words, per session
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("conf", "whisper_on_disk", "want"), [
+    # Apple's model kept it. The helper reports no asset version, so no model.
+    (None, False, ("apple-speech", None)),
+    # Apple's model deferred and Whisper transcribed it in this run: Whisper's, not Apple's.
+    (0.2, True, ("mlx-whisper", "large-v3-turbo")),
+    # Deferred with no Whisper: nothing transcribed it, so nothing is recorded.
+    (0.2, False, (None, None)),
+])
+def test_a_session_records_the_engine_whose_words_it_kept(
+    tmp_path: Path, monkeypatch, conf: float | None, whisper_on_disk: bool,
+    want: tuple[str | None, str | None],
+) -> None:
+    from bristlenose.stages import s05_transcribe as s05
+
+    monkeypatch.delenv("BRISTLENOSE_WHISPER_MODEL", raising=False)  # the default model
+    monkeypatch.setattr(s05, "_resolve_backend", lambda _c, _h: "mlx")  # noqa: ARG005
+    out = payload() if conf is None else _with_conf(payload(), conf)
+    done = _transcribe(tmp_path, monkeypatch, out, whisper_on_disk=whisper_on_disk)
+    assert (done.engine, done.engine_model) == want
+
+
+@pytest.mark.parametrize("on_a_thread", [False, True])
+def test_a_whisper_run_records_whisper_and_its_model(tmp_path: Path, monkeypatch,
+                                                     on_a_thread: bool) -> None:
+    """On the worker thread too, where a chained run transcribes."""
+    import asyncio
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.models import TranscriptSegment
+    from bristlenose.stages import s05_transcribe as s05
+
+    def fake_faster(_settings: Any, *_a: Any) -> Any:
+        return lambda *_a, **_k: (
+            [TranscriptSegment(start_time=0, end_time=2, text="Hi.", source="faster-whisper")],
+            None,
+        )
+
+    monkeypatch.setattr(s05, "_init_faster_whisper_backend", fake_faster)
+    monkeypatch.setattr(s05, "_resolve_backend", lambda _c, _h: "faster-whisper")  # noqa: ARG005
+    token = s05.RUN_ENGINE.set(EngineChoice("whisper", "test"))
+    try:
+        settings = BristlenoseSettings(output_dir=tmp_path / "out", whisper_model="small")
+        if on_a_thread:
+            async def collect() -> list[Any]:
+                return [d async for d in s05.aiter_transcribe_sessions(
+                    [_session(tmp_path)], settings)]
+            (done,) = asyncio.run(collect())
+        else:
+            (done,) = list(s05.iter_transcribe_sessions([_session(tmp_path)], settings))
+    finally:
+        s05.RUN_ENGINE.reset(token)
+    assert (done.engine, done.engine_model) == ("faster-whisper", "small")
+
+
 def test_a_helper_that_runs_too_long_is_killed_and_named(tmp_path: Path) -> None:
     script = _shebang_script(tmp_path / "slow-helper", "import time\ntime.sleep(30)\n")
     with pytest.raises(HelperError, match="timed out") as err:

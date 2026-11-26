@@ -60,6 +60,17 @@ class SessionRecord(BaseModel):
     #: resumed run, which serves the session from cache, can still say so (owner,
     #: 3 Nov 2026); before, only the run that did the extraction ever did.
     quotes_left_out: int | None = None
+    #: Transcription only: what turned this session's recording into words, in
+    #: ``TranscriptSegment.source``'s vocabulary (``"apple-speech"``,
+    #: ``"mlx-whisper"``, ``"faster-whisper"``), and the model it ran: Whisper's
+    #: model name (``whisper_model``), or Apple's asset version when the helper
+    #: reports one (it does not yet, so Apple's model is None). Recorded now
+    #: because it cannot be backfilled (D6, owner 18 Nov 2026); carried with
+    #: the record on a cache hit. An engine of None is no engine (a session
+    #: read from a transcript file) or unknown (transcribed before 26 Nov
+    #: 2026). Never guessed. Nothing user-facing reads these yet.
+    transcription_engine: str | None = None
+    transcription_model: str | None = None
     # Phase 1f cost extension — additive, defaults to None for back-compat.
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -429,6 +440,8 @@ def mark_session_complete(
     content_hash: str | None = None,
     input_hash: str | None = None,
     left_out: int | None = None,
+    engine: str | None = None,
+    engine_model: str | None = None,
 ) -> None:
     """Mark a single session as complete within a per-session stage.
 
@@ -456,6 +469,8 @@ def mark_session_complete(
         content_hash=content_hash,
         input_hash=input_hash,
         quotes_left_out=left_out or None,
+        transcription_engine=engine,
+        transcription_model=engine_model,
     )
     manifest.updated_at = _now_iso()
 

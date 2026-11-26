@@ -4,9 +4,11 @@
 # The Mac app ships under Apple's EULA, which a GPL binary can't go out under.
 # Until 25 Nov 2026 the bundle carried martin-riedl.de's GPL build (--enable-gpl,
 # libx264, libx265), and THIRD-PARTY-BINARIES.md called it LGPL; nothing checked.
-# build-ffmpeg-lgpl.sh gates what it builds and fetch-ffmpeg.sh --check what sits
-# in Resources/, but neither looks at the bundle that ships. This does: build-all.sh
-# runs it on the exported .app and check-pkg-shippable.sh on the .pkg's payload.
+# Callers: build-ffmpeg-lgpl.sh on what it builds, fetch-ffmpeg.sh --check on what
+# sits in Resources/, and build-all.sh step 10 on the exported .app, the one that
+# ships (for app-store, the archive's .app that the .pkg wraps). build-dmg.sh
+# doesn't call it on its own export, which doesn't go out under Apple's EULA; it
+# bundles the same Resources/ copy that ensure-sidecar's fetch-ffmpeg.sh --check vets.
 #
 # It reads what `ffmpeg -buildconf` and `ffmpeg -L` would print, from the binary's
 # strings: a binary signed with the sandbox entitlements exits 133 with no output

@@ -30,7 +30,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    cors: true,
     origin: "http://localhost:5173",
     // The default (the workspace root) plus the theme CSS, which the keyline lab's tests read
     // as text (`?raw`) to pin the lab's shipped values to the shipped files. A `?raw` import

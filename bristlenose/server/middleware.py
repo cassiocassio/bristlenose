@@ -120,6 +120,15 @@ def _is_own_navigation(request: Request) -> bool:
     """
     if request.method not in ("GET", "HEAD"):
         return False
+    return _sent_by_own_origin(request)
+
+
+def _sent_by_own_origin(request: Request) -> bool:
+    """False when the browser says another origin sent the request (``same-site``/``cross-site``).
+
+    An absent ``Sec-Fetch-Site`` passes: non-browser callers and WebKit's download
+    navigation send none (see ``_is_own_navigation``).
+    """
     return request.headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
 
@@ -165,8 +174,18 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
         # /admin on a bundled beta (T21): bearer, the admin cookie, or a single-use code that is
         # swapped for the cookie. Absent on --dev, where the gate is never built.
         gate = getattr(request.app.state, "admin_gate", None)
-        if gate is not None and (path == "/admin" or path.startswith("/admin/")):
+        is_admin = path == "/admin" or path.startswith("/admin/")
+        if gate is not None and is_admin:
             return await self._admin(request, call_next, gate, path)
+        if (
+            is_admin
+            and request.method not in ("GET", "HEAD")
+            and not _sent_by_own_origin(request)
+        ):
+            # --dev's /admin is full CRUD with no auth (on purpose), and SQLAdmin's edit forms
+            # are plain multipart POSTs with no CSRF token: a page on any other site could
+            # auto-submit one. Its own forms are same-origin.
+            return Response(status_code=403)
 
         # Fast path: only check paths that need auth.
         if not any(path.startswith(p) for p in _AUTH_REQUIRED_PREFIXES):

@@ -374,3 +374,40 @@ class TestCookieIsForOwnNavigationsOnly:
         assert resp.status_code == 200
 
 
+
+
+# ---------------------------------------------------------------------------
+# /admin under --dev: no auth by design, so refuse writes another site sends
+# ---------------------------------------------------------------------------
+
+
+class TestDevAdminCrossSiteWrites:
+    """SQLAdmin's edit form is a plain multipart POST: any page could auto-submit one."""
+
+    @pytest.mark.parametrize("site", ["cross-site", "same-site"])
+    def test_admin_post_from_another_site_refused(
+        self, raw_client: TestClient, site: str
+    ) -> None:
+        resp = raw_client.post(
+            "/admin/person/edit/1",
+            files={"full_name": (None, "PWNED-BY-CSRF")},
+            headers={"sec-fetch-site": site},
+        )
+        assert resp.status_code == 403
+        assert "PWNED-BY-CSRF" not in raw_client.get("/admin/person/details/1").text
+
+    @pytest.mark.parametrize("site", ["same-origin", None])
+    def test_admin_post_from_own_origin_reaches_sqladmin(
+        self, raw_client: TestClient, site: str | None
+    ) -> None:
+        """SQLAdmin's own forms are same-origin; a non-browser caller sends no header."""
+        resp = raw_client.post(
+            "/admin/person/edit/999999",
+            files={"full_name": (None, "x")},
+            headers={"sec-fetch-site": site} if site else {},
+        )
+        assert resp.status_code == 404  # SQLAdmin's answer for a missing row: the guard let it by
+
+    def test_admin_get_from_another_site_still_reads(self, raw_client: TestClient) -> None:
+        resp = raw_client.get("/admin/", headers={"sec-fetch-site": "cross-site"})
+        assert resp.status_code == 200

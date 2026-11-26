@@ -14,9 +14,11 @@ still be launched exactly as before.
 
 from __future__ import annotations
 
+import ast
 import io
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -141,7 +143,12 @@ def test_hosted_spacy_download_launches_nothing(
     recorder: _Recorder, hosted: str, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _spacy_model_missing(monkeypatch)
-    with pytest.raises(package_install.FrozenSidecarError):
+    # The sentinel is caught first by the older `_is_frozen_sidecar` refusal (its
+    # base-class error); only macOS's own signal reaches the shellout's guard.
+    expected = (
+        HostedInstallRefusedError if hosted == "app-sandbox" else package_install.FrozenSidecarError
+    )
+    with pytest.raises(expected):
         package_install.ensure_spacy_model("en_core_web_lg")
     assert recorder.argvs == []
 
@@ -187,3 +194,82 @@ def test_cli_spacy_download_runs(
     _spacy_model_missing(monkeypatch)
     package_install.ensure_spacy_model("en_core_web_lg")
     assert recorder.argvs == [[sys.executable, "-m", "spacy", "download", "en_core_web_lg"]]
+
+
+# ---------------------------------------------------------------------------
+# The invariant, not today's list: every installer argv in bristlenose/ is guarded
+# ---------------------------------------------------------------------------
+
+_PACKAGE = Path(__file__).resolve().parent.parent / "bristlenose"
+_GUARDS = {"refuse_install_when_hosted", "installs_forbidden"}
+
+#: Installer argv built where it is not launched. Each names the guarded function
+#: that launches it, and the sweep checks that function is still guarded.
+_BUILDERS = {
+    ("doctor_fixes.py", "get_mlx_install_command"): ("doctor_fixes.py", "install_mlx"),
+    ("ollama.py", "<module>"): ("ollama.py", "install_ollama"),  # WINGET_INSTALL_CMD
+}
+
+
+def _is_installer_argv(node: ast.List | ast.Tuple) -> bool:
+    words = [e.value for e in node.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+    if not words:
+        return False
+    if "install" in words or ("spacy" in words and "download" in words):
+        return True
+    if words[0] in {"curl", "wget"}:
+        return True
+    return any(a == "-m" and b in {"pip", "ensurepip"} for a, b in zip(words, words[1:], strict=False))
+
+
+def _owning_functions(tree: ast.Module) -> dict[ast.AST, str]:
+    """Each node mapped to the name of the innermost function holding it, or ``<module>``."""
+    owners: dict[ast.AST, str] = {}
+    stack: list[tuple[ast.AST, str]] = [(tree, "<module>")]
+    while stack:
+        node, owner = stack.pop()
+        for child in ast.iter_child_nodes(node):
+            name = child.name if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) else owner
+            owners[child] = name
+            stack.append((child, name))
+    return owners
+
+
+def _installer_sites() -> tuple[dict[tuple[str, str], int], set[tuple[str, str]]]:
+    """(file, owning function) -> first line of an installer argv; and guarded functions."""
+    sites: dict[tuple[str, str], int] = {}
+    guarded: set[tuple[str, str]] = set()
+    for path in sorted(_PACKAGE.rglob("*.py")):
+        rel = path.relative_to(_PACKAGE).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        owners = _owning_functions(tree)
+        for node in ast.walk(tree):
+            owner = owners.get(node, "<module>")
+            if isinstance(node, (ast.List, ast.Tuple)) and _is_installer_argv(node):
+                sites.setdefault((rel, owner), node.lineno)
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+                if name in _GUARDS:
+                    guarded.add((rel, owner))
+    return sites, guarded
+
+
+def test_every_installer_argv_in_the_package_is_guarded() -> None:
+    sites, guarded = _installer_sites()
+    # Not vacuous: the six behavioural entry points above live in these.
+    assert len(sites) >= 5, sites
+    unguarded = []
+    for site, line in sites.items():
+        if site in guarded:
+            continue
+        launcher = _BUILDERS.get(site)
+        if launcher is not None and launcher in guarded:
+            continue
+        unguarded.append(f"bristlenose/{site[0]}:{line} in {site[1]}")
+    assert not unguarded, (
+        "installer argv with no refuse_install_when_hosted() in the function that "
+        "launches it (App Store guideline 2.5.2):\n  " + "\n  ".join(unguarded)
+    )
+    # A builder entry that no longer builds an installer is stale.
+    assert set(_BUILDERS) <= set(sites), set(_BUILDERS) - set(sites)

@@ -105,7 +105,7 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - A per-item store call inside a bulk gesture is still n writes.
 - Two things that made the hide case hard, and generalise.
 
-**Routing, serve mode, video and data** (14) — [full entries](gotchas.md#routing-serve-mode-video-and-data)
+**Routing, serve mode, video and data** (15) — [full entries](gotchas.md#routing-serve-mode-video-and-data)
 
 - A running non-dev `bristlenose serve` goes blank after `npm run build`.
 - Health payload shape (Mar 2026) — `GET /api/health` includes footer config: `links.github_issues_url` and…
@@ -121,6 +121,7 @@ Long entries from this section are indexed under **Gotchas** below (theme: Archi
 - Tag provenance (`QuoteTag.source` column) — `"human"` for manually-added tags, `"autocode"` for…
 - Word-level timing data — Whisper captures per-word timestamps (`Word` model: `text`, `start_time`…
 - Speaker role: the moderator's stored role is `"researcher"`, never `"moderator"`.
+- In an export, a SERVER_ONLY route's data is absent and an old export never runs new code: read names from an embedded route.
 
 **Testing and verification** (31) — [full entries](gotchas.md#testing-and-verification)
 

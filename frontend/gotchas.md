@@ -204,6 +204,8 @@ loop became harmless. Pin the contract (`toBe(1)`), not a bound.
 
 - **Speaker role: the moderator's stored role is `"researcher"`, never `"moderator"`.** The `SpeakerRole` enum (`bristlenose/models.py`) is `researcher`/`participant`/`observer`/`unknown`; `"moderator"` is a display word only, never a stored/returned value. So `sp.role === "moderator"` is dead code that silently never fires on real data. Detect moderators by the badge **code prefix** (`sp.speaker_code.startsWith("m")`) — the robust convention used across `TranscriptPage.tsx`, `SessionsTable.tsx`, and `SessionsSidebar.tsx`. A test fixture hardcoding `role: "moderator"` will mask the bug (it did, until `ae522367`) — real-data-shaped fixtures use `"researcher"`
 
+- **In an export, anything a component reads from a SERVER_ONLY route is absent, and an old export never runs new code.** The HTML export inlines its own single-file bundle with the embedded JSON, so a field made optional "because an export made before <date> lacks it" guards nothing: that export runs the code it was built with. Two sessions wrote that reason on `CodebookResponse` (`framework_autocode`, `frameworks`) before review caught it (26 Nov 2026). The real hazard is the other direction: a component that names or classifies things from a route `routes/export.py` lists as `SERVER_ONLY` silently degrades in every export. The codebook navigator read titles and authors only from `/codebook/templates`, so an exported report showed ids and, since built-in is derived from an absent author, filed every codebook under Default (register B9, `1bc0fa4c8`). Before reading from a route, check its classification; if it is server-only, take the value from an embedded route first.
+
 ## Testing and verification
 
 ### Testing

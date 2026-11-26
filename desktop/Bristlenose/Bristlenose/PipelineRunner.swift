@@ -3462,10 +3462,14 @@ var args = ["run", project.path, "--no-serve"]
         // The local model's server is down: the setup check prints "Ollama isn't
         // running" (desktop) or "Ollama is installed but not running" (CLI) and exits
         // before the run opens. It is a reach failure, so the row reads "Couldn't
-        // reach Ollama" (BR-02).
+        // reach Ollama" (BR-02). With the network off the same check stops a cloud
+        // run with its own row, "✗ Network  Can't reach api.anthropic.com"
+        // (`doctor.check_network`), and nothing else here names it: it read as
+        // `.unknown`, "Something went wrong during analysis." (c-offline, 26 Nov
+        // 2026). A healthy row says "reachable", which this does not match.
         if matches(
             tail,
-            #"connection refused|timed out|dns|could not resolve|ollama (isn['\u{2019}]t|is not|is installed but not) running"#
+            #"connection refused|timed out|dns|could not resolve|can['’]t reach|ollama (isn['\u{2019}]t|is not|is installed but not) running"#
         ) {
             return .network
         }

@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 /// Where the subscription meets the app: owns the store (App Store channel
@@ -43,15 +44,28 @@ final class SubscriptionGate: ObservableObject {
         return channel
     }
 
+    /// Called whenever the subscription state changes to one that lets a run
+    /// start: the runner retries the automatic starts this gate held
+    /// (`PipelineRunner.retryHeldStarts`). Called a turn after the change, so
+    /// `allowsStart` already reads the new state.
+    var startsAllowed: (@MainActor () -> Void)?
+    private var stateWatch: AnyCancellable?
+
     init(channel: DistributionChannel = SubscriptionGate.effectiveChannel(.current),
          store: SubscriptionStore? = nil, usesLiveStore: Bool = true) {
         self.channel = channel
         self.store = store ?? (usesLiveStore ? SubscriptionStore.make(channel: channel) : nil)
+        // `$state` publishes before the property changes; hop a turn.
+        stateWatch = self.store?.$state.removeDuplicates().sink { [weak self] new in
+            guard let self, SubscriptionAccess.canStartAnalysis(new, channel: self.channel) else { return }
+            Task { @MainActor [weak self] in self?.startsAllowed?() }
+        }
     }
 
     /// Whether a run may start now. When it may not and the researcher asked
     /// for it, the paywall is raised for that study; a run the app started by
-    /// itself (a restored queue) just does not start, and shows nothing.
+    /// itself (a restored queue) does not start and shows nothing, and its
+    /// caller keeps it for `startsAllowed`.
     func allowsStart(project: Project, clean: Bool, researcherAsked: Bool) -> Bool {
         let state = store?.state ?? .unknown
         if SubscriptionAccess.canStartAnalysis(state, channel: channel) { return true }

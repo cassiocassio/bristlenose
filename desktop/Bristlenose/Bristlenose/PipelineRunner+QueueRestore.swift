@@ -95,15 +95,24 @@ extension PipelineRunner {
             // Only for a spawn inside this call: one that waits behind another
             // run, or is turned away, starts as any other Analyse would.
             if entry.inFlight { resumingAfterQuit.insert(project.id) }
-            start(
+            let outcome = start(
                 project: project, clean: entry.clean,
                 requested: .init(at: entry.enqueuedAt, studyID: entry.studyID ?? project.studyID),
                 origin: .automatic
             )
             resumingAfterQuit.remove(project.id)
+            // Held by the subscription check (a lapse, or a store that has not
+            // answered): kept in the saved queue and started when the
+            // subscription allows it, not dropped with the queue erased.
+            // Every other refusal drops the study, as before.
+            if outcome == .heldForSubscription {
+                queueJournal.heldForSubscription.append(entry)
+                log.notice("run queue: held for the subscription project=\(project.id.uuidString, privacy: .public)")
+            }
         }
         // What actually started: `start` can still turn a study away (no AI
-        // consent, no API key, folder gone), each with its own log line.
+        // consent, no API key, folder gone), each with its own log line. A
+        // study held for the subscription is not counted, but it is kept.
         let started = kept.filter { entry in
             switch state[entry.projectID] {
             case .running, .queued: return true

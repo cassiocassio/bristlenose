@@ -150,8 +150,21 @@
       });
       return t;
     },
+    age: function (b) {           /* "Latest rating: 21 days ago": worked out from the clock, never stored as text */
+      var d = el("div", "m");
+      d.setAttribute("data-label", String(b.label));
+      if (typeof b.epoch === "number" && isFinite(b.epoch)) d.setAttribute("data-ago-epoch", String(b.epoch));
+      else d.textContent = b.label + ": none";
+      return d;
+    },
     text: function (b) { return el("div", null, b.text); }
   };
+
+  function paintAges(nowMs) {
+    document.querySelectorAll("[data-ago-epoch]").forEach(function (d) {
+      d.textContent = d.getAttribute("data-label") + ": " + H.ago(nowMs / 1000 - Number(d.getAttribute("data-ago-epoch")));
+    });
+  }
 
   function paintExpiries(nowMs) {
     document.querySelectorAll("td[data-epoch]").forEach(function (td) {
@@ -204,6 +217,7 @@
     document.getElementById("built").textContent = pa.words;
     document.getElementById("stale24").hidden = !pa.stale;
     paintExpiries(now);
+    paintAges(now);
   }
 
   build();

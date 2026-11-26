@@ -412,6 +412,29 @@ class TestDevAdminCrossSiteWrites:
         resp = raw_client.get("/admin/", headers={"sec-fetch-site": "cross-site"})
         assert resp.status_code == 200
 
+    @pytest.mark.parametrize(
+        "origin", ["http://evil.example", "null", "http://127.0.0.1:8777", "http://[::1"]
+    )
+    def test_admin_post_with_a_foreign_origin_refused(
+        self, raw_client: TestClient, origin: str
+    ) -> None:
+        """Older browsers send no Sec-Fetch-Site but always Origin; another loopback port is foreign."""
+        resp = raw_client.post(
+            "/admin/person/edit/1",
+            files={"full_name": (None, "PWNED-BY-CSRF")},
+            headers={"origin": origin},
+        )
+        assert resp.status_code == 403
+        assert "PWNED-BY-CSRF" not in raw_client.get("/admin/person/details/1").text
+
+    def test_admin_post_with_its_own_origin_reaches_sqladmin(self, raw_client: TestClient) -> None:
+        resp = raw_client.post(
+            "/admin/person/edit/999999",
+            files={"full_name": (None, "x")},
+            headers={"origin": "http://127.0.0.1", "sec-fetch-site": "same-origin"},
+        )
+        assert resp.status_code == 404  # SQLAdmin's answer for a missing row: the guard let it by
+
 
 # ---------------------------------------------------------------------------
 # Token-bearing HTML may be framed only by its own origin

@@ -7,6 +7,7 @@ Not an authentication boundary — see SECURITY.md for honest threat framing.
 from __future__ import annotations
 
 import json
+from urllib.parse import urlsplit
 
 from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -132,6 +133,28 @@ def _sent_by_own_origin(request: Request) -> bool:
     return request.headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
 
+def _foreign_origin(request: Request) -> bool:
+    """True when an ``Origin`` header names anywhere but this server (``null`` included).
+
+    The second signal beside ``Sec-Fetch-Site``, which browsers before Safari 16.4 / Firefox 90
+    do not send; every current browser sends ``Origin`` on a cross-origin POST, and ``null`` from
+    a sandboxed iframe, a ``data:`` page or a cross-scheme redirect. Compared by netloc against
+    ``Host`` (``LoopbackHostMiddleware`` has already made that loopback), so the scheme uvicorn
+    reads from ``X-Forwarded-Proto`` plays no part. An absent ``Origin`` passes: non-browser
+    callers send none. Assumes no ``Referrer-Policy: no-referrer`` on ``/admin`` — under that
+    policy a browser sends ``Origin: null`` on the page's own POSTs and SQLAdmin's forms would 403.
+    """
+    origin = request.headers.get("origin")
+    if origin is None:
+        return False
+    try:
+        netloc = urlsplit(origin).netloc.lower()
+    except ValueError:  # e.g. "http://[::1": refuse, don't 500
+        return True
+    # No netloc ("null", junk) is foreign outright, not by luck of an empty Host.
+    return not netloc or netloc != request.headers.get("host", "").lower()
+
+
 class BearerTokenMiddleware(BaseHTTPMiddleware):
     """Validate ``Authorization: Bearer <token>`` on API and media routes.
 
@@ -171,21 +194,23 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         path = request.url.path
 
-        # /admin on a bundled beta (T21): bearer, the admin cookie, or a single-use code that is
-        # swapped for the cookie. Absent on --dev, where the gate is never built.
-        gate = getattr(request.app.state, "admin_gate", None)
         is_admin = path == "/admin" or path.startswith("/admin/")
-        if gate is not None and is_admin:
-            return await self._admin(request, call_next, gate, path)
         if (
             is_admin
             and request.method not in ("GET", "HEAD")
-            and not _sent_by_own_origin(request)
+            and (not _sent_by_own_origin(request) or _foreign_origin(request))
         ):
             # --dev's /admin is full CRUD with no auth (on purpose), and SQLAdmin's edit forms
             # are plain multipart POSTs with no CSRF token: a page on any other site could
-            # auto-submit one. Its own forms are same-origin.
+            # auto-submit one. Its own forms are same-origin. One guard for both channels: the
+            # beta's read-only /admin refuses writes anyway, and this keeps it that way.
             return Response(status_code=403)
+
+        # /admin on a bundled beta (T21): bearer, the admin cookie, or a single-use code that is
+        # swapped for the cookie. Absent on --dev, where the gate is never built.
+        gate = getattr(request.app.state, "admin_gate", None)
+        if gate is not None and is_admin:
+            return await self._admin(request, call_next, gate, path)
 
         # Fast path: only check paths that need auth.
         if not any(path.startswith(p) for p in _AUTH_REQUIRED_PREFIXES):

@@ -705,6 +705,11 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(WhisperDownloadModel.autoStart(
             phase: .missing, freeBytes: nil, stoppedByUser: d.bool(forKey: "whisperDownloadStoppedByUser"),
             hasConsent: true, runIsLive: false, hasAnswered: true, whisperInBuild: true) == .start)
+        // No fallback and no pill for it; Download Now in Settings asks Background Assets again.
+        #expect(ba.startCalls == 1)
+        #expect(!m.isPillVisible)
+        m.downloadNow()
+        #expect(ba.startCalls == 2)
     }
 
     @Test func aStopWeAskedForIsNotDoubleCounted() {

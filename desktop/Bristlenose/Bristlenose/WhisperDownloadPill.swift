@@ -84,7 +84,19 @@ struct WhisperDownloadDetail: View {
     /// A full disk, whether it stopped the app from starting or stopped a download part-way:
     /// Retry cannot help, Transcription Settings can (other models, Download Now once there is room).
     private var diskProblem: Bool {
-        model.phase == .failed ? model.failureCause.map { !$0.retryCanWork } ?? false : model.lowDisk
+        Self.diskProblem(phase: model.phase, cause: model.failureCause, lowDisk: model.lowDisk)
+    }
+
+    nonisolated static func diskProblem(
+        phase: WhisperDownloadModel.Phase, cause: WhisperFailureCause?, lowDisk: Bool
+    ) -> Bool {
+        phase == .failed ? cause.map { !$0.retryCanWork } ?? false : lowDisk
+    }
+
+    /// The popover's Retry button is drawn exactly when the download failed and the cause is not a
+    /// full disk. It calls `downloadNow()`, as Settings' Retry and Download Now do.
+    nonisolated static func offersRetry(phase: WhisperDownloadModel.Phase, cause: WhisperFailureCause?) -> Bool {
+        phase == .failed && !diskProblem(phase: phase, cause: cause, lowDisk: false)
     }
 
     var body: some View {
@@ -110,7 +122,7 @@ struct WhisperDownloadDetail: View {
                     .fixedSize(horizontal: true, vertical: false)  // a button's label never truncates
                 }
                 .padding(.top, 2)
-            } else if model.phase == .failed {
+            } else if Self.offersRetry(phase: model.phase, cause: model.failureCause) {
                 Text(i18n.t(WhisperFailureCause.titleKey(for: model.failureCause)))
                     .font(.system(.callout).weight(.semibold))
                 Text(i18n.t(WhisperFailureCause.lineKey(for: model.failureCause)))

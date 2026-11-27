@@ -22,10 +22,11 @@ struct ServeManagerRestartTests {
 
     /// A child standing in for a sidecar, adopted as the manager's fronted
     /// process with its exit wired to `handleTermination`.
-    private func adopt(_ script: String, into m: ServeManager) throws -> Process {
+    private func adopt(_ script: String, into m: ServeManager, stdout: Pipe? = nil) throws -> Process {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/sh")
         p.arguments = ["-c", script]
+        if let stdout { p.standardOutput = stdout }
         p.terminationHandler = { [weak m] proc in
             let id = ObjectIdentifier(proc)
             let status = proc.terminationStatus
@@ -33,6 +34,22 @@ struct ServeManagerRestartTests {
         }
         try p.run()
         m.instance.process = p
+        return p
+    }
+
+    /// A child that ignores what `Process.interrupt()` sends, adopted only
+    /// once it says its trap is set. A fixed sleep stood in for that: 200 ms
+    /// was not always enough on a loaded 3-core runner, the SIGINT landed
+    /// first and killed the child, and the precondition below each caller
+    /// failed (Mac Build, macos-26, 27 Nov 2026).
+    private func adoptArmed(into m: ServeManager) async throws -> Process {
+        let out = Pipe()
+        let p = try adopt(
+            "trap '' INT TERM HUP; echo armed; while :; do sleep 0.1; done", into: m, stdout: out
+        )
+        // Ends at "armed", or at EOF if the shell died first, which the
+        // callers' preconditions then report.
+        for try await line in out.fileHandleForReading.bytes.lines where line == "armed" { break }
         return p
     }
 
@@ -88,15 +105,14 @@ struct ServeManagerRestartTests {
 
     /// …and one that lands while the restart awaits teardown. The child
     /// ignores what `Process.interrupt()` sends, so `shutdown` sits in its wait
-    /// for the full timeout before SIGKILL. It must be given time to install
-    /// its trap: the restart's Task runs within milliseconds, and a SIGINT that
-    /// lands first kills the child, closes the window, and lets this test pass
-    /// vacuously. The precondition below is what catches that.
+    /// for the full timeout before SIGKILL. It must have installed its trap
+    /// first (`adoptArmed`): the restart's Task runs within milliseconds, and a
+    /// SIGINT that lands first kills the child, closes the window, and lets this
+    /// test pass vacuously. The precondition below is what catches that.
     @Test func aRestartSupersededMidTeardownLeavesTheNewServe() async throws {
         let m = manager()
-        let p = try adopt("trap '' INT TERM HUP; while :; do sleep 0.1; done", into: m)
+        let p = try await adoptArmed(into: m)
         defer { if p.isRunning { kill(p.processIdentifier, SIGKILL) } }
-        await wait(200)  // until the shell has installed its trap
         m.instance.state = .running(port: Self.port)
         m.instance.currentProjectPath = "/p/a"
 
@@ -120,9 +136,8 @@ struct ServeManagerRestartTests {
     /// nothing showed or tracked.
     @Test func aRestartStoppedMidTeardownStaysStopped() async throws {
         let m = manager()
-        let p = try adopt("trap '' INT TERM HUP; while :; do sleep 0.1; done", into: m)
+        let p = try await adoptArmed(into: m)
         defer { if p.isRunning { kill(p.processIdentifier, SIGKILL) } }
-        await wait(200)  // until the shell has installed its trap
         m.instance.state = .running(port: Self.port)
         m.instance.currentProjectPath = "/p/a"
 
@@ -145,9 +160,8 @@ struct ServeManagerRestartTests {
     /// is the mark: no PUT goes out after it.
     @Test func noAgentScopePutGoesToAServeBeingTornDown() async throws {
         let m = ServeManager(resolvedMode: .success(.devSidecar(path: URL(fileURLWithPath: "/bin/sh"))))
-        let p = try adopt("trap '' INT TERM HUP; while :; do sleep 0.1; done", into: m)
+        let p = try await adoptArmed(into: m)
         defer { if p.isRunning { kill(p.processIdentifier, SIGKILL) } }
-        await wait(200)  // until the shell has installed its trap
         m.instance.state = .running(port: Self.port)
         #expect(m.agentScopeURL != nil, "precondition: a live serve takes the PUT")
 

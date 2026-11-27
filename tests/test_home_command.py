@@ -131,6 +131,7 @@ def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
     assert marker not in out
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="REMOTE_PY runs over ssh on the Linux web host, never on Windows; its csv reader stops differently there")
 def test_a_csv_error_part_way_fails_the_whole_read_instead_of_printing_partial_counts(tmp_path):
     (tmp_path / "bn-counts").mkdir()
     (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok\n", encoding="utf-8")

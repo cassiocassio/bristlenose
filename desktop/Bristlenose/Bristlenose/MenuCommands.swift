@@ -2120,7 +2120,9 @@ private struct HelpMenuContent: View {
         Divider()
 
         // Always shown, in every build: Guideline 5.1.1(i) wants the privacy
-        // policy reachable in the app, and the Terms go with it.
+        // policy reachable in the app, and the Terms go with it. This is the
+        // app's only unconditional privacy link, and its shape (top level, no
+        // `if`/`#if`, no modifiers) is pinned by tests/test_help_menu_privacy_link.py.
         Button(i18n.t("desktop.menu.help.privacyPolicy")) {
             Self.open("https://bristlenose.app/privacy.html")
         }

@@ -1457,13 +1457,13 @@
     "askDownload": "Stáhnout",
     "askNotNow": "Teď ne",
     "askSize": "1,6 GB",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose doporučuje {{floor}} volného místa. Řečový model Whisper potřebuje {{size}}. Uvolněte místo a pak klikněte na „Stáhnout“ v nastavení Přepisu.",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "Nedostatek místa pro Whisper",
+    "lowDiskTitle": "Nedostatek volného místa",
+    "lowDiskBody": "Bristlenose doporučuje {{floor}} volného místa. Řečový model Whisper potřebuje {{size}}. Uvolněte místo a pak ho stáhněte v nastavení Přepisu.",
+    "transcriptionSettings": "Nastavení Přepisu…",
+    "causeNetworkTitle": "Připojení se přerušilo",
+    "causeCertificateTitle": "Nedůvěryhodná síť",
+    "causeCertificateHint": "Bezpečnostní certifikát této sítě není důvěryhodný, což často znamená firemní firewall nebo přihlašovací stránku veřejné Wi-Fi. Připojte se k jiné síti nebo požádejte svůj IT tým, aby toto stahování povolil."
   },
   "studyStartup": {
     "foreignTitle": "Spuštěno na jiném Macu",

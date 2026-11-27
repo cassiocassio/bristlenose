@@ -1376,13 +1376,13 @@
     "askDownload": "Last ned",
     "askNotNow": "Ikke nå",
     "askSize": "1,6 GB",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose anbefaler {{floor}} ledig plass. Talemodellen Whisper trenger {{size}}. Frigjør litt plass, og klikk deretter på «Last ned nå» i innstillingene for Transkripsjon.",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "Ikke nok plass til Whisper",
+    "lowDiskTitle": "Ikke nok ledig plass",
+    "lowDiskBody": "Bristlenose anbefaler {{floor}} ledig plass. Talemodellen Whisper trenger {{size}}. Frigjør litt plass, og last den deretter ned i innstillingene for Transkripsjon.",
+    "transcriptionSettings": "Innstillinger for Transkripsjon…",
+    "causeNetworkTitle": "Forbindelsen ble brutt",
+    "causeCertificateTitle": "Nettverket er ikke godkjent",
+    "causeCertificateHint": "Sikkerhetssertifikatet til dette nettverket er ikke godkjent, noe som ofte skyldes en brannmur i bedriften eller en påloggingsside for offentlig Wi-Fi. Koble til et annet nettverk, eller be IT-teamet om å tillate denne nedlastingen."
   },
   "studyStartup": {
     "foreignTitle": "Startet på en annen Mac",

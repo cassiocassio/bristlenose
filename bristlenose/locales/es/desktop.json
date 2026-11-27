@@ -1376,13 +1376,13 @@
     "askDownload": "Descargar",
     "askNotNow": "Ahora no",
     "askSize": "1,6 GB",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recomienda {{floor}} de espacio libre. El modelo de voz Whisper necesita {{size}}. Libera espacio y, después, haz clic en «Descargar ahora» en los ajustes de Transcripción.",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "No hay espacio suficiente para Whisper",
+    "lowDiskTitle": "No hay suficiente espacio libre",
+    "lowDiskBody": "Bristlenose recomienda {{floor}} de espacio libre. El modelo de voz Whisper necesita {{size}}. Libera espacio y, después, descárgalo en los ajustes de Transcripción.",
+    "transcriptionSettings": "Ajustes de Transcripción…",
+    "causeNetworkTitle": "Se perdió la conexión",
+    "causeCertificateTitle": "Red no fiable",
+    "causeCertificateHint": "El certificado de seguridad de esta red no es de confianza, lo que suele indicar un firewall de empresa o la página de inicio de sesión de una red Wi-Fi pública. Conéctate a otra red o pide a tu equipo de TI que permita esta descarga."
   },
   "studyStartup": {
     "foreignTitle": "Iniciado en otro Mac",

@@ -1376,13 +1376,13 @@
     "askDownload": "Download",
     "askNotNow": "Niet nu",
     "askSize": "1,6 GB",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose raadt {{floor}} vrije ruimte aan. Het spraakmodel Whisper heeft {{size}} nodig. Maak wat ruimte vrij en klik daarna op ‘Nu downloaden’ in de instellingen voor Transcriptie.",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "Niet genoeg ruimte voor Whisper",
+    "lowDiskTitle": "Onvoldoende vrije ruimte",
+    "lowDiskBody": "Bristlenose raadt {{floor}} vrije ruimte aan. Het spraakmodel Whisper heeft {{size}} nodig. Maak wat ruimte vrij en download het daarna in de instellingen voor Transcriptie.",
+    "transcriptionSettings": "Instellingen voor Transcriptie…",
+    "causeNetworkTitle": "Verbinding verbroken",
+    "causeCertificateTitle": "Netwerk niet vertrouwd",
+    "causeCertificateHint": "Het beveiligingscertificaat van dit netwerk wordt niet vertrouwd. Dat komt vaak door een bedrijfsfirewall of de aanmeldpagina van een openbaar wifinetwerk. Maak verbinding met een ander netwerk of vraag je IT-team deze download toe te staan."
   },
   "studyStartup": {
     "foreignTitle": "Gestart op een andere Mac",

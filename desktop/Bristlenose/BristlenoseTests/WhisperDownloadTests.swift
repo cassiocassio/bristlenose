@@ -450,6 +450,7 @@ import Testing
     }
 
     /// The full-disk popover says what to do, with the floor unchanged at 10 GB (owner, 26 Nov 2026).
+    /// It names no button: Settings shows Retry or Download Now depending on the state (owner, 27 Nov 2026).
     @Test func theFullDiskBodySaysWhatToDo() throws {
         let i18n = I18n()
         i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
@@ -460,7 +461,7 @@ import Testing
         #expect(i18n.t("desktop.modelDownload.lowDiskBody",
                        ["floor": floor, "size": i18n.t("desktop.modelDownload.askSize")])
                 == "Bristlenose recommends \(floor) free space. The Whisper speech model needs 1.6 GB. "
-                   + "Free up some space, then click Download Now in Transcription Settings.")
+                   + "Free up some space, then download it in Transcription Settings.")
     }
 }
 

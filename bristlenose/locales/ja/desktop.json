@@ -1326,13 +1326,13 @@
     "askDownload": "ダウンロード",
     "askNotNow": "今はしない",
     "askSize": "1.6 GB",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose では{{floor}}の空き容量をおすすめします。Whisper 音声モデルには{{size}}が必要です。空き容量を増やしてから、「文字起こし」の設定で「今すぐダウンロード」をクリックしてください。",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "Whisper 用の空き容量が足りません",
+    "lowDiskTitle": "空き容量が足りません",
+    "lowDiskBody": "Bristlenose では{{floor}}の空き容量をおすすめします。Whisper 音声モデルには{{size}}が必要です。空き容量を増やしてから、「文字起こし」の設定でダウンロードしてください。",
+    "transcriptionSettings": "「文字起こし」の設定…",
+    "causeNetworkTitle": "接続が切れました",
+    "causeCertificateTitle": "信頼されていないネットワーク",
+    "causeCertificateHint": "このネットワークのセキュリティ証明書は信頼されていません。会社のファイアウォールや公衆 Wi-Fi のログインページが原因であることがよくあります。別のネットワークに接続するか、IT チームにこのダウンロードを許可するよう依頼してください。"
   },
   "studyStartup": {
     "foreignTitle": "別の Mac で開始されました",

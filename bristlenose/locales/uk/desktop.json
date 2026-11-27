@@ -1476,13 +1476,13 @@
     "askDownload": "Завантажити",
     "askNotNow": "Не зараз",
     "askSize": "1,6 ГБ",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose рекомендує {{floor}} вільного місця. Мовленнєвій моделі Whisper потрібно {{size}}. Звільніть місце, а потім натисніть «Завантажити» в параметрах транскрибування.",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "Недостатньо місця для Whisper",
+    "lowDiskTitle": "Недостатньо вільного місця",
+    "lowDiskBody": "Bristlenose рекомендує {{floor}} вільного місця. Мовленнєвій моделі Whisper потрібно {{size}}. Звільніть місце, а потім завантажте її в параметрах транскрибування.",
+    "transcriptionSettings": "Параметри транскрибування…",
+    "causeNetworkTitle": "З’єднання перервалося",
+    "causeCertificateTitle": "Ненадійна мережа",
+    "causeCertificateHint": "Сертифікат безпеки цієї мережі не визнано надійним. Часто причина в корпоративному брандмауері або сторінці входу публічної мережі Wi-Fi. Підключіться до іншої мережі або попросіть ІТ-команду дозволити це завантаження."
   },
   "studyStartup": {
     "foreignTitle": "Запущено на іншому Mac",

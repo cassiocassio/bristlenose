@@ -1376,13 +1376,13 @@
     "askDownload": "Baixa",
     "askNotNow": "Ara no",
     "askSize": "1,6 GB",
-    "lowDiskPill": "Not enough space for Whisper",
-    "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recomana {{floor}} d’espai lliure. El model de veu Whisper necessita {{size}}. Allibera espai i després fes clic a «Baixa ara» a la configuració de Transcripció.",
-    "transcriptionSettings": "Transcription Settings…",
-    "causeNetworkTitle": "Connection dropped",
-    "causeCertificateTitle": "Network not trusted",
-    "causeCertificateHint": "This network’s security certificate isn’t trusted, which often means a company firewall or a public Wi-Fi sign-in page. Connect to a different network, or ask your IT team to allow this download."
+    "lowDiskPill": "No hi ha prou espai per a Whisper",
+    "lowDiskTitle": "No hi ha prou espai lliure",
+    "lowDiskBody": "Bristlenose recomana {{floor}} d’espai lliure. El model de veu Whisper necessita {{size}}. Allibera espai i després baixa’l a la configuració de Transcripció.",
+    "transcriptionSettings": "Configuració de Transcripció…",
+    "causeNetworkTitle": "S’ha perdut la connexió",
+    "causeCertificateTitle": "Xarxa no fiable",
+    "causeCertificateHint": "El certificat de seguretat d’aquesta xarxa no és de confiança, cosa que sovint vol dir un tallafoc d’empresa o la pàgina d’inici de sessió d’una xarxa Wi-Fi pública. Connecta’t a una altra xarxa o demana al teu equip de TI que permeti aquesta baixada."
   },
   "studyStartup": {
     "foreignTitle": "Iniciada en un altre Mac",

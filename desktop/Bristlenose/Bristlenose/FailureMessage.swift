@@ -208,6 +208,7 @@ extension FailureMessage {
         "desktop.llmSettings.validation.noResponse": "No response from {{provider}}.",
         "desktop.llmSettings.validation.timedOut": "Request timed out — {{provider}} didn’t respond in 5s.",
         "desktop.llmSettings.validation.offline": "No network connection. Your key was fine — we just can’t check it right now.",
+        "desktop.llmSettings.validation.offlineUnchecked": "No network connection, so this key hasn’t been checked yet.",
         "desktop.llmSettings.validation.unreachable": "Couldn't reach {{provider}}. Check your connection.",
         "desktop.llmSettings.validation.networkError": "Network error reaching {{provider}}.",
         "desktop.llmSettings.validation.ollamaURLMissing": "Set the Ollama server URL.",

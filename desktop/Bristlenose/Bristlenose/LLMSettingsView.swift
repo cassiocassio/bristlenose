@@ -1146,6 +1146,10 @@ struct LLMSettingsView: View {
                 provider: provider, key: key, azureConfig: azureCfg)
             let resolved = LLMValidator.resolveStatus(observed: status, cached: cached)
             statuses[provider] = resolved
+            // Which sentence goes with it is LLMValidator.explanation's (pure +
+            // unit-tested, shared with AzureScenarioFixture).
+            statusErrors[provider] = LLMValidator.explanation(
+                observed: status, error: error, cached: cached)
             // First provider to validate while nothing is chosen becomes the
             // choice, so a researcher who pastes one key is not left with a
             // blank radio and a working run.
@@ -1154,19 +1158,13 @@ struct LLMSettingsView: View {
                 activate(adopted)
             }
             if resolved != status {
-                // Fell back to a cached verdict (transient failure). Surface the
-                // network error so the user knows we tried; a cached .invalid
-                // shows the "revalidating" hint instead.
-                statusErrors[provider] =
-                    (cached == .invalid)
-                    ? .keyed("desktop.llmSettings.revalidating")
-                    : error  // typically "No network connection" / "rate-limited"
+                // Fell back to a cached verdict (transient failure).
                 Self.logger.info(
                     "validate \(provider.rawValue, privacy: .public) → \(String(describing: resolved), privacy: .public) (cache fallback, network said \(String(describing: status), privacy: .public))"
                 )
             } else {
-                // Definitive observation — record it and show its own error.
-                statusErrors[provider] = error
+                // Definitive observation, or a transient one with nothing cached
+                // to fall back on: record it (a transient one is not recorded).
                 LLMValidator.recordVerdict(
                     provider: provider, key: key, status: status, azureConfig: azureCfg)
                 Self.logger.info(

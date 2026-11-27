@@ -177,10 +177,8 @@ enum AzureScenarioFixture: String, CaseIterable, Identifiable {
             provider: .azure, key: hasKey ? "scenario-fixture-key-not-real" : "",
             azureConfig: config, session: session)
         let shown = LLMValidator.resolveStatus(observed: observed, cached: cached)
-        // The pane's cache-fallback rule (`LLMSettingsView.kickOffValidation`).
-        let failure: FailureMessage? = shown != observed
-            ? (cached == .invalid ? .keyed("desktop.llmSettings.revalidating") : error)
-            : error
+        // The pane's own rule for which sentence goes with the status.
+        let failure = LLMValidator.explanation(observed: observed, error: error, cached: cached)
         return AzureScenarioVerdict(
             id: rawValue, endpoint: endpoint, deployment: deployment,
             apiVersion: config.apiVersion, hasKey: hasKey, status: shown, failure: failure)

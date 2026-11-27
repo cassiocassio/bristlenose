@@ -115,7 +115,8 @@ enum LLMValidator {
             case .notConnectedToInternet, .networkConnectionLost:
                 // Past tense: offline, we can't re-check, so we can only vouch for
                 // what we knew before. "is fine" overclaims (the key may have
-                // changed since the last good check); "was fine" is honest.
+                // changed since the last good check); "was fine" is honest. With
+                // nothing known before, `explanation` swaps in `offlineUnchecked`.
                 return (.unavailable, .keyed(Self.V + "offline"))
             case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
                 return (.unavailable, .keyed(Self.V + "unreachable", vars: ["provider": provider.displayName]))
@@ -572,6 +573,33 @@ enum LLMValidator {
             return cached.status
         }
         return observed
+    }
+
+    /// The sentence to show beside the status `resolveStatus` chose, for the
+    /// same observation and cache. Pure, and the one home of this rule: the
+    /// Settings pane and `AzureScenarioFixture` both call it.
+    ///
+    /// - The status fell back to the cache (a transient failure): a cached
+    ///   rejection shows the "revalidating" hint, anything else the network's
+    ///   own sentence, so the user knows we tried.
+    /// - Otherwise the observation's own sentence, except one. The `offline`
+    ///   sentence says "Your key was fine", true only when an earlier check
+    ///   said so. With no cached verdict (a key pasted with the network off, a
+    ///   first launch offline) nobody has checked the key, so it gets a
+    ///   sentence that claims nothing about it (c-offline, the owner's option B,
+    ///   27 Nov 2026).
+    static func explanation(
+        observed: ProviderStatus, error: FailureMessage?, cached: CachedVerdict?
+    ) -> FailureMessage? {
+        if resolveStatus(observed: observed, cached: cached) != observed {
+            return cached == .invalid ? .keyed("desktop.llmSettings.revalidating") : error
+        }
+        // `cached == nil` is implied today (a transient observation over a cache
+        // takes the branch above) and states the rule rather than adding one.
+        if cached == nil, error?.key == V + "offline" {
+            return .keyed(Self.V + "offlineUnchecked")
+        }
+        return error
     }
 
     /// Persist the verdict for `key` under `provider`. No-op for non-definitive

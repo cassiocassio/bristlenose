@@ -178,6 +178,46 @@ struct LLMValidatorTests {
         #expect(LLMValidator.resolveStatus(observed: .notSetUp, cached: .ok) == .notSetUp)
     }
 
+    // MARK: - explanation (which sentence goes with the status)
+    //
+    // The pane and the Azure fixture both call this. c-offline: "Your key was fine"
+    // is only true after an earlier good check, and a key checked for the first
+    // time with the network off has no cached verdict.
+
+    private static let offline = FailureMessage.keyed("desktop.llmSettings.validation.offline")
+
+    @Test("explanation: offline with nothing cached does not vouch for the key")
+    func explanationOfflineUnchecked() {
+        let shown = LLMValidator.explanation(observed: .unavailable, error: Self.offline, cached: nil)
+        #expect(shown?.key == "desktop.llmSettings.validation.offlineUnchecked")
+        #expect(shown?.english == "No network connection, so this key hasn’t been checked yet.")
+    }
+
+    @Test("explanation: offline over a cached good or out-of-credit verdict keeps the shipped sentence",
+          arguments: [LLMValidator.CachedVerdict.ok, .outOfCredit])
+    func explanationOfflineCached(cached: LLMValidator.CachedVerdict) {
+        #expect(LLMValidator.explanation(observed: .unavailable, error: Self.offline, cached: cached)
+                == Self.offline)
+    }
+
+    @Test("explanation: offline over a cached rejection shows the revalidating hint")
+    func explanationOfflineCachedRejection() {
+        let shown = LLMValidator.explanation(observed: .unavailable, error: Self.offline, cached: .invalid)
+        #expect(shown?.key == "desktop.llmSettings.revalidating")
+    }
+
+    @Test("explanation: a definitive observation keeps its own sentence, and none stays none")
+    func explanationOtherPassesThrough() {
+        let rejected = FailureMessage.keyed(
+            "desktop.llmSettings.validation.keyRejected", vars: ["provider": "Claude", "status": "401"])
+        #expect(LLMValidator.explanation(observed: .invalid, error: rejected, cached: .ok) == rejected)
+        let unreachable = FailureMessage.keyed(
+            "desktop.llmSettings.validation.unreachable", vars: ["provider": "Claude"])
+        #expect(LLMValidator.explanation(observed: .unavailable, error: unreachable, cached: nil)
+                == unreachable)
+        #expect(LLMValidator.explanation(observed: .online, error: nil, cached: nil) == nil)
+    }
+
     // MARK: - Shell command extraction (copyable CLI help)
 
     @Test("shellCommands extracts backtick commands; empty for plain messages")

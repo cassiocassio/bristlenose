@@ -24,8 +24,6 @@ _spec.loader.exec_module(home)
 
 NOW = 1795737600
 
-POSIX_ONLY = pytest.mark.skipif(sys.platform == "win32", reason="home.py is a macOS and Linux command: process groups, file modes, symlinks and a Linux host's python")
-
 
 def cfg(tmp_path, alias="dreamhost"):
     return {"website_repo": tmp_path / "web", "counts_dir": tmp_path / "counts", "host_alias": alias,
@@ -102,8 +100,10 @@ def test_config_defaults_when_there_is_no_file(tmp_path):
 
 def run_remote(home_dir: Path) -> str:
     code = home.REMOTE_PY.replace("https://bristlenose.app/app/news", "http://127.0.0.1:9/never")   # no live request in a test
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60,
-                       env={"HOME": str(home_dir), "PATH": os.environ["PATH"]})
+    env = {"HOME": str(home_dir), "USERPROFILE": str(home_dir), "PATH": os.environ["PATH"]}
+    if "SYSTEMROOT" in os.environ:   # Windows: Python's subprocess needs it, and Path.home() reads USERPROFILE
+        env["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60, env=env)
     assert r.returncode == 0, r.stderr
     return r.stdout
 
@@ -114,7 +114,6 @@ def feedback_csv(d: Path, rows):
     p.write_text("time,version,rating,message,kind\n" + "\n".join(rows) + "\n", encoding="utf-8")
 
 
-@POSIX_ONLY
 def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
     marker = "SECRET-MESSAGE-TEXT-9f2"
     (tmp_path / "bn-counts").mkdir()
@@ -132,7 +131,6 @@ def test_the_remote_command_counts_ratings_and_never_prints_a_message(tmp_path):
     assert marker not in out
 
 
-@POSIX_ONLY
 def test_a_csv_error_part_way_fails_the_whole_read_instead_of_printing_partial_counts(tmp_path):
     (tmp_path / "bn-counts").mkdir()
     (tmp_path / "bn-counts" / "heartbeat").write_text("2026-01-02T03:04:05Z ok\n", encoding="utf-8")
@@ -144,7 +142,6 @@ def test_a_csv_error_part_way_fails_the_whole_read_instead_of_printing_partial_c
     assert hl.parse_host_output(r.stdout) is None
 
 
-@POSIX_ONLY
 def test_the_remote_command_with_no_files_still_prints_parseable_zeros(tmp_path):
     d = hl.parse_host_output(run_remote(tmp_path))
     assert d is not None and d["total"] == 0 and d["heartbeat_epoch"] == 0
@@ -230,15 +227,14 @@ def test_a_recent_good_host_read_is_not_repeated(tmp_path, monkeypatch):
     assert "ssh" not in run_names(c, monkeypatch, NOW)
 
 
-@POSIX_ONLY
 def test_files_are_written_private_and_atomically(tmp_path):
     hl.atomic_write(tmp_path / "d" / "f.json", "{}")
     f = tmp_path / "d" / "f.json"
-    assert stat.S_IMODE(f.stat().st_mode) == 0o600 and stat.S_IMODE(f.parent.stat().st_mode) == 0o700
+    if os.name == "posix":   # Windows has no owner-only mode bits to assert
+        assert stat.S_IMODE(f.stat().st_mode) == 0o600 and stat.S_IMODE(f.parent.stat().st_mode) == 0o700
     assert [p.name for p in f.parent.iterdir()] == ["f.json"], "no temp file left behind"
 
 
-@POSIX_ONLY
 def test_a_symlink_at_the_target_is_not_followed(tmp_path):
     victim = tmp_path / "victim"
     victim.write_text("keep", encoding="utf-8")
@@ -264,7 +260,7 @@ def test_should_run(fresh_for, mt, offline, net, want):
 
 # ---- the runner ----------------------------------------------------------------------------------------------
 
-@POSIX_ONLY
+@pytest.mark.skipif(sys.platform == "win32", reason="home runs on the maintainer's Mac; the deadline kills a POSIX process group (os.killpg)")
 def test_a_timed_out_job_takes_its_children_with_it(tmp_path):
     """A deadline that kills only the child leaves its own children running (scp spawns ssh)."""
     sentinel = tmp_path / "grandchild-ran"
@@ -278,7 +274,6 @@ def test_a_timed_out_job_takes_its_children_with_it(tmp_path):
     assert not sentinel.exists(), "the grandchild outlived its job"
 
 
-@POSIX_ONLY
 def test_a_failing_job_is_failed_and_a_missing_program_is_failed_not_a_crash():
     assert home.run(["false"], 5)[0] == "failed"
     assert home.run(["/no/such/program"], 5)[0] == "failed"
@@ -325,11 +320,11 @@ def offline_run(tmp_path, monkeypatch):
     return calls, tmp_path / "out" / "home.html"
 
 
-@POSIX_ONLY
 def test_an_offline_run_writes_the_nine_panels_in_order_private_and_runs_no_network_job(tmp_path, monkeypatch):
     calls, target = offline_run(tmp_path, monkeypatch)
     page = target.read_text(encoding="utf-8")
-    assert stat.S_IMODE(target.stat().st_mode) == 0o600 and stat.S_IMODE(target.parent.stat().st_mode) == 0o700
+    if os.name == "posix":   # Windows has no owner-only mode bits to assert
+        assert stat.S_IMODE(target.stat().st_mode) == 0o600 and stat.S_IMODE(target.parent.stat().st_mode) == 0o700
     assert not any(c in ("ssh", "gh") or c.endswith("counts-refresh.sh") for c in calls), calls
     assert re.findall(r'"id":"(\w+)"', page) == PANEL_ORDER        # the order is the design
 

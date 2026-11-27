@@ -18,6 +18,14 @@ struct PaywallView: View {
     static let privacyURL = URL(string: "https://bristlenose.app/privacy.html")!
     static let manageURL = URL(string: "https://apps.apple.com/account/subscriptions")!
 
+    /// Wide enough for German's link row on one line: 483 pt measured, plus
+    /// the padding, is 531 pt (owner, 27 Nov 2026: "make German work and stack
+    /// the others"). Every locale wider than the content stacks its links
+    /// (`PaywallLinkRow`): at this width, Russian's offer face only.
+    static let width: CGFloat = 540
+    static let padding: CGFloat = 24
+    static var contentWidth: CGFloat { width - 2 * padding }
+
     /// The free trial in words ("7 days"), read from the product's own offer,
     /// or nil when there is no free trial to promise.
     private var trialLength: String? {
@@ -80,16 +88,10 @@ struct PaywallView: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(working)
             }
-            HStack(spacing: 12) {
-                Link(i18n.t("desktop.subscription.terms"), destination: Self.termsURL)
-                Link(i18n.t("desktop.subscription.privacy"), destination: Self.privacyURL)
-                Button(i18n.t("desktop.subscription.restore")) { Task { await restore() } }
-                    .buttonStyle(.link).disabled(working)
-            }
-            .font(.footnote)
+            PaywallLinkRow(i18n: i18n, manage: false, working: working) { Task { await restore() } }
         }
-        .padding(24)
-        .frame(width: 460)
+        .padding(PaywallView.padding)
+        .frame(width: PaywallView.width)
     }
 
     /// The plan's name and the billed amount lead, the amount as the title:
@@ -140,17 +142,10 @@ struct PaywallView: View {
                 .font(.footnote).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 12) {
-                Link(i18n.t("desktop.subscription.terms"), destination: Self.termsURL)
-                Link(i18n.t("desktop.subscription.privacy"), destination: Self.privacyURL)
-                Button(i18n.t("desktop.subscription.restore")) { Task { await restore() } }
-                    .buttonStyle(.link).disabled(working)
-                Link(i18n.t("desktop.subscription.manage"), destination: Self.manageURL)
-            }
-            .font(.footnote)
+            PaywallLinkRow(i18n: i18n, manage: true, working: working) { Task { await restore() } }
         }
-        .padding(24)
-        .frame(width: 460)
+        .padding(PaywallView.padding)
+        .frame(width: PaywallView.width)
     }
 
     private func buy() async {
@@ -176,5 +171,43 @@ struct PaywallView: View {
         working = true
         await store.refresh()
         working = false
+    }
+}
+
+/// The footnote links under both faces of the paywall: Terms, Privacy, Restore
+/// Purchases and, on the offer, Manage Subscription. On one line when the line
+/// fits, otherwise one link a line, so no label is ever broken mid-word (12 of
+/// 21 locales broke one at the old 460 pt sheet).
+struct PaywallLinkRow: View {
+    /// Passed in rather than read from the environment, so a test can measure
+    /// `line` and `stack` on their own.
+    @ObservedObject var i18n: I18n
+    var manage: Bool
+    var working: Bool
+    var restore: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            line
+            stack
+        }
+    }
+
+    var line: some View {
+        HStack(spacing: 12) { links }.font(.footnote).fixedSize()
+    }
+
+    var stack: some View {
+        VStack(alignment: .leading, spacing: 6) { links }.font(.footnote).fixedSize()
+    }
+
+    @ViewBuilder private var links: some View {
+        Link(i18n.t("desktop.subscription.terms"), destination: PaywallView.termsURL)
+        Link(i18n.t("desktop.subscription.privacy"), destination: PaywallView.privacyURL)
+        Button(i18n.t("desktop.subscription.restore"), action: restore)
+            .buttonStyle(.link).disabled(working)
+        if manage {
+            Link(i18n.t("desktop.subscription.manage"), destination: PaywallView.manageURL)
+        }
     }
 }

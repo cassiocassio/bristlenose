@@ -11,7 +11,8 @@ the real writer, reads them with the real reader, and checks nothing was lost.
 
 Not covered, deliberately: the optional speaker label. The writer prints it as
 ``(Speaker B)`` and the reader keeps it as part of the text, so it is not a
-round-tripped field.
+round-tripped field. ``analyze`` passes ``labels_from``, and then a label the
+project recorded is moved to ``speaker_label`` (tests/test_analyze_speaker_labels.py).
 """
 
 from __future__ import annotations

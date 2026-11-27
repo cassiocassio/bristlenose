@@ -391,3 +391,53 @@ async def test_the_fallbacks_reply_is_validated_after_its_preamble() -> None:
     client, sent = _client(chat)
     assert await _analyze(client) == QuoteExtractionResult(quotes=[])
     assert len(sent) == 2, "read on the first plain reply, no retry"
+
+
+# --- Values outside an enum, with no grammar ---------------------------------------------
+
+
+def _labels(*kinds: str) -> str:
+    return json.dumps({"labels": [
+        {"turn_id": f"s1-t{i}", "kind": k} for i, k in enumerate(kinds)
+    ]})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kinds", "kept"),
+    [(("new", "chat", "core"), ["s1-t0", "s1-t1"]), (("core", "core", "new"), None)],
+    ids=["one-label-out-of-three", "most-labels-out"],
+)
+async def test_a_kind_outside_the_enum_costs_that_turn_never_its_meaning(
+    kinds: tuple[str, ...], kept: list[str] | None, caplog,
+) -> None:
+    # Measured 27 Nov 2026 on gemma4:e4b without a grammar: it wrote the `role` value
+    # "core" into `kind` on every attempt, and one such label in 29 (or 64) failed the
+    # whole session. "core" means no kind, so it is never mapped onto one: each
+    # attempt is a validation failure, and the last keeps the labels that validate
+    # (the turn left out reads "unclassified" in the record), or, when most are
+    # wrong, fails as before.
+    from bristlenose.discussion.models import SessionLabelsOut
+
+    def chat(body: dict) -> httpx.Response:
+        if "format" in body:
+            return httpx.Response(501, json=REFUSAL)
+        return _answer(_labels(*kinds))
+
+    client, sent = _client(chat)
+
+    async def classify() -> SessionLabelsOut:
+        return await client.analyze(
+            system_prompt="sys", user_prompt="usr", response_model=SessionLabelsOut,
+        )
+
+    with caplog.at_level(logging.WARNING):
+        if kept is None:
+            with pytest.raises(RuntimeError, match="after 3 attempts"):
+                await classify()
+        else:
+            result = await classify()
+            assert [lb.turn_id for lb in result.labels] == kept
+            assert result._dropped_items == 1
+            assert "repair=dropped 1 of 3 items | fields=kind" in caplog.text
+    assert ["format" in b for b in sent] == [True, False, False, False]

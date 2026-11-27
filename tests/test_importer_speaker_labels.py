@@ -43,7 +43,7 @@ def test_a_torn_speaker_info_file_is_logged_by_name(
     d = tmp_path / ".bristlenose" / "intermediate" / "speaker-info"
     d.mkdir(parents=True)
     (d / "s1.json").write_text('{"speaker_infos": [{"speaker_label": "Spea', encoding="utf-8")
-    with caplog.at_level(logging.WARNING, logger="bristlenose.server.importer"):
+    with caplog.at_level(logging.WARNING, logger="bristlenose.speaker_labels"):
         assert _session_speaker_labels(tmp_path, "s1") == set()  # no recovery
         assert _session_speaker_labels(tmp_path, "s9") == set()  # absent: nothing said
     lines = [r.getMessage() for r in caplog.records if "speaker-info" in r.getMessage()]

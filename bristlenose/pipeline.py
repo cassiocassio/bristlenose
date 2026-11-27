@@ -4724,6 +4724,9 @@ class Pipeline:
         _file_hashes: dict[str, str] = {}
         clean_transcripts = load_transcripts_from_dir(
             transcripts_dir, skipped=declined, file_hashes=_file_hashes,
+            # The record beside the transcripts names their speaker labels, as
+            # the serve importer reads it (transcripts_dir.parent there too).
+            labels_from=transcripts_dir.parent,
         )
         # A project `run` has analysed: what this writes over the files its
         # manifest vouches for, it records there, per session, against the
@@ -5816,6 +5819,7 @@ def load_transcripts_from_dir(
     transcripts_dir: Path,
     skipped: list[SkippedFile] | None = None,
     file_hashes: dict[str, str] | None = None,
+    labels_from: Path | None = None,
 ) -> list[PiiCleanTranscript]:
     """Load transcript .txt files from a directory into PiiCleanTranscript objects.
 
@@ -5841,6 +5845,15 @@ def load_transcripts_from_dir(
     hash, which is how `analyze` records what it analysed (decision #58). A
     session two files claim (a copy beside its original, header unchanged) gets
     no hash: both are loaded as before, and nothing vouches for the pair.
+
+    *labels_from*, when given, is the output folder whose record names each
+    session's speaker labels (``speaker_labels.session_speaker_labels``). The
+    writer puts a line's label after its code, ``[00:55] [p1] (Speaker A) Um…``;
+    a recorded label is then moved out of the words into ``speaker_label``, so
+    it never reaches a prompt as speech (27 Nov 2026: a local model copied
+    "(Speaker A)" into 58 of 105 quotes' ``verbatim_excerpt``). Anything else in
+    a leading bracket, "(laughs)", stays the transcript's own. Without it, the
+    label stays in the text, as before.
     """
     import re
     from datetime import datetime, timezone
@@ -5968,6 +5981,20 @@ def load_transcripts_from_dir(
         if not participant_id:
             # Legacy fallback: if session_id is a p-code, use it
             participant_id = session_id if session_id.startswith("p") else ""
+
+        if segments and labels_from is not None:
+            from bristlenose.speaker_labels import session_speaker_labels, split_speaker_label
+
+            # After the loop: the session id may come from the file name, last.
+            labels = session_speaker_labels(labels_from, session_id)
+            for seg in segments:
+                label, words = split_speaker_label(seg.text, labels)
+                if label is not None:
+                    seg.speaker_label = label
+                    # A label the inaudible check above could not see past
+                    # ("(Robert (Bob) Smith) [inaudible]") leaves the token.
+                    seg.inaudible = words == INAUDIBLE_TOKEN
+                    seg.text = "" if seg.inaudible else words
 
         if segments:
             if file_hashes is not None:

@@ -16,9 +16,9 @@ anonymiser already handles — never from ``/people``.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, field_validator
 
 RECORD_VERSION = 1
 
@@ -73,7 +73,17 @@ class TurnLabelOut(BaseModel):
 
 
 class SessionLabelsOut(BaseModel):
+    # One label outside the enum must not cost the session its other 63: on the
+    # last attempt `salvage_items` keeps the labels that validate (most of them,
+    # or none), and a turn left without one is "unclassified", never chat
+    # (stage.py). Measured 27 Nov 2026 on gemma4:e4b without a grammar: 1 bad
+    # kind of 29 and 1 of 64 failed whole sessions after 3 attempts.
+    salvage_field: ClassVar[str] = "labels"
+
     labels: list[TurnLabelOut]
+
+    # How many labels `salvage_items` left out; 0 when the reply validated whole.
+    _dropped_items: int = PrivateAttr(default=0)
 
 
 class TopicOut(BaseModel):

@@ -54,6 +54,7 @@ from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.output_language import output_language_steer
 from bristlenose.llm.prompts import get_prompt_template
+from bristlenose.llm.structured import dropped_items
 from bristlenose.models import ExtractedQuote, FullTranscript, SpeakerRole
 from bristlenose.run_lifecycle import _build_cause
 from bristlenose.utils.timecodes import format_timecode
@@ -114,7 +115,10 @@ def _spine_block(spine: list[st.Section]) -> str:
     return "\n".join(lines) or "(no guide — there are no planned sections; every question is `new`)"
 
 
-async def _classify(client: LLMClient, spine: list[st.Section], turns: list[st.Turn]) -> list[st.Label]:
+async def _classify(
+    client: LLMClient, spine: list[st.Section], turns: list[st.Turn],
+) -> tuple[list[st.Label], int]:
+    """The session's labels, and how many the last-attempt salvage left out."""
     tmpl = get_prompt_template("discussion-classify-turns")
     out = await client.analyze(
         system_prompt=tmpl.system + output_language_steer(),
@@ -124,7 +128,7 @@ async def _classify(client: LLMClient, spine: list[st.Section], turns: list[st.T
         response_model=SessionLabelsOut, prompt_template=tmpl,
     )
     return [st.Label(lb.turn_id, lb.kind, lb.item_id, lb.section_id, lb.cluster, lb.role, lb.terse)
-            for lb in out.labels]
+            for lb in out.labels], dropped_items(out)
 
 
 async def _consolidate(client: LLMClient, labels: list[st.Label], turns: dict[str, st.Turn],
@@ -267,7 +271,11 @@ async def run_discussion(
         async with sem:
             try:
                 with _llm_telemetry.stage(TELEMETRY_CLASSIFY_ID), _llm_telemetry.session(sid):
-                    got = await _classify(llm_client, spine, ts)
+                    got, left_out = await _classify(llm_client, spine, ts)
+                if left_out:
+                    # Salvaged: the turns it left out read "unclassified", and the
+                    # record must not read complete (as quotes count theirs).
+                    stats["labels_left_out"] = stats.get("labels_left_out", 0) + left_out
                 sent = {t.id for t in ts}
                 if not any(lb.turn_id in sent for lb in got):
                     # an empty reply must not read as "no questions asked"
@@ -374,5 +382,6 @@ async def run_discussion(
     ok = sum(1 for s in record.sessions if s.state == "ok")
     record.status = ("failed" if ok == 0 and record.sessions else
                      "partial" if outcome.failed or ok < len(record.sessions) or record.guide_problem
+                     or stats.get("labels_left_out")
                      else "complete")
     return record, outcome

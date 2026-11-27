@@ -513,3 +513,28 @@ def test_a_guide_laid_out_in_a_table_is_read(tmp_path):
     assert g is not None and not g.problem
     assert "Who do you live with?" in g.text
     assert "what nearly made you stop" in g.text
+
+
+def test_a_salvaged_session_keeps_its_labels_and_the_record_does_not_read_complete(tmp_path):
+    # The last-attempt salvage (SessionLabelsOut.salvage_field, 27 Nov 2026) keeps the
+    # labels that validate; the turn it left out reads "unclassified", never chat, and
+    # the record says partial, as a quote extraction that left quotes out says so.
+    class Salvaging(FakeClient):
+        async def analyze(self, system_prompt, user_prompt, response_model, **kw):
+            out = await super().analyze(system_prompt, user_prompt, response_model, **kw)
+            if response_model is SessionLabelsOut and "s1@" in user_prompt:
+                left = out.labels[1].turn_id  # as if its kind had come back "core"
+                out = SessionLabelsOut(labels=[lb for lb in out.labels if lb.turn_id != left])
+                out._dropped_items = 1
+                self.left = left
+            return out
+
+    write_guide(tmp_path)
+    ts, qs = two_sessions()
+    client = Salvaging()
+    record, outcome = run(ts, qs, tmp_path, client)
+    assert next(s for s in record.sessions if s.id == "s1").state == "ok"
+    assert next(t for t in record.turns if t.id == client.left).kind == "unclassified"
+    assert record.stats["labels_left_out"] == 1
+    assert record.status == "partial"
+    assert not outcome.failed

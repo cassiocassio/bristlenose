@@ -63,6 +63,12 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
+from bristlenose.speaker_labels import (
+    session_speaker_labels as _session_speaker_labels,
+)
+from bristlenose.speaker_labels import (
+    without_speaker_label as _without_speaker_label,
+)
 from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.markdown import REDACTED_SOURCE
 from bristlenose.utils.text import count_noun
@@ -1253,65 +1259,6 @@ def _import_transcript_segments(
                 inaudible=inaudible,
             )
             db.add(seg)
-
-
-#: The raw ``.txt`` writes each line's speaker label after its code —
-#: ``[00:14] [p1] (Speaker B) Okay…`` (``utils/markdown.format_raw_segment_txt``),
-#: and a platform transcript's label is the person's real name.
-
-
-def _session_speaker_labels(output_dir: Path, sid: str) -> set[str]:
-    """The speaker labels the pipeline gave this session — the exact set the
-    ``.txt`` writer put in front of its lines. From the identify stage's
-    ``speaker-info/<sid>.json`` (its speakers, and each segment's label) and the
-    session registry. Empty when neither
-    knows, and then nothing is stripped."""
-    labels: set[str] = set()
-    info = output_dir / ".bristlenose" / "intermediate" / "speaker-info" / f"{sid}.json"
-    try:
-        data = json.loads(info.read_text(encoding="utf-8"))
-        # A split recording names its labels in speaker_infos; a platform
-        # transcript (VTT voice tags) leaves that empty and carries them on
-        # each segment.
-        labels |= {
-            str(s.get("speaker_label")).strip()
-            for key in ("speaker_infos", "segments_with_roles")
-            for s in data.get(key, [])
-            if s.get("speaker_label")
-        }
-    except FileNotFoundError:
-        pass
-    except (OSError, ValueError, AttributeError) as exc:
-        # Unreadable, not absent: the session's labels stay in its words.
-        logger.warning(
-            "speaker_info_unreadable | file=speaker-info/%s.json | error=%s: %s",
-            sid, type(exc).__name__, exc,
-        )
-    try:
-        from bristlenose.session_registry import NO_PARTICIPANT_LABEL, SessionRegistry
-
-        held = SessionRegistry.load(output_dir).speakers.get(sid, {})
-        labels |= {
-            label for label in held
-            if not label.startswith("\u0000") and label != NO_PARTICIPANT_LABEL
-        }
-    except (OSError, ValueError, ImportError):
-        pass
-    return labels
-
-
-def _without_speaker_label(text: str, labels: set[str]) -> str:
-    """A paragraph's words without the speaker label the ``.txt`` carries in
-    front of them (6 Oct 2026: "(Speaker B)" was drawn in the transcript, and a
-    platform transcript's real name with it, past anonymisation). Only one of
-    this session's own labels is taken, so a transcript's "(laughs)" stays.
-    Matched literally, longest first, so a label holding brackets of its own —
-    "Jo (Acme (UK))", "Smith (Acme" — goes whole."""
-    for label in sorted(labels, key=len, reverse=True):
-        lead = f"({label})"
-        if label and text.startswith(lead) and text[len(lead):].strip():
-            return text[len(lead):].lstrip()
-    return text
 
 
 _SPEAKER_PREFIX_RE = re.compile(r"^\([^)]*\)\s*")

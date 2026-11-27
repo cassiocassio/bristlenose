@@ -219,7 +219,7 @@ def atomic_write(path: Path, text: str) -> None:
     path = Path(path)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     tmp = path.with_name("." + path.name + f".{os.getpid()}.tmp")
-    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         fh.write(text)
     os.chmod(str(tmp), 0o600)

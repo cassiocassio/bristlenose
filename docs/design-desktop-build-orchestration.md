@@ -11,6 +11,7 @@ trued-against: ensure-sidecar with the pre-sign self-test (step 3a) + build-all'
 
 ## Changelog
 
+- _2026-11-27_ — the ffmpeg row names the licence gate, `check-ffmpeg-licence.sh`, which `fetch-ffmpeg.sh --check` and `build-all.sh` step 10 both run (`799d1a88b`). Only that row was checked.
 - _2026-08-14_ — trued up: ensure-sidecar pseudo-code gains step 3a (pre-sign
   `doctor --self-test` on rebuild, `.selftest-stamp`); Phase 2 row and the
   §Local-vs-TestFlight ordering updated (build-all's 2a is now a downstream
@@ -115,7 +116,7 @@ Automation lives on the bundle loop. **Release lives only in `build-all.sh`** (t
 
 | Layer | Rebuild trigger | Output-side check on skip | Cost when triggered | When not |
 |---|---|---|---|---|
-| **ffmpeg** | `ffmpeg` + `ffprobe` in `Resources/` are this recipe's LGPL build (`fetch-ffmpeg.sh --check` reads their embedded version and configure strings; the **model is deliberately not checked** — it's first-run-downloaded, not built here) | n/a | one-time build (~4 min), then from `desktop/build/ffmpeg-cache/` | strings (until 25 Nov 2026: presence, a one-time download) |
+| **ffmpeg** | `ffmpeg` + `ffprobe` in `Resources/` are this recipe's LGPL build (`fetch-ffmpeg.sh --check` reads their embedded version string and runs `check-ffmpeg-licence.sh`, which reads their configure flags and licence strings; `build-all.sh` step 10 runs the same gate on the exported app; the **model is deliberately not checked** — it's first-run-downloaded, not built here) | n/a | one-time build (~4 min), then from `desktop/build/ffmpeg-cache/` | strings (until 25 Nov 2026: presence, a one-time download) |
 | **F · frontend** | frontend slice of `sidecar_source_hash` ≠ `.frontend-stamp` | `server/static/index.html` present + non-empty | `npm run build`, ~10–30s | skip |
 | **V · venv** | venv missing (`! -x $PYTHON`), OR `pyproject.toml` hash + `.venv-sidecar` **installed-manifest** (`pip freeze --exclude-editable`) ≠ `.deps-stamp`, OR `.deps-ok` sentinel absent | `.deps-ok` sentinel exists (written only after install **and** `PyInstaller --version` pass) | recreate venv + pip, minutes | skip (reuse) |
 | **P · PyInstaller** | full `sidecar_source_hash` ≠ `.source-stamp`, OR V rebuilt, OR **F rebuilt** (any F rebuild cascades — not merely "F output missing"), OR bundle missing | sidecar binary present + executable. _(The planned in-bundle `server/static/index.html` assertion was never implemented — see §Core principle.)_ | PyInstaller **`--clean`**, ~tens of sec | skip |

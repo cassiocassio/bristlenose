@@ -13,6 +13,7 @@ _Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026
 
 ## Changelog
 
+- _2026-11-27_ — the `fetch-ffmpeg.sh` bullet and the final verification battery name the licence gate, `check-ffmpeg-licence.sh` (`799d1a88b`). Anchor: `desktop/scripts/build-all.sh` gate g.
 - _2026-11-26_ — trued for the LGPL FFmpeg (`--topic ffmpeg`): the `fetch-ffmpeg.sh` bullet and §C5 now describe our own build from six pinned source tarballs (`build-ffmpeg-lgpl.sh`) instead of martin-riedl.de's GPL download; the grandchild-entitlements bullet marked landed; the CVE cadence names the statically linked libraries; the privacy-manifest re-audit trigger marked as fired. Anchors: `desktop/scripts/build-ffmpeg-lgpl.sh`, `THIRD-PARTY-BINARIES.md`.
 - _2026-10-13_ — trued up: the 28 Apr "entire supervisor path survives the sandbox" claim corrected (orphan attach exec'd `/bin/ps` until 12 Oct 2026); the untested-under-sandbox list and the first open question marked answered; the renamed-folder measurement recorded. Anchors: `ac1415fc`, `desktop/CLAUDE.md` renamed-folder entry.
 - _2026-09-20_ — corrected the §shipped-state bullet that listed presidio / spaCy among the sidecar's PyInstaller excludes. They have been bundled since 12 Sep 2026 (commit "bundle presidio and spaCy; the weights still download"); only `en_core_web_lg` is excluded, as data. Anchors: `desktop/bristlenose-sidecar.spec:248-258`.
@@ -249,7 +250,7 @@ Four-script chain, orchestrated by `desktop/scripts/build-all.sh`:
 
 - `build-sidecar.sh` — PyInstaller `--onedir` only.
 - `sign-sidecar.sh` — parallel inner-Mach-O sign, sequential outer sign, strict + deep verify, SHA256 manifest. Inner loop is a bash `wait -n` job pool, **not `xargs -P`**: BSD `xargs` on macOS drops child exit codes under concurrent jobs, so a single failed codesign would be masked in interleaved stderr (the script would "succeed" while shipping an unsigned dylib). Requires bash 4.3+ for `wait -n`; Apple's default `/bin/bash` is 3.2, so the shebang is `#!/usr/bin/env bash` + a Homebrew bash in `$PATH`.
-- `fetch-ffmpeg.sh` — installs FFmpeg 8.1.3 built by `build-ffmpeg-lgpl.sh`: an LGPL-2.1, static arm64 build from six SHA256-pinned source tarballs (FFmpeg, libass, FreeType, FriBidi, HarfBuzz, dav1d; the pins are also in `THIRD-PARTY-BINARIES.md`). A mismatched tarball fails closed, and the build refuses a binary configured with a GPL, nonfree or version3 flag or linking outside the OS. Built once, then from `desktop/build/ffmpeg-cache/`. _Until 25 Nov 2026 this downloaded martin-riedl.de's GPL build (x264, x265), pinned by SHA256; before 4 Sep 2026 this line said evermeet.cx. A GPL binary can't ship under Apple's EULA, and no reputable source publishes a static LGPL arm64 build with libass._
+- `fetch-ffmpeg.sh` — installs FFmpeg 8.1.3 built by `build-ffmpeg-lgpl.sh`: an LGPL-2.1, static arm64 build from six SHA256-pinned source tarballs (FFmpeg, libass, FreeType, FriBidi, HarfBuzz, dav1d; the pins are also in `THIRD-PARTY-BINARIES.md`). A mismatched tarball fails closed, and the build refuses a binary that fails `check-ffmpeg-licence.sh` (a GPL, nonfree, version3, x264 or x265 configure flag, or any `lib… license:` string other than LGPL 2.1 or later) or links outside the OS. Built once, then from `desktop/build/ffmpeg-cache/`. _Until 25 Nov 2026 this downloaded martin-riedl.de's GPL build (x264, x265), pinned by SHA256; before 4 Sep 2026 this line said evermeet.cx. A GPL binary can't ship under Apple's EULA, and no reputable source publishes a static LGPL arm64 build with libass._
 - `sign-ffmpeg.sh` — signs the two FFmpeg siblings with the same identity and Hardened Runtime. Notarisation rejects the outer bundle otherwise.
 
 ### `codesign --force` entitlement trap
@@ -390,6 +391,7 @@ Different battery per export method. App Store flow (current shipping path):
 - `codesign --verify --deep --strict --verbose=2 <app>` — seals match through every nested Mach-O.
 - `codesign -d --entitlements :- <outer>` — assert **no** `get-task-allow=TRUE` (Debug debuggability entitlement, silently App-Store-rejected).
 - `codesign -d --requirements - <outer>` — assert designated requirement includes Team ID `Z56GZVA2QB`.
+- `check-ffmpeg-licence.sh <app>/Contents/Resources/{ffmpeg,ffprobe}` — assert both are LGPL-2.1+ builds, read from their strings (since 26 Nov 2026; the build stops otherwise).
 
 Developer ID flow (deferred — would run instead of `pkgutil` if `method=developer-id`):
 

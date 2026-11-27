@@ -805,82 +805,110 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                     </p>
                   )}
                   {account && <p className="bn-export-hint">{account}</p>}
-                  <label className="bn-export-hint" htmlFor="bn-miro-board-name">
-                    {t("miro.boardNameLabel")}
-                  </label>
-                  <input
-                    id="bn-miro-board-name"
-                    type="text"
-                    value={boardName}
-                    placeholder={t("miro.boardNamePlaceholder")}
-                    onChange={(e) => {
-                      named.current = true;
-                      setBoardName(e.target.value);
-                    }}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-                  />
-                  <label className="bn-export-hint" style={{ marginTop: 10 }} htmlFor="bn-miro-colour-by">
-                    {t("miro.colourByLabel")}
-                  </label>
-                  <select
-                    id="bn-miro-colour-by"
-                    value={colourBy}
-                    onChange={(e) => setColourBy(e.target.value)}
-                  >
-                    <option value="sentiment">{t("miro.colourBySentiment")}</option>
-                    <option value="none">{t("miro.colourByNone")}</option>
-                  </select>
-                  <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+                  {/* The Mac form, as on the Miro app tab: colon labels right-aligned on one axis,
+                      controls beside. Name, colours, shape, then the long-quotes checkbox under the
+                      row it modifies (owner, v2 form layout, 27 Nov 2026). */}
+                  <div className="bn-board-form">
+                    <label className="bn-board-form-label" htmlFor="bn-miro-board-name">
+                      {t("miro.boardNameLabel")}
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={splitLong}
-                      onChange={(e) => setSplitLong(e.target.checked)}
-                      data-testid="bn-miro-split-long"
+                      id="bn-miro-board-name"
+                      type="text"
+                      value={boardName}
+                      placeholder={t("miro.boardNamePlaceholder")}
+                      onChange={(e) => {
+                        named.current = true;
+                        setBoardName(e.target.value);
+                      }}
+                      style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
                     />
-                    <span>{t("miro.splitLongQuotes")}</span>
-                  </label>
-                  <fieldset className="bn-export-radios" data-testid="bn-miro-shape">
-                    <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
-                    {(["rectangle", "square"] as const).map((s) => (
-                      <label key={s} className="bn-export-checkbox">
-                        <input
-                          type="radio"
-                          name="bn-miro-shape"
-                          value={s}
-                          checked={shape === s}
-                          onChange={() => setShape(s)}
-                        />
-                        <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
-                      </label>
-                    ))}
-                  </fieldset>
-                  {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
-                      screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
-                  {!screens && featureFlags.boardClipLinks && (
-                    <>
-                    <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+                    <span className="bn-board-form-label" id="bn-miro-colour-label">
+                      {t("miro.stickyColoursLabel")}
+                    </span>
+                    <div
+                      className="bn-board-form-radios"
+                      role="radiogroup"
+                      aria-labelledby="bn-miro-colour-label"
+                      data-testid="bn-miro-colour-by"
+                    >
+                      {(["none", "sentiment"] as const).map((c) => (
+                        <label key={c} className="bn-export-checkbox">
+                          <input
+                            type="radio"
+                            name="bn-miro-colour-by"
+                            value={c}
+                            checked={colourBy === c}
+                            onChange={() => setColourBy(c)}
+                          />
+                          <span>{t(c === "none" ? "miro.colourByNone" : "miro.colourBySentiment")}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <span className="bn-board-form-label" id="bn-miro-shape-label">
+                      {t("miro.stickyShapeLabel")}
+                    </span>
+                    <div
+                      className="bn-board-form-radios"
+                      role="radiogroup"
+                      aria-labelledby="bn-miro-shape-label"
+                      data-testid="bn-miro-shape"
+                    >
+                      {(["rectangle", "square"] as const).map((s) => (
+                        <label key={s} className="bn-export-checkbox">
+                          <input
+                            type="radio"
+                            name="bn-miro-shape"
+                            value={s}
+                            checked={shape === s}
+                            onChange={() => setShape(s)}
+                          />
+                          <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <span />
+                    <label className="bn-export-checkbox">
                       <input
                         type="checkbox"
-                        checked={linkClips}
-                        onChange={(e) => setLinkClips(e.target.checked)}
+                        checked={splitLong}
+                        onChange={(e) => setSplitLong(e.target.checked)}
+                        data-testid="bn-miro-split-long"
                       />
-                      <span>
-                        {t("miro.linkClipsLabel")}
-                        <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
-                      </span>
+                      <span>{t("miro.splitLongQuotes")}</span>
                     </label>
-                    {linkClips && (
-                      <input
-                        type="text"
-                        value={clipsBase}
-                        placeholder={t("miro.clipsBasePlaceholder")}
-                        aria-label={t("miro.linkClipsLabel")}
-                        onChange={(e) => setClipsBase(e.target.value)}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-                      />
+                    {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
+                        screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
+                    {!screens && featureFlags.boardClipLinks && (
+                      <>
+                        <span />
+                        <label className="bn-export-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={linkClips}
+                            onChange={(e) => setLinkClips(e.target.checked)}
+                          />
+                          <span>
+                            {t("miro.linkClipsLabel")}
+                            <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
+                          </span>
+                        </label>
+                        {linkClips && (
+                          <>
+                            <span />
+                            <input
+                              type="text"
+                              value={clipsBase}
+                              placeholder={t("miro.clipsBasePlaceholder")}
+                              aria-label={t("miro.linkClipsLabel")}
+                              onChange={(e) => setClipsBase(e.target.value)}
+                              style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
+                            />
+                          </>
+                        )}
+                      </>
                     )}
-                    </>
-                  )}
+                  </div>
                   <p className="bn-export-hint" style={{ marginTop: 10 }}>
                     {renderNotice()}
                   </p>

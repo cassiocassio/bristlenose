@@ -113,6 +113,80 @@ describe("Dialog", () => {
     expect(last).toHaveFocus();
   });
 
+  describe("Return presses the primary button", () => {
+    function ReturnHarness({ onPrimary, disabled = false }: { onPrimary: () => void; disabled?: boolean }) {
+      return (
+        <Dialog open onClose={vi.fn()} label="Form">
+          <input type="text" aria-label="Name" />
+          <textarea aria-label="Notes" />
+          <input
+            type="text"
+            aria-label="Tag"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault(); // commits the tag itself
+            }}
+          />
+          <form onSubmit={(e) => e.preventDefault()}>
+            <input type="text" aria-label="In a form" />
+          </form>
+          <div className="bn-modal-actions">
+            <button className="bn-btn bn-btn-secondary">Cancel</button>
+            <button className="bn-btn bn-btn-primary" onClick={onPrimary} disabled={disabled}>
+              Go
+            </button>
+          </div>
+        </Dialog>
+      );
+    }
+
+    it("clicks the primary button on Enter in the dialog or a plain field", () => {
+      const onPrimary = vi.fn();
+      render(<ReturnHarness onPrimary={onPrimary} />);
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter" });
+      expect(onPrimary).toHaveBeenCalledTimes(1);
+      fireEvent.keyDown(screen.getByLabelText("Name"), { key: "Enter" });
+      expect(onPrimary).toHaveBeenCalledTimes(2);
+    });
+
+    it("leaves Return to a control that needs it", () => {
+      const onPrimary = vi.fn();
+      render(<ReturnHarness onPrimary={onPrimary} />);
+      fireEvent.keyDown(screen.getByLabelText("Notes"), { key: "Enter" });
+      fireEvent.keyDown(screen.getByLabelText("Tag"), { key: "Enter" });
+      fireEvent.keyDown(screen.getByLabelText("In a form"), { key: "Enter" });
+      fireEvent.keyDown(screen.getByRole("button", { name: "Cancel" }), { key: "Enter" });
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", metaKey: true });
+      expect(onPrimary).not.toHaveBeenCalled();
+    });
+
+    it("does nothing while the primary button is disabled", () => {
+      const onPrimary = vi.fn();
+      render(<ReturnHarness onPrimary={onPrimary} disabled />);
+      fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter" });
+      expect(onPrimary).not.toHaveBeenCalled();
+    });
+
+    it("answers only in the topmost dialog", () => {
+      const under = vi.fn();
+      const over = vi.fn();
+      render(
+        <>
+          <Dialog open onClose={vi.fn()} label="Under">
+            <button className="bn-btn bn-btn-primary" onClick={under}>Under</button>
+          </Dialog>
+          <Dialog open onClose={vi.fn()} label="Over">
+            <p>over</p>
+            <button className="bn-btn bn-btn-primary" onClick={over}>Over</button>
+          </Dialog>
+        </>,
+      );
+      fireEvent.keyDown(screen.getByRole("dialog", { name: "Over" }), { key: "Enter" });
+      expect(over).toHaveBeenCalledTimes(1);
+      fireEvent.keyDown(screen.getByRole("dialog", { name: "Under", hidden: true }), { key: "Enter" });
+      expect(under).not.toHaveBeenCalled();
+    });
+  });
+
   it("can leave the × to a dialog that draws its own", () => {
     render(
       <Dialog open onClose={vi.fn()} label="Own" closeButton={false}>

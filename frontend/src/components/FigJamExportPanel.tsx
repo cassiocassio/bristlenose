@@ -127,66 +127,84 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
               {view !== "ready" && (
                 <>
                   <p className="bn-modal-subtitle">{t("figjam.intro")}</p>
-                  <label className="bn-export-hint" htmlFor="bn-figjam-board-name">
-                    {t("miro.boardNameLabel")}
-                  </label>
-                  <input
-                    id="bn-figjam-board-name"
-                    type="text"
-                    value={boardName}
-                    onChange={(e) => {
-                      named.current = true;
-                      setBoardName(e.target.value);
-                    }}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-                  />
-                  <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+                  {/* The Mac form, in the Mac sheet's order: name, shape, then the long-quotes
+                      checkbox under the row it modifies. Square first, as on the Mac sheet. */}
+                  <div className="bn-board-form">
+                    <label className="bn-board-form-label" htmlFor="bn-figjam-board-name">
+                      {t("miro.boardNameLabel")}
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={splitLong}
-                      onChange={(e) => setSplitLong(e.target.checked)}
-                      data-testid="bn-figjam-split-long"
-                    />
-                    <span>{t("miro.splitLongQuotes")}</span>
-                  </label>
-                  <fieldset className="bn-export-radios" data-testid="bn-figjam-shape">
-                    <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
-                    {(["square", "rectangle"] as const).map((s) => (
-                      <label key={s} className="bn-export-checkbox">
-                        <input
-                          type="radio"
-                          name="bn-figjam-shape"
-                          value={s}
-                          checked={shape === s}
-                          onChange={() => setShape(s)}
-                        />
-                        <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
-                      </label>
-                    ))}
-                  </fieldset>
-                  {featureFlags.boardClipLinks && (
-                  <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
-                    <input
-                      type="checkbox"
-                      checked={linkClips}
-                      onChange={(e) => setLinkClips(e.target.checked)}
-                    />
-                    <span>
-                      {t("miro.linkClipsLabel")}
-                      <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
-                    </span>
-                  </label>
-                  )}
-                  {featureFlags.boardClipLinks && linkClips && (
-                    <input
+                      id="bn-figjam-board-name"
                       type="text"
-                      value={clipsBase}
-                      placeholder={t("miro.clipsBasePlaceholder")}
-                      aria-label={t("miro.linkClipsLabel")}
-                      onChange={(e) => setClipsBase(e.target.value)}
+                      value={boardName}
+                      onChange={(e) => {
+                        named.current = true;
+                        setBoardName(e.target.value);
+                      }}
                       style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
                     />
-                  )}
+                    <span className="bn-board-form-label" id="bn-figjam-shape-label">
+                      {t("miro.stickyShapeLabel")}
+                    </span>
+                    <div
+                      className="bn-board-form-radios"
+                      role="radiogroup"
+                      aria-labelledby="bn-figjam-shape-label"
+                      data-testid="bn-figjam-shape"
+                    >
+                      {(["square", "rectangle"] as const).map((s) => (
+                        <label key={s} className="bn-export-checkbox">
+                          <input
+                            type="radio"
+                            name="bn-figjam-shape"
+                            value={s}
+                            checked={shape === s}
+                            onChange={() => setShape(s)}
+                          />
+                          <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <span />
+                    <label className="bn-export-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={splitLong}
+                        onChange={(e) => setSplitLong(e.target.checked)}
+                        data-testid="bn-figjam-split-long"
+                      />
+                      <span>{t("miro.splitLongQuotes")}</span>
+                    </label>
+                    {featureFlags.boardClipLinks && (
+                      <>
+                        <span />
+                        <label className="bn-export-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={linkClips}
+                            onChange={(e) => setLinkClips(e.target.checked)}
+                          />
+                          <span>
+                            {t("miro.linkClipsLabel")}
+                            <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
+                          </span>
+                        </label>
+                      </>
+                    )}
+                    {featureFlags.boardClipLinks && linkClips && (
+                      <>
+                        <span />
+                        <input
+                          type="text"
+                          value={clipsBase}
+                          placeholder={t("miro.clipsBasePlaceholder")}
+                          aria-label={t("miro.linkClipsLabel")}
+                          onChange={(e) => setClipsBase(e.target.value)}
+                          style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
+                        />
+                      </>
+                    )}
+                  </div>
                   <p className="bn-export-hint" style={{ marginTop: 10 }}>
                     {t("figjam.notice")}
                   </p>

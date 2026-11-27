@@ -685,6 +685,7 @@ final class PipelineRunner: ObservableObject {
     private let runAzureIdentity: @MainActor () -> String?
     private let sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)?
     private let outputDrainLimit: Duration
+    private let outputDrainSleep: @Sendable (Duration) async -> Void
     private let foreignRunPollInterval: Duration
     private let foreignRunPatience: Int
     /// How often an attached run is polled, and how long a tick's read of its
@@ -785,6 +786,8 @@ final class PipelineRunner: ObservableObject {
     ///     one beside its launcher to reach a failed lookup (R28).
     ///   - outputDrainLimit: how long a failed run's verdict waits for the
     ///     rest of its output (R25).
+    ///   - outputDrainSleep: the wait that limit is spent in; a test that
+    ///     drives the output itself passes one that never ends.
     ///   - foreignRunPollInterval: how often a run another process owns is
     ///     re-read from disk (R22).
     ///   - foreignRunPatience: how many reads in a row that can't tell whether
@@ -826,6 +829,9 @@ final class PipelineRunner: ObservableObject {
         },
         sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
         outputDrainLimit: Duration = .seconds(2),
+        outputDrainSleep: @escaping @Sendable (Duration) async -> Void = {
+            try? await Task.sleep(for: $0)
+        },
         foreignRunPollInterval: Duration = .seconds(2),
         foreignRunPatience: Int = 15,
         manifestRead: @escaping @Sendable (URL) async -> PipelineState = {
@@ -846,6 +852,7 @@ final class PipelineRunner: ObservableObject {
         self.slowEndRereadInterval = slowEndRereadInterval
         self.sidecarLookup = sidecarLookup
         self.outputDrainLimit = outputDrainLimit
+        self.outputDrainSleep = outputDrainSleep
         self.foreignRunPollInterval = foreignRunPollInterval
         self.sendSignal = sendSignal
         self.hasConsent = hasConsent
@@ -1101,7 +1108,7 @@ final class PipelineRunner: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(for: interval)
                 guard let self, self.isForeignRunning(projectID) else { break }
-                let pending = read ?? Task.detached {
+                let pending = read ?? Self.timedRead {
                     let verdict = EventLogReader.foreignRunVerdict(eventsURL: eventsURL, pidURL: pidURL)
                     return (verdict, await Self.parseManifest(at: manifestURL))
                 }
@@ -1196,8 +1203,29 @@ final class PipelineRunner: ObservableObject {
         }
     }
 
+    /// A read for `value(of:within:)` to time: off the main actor, at the
+    /// caller's priority, which is the priority its timer gets. A bare
+    /// `Task.detached` runs at the default priority, so on a busy machine a
+    /// healthy local read waited behind higher-priority work while its timer
+    /// fired on schedule, and the study read "Not responding" (`.unreachable
+    /// (.timedOut)`): the Mac Build reds of Nov 2026 (desktop/gotchas.md, "A
+    /// timed read runs at its timer's priority"). At equal priority the read
+    /// has the same claim on a thread as its timer. Never below the default,
+    /// which is what these reads ran at before: a utility or background
+    /// caller would have its disk reads throttled while the timer's clock runs
+    /// on. The price: a read stuck on a dead mount now holds a thread of its
+    /// timer's priority, so a caller that leaves timed-out reads behind in
+    /// numbers must not use this (`diskEvidence` does not).
+    nonisolated static func timedRead<T: Sendable>(
+        _ body: @escaping @Sendable () async -> T
+    ) -> Task<T, Never> {
+        Task.detached(priority: max(Task.currentPriority, .medium), operation: body)
+    }
+
     /// The task's value, or nil if it takes longer than `limit`. The task is
-    /// left running, for the caller to wait on again.
+    /// left running, for the caller to wait on again. Make `task` with
+    /// `timedRead`: the timer below inherits the caller's priority, and a race
+    /// against a lower-priority task times the scheduler, not the read.
     nonisolated static func value<T: Sendable>(
         of task: Task<T, Never>, within limit: Duration
     ) async -> T? {
@@ -1537,7 +1565,7 @@ final class PipelineRunner: ObservableObject {
                 let priorOffset = self.orphanLogOffsets[projectID] ?? 0
                 let prior = self.priorRunIds[projectID]
                 let held = pending != nil
-                let reading = pending ?? Task.detached {
+                let reading = pending ?? Self.timedRead {
                     let tail = Self.readLogTail(url: logURL, offset: priorOffset)
                     let state = await read(manifestURL)
                     let event = EventLogReader.currentRunProgress(at: eventsURL, priorRunId: prior)
@@ -1929,7 +1957,7 @@ final class PipelineRunner: ObservableObject {
         read: @escaping @Sendable (URL) async -> PipelineState,
         after held: Task<OrphanPollRead, Never>? = nil
     ) async -> (state: PipelineState, leftBehind: Task<PipelineState, Never>?) {
-        let reading = Task.detached { () -> PipelineState in
+        let reading = timedRead { () -> PipelineState in
             if let held {
                 _ = await held.value
                 // Cancelled while it waited: nobody will take this value, so
@@ -2828,18 +2856,21 @@ var args = ["run", project.path, "--no-serve"]
     private func waitForOutput(_ reader: Task<Void, Never>?) async {
         guard let reader else { return }
         let limit = outputDrainLimit
+        let sleep = outputDrainSleep
         await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
             let once = ResumeOnce<Void>(done)
-            Task { @MainActor in
-                await reader.value
-                once.resume(())
-            }
-            Task { @MainActor in
-                try? await Task.sleep(for: limit)
+            let timer = Task { @MainActor in
+                await sleep(limit)
                 if !once.resumed {
                     Self.logger.notice("run output still open \(limit, privacy: .public) after exit — deciding without the rest")
                 }
                 once.resume(())
+            }
+            // The output in first ends the timer, so nothing is left to wake.
+            Task { @MainActor in
+                await reader.value
+                once.resume(())
+                timer.cancel()
             }
         }
     }
@@ -3123,7 +3154,7 @@ var args = ["run", project.path, "--no-serve"]
                 try? await Task.sleep(for: interval)
                 guard !Task.isCancelled,
                       self?.state[projectID] == .unreachable(reason: .timedOut) else { break }
-                let reading = pending ?? Task.detached { await read(url) }
+                let reading = pending ?? Self.timedRead { await read(url) }
                 pending = reading
                 guard let resolved = await Self.value(of: reading, within: interval) else {
                     continue

@@ -10,7 +10,7 @@ import Testing
 /// upstream heard that the project had moved, so the serve stayed on the old
 /// path too (measured 12 Oct 2026: a re-analyse after a rename ran at the new
 /// path and was never imported).
-@Suite("ProjectFolderWatcher follows a rename")
+@Suite("ProjectFolderWatcher follows a rename", .timeLimit(.minutes(3)))
 struct ProjectFolderWatcherMoveTests {
 
     private func makeFolder() throws -> URL {
@@ -42,20 +42,50 @@ struct ProjectFolderWatcherMoveTests {
         if let moveError { throw moveError }
     }
 
-    /// A watcher that has published its first scan is registered with the
-    /// coordinator and listening. Moving the folder before that races the
-    /// registration: under a full-suite load the move was coordinated with no
-    /// presenter to tell (one timeout in 1849, 12 Oct 2026). Wait for the state
-    /// the test acts on, not a proxy that merely precedes it.
-    final class Ready: @unchecked Sendable { var published = false }
+    /// A callback awaited as an event, with no clock. Both callbacks under test
+    /// reach the owner through `DispatchQueue.main.async`, and on CI's runners
+    /// the main queue went unserviced for 30 s and more under the parallel
+    /// suite: a 5 s deadline failed every run there (12–13 Oct 2026), and the
+    /// 30 s that replaced it failed with `onMove` never called in 5 of 13 runs
+    /// (24–27 Nov 2026; desktop/gotchas.md, the timed-read entry). Waiting for
+    /// the call itself, a slow main queue costs the test time and never its
+    /// verdict; the suite's time limit is the guard against a callback that
+    /// never comes. The first call wins: one rename, one callback.
+    final class Event<Value: Sendable>: @unchecked Sendable {
+        private let lock = NSLock()
+        private var fired = false
+        private var value: Value?
+        private var waiter: CheckedContinuation<Value?, Never>?
 
-    /// Thirty seconds, not five. Both callbacks under test reach the owner through
-    /// `DispatchQueue.main.async`, and on CI's macos-26 runner the main queue is
-    /// slow to service under the parallel suite: with a 5 s deadline the test
-    /// failed on every post-registration run (12–13 Oct 2026, 9–11 s total, so
-    /// the setup half alone took 4–6 s there) while its sibling, which reads the
-    /// presenter's URL with no main hop, passed. Locally both take well under a
-    /// second; the deadline is a ceiling for a slow machine, not the expected wait.
+        func fire(_ v: Value) { settle(v) }
+
+        /// The first value fired, or nil once the test is cancelled.
+        func wait() async -> Value? {
+            await withTaskCancellationHandler {
+                await withCheckedContinuation { (c: CheckedContinuation<Value?, Never>) in
+                    let now: (Bool, Value?) = lock.withLock {
+                        if fired { return (true, value) }
+                        waiter = c
+                        return (false, nil)
+                    }
+                    if now.0 { c.resume(returning: now.1) }
+                }
+            } onCancel: { settle(nil) }
+        }
+
+        private func settle(_ v: Value?) {
+            let w: CheckedContinuation<Value?, Never>? = lock.withLock {
+                guard !fired else { return nil }
+                fired = true
+                value = v
+                defer { waiter = nil }
+                return waiter
+            }
+            w?.resume(returning: v)
+        }
+    }
+
+    /// For a state with no callback: the presenter's URL, read with no main hop.
     private func waitUntil(_ deadline: Duration = .seconds(30),
                            _ condition: @escaping () -> Bool) async -> Bool {
         let clock = ContinuousClock()
@@ -76,12 +106,15 @@ struct ProjectFolderWatcherMoveTests {
             try? FileManager.default.removeItem(at: new)
         }
         let lease = try ProjectBookmarkLease(bookmarkData: old.bookmarkData(options: .withSecurityScope))
-        let ready = Ready()
+        // A watcher that has published its first scan is registered with the
+        // coordinator and listening. Moving the folder before that races the
+        // registration (one timeout in 1849, 12 Oct 2026).
+        let ready = Event<Void>()
         let watcher = ProjectFolderWatcher(
-            projectID: UUID(), lease: lease, initialKnownBasenames: [], onChange: { _ in ready.published = true }
+            projectID: UUID(), lease: lease, initialKnownBasenames: [], onChange: { _ in ready.fire(()) }
         )
         defer { watcher.stop() }
-        #expect(await waitUntil { ready.published }, "the watcher never published its first scan")
+        #expect(await ready.wait() != nil, "the watcher never published its first scan")
 
         try coordinatedRename(old, to: new)
 
@@ -101,24 +134,24 @@ struct ProjectFolderWatcherMoveTests {
             try? FileManager.default.removeItem(at: old)
             try? FileManager.default.removeItem(at: new)
         }
-        final class Box: @unchecked Sendable { var moved: URL? }
-        let box = Box()
+        let moved = Event<URL>()
         let lease = try ProjectBookmarkLease(bookmarkData: old.bookmarkData(options: .withSecurityScope))
-        let ready = Ready()
+        let ready = Event<Void>()
         let watcher = ProjectFolderWatcher(
             projectID: UUID(), lease: lease, initialKnownBasenames: [],
             onMove: { url in
                 dispatchPrecondition(condition: .onQueue(.main))
-                box.moved = url
+                moved.fire(url)
             },
-            onChange: { _ in ready.published = true }
+            onChange: { _ in ready.fire(()) }
         )
         defer { watcher.stop() }
-        #expect(await waitUntil { ready.published }, "the watcher never published its first scan")
+        #expect(await ready.wait() != nil, "the watcher never published its first scan")
 
         try coordinatedRename(old, to: new)
 
-        let told = await waitUntil { box.moved?.standardizedFileURL.path == new.standardizedFileURL.path }
-        #expect(told, "onMove was never called with the new path (got \(box.moved?.path ?? "nil"))")
+        let told = await moved.wait()
+        #expect(told?.standardizedFileURL.path == new.standardizedFileURL.path,
+                "onMove was not called with the new path (got \(told?.path ?? "nil"))")
     }
 }

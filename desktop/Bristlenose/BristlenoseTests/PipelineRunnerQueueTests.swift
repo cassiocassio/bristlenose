@@ -93,13 +93,15 @@ struct PipelineRunnerQueueTests {
         ///   - manifestRead / endStateTimeout / slowEndReread: the read that
         ///     settles a run's end, how long it may take, and the wait before
         ///     reading again when it timed out (R29).
-        ///   - drainLimit: how long a failed run's verdict waits for its output.
+        ///   - drainLimit / drainSleep: how long a failed run's verdict waits
+        ///     for its output, and the wait it is spent in.
         init(lookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
              foreignPoll: Duration = .milliseconds(50), patience: Int = 15,
              manifestRead: (@Sendable (URL) async -> PipelineState)? = nil,
              endStateTimeout: Duration = .seconds(5),
              slowEndReread: Duration = .milliseconds(50),
              drainLimit: Duration = .seconds(1),
+             drainSleep: (@Sendable (Duration) async -> Void)? = nil,
              escalationSleep: @escaping @Sendable (Duration) async -> Void = { _ in }) {
             root = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("runner-queue-\(UUID().uuidString)")
@@ -142,6 +144,7 @@ struct PipelineRunnerQueueTests {
                 runAzureIdentity: { [weak self] in self?.azureIdentityNow },
                 sidecarLookup: lookup,
                 outputDrainLimit: drainLimit,
+                outputDrainSleep: drainSleep ?? { try? await Task.sleep(for: $0) },
                 foreignRunPollInterval: foreignPoll,
                 foreignRunPatience: patience,
                 manifestRead: manifestRead ?? { await PipelineRunner.parseManifest(at: $0) },
@@ -201,6 +204,16 @@ struct PipelineRunnerQueueTests {
     /// main actor costs the test time, never its verdict. A green wait returns
     /// at the first look that finds its condition.
     static let patienceLooks = 3_000
+
+    /// A drain wait that ends only when the run's output does (the runner
+    /// cancels it then). A test that hands the output over itself uses it, so
+    /// its verdict waits for the lines and never races a clock: a 30 s limit
+    /// still lost to a held main actor on the CI runners, in 5 of 13 runs
+    /// (24–27 Nov 2026; desktop/gotchas.md, "A timed read runs at its timer's
+    /// priority").
+    static let untilTheOutputCloses: @Sendable (Duration) async -> Void = { _ in
+        while !Task.isCancelled { try? await Task.sleep(for: .seconds(3600)) }
+    }
 
     /// Wait for `condition`, looking at most `looks` times. Shared by the
     /// suites that drive the runner through `Rig`.
@@ -506,8 +519,17 @@ struct PipelineRunnerQueueTests {
         let start = try #require(EventLogReader.procStartTime(pid: getpid()))
         try Data("\(getpid())\n\(start)\n\(providerLine ?? "")".utf8).write(to: url, options: .atomic)
         runner.scan(project: p)
-        await until { runner.state[p.id] == .running }
-        try #require(runner.state[p.id] == .running, "the orphan was not attached")
+        // Attached, the row reads `.running` until a poll calls the run over,
+        // which can come before a held main actor lets this look: 4 of 13 CI
+        // runs failed here on an orphan whose finished manifest the first poll
+        // read (24–27 Nov 2026; desktop/gotchas.md, the timed-read entry).
+        // Only an attached run's poll probes the run itself, so a probe proves
+        // the attach as the row does. So a caller that needs `.running` after
+        // this returns must give the poll nothing that ends the run (the stop
+        // ladder tests leave no manifest).
+        let attached = { runner.state[p.id] == .running || recorder.leaderProbes > 0 }
+        await until(attached)
+        try #require(attached(), "the orphan was not attached")
         return (runner, p, recorder, url)
     }
 
@@ -689,7 +711,7 @@ struct PipelineRunnerQueueTests {
     /// With no structured cause the category is read off stderr, and a `401`
     /// anywhere in the tail is a guess that must not light an app-wide pill.
     @Test func aStderrGuessAtARejectedKeyDoesNotTellThePill() async {
-        let rig = Rig(drainLimit: .seconds(30)); defer { rig.cleanUp() }
+        let rig = Rig(drainSleep: Self.untilTheOutputCloses); defer { rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
 
@@ -1695,9 +1717,10 @@ struct PipelineRunnerQueueTests {
     // MARK: - R25: a failed run is judged on all of its output
 
     @Test func aFailureIsJudgedOnLinesStillInThePipeAtExit() async throws {
-        // The pipe closes once the traceback is in, so a long limit costs
-        // nothing; a 1 s one lost the race to a held main actor on a guest.
-        let rig = Rig(drainLimit: .seconds(30)); defer { rig.cleanUp() }
+        // The pipe closes once the traceback is in, and the verdict waits for
+        // that: a 1 s limit lost the race to a held main actor on a guest, and
+        // a 30 s one on the CI runners.
+        let rig = Rig(drainSleep: Self.untilTheOutputCloses); defer { rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
 

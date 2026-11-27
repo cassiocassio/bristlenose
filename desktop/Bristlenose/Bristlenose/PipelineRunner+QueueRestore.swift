@@ -132,6 +132,12 @@ extension PipelineRunner {
         for project: Project, index: ProjectIndex
     ) async -> QueueRestorePolicy.DiskEvidence {
         let folder = index.leaseURL(projectID: project.id) ?? URL(fileURLWithPath: project.path)
+        // Not `timedRead`, on purpose. This loop leaves every read that timed
+        // out behind, one per queued study, and a stuck read holds a pool
+        // thread; at the timer's priority enough of them would take the
+        // threads the timers need (desktop/gotchas.md, "A timed read runs at
+        // its timer's priority"). A read that loses its race here costs
+        // nothing: the study is kept as unknown, never dropped.
         let reading = Task.detached { () -> QueueRestorePolicy.DiskEvidence in
             QueueRestorePolicy.DiskEvidence(
                 studyIDOnDisk: StudyMarker.read(folder: folder),

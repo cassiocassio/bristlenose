@@ -154,6 +154,38 @@ struct PipelineRunnerTerminationTests {
         #expect(isReady(state), "got \(state)")
     }
 
+    // MARK: - A timed read and its timer run at the same priority
+
+    /// The timer in `value(of:within:)` inherits the caller's priority. In a
+    /// 3-CPU guest that reproduces the CI runners, default-priority work
+    /// waited 8 to 18 s behind higher-priority work while an end read's 5 s
+    /// timer fired on schedule, so a healthy manifest read as
+    /// `.unreachable(.timedOut)` (desktop/gotchas.md, 27 Nov 2026). A high
+    /// caller is the case a bare `Task.detached` fails; a
+    /// low one keeps the default floor, so its disk read is not throttled.
+    /// Judged on the read's base priority, the one it was queued at: the
+    /// timer's waiter raises a running read's current priority, which is why
+    /// `Task.currentPriority` read `.high` even from a bare `Task.detached`,
+    /// and why that raise did not save the read in the guest. The result
+    /// comes back through a continuation, because awaiting the caller's task
+    /// would raise a low priority to this test's own.
+    @Test(arguments: [(TaskPriority.high, TaskPriority.high), (.low, .medium)])
+    func anEndReadRunsAtItsCallersPriority(_ caller: TaskPriority, _ expected: TaskPriority) async {
+        final class Seen: @unchecked Sendable { var priority: TaskPriority? }
+        let seen = Seen()
+        let manifestURL = makeProjectOutput().manifestURL
+        let readAt = await withCheckedContinuation { (done: CheckedContinuation<TaskPriority?, Never>) in
+            Task(priority: caller) {
+                _ = await PipelineRunner.readEndState(at: manifestURL, timeout: .seconds(600), read: { _ in
+                    seen.priority = withUnsafeCurrentTask { $0?.basePriority }
+                    return .idle
+                })
+                done.resume(returning: seen.priority)
+            }
+        }
+        #expect(readAt == expected, "the read ran at \(String(describing: readAt)), its timer at \(caller)")
+    }
+
     // MARK: - looksLikeSuccess — deletion guard only
 
     /// Single positive assertion guards against accidental deletion of the

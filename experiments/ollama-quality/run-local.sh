@@ -1,7 +1,8 @@
 #!/bin/zsh
 # Sequential local runs on one Ollama version. Each run gets its own ollama-ps sampler.
-S=/private/tmp/claude-501/-Users-cassio-Code-bristlenose/75b06500-a0fe-45b5-9b72-ace8e62f9869/scratchpad/olq
-BN=/Users/cassio/Code/bristlenose/.venv/bin/bristlenose
+# Usage: OLQ_DIR=<folder with one sub-folder per run, each holding transcripts-raw/> ./run-local.sh
+S=${OLQ_DIR:?set OLQ_DIR to the runs folder}
+BN="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/.venv/bin/bristlenose"
 
 sample() {  # $1 = name, $2 = host
   while true; do echo "$(date +%T) $(OLLAMA_HOST=$2 ollama ps | tail -n +2)"; sleep 10; done > $S/$1.ps.log 2>&1

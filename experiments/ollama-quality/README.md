@@ -47,7 +47,8 @@ half of the abandoned 3B run (its failures had started before that window).
   found in the transcript; **joined** = ≥90% of its 5-word runs found (turns
   joined across a moderator interjection); **altered** = 50–90%; **invented** =
   under 50%. Script: `compare.py` here (`python3 compare.py <runs-dir> claude gemma …`);
-  `run-local.sh` is the sequential runner (its scratch path is hard-coded).
+  `run-local.sh` is the sequential runner (`OLQ_DIR=<runs folder>`; later runs used
+  edited copies of it).
 - **Cost:** the Claude run cost **$0.95** (the CLI's own figure from token
   counts; it estimated ~$0.26 beforehand). Local runs cost nothing.
 

@@ -61,7 +61,7 @@ API keys are stored securely in the system keychain. Uses native CLI tools — n
 - **Auto-start**: `start_ollama_serve()` — macOS uses `open -a Ollama`, Linux uses `ollama serve` in background with `start_new_session=True`. Waits 2s and verifies running
 - **Model auto-pull**: `pull_model()` runs `ollama pull` with stdout passthrough for progress bar. Triggered via interactive prompt when no suitable model found
 - **Preferred models**: `PREFERRED_MODELS` list in order — `llama3.2:3b` (default), `llama3.2`, `llama3.2:1b`, `llama3.1:8b`, `mistral:7b`, `qwen2.5:7b`. No Gemma: the desktop's `OllamaCatalog` offers Gemma 4 by RAM and this list does not — a known interim gap, left for the resolver
-- **LLM client**: `_analyze_local()` in `llm/client.py` uses OpenAI SDK with `base_url=settings.local_url`. Asks for the schema as `response_format` `json_schema` (the plain Pydantic schema, not strict; also in the system prompt), falling back once to `json_object` if the server refuses it (remembered per client, as any-llm). Up to 3 attempts; a retry is the first request plus one user turn naming what was wrong (`failure_summary`, never the reply). The "~85% vs ~99%" figure was never measured: RE#R105 (24 Oct 2026) found llama3.2:3b under plain JSON mode echoing the schema back and failing every run
+- **LLM client**: `_analyze_local()` in `llm/client.py` asks Ollama on its native `/api/chat` (since 27 Nov 2026), through the OpenAI SDK's generic `post`: a 32k window (`options.num_ctx`, `_LOCAL_CONTEXT_TOKENS`), `think: false`, `truncate`/`shift` off, the schema as `format` (the plain Pydantic schema; also in the system prompt). On the MLX runner's 501 "structured output is unavailable" it asks without a format and validates the JSON itself (remembered per client). A server that is not Ollama (no `GET /api/version`) keeps the `/v1` request: `response_format` `json_schema`, falling back once to `json_object` if refused (remembered per client, as any-llm). Body builder `ollama_chat_body()`, shared with the preflight. Up to 3 attempts; a retry is the first request plus one user turn naming what was wrong (`failure_summary`, never the reply). The "~85% vs ~99%" figure was never measured: RE#R105 (24 Oct 2026) found llama3.2:3b under plain JSON mode echoing the schema back and failing every run
 - **Doctor integration**: `check_local_provider()` validates endpoint and model. Three fix keys: `ollama_not_installed`, `ollama_not_running`, `ollama_model_missing`. Fix messages are context-aware — suggest `--llm claude` only if user has Anthropic key, etc.
 - **Config**: `local_url` (default `http://localhost:11434/v1`), `local_model` (default `llama3.2:3b`)
 - **Tests**: `tests/test_providers.py` (47 tests), `tests/test_provider_horror_scenarios.py` (31 tests) — covers all error paths, fix messages, interactive prompt logic
@@ -133,9 +133,11 @@ If the default is too low for a workload (very long transcripts with many quotes
 - `google.genai.errors.APIError.details` is the WHOLE response JSON, not the details array.
 - google-genai sends with NO timeout and NEVER retries unless asked
 
-**Local (Ollama)** (5) — [full entries](gotchas.md#local-ollama)
+**Local (Ollama)** (7) — [full entries](gotchas.md#local-ollama)
 
-- Local LLM uses OpenAI SDK — Ollama is OpenAI-compatible, so `_analyze_local()` in `llm/client.py`…
+- Local LLM uses OpenAI SDK — on Ollama's native `/api/chat` (the window), `/v1` for any other server, decided by `GET /api/version`.
+- Ollama's MLX runner can refuse structured output: ask in plain text and validate ourselves.
+- No test reaches a real Ollama (`conftest.py::no_real_ollama`).
 - Local model retry logic — `_analyze_local()` retries a reply that doesn't parse or validate up to 3…
 - Ollama in schema mode almost never returns a shape-invalid reply, so the last-attempt salvage is unreachable from a…
 - `_needs_provider_prompt()` checks Ollama status — for local provider, it calls…

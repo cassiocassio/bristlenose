@@ -620,6 +620,45 @@ def no_scene_strip_thread(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_real_ollama(request, monkeypatch):
+    """No test reaches a real Ollama: a request to its port fails the test.
+
+    The local client asks ``GET /api/version`` before its first call (to choose
+    Ollama's native API over ``/v1``). On a Mac with Ollama running that went to
+    the real server and, with a test's ``_local_client`` mock in place, sent a
+    real ``POST /api/chat`` that held Ollama's one slot for two minutes during
+    another session's measurement (27 Nov 2026); in CI the same test got a
+    refused connection instead. ``pytest.fail`` is a BaseException, so neither
+    the openai SDK's retry loop (which turns any Exception into
+    ``APIConnectionError``) nor a test's ``pytest.raises(Exception)`` can
+    swallow it. Tests that drive the native path inject an
+    ``httpx.MockTransport``, which this does not touch; ``slow`` tests keep the
+    real network.
+    """
+    if request.node.get_closest_marker("slow") is not None:
+        return
+    import httpx
+
+    def refuse(url: httpx.URL) -> None:
+        if url.port == 11434:
+            pytest.fail(f"a test reached a real Ollama at {url} (conftest no_real_ollama)")
+
+    real_sync = httpx.HTTPTransport.handle_request
+    real_async = httpx.AsyncHTTPTransport.handle_async_request
+
+    def sync(self, req):  # type: ignore[no-untyped-def]
+        refuse(req.url)
+        return real_sync(self, req)
+
+    async def async_(self, req):  # type: ignore[no-untyped-def]
+        refuse(req.url)
+        return await real_async(self, req)
+
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", sync)
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", async_)
+
+
+@pytest.fixture(autouse=True)
 def fresh_machine_identity_cache(monkeypatch):
     """machine_id() keeps a good answer for the life of the process. A test that reads it under
     a patched platform or subprocess must not leave that answer for the next test."""

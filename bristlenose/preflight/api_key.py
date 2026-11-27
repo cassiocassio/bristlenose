@@ -671,28 +671,60 @@ def _validate_local(
 ) -> ValidationResult:
     """Exercise a local Ollama-compatible endpoint with the run's own request.
 
-    Runtime path uses the openai SDK pointed at ``local_url`` (Ollama is
-    OpenAI-compatible); the preflight does the same — keeps the dep
-    surface narrow and the failure modes consistent. No api key, no
-    billing — failures are server-down or model-not-pulled.
+    The run's transport, through the openai SDK as the run does: Ollama's
+    native ``/api/chat`` with the run's body (``ollama_chat_body``, context
+    window and all), so setup loads the model at the window the run uses and a
+    window that does not fit fails here; ``/v1`` for a server that is not
+    Ollama, as the run does. No format: a refused format is handled in the run.
+    No api key, no billing — failures are server-down or model-not-pulled.
     """
     import openai
+
+    from bristlenose.llm.client import (
+        _NOT_OLLAMA_STATUSES,
+        is_ollama_version,
+        ollama_chat_body,
+    )
+    from bristlenose.ollama import ollama_root
 
     # The run's parameters, but not its output cap: Ollama refuses no cap, so
     # sending 64000 proves nothing, and a small model that rambles on "." could
     # hold setup for minutes on a laptop.
     params = {**_params_for("local", model, params), "max_tokens": 1}
-    client = openai.OpenAI(
-        base_url=local_url,
-        api_key="ollama",  # required by SDK, ignored by Ollama
-        default_headers={"User-Agent": f"bristlenose/{__version__}"},
-    )
+    messages = [{"role": "user", "content": _VALIDATION_PROMPT}]
+    headers = {"User-Agent": f"bristlenose/{__version__}"}
     try:
-        client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
-            **params,
+        root = openai.OpenAI(
+            base_url=ollama_root(local_url),
+            api_key="ollama",  # required by SDK, ignored by Ollama
+            default_headers=headers,
         )
+        try:
+            version: object = root.get("/api/version", cast_to=object)
+        except openai.APIStatusError as exc:
+            # As the run asks (LLMClient._local_is_ollama): only "no such
+            # route" says the server is not Ollama; any other status is the
+            # check's answer, said below in the server's words.
+            if getattr(exc, "status_code", None) not in _NOT_OLLAMA_STATUSES:
+                raise
+            version = None
+        except ValueError:  # a 200 that is not JSON
+            version = None
+        if is_ollama_version(version):
+            root.post("/api/chat", cast_to=object,
+                      body=ollama_chat_body(model, messages, params, None))
+        else:
+            client = openai.OpenAI(
+                base_url=local_url,
+                api_key="ollama",  # required by SDK, ignored by Ollama
+                default_headers=headers,
+            )
+            client.chat.completions.create(
+                model=model,
+                messages=messages,  # type: ignore[arg-type]
+                max_tokens=params["max_tokens"],
+                temperature=params["temperature"],
+            )
     except openai.APIConnectionError as exc:
         # Server down is the dominant local failure — surface as a
         # network-class result. ``recovery_message`` switches on

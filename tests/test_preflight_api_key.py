@@ -1029,13 +1029,19 @@ def _pipeline_kwargs(settings) -> dict:
     elif provider == "google":
         sdk.aio.models.generate_content = create
         client._google_client = sdk
+    elif provider == "local":
+        # Ollama: the native /api/chat body is the request.
+        sdk.get = AsyncMock(return_value={"version": "0.40.18"})
+        sdk.post = create
+        client._ollama_client = sdk
     else:
         sdk.chat.completions.create = create
-        setattr(client, {"openai": "_openai_client", "azure": "_azure_client",
-                         "local": "_local_client"}[provider], sdk)
+        setattr(client, {"openai": "_openai_client", "azure": "_azure_client"}[provider], sdk)
     with pytest.raises(_SentError):
         asyncio.run(client.analyze(system_prompt="s", user_prompt="u",
                                    response_model=QuoteExtractionResult))
+    if provider == "local":
+        return dict(create.await_args.kwargs["body"])
     return dict(create.await_args.kwargs)
 
 
@@ -1061,6 +1067,10 @@ def _preflight_kwargs(monkeypatch, tmp_path, settings) -> dict:
         return dict(client.models.generate_content.call_args.kwargs)
     fake = TestValidateOpenai()._fake_openai()
     monkeypatch.setitem(sys.modules, "openai", fake)
+    if provider == "local":
+        fake.OpenAI.return_value.get.return_value = {"version": "0.40.18"}
+        preflight_api_key(settings=settings, console=_console())
+        return dict(fake.OpenAI.return_value.post.call_args.kwargs["body"])
     preflight_api_key(settings=settings, console=_console())
     factory = fake.AzureOpenAI if provider == "azure" else fake.OpenAI
     return dict(factory.return_value.chat.completions.create.call_args.kwargs)
@@ -1111,12 +1121,20 @@ class TestPreflightSendsThePipelinesRequest:
     def test_ollama_same_parameters_but_a_one_token_cap(self, monkeypatch, tmp_path):
         # Ollama refuses no cap, so the run's proves nothing there, and a small
         # local model rambling on "." could hold setup for minutes.
+        # The window, thinking off and truncation off too, so setup loads the model
+        # at the window the run uses (a different num_ctx reloads it) and a window
+        # that does not fit fails at setup.
         settings = _real_settings(llm_provider="local", local_model="llama3.2:3b")
         pipeline = _pipeline_kwargs(settings)
         sent = _preflight_kwargs(monkeypatch, tmp_path, settings)
-        assert sent["max_tokens"] == 1
-        keep = lambda d: {k: v for k, v in d.items() if k not in _PROMPT_KEYS | {"max_tokens"}}  # noqa: E731
+        assert sent["options"]["num_predict"] == 1
+        assert pipeline["options"]["num_ctx"] == 32768
+        keep = lambda d: {  # noqa: E731
+            **{k: v for k, v in d.items() if k not in _PROMPT_KEYS | {"options", "format"}},
+            "options": {k: v for k, v in d["options"].items() if k != "num_predict"},
+        }
         assert keep(sent) == keep(pipeline)
+        assert {"think", "truncate", "shift", "stream"} <= set(sent)
 
     def test_gemini_same_model_and_generation_parameters(self, monkeypatch, tmp_path):
         settings = _real_settings(llm_provider="google", google_api_key="g",

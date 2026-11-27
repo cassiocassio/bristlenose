@@ -590,6 +590,17 @@ def ollama_has_model(name: str, installed: list[str]) -> bool:
     return ":" not in name and f"{name}:latest" in installed
 
 
+def ollama_root(url: str) -> str:
+    """Ollama's own API root for a ``local_url``: the URL without its ``/v1``.
+
+    ``local_url`` names the OpenAI-compatible endpoint (``…:11434/v1``); the
+    native API (``/api/tags``, ``/api/chat``) sits at the root. The Mac app's
+    ``LLMValidator.swift`` strips the same suffix.
+    """
+    base = url.rstrip("/")
+    return base[:-3] if base.endswith("/v1") else base
+
+
 def validate_local_endpoint(url: str, model: str) -> tuple[bool | None, str]:
     """Validate that a local endpoint is reachable and has the specified model.
 
@@ -602,10 +613,7 @@ def validate_local_endpoint(url: str, model: str) -> tuple[bool | None, str]:
     import urllib.error
     import urllib.request
 
-    # Normalise URL to API endpoint
-    base_url = url.rstrip("/")
-    if base_url.endswith("/v1"):
-        base_url = base_url[:-3]
+    base_url = ollama_root(url)
 
     try:
         req = urllib.request.Request(f"{base_url}/api/tags", method="GET")

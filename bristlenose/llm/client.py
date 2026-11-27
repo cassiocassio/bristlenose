@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
@@ -447,9 +448,79 @@ def request_params(
         return {"max_completion_tokens": max_tokens}
     if provider == "google":
         return {"max_output_tokens": max_tokens, "temperature": temperature}
-    # Azure (a deployment name cannot say which model is behind it, so the
-    # legacy shape — see _analyze_azure) and Ollama.
+    if provider == "local":
+        # The window and the thinking switch go only on Ollama's native
+        # /api/chat (ollama_chat_body); a server that is not Ollama is asked on
+        # /v1 with max_tokens and temperature alone, as before 27 Nov 2026.
+        return {
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "num_ctx": _LOCAL_CONTEXT_TOKENS,
+            "think": False,
+        }
+    # Azure: a deployment name cannot say which model is behind it, so the
+    # legacy shape (see _analyze_azure).
     return {"max_tokens": max_tokens, "temperature": temperature}
+
+
+# The context window every call to Ollama asks for, in tokens. Sent per request
+# as options.num_ctx because Ollama otherwise picks one from the GPU memory it
+# detects: 4,096 on Macs with 16 GB or less (and, probably, 24 GB), which a
+# 60-minute transcript (9–14k tokens) overflows, and Ollama on its GGUF runner
+# then keeps the prompt's last ~2,000 tokens and answers 200 (measured on
+# 0.40.18, 27 Nov 2026). 32k holds a 13.6k-token transcript, the prompt and the
+# answer; a reply that outgrows it ends "length", which s09 splits on. Fixed,
+# not sized per call: a different num_ctx reloads the model, and three
+# concurrent calls of different sizes would thrash. It overrides a larger
+# OLLAMA_CONTEXT_LENGTH the user set. docs/research/local-models-2026-11.md
+# § "Ways to set the context".
+_LOCAL_CONTEXT_TOKENS = 32768
+
+
+def ollama_chat_body(
+    model: str,
+    messages: list[Any],
+    params: dict[str, Any],
+    fmt: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """The JSON body of one call to Ollama's native ``/api/chat``.
+
+    The one builder of it: the run (``_analyze_local``) and the key preflight
+    (``preflight/api_key.py``) both send it. ``params`` is ``request_params``'s
+    local shape; ``fmt`` is the JSON schema, or None for a plain request.
+
+    ``truncate`` and ``shift`` off make an overflow visible: a prompt longer
+    than the window is refused (400) rather than cut to its tail, and an answer
+    that fills the window stops with ``done_reason: "length"`` rather than
+    shifting the prompt out. ``stream`` off, because the native API streams by
+    default.
+    """
+    body: dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "options": {
+            "num_ctx": params["num_ctx"],
+            "num_predict": params["max_tokens"],
+            "temperature": params["temperature"],
+        },
+        "truncate": False,
+        "shift": False,
+    }
+    if "think" in params:
+        body["think"] = params["think"]
+    if fmt is not None:
+        body["format"] = fmt
+    return body
+
+
+#: The statuses with which a server says it has no ``/api/version``: not Ollama.
+_NOT_OLLAMA_STATUSES = frozenset({404, 405})
+
+
+def is_ollama_version(payload: object) -> bool:
+    """Whether a ``GET /api/version`` answer came from Ollama: ``{"version": "…"}``."""
+    return isinstance(payload, dict) and isinstance(payload.get("version"), str)
 
 
 # Cloud-provider client retry budget. The Anthropic / OpenAI / Azure SDKs all
@@ -627,6 +698,14 @@ class LLMClient:
         self._local_client: openai.AsyncOpenAI | None = None
         # True once the local server has refused a json_schema response format.
         self._local_json_object = False
+        # Ollama's native API, at the root of local_url (see _local_is_ollama).
+        self._ollama_client: openai.AsyncOpenAI | None = None
+        # None until asked: whether local_url is Ollama (native /api/chat) or
+        # another OpenAI-compatible server (/v1, as before 27 Nov 2026).
+        self._local_native: bool | None = None
+        # True once Ollama has refused structured output (the MLX runner's 501):
+        # later calls ask in plain text and validate the JSON themselves.
+        self._local_plain = False
         self._anyllm_provider: Any = None
         self.tracker = LLMUsageTracker()
 
@@ -1608,12 +1687,19 @@ class LLMClient:
         input_chars: int,
         t0: float,
     ) -> T:
-        """Call a local Ollama-compatible API, asking for the response schema.
+        """Call a local Ollama (or other OpenAI-compatible) server for the schema.
 
-        Uses the OpenAI SDK pointed at a local endpoint. The schema goes as
-        ``response_format`` ``json_schema`` (Ollama's structured outputs), and in
-        the system prompt. A server that refuses it is asked again with
-        ``json_object``, remembered for the client, as ``_analyze_anyllm`` does.
+        Ollama is called on its native ``/api/chat`` (``ollama_chat_body``): the
+        only request that sets the context window, with thinking off and
+        overflow made an error. The schema goes as ``format`` and in the system
+        prompt. Ollama's MLX runner refuses any format (501 "structured output
+        is unavailable"); the client then asks without one, for the rest of its
+        life, and the JSON is validated here as any reply is.
+
+        A server that is not Ollama (``_local_is_ollama``) gets the request it
+        got before 27 Nov 2026, on ``/v1``: ``response_format`` ``json_schema``,
+        and ``json_object`` once it refuses that (remembered, as
+        ``_analyze_anyllm`` does).
 
         A reply that doesn't parse or validate is retried as a follow-up turn
         naming what was wrong (``failure_summary``: field paths and error types,
@@ -1622,16 +1708,6 @@ class LLMClient:
         request got the identical echo; schema mode and a corrective turn each
         fixed the replayed failures.
         """
-
-        import openai
-
-        if self._local_client is None:
-            self._local_client = openai.AsyncOpenAI(
-                base_url=self.settings.local_url,
-                api_key="ollama",  # Required by SDK but ignored by Ollama
-            )
-
-        client = self._local_client
 
         # Add JSON schema instruction to the system prompt
         schema = response_model.model_json_schema()
@@ -1655,14 +1731,68 @@ class LLMClient:
         ]
         messages = base_messages
 
-        async def call(fmt: ResponseFormat) -> Any:
-            return await client.chat.completions.create(
+        async def call_native(plain: bool) -> _LocalReply:
+            # Ollama's own API: the only one that takes the context window.
+            # think: false has no refusal to catch: Ollama 0.40.18 refuses only
+            # think: true on a model that cannot think (server/routes.go), and
+            # an Ollama from before the field ignores it.
+            body = ollama_chat_body(
+                model, list(messages), params, None if plain else schema,
+            )
+            reply = await self._ensure_ollama_client().post(
+                "/api/chat", cast_to=object, body=body,
+            )
+            return _native_reply(reply)
+
+        async def call_openai(fmt: ResponseFormat) -> _LocalReply:
+            response = await self._ensure_local_client().chat.completions.create(
                 model=model,
                 max_tokens=params["max_tokens"],
                 temperature=params["temperature"],
                 response_format=fmt,
                 messages=messages,
             )
+            return _openai_reply(response)
+
+        async def call() -> _LocalReply:
+            if await self._local_is_ollama():
+                # What THIS request sends, read before it goes: three sessions'
+                # first calls go out together, and the second 501 arrives after
+                # the first has set the flag.
+                plain = self._local_plain
+                try:
+                    return await call_native(plain)
+                except Exception as exc:
+                    if plain or not _refuses_structured_output(exc):
+                        raise
+                    # Ollama's MLX runner (gemma4:e4b on a Mac, 0.40.18) has no
+                    # grammar. Resent at once, within the same attempt (a refused
+                    # request is not a bad reply), and remembered for the client:
+                    # the schema is in the system prompt, and the JSON is
+                    # validated here as any reply is.
+                    logger.warning(
+                        "local_structured_output_refused | model=%s | "
+                        "asking without a format and validating the reply",
+                        model,
+                    )
+                    self._local_plain = True
+                    return await call_native(True)
+            if self._local_json_object:
+                return await call_openai({"type": "json_object"})
+            try:
+                return await call_openai(schema_format)
+            except Exception as exc:
+                if not _refuses_json_schema(exc):
+                    raise
+                # Within the same attempt, as _analyze_anyllm does: a
+                # refused format is not a bad reply.
+                logger.warning(
+                    "local_json_schema_refused | model=%s | error=%s | "
+                    "falling back to json_object",
+                    model, failure_summary(exc),
+                )
+                self._local_json_object = True
+                return await call_openai({"type": "json_object"})
 
         # Retry logic for JSON parsing failures.
         # Token / elapsed accumulators sum across retries; one terminal
@@ -1681,42 +1811,41 @@ class LLMClient:
             attempts_used = attempt + 1
             try:
                 try:
-                    if self._local_json_object:
-                        response = await call({"type": "json_object"})
-                    else:
-                        try:
-                            response = await call(schema_format)
-                        except Exception as exc:
-                            if not _refuses_json_schema(exc):
-                                raise
-                            # Within the same attempt, as _analyze_anyllm does: a
-                            # refused format is not a bad reply.
-                            logger.warning(
-                                "local_json_schema_refused | model=%s | error=%s | "
-                                "falling back to json_object",
-                                model, failure_summary(exc),
-                            )
-                            self._local_json_object = True
-                            response = await call({"type": "json_object"})
+                    response = await call()
                 except asyncio.CancelledError:
                     raise
-                except Exception:
+                except Exception as exc:
+                    over = _prompt_exceeds_window(exc)
                     self._record_call(
                         request_model=model, response_model=None,
                         input_chars=input_chars,
                         elapsed_ms=int((time.perf_counter() - t0) * 1000),
-                        outcome="error", prompt_template=prompt_template,
+                        outcome="truncated" if over else "error",
+                        prompt_template=prompt_template,
                         input_tokens=sum_input_tokens if any_usage else None,
                         output_tokens=sum_output_tokens if any_usage else None,
                         retry_count=max(attempts_used - 1, 0),
                         usage_source="reported" if any_usage else "missing",
                     )
+                    if over:
+                        # The transcript does not fit the window (truncate: false
+                        # made Ollama say so). A truncation, so quote extraction
+                        # splits the session as it does on a full answer.
+                        raise TruncatedResponseError(
+                            f"The prompt is longer than the local model's context "
+                            f"window (provider={self.provider}, model={model}, "
+                            f"context={params['num_ctx']}).",
+                            provider=self.provider,
+                            model=model,
+                            requested_max_tokens=max_tokens,
+                            model_cap=None,
+                        ) from None
                     raise
 
                 # Track token usage (Ollama provides this)
-                if hasattr(response, "usage") and response.usage:
-                    inp = response.usage.prompt_tokens or 0
-                    out = response.usage.completion_tokens or 0
+                if response.input_tokens is not None or response.output_tokens is not None:
+                    inp = response.input_tokens or 0
+                    out = response.output_tokens or 0
                     sum_input_tokens += inp
                     sum_output_tokens += out
                     any_usage = True
@@ -1726,8 +1855,8 @@ class LLMClient:
                         model, inp, out,
                     )
 
-                last_finish_reason = response.choices[0].finish_reason
-                last_response_model = getattr(response, "model", None)
+                last_finish_reason = response.finish_reason
+                last_response_model = response.model
 
                 # Detect truncated response
                 if last_finish_reason == "length":
@@ -1743,21 +1872,31 @@ class LLMClient:
                         retry_count=attempts_used - 1,
                         usage_source="reported" if any_usage else "missing",
                     )
+                    # With shift: false Ollama also stops "length" when the answer
+                    # fills the context window, which max_tokens cannot fix.
                     raise TruncatedResponseError(
-                        f"LLM response truncated at the model output cap "
-                        f"(provider={self.provider}, model={model}, "
-                        f"max_tokens={max_tokens}).",
+                        (
+                            f"LLM response truncated at the model output cap or the "
+                            f"context window (provider={self.provider}, model={model}, "
+                            f"max_tokens={max_tokens}, context={params['num_ctx']})."
+                        )
+                        if self._local_native
+                        else (
+                            f"LLM response truncated at the model output cap "
+                            f"(provider={self.provider}, model={model}, "
+                            f"max_tokens={max_tokens})."
+                        ),
                         provider=self.provider,
                         model=model,
                         requested_max_tokens=max_tokens,
                         model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(model),
                     )
 
-                content = response.choices[0].message.content
+                content = response.content
                 if content is None:
                     raise RuntimeError("Empty response from local model")
 
-                data = json.loads(content)
+                data = _local_json(content)
                 logger.debug(
                     "LLM response fields: %s",
                     {k: type(v).__name__ for k, v in data.items()}
@@ -1844,6 +1983,67 @@ class LLMClient:
             f"Last error: {failure_summary(last_error) if last_error is not None else None}. "
             f"Try a larger model (BRISTLENOSE_LOCAL_MODEL=llama3.1:8b) or use a cloud API (--llm claude)."
         )
+
+    def _ensure_local_client(self) -> openai.AsyncOpenAI:
+        """The OpenAI SDK pointed at ``local_url`` (``/v1``), for a server that is not Ollama."""
+        import openai
+
+        if self._local_client is None:
+            self._local_client = openai.AsyncOpenAI(
+                base_url=self.settings.local_url,
+                api_key="ollama",  # Required by SDK but ignored by Ollama
+            )
+        return self._local_client
+
+    def _ensure_ollama_client(self) -> openai.AsyncOpenAI:
+        """The OpenAI SDK pointed at Ollama's root, for its native API.
+
+        Its generic ``get``/``post`` keep the SDK's timeout, retries and
+        exception classes, so a server that is down is the same
+        ``APIConnectionError`` the ``/v1`` call raised, and the same recovery copy.
+        """
+        import openai
+
+        from bristlenose.ollama import ollama_root
+
+        if self._ollama_client is None:
+            self._ollama_client = openai.AsyncOpenAI(
+                base_url=ollama_root(self.settings.local_url),
+                api_key="ollama",  # Required by SDK but ignored by Ollama
+            )
+        return self._ollama_client
+
+    async def _local_is_ollama(self) -> bool:
+        """Whether ``local_url`` is Ollama, asked once per client at ``GET /api/version``.
+
+        Exact, not a guess from the URL: Ollama answers ``{"version": …}``;
+        llama.cpp's server, LM Studio and vLLM answer 404 (or 405), or a body of
+        another shape, and keep the ``/v1`` request. Anything else is not an
+        answer and is not remembered: a connection error, or another status (a
+        5xx, a proxy's 401), propagates as the call's error, as the ``/v1``
+        call's did, and the next call asks again. Remembering it would send the
+        whole run to ``/v1`` at Ollama's own small window.
+        """
+        if self._local_native is not None:
+            return self._local_native
+        import openai
+
+        try:
+            payload = await self._ensure_ollama_client().get("/api/version", cast_to=object)
+        except openai.APIStatusError as exc:
+            if exc.status_code not in _NOT_OLLAMA_STATUSES:
+                raise
+            payload = None
+        except ValueError:  # a 200 that is not JSON
+            payload = None
+        self._local_native = is_ollama_version(payload)
+        if not self._local_native:
+            logger.info(
+                "local_server_not_ollama | url=%s | asking on /v1, where the "
+                "context window cannot be set",
+                self.settings.local_url,
+            )
+        return self._local_native
 
     def _ensure_anyllm_provider(self) -> Any:
         """One any-llm provider object per client, reused for every call.
@@ -2133,6 +2333,101 @@ def _refuses_json_schema(exc: BaseException) -> bool:
         return names_format
     status = getattr(exc, "status_code", None)
     return names_format and status == 400
+
+
+def _local_json(content: str) -> Any:
+    """A local reply's JSON, read past what a model writes around it.
+
+    The whole reply first. Failing that, the first JSON object in it: a reply
+    asked for without a format (the MLX fallback) may open with a sentence, an
+    empty thought block (Gemma 4 12B and up emit one with thinking off, per its
+    model card, and Ollama was not checked to strip it on every path) or a
+    fenced block, and may close with more prose. Only the FIRST ``{`` is tried:
+    trying each would, on a reply whose outer object is broken, return one quote
+    from inside it as if it were the answer. A preamble that itself holds a
+    ``{`` is not read past. Raises the first ``json.JSONDecodeError``, which the
+    caller retries. Used on every local path: under a grammar the whole reply
+    parses, so the second read never runs there.
+    """
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError as whole:
+        start = content.find("{")
+        if start == -1:
+            raise
+        try:
+            return json.JSONDecoder().raw_decode(content, start)[0]
+        except json.JSONDecodeError:
+            raise whole from None
+
+
+def _prompt_exceeds_window(exc: BaseException) -> bool:
+    """True when Ollama refused a prompt longer than the context window.
+
+    A 400 in Ollama's words, which ``truncate: false`` turns the GGUF runner's
+    silent cut into ("the prompt is longer than the context length…",
+    ``llm/llama_server.go``, v0.40.18), or llama-server's own ("exceeds the
+    available context size"). Never matched on a server that is not Ollama:
+    ``/v1`` sends no ``truncate``.
+    """
+    if getattr(exc, "status_code", None) != 400:
+        return False
+    text = str(exc).lower()
+    return (
+        "prompt is longer than the context length" in text
+        or "exceeds the available context size" in text
+    )
+
+
+def _refuses_structured_output(exc: BaseException) -> bool:
+    """True when Ollama refused structured output outright: its MLX runner.
+
+    HTTP 501 with Ollama's own words, "structured output is unavailable"
+    (``mlxrunner/grammar.go``, v0.40.18), whatever the format asked for. Only
+    that: any other 5xx is a server failure and propagates.
+    """
+    return (
+        getattr(exc, "status_code", None) == 501
+        and "structured output is unavailable" in str(exc).lower()
+    )
+
+
+@dataclass(frozen=True)
+class _LocalReply:
+    """One local server's answer, in the fields ``_analyze_local`` reads."""
+
+    content: str | None
+    finish_reason: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    model: str | None
+
+
+def _native_reply(data: object) -> _LocalReply:
+    """An Ollama ``/api/chat`` answer (``stream: false``)."""
+    if not isinstance(data, dict):
+        raise RuntimeError("Unexpected response from Ollama's /api/chat")
+    message = data.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    return _LocalReply(
+        content=content if isinstance(content, str) else None,
+        finish_reason=data.get("done_reason"),
+        input_tokens=data.get("prompt_eval_count"),
+        output_tokens=data.get("eval_count"),
+        model=data.get("model"),
+    )
+
+
+def _openai_reply(response: Any) -> _LocalReply:
+    """An OpenAI-compatible ``/v1/chat/completions`` answer."""
+    usage = getattr(response, "usage", None)
+    return _LocalReply(
+        content=response.choices[0].message.content,
+        finish_reason=response.choices[0].finish_reason,
+        input_tokens=(usage.prompt_tokens or 0) if usage else None,
+        output_tokens=(usage.completion_tokens or 0) if usage else None,
+        model=getattr(response, "model", None),
+    )
 
 
 def _refuses_reasoning_off(exc: BaseException) -> bool:

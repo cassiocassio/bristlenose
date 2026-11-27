@@ -55,6 +55,9 @@ def _client(*replies: object) -> tuple[LLMClient, AsyncMock]:
     client._local_client = SimpleNamespace(  # type: ignore[assignment]
         chat=SimpleNamespace(completions=SimpleNamespace(create=create)),
     )
+    # A server that is not Ollama: these pin the /v1 request. Ollama's native
+    # request is pinned in tests/test_local_ollama_native.py.
+    client._local_native = False
     return client, create
 
 

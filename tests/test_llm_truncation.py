@@ -343,6 +343,7 @@ class TestLocalTruncation:
         mock_local = AsyncMock()
         mock_local.chat.completions.create = AsyncMock(return_value=mock_response)
         client._local_client = mock_local
+        client._local_native = False  # the /v1 request
 
         with pytest.raises(RuntimeError, match="truncated"):
             await client.analyze(
@@ -422,6 +423,7 @@ class TestTruncationEmitsTelemetryRow:
         mock_local = AsyncMock()
         mock_local.chat.completions.create = AsyncMock(return_value=bad_response)
         client._local_client = mock_local
+        client._local_native = False  # the /v1 request
 
         run_dir = tmp_path / ".bristlenose"  # type: ignore[operator]
         tokens = telemetry.set_run_context("run-retry", run_dir)
@@ -473,6 +475,7 @@ class TestLocalTruncationSingleRow:
         mock_local = AsyncMock()
         mock_local.chat.completions.create = AsyncMock(return_value=mock_response)
         client._local_client = mock_local
+        client._local_native = False  # the /v1 request
 
         run_dir = tmp_path / ".bristlenose"  # type: ignore[operator]
         tokens = telemetry.set_run_context("run-local-trunc", run_dir)

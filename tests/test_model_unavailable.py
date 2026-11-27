@@ -283,6 +283,9 @@ def _validate(monkeypatch: pytest.MonkeyPatch, provider: str, exc: Any) -> Any:
         messages=SimpleNamespace(create=_raise(exc)),
         chat=SimpleNamespace(completions=SimpleNamespace(create=_raise(exc))),
         models=SimpleNamespace(generate_content=_raise(exc)),
+        # Ollama's native API, which the local check takes once /api/version answers.
+        get=lambda *_a, **_k: {"version": "0.40.18"},
+        post=_raise(exc),
     )
     if provider == "anthropic":
         import anthropic

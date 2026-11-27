@@ -131,7 +131,7 @@ out="$(cd "$ROOT" && env -u BRISTLENOSE_DMG_REMOTE BRISTLENOSE_SHIP_CONF=/dev/nu
         bash "$SCRIPT_DIR/upload-dmg.sh" --dry-run 2>&1)"
 rc=$?
 set -e
-if [ "$rc" -eq 2 ] && echo "$out" | grep -q 'BRISTLENOSE_DMG_REMOTE'; then
+if [ "$rc" -eq 2 ] && grep -q 'BRISTLENOSE_DMG_REMOTE' <<<"$out"; then
     ok "unconfigured remote → exit 2, names the env var"
 else
     bad "unconfigured remote did not exit 2 with guidance (rc=$rc)"

@@ -81,14 +81,14 @@ while IFS=$'\t' read -r file want needle version label; do
     if [ "$rc" -ne "$want" ]; then
         echo "  ✗ $label: exit $rc, wanted $want"; echo "$out" | sed 's/^/      /' | head -4; FAIL=$((FAIL+1)); continue
     fi
-    if ! printf '%s' "$out" | grep -qF -- "$needle"; then
+    if ! grep -qF -- "$needle" <<<"$out"; then
         echo "  ✗ $label: exit $rc but no \"$needle\""; echo "$out" | sed 's/^/      /' | head -4; FAIL=$((FAIL+1)); continue
     fi
     echo "  ✓ $label"; PASS=$((PASS+1))
 done < "$TMP/cases.tsv"
 
 out=$("$GATE" "$TMP/does-not-exist.mcpb" 2>&1); rc=$?
-if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF "no such .mcpb"; then
+if [ "$rc" -eq 1 ] && grep -qF "no such .mcpb" <<<"$out"; then
     echo "  ✓ a path that does not exist is refused"; PASS=$((PASS+1))
 else
     echo "  ✗ a path that does not exist is refused: exit $rc"; FAIL=$((FAIL+1))

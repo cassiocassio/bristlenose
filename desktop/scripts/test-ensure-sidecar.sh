@@ -42,7 +42,7 @@ case "$fh" in [0-9a-f]*) [ ${#fh} -eq 64 ] && ok "frontend_source_hash is 64-hex
 
 # 3. --force makes every layer REBUILD.
 out="$(bash "$SCRIPT_DIR/build-sidecar.sh" --force --dry-run 2>&1)"
-echo "$out" | grep -q '\[F\] REBUILD — forced' && echo "$out" | grep -q '\[P\] REBUILD — forced' \
+grep -q '\[F\] REBUILD — forced' <<<"$out" && grep -q '\[P\] REBUILD — forced' <<<"$out" \
     && ok "--force rebuilds all layers" || bad "--force did not force all layers"
 
 # 4. P SKIPS when the source hash matches the live stamp (the core incremental win).

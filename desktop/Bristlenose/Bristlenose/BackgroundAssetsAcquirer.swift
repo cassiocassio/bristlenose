@@ -96,6 +96,8 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
     private let adapter: WhisperPackAdapter
     private let manifest: WhisperPackManifest
     private let silenceLimit: Duration
+    /// How long an abandoned attempt waits for the system to drop its unfinished pack.
+    private let cleanupLimit: Duration
     private let verify: @Sendable (URL, WhisperPackManifest) -> WhisperPackVerdict
     private let stamp: WhisperPackStampStore
     /// Whether the model the researcher chose is the one this pack holds. Another model is not
@@ -109,8 +111,10 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
 
     /// - silenceLimit: how long without a byte moving before the attempt is given up (plan §4:
     ///   60 s). Injected so a test does not wait a minute.
+    /// - cleanupLimit: how long an abandoned attempt waits on the system's remove. Injected so a
+    ///   test that holds the remove open is not raced by it.
     init(adapter: WhisperPackAdapter, manifest: WhisperPackManifest = .largeV3Turbo,
-         silenceLimit: Duration = .seconds(60),
+         silenceLimit: Duration = .seconds(60), cleanupLimit: Duration = .seconds(5),
          verify: @escaping @Sendable (URL, WhisperPackManifest) -> WhisperPackVerdict = {
              WhisperPackVerifier.verify(directory: $0, manifest: $1)
          },
@@ -121,6 +125,7 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         self.adapter = adapter
         self.manifest = manifest
         self.silenceLimit = silenceLimit
+        self.cleanupLimit = cleanupLimit
         self.verify = verify
     }
 
@@ -245,6 +250,7 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         }
         let adapter = self.adapter
         let limit = silenceLimit
+        let cleanup = cleanupLimit
         let log = Self.logger
         let ensureTask = Task.detached {
             do {
@@ -281,7 +287,7 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
             if clock.neverReported, !packLooksComplete() {
                 let removed = EnsureRace()
                 Task.detached { try? await adapter.remove(); removed.finish(.arrived) }
-                Task.detached { try? await Task.sleep(for: .seconds(5)); removed.finish(.failed) }
+                Task.detached { try? await Task.sleep(for: cleanup); removed.finish(.failed) }
                 _ = await removed.value()
             }
         }

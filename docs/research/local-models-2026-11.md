@@ -1,0 +1,532 @@
+# Local models for each memory size, November 2026: fix the context window first (27 Nov 2026)
+
+_Research note, 27 Nov 2026. A proposal only: the app's `OllamaCatalog` (`desktop/Bristlenose/Bristlenose/LLMProvider.swift`), the CLI default (`local_model` in `bristlenose/config.py`) and the website's set-up page are unchanged until the maintainer decides. Scope: on-device analysis under Ollama for the Bristlenose Mac app and the CLI on macOS and Linux. Ollama v0.40.18 (24 Nov 2026) is the latest stable release; the local measurements were taken on v0.20.7._
+
+Bristlenose should not change its local-model catalogue until the local client sets the context length, and until the proposed models have been loaded on a Mac running a current Ollama. The client sends no `num_ctx`, so Ollama picks a default from the GPU memory it detects: 4,096 tokens on every Mac with 16 GB or less, almost certainly on 24 GB Macs, and on most Linux GPUs. A 60-minute transcript is 9–14k tokens. What happens next depends on which build of the model runs:
+
+- **On the GGUF path** (Linux, any Mac on Ollama before 0.40, and Llama 3.2 3B everywhere), Ollama's source keeps the first few tokens and the last ~2,000 of the prompt, system prompt and instructions included, and returns success. So today's CLI default, Llama 3.2 3B, would analyse only the end of each interview without saying so. The Gemma 4 and Qwen 3.5 tags carry a vision projector, and on this path they get an error instead. Both outcomes are read from the source; neither has been reproduced here.
+- **On a Mac with Ollama 0.40 or later**, the Gemma 4 and Qwen 3.5 tags resolve to an MLX build, which does not truncate. Its memory use and behaviour at this input length have not been measured.
+
+Once the context is set to 32k, the evidence supports a range that starts at 16 GB, not 8 GB:
+
+- **smallest:** Qwen 3.5 4B (about 5 GB in use);
+- **balanced:** Qwen 3.5 9B (about 8–9 GB);
+- **good:** Gemma 4 12B (about 10 GB, from 24 GB);
+- **better:** Qwen 3.8 27B (about 21 GB, from 32 GB, confirmed only at 36 GB).
+
+The two Qwen picks also need the local client to switch thinking off, which it does not do today. Without that change, the fallback is Gemma 4 E2B, E4B, 12B and 26B. The 26B has an open bug: Gemma 4 falls into repetition loops under JSON schemas with long free-text fields, which is the shape of a verbatim quote. No model examined fits an 8 GB Mac with a browser and Mail open (Qwen 3.5 2B and 0.8B exist and were not assessed). Those machines, about three in ten Macs, should be pointed at a cloud provider.
+
+Today's catalogue understates memory:
+
+- Llama 3.2 3B needs about 6.2 GB at 32k, not 4 GB.
+- Gemma 4 E4B downloads 6.6 GB (GGUF) or 9.5 GB (the MLX build a current Mac pulls), not 3 GB.
+- Gemma 4 31B needs about 27 GB, more than the 26.8 GB GPU working set measured on a 32 GB Mac.
+
+None of the proposed models has been measured on the Bristlenose task itself, and that measurement decides whether any of this ships. The memory figures below are arithmetic for the GGUF builds: they describe Linux and older Macs, not the MLX builds a current Mac runs.
+
+## How the figures were obtained and labelled
+
+Every figure carries a label:
+
+- **(M) measured here, 27 Nov 2026.** This covers:
+  - Ollama registry manifests (`https://registry.ollama.ai/v2/library/<name>/manifests/<tag>`, layer sizes summed);
+  - GGUF headers read from the model blobs;
+  - Metal's `recommendedMaxWorkingSetSize` and the Ollama server log, both on one M2 Max with 32 GB running macOS 27 and Ollama 0.20.7;
+  - the idle memory footprint of the Bristlenose app and its sidecar;
+  - the Bristlenose client code.
+- **(C) computed here from measured inputs.** Chiefly the KV-cache sizes, worked out from GGUF headers.
+- **(V) vendor-reported.** The model's maker, or Ollama about Ollama.
+- **(I) independent.** A third party's measurement or evaluation.
+- **(Inf) inference.** Arithmetic or judgement on the above; not measured.
+
+Units:
+
+- Download sizes are in GB of 10⁹ bytes, as Ollama and Finder show them.
+- KV-cache sizes are computed in GiB (2³⁰ bytes) and converted at 1 GiB = 1.074 GB before being added.
+
+**Memory in use** is the sum of three parts:
+
+1. **Weights as loaded.** The model, plus the vision projector and the draft layer, both of which Ollama passes to llama-server on every load ([llm/llama_server.go](https://github.com/ollama/ollama/blob/v0.40.18/llm/llama_server.go)) (V).
+2. **The KV cache.** The cache per slot multiplied by the number of slots.
+3. **Compute buffers.** These take 0.4–1.5 GB. The low end is measured: for Llama 3.2 3B at 32k they took 281 MiB on the GPU and 112 MiB on the CPU (M).
+
+All figures assume Ollama's default f16 KV cache. Setting `OLLAMA_KV_CACHE_TYPE=q8_0` halves the KV term, but that setting is global, needs flash attention and applies only to the GGUF path ([Ollama FAQ](https://github.com/ollama/ollama/blob/main/docs/faq.mdx)) (V).
+
+**The workload:**
+
+| Input | Tokens |
+|---|---|
+| One 60-minute interview, current transcript format | 9,371 (M) |
+| The same interview, earlier transcript format | 13,621 (M) |
+| A 99-minute interview | 17,587 (M) |
+| JSON schema the client appends to the system prompt (quote extraction) | 867 (M) |
+| Quote-extraction prompt | 1,407 (M) |
+| Topic-segmentation prompt | 782 (M) |
+
+The counts use OpenAI's o200k tokeniser on the transcript files on disk, so each model's own count, and the text the stage actually sends, will differ somewhat. Only one 60-minute interview was counted, in two transcript formats. Both stages send the whole transcript in one request, with the prompt and the JSON schema, and the answer shares the same window. The server log on the test Mac shows 5,852 and 8,285 input tokens for two calls on one roughly 19-minute session, which implies up to about 4k tokens of overhead beyond the transcript (M). So a 60-minute interview needs roughly 13–18k tokens in, plus the answer, and 32k is the working figure throughout.
+
+## Most Macs and Linux GPUs get a 4k window, which a transcript overflows
+
+**Ollama picks a default context at server start from the GPU memory it detects** ([server/routes.go, v0.40.18](https://github.com/ollama/ollama/blob/v0.40.18/server/routes.go); [v0.15.5 release notes](https://github.com/ollama/ollama/releases/tag/v0.15.5)) (V):
+
+| GPU memory detected | Default context |
+|---|---|
+| Under 23 GiB | 4,096 tokens |
+| 23 GiB or more | 32,768 tokens |
+| 47 GiB or more | 262,144 tokens, clamped to the model's trained length |
+
+On a Mac, "GPU memory" is Metal's `recommendedMaxWorkingSetSize` (V, same source).
+
+**The two-thirds rule for a 32 GB Mac does not hold on the one machine measured.** Published guidance assumes the working set is two-thirds of RAM, which on a 32 GB Mac means 21.3 GiB and the 4k tier. That assumption comes from a 2023 reverse-engineering of the GPU driver ([llama.cpp discussion #2182](https://github.com/ggml-org/llama.cpp/discussions/2182)) (I) and from Apple's 2021 figure of 21 GB for a 32 GB M1 Pro or Max ([Apple Tech Talk 10580](https://developer.apple.com/videos/play/tech-talks/10580/)) (V). The measurement disagrees:
+
+- On the M2 Max with 32 GB under macOS 27, the working set is **26,800,603,136 bytes (24.96 GiB, 78% of RAM)** (M).
+- The Ollama server log reads `msg="vram-based default context" total_vram="25.0 GiB" default_num_ctx=32768`, on both 13 and 27 Nov (M).
+
+So this 32 GB Mac gets 32k because its working set is 25.0 GiB. Two caveats follow. This is one machine. And the 8, 16 and 24 GB figures below are inferences from both fractions.
+
+| Mac RAM | GPU working set | Default context | Share of Macs, Steam survey, Oct 2026 (I) |
+|---|---|---|---|
+| 8 GB | ~5.3–6.2 GiB (Inf, ⅔ to 78%) | 4k | 28.8% |
+| 16 GB | ~10.7–12.5 GiB (Inf; secondary reports conflict) | 4k | 43.2% |
+| 24 GB | ~16–18.7 GiB (Inf) | 4k, probably | 11.3% |
+| 32 GB | 24.96 GiB (M) | 32k (M) | 5.6% |
+| 36 GB | ~24–28 GiB (Inf) | 32k (Inf) | 2.0% |
+| 48 GB | 40,200 MB on an M5 Pro ([Curunir evals, Apr 2026](https://jalemieux.github.io/curunir-evals/reviews/article-draft-26b-perf-20260409)) (I) | 32k (Inf) | 2.7% |
+| 64 GB | ~42.7 GiB at ⅔ (Inf) to ~48–50 GiB (V, Apple's 2021 "48 GB"; Inf) | 32k at ⅔, 256k at ¾ (Inf) | 2.7% |
+| 128 GB | 96 GiB ([llama.cpp #2182](https://github.com/ggml-org/llama.cpp/discussions/2182)) (I) | 256k (Inf) | under 1% (">64 GB" row) |
+
+Shares are from [Steam's Mac hardware survey](https://store.steampowered.com/hwsurvey/?platform=mac). Steam also has a 20 GB row at 2.3%. Together the 8, 16, 20 and 24 GB rows are **about 86% of the Macs in the sample**, including the 28.8% at 8 GB, which get no model anyway. Steam's users are gamers, so treat this as indicative only. The 24 GB row is twice the size of the 32 GB row.
+
+### What happens when the prompt does not fit
+
+On the GGUF path (every tag on Linux, every tag on a Mac running Ollama before 0.40, and tags with no MLX build, such as `llama3.2:3b`, everywhere), a single oversized user message cannot be dropped as a whole message. Ollama's llama-server wrapper therefore cuts it at token level ([llm/llama_server.go](https://github.com/ollama/ollama/blob/v0.40.18/llm/llama_server.go)) (V):
+
+- It keeps the first `num_keep` tokens (4, plus BOS).
+- It keeps roughly the last half of the window, about 2,050 tokens of a 4k context.
+- It logs a warning and returns HTTP 200.
+
+Because the JSON grammar still applies, the answer comes back valid, schema-shaped and plausible. Ollama 0.20.7 does the same but keeps the last ~4,090 tokens ([runner.go, v0.20.7](https://github.com/ollama/ollama/blob/v0.20.7/runner/ollamarunner/runner.go)) (V).
+
+There are two exceptions:
+
+- **Models with a vision projector.** llama-server disables context shifting for them, so they get an HTTP 400 saying the prompt is longer than the context ([server/sched.go](https://github.com/ollama/ollama/blob/v0.40.18/server/sched.go)) (V).
+- **The MLX path.** Ollama does not truncate at all and treats `num_ctx` only as a sizing hint ([mlxrunner/parallel.go](https://github.com/ollama/ollama/blob/v0.40.18/mlxrunner/parallel.go)) (V).
+
+What this means for the catalogue (Inf):
+
+- **Llama 3.2 3B is a text-only GGUF** (M: one layer, no projector, and no MLX build in the registry). On a 16 or 24 GB Mac, today's CLI default would therefore analyse only the end of a 60-minute interview and report success (Inf from source; not reproduced). On current Ollama that is at most the last 9–13 minutes (2,050 tokens at 156–227 tokens a minute). The cut applies to the whole rendered prompt, so the system prompt and the schema instruction go too; in quote extraction about 16 template lines follow the transcript, leaving roughly 1,700 transcript tokens. On 0.20.7 it is up to the last 18–26 minutes.
+- **The Gemma 4 tags and the Qwen 3.5 tags up to 35B carry projectors** (M; `qwen3.5:122b` has none), so on the GGUF path they fail with a hard error (Inf from source; not reproduced). That is at least a visible failure rather than a wrong report.
+- **A Mac on Ollama 0.40 or later runs those tags on MLX** (next section), which does not truncate. Whether a 14k-token transcript then works, and in how much memory, has not been observed.
+- **This is not just a problem with long interviews.** One call on an 18-minute interview already sent 8,283 tokens (M, a separate measurement on the same Mac).
+
+### Large Macs need the context set too
+
+From 47 GiB of GPU memory (64 and 128 GB Macs, and 48 GB GPUs), the default context is 256k, clamped to the model's trained length:
+
+- **Qwen 3.8 27B at 256k** would hold about 16 GiB of f16 KV instead of 2 GiB. That puts it at roughly 36 GB in use instead of 21 GB (C).
+- **Gemma 4 31B at 256k** with a q8_0 cache measured 31.0 GiB on an M5 Max ([PR #19327](https://github.com/ollama/ollama/pull/19327)) (I).
+
+If a load runs out of memory while the context is automatic, Ollama lowers the context and retries once, and the client is not told ([server/sched.go](https://github.com/ollama/ollama/blob/v0.40.18/server/sched.go)) (V).
+
+### Ways to set the context
+
+Three mechanisms exist; this note does not choose between them.
+
+The OpenAI-compatible endpoint that the app uses has no context field. Its request type maps `max_tokens`, `temperature`, `response_format` and `reasoning_effort`, and nothing for the window ([openai/openai.go](https://github.com/ollama/ollama/blob/v0.40.18/openai/openai.go); [OpenAI compatibility docs](https://github.com/ollama/ollama/blob/v0.40.18/docs/api/openai-compatibility.mdx)) (V).
+
+1. **Ollama's native `/api/chat` with `options.num_ctx` on each request.** This is the highest-precedence setting. Native requests also accept `truncate: false`, which turns silent truncation into an error ([api/types.go](https://github.com/ollama/ollama/blob/v0.40.18/api/types.go)) (V).
+2. **A tag derived from a Modelfile with `PARAMETER num_ctx`.** This is the route Ollama's OpenAI-compatibility page itself recommends. It shares the base tag's blobs, so there is no second download (Inf from the content-addressed blob store, [server/download.go](https://github.com/ollama/ollama/blob/v0.40.18/server/download.go)).
+3. **`OLLAMA_CONTEXT_LENGTH` on the server.** The Ollama Mac app's context slider sets this ([app/server/server.go](https://github.com/ollama/ollama/blob/v0.40.18/app/server/server.go)) (V). It is global and belongs to the user, not to Bristlenose.
+
+Whichever is chosen has to size for input plus output:
+
+- A 13.6k-token transcript plus the 1.4k-token prompt plus a few thousand output tokens fits in 32k.
+- A 99-minute interview at 17.6k tokens leaves about 13k tokens for the prompt and the answer.
+
+Since v0.32.6, truncated answers report `finish_reason: "length"` ([v0.32.6 release](https://github.com/ollama/ollama/releases/tag/v0.32.6)) (V).
+
+## Thinking, Gemma's loops, two download sizes and a serial queue
+
+### Qwen, gpt-oss and Nemotron would think on every call
+
+**The local client sends no thinking switch.** The local path, `_analyze_local` in `bristlenose/llm/client.py` (around lines 1645–1661), sends the model, the messages, `max_tokens`, `temperature` and a `json_schema` response format. It sends no `reasoning_effort` and no `num_ctx` (M). The gateway route in the same file already sends `reasoning_effort: "none"` (lines 417–426) (M).
+
+**Several candidate families think by default:**
+
+- **Qwen 3.5, 3.6 and 3.8** ([Qwen3.5-4B card](https://huggingface.co/Qwen/Qwen3.5-4B); [Qwen3.8-27B card](https://huggingface.co/Qwen/Qwen3.8-27B)) (V).
+- **NVIDIA Nemotron 3.5 Lightning** ([model card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16)) (V).
+- **gpt-oss**, which cannot disable thinking at all; Ollama maps `"none"` to its lowest level ([OpenAI compatibility docs](https://github.com/ollama/ollama/blob/v0.40.18/docs/api/openai-compatibility.mdx)) (V).
+
+**Why this matters.** Thinking tokens come out of the same context window as the answer, and they take time. The seam between thinking and the grammar has also had bugs:
+
+- With thinking on, an MLX build returned invalid JSON in 8 of 10 calls, against 0 of 10 with `reasoning_effort: "none"` ([#18441](https://github.com/ollama/ollama/issues/18441), closed 20 Sep 2026) (I).
+- An earlier bug ignored the schema for Qwen 3.5 when thinking was off. It was fixed in 0.31.2, July 2026 ([#14645](https://github.com/ollama/ollama/issues/14645)) (I).
+
+**Consequence for the catalogue.**
+
+- The Qwen picks below depend on two things. The local client must send `reasoning_effort: "none"`, which Ollama maps to `think: false` ([openai.go](https://github.com/ollama/ollama/blob/v0.40.18/openai/openai.go)) (V). And Ollama must be 0.31.2 or later.
+- gpt-oss and Nemotron are left out.
+- Gemma 4 thinks only when the system prompt opens with its think token ([Gemma 4 model card](https://gemma.ai/models/gemma-4/model-card/)) (V), so it works with the client as it is. With thinking off, Gemma 12B, 26B and 31B still emit an empty thought block (V, same card). This note did not check whether Ollama strips that block on every path.
+
+### Gemma 4 loops under JSON schemas, worst at 26B and 31B
+
+**The evidence.** In google-deepmind/gemma issue #622, opened 11 Apr 2026 and still open, testers ran ten seeds per test on Ollama 0.20.5, with later reports on 0.30.8 and 0.31.1. Whenever a schema was set, the models fell into repetition loops and mostly returned invalid JSON ([gemma #622](https://github.com/google-deepmind/gemma/issues/622)) (I):
+
+- gemma4:26b returned valid JSON in 0 or 1 of 10 runs on most of the schema tests.
+- gemma4:31b looped in 10 of 10 runs on a 1,000-word answer bound to a schema.
+- With no schema, neither model looped.
+- gemma3:27b was clean on the same tests.
+- llama.cpp, running the same files, gave 10 of 10 valid answers, though a later comment (19 May) reports loops under llama.cpp too.
+- Changing the sampling settings did not help (I, same thread).
+
+Ollama's own issue for 31B, with 60–100% failure in long free-text fields, is also open ([#15502](https://github.com/ollama/ollama/issues/15502)) (I). A verbatim quote is exactly that shape: a long free-text field inside a schema.
+
+**What is not known.**
+
+- No report covers E2B, E4B or 12B, either way. One report says the GGUF 12B enforced schemas where the MLX 26B did not ([#16776](https://github.com/ollama/ollama/issues/16776)) (I).
+- Ollama moved its GGUF path to upstream llama-server in v0.30.0. Loops were still reported on 0.30.8 and 0.31.1, so the move alone did not fix them.
+- One report (6 Jul, 0.31.1, QAT build) found non-streaming calls did not loop. Bristlenose does not stream, so this matters, but it is one report.
+- August comments reproduce the loops on Google's own hosted API, which points at the model rather than Ollama (I, same thread).
+
+**A separate regression.** Ollama 0.40.18 currently returns HTTP 200 with an empty body for `json_schema` requests on Windows with ROCm ([#19918](https://github.com/ollama/ollama/issues/19918), open since 26 Nov 2026) (I).
+
+**Consequence for the catalogue.**
+
+- Gemma 4 26B and 31B stay out of the recommended range until Bristlenose has measured their loop rate on its own schemas on a current Ollama.
+- Every local response needs schema validation, loop detection and a retry, whichever model is picked.
+
+### Each tag has two builds, and a current Mac pulls the MLX one
+
+The Ollama library page lists a size range for each tag, consistent with one GGUF manifest and one MLX manifest per tag ([gemma4 tags](https://ollama.com/library/gemma4/tags); [qwen3.5 tags](https://ollama.com/library/qwen3.5/tags)) (V).
+
+| Tag | GGUF manifest (M) | `-mlx` tag (M) | Library-page range (V) | Size to quote to users |
+|---|---|---|---|---|
+| llama3.2:3b | 2.02 GB | none listed | 2.0 GB | 2.0 GB |
+| qwen3.5:4b | 3.32 GB | 3.97 GB | 3.3–4.0 GB | 4.0 GB |
+| gemma4:e2b | 4.59 GB | 7.48 GB | 4.6–7.5 GB | 7.5 GB |
+| gemma4:e4b | 6.58 GB (pulls from before the republish: 9.61 GB) | 9.46 GB | 6.6–9.5 GB | 9.5 GB on a Mac |
+| qwen3.5:9b | 6.55 GB | 8.90 GB | 6.6–7.6 GB | 8.9 GB on a Mac |
+| gemma4:12b | 8.02 GB | 7.71 GB | 7.7–8.0 GB | 8.0 GB |
+| qwen3.8:27b | 17.74 GB | 18.17 GB | 18 GB | 18.2 GB |
+| gemma4:26b | 18.73 GB | 18.33 GB | 16–19 GB | 19 GB |
+| gemma4:31b | 20.39 GB | 19.42 GB | 19–20 GB | 20.4 GB |
+| qwen3.6:35b | 22.62 GB | 23.11 GB | 23 GB | 23.1 GB |
+
+**A Mac on current Ollama receives the MLX build.** Asked with the manifest-list media type the Ollama client sends (`application/vnd.ollama.manifest.list.v2+json`), the registry returns, for `gemma4:e4b`, `gemma4:12b` and `qwen3.5:4b`, a list with two children: `runner: llamacpp, format: gguf` and `runner: mlx, format: safetensors` (M). `llama3.2:3b` returns a single GGUF manifest (M). The client prefers MLX first on macOS on Apple silicon and llama.cpp first everywhere else ([manifest/manifest.go:854–860, v0.40.18](https://github.com/ollama/ollama/blob/v0.40.18/manifest/manifest.go)) (V), and v0.40.0 made MLX the default runner there ([v0.40.0 release](https://github.com/ollama/ollama/releases/tag/v0.40.0)) (V). The list does not show the children's sizes; the explicit `-mlx` tags in the table above are used as their sizes, which is an assumption (Inf). No pull on a Mac was observed. Linux gets GGUF.
+
+**The current E4B was republished.** On the test Mac, an E4B pulled about five months ago is a single 9.61 GB layer (M). The current GGUF is 6.58 GB: a 5.49 GB model, a 0.99 GB projector and a 0.10 GB draft layer, built around 29 Sep 2026 (M). Third-party guides still quote 9.6 GB ([dev.to guide](https://dev.to/purpledoubled/how-to-run-googles-gemma-4-locally-with-ollama-all-4-model-sizes-compared-2pbh)) (I).
+
+**Consequences.**
+
+- On a Mac, user-facing copy should quote the MLX size; on Linux and in the docs' Linux column, the GGUF size.
+- An MLX manifest changes behaviour as well as size. It does not truncate, it picks its own parallelism, and it uses XGrammar for structured output. XGrammar has its own bug history: MLX ignored schemas until [#17933](https://github.com/ollama/ollama/issues/17933) closed on 22 Aug 2026 (I). The `OLLAMA_KV_CACHE_TYPE` setting is not wired into the MLX path (V, per source search of v0.40.18).
+
+### Three concurrent requests run one at a time
+
+Bristlenose's default `llm_concurrency` is 3 (M).
+
+**On the GGUF path, Ollama serves one request at a time.** With `OLLAMA_NUM_PARALLEL` unset, Ollama uses one slot ([server/sched.go](https://github.com/ollama/ollama/blob/v0.40.18/server/sched.go); [FAQ](https://github.com/ollama/ollama/blob/main/docs/faq.mdx)) (V). The server log on the test Mac confirms `n_slots = 1` (M). So:
+
+- Requests two and three wait in the queue.
+- Wall time is roughly three times one request.
+- The client's timeouts have to allow for the wait (Inf).
+
+**Raising parallelism multiplies the KV cache.** Setting the variable to 3 starts llama-server with three times `num_ctx`, which triples the KV cache (V, same sources). Gemma's sliding-window layers scale with it ([PR #19327](https://github.com/ollama/ollama/pull/19327)) (V).
+
+**On MLX, parallelism depends on free memory.** Since v0.40.17, with the variable unset, Ollama picks 8, 4, 2 or 1 slots from the memory free after reserving 4 GiB ([mlxrunner/parallel.go](https://github.com/ollama/ollama/blob/v0.40.18/mlxrunner/parallel.go)) (V). So memory in use on MLX varies with the machine and with whatever else is open (Inf).
+
+The tables below assume one slot and show three slots where that changes the tier.
+
+## The KV cache, not the weights, separates the candidates at 32k
+
+### Checking the arithmetic against the test Mac
+
+**Llama 3.2 3B.** The method was checked against the one model loaded at 32k on the test Mac. The server there runs with two non-default settings, `OLLAMA_FLASH_ATTENTION=1` and `OLLAMA_KV_CACHE_TYPE=q8_0`. Its log shows (M):
+
+| Buffer | Size |
+|---|---|
+| Model, on the GPU | 1,918 MiB |
+| Model, on the CPU | 308 MiB |
+| KV cache (q8_0) | 1,904 MiB |
+| Compute | 393 MiB |
+| **Total** | **about 4.7 GB** |
+
+The f16 KV computed from the GGUF header is 3.5 GiB (C). On Ollama's default f16 cache that gives about 6.2 GB from download sizes, or about 6.7 GB from the measured buffers (C). `ollama ps` reported 5.6 GB for the same model at 32k (M). That was on the q8_0 server, where the logged buffers sum to about 4.7 GB, so `ollama ps` reads about 0.9 GB above the buffers, and the gap is unexplained. What the log does validate is the KV term: 1,904 MiB measured at q8_0 against about 1,792 MiB predicted. Read `ollama ps` on real machines before quoting totals.
+
+**Gemma correction.** A first pass sized Gemma's sliding-window layers at the window length, which gave 0.82 GiB for 26B and 3.28 GiB for 31B. Ollama in fact allocates the window plus a 2,048-token batch, padded, for each sliding layer. This method reproduces the measured figures in [PR #19327](https://github.com/ollama/ollama/pull/19327) (I):
+
+- E2B: 111.56 MiB allocated at 32k with q8_0.
+- 31B: 31.0 GiB measured, against 30.4 predicted, at 256k.
+
+The corrected f16 figures per slot at 32k are (C):
+
+| Gemma 4 size | KV per slot at 32k, f16 |
+|---|---|
+| E2B | 0.2 GiB |
+| E4B | 0.6 GiB |
+| 12B | 1.4 GiB |
+| 26B | 1.2 GiB |
+| 31B | 4.8 GiB |
+
+**Qwen caveat: the arithmetic may run low.** An independent benchmark on a 16 GB Linux card ran Ollama 0.17.7 at 19k context ([glukhov.org](https://glukhov.org/llm-performance/benchmarks/choosing-best-llm-for-ollama-on-16gb-vram-gpu/)) (I). For two other models the same arithmetic matches within 0.4 GB; for Qwen 3.5 it does not:
+
+| Model | Reported at 19k (I) | Same arithmetic (C) |
+|---|---|---|
+| qwen3.5:9b | 9.3 GB | about 7.7 GB |
+| qwen3.5:27b | 24 GB | about 19.8 GB |
+| qwen3.5:35b | 27 GB | about 23.5 GB |
+| mistral-small3.2:24b | 19 GB | about 19.4 GB |
+| ministral-3:14b | 13 GB | about 13.0 GB |
+
+So the Qwen-family figures here may be 1.5–4 GB low. That benchmark predates Ollama's move to llama-server, so the gap needs re-measuring (Inf).
+
+### Memory per model
+
+Memory in use at 32k context, f16 KV, one slot unless stated. These are GGUF figures: they hold on Linux and for Macs on Ollama before 0.40. A current Mac runs the Gemma 4 and Qwen 3.5 tags as MLX builds, whose weights are up to 2.9 GB larger at the small end (E2B 7.5 against 4.6 GB, E4B 9.5 against 6.6, Qwen 3.5 9B 8.9 against 6.6) and whose KV and parallelism policy was not measured, so Mac fits below carry that uncertainty:
+
+| Model (tag) | Weights, GGUF download (M) | KV per slot at 32k (C) | Compute (Inf) | **In use at 32k (C)** | Three slots (C) | Licence |
+|---|---|---|---|---|---|---|
+| llama3.2:3b | 2.02 GB | 3.50 GiB = 3.76 GB | 0.4 GB | **6.2 GB** (6.7 from measured buffers) | 13.7 GB | Llama 3.2 Community Licence ([card](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct)) (V) |
+| qwen3.5:4b | 3.32 GB | 1.00 GiB = 1.07 GB | 0.4–0.8 | **4.8–5.2 GB** (perhaps ~1.5 more) | 6.9–7.3 GB | Apache 2.0 (M, GGUF header) |
+| gemma4:e2b | 4.59 GB | 0.2 GiB = 0.21 GB | 0.4–0.8 | **5.2–5.6 GB** | 5.6–6.0 GB | Apache 2.0 (M) |
+| gemma4:e4b | 6.58 GB | 0.6 GiB = 0.64 GB | 0.4–0.8 | **7.6–8.0 GB** | 8.9–9.3 GB | Apache 2.0 (M) |
+| qwen3.5:9b | 6.55 GB | 1.00 GiB = 1.07 GB | 0.5–1.0 | **8.1–8.6 GB** (9.3 reported at 19k, I) | 10.3–10.8 GB | Apache 2.0 (M) |
+| gemma4:12b-it-qat | 7.15 GB | 1.4 GiB = 1.50 GB | 0.5–1.0 | **9.2–9.7 GB** | 12.3–12.8 GB | Apache 2.0 (M) |
+| gemma4:12b | 8.02 GB | 1.4 GiB = 1.50 GB | 0.5–1.0 | **10.0–10.5 GB** | 13.1–13.6 GB | Apache 2.0 (M) |
+| gpt-oss:20b | 13.79 GB | ~0.8 GiB = 0.86 GB | 0.5–1.0 | **15.2–15.7 GB** (14 reported at 19k, I) | 16.9–17.4 GB | Apache 2.0 ([card](https://huggingface.co/openai/gpt-oss-20b)) (V) |
+| gemma4:26b-a4b-it-qat | 15.63 GB | 1.2 GiB = 1.29 GB | 0.8–1.5 | **17.7–18.4 GB** | 20.3–21.0 GB | Apache 2.0 (M) |
+| gemma4:26b | 18.73 GB | 1.2 GiB = 1.29 GB | 0.8–1.5 | **20.8–21.5 GB** | 23.4–24.1 GB | Apache 2.0 (M) |
+| qwen3.8:27b | 17.74 GB | 2.00 GiB = 2.15 GB | 1.0–1.5 | **20.9–21.4 GB** (perhaps up to ~25) | 25.2–25.7 GB | Apache 2.0 (M) |
+| qwen3.6:35b (35B, 3B active) | 22.62 GB | 0.62 GiB = 0.67 GB | 1.0–1.5 | **24.3–24.8 GB** | 25.6–26.1 GB | Apache 2.0 ([card](https://huggingface.co/Qwen/Qwen3.6-35B-A3B)) (V) |
+| nemotron-3-nano (30B, 3B active) | 24.27 GB | 0.19 GiB = 0.20 GB | 1.0 | **~25.5 GB** | ~25.9 GB | NVIDIA Open Model License (M) |
+| gemma4:31b-it-qat | 18.85 GB | 4.8 GiB = 5.15 GB | 1.0–1.5 | **25.0–25.5 GB** | 35.4–35.9 GB | Apache 2.0 (M) |
+| gemma4:31b | 20.39 GB | 4.8 GiB = 5.15 GB | 1.0–1.5 | **26.5–27.0 GB** | 37.0–37.5 GB | Apache 2.0 (M) |
+| qwen3.8:27b-q8_0 | 30 GB (V, library page) | 2.00 GiB | 1.0–1.5 | **~33–34 GB** | ~37–38 GB | Apache 2.0 |
+| qwen3.6:35b-a3b-q8_0 | 39 GB (V, library page) | 0.62 GiB | 1.0–1.5 | **~41 GB** | ~42 GB | Apache 2.0 |
+| qwen3.5:122b (122B, 10B active) | 81 GB (V, library page) | not computed | ~1.5 | **~84–86 GB** (Inf) | — | Apache 2.0 (V, family) |
+
+Two facts come out of the table:
+
+1. **Llama 3.2 3B is not the smallest model at the needed context.** Its classic dense KV cache makes it heavier at 32k than Qwen 3.5 4B and Gemma 4 E2B. Qwen's hybrid attention puts KV on one layer in four; Gemma's sliding-window layers are small.
+2. **Gemma 4 31B's large KV is what pushes it past a 32 GB Mac.**
+
+On MLX manifests, both the weight size and the KV policy may differ, and no MLX KV measurement was found.
+
+### Memory left for the model on each Mac
+
+What a Mac can give the model is its RAM minus the everyday load, and never more than the GPU working set. The model's weights on the GPU are wired memory, which macOS cannot compress or swap ([Eclectic Light](https://eclecticlight.co/2022/08/13/activity-monitor-meanings-and-misleadings/)) (I). Everything else is what gets squeezed.
+
+The everyday load is an estimate (Inf) built from these parts:
+
+- **macOS:** about 3.5–6 GB. These are forum anecdotes ([MacRumors forums](https://forums.macrumors.com/threads/tahoe-using-too-much-memory-doing-nothing-is-it-okay.2481387/)) (I), and no controlled measurement was found.
+- **A browser with 10–20 tabs:** about 3–8 GB. A browser vendor measured 8.3 GB for Safari with 20 tabs on a 16 GB Mac, and the footprint grows with free memory ([Sigma browser test](https://www.sigmabrowser.com/blog/browser-ram-benchmark-20-tabs)) (V).
+- **Mail:** 0.3–0.5 GB. No measurement was found.
+- **Bristlenose app and sidecar:** 0.4 GB idle (M). The peak during an analysis was not measured.
+
+| Mac RAM | Everyday load (Inf) | Left for the model (Inf) | GPU working set | Binding limit |
+|---|---|---|---|---|
+| 8 GB | ~6.5 GB plus 2–3 GB swap under heavy use on an 8 GB MacBook Neo ([MacRumors review](https://www.macrumors.com/2026/03/27/macbook-neo-review/)) (I) | ~0–2 GB | ~5.7–6.7 GB (Inf) | RAM |
+| 16 GB | 8–10 GB | ~6–8 GB | ~11.5–13.4 GB (Inf) | RAM |
+| 24 GB | 8–10 GB | ~14–16 GB | ~17.2–20.1 GB (Inf) | RAM |
+| 32 GB | 8–10 GB | ~22–24 GB | 26.8 GB (M) | RAM |
+| 36 GB | 8–10 GB | ~26–28 GB | ~25.8–30.1 GB (Inf) | about equal |
+| 48 GB | 9–11 GB | ~37–39 GB | 40.2 GB (I) | about equal |
+| 64 GB | 9–11 GB | ~53–55 GB | ~51.5–53.7 GB (Inf) | GPU |
+| 128 GB | 10–12 GB | ~116–118 GB | 103 GB (96 GiB, I) | GPU |
+
+**On a 32 GB Mac the measurement changes the limit.** The two-thirds rule would give a 32 GB Mac 18–21 GB, with the GPU limit binding. The measured 26.8 GB working set makes RAM the binding limit, at about 22–24 GB.
+
+## The Mac picker: four models from 16 GB, nothing at 8 GB
+
+### The proposed range
+
+The proposal states minimum and recommended RAM as values, not buckets. That way 24 and 36 GB Macs fall where their memory puts them instead of being rounded down to 16 and 32 GB. The often-quoted ladder of 8, 16, 32, 48, 64 and 128 GB skips both, yet 24 GB alone is twice the 32 GB share.
+
+| Slot | Model (tag) | Download to quote | In use at 32k | Minimum Mac | Recommended from | Condition |
+|---|---|---|---|---|---|---|
+| Smallest | qwen3.5:4b | 4.0 GB | ~5 GB (4.8–5.2; perhaps ~6.5) | 16 GB | 16 GB | client sends the thinking switch |
+| Balanced | qwen3.5:9b | 8.9 GB | ~8–9.5 GB (GGUF; MLX weights ~2.3 GB larger) | 16 GB, light browser only | 24 GB | client sends the thinking switch |
+| Good | gemma4:12b | 8.0 GB | ~10–10.5 GB | 24 GB (16 GB tight) | 24 GB | none beyond the context fix |
+| Better | qwen3.8:27b | 18.2 GB | ~21 GB (perhaps ~25) | 32 GB, only if `ollama ps` confirms ≤ 23 GB | 36 GB | client sends the thinking switch |
+
+**If the thinking switch is not added,** the range falls back to Gemma 4:
+
+| Slot | Fallback | Download | In use at 32k |
+|---|---|---|---|
+| Smallest | gemma4:e2b | 7.5 GB | ~5.4 GB (GGUF; MLX weights ~2.9 GB larger) |
+| Balanced | gemma4:e4b | 9.5 GB | ~7.8 GB (GGUF; MLX weights ~2.9 GB larger) |
+| Good | gemma4:12b | 8.0 GB | ~10.3 GB |
+| Better | gemma4:26b | 19 GB | ~21 GB |
+
+The 26B fallback is conditional on Bristlenose's own measurement of its loop rate, and the smallest fallback is weak at long context (see the quality notes below). The smaller QAT tags cut 0.9–3.1 GB from 12B, 26B and 31B: `gemma4:12b-it-qat` saves 0.9 GB and `gemma4:26b-a4b-it-qat` saves 3.1 GB. One independent test found no loss on JSON or 12k-token recall at 12B ([3h4x](https://3h4x.github.io/tech/2026/06/08/gemma4-qat-vs-non-qat)) (I).
+
+### What to offer on each Mac
+
+| Mac RAM | Offer | Why |
+|---|---|---|
+| 8 GB | Nothing; point to a cloud provider (Claude, ChatGPT, Azure OpenAI or Gemini) | The lightest model that holds a transcript needs ~5 GB of wired memory. With a browser and Mail open, that leaves under 3 GB for everything else on a machine that already swaps (Inf). |
+| 16 GB | Smallest. Balanced or Good only with a light browser. | Smallest fits the ~6–8 GB budget. The 8–10.5 GB models exceed it, and macOS would compress the other apps to make room (Inf). |
+| 24 GB | Good. Balanced is also comfortable. | ~10.3 GB in use against a ~14–16 GB budget and a ~17–20 GB GPU working set. Three slots of Good (~13.4 GB) still fit (Inf). |
+| 32 GB | Better, if a real load confirms ≤ 23 GB. Otherwise Good. | ~21 GB computed against a ~22–24 GB budget. If the Qwen overshoot holds, it is over (Inf). |
+| 36 GB | Better | ~5–7 GB of slack (Inf) |
+| 48 GB | Better, with room for three slots (~25.5 GB) | gemma4:31b (~27 GB) fits, if its loop rate measures clean. qwen3.6:35b (~24.5 GB, 3B active) is the faster alternative (Inf). |
+| 64 GB | Better, or a Q8 build: qwen3.8:27b-q8_0 (~33–34 GB) or qwen3.6:35b-a3b-q8_0 (~41 GB) | `num_ctx` must be set, or the 256k default applies (Inf) |
+| 128 GB | As 64 GB. qwen3.5:122b (81 GB download, ~84–86 GB in use, Inf) is the only larger candidate. | Under 1% of Macs. gpt-oss:120b is left out for thinking. |
+
+### Against today's catalogue
+
+| Today's entry | What the app says | Measured or computed | Verdict |
+|---|---|---|---|
+| Llama 3.2 3B (also the CLI default) | 2 GB download, min 4 GB | 2.02 GB (M); 6.2–6.7 GB at 32k (C); text-only, so silently truncated at the 4k default | The download is right. "Min 4 GB" holds only at a context too small to hold a transcript. Retire it as the default. |
+| Gemma 4 E4B | 3 GB, min 8 GB, recommended ≥ 15 GB | 6.58 GB GGUF, 9.46 GB MLX, 9.61 GB for older pulls (M); 7.6–8.0 GB in use (C) | No manifest is 3 GB. Min 8 GB is not workable. It becomes the balanced fallback. |
+| Gemma 4 26B | 16 GB, min 24 GB, recommended ≥ 35 GB | 18.73 GB GGUF; 16 GB is the lower end of the tag page's range (V); 20.8–21.5 GB in use (C) | Min 24 GB is too low; the floor is 32 GB. Open loop bug. |
+| Gemma 4 31B | 20 GB, min 32 GB, recommended ≥ 47 GB | 20.39 GB GGUF, 19.42 GB MLX (M); 26.5–27.0 GB in use, ~37 GB with three slots (C) | On a 32 GB Mac it exceeds both the RAM budget and the measured 26.8 GB working set. The realistic minimum is 48 GB. Open loop bug, worst of the family. |
+
+**The documentation table has the same problems.** It reads "Under 16 GB → Llama 3.2 3B ~2 GB; 16–32 GB → Gemma 4 E4B ~3 GB; 36–47 GB → Gemma 4 26B ~16 GB; 48 GB+ → Gemma 4 31B ~20 GB":
+
+- Its smallest row recommends a model that truncates.
+- It gives E4B a size no manifest has.
+- It puts 32 GB Macs on E4B, although they could run a model of about 21 GB.
+
+### Quality notes
+
+No proposed model has a published result on this task: verbatim quotes, topic boundaries and themes over a 10–15k-token transcript, returned under a JSON schema. The order within the range rests on size and vendor numbers, which are not directly comparable across families. Gemma publishes MRCR and Tau2 but no IFEval; Qwen publishes IFEval, IFBench and AA-LCR but no MRCR.
+
+**Qwen 3.5 4B (smallest).** Vendor scores ([card](https://huggingface.co/Qwen/Qwen3.5-4B)) (V):
+
+| Benchmark | Qwen 3.5 4B |
+|---|---|
+| IFEval | 89.8 |
+| IFBench | 59.2 |
+| LongBench v2 | 50.0 |
+| AA-LCR | 57.0 |
+
+Llama 3.2 3B's IFEval is 77.4 ([card](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct)) (V). No independent figure exists at this size. Two cautions apply to this slot:
+
+- **The cost of forcing a format is largest at the small end.** Asking for a format degrades open models ([Format Tax, Apr 2026](https://arxiv.org/abs/2604.03616)) (I). Below 3B, hard schema decoding took validity from 61.5% to 100% but cut accuracy from 19.7% to 11.0% ([Constraint Tax, May 2026](https://arxiv.org/abs/2605.26128)) (I).
+- **Long inputs are hard for small models.** Older small models lost most of their non-literal retrieval accuracy by 16k tokens. Llama 3.1 8B scored 22.6% at 16K against a base of 76.7 ([NoLiMa](https://arxiv.org/html/2502.05167v3)) (I).
+
+Expect missed quotes from the middle of a transcript rather than outright failure (Inf).
+
+**Qwen 3.5 9B (balanced).** Vendor scores ([card](https://huggingface.co/Qwen/Qwen3.5-9B)) (V):
+
+| Benchmark | Qwen 3.5 9B |
+|---|---|
+| IFEval | 91.5 |
+| IFBench | 64.5 |
+| LongBench v2 | 55.2 |
+| AA-LCR | 63.0 |
+
+Qwen's own table puts gpt-oss-20B at an AA-LCR of 30.7 (V, a vendor reporting a competitor). Prompt reading dominates the time:
+
+- A 16 GB M2 manages about 110 tokens a second of prompt processing under MLX ([oMLX community benchmark, via search summary](https://omlx.ai/benchmarks/g0iz2zz0)) (I).
+- At that rate, reading one transcript takes about two minutes (Inf).
+
+**Gemma 4 12B (good).** Vendor scores ([model card](https://gemma.ai/models/gemma-4/model-card/)) (V):
+
+| Benchmark | 12B | 26B | E4B |
+|---|---|---|---|
+| MRCR v2 8-needle at 128k | 43.4% | 44.1% | 25.4% |
+| Tau2 | 69.0 | 68.2 | — |
+
+The independent evidence is one practitioner test on Apple silicon at 32k ([3h4x](https://3h4x.github.io/tech/2026/06/08/gemma4-qat-vs-non-qat)) (I):
+
+- QAT and Q4_K_M both passed strict JSON and recall from a ~12k-token log.
+- Each scored 4.5 out of 6.
+- The QAT build decoded 27% faster.
+
+No loop reports exist at this size, but nobody has tested it either. It needs no client change beyond the context fix.
+
+**Qwen 3.8 27B (better).** It is the newest dense Qwen (August 2026), with a vendor IFBench of 79.5 ([card](https://huggingface.co/Qwen/Qwen3.8-27B)) (V). On Artificial Analysis's index, its predecessor Qwen 3.5 27B scores 37 non-reasoning against Gemma 4 31B's 32. That is the best independent result without thinking in the sub-32B group ([Artificial Analysis, Apr 2026](https://artificialanalysis.ai/articles/sub-32b-open-weights)) (I).
+
+It is a dense model, which limits speed on base chips:
+
+- A base M5 or M6 with 153–170 GB/s of bandwidth would decode ~17 GB of weights at under ~10 tokens a second (Inf: bandwidth divided by the bytes read per token; [MacBook Pro specs](https://www.apple.com/macbook-pro/specs/)).
+- That means a few minutes per call.
+
+From 36 GB, qwen3.6:35b, with 3B active parameters, is the speed option. It runs at about 60–110 tokens a second on an M4 Max under MLX ([oMLX community benchmark](https://omlx.ai/benchmarks/fqabp6rx)) (I, secondary).
+
+**Gemma 4 26B and 31B.** The 31B is the strongest long-context model in either family, at 66.4% on MRCR (V). Both carry the loop bug, and the 31B also has the largest KV cache.
+
+**Models left out.**
+
+- **gpt-oss:20b.** It cannot stop thinking. An independent write-up documents its schema failures under Ollama ([glukhov.org](https://www.glukhov.org/llm-performance/ollama/ollama-gpt-oss-structured-output-issues/)) (I).
+- **Nemotron.** It thinks by default, and its NVIDIA licences need reading first.
+
+**Applies to every pick.**
+
+- **4-bit is acceptable at this input length.** It is usually fine at short context; large losses were measured only above 64k tokens ([Mekala et al., 2025](https://arxiv.org/abs/2505.20276)) (I).
+- **Low-bit models invent quotes.** A 2026 study of interview transcripts found low-bit models hallucinated more ([Adeseye et al., 2026](https://arxiv.org/abs/2605.20193)) (I). So a verbatim match of each quote against the transcript matters most at Q4 and below.
+
+## One documentation table for macOS and Linux
+
+**On Linux with a discrete NVIDIA or AMD GPU, the tier is the card's VRAM.** The model is not sharing that memory with the desktop and the browser, so a 16 GB card goes further than a 16 GB Mac. System RAM only decides how far a model can spill out of the card, and spilling is slow. In the same independent test, both models ran at a 43/57 CPU/GPU split ([glukhov.org](https://glukhov.org/llm-performance/benchmarks/choosing-best-llm-for-ollama-on-16gb-vram-gpu/)) (I):
+
+| Model | Type | Generation speed |
+|---|---|---|
+| qwen3.5:27b | dense | 6.5 tokens a second |
+| qwen3.5:35b | mixture-of-experts | 20.7 tokens a second |
+
+Ollama cannot move a mixture-of-experts model's experts to the CPU. The feature request has been open since August 2025 ([#11772](https://github.com/ollama/ollama/issues/11772)) (I). Linux always pulls GGUF, so the GGUF size is the download.
+
+**Cards under 23 GiB get the 4k default**, so the context must be set on most Linux machines too. That covers the 8, 12 and 16 GB cards, about 80% of the GPUs in Steam's October 2026 survey ([Steam](https://store.steampowered.com/hwsurvey/Steam-Hardware-Software-Survey-Welcome-to-Steam)) (I). A 24 GB card probably reports enough for 32k (Inf).
+
+| Range | Model | Download (Linux GGUF; Mac MLX) | Linux with NVIDIA or AMD GPU (VRAM) | macOS (unified memory) | Unified-memory x86 (memory given to the GPU) or CPU-only (RAM) |
+|---|---|---|---|---|---|
+| Smallest | qwen3.5:4b | 3.3 GB (Mac 4.0) | 8 GB card | 16 GB | Strix Halo: 8 GB share. CPU-only: 16 GB RAM, slow. |
+| Balanced | qwen3.5:9b | 6.6 GB (Mac 8.9) | 12 GB card | 24 GB (16 GB tight) | 12–16 GB share |
+| Good | gemma4:12b | 8.0 GB | 16 GB card (12 GB tight) | 24 GB | 16 GB share |
+| Better | qwen3.8:27b | 17.7 GB (Mac 18.2) | 24 GB card (tight); 32 GB card comfortable | 32 GB (tight), 36 GB | 32 GB share |
+| Better, faster alternative (3B active) | qwen3.6:35b | 22.6 GB (Mac 23.1) | 24 GB card with some spill | 36–48 GB | 32–64 GB share |
+| Not usable | — | — | under 8 GB | 8 GB | 8 GB RAM, CPU-only |
+
+**If the thinking switch is not added,** the Gemma column applies on every platform: gemma4:e2b, e4b, 12b and 26b, with their GGUF sizes (4.6, 6.6, 8.0 and 18.7 GB) and memory in use (~5.4, ~7.8, ~10.3 and ~21 GB). The same platform minimums hold, except that the 26B needs a 24 GB card.
+
+**CPU-only machines are slow.** On recent laptop and mini-PC chips, Ollama generated 9–24 tokens a second with Llama 3.2 3B on the CPU ([geerlingguy/ai-benchmarks](https://github.com/geerlingguy/ai-benchmarks)) (I). No measured CPU prompt-processing figure was found, so the time to read a 14k-token transcript is unknown. It is plausibly several minutes (Inf). Three concurrent requests would compete for the same memory bandwidth.
+
+**Strix Halo (Ryzen AI Max+) behaves like a Mac with a dial.** It is on Ollama's ROCm list ([Ollama GPU docs](https://docs.ollama.com/gpu)) (V). Its tier is the memory given to the GPU in the BIOS, not the installed total. AMD ran 64 GB of a 128 GB machine as GPU memory ([AMD ROCm blog, May 2026](https://rocm.blogs.amd.com/artificial-intelligence/ryzen-uma-llm/README.html)) (V):
+
+- Qwen 3.5 35B-A3B ran 100% on the GPU, at 154.5 tokens a second of prompt processing and 42 a second of generation.
+- The 122B spilled 39% to the CPU and fell to 8.6 tokens a second.
+
+At 154.5 tokens a second, a 14k-token transcript takes about 90 seconds to read before the first output token (Inf).
+
+**A Linux desktop leaves more memory free than macOS.** It idles at about 0.9 GB with GNOME and 1.2 GB with KDE Plasma ([computingforgeeks, Oct 2026](https://computingforgeeks.com/desktop-environment-ram-usage/)) (I), plus the browser. That matters for CPU-only and unified-memory machines, where system RAM is the whole budget.
+
+**Drivers set the floor** ([Ollama GPU docs](https://docs.ollama.com/gpu)) (V):
+
+- NVIDIA needs driver 550 or newer, or 570 for compute capability 5.0–6.2.
+- AMD needs ROCm 7 on a listed card.
+- Other GPUs go through Vulkan, which estimates VRAM unless Ollama has `cap_perfmon`.
+
+## Conclusion
+
+**The catalogue has been quoting download sizes at a context that cannot hold the work.** The unit that decides fit is memory in use at the needed context, and it reorders the models: the KV-cache design matters more than the parameter count. That is why a 3B dense model is heavier at 32k than a 4B hybrid. It is also why Gemma's 31B, not its 26B, is the one that misses a 32 GB Mac. Setting the context explicitly does two jobs. It lets the work fit, and it turns a silent wrong answer into either a correct answer or a visible error. It is needed at the top of the range too, where the 256k default inflates memory instead of starving it.
+
+**The practical floor for local analysis is a 16 GB Mac or an 8 GB card.** Below that sit roughly three in ten Macs in the one available sample, and those users are cloud users.
+
+**The order of work follows from these dependencies:**
+
+1. The context setting, the thinking switch and response validation, all in the client.
+2. A Bristlenose-specific measurement of each candidate.
+3. Only then, the picker.
+
+Without step 2, choosing between the Gemma and Qwen lines would be choosing between one family's documented failure (the loop bug) and another family's undocumented one.
+
+## What must be verified before shipping
+
+1. **The default context on small Macs, on a current Ollama (0.40.18 or later).** On a 16 GB Mac and a 24 GB Mac, read the `vram-based default context` log line and Metal's `recommendedMaxWorkingSetSize`, and confirm whether those machines get 4k. Do the same on one 64 GB Mac to confirm the 256k default.
+2. **What a Mac actually pulls, and what it uses.** On Apple silicon under 0.40.x, pull each proposed tag and record whether the GGUF or the MLX manifest arrives, and its size. Then load it at 32k and read `ollama ps`, with f16 KV and one slot, and again with MLX's automatic parallelism.
+3. **Overflow, before and after the fix.** Without the fix, reproduce the silent truncation (llama3.2:3b) and the HTTP 400 (gemma4) on a 4k machine. With the fix, confirm a 13.6k-token transcript arrives whole, with no "truncating input prompt" warning in the server log.
+4. **The thinking switch.** Confirm that `reasoning_effort: "none"` on `/v1` turns thinking off for qwen3.5:4b, qwen3.5:9b and qwen3.8:27b under `json_schema`, with valid JSON and no reasoning tokens.
+5. **Bristlenose quality for each proposed model, on real transcripts.** Measure:
+   - the verbatim-match rate of quotes;
+   - coverage across the whole interview;
+   - the quality of topic boundaries and themes;
+   - schema validity;
+   - the loop rate.
+
+   A separate measurement of Llama 3.2 3B and Gemma 4 E4B on the same M2 Max with 32 GB is in progress, and its results are not in this note. Extend it to qwen3.5:4b, qwen3.5:9b, gemma4:12b, qwen3.8:27b and gemma4:26b.
+6. **Qwen memory.** Re-measure Qwen 3.5-family memory at 32k on an Ollama release from the llama-server era, to settle the 1.5–4 GB gap. That figure decides whether Better starts at 32 or 36 GB.
+7. **Time and app memory.** Measure the time per session on a base-chip 16 GB Mac and a base-chip 32 GB Mac, and the memory the app and sidecar use at the peak of an analysis.
+8. **Linux.** Load the Smallest, Good and Better picks on one 16 GB NVIDIA card and one 24 GB card, and read the default context and `ollama ps` for each.

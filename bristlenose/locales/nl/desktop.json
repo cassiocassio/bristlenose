@@ -1433,6 +1433,8 @@
     "restore": "Aankopen herstellen",
     "manage": "Abonnement beheren…",
     "notFound": "Geen abonnement gevonden voor dit Apple-account.",
+    "stillUnavailable": "De App Store is nog steeds niet bereikbaar. Controleer je internetverbinding en probeer het dan opnieuw.",
+    "restoreFailed": "Kan de App Store niet bereiken om je aankopen te herstellen. Probeer het zo nog eens.",
     "pending": "Wachten op goedkeuring. Klik na goedkeuring opnieuw op Analyseer.",
     "failed": "De aankoop is niet gelukt. Probeer het zo nog eens.",
     "unavailable": "De App Store is nu niet beschikbaar. Probeer het zo nog eens.",

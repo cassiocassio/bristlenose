@@ -1433,6 +1433,8 @@
     "restore": "Återställ köp",
     "manage": "Hantera prenumeration…",
     "notFound": "Ingen prenumeration hittades för det här Apple-kontot.",
+    "stillUnavailable": "Det går fortfarande inte att nå App Store. Kontrollera internetanslutningen och försök sedan igen.",
+    "restoreFailed": "Det gick inte att nå App Store för att återställa dina köp. Försök igen om en stund.",
     "pending": "Väntar på godkännande. Klicka på Analysera igen när köpet har godkänts.",
     "failed": "Köpet gick inte igenom. Försök igen om en stund.",
     "unavailable": "App Store är inte tillgänglig just nu. Försök igen om en stund.",

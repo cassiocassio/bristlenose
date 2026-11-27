@@ -1381,6 +1381,8 @@
     "restore": "구입 복원",
     "manage": "구독 관리…",
     "notFound": "이 Apple 계정에서 구독을 찾을 수 없습니다.",
+    "stillUnavailable": "아직 App Store에 연결할 수 없습니다. 인터넷 연결을 확인한 후 다시 시도하세요.",
+    "restoreFailed": "App Store에 연결할 수 없어 구입을 복원하지 못했습니다. 잠시 후 다시 시도하세요.",
     "pending": "승인을 기다리는 중입니다. 승인되면 분석을 다시 누르세요.",
     "failed": "구입을 완료하지 못했습니다. 잠시 후 다시 시도하세요.",
     "unavailable": "지금은 App Store를 사용할 수 없습니다. 잠시 후 다시 시도하세요.",

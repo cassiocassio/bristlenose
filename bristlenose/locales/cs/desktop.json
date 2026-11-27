@@ -1516,6 +1516,8 @@
     "restore": "Obnovit nákupy",
     "manage": "Spravovat předplatné…",
     "notFound": "Pro tento účet Apple nebylo nalezeno žádné předplatné.",
+    "stillUnavailable": "App Store je stále nedostupný. Zkontrolujte připojení k internetu a zkuste to znovu.",
+    "restoreFailed": "Nákupy nelze obnovit, protože se nepodařilo spojit s App Storem. Zkuste to za chvíli znovu.",
     "pending": "Čeká se na schválení. Po schválení znovu klikněte na Analyzovat.",
     "failed": "Nákup se nepodařilo dokončit. Zkuste to za chvíli znovu.",
     "unavailable": "App Store teď není dostupný. Zkuste to za chvíli znovu.",

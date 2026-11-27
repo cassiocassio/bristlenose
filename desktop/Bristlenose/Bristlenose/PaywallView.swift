@@ -56,6 +56,34 @@ struct PaywallView: View {
         }
     }
 
+    /// What the message line says after Try Again or Restore Purchases
+    /// (owner, 27 Nov 2026). A press that still failed used to change nothing
+    /// on the unavailable face, and a restore that never reached the store
+    /// said "No subscription found" (review, 25 Nov 2026).
+    enum Message {
+        enum Press: Equatable { case tryAgain, restore(reached: Bool) }
+
+        /// The key to show, or nil for no message. A subscription closes the
+        /// sheet, so it never has one.
+        static func after(_ press: Press, state: SubscriptionAccess.State,
+                          productLoaded: Bool) -> String? {
+            if case .subscribed = state { return nil }
+            switch press {
+            case .tryAgain:
+                return Face.of(state, productLoaded: productLoaded) == .unavailable
+                    ? "desktop.subscription.stillUnavailable" : nil
+            case .restore(let reached):
+                // "Not found" only when the store answered and found nothing.
+                return reached ? "desktop.subscription.notFound" : "desktop.subscription.restoreFailed"
+            }
+        }
+    }
+
+    private func show(after press: Message.Press) {
+        message = Message.after(press, state: store.state, productLoaded: store.product != nil)
+            .map { i18n.t($0) }
+    }
+
     var body: some View {
         Group {
             switch Face.of(store.state, productLoaded: store.product != nil) {
@@ -69,6 +97,13 @@ struct PaywallView: View {
         .onChange(of: store.state) { _, new in
             if case .subscribed = new { onSubscribed() }
         }
+        // A face that changes by itself (a refresh on activation, or from
+        // `Transaction.updates`) drops the other face's message: "Still can't
+        // reach the App Store" must not sit above a working Subscribe. A
+        // press's own change keeps it: `show` runs before `working` clears.
+        .onChange(of: Face.of(store.state, productLoaded: store.product != nil)) { _, _ in
+            if !working { message = nil }
+        }
     }
 
     /// The store cannot be reached and nothing on record says this person has
@@ -79,6 +114,10 @@ struct PaywallView: View {
             Text(i18n.t("desktop.subscription.unavailable"))
                 .font(.title3.bold())
                 .fixedSize(horizontal: false, vertical: true)
+            if let message {
+                Text(message).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack {
                 Spacer()
                 Button(i18n.t("desktop.subscription.notNow"), action: onNotNow)
@@ -161,15 +200,16 @@ struct PaywallView: View {
 
     private func restore() async {
         working = true; message = nil
-        await store.restore()
+        let reached = await store.restore()
         if case .subscribed = store.state { onSubscribed() }
-        else if store.state == .notSubscribed { message = i18n.t("desktop.subscription.notFound") }
+        else { show(after: .restore(reached: reached)) }
         working = false
     }
 
     private func tryAgain() async {
-        working = true
+        working = true; message = nil
         await store.refresh()
+        show(after: .tryAgain)
         working = false
     }
 }

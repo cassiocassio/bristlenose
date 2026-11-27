@@ -1433,6 +1433,8 @@
     "restore": "Gendan køb",
     "manage": "Administrer abonnement…",
     "notFound": "Der blev ikke fundet noget abonnement til denne Apple-konto.",
+    "stillUnavailable": "Der er stadig ingen forbindelse til App Store. Tjek din internetforbindelse, og prøv igen.",
+    "restoreFailed": "Kunne ikke oprette forbindelse til App Store for at gendanne dine køb. Prøv igen om lidt.",
     "pending": "Venter på godkendelse. Klik på Analysér igen, når købet er godkendt.",
     "failed": "Købet blev ikke gennemført. Prøv igen om lidt.",
     "unavailable": "App Store er ikke tilgængelig lige nu. Prøv igen om lidt.",

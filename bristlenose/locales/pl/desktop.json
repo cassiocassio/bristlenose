@@ -1537,6 +1537,8 @@
     "restore": "Przywróć zakupy",
     "manage": "Zarządzaj subskrypcją…",
     "notFound": "Nie znaleziono subskrypcji dla tego konta Apple.",
+    "stillUnavailable": "Nadal nie można połączyć się z App Store. Sprawdź połączenie z internetem i spróbuj ponownie.",
+    "restoreFailed": "Nie udało się połączyć z App Store, aby przywrócić zakupy. Spróbuj ponownie za chwilę.",
     "pending": "Oczekiwanie na zatwierdzenie. Po zatwierdzeniu zakupu ponownie kliknij Analizuj.",
     "failed": "Nie udało się sfinalizować zakupu. Spróbuj ponownie za chwilę.",
     "unavailable": "App Store jest teraz niedostępny. Spróbuj ponownie za chwilę.",

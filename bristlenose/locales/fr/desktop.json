@@ -1433,6 +1433,8 @@
     "restore": "Restaurer les achats",
     "manage": "Gérer l’abonnement…",
     "notFound": "Aucun abonnement trouvé pour ce compte Apple.",
+    "stillUnavailable": "L’App Store est toujours injoignable. Vérifiez votre connexion Internet, puis réessayez.",
+    "restoreFailed": "Impossible de joindre l’App Store pour restaurer vos achats. Réessayez dans un instant.",
     "pending": "En attente d’approbation. Une fois l’achat approuvé, cliquez à nouveau sur Analyser.",
     "failed": "L’achat n’a pas abouti. Réessayez dans un instant.",
     "unavailable": "L’App Store n’est pas disponible pour le moment. Réessayez dans un instant.",

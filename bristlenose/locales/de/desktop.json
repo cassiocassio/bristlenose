@@ -1433,6 +1433,8 @@
     "restore": "Käufe wiederherstellen",
     "manage": "Abonnement verwalten…",
     "notFound": "Für diese Apple-ID wurde kein Abonnement gefunden.",
+    "stillUnavailable": "Der App Store ist immer noch nicht erreichbar. Prüfe deine Internetverbindung und versuche es dann noch einmal.",
+    "restoreFailed": "Der App Store war nicht erreichbar, deine Käufe konnten nicht wiederhergestellt werden. Versuche es gleich noch einmal.",
     "pending": "Warte auf Genehmigung. Klicke nach der Genehmigung erneut auf Analysieren.",
     "failed": "Der Kauf ist nicht zustande gekommen. Versuche es gleich noch einmal.",
     "unavailable": "Der App Store ist gerade nicht verfügbar. Versuche es gleich noch einmal.",

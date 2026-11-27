@@ -1433,6 +1433,8 @@
     "restore": "Restaurar Compras",
     "manage": "Gerenciar Assinatura…",
     "notFound": "Nenhuma assinatura encontrada para este ID Apple.",
+    "stillUnavailable": "Ainda não é possível conectar à App Store. Verifique sua conexão com a internet e tente novamente.",
+    "restoreFailed": "Não foi possível conectar à App Store para restaurar suas compras. Tente novamente em instantes.",
     "pending": "Aguardando aprovação. Depois que for aprovada, clique em Analisar novamente.",
     "failed": "A compra não foi concluída. Tente novamente em instantes.",
     "unavailable": "A App Store não está disponível no momento. Tente novamente em instantes.",

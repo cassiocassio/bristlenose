@@ -1433,6 +1433,8 @@
     "restore": "Palauta ostokset",
     "manage": "Hallitse tilausta…",
     "notFound": "Tälle Apple-tilille ei löytynyt tilausta.",
+    "stillUnavailable": "App Storeen ei vieläkään saada yhteyttä. Tarkista internetyhteys ja yritä sitten uudelleen.",
+    "restoreFailed": "App Storeen ei saatu yhteyttä ostosten palauttamiseksi. Yritä hetken kuluttua uudelleen.",
     "pending": "Odotetaan hyväksyntää. Kun osto on hyväksytty, valitse Analysoi uudelleen.",
     "failed": "Ostoa ei saatu läpi. Yritä hetken kuluttua uudelleen.",
     "unavailable": "App Store ei ole juuri nyt käytettävissä. Yritä hetken kuluttua uudelleen.",

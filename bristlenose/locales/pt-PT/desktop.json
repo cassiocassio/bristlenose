@@ -1433,6 +1433,8 @@
     "restore": "Restaurar Compras",
     "manage": "Gerir Subscrição…",
     "notFound": "Não foi encontrada nenhuma subscrição para esta conta Apple.",
+    "stillUnavailable": "Continua a não ser possível ligar à App Store. Verifique a ligação à Internet e tente novamente.",
+    "restoreFailed": "Não foi possível ligar à App Store para restaurar as suas compras. Tente novamente daqui a pouco.",
     "pending": "A aguardar aprovação. Depois de aprovada, clique novamente em Analisar.",
     "failed": "A compra não foi concluída. Tente novamente daqui a pouco.",
     "unavailable": "A App Store não está disponível neste momento. Tente novamente daqui a pouco.",

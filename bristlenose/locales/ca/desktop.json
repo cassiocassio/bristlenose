@@ -1433,6 +1433,8 @@
     "restore": "Restaura les compres",
     "manage": "Gestiona la subscripció…",
     "notFound": "No s’ha trobat cap subscripció per a aquest compte d’Apple.",
+    "stillUnavailable": "Encara no es pot connectar amb l’App Store. Comprova la connexió a internet i torna-ho a provar.",
+    "restoreFailed": "No s’ha pogut connectar amb l’App Store per restaurar les compres. Torna-ho a provar d’aquí a un moment.",
     "pending": "Esperant l’aprovació. Quan s’aprovi, torna a prémer Analitza.",
     "failed": "La compra no s’ha completat. Torna-ho a provar d’aquí a un moment.",
     "unavailable": "L’App Store no està disponible ara mateix. Torna-ho a provar d’aquí a un moment.",

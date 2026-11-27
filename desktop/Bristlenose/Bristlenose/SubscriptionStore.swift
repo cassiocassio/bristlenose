@@ -59,6 +59,10 @@ final class SubscriptionStore: ObservableObject {
         var eligible: (Product) async -> Bool
         var entitlements: () async -> [SubscriptionAccess.EntitlementRead]
         var history: () async -> [SubscriptionAccess.Period]
+        /// Restore's `AppStore.sync()`: returns when the App Store answered,
+        /// throws when it could not be reached. A store built for a test that
+        /// does not set it never reaches one.
+        var sync: () async throws -> Void = { throw SyncNotReached() }
 
         static let live = Reads(
             product: { try await Product.products(for: [SubscriptionAccess.monthlyProductID]).first },
@@ -75,9 +79,17 @@ final class SubscriptionStore: ObservableObject {
                 }
                 return reads
             },
-            history: { await SubscriptionStore.history() }
+            history: { await SubscriptionStore.history() },
+            sync: {
+                // Under a test host this would ask for an Apple Account.
+                if SubscriptionStore.refusesSignInPrompts { throw SyncNotReached() }
+                try await AppStore.sync()
+            }
         )
     }
+
+    /// The App Store was not asked: a test host, or a store built for a test.
+    struct SyncNotReached: Error {}
 
     /// Each `refresh()` takes the next number, and publishes only if no
     /// newer one has published already. Refreshes overlap (launch, activation,
@@ -258,7 +270,7 @@ final class SubscriptionStore: ObservableObject {
     /// that wants a purchase buys through its `SKTestSession` instead.
     /// Debug only, so the shipped app can never mistake itself for a test.
     /// Same detector as the keychain's (`KeychainHelper.isUnderTestHost`).
-    static var refusesSignInPrompts: Bool {
+    nonisolated static var refusesSignInPrompts: Bool {
         #if DEBUG
         return KeychainHelper.isUnderTestHost
         #else
@@ -307,14 +319,21 @@ final class SubscriptionStore: ObservableObject {
     }
 
     /// Restore Purchases (Guideline 3.1.1 requires it on the paywall).
-    func restore() async {
-        if Self.refusesSignInPrompts {
-            log.error("restore's AppStore.sync() skipped under a test host: it would ask for an Apple Account")
-        } else {
-            do { try await AppStore.sync() } catch {
-                log.error("restore failed: \(error.localizedDescription, privacy: .public)")
-            }
+    /// Returns whether the App Store answered: false when `AppStore.sync()`
+    /// threw, so the sheet says the store could not be reached rather than
+    /// "no subscription found" (review, 25 Nov 2026). Refreshes either way.
+    @discardableResult
+    func restore() async -> Bool {
+        var reached = false
+        do {
+            try await reads.sync()
+            reached = true
+        } catch is SyncNotReached {
+            log.error("restore's AppStore.sync() not called: a test host (it would ask for an Apple Account) or a store built for a test")
+        } catch {
+            log.error("restore failed: \(error.localizedDescription, privacy: .public)")
         }
         await refresh()
+        return reached
     }
 }

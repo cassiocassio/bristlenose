@@ -1381,6 +1381,8 @@
     "restore": "回復購買項目",
     "manage": "管理訂閱…",
     "notFound": "找不到此 Apple 帳號的訂閱。",
+    "stillUnavailable": "仍然無法連線至 App Store。請檢查網際網路連線，然後再試一次。",
+    "restoreFailed": "無法連線至 App Store 以回復你的購買項目。請稍後再試。",
     "pending": "正在等待核准。核准後，請再按一次「分析」。",
     "failed": "購買未能完成。請稍後再試。",
     "unavailable": "目前無法使用 App Store。請稍後再試。",

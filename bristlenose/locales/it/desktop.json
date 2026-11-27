@@ -1433,6 +1433,8 @@
     "restore": "Ripristina acquisti",
     "manage": "Gestisci abbonamento…",
     "notFound": "Nessun abbonamento trovato per questo ID Apple.",
+    "stillUnavailable": "L’App Store non è ancora raggiungibile. Controlla la connessione a Internet, poi riprova.",
+    "restoreFailed": "Impossibile raggiungere l’App Store per ripristinare gli acquisti. Riprova tra un momento.",
     "pending": "In attesa di approvazione. Una volta approvato, premi di nuovo Analizza.",
     "failed": "L’acquisto non è andato a buon fine. Riprova tra un momento.",
     "unavailable": "L’App Store non è disponibile al momento. Riprova tra un momento.",

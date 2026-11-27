@@ -1438,6 +1438,8 @@
     "restore": "Restore Purchases",
     "manage": "Manage Subscription…",
     "notFound": "No subscription found for this Apple Account.",
+    "stillUnavailable": "Still can’t reach the App Store. Check your internet connection, then try again.",
+    "restoreFailed": "Couldn’t reach the App Store to restore your purchases. Try again in a moment.",
     "pending": "Waiting for approval. Once it is approved, press Analyse again.",
     "failed": "The purchase didn’t go through. Try again in a moment.",
     "unavailable": "The App Store isn’t available right now. Try again in a moment.",

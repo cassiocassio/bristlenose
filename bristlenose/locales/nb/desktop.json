@@ -1433,6 +1433,8 @@
     "restore": "Gjenopprett kjøp",
     "manage": "Administrer abonnement…",
     "notFound": "Fant ikke noe abonnement for denne Apple-kontoen.",
+    "stillUnavailable": "Får fortsatt ikke kontakt med App Store. Sjekk internettforbindelsen, og prøv igjen.",
+    "restoreFailed": "Fikk ikke kontakt med App Store for å gjenopprette kjøpene dine. Prøv igjen om litt.",
     "pending": "Venter på godkjenning. Trykk på Analyser igjen når kjøpet er godkjent.",
     "failed": "Kjøpet gikk ikke gjennom. Prøv igjen om litt.",
     "unavailable": "App Store er ikke tilgjengelig akkurat nå. Prøv igjen om litt.",

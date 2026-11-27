@@ -1433,6 +1433,8 @@
     "restore": "Satın Alımları Geri Yükle",
     "manage": "Aboneliği Yönet…",
     "notFound": "Bu Apple Hesabı için abonelik bulunamadı.",
+    "stillUnavailable": "App Store’a hâlâ ulaşılamıyor. İnternet bağlantınızı kontrol edip yeniden deneyin.",
+    "restoreFailed": "Satın alımlarınızı geri yüklemek için App Store’a ulaşılamadı. Biraz sonra yeniden deneyin.",
     "pending": "Onay bekleniyor. Satın alma onaylandığında Analiz Et’e yeniden basın.",
     "failed": "Satın alma tamamlanamadı. Biraz sonra yeniden deneyin.",
     "unavailable": "App Store şu anda kullanılamıyor. Biraz sonra yeniden deneyin.",

@@ -6,6 +6,11 @@
         "how": "tests/test_check_docs_terms.py, which runs the gate on fixtures with and without a forbidden spelling; mutated the exit locally under PYTHONDONTWRITEBYTECODE=1, then restored by the reverse edit",
         "observed": "2026-11-25"
     },
+    "check-ffmpeg-licence": {
+        "evidence": "six one-change mutations, each watched red (25 tests): the final exit forced to 0, 15 fail (every refusing fixture, plus fetch-ffmpeg.sh --check, which calls the gate); the configure-flag reading disabled, 5 fail (x264 without --enable-gpl, quoted x265 and nonfree by verdict, since their licence strings say LGPL; the GPL build and LGPL v3 by the reason they print); the licence-string reading disabled, 3 fail (GPL, one GPL library among LGPL ones, LGPL v3 under clean flags); bad=0 after a passing binary, 1 fails (a GPL ffmpeg before an LGPL ffprobe, the order build-all.sh passes them); nonfree dropped from the flag list, 1 fails; the licence match loosened to any LGPL, 1 fails. The last three were added after a Fable review found them surviving. Restored by the reverse edit, file checksum-identical, 25 passed. The LGPL fixture passing is half the proof: a gate that rejected everything would fail it. Not covered: the fixtures are text, so that strings(1) reads a real signed Mach-O rests on a hand run, the LGPL 8.1.3 build passing and the 25 Nov archive's GPL 8.0.1 ffmpeg and ffprobe failing",
+        "how": "tests/test_ffmpeg_lgpl_recipe.py (test_the_licence_gate, test_one_missing_binary_fails_the_whole_gate, test_a_gpl_binary_fails_the_gate_beside_an_lgpl_one), which write fake binaries with GPL and LGPL build strings and run desktop/scripts/check-ffmpeg-licence.sh at both verdicts; mutated locally under PYTHONDONTWRITEBYTECODE=1",
+        "observed": "2026-11-27"
+    },
     "check-provider-links": {
         "evidence": "the offline gate's findings come from check(), which the suite drives with one-change mutations of the register; the exit mapping (code = 1 if problems else 0) was unpinned, so test_a_finding_fails_the_gate_and_none_passes_it was added: with that line changed to code = 0, 1 of 21 fails; restored, 21 passed. Not covered: --live (needs the network)",
         "how": "tests/test_provider_links.py; mutated the exit locally, then restored by the reverse edit",

@@ -113,6 +113,9 @@ _LICENCE_CASES = [] if sys.platform == "win32" else [
     ("quoted x265", f"--prefix=/x '--enable-libx265'\n{_LGPL}", 1, "--enable-libx265"),
     ("LGPL v3", "--prefix=/x --enable-version3\n"
      "libavcodec license: LGPL version 3 or later\n", 1, "--enable-version3"),
+    ("nonfree, LGPL licence string", f"--prefix=/x --enable-nonfree\n{_LGPL}", 1, "--enable-nonfree"),
+    ("LGPL v3 licence string, clean flags", "--prefix=/x\n"
+     "libavcodec license: LGPL version 3 or later\n", 1, "LGPL version 3 or later"),
     ("GPL licence string, clean flags", "--prefix=/x\nlibavutil license: GPL version 2 or later\n",
      1, "GPL version 2 or later"),
     ("one GPL library among LGPL ones", f"--prefix=/x\n{_LGPL}"
@@ -144,3 +147,17 @@ def test_one_missing_binary_fails_the_whole_gate(tmp_path: Path, missing: str) -
         capture_output=True, text=True, encoding="utf-8",
     )
     assert result.returncode == 1 and f"{missing}: not found" in result.stderr
+
+
+@pytest.mark.parametrize("order", [] if sys.platform == "win32" else ["GPL first", "GPL last"])
+def test_a_gpl_binary_fails_the_gate_beside_an_lgpl_one(tmp_path: Path, order: str) -> None:
+    """build-all.sh passes ffmpeg then ffprobe in one call: a clean second can't clear a bad first."""
+    (tmp_path / "gpl").write_text(_GPL_8_0_1, encoding="utf-8")
+    (tmp_path / "lgpl").write_text(_OURS, encoding="utf-8")
+    bins = ["gpl", "lgpl"] if order == "GPL first" else ["lgpl", "gpl"]
+    result = subprocess.run(
+        ["bash", str(DESKTOP_SCRIPTS / "check-ffmpeg-licence.sh"), *(str(tmp_path / b) for b in bins)],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert result.returncode == 1, (order, result.stdout, result.stderr)
+    assert "✗ gpl:" in result.stderr and "✓ lgpl:" in result.stdout, order

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="__CSP__">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bristlenose home</title>
+<!--
+  The home page, built by scripts/home.py. A SNAPSHOT: nothing here runs a job or calls the network.
+  RENDER RULE: every string from the data reaches the DOM through textContent on a node made with
+  createElement (or setAttribute for numbers in SVG). No innerHTML, insertAdjacentHTML, outerHTML,
+  document.write: tests/test_home_page.py greps this file, home-page.js, home-freshness.js and the
+  built page for those. The data is third-party-influenced (a release verdict, CI output, a rating
+  typed by a stranger) and this page opens from file://.
+  The palette is scripts/board-tokens.css, shared with the release board. Chart colours are local.
+-->
+<style>
+__BOARD_TOKENS__
+  :root{--s-a:#2a78d6;--s-b:#eb6834;--s-open:#b9651a}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--s-a:#5b9cf0;--s-b:#f08a5a;--s-open:#f0a050}}
+  :root[data-theme="dark"]{--s-a:#5b9cf0;--s-b:#f08a5a;--s-open:#f0a050}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.35 var(--font)}
+  .screen{padding:8px;display:grid;gap:8px;max-width:1280px;margin:0 auto}
+  a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} a:hover{text-decoration-style:solid;color:var(--now)}
+  a:focus-visible{outline:2px solid var(--now);outline-offset:2px;border-radius:3px}
+  .top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 12px}
+  .top h1{margin:0;font-size:14px;font-weight:600}
+  .m{color:var(--mute);font-size:11px}
+  .sp{flex:1}
+  .pill{padding:2px 9px;border-radius:12px;border:1px solid var(--rule2);font-size:11px;color:var(--mute);white-space:nowrap}
+  .pill.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok)}
+  .pill.warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
+  .pill.bad{background:var(--bad-bg);border-color:var(--bad-bd);color:var(--bad)}
+  .pill.unknown{background:var(--unknown-bg);border-color:var(--unknown-bd);color:var(--unknown)}
+  .banner{background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:8px;padding:6px 12px;color:var(--warn)}
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .span2{grid-column:span 2}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}.span2{grid-column:auto}}
+  .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px 6px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .panel[data-state="old"]{border-color:var(--warn-bd)} .panel[data-state="unknown"]{border-color:var(--unknown-bd)}
+  .ph{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-height:18px}
+  .cap{margin:0;font:600 9px var(--font);letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+  .cap a{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}
+  .cap a:hover{color:var(--now);border-bottom-style:solid}
+  .fresh{margin-left:auto;font:10.5px var(--mono);color:var(--mute);white-space:normal}
+  .panel[data-state="old"] .fresh{color:var(--warn)} .panel[data-state="unknown"] .fresh{color:var(--unknown)}
+  .kpis{display:flex;gap:16px;flex-wrap:wrap}
+  .kpi .n{font:600 20px var(--mono);font-variant-numeric:tabular-nums} .kpi .n a{text-decoration:none;border-bottom:1px dotted currentColor}
+  .kpi .l{font-size:10.5px;color:var(--mute)}
+  .bar{height:8px;background:var(--rule);border-radius:4px;overflow:hidden;display:flex} .bar i{display:block;height:100%}
+  .line{display:flex;align-items:flex-start;overflow-x:auto;padding:2px 0}
+  .st{flex:1;min-width:58px;display:flex;flex-direction:column;align-items:center;position:relative}
+  .st::before{content:"";position:absolute;top:9px;left:0;right:0;height:4px;background:var(--rule2)}
+  .st:first-child::before{left:50%} .st:last-child::before{right:50%}
+  .st i{position:relative;z-index:1;width:14px;height:14px;border-radius:50%;border:3px solid var(--mute);background:var(--panel);margin-top:4px}
+  .st.ok i{border-color:var(--ok);background:var(--ok)} .st.bad i{border-color:var(--bad);background:var(--bad)}
+  .st b{font-size:10.5px;font-weight:500;margin-top:5px;text-align:center;white-space:nowrap}
+  .st small{font:9.5px var(--mono);color:var(--mute)}
+  ul.plain{margin:0;padding-left:15px} ul.plain li{margin:1px 0}
+  table{border-collapse:collapse;width:100%;font-size:11px;font-variant-numeric:tabular-nums}
+  td,th{text-align:left;padding:2px 6px 2px 0;border-bottom:1px solid var(--rule);font-weight:400} th{color:var(--mute);font-size:10px}
+  td.n{font-family:var(--mono)}
+  svg{width:100%;height:auto;display:block} svg text{fill:var(--mute);font:9.5px var(--mono)}
+  .gl{stroke:var(--rule);stroke-width:1}
+  .why{font-size:10.5px;color:var(--warn);margin-top:auto;padding-top:4px;border-top:1px solid var(--rule)}
+  .why::before{content:"\25B2  ";content:"\25B2  " / "";font-size:8px;vertical-align:1px}
+  .why.unknown{color:var(--unknown)} .why.unknown::before{content:"?  ";content:"?  " / "";font-size:10px;vertical-align:0}
+  .src{font-size:10px;color:var(--mute);padding-top:2px}
+  code{font:10px var(--mono)}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <h1>Bristlenose · home</h1>
+    <span class="m" id="built"></span>
+    <span class="sp"></span>
+    <span class="pill" id="sum" role="status"></span>
+    <span class="m" id="again" hidden>run <code>scripts/home.py</code> again to refresh</span>
+  </header>
+  <p class="banner" id="stale24" hidden>This page is over a day old. Run <code>scripts/home.py</code> again.</p>
+  <main class="grid" id="grid"></main>
+</div>
+<script type="application/json" id="home-data">__HOME_DATA__</script>
+<script>__HOME_FRESHNESS_JS__</script>
+<script>__HOME_PAGE_JS__</script>
+</body>
+</html>

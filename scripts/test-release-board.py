@@ -38,6 +38,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GEN = ROOT / "scripts" / "release-board.py"
 TEMPLATE = ROOT / "scripts" / "release-board.template.html"
+TOKENS = ROOT / "scripts" / "board-tokens.css"
 FIXTURE = ROOT / "tests" / "fixtures" / "release-board" / "0.28.0"
 PY = sys.executable
 
@@ -424,7 +425,7 @@ class Activity(unittest.TestCase):
         two selectors. Two copies of a palette is exactly the shape that drifts,
         and the drift shows up as one theme quietly going stale months later. So
         they are kept identical mechanically rather than by intention."""
-        tpl = TEMPLATE.read_text()
+        tpl = TOKENS.read_text()   # the palette lives in board-tokens.css, shared with the home page
         # Bounded by the last token rather than by a brace: the blocks close on
         # the same line as --hatch, so a `\n  }` anchor matches the wrong thing.
         media = re.search(r':root:not\(\[data-theme="light"\]\)\{(.*?--hatch:[^\n]*?\)\})', tpl, re.S)
@@ -439,6 +440,18 @@ class Activity(unittest.TestCase):
         # The guard is what makes the override work at all: without :not(), the
         # media query wins on a dark machine and forcing light silently no-ops.
         self.assertIn(':root:not([data-theme="light"])', tpl)
+
+    def test_the_palette_lives_in_one_file_and_the_template_carries_none_of_it(self):
+        """Extracted 26 Nov 2026 so the home page and the board share one palette. The template
+        holds only a marker; a literal token here would be a second copy that drifts."""
+        tpl = TEMPLATE.read_text()
+        self.assertIn("__BOARD_TOKENS__", tpl)
+        self.assertNotRegex(tpl, r"--(ok|warn|bad|unknown|skip|now|hatch)\s*:", "a palette token is defined in the template")
+        html = rb.render_html({"version": "0.0.0"}, TEMPLATE)
+        self.assertNotIn("__BOARD_TOKENS__", html)
+        # structure only: the VALUES are held by tests/test_home_tokens.py, so a palette tune costs one test, not two
+        for token in ("--ok:", "--unknown:", ':root:not([data-theme="light"])', ':root[data-theme="dark"]'):
+            self.assertIn(token, html, token)
 
     def test_a_normal_run_never_leaves_the_first_bracket(self):
         """Measured 24 Sep 2026: this machine is busy for 31-74 minutes, every

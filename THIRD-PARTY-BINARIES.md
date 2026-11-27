@@ -75,7 +75,7 @@ keeps x264 wherever the system FFmpeg has it.
 |---|---|---|
 | `Python` | 3.12.13 | The interpreter that created `.venv-sidecar` (Homebrew `python3.12` on the dev Mac today) |
 | `OpenSSL` | 3.6.3 | Linked into `_ssl` and `_hashlib` |
-| `SQLite` | 3.53.3 | Linked into `_sqlite3` |
+| `SQLite` | 3.54.1 | Linked into `_sqlite3` |
 | `zlib` | 1.2.12 | Linked into `zlib` |
 | `expat` | 2.7.4 | Linked into `pyexpat` |
 <!-- END AUTO: framework-libs -->
@@ -172,7 +172,7 @@ procurement; under-listing would be a compliance risk.
 | `jsonschema-specifications` | 2025.9.1 | MIT | <https://github.com/python-jsonschema/jsonschema-specifications> |
 | `kaldi_native_fbank` | 1.23.3 | Apache-2.0 | <https://github.com/csukuangfj/kaldi-native-fbank> |
 | `llvmlite` | 0.50.0 | BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | <http://llvmlite.readthedocs.io> |
-| `lxml` | 6.1.3 | BSD-3-Clause | <https://lxml.de/> |
+| `lxml` | 6.2.0 | BSD-3-Clause | <https://lxml.de/> |
 | `Mako` | 1.4.3 | MIT | <https://www.makotemplates.org/> |
 | `markdown-it-py` | 4.3.0 | MIT License | <https://github.com/executablebooks/markdown-it-py> |
 | `MarkupSafe` | 3.0.4 | BSD-3-Clause | <https://github.com/pallets/markupsafe/> |

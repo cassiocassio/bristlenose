@@ -130,8 +130,9 @@ the desktop/native surface diverging from the web surface for the same concept.
   *Sie*, measured in the system loctables that day), while Microsoft's German style guide
   uses *Sie*, as do the German QDA tools researchers know. We follow Microsoft here and
   differ from the macOS chrome on purpose; don't "fix" a string to *du* to match Apple.
-  About 40 desktop strings still slip to *du* (subscription, cloud import, accounts, MCP
-  Agents, the language-relaunch prompt, the export save panel) and are owed a pass.
+  The 44 desktop strings that had slipped to *du* (subscription, cloud import, accounts,
+  MCP Agents, the language-relaunch prompt, the export save panel, a codebook name clash)
+  moved to *Sie* the same day; a sweep for *du* pronouns and imperatives now finds none.
   The *du* inside a participant's quote in a welcome example is speech data and stays.
   Wi-Fi is *WLAN* in German (`glossary.csv`). Sessions
   is `Interview(s)` per glossary (not `Sitzung`). Typographic quotes must be JSON-escaped.

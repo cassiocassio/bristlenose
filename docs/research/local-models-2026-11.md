@@ -567,7 +567,11 @@ The same three sessions, re-run with the client fixes in place (CLI from main at
 - **The transcript's speaker label leaks into quotes.** 58 of the 105 MLX quotes begin with "(Speaker A)", against none on GGUF. That accounts for much of the gap in exact matches (Inf).
 - **The GGUF run went from 37 minutes to 16** on the same model with the fixed client. The earlier run had lost time to pass deadlines and split retries.
 
-The two unconstrained-path failures are client work: listing the allowed values in the prompt, passing the validation error back on retry, and stripping a leading speaker label would each help (Inf).
+What the run folder shows on a closer read, and what was done about it (27 Nov 2026, late):
+
+- **The speaker label is in `verbatim_excerpt`, not in the quote.** No quote's text carries it; 58 excerpts do (M). The model copied the transcript exactly: `analyze` read each line's label, `(Speaker A)`, as part of the words, so every provider's prompt carried it, and GGUF and Claude chose not to copy it. Serve finds a quote in its transcript by the excerpt, and its transcript has the label stripped, so those 58 excerpts would not match (Inf). Fixed at the source: `analyze` now moves a label the project recorded for the session out of the words, the serve importer's own rule. A run folder that holds only `transcripts-raw/` has no record, and keeps the label; copy `.bristlenose/intermediate/speaker-info/` with it. Checked once on gemma4:e4b MLX, on the first four minutes of one session: 7 quotes, no excerpt opening with a bracket (M).
+- **The discussion lens's labels: the model put another field's value in `kind`.** Rerun once on one session (57 turns): it wrote `role`'s `"core"` into `kind` on 31–33 turns, on each of three attempts (M). Validation caught every one; "core" names no kind, so it is not mapped. Listing each enum field's allowed values in plain words made it slightly worse (45 outside the set on the last attempt, against 26 without), and naming them in the retry turn changed nothing (M, one run each). Both were dropped. The last attempt now keeps the labels that validate, the turns it leaves out read "unclassified", and the lens is marked partial (the house salvage, opted in for this reply); a reply mostly outside the set still fails. On that rerun the session kept 31 of 57 labels. In the measured run, the two sessions that failed on one bad label (1 in 29, 1 in 64) would have kept the rest (Inf).
+- **Sentiment is not an enum anywhere.** `sentiment` is `str | None` on every path, so a grammar holds it no more than the fallback does. The 23 were reported as "neutral" and the string "null" (the log keeps the first two values only), and quote extraction stores an unrecognised value as no sentiment, which is what the field asks for when a quote is descriptive. No change.
 
 ## Beyond Gemma and Qwen: the wider field (27 Nov 2026)
 
@@ -651,6 +655,65 @@ Measure on the protocol of § "Measured on the Bristlenose task", plus an explic
 - **Gemma 26B in three arms:** GGUF constrained, GGUF unconstrained, and MLX on the official app. This decides whether the shortlist keeps its 26B.
 
 The deciding test is Bonsai 2. The vendor reports 98% benchmark retention at 2.25 bits per weight, while this note's § "Quality notes" cites a finding that low-bit models invent more quotes. Only a verbatim check on real transcripts can say which holds.
+
+## The 64 GB pick, and whether an overnight run works (27 Nov 2026)
+
+Nothing here was run on a 64 GB Mac, and no cloud model was used. The pick rests on registry facts measured today, published benchmarks, and this note's own runs.
+
+### 64 GB: Qwen 3.8 27B at 8 bits
+
+**Pick: `qwen3.8:27b-q8_0`.** Same model as the 32 GB candidate, at twice the precision.
+- **Download:** 29.98 GB (M).
+- **Build:** GGUF only, a single manifest with no MLX child (M). So a Mac runs it on llama.cpp with the schema enforced: no 501, and none of the unconstrained path's drift (§ "With the fixed client").
+- **Memory at 32k:** about 33 GB, perhaps 37 if the Qwen overshoot in § "Memory per model" holds, and about 4 GB more for three slots (C/Inf). A 64 GB Mac gives a model about 48 GiB of GPU memory (Inf, from the working-set fractions in § "Most Macs and Linux GPUs get a 4k window").
+- **Licence and thinking:** Apache 2.0. Thinks by default; the client now sends `think:false`.
+
+Why this one:
+- **Higher precision protects quotes.** The 2026 study in § "Quality notes" found low-bit models invent more interview quotes (I). Eight bits is close to the unquantised model, which is the cheapest gain 64 GB buys (Inf).
+- **It avoids the known traps.** It doesn't suffer from Gemma 4's grammar-amplified loops at 31B (§ "Gemma 4's loops"), and it isn't exposed to MLX's whitespace runaway.
+- **Nothing larger fits.** `llama3.3:70b` needs about 53 GB at 32k, over the budget (C). `qwen3.5:122b` is 81 GB (M).
+
+| Alternative | Download (M) | Why not the pick |
+|---|---|---|
+| `gemma4:31b-it-q8_0` | 33.84 GB | the loop bug is worst at 31B; Gemma 4 31B's plain `gemma4:31b` pulls MLX on a Mac |
+| `qwen3.6:35b-a3b-q8_0` | 38.70 GB, GGUF only | 3B active parameters: about four times faster, but less capacity per token (Inf). The pick if speed matters more than depth |
+| `muse-glimmer:30b-q8_0` | 31.01 GB | unmeasured; 82% hallucination on a knowledge test (I) |
+
+**Confidence: moderate.** It rests on one condition that this note's own runs will test: the same model at 4 bits (`qwen3.8:27b`) doing the job on the 32 GB tier.
+- **It rises to high** if the 4-bit run gives verbatim quotes, sections and themes near Claude's. The same weights at higher precision should do at least as well (Inf).
+- **It falls** if the 4-bit run fails for reasons precision won't fix: invented quotes, themes that don't fit, thinking that leaks despite `think:false`. Then the fallback is `gemma4:31b-it-q8_0`, run unconstrained. If that also fails, the honest answer for 64 GB is "use a cloud provider".
+- **It also falls** if a measured load on a 64 GB Mac exceeds about 45 GB, or if `ollama ps` on any Mac shows the Qwen overshoot growing at 8 bits.
+
+### What more memory buys
+
+Up to 32 GB, more memory buys a larger model: E4B-class at 16 GB, 12–27B at 24–32 GB. From 32 to 64 GB it mostly buys **precision and headroom**: the same 27B at 8 bits instead of 4, three slots at once, and room for a browser alongside. Only at 128 GB does a new class of model fit: `qwen3.5:122b`, a 122B mixture-of-experts with 10B active parameters (Inf, from the sizes above). So the step from 32 to 64 GB should be small in quality, and the step from 64 to 128 GB larger. Neither has been measured.
+
+**128 GB, for the docs:** "With 128 GB you can run models such as Qwen 3.5 122B; at that size you'll want to compare a few on your own interviews before trusting one."
+
+### Overnight runs: how long one interview takes
+
+Estimates to an order of magnitude, all (Inf). **Method:** time ≈ prompt tokens ÷ prefill rate + output tokens ÷ decode rate.
+- **Decode rate** ≈ 0.65 × memory bandwidth ÷ bytes of weights read per token. Published 2026 benchmarks fit this within about ±25%; for Qwen 3.5 122B-A10B on an M5 Max, the prediction and the measurement are both 66 tokens/s (I, [llama.cpp #4167](https://github.com/ggml-org/llama.cpp/discussions/4167) and community MLX benchmarks).
+- **Per interview:** about 33k prompt tokens and 12–22k output tokens over a 3-session run (M, this note's runs).
+- **Decode dominates:** prefill is about 15–20% of the time.
+- **Calibration:** on this M2 Max (400 GB/s), the method predicts 15–25 minutes for Gemma 4 E4B over three sessions, against 13–16 measured. So it errs on the slow side.
+
+| Tier, typical chip (bandwidth) | Model | Per interview | A two-week study, 10–20 interviews |
+|---|---|---|---|
+| 16 GB, base chip (100–153 GB/s) | Gemma 4 E4B-class | 15–30 min | 3–10 h: overnight works |
+| 32 GB, base to Pro (120–273 GB/s) | 27B at 4 bits | 0.5–1.5 h | 5–30 h: overnight on a Pro; a weekend on a base chip |
+| 32 GB, Max (400+ GB/s) | 27B at 4 bits | ~20–30 min | 4–10 h: overnight works |
+| 64 GB, Pro (273–307 GB/s) | Qwen 3.8 27B at 8 bits | ~40–60 min | 7–20 h: overnight for a small study, a weekend for a large one |
+| 64 GB, Max (400–614 GB/s) | Qwen 3.8 27B at 8 bits | ~20–35 min | 4–12 h: overnight works |
+| 64 GB, any | Qwen 3.6 35B-A3B at 8 bits (speed option) | ~5–15 min | 1–5 h |
+| 128 GB, Max (546–614 GB/s) | Qwen 3.5 122B-A10B at 4 bits | ~5–10 min | 1–3 h |
+
+Analysis time only: local transcription comes on top. Fanless MacBook Airs may throttle on a run of many hours, and no sustained-load measurement was found.
+
+**The verdict for a researcher** is quality-first. Speed doesn't rule out any tier for a study left running overnight. Quality decides whether the run is worth it:
+- **16 GB:** worth it, on today's measurements. Gemma 4 E4B under the schema gave 82 quotes, 64 exact and none invented, with weaker themes than Claude's.
+- **32 and 64 GB:** waiting on the 32 GB runs.
+- **8 GB:** no model examined fits with a browser open, so use a cloud provider.
 
 ## What must be verified before shipping
 

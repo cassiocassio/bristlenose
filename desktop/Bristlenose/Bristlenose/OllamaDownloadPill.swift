@@ -1,18 +1,17 @@
 import SwiftUI
 
-/// Toolbar pill + popovers for the on-device model setup flow (flow B,
-/// model-first). Self-hides when the `OllamaDownloadModel` is idle. The
-/// `.status`-zone toolbar pill is now reserved for app-global concerns like
-/// this one (per-project copy/run progress moved to the sidebar row — see the
-/// placement axis in `docs/design-desktop-project-status.md` §4); its visual
-/// envelope is a Capsule + secondary stroke.
+/// Toolbar pill for the on-device model download. The setup itself (choosing a
+/// model, getting Ollama, waiting for it) lives in Settings ▸ LLM Provider ▸
+/// Ollama; the pill shows only while the download runs and after a failure,
+/// until Retry, and is gone once the model is on the Mac or after Cancel
+/// (`OllamaDownloadModel.isPillVisible`, Whisper's rule; owner, 27 Nov 2026).
+/// It reads the same `OllamaDownloadModel.shared` as the Settings card, so the
+/// two always agree. The `.status`-zone toolbar pill is reserved for app-global
+/// concerns (`docs/design-desktop-project-status.md` §4); its visual envelope
+/// is a Capsule + secondary stroke.
 ///
-/// The pill is a click target; the popover it opens is phase-driven, so a
-/// single presentation walks the user through `choosingModel` → `needsOllama`
-/// → `waitingForOllama` → `downloading` → `finishing` without re-anchoring.
-/// Honesty rule (made visible): the hourglass NEVER animates (we're waiting on
-/// the human); only the download bar and the "Bristlenose-is-working" spinner
-/// move. Red is reserved for the genuine `failed` state.
+/// Honesty rule (made visible): only the download bar and the
+/// "Bristlenose-is-working" spinner move. Red is reserved for `failed`.
 ///
 /// See `docs/design-ollama-setup.md` for the full spec and
 /// `docs/mockups/ollama-setup-popovers.html` for the frozen copy + widths.
@@ -22,7 +21,7 @@ struct OllamaDownloadPill: View {
     @State private var showingDetail = false
 
     var body: some View {
-        if model.isActive {
+        if model.isPillVisible {
             Button {
                 showingDetail.toggle()
             } label: {
@@ -33,16 +32,6 @@ struct OllamaDownloadPill: View {
             .accessibilityValue(accessibilityValueText)
             .popover(isPresented: $showingDetail, arrowEdge: .bottom) {
                 detailPopover
-            }
-            // Auto-present the picker once when the pill first appears
-            // post-consent. The 350ms delay lets the toolbar settle so the
-            // popover anchors to the pill, not to where it briefly wasn't.
-            .task(id: model.pendingAutoPresent) {
-                guard model.pendingAutoPresent else { return }
-                try? await Task.sleep(for: .milliseconds(350))
-                guard !Task.isCancelled, model.pendingAutoPresent else { return }
-                showingDetail = true
-                model.consumeAutoPresent()
             }
         }
     }
@@ -109,173 +98,13 @@ struct OllamaDownloadPill: View {
 
     // MARK: - Popover
 
-    @ViewBuilder
+    /// The pill's popover: the stage it is showing (downloading, finishing,
+    /// failed), in the same view Settings' Model card uses.
     private var detailPopover: some View {
-        switch model.phase {
-        case .choosingModel:
-            ModelPicker(model: model)
-                .environmentObject(i18n)
-        case .needsOllama:
-            needsOllamaPopover
-        case .waitingForOllama:
-            waitingPopover
-        case .downloading:
-            downloadingPopover
-        case .finishing:
-            finishingPopover
-        case .failed(let failure):
-            failedPopover(failure)
-        case .idle:
-            EmptyView()
-        }
-    }
-
-    private var needsOllamaPopover: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(String(format: i18n.t("desktop.ollamaSetup.needsTitle"), modelName))
-                .font(.system(.callout).weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-            Text(i18n.t("desktop.ollamaSetup.needsBody"))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Spacer()
-                Button(i18n.t("desktop.ollamaSetup.getOllamaButton")) {
-                    // No dismiss — the popover follows the phase to waiting.
-                    model.getOllama()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(.top, 6)
-        }
-        .padding(16)
-        .frame(width: 280)
-    }
-
-    private var waitingPopover: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(i18n.t("desktop.ollamaSetup.waitingTitle"))
-                .font(.system(.callout).weight(.semibold))
-            Text(LocalizedStringKey(i18n.t("desktop.ollamaSetup.waitingBody")))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: 4) {
-                stepRow(1, i18n.t("desktop.ollamaSetup.waitingStep1"))
-                stepRow(2, i18n.t("desktop.ollamaSetup.waitingStep2"))
-            }
-            Text(String(format: i18n.t("desktop.ollamaSetup.waitingFootnote"), modelName))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 2)
-            Divider()
-                .padding(.top, 4)
-            HStack(spacing: 8) {
-                // Static hourglass — passive wait, no spinner.
-                Image(systemName: "hourglass")
-                    .imageScale(.small)
-                    .foregroundStyle(.secondary)
-                Text(i18n.t("desktop.ollamaSetup.waitingStatusLabel"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button(i18n.t("common.buttons.cancel")) {
-                    model.cancel()
-                }
-                .controlSize(.small)
-                .fixedSize(horizontal: true, vertical: false)  // the status wraps; the button's label never truncates
-            }
-        }
-        .padding(16)
-        .frame(width: 280)
-    }
-
-    private var downloadingPopover: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(String(format: i18n.t("desktop.ollamaSetup.downloadingTitle"), modelName))
-                .font(.system(.callout).weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-            if model.totalBytes > 0 {
-                Text(byteString)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                ProgressView(value: model.downloadRatio)
-                    .progressViewStyle(.linear)
-            } else {
-                HStack {
-                    ProgressView()
-                        .controlSize(.small)
-                    Spacer()
-                }
-            }
-            HStack {
-                Spacer()
-                Button(i18n.t("common.buttons.cancel")) {
-                    model.cancel()
-                }
-            }
-            .padding(.top, 6)
-        }
-        .padding(16)
-        .frame(width: 280)
-    }
-
-    private var finishingPopover: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(i18n.t("desktop.ollamaSetup.finishingTitle"))
-                .font(.system(.callout).weight(.semibold))
-            Text(String(format: i18n.t("desktop.ollamaSetup.finishingBody"), modelName))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Spacer()
-                ProgressView()
-                    .controlSize(.small)
-                Spacer()
-            }
-            .padding(.top, 6)
-        }
-        .padding(16)
-        .frame(width: 280)
-    }
-
-    private func failedPopover(_ failure: OllamaDownloadModel.Failure) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(i18n.t("desktop.ollamaSetup.failedTitle"))
-                .font(.system(.callout).weight(.semibold))
-            Text(failureDetail(failure))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Spacer()
-                Button(i18n.t("common.buttons.retry")) {
-                    // No dismiss — retry re-enters downloading in place.
-                    model.retry()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(.top, 6)
-        }
-        .padding(16)
-        .frame(width: 280)
-    }
-
-    private func stepRow(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 6) {
-            Text("\(n).")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-            Text(text)
-                .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
+        OllamaSetupStageView(model: model)
+            .environmentObject(i18n)
+            .padding(16)
+            .frame(width: 280)
     }
 
     // MARK: - Strings
@@ -316,6 +145,187 @@ struct OllamaDownloadPill: View {
         let tag = model.currentTag ?? ""
         return OllamaCatalog.model(for: tag)?.displayName ?? tag
     }
+}
+
+// MARK: - The stage views (Settings' Model card and the pill's popover)
+
+/// Each stage after the choice, as the pill's popovers drew it: get Ollama,
+/// waiting for it (the hourglass never moves), downloading, finishing, failed.
+/// One view, two homes: under the Model row in Settings ▸ LLM Provider ▸ Ollama,
+/// and in the toolbar pill's popover while it shows. Nothing for idle or
+/// choosing (the picker is its own popover). No width of its own: the pill
+/// gives it 280 pt, the Settings card its column.
+struct OllamaSetupStageView: View {
+    @ObservedObject var model: OllamaDownloadModel
+    @EnvironmentObject var i18n: I18n
+
+    /// Whether there is anything to show for this phase.
+    nonisolated static func shows(_ phase: OllamaDownloadModel.Phase) -> Bool {
+        switch phase {
+        case .needsOllama, .waitingForOllama, .downloading, .finishing, .failed: return true
+        case .idle, .choosingModel: return false
+        }
+    }
+
+    var body: some View {
+        switch model.phase {
+        case .needsOllama:
+            needsOllama
+        case .waitingForOllama:
+            waiting
+        case .downloading:
+            downloading
+        case .finishing:
+            finishing
+        case .failed(let failure):
+            failed(failure)
+        case .idle, .choosingModel:
+            EmptyView()
+        }
+    }
+
+    private var needsOllama: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(format: i18n.t("desktop.ollamaSetup.needsTitle"), modelName))
+                .font(.system(.callout).weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(i18n.t("desktop.ollamaSetup.needsBody"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                Button(i18n.t("desktop.ollamaSetup.getOllamaButton")) {
+                    // No dismiss — the popover follows the phase to waiting.
+                    model.getOllama()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private var waiting: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(i18n.t("desktop.ollamaSetup.waitingTitle"))
+                .font(.system(.callout).weight(.semibold))
+            Text(LocalizedStringKey(i18n.t("desktop.ollamaSetup.waitingBody")))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                stepRow(1, i18n.t("desktop.ollamaSetup.waitingStep1"))
+                stepRow(2, i18n.t("desktop.ollamaSetup.waitingStep2"))
+            }
+            Text(String(format: i18n.t("desktop.ollamaSetup.waitingFootnote"), modelName))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+            Divider()
+                .padding(.top, 4)
+            HStack(spacing: 8) {
+                // Static hourglass — passive wait, no spinner.
+                Image(systemName: "hourglass")
+                    .imageScale(.small)
+                    .foregroundStyle(.secondary)
+                Text(i18n.t("desktop.ollamaSetup.waitingStatusLabel"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(i18n.t("common.buttons.cancel")) {
+                    model.cancel()
+                }
+                .controlSize(.small)
+                .fixedSize(horizontal: true, vertical: false)  // the status wraps; the button's label never truncates
+            }
+        }
+    }
+
+    private var downloading: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(format: i18n.t("desktop.ollamaSetup.downloadingTitle"), modelName))
+                .font(.system(.callout).weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            if model.totalBytes > 0 {
+                Text(byteString)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                ProgressView(value: model.downloadRatio)
+                    .progressViewStyle(.linear)
+            } else {
+                HStack {
+                    ProgressView()
+                        .controlSize(.small)
+                    Spacer()
+                }
+            }
+            HStack {
+                Spacer()
+                Button(i18n.t("common.buttons.cancel")) {
+                    model.cancel()
+                }
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private var finishing: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(i18n.t("desktop.ollamaSetup.finishingTitle"))
+                .font(.system(.callout).weight(.semibold))
+            Text(String(format: i18n.t("desktop.ollamaSetup.finishingBody"), modelName))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                ProgressView()
+                    .controlSize(.small)
+                Spacer()
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private func failed(_ failure: OllamaDownloadModel.Failure) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(i18n.t("desktop.ollamaSetup.failedTitle"))
+                .font(.system(.callout).weight(.semibold))
+            Text(failureDetail(failure))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                Button(i18n.t("common.buttons.retry")) {
+                    // No dismiss — retry re-enters downloading in place.
+                    model.retry()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private func stepRow(_ n: Int, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text("\(n).")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            Text(text)
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var modelName: String {
+        let tag = model.currentTag ?? ""
+        return OllamaCatalog.model(for: tag)?.displayName ?? tag
+    }
 
     private var byteString: String {
         let formatter = ByteCountFormatter()
@@ -341,18 +351,37 @@ struct OllamaDownloadPill: View {
 
 // MARK: - Model picker (step 1)
 
-/// The `choosingModel` popover: a 360pt radio list of the curated catalogue,
-/// grouped by install state when the daemon is already up. Selecting a row and
-/// pressing "Use …" commits via `confirmModel(tag:)`; the popover then follows
-/// the phase the commit routes to.
-private struct ModelPicker: View {
+/// The model picker (approved content, unchanged): a 360pt radio list of the
+/// curated catalogue, grouped by install state when the daemon is already up,
+/// with the models this Mac's memory can't run dimmed. It opens from the Model
+/// row's button in Settings ▸ LLM Provider ▸ Ollama and only chooses: "Use …"
+/// calls `useModel(tag:)` (switch, then setup) and closes it; the stages that
+/// follow show in the Model card. "Custom…" hands over to the Model row's own
+/// text field. One link, to the docs page that explains hardware, quality and
+/// speed (owner: that belongs in the docs, not the app).
+struct OllamaModelPicker: View {
     @ObservedObject var model: OllamaDownloadModel
     @EnvironmentObject var i18n: I18n
     @State private var selectedTag: String
+    /// "Custom…": close the picker and type a tag in the Model row instead.
+    var onCustom: (() -> Void)?
+    /// After "Use …": close the picker.
+    var onCommit: () -> Void
 
-    init(model: OllamaDownloadModel) {
+    /// The page the Welcome tip "Set up Ollama" opens (`WelcomeContent.docs`).
+    static let docsURL = URL(string: "https://bristlenose.app/docs/set-up-ollama.html")!
+
+    init(model: OllamaDownloadModel, onCustom: (() -> Void)? = nil, onCommit: @escaping () -> Void = {}) {
         self.model = model
+        self.onCustom = onCustom
+        self.onCommit = onCommit
         _selectedTag = State(initialValue: model.currentTag ?? OllamaCatalog.recommendedTag())
+    }
+
+    /// A model this Mac's memory can't run: shown, dimmed, with its need, and
+    /// not selectable. The one rule both the row and its words use.
+    nonisolated static func isDimmed(_ m: OllamaModel, ramGB: Double = OllamaCatalog.systemRAMGB) -> Bool {
+        !OllamaCatalog.fits(m, ramGB: ramGB)
     }
 
     var body: some View {
@@ -360,12 +389,23 @@ private struct ModelPicker: View {
             Text(i18n.t("desktop.ollamaSetup.chooseTitle"))
                 .font(.system(.callout).weight(.semibold))
 
-            Text(String(format: bodyTemplate, ramString))
+            // The docs link is a run of its own (`GeneralSettingsView.explanation`),
+            // so no translation can make or move it.
+            Text(GeneralSettingsView.explanation(
+                String(format: bodyTemplate, ramString),
+                link: i18n.t("desktop.welcome.home.learnMore"),
+                destination: Self.docsURL))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             modelsBox
+
+            if let onCustom {
+                Button(i18n.t("desktop.llmSettings.customModelOption")) { onCustom() }
+                    .buttonStyle(.link)
+                    .font(.callout)
+            }
 
             if OllamaCatalog.isLowDisk() {
                 Label(i18n.t("desktop.ollamaSetup.lowDisk"),
@@ -392,8 +432,9 @@ private struct ModelPicker: View {
                 Spacer()
                 Button(String(format: i18n.t("desktop.ollamaSetup.useModel"),
                               selectedDisplayName)) {
-                    // No dismiss — the popover follows confirmModel's routing.
-                    model.confirmModel(tag: selectedTag)
+                    // Switch, then setup; the stages show in the Model card.
+                    model.useModel(tag: selectedTag)
+                    onCommit()
                 }
                 .keyboardShortcut(.defaultAction)
             }
@@ -438,7 +479,7 @@ private struct ModelPicker: View {
 
     @ViewBuilder
     private func rowView(_ m: OllamaModel, installed: Bool) -> some View {
-        let disabled = !OllamaCatalog.fits(m)
+        let disabled = Self.isDimmed(m)
         let selected = selectedTag == m.tag
         HStack(alignment: .top, spacing: 9) {
             radio(selected: selected, disabled: disabled)
@@ -488,7 +529,7 @@ private struct ModelPicker: View {
     /// Composed descriptor: bold model name, then dot-separated qualifiers.
     /// Uses `.foregroundColor` (returns `Text`) so the parts concatenate.
     private func descriptor(for m: OllamaModel, installed: Bool) -> Text {
-        let disabled = !OllamaCatalog.fits(m)
+        let disabled = Self.isDimmed(m)
         var line = Text(m.displayName)
             .font(.callout.weight(.semibold))
             .foregroundColor(disabled ? Color(nsColor: .tertiaryLabelColor) : .primary)

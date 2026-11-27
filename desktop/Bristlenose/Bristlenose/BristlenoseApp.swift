@@ -152,7 +152,7 @@ struct BristlenoseApp: App {
     @StateObject private var copyMachinery = CopyMachinery()
     // Ambient local-model pull (Beat 3). Owned at app level so the download
     // survives the consent sheet's dismissal and surfaces in the toolbar pill.
-    @StateObject private var ollamaDownload = OllamaDownloadModel()
+    @StateObject private var ollamaDownload = OllamaDownloadModel.shared
     /// The daily news check (`docs/private/design-news-and-counts.md`). One per
     /// app, like the fleet: its single-flight guard is what stops a launch and
     /// a wake from both sending `first=1`. Handed to the Welcome window (items,

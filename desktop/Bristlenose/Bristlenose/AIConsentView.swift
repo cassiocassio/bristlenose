@@ -65,10 +65,8 @@ struct AIConsentView: View {
     }
 
     @EnvironmentObject var i18n: I18n
-    @EnvironmentObject var ollamaDownload: OllamaDownloadModel
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
     @AppStorage("activeProvider") private var activeProvider: String = ActiveProviderChoice.unset
-    @AppStorage("llmModel_local") private var ollamaModel: String = ""
 
     /// When true, shows "Done" instead of "Continue" (re-access mode).
     var isReviewMode: Bool = false
@@ -88,20 +86,20 @@ struct AIConsentView: View {
         in: .standard, isForced: NewsPreferences.isManaged)
 
     var body: some View {
+        // The owner's order (app-privtext C, 27 Nov 2026): who the providers are
+        // straight after the intro, then training, the two boxes, and one
+        // footnote that carries the Agent Access exception, the participants
+        // line, the hosts and the policy link.
         VStack(alignment: .leading, spacing: 16) {
             header
             introText
+            providersRow
+            trainingText
             sentToCloudBox
             staysLocalBox
-            // AFTER the stays-local box, deliberately: it is the exception to
-            // BOTH boxes, and an exception has to follow the claim it
-            // qualifies. Above the box it read as a footnote to the cloud
-            // list, leaving the box's "your edits, tags… — unless you turn
-            // on Agent Access" six lines below the line that explains it.
-            agentAccessText
-            providersRow
-            responsibilityText
-            hostsText
+            // AFTER the boxes, deliberately: Agent Access is the exception to
+            // BOTH boxes, and an exception has to follow the claim it qualifies.
+            footnoteText
 
             if !isReviewMode && NewsKeys.isLive {
                 countsChoice
@@ -132,13 +130,16 @@ struct AIConsentView: View {
     // MARK: - Intro
 
     private var introText: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(i18n.t("desktop.aiConsent.intro"))
-                .font(.body)
-            Text(i18n.t("desktop.aiConsent.notUsedForTraining"))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
+        Text(i18n.t("desktop.aiConsent.intro"))
+            .font(.body)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var trainingText: some View {
+        Text(i18n.t("desktop.aiConsent.notUsedForTraining"))
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Sent to cloud
@@ -159,21 +160,6 @@ struct AIConsentView: View {
         .accessibilityLabel(i18n.t("desktop.aiConsent.sentSummary"))
     }
 
-    // MARK: - Agent access (the second, conditional recipient — v2)
-
-    /// A SEPARATE line rather than another bullet in the box above, because
-    /// it is a different recipient: the box is headed "sent to your chosen
-    /// cloud provider", and an agent's vendor is neither chosen there nor the
-    /// same company. Conditional (off by default, per project) and triggered
-    /// by asking rather than by analysing, so it cannot sit in a list of
-    /// things every run sends.
-    private var agentAccessText: some View {
-        Text(i18n.t("desktop.aiConsent.agentAccess"))
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
     // MARK: - Stays local
 
     private var staysLocalBox: some View {
@@ -192,10 +178,14 @@ struct AIConsentView: View {
 
     // MARK: - Cloud providers
 
+    /// "Supported providers" is a heading in the box headings' style. Those are
+    /// `GroupBox` labels with no font of their own, and a GroupBox label renders
+    /// as `.subheadline` in the primary colour (measured with `ImageRenderer`,
+    /// pixel-identical, 27 Nov 2026), so this says `.subheadline` and nothing else.
     private var providersRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(i18n.t("desktop.aiConsent.providersIntro"))
-                .font(.body)
+                .font(.subheadline)
             HStack(spacing: 16) {
                 ForEach(LLMProvider.allCases.filter(\.needsAPIKey)) { provider in
                     Label(provider.displayName, systemImage: provider.iconName)
@@ -205,27 +195,52 @@ struct AIConsentView: View {
         }
     }
 
-    // MARK: - Researcher responsibility
+    // MARK: - The footnote
 
-    private var responsibilityText: some View {
-        Text(i18n.t("desktop.aiConsent.researcherResponsibility"))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-    }
-
-    // MARK: - Download hosts and the report typeface
-
-    /// Who else sees the Mac's IP address, and the policy that says the rest.
-    /// The link is an `AttributedString` run (`GeneralSettingsView.explanation`),
-    /// so nothing a translator writes can become a link.
-    private var hostsText: some View {
-        Text(GeneralSettingsView.explanation(
-            i18n.t("desktop.aiConsent.hostsNote"),
+    /// One paragraph, in the footnote style: the Agent Access exception (the
+    /// second, conditional recipient), the researcher's responsibility, who else
+    /// sees the Mac's IP address, and the policy link.
+    private var footnoteText: some View {
+        Text(Self.footnote(
+            agentAccess: i18n.t("desktop.aiConsent.agentAccess"),
+            responsibility: i18n.t("desktop.aiConsent.researcherResponsibility"),
+            hosts: i18n.t("desktop.aiConsent.hostsNote"),
             link: i18n.t("desktop.aiConsent.privacyLink"),
-            destination: NewsPreferences.privacyURL))
+            destination: NewsPreferences.privacyURL,
+            locale: i18n.locale))
             .font(.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The footnote as one `AttributedString`, from four keys rather than one, so
+    /// every translation stays and the link stays a run of its own: nothing a
+    /// translator writes can become or move a link. The Agent Access text alone
+    /// is read as Markdown, for its one italic word; a string that does not parse
+    /// is shown as written. Japanese and Chinese put no space after a full stop.
+    static func footnote(agentAccess: String, responsibility: String, hosts: String,
+                         link: String, destination: URL, locale: String) -> AttributedString {
+        let joiner = sentenceJoiner(for: locale)
+        let options = AttributedString.MarkdownParsingOptions(
+            interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        var out = (try? AttributedString(markdown: agentAccess, options: options))
+            ?? AttributedString(agentAccess)
+        // Markdown would turn "[x](url)" in a translation into a link: only the
+        // policy link below may be one, so any other link is dropped here.
+        for run in out.runs where run.link != nil {
+            out[run.range].link = nil
+        }
+        out.append(AttributedString(joiner + responsibility + joiner + hosts + joiner))
+        var run = AttributedString(link)
+        run.link = destination
+        out.append(run)
+        return out
+    }
+
+    /// What goes between two sentences: nothing in Japanese and Chinese, a space elsewhere.
+    static func sentenceJoiner(for locale: String) -> String {
+        let language = locale.split(separator: "-").first.map(String.init) ?? locale
+        return ["ja", "zh"].contains(language) ? "" : " "
     }
 
     // MARK: - Anonymous counts (first run only)
@@ -242,14 +257,16 @@ struct AIConsentView: View {
             }
             .toggleStyle(.checkbox)
             .disabled(NewsPreferences.isManaged(NewsPreferences.countsKey))
-            Text(i18n.t("desktop.aiConsent.countsExplain"))
+            // "Details." ends the caption as a link run of its own, the way the
+            // footnote's policy link is drawn (`GeneralSettingsView.explanation`).
+            Text(GeneralSettingsView.explanation(
+                i18n.t("desktop.aiConsent.countsExplain"),
+                link: i18n.t("desktop.aiConsent.countsDetails"),
+                destination: NewsPreferences.analyticsURL))
                 .fixedSize(horizontal: false, vertical: true)
                 .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.leading, 20)   // under the label, not the box
-            Link(i18n.t("desktop.news.whatsSent"), destination: NewsPreferences.analyticsURL)
-                .font(.caption)
-                .padding(.leading, 20)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 20)   // under the label, not the box
         }
     }
 
@@ -265,27 +282,9 @@ struct AIConsentView: View {
 
     private var buttonBar: some View {
         HStack(alignment: .firstTextBaseline) {
-            // Stay local: apply the RAM-aware default model, activate Ollama,
-            // and pull the model ambiently (toolbar pill) — no blocking
-            // picker. Micro-prefs (model choice, concurrency) live in Settings.
-            // The size hint under the button discloses the multi-GB first-run
-            // pull before the click (replacing the line the removed
-            // OllamaSetupSheet used to show).
-            VStack(alignment: .leading, spacing: 2) {
-                Button(i18n.t("desktop.aiConsent.useOllama")) {
-                    recordCountsChoice()
-                    activateLocalDefault()
-                    onDismiss()
-                }
-                .buttonStyle(.borderless)
-
-                if let sizeHint = ollamaDownloadSizeHint {
-                    Text(sizeHint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
+            // No on-device choice here (owner, 27 Nov 2026): it suggested a
+            // realistic choice most Macs can't make well. Ollama is set up in
+            // Settings ▸ LLM Provider, from the Model row (`OllamaSetup`).
             Spacer()
 
             Button(isReviewMode
@@ -300,35 +299,7 @@ struct AIConsentView: View {
         }
     }
 
-    /// Approximate first-run download size for the RAM-aware default model,
-    /// e.g. "~3 GB download". Nil for tags outside the curated catalog (a
-    /// DEBUG tag override), so the hint simply doesn't render.
-    private var ollamaDownloadSizeHint: String? {
-        guard let model = OllamaCatalog.model(for: OllamaCatalog.recommendedTag())
-        else { return nil }
-        let size = "\(Int(model.weightsGB)) GB"
-        return String(format: i18n.t("desktop.aiConsent.ollamaDownloadSize"), size)
-    }
-
     // MARK: - Activation
-
-    /// Stay-local path. Resolves the RAM-aware default, activates Ollama via
-    /// the canonical triad (activeProvider → global model → prefs notify),
-    /// records consent, and kicks off the ambient pull.
-    private func activateLocalDefault() {
-        let tag = OllamaCatalog.recommendedTag()
-        // Order: provider + model writes FIRST (recordConsent reads
-        // `activeProvider` for the audit trail), then sync the global model
-        // so ServeManager routes to it, then consent, then notify, then pull.
-        activeProvider = LLMProvider.ollama.rawValue
-        ollamaModel = tag
-        syncGlobalModel(for: .ollama)
-        recordConsent(action: "ollama")
-        NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        // Re-entry safe: start(tag:) cancels any in-flight pull before
-        // launching, so a double-tap before dismissal can't race two pulls.
-        ollamaDownload.start(tag: tag)
-    }
 
     /// Continue / Done path. Runs the same decision the Settings "Use this
     /// provider" toggle makes: if the active provider is local / unconfigured

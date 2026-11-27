@@ -15,7 +15,7 @@ import SwiftUI
 /// are the canonical values. `OllamaDownloadPill` should adopt this shell as a
 /// fast-follow so there's a single source; until it does, keep the two in sync.
 ///
-/// Gate visibility at the call site (`if model.isActive { StatusPill { … } }`) —
+/// Gate visibility at the call site (`if model.isPillVisible { StatusPill { … } }`) —
 /// the shell always renders; it doesn't self-hide.
 struct StatusPill<Label: View, Detail: View>: View {
     /// Two-way so the caller can also drive presentation (e.g. auto-present).

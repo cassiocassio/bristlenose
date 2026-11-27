@@ -16,6 +16,10 @@ import os
 struct LLMSettingsView: View {
 
     @EnvironmentObject var i18n: I18n
+    /// Ollama's setup, the same instance the toolbar pill reads (Whisper's
+    /// pattern: `TranscriptionSettingsView` and `WhisperDownloadModel.shared`).
+    @ObservedObject private var ollamaDownload = OllamaDownloadModel.shared
+    @State private var showingOllamaPicker = false
 
     private static let logger = Logger(
         subsystem: "app.bristlenose", category: "llm-settings")
@@ -207,7 +211,24 @@ struct LLMSettingsView: View {
          failure(for: selectedProvider)?.resolved(i18n) ?? "",
          fixture?.id ?? "",
          keyDrafts.failed.contains(selectedProvider) ? "keyNotSaved" : "",
-         useCustomModel ? "custom" : "listed"].joined(separator: "|")
+         useCustomModel ? "custom" : "listed",
+         Self.ollamaSetupSignature(selected: selectedProvider, phase: ollamaDownload.phase,
+                                   hasByteTotal: ollamaDownload.totalBytes > 0)]
+            .joined(separator: "|")
+    }
+
+    /// Ollama's setup stage, when Ollama is the provider on screen: the Model card
+    /// grows by a stage and shrinks back when it ends, so the window refits once
+    /// per stage. Never the bytes: a refit per progress tick would animate the
+    /// window all through a download. The one change inside a stage that moves
+    /// the card is the byte total arriving (a spinner becomes a line and a bar),
+    /// so that is in too, once.
+    nonisolated static func ollamaSetupSignature(selected: LLMProvider,
+                                                 phase: OllamaDownloadModel.Phase,
+                                                 hasByteTotal: Bool) -> String {
+        guard selected == .ollama else { return "" }
+        let stage = OllamaDownloadModel.stage(phase)
+        return "ollama:" + stage + (phase == .downloading && hasByteTotal ? "+total" : "")
     }
 
     /// Ask the window to take the height this provider now needs.
@@ -227,9 +248,26 @@ struct LLMSettingsView: View {
 
     // MARK: - Left sidebar
 
+    /// Two groups, by where the model runs (owner, 27 Nov 2026): the cloud
+    /// providers, then Ollama on this Mac.
+    static let cloudProviders: [LLMProvider] = LLMProvider.allCases.filter(\.needsAPIKey)
+    static let onDeviceProviders: [LLMProvider] = LLMProvider.allCases.filter { !$0.needsAPIKey }
+
     private var providerList: some View {
         VStack(spacing: 0) {
-            List(LLMProvider.allCases, selection: $selectedProvider) { provider in
+            List(selection: $selectedProvider) {
+                Section(i18n.t("desktop.llmSettings.groupCloud")) {
+                    ForEach(Self.cloudProviders) { providerRow($0) }
+                }
+                Section(i18n.t("desktop.llmSettings.groupOnDevice")) {
+                    ForEach(Self.onDeviceProviders) { providerRow($0) }
+                }
+            }
+
+        }
+    }
+
+    private func providerRow(_ provider: LLMProvider) -> some View {
                 HStack(spacing: 10) {
                     // Radio indicator for active provider (user choice).
                     // Uses a Button for a reliable click target — onTapGesture
@@ -292,9 +330,6 @@ struct LLMSettingsView: View {
                         value: statusFor(provider))
                 }
                 .tag(provider)
-            }
-
-        }
     }
 
     // MARK: - Right detail pane
@@ -615,12 +650,16 @@ struct LLMSettingsView: View {
         let isKnown = models.contains(currentModel)
 
         return Section(i18n.t("desktop.llmSettings.modelSection")) {
-            Picker(i18n.t("desktop.llmSettings.modelSection"), selection: modelBinding) {
-                ForEach(models, id: \.self) { model in
-                    Text(model).tag(model)
+            if selectedProvider == .ollama {
+                ollamaModelRow(currentModel)
+            } else {
+                Picker(i18n.t("desktop.llmSettings.modelSection"), selection: modelBinding) {
+                    ForEach(models, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                    Divider()
+                    Text(i18n.t("desktop.llmSettings.customModelOption")).tag("__custom__")
                 }
-                Divider()
-                Text(i18n.t("desktop.llmSettings.customModelOption")).tag("__custom__")
             }
 
             if !isKnown || useCustomModel {
@@ -636,9 +675,72 @@ struct LLMSettingsView: View {
                         }
                     }
             }
+
+            // The setup's stage, under the Model row, in the same card: the
+            // pill's own stage views (owner, 27 Nov 2026). Nothing when idle or
+            // choosing; the card shrinks back when the stage ends.
+            if selectedProvider == .ollama, OllamaSetupStageView.shows(ollamaDownload.phase) {
+                OllamaSetupStageView(model: ollamaDownload)
+                    .environmentObject(i18n)
+                    .padding(.vertical, 4)
+            }
         }
         .onAppear { syncModelState() }
         .onChange(of: selectedProvider) { _, _ in syncModelState() }
+    }
+
+    /// Ollama's Model row: its button opens the approved picker in a popover, in
+    /// place of the plain menu; "Custom…" is inside the picker. Not while a setup
+    /// is under way with its own Cancel (waiting, downloading, finishing): opening
+    /// the picker restarts the setup, as Whisper's Model pop-up is dimmed while it
+    /// downloads.
+    private func ollamaModelRow(_ currentModel: String) -> some View {
+        LabeledContent(i18n.t("desktop.llmSettings.modelSection")) {
+            Button {
+                // The picker starts on the current model when it is one of the
+                // catalogue's, else on the one recommended for this Mac.
+                let curated = OllamaCatalog.model(for: currentModel) != nil
+                ollamaDownload.start(tag: curated ? currentModel : OllamaCatalog.recommendedTag())
+                showingOllamaPicker = true
+            } label: {
+                HStack(spacing: 4) {
+                    Text(currentModel)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .imageScale(.small)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .disabled(Self.ollamaPickerLocked(ollamaDownload.phase))
+            .popover(isPresented: $showingOllamaPicker, arrowEdge: .bottom) {
+                OllamaModelPicker(
+                    model: ollamaDownload,
+                    onCustom: {
+                        showingOllamaPicker = false
+                        useCustomModel = true
+                    },
+                    onCommit: {
+                        // The choice replaces any custom tag the field held.
+                        useCustomModel = false
+                        customModelText = ""
+                        showingOllamaPicker = false
+                    })
+                .environmentObject(i18n)
+            }
+        }
+        // Closed: without "Use …" the stage that was showing comes back; after it,
+        // the route "Use …" started carries on (`OllamaDownloadModel.pickerDismissed`).
+        .onChange(of: showingOllamaPicker) { _, open in
+            if !open { ollamaDownload.pickerDismissed() }
+        }
+    }
+
+    /// Whether the Model row's button is dimmed: a setup is running and has its
+    /// own Cancel.
+    nonisolated static func ollamaPickerLocked(_ phase: OllamaDownloadModel.Phase) -> Bool {
+        switch phase {
+        case .waitingForOllama, .downloading, .finishing: return true
+        case .idle, .choosingModel, .needsOllama, .failed: return false
+        }
     }
 
     private func modelForProvider(_ provider: LLMProvider) -> String {
@@ -951,6 +1053,7 @@ struct LLMSettingsView: View {
     private func activate(_ provider: LLMProvider) {
         guard statusFor(provider).canActivate else { return }
         activeProvider = provider.rawValue
+        ollamaDownload.activeProviderChanged(to: provider.rawValue)
         syncGlobalModel()
         refreshStatuses()
         NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)

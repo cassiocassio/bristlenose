@@ -3,12 +3,14 @@ import SwiftUI
 
 /// App-level engine for the on-device model setup flow (flow B, model-first).
 ///
-/// Hoisted out of the old `OllamaSetupSheet` (Beat 3): when the user clicks
-/// "Use Ollama" on the consent sheet we set provider=local and call `start(tag:)`,
-/// which opens the model picker. This object outlives the sheet (owned at app
-/// level via `@StateObject` in `BristlenoseApp`, injected as an
-/// `@EnvironmentObject`) so the setup survives the dismissal and surfaces
-/// through the toolbar `OllamaDownloadPill`.
+/// Started from Settings ▸ LLM Provider ▸ Ollama (owner, 27 Nov 2026; until then
+/// from the AI disclosure's "Use Ollama" button, now gone): the Model row's
+/// button calls `start(tag:)` and opens the model picker in a popover; "Use …"
+/// calls `useModel(tag:)`, which switches the provider to Ollama and then routes.
+/// The stages show in Settings' Model card; with Settings closed, the toolbar
+/// `OllamaDownloadPill` shows a download and a failure only (`isPillVisible`,
+/// Whisper's rule). One instance, `shared`, read by both, as
+/// `WhisperDownloadModel.shared` is by its Settings row and its pill.
 ///
 /// ## One observable bit
 ///
@@ -23,6 +25,20 @@ import SwiftUI
 /// See `docs/design-ollama-setup.md` for the full spec.
 @MainActor
 final class OllamaDownloadModel: ObservableObject {
+
+    /// The one instance: the app, Settings and the pill all read this.
+    static let shared = OllamaDownloadModel()
+
+    /// Where the provider and model choice are written, and where the prefs
+    /// change is posted. Injectable, so a test neither writes the app's
+    /// preferences nor posts into another test's count.
+    let defaults: UserDefaults
+    let notifications: NotificationCenter
+
+    init(defaults: UserDefaults = .standard, notifications: NotificationCenter = .default) {
+        self.defaults = defaults
+        self.notifications = notifications
+    }
 
     enum Phase: Equatable {
         case idle
@@ -60,12 +76,42 @@ final class OllamaDownloadModel: ObservableObject {
     /// `nil` = daemon down (or not yet probed), `[…]` = installed models. Drives
     /// the picker's "Already on this Mac" grouping and foreshadow line.
     @Published private(set) var installedSnapshot: [InstalledModel]?
-    /// One-shot token: the pill auto-presents the picker once when it first
-    /// appears post-consent, then calls `consumeAutoPresent()`.
-    @Published var pendingAutoPresent = false
 
-    /// Whether the pill should be visible. The pill self-hides when idle.
+    /// The stage to put back if the picker closes without a choice (`start`).
+    private var resume: (phase: Phase, tag: String?) = (.idle, nil)
+    /// Whether "Use …" was pressed since the picker opened.
+    private var committed = false
+
+    /// Whether a setup is under way (anything but idle).
     var isActive: Bool { phase != .idle }
+
+    /// Whether the toolbar pill shows: only while the download runs (bytes
+    /// moving, or Ollama writing the model) and after a failure, until Retry.
+    /// Gone once the model is on the Mac or after Cancel. Choosing, getting
+    /// Ollama and waiting for it live in Settings. Whisper's rule
+    /// (`WhisperDownloadModel.isPillVisible`), owner's decision 27 Nov 2026.
+    var isPillVisible: Bool { Self.isPillVisible(phase) }
+
+    nonisolated static func isPillVisible(_ phase: Phase) -> Bool {
+        switch phase {
+        case .downloading, .finishing, .failed: return true
+        case .idle, .choosingModel, .needsOllama, .waitingForOllama: return false
+        }
+    }
+
+    /// The stage alone, for Settings' height signature: one refit per change of
+    /// stage, never per byte of progress (`LLMSettingsView.heightSignature`).
+    nonisolated static func stage(_ phase: Phase) -> String {
+        switch phase {
+        case .idle: return "idle"
+        case .choosingModel: return "choosing"
+        case .needsOllama: return "needs"
+        case .waitingForOllama: return "waiting"
+        case .downloading: return "downloading"
+        case .finishing: return "finishing"
+        case .failed: return "failed"
+        }
+    }
 
     var downloadRatio: Double {
         guard totalBytes > 0 else { return 0 }
@@ -89,18 +135,24 @@ final class OllamaDownloadModel: ObservableObject {
 
     // MARK: - Lifecycle
 
-    /// Entry point from `AIConsentView.activateLocalDefault()` (or a Settings
-    /// re-entry). Always routes to the model picker first (model-first): the
+    /// Opening the picker (the Model row's button in Settings). Model-first: the
     /// choice needs no daemon, so step 1 is universal. Probes the daemon in the
-    /// background to annotate the picker (installed models / foreshadow).
+    /// background to annotate the picker (installed models / foreshadow). Writes
+    /// nothing: the provider switch happens on "Use …" (`useModel(tag:)`).
     func start(tag: String) {
+        // A stage with no task of its own (needs Ollama, failed) comes back if the
+        // picker closes without a choice; anything else goes back to idle.
+        switch phase {
+        case .needsOllama, .failed: resume = (phase, currentTag)
+        default: resume = (.idle, nil)
+        }
+        committed = false
         task?.cancel()
         currentTag = tag
         completedBytes = 0
         totalBytes = 0
         installedSnapshot = nil
         phase = .choosingModel
-        pendingAutoPresent = true
         task = Task { @MainActor in
             let snapshot = await self.daemonSnapshot()
             // Cancellation is cooperative: a re-entry (another start/confirm/
@@ -112,25 +164,63 @@ final class OllamaDownloadModel: ObservableObject {
         }
     }
 
-    /// The pill calls this after auto-presenting the picker once.
-    func consumeAutoPresent() {
-        pendingAutoPresent = false
-    }
-
-    /// Step 1 → commit. Persists the (possibly changed) choice, then routes on a
-    /// fresh daemon snapshot: down → `needsOllama`; up & present → active
-    /// (no fetch); up & absent → `downloading`.
-    func confirmModel(tag: String) {
-        if tag != currentTag {
-            currentTag = tag
-            // Mirror the canonical prefs triad: per-provider model, global
-            // model, notify so ServeManager injects the right model.
-            UserDefaults.standard.set(tag, forKey: "llmModel_local")
-            UserDefaults.standard.set(tag, forKey: "llmModel")
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+    /// Step 1 → commit ("Use …"): the full switch, then the setup. Switches the
+    /// provider to Ollama with this model (the canonical triad: activeProvider,
+    /// per-provider model, global model, then one prefs notification so
+    /// ServeManager restarts on it), then routes on a fresh daemon snapshot:
+    /// down → `needsOllama`; up & present → ready (no fetch); up & absent →
+    /// `downloading`. The switch comes first, always: routing without it would
+    /// download a model while analysis still went to the old provider, and a
+    /// global model written while a cloud provider is active points that
+    /// provider at an Ollama tag. What the sheet's "Use Ollama" button did
+    /// (`activateLocalDefault`), minus the consent record, which is the sheet's.
+    func useModel(tag: String) {
+        committed = true
+        if Self.activate(tag: tag, in: defaults) {
+            notifications.post(name: .bristlenosePrefsChanged, object: nil)
         }
+        currentTag = tag
         task?.cancel()
         task = Task { @MainActor in await self.route(tag: tag) }
+    }
+
+    /// The provider switch `useModel(tag:)` makes, as data: Ollama active, this
+    /// model for Ollama and as the global model. True when anything changed, so
+    /// re-using the same model does not restart the serve.
+    @discardableResult
+    nonisolated static func activate(tag: String, in defaults: UserDefaults) -> Bool {
+        let wanted = [("activeProvider", LLMProvider.ollama.rawValue),
+                      ("llmModel_\(LLMProvider.ollama.rawValue)", tag),
+                      ("llmModel", tag)]
+        var changed = false
+        for (key, value) in wanted where defaults.string(forKey: key) != value {
+            defaults.set(value, forKey: key)
+            changed = true
+        }
+        return changed
+    }
+
+    /// The picker closed. Without "Use …" nothing was chosen, so the stage that
+    /// was showing comes back (needs Ollama, failed) or the setup goes idle.
+    /// After "Use …" the route `useModel` started carries on: the phase is still
+    /// `.choosingModel` until its daemon probe returns, so closing must not cancel.
+    func pickerDismissed() {
+        guard phase == .choosingModel, !committed else { return }
+        task?.cancel()
+        phase = resume.phase
+        currentTag = resume.tag
+    }
+
+    /// The person made another provider active. A setup still waiting on Ollama
+    /// (or for its choice) has no deadline and nothing on screen once Settings
+    /// leaves Ollama, so it stops; a running download, which has its pill and
+    /// its Cancel, carries on.
+    func activeProviderChanged(to rawValue: String) {
+        guard rawValue != LLMProvider.ollama.rawValue else { return }
+        switch phase {
+        case .choosingModel, .needsOllama, .waitingForOllama: cancel()
+        case .idle, .downloading, .finishing, .failed: break
+        }
     }
 
     /// Step 2 → open ollama.com and begin the passive wait. Polling has no

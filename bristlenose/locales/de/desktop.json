@@ -932,6 +932,7 @@
       "noResponse": "Keine Antwort von {{provider}}.",
       "timedOut": "Zeit\u00fcberschreitung \u2013 {{provider}} hat nicht innerhalb von 5 s geantwortet.",
       "offline": "Keine Netzwerkverbindung. Ihr Schl\u00fcssel war in Ordnung \u2013 wir k\u00f6nnen ihn nur gerade nicht pr\u00fcfen.",
+      "offlineUnchecked": "Keine Netzwerkverbindung, daher wurde dieser Schl\u00fcssel noch nicht gepr\u00fcft.",
       "unreachable": "{{provider}} nicht erreichbar. Pr\u00fcfen Sie Ihre Verbindung.",
       "networkError": "Netzwerkfehler beim Verbinden mit {{provider}}.",
       "ollamaURLMissing": "Geben Sie die URL des Ollama-Servers an.",

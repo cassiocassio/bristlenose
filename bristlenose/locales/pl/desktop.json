@@ -988,6 +988,7 @@
       "noResponse": "Brak odpowiedzi od {{provider}}.",
       "timedOut": "Przekroczono czas \u017c\u0105dania \u2013 {{provider}} nie odpowiedzia\u0142 w ci\u0105gu 5 s.",
       "offline": "Brak po\u0142\u0105czenia sieciowego. Klucz by\u0142 poprawny \u2013 po prostu nie mo\u017cemy go teraz sprawdzi\u0107.",
+      "offlineUnchecked": "Brak po\u0142\u0105czenia sieciowego, wi\u0119c ten klucz nie zosta\u0142 jeszcze sprawdzony.",
       "unreachable": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z {{provider}}. Sprawd\u017a po\u0142\u0105czenie.",
       "networkError": "B\u0142\u0105d sieci podczas \u0142\u0105czenia z {{provider}}.",
       "ollamaURLMissing": "Podaj adres URL serwera Ollama.",

@@ -932,6 +932,7 @@
       "noResponse": "Ei vastausta palvelusta {{provider}}.",
       "timedOut": "Pyynt\u00f6 aikakatkaistiin \u2013 {{provider}} ei vastannut 5 sekunnissa.",
       "offline": "Ei verkkoyhteytt\u00e4. Avain oli kunnossa \u2013 emme vain voi tarkistaa sit\u00e4 juuri nyt.",
+      "offlineUnchecked": "Ei verkkoyhteytt\u00e4, joten t\u00e4t\u00e4 avainta ei ole viel\u00e4 tarkistettu.",
       "unreachable": "Palveluun {{provider}} ei saatu yhteytt\u00e4. Tarkista verkkoyhteys.",
       "networkError": "Verkkovirhe yhdistett\u00e4ess\u00e4 palveluun {{provider}}.",
       "ollamaURLMissing": "Aseta Ollama-palvelimen osoite.",

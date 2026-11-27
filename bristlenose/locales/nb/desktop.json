@@ -932,6 +932,7 @@
       "noResponse": "Ingen svar fra {{provider}}.",
       "timedOut": "Foresp\u00f8rselen fikk tidsavbrudd \u2013 {{provider}} svarte ikke innen 5 s.",
       "offline": "Ingen nettverkstilkobling. N\u00f8kkelen din var i orden \u2013 vi kan bare ikke sjekke den n\u00e5.",
+      "offlineUnchecked": "Ingen nettverkstilkobling, s\u00e5 denne n\u00f8kkelen er ikke sjekket enn\u00e5.",
       "unreachable": "Kunne ikke n\u00e5 {{provider}}. Sjekk tilkoblingen din.",
       "networkError": "Nettverksfeil ved tilkobling til {{provider}}.",
       "ollamaURLMissing": "Angi URL-en til Ollama-serveren.",

@@ -932,6 +932,7 @@
       "noResponse": "Aucune r\u00e9ponse de {{provider}}.",
       "timedOut": "D\u00e9lai d\u2019attente d\u00e9pass\u00e9 \u2014 {{provider}} n\u2019a pas r\u00e9pondu en 5\u00a0s.",
       "offline": "Aucune connexion r\u00e9seau. Votre cl\u00e9 \u00e9tait correcte \u2014 nous ne pouvons simplement pas la v\u00e9rifier pour l\u2019instant.",
+      "offlineUnchecked": "Aucune connexion r\u00e9seau, cette cl\u00e9 n\u2019a donc pas encore \u00e9t\u00e9 v\u00e9rifi\u00e9e.",
       "unreachable": "Impossible de joindre {{provider}}. V\u00e9rifiez votre connexion.",
       "networkError": "Erreur r\u00e9seau lors de la connexion \u00e0 {{provider}}.",
       "ollamaURLMissing": "Indiquez l\u2019URL du serveur Ollama.",

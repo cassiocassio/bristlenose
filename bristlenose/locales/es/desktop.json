@@ -932,6 +932,7 @@
       "noResponse": "Sin respuesta de {{provider}}.",
       "timedOut": "La petici\u00f3n ha superado el tiempo l\u00edmite: {{provider}} no ha respondido en 5 s.",
       "offline": "No hay conexi\u00f3n de red. Tu clave era correcta; ahora mismo no podemos comprobarla.",
+      "offlineUnchecked": "No hay conexi\u00f3n de red, as\u00ed que esta clave a\u00fan no se ha comprobado.",
       "unreachable": "No se ha podido contactar con {{provider}}. Comprueba tu conexi\u00f3n.",
       "networkError": "Error de red al contactar con {{provider}}.",
       "ollamaURLMissing": "Indica la URL del servidor de Ollama.",

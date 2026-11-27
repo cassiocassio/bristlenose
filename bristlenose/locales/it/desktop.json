@@ -932,6 +932,7 @@
       "noResponse": "Nessuna risposta da {{provider}}.",
       "timedOut": "Richiesta scaduta: {{provider}} non ha risposto entro 5 s.",
       "offline": "Nessuna connessione di rete. La chiave era corretta: al momento non possiamo verificarla.",
+      "offlineUnchecked": "Nessuna connessione di rete, quindi questa chiave non \u00e8 ancora stata verificata.",
       "unreachable": "Impossibile raggiungere {{provider}}. Controlla la connessione.",
       "networkError": "Errore di rete nel contattare {{provider}}.",
       "ollamaURLMissing": "Imposta l\u2019URL del server Ollama.",

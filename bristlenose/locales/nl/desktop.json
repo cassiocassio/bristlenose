@@ -932,6 +932,7 @@
       "noResponse": "Geen reactie van {{provider}}.",
       "timedOut": "Time-out \u2014 {{provider}} reageerde niet binnen 5 s.",
       "offline": "Geen netwerkverbinding. Je sleutel was in orde \u2014 we kunnen die alleen nu niet controleren.",
+      "offlineUnchecked": "Geen netwerkverbinding, dus deze sleutel is nog niet gecontroleerd.",
       "unreachable": "Kan {{provider}} niet bereiken. Controleer je verbinding.",
       "networkError": "Netwerkfout bij het bereiken van {{provider}}.",
       "ollamaURLMissing": "Stel de URL van de Ollama-server in.",

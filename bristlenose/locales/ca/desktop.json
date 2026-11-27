@@ -932,6 +932,7 @@
       "noResponse": "Cap resposta de {{provider}}.",
       "timedOut": "La petici\u00f3 ha excedit el temps: {{provider}} no ha respost en 5 s.",
       "offline": "No hi ha connexi\u00f3 a la xarxa. La clau \u00e9s correcta; ara mateix no la podem comprovar.",
+      "offlineUnchecked": "No hi ha connexi\u00f3 a la xarxa, de manera que aquesta clau encara no s'ha comprovat.",
       "unreachable": "No s'ha pogut contactar amb {{provider}}. Comprova la connexi\u00f3.",
       "networkError": "Error de xarxa en contactar amb {{provider}}.",
       "ollamaURLMissing": "Indica l\u2019URL del servidor d\u2019Ollama.",

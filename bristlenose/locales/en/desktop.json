@@ -937,6 +937,7 @@
       "noResponse": "No response from {{provider}}.",
       "timedOut": "Request timed out \u2014 {{provider}} didn\u2019t respond in 5s.",
       "offline": "No network connection. Your key was fine \u2014 we just can\u2019t check it right now.",
+      "offlineUnchecked": "No network connection, so this key hasn\u2019t been checked yet.",
       "unreachable": "Couldn't reach {{provider}}. Check your connection.",
       "networkError": "Network error reaching {{provider}}.",
       "ollamaURLMissing": "Set the Ollama server URL.",

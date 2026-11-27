@@ -932,6 +932,7 @@
       "noResponse": "Inget svar fr\u00e5n {{provider}}.",
       "timedOut": "Tidsgr\u00e4nsen \u00f6verskreds \u2013 {{provider}} svarade inte inom 5 s.",
       "offline": "Ingen n\u00e4tverksanslutning. Din nyckel var korrekt \u2013 vi kan bara inte kontrollera den just nu.",
+      "offlineUnchecked": "Ingen n\u00e4tverksanslutning, s\u00e5 den h\u00e4r nyckeln har inte kontrollerats \u00e4n.",
       "unreachable": "Kunde inte n\u00e5 {{provider}}. Kontrollera din anslutning.",
       "networkError": "N\u00e4tverksfel vid anslutning till {{provider}}.",
       "ollamaURLMissing": "Ange URL:en till Ollama-servern.",

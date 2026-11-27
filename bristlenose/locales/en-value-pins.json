@@ -1233,6 +1233,7 @@
  "desktop.llmSettings.validation.networkError": "6c2703",
  "desktop.llmSettings.validation.noResponse": "1186c5",
  "desktop.llmSettings.validation.offline": "593afa",
+ "desktop.llmSettings.validation.offlineUnchecked": "503a83",
  "desktop.llmSettings.validation.ollamaHTTPError": "c65ba8",
  "desktop.llmSettings.validation.ollamaNoModels": "6acc0c",
  "desktop.llmSettings.validation.ollamaNoResponse": "f05487",

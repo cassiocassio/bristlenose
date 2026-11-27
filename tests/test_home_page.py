@@ -46,7 +46,7 @@ def page(built_at=NOW - 60):
 
 
 def data_block(html):
-    m = re.search(r'<script type="application/json" id="home-data">(.*?)</script>', html, re.S)
+    m = re.search(r'<script type="application/json" id="home-data">(.*?)</script\s*>', html, re.S | re.I)
     assert m, "no data block"
     return m.group(1)
 
@@ -65,7 +65,7 @@ def test_the_csp_names_exactly_the_two_scripts_and_blocks_the_network():
     csp = re.search(r'Content-Security-Policy" content="([^"]+)"', html).group(1)
     assert "connect-src 'none'" in csp and "default-src 'none'" in csp and "'unsafe-inline'" in csp.split("style-src")[1].split(";")[0]
     assert "script-src 'sha256-" in csp and "unsafe-eval" not in csp and csp.count("sha256-") == 2
-    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+    scripts = re.findall(r"<script>(.*?)</script\s*>", html, re.S | re.I)
     assert len(scripts) == 2
     for s in scripts:
         assert hl._hash(s) in csp, "a script the CSP does not name would not run"

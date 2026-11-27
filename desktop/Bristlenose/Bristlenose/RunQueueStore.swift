@@ -137,6 +137,11 @@ final class RunQueueJournal {
     /// (N45). They are written after the live queue, which is where they join it.
     var pendingRestore: [PersistedQueueEntry] = []
 
+    /// The restored studies the subscription check held. Written after the
+    /// live queue, as `pendingRestore` is, so a lapse does not erase them from
+    /// the saved queue; `PipelineRunner.retryHeldStarts` starts them.
+    var heldForSubscription: [PersistedQueueEntry] = []
+
     /// Record when `id` was asked for. `fresh` false keeps an earlier stamp:
     /// a second Analyse on a study already waiting is the same request.
     func stamp(_ id: UUID, studyID: String?, fresh: Bool, as given: Stamp? = nil) {
@@ -174,8 +179,11 @@ final class RunQueueJournal {
             entries.append(entry(waiting.id, clean: waiting.clean, inFlight: false))
         }
         // A study already running or queued is not written twice.
-        let present = Set(entries.map(\.projectID))
-        entries.append(contentsOf: pendingRestore.filter { !present.contains($0.projectID) })
+        var present = Set(entries.map(\.projectID))
+        for kept in pendingRestore + heldForSubscription where !present.contains(kept.projectID) {
+            entries.append(kept)
+            present.insert(kept.projectID)
+        }
         let snapshot = PersistedRunQueue(entries: entries)
         guard snapshot != lastWritten else { return }
         store.save(snapshot)

@@ -605,6 +605,19 @@ _QUALITY_SINK: contextvars.ContextVar[dict[str, Any] | None] = contextvars.Conte
 )
 
 
+#: What transcribed the file, for the session's manifest record (D6): set fresh
+#: per session by ``iter_transcribe_sessions``, written by ``_engine_of_record``
+#: when a backend RETURNS, so it names the engine whose segments came back,
+#: never one that was tried and deferred. A backend may leave ``"model"`` here
+#: first (Apple's, whose asset version only the helper's reply can give).
+_ENGINE_SINK: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "bristlenose_transcription_engine", default=None,
+)
+
+#: ``TranscriptSegment.source`` for each Whisper backend ``_resolve_backend`` names.
+_WHISPER_ENGINE = {"mlx": "mlx-whisper", "faster-whisper": "faster-whisper"}
+
+
 class TranscribeFn(Protocol):
     """A transcription backend, as returned by the ``_init_*_backend`` functions."""
 
@@ -614,6 +627,41 @@ class TranscribeFn(Protocol):
         settings: BristlenoseSettings,
         on_segment: FileSegmentCallback | None = None,
     ) -> tuple[list[TranscriptSegment], str | None]: ...
+
+
+def _engine_of_record(fn: TranscribeFn, engine: str, model: str | None) -> TranscribeFn:
+    """``fn``, recording ``engine`` and ``model`` for the session when it returns.
+
+    Clears what an earlier attempt on the same file left, so a session Apple's
+    model deferred and Whisper then transcribed is recorded as Whisper's.
+    """
+
+    def call(
+        audio_path: Path,
+        settings: BristlenoseSettings,
+        on_segment: FileSegmentCallback | None = None,
+    ) -> tuple[list[TranscriptSegment], str | None]:
+        sink = _ENGINE_SINK.get()
+        if sink is not None:
+            sink.clear()
+        out = fn(audio_path, settings, on_segment=on_segment) if on_segment else fn(
+            audio_path, settings)
+        if sink is not None:
+            sink["engine"] = engine
+            sink.setdefault("model", model)
+        return out
+
+    return call
+
+
+def _whisper_of_record(settings: BristlenoseSettings, hw: HardwareInfo) -> TranscribeFn:
+    """The Whisper backend this Mac resolves to, recording itself (D6)."""
+    backend = _resolve_backend(settings.whisper_backend, hw)
+    fn = (
+        _init_mlx_backend(settings) if backend == "mlx"
+        else _init_faster_whisper_backend(settings, hw)
+    )
+    return _engine_of_record(fn, _WHISPER_ENGINE.get(backend, backend), settings.whisper_model)
 
 
 def _needs_transcription(sessions: list[InputSession]) -> list[InputSession]:
@@ -636,6 +684,12 @@ class SessionTranscription:
     #: The session's transcription-quality record (numbers only), or None when
     #: the backend measured nothing. ``bristlenose/transcription_quality.py``.
     quality: dict[str, Any] | None = None
+    #: What produced ``segments`` (``TranscriptSegment.source``'s vocabulary) and
+    #: its model, for the session's manifest record (D6). A silent file is
+    #: recorded against the engine whose signal gate turned it away. None when
+    #: the session failed or was deferred.
+    engine: str | None = None
+    engine_model: str | None = None
 
 
 def _quality_record(
@@ -687,13 +741,19 @@ def iter_transcribe_sessions(
     transcribe_fn: TranscribeFn
     if choice.is_apple:
         assert choice.helper is not None and choice.locale is not None
+        from bristlenose.apple_speech import SOURCE as APPLE_SOURCE
+
         logger.info(
             "Transcribing %d sessions | backend=apple-speech | locale=%s (assumed from the "
             "UI language) | why: %s",
             len(needs_transcription), choice.locale, choice.reason,
         )
         transcribe_fn = _with_whisper_fallback(
-            _init_apple_backend(settings, choice.helper, choice.locale), settings,
+            _engine_of_record(
+                _init_apple_backend(settings, choice.helper, choice.locale),
+                APPLE_SOURCE, None,
+            ),
+            settings,
         )
     else:
         # Detect hardware and choose backend
@@ -714,6 +774,9 @@ def iter_transcribe_sessions(
             transcribe_fn = _init_mlx_backend(settings)
         else:
             transcribe_fn = _init_faster_whisper_backend(settings, hw)
+        transcribe_fn = _engine_of_record(
+            transcribe_fn, _WHISPER_ENGINE.get(backend, backend), settings.whisper_model,
+        )
 
     pinned = settings.whisper_language if settings.whisper_language != "auto" else None
     total = len(needs_transcription)
@@ -733,6 +796,8 @@ def iter_transcribe_sessions(
 
         sink: dict[str, Any] = {}
         sink_token = _QUALITY_SINK.set(sink)
+        engine: dict[str, Any] = {}
+        engine_token = _ENGINE_SINK.set(engine)
         try:
             # Only pass on_segment when a caller actually wants the within-file
             # heartbeat — keeps backward-compat with transcribe_fn callables
@@ -753,6 +818,8 @@ def iter_transcribe_sessions(
             done = SessionTranscription(
                 session.session_id, segments, detected if pinned is None and detected else None,
                 quality=_quality_record(session.session_id, segments, sink),
+                engine=engine.get("engine"),
+                engine_model=engine.get("model"),
             )
             logger.info(
                 "%s: Transcribed %d segments",
@@ -849,6 +916,7 @@ def iter_transcribe_sessions(
                     StageFailure(session_id=session.session_id, cause=cause),
                 )
         finally:
+            _ENGINE_SINK.reset(engine_token)
             _QUALITY_SINK.reset(sink_token)
 
         if on_progress:
@@ -1094,12 +1162,7 @@ def _with_whisper_fallback(apple_fn: TranscribeFn, settings: BristlenoseSettings
     ) -> tuple[list[TranscriptSegment], str | None]:
         if whisper_is_on_disk(settings):
             if not whisper_fn:
-                hw = detect_hardware()
-                whisper_fn.append(
-                    _init_mlx_backend(settings)
-                    if _resolve_backend(settings.whisper_backend, hw) == "mlx"
-                    else _init_faster_whisper_backend(settings, hw)
-                )
+                whisper_fn.append(_whisper_of_record(settings, detect_hardware()))
             logger.info("%s: to Whisper in this run (%s)", audio_path.name, reason)
             fn = whisper_fn[0]
             return fn(audio_path, settings, on_segment=on_segment) if on_segment else fn(
@@ -1208,6 +1271,13 @@ def _init_apple_backend(
         _report_quality(audio, levels, recognition=recognition, name=audio_path.name)
         if not verdict.passed:
             raise TranscriptionDeferredError(verdict.reason)
+        # Its version, for the session's record (D6), when the helper reports one.
+        # It does not today (asset_version is null), and the OS version is no
+        # stand-in: the model is installed and updated apart from macOS.
+        model = payload.get("asset_version")
+        sink = _ENGINE_SINK.get()
+        if sink is not None and model:
+            sink["model"] = str(model)
         logger.info(
             "%s: apple-speech %s, %d segments, mean confidence %s",
             audio_path.name, recognition["locale"], len(segments),

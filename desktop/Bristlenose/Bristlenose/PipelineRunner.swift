@@ -923,7 +923,7 @@ final class PipelineRunner: ObservableObject {
         whisperPhase == .onDisk && waiting.contains { !alreadyRerun.contains($0) }
     }
 
-    private func rerunDeferredProjects() {
+    func rerunDeferredProjects() {
         guard let projects = projectIndex?.projects else { return }
         for id in projectsWaitingForWhisper where !rerunForWhisper.contains(id) {
             guard let project = projects.first(where: { $0.id == id }) else { continue }
@@ -931,7 +931,11 @@ final class PipelineRunner: ObservableObject {
             Self.logger.info(
                 "re-running for deferred sessions project=\(id.uuidString, privacy: .public)"
             )
-            start(project: project, origin: .automatic)
+            // Held by the subscription: still owed, so it is retried when
+            // starts are allowed again, rather than spent here.
+            if start(project: project, origin: .automatic) == .heldForSubscription {
+                whisperRerunsHeld.insert(id)
+            }
         }
     }
 
@@ -2084,7 +2088,87 @@ final class PipelineRunner: ObservableObject {
 
     /// The subscription gate (App Store channel). nil on the `.dmg`, in debug
     /// and under tests that do not set one: no gate, runs start as before.
-    weak var subscriptionGate: SubscriptionGate?
+    /// Setting it also has the gate say when starts are allowed again, so the
+    /// automatic starts it held are retried (`retryHeldStarts`).
+    weak var subscriptionGate: SubscriptionGate? {
+        didSet {
+            subscriptionGate?.startsAllowed = { [weak self] in self?.retryHeldStarts() }
+        }
+    }
+
+    /// What `start` did with a request. The callers that start runs by
+    /// themselves read it: a run held by the subscription check is kept and
+    /// retried, and every other refusal is final, as it always was.
+    enum StartOutcome: Equatable {
+        case started
+        case queued
+        /// This study's run is live already; nothing changed.
+        case alreadyLive
+        case noConsent
+        case orphanAttached
+        case foreignRun
+        case noKey
+        /// The subscription check said no. A researcher's request is waiting
+        /// on the paywall; an automatic one shows nothing.
+        case heldForSubscription
+    }
+
+    /// Whisper re-runs the subscription check held, retried by
+    /// `retryHeldStarts`. Held studies of a restored queue are kept in
+    /// `queueJournal.heldForSubscription` instead, so they stay in the saved
+    /// queue too.
+    private(set) var whisperRerunsHeld: Set<UUID> = []
+
+    /// Start again what the subscription check held, now that it may pass: a
+    /// restored queue's studies in their order, then the Whisper re-runs. Each
+    /// study is read again from the sidebar (the one held may be gone, or
+    /// moved), a queued study still has to be inside the restore window, and a
+    /// re-run still has to be owed. A study held again stays held. Nothing
+    /// starts while a study is waiting on the paywall: what the researcher
+    /// asked for goes first, and the gate calls this again once it has.
+    func retryHeldStarts() {
+        if subscriptionGate?.pending != nil { return }
+        let queued = queueJournal.heldForSubscription
+        let reruns = whisperRerunsHeld
+        guard !queued.isEmpty || !reruns.isEmpty else { return }
+        whisperRerunsHeld = []
+        let projects = projectIndex?.projects ?? []
+        for entry in queued {
+            // Out of the held list only as it is handled: a journal write
+            // during an earlier study's spawn still carries the rest (N45).
+            queueJournal.heldForSubscription.removeAll { $0.projectID == entry.projectID }
+            let project = projects.first { $0.id == entry.projectID }
+            let decision = QueueRestorePolicy.decide(
+                entry, now: queueJournal.now(), project: project,
+                availability: project?.availability, evidence: nil
+            )
+            guard decision == .restore, let project else {
+                if case .drop(let reason) = decision {
+                    Self.logger.notice(
+                        "run queue: held study not retried project=\(entry.projectID.uuidString, privacy: .public) reason=\(reason.rawValue, privacy: .public)"
+                    )
+                }
+                continue
+            }
+            // As at the restore: the run Quit interrupted reads "Resuming…".
+            if entry.inFlight { resumingAfterQuit.insert(project.id) }
+            let outcome = start(
+                project: project, clean: entry.clean,
+                requested: .init(at: entry.enqueuedAt, studyID: entry.studyID ?? project.studyID),
+                origin: .automatic
+            )
+            resumingAfterQuit.remove(project.id)
+            if outcome == .heldForSubscription { queueJournal.heldForSubscription.append(entry) }
+        }
+        let stillWaiting = Set(projectsWaitingForWhisper)
+        for id in reruns where stillWaiting.contains(id) {
+            guard let project = projects.first(where: { $0.id == id }) else { continue }
+            if start(project: project, origin: .automatic) == .heldForSubscription {
+                whisperRerunsHeld.insert(id)
+            }
+        }
+        journalQueue()
+    }
 
     /// Request a pipeline run for `project`. If nothing is running, spawns
     /// immediately; otherwise enqueues.
@@ -2102,10 +2186,11 @@ final class PipelineRunner: ObservableObject {
     ///   `bristlenose-output/` before running. Used by the `outputExists`
     ///   re-analyse CTA in the failed-popover. Destructive — caller must
     ///   confirm with the user first. Default false.
+    @discardableResult
     func start(
         project: Project, clean: Bool = false, requested: RunQueueJournal.Stamp? = nil,
         origin: RunStartOrigin = .researcher
-    ) {
+    ) -> StartOutcome {
         guard hasConsent() else {
             Self.logger.warning(
                 "start blocked — no AI consent (project=\(project.id.uuidString, privacy: .public))"
@@ -2113,7 +2198,7 @@ final class PipelineRunner: ObservableObject {
             // Defence-in-depth — the modal sheet is the real gate. If we ever
             // get here, log and no-op rather than synthesising a fake failure
             // (the user can't "Retry" their way out of consent).
-            return
+            return .noConsent
         }
 
         // If this project is currently an attached orphan (.running but
@@ -2122,7 +2207,7 @@ final class PipelineRunner: ObservableObject {
             Self.logger.warning(
                 "start ignored — orphan attached for project=\(project.id.uuidString, privacy: .public)"
             )
-            return
+            return .orphanAttached
         }
         // Nor over a run another process owns (a CLI run): it holds the output
         // folder, so ours could only fail, as "another run is in progress",
@@ -2131,7 +2216,7 @@ final class PipelineRunner: ObservableObject {
             Self.logger.warning(
                 "start ignored — a run this app does not own is live for project=\(project.id.uuidString, privacy: .public)"
             )
-            return
+            return .foreignRun
         }
         // From here the start writes the row, so a re-read of the last run's
         // end state must not land on it (R29). Not before: a start the guards
@@ -2151,7 +2236,7 @@ final class PipelineRunner: ObservableObject {
                 "start refused — no API key for the active provider (project=\(project.id.uuidString, privacy: .public))"
             )
             state[project.id] = refusal
-            return
+            return .noKey
         }
 
         // The subscription wall: after the key check (a key comes before the
@@ -2162,7 +2247,7 @@ final class PipelineRunner: ObservableObject {
             Self.logger.notice(
                 "start held — no subscription (project=\(project.id.uuidString, privacy: .public))"
             )
-            return
+            return .heldForSubscription
         }
 
         // The run's end banner needs the researcher's permission, asked once, at
@@ -2173,6 +2258,7 @@ final class PipelineRunner: ObservableObject {
         if currentlyRunning == nil {
             queueJournal.stamp(project.id, studyID: project.studyID, fresh: true, as: requested)
             spawn(project: project, clean: clean)
+            return .started
         } else if currentlyRunning != project.id || currentRun == nil {
             // The second case: this study's run has ended and its end state is
             // being read. A start now — a drop onto it in its last moment — is
@@ -2183,7 +2269,9 @@ final class PipelineRunner: ObservableObject {
             )
             queue.enqueue(project.id, clean: clean)
             renumberQueue()
+            return .queued
         }
+        return .alreadyLive
     }
 
     /// Cancel the current run (if it's for `project`) or remove it from the
@@ -3462,10 +3550,14 @@ var args = ["run", project.path, "--no-serve"]
         // The local model's server is down: the setup check prints "Ollama isn't
         // running" (desktop) or "Ollama is installed but not running" (CLI) and exits
         // before the run opens. It is a reach failure, so the row reads "Couldn't
-        // reach Ollama" (BR-02).
+        // reach Ollama" (BR-02). With the network off the same check stops a cloud
+        // run with its own row, "✗ Network  Can't reach api.anthropic.com"
+        // (`doctor.check_network`), and nothing else here names it: it read as
+        // `.unknown`, "Something went wrong during analysis." (c-offline, 26 Nov
+        // 2026). A healthy row says "reachable", which this does not match.
         if matches(
             tail,
-            #"connection refused|timed out|dns|could not resolve|ollama (isn['\u{2019}]t|is not|is installed but not) running"#
+            #"connection refused|timed out|dns|could not resolve|can['’]t reach|ollama (isn['\u{2019}]t|is not|is installed but not) running"#
         ) {
             return .network
         }

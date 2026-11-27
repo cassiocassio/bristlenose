@@ -40,12 +40,25 @@ _BURN_TIMEOUT_SECONDS = 600
 #: within 0.2 VMAF, at 1.4 and 0.95 times the size. ``-g 250`` is x264's own
 #: keyframe interval; without it VideoToolbox takes libavcodec's 12 frames and
 #: the screen recording came out 6 times x264's size for the same picture.
-#: ``-allow_sw`` lets Apple's software encoder stand in where there is no media
-#: engine (a virtual machine); on real hardware it changed no byte.
 _BURN_ENCODERS: dict[str, tuple[str, ...]] = {
     "libx264": ("-c:v", "libx264", "-crf", "18", "-preset", "veryfast"),
-    "h264_videotoolbox": ("-c:v", "h264_videotoolbox", "-q:v", "75", "-g", "250", "-allow_sw", "1"),
+    "h264_videotoolbox": ("-c:v", "h264_videotoolbox", "-q:v", "75", "-g", "250"),
 }
+
+#: Bits per pixel per second for Apple's software H.264 encoder, the second try
+#: when VideoToolbox's hardware one fails (a Mac with no media engine, such as a
+#: virtual machine). The software encoder refuses ``-q:v`` (exit 187, "Error
+#: setting bitrate property: -12900", measured 26 Nov 2026), so ``-allow_sw``
+#: beside ``-q:v`` could never fall back; it takes a bitrate. At 2 bits per pixel
+#: it scored within 1.4 VMAF of x264's CRF 18 on a 960x620 screen recording and
+#: above it on a 3456x2234 one.
+_VT_SOFTWARE_BITS_PER_PIXEL = 2
+
+
+def _vt_software_args(width: int, height: int) -> tuple[str, ...]:
+    """VideoToolbox's software encoder, at a bitrate sized to the frame."""
+    bitrate = max(500_000, round(width * height * _VT_SOFTWARE_BITS_PER_PIXEL))
+    return ("-c:v", "h264_videotoolbox", "-require_sw", "1", "-b:v", str(bitrate), "-g", "250")
 
 
 #: The longest side each encoder takes. VideoToolbox's H.264 refuses a frame
@@ -263,7 +276,8 @@ class FFmpegBackend:
         The "for slides" export: text in the pixels plays anywhere, including
         PowerPoint, Keynote and a Teams screen share, where a subtitle track is
         ignored or needs a manual step. Re-encodes the video with x264 (CRF 18)
-        where this ffmpeg has it, else VideoToolbox (``_BURN_ENCODERS``), and
+        where this ffmpeg has it, else VideoToolbox (``_BURN_ENCODERS``; its
+        software encoder at a bitrate if the hardware one fails), and
         copies the audio. The ``.ass`` file and the bundled font go in a
         private temp folder that ffmpeg runs in, so the filter graph names them
         relatively — no path that needs escaping reaches it (a Windows drive path
@@ -300,30 +314,36 @@ class FFmpegBackend:
             shutil.copy2(BURN_FONT, tmp / BURN_FONT.name)
             ass = tmp / "subtitles.ass"
             ass.write_text(to_ass(cues, width, height), encoding="utf-8")
-            result = subprocess.run(
-                [
-                    ffmpeg, "-hide_banner", "-loglevel", "error",
-                    "-i", str(clip.absolute()),
-                    # ffmpeg turns a rotated phone video upright before the
-                    # filters; scaling to the display size then gives square
-                    # pixels (an anamorphic source's text isn't stretched) and
-                    # even sides, which yuv420p needs — an odd-sized screen
-                    # capture otherwise fails to open the encoder.
-                    "-vf",
-                    f"scale={width}:{height},setsar=1,subtitles={ass.name}:fontsdir=.",
-                    *_BURN_ENCODERS[encoder],
-                    "-pix_fmt", "yuv420p",
-                    "-c:a", "copy", "-movflags", "+faststart",
-                    "-y", str(output.absolute()),
-                ],
-                cwd=tmp,
-                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=_BURN_TIMEOUT_SECONDS,
-            )
-            if result.returncode != 0:
-                logger.warning(
-                    "Burning subtitles into %s failed (exit %d): %s",
-                    clip.name, result.returncode, result.stderr[-500:],
+            attempts = [_BURN_ENCODERS[encoder]]
+            if encoder == "h264_videotoolbox":
+                attempts.append(_vt_software_args(width, height))
+            for n, encoder_args in enumerate(attempts, start=1):
+                result = subprocess.run(
+                    [
+                        ffmpeg, "-hide_banner", "-loglevel", "error",
+                        "-i", str(clip.absolute()),
+                        # ffmpeg turns a rotated phone video upright before the
+                        # filters; scaling to the display size then gives square
+                        # pixels (an anamorphic source's text isn't stretched) and
+                        # even sides, which yuv420p needs — an odd-sized screen
+                        # capture otherwise fails to open the encoder.
+                        "-vf",
+                        f"scale={width}:{height},setsar=1,subtitles={ass.name}:fontsdir=.",
+                        *encoder_args,
+                        "-pix_fmt", "yuv420p",
+                        "-c:a", "copy", "-movflags", "+faststart",
+                        "-y", str(output.absolute()),
+                    ],
+                    cwd=tmp,
+                    capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=_BURN_TIMEOUT_SECONDS,
                 )
+                if result.returncode == 0:
+                    break
+                logger.warning(
+                    "Burning subtitles into %s failed (exit %d, attempt %d of %d): %s",
+                    clip.name, result.returncode, n, len(attempts), result.stderr[-500:],
+                )
+            else:
                 return None
         except subprocess.TimeoutExpired:
             logger.warning("Burning subtitles into %s timed out", clip.name)

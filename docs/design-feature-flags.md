@@ -187,7 +187,7 @@ anything, and they are never user-settable.
 | `dev` param / `_BRISTLENOSE_DEV=1` | `bristlenose serve --dev` (`cli.py`) | Vite HMR mount, playground, SQLAdmin full CRUD, `/api/dev/*`, the `__BRISTLENOSE_DEV__` script tag |
 | `_BRISTLENOSE_DEV_ENDPOINTS=1` | the DEBUG desktop build's sidecar spawn | `/api/dev/*` only — so the native Run Inspector works without flipping the app into HMR mode |
 | `_BRISTLENOSE_ADMIN_PANEL=1` | the `.dmg` beta desktop host | read-only SQLAdmin at `/admin`, never in the App Store build because it never sets the var |
-| `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` | the desktop host | disk `.env` files ignored; credential resolution defers to the host |
+| `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` | the desktop host | disk `.env` files ignored; credential resolution defers to the host; every installer shellout refuses (`installs_forbidden()` in `utils/package_install.py`; App Store guideline 2.5.2) |
 | `_BRISTLENOSE_AUTH_TOKEN`, `_BRISTLENOSE_PORT`, `_BRISTLENOSE_PROJECT_DIR`, `_BRISTLENOSE_VERBOSE` | the CLI, for its own uvicorn reload children | plumbing, not gating |
 
 **The leading underscore is the convention: internal, set by a caller, never

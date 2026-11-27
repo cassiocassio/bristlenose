@@ -132,6 +132,10 @@ if [ ! -x "$TOOLS/bin/meson" ] || [ ! -x "$TOOLS/bin/ninja" ] || [ ! -x "$TOOLS/
         -r /dev/stdin <<<"$TOOLS_REQUIREMENTS" >>"$LOG" 2>&1
 fi
 
+# Nothing from the builder's shell: a Homebrew CPPFLAGS or CPATH would put its
+# headers ahead of ours, and a static .a it pulled in would pass the otool gate.
+unset CPPFLAGS CC CXX CPP LIBS CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH OBJC_INCLUDE_PATH \
+    LIBRARY_PATH SDKROOT ACLOCAL_PATH
 export PATH="$TOOLS/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export PKG_CONFIG="$TOOLS/bin/pkgconf"
 export PKG_CONFIG_LIBDIR="$P/lib/pkgconfig"   # only our prefix's .pc files
@@ -157,14 +161,14 @@ unpack "freetype-$FREETYPE_V"
 step "fribidi $FRIBIDI_V"
 unpack "fribidi-$FRIBIDI_V"
 (meson setup "$BLD/fribidi-$FRIBIDI_V/_b" "$BLD/fribidi-$FRIBIDI_V" --prefix="$P" \
-    --libdir=lib --buildtype=release -Ddefault_library=static \
+    --libdir=lib --buildtype=release --wrap-mode=nodownload -Ddefault_library=static \
     -Ddocs=false -Dbin=false -Dtests=false \
     && ninja -C "$BLD/fribidi-$FRIBIDI_V/_b" install) >>"$LOG" 2>&1
 
 step "harfbuzz $HARFBUZZ_V"
 unpack "harfbuzz-$HARFBUZZ_V"
 (meson setup "$BLD/harfbuzz-$HARFBUZZ_V/_b" "$BLD/harfbuzz-$HARFBUZZ_V" --prefix="$P" \
-    --libdir=lib --buildtype=release -Ddefault_library=static -Dfreetype=enabled \
+    --libdir=lib --buildtype=release --wrap-mode=nodownload -Ddefault_library=static -Dfreetype=enabled \
     -Dglib=disabled -Dgobject=disabled -Dcairo=disabled -Dicu=disabled -Dchafa=disabled \
     -Dcoretext=disabled -Dtests=disabled -Ddocs=disabled -Dutilities=disabled \
     -Dintrospection=disabled \
@@ -182,7 +186,7 @@ unpack "libass-$LIBASS_V"
 step "dav1d $DAV1D_V"
 unpack "dav1d-$DAV1D_V"
 (meson setup "$BLD/dav1d-$DAV1D_V/_b" "$BLD/dav1d-$DAV1D_V" --prefix="$P" \
-    --libdir=lib --buildtype=release -Ddefault_library=static \
+    --libdir=lib --buildtype=release --wrap-mode=nodownload -Ddefault_library=static \
     -Denable_tools=false -Denable_tests=false \
     && ninja -C "$BLD/dav1d-$DAV1D_V/_b" install) >>"$LOG" 2>&1
 
@@ -213,13 +217,12 @@ fail() { echo "error: $1" >&2; exit 1; }
 # and under pipefail the SIGPIPE makes a found match read as a failure.
 for bin in "$FF" "$FP"; do
     text="$(strings -a "$bin")"
-    cfg="$(grep -m1 -e '--prefix=' <<<"$text")" || fail "no configure line in $bin"
-    for flag in --enable-gpl --enable-nonfree --enable-version3; do
-        case " $cfg " in *" $flag "*) fail "$bin was configured with $flag" ;; esac
-    done
+    # The same licence gate build-all.sh runs on the exported app.
+    "$SCRIPT_DIR/check-ffmpeg-licence.sh" "$bin" || fail "$bin is not an LGPL-2.1+ build"
     grep -qx -- "$VERSION" <<<"$text" || fail "$bin does not carry version $VERSION"
     # Only the OS's own libraries: nothing from Homebrew or the build tree.
-    others="$(otool -L "$bin" | tail -n +2 | awk '{print $1}' | grep -v -E '^/(usr/lib|System/Library)/' || true)"
+    links="$(otool -L "$bin")" || fail "otool could not read $bin"
+    others="$(tail -n +2 <<<"$links" | awk '{print $1}' | grep -v -E '^/(usr/lib|System/Library)/' || true)"
     [ -z "$others" ] || fail "$bin links outside the OS: $others"
     if grep -q -F -- "$HOME" <<<"$text"; then fail "$bin embeds the builder's home directory"; fi
 done

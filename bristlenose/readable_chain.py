@@ -247,6 +247,7 @@ class ReadableChain:
         registry: SessionRegistry,
         sentence_paragraphs: set[str],
         languages: Callable[[], tuple[dict[str, str], dict[str, str]]],
+        engines: Callable[[], dict[str, tuple[str, str | None]]] | None = None,
         fingerprint: Callable[[list[TranscriptSegment]], str],
         assign_codes: Callable[..., object],
         tx_fingerprints: dict[str, str],
@@ -269,6 +270,7 @@ class ReadableChain:
         self._registry = registry
         self.sentence_paragraphs = sentence_paragraphs
         self._languages = languages
+        self._engines = engines
         self._fingerprint = fingerprint
         self._assign_codes = assign_codes
         self._tx_fps = tx_fingerprints
@@ -355,8 +357,12 @@ class ReadableChain:
         # file lacks is dropped from a resumed run without a word.
         self._raw[sid] = raw
         self._write_segments()
+        engine, engine_model = (
+            self._engines().get(sid, (None, None)) if self._engines else (None, None)
+        )
         mark_session_complete(
             self._manifest, STAGE_TRANSCRIBE, sid, input_hash=self._tx_fps.get(sid),
+            engine=engine, engine_model=engine_model,
         )
 
         fp = self._fingerprint(raw)

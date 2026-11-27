@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -84,6 +85,7 @@ def _drive(
     llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
     beside: str | None = None, topics_fail: bool = False, quotes_fail: bool = False,
     cluster_fail: str | None = None, settings_kw: dict | None = None,
+    engine_for: Callable[[str], tuple[str | None, str | None]] | None = None,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
@@ -193,7 +195,7 @@ def _drive(
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions", new=_stage2),
         patch("bristlenose.preflight.whisper.preflight_whisper", new=lambda **_kw: None),
         patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions",
-              new=iter_transcribe_from(_transcribe)),
+              new=iter_transcribe_from(_transcribe, engine_for)),
         patch("bristlenose.stages.s05b_identify_speakers.split_single_speaker_llm", new=_split),
         patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm", new=_roles),
         patch("bristlenose.stages.s08_topic_segmentation.segment_topics", new=_topics),

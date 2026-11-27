@@ -350,7 +350,14 @@ def install_ollama(method: str | None = None) -> bool:
 
     Returns:
         True if installation succeeded, False otherwise.
+
+    Raises:
+        HostedInstallRefusedError: inside the Mac app (App Store guideline 2.5.2).
     """
+    from bristlenose.utils.package_install import refuse_install_when_hosted
+
+    refuse_install_when_hosted("Ollama")
+
     if method is None:
         method = get_install_method()
 

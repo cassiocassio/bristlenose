@@ -32,19 +32,17 @@ RESOURCES_DIR="${FETCH_FFMPEG_RESOURCES_DIR:-$DESKTOP_DIR/Bristlenose/Resources}
 VERSION="$("$SCRIPT_DIR/build-ffmpeg-lgpl.sh" --version)"
 BUILT_DIR="$DESKTOP_DIR/build/ffmpeg-cache/$VERSION"
 
-# True if $1 is this recipe's build: it carries the version string and was not
-# configured with a GPL, nonfree or version3 flag.
+# True if $1 is this recipe's build: it carries the version string and passes
+# check-ffmpeg-licence.sh (LGPL-2.1+, no GPL, nonfree, version3, x264 or x265
+# flag), the same gate build-all.sh runs on the exported app.
 _is_ours() {
-    local bin="$1" text cfg
+    local bin="$1" text
     [ -f "$bin" ] || return 1
     # Herestrings, not pipes: `strings | grep -q` closes the pipe at the first
     # match, and under pipefail the SIGPIPE makes a found match read as failure.
     text="$(strings -a "$bin")"
     grep -qx -- "$VERSION" <<<"$text" || return 1
-    cfg="$(grep -m1 -e '--prefix=' <<<"$text")" || return 1
-    case " $cfg " in
-        *" --enable-gpl "*|*" --enable-nonfree "*|*" --enable-version3 "*) return 1 ;;
-    esac
+    "$SCRIPT_DIR/check-ffmpeg-licence.sh" "$bin" >/dev/null 2>&1
 }
 
 _installed() {

@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 11284
+        "tests": 11580
       },
       {
         "basis": "test files",
-        "files": 244,
+        "files": 246,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -30,12 +30,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 277,
+        "files": 281,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3482
+        "tests": 3520
       },
       {
         "basis": "spec files",

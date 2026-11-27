@@ -1461,6 +1461,7 @@
   "modelDownload": {
     "title": "Загрузка Whisper",
     "failedTitle": "Whisper не загрузился",
+    "failedHint": "Повторите попытку или загрузите его позже в настройках транскрибирования.",
     "why": "Для ваших следующих записей. Whisper лучше справляется с плохим звуком, одновременной речью и большими группами.",
     "stop": "Остановить",
     "causeDisk": "На этом Mac недостаточно свободного места.",
@@ -1473,7 +1474,7 @@
     "askSize": "1,6 ГБ",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose рекомендует {{floor}} свободного места. Речевой модели Whisper нужно {{size}}. Освободите место, затем нажмите «Загрузить» в настройках транскрибирования.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

@@ -1361,6 +1361,7 @@
   "modelDownload": {
     "title": "Henter Whisper",
     "failedTitle": "Whisper blev ikke hentet",
+    "failedHint": "Prøv igen, eller hent den senere under indstillingerne for Transskription.",
     "why": "Til dine næste optagelser. Whisper klarer dårlig lyd, folk der taler i munden på hinanden, og større grupper bedre.",
     "stop": "Stop",
     "causeDisk": "Denne Mac har ikke nok ledig plads.",
@@ -1373,7 +1374,7 @@
     "askSize": "1,6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose anbefaler {{floor}} ledig plads. Talemodellen Whisper kræver {{size}}. Frigør noget plads, og klik derefter på “Hent nu” under indstillingerne for Transskription.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

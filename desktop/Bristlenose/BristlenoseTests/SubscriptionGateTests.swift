@@ -94,6 +94,17 @@ struct SubscriptionGateTests {
         #expect(started == 0)
     }
 
+    /// Review, 25 Nov 2026: with no product the offer read "/month" with no
+    /// price and a Subscribe that could not be pressed.
+    @Test("with no product the sheet shows the store-unavailable face, never a blank offer")
+    func noProductIsUnavailable() {
+        typealias F = PaywallView.Face
+        #expect(F.of(.notSubscribed, productLoaded: false) == .unavailable)
+        #expect(F.of(.unknown, productLoaded: false) == .unavailable)
+        #expect(F.of(.storeUnavailable, productLoaded: true) == .unavailable)
+        #expect(F.of(.notSubscribed, productLoaded: true) == .offer)
+    }
+
     @Test("the paywall's legal links are the ones the listing carries")
     func legalLinks() {
         #expect(PaywallView.termsURL.absoluteString == "https://bristlenose.app/terms.html")

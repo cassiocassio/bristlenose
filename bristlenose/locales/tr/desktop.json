@@ -1361,6 +1361,7 @@
   "modelDownload": {
     "title": "Whisper indiriliyor",
     "failedTitle": "Whisper indirilemedi",
+    "failedHint": "Yeniden deneyin veya daha sonra Döküm ayarlarından indirin.",
     "why": "Sonraki kayıtlarınız için. Whisper, kötü sesle, aynı anda konuşan kişilerle ve daha büyük gruplarla daha iyi başa çıkar.",
     "stop": "Durdur",
     "causeDisk": "Bu Mac’te yeterli boş alan yok.",
@@ -1373,7 +1374,7 @@
     "askSize": "1,6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose {{floor}} boş alan önerir. Whisper konuşma modeli için {{size}} gerekir. Biraz yer açın, ardından Döküm ayarlarında “Şimdi İndir” düğmesini tıklayın.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

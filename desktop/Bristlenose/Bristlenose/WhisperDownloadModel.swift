@@ -110,6 +110,18 @@ enum WhisperFailureCause: Equatable {
     static func lineKey(for cause: WhisperFailureCause?) -> String {
         cause?.key ?? "desktop.transcriptionSettings.whisperFailed"
     }
+
+    /// What to do, under the line, in the pill's popover only (the Settings row has the Retry it
+    /// would name right beside it). A certificate needs another network; an unnamed failure gets
+    /// Retry or later (owner's wording, 26 Nov 2026). A dropped connection's title and Retry say
+    /// enough (owner, same day); a full disk has its own popover.
+    static func hintKey(for cause: WhisperFailureCause?) -> String? {
+        switch cause {
+        case .certificate?: return "desktop.modelDownload.causeCertificateHint"
+        case nil: return "desktop.modelDownload.failedHint"
+        case .network?, .disk?: return nil
+        }
+    }
 }
 
 // MARK: - Rate and time left (pure)
@@ -891,9 +903,11 @@ final class WhisperDownloadModel: ObservableObject, WhisperAcquisitionEvents {
             start()
             return
         }
-        // A stop nobody here asked for (the system cancelled it) is not the researcher's Stop:
-        // it is not remembered, so the next opportunity (launch, run, Download Now) tries again.
-        // `stop()` already remembered the researcher's own.
+        // A stop nobody here asked for is not the researcher's Stop: it is not remembered, so the
+        // next opportunity (launch, run, Download Now) tries again. `stop()` already remembered
+        // the researcher's own. Defensive: no acquirer reports this today (both end `.stopped`
+        // only after `stop()`; Background Assets reports a system cancel as `.failed` since
+        // 26 Nov 2026, so it falls back above).
         switch outcome {
         case .succeeded, .stopped:
             // Off `.downloading` before asking, so a probe that fails leaves

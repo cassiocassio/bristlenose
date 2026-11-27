@@ -275,3 +275,69 @@ struct SubscriptionAccessTests {
         }
     }
 }
+
+@Suite("Entitlements as the store reads them")
+struct SubscriptionEntitlementTests {
+
+    private let id = SubscriptionAccess.monthlyProductID
+    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+
+    private func entitlement(expires: Date?) -> SubscriptionAccess.Entitlement {
+        .init(productID: id, start: now.addingTimeInterval(-60), expires: expires, inTrial: false)
+    }
+
+    @Test("a verified purchase counts while the store's record does not list it yet")
+    func purchaseCountsBeforeTheRecord() {
+        let bought = entitlement(expires: now.addingTimeInterval(3600))
+        #expect(SubscriptionAccess.including(bought, in: [], now: now) == [bought])
+    }
+
+    @Test("once the record lists the product, the purchase is not added twice")
+    func recordWins() {
+        let bought = entitlement(expires: now.addingTimeInterval(3600))
+        let listed = entitlement(expires: now.addingTimeInterval(7200))
+        #expect(SubscriptionAccess.including(bought, in: [listed], now: now) == [listed])
+    }
+
+    /// Review, 26 Nov 2026: one helper served both the store's record and a
+    /// purchase taken ahead of it, and its expiry check dropped rows the store
+    /// still lists, a billing grace period's among them, locking out a payer.
+    @Test("a row the store's record lists counts whatever its expiry date says")
+    func recordRowIsNotSecondGuessed() {
+        // Against the real clock: the row's own date is an hour gone.
+        let lapsedDate = Date().addingTimeInterval(-3600)
+        let row = SubscriptionAccess.entitlement(productID: id, revoked: false, start: lapsedDate.addingTimeInterval(-86_400),
+                                                 expires: lapsedDate, inTrial: false)
+        #expect(row?.expires == lapsedDate)
+        #expect(SubscriptionAccess.state(entitlements: [row].compactMap { $0 }, productLoaded: true)
+                == .subscribed(expires: lapsedDate))
+        #expect(SubscriptionAccess.entitlement(productID: id, revoked: true, start: now, expires: nil, inTrial: false) == nil)
+        #expect(SubscriptionAccess.entitlement(productID: "other", revoked: false, start: now, expires: nil, inTrial: false) == nil)
+    }
+
+    @Test("a purchase past its own expiry counts for nothing")
+    func expiredPurchase() {
+        let old = entitlement(expires: now.addingTimeInterval(-1))
+        #expect(SubscriptionAccess.including(old, in: [], now: now).isEmpty)
+    }
+
+    @Test("entitlements add up to the same states as before")
+    func stateFromEntitlements() {
+        let e = SubscriptionAccess.Entitlement(productID: id, start: now, expires: now, inTrial: true)
+        #expect(SubscriptionAccess.state(entitlements: [e], productLoaded: false)
+                == .subscribed(expires: now, inTrial: true))
+        #expect(SubscriptionAccess.state(entitlements: [], productLoaded: true) == .notSubscribed)
+        #expect(SubscriptionAccess.state(entitlements: [], productLoaded: false) == .storeUnavailable)
+    }
+
+    @Test("entitlements that fail verification are said in one log line, with their products")
+    func unverifiedNotice() {
+        let e = entitlement(expires: nil)
+        let line = SubscriptionAccess.unverifiedNotice([
+            .verified(e), .unverified(productID: id), .unverified(productID: "other"),
+        ])
+        #expect(line == "entitlements ignored, failed verification: count=2 products=\(id),other")
+        #expect(SubscriptionAccess.unverifiedNotice([.verified(e)]) == nil)
+        #expect(SubscriptionAccess.unverifiedNotice([]) == nil)
+    }
+}

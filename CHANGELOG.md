@@ -2,6 +2,37 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.49.0** — _27 Nov 2026_
+
+The Mac app checks once a day for news from bristlenose.app, with analytics you can turn on. The subscription sheet is steadier, Whisper download failures say what to do, and the bundled FFmpeg is now an LGPL build.
+
+**New**
+
+- **The Mac app checks for news once a day.** It fetches one signed file from bristlenose.app and shows it on the welcome screen. It sends nothing about you or your projects.
+- **Analytics, if you turn them on** at first run or in Settings ▸ General: the version, the channel, and once a month how many days the app was opened and whether you subscribe. No identifier, and nothing from your projects. Both switches are in Settings ▸ General.
+
+**Improved**
+
+- **Editing a quote across paragraphs:** delete, cut and typing replace a selection that spans paragraphs or quote marks, and paste, drag and Select All work there too.
+- **Whisper download failures say what to do next,** and a download the system cancels falls back to the other source instead of vanishing.
+- **Analyse with no network reads as a network failure,** not "Something went wrong".
+- **Codebooks are called by their own names everywhere,** the exported report's codebook page included.
+- **Proposed names and tentative tags draw a dotted outline.**
+
+**Fixed**
+
+- **The subscription sheet flashed on and off.** It now stays put, shows the store-unavailable screen when the plan can't load, and a purchase that went through no longer reports that it failed.
+- **A study held back by the subscription was dropped.** It now starts once you subscribe, after the study you start yourself.
+- **An exported HTML report included hidden quotes.** It leaves them out, as every other export does.
+- **The report server is harder to misuse from another site:** its pages can only be framed by themselves, cross-site writes are refused, and the study database is readable only by you.
+- **The bundled FFmpeg was a GPL build.** It is now an LGPL build, about 25 MB instead of 61, and burnt-in subtitles use the Mac's own video encoder.
+- **Exports made with 0.33.0 to 0.46.0 carry the maintainer's name** in the sample data of a hidden design page. It isn't participant data, and exports from this version don't.
+
+**Removed**
+
+- **An unused telemetry setting.** `/api/health` and every HTML export carried a switched-on block for an endpoint nothing sent to. It is gone, with `BRISTLENOSE_TELEMETRY_ENABLED` and `_URL`.
+
+
 **0.48.0** — _25 Nov 2026_
 
 AutoCode now tags while it works: tags appear batch by batch, a first run ends by accepting its most confident share, and the tag sidebar shows where it has got to. Quotes keep their paragraphs, a quote is one passage on one point, and the Mac sidebar's divider drags more smoothly.

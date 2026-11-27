@@ -50,6 +50,52 @@ final class SubscriptionStore: ObservableObject {
 
     private var updates: Task<Void, Never>?
     private let log = Logger(subsystem: "app.bristlenose", category: "subscription")
+    private let reads: Reads
+
+    /// What the store reads from StoreKit, behind a seam so a test can decide
+    /// the order in which overlapping reads come back.
+    struct Reads {
+        var product: () async throws -> Product?
+        var eligible: (Product) async -> Bool
+        var entitlements: () async -> [SubscriptionAccess.EntitlementRead]
+        var history: () async -> [SubscriptionAccess.Period]
+
+        static let live = Reads(
+            product: { try await Product.products(for: [SubscriptionAccess.monthlyProductID]).first },
+            eligible: { await $0.subscription?.isEligibleForIntroOffer ?? false },
+            entitlements: {
+                var reads: [SubscriptionAccess.EntitlementRead] = []
+                for await result in Transaction.currentEntitlements {
+                    switch result {
+                    case .verified(let t):
+                        if let e = SubscriptionStore.entitlement(t) { reads.append(.verified(e)) }
+                    case .unverified(let t, _):
+                        reads.append(.unverified(productID: t.productID))
+                    }
+                }
+                return reads
+            },
+            history: { await SubscriptionStore.history() }
+        )
+    }
+
+    /// Each `refresh()` takes the next number, and publishes only if no
+    /// newer one has published already. Refreshes overlap (launch, activation,
+    /// `Transaction.updates`, a purchase): an older one that comes back after
+    /// a newer one has published would put the state back, so it is dropped.
+    /// An older one that finishes while a newer one is still reading does
+    /// publish, so a caller reading `state` after `await refresh()` reads an
+    /// answer at least as fresh as its call. Not serialised, and nothing
+    /// waits: a refresh stalled on `Product.products` holds up no other. A
+    /// refresh begun before a purchase cannot undo it either: it reads
+    /// `verifiedPurchase` after its awaits.
+    private var generation = 0
+    /// The newest generation that has published.
+    private var publishedGeneration = 0
+
+    /// The purchase this app last saw verified, counted as an entitlement
+    /// until the store's own record lists it (`SubscriptionAccess.including`).
+    private var verifiedPurchase: SubscriptionAccess.Entitlement?
 
     /// The only way the app makes a store. nil off the App Store channel, so a
     /// `.dmg`, a debug build and the command line never reach StoreKit.
@@ -61,21 +107,31 @@ final class SubscriptionStore: ObservableObject {
     init(frozenAt state: SubscriptionAccess.State, earlyAdopterSince: Date? = nil) {
         self.state = state
         self.earlyAdopterSince = earlyAdopterSince
+        self.reads = .live
+    }
+
+    /// A store that reads through `reads`, with no StoreKit listener and no
+    /// first refresh. For tests.
+    init(reads: Reads) {
+        self.reads = reads
     }
 
     private init() {
+        reads = .live
         updates = Task { [weak self] in
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result {
                     await transaction.finish()
                     // An Ask to Buy approval, or a purchase made on another
-                    // Mac, arrives here, and its entitlement lags `finish()`
-                    // as a purchase made in the sheet does: read until it shows.
-                    if transaction.productID == SubscriptionAccess.monthlyProductID,
-                       transaction.revocationDate == nil,
-                       (transaction.expirationDate ?? .distantFuture) > Date() {
-                        await self?.refreshAfterPurchase()
-                        continue
+                    // Mac, arrives here, and the store's record lags it as it
+                    // lags a purchase made in the sheet: take it from the
+                    // transaction. A refund of the product arrives here too.
+                    if transaction.productID == SubscriptionAccess.monthlyProductID {
+                        if transaction.revocationDate != nil {
+                            self?.verifiedPurchase = nil
+                        } else {
+                            _ = self?.accept(transaction)
+                        }
                     }
                 }
                 await self?.refresh()
@@ -86,62 +142,96 @@ final class SubscriptionStore: ObservableObject {
 
     deinit { updates?.cancel() }
 
+    /// A verified transaction as an entitlement to the product, or nil when
+    /// it is another product's or refunded (`SubscriptionAccess.entitlement`:
+    /// no expiry check, so a grace-period row in the store's record counts).
+    nonisolated static func entitlement(_ t: Transaction) -> SubscriptionAccess.Entitlement? {
+        SubscriptionAccess.entitlement(productID: t.productID, revoked: t.revocationDate != nil,
+                                       start: t.purchaseDate, expires: t.expirationDate,
+                                       inTrial: t.offer?.type == .introductory)
+    }
+
+    /// Take the entitlement from a verified transaction, now, rather than
+    /// waiting for the store's record to list it. False when the transaction
+    /// grants nothing. Internal so the StoreKit suite can drive it.
+    @discardableResult
+    func accept(_ transaction: Transaction) -> Bool {
+        // Ahead of the store's record, a transaction counts only until its own
+        // expiry: `Transaction.updates` also replays old ones.
+        guard let e = Self.entitlement(transaction), (e.expires ?? .distantFuture) > Date() else { return false }
+        accept(e)
+        return true
+    }
+
+    /// The StoreKit-free half of `accept(_:)`, for tests.
+    func accept(_ entitlement: SubscriptionAccess.Entitlement) {
+        verifiedPurchase = entitlement
+        state = .subscribed(expires: entitlement.expires, inTrial: entitlement.inTrial)
+    }
+
     /// Ask the store for the product and the current entitlement. If the
     /// product did not load and there is no entitlement, the state is
     /// `.storeUnavailable`, not `.notSubscribed`. An entitlement wins either
     /// way: `currentEntitlements` is read from StoreKit's on-device record.
     func refresh() async {
+        generation += 1
+        let mine = generation
         if product == nil {
             do {
-                product = try await Product.products(for: [SubscriptionAccess.monthlyProductID]).first
-                if product == nil {
+                let loaded = try await reads.product()
+                // Another refresh may have loaded it meanwhile; keep the first.
+                if product == nil { product = loaded }
+                if loaded == nil {
                     log.error("store returned no product for \(SubscriptionAccess.monthlyProductID, privacy: .public)")
                 }
             } catch {
                 log.error("product load failed: \(error.localizedDescription, privacy: .public)")
             }
         }
+        let loadedProduct = product
 
         // Read now, published with the state below: published here, a trial
         // purchase flipped the open sheet to the lapsed wording while the
         // entitlement was still being read.
         var eligible: Bool?
-        if let sub = product?.subscription {
-            eligible = await sub.isEligibleForIntroOffer
+        if let loadedProduct, loadedProduct.subscription != nil {
+            eligible = await reads.eligible(loadedProduct)
         }
 
-        var ids: Set<String> = []
-        var expirations: [String: Date] = [:]
-        var trials: Set<String> = []
-        var entitled: [SubscriptionAccess.Period] = []
-        for await result in Transaction.currentEntitlements {
-            guard case .verified(let t) = result, t.revocationDate == nil else { continue }
-            ids.insert(t.productID)
-            if let end = t.expirationDate { expirations[t.productID] = end }
-            if t.offer?.type == .introductory { trials.insert(t.productID) }
-            if t.productID == SubscriptionAccess.monthlyProductID {
-                entitled.append(.init(start: t.purchaseDate, end: t.expirationDate))
-            }
+        let rows = await reads.entitlements()
+        if let notice = SubscriptionAccess.unverifiedNotice(rows) {
+            log.notice("\(notice, privacy: .public)")
         }
-        let newState = SubscriptionAccess.state(entitledProductIDs: ids,
-                                                expirations: expirations,
-                                                trialProductIDs: trials,
-                                                productLoaded: product != nil)
+        let listed = rows.compactMap { row -> SubscriptionAccess.Entitlement? in
+            if case .verified(let e) = row { return e }
+            return nil
+        }
+        let entitled = SubscriptionAccess.including(verifiedPurchase, in: listed, now: Date())
+        let newState = SubscriptionAccess.state(entitlements: entitled,
+                                                productLoaded: loadedProduct != nil)
         // Work the star out before publishing anything, then publish the state
-        // and the star together: two refreshes can overlap (launch, activation,
-        // `Transaction.updates`), and publishing in two steps let a slower one
-        // put a date back after a faster one had cleared it, or blink the star
-        // off for a frame. The current entitlement is added to the history so
-        // an active subscriber always has a run, even if the history read
-        // comes back empty.
+        // and the star together, so neither blinks between two refreshes. The
+        // current entitlement is added to the history so an active subscriber
+        // always has a run, even if the history read comes back empty.
         var since: Date?
         if case .subscribed = newState {
+            let current = entitled.filter { $0.productID == SubscriptionAccess.monthlyProductID }
+                .map { SubscriptionAccess.Period(start: $0.start, end: $0.expires) }
             since = SubscriptionAccess.earlyAdopterSince(state: newState,
-                                                         history: await Self.history() + entitled)
+                                                         history: await reads.history() + current)
+        }
+
+        guard mine > publishedGeneration else {
+            log.debug("refresh older than the state already published; dropped")
+            return
+        }
+        if listed.contains(where: { $0.productID == verifiedPurchase?.productID }) {
+            verifiedPurchase = nil  // the store's record has caught up
         }
         if let eligible { introEligible = eligible }
         state = newState
         earlyAdopterSince = since
+        publishedGeneration = mine
     }
 
     /// Every period of the subscription in the store's history, from
@@ -178,27 +268,6 @@ final class SubscriptionStore: ObservableObject {
 
     enum PurchaseOutcome: Equatable { case subscribed, cancelled, pending, failed }
 
-    /// After a verified purchase: read the entitlement again until it shows,
-    /// for up to `patience`. Straight after `finish()` the store's own record
-    /// does not list the purchase yet, and about a second later it does
-    /// (measured against the local test store, 25 Nov 2026). A single read
-    /// told a buyer who had just paid that the purchase didn't go through, and
-    /// nothing looked again until the app was next activated: a purchase made
-    /// here is returned to `purchase()`, not delivered through
-    /// `Transaction.updates`. Internal so the StoreKit suite can drive it.
-    func refreshAfterPurchase(patience: Duration = .seconds(5)) async {
-        let deadline = ContinuousClock.now + patience
-        while true {
-            await refresh()
-            if case .subscribed = state { return }
-            if ContinuousClock.now >= deadline {
-                log.error("purchase verified, but no entitlement after \(String(describing: patience), privacy: .public)")
-                return
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-        }
-    }
-
     func purchase() async -> PurchaseOutcome {
         if Self.refusesSignInPrompts {
             log.error("purchase refused under a test host: it would reach the real App Store")
@@ -208,9 +277,19 @@ final class SubscriptionStore: ObservableObject {
         do {
             switch try await product.purchase() {
             case .success(let verification):
-                guard case .verified(let t) = verification else { return .failed }
+                guard case .verified(let t) = verification else {
+                    log.notice("purchase returned a transaction that failed verification")
+                    return .failed
+                }
                 await t.finish()
-                await refreshAfterPurchase()
+                // The verified transaction is the entitlement. The store's own
+                // record lists it about a second later, and reading that record
+                // instead told a buyer who had just paid that it failed.
+                guard accept(t) else {
+                    log.error("purchase verified, but it grants no entitlement to the product")
+                    return .failed
+                }
+                await refresh()
                 // Report what the gate will actually do, not what the store said.
                 if case .subscribed = state { return .subscribed }
                 return .failed

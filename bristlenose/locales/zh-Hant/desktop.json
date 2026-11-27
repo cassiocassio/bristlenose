@@ -1311,6 +1311,7 @@
   "modelDownload": {
     "title": "正在下載 Whisper",
     "failedTitle": "Whisper 未能下載",
+    "failedHint": "請重試，或稍後在「逐字稿轉錄」設定中下載。",
     "why": "供你之後的錄音使用。Whisper 更能應付音質不佳、多人同時說話和較大群組的錄音。",
     "stop": "停止",
     "causeDisk": "這部 Mac 的可用空間不足。",
@@ -1323,7 +1324,7 @@
     "askSize": "1.6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose 建議保留 {{floor}} 可用空間。Whisper 語音模型需要 {{size}}。請先釋出一些空間，再到「逐字稿轉錄」設定中按一下「立即下載」。",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

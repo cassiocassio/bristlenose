@@ -1461,6 +1461,7 @@
   "modelDownload": {
     "title": "Pobieranie Whispera",
     "failedTitle": "Nie pobrano Whispera",
+    "failedHint": "Spróbuj ponownie lub pobierz go później w ustawieniach Transkrypcji.",
     "why": "Do Twoich kolejnych nagrań. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami i większymi grupami.",
     "stop": "Zatrzymaj",
     "causeDisk": "Ten Mac nie ma dość wolnego miejsca.",
@@ -1473,7 +1474,7 @@
     "askSize": "1,6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose zaleca {{floor}} wolnego miejsca. Model mowy Whisper potrzebuje {{size}}. Zwolnij trochę miejsca, a następnie kliknij „Pobierz teraz” w ustawieniach Transkrypcji.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

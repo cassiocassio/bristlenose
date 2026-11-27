@@ -293,6 +293,7 @@ final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
     private(set) var directoryCalls = 0
     private(set) var removesFinished = 0
     private var released = false
+    private var removeHeld = false
     var removeDelay: Duration = .zero
     var onRemove: (@Sendable () -> Void)?
     let dir: URL
@@ -333,8 +334,16 @@ final class FakeAdapter: WhisperPackAdapter, @unchecked Sendable {
         lock.lock(); removeCalls += 1; let delay = removeDelay; let hook = onRemove; lock.unlock()
         hook?()
         if delay > .zero { try? await Task.sleep(for: delay) }
+        // A held remove ends only when the test opens it: no timer to race.
+        while true {
+            lock.lock(); let held = removeHeld; lock.unlock()
+            if !held { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
         lock.lock(); removesFinished += 1; lock.unlock()
     }
+    func holdRemove() { lock.lock(); removeHeld = true; lock.unlock() }
+    func openRemove() { lock.lock(); removeHeld = false; lock.unlock() }
 }
 
 @MainActor
@@ -372,17 +381,17 @@ final class RecordingEvents: WhisperAcquisitionEvents {
     }
 
     private func make(_ behaviours: [FakeAdapter.Behaviour], verdicts: [WhisperPackVerdict] = [.ok],
-                      silence: Duration = .seconds(60), complete: Bool = true, verified: Bool = true,
-                      turbo: Bool = true)
+                      silence: Duration = .seconds(60), cleanup: Duration = .seconds(5),
+                      complete: Bool = true, verified: Bool = true, turbo: Bool = true)
         throws -> (BackgroundAssetsAcquirer, FakeAdapter, RecordingEvents) {
-        let (a, ad, ev, _) = try makeWithStamp(behaviours, verdicts: verdicts, silence: silence,
+        let (a, ad, ev, _) = try makeWithStamp(behaviours, verdicts: verdicts, silence: silence, cleanup: cleanup,
                                                complete: complete, verified: verified, turbo: turbo)
         return (a, ad, ev)
     }
 
     private func makeWithStamp(_ behaviours: [FakeAdapter.Behaviour], verdicts: [WhisperPackVerdict] = [.ok],
-                               silence: Duration = .seconds(60), complete: Bool = true, verified: Bool = true,
-                               turbo: Bool = true)
+                               silence: Duration = .seconds(60), cleanup: Duration = .seconds(5),
+                               complete: Bool = true, verified: Bool = true, turbo: Bool = true)
         throws -> (BackgroundAssetsAcquirer, FakeAdapter, RecordingEvents, MemoryStamp) {
         let adapter = FakeAdapter(behaviours, dir: try dir(complete: complete))
         let queue = VerdictQueue(verdicts)
@@ -391,7 +400,7 @@ final class RecordingEvents: WhisperAcquisitionEvents {
             stamp.verifiedFingerprint = WhisperPackVerifier.fingerprint(directory: adapter.dir, manifest: manifest)
         }
         let acquirer = BackgroundAssetsAcquirer(
-            adapter: adapter, manifest: manifest, silenceLimit: silence,
+            adapter: adapter, manifest: manifest, silenceLimit: silence, cleanupLimit: cleanup,
             verify: { _, _ in queue.next() }, stamp: stamp, servesChosenModel: { turbo })
         return (acquirer, adapter, RecordingEvents(), stamp)
     }
@@ -427,6 +436,44 @@ final class RecordingEvents: WhisperAcquisitionEvents {
         _ = a.start(events: ev)
         await ev.waitForEnd()
         #expect(ev.outcome == .failed(cause: nil))
+    }
+
+    /// The system cancelled the request and nobody here asked: a failure (so the model falls back
+    /// and the pill stays), not a Stop. Our own Stop is `stopCancelsTheAttemptAndEndsAsStopped`.
+    @Test func aSystemCancelIsAFailureNotAStop() async throws {
+        for error: Error in [NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled), CancellationError()] {
+            let (a, _, ev) = try make([.throwError(error)])
+            _ = a.start(events: ev)
+            await ev.waitForEnd()
+            #expect(ev.outcome == .failed(cause: nil), "\(error)")
+        }
+    }
+
+    /// An attempt given up before the first byte (a system cancel, or the watchdog) waits on the
+    /// bounded remove; the researcher's Stop pressed during that wait still ends as a Stop, not a
+    /// failure that would start a fallback.
+    @Test(arguments: [false, true])
+    func aStopDuringTheCleanupAfterAGiveUpIsAStop(watchdog: Bool) async throws {
+        let cancel = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        // The remove is held open until after the Stop, and the acquirer's own cleanup bound is
+        // taken out of the race, so the Stop lands inside the cleanup however loaded the run is
+        // (a timed remove failed under the full signed suite, 27 Nov 2026).
+        // The cancel arm gets a watchdog that cannot fire first, so it always takes `.cancelled`.
+        let (a, adapter, ev) = try make([watchdog ? .hangIgnoringCancel : .throwError(cancel)],
+                                        silence: watchdog ? .milliseconds(300) : .seconds(3600),
+                                        cleanup: .seconds(3600), complete: false)
+        adapter.holdRemove()
+        defer { adapter.openRemove(); adapter.release() }
+        _ = a.start(events: ev)
+        let deadline = ContinuousClock.now + .seconds(120)  // a hang guard, never reached when green
+        while adapter.removeCalls == 0, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(adapter.removeCalls == 1, "the cleanup is under way")
+        #expect(adapter.removesFinished == 0, "and held open: Stop lands inside it")
+        a.stop()
+        adapter.openRemove()
+        await ev.waitForEnd()
+        adapter.release()
+        #expect(ev.outcome == .stopped)
     }
 
     @Test func offlineAtStartIsAFailure() async throws {
@@ -526,10 +573,14 @@ final class RecordingEvents: WhisperAcquisitionEvents {
     /// Stop while the bad pack is being removed must not go on to download it all again.
     @Test func stopDuringTheRepairDoesNotAskForThePackAgain() async throws {
         let (a, adapter, ev) = try make([.succeed, .succeed], verdicts: [.wrongHash("w"), .ok])
-        adapter.removeDelay = .milliseconds(400)
+        adapter.holdRemove()  // held open until after the Stop: no timer to race
+        defer { adapter.openRemove() }
         _ = a.start(events: ev)
-        try await Task.sleep(for: .milliseconds(150))
+        let deadline = ContinuousClock.now + .seconds(120)  // a hang guard, never reached when green
+        while adapter.removeCalls == 0, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(adapter.removeCalls == 1, "the repair's remove is under way")
         a.stop()
+        adapter.openRemove()
         await ev.waitForEnd()
         #expect(ev.outcome == .stopped)
         #expect(adapter.ensureCalls == 1)
@@ -692,8 +743,10 @@ final class VerdictQueue: @unchecked Sendable {
         #expect(fetch.startCalls == 1)
     }
 
-    /// The system cancelled it (nobody here asked): that is NOT the researcher's Stop, so it is
-    /// not remembered and the next opportunity (launch, run, Download Now) tries again.
+    /// An acquirer that ends `.stopped` when nobody here asked: that is NOT the researcher's Stop,
+    /// so it is not remembered and the next opportunity (launch, run, Download Now) tries again.
+    /// A defensive rule: no real acquirer ends this way today (Background Assets reports a system
+    /// cancel as a failure, `aSystemCancelIsAFailureNotAStop`).
     @Test func aCancelThatWasNotOursIsNotRememberedAsAStop() {
         let ba = FakeAcquirer(); ba.kind = .backgroundAssets
         let d = defaults()

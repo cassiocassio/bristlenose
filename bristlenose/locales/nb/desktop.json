@@ -1361,6 +1361,7 @@
   "modelDownload": {
     "title": "Laster ned Whisper",
     "failedTitle": "Whisper ble ikke lastet ned",
+    "failedHint": "Prøv igjen, eller last den ned senere i innstillingene for Transkripsjon.",
     "why": "Til de neste opptakene dine. Whisper takler dårlig lyd, folk som snakker i munnen på hverandre og større grupper bedre.",
     "stop": "Stopp",
     "causeDisk": "Denne Macen har ikke nok ledig plass.",
@@ -1373,7 +1374,7 @@
     "askSize": "1,6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose anbefaler {{floor}} ledig plass. Talemodellen Whisper trenger {{size}}. Frigjør litt plass, og klikk deretter på «Last ned nå» i innstillingene for Transkripsjon.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

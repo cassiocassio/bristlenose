@@ -1361,6 +1361,7 @@
   "modelDownload": {
     "title": "Ladataan Whisperiä",
     "failedTitle": "Whisperin lataus epäonnistui",
+    "failedHint": "Yritä uudelleen tai lataa se myöhemmin Litterointi-asetuksista.",
     "why": "Seuraavia tallenteitasi varten. Whisper selviää paremmin huonosta äänestä, päällekkäisestä puheesta ja suuremmista ryhmistä.",
     "stop": "Pysäytä",
     "causeDisk": "Tällä Macilla ei ole tarpeeksi vapaata tilaa.",
@@ -1373,7 +1374,7 @@
     "askSize": "1,6 GB",
     "lowDiskPill": "Not enough space for Whisper",
     "lowDiskTitle": "Not enough free space",
-    "lowDiskBody": "Bristlenose recommends {{floor}} free space. The Whisper speech model needs {{size}}.",
+    "lowDiskBody": "Bristlenose suosittelee {{floor}} vapaata tilaa. Whisper-puhemalli tarvitsee {{size}}. Vapauta tilaa ja valitse sitten ”Lataa nyt” Litterointi-asetuksista.",
     "transcriptionSettings": "Transcription Settings…",
     "causeNetworkTitle": "Connection dropped",
     "causeCertificateTitle": "Network not trusted",

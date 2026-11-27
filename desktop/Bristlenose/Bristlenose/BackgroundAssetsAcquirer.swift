@@ -96,6 +96,8 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
     private let adapter: WhisperPackAdapter
     private let manifest: WhisperPackManifest
     private let silenceLimit: Duration
+    /// How long an abandoned attempt waits for the system to drop its unfinished pack.
+    private let cleanupLimit: Duration
     private let verify: @Sendable (URL, WhisperPackManifest) -> WhisperPackVerdict
     private let stamp: WhisperPackStampStore
     /// Whether the model the researcher chose is the one this pack holds. Another model is not
@@ -109,8 +111,10 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
 
     /// - silenceLimit: how long without a byte moving before the attempt is given up (plan §4:
     ///   60 s). Injected so a test does not wait a minute.
+    /// - cleanupLimit: how long an abandoned attempt waits on the system's remove. Injected so a
+    ///   test that holds the remove open is not raced by it.
     init(adapter: WhisperPackAdapter, manifest: WhisperPackManifest = .largeV3Turbo,
-         silenceLimit: Duration = .seconds(60),
+         silenceLimit: Duration = .seconds(60), cleanupLimit: Duration = .seconds(5),
          verify: @escaping @Sendable (URL, WhisperPackManifest) -> WhisperPackVerdict = {
              WhisperPackVerifier.verify(directory: $0, manifest: $1)
          },
@@ -121,6 +125,7 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         self.adapter = adapter
         self.manifest = manifest
         self.silenceLimit = silenceLimit
+        self.cleanupLimit = cleanupLimit
         self.verify = verify
     }
 
@@ -193,10 +198,17 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         // The one repair: a pack that arrives wrong is removed and asked for again, once.
         for attempt in 1...2 {
             switch await ensureWithWatchdog() {
-            case .cancelled:
+            case .cancelled where stopRequested:
                 return .stopped
-            case .failed:
+            case .cancelled:
+                // The system cancelled it; nobody here asked. A failure, so this launch falls to
+                // Hugging Face and the pill stays, rather than vanishing with nothing said (owner,
+                // 26 Nov 2026, reversing the 16 Nov "not a Stop, no fallback, no pill").
+                Self.logger.error("whisper pack request cancelled by the system")
                 return .failed(cause: nil)
+            case .failed:
+                // A Stop pressed while a given-up attempt cleans up is still the researcher's Stop.
+                return stopRequested ? .stopped : .failed(cause: nil)
             case .arrived:
                 break
             }
@@ -238,11 +250,17 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
         }
         let adapter = self.adapter
         let limit = silenceLimit
+        let cleanup = cleanupLimit
+        let log = Self.logger
         let ensureTask = Task.detached {
             do {
                 try await adapter.ensure(report: report)
                 race.finish(.arrived)
             } catch {
+                // Domain and code, so a build in the field says what a system cancel or failure
+                // really is (design doc §11: "what a system cancel looks like" is owed).
+                let ns = error as NSError
+                log.error("whisper pack request ended: \(ns.domain, privacy: .public) \(ns.code, privacy: .public)")
                 race.finish(whisperEnsureWasCancelled(error) ? .cancelled : .failed)
             }
         }
@@ -269,7 +287,7 @@ final class BackgroundAssetsAcquirer: WhisperModelAcquirer {
             if clock.neverReported, !packLooksComplete() {
                 let removed = EnsureRace()
                 Task.detached { try? await adapter.remove(); removed.finish(.arrived) }
-                Task.detached { try? await Task.sleep(for: .seconds(5)); removed.finish(.failed) }
+                Task.detached { try? await Task.sleep(for: cleanup); removed.finish(.failed) }
                 _ = await removed.value()
             }
         }

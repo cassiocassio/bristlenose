@@ -49,10 +49,23 @@ def test_the_build_and_the_release_ask_for_the_pinned_recipe() -> None:
         assert re.search(r'^[^#\n]*fetch-ffmpeg\.sh" --check', text, flags=re.M), caller
     fetch = (DESKTOP_SCRIPTS / "fetch-ffmpeg.sh").read_text(encoding="utf-8")
     assert re.search(r'^[^#\n]*"\$SCRIPT_DIR/build-ffmpeg-lgpl\.sh" "\$tmp"', fetch, flags=re.M)
+    # --check's licence half is the shipped-bundle gate itself, not a second copy of it.
+    assert re.search(r'^[^#\n]*"\$SCRIPT_DIR/check-ffmpeg-licence\.sh" "\$bin"', fetch, flags=re.M)
+
+
+def test_the_build_gates_the_ffmpeg_it_exported() -> None:
+    """The licence gate reads the exported app's binaries, on a live line of build-all.sh."""
+    text = (DESKTOP_SCRIPTS / "build-all.sh").read_text(encoding="utf-8").replace("\\\n", " ")
+    call = re.search(r'^[^#\n]*"\$SCRIPT_DIR/check-ffmpeg-licence\.sh"[^\n]*', text, flags=re.M)
+    assert call, "build-all.sh does not run check-ffmpeg-licence.sh"
+    for name in ("ffmpeg", "ffprobe"):
+        assert f'"$EXPORTED_APP/Contents/Resources/{name}"' in call.group(0), name
+    assert "|| {" in call.group(0)  # a failure stops the build, not a warning
 
 
 _VERSION = "8.1.3-bristlenose-lgpl-1"
-_OURS = f"{_VERSION}\n--prefix=/x --enable-libass --enable-videotoolbox\n"
+_LGPL = "libavcodec license: LGPL version 2.1 or later\n"
+_OURS = f"{_VERSION}\n--prefix=/x --enable-libass --enable-videotoolbox\n{_LGPL}"
 # Bash scripts: nothing to run on Windows. An empty parameter list rather than a skip
 # marker, as in test_gate_selftests.py (the skip-site ratchet counts markers).
 _CHECK_CASES = [] if sys.platform == "win32" else [
@@ -60,6 +73,7 @@ _CHECK_CASES = [] if sys.platform == "win32" else [
     ("the GPL build shipped until 25 Nov 2026",
      "8.0.1-https://www.martin-riedl.de\n--prefix=/x --enable-gpl --enable-libx264\n", _OURS, 1),
     ("our version string, GPL flags", f"{_VERSION}\n--prefix=/x --enable-gpl\n", _OURS, 1),
+    ("our version string, no licence strings", f"{_VERSION}\n--prefix=/x\n", _OURS, 1),
     ("an older BUILD_REV", "8.1.3-bristlenose-lgpl-0\n--prefix=/x\n", _OURS, 1),
     ("ffprobe missing", _OURS, None, 1),
 ]
@@ -82,3 +96,68 @@ def test_check_tells_the_pinned_build_from_anything_else(
         capture_output=True, text=True, encoding="utf-8",
     )
     assert result.returncode == expected, (case, result.stderr)
+
+
+_GPL_8_0_1 = (  # the shape of the martin-riedl.de build shipped until 25 Nov 2026
+    "%sconfiguration: --prefix=/Volumes/ffmpeg_arm64/out --enable-gpl --enable-libass"
+    " --enable-libx264 --enable-libx265\n"
+    "--prefix=/Volumes/ffmpeg_arm64/out --enable-gpl --enable-libass --enable-libx264"
+    " --enable-libx265\n"
+    "libavcodec license: GPL version 2 or later\n"
+)
+_LICENCE_CASES = [] if sys.platform == "win32" else [
+    ("this recipe's build", _OURS, 0, "LGPL version 2.1 or later"),
+    ("the GPL build", _GPL_8_0_1, 1, "configured with --enable-gpl --enable-libx264 --enable-libx265"),
+    # Each reading alone refuses: flags that slipped past the licence string, and back.
+    ("x264 without --enable-gpl", f"--prefix=/x --enable-libx264\n{_LGPL}", 1, "--enable-libx264"),
+    ("quoted x265", f"--prefix=/x '--enable-libx265'\n{_LGPL}", 1, "--enable-libx265"),
+    ("LGPL v3", "--prefix=/x --enable-version3\n"
+     "libavcodec license: LGPL version 3 or later\n", 1, "--enable-version3"),
+    ("nonfree, LGPL licence string", f"--prefix=/x --enable-nonfree\n{_LGPL}", 1, "--enable-nonfree"),
+    ("LGPL v3 licence string, clean flags", "--prefix=/x\n"
+     "libavcodec license: LGPL version 3 or later\n", 1, "LGPL version 3 or later"),
+    ("GPL licence string, clean flags", "--prefix=/x\nlibavutil license: GPL version 2 or later\n",
+     1, "GPL version 2 or later"),
+    ("one GPL library among LGPL ones", f"--prefix=/x\n{_LGPL}"
+     "libavfilter license: GPL version 3 or later\n", 1, "libavfilter"),
+    # Unreadable is not clean.
+    ("no configure line", _LGPL, 1, "no embedded configure line"),
+    ("no licence strings", "--prefix=/x\n", 1, "no embedded licence strings"),
+    ("a prefix that names a flag", f"--prefix=/opt/--enable-gplish\n{_LGPL}", 0, "LGPL"),
+]
+
+
+@pytest.mark.parametrize(("case", "text", "expected", "says"), _LICENCE_CASES)
+def test_the_licence_gate(tmp_path: Path, case: str, text: str, expected: int, says: str) -> None:
+    (tmp_path / "ffmpeg").write_text(text, encoding="utf-8")
+    result = subprocess.run(
+        ["bash", str(DESKTOP_SCRIPTS / "check-ffmpeg-licence.sh"), str(tmp_path / "ffmpeg")],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert result.returncode == expected, (case, result.stdout, result.stderr)
+    assert says in result.stdout + result.stderr, case
+
+
+@pytest.mark.parametrize("missing", [] if sys.platform == "win32" else ["ffprobe"])
+def test_one_missing_binary_fails_the_whole_gate(tmp_path: Path, missing: str) -> None:
+    (tmp_path / "ffmpeg").write_text(_OURS, encoding="utf-8")
+    result = subprocess.run(
+        ["bash", str(DESKTOP_SCRIPTS / "check-ffmpeg-licence.sh"),
+         str(tmp_path / "ffmpeg"), str(tmp_path / missing)],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert result.returncode == 1 and f"{missing}: not found" in result.stderr
+
+
+@pytest.mark.parametrize("order", [] if sys.platform == "win32" else ["GPL first", "GPL last"])
+def test_a_gpl_binary_fails_the_gate_beside_an_lgpl_one(tmp_path: Path, order: str) -> None:
+    """build-all.sh passes ffmpeg then ffprobe in one call: a clean second can't clear a bad first."""
+    (tmp_path / "gpl").write_text(_GPL_8_0_1, encoding="utf-8")
+    (tmp_path / "lgpl").write_text(_OURS, encoding="utf-8")
+    bins = ["gpl", "lgpl"] if order == "GPL first" else ["lgpl", "gpl"]
+    result = subprocess.run(
+        ["bash", str(DESKTOP_SCRIPTS / "check-ffmpeg-licence.sh"), *(str(tmp_path / b) for b in bins)],
+        capture_output=True, text=True, encoding="utf-8",
+    )
+    assert result.returncode == 1, (order, result.stdout, result.stderr)
+    assert "✗ gpl:" in result.stderr and "✓ lgpl:" in result.stdout, order

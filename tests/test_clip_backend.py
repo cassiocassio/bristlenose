@@ -289,7 +289,7 @@ class TestBurnSubtitles:
 
     @pytest.mark.parametrize(("encoder", "args"), [
         ("libx264", "-c:v libx264 -crf 18 -preset veryfast -pix_fmt yuv420p"),
-        ("h264_videotoolbox", "-c:v h264_videotoolbox -q:v 75 -g 250 -allow_sw 1 -pix_fmt yuv420p"),
+        ("h264_videotoolbox", "-c:v h264_videotoolbox -q:v 75 -g 250 -pix_fmt yuv420p"),
     ])
     def test_burn_command_and_cleanup(self, tmp_path: Path, encoder: str, args: str) -> None:
         clip = tmp_path / "clip.mp4"
@@ -352,6 +352,51 @@ class TestBurnSubtitles:
             assert FFmpegBackend().burn_subtitles(clip, self._cues(), out) == out
         assert seen["vf"].endswith("subtitles=subtitles.ass:fontsdir=.")  # type: ignore[union-attr]
         assert Path(str(seen["cwd"])) == awkward / "bn-burn-x"
+
+    @pytest.mark.parametrize("software_ok", [True, False])
+    def test_videotoolbox_falls_back_to_apples_software_encoder(
+        self, tmp_path: Path, software_ok: bool,
+    ) -> None:
+        """A Mac with no media engine (a virtual machine) has only Apple's software
+        H.264 encoder, which refuses ``-q:v``: the burn retries it at a bitrate."""
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+        out = tmp_path / "o.mp4"
+        encodes: list[list[str]] = []
+
+        def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+            if "-show_entries" in cmd:
+                return MagicMock(returncode=0, stdout=_PROBE_1280, stderr="")
+            encodes.append(cmd)
+            if "-q:v" in cmd or not software_ok:  # what the software encoder does with -q:v
+                return MagicMock(returncode=187, stdout="", stderr="Error setting bitrate property: -12900")
+            Path(cmd[-1]).write_bytes(b"burned")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value="h264_videotoolbox"), \
+                patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+            result = FFmpegBackend().burn_subtitles(clip, self._cues(), out)
+        assert result == (out if software_ok else None)
+        assert len(encodes) == 2  # hardware, then software; never a third
+        hardware, software = (" ".join(c) for c in encodes)
+        assert "-q:v 75" in hardware and "_sw" not in hardware
+        assert "-require_sw 1 -b:v " in software and "-q:v" not in software
+
+    def test_x264_gets_no_second_try(self, tmp_path: Path) -> None:
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+        encodes = []
+
+        def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+            if "-show_entries" in cmd:
+                return MagicMock(returncode=0, stdout=_PROBE_1280, stderr="")
+            encodes.append(cmd)
+            return MagicMock(returncode=1, stdout="", stderr="")
+
+        with patch.object(FFmpegBackend, "_burn_encoder", return_value="libx264"), \
+                patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+            assert FFmpegBackend().burn_subtitles(clip, self._cues(), tmp_path / "o.mp4") is None
+        assert len(encodes) == 1
 
     def test_failed_burn_returns_none(self, tmp_path: Path) -> None:
         clip = tmp_path / "clip.mp4"

@@ -125,7 +125,15 @@ the desktop/native surface diverging from the web surface for the same concept.
 
 - **cs** — High quality. Watch Quotes `citát` (glossary) vs stray `citace`. CLDR
   few/many forms are correctly present (don't "fix" them to match en's one/other).
-- **de** — Formal *Sie* throughout; a few desktop/settings strings slip to *du*. Sessions
+- **de** — Formal *Sie* throughout, re-confirmed by the owner on 27 Nov 2026 against the
+  evidence: Apple's macOS German says *du* (23,180 strings with a *du* form, 348 with
+  *Sie*, measured in the system loctables that day), while Microsoft's German style guide
+  uses *Sie*, as do the German QDA tools researchers know. We follow Microsoft here and
+  differ from the macOS chrome on purpose; don't "fix" a string to *du* to match Apple.
+  About 40 desktop strings still slip to *du* (subscription, cloud import, accounts, MCP
+  Agents, the language-relaunch prompt, the export save panel) and are owed a pass.
+  The *du* inside a participant's quote in a welcome example is speech data and stays.
+  Wi-Fi is *WLAN* in German (`glossary.csv`). Sessions
   is `Interview(s)` per glossary (not `Sitzung`). Typographic quotes must be JSON-escaped.
 - **es** — Informal *tú* throughout; the AI-consent modal is the known slip to *usted*.
   `Pipeline` should not be literalised to `Tubería`.

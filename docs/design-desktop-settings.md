@@ -255,7 +255,11 @@ this exact key, the cache wins: `.online` from cache survives a flaky café
 connection; `.invalid` from cache survives an offline relaunch. The user
 keeps the radio activatable on a previously-good key without a fresh
 network round-trip. Net guarantee: the dot reflects last-known-truth, not
-"can we reach the network right now."
+"can we reach the network right now." With no cached verdict (a key pasted
+offline, a first launch offline) the dot stays orange and the sentence claims
+nothing about the key: "No network connection, so this key hasn’t been checked
+yet." rather than the cached case's "Your key was fine" (27 Nov 2026; the rule is
+`LLMValidator.explanation`, shared with `AzureScenarioFixture`).
 
 **TTL gating.** `LLMSettingsView.cacheTTL = 60s`. `revalidateAll()` skips
 `kickOffValidation` for cloud providers whose cache entry is younger

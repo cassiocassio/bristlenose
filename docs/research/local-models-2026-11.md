@@ -149,7 +149,7 @@ The OpenAI-compatible endpoint that the app uses has no context field. Its reque
 - 32k is fixed, not sized per call, because a different `num_ctx` reloads the model. It replaces Ollama's own default in both directions: up from 4k on small machines, which is the point; down from 256k at 47 GiB or more, which still fits the workload (§ "Large Macs need the context set too"); and down from a larger `OLLAMA_CONTEXT_LENGTH` a user set. There is no setting to change it yet.
 - On the MLX runner's 501 the client asks again with no format, for the rest of the run. The schema stays in the system prompt, and the reply is parsed and validated as any reply is.
 
-Verified with mocked HTTP only (`tests/test_local_ollama_native.py`); a real Ollama run with the change is item 3 under "What must be verified".
+Tested with mocked HTTP (`tests/test_local_ollama_native.py`) and checked once each against Ollama 0.40.18 (Homebrew) on the test Mac, with a two-turn transcript (M): `gemma4:e4b` on MLX refused the format, the client asked again in plain text and validated 2 quotes, loaded at 32,768; the `gemma4` GGUF build answered the schema with `think: false` (valid JSON, `n_ctx = 32768` in the log); `llama3.2:3b` given a prompt over the window answered 400 in 1.9 s, raised as a truncation, with no "truncating input prompt" line; the preflight loaded `gemma4` at 32,768. No full analysis has run with the change: item 3 under "What must be verified".
 
 Whichever is chosen has to size for input plus output:
 

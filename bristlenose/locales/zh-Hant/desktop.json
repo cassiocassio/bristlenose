@@ -703,8 +703,8 @@
           "link": "\u5f71\u7247\u7247\u6bb5"
         },
         "shareReport": {
-          "text": "\u5206\u4eab\u4e00\u500b\u7368\u7acb\u7684 HTML \u6a94\u6848\uff0c\u7121\u9700\u5b89\u88dd\u3002",
-          "more": "\u4efb\u4f55\u4eba\u90fd\u80fd\u7528\u700f\u89bd\u5668\u6253\u958b\uff1b\u4f60\u4e5f\u53ef\u4ee5\u5148\u5c07\u59d3\u540d\u8207\u5730\u9ede\u533f\u540d\u5316\u3002",
+          "text": "\u5206\u4eab\u4e00\u500b\u7368\u7acb\u7684 HTML \u6a94\u6848\u3002",
+          "more": "\u4efb\u4f55\u700f\u89bd\u5668\u90fd\u80fd\u6253\u958b\uff1b\u4f60\u4e5f\u53ef\u4ee5\u5148\u533f\u540d\u5316\u3002",
           "link": "\u5206\u4eab\u5831\u544a"
         },
         "sendToMiro": {
@@ -759,7 +759,7 @@
         },
         "privacy": {
           "text": "\u6e05\u695a\u770b\u5230 AI \u770b\u5f97\u5230\u4ec0\u9ebc\uff0c\u4ee5\u53ca\u4ec0\u9ebc\u7d55\u4e0d\u96e2\u958b\u4f60\u7684 Mac\u3002",
-          "more": "\u9304\u97f3\u8207\u6a94\u6848\u7559\u5728\u672c\u6a5f\uff1b\u53ea\u6709\u9010\u5b57\u7a3f\u6587\u5b57\u6703\u9001\u5230\u4f60\u7684\u4f9b\u61c9\u5546\u3002",
+          "more": "\u9304\u97f3\u7559\u5728\u672c\u6a5f\uff1b\u4f60\u7684\u4f9b\u61c9\u5546\u6703\u6536\u5230\u9010\u5b57\u7a3f\u6587\u5b57\uff0c\u4ee5\u53ca\u4f60\u7684\u8a2a\u8ac7\u5927\u7db1\uff08\u5982\u6709\u52a0\u5165\uff09\u3002",
           "link": "\u96b1\u79c1\u6b0a"
         },
         "configuration": {
@@ -870,20 +870,22 @@
   "aiConsent": {
     "title": "AI 智慧分析",
     "intro": "Bristlenose 使用 AI 分析你的訪談逐字稿。當你使用雲端供應商時，逐字稿資料會傳送到該供應商的伺服器進行處理。",
-    "notUsedForTraining": "你的資料不會用於訓練 AI 模型。各供應商的資料保留政策請參閱其使用條款。",
+    "notUsedForTraining": "Bristlenose 不會用你的資料訓練 AI 模型。供應商能否這麼做、會保留你的資料多久，取決於你與該供應商的協議。",
     "sentToCloudLabel": "傳送到你所選的雲端供應商",
-    "sentItem1": "處理後的訪談逐字稿（若已啟用，則先套用 PII 遮蔽）",
+    "sentItem1": "訪談逐字稿原文，包括其中的姓名與個人詳細資料",
     "sentItem2": "說話者編碼與時間碼",
     "sentItem3": "分析請求（主題分段、引述擷取、主軸歸納）",
-    "sentSummary": "傳送到雲端供應商的資料：處理後的逐字稿、說話者編碼與分析請求",
+    "sentItem4": "你的訪談大綱（如有加入）",
+    "sentSummary": "傳送到雲端供應商的資料：含有姓名的逐字稿、說話者編碼、你的訪談大綱（如有加入）與分析請求",
     "agentAccess": "\u82e5\u70ba\u5c08\u6848\u958b\u555f\u4ee3\u7406\u5b58\u53d6\uff0c\u4ee3\u7406\u8b80\u53d6\u7684\u5f15\u8ff0\u2014\u2014\u4ee5\u53ca\u5728\u672a\u958b\u555f\u533f\u540d\u5316\u6642\uff0c\u5f15\u8ff0\u65c1\u7684\u53c3\u8207\u8005\u59d3\u540d\uff0c\u9023\u540c\u4f60\u7684\u7de8\u8f2f\u8207\u6a19\u7c64\u2014\u2014\u6703\u5728\u4f60\u6bcf\u6b21\u63d0\u554f\u6642\u50b3\u9001\u7d66\u8a72\u4ee3\u7406\u7684\u4f9b\u61c9\u5546\u3002\u90a3\u662f\u53e6\u4e00\u5bb6\u516c\u53f8\uff0c\u9069\u7528\u5176\u81ea\u8eab\u689d\u6b3e\u3002\u9810\u8a2d\u70ba\u95dc\u9589\uff0c\u4e26\u53ef\u9010\u4e00\u5c08\u6848\u8a2d\u5b9a\u3002",
-    "staysLocalLabel": "始終保留在你的裝置上",
+    "staysLocalLabel": "絕不會傳送給你的 AI 供應商",
     "localItem1": "原始音訊與影片錄音",
-    "localItem2": "\u53c3\u8207\u8005\u59d3\u540d\u3001\u806f\u7d61\u8cc7\u8a0a\u8207\u500b\u4eba\u8a73\u7d30\u8cc7\u6599\u2014\u2014\u9664\u975e\u4f60\u958b\u555f\u4ee3\u7406\u5b58\u53d6",
     "localItem3": "\u4f60\u7684\u7de8\u8f2f\u3001\u6a19\u7c64\u8207\u5831\u544a\u81ea\u8a02\u8a2d\u5b9a\u2014\u2014\u9664\u975e\u4f60\u958b\u555f\u4ee3\u7406\u5b58\u53d6",
-    "localSummary": "保留在你裝置上的資料：錄音、個人詳細資料與你的編輯",
+    "localSummary": "絕不會傳送給你的 AI 供應商的資料：錄音，以及你的編輯、標籤與報告自訂設定",
     "providersIntro": "可能會處理你資料的雲端供應商：",
     "researcherResponsibility": "依規定告知參與者，其訪談資料可能會由第三方 AI 服務處理。",
+    "hostsNote": "模型從 Apple、Hugging Face、GitHub 下載；若你使用 Ollama，則從 Ollama 的模型庫下載。報告會從 Google Fonts 載入字體。它們都能看到你的 IP 位址，但都不會收到你研究中的任何內容。",
+    "privacyLink": "隱私權政策",
     "continue": "繼續",
     "useOllama": "在裝置上使用 Ollama 模型",
     "ollamaDownloadSize": "約 %@ 下載量",

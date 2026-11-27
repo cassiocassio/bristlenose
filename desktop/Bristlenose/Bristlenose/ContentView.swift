@@ -699,7 +699,7 @@ struct ContentView: View {
     private var selectionCount: Int { selection.count }
 
     /// Whether the user has acknowledged the current AI data disclosure.
-    private var hasConsent: Bool { consentVersion >= AIConsentView.currentVersion }
+    private var hasConsent: Bool { AIConsentView.isAcknowledged(consentVersion) }
 
     /// Inject the native locale as a URL query parameter so the React SPA
     /// can detect it synchronously on first render (prevents language flash).
@@ -1063,7 +1063,14 @@ struct ContentView: View {
         }
         // When consent is granted (version updated), start serve for the
         // already-selected project if one exists.
-        .onChange(of: consentVersion) { _, _ in
+        .onChange(of: consentVersion) { _, newVersion in
+            // Answered in another window: this window's first-run sheet closes
+            // without recording, so its stale analytics box cannot overwrite
+            // the answer just given.
+            if showingAIConsent, !AIConsentView.sheetStaysOpen(
+                acknowledgedVersion: newVersion, isReviewMode: aiConsentReviewMode) {
+                showingAIConsent = false
+            }
             // The Whisper download waits for the disclosure too.
             if hasConsent { WhisperDownloadModel.shared.checkAtLaunch() }
             // The spare waits for the disclosure too; granting it is the moment to want one.

@@ -314,7 +314,7 @@ Bristlenose has **no account system at all** — no Bristlenose account, no serv
 
 **Consequently: do NOT ask for cloud import to be added to `AIConsentView`, and do not treat its absence as a stale consent version.** The two surfaces answer different questions. The vendor-name overlap is coincidental — the Gemini *API key* and the Google Meet *OAuth client* are different consoles, different credentials, different data flows (`docs/design-cloud-import.md`; `GoogleOAuth.swift` vs the Gemini provider). Where the user gets their recordings from is their business.
 
-Nor is the dialog's *"Raw audio and video recordings — always stays on your device"* falsified by import: import's entire job is to put recordings **on** the device, and nothing ever uploads them.
+Nor is the dialog's *"Raw audio and video recordings"*, listed under *"Never sent to your AI provider"* (since consent v3, 27 Nov 2026; v2 said *"always stays on your device"*), falsified by import: import's entire job is to put recordings **on** the device, and nothing ever uploads them.
 
 **What §5.1.1 DOES require, and where it is satisfied:** clear disclosure of the third-party data source and what happens to the data after — what is accessed, how, retention, and how to revoke. That lives in the privacy policy at `https://bristlenose.app/privacy.html` (the canonical URL all three consoles point at), which names the vendors, the read-only scoping, the Keychain/iCloud behaviour, and revocation via Entra ▸ Enterprise Applications or Google Account ▸ Security. Check that page is current before submission — **not** the docs page at `/docs/privacy.html`, which is documentation and deliberately not the policy.
 

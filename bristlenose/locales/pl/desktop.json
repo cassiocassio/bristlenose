@@ -787,8 +787,8 @@
           "link": "Klipy wideo"
         },
         "shareReport": {
-          "text": "Udostępnij jeden samodzielny plik HTML — bez instalacji.",
-          "more": "Każdy otworzy go w przeglądarce; wcześniej możesz zanonimizować nazwiska i miejsca.",
+          "text": "Udostępnij jeden samodzielny plik HTML.",
+          "more": "Otwiera się w każdej przeglądarce; wcześniej możesz go zanonimizować.",
           "link": "Udostępnij raport"
         },
         "sendToMiro": {
@@ -843,7 +843,7 @@
         },
         "privacy": {
           "text": "Zobacz dokładnie, co widzi AI, a co nigdy nie opuszcza Maca.",
-          "more": "Nagrania i pliki zostają na miejscu; do dostawcy trafia tylko tekst transkrypcji.",
+          "more": "Nagrania zostają na miejscu; dostawca otrzymuje tekst transkrypcji oraz Twój scenariusz wywiadu, jeśli go dodasz.",
           "link": "Prywatność"
         },
         "configuration": {
@@ -954,20 +954,22 @@
   "aiConsent": {
     "title": "Analiza wspomagana przez AI",
     "intro": "Bristlenose używa AI do analizy transkrypcji wywiadów. Gdy korzystasz z dostawcy w chmurze, dane transkrypcji są wysyłane na serwery tego dostawcy w celu przetworzenia.",
-    "notUsedForTraining": "Twoje dane nie są używane do trenowania modeli AI. Zasady przechowywania danych znajdziesz w warunkach każdego dostawcy.",
+    "notUsedForTraining": "Bristlenose nie używa Twoich danych do trenowania modeli AI. To, czy dostawca może to robić i jak długo przechowuje Twoje dane, określa Twoja umowa z tym dostawcą.",
     "sentToCloudLabel": "Wysyłane do wybranego dostawcy w chmurze",
-    "sentItem1": "Przetworzone transkrypcje wywiadów (z uprzednio zastosowanym usuwaniem danych osobowych, jeśli włączono)",
+    "sentItem1": "Transkrypcje wywiadów w niezmienionej postaci, łącznie z zawartymi w nich imionami, nazwiskami i danymi osobowymi",
     "sentItem2": "Kody rozmówców i kody czasowe",
     "sentItem3": "Żądania analizy (segmentacja tematów, wyodrębnianie cytatów, grupowanie motywów)",
-    "sentSummary": "Dane wysyłane do dostawcy w chmurze: przetworzone transkrypcje, kody rozmówców i żądania analizy",
+    "sentItem4": "Twój scenariusz wywiadu, jeśli go dodasz",
+    "sentSummary": "Dane wysyłane do dostawcy w chmurze: transkrypcje wraz z zawartymi w nich imionami i nazwiskami, kody rozmówców, Twój scenariusz wywiadu, jeśli go dodasz, oraz żądania analizy",
     "agentAccess": "Je\u015bli w\u0142\u0105czysz dost\u0119p agent\u00f3w dla projektu, cytaty odczytane przez agenta \u2014 a je\u015bli anonimizacja jest wy\u0142\u0105czona, tak\u017ce znajduj\u0105ce si\u0119 przy nich imiona uczestnik\u00f3w oraz Twoje zmiany i tagi \u2014 s\u0105 wysy\u0142ane do dostawcy tego agenta przy ka\u017cdym pytaniu. To inna firma, na w\u0142asnych warunkach. Domy\u015blnie wy\u0142\u0105czone, ustawiane dla ka\u017cdego projektu.",
-    "staysLocalLabel": "Zawsze pozostaje na Twoim urządzeniu",
+    "staysLocalLabel": "Nigdy nie trafia do Twojego dostawcy AI",
     "localItem1": "Surowe nagrania dźwiękowe i wideo",
-    "localItem2": "Imiona uczestnik\u00f3w, dane kontaktowe i dane osobowe \u2014 chyba \u017ce w\u0142\u0105czysz dost\u0119p agent\u00f3w",
     "localItem3": "Twoje zmiany, tagi i dostosowania raportu \u2014 chyba \u017ce w\u0142\u0105czysz dost\u0119p agent\u00f3w",
-    "localSummary": "Dane, które pozostają na Twoim urządzeniu: nagrania, dane osobowe i Twoje edycje",
+    "localSummary": "Dane, które nigdy nie trafiają do Twojego dostawcy AI: nagrania oraz Twoje edycje, tagi i dostosowania raportu",
     "providersIntro": "Dostawcy w chmurze, którzy mogą przetwarzać Twoje dane:",
     "researcherResponsibility": "Poinformuj uczestników, że ich dane z wywiadów mogą być przetwarzane przez zewnętrzne usługi AI, zgodnie z wymogami.",
+    "hostsNote": "Modele są pobierane z serwisów Apple, Hugging Face i GitHub oraz, jeśli używasz Ollamy, z biblioteki Ollamy. Raporty wczytują krój pisma z Google Fonts. Każdy z nich widzi Twój adres IP; żaden nie otrzymuje niczego z Twojego badania.",
+    "privacyLink": "Polityka prywatności",
     "continue": "Kontynuuj",
     "useOllama": "Użyj modelu Ollama na urządzeniu",
     "ollamaDownloadSize": "~%@ do pobrania",

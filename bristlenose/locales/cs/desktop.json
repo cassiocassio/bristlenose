@@ -786,8 +786,8 @@
           "link": "Videoklipy"
         },
         "shareReport": {
-          "text": "Sd\u00edlejte jeden samostatn\u00fd soubor HTML \u2014 bez instalace.",
-          "more": "Otev\u0159e ho ka\u017ed\u00fd v prohl\u00ed\u017ee\u010di; jm\u00e9na a m\u00edsta m\u016f\u017eete p\u0159edem anonymizovat.",
+          "text": "Sd\u00edlejte jeden samostatn\u00fd soubor HTML.",
+          "more": "Otev\u0159e se v libovoln\u00e9m prohl\u00ed\u017ee\u010di; p\u0159edem ho m\u016f\u017eete anonymizovat.",
           "link": "Sd\u00edlet zpr\u00e1vu"
         },
         "sendToMiro": {
@@ -842,7 +842,7 @@
         },
         "privacy": {
           "text": "P\u0159esn\u011b vid\u00edte, co AI vid\u00ed a co nikdy neopust\u00ed v\u00e1\u0161 Mac.",
-          "more": "Nahr\u00e1vky a soubory z\u016fst\u00e1vaj\u00ed u v\u00e1s; poskytovateli jde jen text p\u0159episu.",
+          "more": "Nahr\u00e1vky z\u016fst\u00e1vaj\u00ed u v\u00e1s; poskytovatel dostane text p\u0159episu a v\u00e1\u0161 sc\u00e9n\u00e1\u0159 rozhovoru, pokud ho p\u0159id\u00e1te.",
           "link": "Soukrom\u00ed"
         },
         "configuration": {
@@ -953,20 +953,22 @@
   "aiConsent": {
     "title": "Analýza poháněná AI",
     "intro": "Bristlenose využívá AI k analýze vašich přepisů rozhovorů. Když použijete cloudového poskytovatele, data přepisu se odesílají ke zpracování na servery tohoto poskytovatele.",
-    "notUsedForTraining": "Vaše data nejsou používána k trénování modelů AI. Zásady uchovávání dat najdete v podmínkách jednotlivých poskytovatelů.",
+    "notUsedForTraining": "Bristlenose vaše data k trénování modelů AI nepoužívá. Zda to smí poskytovatel a jak dlouho vaše data uchovává, určuje vaše smlouva s tímto poskytovatelem.",
     "sentToCloudLabel": "Odesláno vámi zvolenému cloudovému poskytovateli",
-    "sentItem1": "Zpracované přepisy rozhovorů (s případně předem aplikovanou redakcí osobních údajů, pokud je povolena)",
+    "sentItem1": "Přepisy rozhovorů tak, jak jsou, včetně jmen a osobních údajů, které obsahují",
     "sentItem2": "Kódy mluvčích a časové značky",
     "sentItem3": "Požadavky na analýzu (segmentace témat, extrakce citátů, shlukování témat)",
-    "sentSummary": "Data odeslaná cloudovému poskytovateli: zpracované přepisy, kódy mluvčích a požadavky na analýzu",
+    "sentItem4": "Váš scénář rozhovoru, pokud ho přidáte",
+    "sentSummary": "Data odeslaná cloudovému poskytovateli: přepisy včetně jmen, která obsahují, kódy mluvčích, váš scénář rozhovoru, pokud ho přidáte, a požadavky na analýzu",
     "agentAccess": "Pokud u projektu zapnete p\u0159\u00edstup agent\u016f, citace, kter\u00e9 agent p\u0159e\u010dte \u2014 a pokud nen\u00ed zapnut\u00e1 anonymizace, tak\u00e9 jm\u00e9na \u00fa\u010dastn\u00edk\u016f u nich, spolu s va\u0161imi \u00fapravami a \u0161t\u00edtky \u2014 se p\u0159i ka\u017ed\u00e9m dotazu ode\u0161lou poskytovateli dan\u00e9ho agenta. Jin\u00e9 spole\u010dnosti s vlastn\u00edmi podm\u00ednkami. Ve v\u00fdchoz\u00edm stavu vypnuto, nastavuje se pro ka\u017ed\u00fd projekt.",
-    "staysLocalLabel": "Vždy zůstává ve vašem zařízení",
+    "staysLocalLabel": "Nikdy se neodesílá vašemu poskytovateli AI",
     "localItem1": "Surové audio a video nahrávky",
-    "localItem2": "Jm\u00e9na \u00fa\u010dastn\u00edk\u016f, kontaktn\u00ed \u00fadaje a osobn\u00ed \u00fadaje \u2014 pokud nezapnete p\u0159\u00edstup agent\u016f",
     "localItem3": "Va\u0161e \u00fapravy, \u0161t\u00edtky a p\u0159izp\u016fsoben\u00ed reportu \u2014 pokud nezapnete p\u0159\u00edstup agent\u016f",
-    "localSummary": "Data, která zůstávají ve vašem zařízení: nahrávky, osobní údaje a vaše úpravy",
+    "localSummary": "Data, která se nikdy neodesílají vašemu poskytovateli AI: nahrávky a vaše úpravy, štítky a přizpůsobení reportu",
     "providersIntro": "Cloudoví poskytovatelé, kteří mohou zpracovávat vaše data:",
     "researcherResponsibility": "Informujte účastníky, že jejich data z rozhovorů mohou být zpracována službami AI třetích stran, jak je vyžadováno.",
+    "hostsNote": "Modely se stahují ze služeb Apple, Hugging Face a GitHub, a pokud používáte Ollama, z knihovny Ollama. Reporty načítají písmo z Google Fonts. Každá z těchto služeb vidí vaši IP adresu; žádná nedostane nic z vaší studie.",
+    "privacyLink": "Zásady ochrany osobních údajů",
     "continue": "Pokračovat",
     "useOllama": "Použít model Ollama v zařízení",
     "ollamaDownloadSize": "~%@ ke stažení",

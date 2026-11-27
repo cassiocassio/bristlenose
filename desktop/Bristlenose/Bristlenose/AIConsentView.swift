@@ -19,6 +19,9 @@ import SwiftUI
 ///   quotes to that agent's own vendor, which is a different company, under
 ///   different terms, at a different moment (when the researcher asks a
 ///   question, not when the analysis runs).
+/// - **A claim the sheet made turns out to be false.** v3 is the worked
+///   example: everyone acknowledged a sheet that said participant names stay
+///   on the device, so everyone sees the corrected one.
 ///
 /// Do NOT increment for:
 /// - Copy tweaks or layout changes
@@ -33,7 +36,33 @@ struct AIConsentView: View {
     /// five-step manual config into one button, removing the friction that
     /// was implicitly doing the disclosure work, so the disclosure has to do
     /// it explicitly instead.
-    static let currentVersion = 2
+    ///
+    /// **v3 (27 Nov 2026)** — two claims on v2 were false. "Your data is not
+    /// used to train AI models" is not ours to promise (a provider's own terms
+    /// decide, and Gemini's unpaid tier may use what it is sent), and
+    /// "participant names … always stay on your device" was wrong: speaker
+    /// identification sends the transcript, names included, and the Mac app has
+    /// no redaction control. v3 also names the discussion guide, which is sent,
+    /// and the hosts models and the report typeface come from.
+    static let currentVersion = 3
+
+    /// Has the person acknowledged the disclosure as it stands? The decision
+    /// that shows the first-run sheet (`ContentView.hasConsent`). Other gates
+    /// (`PipelineRunner`, `NewsFetcher`, `StandbySidecar`) compare against
+    /// `currentVersion` themselves and follow a bump the same way.
+    static func isAcknowledged(_ acknowledgedVersion: Int) -> Bool {
+        acknowledgedVersion >= currentVersion
+    }
+
+    /// Should an open sheet stay up once the stored version changes? A bump
+    /// raises the first-run sheet in every open window; when the person answers
+    /// it in one, the others close without recording anything, so a stale
+    /// window cannot overwrite the analytics answer or log a second consent.
+    /// The review-mode sheet (Bristlenose ▸ AI & Privacy…) is the person's own
+    /// and stays.
+    static func sheetStaysOpen(acknowledgedVersion: Int, isReviewMode: Bool) -> Bool {
+        isReviewMode || !isAcknowledged(acknowledgedVersion)
+    }
 
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
@@ -67,12 +96,12 @@ struct AIConsentView: View {
             // AFTER the stays-local box, deliberately: it is the exception to
             // BOTH boxes, and an exception has to follow the claim it
             // qualifies. Above the box it read as a footnote to the cloud
-            // list, leaving "Always stays on your device → participant
-            // names" standing unqualified six lines below its own
-            // contradiction.
+            // list, leaving the box's "your edits, tags… — unless you turn
+            // on Agent Access" six lines below the line that explains it.
             agentAccessText
             providersRow
             responsibilityText
+            hostsText
 
             if !isReviewMode && NewsKeys.isLive {
                 countsChoice
@@ -120,6 +149,7 @@ struct AIConsentView: View {
                 bulletItem(i18n.t("desktop.aiConsent.sentItem1"))
                 bulletItem(i18n.t("desktop.aiConsent.sentItem2"))
                 bulletItem(i18n.t("desktop.aiConsent.sentItem3"))
+                bulletItem(i18n.t("desktop.aiConsent.sentItem4"))
             }
             .padding(.top, 4)
         } label: {
@@ -131,7 +161,7 @@ struct AIConsentView: View {
 
     // MARK: - Agent access (the second, conditional recipient — v2)
 
-    /// A SEPARATE line rather than a fourth bullet in the box above, because
+    /// A SEPARATE line rather than another bullet in the box above, because
     /// it is a different recipient: the box is headed "sent to your chosen
     /// cloud provider", and an agent's vendor is neither chosen there nor the
     /// same company. Conditional (off by default, per project) and triggered
@@ -150,7 +180,6 @@ struct AIConsentView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 4) {
                 bulletItem(i18n.t("desktop.aiConsent.localItem1"))
-                bulletItem(i18n.t("desktop.aiConsent.localItem2"))
                 bulletItem(i18n.t("desktop.aiConsent.localItem3"))
             }
             .padding(.top, 4)
@@ -182,6 +211,21 @@ struct AIConsentView: View {
         Text(i18n.t("desktop.aiConsent.researcherResponsibility"))
             .font(.caption)
             .foregroundStyle(.secondary)
+    }
+
+    // MARK: - Download hosts and the report typeface
+
+    /// Who else sees the Mac's IP address, and the policy that says the rest.
+    /// The link is an `AttributedString` run (`GeneralSettingsView.explanation`),
+    /// so nothing a translator writes can become a link.
+    private var hostsText: some View {
+        Text(GeneralSettingsView.explanation(
+            i18n.t("desktop.aiConsent.hostsNote"),
+            link: i18n.t("desktop.aiConsent.privacyLink"),
+            destination: NewsPreferences.privacyURL))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Anonymous counts (first run only)

@@ -731,8 +731,8 @@
           "link": "Clip video"
         },
         "shareReport": {
-          "text": "Condividi un unico file HTML autonomo — senza installare nulla.",
-          "more": "Chiunque può aprirlo in un browser; se vuoi, prima anonimizza nomi e luoghi.",
+          "text": "Condividi un unico file HTML autonomo.",
+          "more": "Si apre in qualsiasi browser; se vuoi, prima anonimizzalo.",
           "link": "Condividi un report"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Vedi esattamente cosa vede l'IA e cosa non lascia mai il tuo Mac.",
-          "more": "Registrazioni e file restano in locale; solo il testo trascritto va al provider.",
+          "more": "Le registrazioni restano in locale; il provider riceve il testo trascritto, e la tua traccia di intervista se ne aggiungi una.",
           "link": "Privacy"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "Analisi basata sull'IA",
     "intro": "Bristlenose utilizza l'IA per analizzare le trascrizioni delle interviste. Quando si usa un provider cloud, i dati delle trascrizioni vengono inviati ai server di quel provider per l'elaborazione.",
-    "notUsedForTraining": "I tuoi dati non vengono usati per addestrare i modelli di IA. Consulta i termini di ciascun provider per le relative politiche di conservazione dei dati.",
+    "notUsedForTraining": "Bristlenose non usa i tuoi dati per addestrare modelli di IA. Se un provider possa farlo, e per quanto tempo conservi i tuoi dati, dipende dal tuo accordo con quel provider.",
     "sentToCloudLabel": "Inviato al provider cloud scelto",
-    "sentItem1": "Trascrizioni elaborate delle interviste (con l'oscuramento dei dati personali applicato prima, se attivato)",
+    "sentItem1": "Trascrizioni delle interviste così come sono, compresi i nomi e i dati personali che contengono",
     "sentItem2": "Codici degli interlocutori e timecode",
     "sentItem3": "Richieste di analisi (segmentazione degli argomenti, estrazione delle citazioni, raggruppamento dei temi)",
-    "sentSummary": "Dati inviati al provider cloud: trascrizioni elaborate, codici degli interlocutori e richieste di analisi",
+    "sentItem4": "La tua traccia di intervista, se ne aggiungi una",
+    "sentSummary": "Dati inviati al provider cloud: trascrizioni con i nomi che contengono, codici degli interlocutori, la tua traccia di intervista se ne aggiungi una, e richieste di analisi",
     "agentAccess": "Se attivi l'accesso agenti per un progetto, le citazioni lette da un agente \u2014 e, se l'anonimizzazione non \u00e8 attiva, i nomi dei partecipanti accanto a esse, insieme alle tue modifiche e ai tag \u2014 vengono inviati al provider di quell'agente ogni volta che gli poni una domanda. Un'azienda diversa, con termini propri. Disattivato per impostazione predefinita e impostabile per progetto.",
-    "staysLocalLabel": "Resta sempre sul tuo dispositivo",
+    "staysLocalLabel": "Mai inviato al tuo provider di IA",
     "localItem1": "Registrazioni audio e video originali",
-    "localItem2": "Nomi dei partecipanti, contatti e dati personali, salvo che attivi l'accesso agenti",
     "localItem3": "Le tue modifiche, i tag e le personalizzazioni del report, salvo che attivi l'accesso agenti",
-    "localSummary": "Dati che restano sul tuo dispositivo: registrazioni, dati personali e le tue modifiche",
+    "localSummary": "Dati mai inviati al tuo provider di IA: registrazioni, e le tue modifiche, i tag e le personalizzazioni del report",
     "providersIntro": "Provider cloud che possono elaborare i tuoi dati:",
     "researcherResponsibility": "Informa i partecipanti che i dati delle loro interviste possono essere elaborati da servizi di IA di terze parti, come richiesto.",
+    "hostsNote": "I modelli vengono scaricati da Apple, Hugging Face, GitHub e, se usi Ollama, dalla libreria di Ollama. I report caricano un carattere tipografico da Google Fonts. Ognuno vede il tuo indirizzo IP; nessuno riceve nulla dal tuo studio.",
+    "privacyLink": "Informativa sulla privacy",
     "continue": "Continua",
     "useOllama": "Usa il modello Ollama sul dispositivo",
     "ollamaDownloadSize": "~%@ di download",

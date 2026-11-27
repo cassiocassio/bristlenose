@@ -731,8 +731,8 @@
           "link": "Videoklipp"
         },
         "shareReport": {
-          "text": "Dela en enda frist\u00e5ende HTML-fil \u2013 ingen installation kr\u00e4vs.",
-          "more": "Vem som helst kan \u00f6ppna den i en webbl\u00e4sare; anonymisera namn och platser f\u00f6rst om du vill.",
+          "text": "Dela en enda frist\u00e5ende HTML-fil.",
+          "more": "\u00d6ppnas i valfri webbl\u00e4sare; anonymisera f\u00f6rst om du vill.",
           "link": "Dela en rapport"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Se exakt vad AI:n ser, och vad som aldrig l\u00e4mnar din Mac.",
-          "more": "Inspelningar och filer stannar lokalt; bara transkriptionstext g\u00e5r till din leverant\u00f6r.",
+          "more": "Inspelningar stannar lokalt; din leverant\u00f6r f\u00e5r transkriptionstexten, och din intervjuguide om du l\u00e4gger till en.",
           "link": "Integritet"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "AI-driven analys",
     "intro": "Bristlenose använder AI för att analysera dina intervjutranskriptioner. När du använder en molnleverantör skickas transkriptionsdata till den leverantörens servrar för bearbetning.",
-    "notUsedForTraining": "Dina data används inte för att träna AI-modeller. Se varje leverantörs villkor för deras policy för datalagring.",
+    "notUsedForTraining": "Bristlenose använder inte dina data för att träna AI-modeller. Om en leverantör får göra det, och hur länge den sparar dina data, avgörs av ditt avtal med leverantören.",
     "sentToCloudLabel": "Skickas till din valda molnleverantör",
-    "sentItem1": "Bearbetade intervjutranskriptioner (med redigering av personuppgifter tillämpad först, om aktiverat)",
+    "sentItem1": "Intervjutranskriptioner som de är, inklusive namn och personuppgifter som finns i dem",
     "sentItem2": "Talarkoder och tidkoder",
     "sentItem3": "Analysbegäranden (ämnessegmentering, citatextrahering, temagruppering)",
-    "sentSummary": "Data som skickas till molnleverantör: bearbetade transkriptioner, talarkoder och analysbegäranden",
+    "sentItem4": "Din intervjuguide, om du lägger till en",
+    "sentSummary": "Data som skickas till molnleverantör: transkriptioner med de namn som finns i dem, talarkoder, din intervjuguide om du lägger till en, och analysbegäranden",
     "agentAccess": "Om du sl\u00e5r p\u00e5 agent\u00e5tkomst f\u00f6r ett projekt skickas de citat som en agent l\u00e4ser \u2014 och, om inte anonymisering \u00e4r p\u00e5slagen, deltagarnamnen bredvid dem samt dina \u00e4ndringar och taggar \u2014 till agentens leverant\u00f6r varje g\u00e5ng du st\u00e4ller en fr\u00e5ga. Ett annat f\u00f6retag, med egna villkor. Avst\u00e4ngt som standard och st\u00e4lls in per projekt.",
-    "staysLocalLabel": "Stannar alltid på din enhet",
+    "staysLocalLabel": "Skickas aldrig till din AI-leverantör",
     "localItem1": "Rå ljud- och videoinspelningar",
-    "localItem2": "Deltagarnamn, kontaktuppgifter och personuppgifter \u2014 om du inte sl\u00e5r p\u00e5 agent\u00e5tkomst",
     "localItem3": "Dina \u00e4ndringar, taggar och rapportanpassningar \u2014 om du inte sl\u00e5r p\u00e5 agent\u00e5tkomst",
-    "localSummary": "Data som stannar på din enhet: inspelningar, personliga uppgifter och dina ändringar",
+    "localSummary": "Data som aldrig skickas till din AI-leverantör: inspelningar samt dina ändringar, taggar och rapportanpassningar",
     "providersIntro": "Molnleverantörer som kan bearbeta dina data:",
     "researcherResponsibility": "Informera deltagarna om att deras intervjudata kan bearbetas av AI-tjänster från tredje part, enligt gällande krav.",
+    "hostsNote": "Modeller laddas ned från Apple, Hugging Face, GitHub och, om du använder Ollama, Ollamas bibliotek. Rapporter läser in ett typsnitt från Google Fonts. Var och en av dem ser din IP-adress; ingen tar emot något från din studie.",
+    "privacyLink": "Integritetspolicy",
     "continue": "Fortsätt",
     "useOllama": "Använd Ollama-modell på enheten",
     "ollamaDownloadSize": "~%@ hämtning",

@@ -731,8 +731,8 @@
           "link": "Clipes de vídeo"
         },
         "shareReport": {
-          "text": "Compartilhe um arquivo HTML autossuficiente — nada a instalar.",
-          "more": "Qualquer pessoa abre no navegador; se quiser, anonimize nomes e lugares antes.",
+          "text": "Compartilhe um único arquivo HTML autossuficiente.",
+          "more": "Abre em qualquer navegador; se quiser, anonimize antes.",
           "link": "Compartilhar HTML"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Veja exatamente o que a IA vê e o que nunca sai do seu Mac.",
-          "more": "Gravações e arquivos ficam no seu Mac; só o texto da transcrição vai ao seu provedor.",
+          "more": "Gravações ficam no seu Mac; seu provedor recebe o texto da transcrição, e seu roteiro de entrevista se você adicionar um.",
           "link": "Privacidade"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "Análise com IA",
     "intro": "O Bristlenose usa IA para analisar as transcrições das suas entrevistas. Quando você usa um provedor na nuvem, os dados da transcrição são enviados aos servidores desse provedor para processamento.",
-    "notUsedForTraining": "Seus dados não são usados para treinar modelos de IA. Consulte os termos de cada provedor para conhecer suas políticas de retenção de dados.",
+    "notUsedForTraining": "O Bristlenose não usa seus dados para treinar modelos de IA. Se um provedor pode fazer isso, e por quanto tempo guarda seus dados, é definido pelo seu contrato com esse provedor.",
     "sentToCloudLabel": "Enviado ao provedor na nuvem que você escolher",
-    "sentItem1": "Transcrições de entrevistas processadas (com a ocultação de PII aplicada primeiro, se ativada)",
+    "sentItem1": "Transcrições de entrevistas como estão, incluindo os nomes e dados pessoais que contiverem",
     "sentItem2": "Códigos de falantes e marcações de tempo",
     "sentItem3": "Solicitações de análise (segmentação de tópicos, extração de citações, agrupamento de temas)",
-    "sentSummary": "Dados enviados ao provedor na nuvem: transcrições processadas, códigos de falantes e solicitações de análise",
+    "sentItem4": "Seu roteiro de entrevista, se você adicionar um",
+    "sentSummary": "Dados enviados ao provedor na nuvem: transcrições com os nomes que contiverem, códigos de falantes, seu roteiro de entrevista se você adicionar um, e solicitações de análise",
     "agentAccess": "Se voc\u00ea ativar o acesso de agentes em um projeto, as cita\u00e7\u00f5es que um agente ler \u2014 e, a menos que a anonimiza\u00e7\u00e3o esteja ativada, os nomes dos participantes ao lado delas, junto com suas edi\u00e7\u00f5es e tags \u2014 ser\u00e3o enviados ao provedor desse agente sempre que voc\u00ea fizer uma pergunta. Outra empresa, sob os termos dela. Desativado por padr\u00e3o e definido por projeto.",
-    "staysLocalLabel": "Sempre permanece no seu dispositivo",
+    "staysLocalLabel": "Nunca enviado ao seu provedor de IA",
     "localItem1": "Gravações brutas de áudio e vídeo",
-    "localItem2": "Nomes dos participantes, informa\u00e7\u00f5es de contato e dados pessoais \u2014 a menos que voc\u00ea ative o acesso de agentes",
     "localItem3": "Suas edi\u00e7\u00f5es, tags e personaliza\u00e7\u00f5es do relat\u00f3rio \u2014 a menos que voc\u00ea ative o acesso de agentes",
-    "localSummary": "Dados que permanecem no seu dispositivo: gravações, dados pessoais e suas edições",
+    "localSummary": "Dados nunca enviados ao seu provedor de IA: gravações, e suas edições, tags e personalizações do relatório",
     "providersIntro": "Provedores na nuvem que podem processar seus dados:",
     "researcherResponsibility": "Informe aos participantes que os dados de suas entrevistas podem ser processados por serviços de IA de terceiros, conforme exigido.",
+    "hostsNote": "Os modelos são baixados da Apple, do Hugging Face, do GitHub e, se você usar o Ollama, da biblioteca do Ollama. Os relatórios carregam uma fonte do Google Fonts. Cada um deles vê seu endereço IP; nenhum recebe nada do seu estudo.",
+    "privacyLink": "Política de Privacidade",
     "continue": "Continuar",
     "useOllama": "Usar modelo Ollama no dispositivo",
     "ollamaDownloadSize": "~%@ de download",

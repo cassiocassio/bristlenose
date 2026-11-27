@@ -551,7 +551,7 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   study and it would have deleted the wrong account). _(The third entry here — "no
   consent-version bump yet for the agent recipient class" — was stale and
   is removed: it shipped 1 Aug 2026, `09b348b1` + `6df94d4f`, and
-  `AIConsentView.currentVersion` is 2.)_
+  `AIConsentView.currentVersion` was 2; it is 3 since 27 Nov 2026.)_
 - **The native MCP helper is built in the Copy Sidecar Resources phase, and its
   identifier follows the signer kind.** `desktop/mcp-helper/build-helper.sh`
   compiles `bristlenose-mcp` for the app's floor and signs it with the identity

@@ -703,8 +703,8 @@
           "link": "\ube44\ub514\uc624 \ud074\ub9bd"
         },
         "shareReport": {
-          "text": "\ub3c5\ub9bd \uc2e4\ud589\ud615 HTML \ud30c\uc77c \ud558\ub098\ub85c \uacf5\uc720\ud558\uc138\uc694. \uc124\uce58\uac00 \ud544\uc694 \uc5c6\uc2b5\ub2c8\ub2e4.",
-          "more": "\ub204\uad6c\ub098 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \uc5f4 \uc218 \uc788\uc73c\uba70, \uc6d0\ud558\uba74 \uc774\ub984\uacfc \uc7a5\uc18c\ub97c \uba3c\uc800 \uc775\uba85\ud654\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
+          "text": "\ub3c5\ub9bd \uc2e4\ud589\ud615 HTML \ud30c\uc77c \ud558\ub098\ub85c \uacf5\uc720\ud558\uc138\uc694.",
+          "more": "\uc5b4\ub5a4 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c\ub3c4 \uc5f4 \uc218 \uc788\uc73c\uba70, \uc6d0\ud558\uba74 \uba3c\uc800 \uc775\uba85\ud654\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
           "link": "\ubcf4\uace0\uc11c \uacf5\uc720"
         },
         "sendToMiro": {
@@ -759,7 +759,7 @@
         },
         "privacy": {
           "text": "AI\uac00 \ubcf4\ub294 \uac83\uacfc Mac\uc744 \ub5a0\ub098\uc9c0 \uc54a\ub294 \uac83\uc744 \uc815\ud655\ud788 \ud655\uc778\ud558\uc138\uc694.",
-          "more": "\ub179\uc74c\uacfc \ud30c\uc77c\uc740 \ub85c\uceec\uc5d0 \ub0a8\uace0, \uc804\uc0ac\ubcf8 \ud14d\uc2a4\ud2b8\ub9cc \uc81c\uacf5\uc790\uc5d0\uac8c \uc804\uc1a1\ub429\ub2c8\ub2e4.",
+          "more": "\ub179\uc74c\uc740 \ub85c\uceec\uc5d0 \ub0a8\uace0, \uc81c\uacf5\uc790\uc5d0\uac8c\ub294 \uc804\uc0ac\ubcf8 \ud14d\uc2a4\ud2b8\uc640 \ucd94\uac00\ud55c \uacbd\uc6b0 \uc778\ud130\ubdf0 \uac00\uc774\ub4dc\uac00 \uc804\uc1a1\ub429\ub2c8\ub2e4.",
           "link": "\uac1c\uc778\uc815\ubcf4"
         },
         "configuration": {
@@ -870,20 +870,22 @@
   "aiConsent": {
     "title": "AI 기반 분석",
     "intro": "Bristlenose는 AI를 사용하여 인터뷰 전사본을 분석합니다. 클라우드 제공업체를 사용하면 전사 데이터가 해당 제공업체의 서버로 전송되어 처리됩니다.",
-    "notUsedForTraining": "귀하의 데이터는 AI 모델 학습에 사용되지 않습니다. 각 제공업체의 데이터 보관 정책은 해당 약관을 참조하세요.",
+    "notUsedForTraining": "Bristlenose는 귀하의 데이터를 AI 모델 학습에 사용하지 않습니다. 제공업체가 학습에 사용할 수 있는지, 데이터를 얼마나 보관하는지는 해당 제공업체와의 계약에 따라 정해집니다.",
     "sentToCloudLabel": "선택한 클라우드 제공업체로 전송",
-    "sentItem1": "처리된 인터뷰 전사본 (활성화된 경우 개인정보 삭제 적용 후)",
+    "sentItem1": "인터뷰 전사본 원본 그대로 (포함된 이름과 개인 정보 포함)",
     "sentItem2": "화자 코드 및 타임코드",
     "sentItem3": "분석 요청 (주제 분류, 인용문 추출, 테마 클러스터링)",
-    "sentSummary": "클라우드 제공업체로 전송되는 데이터: 처리된 전사본, 화자 코드, 분석 요청",
+    "sentItem4": "인터뷰 가이드 (추가한 경우)",
+    "sentSummary": "클라우드 제공업체로 전송되는 데이터: 이름이 포함된 전사본, 화자 코드, 인터뷰 가이드(추가한 경우), 분석 요청",
     "agentAccess": "\ud504\ub85c\uc81d\ud2b8\uc5d0 \uc5d0\uc774\uc804\ud2b8 \uc811\uadfc\uc744 \ucf1c\uba74, \uc9c8\ubb38\ud560 \ub54c\ub9c8\ub2e4 \uc5d0\uc774\uc804\ud2b8\uac00 \uc77d\uc740 \uc778\uc6a9\ubb38\uacfc \u2014 \uc775\uba85\ud654\uac00 \uaebc\uc838 \uc788\ub294 \uacbd\uc6b0 \uadf8 \uc606\uc758 \ucc38\uc5ec\uc790 \uc774\ub984, \uadf8\ub9ac\uace0 \ud3b8\uc9d1 \ub0b4\uc6a9\uacfc \ud0dc\uadf8\uae4c\uc9c0 \u2014 \ud574\ub2f9 \uc5d0\uc774\uc804\ud2b8\uc758 \uc81c\uacf5\uc5c5\uccb4\ub85c \uc804\uc1a1\ub429\ub2c8\ub2e4. \uc790\uccb4 \uc57d\uad00\uc744 \ub530\ub974\ub294 \ubcc4\ub3c4\uc758 \ud68c\uc0ac\uc785\ub2c8\ub2e4. \uae30\ubcf8\uac12\uc740 \uaebc\uc9d0\uc774\uba70 \ud504\ub85c\uc81d\ud2b8\ubcc4\ub85c \uc124\uc815\ud569\ub2c8\ub2e4.",
-    "staysLocalLabel": "항상 기기에 보관",
+    "staysLocalLabel": "AI 제공업체로 전송되지 않음",
     "localItem1": "원본 오디오 및 비디오 녹음",
-    "localItem2": "\ucc38\uc5ec\uc790 \uc774\ub984, \uc5f0\ub77d\ucc98, \uac1c\uc778 \uc815\ubcf4 \u2014 \uc5d0\uc774\uc804\ud2b8 \uc811\uadfc\uc744 \ucf1c\uc9c0 \uc54a\ub294 \ud55c",
     "localItem3": "\ud3b8\uc9d1 \ub0b4\uc6a9, \ud0dc\uadf8, \ubcf4\uace0\uc11c \uc0ac\uc6a9\uc790 \uc124\uc815 \u2014 \uc5d0\uc774\uc804\ud2b8 \uc811\uadfc\uc744 \ucf1c\uc9c0 \uc54a\ub294 \ud55c",
-    "localSummary": "기기에 보관되는 데이터: 녹음, 개인 정보, 편집 내용",
+    "localSummary": "AI 제공업체로 전송되지 않는 데이터: 녹음, 편집 내용, 태그, 보고서 사용자 설정",
     "providersIntro": "데이터를 처리할 수 있는 클라우드 제공업체:",
     "researcherResponsibility": "필요에 따라 참가자에게 인터뷰 데이터가 제3자 AI 서비스에서 처리될 수 있음을 알리세요.",
+    "hostsNote": "모델은 Apple, Hugging Face, GitHub에서, Ollama를 사용하는 경우 Ollama 라이브러리에서 다운로드됩니다. 보고서는 Google Fonts에서 서체를 불러옵니다. 이들 모두 IP 주소를 볼 수 있지만, 연구 내용은 전혀 받지 않습니다.",
+    "privacyLink": "개인정보 처리방침",
     "continue": "계속",
     "useOllama": "기기에서 Ollama 모델 사용",
     "ollamaDownloadSize": "~%@ 다운로드",

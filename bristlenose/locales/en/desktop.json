@@ -736,8 +736,8 @@
           "link": "Video clips"
         },
         "shareReport": {
-          "text": "Share one self-contained HTML file — no install needed.",
-          "more": "Anyone can open it in a browser; anonymise names and places first if you like.",
+          "text": "Share one self-contained HTML file.",
+          "more": "Open in any browser; anonymise first if you like.",
           "link": "Share a report"
         },
         "sendToMiro": {
@@ -792,7 +792,7 @@
         },
         "privacy": {
           "text": "See exactly what the AI sees, and what never leaves your Mac.",
-          "more": "Recordings and files stay local; only transcript text goes to your provider.",
+          "more": "Recordings stay local; your provider gets transcript text, and your discussion guide if you add one.",
           "link": "Privacy"
         },
         "configuration": {
@@ -903,20 +903,22 @@
   "aiConsent": {
     "title": "AI-Powered Analysis",
     "intro": "Bristlenose uses AI to analyse your interview transcripts. When you use a cloud provider, transcript data is sent to that provider's servers for processing.",
-    "notUsedForTraining": "Your data is not used to train AI models. See each provider's terms for their data retention policies.",
+    "notUsedForTraining": "Bristlenose doesn't use your data to train AI models. Whether a provider may, and how long it keeps your data, is set by your agreement with that provider.",
     "sentToCloudLabel": "Sent to your chosen cloud provider",
-    "sentItem1": "Processed interview transcripts (with PII redaction applied first, if enabled)",
+    "sentItem1": "Interview transcripts as they are, including any names and personal details in them",
     "sentItem2": "Speaker codes and timecodes",
     "sentItem3": "Analysis requests (topic segmentation, quote extraction, theme clustering)",
-    "sentSummary": "Data sent to cloud provider: processed transcripts, speaker codes, and analysis requests",
+    "sentItem4": "Your discussion guide, if you add one",
+    "sentSummary": "Data sent to cloud provider: transcripts with any names in them, speaker codes, your discussion guide if you add one, and analysis requests",
     "agentAccess": "If you turn on Agent Access for a project, the quotes an agent reads \u2014 and, unless Anonymise is on, the participant names beside them, along with your edits and tags \u2014 are sent to that agent's provider each time you ask it a question. A separate company, under its own terms. Off by default, and set per project.",
-    "staysLocalLabel": "Always stays on your device",
+    "staysLocalLabel": "Never sent to your AI provider",
     "localItem1": "Raw audio and video recordings",
-    "localItem2": "Participant names, contact info, and personal details \u2014 unless you turn on Agent Access",
     "localItem3": "Your edits, tags, and report customisations \u2014 unless you turn on Agent Access",
-    "localSummary": "Data that stays on your device: recordings, personal details, and your edits",
+    "localSummary": "Data never sent to your AI provider: recordings, and your edits, tags and report customisations",
     "providersIntro": "Cloud providers that may process your data:",
     "researcherResponsibility": "Inform participants their interview data may be processed by third-party AI services, as required.",
+    "hostsNote": "Models are downloaded from Apple, Hugging Face, GitHub and, if you use Ollama, Ollama's library. Reports load a typeface from Google Fonts. Each of them sees your IP address; none receives anything from your study.",
+    "privacyLink": "Privacy Policy",
     "continue": "Continue",
     "useOllama": "Use Ollama model on-device",
     "ollamaDownloadSize": "~%@ download",

@@ -731,8 +731,8 @@
           "link": "Videoklip"
         },
         "shareReport": {
-          "text": "Del én selvstændig HTML-fil — ingen installation nødvendig.",
-          "more": "Alle kan åbne den i en browser; anonymisér først navne og steder, hvis du vil.",
+          "text": "Del én selvstændig HTML-fil.",
+          "more": "Åbn den i en hvilken som helst browser; anonymisér først, hvis du vil.",
           "link": "Del en rapport"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Se præcis, hvad AI’en ser, og hvad der aldrig forlader din Mac.",
-          "more": "Optagelser og filer bliver lokalt; kun transskriptionstekst sendes til din udbyder.",
+          "more": "Optagelser bliver lokalt; din udbyder får transskriptionsteksten og din interviewguide, hvis du tilføjer en.",
           "link": "Privatliv"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "AI-baseret analyse",
     "intro": "Bristlenose bruger AI til at analysere dine interviewtransskriptioner. Når du bruger en cloududbyder, sendes transskriptionsdata til den udbyders servere til behandling.",
-    "notUsedForTraining": "Dine data bruges ikke til at træne AI-modeller. Se den enkelte udbyders vilkår for deres politik om datalagring.",
+    "notUsedForTraining": "Bristlenose bruger ikke dine data til at træne AI-modeller. Om en udbyder må, og hvor længe den gemmer dine data, afgøres af din aftale med udbyderen.",
     "sentToCloudLabel": "Sendt til din valgte cloududbyder",
-    "sentItem1": "Behandlede interviewtransskriptioner (med fjernelse af personoplysninger anvendt først, hvis aktiveret)",
+    "sentItem1": "Interviewtransskriptioner, som de er, inklusive de navne og personlige oplysninger, de indeholder",
     "sentItem2": "Talerkoder og tidskoder",
     "sentItem3": "Analyseanmodninger (emneopdeling, citatudtræk, temagruppering)",
-    "sentSummary": "Data sendt til cloududbyder: behandlede transskriptioner, talerkoder og analyseanmodninger",
+    "sentItem4": "Din interviewguide, hvis du tilføjer en",
+    "sentSummary": "Data sendt til cloududbyder: transskriptioner med de navne, de indeholder, talerkoder, din interviewguide, hvis du tilføjer en, og analyseanmodninger",
     "agentAccess": "Hvis du sl\u00e5r agentadgang til for et projekt, sendes de citater, en agent l\u00e6ser \u2014 og, medmindre anonymisering er sl\u00e5et til, deltagernavnene ved siden af dem samt dine redigeringer og tags \u2014 til den p\u00e5g\u00e6ldende agents udbyder, hver gang du stiller et sp\u00f8rgsm\u00e5l. En anden virksomhed med sine egne vilk\u00e5r. Sl\u00e5et fra som standard og indstilles pr. projekt.",
-    "staysLocalLabel": "Bliver altid på din enhed",
+    "staysLocalLabel": "Sendes aldrig til din AI-udbyder",
     "localItem1": "Rå lyd- og videooptagelser",
-    "localItem2": "Deltagernavne, kontaktoplysninger og personlige oplysninger \u2014 medmindre du sl\u00e5r agentadgang til",
     "localItem3": "Dine redigeringer, tags og rapporttilpasninger \u2014 medmindre du sl\u00e5r agentadgang til",
-    "localSummary": "Data der bliver på din enhed: optagelser, personlige oplysninger og dine redigeringer",
+    "localSummary": "Data der aldrig sendes til din AI-udbyder: optagelser samt dine redigeringer, tags og rapporttilpasninger",
     "providersIntro": "Cloududbydere, der kan behandle dine data:",
     "researcherResponsibility": "Informér deltagerne om, at deres interviewdata kan blive behandlet af tredjeparts AI-tjenester, som påkrævet.",
+    "hostsNote": "Modeller hentes fra Apple, Hugging Face, GitHub og, hvis du bruger Ollama, Ollamas bibliotek. Rapporter indlæser en skrifttype fra Google Fonts. Hver af dem ser din IP-adresse; ingen modtager noget fra din undersøgelse.",
+    "privacyLink": "Privatlivspolitik",
     "continue": "Fortsæt",
     "useOllama": "Brug Ollama-model på enheden",
     "ollamaDownloadSize": "~%@ download",

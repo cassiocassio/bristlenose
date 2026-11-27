@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -51,7 +52,7 @@ case "$1" in
   sh)
     case "$3" in
       *"defaults write"*) [ -n "${FAKE_WRITE_FAIL:-}" ] && exit 1; exit 0 ;;
-      *"defaults read"*) printf '%b' "${FAKE_PREF_READ:-2\n0\nlocal\n}"; exit 0 ;;
+      *"defaults read"*) printf '%b' "${FAKE_PREF_READ:-3\n0\nlocal\n}"; exit 0 ;;
       *'run_(completed'*) echo '{"event":"run_completed","outcome":"ok"}'; exit 0 ;;
       *) exit 0 ;;
     esac ;;
@@ -154,6 +155,21 @@ def test_preseed_with_a_consent_sheet_halts(tmp_path: Path) -> None:
     verdict, _ = _walk(tmp_path, PRESEED="1", FAKE_CONSENT="1")
     assert verdict.startswith("HALTED")
     assert "preseed did not take" in verdict
+
+
+def test_the_preseed_writes_the_current_consent_version() -> None:
+    """A bump of `AIConsentView.currentVersion` that leaves the seed behind puts the sheet in
+    front of every lens, and the walk halts (27 Nov 2026, v2 to v3). The seed, its read-back
+    and this file's fake guest must all carry the number the app checks."""
+    swift = (ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "AIConsentView.swift").read_text(
+        encoding="utf-8")
+    match = re.search(r"static let currentVersion = (\d+)", swift)
+    assert match, "AIConsentView.currentVersion not found"
+    current = match.group(1)
+    walk = (WALK_DIR / "walk.sh").read_text(encoding="utf-8")
+    assert f"aiConsentVersion -int {current} " in walk
+    assert f'"$seen" = "{current} 0 local "' in walk
+    assert "${FAKE_PREF_READ:-" + current + "\\n0" in FAKE_G
 
 
 def test_the_sheet_text_is_the_english_locale_value() -> None:

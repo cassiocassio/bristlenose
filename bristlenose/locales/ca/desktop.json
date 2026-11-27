@@ -731,8 +731,8 @@
           "link": "Clips de vídeo"
         },
         "shareReport": {
-          "text": "Comparteix un sol fitxer HTML autònom — sense instal·lar res.",
-          "more": "Qualsevol el pot obrir en un navegador; si vols, anonimitza abans noms i llocs.",
+          "text": "Comparteix un sol fitxer HTML autònom.",
+          "more": "S'obre en qualsevol navegador; si vols, anonimitza'l abans.",
           "link": "Comparteix l'informe"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Mira exactament què veu la IA i què no surt mai del teu Mac.",
-          "more": "Enregistraments i fitxers es queden al Mac; només el text transcrit va al proveïdor.",
+          "more": "Els enregistraments es queden al Mac; el proveïdor rep el text transcrit, i la teva guia de discussió si n'afegeixes una.",
           "link": "Privadesa"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "Anàlisi amb IA",
     "intro": "El Bristlenose utilitza IA per analitzar les transcripcions de les teves entrevistes. Quan fas servir un proveïdor al núvol, les dades de la transcripció s'envien als servidors d'aquest proveïdor per processar-les.",
-    "notUsedForTraining": "Les teves dades no s'utilitzen per entrenar models d'IA. Consulta les condicions de cada proveïdor per conèixer-ne les polítiques de retenció de dades.",
+    "notUsedForTraining": "Bristlenose no utilitza les teves dades per entrenar models d'IA. Si un proveïdor pot fer-ho, i quant de temps conserva les teves dades, ho determina el teu acord amb aquest proveïdor.",
     "sentToCloudLabel": "S'envia al proveïdor de núvol que triïs",
-    "sentItem1": "Transcripcions processades de les entrevistes (amb l'ocultació de dades personals aplicada abans, si està activada)",
+    "sentItem1": "Transcripcions de les entrevistes tal com són, inclosos els noms i les dades personals que continguin",
     "sentItem2": "Codis dels parlants i marques de temps",
     "sentItem3": "Peticions d'anàlisi (segmentació per temes, extracció de cites, agrupació temàtica)",
-    "sentSummary": "Dades enviades al proveïdor de núvol: transcripcions processades, codis dels parlants i peticions d'anàlisi",
+    "sentItem4": "La teva guia de discussió, si n'afegeixes una",
+    "sentSummary": "Dades enviades al proveïdor de núvol: transcripcions amb els noms que continguin, codis dels parlants, la teva guia de discussió si n'afegeixes una, i peticions d'anàlisi",
     "agentAccess": "Si actives l'accés d'agents per a un projecte, les cites que llegeix un agent — i, tret que l'anonimització estigui activada, els noms dels participants que hi ha al costat, juntament amb les teves edicions i etiquetes — s'envien al proveïdor d'aquest agent cada vegada que li fas una pregunta. És una empresa diferent, amb les seves pròpies condicions. Està desactivat per defecte i es configura per projecte.",
-    "staysLocalLabel": "Sempre es queda al teu dispositiu",
+    "staysLocalLabel": "Mai no s'envia al teu proveïdor d'IA",
     "localItem1": "Enregistraments d'àudio i vídeo originals",
-    "localItem2": "Noms dels participants, dades de contacte i detalls personals — tret que activis l'accés d'agents",
     "localItem3": "Les teves edicions, etiquetes i personalitzacions de l'informe — tret que activis l'accés d'agents",
-    "localSummary": "Dades que es queden al teu dispositiu: enregistraments, detalls personals i les teves edicions",
+    "localSummary": "Dades que mai no s'envien al teu proveïdor d'IA: enregistraments, i les teves edicions, etiquetes i personalitzacions de l'informe",
     "providersIntro": "Proveïdors de núvol que poden processar les teves dades:",
     "researcherResponsibility": "Informa els participants que les dades de la seva entrevista poden ser processades per serveis d'IA de tercers, tal com calgui.",
+    "hostsNote": "Els models es baixen d'Apple, Hugging Face, GitHub i, si fas servir Ollama, de la biblioteca d'Ollama. Els informes carreguen una tipografia de Google Fonts. Cadascun veu la teva adre\u00e7a IP; cap no rep res del teu estudi.",
+    "privacyLink": "Pol\u00edtica de privadesa",
     "continue": "Continua",
     "useOllama": "Utilitza un model d'Ollama al dispositiu",
     "ollamaDownloadSize": "~%@ de baixada",

@@ -731,8 +731,8 @@
           "link": "Videoclips"
         },
         "shareReport": {
-          "text": "Deel één zelfstandig HTML-bestand — geen installatie nodig.",
-          "more": "Iedereen opent het in een browser; anonimiseer eerst namen en plaatsen als je wilt.",
+          "text": "Deel één zelfstandig HTML-bestand.",
+          "more": "Opent in elke browser; anonimiseer eerst als je wilt.",
           "link": "Rapport delen"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Zie precies wat de AI ziet, en wat je Mac nooit verlaat.",
-          "more": "Opnamen en bestanden blijven lokaal; alleen transcripttekst gaat naar je provider.",
+          "more": "Opnamen blijven lokaal; je provider krijgt de transcripttekst, en je gespreksgids als je er een toevoegt.",
           "link": "Privacy"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "AI-gestuurde analyse",
     "intro": "Bristlenose gebruikt AI om je interviewtranscripten te analyseren. Wanneer je een cloudprovider gebruikt, worden transcriptgegevens naar de servers van die provider gestuurd voor verwerking.",
-    "notUsedForTraining": "Je gegevens worden niet gebruikt om AI-modellen te trainen. Zie de voorwaarden van elke provider voor het databewaarbeleid.",
+    "notUsedForTraining": "Bristlenose gebruikt je gegevens niet om AI-modellen te trainen. Of een provider dat mag, en hoe lang die je gegevens bewaart, bepaalt je overeenkomst met die provider.",
     "sentToCloudLabel": "Verzonden naar je gekozen cloudprovider",
-    "sentItem1": "Verwerkte interviewtranscripten (met PII-redactie eerst toegepast, indien ingeschakeld)",
+    "sentItem1": "Interviewtranscripten zoals ze zijn, inclusief de namen en persoonlijke details die erin staan",
     "sentItem2": "Sprekercodes en tijdcodes",
     "sentItem3": "Analyseaanvragen (onderwerpsegmentatie, citaatextractie, themaclustering)",
-    "sentSummary": "Naar de cloudprovider verzonden gegevens: verwerkte transcripten, sprekercodes en analyseaanvragen",
+    "sentItem4": "Je gespreksgids, als je er een toevoegt",
+    "sentSummary": "Naar de cloudprovider verzonden gegevens: transcripten met de namen die erin staan, sprekercodes, je gespreksgids als je er een toevoegt, en analyseaanvragen",
     "agentAccess": "Als je agenttoegang inschakelt voor een project, worden de citaten die een agent leest \u2014 en, tenzij anonimiseren aanstaat, de deelnemersnamen ernaast, samen met je bewerkingen en tags \u2014 naar de provider van die agent gestuurd, telkens wanneer je een vraag stelt. Een ander bedrijf, met eigen voorwaarden. Standaard uit, en per project in te stellen.",
-    "staysLocalLabel": "Blijft altijd op je apparaat",
+    "staysLocalLabel": "Nooit naar je AI-provider verzonden",
     "localItem1": "Ruwe audio- en video-opnamen",
-    "localItem2": "Deelnemersnamen, contactgegevens en persoonlijke details \u2014 tenzij je agenttoegang inschakelt",
     "localItem3": "Je bewerkingen, tags en rapportaanpassingen \u2014 tenzij je agenttoegang inschakelt",
-    "localSummary": "Gegevens die op je apparaat blijven: opnamen, persoonlijke details en je bewerkingen",
+    "localSummary": "Gegevens die nooit naar je AI-provider gaan: opnamen, en je bewerkingen, tags en rapportaanpassingen",
     "providersIntro": "Cloudproviders die je gegevens kunnen verwerken:",
     "researcherResponsibility": "Informeer deelnemers dat hun interviewgegevens door externe AI-diensten kunnen worden verwerkt, zoals vereist.",
+    "hostsNote": "Modellen worden gedownload van Apple, Hugging Face, GitHub en, als je Ollama gebruikt, de bibliotheek van Ollama. Rapporten laden een lettertype van Google Fonts. Elk van hen ziet je IP-adres; geen enkele ontvangt iets uit je onderzoek.",
+    "privacyLink": "Privacybeleid",
     "continue": "Ga door",
     "useOllama": "Gebruik Ollama-model op apparaat",
     "ollamaDownloadSize": "~%@ download",

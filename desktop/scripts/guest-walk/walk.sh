@@ -52,14 +52,14 @@ log "walk $RUN: $(g sw_vers -productVersion) guest, app $(g defaults read /Appli
 g sh -c 'pkill -x Bristlenose; sleep 1; rm -rf ~/Library/Containers/app.bristlenose ~/Documents/smoke-project/bristlenose-output ~/Documents/smoke-project/bristlenose-study.txt ~/Documents/"New Project"' >/dev/null 2>&1
 if [ "${PRESEED:-0}" = 1 ]; then
   # First-launch state written before launch (no sheet, no Welcome), so the walk does not depend on clicking through them.
-  # Keys: AIConsentView.currentVersion (2), WelcomeWindow.showOnLaunchKey, activeProvider.
+  # Keys: AIConsentView.currentVersion (3), WelcomeWindow.showOnLaunchKey, activeProvider.
   PREF=/Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences/app.bristlenose
-  g sh -c "mkdir -p /Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences && defaults write $PREF aiConsentVersion -int 2 && defaults write $PREF showWelcomeOnLaunch -bool false && defaults write $PREF activeProvider -string local" >>"$OUT/$RUN/walk.log" 2>&1 \
+  g sh -c "mkdir -p /Users/admin/Library/Containers/app.bristlenose/Data/Library/Preferences && defaults write $PREF aiConsentVersion -int 3 && defaults write $PREF showWelcomeOnLaunch -bool false && defaults write $PREF activeProvider -string local" >>"$OUT/$RUN/walk.log" 2>&1 \
     || halt "PRESEED: writing the first-launch preferences failed"
   # Read back what was written, before launch (a write that did not stick would otherwise show only as a sheet in the way).
   seen="$(g sh -c "defaults read $PREF aiConsentVersion; defaults read $PREF showWelcomeOnLaunch; defaults read $PREF activeProvider" 2>>"$OUT/$RUN/walk.log" | tr '\n' ' ')"
-  [ "$seen" = "2 0 local " ] || halt "PRESEED: read back '$seen', expected '2 0 local '"
-  log "preseed: consent 2, no Welcome, provider local (read back)"
+  [ "$seen" = "3 0 local " ] || halt "PRESEED: read back '$seen', expected '3 0 local '"
+  log "preseed: consent 3, no Welcome, provider local (read back)"
 fi
 g open -a /Applications/Bristlenose.app
 do_ "app window appears" wait "$B" "Bristlenose" 60

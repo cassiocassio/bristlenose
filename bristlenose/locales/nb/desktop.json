@@ -731,8 +731,8 @@
           "link": "Videoklipp"
         },
         "shareReport": {
-          "text": "Del én selvstendig HTML-fil – ingen installasjon nødvendig.",
-          "more": "Hvem som helst kan åpne den i en nettleser; anonymiser navn og steder først om du vil.",
+          "text": "Del én selvstendig HTML-fil.",
+          "more": "Åpnes i hvilken som helst nettleser; anonymiser først om du vil.",
           "link": "Del en rapport"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Se nøyaktig hva KI-en ser, og hva som aldri forlater Mac-en din.",
-          "more": "Opptak og filer blir lokalt; bare transkripsjonstekst går til leverandøren din.",
+          "more": "Opptak blir lokalt; leverandøren din får transkripsjonsteksten, og intervjuguiden din hvis du legger til en.",
           "link": "Personvern"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "KI-drevet analyse",
     "intro": "Bristlenose bruker KI til å analysere intervjutranskripsjonene dine. Når du bruker en skyleverandør, sendes transkripsjonsdata til leverandørens servere for behandling.",
-    "notUsedForTraining": "Dataene dine brukes ikke til å trene KI-modeller. Se vilkårene til hver leverandør for deres retningslinjer for datalagring.",
+    "notUsedForTraining": "Bristlenose bruker ikke dataene dine til å trene KI-modeller. Om en leverandør kan det, og hvor lenge den lagrer dataene dine, avgjøres av avtalen din med leverandøren.",
     "sentToCloudLabel": "Sendes til skyleverandøren du har valgt",
-    "sentItem1": "Behandlede intervjutranskripsjoner (med sladding av personopplysninger utført først, hvis aktivert)",
+    "sentItem1": "Intervjutranskripsjoner slik de er, inkludert navn og personopplysninger i dem",
     "sentItem2": "Talerkoder og tidskoder",
     "sentItem3": "Analyseforespørsler (emneinndeling, sitatuttrekk, temagruppering)",
-    "sentSummary": "Data som sendes til skyleverandøren: behandlede transkripsjoner, talerkoder og analyseforespørsler",
+    "sentItem4": "Intervjuguiden din, hvis du legger til en",
+    "sentSummary": "Data som sendes til skyleverandøren: transkripsjoner med navnene i dem, talerkoder, intervjuguiden din hvis du legger til en, og analyseforespørsler",
     "agentAccess": "Hvis du sl\u00e5r p\u00e5 agenttilgang for et prosjekt, sendes sitatene en agent leser \u2014 og, med mindre anonymisering er p\u00e5, deltakernavnene ved siden av dem samt endringene og taggene dine \u2014 til agentens leverand\u00f8r hver gang du stiller et sp\u00f8rsm\u00e5l. Et annet selskap, med egne vilk\u00e5r. Av som standard, og angis per prosjekt.",
-    "staysLocalLabel": "Forblir alltid på enheten din",
+    "staysLocalLabel": "Sendes aldri til KI-leverandøren din",
     "localItem1": "Rå lyd- og videoopptak",
-    "localItem2": "Deltakernavn, kontaktinformasjon og personopplysninger \u2014 med mindre du sl\u00e5r p\u00e5 agenttilgang",
     "localItem3": "Endringene dine, tagger og rapporttilpasninger \u2014 med mindre du sl\u00e5r p\u00e5 agenttilgang",
-    "localSummary": "Data som forblir på enheten din: opptak, personopplysninger og redigeringene dine",
+    "localSummary": "Data som aldri sendes til KI-leverandøren din: opptak, og redigeringene dine, tagger og rapporttilpasninger",
     "providersIntro": "Skyleverandører som kan behandle dataene dine:",
     "researcherResponsibility": "Informer deltakerne om at intervjudataene deres kan behandles av tredjeparts KI-tjenester, slik det kreves.",
+    "hostsNote": "Modeller lastes ned fra Apple, Hugging Face, GitHub og, hvis du bruker Ollama, Ollamas bibliotek. Rapporter laster inn en skrifttype fra Google Fonts. Hver av dem ser IP-adressen din; ingen mottar noe fra studien din.",
+    "privacyLink": "Personvernerkl\u00e6ring",
     "continue": "Fortsett",
     "useOllama": "Bruk Ollama-modell på enheten",
     "ollamaDownloadSize": "~%@ nedlasting",

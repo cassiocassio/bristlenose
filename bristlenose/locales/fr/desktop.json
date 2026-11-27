@@ -731,8 +731,8 @@
           "link": "Clips vidéo"
         },
         "shareReport": {
-          "text": "Partagez un seul fichier HTML autonome — sans rien installer.",
-          "more": "Il s’ouvre dans n’importe quel navigateur ; anonymisez noms et lieux au préalable si besoin.",
+          "text": "Partagez un seul fichier HTML autonome.",
+          "more": "S’ouvre dans n’importe quel navigateur ; anonymisez-le au préalable si vous le souhaitez.",
           "link": "Partager un rapport"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Voyez ce que voit l’IA, et ce qui ne quitte jamais votre Mac.",
-          "more": "Enregistrements et fichiers restent ici ; seul le texte transcrit va au fournisseur.",
+          "more": "Les enregistrements restent ici ; le fournisseur reçoit le texte transcrit, et votre guide d’entretien si vous en ajoutez un.",
           "link": "Confidentialité"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "Analyse par IA",
     "intro": "Bristlenose utilise l'IA pour analyser vos transcriptions d'entretiens. Lorsque vous utilisez un fournisseur cloud, les données de transcription sont envoyées aux serveurs de ce fournisseur pour traitement.",
-    "notUsedForTraining": "Vos données ne sont pas utilisées pour entraîner des modèles d'IA. Consultez les conditions de chaque fournisseur pour leurs politiques de conservation des données.",
+    "notUsedForTraining": "Bristlenose n'utilise pas vos données pour entraîner des modèles d'IA. C'est votre contrat avec chaque fournisseur qui détermine s'il peut le faire, et combien de temps il conserve vos données.",
     "sentToCloudLabel": "Envoyé au fournisseur cloud choisi",
-    "sentItem1": "Transcriptions traitées (avec suppression des données personnelles appliquée au préalable, si activée)",
+    "sentItem1": "Transcriptions d'entretiens telles quelles, y compris les noms et données personnelles qu'elles contiennent",
     "sentItem2": "Codes de locuteur et horodatages",
     "sentItem3": "Demandes d'analyse (segmentation thématique, extraction de verbatim, regroupement thématique)",
-    "sentSummary": "Données envoyées au fournisseur cloud : transcriptions traitées, codes de locuteur et demandes d'analyse",
+    "sentItem4": "Votre guide d'entretien, si vous en ajoutez un",
+    "sentSummary": "Données envoyées au fournisseur cloud : transcriptions avec les noms qu'elles contiennent, codes de locuteur, votre guide d'entretien si vous en ajoutez un, et demandes d'analyse",
     "agentAccess": "Si vous activez l'acc\u00e8s des agents pour un projet, les citations lues par un agent \u2014 et, sauf si l'anonymisation est activ\u00e9e, les noms des participants qui les accompagnent, ainsi que vos modifications et \u00e9tiquettes \u2014 sont envoy\u00e9s au fournisseur de cet agent \u00e0 chaque question pos\u00e9e. Une autre entreprise, avec ses propres conditions. D\u00e9sactiv\u00e9 par d\u00e9faut et d\u00e9fini par projet.",
-    "staysLocalLabel": "Reste toujours sur votre appareil",
+    "staysLocalLabel": "Jamais envoyé à votre fournisseur d'IA",
     "localItem1": "Enregistrements audio et vidéo originaux",
-    "localItem2": "Noms des participants, coordonn\u00e9es et donn\u00e9es personnelles, sauf si vous activez l'acc\u00e8s des agents",
     "localItem3": "Vos modifications, \u00e9tiquettes et personnalisations du rapport, sauf si vous activez l'acc\u00e8s des agents",
-    "localSummary": "Données qui restent sur votre appareil : enregistrements, données personnelles et vos modifications",
+    "localSummary": "Données jamais envoyées à votre fournisseur d'IA : enregistrements, ainsi que vos modifications, étiquettes et personnalisations du rapport",
     "providersIntro": "Fournisseurs cloud susceptibles de traiter vos données :",
     "researcherResponsibility": "Informez les participants que leurs données d'entretien peuvent être traitées par des services d'IA tiers, comme requis.",
+    "hostsNote": "Les modèles sont téléchargés depuis Apple, Hugging Face, GitHub et, si vous utilisez Ollama, la bibliothèque d'Ollama. Les rapports chargent une police depuis Google Fonts. Chacun voit votre adresse IP ; aucun ne reçoit quoi que ce soit de votre étude.",
+    "privacyLink": "Politique de confidentialité",
     "continue": "Continuer",
     "useOllama": "Utiliser un modèle Ollama sur l'appareil",
     "ollamaDownloadSize": "~%@ à télécharger",

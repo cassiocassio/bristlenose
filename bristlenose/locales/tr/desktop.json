@@ -731,8 +731,8 @@
           "link": "Video klipler"
         },
         "shareReport": {
-          "text": "Tek bir ba\u011f\u0131ms\u0131z HTML dosyas\u0131 payla\u015f\u0131n \u2014 kurulum gerekmez.",
-          "more": "Herkes taray\u0131c\u0131da a\u00e7abilir; isterseniz \u00f6nce adlar\u0131 ve yerleri anonimle\u015ftirin.",
+          "text": "Tek bir ba\u011f\u0131ms\u0131z HTML dosyas\u0131 payla\u015f\u0131n.",
+          "more": "Her taray\u0131c\u0131da a\u00e7\u0131l\u0131r; isterseniz \u00f6nce anonimle\u015ftirin.",
           "link": "Rapor payla\u015f"
         },
         "sendToMiro": {
@@ -787,7 +787,7 @@
         },
         "privacy": {
           "text": "Yapay zek\u00e2n\u0131n ne g\u00f6rd\u00fc\u011f\u00fcn\u00fc ve neyin Mac'inizde kald\u0131\u011f\u0131n\u0131 g\u00f6r\u00fcn.",
-          "more": "Kay\u0131tlar ve dosyalar yerelde kal\u0131r; sa\u011flay\u0131c\u0131ya yaln\u0131zca d\u00f6k\u00fcm metni gider.",
+          "more": "Kay\u0131tlar yerelde kal\u0131r; sa\u011flay\u0131c\u0131ya d\u00f6k\u00fcm metni ve eklerseniz g\u00f6r\u00fc\u015fme rehberiniz gider.",
           "link": "Gizlilik"
         },
         "configuration": {
@@ -898,20 +898,22 @@
   "aiConsent": {
     "title": "Yapay Zekâ Destekli Analiz",
     "intro": "Bristlenose, görüşme dökümlerinizi analiz etmek için yapay zekâ kullanır. Bir bulut sağlayıcısı kullandığınızda, döküm verileri işlenmek üzere o sağlayıcının sunucularına gönderilir.",
-    "notUsedForTraining": "Verileriniz yapay zekâ modellerini eğitmek için kullanılmaz. Veri saklama ilkeleri için her sağlayıcının koşullarına bakın.",
+    "notUsedForTraining": "Bristlenose verilerinizi yapay zekâ modellerini eğitmek için kullanmaz. Bir sağlayıcının bunu yapıp yapamayacağını ve verilerinizi ne kadar süre saklayacağını, o sağlayıcıyla yaptığınız anlaşma belirler.",
     "sentToCloudLabel": "Seçtiğiniz bulut sağlayıcısına gönderilir",
-    "sentItem1": "İşlenmiş görüşme dökümleri (etkinse önce kişisel veri sansürü uygulanmış olarak)",
+    "sentItem1": "İçindeki adlar ve kişisel bilgilerle birlikte, olduğu gibi görüşme dökümleri",
     "sentItem2": "Konuşmacı kodları ve zaman kodları",
     "sentItem3": "Analiz istekleri (konu bölümleme, alıntı çıkarma, tema gruplama)",
-    "sentSummary": "Bulut sağlayıcısına gönderilen veriler: işlenmiş dökümler, konuşmacı kodları ve analiz istekleri",
+    "sentItem4": "Eklerseniz görüşme rehberiniz",
+    "sentSummary": "Bulut sağlayıcısına gönderilen veriler: içindeki adlarla birlikte dökümler, konuşmacı kodları, eklerseniz görüşme rehberiniz ve analiz istekleri",
     "agentAccess": "Bir proje i\u00e7in Ajan Eri\u015fimi'ni a\u00e7arsan\u0131z, bir ajan\u0131n okudu\u011fu al\u0131nt\u0131lar \u2014 ve Anonimle\u015ftirme kapal\u0131ysa yanlar\u0131ndaki kat\u0131l\u0131mc\u0131 adlar\u0131 ile d\u00fczenlemeleriniz ve etiketleriniz \u2014 her soru sordu\u011funuzda o ajan\u0131n sa\u011flay\u0131c\u0131s\u0131na g\u00f6nderilir. Kendi ko\u015fullar\u0131 olan ayr\u0131 bir \u015firket. Varsay\u0131lan olarak kapal\u0131d\u0131r ve proje baz\u0131nda ayarlan\u0131r.",
-    "staysLocalLabel": "Her zaman aygıtınızda kalır",
+    "staysLocalLabel": "Yapay zekâ sağlayıcınıza asla gönderilmez",
     "localItem1": "Ham ses ve video kayıtları",
-    "localItem2": "Kat\u0131l\u0131mc\u0131 adlar\u0131, ileti\u015fim bilgileri ve ki\u015fisel bilgiler \u2014 Ajan Eri\u015fimi'ni a\u00e7mad\u0131\u011f\u0131n\u0131z s\u00fcrece",
     "localItem3": "D\u00fczenlemeleriniz, etiketleriniz ve rapor \u00f6zelle\u015ftirmeleriniz \u2014 Ajan Eri\u015fimi'ni a\u00e7mad\u0131\u011f\u0131n\u0131z s\u00fcrece",
-    "localSummary": "Aygıtınızda kalan veriler: kayıtlar, kişisel ayrıntılar ve düzenlemeleriniz",
+    "localSummary": "Yapay zekâ sağlayıcınıza asla gönderilmeyen veriler: kayıtlar ile düzenlemeleriniz, etiketleriniz ve rapor özelleştirmeleriniz",
     "providersIntro": "Verilerinizi işleyebilecek bulut sağlayıcıları:",
     "researcherResponsibility": "Gerektiği şekilde, katılımcıları görüşme verilerinin üçüncü taraf yapay zekâ hizmetlerince işlenebileceği konusunda bilgilendirin.",
+    "hostsNote": "Modeller Apple, Hugging Face, GitHub ve Ollama kullanıyorsanız Ollama kitaplığından indirilir. Raporlar Google Fonts'tan bir yazı tipi yükler. Her biri IP adresinizi görür; hiçbiri çalışmanızdan bir şey almaz.",
+    "privacyLink": "Gizlilik Politikası",
     "continue": "Sürdür",
     "useOllama": "Aygıtta Ollama modelini kullan",
     "ollamaDownloadSize": "~%@ indirme",

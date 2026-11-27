@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Como obtenho um token?",
+    "copyBoard": "Copiar dados do quadro",
+    "createBoard": "Criar quadro",
+    "tabApp": "App do Miro",
+    "tabToken": "Token de acesso de desenvolvedor",
     "boardNameLabel": "Nome do quadro:",
     "stickyColoursLabel": "Cores dos adesivos:",
     "miroStatusLabel": "Status do Miro:",
@@ -8,7 +12,7 @@
     "boardDestination": "Cria um novo quadro em {{team}}.",
     "connected": "Conectado",
     "openInMiro": "Abrir no Miro…",
-    "connectPersistWarning": "Conectado, mas não foi possível salvar o token nas suas Chaves — talvez seja necessário reconectar após reiniciar."
+    "connectPersistWarning": "Conectado, mas não foi possível salvar o token nas suas Chaves. Talvez seja necessário reconectar após reiniciar."
   },
   "menu": {
     "app": {

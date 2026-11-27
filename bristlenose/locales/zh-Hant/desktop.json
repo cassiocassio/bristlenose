@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "如何取得權杖？",
+    "copyBoard": "複製看板資料",
+    "createBoard": "建立看板",
+    "tabApp": "Miro 應用程式",
+    "tabToken": "開發者存取權杖",
     "boardNameLabel": "看板名稱：",
     "stickyColoursLabel": "便利貼顏色：",
     "miroStatusLabel": "Miro 狀態：",
@@ -8,7 +12,7 @@
     "boardDestination": "在 {{team}} 中建立新看板。",
     "connected": "已連線",
     "openInMiro": "在 Miro 中打開⋯",
-    "connectPersistWarning": "已連線，但無法將權杖儲存到你的鑰匙圈 — 重新啟動後你可能需要重新連線。"
+    "connectPersistWarning": "已連線，但無法將權杖儲存到你的鑰匙圈。重新啟動後你可能需要重新連線。"
   },
   "menu": {
     "app": {

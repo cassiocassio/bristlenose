@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Com puc obtenir un testimoni?",
+    "copyBoard": "Copia les dades del tauler",
+    "createBoard": "Crea el tauler",
+    "tabApp": "App del Miro",
+    "tabToken": "Testimoni d'accés de desenvolupador",
     "boardNameLabel": "Nom del tauler:",
     "stickyColoursLabel": "Colors de les notes:",
     "miroStatusLabel": "Estat del Miro:",
@@ -8,7 +12,7 @@
     "boardDestination": "Crea un tauler nou a {{team}}.",
     "connected": "Connectat",
     "openInMiro": "Obre al Miro…",
-    "connectPersistWarning": "S'ha connectat, però no s'ha pogut desar el testimoni al Clauer — pot ser que t'hi hagis de tornar a connectar després de reiniciar."
+    "connectPersistWarning": "S'ha connectat, però no s'ha pogut desar el testimoni al Clauer. Pot ser que t'hi hagis de tornar a connectar després de reiniciar."
   },
   "menu": {
     "app": {

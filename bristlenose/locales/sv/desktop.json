@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Hur får jag en token?",
+    "copyBoard": "Kopiera tavlans data",
+    "createBoard": "Skapa tavla",
+    "tabApp": "Miro-app",
+    "tabToken": "Utvecklaråtkomsttoken",
     "boardNameLabel": "Tavlans namn:",
     "stickyColoursLabel": "Lappfärger:",
     "miroStatusLabel": "Miro-status:",
@@ -8,7 +12,7 @@
     "boardDestination": "Skapar en ny tavla i {{team}}.",
     "connected": "Ansluten",
     "openInMiro": "Öppna i Miro…",
-    "connectPersistWarning": "Ansluten, men det gick inte att spara token i din nyckelring – du kan behöva ansluta igen efter en omstart."
+    "connectPersistWarning": "Ansluten, men det gick inte att spara token i din nyckelring. Du kan behöva ansluta igen efter en omstart."
   },
   "menu": {
     "app": {

@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Hvordan får jeg en token?",
+    "copyBoard": "Kopier tavledata",
+    "createBoard": "Lag tavle",
+    "tabApp": "Miro-app",
+    "tabToken": "Tilgangstoken for utviklere",
     "boardNameLabel": "Tavlenavn:",
     "stickyColoursLabel": "Lappefarger:",
     "miroStatusLabel": "Miro-status:",
@@ -8,7 +12,7 @@
     "boardDestination": "Oppretter en ny tavle i {{team}}.",
     "connected": "Tilkoblet",
     "openInMiro": "Åpne i Miro…",
-    "connectPersistWarning": "Tilkoblet, men kunne ikke lagre tokenen i nøkkelringen din – du må kanskje koble til på nytt etter omstart."
+    "connectPersistWarning": "Tilkoblet, men kunne ikke lagre tokenen i nøkkelringen din. Du må kanskje koble til på nytt etter omstart."
   },
   "menu": {
     "app": {

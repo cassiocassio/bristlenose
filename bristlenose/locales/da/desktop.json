@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Hvordan får jeg et token?",
+    "copyBoard": "Kopiér boarddata",
+    "createBoard": "Opret board",
+    "tabApp": "Miro-app",
+    "tabToken": "Udvikleradgangstoken",
     "boardNameLabel": "Boardnavn:",
     "stickyColoursLabel": "Farver på noter:",
     "miroStatusLabel": "Miro-status:",
@@ -8,7 +12,7 @@
     "boardDestination": "Opretter et nyt board i {{team}}.",
     "connected": "Forbundet",
     "openInMiro": "Åbn i Miro…",
-    "connectPersistWarning": "Forbundet, men dit token kunne ikke gemmes i din nøglering — du skal muligvis oprette forbindelse igen efter genstart."
+    "connectPersistWarning": "Forbundet, men dit token kunne ikke gemmes i din nøglering. Du skal muligvis oprette forbindelse igen efter genstart."
   },
   "menu": {
     "app": {

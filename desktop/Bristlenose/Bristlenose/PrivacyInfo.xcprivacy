@@ -7,12 +7,17 @@ Scope: SwiftUI host (desktop/Bristlenose/Bristlenose/) and FFmpeg + ffprobe
 shipped at Contents/Resources/. The Python sidecar declares its own API uses
 in Contents/Resources/bristlenose-sidecar/PrivacyInfo.xcprivacy.
 
-Collected data (the news check's opt-in counts, docs/private/design-news-and-counts.md
-§8; declared linked because the host keeps each request's IP for 7 days, D6):
-  ProductInteraction — v, ch, first, month, w and days (how often the app is opened).
-  PurchaseHistory    — sub (whether the install is subscribed or in its trial).
-  Both: analytics only, no identifier, not used to track. Sent only after an
-  explicit yes on first run or in Settings.
+Collected data. All three declared linked because the host keeps each
+request's IP for 7 days (D6); none is used to track.
+  The news check's opt-in counts (docs/private/design-news-and-counts.md §8):
+    ProductInteraction — v, ch, first, month, w and days (how often the app is opened).
+    PurchaseHistory    — sub (whether the install is subscribed or in its trial).
+    These two: analytics only, no identifier. Sent only after an explicit yes
+    on first run or in Settings.
+  The feedback form (Help ▸ Send Feedback):
+    CustomerSupport    — version, rating, message and, for a problem report,
+    kind. Sent only when the user presses Send; kept by
+    bristlenose.app/feedback.php. App functionality and analytics.
 
 Required-reason APIs:
   CA92.1 — UserDefaults: @AppStorage property wrappers in the host app.
@@ -55,6 +60,19 @@ https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
             <false/>
             <key>NSPrivacyCollectedDataTypePurposes</key>
             <array>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeCustomerSupport</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
                 <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
             </array>
         </dict>

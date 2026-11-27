@@ -366,7 +366,7 @@
       "copyFailed": "Die Bildschirmfotos konnten nicht in die Zwischenablage gelegt werden.",
       "none": "Noch keine Bildschirme zum Exportieren"
     },
-    "savePanelMessage": "W\u00e4hle, wo der Bericht gespeichert werden soll.",
+    "savePanelMessage": "W\u00e4hlen Sie, wo der Bericht gespeichert werden soll.",
     "saveFailedAlert": "Der Export konnte nicht gespeichert werden."
   },
   "miro": {
@@ -569,7 +569,7 @@
     "tagProposalsDiscarded_one": "{{count}} AutoCode-Vorschlag wird verworfen.",
     "tagProposalsDiscarded_other": "{{count}} AutoCode-Vorschl\u00e4ge werden verworfen.",
     "newGroup": "Neue Gruppe",
-    "nameTaken": "Der Name \u201e{{name}}\u201c wird bereits verwendet. W\u00e4hle einen anderen Namen.",
+    "nameTaken": "Der Name \u201e{{name}}\u201c wird bereits verwendet. W\u00e4hlen Sie einen anderen Namen.",
     "browseCodebooks": "Codebuch-Bibliothek",
     "browseCodebooksButton": "Codeb\u00fccher durchsuchen",
     "frameworksSection": "Frameworks",

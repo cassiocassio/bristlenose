@@ -241,3 +241,30 @@ and for the product, sending `num_ctx` (not tested here).
   `ollama pull llama3.2:3b`: both steer new users to the model whose report is
   not usable.
 - The CLI's pre-run estimate for Claude was ~$0.26; the run cost $0.95.
+
+## Addendum, 27 Nov 2026 late: the client fix `4d041f0ef`
+
+Later the same evening `4d041f0ef` changed the local client: Ollama's native
+`/api/chat` with `num_ctx` 32768 (truncate and shift off), a plain-text
+resend on the MLX 501, and `think: false` for Gemma 4 (thinking had been on:
+the old-client Gemma run above produced 76,950 output tokens). The
+ollama-catalog session ran Talismanic again with a CLI at `331d7e984`, same
+Mac, Ollama, transcripts, concurrency 3 and KV settings. Its run folders were
+re-read here with `compare.py`; the figures below are from them.
+
+| | Gemma 4 E4B, today's Mac build (MLX) | Gemma 4 E4B, GGUF build |
+|---|---|---|
+| Wall-clock | 13 min 10 s, **"Done with warnings — the discussion lens wasn't built"** (its JSON failed validation in all three sessions) | 15 min 47 s, every stage ok |
+| Topic segmentation / quote extraction / sections + themes | 48.9 s / 6 min 17 s / 27.9 s | 58.3 s / 7 min 55 s / 32.8 s |
+| Quotes | 105 (105 distinct) | 82 (82 distinct) |
+| Verbatim: exact / joined / altered / invented | 43 / 47 / 15 / 0 | 64 / 17 / 1 / 0 |
+| Themes, not counting "Uncategorised" | 6, one a catch-all ("General Contextual/Non-Task Related Topics", 13); 6 uncategorised | 7, each of 2–6 quotes; 17 uncategorised |
+| Sections | 7 | 5 |
+| Calls / not ok | 11 / 3 | 16 / 0 |
+
+The catalog session also reports 58 of the MLX run's 105 quotes carrying a
+leading "(Speaker A)" (not re-counted here). So with the fix, today's Mac build
+runs, but a notch below the GGUF build and without the discussion lens; and the
+"37 minutes" and "seven times Claude" on the docs page are the old client's.
+Which figures the page carries depends on whether it deploys before or after a
+release that contains `4d041f0ef` (owner's call; marked PENDING on the page).

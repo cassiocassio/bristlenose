@@ -66,7 +66,7 @@ All 22 sections, measured 21 Aug 2026. **635 keys.** _(A snapshot: 22 Oct 2026 r
 | `pipeline.*` | 35 | Run status pills, diagnostic popover categories, tooltips, overflow plurals |
 | `mcpAgents.*` | 31 | Settings ▸ MCP Agents: the projects register, exposure states, extension install |
 | `toolbar.*` | 23 | Native toolbar labels with keyboard shortcut hints |
-| `aiConsent.*` | 24 | First-run cloud provider consent dialog |
+| `aiConsent.*` | 23 | First-run cloud provider consent dialog |
 | `accounts.*` | 20 | Settings ▸ Accounts: connection states, disconnect alert, section footers |
 | `connectAgent.*` | 16 | Connect-an-agent sheet |
 | `welcome.*` | 13 | Welcome screen title, subtitle, drop card, three how-it-works steps |

@@ -297,7 +297,7 @@ By design, in each case:
 - If the researcher chooses Not Now: Tree A fetches inside a later run that needs Whisper; Tree B waits (§7).
 - On macOS 15 there is no Apple model. A recording needs Whisper, and imported transcripts need nothing.
 - A review account needs a provider key to reach any transcript or report; without one the run stops before transcription (E9). The sample recording, transcript file and key do not exist yet (D11).
-- The AI disclosure's Ollama button carries "~2 GB download" (`aiConsent.ollamaDownloadSize`, the recommended local model's whole-GB weights: 2, 3, 16 or 20 GB by the Mac's memory). It is a different download from Whisper's; "About 1.6 GB" stands for Whisper, since the size is known (owner, 21 Nov 2026).
+- The AI disclosure's Ollama button carried "~2 GB download" (`aiConsent.ollamaDownloadSize`, the recommended local model's whole-GB weights: 2, 3, 16 or 20 GB by the Mac's memory). It is a different download from Whisper's; "About 1.6 GB" stands for Whisper, since the size is known (owner, 21 Nov 2026). The button and its key went on 27 Nov 2026: Ollama is set up in Settings ▸ LLM Provider, and the picker shows each model's size.
 - A notification permission prompt appears during a run.
 
 All of this is by design or code reading, not observed under review conditions.

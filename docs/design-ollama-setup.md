@@ -6,6 +6,16 @@ trued-against: beat3-provider-activation @ implemented + QA-verified (ea4c2e5, 0
 
 # Design: Ollama setup flow (first-run on-device AI)
 
+> **27 Nov 2026, where it starts and shows (owner, app-privtext v3 C).** The AI disclosure no longer
+> offers "Use Ollama model on-device". The setup starts in Settings ▸ LLM Provider ▸ Ollama: the Model
+> row's button opens this picker in a popover ("Custom…" is inside it, and one "Learn more" link goes
+> to the docs page), and "Use …" calls `OllamaDownloadModel.useModel(tag:)`, which switches the
+> provider to Ollama and then routes. The stages after the choice (needs Ollama, waiting, downloading,
+> finishing, failed) show in the Model card under the row (`OllamaSetupStageView`), and the Settings
+> window refits once per stage. The toolbar pill shows only while the download runs and after a
+> failure, until Retry (`isPillVisible`, the Whisper download's rule), and no longer opens itself. The
+> stages, routing, catalogue and copy below are unchanged. The mockups are in the maintainer's notes.
+
 _3 Jun 2026 — functional + UX spec. Supersedes the silent browser-open + blind
 120s daemon-spin in the original `OllamaSetupSheet` / `OllamaDownloadModel`
 flow (review-log Finding 3, branch `beat3-provider-activation`)._

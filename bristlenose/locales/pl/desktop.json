@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Jak uzyskać token?",
+    "copyBoard": "Kopiuj dane tablicy",
+    "createBoard": "Utwórz tablicę",
+    "tabApp": "Aplikacja Miro",
+    "tabToken": "Token dostępu dewelopera",
     "boardNameLabel": "Nazwa tablicy:",
     "stickyColoursLabel": "Kolory karteczek:",
     "miroStatusLabel": "Stan Miro:",
@@ -8,7 +12,7 @@
     "boardDestination": "Tworzy nową tablicę w {{team}}.",
     "connected": "Połączono",
     "openInMiro": "Otwórz w Miro…",
-    "connectPersistWarning": "Połączono, ale nie udało się zapisać tokenu w pęku kluczy — po ponownym uruchomieniu może być konieczne ponowne połączenie."
+    "connectPersistWarning": "Połączono, ale nie udało się zapisać tokenu w pęku kluczy. Po ponownym uruchomieniu może być konieczne ponowne połączenie."
   },
   "menu": {
     "app": {

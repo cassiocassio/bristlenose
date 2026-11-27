@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Como obtenho um token?",
+    "copyBoard": "Copiar dados do quadro",
+    "createBoard": "Criar quadro",
+    "tabApp": "App do Miro",
+    "tabToken": "Token de acesso de programador",
     "boardNameLabel": "Nome do quadro:",
     "stickyColoursLabel": "Cores dos autocolantes:",
     "miroStatusLabel": "Estado do Miro:",
@@ -8,7 +12,7 @@
     "boardDestination": "Cria um novo quadro em {{team}}.",
     "connected": "Ligado",
     "openInMiro": "Abrir no Miro…",
-    "connectPersistWarning": "Ligado, mas não foi possível guardar o token no seu porta-chaves — poderá ser necessário voltar a ligar após reiniciar."
+    "connectPersistWarning": "Ligado, mas não foi possível guardar o token no seu porta-chaves. Poderá ser necessário voltar a ligar após reiniciar."
   },
   "menu": {
     "app": {

@@ -73,6 +73,20 @@ describe("FigJamExportPanel", () => {
     expect(field.value).toBe("Round 2");
   });
 
+  it("orders the form name, shape, then the long-quotes checkbox, Square first", async () => {
+    render(<FigJamExportPanel open onClose={() => {}} />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    const name = screen.getByLabelText(i18n.t("miro.boardNameLabel"));
+    const shape = screen.getByRole("radiogroup", { name: i18n.t("miro.stickyShapeLabel") });
+    const split = screen.getByTestId("bn-figjam-split-long");
+    const follows = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(name, shape)).toBe(true);
+    expect(follows(shape, split)).toBe(true);
+    const radios = Array.from(shape.querySelectorAll("input[type=radio]")).map((r) => (r as HTMLInputElement).value);
+    expect(radios).toEqual(["square", "rectangle"]);
+  });
+
   it("defaults to breaking long quotes and square stickies", async () => {
     render(<FigJamExportPanel open onClose={() => {}} />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());

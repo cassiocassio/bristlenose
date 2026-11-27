@@ -71,6 +71,39 @@ describe("MiroExportPanel — the board's language travels with the request", ()
     expect(body).toMatchObject({ colour_by: "none", clips_base: "", locale: "en" });
   });
 
+  it("sends the colour the radios pick, the values the drop-down sent", async () => {
+    // The drop-down became two radios (v2 form layout, 27 Nov 2026); the wire
+    // values must not move with it: "none" flat, "sentiment" coloured.
+    await i18n.changeLanguage("en");
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
+    const group = await screen.findByRole("radiogroup", { name: i18n.t("miro.stickyColoursLabel") });
+    const none = screen.getByRole("radio", { name: i18n.t("miro.colourByNone") });
+    const sentiment = screen.getByRole("radio", { name: i18n.t("miro.colourBySentiment") });
+    expect(group).toContainElement(none);
+    expect(group).toContainElement(sentiment);
+    expect(none).toBeChecked();
+    expect(screen.queryByRole("combobox")).toBeNull();
+
+    fireEvent.click(sentiment);
+    fireEvent.click(screen.getByText(i18n.t("miro.createBoard")));
+    await waitFor(() => expect(startMiroBoard).toHaveBeenCalledTimes(1));
+    expect(startMiroBoard.mock.calls[0][0]).toMatchObject({ colour_by: "sentiment" });
+  });
+
+  it("orders the form name, colours, shape, then the long-quotes checkbox", async () => {
+    await i18n.changeLanguage("en");
+    renderOnTokenTab(<MiroExportPanel open onClose={() => {}} />);
+    const name = await screen.findByLabelText(i18n.t("miro.boardNameLabel"));
+    const colours = screen.getByRole("radiogroup", { name: i18n.t("miro.stickyColoursLabel") });
+    const shape = screen.getByRole("radiogroup", { name: i18n.t("miro.stickyShapeLabel") });
+    const split = screen.getByTestId("bn-miro-split-long");
+    const follows = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(name, colours)).toBe(true);
+    expect(follows(colours, shape)).toBe(true);
+    expect(follows(shape, split)).toBe(true);
+  });
+
   it("offers no clip links while they are parked, and sends no folder", async () => {
     const body = await exportOnce("en");
     expect(screen.queryByText(i18n.t("miro.linkClipsLabel"))).toBeNull();

@@ -110,7 +110,7 @@ fi
 _stub=$(mktemp); printf '#!/bin/sh\necho "no commands here"\n' > "$_stub"; chmod +x "$_stub"
 _out=$(BN_BIN="$_stub" bash "$ROOT/scripts/check-doc-surfaces.sh" 2>&1); rc=$?
 rm -f "$_stub"
-if [ "$rc" -eq 2 ] && printf '%s' "$_out" | grep -q 'help parsing is broken'; then
+if [ "$rc" -eq 2 ] && grep -q 'help parsing is broken' <<<"$_out"; then
     ok "broken help parsing refuses (exit 2) rather than passing on 0 flags"
 else
     bad "trivial-pass guard did not fire (exit $rc)"

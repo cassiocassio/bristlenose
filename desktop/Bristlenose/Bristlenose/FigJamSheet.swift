@@ -127,6 +127,9 @@ final class FigJamSheetModel: ObservableObject {
     var chooseDestination: (String) async -> URL?
     /// The board file and its quote count. Injected so a test needs no server.
     var fetchBoard: (FigJamAPI.Options) async throws -> (data: Data, quotes: Int)
+    /// The save the button started, kept so closing the sheet can stop it (`cancelSave`).
+    /// Readable so a test can wait for it to end.
+    private(set) var saveTask: Task<Void, Never>?
 
     init(port: Int, token: String?, projectName: String, i18n: I18n,
          clipLinksOffered: Bool = BristlenoseFlags.boardClipLinks) {
@@ -141,6 +144,12 @@ final class FigJamSheetModel: ObservableObject {
     }
 
     func t(_ key: String) -> String { i18n.t(key) }
+
+    /// The board-name row's label, which also names its field for VoiceOver (form-layout-v2
+    /// item 3): the Miro sheet's words.
+    func boardNameLabel() -> String { i18n.t("desktop.miro.boardNameLabel") }
+    /// The shape radios' group name for VoiceOver: the Miro sheet's, without the form colon.
+    func stickyShapeGroupName() -> String { i18n.t("common.miro.stickyShape") }
 
     func options() -> FigJamAPI.Options {
         FigJamAPI.Options(
@@ -161,13 +170,29 @@ final class FigJamSheetModel: ObservableObject {
         return "\(safe.isEmpty ? "Bristlenose" : safe)-figjam-board.json"
     }
 
+    /// The Save button: one save at a time, kept so the sheet can stop it.
+    func startSave() {
+        guard step != .preparing else { return }
+        saveTask = Task { [weak self] in await self?.save() }
+    }
+
+    /// Cancel or Escape while the file is being built: stop, so no save panel opens after the
+    /// sheet has gone (form-layout-v2 item 6; the Miro sheet's `cancelFile`).
+    func cancelSave() { saveTask?.cancel() }
+
     /// Build the file, ask where it goes, write it. "Done" only once it is on
-    /// disk: a cancelled save panel goes back to the choices, saying nothing.
+    /// disk: a cancelled save panel goes back to the choices, saying nothing,
+    /// and a cancelled build asks nothing at all.
     func save() async {
         error = nil
         step = .preparing
         do {
             let board = try await fetchBoard(options())
+            // The sheet closed while the file was built: no panel for a sheet that has gone.
+            if Task.isCancelled {
+                step = .configure
+                return
+            }
             guard let url = await chooseDestination(suggestedFilename()) else {
                 step = .configure
                 return
@@ -176,11 +201,13 @@ final class FigJamSheetModel: ObservableObject {
             quotes = board.quotes
             step = .done
         } catch let e as FigJamAPI.APIError {
+            step = .configure
+            if Task.isCancelled { return }
             error = i18n.t(e.localeKey ?? "common.figjam.error")
-            step = .configure
         } catch {
-            self.error = i18n.t("common.figjam.error")
             step = .configure
+            if Task.isCancelled { return }
+            self.error = i18n.t("common.figjam.error")
         }
     }
 
@@ -241,6 +268,7 @@ struct FigJamSheet: View {
         .padding(20)
         .frame(width: sheetWidth)
         .frame(minHeight: sheetMinHeight)
+        .onDisappear { model.cancelSave() }
     }
 
     private var configure: some View {
@@ -251,15 +279,17 @@ struct FigJamSheet: View {
             // The Miro sheet's form: right-aligned colon labels, left-aligned controls.
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 12) {
                 GridRow(alignment: .firstTextBaseline) {
-                    Text(model.t("desktop.miro.boardNameLabel"))
-                        .foregroundStyle(.secondary)
+                    Text(model.boardNameLabel())
                         .gridColumnAlignment(.trailing)
+                    // Named for VoiceOver by its label, not left unnamed (form-layout-v2 item 3).
                     TextField("", text: $model.boardName)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel(model.boardNameLabel())
                 }
                 GridRow(alignment: .firstTextBaseline) {
-                    Text(model.t("desktop.figjam.stickyShapeLabel")).foregroundStyle(.secondary)
-                    Picker("", selection: $model.square) {
+                    Text(model.t("desktop.figjam.stickyShapeLabel"))
+                    // The hidden title names the radio group for VoiceOver, as on the Miro sheet.
+                    Picker(model.stickyShapeGroupName(), selection: $model.square) {
                         Text(model.t("common.miro.stickyShapeSquare")).tag(true)
                         Text(model.t("common.miro.stickyShapeRectangle")).tag(false)
                     }
@@ -269,7 +299,10 @@ struct FigJamSheet: View {
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    Toggle(model.t("common.miro.splitLongQuotes"), isOn: $model.splitLongQuotes)
+                    // Wraps rather than truncates in a long locale, as on the Miro sheet.
+                    Toggle(isOn: $model.splitLongQuotes) {
+                        Text(model.t("common.miro.splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if model.clipLinksOffered {
                 GridRow(alignment: .top) {
@@ -295,7 +328,7 @@ struct FigJamSheet: View {
                 if model.step == .preparing { ProgressView().controlSize(.small) }
                 Spacer()
                 Button(model.t("common.miro.cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(model.t("desktop.figjam.saveBoardFile")) { Task { await model.save() } }
+                Button(model.t("desktop.figjam.saveBoardFile")) { model.startSave() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(model.step == .preparing)
             }
@@ -319,6 +352,17 @@ struct FigJamSheet: View {
             HStack {
                 Spacer()
                 Button(model.t("common.miro.done")) { dismiss() }.keyboardShortcut(.defaultAction)
+                    // Escape closes the done step too, as the Miro sheet's does (form-layout-v2
+                    // item 4). A button holds one shortcut and Done keeps Return, so Escape is an
+                    // invisible twin behind it. `.onExitCommand` would be the stock route, but it
+                    // needs a focused view and this step has none: probed 27 Nov 2026, Escape in a
+                    // key sheet reached the twin and never the exit command.
+                    .background {
+                        Button(model.t("common.miro.done")) { dismiss() }
+                            .keyboardShortcut(.cancelAction)
+                            .opacity(0)
+                            .accessibilityHidden(true)
+                    }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

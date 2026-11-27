@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "\ud1a0\ud070\uc740 \uc5b4\ub5bb\uac8c \ubc1b\ub098\uc694?",
+    "copyBoard": "보드 데이터 복사",
+    "createBoard": "\ubcf4\ub4dc \ub9cc\ub4e4\uae30",
+    "tabApp": "Miro 앱",
+    "tabToken": "개발자 액세스 토큰",
     "boardNameLabel": "\ubcf4\ub4dc \uc774\ub984:",
     "stickyColoursLabel": "\uba54\ubaa8 \uc0c9\uc0c1:",
     "miroStatusLabel": "Miro \uc0c1\ud0dc:",

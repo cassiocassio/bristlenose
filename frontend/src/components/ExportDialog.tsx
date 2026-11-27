@@ -85,34 +85,40 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
               <p className="bn-modal-subtitle">
                 {t("export.subtitle")}
               </p>
-              <label className="bn-export-locale">
-                <span>{t("settings:language.legend")}</span>
-                <select
-                  className="bn-locale-select"
-                  value={exportLocale}
-                  onChange={(e) => setExportLocale(e.target.value as Locale)}
-                  data-testid="bn-export-locale-select"
-                >
-                  {SUPPORTED_LOCALES.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {LOCALE_LABELS[loc]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="bn-export-checkbox">
-                <input
-                  type="checkbox"
-                  checked={anonymise}
-                  onChange={(e) => setAnonymise(e.target.checked)}
-                            />
+              <div className="bn-board-form">
+                <label className="bn-board-form-label" htmlFor="bn-export-locale-select">
+                  {t("export.languageLabel")}
+                </label>
                 <span>
-                  {t("export.anonymise")}
-                  <small className="bn-export-hint">
-                    {t("export.anonymiseHint")}
-                  </small>
+                  <select
+                    id="bn-export-locale-select"
+                    className="bn-locale-select"
+                    value={exportLocale}
+                    onChange={(e) => setExportLocale(e.target.value as Locale)}
+                    data-testid="bn-export-locale-select"
+                  >
+                    {SUPPORTED_LOCALES.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {LOCALE_LABELS[loc]}
+                      </option>
+                    ))}
+                  </select>
                 </span>
-              </label>
+                <span />
+                <label className="bn-export-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={anonymise}
+                    onChange={(e) => setAnonymise(e.target.checked)}
+                  />
+                  <span>
+                    {t("export.anonymise")}
+                    <small className="bn-export-hint">
+                      {t("export.anonymiseHint")}
+                    </small>
+                  </span>
+                </label>
+              </div>
               {error && (
                 <p className="bn-export-error" role="alert">
                   {error}

@@ -163,7 +163,7 @@ final class MiroSheetModel: ObservableObject {
         return line
     }
 
-    /// "Board ready — N quote stickies placed", count-correct. Plural selection
+    /// "Board ready. N quote stickies placed", count-correct. Plural selection
     /// and the `_other` fallback for an absent stem both live in `I18n.plural`.
     func boardReadyText() -> String {
         i18n.plural(screens ? "common.export.screens.done" : "common.miro.boardReady", count: stickies)
@@ -416,6 +416,13 @@ final class MiroSheetModel: ObservableObject {
     /// The Mac's word for the download, as the FigJam sheet says it: a save panel follows.
     func saveBoardFileTitle() -> String { i18n.t("desktop.figjam.saveBoardFile") }
 
+    /// The Mac's button and segment titles, in title case through `desktop.miro.*` overrides
+    /// (form-layout-v2 item 2): the shared `common.miro.*` strings are the browser's, in sentence
+    /// case as every web button is.
+    func copyBoardTitle() -> String { dt("copyBoard") }
+    func createBoardTitle() -> String { dt("createBoard") }
+    func routeTitle(_ route: Route) -> String { dt(route == .app ? "tabApp" : "tabToken") }
+
     /// Fetch the board under the current choices, then hand it on; a refusal is said in words.
     /// `then` gets the choices as they were at the click: a choice changed while the board was
     /// fetched, or while the save panel was open, makes a different board, and "Copied" or the
@@ -535,8 +542,8 @@ struct MiroSheet: View {
                 .frame(maxWidth: .infinity, alignment: .center)
             if !model.screens {
                 Picker(model.t("quotesTitle"), selection: $model.route) {
-                    Text(model.t("tabApp")).tag(MiroSheetModel.Route.app)
-                    Text(model.t("tabToken")).tag(MiroSheetModel.Route.token)
+                    Text(model.routeTitle(.app)).tag(MiroSheetModel.Route.app)
+                    Text(model.routeTitle(.token)).tag(MiroSheetModel.Route.token)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -622,7 +629,7 @@ struct MiroSheet: View {
     /// the widest of the three in every language, and Copy keeps that width when it says Copied.
     private func pairLabel(_ shown: String) -> some View {
         ZStack {
-            ForEach([model.saveBoardFileTitle(), model.t("copyBoard"), model.t("copied")], id: \.self) { title in
+            ForEach([model.saveBoardFileTitle(), model.copyBoardTitle(), model.t("copied")], id: \.self) { title in
                 Text(title).opacity(title == shown ? 1 : 0).accessibilityHidden(title != shown)
             }
         }
@@ -632,11 +639,11 @@ struct MiroSheet: View {
     /// in its own place, both titles stacked so the button keeps the wider one's width.
     private var copyButton: some View {
         Button { model.copyBoard() } label: {
-            pairLabel(model.t(model.copied ? "copied" : "copyBoard"))
+            pairLabel(model.copied ? model.t("copied") : model.copyBoardTitle())
         }
         .keyboardShortcut(.defaultAction)
         .disabled(model.fileBusy)
-        .accessibilityLabel(model.t(model.copied ? "copied" : "copyBoard"))
+        .accessibilityLabel(model.copied ? model.t("copied") : model.copyBoardTitle())
     }
 
     private var saveButton: some View {
@@ -717,20 +724,24 @@ struct MiroSheet: View {
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.dt("boardNameLabel"))
+                    // VoiceOver names the field by its label, not its placeholder (form-layout-v2
+                    // item 3).
                     TextField(model.t("boardNamePlaceholder"), text: $model.boardName)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel(model.dt("boardNameLabel"))
                 }
+                // Name, colours, shape, then the checkbox under the shape it modifies (item 12).
+                // Both colour states are named radios (Q1), stacked: the radio group's own layout.
+                // Side by side, "Single colour (yellow)" truncates in English (form-layout-v2).
+                // The hidden title names the group for VoiceOver.
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.dt("stickyColoursLabel"))
-                    Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
-                }
-                GridRow(alignment: .firstTextBaseline) {
-                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    // Long labels wrap rather than truncate (the grid column would cut them to one
-                    // line, "Break long quotes into multi…"); the same for the clip-link hint below.
-                    Toggle(isOn: $model.splitLongQuotes) {
-                        Text(model.t("splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
+                    Picker(model.dt("stickyColoursLabel"), selection: $model.colourBySentiment) {
+                        Text(model.t("colourByNone")).tag(false)
+                        Text(model.t("colourBySentiment")).tag(true)
                     }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.t("stickyShapeLabel"))
@@ -741,6 +752,14 @@ struct MiroSheet: View {
                     .pickerStyle(.radioGroup)
                     .horizontalRadioGroupLayout()
                     .labelsHidden()
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                    // Long labels wrap rather than truncate (the grid column would cut them to one
+                    // line, "Break long quotes into multi…"); the same for the clip-link hint below.
+                    Toggle(isOn: $model.splitLongQuotes) {
+                        Text(model.t("splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 // Clip links are a quotes-board option; the screens board's stickies carry none.
                 // Parked on both (`BristlenoseFlags.boardClipLinks`).
@@ -770,7 +789,7 @@ struct MiroSheet: View {
                     .help(model.dt("howToGetToken"))
                 Spacer()
                 Button(model.t("cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(model.t("createBoard")) { model.createBoard() }
+                Button(model.createBoardTitle()) { model.createBoard() }
                     .keyboardShortcut(.defaultAction).disabled(model.busy)
             }
         }

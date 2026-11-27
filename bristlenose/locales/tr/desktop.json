@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Belirteci nasıl alırım?",
+    "copyBoard": "Pano verilerini kopyala",
+    "createBoard": "Pano oluştur",
+    "tabApp": "Miro uygulaması",
+    "tabToken": "Geliştirici erişim jetonu",
     "boardNameLabel": "Pano adı:",
     "stickyColoursLabel": "Yapışkan not renkleri:",
     "miroStatusLabel": "Miro durumu:",
@@ -8,7 +12,7 @@
     "boardDestination": "{{team}} içinde yeni bir pano oluşturur.",
     "connected": "Bağlandı",
     "openInMiro": "Miro’da Aç…",
-    "connectPersistWarning": "Bağlandı, ancak belirteç Anahtar Zinciri’ne kaydedilemedi — yeniden başlattıktan sonra yeniden bağlanmanız gerekebilir."
+    "connectPersistWarning": "Bağlandı, ancak belirteç Anahtar Zinciri’ne kaydedilemedi. Yeniden başlattıktan sonra yeniden bağlanmanız gerekebilir."
   },
   "menu": {
     "app": {

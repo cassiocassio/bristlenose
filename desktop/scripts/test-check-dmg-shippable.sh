@@ -117,7 +117,7 @@ run() {
     if [ "$rc" -ne "$want" ]; then
         echo "  ✗ $label: exit $rc, wanted $want"; echo "$out" | sed 's/^/      /' | rg "✗|FAIL|fail" | head -4; FAIL=$((FAIL+1)); return
     fi
-    if [ -n "$needle" ] && ! printf '%s' "$out" | grep -qF -- "$needle"; then
+    if [ -n "$needle" ] && ! grep -qF -- "$needle" <<<"$out"; then
         echo "  ✗ $label: exit $rc but no \"$needle\""; echo "$out" | sed 's/^/      /' | head -6; FAIL=$((FAIL+1)); return
     fi
     echo "  ✓ $label"; PASS=$((PASS+1))

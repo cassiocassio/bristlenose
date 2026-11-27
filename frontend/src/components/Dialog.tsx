@@ -2,7 +2,9 @@
  * Dialog — the one modal shell every dialog in the report draws through.
  *
  * Owns what each modal used to hand-roll: the portal to `document.body`, the
- * inert page behind (`useInert`), Escape for the topmost dialog only, the ×,
+ * inert page behind (`useInert`), Escape for the topmost dialog only, Return
+ * for its primary button (`.bn-btn-primary`, the one in `.bn-modal-actions`
+ * first) unless focus is in a control that needs Return itself, the ×,
  * focus in on open and back to the opener on close, the Tab loop, and the
  * dialog's role and name. The look is the shared atom (`atoms/modal.css`):
  * the macOS sheet, measured, its values in `tokens.css` § Dialogs.
@@ -65,6 +67,19 @@ const stack: symbol[] = [];
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * A control whose own Return matters: a multi-line field, a pop-up, a button or
+ * link (Return already activates it), anything editable in place, and a field
+ * inside a `<form>` (the form's own submission is its Return).
+ */
+const NEEDS_RETURN =
+  'textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="combobox"], [role="listbox"], [role="option"], [role="menuitem"], [role="tab"]';
+
+function needsReturn(el: HTMLElement): boolean {
+  if (el.isContentEditable || el.closest(NEEDS_RETURN)) return true;
+  return el instanceof HTMLInputElement && el.form !== null;
+}
+
 export function Dialog({
   open,
   onClose,
@@ -126,9 +141,30 @@ export function Dialog({
         first.focus();
       }
     };
+    // Return presses the primary button, as a Mac sheet's default button answers
+    // Return. Bubble phase, after the field's own handlers: a field that uses
+    // Return itself (a tag input committing, ConfirmDialog's Enter) has called
+    // preventDefault by now, and is left alone.
+    const onReturn = (e: KeyboardEvent) => {
+      if (stack[stack.length - 1] !== me) return;
+      if (e.key !== "Enter" || e.defaultPrevented || e.repeat || e.isComposing) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const card = cardRef.current;
+      const target = e.target;
+      if (!card || !(target instanceof HTMLElement) || !card.contains(target)) return;
+      if (needsReturn(target)) return;
+      const primary =
+        card.querySelector<HTMLElement>(".bn-modal-actions .bn-btn-primary") ??
+        card.querySelector<HTMLElement>(".bn-btn-primary");
+      if (!primary || primary.matches(":disabled, [aria-disabled='true']")) return;
+      e.preventDefault();
+      primary.click();
+    };
     document.addEventListener("keydown", handler, true);
+    document.addEventListener("keydown", onReturn);
     return () => {
       document.removeEventListener("keydown", handler, true);
+      document.removeEventListener("keydown", onReturn);
       const i = stack.indexOf(me);
       if (i !== -1) stack.splice(i, 1);
     };

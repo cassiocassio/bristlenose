@@ -9,7 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -23,7 +23,7 @@ HOSTILE = "</script><script>alert(2)</script><!--     & < >"
 
 def hostile_panels():
     p = []
-    p.append(hl.panel("fresh", "Fresh one", link="file:///tmp/x.html", as_of=NOW - 240, as_of_label="pulled",
+    p.append(hl.panel("fresh", "Fresh one", link=PurePosixPath("/tmp/x.html").as_uri(), as_of=NOW - 240, as_of_label="pulled",
                       max_age=3600, body=[{"kind": "kpis", "items": [{"n": 1, "l": HOSTILE}]}]))
     p.append(hl.panel("old", "Old one", as_of=NOW - 7200, as_of_label="pulled", max_age=3600))
     p.append(hl.panel("srcold", "Source old", as_of=NOW - 864000, as_of_label="changed", max_age=259200, refreshable=False))
@@ -46,7 +46,7 @@ def page(built_at=NOW - 60):
 
 
 def data_block(html):
-    m = re.search(r'<script type="application/json" id="home-data">(.*?)</script\s*>', html, re.S | re.I)
+    m = re.search(r'<script type="application/json" id="home-data">(.*?)</script>', html, re.S)
     assert m, "no data block"
     return m.group(1)
 
@@ -65,7 +65,7 @@ def test_the_csp_names_exactly_the_two_scripts_and_blocks_the_network():
     csp = re.search(r'Content-Security-Policy" content="([^"]+)"', html).group(1)
     assert "connect-src 'none'" in csp and "default-src 'none'" in csp and "'unsafe-inline'" in csp.split("style-src")[1].split(";")[0]
     assert "script-src 'sha256-" in csp and "unsafe-eval" not in csp and csp.count("sha256-") == 2
-    scripts = re.findall(r"<script>(.*?)</script\s*>", html, re.S | re.I)
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
     assert len(scripts) == 2
     for s in scripts:
         assert hl._hash(s) in csp, "a script the CSP does not name would not run"

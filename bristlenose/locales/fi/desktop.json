@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Mistä saan tunnuksen?",
+    "copyBoard": "Kopioi taulun tiedot",
+    "createBoard": "Luo taulu",
+    "tabApp": "Miro-sovellus",
+    "tabToken": "Kehittäjän käyttöoikeustunnus",
     "boardNameLabel": "Taulun nimi:",
     "stickyColoursLabel": "Tarrojen värit:",
     "miroStatusLabel": "Miron tila:",
@@ -8,7 +12,7 @@
     "boardDestination": "Luo uuden taulun tiimiin {{team}}.",
     "connected": "Yhdistetty",
     "openInMiro": "Avaa Mirossa…",
-    "connectPersistWarning": "Yhdistetty, mutta tunnusta ei voitu tallentaa avainnippuusi — sinun on ehkä yhdistettävä uudelleen uudelleenkäynnistyksen jälkeen."
+    "connectPersistWarning": "Yhdistetty, mutta tunnusta ei voitu tallentaa avainnippuusi. Sinun on ehkä yhdistettävä uudelleen uudelleenkäynnistyksen jälkeen."
   },
   "menu": {
     "app": {

@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Hoe kom ik aan een token?",
+    "copyBoard": "Bordgegevens kopiëren",
+    "createBoard": "Bord maken",
+    "tabApp": "Miro-app",
+    "tabToken": "Toegangstoken voor ontwikkelaars",
     "boardNameLabel": "Bordnaam:",
     "stickyColoursLabel": "Kleuren plaknotities:",
     "miroStatusLabel": "Miro-status:",
@@ -8,7 +12,7 @@
     "boardDestination": "Maakt een nieuw bord in {{team}}.",
     "connected": "Verbonden",
     "openInMiro": "Openen in Miro…",
-    "connectPersistWarning": "Verbonden, maar de token kon niet in je sleutelhanger worden bewaard — mogelijk moet je opnieuw verbinden na een herstart."
+    "connectPersistWarning": "Verbonden, maar de token kon niet in je sleutelhanger worden bewaard. Mogelijk moet je opnieuw verbinden na een herstart."
   },
   "menu": {
     "app": {

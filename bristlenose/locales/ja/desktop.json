@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "\u30c8\u30fc\u30af\u30f3\u306e\u53d6\u5f97\u65b9\u6cd5",
+    "copyBoard": "ボードデータをコピー",
+    "createBoard": "\u30dc\u30fc\u30c9\u3092\u4f5c\u6210",
+    "tabApp": "Miroアプリ",
+    "tabToken": "開発者アクセストークン",
     "boardNameLabel": "\u30dc\u30fc\u30c9\u540d\uff1a",
     "stickyColoursLabel": "\u4ed8\u7b8b\u306e\u8272\uff1a",
     "miroStatusLabel": "Miro\u306e\u72b6\u614b\uff1a",

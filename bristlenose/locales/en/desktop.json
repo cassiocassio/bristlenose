@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "How do I get a token?",
+    "copyBoard": "Copy Board Data",
+    "createBoard": "Create Board",
+    "tabApp": "Miro App",
+    "tabToken": "Developer Access Token",
     "boardNameLabel": "Board name:",
     "stickyColoursLabel": "Sticky colours:",
     "miroStatusLabel": "Miro status:",
@@ -8,7 +12,7 @@
     "boardDestination": "Creates a new board in {{team}}.",
     "connected": "Connected",
     "openInMiro": "Open in Miro\u2026",
-    "connectPersistWarning": "Connected, but couldn\u2019t save the token to your Keychain \u2014 you may need to reconnect after restarting."
+    "connectPersistWarning": "Connected, but couldn\u2019t save the token to your Keychain. You may need to reconnect after restarting."
   },
   "menu": {
     "app": {

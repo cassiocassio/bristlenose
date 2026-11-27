@@ -1,6 +1,10 @@
 {
   "miro": {
     "howToGetToken": "Come ottenere un token?",
+    "copyBoard": "Copia i dati della bacheca",
+    "createBoard": "Crea bacheca",
+    "tabApp": "App Miro",
+    "tabToken": "Token di accesso sviluppatore",
     "boardNameLabel": "Nome della board:",
     "stickyColoursLabel": "Colori dei post-it:",
     "miroStatusLabel": "Stato di Miro:",
@@ -8,7 +12,7 @@
     "boardDestination": "Crea una nuova board in {{team}}.",
     "connected": "Connesso",
     "openInMiro": "Apri in Miro…",
-    "connectPersistWarning": "Connesso, ma non è stato possibile salvare il token nel Portachiavi — potrebbe essere necessario riconnettersi dopo il riavvio."
+    "connectPersistWarning": "Connesso, ma non è stato possibile salvare il token nel Portachiavi. Potrebbe essere necessario riconnettersi dopo il riavvio."
   },
   "menu": {
     "app": {

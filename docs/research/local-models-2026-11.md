@@ -2,10 +2,10 @@
 
 _Research note, 27 Nov 2026. A proposal only: the app's `OllamaCatalog` (`desktop/Bristlenose/Bristlenose/LLMProvider.swift`), the CLI default (`local_model` in `bristlenose/config.py`) and the website's set-up page are unchanged until the maintainer decides. Scope: on-device analysis under Ollama for the Bristlenose Mac app and the CLI on macOS and Linux. Ollama v0.40.18 (24 Nov 2026) is the latest stable release; the registry and memory measurements were taken on v0.20.7, and the Bristlenose analysis runs in § "Measured on the Bristlenose task" on v0.40.18. Revised the same day when those runs came in._
 
-Bristlenose should not change its local-model catalogue until the local client sets the context length, and until it can run on the build a current Mac downloads. On Ollama 0.40.18, `gemma4:e4b` on Apple silicon arrives as an MLX build whose runner refuses structured output with HTTP 501, so today's recommended model fails at the first call (measured, below). The client sends no `num_ctx`, so Ollama picks a default from the GPU memory it detects: 4,096 tokens on every Mac with 16 GB or less, almost certainly on 24 GB Macs, and on most Linux GPUs. A 60-minute transcript is 9–14k tokens. What happens next depends on which build of the model runs:
+Bristlenose should not change its local-model catalogue until the local client sets the context length, and until it can run on the build a current Mac downloads. On Ollama 0.40.18, `gemma4:e4b` on Apple silicon arrives as an MLX build. On the test Mac's Homebrew install that build's runner refused structured output with HTTP 501, so today's recommended model failed at the first call (measured, below). The cause is a library missing from Homebrew's package, not MLX itself (§ "Structured output on MLX: a packaging gap"). Until 27 Nov 2026 the client sent no `num_ctx` (it now sets 32k: § "Ways to set the context"), so Ollama picked a default from the GPU memory it detects: 4,096 tokens on every Mac with 16 GB or less, almost certainly on 24 GB Macs, and on most Linux GPUs. A 60-minute transcript is 9–14k tokens. What happens next depends on which build of the model runs:
 
 - **On the GGUF path** (Linux, any Mac on Ollama before 0.40, and Llama 3.2 3B everywhere), Ollama keeps the first 5 tokens and the last ~2,050 of the prompt and returns HTTP 200. The system prompt and schema instruction, which come first, are lost with most of the transcript. Measured on 0.40.18 with a 4k server: every topic-segmentation call arrived as exactly 2,051 tokens, "succeeded", and nothing told the user; every quote-extraction reply then ran out of room (`finish_reason: length`) and the analysis failed after 10 minutes. This was a Gemma 4 E4B GGUF build, so the HTTP 400 that the source suggested for models with a projector did not happen.
-- **On a Mac with Ollama 0.40 or later**, the Gemma 4 and Qwen 3.5 tags resolve to an MLX build. For `gemma4:e4b` that build was pulled and tried: the MLX runner answers every structured-output request with **501 "structured output is unavailable"**, through `/v1` with `json_object` or `json_schema` and through native `/api/chat` with `format: "json"`. A request with no format works. Bristlenose always asks for structured output, so the run ends in 8 seconds. Other MLX builds were not tried.
+- **On a Mac with Ollama 0.40 or later**, the Gemma 4 and Qwen 3.5 tags resolve to an MLX build. For `gemma4:e4b` that build was pulled and tried: the MLX runner answers every structured-output request with **501 "structured output is unavailable"**, through `/v1` with `json_object` or `json_schema` and through native `/api/chat` with `format: "json"`. A request with no format works. Bristlenose always asks for structured output, so the run ends in 8 seconds. Other MLX builds were not tried. The server log gives the cause: `xgrammar library not found at …/mlx_metal_v3/libollama_xgrammar.dylib`. Homebrew's Ollama package leaves that library out, and Ollama's own builds ship it (§ "Structured output on MLX: a packaging gap"). So this failure is certain for Homebrew installs; the official app was not tried.
 
 Once the context is set to 32k, the evidence supports a range that starts at 16 GB, not 8 GB:
 
@@ -14,9 +14,9 @@ Once the context is set to 32k, the evidence supports a range that starts at 16 
 - **good:** Gemma 4 12B (about 10 GB, from 24 GB);
 - **better:** Qwen 3.8 27B (about 21 GB, from 32 GB, confirmed only at 36 GB).
 
-All of these tags pull an MLX build on a current Mac, so on the Mac the range holds only once one of three things is true: the client stops asking Ollama for structured output and validates the JSON itself; it pulls and runs the GGUF build (Ollama has a hidden `--runner llamacpp` flag on `pull` and `run`, and a `runner` field on native API requests, but none on `/v1`); or Ollama's MLX runner gains structured output. On Linux the range holds as written.
+All of these tags pull an MLX build on a current Mac, so on the Mac the range holds only once one of three things is true: the client stops asking Ollama for structured output and validates the JSON itself (done 27 Nov 2026, on the 501 only); it pulls and runs the GGUF build (Ollama has a hidden `--runner llamacpp` flag on `pull` and `run`, and a `runner` field on native API requests, but none on `/v1`); or Ollama's MLX runner gains structured output. On Linux the range holds as written.
 
-The two Qwen picks also need the local client to switch thinking off, which it does not do today. Without that change, the fallback is Gemma 4 E2B, E4B, 12B and 26B. The 26B has an open bug: Gemma 4 falls into repetition loops under JSON schemas with long free-text fields, which is the shape of a verbatim quote. No model examined fits an 8 GB Mac with a browser and Mail open (Qwen 3.5 2B and 0.8B exist and were not assessed). Those machines, about three in ten Macs, should be pointed at a cloud provider.
+The two Qwen picks also need the local client to switch thinking off, which it has done since 27 Nov 2026 (`think: false`; not yet measured on Qwen). Without that change, the fallback is Gemma 4 E2B, E4B, 12B and 26B. The 26B has an open bug: Gemma 4 falls into repetition loops under JSON schemas with long free-text fields, which is the shape of a verbatim quote. No model examined fits an 8 GB Mac with a browser and Mail open (Qwen 3.5 2B and 0.8B exist and were not assessed). Those machines, about three in ten Macs, should be pointed at a cloud provider.
 
 Today's catalogue understates memory:
 
@@ -25,6 +25,8 @@ Today's catalogue understates memory:
 - Gemma 4 31B needs about 27 GB, more than the 26.8 GB GPU working set measured on a 32 GB Mac.
 
 Of the proposed models, only Gemma 4 E4B (GGUF) has been run on the Bristlenose task, on three public test sessions: at 32k it finished, with nearly all quotes verbatim and weaker themes than Claude. That measurement for the rest decides whether any of this ships. The memory figures below are arithmetic for the GGUF builds, and for the Gemma E-models they overstate resident memory (see "Measured on the Bristlenose task"); they describe Linux and older Macs, not the MLX builds a current Mac runs.
+
+A wider search of the other families Ollama carries (§ "Beyond Gemma and Qwen: the wider field") found none that beats this shortlist. One, Bonsai 2 27B, a 2-bit Qwen 3.8 derivative at about 10.4 GB, earns a run for 16 GB Macs. The same search traced the MLX 501 to Homebrew's package: it leaves out the XGrammar library.
 
 ## How the figures were obtained and labelled
 
@@ -112,13 +114,13 @@ Because the JSON grammar still applies, the answer comes back valid, schema-shap
 There are two exceptions:
 
 - **Models with a vision projector.** The source suggests llama-server disables context shifting for them and returns an HTTP 400 saying the prompt is longer than the context ([server/sched.go](https://github.com/ollama/ollama/blob/v0.40.18/server/sched.go)) (V). **Not what was measured:** a Gemma 4 E4B GGUF build on 0.40.18 at 4k was truncated silently with HTTP 200, the server logging `truncating input prompt limit=2051 prompt=6419 keep=5 new=2051` (M). Treat silent truncation as the GGUF behaviour for every model until a 400 is observed.
-- **The MLX path.** Ollama does not truncate at all and treats `num_ctx` only as a sizing hint. For Bristlenose this is moot today: the one MLX build tried refuses structured output (501) before any of this matters (M) ([mlxrunner/parallel.go](https://github.com/ollama/ollama/blob/v0.40.18/mlxrunner/parallel.go)) (V).
+- **The MLX path.** Ollama does not truncate at all and treats `num_ctx` only as a sizing hint. On a Homebrew install this is moot: the MLX runner refuses structured output (501) before any of this matters (M) ([mlxrunner/parallel.go](https://github.com/ollama/ollama/blob/v0.40.18/mlxrunner/parallel.go)) (V).
 
 What this means for the catalogue (Inf):
 
 - **Llama 3.2 3B is a text-only GGUF** (M: one layer, no projector, and no MLX build in the registry). On a 16 or 24 GB Mac, today's CLI default would therefore analyse only the end of a 60-minute interview and report success (Inf; the same truncation was reproduced with Gemma 4 E4B, not with Llama). On current Ollama that is at most the last 9–13 minutes (2,050 tokens at 156–227 tokens a minute). The cut applies to the whole rendered prompt, so the system prompt and the schema instruction go too; in quote extraction about 16 template lines follow the transcript, leaving roughly 1,700 transcript tokens. On 0.20.7 it is up to the last 18–26 minutes.
 - **The Gemma 4 tags and the Qwen 3.5 tags up to 35B carry projectors** (M; `qwen3.5:122b` has none). The source suggested a hard error for them on the GGUF path; the measured Gemma 4 E4B build was truncated silently instead, and its analysis failed at quote extraction with a message blaming `max_tokens` 64,000 rather than the context (M). So the failure is visible only at the second stage, and it names the wrong limit.
-- **A Mac on Ollama 0.40 or later runs those tags on MLX** (next section). The one tried, `gemma4:e4b`, refuses structured output with a 501, so no transcript reaches it (M).
+- **A Mac on Ollama 0.40 or later runs those tags on MLX** (next section). On the test Mac's Homebrew install, `gemma4:e4b` refused structured output with a 501, so no transcript reached it (M).
 - **This is not just a problem with long interviews.** One call on an 18-minute interview already sent 8,283 tokens (M, a separate measurement on the same Mac).
 
 ### Large Macs need the context set too
@@ -132,13 +134,22 @@ If a load runs out of memory while the context is automatic, Ollama lowers the c
 
 ### Ways to set the context
 
-Three mechanisms exist; this note does not choose between them.
+Three mechanisms exist. Since 27 Nov 2026 Bristlenose uses the first ("What the client does now", below).
 
 The OpenAI-compatible endpoint that the app uses has no context field. Its request type maps `max_tokens`, `temperature`, `response_format` and `reasoning_effort`, and nothing for the window ([openai/openai.go](https://github.com/ollama/ollama/blob/v0.40.18/openai/openai.go); [OpenAI compatibility docs](https://github.com/ollama/ollama/blob/v0.40.18/docs/api/openai-compatibility.mdx)) (V).
 
 1. **Ollama's native `/api/chat` with `options.num_ctx` on each request.** This is the highest-precedence setting. Native requests also accept `truncate: false`, which turns silent truncation into an error ([api/types.go](https://github.com/ollama/ollama/blob/v0.40.18/api/types.go)) (V).
 2. **A tag derived from a Modelfile with `PARAMETER num_ctx`.** This is the route Ollama's OpenAI-compatibility page itself recommends. It shares the base tag's blobs, so there is no second download (Inf from the content-addressed blob store, [server/download.go](https://github.com/ollama/ollama/blob/v0.40.18/server/download.go)).
 3. **`OLLAMA_CONTEXT_LENGTH` on the server.** The Ollama Mac app's context slider sets this ([app/server/server.go](https://github.com/ollama/ollama/blob/v0.40.18/app/server/server.go)) (V). It is global and belongs to the user, not to Bristlenose.
+
+**What the client does now (27 Nov 2026, card `ollama-mlx-json`).** The local client asks Ollama on its native `/api/chat` with `options.num_ctx` 32768, `truncate: false`, `shift: false` and `think: false`, through the openai SDK's generic `post`, so errors keep the classes they had (`ollama_chat_body` in `bristlenose/llm/client.py`; the key preflight sends the same body with a one-token cap, so the model loads at the run's window during setup). A derived tag would leave artefacts in the user's Ollama, and `OLLAMA_CONTEXT_LENGTH` is the user's. Which API to use is asked once per client at `GET /api/version` (a 404 or 405 means not Ollama). A server that is not Ollama (llama.cpp's server, LM Studio, vLLM: no `/api/chat`) keeps the `/v1` request, where the window cannot be set. The consequences:
+
+- On the GGUF runner, a prompt over the window becomes a 400 instead of a silent cut to its tail, and an answer that fills the window ends `done_reason: "length"` instead of shifting the prompt out (V, `llm/llama_server.go`). The client treats both as a truncation, which quote extraction splits the session on; topic segmentation does not split, so there an over-long transcript fails visibly.
+- The MLX runner ignores `truncate` and does not truncate; the over-window case there was not measured.
+- 32k is fixed, not sized per call, because a different `num_ctx` reloads the model. It replaces Ollama's own default in both directions: up from 4k on small machines, which is the point; down from 256k at 47 GiB or more, which still fits the workload (§ "Large Macs need the context set too"); and down from a larger `OLLAMA_CONTEXT_LENGTH` a user set. There is no setting to change it yet.
+- On the MLX runner's 501 the client asks again with no format, for the rest of the run. The schema stays in the system prompt, and the reply is parsed and validated as any reply is.
+
+Verified with mocked HTTP only (`tests/test_local_ollama_native.py`); a real Ollama run with the change is item 3 under "What must be verified".
 
 Whichever is chosen has to size for input plus output:
 
@@ -151,7 +162,7 @@ Since v0.32.6, truncated answers report `finish_reason: "length"` ([v0.32.6 rele
 
 ### Qwen, gpt-oss and Nemotron would think on every call
 
-**The local client sends no thinking switch.** The local path, `_analyze_local` in `bristlenose/llm/client.py` (around lines 1645–1661), sends the model, the messages, `max_tokens`, `temperature` and a `json_schema` response format. It sends no `reasoning_effort` and no `num_ctx` (M). The gateway route in the same file already sends `reasoning_effort: "none"` (lines 417–426) (M).
+**Until 27 Nov 2026 the local client sent no thinking switch.** It now sends `think: false` on Ollama's native API, the value Ollama maps `reasoning_effort: "none"` to; a model that cannot think accepts it, since Ollama refuses only `think: true` there (V, `server/routes.go`). As measured before the change: the local path, `_analyze_local` in `bristlenose/llm/client.py` (around lines 1645–1661), sends the model, the messages, `max_tokens`, `temperature` and a `json_schema` response format. It sends no `reasoning_effort` and no `num_ctx` (M). The gateway route in the same file already sends `reasoning_effort: "none"` (lines 417–426) (M).
 
 **Several candidate families think by default:**
 
@@ -166,7 +177,7 @@ Since v0.32.6, truncated answers report `finish_reason: "length"` ([v0.32.6 rele
 
 **Consequence for the catalogue.**
 
-- The Qwen picks below depend on two things. The local client must send `reasoning_effort: "none"`, which Ollama maps to `think: false` ([openai.go](https://github.com/ollama/ollama/blob/v0.40.18/openai/openai.go)) (V). And Ollama must be 0.31.2 or later.
+- The Qwen picks below depend on two things. The local client must switch thinking off, which it does since 27 Nov 2026 with `think: false`, the value `reasoning_effort: "none"` maps to ([openai.go](https://github.com/ollama/ollama/blob/v0.40.18/openai/openai.go)) (V). And Ollama must be 0.31.2 or later.
 - gpt-oss and Nemotron are left out.
 - Gemma 4 thinks only when the system prompt opens with its think token ([Gemma 4 model card](https://gemma.ai/models/gemma-4/model-card/)) (V), so it works with the client as it is. With thinking off, Gemma 12B, 26B and 31B still emit an empty thought block (V, same card). This note did not check whether Ollama strips that block on every path.
 
@@ -185,7 +196,7 @@ Ollama's own issue for 31B, with 60–100% failure in long free-text fields, is 
 
 **What is not known.**
 
-- No report covers E2B, E4B or 12B, either way. One report says the GGUF 12B enforced schemas where the MLX 26B did not ([#16776](https://github.com/ollama/ollama/issues/16776)) (I).
+- Smaller sizes are not clean either (§ "Gemma 4's loops: a grammar makes them worse"): E2B and E4B loop on long unconstrained enumerations, E2B under an MLX grammar failed to stop on 3 of 12 runs, and 12B loops while thinking. One report says the GGUF 12B enforced schemas where the MLX 26B did not ([#16776](https://github.com/ollama/ollama/issues/16776)) (I).
 - Ollama moved its GGUF path to upstream llama-server in v0.30.0. Loops were still reported on 0.30.8 and 0.31.1, so the move alone did not fix them.
 - One report (6 Jul, 0.31.1, QAT build) found non-streaming calls did not loop. Bristlenose does not stream, so this matters, but it is one report.
 - August comments reproduce the loops on Google's own hosted API, which points at the model rather than Ollama (I, same thread).
@@ -221,7 +232,7 @@ The Ollama library page lists a size range for each tag, consistent with one GGU
 **Consequences.**
 
 - On a Mac, user-facing copy should quote the MLX size; on Linux and in the docs' Linux column, the GGUF size.
-- An MLX manifest changes behaviour as well as size. It does not truncate and it picks its own parallelism. **The `gemma4:e4b` MLX build refused structured output outright on 0.40.18: HTTP 501 "structured output is unavailable", for `json_object`, `json_schema` and native `format: "json"` alike (M).** The source and issue history say MLX structured output uses XGrammar. XGrammar has its own bug history: MLX ignored schemas until [#17933](https://github.com/ollama/ollama/issues/17933) closed on 22 Aug 2026 (I). The `OLLAMA_KV_CACHE_TYPE` setting is not wired into the MLX path (V, per source search of v0.40.18).
+- An MLX manifest changes behaviour as well as size. It does not truncate and it picks its own parallelism. **On the test Mac's Homebrew install of 0.40.18, the `gemma4:e4b` MLX build refused structured output outright: HTTP 501 "structured output is unavailable", for `json_object`, `json_schema` and native `format: "json"` alike (M).** MLX structured output uses XGrammar, and the Homebrew package lacks the XGrammar library (§ "Structured output on MLX: a packaging gap"). XGrammar has its own bug history: MLX ignored schemas up to v0.33.0; structured output arrived in v0.33.1 (26 Aug 2026). [#17933](https://github.com/ollama/ollama/issues/17933), often cited for the fix, was closed as a duplicate with no change (V). The `OLLAMA_KV_CACHE_TYPE` setting is not wired into the MLX path (V, per source search of v0.40.18).
 
 ### Three concurrent requests run one at a time
 
@@ -342,7 +353,7 @@ The everyday load is an estimate (Inf) built from these parts:
 
 ### The proposed range
 
-**On a Mac, every tag below pulls an MLX build, and the one MLX build tried refuses structured output** (§ "Measured on the Bristlenose task"). The range applies on the Mac only once the client can run on what arrives; on Linux it applies as written.
+**On a Mac, every tag below pulls an MLX build. On a Homebrew install of Ollama, MLX refuses structured output** (§ "Measured on the Bristlenose task"). The range applies on the Mac only once the client can run on what arrives, which the unconstrained fallback covers; on Linux it applies as written.
 
 The proposal states minimum and recommended RAM as values, not buckets. That way 24 and 36 GB Macs fall where their memory puts them instead of being rounded down to 16 and 32 GB. The often-quoted ladder of 8, 16, 32, 48, 64 and 128 GB skips both, yet 24 GB alone is twice the 32 GB share.
 
@@ -382,7 +393,7 @@ The 26B fallback is conditional on Bristlenose's own measurement of its loop rat
 | Today's entry | What the app says | Measured or computed | Verdict |
 |---|---|---|---|
 | Llama 3.2 3B (also the CLI default) | 2 GB download, min 4 GB | 2.02 GB (M); 6.2–6.7 GB at 32k (C), 4.3 GB in `ollama ps` on 0.40.18 with q8_0 KV (M); text-only, so silently truncated at the 4k default | The download is right. Measured on the task even at 32k, the output is not usable (below). Retire it, as the default and from the picker. |
-| Gemma 4 E4B | 3 GB, min 8 GB, recommended ≥ 15 GB | 6.58 GB GGUF, 9.46 GB MLX, 9.61 GB for older pulls (M); 7.6–8.0 GB in use (C), but 4.7 GB resident measured for the older GGUF at 32k with q8_0 KV (M) | No manifest is 3 GB. **On a current Mac it pulls the MLX build, which refuses structured output: the app's recommended model for 15–35 GB fails at the first call (M).** On GGUF at 32k it ran the task (below). It becomes the balanced fallback once the Mac can run it. |
+| Gemma 4 E4B | 3 GB, min 8 GB, recommended ≥ 15 GB | 6.58 GB GGUF, 9.46 GB MLX, 9.61 GB for older pulls (M); 7.6–8.0 GB in use (C), but 4.7 GB resident measured for the older GGUF at 32k with q8_0 KV (M) | No manifest is 3 GB. **On a current Mac it pulls the MLX build, which refused structured output on the test Mac's Homebrew install: the app's recommended model for 15–35 GB failed at the first call (M).** On GGUF at 32k it ran the task (below). It becomes the balanced fallback once the Mac can run it. |
 | Gemma 4 26B | 16 GB, min 24 GB, recommended ≥ 35 GB | 18.73 GB GGUF; 16 GB is the lower end of the tag page's range (V); 20.8–21.5 GB in use (C) | Min 24 GB is too low; the floor is 32 GB. Open loop bug. |
 | Gemma 4 31B | 20 GB, min 32 GB, recommended ≥ 47 GB | 20.39 GB GGUF, 19.42 GB MLX (M); 26.5–27.0 GB in use, ~37 GB with three slots (C) | On a 32 GB Mac it exceeds both the RAM budget and the measured 26.8 GB working set. The realistic minimum is 48 GB. Open loop bug, worst of the family. |
 
@@ -536,12 +547,95 @@ What this settles for the catalogue:
 - **Memory of the E-models is lower than the arithmetic.** The older E4B GGUF had 4.7 GB resident at 32k with q8_0 KV. Its 5.4 GB per-layer embedding table is memory-mapped and read sparsely; `ollama ps` showed 1.2 GB, an undercount. The MLX build showed 9.4 GB in `ollama ps`. The figures in "Memory per model" count the whole table, so they overstate E2B and E4B.
 - **Three sessions at once overran a one-slot server.** Ollama served one request at a time, the 570-second pass deadline counted time spent queued, and the abandoned run told the user to check their network connection. This is the queue described in "Three concurrent requests run one at a time": on GGUF, Bristlenose's concurrency of 3 queues rather than runs in parallel.
 
-These are product findings for the client (context, structured output on MLX, the `max_tokens` cap, the deadline, the error text); this note does not change any of them.
+These are product findings for the client (context, structured output on MLX, the `max_tokens` cap, the deadline, the error text). Three were fixed on 27 Nov 2026: the context, the MLX refusal, and thinking (§ "Ways to set the context"). The deadline that counts queued time, and its "check your network" wording, remain.
+
+## Beyond Gemma and Qwen: the wider field (27 Nov 2026)
+
+A second pass looked at every other family Ollama carries: Phi, Granite, SmolLM, OLMo, Mistral (Ministral, NeMo, Small, Magistral, Medium), Llama 3.x and 4, the DeepSeek-R1 distills, and everything the library added or updated from July to November 2026. It also covered the prior art on local models for interview analysis, and the Gemma 4 loop and MLX structured-output problems in more depth. No model was pulled or run. Registry sizes, GGUF headers, Ollama's source at v0.40.18, and the test Mac's files and log are (M). Labels otherwise follow this note's scheme. A bug reporter's measurements in an issue are (I). Ollama's source, commits and release notes are (V).
+
+**The short answer.** No family beyond Gemma 4 and Qwen 3.5/3.8 beats the shortlist on the evidence available. One entrant could change a tier: **Bonsai 2 27B**, a 2-bit derivative of Qwen 3.8 27B that needs about 10.4 GB at 32k (C), which would put 27B-class analysis on a 16 GB Mac if its quotes stay verbatim. Most July–November additions are coding-agent tunes or cloud-only.
+
+### Structured output on MLX: a packaging gap
+
+The 501 "structured output is unavailable" in § "Measured on the Bristlenose task" comes from **Homebrew's Ollama package, not from MLX**.
+- On the test Mac, Homebrew's 0.40.18 has only `libmlxc.dylib` in `libexec/lib/ollama/mlx_metal_v3/`. The server log reads `source=grammar.go:74 msg="Structured output is unavailable" error="xgrammar library not found at …/mlx_metal_v3/libollama_xgrammar.dylib"` (M).
+- In the source, the MLX runner's grammar engine is nil when the XGrammar library fails to load, and every structured request then gets the 501 ([grammar.go L52–81, L133–142](https://github.com/ollama/ollama/blob/v0.40.18/mlxrunner/grammar.go#L52-L81)) (V).
+- Ollama's own build ships that library in every MLX payload, and its CI refuses a payload without it ([build_darwin.sh](https://github.com/ollama/ollama/blob/v0.40.18/scripts/build_darwin.sh#L118)) (V).
+- The Homebrew formula never builds it (M). The gap is reported as [Homebrew core issue #302645](https://github.com/Homebrew/homebrew-core/issues/302645) (opened 6 Sep, still open), where a user names the `ollama-binary` cask as a workaround (I). Ollama commit `9a4b136ef` (16 Nov, in 0.40.18) lets packagers supply XGrammar; the formula doesn't use it yet (V/M).
+
+A Mac on an MLX tag therefore gets one of three behaviours. Up to 0.33.0, the schema is dropped and the reply is HTTP 200. From 0.33.1 with the library, as in the official app, the schema is enforced. From 0.33.1 without it, as on Homebrew, the reply is 501 (Inf, from the release notes and commits). That the official app enforces Bristlenose's schemas on MLX is likely, but it **was not measured**.
+
+Where MLX enforces a schema, it has a failure of its own. In [ollama#18567](https://github.com/ollama/ollama/issues/18567), `gemma4:e2b-mlx` under a schema emitted whitespace until the output cap on 3 of 12 runs, and on 0 of 12 on GGUF (official 0.34.2, temperature 0.3) (I). It was closed as standard behaviour. The v0.40.18 MLX runner has no whitespace bound (M, source search), while llama.cpp's JSON grammar caps it at 20 characters ([json-schema-to-grammar.cpp](https://github.com/ggml-org/llama.cpp/blob/b12651/common/json-schema-to-grammar.cpp#L229)) (V).
+
+A Mac can ask for the GGUF build only through the native API: `runner: "llamacpp"` on `/api/chat` and `/api/pull`, or the hidden `--runner` flag on `ollama pull` and `run` ([types.go](https://github.com/ollama/ollama/blob/v0.40.18/api/types.go#L138-L146)) (V). `/v1` has no such field (M). Whether `/api/chat` with that field fetches the GGUF child when only the MLX one is on disk is untested.
+
+### Gemma 4's loops: a grammar makes them worse
+
+The loop is open in [gemma#622](https://github.com/google-deepmind/gemma/issues/622), [ollama#15502](https://github.com/ollama/ollama/issues/15502) and [gemma#610](https://github.com/google-deepmind/gemma/issues/610) (unconstrained lists on 26B, reports to 22 Oct). Neither Google nor Ollama has shipped a fix.
+- **A grammar amplifies it** (I, the #622 reporter's ten seeds per test on Ollama 0.20.5). 31B looped 7–10/10 under a schema, 26B 4–5/10, and both 0/10 with no schema. Gemma 3 27B was clean. #15502 needed all three of a `format` schema, free-text string fields and Gemma 4.
+- **Unconstrained output isn't immune.** Words double with no grammar ("the the"). Google's hosted API looped 2 of 5 runs of 26B under structured output, and AI Studio failed 10/10 on a string-array schema (I). So the model starts the loop and a grammar traps it (Inf).
+- **Runner.** The same GGUF on standalone llama.cpp-server gave 0/10 loops and 10/10 valid JSON for 26B and 31B, but 31B on Ollama 0.30.8, by then on llama-server, still collapsed under `format` (I).
+- **What doesn't help.** Repeat penalties of 1.0–1.5 under a grammar; greedy decoding; the schema in the prompt for 1,000+ word outputs (10/10 looped). `think=False` removed the loop in one test but made the JSON invalid in all three runs (I). Google's card gives temperature 1.0, top_p 0.95, top_k 64 and nothing on structured output ([model card](https://gemma.ai/models/gemma-4/model-card/)) (V). No source tests Bristlenose's 0.1–0.2.
+- **Smaller sizes.** E2B, E4B, 26B and 31B loop on long factual enumeration with no JSON, at about 12% of runs ([arXiv:2606.13705](https://arxiv.org/abs/2606.13705)) (I). The 12B loops while thinking on llama-server (I, forum). Bristlenose's E4B GGUF run under its schema finished without a recorded loop (M).
+
+For Bristlenose this means that for Gemma 4, unconstrained output with the schema in the prompt and client-side validation has the lowest reported loop rate on any runner (Inf). It is the better path, not a degraded fallback. A verbatim quote is copied rather than invented, which the reports suggest is less loop-prone, but that is unmeasured (Inf).
+
+### Other families: nothing beats the shortlist
+
+No Mistral, Llama, DeepSeek, Phi, Granite, OLMo, SmolLM, Bonsai or LFM2.5 tag has an MLX build (M). On a Mac today that is an advantage: they never meet the Homebrew 501 or MLX's whitespace runaway, and they always get llama.cpp's bounded grammar. The cost is MLX's speed. The older families also carry dense attention: 4–6 GiB of KV at 32k for the 8–24B models, against 1.0 GiB for Qwen 3.5 9B (C). So Ministral 3 8B at ~10.6 GB is worse on a 16 GB Mac than Qwen 3.5 9B (Inf).
+
+| Model (tag) | MLX on a Mac (M) | Download (M) | In use at 32k (C) | Licence | Thinking | Verdict |
+|---|---|---|---|---|---|---|
+| Bonsai 2 27B `bonsai-2:27b` (Q2_0, Qwen 3.8 27B derivative) | no | 8.26 GB | ~10.4 GB | Apache 2.0 (V) | on by default; off works through the qwen3.5 renderer (M) | **Measure, 16 GB.** IFEval 91.3 and IFBench 74.0 against 91.5/71.0 at full precision, but MuSR −9 points (V, thinking on); needs Ollama ≥ 0.40.6 (M) |
+| Granite 4.2 8B `granite4.2:8b` (25 Aug) | no | 5.35 GB | ~10.0 GiB | Apache 2.0 | on by default; off through the GGUF's Jinja `enable_thinking`, unmeasured | **Measure, 16–24 GB.** RULER 81.0 at 64K, IFBench 79.3 (V); library sets temperature 1.0, so pin it |
+| Muse Glimmer 30B `muse-glimmer:30b-q4_K_M` (Aug) | `latest` GGUF; a `30b-mlx` tag exists | 18.16 GB | ~18.7 GB | Apache 2.0 per card (V); no licence layer in the manifest (M) | on; `false` sends a "none" level the card doesn't document | **Measure, 32 GB.** IFBench 77.0, AA-LCR 80.0 at high reasoning (V); 82% hallucination on a knowledge test (I) |
+| Mistral Small 3.2 `mistral-small3.2:24b` | no | 15.18 GB | ~20.6 GB | Apache 2.0 | none | Second opinion, 32 GB. Vendor "infinite generations" 1.29%, IF 84.8 (V) |
+| Ministral 3 14B `ministral-3:14b` | no | 9.08 GB | ~14.5 GB | Apache 2.0 | none | Second opinion, 24 GB. Trained at 16k, stretched to 256k (V) |
+| Inkling 2 Mini `inkling-2-mini:26b-a5b-iq4_NL` (20 Nov) | `latest` is MLX; pin this GGUF tag | 18.27 GB | ~19–19.5 GB | Apache 2.0 | off = effort 0, which the vendor says doesn't fully disable reasoning | Second opinion, 32 GB. Strong long-context (V), days-old runtime support |
+| LFM2.5 24B `lfm2.5:24b` | no | 14.53 GB | ~15.2 GB | LFM Open License: no commercial use at $10M+ revenue (V) | always reasons (V) | Only after a licence decision |
+| Granite 4.0 H-Tiny `granite4:tiny-h` | no | 4.23 GB | ~4.2 GiB (4 of 40 layers attend) | Apache 2.0 | none | Memory outlier; no long-context evidence |
+| Llama 3.1 8B; Llama 3.3 70B; Llama 4 Scout | no | 4.92; 42.52; 67.44 GB | ~9.2; ~53; ~70–74 GB | Llama licences; Llama 4 withholds the multimodal licence from EU entities (V) | none | No. 3.3 70B (IFEval 92.1) only for 96–128 GB |
+| Mistral NeMo 12B | no | 7.07 GB | ~12.4 GB | Apache 2.0 | none | No: RULER 69.0 at 32K (I) |
+| Magistral 24B; DeepSeek-R1 distills | no | 14.33; 1.1–42.5 GB | — | Apache 2.0; MIT | reasoning only; `false` pre-fills an empty think block (M) | No |
+| Phi-4 (16K), SmolLM2 (8K), OLMo 2 (4K) | no | — | can't hold 32k (M) | MIT / Apache 2.0 | — | No |
+| Phi-4-mini; Olmo 3 / 3.1 Instruct | no | 2.49; 4.47 / 19.48 GB | ~6.3; ~9.7–20 GiB | MIT; Apache 2.0 | none (`olmo-3:latest` is the Think model) | No. Olmo 3 has a llama.cpp YaRN bug ([#33191](https://github.com/ggml-org/llama.cpp/issues/33191), I) |
+
+**July–November releases.** Thirteen local families arrived or changed (M, [library](https://ollama.com/search?o=newest)). Flint, Laguna, Ripple, North Mini Code and MiMo-V2.6 are coding-agent tunes. Every frontier release is cloud-only on Ollama: GLM-5.3, Kimi K3, MiniMax M3.1, DeepSeek V4, Mistral Large 4 and others. Cohere's in-window models are non-commercial. Bonsai 2, MiMo-V2.6 and Ornith-1.5 share the `qwen35` architecture, so they add no independent lineage (M/Inf). On a Mac, `latest` resolves to MLX for inkling-2-mini, flint, ripple-preview, mimo-v2.6 and lfm3 (M).
+
+**The indices don't line up.** Artificial Analysis's scale appears to have changed between August and November, and Granite 4.2 8B appears there as 5, 11 and 20 (I). No candidate publishes JSON-schema adherence, verbatim-extraction or loop-rate figures.
+
+### Prior art
+
+Published evidence on local models for interview analysis is thin and a generation old. No study tests Qwen 3.x, Gemma 3 or 4, gpt-oss, Mistral Small 3.x or Llama 4 on interview thematic analysis, so Bristlenose's own runs are among the first.
+- **Coding.** Open Qwen, Llama and Mistral 7–8B models were not reliable enough for unsupervised coding of 13,000 conversations; Claude 3.5 Haiku had under 3% malformed JSON ([arXiv 2507.17985](https://arxiv.org/html/2507.17985v3)) (I). The best local result found is a 70B model on psychiatric interviews, Jaccard 0.44–0.69 against human themes (I).
+- **The cloud bar.** On a focus group, ChatGPT-5 and Claude 4 Sonnet matched human deductive coding (93.5% against 92.7%). Cohen's κ was 0.34, while Gwet's AC1 was 0.93: κ collapses on imbalanced codes, so report AC1 too ([PLOS Digital Health](https://journals.plos.org/digitalhealth/article?id=10.1371%2Fjournal.pdig.0001189)) (I).
+- **Quote fidelity.** GPT-5.2 over 20–30k-word batches of heart-failure transcripts gave 68% verbatim, 20% paraphrased, 3% truncated and 9% partly or wholly hallucinated quotes, checked by hand ([JAMIA](https://pmc.ncbi.nlm.nih.gov/articles/PMC13687763)) (I). Recall is a separate failure: 44% of the excerpts humans chose were missed (I). Bristlenose's E4B GGUF run had 0 invented quotes of 95 (M), though the taxonomies differ.
+- **Long context.** On NoLiMa, which removes literal-match shortcuts, Gemma 3 12B falls from 87.4 to 27.4 at 8k and 7.3 at 32k, and Llama 3.3 70B holds 85% of its base only to 2k ([NoLiMa](https://huggingface.co/datasets/amodaresi/NoLiMa/raw/main/README.md)) (I). It has no Qwen or Gemma 4 rows. Sending one topic segment of 2–4k tokens rather than a whole session is worth testing (Inf).
+- **Format.** JSONSchemaBench finds a two-fold spread in schema coverage between frameworks ([arXiv 2501.10868](https://arxiv.org/abs/2501.10868v2)) (I). The Format Tax paper puts most of the cost of asking for JSON in the instruction, not the decoder ([arXiv 2604.03616](https://arxiv.org/abs/2604.03616)) (I). For Gemma 4 the issue-tracker evidence is stronger than either.
+- **Tools.** QDA Miner/WordStat 2026.1 runs local models through Ollama or LM Studio, with no model recommendation (V). No other mainstream QDA tool with a local option was confirmed. A measured recommendation would be unusual in the field (Inf).
+
+### Client findings that bear on the fix
+
+1. **Cap the output.** Ollama's default `num_predict` is -1. On llama-server, generation is then bounded only at 10 × `num_ctx` ([types.go](https://github.com/ollama/ollama/blob/v0.40.18/api/types.go#L1340-L1356); [llama_server.go](https://github.com/ollama/ollama/blob/v0.40.18/llm/llama_server.go#L118-L136)) (V), which fits the ~21,000-token Llama runaway. Size the cap from the expected reply, and treat `length` as a failure.
+2. **An HTTP 200 can be empty.** On 0.40.18, `json_schema` requests on the llama.cpp path have returned 200 with an empty body mid-load: 92 of 535 requests, against none on 0.40.16/17 ([ollama#19918](https://github.com/ollama/ollama/issues/19918), open) (I). Validation must reject it.
+3. **The default repeat penalty is gone.** PR #17679 (merged 12 Aug, in v0.32.10) changed the default from 1.1 to 1.0 for models that set none, and warns that small older models will repeat more ([commit](https://github.com/ollama/ollama/commit/6a261db7d)) (V). `repeat_penalty` isn't an OpenAI field, so on `/v1` it probably needs the native API or a Modelfile (Inf).
+4. **MLX's whitespace runaway** will meet users of the official app once XGrammar loads, as described above. The output cap and the unconstrained fallback cover it.
+5. **Prompt-cache reuse is off** for hybrid and sliding-window models on llama-server ([llama.cpp#22940](https://github.com/ggml-org/llama.cpp/issues/22940), closed as stale) (I). That covers Qwen 3.5/3.8, Gemma 4 and most candidates, so each call pays a full 10–15k-token prefill (Inf).
+6. **Thinking off is per model.** Since v0.40.17, "off" maps to the model's lowest level, and `/api/show` advertises each model's controls (V). For Gemma 4, keep sending no thinking switch: `think=False` under a schema broke its JSON in #15502 (I).
+
+### What to measure next
+
+Measure on the protocol of § "Measured on the Bristlenose task", plus an explicit output cap, a constrained and an unconstrained arm, reasoning tokens counted separately, and quotes scored in both Bristlenose's four classes and JAMIA's five.
+- **First runs:** `bonsai-2:27b` (16 GB, against `qwen3.5:9b`), `granite4.2:8b` (16–24 GB), `muse-glimmer:30b-q4_K_M` (32 GB, against `qwen3.8:27b` and `gemma4:26b`).
+- **Second opinions:** `mistral-small3.2:24b`, `ministral-3:14b`, `inkling-2-mini:26b-a5b-iq4_NL`.
+- **Gemma 26B in three arms:** GGUF constrained, GGUF unconstrained, and MLX on the official app. This decides whether the shortlist keeps its 26B.
+
+The deciding test is Bonsai 2. The vendor reports 98% benchmark retention at 2.25 bits per weight, while this note's § "Quality notes" cites a finding that low-bit models invent more quotes. Only a verbatim check on real transcripts can say which holds.
 
 ## What must be verified before shipping
 
 1. **The default context on small Macs, on a current Ollama (0.40.18 or later).** On a 16 GB Mac and a 24 GB Mac, read the `vram-based default context` log line and Metal's `recommendedMaxWorkingSetSize`, and confirm whether those machines get 4k. Do the same on one 64 GB Mac to confirm the 256k default.
-2. **What a Mac actually pulls, and whether it can run Bristlenose.** Done for `gemma4:e4b` (MLX, 501 on structured output). For each other proposed tag on Apple silicon under 0.40.x, record the build that arrives and its size, and send one `json_schema` request. Then test the GGUF route: `ollama pull --runner llamacpp <tag>` and a `/v1` request. Then load it at 32k and read `ollama ps`, with f16 KV and one slot, and again with MLX's automatic parallelism.
+2. **What a Mac actually pulls, and whether it can run Bristlenose.** Done for `gemma4:e4b` on a Homebrew install (MLX, 501 on structured output). Repeat it on the official Ollama app, which ships the XGrammar library. For each other proposed tag on Apple silicon under 0.40.x, record the build that arrives and its size, and send one `json_schema` request. Then test the GGUF route: `ollama pull --runner llamacpp <tag>` and a `/v1` request. Then load it at 32k and read `ollama ps`, with f16 KV and one slot, and again with MLX's automatic parallelism.
 3. **Overflow, before and after the fix.** The silent truncation is reproduced for a Gemma 4 E4B GGUF build at 4k (done, 27 Nov). With the fix, confirm a 13.6k-token transcript arrives whole, with no "truncating input prompt" warning in the server log.
 4. **The thinking switch.** Confirm that `reasoning_effort: "none"` on `/v1` turns thinking off for qwen3.5:4b, qwen3.5:9b and qwen3.8:27b under `json_schema`, with valid JSON and no reasoning tokens.
 5. **Bristlenose quality for each proposed model, on real transcripts.** Measure:

@@ -115,6 +115,46 @@ struct FigJamSheetTests {
         #expect(!asked)
     }
 
+    @Test("closing the sheet while the file is built offers no save panel", .timeLimit(.minutes(1)))
+    func cancelledMidBuild() async throws {
+        let (m, _) = Self.model()
+        var asked = false
+        m.chooseDestination = { _ in asked = true; return nil }
+        // A build that finishes regardless of cancellation, as a fetch whose bytes are already in
+        // does: only the check after it can keep the panel from opening.
+        var release: CheckedContinuation<Void, Never>?
+        m.fetchBoard = { @MainActor _ in
+            await withCheckedContinuation { release = $0 }
+            return (Data("{}".utf8), 3)
+        }
+        m.startSave()
+        for _ in 0..<400 where release == nil { try await Task.sleep(nanoseconds: 5_000_000) }
+        let building = try #require(release)
+        #expect(m.step == .preparing)
+        m.cancelSave()  // what the sheet's onDisappear does on Cancel or Escape
+        building.resume()
+        await m.saveTask?.value
+        #expect(!asked)
+        #expect(m.error == nil)
+        #expect(m.step == .configure)
+    }
+
+    @Test("a build stopped by closing the sheet says no error", .timeLimit(.minutes(1)))
+    func cancelledBuildSaysNothing() async {
+        let (m, _) = Self.model()
+        var asked = false
+        m.chooseDestination = { _ in asked = true; return nil }
+        m.fetchBoard = { _ in
+            try await Task.sleep(nanoseconds: 2_000_000_000)  // throws CancellationError on cancel
+            return (Data("{}".utf8), 3)
+        }
+        m.startSave()
+        m.cancelSave()
+        await m.saveTask?.value
+        #expect(!asked)
+        #expect(m.error == nil)
+    }
+
     @Test("parked: the flag reads off by default")
     func parkedByDefault() {
         let defaults = UserDefaults.standard

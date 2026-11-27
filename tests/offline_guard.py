@@ -2,7 +2,8 @@
 
 ``install(log)`` replaces the ``socket`` module's resolvers (``getaddrinfo``,
 ``gethostbyname``, ``gethostbyname_ex``, ``gethostbyaddr``) and the socket methods that
-reach an address (``connect``, ``connect_ex``, ``sendto``, ``sendmsg`` with an address).
+reach an address (``connect``, ``connect_ex``, ``sendto``, and ``sendmsg`` with an address
+where the platform has it: Windows does not).
 A name that is not loopback fails the way macOS fails it with no network (``gaierror``
 "nodename nor servname provided"), and a non-loopback address fails with ``ENETUNREACH``.
 Loopback (``127.0.0.0/8``, ``::1``, ``localhost``) and Unix sockets pass, so the serve can
@@ -84,7 +85,8 @@ def install(
     real_connect = socket.socket.connect
     real_connect_ex = socket.socket.connect_ex
     real_sendto = socket.socket.sendto
-    real_sendmsg = socket.socket.sendmsg
+    # POSIX only: Windows' socket has no sendmsg, so there is nothing to guard there.
+    real_sendmsg = getattr(socket.socket, "sendmsg", None)
 
     def note(what: str) -> None:
         with log.open("a", encoding="utf-8") as fh:
@@ -129,14 +131,16 @@ def install(
     def sendmsg(self: socket.socket, buffers: Any, *rest: Any) -> int:
         if len(rest) >= 3 and rest[2] is not None and _outbound(self, rest[2]):
             raise refuse("sendmsg", rest[2])
-        return real_sendmsg(self, buffers, *rest)
+        assert real_sendmsg is not None
+        return int(real_sendmsg(self, buffers, *rest))
 
     for name in real:
         set_attr(socket, name, resolver(name))
     set_attr(socket.socket, "connect", connect)
     set_attr(socket.socket, "connect_ex", connect_ex)
     set_attr(socket.socket, "sendto", sendto)
-    set_attr(socket.socket, "sendmsg", sendmsg)
+    if real_sendmsg is not None:
+        set_attr(socket.socket, "sendmsg", sendmsg)
 
 
 def main() -> None:

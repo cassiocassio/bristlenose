@@ -77,7 +77,7 @@ def safe_link(url: str | None) -> str | None:
 
 def file_link(path: Path | str) -> str | None:
     p = Path(path)
-    return p.as_uri() if p.exists() else None
+    return p.resolve().as_uri() if p.exists() else None
 
 
 # ---- the panel skeleton -----------------------------------------------------
@@ -219,7 +219,9 @@ def atomic_write(path: Path, text: str) -> None:
     path = Path(path)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     tmp = path.with_name("." + path.name + f".{os.getpid()}.tmp")
-    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    # O_NOFOLLOW is POSIX-only; Windows has no symlink-follow flag (and creating one needs privilege).
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | nofollow, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         fh.write(text)
     os.chmod(str(tmp), 0o600)

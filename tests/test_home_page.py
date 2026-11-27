@@ -9,7 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -23,7 +23,7 @@ HOSTILE = "</script><script>alert(2)</script><!--     & < >"
 
 def hostile_panels():
     p = []
-    p.append(hl.panel("fresh", "Fresh one", link=Path("/tmp/x.html").as_uri(), as_of=NOW - 240, as_of_label="pulled",
+    p.append(hl.panel("fresh", "Fresh one", link=PurePosixPath("/tmp/x.html").as_uri(), as_of=NOW - 240, as_of_label="pulled",
                       max_age=3600, body=[{"kind": "kpis", "items": [{"n": 1, "l": HOSTILE}]}]))
     p.append(hl.panel("old", "Old one", as_of=NOW - 7200, as_of_label="pulled", max_age=3600))
     p.append(hl.panel("srcold", "Source old", as_of=NOW - 864000, as_of_label="changed", max_age=259200, refreshable=False))

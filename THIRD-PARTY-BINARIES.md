@@ -160,7 +160,7 @@ procurement; under-listing would be a compliance risk.
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
 | `httpcore2` | 2.16.2 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `httptools` | 0.9.0 | MIT | <https://github.com/MagicStack/httptools> |
-| `httpx` | 0.28.1 | BSD License | <https://github.com/encode/httpx> |
+| `httpx` | 0.29.0 | BSD-3-Clause | <https://github.com/encode/httpx> |
 | `httpx2` | 2.16.2 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `huggingface_hub` | 1.33.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
 | `idna` | 3.20 | BSD-3-Clause | <https://github.com/kjd/idna> |
@@ -179,8 +179,8 @@ procurement; under-listing would be a compliance risk.
 | `mcp` | 2.3.0 | MIT License | <https://modelcontextprotocol.io> |
 | `mcp-types` | 2.3.0 | MIT License | <https://modelcontextprotocol.io> |
 | `mdurl` | 0.1.2 | MIT License | <https://github.com/executablebooks/mdurl> |
-| `mlx` | 0.32.4 | MIT | <https://github.com/ml-explore/mlx> |
-| `mlx-metal` | 0.32.4 | MIT | <https://github.com/ml-explore/mlx> |
+| `mlx` | 0.32.5 | MIT | <https://github.com/ml-explore/mlx> |
+| `mlx-metal` | 0.32.5 | MIT | <https://github.com/ml-explore/mlx> |
 | `mlx-whisper` | 0.4.3 | MIT | <https://github.com/ml-explore/mlx-examples> |
 | `more-itertools` | 11.2.1 | MIT | <https://github.com/more-itertools/more-itertools> |
 | `mpmath` | 1.3.0 | BSD License | <http://mpmath.org/> |
@@ -189,7 +189,7 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.1 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.32.0 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.59.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.60.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.2 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.4 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -214,7 +214,7 @@ procurement; under-listing would be a compliance risk.
 | `python-multipart` | 0.0.34 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
 | `PyYAML` | 6.0.4 | MIT License | <https://pyyaml.org/> |
 | `referencing` | 0.37.0 | MIT | <https://github.com/python-jsonschema/referencing> |
-| `regex` | 2026.11.23 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
+| `regex` | 2026.11.25 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
 | `requests` | 2.34.2 | Apache Software License | <https://github.com/psf/requests> |
 | `requests-file` | 3.0.1 | Apache Software License | <https://codeberg.org/dashea/requests-file> |
 | `rich` | 15.0.0 | MIT License | <https://github.com/Textualize/rich> |
@@ -239,7 +239,7 @@ procurement; under-listing would be a compliance risk.
 | `tqdm` | 4.70.1 | MPL-2.0 AND MIT | <https://tqdm.github.io> |
 | `truststore` | 0.10.5 | MIT | <https://github.com/sethmlarson/truststore> |
 | `typeguard` | 4.6.1 | MIT | <https://typeguard.readthedocs.io/en/latest/> |
-| `typer` | 0.29.2 | MIT | <https://github.com/fastapi/typer> |
+| `typer` | 0.29.3 | MIT | <https://github.com/fastapi/typer> |
 | `typing_extensions` | 4.16.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | `urllib3` | 2.8.0 | MIT | <https://github.com/urllib3/urllib3/blob/main/CHANGES.rst> |
 | `uvicorn` | 0.54.0 | BSD-3-Clause | <https://uvicorn.dev/> |

@@ -467,6 +467,18 @@ satisfy is not a test.**
 
 **Tell for both:** a gate whose verdict changes when you add a comment.
 
+### A Python test that reads Swift to pin "unconditional" must pin the good shape, not list the bad ones (26 Nov 2026)
+
+`tests/test_help_menu_privacy_link.py` guards Help ▸ Privacy Policy, the app's only always-shown privacy link (App Store 5.1.1(i)). The
+first version (`71ee7c021`) used a hand-rolled Swift lexer, brace depth and a denylist (`if`, `#if`, `.disabled`, `.hidden`). A Fable
+review reproduced **seven false greens**, each a way to be conditional that the list didn't name: an `if` inside the Help group or
+inside the button's action, the group moved into a child `Commands` struct called under an `if`, `.keyboardShortcut` then `.disabled`,
+a postfix `#if`, a same-prefix decoy struct, a gutted `open()`. Its mutants asserted only "some problem", so five checks had no mutant
+pinning them. The fix (`40d7950f0`) pins the one known-unconditional shape (top-level statement, no `#if`, no modifiers, action exactly
+`Self.open(url)`), reads nesting from Xcode's 4-space indentation instead of lexing Swift, and makes each mutant assert the one message
+its check gives; switching off any of the 14 checks then turns the suite red. For a guarantee that fails silently in review, a false
+red on a harmless refactor is the cheap failure.
+
 ### A negative fixture proves nothing when every fixture is rejected — match the row's ✗ line, and pass an intact one
 
 `test-check-pkg-shippable.sh` had six negative cases that could not fail

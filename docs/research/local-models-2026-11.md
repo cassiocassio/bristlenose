@@ -549,6 +549,26 @@ What this settles for the catalogue:
 
 These are product findings for the client (context, structured output on MLX, the `max_tokens` cap, the deadline, the error text). Three were fixed on 27 Nov 2026: the context, the MLX refusal, and thinking (§ "Ways to set the context"). The deadline that counts queued time, and its "check your network" wording, remain.
 
+### With the fixed client (27 Nov 2026, evening)
+
+The same three sessions, re-run with the client fixes in place (CLI from main at `331d7e984`, which includes the context, fallback and thinking fixes), on Homebrew Ollama 0.40.18 with q8_0 KV and flash attention, at Bristlenose's default concurrency of 3 (M):
+
+| | Claude Sonnet 4.6 (earlier run) | Gemma 4 E4B, MLX (Mac default; 501, then unconstrained with client validation) | Gemma 4 E4B, GGUF (schema enforced) |
+|---|---|---|---|
+| Finished | yes, 5 min 10 s | with a warning, 13 min 10 s | yes, 15 min 47 s |
+| Quotes | 85 | 105 | 82 |
+| Verbatim (exact / joined / altered / invented) | 75 / 8 / 2 / 0 | 43 / 47 / 15 / 0 | 64 / 17 / 1 / 0 |
+| Sections / themes | 13 / 8 | 7 / 7, one catch-all | 5 / 8, 17 quotes uncategorised |
+| Failed calls | 0 | 3: the discussion lens, one per session | 0 |
+| `ollama ps` | — | 9.6–10 GB, runner mlx, context 32768 | 1.2 GB (undercounts), llamacpp, 32768 |
+
+- **The Mac's default build now runs.** Earlier the analysis failed in 8 seconds; now it finishes in 13 minutes.
+- **Without a grammar, enum fields drift.** The discussion lens's labels failed validation in all three sessions (`literal_error` on `kind`, after 3 attempts), and 23 quotes came back with an unrecognised sentiment such as "neutral" or null.
+- **The transcript's speaker label leaks into quotes.** 58 of the 105 MLX quotes begin with "(Speaker A)", against none on GGUF. That accounts for much of the gap in exact matches (Inf).
+- **The GGUF run went from 37 minutes to 16** on the same model with the fixed client. The earlier run had lost time to pass deadlines and split retries.
+
+The two unconstrained-path failures are client work: listing the allowed values in the prompt, passing the validation error back on retry, and stripping a leading speaker label would each help (Inf).
+
 ## Beyond Gemma and Qwen: the wider field (27 Nov 2026)
 
 A second pass looked at every other family Ollama carries: Phi, Granite, SmolLM, OLMo, Mistral (Ministral, NeMo, Small, Magistral, Medium), Llama 3.x and 4, the DeepSeek-R1 distills, and everything the library added or updated from July to November 2026. It also covered the prior art on local models for interview analysis, and the Gemma 4 loop and MLX structured-output problems in more depth. No model was pulled or run. Registry sizes, GGUF headers, Ollama's source at v0.40.18, and the test Mac's files and log are (M). Labels otherwise follow this note's scheme. A bug reporter's measurements in an issue are (I). Ollama's source, commits and release notes are (V).

@@ -9,6 +9,7 @@ when pyproject.toml's dependencies change and this was not re-run.
 
     python packaging/windows/lock.py            # needs uv on PATH
     python packaging/windows/lock.py --upgrade  # every package to its latest
+    python packaging/windows/lock.py --upgrade-package=av  # one package (a yanked pin, say)
 
 Without ``--upgrade`` the current pins are kept wherever they still satisfy pyproject.toml, so
 adding a dependency adds it and nothing else moves (uv prefers the versions already in its
@@ -66,7 +67,11 @@ def recorded_digest(constraints_text: str) -> str | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    upgrade = "--upgrade" in (sys.argv[1:] if argv is None else argv)
+    args = sys.argv[1:] if argv is None else argv
+    upgrade = "--upgrade" in args
+    # One package, when a kept pin must move: uv keeps a pin it then warns is
+    # yanked (av 18.1.0, memory corruption decoding audio, found 28 Nov 2026).
+    only = [a.split("=", 1)[1] for a in args if a.startswith("--upgrade-package=")]
     with tempfile.TemporaryDirectory() as tmp:
         build_in = Path(tmp) / "build.in"
         build_in.write_text("\n".join(BUILD_TOOLS) + "\n", encoding="utf-8")
@@ -86,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
             # Kept pins never apply to the trust store: holding an old CA bundle
             # is itself the risk (the emSign root, 23 Oct 2026).
             "--upgrade-package", "certifi",
+            *[arg for name in only for arg in ("--upgrade-package", name)],
         ]
         result = subprocess.run(cmd, cwd=ROOT)
         if result.returncode != 0:

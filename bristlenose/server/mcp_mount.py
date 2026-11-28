@@ -326,9 +326,10 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         # info, not warning: the terminal handler shows WARNING+, and this is
         # the expected state for every install without the optional extra —
         # the CLI's "MCP: unavailable" line is the user-facing signal.
+        from bristlenose.utils.install_channel import add_extra_command
+
         logger.info(
-            "mcp extra not installed — /mcp/ not mounted "
-            '(pip install "bristlenose[mcp]")'
+            "mcp extra not installed — /mcp/ not mounted (%s)", add_extra_command("mcp")
         )
         return None
 

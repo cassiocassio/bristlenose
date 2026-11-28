@@ -157,3 +157,82 @@ def test_the_presidio_hint_on_uv_rebuilds_the_install(uv_channel: None) -> None:
     fix = doctor_fixes.get_fix("presidio_missing", "pip")
     assert "uv tool install --reinstall bristlenose" in fix
     assert "pipx" not in fix
+
+
+# ---------------------------------------------------------------------------
+# The other "install this extra" hints follow the install channel too
+# ---------------------------------------------------------------------------
+
+
+def test_the_transcription_backend_hint_on_uv_rebuilds(uv_channel: None) -> None:
+    fix = doctor_fixes.get_fix("backend_import_fail", "pip")
+    assert "uv tool install --reinstall bristlenose" in fix
+    assert "pipx" not in fix
+
+
+def test_the_apple_silicon_log_names_the_channel_command(
+    uv_channel: None, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from bristlenose.stages import s05_transcribe
+    from bristlenose.utils.hardware import AcceleratorType
+
+    monkeypatch.setattr(install_channel, "installed_extras", list)
+    hw = MagicMock(accelerator=AcceleratorType.APPLE_SILICON, mlx_available=False)
+    with caplog.at_level("INFO"):
+        s05_transcribe._resolve_backend("auto", hw)
+    assert 'uv tool install --force "bristlenose[apple]"' in caplog.text
+    assert "pip install" not in caplog.text
+
+
+def test_the_mcp_unavailable_line_on_uv(
+    uv_channel: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from bristlenose.cli import _print_mcp_connect
+
+    monkeypatch.setitem(sys.modules, "mcp", None)
+    monkeypatch.setattr(install_channel, "installed_extras", list)
+    _print_mcp_connect(8150)
+    out = capsys.readouterr().out
+    assert 'uv tool install --force "bristlenose[mcp]"' in out
+
+
+# ---------------------------------------------------------------------------
+# The channel is read from the tool's own marker, wherever the env lives
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("marker", "channel"), [("uv-receipt.toml", "uv"), ("pipx_metadata.json", "pipx")]
+)
+def test_a_moved_tool_dir_is_still_recognised(
+    marker: str, channel: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """UV_TOOL_DIR or PIPX_HOME can put the env anywhere; on 28 Nov 2026 a uv
+    install under a custom UV_TOOL_DIR was told to `pip install` its extras."""
+    env = tmp_path / "my-tools" / "bristlenose"
+    env.mkdir(parents=True)
+    (env / marker).write_text("", encoding="utf-8")
+    monkeypatch.setattr(sys, "prefix", str(env))
+    monkeypatch.setattr(install_channel, "installed_extras", list)
+    assert install_channel.install_channel() == channel
+    assert install_channel.add_extra_command("voice").startswith(channel)
+    fix = doctor_fixes.get_fix("serve_deps_missing", "pip")
+    assert ("reinstall" in fix) and (channel in fix)
+
+
+def test_every_uv_rebuild_names_the_running_python(
+    uv_channel: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`uv tool install --force` picks a Python again unless told. On an Intel
+    Mac (28 Nov 2026) a working 3.12 install was rebuilt on 3.14, which has no
+    onnxruntime wheel there. Every rebuild we suggest names the running one."""
+    monkeypatch.setattr(sys, "version_info", (3, 12, 16, "final", 0))
+    monkeypatch.setattr(install_channel, "installed_extras", list)
+    for command in (
+        install_channel.add_extra_command("voice"),
+        install_channel.inject_command("any-llm-sdk[cohere]==1.44.0"),
+        doctor_fixes.get_fix("serve_deps_missing", "pip"),
+        doctor_fixes.get_fix("presidio_missing", "pip"),
+        doctor_fixes.get_fix("backend_import_fail", "pip"),
+    ):
+        assert "--python 3.12" in command, command

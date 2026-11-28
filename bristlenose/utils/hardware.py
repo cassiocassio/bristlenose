@@ -162,10 +162,13 @@ def detect_hardware() -> HardwareInfo:
         info.mlx_available = _check_mlx_available()
 
         if not info.mlx_available:
+            from bristlenose.utils.install_channel import add_extra_command
+
             logger.info(
                 "Apple Silicon detected (%s) but mlx-whisper not installed. "
-                "Install with: pip install bristlenose[apple]",
+                "Install with: %s",
                 info.chip_name,
+                add_extra_command("apple"),
             )
     else:
         # Check for NVIDIA CUDA

@@ -928,10 +928,13 @@ class TestCliConnectBlock:
         import sys
 
         from bristlenose.cli import _print_mcp_connect
+        from bristlenose.utils import install_channel
 
         # A None entry makes `import mcp` raise ImportError — the same
         # probe the mount gate uses, so this exercises the real branch.
         monkeypatch.setitem(sys.modules, "mcp", None)
+        # The hint keeps whatever extras this venv has; pin none for an exact spec.
+        monkeypatch.setattr(install_channel, "installed_extras", list)
         _print_mcp_connect(8150)
         out = capsys.readouterr().out
         assert "unavailable" in out

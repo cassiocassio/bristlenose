@@ -24,7 +24,15 @@ from pathlib import Path
 
 def install_channel() -> str:
     """``"pipx"``, ``"uv"``, ``"brew"`` or ``"pip"``, from this Python's prefix."""
-    parts = Path(sys.prefix).parts
+    prefix = Path(sys.prefix)
+    # Each tool's own marker in the environment it built: exact, and right
+    # wherever UV_TOOL_DIR or PIPX_HOME has moved it (the paths below aren't).
+    if (prefix / "uv-receipt.toml").is_file():
+        return "uv"
+    if (prefix / "pipx_metadata.json").is_file():
+        return "pipx"
+    # Backslashes folded so a Windows prefix splits the same on any OS (tests).
+    parts = Path(sys.prefix.replace("\\", "/")).parts
     if "pipx" in parts:
         return "pipx"
     # uv tool venvs: ~/.local/share/uv/tools/<name>, or under %APPDATA% on Windows.
@@ -44,6 +52,8 @@ def installed_extras() -> list[str]:
         present.append("any-llm")
     if _importable("mlx_whisper"):
         present.append("apple")
+    if _importable("mcp"):
+        present.append("mcp")
     return present
 
 
@@ -71,6 +81,17 @@ def _spec(extra: str) -> str:
     return f"bristlenose[{','.join(extras)}]"
 
 
+def uv_python_flag() -> str:
+    """``--python X.Y``, the Python this tool runs on, for every uv rebuild we suggest.
+
+    ``uv tool install --force`` picks an interpreter again unless told: on an
+    Intel Mac a working 3.12 install was rebuilt on 3.14, which has no
+    onnxruntime wheel there, and the rebuild failed (28 Nov 2026). Naming the
+    running Python keeps whatever already works.
+    """
+    return f"--python {sys.version_info[0]}.{sys.version_info[1]}"
+
+
 def add_extra_command(extra: str) -> str:
     """The command that adds ``bristlenose[extra]`` to this install, keeping the rest."""
     from bristlenose import __version__
@@ -80,7 +101,7 @@ def add_extra_command(extra: str) -> str:
     if channel == "pipx":
         return f'pipx install --force "{spec}"'
     if channel == "uv":
-        return f'uv tool install --force "{spec}"'
+        return f'uv tool install --force "{spec}" {uv_python_flag()}'
     if channel == "brew":
         # The formula's own pip, pinned to the installed version: the formula
         # itself only installs what its post_install names.
@@ -94,7 +115,10 @@ def inject_command(requirement: str) -> str:
     if channel == "pipx":
         return f'pipx inject bristlenose "{requirement}"'
     if channel == "uv":
-        return f'uv tool install --force "{_spec("any-llm")}" --with "{requirement}"'
+        return (
+            f'uv tool install --force "{_spec("any-llm")}" --with "{requirement}" '
+            f"{uv_python_flag()}"
+        )
     if channel == "brew":
         return f'$(brew --prefix bristlenose)/libexec/bin/pip install "{requirement}"'
     return f'pip install "{requirement}"'

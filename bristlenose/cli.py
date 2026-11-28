@@ -2426,7 +2426,11 @@ def _print_mcp_connect(port: int) -> None:
     try:
         import mcp  # noqa: F401
     except ImportError:
-        console.print('  [dim]MCP:    unavailable — pip install "bristlenose\\[mcp]"[/dim]')
+        from rich.markup import escape
+
+        from bristlenose.utils.install_channel import add_extra_command
+
+        console.print(f"  [dim]MCP:    unavailable — {escape(add_extra_command('mcp'))}[/dim]")
         return
     # Pre-mint the auth token if no serve has minted one yet (the run path
     # prints this block BEFORE create_app runs). create_app recovers this

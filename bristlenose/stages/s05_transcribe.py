@@ -1308,10 +1308,12 @@ def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
     """
     if configured == "mlx":
         if not hw.mlx_available:
+            from bristlenose.utils.install_channel import add_extra_command
+
             logger.warning(
                 "MLX backend requested but mlx-whisper not installed. "
-                "Install with: pip install bristlenose[apple]  "
-                "Falling back to faster-whisper."
+                "Install with: %s  Falling back to faster-whisper.",
+                add_extra_command("apple"),
             )
             return "faster-whisper"
         return "mlx"
@@ -1328,10 +1330,12 @@ def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
         return "mlx"
 
     if hw.accelerator == AcceleratorType.APPLE_SILICON and not hw.mlx_available:
+        from bristlenose.utils.install_channel import add_extra_command
+
         logger.info(
             "Apple Silicon detected but mlx-whisper not installed. "
-            "Using faster-whisper on CPU. For GPU acceleration: "
-            "pip install bristlenose[apple]"
+            "Using faster-whisper on CPU. For GPU acceleration: %s",
+            add_extra_command("apple"),
         )
 
     return "faster-whisper"

@@ -539,6 +539,10 @@ def test_a_provider_key_alone_never_chooses_any_llm(monkeypatch: pytest.MonkeyPa
 # ---------------------------------------------------------------------------
 
 
+# uv rebuilds name the running Python (install_channel.uv_python_flag).
+_UV_PY = f"--python {sys.version_info[0]}.{sys.version_info[1]}"
+
+
 @pytest.mark.parametrize(
     ("prefix", "extra", "inject"),
     [
@@ -548,8 +552,9 @@ def test_a_provider_key_alone_never_chooses_any_llm(monkeypatch: pytest.MonkeyPa
          'pipx install --force "bristlenose[any-llm]"',
          'pipx inject bristlenose "any-llm-sdk[cohere]==1.44.0"'),
         (("home", "u", ".local", "share", "uv", "tools", "bristlenose"),
-         'uv tool install --force "bristlenose[any-llm]"',
-         'uv tool install --force "bristlenose[any-llm]" --with "any-llm-sdk[cohere]==1.44.0"'),
+         'uv tool install --force "bristlenose[any-llm]" ' + _UV_PY,
+         'uv tool install --force "bristlenose[any-llm]" --with "any-llm-sdk[cohere]==1.44.0" '
+         + _UV_PY),
         (("opt", "homebrew", "Cellar", "bristlenose", "0.43.0", "libexec"),
          '$(brew --prefix bristlenose)/libexec/bin/pip install "bristlenose[any-llm]==' + __version__ + '"',
          '$(brew --prefix bristlenose)/libexec/bin/pip install "any-llm-sdk[cohere]==1.44.0"'),

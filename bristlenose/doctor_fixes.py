@@ -238,6 +238,15 @@ def _fix_backend_import_fail(method: str) -> str:
             "--upgrade ctranslate2 faster-whisper\n\n"
             "If that doesn't help: github.com/cassiocassio/bristlenose/issues"
         )
+    from bristlenose.utils.install_channel import install_channel, uv_python_flag
+
+    if install_channel() == "uv":
+        # Both are core dependencies: rebuilding the tool env restores them.
+        return (
+            "Transcription backend failed to load.\n\n"
+            "  uv tool install --reinstall bristlenose " + uv_python_flag() + "\n\n"
+            "If that doesn't help: github.com/cassiocassio/bristlenose/issues"
+        )
     return (
         "Transcription backend failed to load.\n\n"
         "  pipx inject bristlenose ctranslate2 faster-whisper\n\n"
@@ -450,7 +459,7 @@ def _fix_presidio_missing(method: str) -> str:
             "presidio-analyzer presidio-anonymizer\n\n"
             "Then re-run. Or drop --redact-pii if you don't need it."
         )
-    from bristlenose.utils.install_channel import install_channel
+    from bristlenose.utils.install_channel import install_channel, uv_python_flag
 
     if install_channel() == "uv":
         # A core dependency missing from a uv tool env is a damaged install;
@@ -458,7 +467,7 @@ def _fix_presidio_missing(method: str) -> str:
         return (
             "PII redaction requires presidio-analyzer, which should have come\n"
             "with Bristlenose. Rebuild the install:\n\n"
-            "  uv tool install --reinstall bristlenose"
+            "  uv tool install --reinstall bristlenose " + uv_python_flag()
         )
     return (
         "PII redaction requires presidio-analyzer.\n\n"
@@ -692,18 +701,19 @@ def _fix_serve_deps_missing(method: str) -> str:
             "`bristlenose serve` needs packages missing from this install.\n\n"
             "  brew upgrade cassiocassio/bristlenose/bristlenose"
         )
-    # pip / pipx / uv. pipx and uv tool venvs are recognisable from
-    # sys.prefix; suggest the command that rebuilds that venv in place.
-    prefix = sys.prefix.replace("\\", "/")
-    if "pipx" in prefix:
+    # pip / pipx / uv: suggest the command that rebuilds that venv in place.
+    from bristlenose.utils.install_channel import install_channel, uv_python_flag
+
+    channel = install_channel()
+    if channel == "pipx":
         return (
             "`bristlenose serve` needs packages missing from this install.\n\n"
             "  pipx reinstall bristlenose"
         )
-    if "/uv/tools/" in prefix:
+    if channel == "uv":
         return (
             "`bristlenose serve` needs packages missing from this install.\n\n"
-            "  uv tool install --reinstall bristlenose"
+            "  uv tool install --reinstall bristlenose " + uv_python_flag()
         )
     return (
         "`bristlenose serve` needs packages missing from this install.\n\n"

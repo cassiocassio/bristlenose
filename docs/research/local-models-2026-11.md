@@ -1,6 +1,13 @@
 # Local models for each memory size, November 2026: fix the context window and the Mac build first (27 Nov 2026)
 
-_Research note, 27 Nov 2026. A proposal only: the app's `OllamaCatalog` (`desktop/Bristlenose/Bristlenose/LLMProvider.swift`), the CLI default (`local_model` in `bristlenose/config.py`) and the website's set-up page are unchanged until the maintainer decides. Scope: on-device analysis under Ollama for the Bristlenose Mac app and the CLI on macOS and Linux. Ollama v0.40.18 (24 Nov 2026) is the latest stable release; the registry and memory measurements were taken on v0.20.7, and the Bristlenose analysis runs in § "Measured on the Bristlenose task" on v0.40.18. Revised the same day when those runs came in._
+_Research note, 27 Nov 2026. A proposal only: the app's `OllamaCatalog` (`desktop/Bristlenose/Bristlenose/LLMProvider.swift`), the CLI default (`local_model` in `bristlenose/config.py`) and the website's set-up page are unchanged until the maintainer decides. Scope: on-device analysis under Ollama for the Bristlenose Mac app and the CLI on macOS and Linux. Ollama v0.40.18 (24 Nov 2026) is the latest stable release; the registry and memory measurements were taken on v0.20.7, and the Bristlenose analysis runs in § "Measured on the Bristlenose task" on v0.40.18. Revised the same day when those runs came in, and again on 28 Nov 2026 with nine models measured._
+
+**Update, 28 Nov 2026.** Nine models have now been run on the Bristlenose task with the fixed client (§ "Nine models measured, and one model per tier"), and they settle one model per tier:
+- **8 GB:** use a cloud provider.
+- **16 GB:** `gemma4:e4b`, with other large apps closed.
+- **32 GB and 64 GB:** `gemma4:26b`.
+
+Qwen 3.8 27B gave the best quotes of any local model, but it runs into quote extraction's 570-second limit on each call, which costs slower models whole interviews. The proposals below that say otherwise are the 27 Nov reasoning, kept as it was.
 
 Bristlenose should not change its local-model catalogue until the local client sets the context length, and until it can run on the build a current Mac downloads. On Ollama 0.40.18, `gemma4:e4b` on Apple silicon arrives as an MLX build. On the test Mac's Homebrew install that build's runner refused structured output with HTTP 501, so today's recommended model failed at the first call (measured, below). The cause is a library missing from Homebrew's package, not MLX itself (§ "Structured output on MLX: a packaging gap"). Until 27 Nov 2026 the client sent no `num_ctx` (it now sets 32k: § "Ways to set the context"), so Ollama picked a default from the GPU memory it detects: 4,096 tokens on every Mac with 16 GB or less, almost certainly on 24 GB Macs, and on most Linux GPUs. A 60-minute transcript is 9–14k tokens. What happens next depends on which build of the model runs:
 
@@ -663,6 +670,8 @@ Nothing here was run on a 64 GB Mac, and no cloud model was used. The pick rests
 
 ### 64 GB: Qwen 3.8 27B at 8 bits
 
+_Superseded on 28 Nov 2026: the measured runs put `gemma4:26b` at 64 GB, and an 8-bit 27B would overrun quote extraction's 570-second limit (§ "Why the large dense models lose interviews"). The reasoning is kept as it was._
+
 **Pick: `qwen3.8:27b-q8_0`.** Same model as the 32 GB candidate, at twice the precision.
 - **Download:** 29.98 GB (M).
 - **Build:** GGUF only, a single manifest with no MLX child (M). So a Mac runs it on llama.cpp with the schema enforced: no 501, and none of the unconstrained path's drift (§ "With the fixed client").
@@ -713,8 +722,95 @@ Analysis time only: local transcription comes on top. Fanless MacBook Airs may t
 
 **The verdict for a researcher** is quality-first. Speed doesn't rule out any tier for a study left running overnight. Quality decides whether the run is worth it:
 - **16 GB:** worth it, on today's measurements. Gemma 4 E4B under the schema gave 82 quotes, 64 exact and none invented, with weaker themes than Claude's.
-- **32 and 64 GB:** waiting on the 32 GB runs.
+- **32 and 64 GB:** Gemma 4 26B, at about 10 minutes per hour of interview on an M2 Max (§ "Nine models measured").
 - **8 GB:** no model examined fits with a browser open, so use a cloud provider.
+
+## Nine models measured, and one model per tier (28 Nov 2026)
+
+**One model per tier:**
+
+| Mac memory | Model | Download on a Mac | In memory at 32k | Evidence |
+|---|---|---|---|---|
+| 8 GB | none: use a cloud provider | | | Qwen 3.5 4B runs, but finds about half the quotes (M) |
+| 16 GB | `gemma4:e4b`, with other large apps closed | 9.5 GB (MLX) | 10 GB | measured, clean (M) |
+| 32 GB | `gemma4:26b` | 16 GB (MLX) | 16 GB | measured, clean (M) |
+| 64 GB | `gemma4:26b` | 16 GB (MLX) | 16 GB | the 32 GB run, with more room to spare (Inf) |
+| 128 GB | "With 128 GB you can run models such as Qwen 3.5 122B; at that size you'll want to compare a few on your own interviews before trusting one." | | | |
+
+**What changed since 27 Nov:**
+- **The 64 GB pick is no longer the 8-bit Qwen 3.8 27B.** The 4-bit Qwen 3.8 27B gave the best quotes of any local model. But its quote-extraction passes already take 450–550 s on this Mac, against a 570 s limit. An 8-bit build, or a slower chip, would pass that limit, and the analysis would lose whole interviews (below).
+- **16 GB loses its 9B "balanced" step.** On the run below, Qwen 3.5 9B's discussion stage failed.
+
+### How the runs were made
+
+- **Hardware and software:** one M2 Max with 32 GB (400 GB/s) and Ollama 0.40.18 from Homebrew, using flash attention, a q8_0 KV cache and `num_ctx` 32768.
+- **Command:** `bristlenose analyze --llm local` on three public test sessions of 18, 36 and 38 minutes (91 minutes in all), with each run in a fresh project.
+- **One model at a time.** Each model was pulled, run, stopped and removed before the next started, and no other model ran during any run.
+- **Commits.** The runs were spread over the commits `5fdce3f24`, `2bdb7930c`, `dea44c6f7` and `63dbc8274`. Between the first and the last, nothing changed in `bristlenose/llm`, `bristlenose/stages` or `bristlenose/discussion` except install hints, so the runs are comparable (M, `git log`).
+- **One run's timing is suspect.** The Qwen 3.5 9B run overlapped a full Xcode build, so its time is probably too long. Its quality is unaffected.
+- **Runner.** Every MLX run hit the 501 from Homebrew's missing XGrammar library. The client then asked without a format and validated the reply (§ "Structured output on MLX: a packaging gap"), so the MLX rows are unconstrained and the llama.cpp rows are constrained.
+- **Scoring.** Quotes were scored against the source transcript with the four classes of § "Measured on the Bristlenose task".
+  - The baseline is Claude on the same sessions: 85 quotes (75 exact, 8 joined, 2 altered), 8 themes, 13 sections and 2 uncategorised quotes.
+  - "Invented" was zero for every model.
+
+| Model (runner) | Time | Quotes: exact / joined / altered | Themes | Uncat. | Sections | What went wrong |
+|---|---|---|---|---|---|---|
+| `gemma4:e4b` (MLX) | 9 m 22 s | 103: 99 / 2 / 2 | 6 | 2 | 7 | 7 sentiments outside the list ("neutral") |
+| `gemma4:26b` (MLX) | 15 m 45 s | 96: 89 / 3 / 4 | 5 | 1 | 8 | nothing |
+| `qwen3.8:27b` 4-bit (MLX) | 63 m 41 s | 133: 133 / 0 / 0 | 10 | 4 | 7 | 4 passes cut at the deadline and split; nothing lost |
+| `gemma4:12b` (MLX) | 43 m 42 s | 127: 120 / 5 / 2 | 6 | 6 | 6 | 3 passes cut and split; 20 sentiments outside the list |
+| `qwen3.5:9b` (MLX) | 24 m 45 s | 104: 93 / 11 / 0 | 4 | 1 | 7 | the discussion stage failed (`RouteBatchOut`, 5 errors) |
+| `qwen3.5:4b` (MLX) | 18 m 31 s | 49: 33 / 15 / 1 | 5 | 1 | 4 | thin: about half the quotes |
+| `granite4.2:8b` (llama.cpp) | 31 m 08 s | 80: 70 / 5 / 5 | 4 | 0 | 6 | no sentiment on any quote; 11 of 46 quotes not placed on a section; one looping quote |
+| `bonsai-2:27b` (llama.cpp) | 1 h 59 m | 105: 90 / 13 / 2 | 9 | 4 | 5 | **no quotes from one session**; 2 empty quotes |
+| `muse-glimmer:30b-q4_K_M` (llama.cpp) | 1 h 15 m | 35: 34 / 1 / 0 | 4 | 2 | 8 | **no quotes from two of the three sessions** |
+
+All (M), from one run each. Each row is one sample.
+
+### Why the large dense models lose interviews
+
+Quote extraction stops any single call after 570 seconds (`_PASS_DEADLINE_S` in `bristlenose/stages/s09_quote_extraction.py`, since 20 Oct 2026). A session cut short is split in half and retried, down to eighths. One failure ends the session.
+- **Where the limit comes from.** It was set for cloud providers: a normal hour takes 230–300 s there, and the limit keeps the SDKs from re-sending a whole job.
+- **Local models pay for it.** The local model is the one that runs slowest (M, the call log):
+  - Qwen 3.8 27B's passes at every depth took 450–550 s;
+  - Bonsai 2 27B and Muse Glimmer 30B overran even at depths 2 and 3, so their sessions ran out of depth.
+- **Why that rules out the 8-bit 27B.** It reads twice the bytes per token, so it decodes at about half the speed (§ "Overnight runs"). On this Mac it would overrun at every depth, as Muse did (Inf, high confidence).
+- **Slower chips have the same problem.** The 4-bit 27B on a base or Pro chip would also overrun (Inf).
+- **Sessions in the field are longer.** The test sessions are 18–38 minutes, and a 60–90 minute interview gives every pass more to write.
+- **The clock counts the queue.** Bristlenose sends three sessions at once. On llama.cpp, Ollama serves one at a time (§ "Three concurrent requests run one at a time"), so a pass's 570 s includes its wait behind the others (Inf, from the call log's timing). That probably explains some of the Bonsai and Muse cuts at depth 0. It doesn't explain the 27B's on MLX, where the deeper passes ran after the queue had cleared.
+
+So under today's client the 27B is not offered on any tier. If the limit scaled with the provider, or were lifted for local models, Qwen 3.8 27B would become the quality pick on 32 GB Max chips and on 64 GB. It gave 133 quotes, all exact, and 10 themes against Claude's 8 (M). That change is for the client's owner to decide; this note only reports it.
+
+### What each tier rests on
+
+- **8 GB: use a cloud provider.**
+  - Qwen 3.5 4B finished cleanly, with 4.5 GB in memory at 32k (M). It found 49 quotes against Claude's 85, mostly general context, and 4 sections against 13 (M).
+  - It wasn't run on an 8 GB Mac, which leaves about 0–2 GB for a model once a browser and Mail are open (§ "Memory left for the model on each Mac") (Inf).
+  - **Confidence:** high that a researcher on 8 GB is better served by a cloud provider.
+- **16 GB: `gemma4:e4b`.** The fastest run and among the cleanest: 99 of 103 quotes exact and none invented. The discussion stage passed after 4 retries.
+  - **Compared with 27 Nov:** on `4d041f0ef` the same model gave 43 exact quotes, 47 joined and 15 altered, with a "(Speaker A)" prefix. The client fixes since then account for the change (M, two runs).
+  - **The risk is memory.** It held 10 GB at 32k (M). The GPU allows that, at about 11.5–13.4 GB, but RAM doesn't once a browser is open: the table in § "Memory left for the model on each Mac" leaves about 6–8 GB, so the Mac would swap (Inf). The model is for a run with the browser and other large apps closed, which suits an overnight run.
+  - **The fork:** Qwen 3.5 4B (4.5 GB) fits alongside a browser, but finds about half the quotes. This is the one tier where the owner has a real choice.
+  - **Confidence:** high on quality, moderate on fit.
+- **32 GB: `gemma4:26b`.** A mixture-of-experts model with about 4B active parameters, so it runs at small-model speed. It made no deadline cuts: the longest pass was 460 s for a whole 38-minute session (M).
+  - It gave fewer themes and sections than Claude (5 themes against 8, and 8 sections against 13), tied with Muse Glimmer for the most sections of any local model. 89 of 96 quotes were exact, and its 4 altered quotes are mostly the same cross-turn joins that Claude's altered quotes are.
+  - The 501 doesn't touch it: it runs unconstrained on MLX, so the grammar-amplified loops of § "Gemma 4's loops" don't apply.
+  - **Confidence:** high.
+- **64 GB: `gemma4:26b`, the same model.**
+  - **Why not a higher-precision Gemma.** The 8-bit tag `gemma4:26b-a4b-it-q8_0` (28.05 GB) is GGUF only (M), so a Mac would run it on llama.cpp under a grammar, which is the arm where Gemma 4's loops are worst.
+  - **Why not Qwen.** The 27B waits on the deadline, above. `qwen3.6:35b-a3b-q8_0` is fast enough, but it is unmeasured.
+  - **What 64 GB buys today:** headroom for other apps, not a better model.
+  - **Confidence:** high that it works, since it is the 32 GB run with memory to spare. Moderate that nothing better fits, because Qwen 3.6 35B-A3B is the untested candidate (Inf).
+
+### Time per hour of interview, measured
+
+On this M2 Max, per hour of interview audio:
+- `gemma4:e4b`: about 6 minutes;
+- `gemma4:26b`: about 10;
+- `gemma4:12b`: about 29;
+- `qwen3.8:27b` at 4 bits: about 42.
+
+All (M, wall-clock ÷ 1.5 h of sessions). That puts the 27B at the slow end of the estimate in § "Overnight runs" and the Gemma models below it. A base-chip Mac (100–153 GB/s) should take about three to four times as long (Inf). So a two-week study of 10–20 hour-long interviews would take 4–8 h with E4B on a base 16 GB Mac (Inf), which is an overnight run.
 
 ## What must be verified before shipping
 
@@ -729,7 +825,7 @@ Analysis time only: local transcription comes on top. Fanless MacBook Airs may t
    - schema validity;
    - the loop rate.
 
-   Done for Llama 3.2 3B and Gemma 4 E4B (GGUF) on one M2 Max with 32 GB (§ "Measured on the Bristlenose task"). Extend it to qwen3.5:4b, qwen3.5:9b, gemma4:12b, qwen3.8:27b and gemma4:26b.
+   Done for Llama 3.2 3B and Gemma 4 E4B (GGUF) on one M2 Max with 32 GB (§ "Measured on the Bristlenose task"). Extended on 28 Nov 2026 to nine models on MLX and llama.cpp (§ "Nine models measured"). Still to do: one run per tier on a base-chip Mac, sessions of 60–90 minutes, and more than one sample per model.
 6. **Qwen memory.** Re-measure Qwen 3.5-family memory at 32k on an Ollama release from the llama-server era, to settle the 1.5–4 GB gap. That figure decides whether Better starts at 32 or 36 GB.
 7. **Time and app memory.** Measure the time per session on a base-chip 16 GB Mac and a base-chip 32 GB Mac, and the memory the app and sidecar use at the peak of an analysis.
 8. **Linux.** Load the Smallest, Good and Better picks on one 16 GB NVIDIA card and one 24 GB card, and read the default context and `ollama ps` for each.

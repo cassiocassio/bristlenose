@@ -156,7 +156,8 @@ If the default is too low for a workload (very long transcripts with many quotes
 - A second request builder drifts from the first the day a default moves.
 - A terse fixture prompt is a different test from the product.
 
-**Prompts and platform quirks** (2) — [full entries](gotchas.md#prompts-and-platform-quirks)
+**Prompts and platform quirks** (3) — [full entries](gotchas.md#prompts-and-platform-quirks)
 
 - Python 3.14 + pydantic v1 crash — `import presidio_analyzer` → spacy → pydantic v1 → `ConfigError`…
 - A length rule in a prompt is calibrated per model, and the production model obeys where the cheap…
+- A literal brace in a prompt breaks it (`str.format`), and `test_no_double_braces` forbids the doubled fix: write a worked example in words

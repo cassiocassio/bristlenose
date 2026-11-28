@@ -384,6 +384,8 @@ The 26B fallback is conditional on Bristlenose's own measurement of its loop rat
 
 ### What to offer on each Mac
 
+_Superseded on 28 Nov 2026 by the measured picks at the top of this note: 8 GB cloud, 16 GB `gemma4:e4b`, 32 and 64 GB `gemma4:26b`. This table is the estimate made before those runs._
+
 | Mac RAM | Offer | Why |
 |---|---|---|
 | 8 GB | Nothing; point to a cloud provider (Claude, ChatGPT, Azure OpenAI or Gemini) | The lightest model that holds a transcript needs ~5 GB of wired memory. With a browser and Mail open, that leaves under 3 GB for everything else on a machine that already swaps (Inf). |

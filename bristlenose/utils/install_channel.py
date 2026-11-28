@@ -42,7 +42,19 @@ def installed_extras() -> list[str]:
         present.append("voice")
     if _importable("any_llm"):
         present.append("any-llm")
+    if _importable("mlx_whisper"):
+        present.append("apple")
     return present
+
+
+def pip_available() -> bool:
+    """Whether this Python can run ``-m pip``.
+
+    uv builds its environments without pip, so a ``uv tool install`` has none;
+    pipx's do, through pipx's shared libraries. Anything that would shell out to
+    ``python -m pip`` (``spacy download`` among them) asks this first.
+    """
+    return _importable("pip")
 
 
 def _importable(name: str) -> bool:

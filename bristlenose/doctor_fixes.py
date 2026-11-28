@@ -402,6 +402,12 @@ def _fix_spacy_model_missing(method: str) -> str:
         return _pii_model_in_user_cache()
     if method == "winget":
         return _PII_NOT_IN_WINDOWS_INSTALLER
+    from bristlenose.stages.s07_pii_removal import spacy_model_needs_user_cache
+
+    if spacy_model_needs_user_cache():
+        # A uv install has no pip, so `spacy download` cannot work there;
+        # stage 7 fetches into the user cache instead, as on the snap.
+        return _pii_model_in_user_cache()
     if method == "brew":
         return (
             "PII redaction needs a spaCy language model.\n\n"
@@ -444,6 +450,16 @@ def _fix_presidio_missing(method: str) -> str:
             "presidio-analyzer presidio-anonymizer\n\n"
             "Then re-run. Or drop --redact-pii if you don't need it."
         )
+    from bristlenose.utils.install_channel import install_channel
+
+    if install_channel() == "uv":
+        # A core dependency missing from a uv tool env is a damaged install;
+        # rebuilding it restores everything the package declares.
+        return (
+            "PII redaction requires presidio-analyzer, which should have come\n"
+            "with Bristlenose. Rebuild the install:\n\n"
+            "  uv tool install --reinstall bristlenose"
+        )
     return (
         "PII redaction requires presidio-analyzer.\n\n"
         "  pipx inject bristlenose presidio-analyzer presidio-anonymizer\n\n"
@@ -456,10 +472,20 @@ def get_mlx_install_command() -> tuple[list[str], str]:
     """Get the pip command to install MLX.
 
     Uses ``sys.executable`` so the command targets the same Python that is
-    running bristlenose (correct for brew, pipx, and plain-venv installs).
+    running bristlenose (correct for brew, pipx, and plain-venv installs). A
+    uv install has no pip, so there uv installs into this same Python instead.
 
     Returns ``(command_list, display_string)``.
     """
+    import shutil
+
+    from bristlenose.utils.install_channel import pip_available
+
+    uv = None if pip_available() else shutil.which("uv")
+    if uv is not None:
+        cmd = [uv, "pip", "install", "--python", sys.executable, "mlx", "mlx-whisper"]
+        display = f"uv pip install --python {sys.executable} mlx mlx-whisper"
+        return cmd, display
     cmd = [sys.executable, "-m", "pip", "install", "mlx", "mlx-whisper"]
     display = f"{sys.executable} -m pip install mlx mlx-whisper"
     return cmd, display
@@ -510,6 +536,14 @@ def _fix_mlx_not_installed(method: str) -> str:
             "Apple Silicon detected but MLX not installed. Transcription will\n"
             "use CPU (works fine, GPU is faster).\n\n"
             "  $(brew --prefix bristlenose)/libexec/bin/python -m pip install mlx mlx-whisper"
+        )
+    from bristlenose.utils.install_channel import add_extra_command, install_channel
+
+    if install_channel() == "uv":
+        return (
+            "Apple Silicon detected but MLX not installed. Transcription will\n"
+            "use CPU (works fine, GPU is faster).\n\n"
+            f"  {add_extra_command('apple')}"
         )
     return (
         "Apple Silicon detected but MLX not installed. Transcription will\n"

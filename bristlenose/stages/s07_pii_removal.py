@@ -85,10 +85,24 @@ def cached_spacy_model() -> Path | None:
 
 
 def spacy_model_needs_user_cache() -> bool:
-    """True where the model must be fetched into the user cache, not installed."""
-    from bristlenose.doctor_fixes import detect_install_method
+    """True where the model must be fetched into the user cache, not installed.
 
-    return detect_install_method() in _READ_ONLY_INSTALLS
+    Two kinds of install cannot take a ``spacy download``: a read-only package
+    (snap, RPM), and an environment with no pip in it, which is what
+    ``uv tool install`` builds. There spaCy falls back to ``uv pip install``,
+    and that targets whatever virtualenv the working folder sits in, not this
+    one: it fails with "No virtual environment found", or puts 400 MB into an
+    unrelated ``.venv`` above the project folder. The frozen builds keep their
+    own answers (the Mac app ships the model; the winget build says PII isn't
+    in it), so they are left out here.
+    """
+    from bristlenose.doctor_fixes import detect_install_method
+    from bristlenose.utils.install_channel import pip_available
+    from bristlenose.utils.package_install import _is_frozen_sidecar
+
+    if detect_install_method() in _READ_ONLY_INSTALLS:
+        return True
+    return not _is_frozen_sidecar() and not pip_available()
 
 
 def fetch_spacy_model(
@@ -353,7 +367,7 @@ def _ensure_spacy_model(
     spacy.load(model)
 
 def _fetch_into_user_cache(*, status: Status | None) -> None:
-    """The read-only-package arm of :func:`_ensure_spacy_model`, with a progress bar.
+    """The user-cache arm of :func:`_ensure_spacy_model` (read-only or pip-less), with a progress bar.
 
     ``fetch_spacy_model`` downloads in-process, so unlike pip it prints nothing
     of its own; 400 MB in silence reads as a hang.

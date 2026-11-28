@@ -107,8 +107,9 @@ if [ "$route" = uv ]; then
   step "$py -m pip --version"
   step "$py -m spacy download en_core_web_lg"
   wheel=$(cd "$wheel_dir" && ls bristlenose-*.whl | head -1)
-  # No --python here, as in our own hints: does --force keep the env's 3.14?
-  step "uv tool install --force /dist/$wheel"
+  # --python named: --force re-resolves the interpreter otherwise (an Intel
+  # Mac went 3.12 -> 3.14 and broke), which is why our hints name it too.
+  step "uv tool install --force /dist/$wheel --python 3.14"
   step "$py -c 'import sys; print(\"python\", sys.version.split()[0])'"
   step "$py -c 'from bristlenose.stages import s07_pii_removal as s; print(\"needs_user_cache\", s.spacy_model_needs_user_cache())'"
   step "$py -c 'from bristlenose.doctor_fixes import get_mlx_install_command as g; print(g()[1])'"
@@ -124,8 +125,8 @@ if [ -n "$media" ]; then
 fi
 
 if [ "$route" = uv ]; then
-  # The voice hint uv users get from doctor, word for word (from PyPI, so last).
-  step "uv tool install --force \"bristlenose[voice]\" && $py -c 'import sys, kaldi_native_fbank; print(\"voice on python\", sys.version.split()[0])'"
+  # The voice hint uv users get from doctor, word for word, from this checkout's code.
+  step "cmd=\$($py -c 'from bristlenose.utils.install_channel import add_extra_command as a; print(a(\"voice\"))'); echo \"\$cmd\"; eval \"\$cmd\" && $py -c 'import sys, kaldi_native_fbank; print(\"voice on python\", sys.version.split()[0])'"
 fi
 
 say "== DONE"

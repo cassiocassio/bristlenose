@@ -89,7 +89,26 @@ def uv_python_flag() -> str:
     onnxruntime wheel there, and the rebuild failed (28 Nov 2026). Naming the
     running Python keeps whatever already works.
     """
-    return f"--python {sys.version_info[0]}.{sys.version_info[1]}"
+    version = f"{sys.version_info[0]}.{sys.version_info[1]}"
+    if _x64_python_on_arm64_windows():
+        # The engine (ctranslate2) has no Arm64 Windows build, and an Arm64 uv
+        # asked for "3.13" picks an Arm64 Python and fails. Name the x64 one,
+        # which Windows runs under emulation (the Windows 11 Arm VM, 28 Nov 2026).
+        return f"--python cpython-{version}-windows-x86_64-none"
+    return f"--python {version}"
+
+
+def _x64_python_on_arm64_windows() -> bool:
+    """An x64 Python on an Arm64 Windows machine.
+
+    ``sys.version`` names the build (``[MSC v.1944 64 bit (AMD64)]``) and
+    ``platform.machine()`` names the machine (``ARM64`` even to an x64 process).
+    """
+    if sys.platform != "win32" or "(AMD64)" not in sys.version:
+        return False
+    import platform
+
+    return platform.machine().upper() == "ARM64"
 
 
 def add_extra_command(extra: str) -> str:

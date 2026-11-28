@@ -97,7 +97,7 @@ The "Whisper model" line in doctor says *not cached* until your first transcript
 
 If it stops, it says why in one red sentence. On a work computer, the usual cause is a proxy, a firewall or a company policy: the steps below do the same thing one at a time, and show which part is blocked.
 
-> **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): the same line works. Bristlenose runs on the x64 build of Python, under emulation; the native Arm build can't install one of its transcription libraries yet.
+> **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): the line above works, and picks the x64 build of Python by itself. Bristlenose runs on that build under emulation; the Arm build of Python can't install one of its transcription libraries. In any `uv tool install` command of your own, write `--python cpython-3.13-windows-x86_64-none` where this page says `--python 3.13`, so it works whichever build of uv you have.
 
 **Optional: the voice pass**, which tells speakers apart by their voices as well as their words:
 

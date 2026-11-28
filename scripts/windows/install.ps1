@@ -31,6 +31,18 @@
     $FfmpegZipSha256 = '60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba'
     $UvInstallerUrl = 'https://astral.sh/uv/install.ps1'
     $PythonVersion = '3.13'   # the voice extra has no Windows wheel for 3.14 yet
+    # Windows on Arm: the transcription engine (ctranslate2) has no Arm64 Windows
+    # build, and an Arm64 uv asked for '3.13' picks an Arm64 Python, so the install
+    # fails. The x64 Python, which Windows runs under emulation, has every wheel
+    # (walked on the Windows 11 Arm VM, 28 Nov 2026). 12 is Win32_Processor's ARM64.
+    $PythonRequest = $PythonVersion
+    try {
+        if ((Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object -First 1).Architecture -eq 12) {
+            $PythonRequest = "cpython-$PythonVersion-windows-x86_64-none"
+        }
+    } catch {
+        $PythonRequest = $PythonVersion
+    }
 
     $ProgressPreference = 'SilentlyContinue'  # PowerShell 5.1's progress bar makes downloads crawl
     $ErrorActionPreference = 'Continue'       # native tools write progress to stderr; we check exit codes
@@ -254,7 +266,7 @@
                     'Remove it first (pipx uninstall bristlenose, or pip uninstall bristlenose), then run this again.')
             }
             Write-Note "Installing with Python $PythonVersion. uv downloads it for Bristlenose alone; any other Python stays as it is. This takes a few minutes the first time."
-            & uv tool install --python $PythonVersion $spec
+            & uv tool install --python $PythonRequest $spec
             if ($LASTEXITCODE -ne 0) { Exit-Install 'uv could not install Bristlenose (its message is above).' }
         }
         $installed = $true

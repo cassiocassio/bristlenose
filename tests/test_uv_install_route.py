@@ -236,3 +236,35 @@ def test_every_uv_rebuild_names_the_running_python(
         doctor_fixes.get_fix("backend_import_fail", "pip"),
     ):
         assert "--python 3.12" in command, command
+
+
+def test_windows_on_arm_names_the_x64_python(
+    uv_channel: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On the Windows 11 Arm VM (28 Nov 2026) an Arm64 uv asked for "3.13" chose an
+    Arm64 Python, which has no ctranslate2 wheel; the x64 one installs and runs."""
+    import platform
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "version_info", (3, 13, 18, "final", 0))
+    monkeypatch.setattr(sys, "version", "3.13.18 (main) [MSC v.1944 64 bit (AMD64)]")
+    monkeypatch.setattr(platform, "machine", lambda: "ARM64")
+    monkeypatch.setattr(install_channel, "installed_extras", list)
+    assert install_channel.uv_python_flag() == "--python cpython-3.13-windows-x86_64-none"
+    assert install_channel.add_extra_command("voice").endswith(
+        "--python cpython-3.13-windows-x86_64-none"
+    )
+    monkeypatch.setattr(platform, "machine", lambda: "AMD64")  # an x64 PC
+    assert install_channel.uv_python_flag() == "--python 3.13"
+
+
+def test_the_windows_one_liner_asks_for_x64_python_on_arm() -> None:
+    """The one-liner's install line must use the Arm-aware request, not the bare version."""
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parent.parent / "scripts" / "windows" / "install.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "& uv tool install --python $PythonRequest $spec" in script
+    assert "Architecture -eq 12" in script
+    assert '"cpython-$PythonVersion-windows-x86_64-none"' in script

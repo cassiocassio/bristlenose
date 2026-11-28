@@ -268,3 +268,102 @@ def test_the_windows_one_liner_asks_for_x64_python_on_arm() -> None:
     assert "& uv tool install --python $PythonRequest $spec" in script
     assert "Architecture -eq 12" in script
     assert '"cpython-$PythonVersion-windows-x86_64-none"' in script
+
+
+# ---------------------------------------------------------------------------
+# Windows without the Visual C++ runtime: doctor says so, and says what to do
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def clean_windows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """A Windows with no msvcp140.dll in System32 or beside the base Python
+    (a clean Windows 11 in VirtualBox, 28 Nov 2026)."""
+    import platform
+
+    (tmp_path / "Windows" / "System32").mkdir(parents=True)
+    (tmp_path / "python").mkdir()
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.setattr(sys, "base_prefix", str(tmp_path / "python"))
+    monkeypatch.setenv("SystemRoot", str(tmp_path / "Windows"))
+    monkeypatch.setattr(platform, "system", lambda: "Windows")
+    monkeypatch.setattr(platform, "machine", lambda: "AMD64")
+    return tmp_path
+
+
+def test_a_missing_cpp_runtime_is_named_not_a_reinstall(
+    clean_windows: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from bristlenose.doctor import check_backend, windows_cpp_runtime_missing
+
+    assert windows_cpp_runtime_missing() is True
+    monkeypatch.setitem(sys.modules, "faster_whisper", None)  # the import fails
+    result = check_backend()
+    assert result.fix_key == "msvc_runtime_missing"
+    assert "Visual C++ runtime" in result.detail
+    fix = doctor_fixes.get_fix("msvc_runtime_missing", "pip")
+    assert "https://aka.ms/vs/17/release/vc_redist.x64.exe" in fix
+    assert "reinstall" not in fix
+
+
+@pytest.mark.parametrize("where", ["Windows/System32", "python"])
+def test_a_runtime_in_either_place_is_found(
+    where: str, clean_windows: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from bristlenose.doctor import check_backend, windows_cpp_runtime_missing
+
+    (clean_windows / where / "msvcp140.dll").write_bytes(b"")
+    assert windows_cpp_runtime_missing() is False
+    monkeypatch.setitem(sys.modules, "faster_whisper", None)
+    assert check_backend().fix_key == "backend_import_fail"
+
+
+def test_the_runtime_link_follows_the_pythons_architecture(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "version", "3.13.18 (main) [MSC v.1944 64 bit (ARM64)]")
+    assert "vc_redist.arm64.exe" in doctor_fixes.get_fix("msvc_runtime_missing", "pip")
+
+
+def test_never_on_other_platforms_or_the_frozen_build(monkeypatch: pytest.MonkeyPatch) -> None:
+    from bristlenose.doctor import windows_cpp_runtime_missing
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert windows_cpp_runtime_missing() is False
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert windows_cpp_runtime_missing() is False
+
+
+def test_a_runtime_in_the_environment_is_named_to_windows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On the clean Windows 11 VM (28 Nov 2026), msvc-runtime's DLLs at sys.prefix
+    let ctranslate2 and thinc load only once that folder was added this way."""
+    import os
+
+    from bristlenose.utils import windows_runtime
+
+    added: list[str] = []
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.setattr(sys, "prefix", str(tmp_path))
+    monkeypatch.setattr(os, "add_dll_directory", lambda p: added.append(p) or "handle", raising=False)
+
+    assert windows_runtime.name_runtime_in_prefix() is None  # no DLL there: nothing
+    (tmp_path / "msvcp140.dll").write_bytes(b"")
+    assert windows_runtime.name_runtime_in_prefix() == "handle"
+    assert added == [str(tmp_path)]
+    monkeypatch.setattr(sys, "frozen", True, raising=False)  # the winget build carries its own
+    assert windows_runtime.name_runtime_in_prefix() is None
+
+
+def test_the_runtime_in_the_environment_satisfies_doctor(
+    clean_windows: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from bristlenose.doctor import windows_cpp_runtime_missing
+
+    venv = clean_windows / "venv"
+    venv.mkdir()
+    (venv / "msvcp140.dll").write_bytes(b"")
+    monkeypatch.setattr(sys, "prefix", str(venv))
+    assert windows_cpp_runtime_missing() is False

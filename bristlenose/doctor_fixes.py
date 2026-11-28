@@ -255,6 +255,23 @@ def _fix_backend_import_fail(method: str) -> str:
     )
 
 
+def _fix_msvc_runtime_missing(method: str) -> str:
+    """Windows without the Visual C++ runtime: Microsoft's installer, once.
+
+    Reinstalling Bristlenose cannot help, which is what the generic
+    backend hint used to say. The architecture is the Python's, not the
+    machine's: an x64 Python on Windows on Arm needs the x64 runtime.
+    """
+    del method
+    arch = "arm64" if "(ARM64)" in sys.version else "x64"
+    return (
+        "Windows is missing the Microsoft Visual C++ runtime, which transcription,\n"
+        "PII redaction and the voice pass need. Install it from Microsoft (it asks\n"
+        "for administrator rights once), then open a new terminal:\n\n"
+        f"  https://aka.ms/vs/17/release/vc_redist.{arch}.exe"
+    )
+
+
 def _credential_store_hint() -> str:
     """Describe where ``configure`` will actually store the key.
 
@@ -781,6 +798,7 @@ _FIX_TABLE: dict[str, Callable[[str], str]] = {
     "ffmpeg_will_not_run": _fix_ffmpeg_will_not_run,
     "ffprobe_missing": _fix_ffprobe_missing,
     "backend_import_fail": _fix_backend_import_fail,
+    "msvc_runtime_missing": _fix_msvc_runtime_missing,
     "mlx_cannot_start": _fix_mlx_cannot_start,
     "api_key_missing_anthropic": _fix_api_key_missing_anthropic,
     "api_key_missing_openai": _fix_api_key_missing_openai,

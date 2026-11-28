@@ -180,6 +180,45 @@ def check_ffprobe() -> CheckResult:
     return CheckResult(status=CheckStatus.OK, label="FFprobe", detail=path)
 
 
+def windows_cpp_runtime_missing() -> bool:
+    """True on Windows when the Microsoft Visual C++ runtime is nowhere the engines look.
+
+    ctranslate2, spaCy's thinc and the voice pass are C++ and need
+    ``msvcp140.dll``. A clean Windows 11 has none (the VirtualBox walk,
+    28 Nov 2026), and uv's Python and python.org's bring only the C runtime, so
+    the engines fail with "Could not find module ... (or one of its
+    dependencies)". Windows looks in System32 and beside the base ``python.exe``,
+    and in ``sys.prefix`` once ``bristlenose/__init__.py`` has named it.
+    The frozen winget build carries its own copy.
+    """
+    import os
+
+    if sys.platform != "win32" or getattr(sys, "frozen", False):
+        return False
+    system32 = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
+    # sys.prefix too: bristlenose/__init__.py names it to Windows when the
+    # runtime's DLLs are there (msvc-runtime in the environment).
+    folders = (system32, Path(sys.base_prefix), Path(sys.prefix))
+    return not any((folder / "msvcp140.dll").exists() for folder in folders)
+
+
+def _engine_load_failure(detail: str) -> CheckResult:
+    """The transcription engine would not load: name the runtime when that is why."""
+    if windows_cpp_runtime_missing():
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Transcription",
+            detail="faster-whisper cannot load: the Microsoft Visual C++ runtime is not installed",
+            fix_key="msvc_runtime_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.FAIL,
+        label="Transcription",
+        detail=detail,
+        fix_key="backend_import_fail",
+    )
+
+
 def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
     """Check whether a transcription backend is importable.
 
@@ -246,19 +285,9 @@ def check_backend(settings: BristlenoseSettings | None = None) -> CheckResult:
     try:
         import faster_whisper  # noqa: F401
     except ImportError:
-        return CheckResult(
-            status=CheckStatus.FAIL,
-            label="Transcription",
-            detail="faster-whisper not installed",
-            fix_key="backend_import_fail",
-        )
+        return _engine_load_failure("faster-whisper not installed")
     except Exception as exc:
-        return CheckResult(
-            status=CheckStatus.FAIL,
-            label="Transcription",
-            detail=f"faster-whisper failed to load: {exc}",
-            fix_key="backend_import_fail",
-        )
+        return _engine_load_failure(f"faster-whisper failed to load: {exc}")
 
     # ctranslate2 version and GPU info
     ct2_version = ""

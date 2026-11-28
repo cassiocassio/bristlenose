@@ -93,6 +93,8 @@ It installs, for you alone and without administrator rights:
 
 Then it runs `bristlenose doctor`, which checks FFmpeg, transcription and your AI provider. The first install takes a few minutes. When it finishes, `bristlenose` works in the same window and in new ones. Run the same line again later to upgrade.
 
+On a newly set-up PC, doctor may say Windows is missing the **Microsoft Visual C++ runtime**, which transcription needs. Install it from Microsoft ([vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe); it asks for administrator rights once), then open a new terminal.
+
 The "Whisper model" line in doctor says *not cached* until your first transcription, which downloads the speech-recognition model (about 1.6 GB) once.
 
 If it stops, it says why in one red sentence. On a work computer, the usual cause is a proxy, a firewall or a company policy: the steps below do the same thing one at a time, and show which part is blocked.

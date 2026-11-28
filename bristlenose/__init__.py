@@ -100,4 +100,11 @@ from bristlenose.utils.bundled_binary import prepend_bundled_to_path as _prepend
 _prepend()
 del _prepend
 
+# Windows: a Visual C++ runtime inside this environment counts (see the
+# module). Kept on the package: closing the handle removes the folder again.
+from bristlenose.utils.windows_runtime import name_runtime_in_prefix as _name_runtime  # noqa: E402
+
+_runtime_dll_dir = _name_runtime()
+del _name_runtime
+
 __version__ = "0.49.0"

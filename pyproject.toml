@@ -56,7 +56,7 @@ dependencies = [
     # 2.2.364 + cryptography 48.0.1, both with wheels. Everywhere else 50.x
     # resolves and is wanted (it closes three CVEs on 48.0.1). Lift when Intel
     # Macs stop being a CLI target. docs/dependency-premortem-log.md Entry 9.
-    "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "cryptography<51; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     # The Microsoft Visual C++ runtime, as DLLs in the environment: a clean
     # Windows has none, and ctranslate2, spaCy's thinc and the voice pass cannot
     # load without msvcp140.dll (benbecula's VirtualBox Windows 10 and 11,

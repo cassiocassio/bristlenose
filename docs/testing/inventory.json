@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 11654
+        "tests": 11660
       },
       {
         "basis": "test files",

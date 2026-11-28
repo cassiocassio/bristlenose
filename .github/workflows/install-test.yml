@@ -254,6 +254,33 @@ jobs:
           fi
           "$py" -c 'from bristlenose.stages.s07_pii_removal import spacy_model_needs_user_cache as f; assert f(), "a pip-less install would run spacy download"'
 
+      # No other job runs FFmpeg and Whisper on real audio: full-run's fixtures
+      # are VTT transcripts. A clip spoken by the OS (espeak-ng, say) needs no
+      # binary in the repo and no participant's voice; the tiny model keeps it
+      # under two minutes. Proven locally on x86_64 Linux and macOS, 28 Nov 2026.
+      - name: Transcribe a synthetic clip (FFmpeg and Whisper on real audio)
+        run: |
+          clip="$RUNNER_TEMP/clip"
+          mkdir -p "$clip"
+          line="Thanks for joining. Could you tell me how you checked out last time? I could not find the checkout button, so I gave up and called the shop instead."
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get install -y espeak-ng
+            espeak-ng -s 150 -w "$clip/interview.wav" "$line"
+          else
+            say -o "$clip/interview.wav" --data-format=LEI16@16000 "$line"
+          fi
+          bristlenose transcribe "$clip" -w tiny
+          t="$clip/bristlenose-output/transcripts-raw/s1.txt"
+          if ! test -s "$t"; then
+            echo "::error::transcribe wrote no transcript"
+            exit 1
+          fi
+          if ! grep -iE "checkout|check out|button" "$t"; then
+            echo "::error::the transcript does not hold the spoken words"
+            cat "$t"
+            exit 1
+          fi
+
       - name: Run doctor (no API key expected; anything else must pass)
         run: bash scripts/check-doctor-install.sh
 

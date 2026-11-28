@@ -9,7 +9,7 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 11654 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 11660 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 247 files | test files | `frontend/src/**/*.test.*` |
 | `figjam-plugin` | figjam plugin unit | 3 files | test files | `figjam-plugin/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 3564 in 286 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |

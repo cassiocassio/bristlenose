@@ -11,11 +11,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 docker volume create bn-walk-hf >/dev/null
 
 # image route family platform pii
-cat <<'EOF' | grep -v '^#' | xargs -P 4 -L 1 bash -c '
-  WALK_PLATFORM=$4 WALK_MEDIA="'"$media"'" WALK_HF_CACHE=bn-walk-hf \
-    bash "'"$here"'/walk.sh" "$1" "$2" "$3" "'"$wheel_dir"'" "'"$log_dir"'" "$5" >/dev/null 2>&1
-  echo "finished $1 $2"' _
-debian:trixie uv apt linux/arm64 pii
+table='debian:trixie uv apt linux/arm64 pii
 debian:trixie pipx apt linux/arm64 -
 debian:bookworm uv apt linux/arm64 -
 debian:bookworm pipx apt linux/arm64 -
@@ -30,5 +26,15 @@ fedora:43 pipx dnf linux/arm64 -
 fedora:44 uv dnf linux/arm64 pii
 fedora:44 pipx dnf linux/arm64 -
 archlinux:latest uv pacman linux/amd64 pii
-archlinux:latest pipx pacman linux/amd64 -
-EOF
+archlinux:latest pipx pacman linux/amd64 -'
+
+# Pull each image for its own platform first: one tag serves every architecture,
+# and a tag last pulled for another one (32-bit Arm, say) would otherwise run as is.
+printf '%s\n' "$table" | while read -r image _ _ platform _; do
+  docker pull -q --platform "$platform" "$image" >/dev/null || echo "pull failed: $image $platform"
+done
+
+printf '%s\n' "$table" | xargs -P 4 -L 1 bash -c '
+  WALK_PLATFORM=$4 WALK_MEDIA="'"$media"'" WALK_HF_CACHE=bn-walk-hf \
+    bash "'"$here"'/walk.sh" "$1" "$2" "$3" "'"$wheel_dir"'" "'"$log_dir"'" "$5" >/dev/null 2>&1
+  echo "finished $1 $2"' _

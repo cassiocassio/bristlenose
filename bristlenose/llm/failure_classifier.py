@@ -255,11 +255,38 @@ def classify_exception(provider: str | None, exc: BaseException) -> LLMFailureKi
     return classify_fields(provider, exc)
 
 
+def sdk_error_text(exc: BaseException) -> str:
+    """An SDK error's message, with the server's own words from its body.
+
+    openai 3.26 built ``str(exc)`` as "Error code: 404 - {body}"; by 3.60 it is
+    "Error code: 404" alone, and the words stay in ``exc.body``: a string when
+    the envelope's ``error`` is one (Ollama's ``{"error": "model 'x' not
+    found"}``), otherwise a dict. Every match on a provider's own words reads
+    through here, or a fresh install, which gets the newer SDK, stops
+    recognising them (CI, 28 Nov 2026: Ollama's model-not-found and the MLX
+    runner's 501 went unrecognised).
+    """
+    import json
+
+    text = str(exc) or exc.__class__.__name__
+    body = getattr(exc, "body", None)
+    detail = ""
+    if isinstance(body, str):
+        detail = body
+    elif isinstance(body, dict):
+        inner = body.get("error", body)
+        message = inner.get("message") if isinstance(inner, dict) else inner
+        detail = message if isinstance(message, str) else json.dumps(body, default=str)
+    if detail and detail not in text:
+        text = f"{text} - {detail}"
+    return text
+
+
 def classify_fields(provider: str | None, exc: BaseException) -> LLMFailureKind:
     """:func:`classify_exception`'s field extraction, without any routing."""
     status = _extract_status(exc)
     code = _extract_code(exc)
-    message = str(exc) or exc.__class__.__name__
+    message = sdk_error_text(exc)
     kind = classify_llm_failure(
         provider,
         status=status,

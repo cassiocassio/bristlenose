@@ -2372,7 +2372,9 @@ def _prompt_exceeds_window(exc: BaseException) -> bool:
     """
     if getattr(exc, "status_code", None) != 400:
         return False
-    text = str(exc).lower()
+    from bristlenose.llm.failure_classifier import sdk_error_text
+
+    text = sdk_error_text(exc).lower()
     return (
         "prompt is longer than the context length" in text
         or "exceeds the available context size" in text
@@ -2386,9 +2388,11 @@ def _refuses_structured_output(exc: BaseException) -> bool:
     (``mlxrunner/grammar.go``, v0.40.18), whatever the format asked for. Only
     that: any other 5xx is a server failure and propagates.
     """
+    from bristlenose.llm.failure_classifier import sdk_error_text
+
     return (
         getattr(exc, "status_code", None) == 501
-        and "structured output is unavailable" in str(exc).lower()
+        and "structured output is unavailable" in sdk_error_text(exc).lower()
     )
 
 

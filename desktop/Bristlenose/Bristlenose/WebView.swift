@@ -481,7 +481,7 @@ struct WebView: NSViewRepresentable {
             // download-delegate path runs — under App Sandbox a same-frame
             // navigation to a blob: URL is otherwise dropped silently.
             if navigationAction.shouldPerformDownload {
-                decisionHandler(.download)
+                decisionHandler(dropsExportPress(url) ? .cancel : .download)
                 return
             }
 
@@ -675,6 +675,24 @@ struct WebView: NSViewRepresentable {
             Task { @MainActor in
                 self.adoptDownload(download, requestURL: url)
             }
+        }
+
+        /// Whether a download link's press is a second Export Report while one
+        /// is pending, and so changes nothing (R76). Answered in the navigation
+        /// policy, before WebKit makes a request: a download started and then
+        /// cancelled at once took the pending export's connection down with it
+        /// on macOS 26, and the export failed with NSURLErrorDomain -1005 and
+        /// "The export could not be saved" in about 3 runs of 10 (probe in a
+        /// macOS 26.6.2 guest, 27 Nov 2026; plain WebKit does it too, less
+        /// often). `adoptDownload` still drops one that arrives another way.
+        @MainActor
+        func dropsExportPress(_ url: URL?) -> Bool {
+            guard Self.isHTMLReportURL(url), pendingReportExport != nil else { return false }
+            log.notice("export: Export Report pressed again while one is pending — refused before its request")
+            // As in `adoptDownload`: past its panel the pending export says
+            // nothing on the row, so this press's "Exporting…" goes now.
+            if !reportExportAwaitingPanel { bridgeHandler.reportExportSettled() }
+            return true
         }
 
         /// Take on a download the page started. A second Export Report while

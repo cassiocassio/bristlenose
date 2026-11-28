@@ -131,6 +131,14 @@ private final class FakeServe: @unchecked Sendable {
     func stop() { listener.cancel() }
 }
 
+/// A click on a download link, as WebKit hands it to the navigation policy.
+private final class LinkPress: WKNavigationAction {
+    private let url: URL
+    init(_ url: URL) { self.url = url; super.init() }
+    override var request: URLRequest { URLRequest(url: url) }
+    override var shouldPerformDownload: Bool { true }
+}
+
 @MainActor
 private final class ExportRig {
     let serve: FakeServe
@@ -179,6 +187,33 @@ private final class ExportRig {
             // As `navigationAction(_:didBecome:)` hands the SPA's link over.
             coordinator.adoptDownload(download, requestURL: url)
         }
+    }
+
+    /// Put up a report page with the SPA's Export Report link on it, served
+    /// from this server's origin, so `pressExportLink` can click it.
+    func loadReportPage() async throws {
+        await serve.ready()
+        try #require(serve.port != 0, "precondition: the loopback server is listening")
+        webView.navigationDelegate = coordinator
+        let base = URL(string: "http://127.0.0.1:\(serve.port)/report/")!
+        coordinator.lastLoadedURL = base
+        webView.loadHTMLString(#"<a id="export" download>Export Report</a>"#, baseURL: base)
+        await until { !webView.isLoading }
+        try #require(!webView.isLoading, "precondition: the report page loaded")
+    }
+
+    /// Press Export Report as the app does: the SPA clicks its `<a download>`
+    /// link, and the coordinator's navigation policy sees the press before
+    /// WebKit makes any request. `export()` starts the download itself, so
+    /// it reaches only `adoptDownload`.
+    func pressExportLink(query: String = "locale=en") async throws {
+        _ = try await webView.callAsyncJavaScript(
+            """
+            const a = document.getElementById("export");
+            a.href = "/api/projects/1/export?" + query;
+            a.click();
+            """,
+            arguments: ["query": query], in: nil, contentWorld: .page)
     }
 
     /// How many looks a wait for something that must happen may take, 20 ms
@@ -424,13 +459,17 @@ struct ExportSaveFlowTests {
 
     /// A second press after the panel, while the saved copy is still being
     /// fetched, is dropped — and so is its "Exporting…", at once, not after
-    /// the fallback (review of ce125ffc).
+    /// the fallback (review of ce125ffc). Pressed through the link, as the
+    /// app does: refused before its request, it cannot take the export in
+    /// flight down with it, which a started-and-cancelled download did on
+    /// macOS 26 (-1005, mac-build on 0e4c54e6d and 72f1b2458).
     @Test func aPressDroppedAfterThePanelLetsGoAtOnce() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         let bridge = rig.coordinator.bridgeHandler
         bridge.reportExportStartPatience = .seconds(60)
         rig.atPanel = { $0?.anonymise = true }
         rig.serve.hold = { $0.query?.contains("anonymise=true") == true }
+        try await rig.loadReportPage()
         bridge.reportExportPressed()
         try await rig.export()
         await rig.until { rig.serve.requested.count == 2 }
@@ -438,7 +477,7 @@ struct ExportSaveFlowTests {
 
         #expect(bridge.reportExportPressed())
         #expect(bridge.isExportingReport, "the second press said nothing, so its going proves nothing")
-        try await rig.export()
+        try await rig.pressExportLink()
         await rig.until({ !bridge.isExportingReport }, looks: 250)
         #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
         // The dropped press's own outcome, judged before the first export is
@@ -452,6 +491,7 @@ struct ExportSaveFlowTests {
         // export's connection went when the dropped one was cancelled.
         try? await Task.sleep(for: .milliseconds(300))
         let served = "server saw \(rig.serve.requested.map { $0.query ?? "?" }), connections \(rig.serve.connectionEvents)"
+        #expect(rig.serve.requested.count == 2, "the dropped press reached the server: \(served)")
         #expect(rig.panels == 1, "the dropped press put up a save panel")
         #expect(rig.alerts.isEmpty, "the dropped press's own download failed: \(rig.alertsSaid); \(served)")
         #expect(rig.coordinator.hasPendingReportExport,
@@ -481,6 +521,34 @@ struct ExportSaveFlowTests {
                 "the export in flight never landed (alerts: \(rig.alertsSaid), panels: \(rig.panels); \(servedAfter))")
         #expect(rig.panels == 1, "the dropped press put up a save panel")
         #expect(rig.alerts.isEmpty, "a dropped press is not a failure: \(rig.alertsSaid); \(servedAfter)")
+    }
+
+    /// The press itself, as the navigation policy sees it: a download link
+    /// to the HTML report while an export is pending is refused, so WebKit
+    /// makes no request; anything else still becomes a download. Without
+    /// this, the press became a download that was cancelled at once, which
+    /// on macOS 26 could take the pending export's connection with it.
+    @Test func aSecondExportLinkIsRefusedBeforeItsRequest() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        let base = "http://127.0.0.1:\(rig.serve.port)/api/projects/1/export"
+        func policy(_ url: String) -> WKNavigationActionPolicy? {
+            var answer: WKNavigationActionPolicy?
+            rig.coordinator.webView(rig.webView, decidePolicyFor: LinkPress(URL(string: url)!)) { answer = $0 }
+            return answer
+        }
+        #expect(policy(base + "?locale=en") == .download, "an export with none pending was refused")
+
+        rig.serve.hold = { _ in true }
+        try await rig.export()
+        await rig.until { rig.serve.requested.count == 1 }
+        try #require(rig.coordinator.hasPendingReportExport, "precondition: an export is pending")
+
+        #expect(policy(base + "?locale=en") == .cancel, "a second Export Report became a download")
+        #expect(policy(base + "?locale=fr&anonymise=true") == .cancel, "a second Export Report became a download")
+        #expect(policy(base + "/quotes.csv") == .download, "a quotes download was refused for a pending report")
+        #expect(rig.coordinator.hasPendingReportExport, "the refused press touched the pending export")
+        rig.serve.release()
+        await rig.until { rig.saved != nil }
     }
 
     /// A second press before the panel is dropped too, but the first export
@@ -527,9 +595,14 @@ struct ExportSaveFlowTests {
         rig.atPanel = { $0?.anonymise = true }
         // Hold the anonymised copy up until the second press is in.
         rig.serve.hold = { $0.query?.contains("anonymise=true") == true }
+        try await rig.loadReportPage()
         try await rig.export()
         await rig.until { rig.serve.requested.count == 2 }
-        try await rig.export()
+        // Through the link, as the app presses: a started-and-cancelled
+        // download here is the one macOS 26 lets take the copy down with it.
+        try await rig.pressExportLink()
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(rig.serve.requested.count == 2, "the second press reached the server")
         rig.serve.release()
         await rig.until { rig.saved == "<html>ANONYMISED</html>" }
         try? await Task.sleep(for: .milliseconds(500))

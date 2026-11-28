@@ -52,12 +52,24 @@ for f in install.ps1 post.ps1 "${BN_POST:-post.ps1}" waitclock.ps1 kit.zip; do
     vbm guestcontrol "$vm" copyto --username "$GUSER" --passwordfile "$PWFILE" --target-directory "$W\\" "$kit/$f" || say_ "copy $f failed"
 done
 whl=$(cd "$kit" && unzip -Z1 kit.zip | grep '\.whl$' | head -1)
+# BN_WHEELHOUSE=<dir>: install only from these wheels (UV_NO_INDEX). For a guest
+# clock too early for PyPI's certificate, which no wait fixes when the guest's
+# time service is slow; the one-liner runs as written, only the source changes.
+extra_env=()
+epoch=$(date +%s)
+if [ -n "${BN_WHEELHOUSE:-}" ]; then
+    vbm guestcontrol "$vm" copyto --username "$GUSER" --passwordfile "$PWFILE" --recursive \
+        --target-directory "$W\\" "$BN_WHEELHOUSE" || say_ "copy wheelhouse failed"
+    extra_env=(--putenv "UV_FIND_LINKS=$W\\$(basename "$BN_WHEELHOUSE")" --putenv "UV_NO_INDEX=1")
+    epoch=0
+    say_ "[$vm] installing from the wheelhouse only ($(ls "$BN_WHEELHOUSE" | wc -l | tr -d ' ') wheels)"
+fi
 say_ "[$vm] the one-liner (install.ps1), FFmpeg from its pinned zip, Bristlenose from $whl"
 # One guest logon for everything: the guest's own time service corrects a
 # set-back clock once it has network, and a second logon then meets the expired
 # password ("account is restricted"). post.ps1 reads PATH from the registry, as
 # a new terminal would, so running it in the same session loses nothing.
-grun --putenv "BRISTLENOSE_INSTALL_SPEC=$W\\kit\\$whl" --putenv "BRISTLENOSE_INSTALL_FFMPEG=zip" --putenv "BN_REAL_EPOCH=$(date +%s)" \
+grun --putenv "BRISTLENOSE_INSTALL_SPEC=$W\\kit\\$whl" --putenv "BRISTLENOSE_INSTALL_FFMPEG=zip" --putenv "BN_REAL_EPOCH=$epoch" ${extra_env[@]+"${extra_env[@]}"} \
      --exe 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -- \
      -NoProfile -ExecutionPolicy Bypass -Command \
      "& powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\waitclock.ps1'; Expand-Archive -Force '$W\\kit.zip' '$W\\kit'; & powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\install.ps1'; '== install.ps1 exit: ' + \$LASTEXITCODE; & powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\${BN_POST:-post.ps1}'" 2>&1 | tr -d '\r'

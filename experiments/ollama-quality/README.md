@@ -268,3 +268,55 @@ runs, but a notch below the GGUF build and without the discussion lens; and the
 "37 minutes" and "seven times Claude" on the docs page are the old client's.
 Which figures the page carries depends on whether it deploys before or after a
 release that contains `4d041f0ef` (owner's call; marked PENDING on the page).
+
+## Addendum, 28 Nov 2026: overnight runs after `5fdce3f24`
+
+The ollama-catalog session ran Talismanic once per model overnight, one model
+at a time, on the same Mac and Ollama 0.40.18 (Homebrew; `num_ctx` 32768,
+`q8_0` KV, flash attention), `bristlenose analyze transcripts-raw --llm local`.
+CLI commits per run: `5fdce3f24` (qwen3.5:9b), `2bdb7930c` (qwen3.5:4b,
+granite4.2:8b), `dea44c6f7` (bonsai-2:27b), `63dbc8274` (the rest). Between
+`5fdce3f24` and `63dbc8274` only `s05_transcribe.py`, `s07_pii_removal.py` and
+the llm docs changed, and `analyze` uses neither stage's changed path, so the
+runs are comparable. Every MLX run logged `local_structured_output_refused`
+(the Homebrew xgrammar 501) and went on in plain text, as designed.
+
+Re-read here with `compare.py` from the catalog's run folders; wall-clock from
+each run's `real`; Discussion status from `intermediate/discussion.json`;
+memory from its 15 s `ollama ps` samples.
+
+| Model (runner) | Wall-clock | Quotes (distinct) | exact / joined / altered / invented | Themes excl. Uncat. | Uncat. | Sections | Discussion | `ollama ps` |
+|---|---|---|---|---|---|---|---|---|
+| Claude (baseline, above) | 5 m 10 s | 85 (85) | 75 / 8 / 2 / 0 | 7 | 2 | 13 | complete | — |
+| gemma4:e4b (mlx) | 9 m 22 s | 103 (103) | 99 / 2 / 2 / 0 | 5 | 2 | 7 | partial, 27 of 165 turns unlabelled | 10–12 GB |
+| gemma4:26b (mlx) | 15 m 45 s | 96 (96) | 89 / 3 / 4 / 0 | 4 | 1 | 8 | complete | 16–18 GB |
+| gemma4:12b (mlx) | 43 m 42 s | 127 (122) | 120 / 5 / 2 / 0 | 5 | 6 | 6 | partial | 10–12 GB |
+| qwen3.8:27b 4-bit (mlx) | 63 m 41 s | 133 (124) | 133 / 0 / 0 / 0 | 9 | 4 | 7 | complete | 18–21 GB |
+| qwen3.5:9b (mlx) | 24 m 45 s | 104 (102) | 93 / 11 / 0 / 0 | 3 | 1 | 7 | partial | — |
+| qwen3.5:4b (mlx) | 18 m 31 s | 49 (46) | 33 / 15 / 1 / 0 | 4 | 1 | 4 | — | — |
+| granite4.2:8b (llamacpp) | 31 m 08 s | 80 (79), none with a sentiment | 70 / 5 / 5 / 0 | 4 | 0 | 6 | — | — |
+| bonsai-2:27b (llamacpp) | 1 h 59 m | 105 (87), **none from s2** | 90 / 13 / 2 / 0 | 8 | 4 | 5 | — | — |
+| muse-glimmer:30b q4_K_M (llamacpp) | 1 h 15 m | 35 (32), **none from s2 or s3** | 34 / 1 / 0 / 0 | 3 | 2 | 8 | — | — |
+
+The catalog session counts themes including "Uncategorised"; this table, like
+the page, excludes it. Its other figures match these. Not re-checked here:
+its notes on granite (sections unplaced, dropped topic boundaries, a looping
+quote) and qwen3.5:9b's overlap with an Xcode build.
+
+Findings:
+
+- The "(Speaker A)" prefix and the failed Discussion on the MLX E4B are gone
+  after `5fdce3f24`: 99 of 103 quotes exact, Discussion `partial` rather than
+  missing.
+- More model bought better themes at the cost of time: 26B took 1.7× E4B,
+  qwen3.8:27b 6.8×. qwen3.8:27b gave the nearest report to Claude's (9
+  specific themes, every quote exact) but four of its quote passes hit the
+  570 s deadline and were split; bonsai-2 and muse-glimmer lost whole sessions
+  that way. The deadline, not the model's quality, is what rules the 27–30B
+  class out on slower chips (raised by ollama-catalog as a client finding).
+- `quote_sentiment_unrecognised` ("neutral", "disappointment") on E4B (7),
+  26B (6) and 12B (20): sentiment is free text on the plain-text path.
+
+Docs page: website `w-ollama` `53041ae` carries these rows, with tiers 8 GB
+cloud, 16 GB E4B, 32 and 64 GB 26B, 128 GB one line; times on other chips are
+estimates scaled by memory bandwidth, marked as such.

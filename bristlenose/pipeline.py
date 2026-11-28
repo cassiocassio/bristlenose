@@ -2293,7 +2293,6 @@ class Pipeline:
 
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.s01_ingest import ingest, split_left_alone
-        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
             sentence_paragraph_sessions,
@@ -2549,7 +2548,7 @@ class Pipeline:
                 if _ss_path.exists() else set()
             )
             _to_decode = [s for s in sessions if s.session_id not in _cached_before_decode]
-            await extract_audio_for_sessions(_to_decode, temp_dir)
+            await self._extract_audio_or_abandon(_to_decode, temp_dir)
             if _any_recording(sessions):  # a transcript-only folder has no audio to extract
                 _print_step(
                     f"Extracted audio from {count_noun(len(_to_decode), 'session')}"
@@ -4332,7 +4331,6 @@ class Pipeline:
         from collections import Counter
 
         from bristlenose.stages.s01_ingest import ingest, split_left_alone
-        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
         from bristlenose.stages.s05b_identify_speakers import identify_speaker_roles_heuristic
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
@@ -4453,7 +4451,7 @@ class Pipeline:
             t0 = time.perf_counter()
             temp_dir = output_dir / ".bristlenose" / "temp"
             temp_dir.mkdir(parents=True, exist_ok=True)
-            await extract_audio_for_sessions(_remaining, temp_dir)
+            await self._extract_audio_or_abandon(_remaining, temp_dir)
             if _any_recording(sessions):  # a transcript-only folder has no audio to extract
                 _print_step(
                     f"Extracted audio from {count_noun(len(_remaining), 'session')}"
@@ -5100,6 +5098,38 @@ class Pipeline:
             summary=self._summary,
         )
 
+    async def _extract_audio_or_abandon(
+        self, sessions: list[InputSession], temp_dir: Path
+    ) -> None:
+        """Stage 2, with a media toolchain that will not run reported as a clean stop.
+
+        ``AudioToolError`` is fail-loud by design (stages/gotchas.md): a broken
+        FFmpeg must never read as "no audio". Raised bare it reached the terminal
+        as a Python traceback that named the recording as if the file were at
+        fault (an Intel Mac whose Homebrew FFmpeg lost a library, 28 Nov 2026).
+        The Cause says only what is true of the toolchain: the exception's text
+        names the recording, often after a participant, and the Cause is written
+        to ``pipeline-events.jsonl``. The full text goes to the local log.
+        """
+        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
+        from bristlenose.utils.audio import AudioToolError
+
+        try:
+            await extract_audio_for_sessions(sessions, temp_dir)
+        except AudioToolError as exc:
+            logger.error("stage 2: the media toolchain failed to run: %s", exc)
+            raise PipelineAbandonedError(
+                cause=Cause(
+                    category=CauseCategoryEnum.MISSING_BINARY,
+                    message=(
+                        "FFmpeg or ffprobe is installed but failed to run. "
+                        "Run `bristlenose doctor` to see why."
+                    ),
+                    stage="s02_extract_audio",
+                ),
+                summary=self._summary,
+            ) from exc
+
     async def _ensure_audio(self, sessions: list[InputSession], temp_dir: Path) -> None:
         """Decode the audio of any session stage 2 skipped that is about to be
         transcribed or voiced after all.
@@ -5110,8 +5140,6 @@ class Pipeline:
         judged unusable (``InputFile.error`` set) is not retried, and a session
         read from a transcript file never needs audio.
         """
-        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
-
         pending = [
             s for s in sessions
             if s.audio_path is None
@@ -5122,7 +5150,7 @@ class Pipeline:
             )
         ]
         if pending:
-            await extract_audio_for_sessions(pending, temp_dir)
+            await self._extract_audio_or_abandon(pending, temp_dir)
 
     def _record_ingest_outcome(
         self,

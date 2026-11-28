@@ -149,6 +149,34 @@ def check_ffprobe() -> CheckResult:
             detail="not found (video files need it)",
             fix_key="ffprobe_missing",
         )
+    # Run it, as check_ffmpeg does: a present ffprobe that aborts on a missing
+    # library showed ✓ here, and the next video run stopped at stage 2 (an
+    # Intel Mac after a Homebrew update, 28 Nov 2026). Still a warning, for
+    # the same reason a missing one is. A slow first run is forgiven.
+    try:
+        result = subprocess.run(
+            [path, "-version"],
+            capture_output=True,
+            text=True, encoding="utf-8", errors="replace",
+            timeout=5,
+        )
+    except subprocess.TimeoutExpired:
+        result = None
+    except OSError as exc:
+        return CheckResult(
+            status=CheckStatus.WARN,
+            label="FFprobe",
+            detail=f"found, but it will not run ({_first_line(str(exc)) or 'could not start'})",
+            fix_key="ffmpeg_will_not_run",
+        )
+    if result is not None and result.returncode != 0:
+        reason = _first_line(result.stderr or "") or f"exit code {result.returncode}"
+        return CheckResult(
+            status=CheckStatus.WARN,
+            label="FFprobe",
+            detail=f"found, but it will not run ({reason})",
+            fix_key="ffmpeg_will_not_run",
+        )
     return CheckResult(status=CheckStatus.OK, label="FFprobe", detail=path)
 
 

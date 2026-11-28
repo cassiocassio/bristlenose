@@ -163,9 +163,27 @@ class TestCheckFfprobe:
     def test_found_is_ok(self) -> None:
         from bristlenose.doctor import check_ffprobe
 
-        with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffprobe"):
+        ran = MagicMock(returncode=0, stdout="ffprobe version 8.1", stderr="")
+        with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffprobe"), \
+                patch("bristlenose.doctor.subprocess.run", return_value=ran):
             result = check_ffprobe()
         assert result.status == CheckStatus.OK
+
+    def test_found_but_aborting_warns_with_the_reason(self) -> None:
+        """An Intel Mac after a Homebrew update (28 Nov 2026): ffprobe was there,
+        aborted on a missing library, and this row said ✓."""
+        from bristlenose.doctor import check_ffprobe
+
+        ran = MagicMock(
+            returncode=-6, stdout="",
+            stderr="dyld: Library not loaded: /usr/local/opt/x265/lib/libx265.176.dylib\n",
+        )
+        with patch("bristlenose.doctor.shutil.which", return_value="/usr/local/bin/ffprobe"), \
+                patch("bristlenose.doctor.subprocess.run", return_value=ran):
+            result = check_ffprobe()
+        assert result.status == CheckStatus.WARN
+        assert "will not run" in result.detail and "libx265" in result.detail
+        assert result.fix_key == "ffmpeg_will_not_run"
 
     def test_a_missing_ffprobe_does_not_stop_a_run(self) -> None:
         from bristlenose.doctor import check_ffprobe

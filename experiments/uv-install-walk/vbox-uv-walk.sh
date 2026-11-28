@@ -48,7 +48,7 @@ i=0; until grun --exe 'C:\Windows\System32\cmd.exe' -- /d /c ver >/dev/null 2>&1
     [ $i -ge 1500 ] && { say_ "guest never answered"; restore_clean; reset_clock; exit 1; }; sleep 15; i=$((i+15)); done
 say_ "[$vm] guest control answered after ${i} s"
 vbm guestcontrol "$vm" mkdir --username "$GUSER" --passwordfile "$PWFILE" --parents "$W"
-for f in install.ps1 post.ps1 "${BN_POST:-post.ps1}" kit.zip; do
+for f in install.ps1 post.ps1 "${BN_POST:-post.ps1}" waitclock.ps1 kit.zip; do
     vbm guestcontrol "$vm" copyto --username "$GUSER" --passwordfile "$PWFILE" --target-directory "$W\\" "$kit/$f" || say_ "copy $f failed"
 done
 whl=$(cd "$kit" && unzip -Z1 kit.zip | grep '\.whl$' | head -1)
@@ -57,10 +57,10 @@ say_ "[$vm] the one-liner (install.ps1), FFmpeg from its pinned zip, Bristlenose
 # set-back clock once it has network, and a second logon then meets the expired
 # password ("account is restricted"). post.ps1 reads PATH from the registry, as
 # a new terminal would, so running it in the same session loses nothing.
-grun --putenv "BRISTLENOSE_INSTALL_SPEC=$W\\kit\\$whl" --putenv "BRISTLENOSE_INSTALL_FFMPEG=zip" \
+grun --putenv "BRISTLENOSE_INSTALL_SPEC=$W\\kit\\$whl" --putenv "BRISTLENOSE_INSTALL_FFMPEG=zip" --putenv "BN_REAL_EPOCH=$(date +%s)" \
      --exe 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -- \
      -NoProfile -ExecutionPolicy Bypass -Command \
-     "Expand-Archive -Force '$W\\kit.zip' '$W\\kit'; & powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\install.ps1'; '== install.ps1 exit: ' + \$LASTEXITCODE; & powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\${BN_POST:-post.ps1}'" 2>&1 | tr -d '\r'
+     "& powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\waitclock.ps1'; Expand-Archive -Force '$W\\kit.zip' '$W\\kit'; & powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\install.ps1'; '== install.ps1 exit: ' + \$LASTEXITCODE; & powershell -NoProfile -ExecutionPolicy Bypass -File '$W\\${BN_POST:-post.ps1}'" 2>&1 | tr -d '\r'
 echo "== session exit: $?"
 restore_clean
 reset_clock

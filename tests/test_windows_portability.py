@@ -349,8 +349,13 @@ def test_redirected_output_in_a_codepage_prints_rather_than_crashes(tmp_path: Pa
     replaced with ``?``, a saved log could not tell a pass from a fail. The
     child's stdout is forced to cp1252, which reproduces it on any OS, and
     ``pipeline`` is a real command that prints ticks, crosses and dots without a
-    project. Its own "untested" marker is a literal ``?``, so the count of ``?``
-    must match a UTF-8 run of the same command: no symbol may collapse into one.
+    project. Its own "untested" marker is a literal ``?``, so once those are
+    removed no ``?`` may remain: no symbol may collapse into one.
+
+    This used to compare the ``?`` count with a second, UTF-8 run. The command
+    lists this machine's Ollama models through a 0.3 s port probe and a 2 s
+    ``ollama list``, so under a loaded suite the two runs could list different
+    models and the counts differed with nothing collapsed (28 Nov 2026).
     """
     def run(encoding: str) -> subprocess.CompletedProcess[bytes]:
         env = {**os.environ, "PYTHONIOENCODING": encoding, "HOME": str(tmp_path),
@@ -361,12 +366,12 @@ def test_redirected_output_in_a_codepage_prints_rather_than_crashes(tmp_path: Pa
             capture_output=True, env=env, timeout=120,
         )
 
-    narrow, wide = run("cp1252"), run("utf-8")
+    narrow = run("cp1252")
     assert narrow.returncode == 0, narrow.stderr.decode("cp1252", "replace")[-600:]
     assert b"UnicodeEncodeError" not in narrow.stderr
     text = narrow.stdout.decode("cp1252")
     assert "+" in text, "the pass glyph did not become +"
-    assert text.count("?") == wide.stdout.decode("utf-8").count("?"), text
+    assert "?" not in re.sub(r"\?\s+untested", "", text), text
 
 
 

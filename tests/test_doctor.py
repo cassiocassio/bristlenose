@@ -2682,7 +2682,13 @@ class TestCheckPiiDiagnosesTheModelDirectory:
         """
         import sys
 
+        # Imported before the version is faked: under a fake 3.14, importing
+        # Presidio reaches for `annotationlib` (3.14-only) and fails, so a test
+        # run on its own read "presidio-analyzer not installed" (28 Nov 2026).
+        import presidio_analyzer  # noqa: F401
         import spacy
+
+        import bristlenose.stages.s07_pii_removal  # noqa: F401
 
         def _raise(*_args, **_kwargs):
             raise exc

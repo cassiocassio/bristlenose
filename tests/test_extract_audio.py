@@ -305,6 +305,18 @@ async def test_a_tripped_provider_shortens_the_remaining_lanes(
     monkeypatch.setattr(fs_mod, "open", Blocks, raising=False)
     monkeypatch.setattr(fs_mod, "MATERIALISE_TIMEOUT_SECONDS", 1.0)
     monkeypatch.setattr(fs_mod, "MATERIALISE_TRIPPED_TIMEOUT_SECONDS", 0.1)
+    # The bound each file was given, which is the claim; elapsed time is only a
+    # hang guard. A 3.0 s wall-clock assertion failed under a loaded full suite
+    # (3.2 s, 28 Nov 2026) while every bound was right.
+    bounds: list[float] = []
+    real_bound_for = fs_mod.CloudFetchBudget.bound_for
+
+    def _recording_bound_for(self, provider, timeout):  # type: ignore[no-untyped-def]
+        bound = real_bound_for(self, provider, timeout)
+        bounds.append(bound)
+        return bound
+
+    monkeypatch.setattr(fs_mod.CloudFetchBudget, "bound_for", _recording_bound_for)
 
     folder = tmp_path / "Library" / "CloudStorage" / "Dropbox"
     folder.mkdir(parents=True)
@@ -327,5 +339,7 @@ async def test_a_tripped_provider_shortens_the_remaining_lanes(
 
     assert [s.files[0].error for s in sessions] == ["cloud_fetch"] * 5
     assert all(s.audio_path is None for s in sessions)
-    # 1 s + 4 × 0.1 s with the budget; 5 s without it.
-    assert elapsed < 3.0, elapsed
+    # The first file waits the full bound, the other four the short one; without
+    # the budget (or without it reaching the worker threads) all five get 1.0.
+    assert bounds == [1.0, 0.1, 0.1, 0.1, 0.1], bounds
+    assert elapsed < 30, elapsed  # a hang guard, not the measure

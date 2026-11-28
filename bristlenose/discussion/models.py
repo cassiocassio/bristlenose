@@ -66,10 +66,24 @@ class TurnLabelOut(BaseModel):
     role: Literal["opening", "core", "closing"] = "core"
     terse: str = ""
 
+    # A JSON null in an optional field means "none", not a failed label: read it as
+    # the field's default. Measured 28 Nov 2026 (d-classify-v11): gemma4:e4b wrote
+    # `section_id: null` 88 times, and one session lost all 57 labels to it where
+    # reading null as "" kept 54.
+    @field_validator("item_id", "section_id", "cluster", mode="before")
+    @classmethod
+    def _null_is_empty(cls, v: object) -> object:
+        return "" if v is None else v
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def _null_role_is_core(cls, v: object) -> object:
+        return "core" if v is None else v
+
     @field_validator("terse", mode="before")
     @classmethod
     def _terse(cls, v: object) -> object:
-        return _clip(v, 30)
+        return "" if v is None else _clip(v, 30)
 
 
 class SessionLabelsOut(BaseModel):

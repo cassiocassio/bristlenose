@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from bristlenose.discussion.guide import GUIDE_FOLDER, MAX_GUIDE_BYTES, NO_GUIDE_SHA, find_guide
 from bristlenose.discussion.models import (
@@ -538,3 +539,16 @@ def test_a_salvaged_session_keeps_its_labels_and_the_record_does_not_read_comple
     assert record.stats["labels_left_out"] == 1
     assert record.status == "partial"
     assert not outcome.failed
+
+
+def test_a_null_in_an_optional_label_field_reads_as_its_default_not_a_failed_label():
+    # gemma4:e4b wrote `section_id: null` 88 times on 28 Nov 2026 (d-classify-v11) and
+    # lost a whole session to it; null means "none" for the optional fields.
+    lb = TurnLabelOut.model_validate(
+        {"turn_id": "s1@00:10", "kind": "adlib", "item_id": None, "section_id": None,
+         "cluster": None, "role": None, "terse": None}
+    )
+    assert (lb.item_id, lb.section_id, lb.cluster, lb.role, lb.terse) == ("", "", "", "core", "")
+    # kind has no default: a null there is still a bad label, left to the salvage
+    with pytest.raises(ValidationError):
+        TurnLabelOut.model_validate({"turn_id": "s1@00:10", "kind": None})

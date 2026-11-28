@@ -58,9 +58,10 @@ struct ServeManagerRestartTests {
     }
 
     /// Wait, with a deadline, until `condition` holds. Under a full suite the
-    /// main actor is shared, so "after N ms" is not "after the Task ran".
-    private func waitUntil(_ condition: () -> Bool) async {
-        for _ in 0..<300 where !condition() {
+    /// main actor is shared, so "after N ms" is not "after the Task ran". The
+    /// deadline only bounds a broken run: a passing one ends at the event.
+    private func waitUntil(seconds: Int = 3, _ condition: () -> Bool) async {
+        for _ in 0..<(seconds * 100) where !condition() {
             try? await Task.sleep(for: .milliseconds(10))
         }
     }
@@ -123,7 +124,12 @@ struct ServeManagerRestartTests {
         #expect(m.instance.process == nil, "precondition: the restart has begun its teardown")
         #expect(p.isRunning, "precondition: the teardown is still waiting on the child")
         m.start(projectPath: "/p/b")
-        await wait(2_600)  // past the 2 s timeout and the SIGKILL grace
+        // The restart's Task clears `restartPending` as it ends, after its 2 s
+        // timeout, the SIGKILL and its generation check. A fixed 2.6 s stood in
+        // for that and lost under a full local suite (28 Nov 2026).
+        await waitUntil(seconds: 30) { !m.restartPending }
+        #expect(!m.restartPending, "the superseded restart never finished")
+        await waitUntil(seconds: 30) { !p.isRunning }
 
         #expect(!p.isRunning)
         #expect(m.currentProjectPath == "/p/b", "the superseded restart restarted the old path")
@@ -144,9 +150,13 @@ struct ServeManagerRestartTests {
         m.restartIfRunning()
         await waitUntil { m.instance.process == nil }
         #expect(m.instance.process == nil, "precondition: the restart has begun its teardown")
+        #expect(p.isRunning, "precondition: the teardown is still waiting on the child")
         m.stop()
-        await waitUntil { !p.isRunning }  // the restart's 2 s timeout, then SIGKILL
-        await wait(300)  // and whatever the restart does after its teardown
+        // The restart's 2 s timeout, then SIGKILL, then whatever it does after
+        // its teardown: its Task clears `restartPending` as it ends.
+        await waitUntil(seconds: 30) { !m.restartPending }
+        #expect(!m.restartPending, "the stopped restart never finished")
+        await waitUntil(seconds: 30) { !p.isRunning }
 
         #expect(!p.isRunning)
         #expect(m.state == .idle, "a stopped serve was restarted")

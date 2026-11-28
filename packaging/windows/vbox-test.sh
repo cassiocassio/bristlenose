@@ -16,6 +16,13 @@
 #   vbox-test.sh status                           the VMs and their state
 #
 # <vm> names its Windows: win10-* builds Windows 10, win11-* Windows 11.
+# Known since 28 Nov 2026: the snapshots' test user was made on 9 Oct, and
+# Windows' default 42-day password age expired it on about 20 Nov, so guest
+# control can no longer log in ("guest additions never answered", run level
+# 2). BN_GUEST_CLOCK=YYYY-MM-DD boots the guest on that date, host time sync
+# off, and resets both at the end. It must also be late enough for the TLS
+# certificates the install fetches (2026-11-19 works for these snapshots).
+# The lasting fix is a rebuilt snapshot whose password never expires.
 # What it cannot see: SmartScreen and Smart App Control. A file copied in by
 # the guest additions carries no Mark of the Web, so those stay a human check.
 #
@@ -181,6 +188,12 @@ cmd_test() {
     [ "$(state "$vm")" = poweroff ] || vbm controlvm "$vm" poweroff >/dev/null 2>&1
     wait_state "$vm" poweroff 120 || true
     vbm snapshot "$vm" restore clean >/dev/null || die "no clean snapshot for $vm"
+    if [ -n "${BN_GUEST_CLOCK:-}" ]; then
+        local off=$(( ($(date -j -f "%Y-%m-%d %H:%M:%S" "$BN_GUEST_CLOCK 12:00:00" +%s) - $(date +%s)) * 1000 ))
+        vbm setextradata "$vm" "VBoxInternal/Devices/VMMDev/0/Config/GetHostTimeDisabled" 1
+        vbm modifyvm "$vm" --bios-system-time-offset "$off" || die "clock offset"
+        say_ "[$vm] guest clock set to $BN_GUEST_CLOCK, host time sync off"
+    fi
     say_ "[$vm] booting the clean snapshot"
     vbm startvm "$vm" --type headless >/dev/null || die startvm
     local rc=0 failed=""
@@ -224,6 +237,11 @@ cmd_test() {
     step "PATH entry gone after uninstall" check_path_clean
 
     vbm controlvm "$vm" poweroff >/dev/null 2>&1
+    if [ -n "${BN_GUEST_CLOCK:-}" ]; then
+        wait_state "$vm" poweroff 120 || true
+        vbm setextradata "$vm" "VBoxInternal/Devices/VMMDev/0/Config/GetHostTimeDisabled" >/dev/null 2>&1
+        vbm modifyvm "$vm" --bios-system-time-offset 0 >/dev/null 2>&1
+    fi
     if [ "$rc" -eq 0 ]; then say_ "[$vm] PASS  $name"; else say_ "[$vm] FAILED $name:${failed#;}"; fi
     return "$rc"
 }

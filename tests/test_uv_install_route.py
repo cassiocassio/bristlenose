@@ -286,6 +286,10 @@ def clean_windows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.delattr(sys, "frozen", raising=False)
     monkeypatch.setattr(sys, "base_prefix", str(tmp_path / "python"))
+    # sys.prefix too: on a real Windows runner msvc-runtime (a dependency) puts
+    # the DLL there, and the "clean" PC was then not clean (CI, 28 Nov 2026).
+    (tmp_path / "venv").mkdir()
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "venv"))
     monkeypatch.setenv("SystemRoot", str(tmp_path / "Windows"))
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
@@ -363,7 +367,6 @@ def test_the_runtime_in_the_environment_satisfies_doctor(
     from bristlenose.doctor import windows_cpp_runtime_missing
 
     venv = clean_windows / "venv"
-    venv.mkdir()
     (venv / "msvcp140.dll").write_bytes(b"")
     monkeypatch.setattr(sys, "prefix", str(venv))
     assert windows_cpp_runtime_missing() is False

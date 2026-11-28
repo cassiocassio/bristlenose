@@ -16,7 +16,7 @@ The pipeline runs on the user's own machine; the analysis itself is a **cloud LL
 - `.venv/bin/python -m pytest tests/ -m slow` — the **paid** suite: real LLM calls, **~$0.63 and ~8 min per full run** measured 3 Nov 2026 on Claude (Console balance delta; the `-m slow` run is dominated by `TestLiveNorman`, ~$0.29 for its 5 batched calls over 120 quotes, and one test in that class pays for the whole class because they share a cache). That figure leaves out the 6 `test_no_fake_success_acceptance.py` pipeline cases, which skip unless `BRISTLENOSE_ANTHROPIC_API_KEY` / `BRISTLENOSE_OPENAI_API_KEY` are set and cost more when they run (a `-m` on the command line overrides `addopts`). Opt in deliberately; it is excluded from CI and ratcheted by `scripts/check-ratchet.py` as coverage given up. With no credit it now **skips** with a "SKIPPED, NOT PASSED" message rather than erroring — a genuine `BAD_REQUEST` still fails
 - `.venv/bin/ruff check bristlenose/` — lint (no global ruff install)
 - `.venv/bin/ruff check --fix bristlenose/` — lint and auto-fix
-- `.venv/bin/mypy bristlenose/` — type check (a gate: the CI ratchet holds `mypy_errors` at 0, so a new error fails CI)
+- `.venv/bin/mypy bristlenose/ --ignore-missing-imports` — type check, with the flag CI passes (a gate: the CI ratchet holds `mypy_errors` at 0, so a new error fails CI). Without the flag, 21 missing-stub errors for third-party modules show up (28 Nov 2026); none of them are ours
 - `cd e2e && npm test` — Playwright E2E tests (layers 1–3: console, links, network; Chromium + WebKit)
 
 ## Key conventions

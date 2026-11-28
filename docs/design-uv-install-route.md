@@ -177,7 +177,12 @@ The project was cut from the Talismanic recordings (public test data): two Teams
 
 **Rerun on the committed code** (a wheel of `efbc71b1b`): Debian 13, Ubuntu 24.04 and 26.04, and Fedora 44 with uv, plus macOS (Apple silicon) all pass the real-media probe. Fedora's HEVC thumbnail is the documented exception. The voice hint each install prints, run word for word, installs the extra and keeps the same Python.
 
-**Not covered:** the Snap and Copr (unchanged routes), Windows (its own CI job), Linux Mint (Ubuntu 24.04 is its base), native x86_64 Linux (Docker on the Intel Mac wouldn't start; Arch ran emulated), video on the Intel Mac (its ffprobe is broken, and the stand-in FFmpeg had none), and analysis (needs a key).
+**Then, the same night:**
+- **Windows 11 on Arm** (the UTM test VM, `experiments/uv-install-walk/windows-walk.ps1`). INSTALL.md's uv route, `uv tool install --python 3.13 bristlenose`, gives a native ARM64 Python 3.13.18, and the engines install. The released 0.48.0's PII first run fails with "No virtual environment found", as everywhere. With this checkout, all 8 speech sessions transcribe, every thumbnail is drawn (HEVC included; winget's Gyan FFmpeg), PII gives the same 238 redactions through the user cache, serve answers, and the uv hint names `--python 3.13`.
+- **x86_64 Linux, emulated:** Ubuntu 24.04 with uv (PII included) and Debian 13 with pipx, on a smaller project (a Teams video, the HEVC `.MOV`, an M4A and the VTT). Both pass. Emulation makes transcription about 20× slower; that is the emulator, not the product.
+- **Not supported, by any route:** 32-bit Arm (32-bit Raspberry Pi OS) and musl distributions (Alpine). ctranslate2, the transcription engine, publishes no `armv7l` or `musllinux` build for any Python. The website's Debian and Raspberry Pi section now says the Pi needs the 64-bit OS.
+
+**Not covered:** the Snap and Copr (unchanged routes); the Windows one-liner as a signed-in user (the VM walk ran as SYSTEM through the guest agent; the one-liner has its own CI job); Linux Mint (Ubuntu 24.04 is its base); native x86_64 Linux (Docker on the Intel Mac wouldn't start; everything x86_64 ran emulated); video on the Intel Mac (its ffprobe is broken, and the stand-in FFmpeg had none); and analysis (needs a key).
 
 **Not ours, seen on the way:** `tests/test_doctor.py::TestCheckPiiDiagnosesTheModelDirectory::test_on_314_the_incompatibility_is_what_it_says` fails when run alone and passes in file order, so it depends on an earlier test in that file. Recorded, not chased.
 

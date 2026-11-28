@@ -30,6 +30,11 @@ want_pii = len(sys.argv) > 2 and sys.argv[2] == "pii"
 out = project / "bristlenose-output"
 raw = out / "transcripts-raw"
 
+# What the real CLI does at import: a redirected Windows stdout is cp1252, and
+# the CLI turns its ✓ glyphs into ASCII there (cli._tolerate_narrow_output_encoding).
+# Imported after reading argv: importing the CLI inserts `run` before a folder argument.
+import bristlenose.cli  # noqa: E402, F401
+
 # 1. Transcripts: every session that had speech has a non-empty .txt.
 txts = sorted(raw.glob("*.txt"))
 sizes = {t.name: len(t.read_text(encoding="utf-8").splitlines()) for t in txts}
@@ -42,7 +47,7 @@ report("transcripts", len(txts) >= min_txts and all(n > 2 for n in sizes.values(
 from bristlenose.utils.video import extract_thumbnail  # noqa: E402
 
 for video in sorted(p for p in project.iterdir() if p.suffix.lower() in {".mp4", ".mov"}):
-    dest = Path("/tmp") / f"thumb-{abs(hash(video.name))}.jpg"
+    dest = Path(__import__("tempfile").gettempdir()) / f"thumb-{abs(hash(video.name))}.jpg"
     got = extract_thumbnail(video, dest, 5.0)
     size = dest.stat().st_size if got and dest.exists() else 0
     report(f"thumbnail[{video.name}]", size > 1000, f"{size} bytes")

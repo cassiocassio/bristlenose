@@ -55,10 +55,30 @@ names, the Teams Word transcript, a phone-style HEVC `.MOV`, M4A, MP3 and WAV
 audio, a silent WAV, and the named cloud VTT from
 `tests/fixtures/platform-transcripts/`. The media is not committed.
 
+## Windows
+
+`windows-walk.ps1` runs the same route in the UTM Windows 11 VM, isolated under
+`C:\bnwalk`. `utmctl exec` returns only an exit code and runs as SYSTEM, so
+`windows-run.cmd <name>` runs `<name>.ps1` with its output in `<name>.out.txt`
+and writes `<name>.done` when finished:
+
+```bash
+U=/Applications/UTM.app/Contents/MacOS/utmctl; V="Windows 11 (Bristlenose)"
+$U file push "$V" 'C:\bnwalk\kit.zip' < kit.zip          # project/, the wheel, probe.py
+$U file push "$V" 'C:\bnwalk\run.cmd' < experiments/uv-install-walk/windows-run.cmd
+$U file push "$V" 'C:\bnwalk\walk.ps1' < experiments/uv-install-walk/windows-walk.ps1
+$U exec "$V" --cmd cmd.exe /c 'C:\bnwalk\run.cmd walk'
+# poll `$U file pull "$V" 'C:\bnwalk\walk.done'`, then pull walk.out.txt
+```
+
+Build `kit.zip` with Python's `zipfile`, which keeps non-ASCII file names
+(the Meet recording's em dash) intact.
+
 ## Not covered
 
 - The Snap (needs systemd) and the Copr package (not uv).
-- Windows (the one-liner and the uv route have their own CI job and walk).
+- The Windows one-liner as a signed-in user: the VM walk runs as SYSTEM (the
+  one-liner has its own CI job, `windows-install-ps1`).
 - Linux Mint has no official image; Ubuntu 24.04 is its base.
 - Arch runs under emulation; pacman's download sandbox is switched off there
   only, because seccomp fails under emulation.

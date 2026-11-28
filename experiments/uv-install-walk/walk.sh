@@ -121,7 +121,7 @@ if [ -n "$media" ]; then
   say "== MEDIA: transcribe a real project, then probe"
   step "rm -rf ~/project && cp -r /media ~/project"
   step "bristlenose transcribe ~/project -w tiny 2>&1 | tail -25; test -d ~/project/bristlenose-output/transcripts-raw"
-  step "$py /walk/probe.py ~/project $pii"
+  step "PROBE_MIN_TRANSCRIPTS=${PROBE_MIN_TRANSCRIPTS:-7} $py /walk/probe.py ~/project $pii"
 fi
 
 if [ "$route" = uv ]; then

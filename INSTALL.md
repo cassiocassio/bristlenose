@@ -67,7 +67,7 @@ If you prefer not to use Homebrew:
 
    If you don't have Homebrew, download FFmpeg from [ffmpeg.org/download.html](https://ffmpeg.org/download.html).
 
-> If you use [uv](https://docs.astral.sh/uv/): `uv tool install bristlenose`
+> If you use [uv](https://docs.astral.sh/uv/): `uv tool install --python 3.12 bristlenose`. Pin the Python: part of the transcription engine has no build for uv's own default (3.15), and on an Intel Mac nothing after 3.12 works on macOS 11 or 12, or after 3.13 on later releases.
 
 ---
 
@@ -294,7 +294,7 @@ Install Python 3.10+, pipx, and FFmpeg using your distribution's package manager
 pipx install bristlenose
 ```
 
-> If you use [uv](https://docs.astral.sh/uv/): `uv tool install bristlenose`
+> If you use [uv](https://docs.astral.sh/uv/): `uv tool install --python 3.14 bristlenose` (uv's own default, Python 3.15, has no build of part of the transcription engine)
 
 ---
 

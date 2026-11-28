@@ -105,7 +105,7 @@ pipx install bristlenose
 
 # Anything else, any processor (pipx or uv) -- install FFmpeg first
 pipx install bristlenose
-uv tool install bristlenose    # alternative
+uv tool install --python 3.14 bristlenose    # alternative; 3.15 lacks a dependency
 ```
 
 The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.

@@ -96,7 +96,11 @@ def test_python_version_matches_install_guide() -> None:
     script_py = re.search(r"\$PythonVersion = '([\d.]+)'", text)
     assert script_py
     guide = (ROOT / "INSTALL.md").read_text(encoding="utf-8")
-    guide_py = re.search(r"uv tool install --python ([\d.]+) bristlenose", guide)
+    # The Windows section only: macOS and Linux pin their own Pythons for uv
+    # (3.12 for Intel Macs, 3.14 for Fedora's packaged uv).
+    windows = re.search(r"^## Windows\n(.*?)^## ", guide, re.M | re.S)
+    assert windows, "INSTALL.md has no Windows section"
+    guide_py = re.search(r"uv tool install --python ([\d.]+) bristlenose", windows.group(1))
     assert guide_py, "INSTALL.md no longer gives the uv command"
     assert script_py.group(1) == guide_py.group(1)
 

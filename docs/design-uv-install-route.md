@@ -105,30 +105,32 @@ A uv environment has no pip: on uv 0.10.11, `python -m pip` in a fresh `uv venv`
 
 Hints that give a uv user the wrong command: the spaCy-model hint (`python3 -m spacy download …`) and the Presidio hint (`pipx inject …`; Presidio is a core dependency, so a missing one means a broken install anyway).
 
-Not run end to end: a real `uv tool install bristlenose` followed by `run --redact-pii`. The mechanism is proven piece by piece above; step 1's test should make the whole failure happen before the fix lands.
+Since run end to end (§6): with the released 0.48.0, `spacy download` failed with "No virtual environment found" on every distro. With this checkout, a real `--redact-pii`-equivalent run fetched the model into the user cache and redacted the real transcripts.
 
 ---
 
 ## 4. The plan
 
-1. **Make uv installs work (reliability; fits the beta's no-new-features rule).** *Done 28 Nov 2026, uncommitted at the time of writing.*
+1. **Make uv installs work (reliability; fits the beta's no-new-features rule).** *Done 28 Nov 2026: `2cc85d3bd`, then the overnight follow-ups in §6.*
    - A pip-less install that isn't a frozen build now takes the in-process spaCy download into the user cache (`spacy_model_needs_user_cache` in `s07_pii_removal.py`, asking the new `install_channel.pip_available()`). It's keyed on whether pip is importable, not on a directory, so it covers any pip-less environment. The Mac app and the winget build are left out on purpose: each keeps its own answer.
    - `doctor --fix` for MLX runs `uv pip install --python <this python> mlx mlx-whisper` when there's no pip and `uv` is on PATH. That's the same "install into this environment" behaviour as the pip command it replaces, so it's no more permanent than before.
    - The hints are channel-aware where a uv user was told the wrong thing. The spaCy hint names the cache. The MLX hint names the `apple` extra through `add_extra_command` (persistent across rebuilds). The Presidio hint says `uv tool install --reinstall`, since Presidio is a core dependency. `installed_extras()` now detects `apple`, so a later voice or any-llm hint keeps MLX instead of rebuilding without it.
    - `detect_install_method()` is unchanged; the hints ask `install_channel()` or `pip_available()` instead, which keeps the change off every other caller.
    - Tests: `tests/test_uv_install_route.py`, 11 tests. Each of the six fixes, reverted alone, turns at least one red. Not done: an AST sweep requiring a pip check beside every `-m pip` argv. Today there's one such site, and its outcome test covers it.
-2. **Test uv in CI.** Add `linux-uv` and `macos-uv` jobs to `install-test.yml`: `uv tool install .`, `bristlenose --version`, `bristlenose doctor`, and a check that the spaCy route chosen is the user-cache one (not a 400 MB download per run).
+2. **Test uv in CI.** *Written 28 Nov 2026, not yet run: nothing is pushed.* One `uv` job in `install-test.yml`, on `ubuntu-latest` and `macos-latest`. It runs Astral's installer, then `uv tool install --python 3.14 .`, `bristlenose --version`, a check that the tool env has no pip and that stage 7 chooses the user-cache route, and `scripts/check-doctor-install.sh`.
 3. **Docs, kept light.** *Website done 28 Nov 2026, uncommitted in the website repo and not deployed.* In `docs-src/install.md`:
    - The table's catch-all row is split. "Debian, Raspberry Pi OS, Linux Mint" stays on pipx; "Arch and anything else" lists uv, then pipx.
    - The Arch section offers both, with the `pacman` line for each.
    - A new "Install with uv" section follows "Install with pipx": `pacman` and `dnf` lines, Astral's installer for everywhere else, `uv tool update-shell` if the command isn't found, and `pipx uninstall bristlenose` first for anyone switching.
-   - The README already lists uv in its "Anything else" block, and INSTALL.md has its own layout. Both are left as they are.
+   - Overnight, from the walk (§6): `uv tool install --python 3.14 bristlenose`, with one line on why, and a `pipx ensurepath` line in the pipx section. Arch doesn't put `~/.local/bin` on PATH.
+   - The README and INSTALL.md keep their own layouts. Their uv lines now carry `--python 3.14` too.
    - The man page isn't affected: it doesn't document install routes.
 
    Revisit the table yearly. It changes when a distro does: Debian or Ubuntu packaging the uv CLI, Fedora shipping its marker, or a distro's pip refusal naming uv.
 4. **Later, only if the numbers ask for it:** the PyPI installer-share query for Bristlenose, to see whether pipx has users worth keeping as the lead anywhere.
 
 Order: 1 before 3. Recommending uv first while its PII path breaks would send people to the route that fails.
+
 
 ---
 
@@ -137,6 +139,45 @@ Order: 1 before 3. Recommending uv first while its PII path breaks would send pe
 1. **Should `doctor` notice a double install** (bristlenose in both pipx and uv, with one shadowing the other on PATH)? It's cheap to detect, but it's a new check.
 2. **The PyPI installer-share query for `bristlenose`:** run it? It sends the package name to Google BigQuery or ClickHouse's public dataset.
 3. **Does the winget page keep pointing PII users at uv?** Once step 1 lands it works; until then that advice leads into the failure in §3.
+
+---
+
+## 6. The walk: following our own page in fresh containers (28 Nov 2026, overnight)
+
+`experiments/uv-install-walk/` (README there). Each run follows the website's Linux page to the letter in a fresh container, as a user with sudo. It then transcribes a real project and runs `probe.py`, which checks:
+- the transcripts;
+- an FFmpeg thumbnail from every video;
+- PII redaction on the real transcripts, where asked;
+- `bristlenose serve`, answering `/api/health` and `/report/`.
+
+The project was cut from the Talismanic recordings (public test data): two Teams MP4s and a Google Meet MP4 with their original names, the Teams Word transcript, a phone-style HEVC `.MOV`, M4A, MP3 and WAV audio, a silent WAV and a cloud VTT. No LLM call, nothing billed.
+
+**Matrix:** Debian 12 and 13, Ubuntu 22.04, 24.04 and 26.04, and Fedora 43 and 44, on native Arm; Arch as x86_64 under emulation. Each was run with pipx and with uv, plus macOS (Apple silicon) with uv, isolated in scratch directories.
+
+**Results:**
+- **Install and doctor.** Every route installs. `doctor`'s only failing row anywhere is the missing API key.
+- **Transcription.** All 8 speech sessions transcribe everywhere, the HEVC phone file included. The silent WAV is correctly left with no segments.
+- **PII redaction.** The same 238 redactions on Debian, Fedora, Arch and macOS with uv.
+- **Serve.** It answers `/api/health` and serves the report everywhere.
+- **Thumbnails.** All drawn, except the HEVC file on Fedora, where `ffmpeg-free` can't decode HEVC. The page already says so.
+- **macOS.** The MLX fix ran its real `uv pip install`, and the next transcription used MLX.
+
+**What the walk found, and what was done:**
+1. **uv's own default Python, 3.15, can't install Bristlenose.** onnxruntime (faster-whisper's dependency) has no 3.15 wheel. Ubuntu and Fedora were fine because uv used the system Python. Debian's image has no system Python, so uv downloaded 3.15 and the install failed. Fedora's packaged uv sets `python-downloads = "manual"` and `python-preference = "system"` (its `/etc/uv/uv.toml`), so `--python 3.13` fails there, while `--python 3.14` uses the system 3.14. **Fix:** every uv install line says `--python 3.14`: the website, the README, INSTALL.md (macOS and Linux) and the CI job. Windows keeps 3.13, for the voice extra. The voice extra installs on 3.14 on Linux, Arm and x86_64. uv's receipt records `python = "3.14"`, so our own `uv tool install --force "bristlenose[…]"` hints keep it (checked: still 3.14.10 after a `--force`).
+2. **The released 0.48.0's PII first run fails on every uv install**, with spaCy's "No virtual environment found". Reproduced on every distro; this checkout fetches into the user cache instead.
+3. **Arch puts no `~/.local/bin` on PATH.** Both routes need the PATH line. The uv section had `uv tool update-shell`; the pipx section now has `pipx ensurepath`.
+4. **The uv route on Debian and Ubuntu needs `curl` or `wget`**, for Astral's installer. Desktops ship `wget`; Docker images ship neither.
+5. **Channel detection missed a moved tool dir.** Under a custom `UV_TOOL_DIR`, a uv install was told to `pip install` its extras. **Fix:** `install_channel()` reads uv's `uv-receipt.toml` and pipx's `pipx_metadata.json` in the environment first, with the path as fallback. The serve-deps hint now asks the same function instead of its own sniff.
+6. **Bare `pip install` hints for everyone.** The Apple-silicon MLX lines in transcription and the hardware check, and the MCP extra line in `serve`, told pipx and uv users `pip install …`. **Fix:** all three use `add_extra_command`. `installed_extras()` detects `mcp` too, so a later hint keeps it. The transcription-backend hint gets a uv branch.
+
+7. **Intel Macs need an older Python.** Seen natively on a 2014 MacBook Pro (macOS 11.4, x86_64): onnxruntime stopped publishing macOS x86_64 wheels after 1.23.2 (Python 3.10–3.13), and on macOS 11 and 12 the newest that installs is 1.19.2 (up to 3.12). So `--python 3.14` and `--python 3.13` both fail there, and `--python 3.12` installs. Intel Macs are a stated CLI target (`docs/design-platform-policy.md`, the cryptography pin). **Fix:** INSTALL.md's macOS uv line says `--python 3.12`. That works on every Mac and is the Python the Homebrew formula and the Mac app use. Linux keeps 3.14. With 3.12 and a working FFmpeg (that machine's Homebrew FFmpeg was broken, below), audio transcription, PII redaction (the user-cache route) and serve all ran natively on x86_64.
+8. **`uv tool install --force` does not keep the Python.** On the Intel Mac, a working 3.12 install was rebuilt on 3.14 when `--force` was given no `--python`, and the rebuild failed. On Linux it happened to keep 3.14 only because no newer Python was installed. Our hints used exactly that form. **Fix:** every uv rebuild we suggest names the running Python (`install_channel.uv_python_flag()`): the extra hints, any-llm's `--with` hint, and the serve-deps, Presidio and transcription-backend reinstall lines.
+9. **A broken media toolchain stopped `transcribe` with a Python traceback**, worded as if the recording were at fault. On the Intel Mac, Homebrew's ffprobe aborted on a missing `libx265` dylib, and stage 2's `AudioToolError` propagated bare. **Fix:** `Pipeline._extract_audio_or_abandon` turns it into a clean stop on all three stage-2 calls (`run`, `transcribe`, the late decode). The banner says "FFmpeg or ffprobe is installed but failed to run. Run `bristlenose doctor` to see why." The `missing_binary` Cause carries no file name; the full text goes to the local log. `tests/test_stage2_toolchain_abandon.py` pins the outcome, and an AST check confirms that no stage-2 call bypasses the guard.
+10. **`doctor` showed ✓ FFprobe for an ffprobe that aborts.** The row only checked that the file existed. **Fix:** it runs `ffprobe -version` as the FFmpeg row does, and says "found, but it will not run (dyld: …)". It stays a warning, as a missing ffprobe is, because only video needs it.
+
+**Not covered:** the Snap and Copr (unchanged routes), Windows (its own CI job), Linux Mint (Ubuntu 24.04 is its base), native x86_64 Linux (Docker on the Intel Mac wouldn't start; Arch ran emulated), video on the Intel Mac (its ffprobe is broken, and the stand-in FFmpeg had none), and analysis (needs a key).
+
+**Not ours, seen on the way:** `tests/test_doctor.py::TestCheckPiiDiagnosesTheModelDirectory::test_on_314_the_incompatibility_is_what_it_says` fails when run alone and passes in file order, so it depends on an earlier test in that file. Recorded, not chased.
 
 ---
 

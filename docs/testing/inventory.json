@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 11580
+        "tests": 11654
       },
       {
         "basis": "test files",
-        "files": 246,
+        "files": 247,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -30,12 +30,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 281,
+        "files": 286,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 3520
+        "tests": 3564
       },
       {
         "basis": "spec files",
@@ -543,6 +543,28 @@
             "job_colour": "hard",
             "notable_steps": [],
             "runs_on": "windows-latest"
+          },
+          {
+            "calls": null,
+            "id": "uv",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "The tool env has no pip, and stage 7 knows it",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Run doctor (no API key expected; anything else must pass)",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
+            "runs_on": "${{ matrix.os }}"
           },
           {
             "calls": null,

@@ -209,6 +209,54 @@ jobs:
           bristlenose --version
           if ($LASTEXITCODE -ne 0) { throw 'bristlenose --version failed' }
 
+  # ── Linux and macOS: uv tool install from source ────────────────
+  # The website's "Install with uv" section: Astral's installer, then
+  # `uv tool install --python 3.14` (uv's own default, 3.15, has no
+  # onnxruntime wheel). A uv tool env has no pip, so the job also checks that
+  # stage 7 takes the user-cache route for the PII model rather than
+  # `spacy download` (docs/design-uv-install-route.md §3).
+
+  uv:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install FFmpeg
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          else
+            brew install ffmpeg
+          fi
+
+      - name: Install uv with Astral's installer
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install bristlenose via uv
+        run: uv tool install --python 3.14 .
+
+      - name: Verify CLI
+        run: bristlenose --version
+
+      - name: The tool env has no pip, and stage 7 knows it
+        run: |
+          py="$(uv tool dir)/bristlenose/bin/python"
+          if "$py" -m pip --version; then
+            echo "::error::the uv tool env has pip; the pip-less paths are untested"
+            exit 1
+          fi
+          "$py" -c 'from bristlenose.stages.s07_pii_removal import spacy_model_needs_user_cache as f; assert f(), "a pip-less install would run spacy download"'
+
+      - name: Run doctor (no API key expected; anything else must pass)
+        run: bash scripts/check-doctor-install.sh
+
   macos-pip:
     runs-on: macos-latest
     timeout-minutes: 15

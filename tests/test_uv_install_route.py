@@ -367,3 +367,16 @@ def test_the_runtime_in_the_environment_satisfies_doctor(
     (venv / "msvcp140.dll").write_bytes(b"")
     monkeypatch.setattr(sys, "prefix", str(venv))
     assert windows_cpp_runtime_missing() is False
+
+
+def test_windows_installs_declare_the_cpp_runtime() -> None:
+    """Without it a clean Windows cannot load the engines (28 Nov 2026); the
+    marker keeps it off every other platform."""
+    try:
+        import tomllib
+    except ImportError:  # Python 3.10
+        import tomli as tomllib  # type: ignore[no-redef]
+
+    root = Path(__file__).resolve().parent.parent
+    deps = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]["dependencies"]
+    assert "msvc-runtime; sys_platform == 'win32'" in deps

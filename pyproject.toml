@@ -57,6 +57,14 @@ dependencies = [
     # resolves and is wanted (it closes three CVEs on 48.0.1). Lift when Intel
     # Macs stop being a CLI target. docs/dependency-premortem-log.md Entry 9.
     "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    # The Microsoft Visual C++ runtime, as DLLs in the environment: a clean
+    # Windows has none, and ctranslate2, spaCy's thinc and the voice pass cannot
+    # load without msvcp140.dll (benbecula's VirtualBox Windows 10 and 11,
+    # 28 Nov 2026). Microsoft's installer needs administrator rights; these do
+    # not. bristlenose/utils/windows_runtime.py points Windows at them. The
+    # winget build carries its own copy. Licence: Microsoft's redistributable
+    # terms (PyPI says "Proprietary"). Owner decision, docs/design-uv-install-route.md.
+    "msvc-runtime; sys_platform == 'win32'",
     # Ceiling <2 since 24 Oct 2026: anthropic 2.0.0 sends API version
     # 2026-10-21, which answers any request carrying `temperature` with a 400,
     # and client.py sends it via `extra_body` for every model in

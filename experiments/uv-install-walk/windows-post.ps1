@@ -15,5 +15,5 @@ Step 'bristlenose doctor' { bristlenose doctor }
 Step 'channel and hint' { & $py -c "from bristlenose.utils.install_channel import install_channel as c, add_extra_command as a; print(c(), '|', a('voice'))" }
 Step 'transcribe' { bristlenose transcribe "$W\kit\project" -w tiny 2>&1 | Select-Object -Last 14 }
 Step 'probe' { & $py "$W\kit\probe.py" "$W\kit\project" pii }
-Step 'voice hint, run as printed' { $cmd = & $py -c "from bristlenose.utils.install_channel import add_extra_command as a; print(a('voice'))"; $cmd; Invoke-Expression $cmd 2>&1 | Select-Object -Last 1; & $py -c "import sys, kaldi_native_fbank; print('voice on', sys.version.split()[0])" }
+Step 'voice hint, run as printed' { $cmd = & $py -c "from bristlenose.utils.install_channel import add_extra_command as a; print(a('voice'))"; $cmd; Invoke-Expression $cmd 2>&1 | Select-Object -Last 1; & $py -c "import sys, bristlenose, kaldi_native_fbank; print('voice on', sys.version.split()[0])" }
 "== DONE"

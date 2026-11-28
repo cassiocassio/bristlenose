@@ -33,5 +33,5 @@ Step 'channel and hint' { & $py -c "from bristlenose.utils.install_channel impor
 Step 'pii route' { & $py -c "from bristlenose.stages import s07_pii_removal as s; print('needs_user_cache', s.spacy_model_needs_user_cache())" }
 Step 'transcribe' { bristlenose transcribe "$B\kit\project" -w tiny 2>&1 | Select-Object -Last 14 }
 Step 'probe' { & $py "$B\kit\probe.py" "$B\kit\project" pii }
-Step 'printed voice hint, run as printed' { $cmd = & $py -c "from bristlenose.utils.install_channel import add_extra_command as a; print(a('voice'))"; $cmd; Invoke-Expression $cmd 2>&1 | Select-Object -Last 2; & $py -c "import sys, platform, kaldi_native_fbank; print('voice on', sys.version.split()[0], platform.machine())" }
+Step 'printed voice hint, run as printed' { $cmd = & $py -c "from bristlenose.utils.install_channel import add_extra_command as a; print(a('voice'))"; $cmd; Invoke-Expression $cmd 2>&1 | Select-Object -Last 2; & $py -c "import sys, platform, bristlenose, kaldi_native_fbank; print('voice on', sys.version.split()[0], platform.machine())" }
 "== DONE"
